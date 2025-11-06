@@ -13,12 +13,6 @@
       "NODE_ENV": "production"
     }
   },
-  "functions": {
-    "api/**/*.ts": {
-      "memory": 1024,
-      "maxDuration": 10
-    }
-  },
   "rewrites": [
     {
       "source": "/api/:path*",
