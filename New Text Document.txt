@@ -1,0 +1,90 @@
+your a expert in web developer and you are tasked with building a web app similar to ..https://www.squareyards.com/ what would you work ouline look like 
+
+Your tech stack
+Frontend
+React 19 — UI framework
+TypeScript 5.9 — Type safety
+Vite 7 — Build tool and dev server
+Wouter 3 — Client-side routing
+Tailwind CSS 4 — Styling
+shadcn/ui (Radix UI) — UI components
+TanStack Query (React Query) 5 — Data fetching and caching
+tRPC 11 — Type-safe API client
+Framer Motion — Animations
+Lucide React — Icons
+Backend
+Express 4 — Web server
+tRPC 11 — Type-safe API layer
+Drizzle ORM 0.44 — Database ORM
+MySQL2 — MySQL driver
+TypeScript — Type safety
+Authentication & Security
+bcryptjs — Password hashing
+Jose (JWT) — JWT tokens
+Custom auth — Email/password (replaced Manus OAuth)
+Database
+MySQL/TiDB — Relational database
+Drizzle Kit — Migrations
+Storage
+AWS SDK S3 — File storage
+Development Tools
+pnpm — Package manager
+TypeScript — Type checking
+Prettier — Code formatting
+Vitest — Testing
+ESBuild — Production bundling
+tsx — TypeScript execution
+Additional Libraries
+Zod — Schema validation
+React Hook Form — Form management
+SuperJSON — Data serialization
+Recharts — Charts
+Date-fns — Date utilities
+Sonner — Toast notifications
+Architecture
+Stack: Full-stack TypeScript monorepo
+Pattern: Type-safe API with tRPC
+Database: MySQL with Drizzle ORM
+UI: React + Tailwind + shadcn/ui
+This is a modern, type-safe full-stack setup suitable for production use
+You said:
+Phase 1 backend is complete. Summary of what we've built:
+Phase 1 backend complete
+What we've built
+1. Property CRUD API
+properties.create — Create property listings with validation
+properties.update — Update properties (ownership verified)
+properties.delete — Delete properties (ownership verified)
+properties.myProperties — Get user's properties
+properties.deleteImage — Delete property images
+2. S3 image upload system
+upload.presign — Generate presigned URLs for direct S3 uploads
+upload.direct — Direct upload via API (fallback)
+upload.getUrl — Get public URLs for images
+Supports AWS S3 (if configured) or storage proxy fallback
+3. Database functions
+getUserProperties() — Get user's properties
+updateProperty() — Update with ownership check
+deleteProperty() — Delete with ownership check
+deletePropertyImage() — Delete images with ownership check
+Progress
+Backend:
+Property CRUD API — complete
+Image upload system — complete
+Security (ownership checks) — complete
+Frontend (next):
+ImageUploader component
+List Property page
+Dashboard/My Properties page
+What you can test now
+You can test the backend endpoints via tRPC:
+// Create propertytrpc.properties.create.useMutation()// Get my propertiestrpc.properties.myProperties.useQuery()// Upload imagetrpc.upload.presign.useMutation()
+Next steps
+Build the ImageUploader component — Multi-file upload with previews
+Build the List Property page — Multi-step form for creating listings
+Build the Dashboard page — View and manage your properties
+Should I continue with the frontend components next? I can start with:
+ImageUploader component
+List Property page
+Or the Dashboard page
+Which should I build first?

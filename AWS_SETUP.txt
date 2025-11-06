@@ -1,0 +1,227 @@
+================================================================================
+AWS S3 + CLOUDFRONT SETUP GUIDE FOR REAL ESTATE PORTAL
+================================================================================
+
+COST: $0/month (AWS Free Tier)
+TIME: ~30 minutes
+RESULT: Production-ready image storage with CDN
+
+================================================================================
+STEP 1: CREATE S3 BUCKET (5 minutes)
+================================================================================
+
+1. Go to AWS Console: https://console.aws.amazon.com/s3
+2. Click "Create bucket"
+3. Configure:
+   - Bucket name: your-property-images-prod (must be globally unique)
+   - Region: us-east-1
+   - Block Public Access: KEEP ALL CHECKBOXES CHECKED ✓
+4. Click "Create bucket"
+
+5. Configure CORS:
+   - Click your bucket → Permissions tab
+   - Scroll to "Cross-origin resource sharing (CORS)"
+   - Click Edit and paste:
+
+[
+  {
+    "AllowedHeaders": ["*"],
+    "AllowedMethods": ["GET", "PUT", "POST", "DELETE"],
+    "AllowedOrigins": [
+      "http://localhost:5173",
+      "https://*.vercel.app",
+      "https://yourdomain.com"
+    ],
+    "ExposeHeaders": ["ETag"],
+    "MaxAgeSeconds": 3000
+  }
+]
+
+   - Click "Save changes"
+
+================================================================================
+STEP 2: CREATE IAM USER (10 minutes)
+================================================================================
+
+1. Go to IAM Console: https://console.aws.amazon.com/iam
+2. Click "Users" → "Create user"
+3. Username: vercel-s3-upload
+4. Click "Next" → "Attach policies directly"
+
+5. Click "Create policy" → "JSON" tab
+6. Paste this policy (REPLACE your-property-images-prod with YOUR bucket name):
+
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "s3:PutObject",
+        "s3:GetObject",
+        "s3:DeleteObject",
+        "s3:ListBucket"
+      ],
+      "Resource": [
+        "arn:aws:s3:::your-property-images-prod",
+        "arn:aws:s3:::your-property-images-prod/*"
+      ]
+    }
+  ]
+}
+
+7. Name it: S3-Property-Upload-Policy
+8. Click "Create policy"
+
+9. Go back to user creation
+10. Search for "S3-Property-Upload-Policy"
+11. Select it and click "Next"
+12. Click "Create user"
+
+13. Click on the user → "Security credentials" tab
+14. Click "Create access key"
+15. Choose "Application running outside AWS"
+16. Click "Next" → "Create access key"
+
+17. **IMPORTANT - SAVE THESE CREDENTIALS:**
+    AWS_ACCESS_KEY_ID=AKIA...
+    AWS_SECRET_ACCESS_KEY=...
+
+    You will NOT be able to see the secret key again!
+
+================================================================================
+STEP 3: CREATE CLOUDFRONT DISTRIBUTION (10 minutes)
+================================================================================
+
+1. Go to CloudFront Console: https://console.aws.amazon.com/cloudfront
+2. Click "Create distribution"
+
+3. Configure Origin:
+   - Origin domain: Select your S3 bucket from dropdown
+   - Origin access: "Origin access control settings (recommended)"
+   - Click "Create control setting" → "Create"
+   - Leave other settings as default
+
+4. Configure Default cache behavior:
+   - Viewer protocol policy: "Redirect HTTP to HTTPS"
+   - Allowed HTTP methods: "GET, HEAD, OPTIONS"
+   - Cache policy: "CachingOptimized"
+   - Leave rest as default
+
+5. Configure Settings:
+   - Price class: "Use only North America and Europe" (cheaper)
+   - Alternate domain name (CNAME): Leave empty for now
+   - Default root object: Leave empty
+
+6. Click "Create distribution"
+
+7. **IMPORTANT - SAVE THIS:**
+   - Copy the "Distribution domain name" (e.g., d111111abcdef8.cloudfront.net)
+   - This is your CLOUDFRONT_URL
+
+8. Update S3 Bucket Policy:
+   - CloudFront will show a banner: "Copy policy"
+   - Click it
+   - Go to your S3 bucket → Permissions → Bucket policy
+   - Paste the policy
+   - Click "Save changes"
+
+================================================================================
+STEP 4: UPDATE YOUR .ENV FILE (2 minutes)
+================================================================================
+
+1. Open your .env file
+2. Add/update these variables:
+
+# AWS S3 + CloudFront
+AWS_REGION=us-east-1
+AWS_ACCESS_KEY_ID=AKIA... (from Step 2, #17)
+AWS_SECRET_ACCESS_KEY=... (from Step 2, #17)
+S3_BUCKET_NAME=your-property-images-prod
+CLOUDFRONT_URL=https://d111111abcdef8.cloudfront.net (from Step 3, #7)
+
+# Image settings
+MAX_IMAGE_SIZE_MB=10
+
+3. Save the file
+
+================================================================================
+STEP 5: TEST THE SETUP (3 minutes)
+================================================================================
+
+1. Restart your development server:
+   pnpm dev
+
+2. Upload a property with images through your UI
+
+3. Check S3 Console:
+   - Go to your bucket
+   - Navigate to properties/[property-id]/
+   - You should see 5 images:
+     * propertyid-thumbnail.webp
+     * propertyid-small.webp
+     * propertyid-medium.webp
+     * propertyid-large.webp
+     * propertyid-original.webp
+
+4. Test CDN:
+   - Copy any image URL from CloudFront
+   - Open it in a browser
+   - It should load fast from the CDN
+
+================================================================================
+DONE! 🎉
+================================================================================
+
+Your images are now:
+✓ Stored on AWS S3 (reliable, cheap)
+✓ Served through CloudFront (fast, global CDN)
+✓ Automatically resized to 5 different sizes
+✓ Converted to WebP (smaller file sizes)
+✓ Cached for 1 year (optimal performance)
+
+================================================================================
+TROUBLESHOOTING
+================================================================================
+
+ISSUE: "Access Denied" when uploading
+FIX: Check IAM policy has correct bucket name
+
+ISSUE: Images not loading
+FIX: 
+  1. Check CORS settings in S3
+  2. Verify CloudFront distribution is "Deployed" (takes 5-10 min)
+  3. Check CLOUDFRONT_URL in .env
+
+ISSUE: "Module not found: sharp"
+FIX: Run: pnpm install sharp
+
+ISSUE: Upload works but images don't show
+FIX: Your database might have old image format (string instead of ImageUrls object)
+
+================================================================================
+OPTIONAL: CUSTOM DOMAIN FOR CLOUDFRONT
+================================================================================
+
+1. Get a domain from Route 53, Namecheap, or GoDaddy
+2. Request SSL certificate in AWS Certificate Manager (ACM)
+3. Add CNAME to CloudFront distribution
+4. Update DNS records
+5. Update CLOUDFRONT_URL in .env
+
+Guide: https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/CNAMEs.html
+
+================================================================================
+COSTS (Estimated)
+================================================================================
+
+Free Tier (First 12 months):
+- S3: 5GB storage, 20,000 GET requests, 2,000 PUT requests
+- CloudFront: 1TB data transfer out, 10,000,000 requests
+
+After Free Tier:
+- S3 Storage: $0.023/GB/month
+- CloudFront Data Transfer: $0.085/GB (first 10TB)
+- Typical cost for 10,000 properties with 5 images each: ~$5-15/month
+
+================================================================================

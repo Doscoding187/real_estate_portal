@@ -1,0 +1,302 @@
+================================================================================
+  SA PROPERTY PORTAL - DATABASE MIGRATION GUIDE
+  Step-by-Step Instructions
+================================================================================
+
+📋 PREREQUISITES
+----------------
+✓ MySQL Server running on localhost:3307
+✓ User: app_user (password available)
+✓ MySQL Workbench installed
+✓ Backup directory created (optional)
+
+================================================================================
+STEP 1: CREATE BACKUP (OPTIONAL - If database exists)
+================================================================================
+
+If you already have data in the database:
+
+1. Open MySQL Workbench
+2. Connect to localhost:3307 as app_user
+3. Open the backup script:
+   → File > Open SQL Script
+   → Select: migrations/backup-database.sql
+   → Click Execute (⚡)
+
+4. Review the output:
+   - Check table counts
+   - Note existing records
+
+5. Create actual backup:
+   Method A (MySQL Workbench):
+   → Server > Data Export
+   → Select: real_estate_portal
+   → Check: "Dump Structure and Data"
+   → Set filename: backups/backup_YYYYMMDD.sql
+   → Click: Start Export
+
+   Method B (Command Line):
+   → Open PowerShell
+   → Run: cd "C:\Users\Edward\Dropbox\PC\Desktop\real_estate_portal"
+   → Run: mysqldump -u app_user -p -h localhost -P 3307 real_estate_portal > backups/backup_$(Get-Date -Format 'yyyyMMdd_HHmmss').sql
+
+✅ Backup Status: [ ] Complete
+
+================================================================================
+STEP 2: RUN MAIN MIGRATION
+================================================================================
+
+Option A: Using Single Master Script (RECOMMENDED)
+---------------------------------------------------
+1. Open MySQL Workbench
+2. Connect to localhost:3307 as app_user
+3. Open new SQL tab
+4. Load the master script:
+   → File > Open SQL Script
+   → Select: migrations/full-database-setup.sql
+
+5. IMPORTANT: Fix SOURCE paths
+   The script uses SOURCE commands. You have two options:
+
+   Option 1 - Use absolute paths (edit the file):
+   Replace:
+     SOURCE create-base-schema.sql;
+   With:
+     SOURCE C:/Users/Edward/Dropbox/PC/Desktop/real_estate_portal/migrations/create-base-schema.sql;
+
+   (Repeat for all SOURCE commands)
+
+   Option 2 - Copy/paste each file manually:
+   → Don't run full-database-setup.sql
+   → Instead, follow Option B below
+
+6. Click Execute (⚡ lightning bolt)
+7. Wait for completion (may take 1-2 minutes)
+8. Check for success message:
+   "🎉 SA Property Portal Database Setup Complete!"
+
+Option B: Run Scripts Individually (SAFER)
+-------------------------------------------
+Run these in order, one at a time:
+
+1. Create base schema:
+   → Open: migrations/create-base-schema.sql
+   → Execute
+   → Verify: "Base schema created" message
+
+2. Create core tables:
+   → Open: migrations/create-core-tables.sql
+   → Execute
+   → Verify: "Core tables created"
+
+3. Create agencies:
+   → Open: migrations/create-agencies-table.sql
+   → Execute
+   → Verify: Tables created
+
+4. Create invitations:
+   → Open: migrations/create-invitations-table.sql
+   → Execute
+   → Verify: Tables created
+
+5. Create agent dashboard:
+   → Open: migrations/create-agent-dashboard-tables.sql
+   → Execute
+   → Verify: Dashboard tables created
+
+6. Create prospect tables:
+   → Open: migrations/create-prospect-tables.sql
+   → Execute
+   → Verify: Prospect tables created
+   → Check for: "4 new tables" message
+
+✅ Migration Status: [ ] Complete
+
+================================================================================
+STEP 3: VERIFY MIGRATION SUCCESS
+================================================================================
+
+Run these verification queries in MySQL Workbench:
+
+1. Check database exists:
+   USE real_estate_portal;
+
+2. Count all tables (should be 21+):
+   SELECT COUNT(*) as total_tables 
+   FROM information_schema.tables
+   WHERE table_schema = 'real_estate_portal';
+
+3. Show all tables:
+   SHOW TABLES;
+
+4. Verify prospect tables specifically:
+   SHOW TABLES LIKE 'prospect%';
+   SHOW TABLES LIKE 'scheduled_viewings';
+   SHOW TABLES LIKE 'recently_viewed';
+
+5. Check table structure (example):
+   DESCRIBE prospects;
+   DESCRIBE properties;
+
+Expected Results:
+✓ Total tables: 21+ tables
+✓ Prospect tables: 4 (prospects, prospect_favorites, scheduled_viewings, recently_viewed)
+✓ No error messages
+✓ All foreign keys created
+
+✅ Verification Status: [ ] Complete
+
+================================================================================
+STEP 4: SEED SAMPLE DATA (OPTIONAL)
+================================================================================
+
+This step adds realistic test data for development.
+
+1. Ensure migration completed successfully
+2. Open: migrations/seed-sample-data.sql
+3. Review the data being inserted:
+   - 3 agencies
+   - 4 users (including agents)
+   - 3 agent profiles
+   - 8 properties
+   - 4 leads
+   - 3 prospects
+   - Scheduled viewings
+   - Favorites and viewing history
+
+4. Click Execute (⚡)
+5. Review summary output:
+   - Agencies: 3
+   - Users: 4
+   - Agents: 3
+   - Properties: 8
+   - Leads: 4
+   - Prospects: 3
+
+6. Test login credentials:
+   Email: agent@test.com
+   Password: agent123
+
+✅ Sample Data Status: [ ] Complete
+
+================================================================================
+STEP 5: TEST THE APPLICATION
+================================================================================
+
+1. Ensure dev server is running:
+   → Open PowerShell
+   → cd "C:\Users\Edward\Dropbox\PC\Desktop\real_estate_portal"
+   → pnpm dev
+
+2. Open browser:
+   → Navigate to: http://localhost:5173
+
+3. Test features:
+   ✓ Browse properties (should show 8 sample properties)
+   ✓ View property details
+   ✓ Test login with: agent@test.com / agent123
+   ✓ Access agent dashboard
+   ✓ Test prospect dashboard (scroll for calculator)
+   ✓ Enter financial details
+   ✓ Schedule property viewing
+
+4. Check database updates:
+   → Refresh MySQL Workbench
+   → Run: SELECT * FROM prospects ORDER BY id DESC LIMIT 5;
+   → Run: SELECT * FROM scheduled_viewings ORDER BY id DESC LIMIT 5;
+
+✅ Testing Status: [ ] Complete
+
+================================================================================
+TROUBLESHOOTING
+================================================================================
+
+Problem: "Table already exists" errors
+Solution: This is normal if running migration multiple times. 
+          Script uses "IF NOT EXISTS" to prevent conflicts.
+
+Problem: SOURCE command fails in Workbench
+Solution: Use Option B (run scripts individually)
+          Or update SOURCE paths to absolute paths
+
+Problem: Foreign key constraint fails
+Solution: Ensure scripts run in correct order
+          Check that parent tables exist before child tables
+
+Problem: Authentication fails
+Solution: Verify .env file has correct DATABASE_URL
+          Ensure MySQL user has proper permissions
+
+Problem: Can't connect to MySQL
+Solution: Check MySQL is running on port 3307
+          Verify credentials: app_user / AppPassword123
+
+Problem: Sample data fails to insert
+Solution: Ensure migration completed successfully first
+          Check all required tables exist
+          Verify no duplicate data exists
+
+================================================================================
+ROLLBACK PROCEDURE (If needed)
+================================================================================
+
+If you need to start over:
+
+1. Drop the database:
+   DROP DATABASE IF EXISTS real_estate_portal;
+
+2. Restore from backup (if you created one):
+   → Open PowerShell
+   → mysql -u app_user -p -h localhost -P 3307 < backups/backup_YYYYMMDD.sql
+
+3. Or start fresh:
+   → Re-run Step 2 (Main Migration)
+
+================================================================================
+COMPLETION CHECKLIST
+================================================================================
+
+[ ] Step 1: Backup created (if needed)
+[ ] Step 2: Migration executed successfully
+[ ] Step 3: All 21+ tables verified
+[ ] Step 4: Sample data seeded (optional)
+[ ] Step 5: Application tested
+[ ] No errors in console
+[ ] Can login and view properties
+[ ] Prospect dashboard working
+[ ] Ready for development! 🎉
+
+================================================================================
+NEXT STEPS
+================================================================================
+
+After successful migration:
+
+1. Development:
+   - Start building features
+   - Use sample data for testing
+   - Create more test prospects
+
+2. Production Prep:
+   - Don't run seed-sample-data.sql in production
+   - Create proper backup schedule
+   - Set up monitoring
+
+3. Documentation:
+   - Keep migration files in version control
+   - Document any custom changes
+   - Track schema versions
+
+================================================================================
+SUPPORT
+================================================================================
+
+If you encounter issues:
+1. Check the error message carefully
+2. Verify all prerequisites are met
+3. Review the troubleshooting section
+4. Check MySQL error logs
+5. Ensure .env configuration is correct
+
+Database should now be fully set up and ready for the SA Property Portal! 🚀
+================================================================================
