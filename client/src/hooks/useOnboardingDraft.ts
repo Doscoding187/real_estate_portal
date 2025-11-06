@@ -1,8 +1,16 @@
-import { useEffect, useCallback } from 'react';
-import { debounce } from 'lodash-es';
+import { useEffect, useCallback, useRef } from 'react';
 
 const DRAFT_KEY = 'agency_onboarding_draft';
 const DRAFT_EXPIRY_HOURS = 72;
+
+// Simple debounce implementation
+function debounce<T extends (...args: any[]) => any>(func: T, wait: number): T {
+  let timeout: ReturnType<typeof setTimeout> | null = null;
+  return ((...args: Parameters<T>) => {
+    if (timeout) clearTimeout(timeout);
+    timeout = setTimeout(() => func(...args), wait);
+  }) as T;
+}
 
 export interface OnboardingDraftData {
   basicInfo?: any;
