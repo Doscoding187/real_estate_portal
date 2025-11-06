@@ -1,12 +1,15 @@
 import { defineConfig } from "drizzle-kit";
 
-const connectionString = process.env.DATABASE_URL || "file:./sqlite.db";
-
 export default defineConfig({
   schema: "./drizzle/schema.ts",
   out: "./drizzle",
-  dialect: "sqlite",
+  dialect: "mysql",
   dbCredentials: {
-    url: connectionString.replace('file:', ''),
+    host: "gateway01.ap-northeast-1.prod.aws.tidbcloud.com",
+    port: 4000,
+    user: "292qWmvn2YGy2jW.root",
+    password: "TOdjCJY1bepCcJg1",
+    database: "listify_property_sa",
+    ssl: {},
   },
 });
