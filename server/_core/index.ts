@@ -34,17 +34,34 @@ async function startServer() {
   const app = express();
   const server = createServer(app);
 
-  // Enable CORS for Vercel frontend
+  // CORS Configuration - Allow Vercel frontend and local development
+  const allowedOrigins = [
+    'http://localhost:5173', // Vite dev
+    'http://localhost:3000', // Local dev
+    'https://real-estate-portal-xi.vercel.app', // Vercel production
+    'https://realestateportal-production-8e32.up.railway.app', // Railway backend (for webhook testing)
+  ];
+
   app.use(
     cors({
-      origin: [
-        'http://localhost:5173', // Vite dev
-        'http://localhost:3000', // Local dev
-        'https://*.vercel.app', // All Vercel deployments
-      ],
+      origin: (origin, callback) => {
+        // Allow requests with no origin (mobile apps, Postman, etc.)
+        if (!origin) return callback(null, true);
+
+        // Check if origin is in allowed list or matches vercel.app pattern
+        if (allowedOrigins.includes(origin) || origin.endsWith('.vercel.app')) {
+          console.log(`✅ CORS: Allowed origin: ${origin}`);
+          callback(null, true);
+        } else {
+          console.warn(`❌ CORS: Blocked origin: ${origin}`);
+          callback(new Error('Not allowed by CORS'));
+        }
+      },
       credentials: true,
       methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
       allowedHeaders: ['Content-Type', 'Authorization', 'trpc-batch-mode'],
+      exposedHeaders: ['Set-Cookie'],
+      maxAge: 86400, // 24 hours
     }),
   );
 
