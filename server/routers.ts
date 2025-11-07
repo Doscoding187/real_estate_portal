@@ -652,7 +652,15 @@ export const appRouter = router({
     getFavorites: publicProcedure
       .input(z.object({ sessionId: z.string() }))
       .query(async ({ input }) => {
-        return await db.getProspectFavorites(input.sessionId);
+        try {
+          const results = await db.getProspectFavorites(input.sessionId);
+          // Always return array, even if empty
+          return Array.isArray(results) ? results : [];
+        } catch (error) {
+          console.error('[prospects.getFavorites] Error:', error);
+          // Return empty array to prevent 500 error
+          return [];
+        }
       }),
 
     scheduleViewing: publicProcedure
@@ -731,7 +739,15 @@ export const appRouter = router({
     getRecentlyViewed: publicProcedure
       .input(z.object({ sessionId: z.string() }))
       .query(async ({ input }) => {
-        return await db.getRecentlyViewed(input.sessionId);
+        try {
+          const results = await db.getRecentlyViewed(input.sessionId);
+          // Always return array, even if empty
+          return Array.isArray(results) ? results : [];
+        } catch (error) {
+          console.error('[prospects.getRecentlyViewed] Error:', error);
+          // Return empty array to prevent 500 error
+          return [];
+        }
       }),
 
     getProspectProgress: publicProcedure

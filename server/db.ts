@@ -742,7 +742,11 @@ export async function addProspectFavorite(sessionId: string, propertyId: number)
   const db = await getDb();
   if (!db) throw new Error('Database not available');
 
-  await db.insert(prospectFavorites).values({ sessionId, propertyId });
+  // Get prospect ID from sessionId
+  const prospect = await getProspect(sessionId);
+  if (!prospect) throw new Error('Prospect not found');
+
+  await db.insert(prospectFavorites).values({ prospectId: prospect.id, propertyId });
   return { success: true };
 }
 
@@ -750,10 +754,17 @@ export async function removeProspectFavorite(sessionId: string, propertyId: numb
   const db = await getDb();
   if (!db) throw new Error('Database not available');
 
+  // Get prospect ID from sessionId
+  const prospect = await getProspect(sessionId);
+  if (!prospect) throw new Error('Prospect not found');
+
   await db
     .delete(prospectFavorites)
     .where(
-      and(eq(prospectFavorites.sessionId, sessionId), eq(prospectFavorites.propertyId, propertyId)),
+      and(
+        eq(prospectFavorites.prospectId, prospect.id),
+        eq(prospectFavorites.propertyId, propertyId),
+      ),
     );
 
   return { success: true };
@@ -763,17 +774,33 @@ export async function getProspectFavorites(sessionId: string) {
   const db = await getDb();
   if (!db) return [];
 
-  return await db
-    .select({
-      id: prospectFavorites.id,
-      propertyId: prospectFavorites.propertyId,
-      property: properties,
-      createdAt: prospectFavorites.createdAt,
-    })
-    .from(prospectFavorites)
-    .innerJoin(properties, eq(prospectFavorites.propertyId, properties.id))
-    .where(eq(prospectFavorites.sessionId, sessionId))
-    .orderBy(desc(prospectFavorites.createdAt));
+  try {
+    // First get the prospect by sessionId
+    const prospect = await getProspect(sessionId);
+    if (!prospect) {
+      console.log('[getProspectFavorites] No prospect found for sessionId:', sessionId);
+      return [];
+    }
+
+    const results = await db
+      .select({
+        id: prospectFavorites.id,
+        propertyId: prospectFavorites.propertyId,
+        property: properties,
+        createdAt: prospectFavorites.createdAt,
+      })
+      .from(prospectFavorites)
+      .innerJoin(properties, eq(prospectFavorites.propertyId, properties.id))
+      .where(eq(prospectFavorites.prospectId, prospect.id))
+      .orderBy(desc(prospectFavorites.createdAt));
+
+    // Ensure we always return an array, even if results is null/undefined
+    return Array.isArray(results) ? results : [];
+  } catch (error) {
+    console.error('[getProspectFavorites] Database query failed:', error);
+    // Return empty array instead of throwing to prevent 500 errors
+    return [];
+  }
 }
 
 export async function scheduleViewing(viewingData: any) {
@@ -788,23 +815,37 @@ export async function getScheduledViewings(sessionId: string) {
   const db = await getDb();
   if (!db) return [];
 
-  return await db
-    .select({
-      id: scheduledViewings.id,
-      propertyId: scheduledViewings.propertyId,
-      property: properties,
-      agentId: scheduledViewings.agentId,
-      agent: agents,
-      scheduledAt: scheduledViewings.scheduledAt,
-      status: scheduledViewings.status,
-      notes: scheduledViewings.notes,
-      createdAt: scheduledViewings.createdAt,
-    })
-    .from(scheduledViewings)
-    .innerJoin(properties, eq(scheduledViewings.propertyId, properties.id))
-    .leftJoin(agents, eq(scheduledViewings.agentId, agents.id))
-    .where(eq(scheduledViewings.sessionId, sessionId))
-    .orderBy(scheduledViewings.scheduledAt);
+  try {
+    // Get prospect ID from sessionId
+    const prospect = await getProspect(sessionId);
+    if (!prospect) {
+      console.log('[getScheduledViewings] No prospect found for sessionId:', sessionId);
+      return [];
+    }
+
+    const results = await db
+      .select({
+        id: scheduledViewings.id,
+        propertyId: scheduledViewings.propertyId,
+        property: properties,
+        agentId: scheduledViewings.agentId,
+        agent: agents,
+        scheduledAt: scheduledViewings.scheduledAt,
+        status: scheduledViewings.status,
+        notes: scheduledViewings.notes,
+        createdAt: scheduledViewings.createdAt,
+      })
+      .from(scheduledViewings)
+      .innerJoin(properties, eq(scheduledViewings.propertyId, properties.id))
+      .leftJoin(agents, eq(scheduledViewings.agentId, agents.id))
+      .where(eq(scheduledViewings.prospectId, prospect.id))
+      .orderBy(scheduledViewings.scheduledAt);
+
+    return Array.isArray(results) ? results : [];
+  } catch (error) {
+    console.error('[getScheduledViewings] Database query failed:', error);
+    return [];
+  }
 }
 
 export async function updateViewingStatus(viewingId: number, status: string) {
@@ -826,11 +867,17 @@ export async function trackPropertyView(sessionId: string, propertyId: number) {
   const db = await getDb();
   if (!db) throw new Error('Database not available');
 
+  // Get prospect ID from sessionId
+  const prospect = await getProspect(sessionId);
+  if (!prospect) throw new Error('Prospect not found');
+
   // First check if this property was recently viewed by this prospect
   const existing = await db
     .select()
     .from(recentlyViewed)
-    .where(and(eq(recentlyViewed.sessionId, sessionId), eq(recentlyViewed.propertyId, propertyId)))
+    .where(
+      and(eq(recentlyViewed.prospectId, prospect.id), eq(recentlyViewed.propertyId, propertyId)),
+    )
     .limit(1);
 
   if (existing.length > 0) {
@@ -841,12 +888,12 @@ export async function trackPropertyView(sessionId: string, propertyId: number) {
         viewedAt: new Date(),
       })
       .where(
-        and(eq(recentlyViewed.sessionId, sessionId), eq(recentlyViewed.propertyId, propertyId)),
+        and(eq(recentlyViewed.prospectId, prospect.id), eq(recentlyViewed.propertyId, propertyId)),
       );
   } else {
     // Insert new record
     await db.insert(recentlyViewed).values({
-      sessionId,
+      prospectId: prospect.id,
       propertyId,
       viewedAt: new Date(),
     });
@@ -859,18 +906,34 @@ export async function getRecentlyViewed(sessionId: string) {
   const db = await getDb();
   if (!db) return [];
 
-  return await db
-    .select({
-      id: recentlyViewed.id,
-      propertyId: recentlyViewed.propertyId,
-      property: properties,
-      viewedAt: recentlyViewed.viewedAt,
-    })
-    .from(recentlyViewed)
-    .innerJoin(properties, eq(recentlyViewed.propertyId, properties.id))
-    .where(eq(recentlyViewed.sessionId, sessionId))
-    .orderBy(desc(recentlyViewed.viewedAt))
-    .limit(10);
+  try {
+    // First get the prospect by sessionId
+    const prospect = await getProspect(sessionId);
+    if (!prospect) {
+      console.log('[getRecentlyViewed] No prospect found for sessionId:', sessionId);
+      return [];
+    }
+
+    const results = await db
+      .select({
+        id: recentlyViewed.id,
+        propertyId: recentlyViewed.propertyId,
+        property: properties,
+        viewedAt: recentlyViewed.viewedAt,
+      })
+      .from(recentlyViewed)
+      .innerJoin(properties, eq(recentlyViewed.propertyId, properties.id))
+      .where(eq(recentlyViewed.prospectId, prospect.id))
+      .orderBy(desc(recentlyViewed.viewedAt))
+      .limit(10);
+
+    // Ensure we always return an array, even if results is null/undefined
+    return Array.isArray(results) ? results : [];
+  } catch (error) {
+    console.error('[getRecentlyViewed] Database query failed:', error);
+    // Return empty array instead of throwing to prevent 500 errors
+    return [];
+  }
 }
 
 export async function updateProspectProgress(
