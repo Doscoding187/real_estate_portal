@@ -10,6 +10,7 @@
   "scripts": {
     "dev": "cross-env NODE_ENV=development tsx watch server/_core/index.ts",
     "build": "vite build && tsx --tsconfig tsconfig.json scripts/build-backend.ts",
+    "build:prod": "cross-env NODE_ENV=production pnpm build",
     "build:frontend": "vite build",
     "build:backend": "tsx --tsconfig tsconfig.json scripts/build-backend.ts",
     "start": "node dist/index.js",
@@ -17,7 +18,8 @@
     "lint": "eslint client/src/**/*.{ts,tsx} server/**/*.{ts,tsx} shared/**/*.{ts,tsx} --fix",
     "format": "prettier --write client/src/**/*.{ts,tsx,json} server/**/*.{ts,tsx,json} shared/**/*.{ts,tsx,json}",
     "test": "vitest run",
-    "db:push": "drizzle-kit generate && drizzle-kit migrate"
+    "db:push": "drizzle-kit generate && drizzle-kit migrate",
+    "db:generate": "drizzle-kit generate"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.693.0",

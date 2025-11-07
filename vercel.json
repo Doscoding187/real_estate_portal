@@ -1,10 +1,17 @@
 {
   "version": 2,
-  "buildCommand": "pnpm build",
+  "buildCommand": "pnpm build:frontend",
   "devCommand": "pnpm dev",
   "installCommand": "pnpm install",
   "framework": null,
   "outputDirectory": "dist/public",
+  "cleanUrls": true,
+  "builds": [
+    {
+      "src": "dist/public/**",
+      "use": "@vercel/static"
+    }
+  ],
   "env": {
     "NODE_ENV": "production"
   },
@@ -13,12 +20,6 @@
       "NODE_ENV": "production"
     }
   },
-  "rewrites": [
-    {
-      "source": "/api/:path*",
-      "destination": "/api/:path*"
-    }
-  ],
   "headers": [
     {
       "source": "/(.*)",
