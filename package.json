@@ -9,9 +9,9 @@
   },
   "scripts": {
     "dev": "cross-env NODE_ENV=development tsx watch server/_core/index.ts",
-    "build": "vite build && esbuild server/_core/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist",
+    "build": "vite build && tsx --tsconfig tsconfig.json scripts/build-backend.ts",
     "build:frontend": "vite build",
-    "build:backend": "esbuild server/_core/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist",
+    "build:backend": "tsx --tsconfig tsconfig.json scripts/build-backend.ts",
     "start": "node dist/index.js",
     "check": "tsc --noEmit",
     "lint": "eslint client/src/**/*.{ts,tsx} server/**/*.{ts,tsx} shared/**/*.{ts,tsx} --fix",
