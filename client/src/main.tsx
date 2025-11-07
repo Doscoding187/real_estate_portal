@@ -37,10 +37,18 @@ queryClient.getMutationCache().subscribe(event => {
   }
 });
 
+const getBaseUrl = () => {
+  if (typeof window !== 'undefined') {
+    // Browser: use VITE_API_URL environment variable or fallback to current origin
+    return import.meta.env.VITE_API_URL || window.location.origin;
+  }
+  return import.meta.env.VITE_API_URL || 'http://localhost:3000';
+};
+
 const trpcClient = trpc.createClient({
   links: [
     httpBatchLink({
-      url: '/api/trpc',
+      url: `${getBaseUrl()}/api/trpc`,
       transformer: superjson,
       fetch(input, init) {
         return globalThis.fetch(input, {
