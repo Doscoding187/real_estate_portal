@@ -29,10 +29,17 @@ let _db: any = null;
 export async function getDb() {
   if (!_db && process.env.DATABASE_URL) {
     try {
-      const poolConnection = mysql.createPool(process.env.DATABASE_URL);
+      // TiDB Cloud requires SSL for secure connections
+      // Parse the DATABASE_URL and add explicit SSL configuration
+      const poolConnection = mysql.createPool({
+        uri: process.env.DATABASE_URL,
+        ssl: {
+          rejectUnauthorized: true,
+        },
+      });
       _db = drizzle(poolConnection);
       console.log(
-        '[Database] Connected to MySQL:',
+        '[Database] Connected to MySQL with SSL:',
         process.env.DATABASE_URL.replace(/:([^:@]+)@/, ':****@'),
       );
     } catch (error) {
