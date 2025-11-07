@@ -575,7 +575,10 @@ export const appRouter = router({
     getProspect: publicProcedure
       .input(z.object({ sessionId: z.string() }))
       .query(async ({ input }) => {
-        return await db.getProspect(input.sessionId);
+        const prospect = await db.getProspect(input.sessionId);
+        // Return null instead of undefined if prospect not found
+        // This prevents tRPC client parsing errors
+        return prospect ?? null;
       }),
 
     calculateBuyability: publicProcedure
