@@ -1,11 +1,19 @@
+import { config } from 'dotenv';
 import { drizzle } from 'drizzle-orm/mysql2';
 import mysql from 'mysql2/promise';
 import { properties, propertyImages, users } from './drizzle/schema';
 
+// Load environment variables
+config();
+
 async function seedData() {
+  if (!process.env.DATABASE_URL) {
+    throw new Error('DATABASE_URL environment variable is not set');
+  }
+
   // Create connection pool with SSL for TiDB Cloud
   const poolConnection = mysql.createPool({
-    uri: process.env.DATABASE_URL!,
+    uri: process.env.DATABASE_URL,
     ssl: {
       rejectUnauthorized: true,
     },
@@ -13,13 +21,30 @@ async function seedData() {
   const db = drizzle(poolConnection);
 
   console.log('Starting database seeding...');
-  console.log('DATABASE_URL:', process.env.DATABASE_URL?.replace(/:([^:@]+)@/, ':****@'));
+  console.log('DATABASE_URL:', process.env.DATABASE_URL.replace(/:([^:@]+)@/, ':****@'));
 
-  // Get the first user (owner) from the database
-  const allUsers = await db.select().from(users).limit(1);
-  const ownerId = allUsers[0]?.id || 1;
+  // Get or create the first user (owner)
+  let allUsers = await db.select().from(users).limit(1);
+  let ownerId: number;
 
-  console.log(`Using owner ID: ${ownerId}`);
+  if (allUsers.length === 0) {
+    console.log('No users found. Creating default admin user...');
+    const userResult = await db.insert(users).values({
+      openId: 'admin_default',
+      name: 'System Administrator',
+      email: 'admin@realestate.com',
+      role: 'super_admin',
+      loginMethod: 'system',
+      emailVerified: 1,
+      isSubaccount: 0,
+      lastSignedIn: new Date(),
+    });
+    ownerId = Number(userResult[0].insertId);
+    console.log(`✓ Created admin user with ID: ${ownerId}`);
+  } else {
+    ownerId = allUsers[0].id;
+    console.log(`Using existing owner ID: ${ownerId}`);
+  }
 
   // Sample property data - South African locations
   const sampleProperties = [
@@ -270,7 +295,15 @@ async function seedData() {
   for (const prop of sampleProperties) {
     const { imageFile, ...propertyData } = prop;
     
-    const result = await db.insert(properties).values(propertyData);
+    // Add missing required fields
+    const completePropertyData = {
+      ...propertyData,
+      transactionType: propertyData.listingType === 'rent' ? ('rent' as const) : ('sale' as const),
+      views: 0,
+      enquiries: 0,
+    };
+    
+    const result = await db.insert(properties).values(completePropertyData);
     const propertyId = Number(result[0].insertId);
 
     // Add property image
