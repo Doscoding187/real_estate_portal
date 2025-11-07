@@ -1,10 +1,19 @@
-import { drizzle } from "drizzle-orm/mysql2";
-import { properties, propertyImages, users } from "./drizzle/schema";
+import { drizzle } from 'drizzle-orm/mysql2';
+import mysql from 'mysql2/promise';
+import { properties, propertyImages, users } from './drizzle/schema';
 
 async function seedData() {
-  const db = drizzle(process.env.DATABASE_URL!);
+  // Create connection pool with SSL for TiDB Cloud
+  const poolConnection = mysql.createPool({
+    uri: process.env.DATABASE_URL!,
+    ssl: {
+      rejectUnauthorized: true,
+    },
+  });
+  const db = drizzle(poolConnection);
 
-  console.log("Starting database seeding...");
+  console.log('Starting database seeding...');
+  console.log('DATABASE_URL:', process.env.DATABASE_URL?.replace(/:([^:@]+)@/, ':****@'));
 
   // Get the first user (owner) from the database
   const allUsers = await db.select().from(users).limit(1);

@@ -1,5 +1,15 @@
 {
   "buildCommand": "pnpm build:frontend",
   "outputDirectory": "dist/public",
-  "framework": null
+  "framework": null,
+  "routes": [
+    {
+      "src": "/assets/(.*)",
+      "dest": "/assets/$1"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/index.html"
+    }
+  ]
 }
