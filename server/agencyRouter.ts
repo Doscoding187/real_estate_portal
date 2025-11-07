@@ -630,4 +630,79 @@ export const agencyRouter = router({
       }
       return await getAgentPerformanceLeaderboard(ctx.user.agencyId, input?.months || 3);
     }),
+
+  /**
+   * Get agency branding (public endpoint for theme customization)
+   */
+  getBranding: publicProcedure
+    .input(z.object({ agencyId: z.number().optional() }).optional())
+    .query(async ({ input, ctx }) => {
+      const db = await getDb();
+      if (!db) {
+        // Return default branding if database is not available
+        return {
+          companyName: 'Real Estate Portal',
+          primaryColor: '#1e40af',
+          secondaryColor: '#3b82f6',
+          logoUrl: null,
+          tagline: 'Find Your Dream Home',
+          isEnabled: true,
+        };
+      }
+
+      try {
+        // Try to get branding from user's agency or provided agencyId
+        const targetAgencyId = input?.agencyId || ctx.user?.agencyId;
+
+        if (!targetAgencyId) {
+          // Return default branding if no agency
+          return {
+            companyName: 'Real Estate Portal',
+            primaryColor: '#1e40af',
+            secondaryColor: '#3b82f6',
+            logoUrl: null,
+            tagline: 'Find Your Dream Home',
+            isEnabled: true,
+          };
+        }
+
+        const [branding] = await db
+          .select()
+          .from(agencyBranding)
+          .where(eq(agencyBranding.agencyId, targetAgencyId))
+          .limit(1);
+
+        if (!branding || !branding.isEnabled) {
+          // Return default if no branding found or disabled
+          return {
+            companyName: 'Real Estate Portal',
+            primaryColor: '#1e40af',
+            secondaryColor: '#3b82f6',
+            logoUrl: null,
+            tagline: 'Find Your Dream Home',
+            isEnabled: true,
+          };
+        }
+
+        return {
+          companyName: branding.companyName,
+          primaryColor: branding.primaryColor,
+          secondaryColor: branding.secondaryColor,
+          logoUrl: branding.logoUrl,
+          tagline: branding.tagline,
+          isEnabled: Boolean(branding.isEnabled),
+        };
+      } catch (error) {
+        console.error('[agency.getBranding] Error:', error);
+        // Return default on error
+        return {
+          companyName: 'Real Estate Portal',
+          primaryColor: '#1e40af',
+          secondaryColor: '#3b82f6',
+          logoUrl: null,
+          tagline: 'Find Your Dream Home',
+          isEnabled: true,
+        };
+      }
+    }),
 });
