@@ -12,6 +12,12 @@
       "use": "@vercel/static"
     }
   ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "/index.html"
+    }
+  ],
   "env": {
     "NODE_ENV": "production"
   },
