@@ -14,6 +14,7 @@ import {
   prospectFavorites,
   scheduledViewings,
   recentlyViewed,
+  agents,
   type User,
   type Property,
   type Prospect,
