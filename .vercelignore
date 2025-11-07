@@ -10,7 +10,6 @@ coverage
 .idea
 *.md
 migrations
-patches
 drizzle
 *.sql
 test-*.ts
