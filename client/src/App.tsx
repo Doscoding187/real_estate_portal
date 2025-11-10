@@ -31,6 +31,8 @@ import AcceptInvitation from './pages/AcceptInvitation';
 import ExploreFeed from './pages/ExploreFeed';
 import AgencyOnboarding from './pages/AgencyOnboarding';
 import OnboardingSuccess from './pages/OnboardingSuccess';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -52,7 +54,7 @@ function Router() {
       <Route path="/admin/agencies/create" component={CreateAgency} />
       <Route path="/admin/users" component={UserManagement} />
       <Route path="/admin/audit-logs" component={AuditLogs} />
-      <Route path="/admin/listings" component={ListingOversight} />
+      <Routhe path="/admin/listings" component={ListingOversight} />
       <Route path="/admin/subscriptions" component={SubscriptionManagement} />
       <Route path="/admin/settings" component={PlatformSettings} />
       <Route path="/agency/dashboard" component={AgencyDashboard} />
@@ -62,6 +64,8 @@ function Router() {
       <Route path="/agency/agents" component={AgentManagement} />
       <Route path="/accept-invitation" component={AcceptInvitation} />
       <Route path="/login" component={Login} />
+      <Route path="/forgot-password" component={ForgotPassword} />
+      <Route path="/reset-password" component={ResetPassword} />
       <Route path={'/404'} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />

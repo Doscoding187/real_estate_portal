@@ -9,9 +9,11 @@ import type { Request } from 'express';
 import { SignJWT, jwtVerify } from 'jose';
 import { parse as parseCookieHeader } from 'cookie';
 import bcrypt from 'bcryptjs';
+import crypto from 'crypto';
 import type { User } from '../../drizzle/schema';
 import * as db from '../db';
 import { ENV } from './env';
+import { EmailService } from './emailService';
 
 export type SessionPayload = {
   userId: number;
@@ -164,78 +166,172 @@ class AuthService {
   /**
    * Register a new user with email and password
    */
-  async register(
-    email: string,
-    password: string,
-    name?: string,
-  ): Promise<{ user: User; sessionToken: string }> {
-    // Check if user already exists
-    const existingUser = await db.getUserByEmail(email);
-    if (existingUser) {
-      throw new Error('User with this email already exists');
+    async register(
+      email: string,
+      password: string,
+      name?: string,
+    ): Promise<{ user: User; sessionToken: string }> {
+      // Check if user already exists
+      const existingUser = await db.getUserByEmail(email);
+      if (existingUser) {
+        throw new Error('User with this email already exists');
+      }
+  
+      // Hash password
+      const passwordHash = await this.hashPassword(password);
+  
+      // Generate email verification token
+      const emailVerificationToken = crypto.randomBytes(32).toString('hex');
+  
+      // Create user
+      const userId = await db.createUser({
+        email,
+        passwordHash,
+        name: name || email.split('@')[0],
+        emailVerified: 0,
+        loginMethod: 'email',
+        role: 'visitor', // Default role for new registrations
+        emailVerificationToken,
+      });
+  
+      // Get the created user
+      const user = await db.getUserById(userId);
+      if (!user) {
+        throw new Error('Failed to create user');
+      }
+  
+      // Send verification email
+      const verificationLink = `${ENV.appUrl}/verify-email?token=${emailVerificationToken}`;
+      await EmailService.sendEmail({
+        to: user.email!,
+        subject: 'Verify Your Email Address',
+        html: `<p>Welcome! Please verify your email address by clicking the link below:</p><a href="${verificationLink}">${verificationLink}</a>`,
+        text: `Welcome! Please verify your email address by copying and pasting this link into your browser: ${verificationLink}`,
+      });
+  
+      // Create session token
+      const sessionToken = await this.createSessionToken(
+        user.id,
+        user.email!,
+        user.name || user.email!,
+      );
+  
+      return { user, sessionToken };
+    }
+  
+    /**
+     * Login with email and password
+     */
+    async login(
+      email: string,
+      password: string,
+      rememberMe?: boolean,
+    ): Promise<{ user: User; sessionToken: string }> {
+      // Get user by email
+      const user = await db.getUserByEmail(email);
+      if (!user) {
+        throw ForbiddenError('Invalid email or password');
+      }
+  
+      // Check if user has password (not OAuth-only)
+      if (!user.passwordHash) {
+        throw ForbiddenError('This account uses OAuth login. Please use your original login method.');
+      }
+  
+      // Verify password
+      const isValid = await this.verifyPassword(password, user.passwordHash);
+      if (!isValid) {
+        throw ForbiddenError('Invalid email or password');
+      }
+  
+      // Check if email is verified
+      if (!user.emailVerified) {
+        throw ForbiddenError('Please verify your email address before logging in.');
+      }
+  
+      // Update last signed in
+      await db.updateUserLastSignIn(user.id);
+  
+      // Create session token
+      const expiresInMs = rememberMe
+        ? 30 * 24 * 60 * 60 * 1000 // 30 days
+        : 24 * 60 * 60 * 1000; // 24 hours
+
+      const sessionToken = await this.createSessionToken(
+        user.id,
+        user.email!,
+        user.name || user.email!,
+        { expiresInMs },
+      );
+  
+      return { user, sessionToken };
     }
 
-    // Hash password
-    const passwordHash = await this.hashPassword(password);
-
-    // Create user
-    const userId = await db.createUser({
-      email,
-      passwordHash,
-      name: name || email.split('@')[0],
-      emailVerified: 0,
-      loginMethod: 'email',
-      role: 'visitor', // Default role for new registrations
-    });
-
-    // Get the created user
-    const user = await db.getUserById(userId);
+  /**
+   * Forgot password - generate and send reset token
+   */
+  async forgotPassword(email: string): Promise<void> {
+    const user = await db.getUserByEmail(email);
     if (!user) {
-      throw new Error('Failed to create user');
+      // Don't reveal that the user doesn't exist
+      return;
     }
 
-    // Create session token
-    const sessionToken = await this.createSessionToken(
-      user.id,
-      user.email!,
-      user.name || user.email!,
-    );
+    // Generate a random token
+    const token = crypto.randomBytes(32).toString('hex');
+    const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
 
-    return { user, sessionToken };
+    // Set token expiry to 1 hour from now
+    const expiresAt = new Date(Date.now() + 3600000); // 1 hour
+
+    // Store hashed token and expiry in the database
+    await db.updateUserPasswordResetToken(user.id, hashedToken, expiresAt);
+
+    // Send email with reset link
+    const resetLink = `${ENV.appUrl}/reset-password?token=${token}`;
+    
+    await EmailService.sendEmail({
+      to: user.email!,
+      subject: 'Password Reset Request',
+      html: `<p>You requested a password reset. Click the link below to reset your password:</p><a href="${resetLink}">${resetLink}</a><p>This link will expire in 1 hour.</p>`,
+      text: `You requested a password reset. Copy and paste this link into your browser to reset your password: ${resetLink}`
+    });
   }
 
   /**
-   * Login with email and password
+   * Reset password using a token
    */
-  async login(email: string, password: string): Promise<{ user: User; sessionToken: string }> {
-    // Get user by email
-    const user = await db.getUserByEmail(email);
+  async resetPassword(token: string, newPassword: string): Promise<void> {
+    const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+
+    const user = await db.getUserByPasswordResetToken(hashedToken);
+
+    if (!user || !user.passwordResetTokenExpiresAt) {
+      throw new Error('Invalid or expired password reset token.');
+    }
+
+    if (new Date() > new Date(user.passwordResetTokenExpiresAt)) {
+      throw new Error('Invalid or expired password reset token.');
+    }
+
+    // Hash new password
+    const passwordHash = await this.hashPassword(newPassword);
+
+    // Update password and clear reset token fields
+    await db.updateUserPassword(user.id, passwordHash);
+  }
+
+  /**
+   * Verify email address using a token
+   */
+  async verifyEmail(token: string): Promise<void> {
+    const user = await db.getUserByEmailVerificationToken(token);
+
     if (!user) {
-      throw ForbiddenError('Invalid email or password');
+      throw new Error('Invalid or expired email verification token.');
     }
 
-    // Check if user has password (not OAuth-only)
-    if (!user.passwordHash) {
-      throw ForbiddenError('This account uses OAuth login. Please use your original login method.');
-    }
-
-    // Verify password
-    const isValid = await this.verifyPassword(password, user.passwordHash);
-    if (!isValid) {
-      throw ForbiddenError('Invalid email or password');
-    }
-
-    // Update last signed in
-    await db.updateUserLastSignIn(user.id);
-
-    // Create session token
-    const sessionToken = await this.createSessionToken(
-      user.id,
-      user.email!,
-      user.name || user.email!,
-    );
-
-    return { user, sessionToken };
+    await db.verifyUserEmail(user.id);
   }
 }
 

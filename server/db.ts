@@ -35,7 +35,7 @@ export async function getDb() {
       const poolConnection = mysql.createPool({
         uri: process.env.DATABASE_URL,
         ssl: {
-          rejectUnauthorized: true,
+          rejectUnauthorized: false, // Changed to false to allow self-signed certificates
         },
       });
       _db = drizzle(poolConnection);
@@ -44,7 +44,7 @@ export async function getDb() {
         process.env.DATABASE_URL.replace(/:([^:@]+)@/, ':****@'),
       );
     } catch (error) {
-      console.warn('[Database] Failed to connect:', error);
+      console.error('[Database] Failed to connect:', error);
       _db = null;
     }
   }
@@ -177,6 +177,95 @@ export async function updateUserLastSignIn(userId: number): Promise<void> {
   if (!db) throw new Error('Database not available');
 
   await db.update(users).set({ lastSignedIn: new Date() }).where(eq(users.id, userId));
+}
+
+/**
+ * Update user's password reset token
+ */
+export async function updateUserPasswordResetToken(
+  userId: number,
+  token: string,
+  expiresAt: Date,
+): Promise<void> {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+
+  await db
+    .update(users)
+    .set({
+      passwordResetToken: token,
+      passwordResetTokenExpiresAt: expiresAt,
+    })
+    .where(eq(users.id, userId));
+}
+
+/**
+ * Get user by password reset token
+ */
+export async function getUserByPasswordResetToken(token: string): Promise<User | undefined> {
+  const db = await getDb();
+  if (!db) {
+    console.warn('[Database] Cannot get user: database not available');
+    return undefined;
+  }
+
+  const result = await db
+    .select()
+    .from(users)
+    .where(eq(users.passwordResetToken, token))
+    .limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+/**
+ * Update user's password
+ */
+export async function updateUserPassword(userId: number, passwordHash: string): Promise<void> {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+
+  await db
+    .update(users)
+    .set({
+      passwordHash,
+      passwordResetToken: null,
+      passwordResetTokenExpiresAt: null,
+    })
+    .where(eq(users.id, userId));
+}
+
+/**
+ * Get user by email verification token
+ */
+export async function getUserByEmailVerificationToken(token: string): Promise<User | undefined> {
+  const db = await getDb();
+  if (!db) {
+    console.warn('[Database] Cannot get user: database not available');
+    return undefined;
+  }
+
+  const result = await db
+    .select()
+    .from(users)
+    .where(eq(users.emailVerificationToken, token))
+    .limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+/**
+ * Mark user's email as verified
+ */
+export async function verifyUserEmail(userId: number): Promise<void> {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+
+  await db
+    .update(users)
+    .set({
+      emailVerified: 1,
+      emailVerificationToken: null,
+    })
+    .where(eq(users.id, userId));
 }
 
 // Property queries
