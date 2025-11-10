@@ -87,11 +87,14 @@ async function startServer() {
       createContext,
     }),
   );
-  // development mode uses Vite, production mode uses static files
+  // development mode uses Vite, production mode serves static files
+  // Skip static file serving if SKIP_FRONTEND env var is set (for Railway backend-only deployment)
   if (process.env.NODE_ENV === 'development') {
     await setupVite(app, server);
-  } else {
+  } else if (!process.env.SKIP_FRONTEND) {
     serveStatic(app);
+  } else {
+    console.log('[Server] Skipping frontend static file serving (backend-only mode)');
   }
 
   const preferredPort = parseInt(process.env.PORT || '3000');
