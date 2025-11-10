@@ -38,10 +38,19 @@ import { useAuth } from '@/_core/hooks/useAuth';
 
 export default function Dashboard() {
   const [, setLocation] = useLocation();
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated, user, loading: authLoading } = useAuth();
   const [deletePropertyId, setDeletePropertyId] = useState<number | null>(null);
 
   const isAdmin = user?.role === 'admin';
+
+  // Show a loading state while authentication is being checked
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <p>Loading authentication...</p>
+      </div>
+    );
+  }
 
   // Redirect if not authenticated
   if (!isAuthenticated) {

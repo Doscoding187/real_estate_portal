@@ -22,25 +22,32 @@ function isSecureRequest(req: Request) {
 export function getSessionCookieOptions(
   req: Request,
 ): Pick<CookieOptions, 'domain' | 'httpOnly' | 'path' | 'sameSite' | 'secure'> {
-  // const hostname = req.hostname;
-  // const shouldSetDomain =
-  //   hostname &&
-  //   !LOCAL_HOSTS.has(hostname) &&
-  //   !isIpAddress(hostname) &&
-  //   hostname !== "127.0.0.1" &&
-  //   hostname !== "::1";
+  const hostname = req.hostname;
+  const shouldSetDomain =
+    hostname &&
+    !LOCAL_HOSTS.has(hostname) &&
+    !isIpAddress(hostname) &&
+    hostname !== "127.0.0.1" &&
+    hostname !== "::1";
 
-  // const domain =
-  //   shouldSetDomain && !hostname.startsWith(".")
-  //     ? `.${hostname}`
-  //     : shouldSetDomain
-  //       ? hostname
-  //       : undefined;
+  const domain =
+    shouldSetDomain && !hostname.startsWith(".")
+      ? `.${hostname}`
+      : shouldSetDomain
+        ? hostname
+        : undefined;
+
+  const isProduction = process.env.NODE_ENV === 'production';
+  const isSecure = isSecureRequest(req);
 
   return {
+    domain,
     httpOnly: true,
     path: '/',
-    sameSite: 'lax', // Changed from "none" to "lax" for localhost development
-    secure: isSecureRequest(req),
+    // For cross-domain (Vercel frontend + Railway backend), use 'none'
+    // For same-domain or local dev, use 'lax'
+    sameSite: isProduction && isSecure ? 'none' : 'lax',
+    // Secure cookies required for sameSite: 'none'
+    secure: isProduction && isSecure,
   };
 }

@@ -96,6 +96,7 @@ export default function Login() {
       });
 
       console.log('[Login] Login successful, user:', result.user);
+      console.log('[Login] User role:', result.user?.role);
       toast.success('Logged in successfully!');
 
       // Role-based redirect
@@ -111,6 +112,11 @@ export default function Login() {
       }
 
       // Use hard redirect to ensure fresh page load with cookie
+      console.log('[Login] Redirecting to:', redirectPath);
+      
+      // Small delay to ensure cookie is set before redirect
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
       window.location.href = redirectPath;
     } catch (error) {
       console.error('[Login] Error caught:', error);
