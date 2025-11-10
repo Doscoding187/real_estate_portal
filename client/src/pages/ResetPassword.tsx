@@ -17,6 +17,7 @@ import {
 import { Home, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { APP_TITLE } from '@/const';
+import { apiFetch, ApiError } from '@/lib/api';
 
 const resetPasswordSchema = z
   .object({
@@ -38,13 +39,6 @@ const resetPasswordSchema = z
   });
 
 type ResetPasswordFormData = z.infer<typeof resetPasswordSchema>;
-
-// Get the API base URL
-const getApiUrl = (endpoint: string) => {
-  const baseUrl = import.meta.env.VITE_API_URL || window.location.origin;
-  const cleanEndpoint = endpoint.startsWith('/') ? endpoint.slice(1) : endpoint;
-  return `${baseUrl}/api/${cleanEndpoint}`;
-};
 
 export default function ResetPassword() {
   const [, setLocation] = useLocation();
@@ -71,41 +65,21 @@ export default function ResetPassword() {
 
     setIsLoading(true);
     try {
-      console.log('[ResetPassword] API URL:', getApiUrl('/auth/reset-password'));
-      
-      const response = await fetch(getApiUrl('/auth/reset-password'), {
+      await apiFetch('/auth/reset-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token, newPassword: data.newPassword }),
       });
 
-      // Check if response has content before parsing
-      const contentType = response.headers.get('content-type');
-      if (!contentType || !contentType.includes('application/json')) {
-        console.error('[ResetPassword] Response is not JSON, content-type:', contentType);
-        const text = await response.text();
-        console.error('[ResetPassword] Response body:', text);
-        throw new Error('Server returned an invalid response. Please check server logs.');
-      }
-
-      let result;
-      try {
-        result = await response.json();
-      } catch (jsonError) {
-        console.error('[ResetPassword] Failed to parse JSON:', jsonError);
-        const text = await response.text();
-        console.error('[ResetPassword] Response body that failed to parse:', text);
-        throw new Error('Server returned an invalid JSON response. Please check server logs.');
-      }
-
-      if (!response.ok) {
-        throw new Error(result.error || 'Failed to reset password');
-      }
-
       toast.success('Your password has been reset successfully!');
       setIsSuccess(true);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'An unexpected error occurred.');
+      console.error('[ResetPassword] Error caught:', error);
+      if (error instanceof ApiError) {
+        toast.error(error.body?.error || `Password reset failed (${error.status})`);
+      } else {
+        toast.error(error instanceof Error ? error.message : 'An unexpected error occurred.');
+      }
     } finally {
       setIsLoading(false);
     }

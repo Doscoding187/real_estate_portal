@@ -20,6 +20,7 @@ import { Home, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { APP_TITLE } from '@/const';
 import { trpc } from '@/lib/trpc';
+import { apiFetch, ApiError } from '@/lib/api';
 
 const loginSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -50,13 +51,6 @@ const registerSchema = z
 
 type LoginFormData = z.infer<typeof loginSchema>;
 type RegisterFormData = z.infer<typeof registerSchema>;
-
-// Get the API base URL
-const getApiUrl = (endpoint: string) => {
-  const baseUrl = import.meta.env.VITE_API_URL || window.location.origin;
-  const cleanEndpoint = endpoint.startsWith('/') ? endpoint.slice(1) : endpoint;
-  return `${baseUrl}/api/${cleanEndpoint}`;
-};
 
 export default function Login() {
   const [, setLocation] = useLocation();
@@ -95,52 +89,17 @@ export default function Login() {
     console.log('[Login] onLogin function called with data:', data);
     setIsLoading(true);
     try {
-      console.log('[Login] Starting login request...');
-      console.log('[Login] API URL:', getApiUrl('/auth/login'));
-      
-      const response = await fetch(getApiUrl('/auth/login'), {
+      const result = await apiFetch('/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
-        credentials: 'include',
       });
 
-      console.log('[Login] Response status:', response.status);
-      console.log('[Login] Response headers:', response.headers.get('content-type'));
-
-      // Check if response has content before parsing
-      const contentType = response.headers.get('content-type');
-      if (!contentType || !contentType.includes('application/json')) {
-        console.error('[Login] Response is not JSON, content-type:', contentType);
-        const text = await response.text();
-        console.error('[Login] Response body:', text);
-        throw new Error('Server returned an invalid response. Please check server logs.');
-      }
-
-      let result;
-      try {
-        result = await response.json();
-        console.log('[Login] Response data:', result);
-      } catch (jsonError) {
-        console.error('[Login] Failed to parse JSON:', jsonError);
-        const text = await response.text();
-        console.error('[Login] Response body that failed to parse:', text);
-        throw new Error('Server returned an invalid JSON response. Please check server logs.');
-      }
-
-      if (!response.ok) {
-        console.error('[Login] Response not OK');
-        throw new Error(result.error || 'Login failed');
-      }
-
-      console.log('[Login] Login successful, showing toast');
+      console.log('[Login] Login successful, user:', result.user);
       toast.success('Logged in successfully!');
 
       // Role-based redirect
       const role = result.user?.role;
-      console.log('[Login] User role:', role);
-      console.log('[Login] Full user object:', result.user);
-
       let redirectPath = '/dashboard'; // Default for visitor
 
       if (role === 'super_admin') {
@@ -151,14 +110,15 @@ export default function Login() {
         redirectPath = '/agent/dashboard';
       }
 
-      console.log('[Login] Navigating to:', redirectPath);
-      console.log('[Login] Using hard redirect with window.location.href');
-
       // Use hard redirect to ensure fresh page load with cookie
       window.location.href = redirectPath;
     } catch (error) {
       console.error('[Login] Error caught:', error);
-      toast.error(error instanceof Error ? error.message : 'Login failed');
+      if (error instanceof ApiError) {
+        toast.error(error.body?.error || `Login failed (${error.status})`);
+      } else {
+        toast.error(error instanceof Error ? error.message : 'Login failed');
+      }
       setIsLoading(false);
     }
   };
@@ -166,9 +126,7 @@ export default function Login() {
   const onRegister = async (data: RegisterFormData) => {
     setIsLoading(true);
     try {
-      console.log('[Register] API URL:', getApiUrl('/auth/register'));
-      
-      const response = await fetch(getApiUrl('/auth/register'), {
+      await apiFetch('/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -176,38 +134,18 @@ export default function Login() {
           email: data.email,
           password: data.password,
         }),
-        credentials: 'include',
       });
-
-      // Check if response has content before parsing
-      const contentType = response.headers.get('content-type');
-      if (!contentType || !contentType.includes('application/json')) {
-        console.error('[Register] Response is not JSON, content-type:', contentType);
-        const text = await response.text();
-        console.error('[Register] Response body:', text);
-        throw new Error('Server returned an invalid response. Please check server logs.');
-      }
-
-      let result;
-      try {
-        result = await response.json();
-      } catch (jsonError) {
-        console.error('[Register] Failed to parse JSON:', jsonError);
-        const text = await response.text();
-        console.error('[Register] Response body that failed to parse:', text);
-        throw new Error('Server returned an invalid JSON response. Please check server logs.');
-      }
-
-      if (!response.ok) {
-        throw new Error(result.error || 'Registration failed');
-      }
 
       toast.success('Account created successfully! Please check your email to verify your account.');
       setActiveTab('login');
-      // Clear form
       registerForm.reset();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Registration failed');
+      console.error('[Register] Error caught:', error);
+      if (error instanceof ApiError) {
+        toast.error(error.body?.error || `Registration failed (${error.status})`);
+      } else {
+        toast.error(error instanceof Error ? error.message : 'Registration failed');
+      }
     } finally {
       setIsLoading(false);
     }

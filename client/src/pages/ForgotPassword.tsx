@@ -17,19 +17,13 @@ import {
 import { Home, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { APP_TITLE } from '@/const';
+import { apiFetch, ApiError } from '@/lib/api';
 
 const forgotPasswordSchema = z.object({
   email: z.string().email('Invalid email address'),
 });
 
 type ForgotPasswordFormData = z.infer<typeof forgotPasswordSchema>;
-
-// Get the API base URL
-const getApiUrl = (endpoint: string) => {
-  const baseUrl = import.meta.env.VITE_API_URL || window.location.origin;
-  const cleanEndpoint = endpoint.startsWith('/') ? endpoint.slice(1) : endpoint;
-  return `${baseUrl}/api/${cleanEndpoint}`;
-};
 
 export default function ForgotPassword() {
   const [, setLocation] = useLocation();
@@ -46,41 +40,21 @@ export default function ForgotPassword() {
   const onSubmit = async (data: ForgotPasswordFormData) => {
     setIsLoading(true);
     try {
-      console.log('[ForgotPassword] API URL:', getApiUrl('/auth/forgot-password'));
-      
-      const response = await fetch(getApiUrl('/auth/forgot-password'), {
+      await apiFetch('/auth/forgot-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
       });
 
-      // Check if response has content before parsing
-      const contentType = response.headers.get('content-type');
-      if (!contentType || !contentType.includes('application/json')) {
-        console.error('[ForgotPassword] Response is not JSON, content-type:', contentType);
-        const text = await response.text();
-        console.error('[ForgotPassword] Response body:', text);
-        throw new Error('Server returned an invalid response. Please check server logs.');
-      }
-
-      let result;
-      try {
-        result = await response.json();
-      } catch (jsonError) {
-        console.error('[ForgotPassword] Failed to parse JSON:', jsonError);
-        const text = await response.text();
-        console.error('[ForgotPassword] Response body that failed to parse:', text);
-        throw new Error('Server returned an invalid JSON response. Please check server logs.');
-      }
-
-      if (!response.ok) {
-        throw new Error(result.error || 'Failed to send reset link');
-      }
-
       toast.success('If an account with that email exists, a reset link has been sent.');
       setIsSubmitted(true);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'An unexpected error occurred.');
+      console.error('[ForgotPassword] Error caught:', error);
+      if (error instanceof ApiError) {
+        toast.error(error.body?.error || `Failed to send reset link (${error.status})`);
+      } else {
+        toast.error(error instanceof Error ? error.message : 'An unexpected error occurred.');
+      }
     } finally {
       setIsLoading(false);
     }
