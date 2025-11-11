@@ -3,9 +3,6 @@ import { drizzle } from 'drizzle-orm/mysql2';
 import mysql from 'mysql2/promise';
 import {
   favorites,
-  InsertProperty,
-  InsertPropertyImage,
-  InsertUser,
   properties,
   propertyImages,
   users,
@@ -15,12 +12,6 @@ import {
   scheduledViewings,
   recentlyViewed,
   agents,
-  type User,
-  type Property,
-  type Prospect,
-  type ProspectFavorite,
-  type ScheduledViewing,
-  type RecentlyViewed,
 } from '../drizzle/schema';
 import { ENV } from './_core/env';
 
@@ -50,10 +41,11 @@ export async function getDb() {
     try {
       // TiDB Cloud requires SSL for secure connections
       // Parse the DATABASE_URL and add explicit SSL configuration
+      const isProduction = process.env.NODE_ENV === 'production';
       const poolConnection = mysql.createPool({
         uri: process.env.DATABASE_URL,
         ssl: {
-          rejectUnauthorized: true, // Use true for production with valid certificates
+          rejectUnauthorized: isProduction, // Use true for production with valid certificates
         },
       });
       _db = drizzle(poolConnection);

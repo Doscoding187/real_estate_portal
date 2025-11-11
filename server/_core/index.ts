@@ -96,17 +96,17 @@ async function startServer() {
   // Skip static file serving if SKIP_FRONTEND env var is set (for Railway backend-only deployment)
   console.log('[Server] NODE_ENV:', process.env.NODE_ENV);
   console.log('[Server] SKIP_FRONTEND:', process.env.SKIP_FRONTEND);
-  if (process.env.NODE_ENV === 'development') {
+  if (process.env.NODE_ENV === 'development' && !process.env.SKIP_FRONTEND) {
     console.log('[Server] Using Vite development server');
     await setupVite(app, server);
-  } else if (!process.env.SKIP_FRONTEND) {
+  } else if (process.env.NODE_ENV !== 'development' && !process.env.SKIP_FRONTEND) {
     console.log('[Server] Serving static files');
     serveStatic(app);
   } else {
     console.log('[Server] Skipping frontend static file serving (backend-only mode)');
   }
 
-  const preferredPort = parseInt(process.env.PORT || '3000');
+  const preferredPort = parseInt(process.env.PORT || '5000');
   const port = process.env.PORT ? preferredPort : await findAvailablePort(preferredPort);
 
   if (port !== preferredPort && !process.env.PORT) {
@@ -114,7 +114,8 @@ async function startServer() {
   }
 
   server.listen(port, '0.0.0.0', () => {
-    console.log(`Server running on port ${port}`);
+    console.log(`Backend running on http://localhost:${port}`);
+    console.log(`tRPC endpoint: http://localhost:${port}/trpc`);
     console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
   });
 }
