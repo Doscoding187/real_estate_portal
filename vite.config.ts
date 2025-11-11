@@ -24,6 +24,16 @@ export default defineConfig({
   build: {
     outDir: path.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: true,
+    minify: 'esbuild',
+    rollupOptions: {
+      output: {
+        manualChunks: undefined,
+      },
+    },
+    // Prevent name mangling issues with wouter
+    esbuild: {
+      keepNames: true,
+    },
   },
   server: {
     host: true,
