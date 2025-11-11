@@ -76,6 +76,11 @@ async function startServer() {
   // Custom authentication routes (register/login/logout)
   registerAuthRoutes(app);
 
+  // Simple test endpoint for debugging
+  app.get('/api/test', (req, res) => {
+    res.json({ message: 'Backend is running!', timestamp: new Date().toISOString() });
+  });
+
   // Stripe webhook endpoint (must be before JSON parsing)
   app.post('/api/webhooks/stripe', express.raw({ type: 'application/json' }), handleStripeWebhook);
 
