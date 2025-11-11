@@ -53,7 +53,7 @@ export async function getDb() {
       const poolConnection = mysql.createPool({
         uri: process.env.DATABASE_URL,
         ssl: {
-          rejectUnauthorized: false, // Changed to false to allow self-signed certificates
+          rejectUnauthorized: true, // Use true for production with valid certificates
         },
       });
       _db = drizzle(poolConnection);
