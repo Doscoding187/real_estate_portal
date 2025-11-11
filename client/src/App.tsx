@@ -43,6 +43,8 @@ import Users from './pages/admin/Users';
 import Tickets from './pages/admin/Tickets';
 import Audit from './pages/admin/Audit';
 import Settings from './pages/admin/Settings';
+// Future Dashboard Components
+import PartnerDashboard from './pages/partner/PartnerDashboard';
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -75,6 +77,26 @@ function Router() {
       <Route path="/login" component={Login} />
       <Route path="/forgot-password" component={ForgotPassword} />
       <Route path="/reset-password" component={ResetPassword} />
+
+      {/* Future Dashboard Routes - TODO: Add proper role-based guards */}
+      <Route path="/agency/*">
+        <RequireSuperAdmin>
+          <AgencyDashboard />
+        </RequireSuperAdmin>
+      </Route>
+
+      <Route path="/agent/*">
+        <RequireSuperAdmin>
+          <AgentDashboard />
+        </RequireSuperAdmin>
+      </Route>
+
+      <Route path="/partner/*">
+        <RequireSuperAdmin>
+          <PartnerDashboard />
+        </RequireSuperAdmin>
+      </Route>
+
       <Route path={'/404'} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />

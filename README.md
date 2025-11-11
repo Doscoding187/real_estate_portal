@@ -298,5 +298,31 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 - [ ] **API Marketplace** - Third-party integrations
 - [ ] **White-label API** - Custom implementations
 
-Built with ❤️ for the South African real estate industry/ /   T r i g g e r   r e d e p l o y  
+## 🔄 Future Dashboards
+
+### Agency Dashboard (`/agency/*`)
+- **Target Users**: Agency administrators
+- **Purpose**: Manage agency operations, agents, listings, and performance
+- **Current Status**: Placeholder implemented
+- **Components**: `client/src/pages/agency/AgencyDashboard.tsx`
+
+### Agent Dashboard (`/agent/*`)
+- **Target Users**: Individual real estate agents
+- **Purpose**: Manage personal listings, leads, showings, and commissions
+- **Current Status**: Placeholder implemented
+- **Components**: `client/src/pages/agent/AgentDashboard.tsx`
+
+### Partner Dashboard (`/partner/*`)
+- **Target Users**: Third-party partners and service providers
+- **Purpose**: Manage partnerships, integrations, and shared resources
+- **Current Status**: Placeholder implemented
+- **Components**: `client/src/pages/partner/PartnerDashboard.tsx`
+
+### Implementation Notes
+- All future dashboards use the shared `DashboardLayout` component for consistent UI
+- Role-based access control will be implemented with dedicated guard components
+- Routes are already scaffolded in `client/src/App.tsx` with temporary `RequireSuperAdmin` guards
+
+Built with ❤️ for the South African real estate industry/ /   T r i g g e r   r e d e p l o y 
+ 
  
