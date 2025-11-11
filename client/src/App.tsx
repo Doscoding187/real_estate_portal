@@ -54,7 +54,7 @@ function Router() {
       <Route path="/admin/agencies/create" component={CreateAgency} />
       <Route path="/admin/users" component={UserManagement} />
       <Route path="/admin/audit-logs" component={AuditLogs} />
-      <Routhe path="/admin/listings" component={ListingOversight} />
+      <Route path="/admin/listings" component={ListingOversight} />
       <Route path="/admin/subscriptions" component={SubscriptionManagement} />
       <Route path="/admin/settings" component={PlatformSettings} />
       <Route path="/agency/dashboard" component={AgencyDashboard} />

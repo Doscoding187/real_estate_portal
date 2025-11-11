@@ -31,14 +31,34 @@ export default function AdminDashboard() {
   const [, setLocation] = useLocation();
   const { isAuthenticated, user, loading } = useAuth();
 
-  const { data: analytics, isLoading: analyticsLoading } = trpc.admin.getAnalytics.useQuery();
-  const { data: listingStats } = trpc.admin.getListingStats.useQuery();
+  console.log('[AdminDashboard] Rendering...');
+  console.log('[AdminDashboard] loading:', loading);
+  console.log('[AdminDashboard] isAuthenticated:', isAuthenticated);
+  console.log('[AdminDashboard] user:', user);
+  console.log('[AdminDashboard] user.role:', user?.role);
+
+  const isAdmin = isAuthenticated && user?.role === 'super_admin';
+
+  const { data: analytics, isLoading: analyticsLoading } = trpc.admin.getAnalytics.useQuery(
+    undefined,
+    { enabled: isAdmin },
+  );
+  const { data: listingStats } = trpc.admin.getListingStats.useQuery(undefined, {
+    enabled: isAdmin,
+  });
+
+  // Get the TRPC utils to access the me query
+  const utils = trpc.useUtils();
+  const meQuery = utils.auth.me.getData();
 
   console.log('[AdminDashboard] Rendering...');
   console.log('[AdminDashboard] loading:', loading);
   console.log('[AdminDashboard] isAuthenticated:', isAuthenticated);
   console.log('[AdminDashboard] user:', user);
   console.log('[AdminDashboard] user.role:', user?.role);
+
+  // Debug: Check if TRPC auth.me is working
+  console.log('[AdminDashboard] TRPC meQuery data:', meQuery);
 
   // Wait for auth to load
   if (loading) {
@@ -217,7 +237,7 @@ export default function AdminDashboard() {
               >
                 <div className="text-left">
                   <div className="font-semibold">User Management</div>
-                  <div className="text-sm text-muted-foreground">Manage users and roles</div>
+                  <div className="text-sm text-muted-foreground">Manage user accounts</div>
                 </div>
                 <ArrowRight className="h-4 w-4" />
               </Button>

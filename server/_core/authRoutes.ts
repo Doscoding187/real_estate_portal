@@ -63,6 +63,7 @@ export function registerAuthRoutes(app: Express) {
    */
   app.post('/api/auth/login', async (req: Request, res: Response) => {
     try {
+      console.log('🔐 Login attempt:', req.body);
       const { email, password, rememberMe } = req.body;
 
       // Validate input
@@ -74,20 +75,24 @@ export function registerAuthRoutes(app: Express) {
         return res.status(400).json({ error: 'Invalid input types' });
       }
 
+      console.log('🔍 Validating credentials for:', email);
       // Login user
       const { user, sessionToken } = await authService.login(email, password, rememberMe);
+      console.log('✅ Auth service returned user:', user.email);
 
       // Feature 4: "Remember Me" Functionality
       const maxAge = rememberMe
         ? 30 * 24 * 60 * 60 * 1000 // 30 days
         : 24 * 60 * 60 * 1000; // 24 hours
 
+      console.log('🍪 Setting cookie with name:', COOKIE_NAME);
       // Set session cookie
       const cookieOptions = getSessionCookieOptions(req);
       res.cookie(COOKIE_NAME, sessionToken, {
         ...cookieOptions,
         maxAge,
       });
+      console.log('✅ Cookie set successfully');
 
       // Return success with user info
       res.json({
@@ -100,13 +105,18 @@ export function registerAuthRoutes(app: Express) {
         },
       });
     } catch (error: any) {
-      console.error('[Auth] Login failed', error);
+      console.error('❌ Login failed:', error);
+      console.error('Error stack:', error.stack);
 
       if (error.message?.includes('Invalid') || error.message?.includes('verify')) {
         return res.status(401).json({ error: error.message });
       }
 
-      res.status(500).json({ error: 'Login failed' });
+      res.status(500).json({
+        error: 'Login failed',
+        message: error.message,
+        stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+      });
     }
   });
 

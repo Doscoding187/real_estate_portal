@@ -298,4 +298,5 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 - [ ] **API Marketplace** - Third-party integrations
 - [ ] **White-label API** - Custom implementations
 
-Built with ❤️ for the South African real estate industry
+Built with ❤️ for the South African real estate industry/ /   T r i g g e r   r e d e p l o y  
+ 

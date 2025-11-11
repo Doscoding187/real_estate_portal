@@ -9,6 +9,15 @@ export type TrpcContext = {
 };
 
 export async function createContext(opts: CreateExpressContextOptions): Promise<TrpcContext> {
+  // 🔍 DEBUG: Log everything
+  console.log('=== TRPC CONTEXT ===');
+  console.log('Path:', opts.req.path);
+  console.log('Raw Cookie Header:', opts.req.headers.cookie);
+  console.log('Parsed Cookies:', opts.req.cookies);
+  console.log('All Cookie Keys:', Object.keys(opts.req.cookies || {}));
+  console.log('SessionId Cookie:', opts.req.cookies?.app_session_id);
+  console.log('===================');
+
   let user: User | null = null;
 
   try {

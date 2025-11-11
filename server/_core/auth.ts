@@ -140,6 +140,8 @@ class AuthService {
     console.log('[Auth] Parsed cookies:', Array.from(cookies.entries()));
 
     const sessionCookie = cookies.get(COOKIE_NAME);
+    console.log('[Auth] COOKIE_NAME:', COOKIE_NAME);
+    console.log('[Auth] sessionCookie value:', sessionCookie ? '(exists)' : '(missing)');
     console.log('[Auth] Session cookie value:', sessionCookie ? '(exists)' : '(missing)');
 
     const session = await this.verifySession(sessionCookie);

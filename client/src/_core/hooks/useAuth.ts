@@ -10,6 +10,21 @@ type UseAuthOptions = {
 
 export function useAuth(options?: UseAuthOptions) {
   const { redirectOnUnauthenticated = false, redirectPath = getLoginUrl() } = options ?? {};
+
+  // Add a check for trpc availability
+  if (!trpc) {
+    console.warn('TRPC context not found in useAuth hook. Ensure trpc.Provider is correctly set up.');
+    // Return a minimal state to prevent further errors
+    return {
+      user: null,
+      loading: false,
+      error: new Error('TRPC context not available'),
+      isAuthenticated: false,
+      refresh: () => {},
+      logout: async () => {},
+    };
+  }
+
   const utils = trpc.useUtils();
 
   const meQuery = trpc.auth.me.useQuery(undefined, {
