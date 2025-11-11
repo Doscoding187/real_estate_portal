@@ -3,15 +3,30 @@ import { useEffect } from 'react';
 import { useLocation } from 'wouter';
 
 export const RequireRole = ({ role, children }: { role: string; children: React.ReactNode }) => {
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated, user, loading } = useAuth();
   const [, setLocation] = useLocation();
 
   useEffect(() => {
+    // Bail out while the auth status is still loading (prevents flash-of-unauthenticated)
+    if (loading) return;
+
+    // If NOT authorized → client-side navigation
     if (!isAuthenticated || user?.role !== role) {
       setLocation('/login');
     }
-  }, [isAuthenticated, user?.role, role, setLocation]);
+  }, [isAuthenticated, user, loading, role, setLocation]);
 
+  // While we decide whether to redirect, render nothing (or a loader)
+  if (loading) {
+    // Optionally render a spinner or skeleton
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <span className="text-slate-600">Checking access…</span>
+      </div>
+    );
+  }
+
+  // If we made it here, the user is authorized
   if (!isAuthenticated || user?.role !== role) {
     return null;
   }
