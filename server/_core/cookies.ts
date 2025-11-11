@@ -39,6 +39,12 @@ export function getSessionCookieOptions(
 
   const isProduction = process.env.NODE_ENV === 'production';
   const isSecure = isSecureRequest(req);
+  
+  // For cross-domain scenarios (Vercel frontend + Railway backend), we need sameSite: 'none' and secure: true
+  // This is required when frontend is served over HTTPS (like Vercel) and communicates with backend
+  const isCrossDomain = req.headers.origin?.includes('.vercel.app') || 
+                        req.headers.origin?.includes('.railway.app') ||
+                        (req.headers.origin?.startsWith('https://') && !req.headers.origin?.includes(hostname));
 
   return {
     domain,
@@ -46,8 +52,8 @@ export function getSessionCookieOptions(
     path: '/',
     // For cross-domain (Vercel frontend + Railway backend), use 'none'
     // For same-domain or local dev, use 'lax'
-    sameSite: isProduction && isSecure ? 'none' : 'lax',
+    sameSite: (isProduction && isSecure) || isCrossDomain ? 'none' : 'lax',
     // Secure cookies required for sameSite: 'none'
-    secure: isProduction && isSecure,
+    secure: (isProduction && isSecure) || isCrossDomain,
   };
 }
