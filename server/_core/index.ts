@@ -94,9 +94,13 @@ async function startServer() {
   );
   // development mode uses Vite, production mode serves static files
   // Skip static file serving if SKIP_FRONTEND env var is set (for Railway backend-only deployment)
+  console.log('[Server] NODE_ENV:', process.env.NODE_ENV);
+  console.log('[Server] SKIP_FRONTEND:', process.env.SKIP_FRONTEND);
   if (process.env.NODE_ENV === 'development') {
+    console.log('[Server] Using Vite development server');
     await setupVite(app, server);
   } else if (!process.env.SKIP_FRONTEND) {
+    console.log('[Server] Serving static files');
     serveStatic(app);
   } else {
     console.log('[Server] Skipping frontend static file serving (backend-only mode)');
