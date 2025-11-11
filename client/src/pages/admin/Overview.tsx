@@ -1,0 +1,151 @@
+import { useState } from 'react';
+import { DashboardLayout } from '@/components/DashboardLayout';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import {
+  LayoutDashboard,
+  Building2,
+  CreditCard,
+  Home,
+  Users,
+  Ticket,
+  Activity,
+  Settings,
+  Search,
+  Filter,
+} from 'lucide-react';
+import { useAuth } from '@/_core/hooks/useAuth';
+import { useAnalytics } from '@/hooks/admin';
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  LineChart,
+  Line,
+} from 'recharts';
+
+// Mock data for charts
+const mockRevenueData = [
+  { name: 'Jan', revenue: 4000 },
+  { name: 'Feb', revenue: 3000 },
+  { name: 'Mar', revenue: 2000 },
+  { name: 'Apr', revenue: 2780 },
+  { name: 'May', revenue: 1890 },
+  { name: 'Jun', revenue: 2390 },
+];
+
+const mockUserGrowthData = [
+  { name: 'Jan', users: 400 },
+  { name: 'Feb', users: 600 },
+  { name: 'Mar', users: 800 },
+  { name: 'Apr', users: 1200 },
+  { name: 'May', users: 1500 },
+  { name: 'Jun', users: 1800 },
+];
+
+export default function Overview() {
+  const { user } = useAuth();
+  const { data: analytics } = useAnalytics();
+  
+  const [searchTerm, setSearchTerm] = useState('');
+
+  return (
+    <DashboardLayout adminSidebar={true}>
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold">Dashboard Overview</h1>
+            <p className="text-muted-foreground">Welcome back, {user?.name || user?.email}</p>
+          </div>
+          <Badge variant="destructive">Super Admin</Badge>
+        </div>
+
+        {/* Stats Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">R{analytics?.monthlyRevenue?.toLocaleString() || '0'}</div>
+              <p className="text-xs text-muted-foreground">+12% from last month</p>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Active Users</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{analytics?.totalUsers || 0}</div>
+              <p className="text-xs text-muted-foreground">+180 from last month</p>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Properties</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{analytics?.activeProperties || 0}</div>
+              <p className="text-xs text-muted-foreground">+52 from last month</p>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Agencies</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{analytics?.totalAgencies || 0}</div>
+              <p className="text-xs text-muted-foreground">+8 from last month</p>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Charts */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Revenue Overview</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={mockRevenueData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="name" />
+                  <YAxis />
+                  <Tooltip />
+                  <Bar dataKey="revenue" fill="#3b82f6" />
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader>
+              <CardTitle>User Growth</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={300}>
+                <LineChart data={mockUserGrowthData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="name" />
+                  <YAxis />
+                  <Tooltip />
+                  <Line type="monotone" dataKey="users" stroke="#10b981" strokeWidth={2} />
+                </LineChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    </DashboardLayout>
+  );
+}
