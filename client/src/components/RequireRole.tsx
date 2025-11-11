@@ -2,17 +2,17 @@ import { useAuth } from '@/_core/hooks/useAuth';
 import { useEffect } from 'react';
 import { useLocation } from 'wouter';
 
-export const RequireSuperAdmin = ({ children }: { children: React.ReactNode }) => {
+export const RequireRole = ({ role, children }: { role: string; children: React.ReactNode }) => {
   const { isAuthenticated, user } = useAuth();
   const [, setLocation] = useLocation();
 
   useEffect(() => {
-    if (!isAuthenticated || user?.role !== 'super_admin') {
+    if (!isAuthenticated || user?.role !== role) {
       setLocation('/login');
     }
-  }, [isAuthenticated, user?.role, setLocation]);
+  }, [isAuthenticated, user?.role, role, setLocation]);
 
-  if (!isAuthenticated || user?.role !== 'super_admin') {
+  if (!isAuthenticated || user?.role !== role) {
     return null;
   }
 

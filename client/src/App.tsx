@@ -34,6 +34,7 @@ import OnboardingSuccess from './pages/OnboardingSuccess';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
 import { RequireSuperAdmin } from '@/components/RequireSuperAdmin';
+import { RequireRole } from '@/components/RequireRole';
 import SuperAdminDashboard from '@/pages/admin/SuperAdminDashboard';
 // Super Admin Dashboard Pages
 import Overview from './pages/admin/Overview';
@@ -80,21 +81,21 @@ function Router() {
 
       {/* Future Dashboard Routes - TODO: Add proper role-based guards */}
       <Route path="/agency/*">
-        <RequireSuperAdmin>
+        <RequireRole role="agency_admin">
           <AgencyDashboard />
-        </RequireSuperAdmin>
+        </RequireRole>
       </Route>
 
       <Route path="/agent/*">
-        <RequireSuperAdmin>
+        <RequireRole role="agent">
           <AgentDashboard />
-        </RequireSuperAdmin>
+        </RequireRole>
       </Route>
 
       <Route path="/partner/*">
-        <RequireSuperAdmin>
+        <RequireRole role="partner">
           <PartnerDashboard />
-        </RequireSuperAdmin>
+        </RequireRole>
       </Route>
 
       <Route path={'/404'} component={NotFound} />
