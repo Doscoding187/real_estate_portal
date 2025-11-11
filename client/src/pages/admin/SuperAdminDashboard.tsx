@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useLocation } from 'wouter';
-import { DashboardLayout } from '@/components/DashboardLayout';
+import DashboardLayout from '@/components/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -54,7 +54,7 @@ export default function SuperAdminDashboard() {
   const [, setLocation] = useLocation();
   const { user } = useAuth();
   const { data: analytics } = useAnalytics();
-  
+
   const [searchTerm, setSearchTerm] = useState('');
 
   // Navigation items for the sidebar
@@ -92,11 +92,13 @@ export default function SuperAdminDashboard() {
               <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">R{analytics?.monthlyRevenue?.toLocaleString() || '0'}</div>
+              <div className="text-2xl font-bold">
+                R{analytics?.monthlyRevenue?.toLocaleString() || '0'}
+              </div>
               <p className="text-xs text-muted-foreground">+12% from last month</p>
             </CardContent>
           </Card>
-          
+
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Active Users</CardTitle>
@@ -106,7 +108,7 @@ export default function SuperAdminDashboard() {
               <p className="text-xs text-muted-foreground">+180 from last month</p>
             </CardContent>
           </Card>
-          
+
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Properties</CardTitle>
@@ -116,7 +118,7 @@ export default function SuperAdminDashboard() {
               <p className="text-xs text-muted-foreground">+52 from last month</p>
             </CardContent>
           </Card>
-          
+
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Agencies</CardTitle>
@@ -146,7 +148,7 @@ export default function SuperAdminDashboard() {
               </ResponsiveContainer>
             </CardContent>
           </Card>
-          
+
           <Card>
             <CardHeader>
               <CardTitle>User Growth</CardTitle>
@@ -172,7 +174,7 @@ export default function SuperAdminDashboard() {
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              {navItems.slice(1).map((item) => (
+              {navItems.slice(1).map(item => (
                 <Button
                   key={item.path}
                   variant="outline"
