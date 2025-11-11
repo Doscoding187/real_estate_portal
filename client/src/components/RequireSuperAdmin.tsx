@@ -12,7 +12,10 @@ export const RequireSuperAdmin = ({ children }: { children: React.ReactNode }) =
 
     // If NOT authorized → client-side navigation
     if (!isAuthenticated || user?.role !== 'super_admin') {
-      setLocation('/login');
+      // Only trigger if we're not already on the login page
+      if (window.location.pathname !== '/login') {
+        setLocation('/login');
+      }
     }
   }, [isAuthenticated, user, loading, setLocation]);
 

@@ -12,7 +12,10 @@ export const RequireRole = ({ role, children }: { role: string; children: React.
 
     // If NOT authorized → client-side navigation
     if (!isAuthenticated || user?.role !== role) {
-      setLocation('/login');
+      // Only trigger if we're not already on the login page
+      if (window.location.pathname !== '/login') {
+        setLocation('/login');
+      }
     }
   }, [isAuthenticated, user, loading, role, setLocation]);
 
