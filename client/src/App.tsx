@@ -15,7 +15,7 @@ import CityPage from './pages/CityPage';
 import ListProperty from './pages/ListProperty';
 import Dashboard from './pages/Dashboard';
 import Login from './pages/Login';
-import AdminDashboard from './pages/AdminDashboard';
+
 import AgencyDashboard from './pages/AgencyDashboard';
 import AgentDashboard from './pages/AgentDashboard';
 import AgencyList from './pages/admin/AgencyList';
@@ -33,8 +33,8 @@ import AgencyOnboarding from './pages/AgencyOnboarding';
 import OnboardingSuccess from './pages/OnboardingSuccess';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
-import { RequireSuperAdmin } from './components/RequireSuperAdmin';
-import SuperAdminDashboard from './pages/admin/SuperAdminDashboard';
+import { RequireSuperAdmin } from '@/components/RequireSuperAdmin';
+import SuperAdminDashboard from '@/pages/admin/SuperAdminDashboard';
 // Super Admin Dashboard Pages
 import Overview from './pages/admin/Overview';
 import Agencies from './pages/admin/Agencies';
@@ -60,17 +60,12 @@ function Router() {
       <Route path="/dashboard" component={Dashboard} />
       <Route path="/explore" component={ExploreFeed} />
       {/* Super Admin Dashboard Routes */}
-      <Route path="/admin" component={SuperAdminDashboard} />
-      <Route path="/admin/overview" component={Overview} />
-      <Route path="/admin/agencies" component={Agencies} />
-      <Route path="/admin/agencies/create" component={CreateAgency} />
-      <Route path="/admin/subscriptions" component={SubscriptionManagement} />
-      <Route path="/admin/listings" component={Listings} />
-      <Route path="/admin/users" component={Users} />
-      <Route path="/admin/tickets" component={Tickets} />
-      <Route path="/admin/audit" component={Audit} />
-      <Route path="/admin/audit-logs" component={AuditLogs} />
-      <Route path="/admin/settings" component={Settings} />
+      <Route path="/admin/*">
+        <RequireSuperAdmin>
+          <SuperAdminDashboard />
+        </RequireSuperAdmin>
+      </Route>
+
       <Route path="/agency/dashboard" component={AgencyDashboard} />
       <Route path="/agency/onboarding" component={AgencyOnboarding} />
       <Route path="/agency/onboarding/success" component={OnboardingSuccess} />
