@@ -33,6 +33,16 @@ import AgencyOnboarding from './pages/AgencyOnboarding';
 import OnboardingSuccess from './pages/OnboardingSuccess';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
+import { RequireSuperAdmin } from './components/RequireSuperAdmin';
+import SuperAdminDashboard from './pages/admin/SuperAdminDashboard';
+// Super Admin Dashboard Pages
+import Overview from './pages/admin/Overview';
+import Agencies from './pages/admin/Agencies';
+import Listings from './pages/admin/Listings';
+import Users from './pages/admin/Users';
+import Tickets from './pages/admin/Tickets';
+import Audit from './pages/admin/Audit';
+import Settings from './pages/admin/Settings';
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -49,14 +59,18 @@ function Router() {
       <Route path="/list-property" component={ListProperty} />
       <Route path="/dashboard" component={Dashboard} />
       <Route path="/explore" component={ExploreFeed} />
-      <Route path="/admin/dashboard" component={AdminDashboard} />
-      <Route path="/admin/agencies" component={AgencyList} />
+      {/* Super Admin Dashboard Routes */}
+      <Route path="/admin" component={SuperAdminDashboard} />
+      <Route path="/admin/overview" component={Overview} />
+      <Route path="/admin/agencies" component={Agencies} />
       <Route path="/admin/agencies/create" component={CreateAgency} />
-      <Route path="/admin/users" component={UserManagement} />
-      <Route path="/admin/audit-logs" component={AuditLogs} />
-      <Route path="/admin/listings" component={ListingOversight} />
       <Route path="/admin/subscriptions" component={SubscriptionManagement} />
-      <Route path="/admin/settings" component={PlatformSettings} />
+      <Route path="/admin/listings" component={Listings} />
+      <Route path="/admin/users" component={Users} />
+      <Route path="/admin/tickets" component={Tickets} />
+      <Route path="/admin/audit" component={Audit} />
+      <Route path="/admin/audit-logs" component={AuditLogs} />
+      <Route path="/admin/settings" component={Settings} />
       <Route path="/agency/dashboard" component={AgencyDashboard} />
       <Route path="/agency/onboarding" component={AgencyOnboarding} />
       <Route path="/agency/onboarding/success" component={OnboardingSuccess} />
