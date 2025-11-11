@@ -1,13 +1,17 @@
 import { useAuth } from '@/_core/hooks/useAuth';
-import { Navigate } from 'wouter';
+import { useEffect } from 'react';
 
-export const RequireSuperAdmin = ({
-  children,
-}: { children: React.ReactNode }) => {
+export const RequireSuperAdmin = ({ children }: { children: React.ReactNode }) => {
   const { isAuthenticated, user } = useAuth();
 
+  useEffect(() => {
+    if (!isAuthenticated || user?.role !== 'super_admin') {
+      window.location.href = '/login';
+    }
+  }, [isAuthenticated, user?.role]);
+
   if (!isAuthenticated || user?.role !== 'super_admin') {
-    return <Navigate to="/login" />;
+    return null;
   }
 
   return <>{children}</>;
