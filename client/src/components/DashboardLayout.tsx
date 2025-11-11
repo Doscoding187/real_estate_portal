@@ -21,7 +21,18 @@ import {
 } from '@/components/ui/sidebar';
 import { APP_LOGO, APP_TITLE, getLoginUrl } from '@/const';
 import { useIsMobile } from '@/hooks/useMobile';
-import { LayoutDashboard, LogOut, PanelLeft, Users } from 'lucide-react';
+import {
+  Building2,
+  CreditCard,
+  Home,
+  LayoutDashboard,
+  LogOut,
+  PanelLeft,
+  Settings,
+  Activity,
+  Ticket,
+  Users,
+} from 'lucide-react';
 import { CSSProperties, useEffect, useRef, useState } from 'react';
 import { useLocation } from 'wouter';
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
@@ -32,12 +43,28 @@ const menuItems = [
   { icon: Users, label: 'Page 2', path: '/some-path' },
 ];
 
+const adminMenuItems = [
+  { icon: LayoutDashboard, label: 'Overview', path: '/admin/overview' },
+  { icon: Building2, label: 'Agencies', path: '/admin/agencies' },
+  { icon: CreditCard, label: 'Subscriptions', path: '/admin/subscriptions' },
+  { icon: Home, label: 'Listings', path: '/admin/listings' },
+  { icon: Users, label: 'Users', path: '/admin/users' },
+  { icon: Ticket, label: 'Support Tickets', path: '/admin/tickets' },
+  { icon: Activity, label: 'Audit Log', path: '/admin/audit' },
+  { icon: Settings, label: 'Settings', path: '/admin/settings' },
+];
+
 const SIDEBAR_WIDTH_KEY = 'sidebar-width';
 const DEFAULT_WIDTH = 280;
 const MIN_WIDTH = 200;
 const MAX_WIDTH = 480;
 
-export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+type DashboardLayoutProps = {
+  children: React.ReactNode;
+  adminSidebar?: boolean;
+};
+
+export default function DashboardLayout({ children, adminSidebar = false }: DashboardLayoutProps) {
   const [sidebarWidth, setSidebarWidth] = useState(() => {
     const saved = localStorage.getItem(SIDEBAR_WIDTH_KEY);
     return saved ? parseInt(saved, 10) : DEFAULT_WIDTH;
@@ -93,7 +120,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         } as CSSProperties
       }
     >
-      <DashboardLayoutContent setSidebarWidth={setSidebarWidth}>{children}</DashboardLayoutContent>
+      <DashboardLayoutContent
+        setSidebarWidth={setSidebarWidth}
+        adminSidebar={adminSidebar}
+        userRole={user.role}
+      >
+        {children}
+      </DashboardLayoutContent>
     </SidebarProvider>
   );
 }
@@ -101,16 +134,24 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 type DashboardLayoutContentProps = {
   children: React.ReactNode;
   setSidebarWidth: (width: number) => void;
+  adminSidebar?: boolean;
+  userRole?: string;
 };
 
-function DashboardLayoutContent({ children, setSidebarWidth }: DashboardLayoutContentProps) {
+function DashboardLayoutContent({
+  children,
+  setSidebarWidth,
+  adminSidebar = false,
+  userRole,
+}: DashboardLayoutContentProps) {
   const { user, logout } = useAuth();
   const [location, setLocation] = useLocation();
   const { state, toggleSidebar } = useSidebar();
   const isCollapsed = state === 'collapsed';
   const [isResizing, setIsResizing] = useState(false);
   const sidebarRef = useRef<HTMLDivElement>(null);
-  const activeMenuItem = menuItems.find(item => item.path === location);
+  const menuItemsToUse = adminSidebar && userRole === 'super_admin' ? adminMenuItems : menuItems;
+  const activeMenuItem = menuItemsToUse.find(item => item.path === location);
   const isMobile = useIsMobile();
 
   useEffect(() => {
@@ -192,7 +233,7 @@ function DashboardLayoutContent({ children, setSidebarWidth }: DashboardLayoutCo
 
           <SidebarContent className="gap-0">
             <SidebarMenu className="px-2 py-1">
-              {menuItems.map(item => {
+              {menuItemsToUse.map(item => {
                 const isActive = location === item.path;
                 return (
                   <SidebarMenuItem key={item.path}>
@@ -200,9 +241,9 @@ function DashboardLayoutContent({ children, setSidebarWidth }: DashboardLayoutCo
                       isActive={isActive}
                       onClick={() => setLocation(item.path)}
                       tooltip={item.label}
-                      className={`h-10 transition-all font-normal`}
+                      className={`h-10 transition-all ${isActive ? 'bg-blue-100 text-blue-700 font-medium' : 'font-normal'}`}
                     >
-                      <item.icon className={`h-4 w-4 ${isActive ? 'text-primary' : ''}`} />
+                      <item.icon className={`h-4 w-4 ${isActive ? 'text-blue-700' : ''}`} />
                       <span>{item.label}</span>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
