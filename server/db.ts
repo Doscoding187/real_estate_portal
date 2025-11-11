@@ -26,6 +26,24 @@ import { ENV } from './_core/env';
 
 let _db: any = null;
 
+// Debug database connection
+console.log('[Database] Checking DATABASE_URL:', process.env.DATABASE_URL ? 'present' : 'missing');
+if (process.env.DATABASE_URL) {
+  console.log(
+    '[Database] DATABASE_URL (masked):',
+    process.env.DATABASE_URL.replace(/:([^:@]+)@/, ':****@'),
+  );
+}
+
+// Debug database connection
+console.log('[Database] Checking DATABASE_URL:', process.env.DATABASE_URL ? 'present' : 'missing');
+if (process.env.DATABASE_URL) {
+  console.log(
+    '[Database] DATABASE_URL (masked):',
+    process.env.DATABASE_URL.replace(/:([^:@]+)@/, ':****@'),
+  );
+}
+
 // Lazily create the drizzle instance so local tooling can run without a DB.
 export async function getDb() {
   if (!_db && process.env.DATABASE_URL) {
@@ -209,11 +227,7 @@ export async function getUserByPasswordResetToken(token: string): Promise<User |
     return undefined;
   }
 
-  const result = await db
-    .select()
-    .from(users)
-    .where(eq(users.passwordResetToken, token))
-    .limit(1);
+  const result = await db.select().from(users).where(eq(users.passwordResetToken, token)).limit(1);
   return result.length > 0 ? result[0] : undefined;
 }
 
