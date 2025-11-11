@@ -323,6 +323,27 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 - Role-based access control will be implemented with dedicated guard components
 - Routes are already scaffolded in `client/src/App.tsx` with temporary `RequireSuperAdmin` guards
 
+## 🔐 Route Guards (client/src/components)
+
+### `RequireSuperAdmin`
+- Protects any component tree behind a `super_admin` role.
+- Shows a loading spinner while the auth context resolves.
+- Uses **wouter**'s `useLocation` for client‑side navigation.
+- Includes infinite‑loop protection (`if (window.location.pathname !== '/login')`).
+
+### `RequireRole`
+- Generic version that accepts a `role: string` prop.
+- Works the same way as `RequireSuperAdmin` but can be used for `agency_admin`, `agent`, `partner`, etc.
+- Example:
+
+```tsx
+<RequireRole role="agency_admin">
+  <AgencyDashboard />
+</RequireRole>
+```
+
+Both components live in `src/components/` and include comprehensive unit tests.
+
 Built with ❤️ for the South African real estate industry/ /   T r i g g e r   r e d e p l o y 
  
  
