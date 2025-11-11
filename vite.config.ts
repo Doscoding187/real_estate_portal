@@ -24,6 +24,13 @@ export default defineConfig({
   build: {
     outDir: path.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: true,
+    minify: 'terser',
+    terserOptions: {
+      keep_fnames: true,
+      mangle: {
+        keep_fnames: true,
+      },
+    },
     // Prevent name mangling issues with wouter
     rollupOptions: {
       output: {
