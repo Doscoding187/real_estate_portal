@@ -123,6 +123,7 @@ export default function SuperAdminDashboard() {
   const { user } = useAuth();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [location] = useLocation();
 
   // Check if we're on mobile
   useEffect(() => {
@@ -195,7 +196,17 @@ export default function SuperAdminDashboard() {
             </div>
 
             {/* Render children routes */}
-            <div>{/* This will render the matched child route component */}</div>
+            <div>
+              {/* This is where the child routes will be rendered */}
+              {location === '/admin' || location === '/admin/' ? (
+                <div className="text-center py-12">
+                  <h2 className="text-xl font-semibold mb-2">Welcome to the Super Admin Dashboard</h2>
+                  <p className="text-muted-foreground">
+                    Select an option from the sidebar to get started.
+                  </p>
+                </div>
+              ) : null}
+            </div>
           </div>
         </main>
       </div>

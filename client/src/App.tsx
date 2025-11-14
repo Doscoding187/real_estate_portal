@@ -37,17 +37,6 @@ import { RequireSuperAdmin } from '@/components/RequireSuperAdmin';
 import { RequireRole } from '@/components/RequireRole';
 import SuperAdminDashboard from '@/pages/admin/SuperAdminDashboard';
 // Super Admin Dashboard Pages
-import Overview from './pages/admin/Overview';
-import Agencies from './pages/admin/Agencies';
-import Listings from './pages/admin/Listings';
-import Users from './pages/admin/Users';
-import Tickets from './pages/admin/Tickets';
-import Audit from './pages/admin/Audit';
-import Settings from './pages/admin/Settings';
-// Future Dashboard Components
-import PartnerDashboard from './pages/partner/PartnerDashboard';
-
-// Import new admin pages
 import OverviewPage from './pages/admin/OverviewPage';
 import AgenciesPage from './pages/admin/AgenciesPage';
 import UsersPage from './pages/admin/UsersPage';
@@ -72,9 +61,12 @@ function Router() {
       <Route path="/list-property" component={ListProperty} />
       <Route path="/dashboard" component={Dashboard} />
       <Route path="/explore" component={ExploreFeed} />
+      
       {/* Super Admin Dashboard Routes */}
-      <Route path="/admin/*" component={SuperAdminDashboard} />
-
+      <Route path="/admin">
+        <SuperAdminDashboard />
+      </Route>
+      
       {/* Super Admin Dashboard Pages */}
       <Route path="/admin/overview" component={OverviewPage} />
       <Route path="/admin/agencies" component={AgenciesPage} />
@@ -116,12 +108,6 @@ function Router() {
       <Route path="/agent/*">
         <RequireRole role="agent">
           <AgentDashboard />
-        </RequireRole>
-      </Route>
-
-      <Route path="/partner/*">
-        <RequireRole role="partner">
-          <PartnerDashboard />
         </RequireRole>
       </Route>
 
