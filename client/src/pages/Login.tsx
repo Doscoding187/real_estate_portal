@@ -91,9 +91,9 @@ export default function Login() {
       toast.success('Logged in successfully!');
       // Role-based redirect
       const role = result.user?.role;
-      let redirectPath = '/dashboard'; // Default for regular users
+      let redirectPath = '/user/dashboard'; // Default for regular users
       if (role === 'super_admin') {
-        redirectPath = '/admin/dashboard';
+        redirectPath = '/admin/overview';
       } else if (role === 'agency_admin') {
         // Check if this is a property developer or agency admin
         // For now, we'll redirect agency_admin to agency dashboard
