@@ -61,17 +61,20 @@ function Router() {
       <Route path="/list-property" component={ListProperty} />
       <Route path="/dashboard" component={Dashboard} />
       <Route path="/explore" component={ExploreFeed} />
-      
+
       {/* Super Admin Dashboard Routes */}
       <Route path="/admin">
-        <SuperAdminDashboard />
+        <SuperAdminDashboard>
+          <Switch>
+            <Route path="/admin/overview" component={OverviewPage} />
+            <Route path="/admin/agencies" component={AgenciesPage} />
+            <Route path="/admin/users" component={UsersPage} />
+            <Route path="/admin/developers" component={DevelopersPage} />
+            {/* Default route for admin dashboard - should be last */}
+            <Route path="/admin/*" component={OverviewPage} />
+          </Switch>
+        </SuperAdminDashboard>
       </Route>
-      
-      {/* Super Admin Dashboard Pages */}
-      <Route path="/admin/overview" component={OverviewPage} />
-      <Route path="/admin/agencies" component={AgenciesPage} />
-      <Route path="/admin/users" component={UsersPage} />
-      <Route path="/admin/developers" component={DevelopersPage} />
 
       <Route path="/agency/dashboard" component={AgencyDashboard} />
       <Route path="/agency/onboarding" component={AgencyOnboarding} />

@@ -119,7 +119,7 @@ const SidebarNavigation = () => {
   );
 };
 
-export default function SuperAdminDashboard() {
+export default function SuperAdminDashboard({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
@@ -187,25 +187,24 @@ export default function SuperAdminDashboard() {
               <div className="flex items-center justify-between">
                 <div>
                   <h1 className="text-2xl font-bold">Super Admin Dashboard</h1>
-                  <p className="text-muted-foreground">
-                    Welcome back, {user?.name || user?.email}
-                  </p>
+                  <p className="text-muted-foreground">Welcome back, {user?.name || user?.email}</p>
                 </div>
                 <Badge variant="destructive">Super Admin</Badge>
               </div>
             </div>
 
-            {/* Render children routes */}
+            {/* Render children routes or default content */}
             <div>
-              {/* This is where the child routes will be rendered */}
-              {location === '/admin' || location === '/admin/' ? (
+              {children || (
                 <div className="text-center py-12">
-                  <h2 className="text-xl font-semibold mb-2">Welcome to the Super Admin Dashboard</h2>
+                  <h2 className="text-xl font-semibold mb-2">
+                    Welcome to the Super Admin Dashboard
+                  </h2>
                   <p className="text-muted-foreground">
                     Select an option from the sidebar to get started.
                   </p>
                 </div>
-              ) : null}
+              )}
             </div>
           </div>
         </main>
