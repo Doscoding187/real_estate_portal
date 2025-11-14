@@ -1,195 +1,206 @@
-import { useState } from 'react';
-import { useLocation } from 'wouter';
+import { useState, useEffect } from 'react';
+import { useLocation, useRoute } from 'wouter';
 import DashboardLayout from '@/components/DashboardLayout';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
+  Menu,
   LayoutDashboard,
   Building2,
-  CreditCard,
-  Home,
   Users,
-  Ticket,
-  Activity,
+  Home,
+  CreditCard,
+  BarChart3,
+  MessageSquare,
+  FileText,
   Settings,
-  Search,
-  Filter,
-  ArrowRight,
+  Shield,
+  TrendingUp,
+  BarChart,
+  Megaphone,
+  Handshake,
+  Code,
+  User,
+  Star,
+  Activity,
+  Ticket,
 } from 'lucide-react';
 import { useAuth } from '@/_core/hooks/useAuth';
-import { useAnalytics } from '@/hooks/admin';
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  LineChart,
-  Line,
-} from 'recharts';
 
-// Mock data for charts
-const mockRevenueData = [
-  { name: 'Jan', revenue: 4000 },
-  { name: 'Feb', revenue: 3000 },
-  { name: 'Mar', revenue: 2000 },
-  { name: 'Apr', revenue: 2780 },
-  { name: 'May', revenue: 1890 },
-  { name: 'Jun', revenue: 2390 },
-];
+const SidebarNavigation = () => {
+  const [location, setLocation] = useLocation();
 
-const mockUserGrowthData = [
-  { name: 'Jan', users: 400 },
-  { name: 'Feb', users: 600 },
-  { name: 'Mar', users: 800 },
-  { name: 'Apr', users: 1200 },
-  { name: 'May', users: 1500 },
-  { name: 'Jun', users: 1800 },
-];
-
-export default function SuperAdminDashboard() {
-  const [, setLocation] = useLocation();
-  const { user } = useAuth();
-  const { data: analytics } = useAnalytics();
-
-  const [searchTerm, setSearchTerm] = useState('');
-
-  // Navigation items for the sidebar
-  const navItems = [
-    { icon: LayoutDashboard, label: 'Overview', path: '/admin/overview' },
-    { icon: Building2, label: 'Agencies', path: '/admin/agencies' },
-    { icon: CreditCard, label: 'Subscriptions', path: '/admin/subscriptions' },
-    { icon: Home, label: 'Listings', path: '/admin/listings' },
-    { icon: Users, label: 'Users', path: '/admin/users' },
-    { icon: Ticket, label: 'Support Tickets', path: '/admin/tickets' },
-    { icon: Activity, label: 'Audit Log', path: '/admin/audit' },
-    { icon: Settings, label: 'Settings', path: '/admin/settings' },
+  const navigationGroups = [
+    {
+      title: 'DASHBOARD',
+      items: [{ name: 'Overview', path: '/admin/overview', icon: LayoutDashboard }],
+    },
+    {
+      title: 'REVENUE & ANALYTICS',
+      items: [
+        { name: 'Revenue Center', path: '/admin/revenue', icon: TrendingUp },
+        { name: 'Analytics & Reports', path: '/admin/analytics', icon: BarChart },
+        { name: 'Marketing Campaigns', path: '/admin/marketing', icon: Megaphone },
+        { name: 'Partner Network', path: '/admin/partners', icon: Handshake },
+        { name: 'Developers', path: '/admin/developers', icon: Code },
+      ],
+    },
+    {
+      title: 'ECOSYSTEM MANAGEMENT',
+      items: [
+        { name: 'Agencies', path: '/admin/agencies', icon: Building2 },
+        { name: 'Agents', path: '/admin/agents', icon: Users },
+        { name: 'End Users', path: '/admin/end-users', icon: User },
+        { name: 'Property Listings', path: '/admin/properties', icon: Home },
+        { name: 'Featured Placements', path: '/admin/placements', icon: Star },
+      ],
+    },
+    {
+      title: 'PLATFORM MANAGEMENT',
+      items: [
+        {
+          name: 'Subscription Management',
+          path: '/admin/subscriptions',
+          icon: CreditCard,
+        },
+        { name: 'Financial Tracking', path: '/admin/financials', icon: BarChart3 },
+        { name: 'Content Manager', path: '/admin/content', icon: FileText },
+        {
+          name: 'Communications',
+          path: '/admin/communications',
+          icon: MessageSquare,
+        },
+        { name: 'User & Role Management', path: '/admin/users', icon: Users },
+      ],
+    },
+    {
+      title: 'SYSTEM',
+      items: [
+        { name: 'Settings & Integrations', path: '/admin/settings', icon: Settings },
+        { name: 'System & Security', path: '/admin/system', icon: Shield },
+        { name: 'Audit Log', path: '/admin/audit', icon: Activity },
+        { name: 'Support Tickets', path: '/admin/tickets', icon: Ticket },
+      ],
+    },
   ];
 
-  const handleNavClick = (path: string) => {
-    setLocation(path);
+  return (
+    <div className="flex flex-col h-full bg-background border-r">
+      <div className="flex-1 overflow-y-auto pt-6 pb-6">
+        <div className="flex flex-col px-3">
+          {navigationGroups.map(group => (
+            <div key={group.title} className="mb-4">
+              <h3 className="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                {group.title}
+              </h3>
+              <div className="mt-1 space-y-1">
+                {group.items.map(item => {
+                  const isActive = location === item.path;
+                  return (
+                    <button
+                      key={item.name}
+                      onClick={() => setLocation(item.path)}
+                      className={`flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors w-full text-left ${
+                        isActive
+                          ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-100'
+                          : 'text-muted-foreground hover:bg-muted'
+                      }`}
+                    >
+                      <item.icon className="h-4 w-4 mr-3" />
+                      <span className="truncate">{item.name}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default function SuperAdminDashboard() {
+  const { user } = useAuth();
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Check if we're on mobile
+  useEffect(() => {
+    const checkIfMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+      if (window.innerWidth >= 768) {
+        setIsSidebarOpen(true);
+      }
+    };
+
+    checkIfMobile();
+    window.addEventListener('resize', checkIfMobile);
+
+    return () => {
+      window.removeEventListener('resize', checkIfMobile);
+    };
+  }, []);
+
+  const toggleSidebar = () => {
+    setIsSidebarOpen(!isSidebarOpen);
   };
 
   return (
     <DashboardLayout adminSidebar={true}>
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold">Super Admin Dashboard</h1>
-            <p className="text-muted-foreground">Welcome back, {user?.name || user?.email}</p>
+      <div className="flex flex-col min-h-screen bg-background">
+        <div className="flex flex-1">
+          {/* Sidebar */}
+          <div
+            className={`${
+              isMobile ? 'absolute z-40' : 'relative'
+            } ${isSidebarOpen ? 'block' : 'hidden'} md:block transition-all duration-300 ease-in-out`}
+            style={{ width: '280px' }}
+          >
+            <SidebarNavigation />
           </div>
-          <Badge variant="destructive">Super Admin</Badge>
-        </div>
 
-        {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                R{analytics?.monthlyRevenue?.toLocaleString() || '0'}
-              </div>
-              <p className="text-xs text-muted-foreground">+12% from last month</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Active Users</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{analytics?.totalUsers || 0}</div>
-              <p className="text-xs text-muted-foreground">+180 from last month</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Properties</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{analytics?.activeProperties || 0}</div>
-              <p className="text-xs text-muted-foreground">+52 from last month</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Agencies</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{analytics?.totalAgencies || 0}</div>
-              <p className="text-xs text-muted-foreground">+8 from last month</p>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Charts */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Revenue Overview</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={mockRevenueData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="name" />
-                  <YAxis />
-                  <Tooltip />
-                  <Bar dataKey="revenue" fill="#3b82f6" />
-                </BarChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>User Growth</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
-                <LineChart data={mockUserGrowthData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="name" />
-                  <YAxis />
-                  <Tooltip />
-                  <Line type="monotone" dataKey="users" stroke="#10b981" strokeWidth={2} />
-                </LineChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Quick Actions */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Quick Actions</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              {navItems.slice(1).map(item => (
-                <Button
-                  key={item.path}
-                  variant="outline"
-                  className="justify-between h-auto py-4"
-                  onClick={() => handleNavClick(item.path)}
+          {/* Main Content */}
+          <main
+            className={`flex-1 overflow-auto transition-all duration-300 ease-in-out ${
+              isMobile ? 'pt-16' : ''
+            }`}
+          >
+            {isMobile && (
+              <div className="fixed top-0 left-0 right-0 h-16 flex items-center justify-between px-4 bg-background border-b z-30">
+                <button
+                  onClick={toggleSidebar}
+                  className="p-2 rounded-md bg-background text-foreground hover:bg-muted"
                 >
-                  <div className="text-left">
-                    <div className="font-semibold">{item.label}</div>
+                  <Menu className="h-5 w-5" />
+                </button>
+                <div className="flex items-center gap-2">
+                  <span className="font-semibold">Admin Dashboard</span>
+                  <Badge variant="destructive">Super Admin</Badge>
+                </div>
+                <div className="w-8"></div> {/* Spacer for symmetry */}
+              </div>
+            )}
+
+            {/* Page Content */}
+            <div className="p-4 md:p-6">
+              <div className="mb-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h1 className="text-2xl font-bold">Super Admin Dashboard</h1>
+                    <p className="text-muted-foreground">
+                      Welcome back, {user?.name || user?.email}
+                    </p>
                   </div>
-                  <ArrowRight className="h-4 w-4" />
-                </Button>
-              ))}
+                  <Badge variant="destructive">Super Admin</Badge>
+                </div>
+              </div>
+
+              {/* Render children routes */}
+              <div>{/* This will render the matched child route component */}</div>
             </div>
-          </CardContent>
-        </Card>
+          </main>
+        </div>
       </div>
     </DashboardLayout>
   );

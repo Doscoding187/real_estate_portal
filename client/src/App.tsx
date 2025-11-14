@@ -47,6 +47,12 @@ import Settings from './pages/admin/Settings';
 // Future Dashboard Components
 import PartnerDashboard from './pages/partner/PartnerDashboard';
 
+// Import new admin pages
+import OverviewPage from './pages/admin/OverviewPage';
+import AgenciesPage from './pages/admin/AgenciesPage';
+import UsersPage from './pages/admin/UsersPage';
+import DevelopersPage from './pages/admin/DevelopersPage';
+
 function Router() {
   // make sure to consider if you need authentication for certain routes
   return (
@@ -68,6 +74,12 @@ function Router() {
           <SuperAdminDashboard />
         </RequireSuperAdmin>
       </Route>
+
+      {/* Super Admin Dashboard Pages */}
+      <Route path="/admin/overview" component={OverviewPage} />
+      <Route path="/admin/agencies" component={AgenciesPage} />
+      <Route path="/admin/users" component={UsersPage} />
+      <Route path="/admin/developers" component={DevelopersPage} />
 
       <Route path="/agency/dashboard" component={AgencyDashboard} />
       <Route path="/agency/onboarding" component={AgencyOnboarding} />
