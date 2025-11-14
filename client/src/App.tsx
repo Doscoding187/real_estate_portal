@@ -53,6 +53,10 @@ import AgenciesPage from './pages/admin/AgenciesPage';
 import UsersPage from './pages/admin/UsersPage';
 import DevelopersPage from './pages/admin/DevelopersPage';
 
+// Import new role-based dashboards
+import UserDashboard from './pages/UserDashboard';
+import PropertyDeveloperDashboard from './pages/PropertyDeveloperDashboard';
+
 function Router() {
   // make sure to consider if you need authentication for certain routes
   return (
@@ -86,6 +90,21 @@ function Router() {
       <Route path="/agency/onboarding/success" component={OnboardingSuccess} />
       <Route path="/agency/invite" component={InviteAgents} />
       <Route path="/agency/agents" component={AgentManagement} />
+
+      {/* Property Developer Dashboard Route */}
+      <Route path="/developer/dashboard">
+        <RequireRole role="property_developer">
+          <PropertyDeveloperDashboard />
+        </RequireRole>
+      </Route>
+
+      {/* User Dashboard Route */}
+      <Route path="/user/dashboard">
+        <RequireRole role="user">
+          <UserDashboard />
+        </RequireRole>
+      </Route>
+
       <Route path="/accept-invitation" component={AcceptInvitation} />
       <Route path="/login" component={Login} />
       <Route path="/forgot-password" component={ForgotPassword} />

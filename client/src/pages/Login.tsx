@@ -101,7 +101,7 @@ export default function Login() {
 
       // Role-based redirect
       const role = result.user?.role;
-      let redirectPath = '/dashboard'; // Default for visitor
+      let redirectPath = '/dashboard'; // Default for regular users
 
       if (role === 'super_admin') {
         redirectPath = '/admin/dashboard';
@@ -109,14 +109,19 @@ export default function Login() {
         redirectPath = '/agency/dashboard';
       } else if (role === 'agent') {
         redirectPath = '/agent/dashboard';
+      } else if (role === 'property_developer') {
+        redirectPath = '/developer/dashboard';
+      } else {
+        // Regular user
+        redirectPath = '/user/dashboard';
       }
 
       // Use hard redirect to ensure fresh page load with cookie
       console.log('[Login] Redirecting to:', redirectPath);
-      
+
       // Small delay to ensure cookie is set before redirect
       await new Promise(resolve => setTimeout(resolve, 100));
-      
+
       window.location.href = redirectPath;
     } catch (error) {
       console.error('[Login] Error caught:', error);
@@ -142,7 +147,9 @@ export default function Login() {
         }),
       });
 
-      toast.success('Account created successfully! Please check your email to verify your account.');
+      toast.success(
+        'Account created successfully! Please check your email to verify your account.',
+      );
       setActiveTab('login');
       registerForm.reset();
     } catch (error) {
@@ -221,10 +228,7 @@ export default function Login() {
                         render={({ field }) => (
                           <FormItem className="flex flex-row items-start space-x-3 space-y-0">
                             <FormControl>
-                              <Checkbox
-                                checked={field.value}
-                                onCheckedChange={field.onChange}
-                              />
+                              <Checkbox checked={field.value} onCheckedChange={field.onChange} />
                             </FormControl>
                             <div className="space-y-1 leading-none">
                               <FormLabel>Remember me</FormLabel>
