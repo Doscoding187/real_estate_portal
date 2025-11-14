@@ -59,10 +59,9 @@ function Router() {
       <Route path="/agent/:id" component={AgentDetail} />
       <Route path="/city/:slug" component={CityPage} />
       <Route path="/list-property" component={ListProperty} />
-      <Route path="/dashboard" component={Dashboard} />
       <Route path="/explore" component={ExploreFeed} />
 
-      {/* Super Admin Dashboard Routes */}
+      {/* Super Admin Dashboard Routes - Moved to be earlier in the route list */}
       <Route path="/admin">
         <SuperAdminDashboard>
           <Switch>
@@ -75,6 +74,9 @@ function Router() {
           </Switch>
         </SuperAdminDashboard>
       </Route>
+
+      {/* Other routes that might conflict */}
+      <Route path="/dashboard" component={Dashboard} />
 
       <Route path="/agency/dashboard" component={AgencyDashboard} />
       <Route path="/agency/onboarding" component={AgencyOnboarding} />
