@@ -21,20 +21,53 @@ export default function Listings() {
 
   // Mock data since we don't have a real listings endpoint yet
   const mockListings = [
-    { id: 1, title: 'Modern Family Home', price: 2500000, status: 'available', city: 'Johannesburg', owner: 'Sarah Johnson', featured: true },
-    { id: 2, title: 'Luxury Apartment', price: 1800000, status: 'pending', city: 'Cape Town', owner: 'Mike Williams', featured: false },
-    { id: 3, title: 'Townhouse for Rent', price: 25000, status: 'rented', city: 'Durban', owner: 'Emma Davis', featured: false },
-    { id: 4, title: 'Beachfront Villa', price: 4500000, status: 'available', city: 'Port Elizabeth', owner: 'James Brown', featured: true },
+    {
+      id: 1,
+      title: 'Modern Family Home',
+      price: 2500000,
+      status: 'available',
+      city: 'Johannesburg',
+      owner: 'Sarah Johnson',
+      featured: true,
+    },
+    {
+      id: 2,
+      title: 'Luxury Apartment',
+      price: 1800000,
+      status: 'pending',
+      city: 'Cape Town',
+      owner: 'Mike Williams',
+      featured: false,
+    },
+    {
+      id: 3,
+      title: 'Townhouse for Rent',
+      price: 25000,
+      status: 'rented',
+      city: 'Durban',
+      owner: 'Emma Davis',
+      featured: false,
+    },
+    {
+      id: 4,
+      title: 'Beachfront Villa',
+      price: 4500000,
+      status: 'available',
+      city: 'Port Elizabeth',
+      owner: 'James Brown',
+      featured: true,
+    },
   ];
 
   const filteredListings = useMemo(() => {
     if (!searchTerm) return mockListings;
-    
+
     const term = searchTerm.toLowerCase();
-    return mockListings.filter(listing => 
-      listing.title.toLowerCase().includes(term) || 
-      listing.city.toLowerCase().includes(term) ||
-      listing.owner.toLowerCase().includes(term)
+    return mockListings.filter(
+      listing =>
+        listing.title.toLowerCase().includes(term) ||
+        listing.city.toLowerCase().includes(term) ||
+        listing.owner.toLowerCase().includes(term),
     );
   }, [searchTerm]);
 
@@ -74,7 +107,7 @@ export default function Listings() {
                 <Input
                   placeholder="Search listings..."
                   value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onChange={e => setSearchTerm(e.target.value)}
                   className="pl-10"
                 />
               </div>
@@ -108,12 +141,20 @@ export default function Listings() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredListings.map((listing) => (
+                {filteredListings.map(listing => (
                   <TableRow key={listing.id}>
                     <TableCell className="font-medium">{listing.title}</TableCell>
                     <TableCell>R{listing.price.toLocaleString()}</TableCell>
                     <TableCell>
-                      <Badge variant={listing.status === 'available' ? "default" : listing.status === 'pending' ? "secondary" : "outline"}>
+                      <Badge
+                        variant={
+                          listing.status === 'available'
+                            ? 'default'
+                            : listing.status === 'pending'
+                              ? 'secondary'
+                              : 'outline'
+                        }
+                      >
                         {listing.status}
                       </Badge>
                     </TableCell>
@@ -127,17 +168,17 @@ export default function Listings() {
                       )}
                     </TableCell>
                     <TableCell>
-                      <Button variant="ghost" size="sm">Review</Button>
+                      <Button variant="ghost" size="sm">
+                        Review
+                      </Button>
                     </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
-            
+
             {filteredListings.length === 0 && (
-              <div className="text-center py-8 text-muted-foreground">
-                No listings found
-              </div>
+              <div className="text-center py-8 text-muted-foreground">No listings found</div>
             )}
           </CardContent>
         </Card>

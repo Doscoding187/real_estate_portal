@@ -115,7 +115,7 @@ export function registerAuthRoutes(app: Express) {
       res.status(500).json({
         error: 'Login failed',
         message: error.message,
-        stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+        stack: process.env.NODE_ENV === 'development' ? error.stack : undefined,
       });
     }
   });
@@ -188,7 +188,9 @@ export function registerAuthRoutes(app: Express) {
       res.json({ success: true, message: 'Your password has been reset successfully.' });
     } catch (error: any) {
       console.error('[Auth] Reset password failed', error);
-      res.status(400).json({ error: error.message || 'The password reset token is invalid or has expired.' });
+      res
+        .status(400)
+        .json({ error: error.message || 'The password reset token is invalid or has expired.' });
     }
   });
 
@@ -202,7 +204,11 @@ export function registerAuthRoutes(app: Express) {
       const { token } = req.query;
 
       if (!token || typeof token !== 'string') {
-        return res.status(400).send('<h1>Email Verification Failed</h1><p>The verification link is missing a token.</p>');
+        return res
+          .status(400)
+          .send(
+            '<h1>Email Verification Failed</h1><p>The verification link is missing a token.</p>',
+          );
       }
 
       await authService.verifyEmail(token);
@@ -211,7 +217,11 @@ export function registerAuthRoutes(app: Express) {
       res.redirect(`${ENV.appUrl}/login?verified=true`);
     } catch (error: any) {
       console.error('[Auth] Email verification failed', error);
-      res.status(400).send(`<h1>Email Verification Failed</h1><p>${error.message || 'The verification link is invalid or has expired.'}</p>`);
+      res
+        .status(400)
+        .send(
+          `<h1>Email Verification Failed</h1><p>${error.message || 'The verification link is invalid or has expired.'}</p>`,
+        );
     }
   });
 }

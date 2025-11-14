@@ -44,20 +44,20 @@ export default function Settings() {
                 <Input
                   id="platformName"
                   value={settings.platformName}
-                  onChange={(e) => setSettings({...settings, platformName: e.target.value})}
+                  onChange={e => setSettings({ ...settings, platformName: e.target.value })}
                 />
               </div>
-              
+
               <div className="space-y-2">
                 <Label htmlFor="supportEmail">Support Email</Label>
                 <Input
                   id="supportEmail"
                   type="email"
                   value={settings.supportEmail}
-                  onChange={(e) => setSettings({...settings, supportEmail: e.target.value})}
+                  onChange={e => setSettings({ ...settings, supportEmail: e.target.value })}
                 />
               </div>
-              
+
               <div className="flex items-center justify-between pt-4">
                 <div className="space-y-1">
                   <Label>Maintenance Mode</Label>
@@ -67,10 +67,12 @@ export default function Settings() {
                 </div>
                 <Switch
                   checked={settings.maintenanceMode}
-                  onCheckedChange={(checked) => setSettings({...settings, maintenanceMode: checked})}
+                  onCheckedChange={checked =>
+                    setSettings({ ...settings, maintenanceMode: checked })
+                  }
                 />
               </div>
-              
+
               <div className="flex items-center justify-between pt-4">
                 <div className="space-y-1">
                   <Label>Email Notifications</Label>
@@ -80,11 +82,13 @@ export default function Settings() {
                 </div>
                 <Switch
                   checked={settings.emailNotifications}
-                  onCheckedChange={(checked) => setSettings({...settings, emailNotifications: checked})}
+                  onCheckedChange={checked =>
+                    setSettings({ ...settings, emailNotifications: checked })
+                  }
                 />
               </div>
             </div>
-            
+
             <div className="flex justify-end">
               <Button onClick={handleSave}>Save Changes</Button>
             </div>

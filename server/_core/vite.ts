@@ -43,7 +43,7 @@ export function serveStatic(app: Express) {
   // In production, the bundled server is in dist/index.js
   // Frontend files are in dist/public
   const distPath = path.resolve(import.meta.dirname, 'public');
-  
+
   if (!fs.existsSync(distPath)) {
     console.error(
       `Could not find the build directory: ${distPath}, make sure to build the client first`,

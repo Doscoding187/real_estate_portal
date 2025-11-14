@@ -51,7 +51,7 @@ const mockUserGrowthData = [
 export default function Overview() {
   const { user } = useAuth();
   const { data: analytics } = useAnalytics();
-  
+
   const [searchTerm, setSearchTerm] = useState('');
 
   return (
@@ -73,11 +73,13 @@ export default function Overview() {
               <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">R{analytics?.monthlyRevenue?.toLocaleString() || '0'}</div>
+              <div className="text-2xl font-bold">
+                R{analytics?.monthlyRevenue?.toLocaleString() || '0'}
+              </div>
               <p className="text-xs text-muted-foreground">+12% from last month</p>
             </CardContent>
           </Card>
-          
+
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Active Users</CardTitle>
@@ -87,7 +89,7 @@ export default function Overview() {
               <p className="text-xs text-muted-foreground">+180 from last month</p>
             </CardContent>
           </Card>
-          
+
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Properties</CardTitle>
@@ -97,7 +99,7 @@ export default function Overview() {
               <p className="text-xs text-muted-foreground">+52 from last month</p>
             </CardContent>
           </Card>
-          
+
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Agencies</CardTitle>
@@ -127,7 +129,7 @@ export default function Overview() {
               </ResponsiveContainer>
             </CardContent>
           </Card>
-          
+
           <Card>
             <CardHeader>
               <CardTitle>User Growth</CardTitle>

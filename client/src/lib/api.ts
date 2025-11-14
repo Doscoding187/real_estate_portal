@@ -3,9 +3,10 @@
  * Uses VITE_API_URL environment variable or falls back to current origin
  */
 export const getApiUrl = (endpoint: string) => {
-  const base = (typeof window !== 'undefined')
-    ? import.meta.env.VITE_API_URL || window.location.origin
-    : import.meta.env.VITE_API_URL || 'http://localhost:3000';
+  const base =
+    typeof window !== 'undefined'
+      ? import.meta.env.VITE_API_URL || window.location.origin
+      : import.meta.env.VITE_API_URL || 'http://localhost:3000';
   return `${base.replace(/\/$/, '')}/api/${endpoint.replace(/^\//, '')}`;
 };
 
@@ -15,7 +16,7 @@ export const getApiUrl = (endpoint: string) => {
 export class ApiError extends Error {
   status: number;
   body: any;
-  
+
   constructor(status: number, message: string, body: any = null) {
     super(message);
     this.status = status;
@@ -26,17 +27,14 @@ export class ApiError extends Error {
 /**
  * Centralized API fetch wrapper with comprehensive error handling
  */
-export async function apiFetch<T = any>(
-  endpoint: string,
-  init?: RequestInit
-): Promise<T> {
+export async function apiFetch<T = any>(endpoint: string, init?: RequestInit): Promise<T> {
   const url = getApiUrl(endpoint);
-  
+
   console.log(`[API] ${init?.method || 'GET'} ${url}`);
-  
+
   const res = await fetch(url, {
     credentials: 'include', // if using cookies/sessions
-    headers: { 'Accept': 'application/json', ...(init?.headers || {}) },
+    headers: { Accept: 'application/json', ...(init?.headers || {}) },
     ...init,
   });
 
@@ -49,10 +47,10 @@ export async function apiFetch<T = any>(
     // Try parse JSON body if possible, else return text
     let body = text;
     if (contentType.includes('application/json')) {
-      try { 
-        body = JSON.parse(text); 
+      try {
+        body = JSON.parse(text);
         console.error(`[API] Error response:`, body);
-      } catch { 
+      } catch {
         // leave as text
         console.error(`[API] Error response (text):`, text);
       }
@@ -64,13 +62,13 @@ export async function apiFetch<T = any>(
 
   if (!text) {
     console.log(`[API] Empty success response for ${endpoint}`);
-    return (null as unknown) as T; // empty success body => return null
+    return null as unknown as T; // empty success body => return null
   }
-  
+
   if (!contentType.includes('application/json')) {
     // If you expect JSON, treat this as an error or return raw text
     console.warn(`[API] Non-JSON response for ${endpoint}:`, text);
-    return (text as unknown) as T;
+    return text as unknown as T;
   }
 
   try {

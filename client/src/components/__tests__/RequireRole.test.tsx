@@ -22,7 +22,7 @@ const renderWithAuth = (authValue: any, role: string) => {
   return render(
     <RequireRole role={role}>
       <div data-testid="protected">Protected Content</div>
-    </RequireRole>
+    </RequireRole>,
   );
 };
 
@@ -30,7 +30,7 @@ describe('RequireRole', () => {
   beforeEach(() => {
     // Reset all mocks before each test
     vi.resetAllMocks();
-    
+
     // Mock window.location
     Object.defineProperty(window, 'location', {
       value: {
@@ -46,7 +46,7 @@ describe('RequireRole', () => {
       user: { role: 'agency_admin' },
       loading: false,
     });
-    
+
     mockUseLocation.mockReturnValue([null, vi.fn()]);
 
     renderWithAuth({}, 'agency_admin');
@@ -61,7 +61,7 @@ describe('RequireRole', () => {
       user: null,
       loading: false,
     });
-    
+
     mockUseLocation.mockReturnValue([null, setLocation]);
 
     renderWithAuth({}, 'agency_admin');
@@ -78,7 +78,7 @@ describe('RequireRole', () => {
       user: { role: 'agent' },
       loading: false,
     });
-    
+
     mockUseLocation.mockReturnValue([null, setLocation]);
 
     renderWithAuth({}, 'agency_admin');
@@ -94,7 +94,7 @@ describe('RequireRole', () => {
       user: null,
       loading: true,
     });
-    
+
     mockUseLocation.mockReturnValue([null, vi.fn()]);
 
     renderWithAuth({}, 'agency_admin');
@@ -117,14 +117,14 @@ describe('RequireRole', () => {
       user: null,
       loading: false,
     });
-    
+
     mockUseLocation.mockReturnValue([null, setLocation]);
 
     renderWithAuth({}, 'agency_admin');
 
     // Wait a bit to ensure no redirect happens
     await new Promise(resolve => setTimeout(resolve, 100));
-    
+
     expect(setLocation).not.toHaveBeenCalled();
   });
 });

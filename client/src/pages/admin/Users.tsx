@@ -21,20 +21,49 @@ export default function Users() {
 
   // Mock data since we don't have a real users endpoint yet
   const mockUsers = [
-    { id: 1, name: 'John Admin', email: 'john@admin.com', role: 'super_admin', status: 'active', lastLogin: '2024-06-15' },
-    { id: 2, name: 'Sarah Agent', email: 'sarah@agency.com', role: 'agent', status: 'active', lastLogin: '2024-06-14' },
-    { id: 3, name: 'Mike Agency', email: 'mike@urbanestates.com', role: 'agency_admin', status: 'active', lastLogin: '2024-06-10' },
-    { id: 4, name: 'Emma Visitor', email: 'emma@gmail.com', role: 'visitor', status: 'inactive', lastLogin: '2024-05-20' },
+    {
+      id: 1,
+      name: 'John Admin',
+      email: 'john@admin.com',
+      role: 'super_admin',
+      status: 'active',
+      lastLogin: '2024-06-15',
+    },
+    {
+      id: 2,
+      name: 'Sarah Agent',
+      email: 'sarah@agency.com',
+      role: 'agent',
+      status: 'active',
+      lastLogin: '2024-06-14',
+    },
+    {
+      id: 3,
+      name: 'Mike Agency',
+      email: 'mike@urbanestates.com',
+      role: 'agency_admin',
+      status: 'active',
+      lastLogin: '2024-06-10',
+    },
+    {
+      id: 4,
+      name: 'Emma Visitor',
+      email: 'emma@gmail.com',
+      role: 'visitor',
+      status: 'inactive',
+      lastLogin: '2024-05-20',
+    },
   ];
 
   const filteredUsers = useMemo(() => {
     if (!searchTerm) return mockUsers;
-    
+
     const term = searchTerm.toLowerCase();
-    return mockUsers.filter(user => 
-      user.name.toLowerCase().includes(term) || 
-      user.email.toLowerCase().includes(term) ||
-      user.role.toLowerCase().includes(term)
+    return mockUsers.filter(
+      user =>
+        user.name.toLowerCase().includes(term) ||
+        user.email.toLowerCase().includes(term) ||
+        user.role.toLowerCase().includes(term),
     );
   }, [searchTerm]);
 
@@ -74,7 +103,7 @@ export default function Users() {
                 <Input
                   placeholder="Search users..."
                   value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onChange={e => setSearchTerm(e.target.value)}
                   className="pl-10"
                 />
               </div>
@@ -107,33 +136,43 @@ export default function Users() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredUsers.map((user) => (
+                {filteredUsers.map(user => (
                   <TableRow key={user.id}>
                     <TableCell className="font-medium">{user.name}</TableCell>
                     <TableCell>{user.email}</TableCell>
                     <TableCell>
-                      <Badge variant={user.role === 'super_admin' ? "destructive" : user.role === 'agency_admin' ? "default" : user.role === 'agent' ? "secondary" : "outline"}>
+                      <Badge
+                        variant={
+                          user.role === 'super_admin'
+                            ? 'destructive'
+                            : user.role === 'agency_admin'
+                              ? 'default'
+                              : user.role === 'agent'
+                                ? 'secondary'
+                                : 'outline'
+                        }
+                      >
                         {user.role}
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      <Badge variant={user.status === 'active' ? "default" : "secondary"}>
+                      <Badge variant={user.status === 'active' ? 'default' : 'secondary'}>
                         {user.status}
                       </Badge>
                     </TableCell>
                     <TableCell>{user.lastLogin}</TableCell>
                     <TableCell>
-                      <Button variant="ghost" size="sm">Edit</Button>
+                      <Button variant="ghost" size="sm">
+                        Edit
+                      </Button>
                     </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
-            
+
             {filteredUsers.length === 0 && (
-              <div className="text-center py-8 text-muted-foreground">
-                No users found
-              </div>
+              <div className="text-center py-8 text-muted-foreground">No users found</div>
             )}
           </CardContent>
         </Card>

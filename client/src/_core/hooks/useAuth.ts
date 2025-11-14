@@ -13,7 +13,9 @@ export function useAuth(options?: UseAuthOptions) {
 
   // Add a check for trpc availability
   if (!trpc) {
-    console.warn('TRPC context not found in useAuth hook. Ensure trpc.Provider is correctly set up.');
+    console.warn(
+      'TRPC context not found in useAuth hook. Ensure trpc.Provider is correctly set up.',
+    );
     // Return a minimal state to prevent further errors
     return {
       user: null,

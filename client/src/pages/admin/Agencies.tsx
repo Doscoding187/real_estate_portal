@@ -22,12 +22,13 @@ export default function Agencies() {
   const filteredAgencies = useMemo(() => {
     if (!data?.agencies) return [];
     if (!searchTerm) return data.agencies;
-    
+
     const term = searchTerm.toLowerCase();
-    return data.agencies.filter(agency => 
-      agency.name.toLowerCase().includes(term) || 
-      agency.email.toLowerCase().includes(term) ||
-      agency.city.toLowerCase().includes(term)
+    return data.agencies.filter(
+      agency =>
+        agency.name.toLowerCase().includes(term) ||
+        agency.email.toLowerCase().includes(term) ||
+        agency.city.toLowerCase().includes(term),
     );
   }, [data?.agencies, searchTerm]);
 
@@ -70,7 +71,7 @@ export default function Agencies() {
                 <Input
                   placeholder="Search agencies..."
                   value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onChange={e => setSearchTerm(e.target.value)}
                   className="pl-10"
                 />
               </div>
@@ -103,7 +104,7 @@ export default function Agencies() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredAgencies.map((agency) => (
+                {filteredAgencies.map(agency => (
                   <TableRow key={agency.id}>
                     <TableCell>
                       <div className="font-medium">{agency.name}</div>
@@ -120,22 +121,22 @@ export default function Agencies() {
                       <Badge variant="secondary">{agency.subscriptionPlan}</Badge>
                     </TableCell>
                     <TableCell>
-                      <Badge variant={agency.isVerified ? "default" : "secondary"}>
-                        {agency.isVerified ? "Verified" : "Pending"}
+                      <Badge variant={agency.isVerified ? 'default' : 'secondary'}>
+                        {agency.isVerified ? 'Verified' : 'Pending'}
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      <Button variant="ghost" size="sm">View</Button>
+                      <Button variant="ghost" size="sm">
+                        View
+                      </Button>
                     </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
-            
+
             {filteredAgencies.length === 0 && (
-              <div className="text-center py-8 text-muted-foreground">
-                No agencies found
-              </div>
+              <div className="text-center py-8 text-muted-foreground">No agencies found</div>
             )}
           </CardContent>
         </Card>

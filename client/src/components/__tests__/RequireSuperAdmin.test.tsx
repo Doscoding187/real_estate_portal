@@ -22,7 +22,7 @@ const renderWithAuth = (authValue: any) => {
   return render(
     <RequireSuperAdmin>
       <div data-testid="protected">Protected Content</div>
-    </RequireSuperAdmin>
+    </RequireSuperAdmin>,
   );
 };
 
@@ -30,7 +30,7 @@ describe('RequireSuperAdmin', () => {
   beforeEach(() => {
     // Reset all mocks before each test
     vi.resetAllMocks();
-    
+
     // Mock window.location
     Object.defineProperty(window, 'location', {
       value: {
@@ -46,7 +46,7 @@ describe('RequireSuperAdmin', () => {
       user: { role: 'super_admin' },
       loading: false,
     });
-    
+
     mockUseLocation.mockReturnValue([null, vi.fn()]);
 
     renderWithAuth({});
@@ -61,7 +61,7 @@ describe('RequireSuperAdmin', () => {
       user: null,
       loading: false,
     });
-    
+
     mockUseLocation.mockReturnValue([null, setLocation]);
 
     renderWithAuth({});
@@ -78,7 +78,7 @@ describe('RequireSuperAdmin', () => {
       user: { role: 'agent' },
       loading: false,
     });
-    
+
     mockUseLocation.mockReturnValue([null, setLocation]);
 
     renderWithAuth({});
@@ -94,7 +94,7 @@ describe('RequireSuperAdmin', () => {
       user: null,
       loading: true,
     });
-    
+
     mockUseLocation.mockReturnValue([null, vi.fn()]);
 
     renderWithAuth({});
@@ -117,14 +117,14 @@ describe('RequireSuperAdmin', () => {
       user: null,
       loading: false,
     });
-    
+
     mockUseLocation.mockReturnValue([null, setLocation]);
 
     renderWithAuth({});
 
     // Wait a bit to ensure no redirect happens
     await new Promise(resolve => setTimeout(resolve, 100));
-    
+
     expect(setLocation).not.toHaveBeenCalled();
   });
 });

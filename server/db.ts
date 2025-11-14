@@ -17,16 +17,7 @@ import { ENV } from './_core/env';
 
 let _db: any = null;
 
-// Debug database connection
-console.log('[Database] Checking DATABASE_URL:', process.env.DATABASE_URL ? 'present' : 'missing');
-if (process.env.DATABASE_URL) {
-  console.log(
-    '[Database] DATABASE_URL (masked):',
-    process.env.DATABASE_URL.replace(/:([^:@]+)@/, ':****@'),
-  );
-}
-
-// Debug database connection
+/* Debug database connection (single log) */
 console.log('[Database] Checking DATABASE_URL:', process.env.DATABASE_URL ? 'present' : 'missing');
 if (process.env.DATABASE_URL) {
   console.log(

@@ -21,20 +21,49 @@ export default function Subscriptions() {
 
   // Mock data since we don't have a real subscriptions endpoint yet
   const mockSubscriptions = [
-    { id: 1, agency: 'Premium Properties SA', plan: 'premium', status: 'active', expiry: '2024-12-31', revenue: 1200 },
-    { id: 2, agency: 'Urban Estates', plan: 'basic', status: 'active', expiry: '2024-11-15', revenue: 600 },
-    { id: 3, agency: 'Coastal Homes', plan: 'premium', status: 'suspended', expiry: '2024-10-30', revenue: 1200 },
-    { id: 4, agency: 'Mountain View Realty', plan: 'free', status: 'trial', expiry: '2024-09-20', revenue: 0 },
+    {
+      id: 1,
+      agency: 'Premium Properties SA',
+      plan: 'premium',
+      status: 'active',
+      expiry: '2024-12-31',
+      revenue: 1200,
+    },
+    {
+      id: 2,
+      agency: 'Urban Estates',
+      plan: 'basic',
+      status: 'active',
+      expiry: '2024-11-15',
+      revenue: 600,
+    },
+    {
+      id: 3,
+      agency: 'Coastal Homes',
+      plan: 'premium',
+      status: 'suspended',
+      expiry: '2024-10-30',
+      revenue: 1200,
+    },
+    {
+      id: 4,
+      agency: 'Mountain View Realty',
+      plan: 'free',
+      status: 'trial',
+      expiry: '2024-09-20',
+      revenue: 0,
+    },
   ];
 
   const filteredSubscriptions = useMemo(() => {
     if (!searchTerm) return mockSubscriptions;
-    
+
     const term = searchTerm.toLowerCase();
-    return mockSubscriptions.filter(sub => 
-      sub.agency.toLowerCase().includes(term) || 
-      sub.plan.toLowerCase().includes(term) ||
-      sub.status.toLowerCase().includes(term)
+    return mockSubscriptions.filter(
+      sub =>
+        sub.agency.toLowerCase().includes(term) ||
+        sub.plan.toLowerCase().includes(term) ||
+        sub.status.toLowerCase().includes(term),
     );
   }, [searchTerm]);
 
@@ -74,7 +103,7 @@ export default function Subscriptions() {
                 <Input
                   placeholder="Search subscriptions..."
                   value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onChange={e => setSearchTerm(e.target.value)}
                   className="pl-10"
                 />
               </div>
@@ -107,31 +136,39 @@ export default function Subscriptions() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredSubscriptions.map((sub) => (
+                {filteredSubscriptions.map(sub => (
                   <TableRow key={sub.id}>
                     <TableCell className="font-medium">{sub.agency}</TableCell>
                     <TableCell>
                       <Badge variant="secondary">{sub.plan}</Badge>
                     </TableCell>
                     <TableCell>
-                      <Badge variant={sub.status === 'active' ? "default" : sub.status === 'trial' ? "outline" : "destructive"}>
+                      <Badge
+                        variant={
+                          sub.status === 'active'
+                            ? 'default'
+                            : sub.status === 'trial'
+                              ? 'outline'
+                              : 'destructive'
+                        }
+                      >
                         {sub.status}
                       </Badge>
                     </TableCell>
                     <TableCell>{sub.expiry}</TableCell>
                     <TableCell>R{sub.revenue}</TableCell>
                     <TableCell>
-                      <Button variant="ghost" size="sm">Manage</Button>
+                      <Button variant="ghost" size="sm">
+                        Manage
+                      </Button>
                     </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
-            
+
             {filteredSubscriptions.length === 0 && (
-              <div className="text-center py-8 text-muted-foreground">
-                No subscriptions found
-              </div>
+              <div className="text-center py-8 text-muted-foreground">No subscriptions found</div>
             )}
           </CardContent>
         </Card>

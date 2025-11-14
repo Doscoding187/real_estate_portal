@@ -21,20 +21,53 @@ export default function Tickets() {
 
   // Mock data since we don't have a real tickets endpoint yet
   const mockTickets = [
-    { id: 1, subject: 'Property listing not showing', priority: 'high', status: 'open', user: 'Sarah Johnson', createdAt: '2024-06-15', assignedTo: 'John Admin' },
-    { id: 2, subject: 'Payment processing issue', priority: 'medium', status: 'in-progress', user: 'Mike Williams', createdAt: '2024-06-14', assignedTo: 'Emma Support' },
-    { id: 3, subject: 'Account verification', priority: 'low', status: 'resolved', user: 'James Brown', createdAt: '2024-06-10', assignedTo: 'Support Team' },
-    { id: 4, subject: 'Image upload failing', priority: 'high', status: 'open', user: 'Lisa Davis', createdAt: '2024-06-16', assignedTo: 'Unassigned' },
+    {
+      id: 1,
+      subject: 'Property listing not showing',
+      priority: 'high',
+      status: 'open',
+      user: 'Sarah Johnson',
+      createdAt: '2024-06-15',
+      assignedTo: 'John Admin',
+    },
+    {
+      id: 2,
+      subject: 'Payment processing issue',
+      priority: 'medium',
+      status: 'in-progress',
+      user: 'Mike Williams',
+      createdAt: '2024-06-14',
+      assignedTo: 'Emma Support',
+    },
+    {
+      id: 3,
+      subject: 'Account verification',
+      priority: 'low',
+      status: 'resolved',
+      user: 'James Brown',
+      createdAt: '2024-06-10',
+      assignedTo: 'Support Team',
+    },
+    {
+      id: 4,
+      subject: 'Image upload failing',
+      priority: 'high',
+      status: 'open',
+      user: 'Lisa Davis',
+      createdAt: '2024-06-16',
+      assignedTo: 'Unassigned',
+    },
   ];
 
   const filteredTickets = useMemo(() => {
     if (!searchTerm) return mockTickets;
-    
+
     const term = searchTerm.toLowerCase();
-    return mockTickets.filter(ticket => 
-      ticket.subject.toLowerCase().includes(term) || 
-      ticket.user.toLowerCase().includes(term) ||
-      ticket.status.toLowerCase().includes(term)
+    return mockTickets.filter(
+      ticket =>
+        ticket.subject.toLowerCase().includes(term) ||
+        ticket.user.toLowerCase().includes(term) ||
+        ticket.status.toLowerCase().includes(term),
     );
   }, [searchTerm]);
 
@@ -74,7 +107,7 @@ export default function Tickets() {
                 <Input
                   placeholder="Search tickets..."
                   value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onChange={e => setSearchTerm(e.target.value)}
                   className="pl-10"
                 />
               </div>
@@ -108,19 +141,35 @@ export default function Tickets() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredTickets.map((ticket) => (
+                {filteredTickets.map(ticket => (
                   <TableRow key={ticket.id}>
                     <TableCell>
                       <div className="font-medium">{ticket.subject}</div>
                       <div className="text-sm text-muted-foreground">#{ticket.id}</div>
                     </TableCell>
                     <TableCell>
-                      <Badge variant={ticket.priority === 'high' ? "destructive" : ticket.priority === 'medium' ? "default" : "secondary"}>
+                      <Badge
+                        variant={
+                          ticket.priority === 'high'
+                            ? 'destructive'
+                            : ticket.priority === 'medium'
+                              ? 'default'
+                              : 'secondary'
+                        }
+                      >
                         {ticket.priority}
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      <Badge variant={ticket.status === 'open' ? "default" : ticket.status === 'in-progress' ? "secondary" : "outline"}>
+                      <Badge
+                        variant={
+                          ticket.status === 'open'
+                            ? 'default'
+                            : ticket.status === 'in-progress'
+                              ? 'secondary'
+                              : 'outline'
+                        }
+                      >
                         {ticket.status}
                       </Badge>
                     </TableCell>
@@ -128,17 +177,17 @@ export default function Tickets() {
                     <TableCell>{ticket.createdAt}</TableCell>
                     <TableCell>{ticket.assignedTo}</TableCell>
                     <TableCell>
-                      <Button variant="ghost" size="sm">View</Button>
+                      <Button variant="ghost" size="sm">
+                        View
+                      </Button>
                     </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
-            
+
             {filteredTickets.length === 0 && (
-              <div className="text-center py-8 text-muted-foreground">
-                No tickets found
-              </div>
+              <div className="text-center py-8 text-muted-foreground">No tickets found</div>
             )}
           </CardContent>
         </Card>

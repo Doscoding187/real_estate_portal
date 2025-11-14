@@ -27,11 +27,11 @@ export function getSessionCookieOptions(
     hostname &&
     !LOCAL_HOSTS.has(hostname) &&
     !isIpAddress(hostname) &&
-    hostname !== "127.0.0.1" &&
-    hostname !== "::1";
+    hostname !== '127.0.0.1' &&
+    hostname !== '::1';
 
   const domain =
-    shouldSetDomain && !hostname.startsWith(".")
+    shouldSetDomain && !hostname.startsWith('.')
       ? `.${hostname}`
       : shouldSetDomain
         ? hostname
@@ -39,12 +39,13 @@ export function getSessionCookieOptions(
 
   const isProduction = process.env.NODE_ENV === 'production';
   const isSecure = isSecureRequest(req);
-  
+
   // For cross-domain scenarios (Vercel frontend + Railway backend), we need sameSite: 'none' and secure: true
   // This is required when frontend is served over HTTPS (like Vercel) and communicates with backend
-  const isCrossDomain = req.headers.origin?.includes('.vercel.app') || 
-                        req.headers.origin?.includes('.railway.app') ||
-                        (req.headers.origin?.startsWith('https://') && !req.headers.origin?.includes(hostname));
+  const isCrossDomain =
+    req.headers.origin?.includes('.vercel.app') ||
+    req.headers.origin?.includes('.railway.app') ||
+    (req.headers.origin?.startsWith('https://') && !req.headers.origin?.includes(hostname));
 
   return {
     domain,

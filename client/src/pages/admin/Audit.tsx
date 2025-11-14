@@ -19,22 +19,65 @@ export default function Audit() {
 
   // Mock data since we don't have a real audit logs endpoint yet
   const mockAuditLogs = [
-    { id: 1, timestamp: '2024-06-15 14:30:22', user: 'John Admin', action: 'Updated property status', target: 'Property #123', ip: '192.168.1.100' },
-    { id: 2, timestamp: '2024-06-15 13:45:10', user: 'Sarah Agent', action: 'Created new listing', target: 'Property #456', ip: '192.168.1.101' },
-    { id: 3, timestamp: '2024-06-15 12:20:05', user: 'Mike Admin', action: 'Deleted user account', target: 'User #789', ip: '192.168.1.102' },
-    { id: 4, timestamp: '2024-06-15 11:15:33', user: 'Emma Support', action: 'Resolved support ticket', target: 'Ticket #101', ip: '192.168.1.103' },
-    { id: 5, timestamp: '2024-06-15 10:05:12', user: 'Alex Admin', action: 'Modified agency subscription', target: 'Agency #42', ip: '192.168.1.104' },
-    { id: 6, timestamp: '2024-06-15 09:30:45', user: 'System', action: 'Generated monthly report', target: 'Report #2024-06', ip: '192.168.1.1' },
+    {
+      id: 1,
+      timestamp: '2024-06-15 14:30:22',
+      user: 'John Admin',
+      action: 'Updated property status',
+      target: 'Property #123',
+      ip: '192.168.1.100',
+    },
+    {
+      id: 2,
+      timestamp: '2024-06-15 13:45:10',
+      user: 'Sarah Agent',
+      action: 'Created new listing',
+      target: 'Property #456',
+      ip: '192.168.1.101',
+    },
+    {
+      id: 3,
+      timestamp: '2024-06-15 12:20:05',
+      user: 'Mike Admin',
+      action: 'Deleted user account',
+      target: 'User #789',
+      ip: '192.168.1.102',
+    },
+    {
+      id: 4,
+      timestamp: '2024-06-15 11:15:33',
+      user: 'Emma Support',
+      action: 'Resolved support ticket',
+      target: 'Ticket #101',
+      ip: '192.168.1.103',
+    },
+    {
+      id: 5,
+      timestamp: '2024-06-15 10:05:12',
+      user: 'Alex Admin',
+      action: 'Modified agency subscription',
+      target: 'Agency #42',
+      ip: '192.168.1.104',
+    },
+    {
+      id: 6,
+      timestamp: '2024-06-15 09:30:45',
+      user: 'System',
+      action: 'Generated monthly report',
+      target: 'Report #2024-06',
+      ip: '192.168.1.1',
+    },
   ];
 
   const filteredLogs = useMemo(() => {
     if (!searchTerm) return mockAuditLogs;
-    
+
     const term = searchTerm.toLowerCase();
-    return mockAuditLogs.filter(log => 
-      log.user.toLowerCase().includes(term) || 
-      log.action.toLowerCase().includes(term) ||
-      log.target.toLowerCase().includes(term)
+    return mockAuditLogs.filter(
+      log =>
+        log.user.toLowerCase().includes(term) ||
+        log.action.toLowerCase().includes(term) ||
+        log.target.toLowerCase().includes(term),
     );
   }, [searchTerm]);
 
@@ -66,7 +109,7 @@ export default function Audit() {
                 <Input
                   placeholder="Search audit logs..."
                   value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onChange={e => setSearchTerm(e.target.value)}
                   className="pl-10"
                 />
               </div>
@@ -98,7 +141,7 @@ export default function Audit() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredLogs.map((log) => (
+                {filteredLogs.map(log => (
                   <TableRow key={log.id}>
                     <TableCell className="font-medium">{log.timestamp}</TableCell>
                     <TableCell>{log.user}</TableCell>
@@ -111,11 +154,9 @@ export default function Audit() {
                 ))}
               </TableBody>
             </Table>
-            
+
             {filteredLogs.length === 0 && (
-              <div className="text-center py-8 text-muted-foreground">
-                No audit logs found
-              </div>
+              <div className="text-center py-8 text-muted-foreground">No audit logs found</div>
             )}
           </CardContent>
         </Card>
