@@ -43,7 +43,7 @@ export default function UserDashboard() {
     return null;
   }
 
-  if (user?.role !== 'user') {
+  if (user?.role !== 'visitor') {
     setLocation('/dashboard');
     return null;
   }

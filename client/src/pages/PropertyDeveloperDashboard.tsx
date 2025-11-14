@@ -48,7 +48,7 @@ export default function PropertyDeveloperDashboard() {
     return null;
   }
 
-  if (user?.role !== 'property_developer') {
+  if (user?.role !== 'agency_admin') {
     setLocation('/dashboard');
     return null;
   }

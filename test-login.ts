@@ -9,8 +9,8 @@ async function testLogin() {
   console.log('🔍 Testing login...\n');
   
   try {
-    const response = await axios.post('http://localhost:8080/trpc/auth.login', {
-      email: 'user@example.com', // Using our new test user
+    const response = await axios.post('http://localhost:8080/api/auth/login', {
+      email: 'developer@example.com', // Using our property developer test user
       password: 'password123'
     }, {
       headers: {

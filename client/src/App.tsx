@@ -73,11 +73,7 @@ function Router() {
       <Route path="/dashboard" component={Dashboard} />
       <Route path="/explore" component={ExploreFeed} />
       {/* Super Admin Dashboard Routes */}
-      <Route path="/admin/*">
-        <RequireSuperAdmin>
-          <SuperAdminDashboard />
-        </RequireSuperAdmin>
-      </Route>
+      <Route path="/admin/*" component={SuperAdminDashboard} />
 
       {/* Super Admin Dashboard Pages */}
       <Route path="/admin/overview" component={OverviewPage} />

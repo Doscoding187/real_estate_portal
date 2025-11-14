@@ -21,13 +21,11 @@ import { toast } from 'sonner';
 import { APP_TITLE } from '@/const';
 import { trpc } from '@/lib/trpc';
 import { apiFetch, ApiError } from '@/lib/api';
-
 const loginSchema = z.object({
   email: z.string().email('Invalid email address'),
   password: z.string().min(6, 'Password must be at least 6 characters'),
   rememberMe: z.boolean().optional(),
 });
-
 const registerSchema = z
   .object({
     name: z.string().min(2, 'Name must be at least 2 characters'),
@@ -39,7 +37,7 @@ const registerSchema = z
       .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
       .regex(/\d/, 'Password must contain at least one number')
       .regex(
-        /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/,
+        /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>?]/,
         'Password must contain at least one special character',
       ),
     confirmPassword: z.string(),
@@ -48,10 +46,8 @@ const registerSchema = z
     message: "Passwords don't match",
     path: ['confirmPassword'],
   });
-
 type LoginFormData = z.infer<typeof loginSchema>;
 type RegisterFormData = z.infer<typeof registerSchema>;
-
 export default function Login() {
   const [, setLocation] = useLocation();
   const searchParams = new URLSearchParams(useSearch());
@@ -59,13 +55,11 @@ export default function Login() {
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('login');
   const utils = trpc.useUtils();
-
   useEffect(() => {
     if (searchParams.get('verified') === 'true') {
       toast.success('Email verified successfully! You can now log in.');
     }
   }, [searchParams]);
-
   const loginForm = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
@@ -74,7 +68,6 @@ export default function Login() {
       rememberMe: false,
     },
   });
-
   const registerForm = useForm<RegisterFormData>({
     resolver: zodResolver(registerSchema),
     defaultValues: {
@@ -84,7 +77,6 @@ export default function Login() {
       confirmPassword: '',
     },
   });
-
   const onLogin = async (data: LoginFormData) => {
     console.log('[Login] onLogin function called with data:', data);
     setIsLoading(true);
@@ -94,34 +86,29 @@ export default function Login() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
       });
-
       console.log('[Login] Login successful, user:', result.user);
       console.log('[Login] User role:', result.user?.role);
       toast.success('Logged in successfully!');
-
       // Role-based redirect
       const role = result.user?.role;
       let redirectPath = '/dashboard'; // Default for regular users
-
       if (role === 'super_admin') {
         redirectPath = '/admin/dashboard';
       } else if (role === 'agency_admin') {
+        // Check if this is a property developer or agency admin
+        // For now, we'll redirect agency_admin to agency dashboard
+        // In a more sophisticated system, we might have a separate field to distinguish
         redirectPath = '/agency/dashboard';
       } else if (role === 'agent') {
         redirectPath = '/agent/dashboard';
-      } else if (role === 'property_developer') {
-        redirectPath = '/developer/dashboard';
       } else {
-        // Regular user
+        // Regular user (visitor role)
         redirectPath = '/user/dashboard';
       }
-
       // Use hard redirect to ensure fresh page load with cookie
       console.log('[Login] Redirecting to:', redirectPath);
-
       // Small delay to ensure cookie is set before redirect
       await new Promise(resolve => setTimeout(resolve, 100));
-
       window.location.href = redirectPath;
     } catch (error) {
       console.error('[Login] Error caught:', error);
@@ -133,7 +120,6 @@ export default function Login() {
       setIsLoading(false);
     }
   };
-
   const onRegister = async (data: RegisterFormData) => {
     setIsLoading(true);
     try {
@@ -146,7 +132,6 @@ export default function Login() {
           password: data.password,
         }),
       });
-
       toast.success(
         'Account created successfully! Please check your email to verify your account.',
       );
@@ -163,7 +148,6 @@ export default function Login() {
       setIsLoading(false);
     }
   };
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
@@ -175,7 +159,6 @@ export default function Login() {
           </div>
           <p className="text-muted-foreground">Your premier real estate marketplace</p>
         </div>
-
         {/* Login/Register Card */}
         <Card>
           <CardHeader>
@@ -188,7 +171,6 @@ export default function Login() {
                 <TabsTrigger value="login">Login</TabsTrigger>
                 <TabsTrigger value="register">Register</TabsTrigger>
               </TabsList>
-
               {/* Login Tab */}
               <TabsContent value="login">
                 <Form {...loginForm}>
@@ -206,7 +188,6 @@ export default function Login() {
                         </FormItem>
                       )}
                     />
-
                     <FormField
                       control={loginForm.control}
                       name="password"
@@ -220,7 +201,6 @@ export default function Login() {
                         </FormItem>
                       )}
                     />
-
                     <div className="flex items-center justify-between">
                       <FormField
                         control={loginForm.control}
@@ -245,7 +225,6 @@ export default function Login() {
                         Forgot password?
                       </Button>
                     </div>
-
                     <Button type="submit" className="w-full" disabled={isLoading}>
                       {isLoading ? (
                         <>
@@ -259,7 +238,6 @@ export default function Login() {
                   </form>
                 </Form>
               </TabsContent>
-
               {/* Register Tab */}
               <TabsContent value="register">
                 <Form {...registerForm}>
@@ -277,7 +255,6 @@ export default function Login() {
                         </FormItem>
                       )}
                     />
-
                     <FormField
                       control={registerForm.control}
                       name="email"
@@ -291,7 +268,6 @@ export default function Login() {
                         </FormItem>
                       )}
                     />
-
                     <FormField
                       control={registerForm.control}
                       name="password"
@@ -305,7 +281,6 @@ export default function Login() {
                         </FormItem>
                       )}
                     />
-
                     <FormField
                       control={registerForm.control}
                       name="confirmPassword"
@@ -319,7 +294,6 @@ export default function Login() {
                         </FormItem>
                       )}
                     />
-
                     <Button type="submit" className="w-full" disabled={isLoading}>
                       {isLoading ? (
                         <>
@@ -334,7 +308,6 @@ export default function Login() {
                 </Form>
               </TabsContent>
             </Tabs>
-
             {/* Back to Home */}
             <div className="mt-6 text-center">
               <Button variant="ghost" onClick={() => setLocation('/')} className="text-sm">

@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { useLocation, useRoute } from 'wouter';
-import DashboardLayout from '@/components/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -147,61 +146,59 @@ export default function SuperAdminDashboard() {
   };
 
   return (
-    <DashboardLayout adminSidebar={true}>
-      <div className="flex flex-col min-h-screen bg-background">
-        <div className="flex flex-1">
-          {/* Sidebar */}
-          <div
-            className={`${
-              isMobile ? 'absolute z-40' : 'relative'
-            } ${isSidebarOpen ? 'block' : 'hidden'} md:block transition-all duration-300 ease-in-out`}
-            style={{ width: '280px' }}
-          >
-            <SidebarNavigation />
-          </div>
-
-          {/* Main Content */}
-          <main
-            className={`flex-1 overflow-auto transition-all duration-300 ease-in-out ${
-              isMobile ? 'pt-16' : ''
-            }`}
-          >
-            {isMobile && (
-              <div className="fixed top-0 left-0 right-0 h-16 flex items-center justify-between px-4 bg-background border-b z-30">
-                <button
-                  onClick={toggleSidebar}
-                  className="p-2 rounded-md bg-background text-foreground hover:bg-muted"
-                >
-                  <Menu className="h-5 w-5" />
-                </button>
-                <div className="flex items-center gap-2">
-                  <span className="font-semibold">Admin Dashboard</span>
-                  <Badge variant="destructive">Super Admin</Badge>
-                </div>
-                <div className="w-8"></div> {/* Spacer for symmetry */}
-              </div>
-            )}
-
-            {/* Page Content */}
-            <div className="p-4 md:p-6">
-              <div className="mb-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h1 className="text-2xl font-bold">Super Admin Dashboard</h1>
-                    <p className="text-muted-foreground">
-                      Welcome back, {user?.name || user?.email}
-                    </p>
-                  </div>
-                  <Badge variant="destructive">Super Admin</Badge>
-                </div>
-              </div>
-
-              {/* Render children routes */}
-              <div>{/* This will render the matched child route component */}</div>
-            </div>
-          </main>
+    <div className="flex flex-col min-h-screen bg-background">
+      <div className="flex flex-1">
+        {/* Sidebar */}
+        <div
+          className={`${
+            isMobile ? 'absolute z-40' : 'relative'
+          } ${isSidebarOpen ? 'block' : 'hidden'} md:block transition-all duration-300 ease-in-out`}
+          style={{ width: '280px' }}
+        >
+          <SidebarNavigation />
         </div>
+
+        {/* Main Content */}
+        <main
+          className={`flex-1 overflow-auto transition-all duration-300 ease-in-out ${
+            isMobile ? 'pt-16' : ''
+          }`}
+        >
+          {isMobile && (
+            <div className="fixed top-0 left-0 right-0 h-16 flex items-center justify-between px-4 bg-background border-b z-30">
+              <button
+                onClick={toggleSidebar}
+                className="p-2 rounded-md bg-background text-foreground hover:bg-muted"
+              >
+                <Menu className="h-5 w-5" />
+              </button>
+              <div className="flex items-center gap-2">
+                <span className="font-semibold">Admin Dashboard</span>
+                <Badge variant="destructive">Super Admin</Badge>
+              </div>
+              <div className="w-8"></div> {/* Spacer for symmetry */}
+            </div>
+          )}
+
+          {/* Page Content */}
+          <div className="p-4 md:p-6">
+            <div className="mb-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h1 className="text-2xl font-bold">Super Admin Dashboard</h1>
+                  <p className="text-muted-foreground">
+                    Welcome back, {user?.name || user?.email}
+                  </p>
+                </div>
+                <Badge variant="destructive">Super Admin</Badge>
+              </div>
+            </div>
+
+            {/* Render children routes */}
+            <div>{/* This will render the matched child route component */}</div>
+          </div>
+        </main>
       </div>
-    </DashboardLayout>
+    </div>
   );
 }
