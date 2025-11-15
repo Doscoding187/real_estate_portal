@@ -63,20 +63,18 @@ function Router() {
 
       {/* Super Admin Dashboard Routes - Moved to be earlier in the route list */}
       <Route path="/admin">
-        <RequireSuperAdmin>
-          <SuperAdminDashboard>
-            <Switch>
-              <Route path="/admin/overview" component={OverviewPage} />
-              <Route path="/admin/agencies" component={AgenciesPage} />
-              <Route path="/admin/users" component={UsersPage} />
-              <Route path="/admin/developers" component={DevelopersPage} />
-              {/* Specific route for /admin to redirect to overview */}
-              <Route path="/admin" component={OverviewPage} />
-              {/* Default route for admin dashboard - should be last */}
-              <Route path="/admin/*" component={OverviewPage} />
-            </Switch>
-          </SuperAdminDashboard>
-        </RequireSuperAdmin>
+        <SuperAdminDashboard>
+          <Switch>
+            <Route path="/admin/overview" component={OverviewPage} />
+            <Route path="/admin/agencies" component={AgenciesPage} />
+            <Route path="/admin/users" component={UsersPage} />
+            <Route path="/admin/developers" component={DevelopersPage} />
+            {/* Specific route for /admin to redirect to overview */}
+            <Route path="/admin" component={OverviewPage} />
+            {/* Default route for admin dashboard - should be last */}
+            <Route path="/admin/*" component={OverviewPage} />
+          </Switch>
+        </SuperAdminDashboard>
       </Route>
 
       {/* Other routes that might conflict */}

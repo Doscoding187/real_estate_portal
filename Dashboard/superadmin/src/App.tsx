@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { Routes, Route } from 'react-router-dom';
 import DashboardLayout from './components/dashboard/DashboardLayout';
 import OverviewPage from './pages/OverviewPage';
 import AgenciesPage from './pages/AgenciesPage';
@@ -17,33 +17,33 @@ import MarketingCampaignsPage from './pages/MarketingCampaignsPage';
 import PartnerNetworkPage from './pages/PartnerNetworkPage';
 import DevelopersPage from './pages/DevelopersPage';
 import FeaturedPlacementsPage from './pages/FeaturedPlacementsPage';
+import LoginPage from './pages/LoginPage';
 
 function App() {
   return (
-    <Router>
-      <Routes>
-        <Route path="/" element={<DashboardLayout />}>
-          <Route index element={<OverviewPage />} />
-          <Route path="agencies" element={<AgenciesPage />} />
-          <Route path="agents" element={<AgentsPage />} />
-          <Route path="properties" element={<PropertyListingsPage />} />
-          <Route path="subscriptions" element={<SubscriptionsPage />} />
-          <Route path="financials" element={<FinancialsPage />} />
-          <Route path="content" element={<ContentManagerPage />} />
-          <Route path="communications" element={<CommunicationsPage />} />
-          <Route path="users" element={<UsersPage />} />
-          <Route path="settings" element={<SettingsPage />} />
-          <Route path="system" element={<SystemSecurityPage />} />
-          <Route path="revenue" element={<RevenueCenterPage />} />
-          <Route path="analytics" element={<AnalyticsReportsPage />} />
-          <Route path="marketing" element={<MarketingCampaignsPage />} />
-          <Route path="partners" element={<PartnerNetworkPage />} />
-          <Route path="developers" element={<DevelopersPage />} />
-          <Route path="end-users" element={<UsersPage />} />
-          <Route path="placements" element={<FeaturedPlacementsPage />} />
-        </Route>
-      </Routes>
-    </Router>
+    <Routes>
+      <Route path="/login" element={<LoginPage />} />
+      <Route path="/" element={<DashboardLayout />}>
+        <Route index element={<OverviewPage />} />
+        <Route path="agencies" element={<AgenciesPage />} />
+        <Route path="agents" element={<AgentsPage />} />
+        <Route path="properties" element={<PropertyListingsPage />} />
+        <Route path="subscriptions" element={<SubscriptionsPage />} />
+        <Route path="financials" element={<FinancialsPage />} />
+        <Route path="content" element={<ContentManagerPage />} />
+        <Route path="communications" element={<CommunicationsPage />} />
+        <Route path="users" element={<UsersPage />} />
+        <Route path="settings" element={<SettingsPage />} />
+        <Route path="system" element={<SystemSecurityPage />} />
+        <Route path="revenue" element={<RevenueCenterPage />} />
+        <Route path="analytics" element={<AnalyticsReportsPage />} />
+        <Route path="marketing" element={<MarketingCampaignsPage />} />
+        <Route path="partners" element={<PartnerNetworkPage />} />
+        <Route path="developers" element={<DevelopersPage />} />
+        <Route path="end-users" element={<UsersPage />} />
+        <Route path="placements" element={<FeaturedPlacementsPage />} />
+      </Route>
+    </Routes>
   );
 }
 
