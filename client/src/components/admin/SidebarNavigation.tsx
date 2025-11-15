@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { useLocation } from 'wouter';
 import {
   LayoutDashboard,
   Building2,
@@ -21,31 +21,31 @@ import {
 } from 'lucide-react';
 
 const SidebarNavigation: React.FC = () => {
-  const location = useLocation();
+  const [location, setLocation] = useLocation();
 
   const navigationGroups = [
     {
       title: 'DASHBOARD',
-      items: [{ name: 'Overview', href: '/', icon: LayoutDashboard }],
+      items: [{ name: 'Overview', path: '/admin/overview', icon: LayoutDashboard }],
     },
     {
       title: 'REVENUE & ANALYTICS',
       items: [
-        { name: 'Revenue Center', href: '/revenue', icon: TrendingUp },
-        { name: 'Analytics & Reports', href: '/analytics', icon: BarChart },
-        { name: 'Marketing Campaigns', href: '/marketing', icon: Megaphone },
-        { name: 'Partner Network', href: '/partners', icon: Handshake },
-        { name: 'Developers', href: '/developers', icon: Code },
+        { name: 'Revenue Center', path: '/admin/revenue', icon: TrendingUp },
+        { name: 'Analytics & Reports', path: '/admin/analytics', icon: BarChart },
+        { name: 'Marketing Campaigns', path: '/admin/marketing', icon: Megaphone },
+        { name: 'Partner Network', path: '/admin/partners', icon: Handshake },
+        { name: 'Developers', path: '/admin/developers', icon: Code },
       ],
     },
     {
       title: 'ECOSYSTEM MANAGEMENT',
       items: [
-        { name: 'Agencies', href: '/agencies', icon: Building2 },
-        { name: 'Agents', href: '/agents', icon: Users },
-        { name: 'End Users', href: '/end-users', icon: User },
-        { name: 'Property Listings', href: '/properties', icon: Home },
-        { name: 'Featured Placements', href: '/placements', icon: Star },
+        { name: 'Agencies', path: '/admin/agencies', icon: Building2 },
+        { name: 'Agents', path: '/admin/agents', icon: Users },
+        { name: 'End Users', path: '/admin/end-users', icon: User },
+        { name: 'Property Listings', path: '/admin/properties', icon: Home },
+        { name: 'Featured Placements', path: '/admin/placements', icon: Star },
       ],
     },
     {
@@ -53,24 +53,24 @@ const SidebarNavigation: React.FC = () => {
       items: [
         {
           name: 'Subscription Management',
-          href: '/subscriptions',
+          path: '/admin/subscriptions',
           icon: CreditCard,
         },
-        { name: 'Financial Tracking', href: '/financials', icon: BarChart3 },
-        { name: 'Content Manager', href: '/content', icon: FileText },
+        { name: 'Financial Tracking', path: '/admin/financials', icon: BarChart3 },
+        { name: 'Content Manager', path: '/admin/content', icon: FileText },
         {
           name: 'Communications',
-          href: '/communications',
+          path: '/admin/communications',
           icon: MessageSquare,
         },
-        { name: 'User & Role Management', href: '/users', icon: Users },
+        { name: 'User & Role Management', path: '/admin/users', icon: Users },
       ],
     },
     {
       title: 'SYSTEM',
       items: [
-        { name: 'Settings & Integrations', href: '/settings', icon: Settings },
-        { name: 'System & Security', href: '/system', icon: Shield },
+        { name: 'Settings & Integrations', path: '/admin/settings', icon: Settings },
+        { name: 'System & Security', path: '/admin/system', icon: Shield },
       ],
     },
   ];
@@ -86,12 +86,12 @@ const SidebarNavigation: React.FC = () => {
               </h3>
               <div className="mt-2 space-y-1">
                 {group.items.map(item => {
-                  const isActive = location.pathname === item.href;
+                  const isActive = location === item.path;
                   return (
-                    <Link
+                    <button
                       key={item.name}
-                      to={item.href}
-                      className={`flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-colors ${
+                      onClick={() => setLocation(item.path)}
+                      className={`flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-colors w-full text-left ${
                         isActive
                           ? 'bg-blue-100 text-blue-700'
                           : 'text-slate-700 hover:bg-slate-100 hover:text-slate-900'
@@ -99,7 +99,7 @@ const SidebarNavigation: React.FC = () => {
                     >
                       <item.icon className="h-5 w-5 mr-3" />
                       <span className="truncate">{item.name}</span>
-                    </Link>
+                    </button>
                   );
                 })}
               </div>

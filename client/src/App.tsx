@@ -61,7 +61,13 @@ function Router() {
       <Route path="/list-property" component={ListProperty} />
       <Route path="/explore" component={ExploreFeed} />
 
-      {/* Super Admin Dashboard Routes - Moved to be earlier in the route list */}
+      {/* Login and authentication routes should be early in the route list */}
+      <Route path="/login" component={Login} />
+      <Route path="/forgot-password" component={ForgotPassword} />
+      <Route path="/reset-password" component={ResetPassword} />
+      <Route path="/accept-invitation" component={AcceptInvitation} />
+
+      {/* Super Admin Dashboard Routes */}
       <Route path="/admin">
         <SuperAdminDashboard>
           <Switch>
@@ -99,11 +105,6 @@ function Router() {
           <UserDashboard />
         </RequireRole>
       </Route>
-
-      <Route path="/accept-invitation" component={AcceptInvitation} />
-      <Route path="/login" component={Login} />
-      <Route path="/forgot-password" component={ForgotPassword} />
-      <Route path="/reset-password" component={ResetPassword} />
 
       {/* Future Dashboard Routes - TODO: Add proper role-based guards */}
       <Route path="/agency/*">

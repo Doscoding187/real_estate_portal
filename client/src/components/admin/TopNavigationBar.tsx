@@ -1,16 +1,24 @@
 import React, { useState } from 'react';
 import { Bell, Shield, ChevronDown, LogOut, User } from 'lucide-react';
+import { useLocation } from 'wouter';
+import { useAuth } from '@/_core/hooks/useAuth';
 
 const TopNavigationBar: React.FC = () => {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [, setLocation] = useLocation();
+  const { user, logout } = useAuth();
 
   const toggleProfileMenu = () => {
     setIsProfileOpen(!isProfileOpen);
   };
 
-  const handleLogout = () => {
-    console.log('Logout clicked');
-    // Implement logout logic here
+  const handleLogout = async () => {
+    try {
+      await logout();
+      setLocation('/login');
+    } catch (error) {
+      console.error('Logout failed:', error);
+    }
   };
 
   return (
@@ -38,10 +46,12 @@ const TopNavigationBar: React.FC = () => {
               className="flex items-center space-x-2 cursor-pointer focus:outline-none"
             >
               <div className="h-8 w-8 rounded-full bg-blue-500 flex items-center justify-center">
-                <span className="font-semibold">A</span>
+                <span className="font-semibold">
+                  {user?.name?.charAt(0)?.toUpperCase() || 'A'}
+                </span>
               </div>
               <div className="hidden md:block text-left">
-                <p className="text-sm font-medium">Admin User</p>
+                <p className="text-sm font-medium">{user?.name || 'Admin User'}</p>
                 <p className="text-xs text-blue-200">Super Administrator</p>
               </div>
               <ChevronDown className="h-4 w-4 hidden md:block" />
@@ -50,7 +60,7 @@ const TopNavigationBar: React.FC = () => {
             {isProfileOpen && (
               <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 text-slate-900 z-50">
                 <div className="px-4 py-2 border-b border-slate-200">
-                  <p className="text-sm font-medium">Admin User</p>
+                  <p className="text-sm font-medium">{user?.name || 'Admin User'}</p>
                   <p className="text-xs text-slate-500">Super Administrator</p>
                 </div>
                 <button className="flex items-center w-full px-4 py-2 text-sm hover:bg-slate-100">

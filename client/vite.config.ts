@@ -27,4 +27,13 @@ export default defineConfig({
       },
     },
   },
+  // Exclude the separate dashboard directory from being processed
+  optimizeDeps: {
+    exclude: ['../Dashboard/superadmin']
+  },
+  build: {
+    rollupOptions: {
+      external: ['../Dashboard/superadmin']
+    }
+  }
 });
