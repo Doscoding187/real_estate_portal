@@ -7,7 +7,6 @@ const LoginPage = () => {
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     // In a real application, you'd handle authentication here
-    console.log('Logging in with:', { username, password });
     // For now, we'll just simulate a successful login
     localStorage.setItem('isAuthenticated', 'true');
     // and redirect to the dashboard.
