@@ -68,20 +68,46 @@ function Router() {
       <Route path="/accept-invitation" component={AcceptInvitation} />
 
       {/* Super Admin Dashboard Routes */}
-      <Route path="/admin">
-        <SuperAdminDashboard>
-          <Switch>
-            <Route path="/admin/overview" component={OverviewPage} />
-            <Route path="/admin/agencies" component={AgenciesPage} />
-            <Route path="/admin/users" component={UsersPage} />
-            <Route path="/admin/developers" component={DevelopersPage} />
-            {/* Specific route for /admin to redirect to overview */}
-            <Route path="/admin" component={OverviewPage} />
-            {/* Default route for admin dashboard - should be last */}
-            <Route path="/admin/*" component={OverviewPage} />
-          </Switch>
-        </SuperAdminDashboard>
-      </Route>
+      <Route
+        path="/admin/overview"
+        component={() => (
+          <SuperAdminDashboard>
+            <OverviewPage />
+          </SuperAdminDashboard>
+        )}
+      />
+      <Route
+        path="/admin/agencies"
+        component={() => (
+          <SuperAdminDashboard>
+            <AgenciesPage />
+          </SuperAdminDashboard>
+        )}
+      />
+      <Route
+        path="/admin/users"
+        component={() => (
+          <SuperAdminDashboard>
+            <UsersPage />
+          </SuperAdminDashboard>
+        )}
+      />
+      <Route
+        path="/admin/developers"
+        component={() => (
+          <SuperAdminDashboard>
+            <DevelopersPage />
+          </SuperAdminDashboard>
+        )}
+      />
+      <Route
+        path="/admin"
+        component={() => (
+          <SuperAdminDashboard>
+            <OverviewPage />
+          </SuperAdminDashboard>
+        )}
+      />
 
       {/* Other routes that might conflict */}
       <Route path="/dashboard" component={Dashboard} />
