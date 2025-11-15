@@ -1,0 +1,74 @@
+Developer Dashboard Specification (UI + Functionality)
+
+1.  Dashboard Home
+
+-   Overview of all developments.
+-   Cards showing total leads, sales, active developments, pending
+    tasks.
+-   Sidebar navigation: Dashboard, Developments, Team, Marketing,
+    Billing, Integrations, Support.
+
+2.  Developments List
+
+-   Table view with development name, status (Active/Coming Soon), units
+    available, leads, visibility.
+-   Button: “+ Add Development”.
+
+3.  Development Overview (When a development is clicked)
+
+-   Header with development name, status badge, quick actions (Edit, Add
+    Unit, Upload File, Manage Agents).
+-   Charts: Leads per day, traffic sources, units sold vs available.
+-   Stats: Total leads, total sales, conversion rate, page views.
+
+4.  Units Management
+
+-   Grid or table of units: Type, price, availability, photos,
+    commissions.
+-   Bulk upload CSV.
+-   Buttons: Add Unit Type, Edit Pricing, Update Availability.
+
+5.  Lead Management
+
+-   CRM-style lead table: Name, contact, source, status.
+-   Filters: New, Contacted, Viewing, Offer, Closed.
+-   Assign leads to internal or external agents.
+-   Lead profile view with notes, tasks, files, timeline.
+
+6.  Team Management
+
+-   Internal team list: roles and permissions.
+-   External agents roster.
+-   Performance dashboard for each agent.
+
+7.  Documents & Media
+
+-   Folder-style UI: Price lists, brochures, floor plans, videos.
+-   PDF preview, version uploads, restrict visibility.
+
+8.  Marketing & Campaigns
+
+-   Active campaigns with impressions, clicks, cost, ROI.
+-   Button: “Boost Development”.
+-   Order banners or featured placements.
+
+9.  Integrations
+
+-   API settings, webhook URLs, documentation.
+-   Sync status with external CRM/ERP.
+
+10. Billing
+
+-   Subscription overview, invoices, downloadable receipts.
+-   Campaign billing history.
+
+11. Support
+
+-   Help articles.
+-   Ticket submission form.
+-   Chat widget.
+
+UI Notes: - Modern clean layout similar to Monday.com or HubSpot. -
+Light theme default with optional dark mode. - Card-based analytics,
+clean table layouts, intuitive icons. - Sticky top navigation bar inside
+each development.

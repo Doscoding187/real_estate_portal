@@ -120,7 +120,7 @@ function Router() {
 
       {/* Property Developer Dashboard Route */}
       <Route path="/developer/dashboard">
-        <RequireRole role="property_developer">
+        <RequireRole role="agency_admin">
           <PropertyDeveloperDashboard />
         </RequireRole>
       </Route>
