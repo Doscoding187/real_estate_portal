@@ -12,23 +12,24 @@ dotenv.config();
 async function applySchema() {
   // Create connection without database first
   const connection = await createConnection({
-    host: 'localhost',
-    user: 'root',
-    password: 'Edmaritinados187#',
-    port: 3306,
+    host: 'gateway01.ap-northeast-1.prod.aws.tidbcloud.com',
+    user: '292qWmvn2YGy2jW.root',
+    password: 'TOdjCJY1bepCcJg1',
+    port: 4000,
+    ssl: {},
   });
 
   console.log('Connected to MySQL server');
 
   // Create database
-  await connection.query('CREATE DATABASE IF NOT EXISTS propertifi_sa_database');
-  console.log('Database propertifi_sa_database created or already exists');
+  await connection.query('CREATE DATABASE IF NOT EXISTS listify_property_sa');
+  console.log('Database listify_property_sa created or already exists');
 
-  await connection.changeUser({ database: 'propertifi_sa_database' });
-  console.log('Switched to propertifi_sa_database database');
+  await connection.changeUser({ database: 'listify_property_sa' });
+  console.log('Switched to listify_property_sa database');
 
   // Read and execute SQL file
-  const sqlFile = path.join(__dirname, 'drizzle', '0000_dry_jack_flag.sql');
+  const sqlFile = path.join(__dirname, 'drizzle', '0002_add_property_developer_role.sql');
   const sql = fs.readFileSync(sqlFile, 'utf-8');
 
   // Split by semicolons and execute each statement
