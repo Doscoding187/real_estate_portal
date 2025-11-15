@@ -94,6 +94,8 @@ export default function Login() {
       let redirectPath = '/user/dashboard'; // Default for regular users
       if (role === 'super_admin') {
         redirectPath = '/admin/overview';
+      } else if (role === 'property_developer') {
+        redirectPath = '/developer/dashboard';
       } else if (role === 'agency_admin') {
         // Check if this is a property developer or agency admin
         // For now, we'll redirect agency_admin to agency dashboard
