@@ -1,5 +1,5 @@
+import React, { useEffect } from 'react';
 import { useAuth } from '@/_core/hooks/useAuth';
-import { useEffect } from 'react';
 import { useLocation } from 'wouter';
 
 export const RequireRole = ({ role, children }: { role: string; children: React.ReactNode }) => {
