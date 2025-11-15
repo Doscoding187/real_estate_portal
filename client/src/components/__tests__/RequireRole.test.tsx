@@ -1,5 +1,6 @@
+import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
-import { vi } from 'vitest';
+import { describe, it, expect, beforeEach, vi, test } from 'vitest';
 import { RequireRole } from '@/components/RequireRole';
 
 // Mock the useAuth hook

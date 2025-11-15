@@ -1,32 +1,29 @@
 import React, { useState } from 'react';
-import { Plus, MapPin, Phone, Search, Filter, Eye, Edit, Trash2 } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
-import { Badge } from '@/components/ui/badge';
+  Plus,
+  MapPin,
+  Phone,
+  Search,
+  Filter,
+  Eye,
+  Edit,
+  Trash2,
+} from 'lucide-react';
+import Button from '@/components/admin/Button';
+import Badge from '@/components/admin/Badge';
+import Table from '@/components/admin/Table';
+import Modal from '@/components/admin/Modal';
+import TextInput from '@/components/admin/TextInput';
 
 const AgenciesPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedAgency, setSelectedAgency] = useState<Record<string, any> | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedAgency, setSelectedAgency] = useState<Record<
+    string,
+    React.ReactNode
+  > | null>(null);
 
   // Mock data for agencies
-  const agenciesData: Record<string, any>[] = [
+  const agenciesData: Record<string, React.ReactNode>[] = [
     {
       id: 1,
       name: 'PropCity Estates',
@@ -56,179 +53,176 @@ const AgenciesPage: React.FC = () => {
     },
   ];
 
-  const handleViewAgency = (agency: Record<string, any>) => {
-    setSelectedAgency(agency);
-    setIsModalOpen(true);
-  };
-
-  const getStatusVariant = (status: string) => {
-    switch (status) {
-      case 'Active':
-        return 'default';
-      case 'Pending':
-        return 'secondary';
-      default:
-        return 'destructive';
-    }
-  };
+  const agencyColumns = [
+    { key: 'name', title: 'Agency Name', sortable: true },
+    { key: 'location', title: 'Location', sortable: true },
+    { key: 'properties', title: 'Properties Listed', sortable: true },
+    { key: 'agents', title: 'Agents', sortable: true },
+    {
+      key: 'status',
+      title: 'Status',
+      sortable: true,
+      render: (value: string) => (
+        <Badge
+          variant={
+            value === 'Active'
+              ? 'success'
+              : value === 'Pending'
+                ? 'warning'
+                : 'error'
+          }
+        >
+          {value}
+        </Badge>
+      ),
+    },
+    { key: 'contact', title: 'Contact', sortable: true },
+    {
+      key: 'actions',
+      title: 'Actions',
+      render: (_: unknown, record: Record<string, React.ReactNode>) => (
+        <div className="flex space-x-1">
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => setSelectedAgency(record)}
+          >
+            <Eye className="h-4 w-4" />
+          </Button>
+          <Button variant="secondary" size="sm">
+            <Edit className="h-4 w-4" />
+          </Button>
+          <Button variant="danger" size="sm">
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
+      ),
+    },
+  ];
 
   return (
-    <div className="space-y-6">
+    <div className="p-3">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Agency Management</h1>
-          <p className="text-muted-foreground">Manage real estate agencies and their listings</p>
+      <div className="mb-4">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+          <div>
+            <h1 className="text-xl font-bold text-slate-900">
+              Agency Management
+            </h1>
+            <p className="text-slate-600 text-sm">
+              Manage real estate agencies and their listings
+            </p>
+          </div>
+          <Button variant="primary" size="md">
+            <Plus className="h-4 w-4 mr-1" />
+            Add Agency
+          </Button>
         </div>
-        <Button>
-          <Plus className="h-4 w-4 mr-2" />
-          Add Agency
-        </Button>
       </div>
 
       {/* Search and Filters */}
-      <Card>
-        <CardContent className="pt-6">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <div className="w-full md:w-60">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search agencies..."
-                  value={searchQuery}
-                  onChange={e => setSearchQuery(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <select className="border border-input rounded-md px-3 py-2 text-sm">
-                <option>All Statuses</option>
-                <option>Active</option>
-                <option>Pending</option>
-                <option>Suspended</option>
-              </select>
-              <Button variant="outline">
-                <Filter className="h-4 w-4 mr-2" />
-                Filter
-              </Button>
-            </div>
+      <div className="card p-3 mb-4">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+          <div className="w-full md:w-60">
+            <TextInput
+              placeholder="Search agencies..."
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              icon={<Search className="h-4 w-4 text-slate-400" />}
+            />
           </div>
-        </CardContent>
-      </Card>
+          <div className="flex flex-wrap gap-1">
+            <select className="text-sm border border-slate-300 rounded-lg px-2 py-1">
+              <option>All Statuses</option>
+              <option>Active</option>
+              <option>Pending</option>
+              <option>Suspended</option>
+            </select>
+            <Button variant="secondary" size="sm">
+              <Filter className="h-4 w-4 mr-1" />
+              Filter
+            </Button>
+          </div>
+        </div>
+      </div>
 
       {/* Agencies Table */}
-      <Card>
-        <CardContent className="pt-6">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Agency Name</TableHead>
-                <TableHead>Location</TableHead>
-                <TableHead>Properties Listed</TableHead>
-                <TableHead>Agents</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Contact</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {agenciesData.map(agency => (
-                <TableRow key={agency.id}>
-                  <TableCell className="font-medium">{agency.name}</TableCell>
-                  <TableCell>{agency.location}</TableCell>
-                  <TableCell>{agency.properties}</TableCell>
-                  <TableCell>{agency.agents}</TableCell>
-                  <TableCell>
-                    <Badge variant={getStatusVariant(agency.status)}>{agency.status}</Badge>
-                  </TableCell>
-                  <TableCell>{agency.contact}</TableCell>
-                  <TableCell>
-                    <div className="flex space-x-2">
-                      <Button variant="outline" size="sm" onClick={() => handleViewAgency(agency)}>
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                      <Button variant="outline" size="sm">
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button variant="outline" size="sm">
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+      <div className="card p-3">
+        <Table data={agenciesData} columns={agencyColumns} loading={false} />
+      </div>
 
       {/* Agency Detail Modal */}
-      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>{selectedAgency?.name}</DialogTitle>
-          </DialogHeader>
-          {selectedAgency && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Card>
-                  <CardContent className="pt-4">
-                    <p className="text-sm text-muted-foreground">Agency Name</p>
-                    <p className="font-medium">{selectedAgency.name}</p>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardContent className="pt-4">
-                    <p className="text-sm text-muted-foreground">Location</p>
-                    <p className="font-medium flex items-center">
-                      <MapPin className="h-4 w-4 mr-1 text-muted-foreground" />
-                      {selectedAgency.location}
-                    </p>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardContent className="pt-4">
-                    <p className="text-sm text-muted-foreground">Properties Listed</p>
-                    <p className="font-medium">{selectedAgency.properties}</p>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardContent className="pt-4">
-                    <p className="text-sm text-muted-foreground">Agents</p>
-                    <p className="font-medium">{selectedAgency.agents}</p>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardContent className="pt-4">
-                    <p className="text-sm text-muted-foreground">Status</p>
-                    <p className="font-medium">
-                      <Badge variant={getStatusVariant(selectedAgency.status)}>
-                        {selectedAgency.status}
-                      </Badge>
-                    </p>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardContent className="pt-4">
-                    <p className="text-sm text-muted-foreground">Contact</p>
-                    <p className="font-medium flex items-center">
-                      <Phone className="h-4 w-4 mr-1 text-muted-foreground" />
-                      {selectedAgency.contact}
-                    </p>
-                  </CardContent>
-                </Card>
+      {selectedAgency && (
+        <Modal
+          isOpen={!!selectedAgency}
+          onClose={() => setSelectedAgency(null)}
+          title={selectedAgency.name as string}
+          size="md"
+        >
+          <div className="space-y-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="card p-3">
+                <p className="text-sm text-slate-600">Agency Name</p>
+                <p className="font-medium text-slate-900">
+                  {selectedAgency.name as string}
+                </p>
               </div>
-              <div className="flex justify-end space-x-2">
-                <Button variant="outline" onClick={() => setIsModalOpen(false)}>
-                  Close
-                </Button>
-                <Button>Edit Agency</Button>
+              <div className="card p-3">
+                <p className="text-sm text-slate-600">Location</p>
+                <p className="font-medium text-slate-900 flex items-center">
+                  <MapPin className="h-4 w-4 mr-1 text-slate-500" />
+                  {selectedAgency.location as string}
+                </p>
+              </div>
+              <div className="card p-3">
+                <p className="text-sm text-slate-600">Properties Listed</p>
+                <p className="font-medium text-slate-900">
+                  {selectedAgency.properties as number}
+                </p>
+              </div>
+              <div className="card p-3">
+                <p className="text-sm text-slate-600">Agents</p>
+                <p className="font-medium text-slate-900">
+                  {selectedAgency.agents as number}
+                </p>
+              </div>
+              <div className="card p-3">
+                <p className="text-sm text-slate-600">Status</p>
+                <p className="font-medium text-slate-900">
+                  <Badge
+                    variant={
+                      selectedAgency.status === 'Active'
+                        ? 'success'
+                        : selectedAgency.status === 'Pending'
+                          ? 'warning'
+                          : 'error'
+                    }
+                  >
+                    {selectedAgency.status as string}
+                  </Badge>
+                </p>
+              </div>
+              <div className="card p-3">
+                <p className="text-sm text-slate-600">Contact</p>
+                <p className="font-medium text-slate-900 flex items-center">
+                  <Phone className="h-4 w-4 mr-1 text-slate-500" />
+                  {selectedAgency.contact as string}
+                </p>
               </div>
             </div>
-          )}
-        </DialogContent>
-      </Dialog>
+
+            <div className="flex justify-end space-x-2 pt-3">
+              <Button
+                variant="secondary"
+                onClick={() => setSelectedAgency(null)}
+              >
+                Close
+              </Button>
+              <Button variant="primary">Edit Agency</Button>
+            </div>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 };

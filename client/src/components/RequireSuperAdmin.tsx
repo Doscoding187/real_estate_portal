@@ -1,5 +1,5 @@
+import React, { useEffect } from 'react';
 import { useAuth } from '@/_core/hooks/useAuth';
-import { useEffect } from 'react';
 import { useLocation } from 'wouter';
 
 export const RequireSuperAdmin = ({ children }: { children: React.ReactNode }) => {
