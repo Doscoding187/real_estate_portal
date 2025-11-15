@@ -15,6 +15,13 @@
       "when": 1762868197427,
       "tag": "0001_broad_dark_beast",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1762870000000,
+      "tag": "0002_add_property_developer_role",
+      "breakpoints": true
     }
   ]
 }

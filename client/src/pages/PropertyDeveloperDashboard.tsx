@@ -41,13 +41,13 @@ export default function PropertyDeveloperDashboard() {
     );
   }
 
-  // Redirect if not authenticated or not an agency admin (property developers use agency_admin role)
+  // Redirect if not authenticated or not a property developer
   if (!isAuthenticated) {
     setLocation('/login');
     return null;
   }
 
-  if (user?.role !== 'agency_admin') {
+  if (user?.role !== 'property_developer') {
     setLocation('/dashboard');
     return null;
   }
