@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { useLocation } from 'wouter';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Menu } from 'lucide-react';
 import { useAuth } from '@/_core/hooks/useAuth';
@@ -11,7 +10,7 @@ export default function SuperAdminDashboard({ children }: { children: React.Reac
   const { user, isAuthenticated, loading } = useAuth();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
-  const [location, setLocation] = useLocation();
+  const [, setLocation] = useLocation();
 
   // Check authentication and redirect if not authenticated
   useEffect(() => {
@@ -70,7 +69,6 @@ export default function SuperAdminDashboard({ children }: { children: React.Reac
   return (
     <div className="flex flex-col min-h-screen bg-background">
       <TopNavigationBar />
-      
       <div className="flex flex-1">
         {/* Sidebar */}
         <div
@@ -106,16 +104,6 @@ export default function SuperAdminDashboard({ children }: { children: React.Reac
 
           {/* Page Content */}
           <div className="p-4 md:p-6">
-            <div className="mb-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h1 className="text-2xl font-bold">Super Admin Dashboard</h1>
-                  <p className="text-muted-foreground">Welcome back, {user?.name || user?.email}</p>
-                </div>
-                <Badge variant="destructive">Super Admin</Badge>
-              </div>
-            </div>
-
             {/* Render children routes or default content */}
             <div>
               {children || (
