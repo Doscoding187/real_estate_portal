@@ -1,7 +1,6 @@
 import React from 'react';
 import { useLocation } from 'wouter';
 import { useAuth } from '@/_core/hooks/useAuth';
-import { Navbar } from '@/components/Navbar';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -57,7 +56,6 @@ export default function PropertyDeveloperDashboard() {
       <div className="min-h-screen bg-background">
         <DeveloperSidebar active={section} onChange={setSection} />
         <SidebarInset>
-          <Navbar />
           <div className="container mx-auto px-4 py-6">
             <div className="flex items-center gap-3 mb-6">
               <SidebarTrigger />
