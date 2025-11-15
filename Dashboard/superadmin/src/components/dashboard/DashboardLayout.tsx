@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Outlet } from 'react-router-dom';
+import { Outlet, useNavigate } from 'react-router-dom';
 import TopNavigationBar from '../layout/TopNavigationBar';
 import SidebarNavigation from '../layout/SidebarNavigation';
 import { Menu } from 'lucide-react';
@@ -7,6 +7,14 @@ import { Menu } from 'lucide-react';
 const DashboardLayout: React.FC = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const isAuthenticated = localStorage.getItem('isAuthenticated');
+    if (!isAuthenticated) {
+      navigate('/login');
+    }
+  }, [navigate]);
 
   // Check if we're on mobile
   useEffect(() => {
