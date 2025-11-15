@@ -43,7 +43,7 @@ type Props = {
 
 export function DeveloperSidebar({ active, onChange }: Props) {
   return (
-    <Sidebar collapsible="icon">
+    <Sidebar collapsible="icon" variant="inset">
       <SidebarHeader className="px-3 py-2">
         <div className="font-semibold">Developer</div>
         <div className="text-xs text-muted-foreground">Property Dashboard</div>
