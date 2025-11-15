@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useLocation, useRoute } from 'wouter';
+import { useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -25,6 +25,7 @@ import {
   Ticket,
 } from 'lucide-react';
 import { useAuth } from '@/_core/hooks/useAuth';
+import { RequireSuperAdmin } from '@/components/RequireSuperAdmin';
 
 const SidebarNavigation = () => {
   const [location, setLocation] = useLocation();

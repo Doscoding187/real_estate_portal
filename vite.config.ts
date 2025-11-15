@@ -5,7 +5,6 @@ import fs from "node:fs";
 import path from "path";
 import { defineConfig } from "vite";
 
-
 const plugins = [react(), tailwindcss(), jsxLocPlugin()];
 
 export default defineConfig({
@@ -39,7 +38,7 @@ export default defineConfig({
   },
   server: {
     host: true,
-    port: 3000,
+    port: 3009,
     allowedHosts: [
       "localhost",
       "127.0.0.1",
@@ -49,9 +48,15 @@ export default defineConfig({
       deny: ["**/.*"],
     },
     proxy: {
-      '/trpc': {
-        target: 'http://localhost:8080',
+      '/api': {
+        target: process.env.VITE_API_URL || 'http://localhost:8081',
         changeOrigin: true,
+        secure: false,
+      },
+      '/trpc': {
+        target: process.env.VITE_API_URL || 'http://localhost:8081',
+        changeOrigin: true,
+        secure: false,
       },
     },
   },
