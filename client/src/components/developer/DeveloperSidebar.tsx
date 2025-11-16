@@ -29,12 +29,15 @@ export type DeveloperSection =
   | 'developments'
   | 'units'
   | 'leads'
+  | 'analytics'
   | 'team'
   | 'documents'
   | 'marketing'
   | 'integrations'
   | 'billing'
-  | 'support';
+  | 'support'
+  | 'messages'
+  | 'settings';
 
 type Props = {
   active: DeveloperSection;
@@ -76,6 +79,12 @@ export function DeveloperSidebar({ active, onChange, className }: Props) {
                 <SidebarMenuButton isActive={active === 'units'} onClick={() => onChange('units')}>
                   <Boxes />
                   <span>Units</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton isActive={active === 'analytics'} onClick={() => onChange('analytics')}>
+                  <LayoutDashboard />
+                  <span>Analytics</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>
@@ -131,6 +140,12 @@ export function DeveloperSidebar({ active, onChange, className }: Props) {
                   <span>Integrations</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton isActive={active === 'messages'} onClick={() => onChange('messages')}>
+                  <LifeBuoy />
+                  <span>Messages</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
@@ -147,6 +162,12 @@ export function DeveloperSidebar({ active, onChange, className }: Props) {
             <SidebarMenuButton isActive={active === 'support'} onClick={() => onChange('support')}>
               <LifeBuoy />
               <span>Support</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+          <SidebarMenuItem>
+            <SidebarMenuButton isActive={active === 'settings'} onClick={() => onChange('settings')}>
+              <LayoutDashboard />
+              <span>Settings</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>

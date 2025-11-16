@@ -15,9 +15,13 @@ import LeadsManager from '@/components/developer/LeadsManager';
 import TeamManagement from '@/components/developer/TeamManagement';
 import DocumentsMedia from '@/components/developer/DocumentsMedia';
 import MarketingCampaigns from '@/components/developer/MarketingCampaigns';
+import MarketingTools from '@/components/developer/MarketingTools';
 import IntegrationsPanel from '@/components/developer/IntegrationsPanel';
 import BillingPanel from '@/components/developer/BillingPanel';
 import SupportCenter from '@/components/developer/SupportCenter';
+import AnalyticsPanel from '@/components/developer/AnalyticsPanel';
+import MessagesCenter from '@/components/developer/MessagesCenter';
+import SettingsPanel from '@/components/developer/SettingsPanel';
 
 export default function PropertyDeveloperDashboard() {
   const [, setLocation] = useLocation();
@@ -67,12 +71,15 @@ export default function PropertyDeveloperDashboard() {
           {section === 'developments' && <DevelopmentsList />}
           {section === 'units' && <UnitsManager />}
           {section === 'leads' && <LeadsManager />}
+          {section === 'analytics' && <AnalyticsPanel />}
           {section === 'team' && <TeamManagement />}
           {section === 'documents' && <DocumentsMedia />}
-          {section === 'marketing' && <MarketingCampaigns />}
+          {section === 'marketing' && <MarketingTools />}
           {section === 'integrations' && <IntegrationsPanel />}
           {section === 'billing' && <BillingPanel />}
           {section === 'support' && <SupportCenter />}
+          {section === 'messages' && <MessagesCenter />}
+          {section === 'settings' && <SettingsPanel />}
 
           {section === 'developments' || section === 'units' ? null : null}
           {section === 'dashboard' && (
