@@ -53,72 +53,70 @@ export default function PropertyDeveloperDashboard() {
 
   return (
     <SidebarProvider>
-      <div className="min-h-screen bg-background flex">
-        <DeveloperSidebar active={section} onChange={setSection} className="w-64" />
-        <SidebarInset>
-          <div className="px-4 py-6 w-full">
-            <div className="flex items-center gap-3 mb-6">
-              <SidebarTrigger />
-              <Building2 className="h-6 w-6 text-primary" />
-              <h1 className="text-2xl font-bold">Developer Dashboard</h1>
-              <Badge variant="secondary">Property Developer</Badge>
-            </div>
-
-            {section === 'dashboard' && <Overview />}
-            {section === 'developments' && <DevelopmentsList />}
-            {section === 'units' && <UnitsManager />}
-            {section === 'leads' && <LeadsManager />}
-            {section === 'team' && <TeamManagement />}
-            {section === 'documents' && <DocumentsMedia />}
-            {section === 'marketing' && <MarketingCampaigns />}
-            {section === 'integrations' && <IntegrationsPanel />}
-            {section === 'billing' && <BillingPanel />}
-            {section === 'support' && <SupportCenter />}
-
-            {section === 'developments' || section === 'units' ? null : null}
-            {section === 'dashboard' && (
-              <div className="mt-8">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Recent Listings</CardTitle>
-                    <CardDescription>Recently added property listings</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    {propertiesLoading ? (
-                      <p className="text-muted-foreground">Loading listings...</p>
-                    ) : (properties?.length ?? 0) === 0 ? (
-                      <p className="text-muted-foreground">No listings yet.</p>
-                    ) : (
-                      <ul className="space-y-3">
-                        {properties!.slice(0, 3).map((listing: any) => (
-                          <li
-                            key={listing.id}
-                            className="flex items-center justify-between border-b pb-2"
-                          >
-                            <div className="flex-1">
-                              <div className="font-medium">{listing.title}</div>
-                              <div className="text-sm text-muted-foreground">
-                                {listing.city}, {listing.province}
-                              </div>
-                            </div>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => setLocation(`/property/${listing.id}`)}
-                            >
-                              View
-                            </Button>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </CardContent>
-                </Card>
-              </div>
-            )}
+      <DeveloperSidebar active={section} onChange={setSection} className="w-64" />
+      <SidebarInset>
+        <div className="px-4 py-6 w-full">
+          <div className="flex items-center gap-3 mb-6">
+            <SidebarTrigger />
+            <Building2 className="h-6 w-6 text-primary" />
+            <h1 className="text-2xl font-bold">Developer Dashboard</h1>
+            <Badge variant="secondary">Property Developer</Badge>
           </div>
-        </SidebarInset>
-      </div>
+
+          {section === 'dashboard' && <Overview />}
+          {section === 'developments' && <DevelopmentsList />}
+          {section === 'units' && <UnitsManager />}
+          {section === 'leads' && <LeadsManager />}
+          {section === 'team' && <TeamManagement />}
+          {section === 'documents' && <DocumentsMedia />}
+          {section === 'marketing' && <MarketingCampaigns />}
+          {section === 'integrations' && <IntegrationsPanel />}
+          {section === 'billing' && <BillingPanel />}
+          {section === 'support' && <SupportCenter />}
+
+          {section === 'developments' || section === 'units' ? null : null}
+          {section === 'dashboard' && (
+            <div className="mt-8">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Recent Listings</CardTitle>
+                  <CardDescription>Recently added property listings</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {propertiesLoading ? (
+                    <p className="text-muted-foreground">Loading listings...</p>
+                  ) : (properties?.length ?? 0) === 0 ? (
+                    <p className="text-muted-foreground">No listings yet.</p>
+                  ) : (
+                    <ul className="space-y-3">
+                      {properties!.slice(0, 3).map((listing: any) => (
+                        <li
+                          key={listing.id}
+                          className="flex items-center justify-between border-b pb-2"
+                        >
+                          <div className="flex-1">
+                            <div className="font-medium">{listing.title}</div>
+                            <div className="text-sm text-muted-foreground">
+                              {listing.city}, {listing.province}
+                            </div>
+                          </div>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setLocation(`/property/${listing.id}`)}
+                          >
+                            View
+                          </Button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          )}
+        </div>
+      </SidebarInset>
     </SidebarProvider>
   );
 }
