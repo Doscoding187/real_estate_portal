@@ -59,7 +59,7 @@ export default function PropertyDeveloperDashboard() {
           <div className="flex items-center gap-3 mb-6">
             <SidebarTrigger />
             <Building2 className="h-6 w-6 text-primary" />
-            <h1 className="text-2xl font-bold">Developer Dashboard</h1>
+            <h1 className="typ-h2">Developer Dashboard</h1>
             <Badge variant="secondary">Property Developer</Badge>
           </div>
 
@@ -77,9 +77,9 @@ export default function PropertyDeveloperDashboard() {
           {section === 'developments' || section === 'units' ? null : null}
           {section === 'dashboard' && (
             <div className="mt-8">
-              <Card>
+              <Card className="card">
                 <CardHeader>
-                  <CardTitle>Recent Listings</CardTitle>
+                  <CardTitle className="typ-h3">Recent Listings</CardTitle>
                   <CardDescription>Recently added property listings</CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -92,7 +92,7 @@ export default function PropertyDeveloperDashboard() {
                       {properties!.slice(0, 3).map((listing: any) => (
                         <li
                           key={listing.id}
-                          className="flex items-center justify-between border-b pb-2"
+                          className="flex items-center justify-between border-light rounded-12 p-3"
                         >
                           <div className="flex-1">
                             <div className="font-medium">{listing.title}</div>
@@ -102,6 +102,7 @@ export default function PropertyDeveloperDashboard() {
                           </div>
                           <Button
                             variant="outline"
+                            className="btn btn-secondary"
                             size="sm"
                             onClick={() => setLocation(`/property/${listing.id}`)}
                           >

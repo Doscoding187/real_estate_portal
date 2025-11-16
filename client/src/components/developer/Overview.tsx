@@ -13,10 +13,10 @@ export default function Overview() {
           { title: 'Active Developments', value: '0', icon: Home },
           { title: 'Pending Tasks', value: '0', icon: ClipboardList },
         ].map(({ title, value, icon: Icon }) => (
-          <Card key={title}>
+          <Card key={title} className="card metric-card">
             <CardHeader className="pb-2">
               <CardDescription>{title}</CardDescription>
-              <CardTitle className="text-3xl flex items-center gap-2">
+              <CardTitle className="typ-h3 flex items-center gap-2">
                 <Icon className="h-5 w-5 text-muted-foreground" /> {value}
               </CardTitle>
             </CardHeader>
@@ -25,32 +25,32 @@ export default function Overview() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card>
+        <Card className="card">
           <CardHeader>
-            <CardTitle>Leads per Day</CardTitle>
+            <CardTitle className="typ-h3">Leads per Day</CardTitle>
             <CardDescription>Recent lead activity</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="text-sm text-muted-foreground">Chart placeholder</div>
-            <div className="bg-secondary h-40 rounded" />
+            <div className="bg-secondary h-40 rounded-16" />
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="card">
           <CardHeader>
-            <CardTitle>Traffic Sources</CardTitle>
+            <CardTitle className="typ-h3">Traffic Sources</CardTitle>
             <CardDescription>Where your traffic comes from</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="text-sm text-muted-foreground">Chart placeholder</div>
-            <div className="bg-secondary h-40 rounded" />
+            <div className="bg-secondary h-40 rounded-16" />
           </CardContent>
         </Card>
       </div>
 
-      <Card>
+      <Card className="card">
         <CardHeader>
-          <CardTitle>Units Sold vs Available</CardTitle>
+          <CardTitle className="typ-h3">Units Sold vs Available</CardTitle>
           <CardDescription>Inventory breakdown</CardDescription>
         </CardHeader>
         <CardContent>
@@ -58,7 +58,7 @@ export default function Overview() {
             <Badge variant="secondary">Sold: 0</Badge>
             <Badge variant="outline">Available: 0</Badge>
           </div>
-          <div className="bg-secondary h-6 rounded mt-4" />
+          <div className="bg-secondary h-6 rounded-16 mt-4" />
         </CardContent>
       </Card>
     </div>

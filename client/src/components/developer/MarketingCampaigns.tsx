@@ -6,21 +6,21 @@ export default function MarketingCampaigns() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold">Marketing & Campaigns</h2>
-        <Button>Boost Development</Button>
+        <h2 className="typ-h2">Marketing & Campaigns</h2>
+        <Button className="btn btn-primary">Boost Development</Button>
       </div>
-      <Card>
+      <Card className="card">
         <CardHeader>
-          <CardTitle>Active Campaigns</CardTitle>
+          <CardTitle className="typ-h3">Active Campaigns</CardTitle>
           <CardDescription>Impressions, clicks, cost, ROI</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="text-sm text-muted-foreground">No active campaigns.</div>
         </CardContent>
       </Card>
-      <Card>
+      <Card className="card">
         <CardHeader>
-          <CardTitle>Order Placements</CardTitle>
+          <CardTitle className="typ-h3">Order Placements</CardTitle>
           <CardDescription>Order banners or featured placements</CardDescription>
         </CardHeader>
         <CardContent>

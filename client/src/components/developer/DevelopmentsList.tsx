@@ -16,18 +16,18 @@ export default function DevelopmentsList() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold">Developments</h2>
-        <Button>
+        <h2 className="typ-h2">Developments</h2>
+        <Button className="btn btn-primary">
           <Plus className="h-4 w-4 mr-2" /> Add Development
         </Button>
       </div>
 
-      <Card>
+      <Card className="card">
         <CardHeader>
-          <CardTitle>All Developments</CardTitle>
+          <CardTitle className="typ-h3">All Developments</CardTitle>
         </CardHeader>
         <CardContent>
-          <Table>
+          <Table className="table-soft table-soft--comfortable">
             <TableHeader>
               <TableRow>
                 <TableHead>Name</TableHead>

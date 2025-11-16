@@ -14,15 +14,15 @@ export default function TeamManagement() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold">Team</h2>
-        <Button>Invite Member</Button>
+        <h2 className="typ-h2">Team</h2>
+        <Button className="btn btn-primary">Invite Member</Button>
       </div>
-      <Card>
+      <Card className="card">
         <CardHeader>
-          <CardTitle>Internal Team</CardTitle>
+          <CardTitle className="typ-h3">Internal Team</CardTitle>
         </CardHeader>
         <CardContent>
-          <Table>
+          <Table className="table-soft table-soft--comfortable">
             <TableHeader>
               <TableRow>
                 <TableHead>Name</TableHead>
@@ -40,12 +40,12 @@ export default function TeamManagement() {
           </Table>
         </CardContent>
       </Card>
-      <Card>
+      <Card className="card">
         <CardHeader>
-          <CardTitle>External Agents</CardTitle>
+          <CardTitle className="typ-h3">External Agents</CardTitle>
         </CardHeader>
         <CardContent>
-          <Table>
+          <Table className="table-soft table-soft--comfortable">
             <TableHeader>
               <TableRow>
                 <TableHead>Name</TableHead>

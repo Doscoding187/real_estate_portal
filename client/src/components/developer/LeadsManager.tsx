@@ -21,7 +21,7 @@ export default function LeadsManager() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold">Leads</h2>
+        <h2 className="typ-h2">Leads</h2>
         <div className="flex gap-2">
           <Select>
             <SelectTrigger className="w-40">
@@ -37,12 +37,12 @@ export default function LeadsManager() {
           </Select>
         </div>
       </div>
-      <Card>
+      <Card className="card">
         <CardHeader>
-          <CardTitle>Lead Table</CardTitle>
+          <CardTitle className="typ-h3">Lead Table</CardTitle>
         </CardHeader>
         <CardContent>
-          <Table>
+          <Table className="table-soft table-soft--comfortable">
             <TableHeader>
               <TableRow>
                 <TableHead>Name</TableHead>

@@ -12,21 +12,21 @@ import {
 export default function BillingPanel() {
   return (
     <div className="space-y-4">
-      <Card>
+      <Card className="card">
         <CardHeader>
-          <CardTitle>Subscription</CardTitle>
+          <CardTitle className="typ-h3">Subscription</CardTitle>
           <CardDescription>Current plan and billing cycle</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="text-sm text-muted-foreground">No subscription found.</div>
         </CardContent>
       </Card>
-      <Card>
+      <Card className="card">
         <CardHeader>
-          <CardTitle>Invoices</CardTitle>
+          <CardTitle className="typ-h3">Invoices</CardTitle>
         </CardHeader>
         <CardContent>
-          <Table>
+          <Table className="table-soft table-soft--comfortable">
             <TableHeader>
               <TableRow>
                 <TableHead>Date</TableHead>
@@ -46,9 +46,9 @@ export default function BillingPanel() {
           </Table>
         </CardContent>
       </Card>
-      <Card>
+      <Card className="card">
         <CardHeader>
-          <CardTitle>Campaign Billing</CardTitle>
+          <CardTitle className="typ-h3">Campaign Billing</CardTitle>
           <CardDescription>History of marketing spend</CardDescription>
         </CardHeader>
         <CardContent>

@@ -30,7 +30,7 @@ async function createRoleBasedUsers() {
       email: 'developer@example.com',
       password: 'password123',
       name: 'Property Developer',
-      role: 'agency_admin' // Using agency_admin as property developer role
+      role: 'property_developer'
     },
     {
       email: 'agent@example.com',

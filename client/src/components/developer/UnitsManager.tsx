@@ -14,20 +14,28 @@ export default function UnitsManager() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold">Units</h2>
+        <h2 className="typ-h2">Units</h2>
         <div className="flex gap-2">
-          <Button variant="outline">Bulk Upload CSV</Button>
-          <Button variant="outline">Add Unit Type</Button>
-          <Button variant="outline">Edit Pricing</Button>
-          <Button variant="outline">Update Availability</Button>
+          <Button variant="outline" className="btn btn-secondary">
+            Bulk Upload CSV
+          </Button>
+          <Button variant="outline" className="btn btn-secondary">
+            Add Unit Type
+          </Button>
+          <Button variant="outline" className="btn btn-secondary">
+            Edit Pricing
+          </Button>
+          <Button variant="outline" className="btn btn-secondary">
+            Update Availability
+          </Button>
         </div>
       </div>
-      <Card>
+      <Card className="card">
         <CardHeader>
-          <CardTitle>Units Table</CardTitle>
+          <CardTitle className="typ-h3">Units Table</CardTitle>
         </CardHeader>
         <CardContent>
-          <Table>
+          <Table className="table-soft table-soft--comfortable">
             <TableHeader>
               <TableRow>
                 <TableHead>Type</TableHead>
