@@ -39,11 +39,12 @@ export type DeveloperSection =
 type Props = {
   active: DeveloperSection;
   onChange: (section: DeveloperSection) => void;
+  className?: string;
 };
 
-export function DeveloperSidebar({ active, onChange }: Props) {
+export function DeveloperSidebar({ active, onChange, className }: Props) {
   return (
-    <Sidebar collapsible="icon" variant="inset">
+    <Sidebar collapsible="icon" variant="inset" className={className}>
       <SidebarHeader className="px-3 py-2">
         <div className="font-semibold">Developer</div>
         <div className="text-xs text-muted-foreground">Property Dashboard</div>

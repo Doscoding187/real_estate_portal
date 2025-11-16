@@ -53,8 +53,8 @@ export default function PropertyDeveloperDashboard() {
 
   return (
     <SidebarProvider>
-      <div className="min-h-screen bg-background">
-        <DeveloperSidebar active={section} onChange={setSection} />
+      <div className="min-h-screen bg-background flex">
+        <DeveloperSidebar active={section} onChange={setSection} className="w-64" />
         <SidebarInset>
           <div className="px-4 py-6 w-full">
             <div className="flex items-center gap-3 mb-6">
