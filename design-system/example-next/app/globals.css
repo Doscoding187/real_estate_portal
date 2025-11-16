@@ -1,0 +1,15 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Import Ikhaya design-system utilities */
+@import '../../components.css';
+
+html,
+body {
+  height: 100%;
+}
+body {
+  background: var(--color-gray-50);
+  color: var(--color-gray-900);
+}
