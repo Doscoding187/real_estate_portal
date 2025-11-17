@@ -24,18 +24,16 @@ export function StatCard({ title, value, icon: Icon, trend, className }: StatCar
             {trend && (
               <p
                 className={cn(
-                  'text-xs font-medium mt-2',
-                  trend.positive ? 'text-success' : 'text-destructive',
+                  'text-xs font-medium mt-1',
+                  trend.positive ? 'text-green-600' : 'text-red-600',
                 )}
               >
-                {trend.positive ? '↑' : '↓'} {trend.value}
+                {trend.value}
               </p>
             )}
           </div>
-          <div className="ml-4">
-            <div className="p-3 bg-primary/10 rounded-lg">
-              <Icon className="h-6 w-6 text-primary" />
-            </div>
+          <div className="p-3 bg-primary/10 rounded-lg">
+            <Icon className="h-6 w-6 text-primary" />
           </div>
         </div>
       </CardContent>

@@ -1,73 +1,98 @@
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Eye, MessageSquare, TrendingUp, UserPlus } from "lucide-react";
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Eye, MessageSquare, TrendingUp, UserPlus } from 'lucide-react';
 
 const activities = [
   {
     id: 1,
-    type: "view",
-    message: "New lead viewed Luxury Villa in Beverly Hills",
-    time: "5 minutes ago",
+    type: 'view',
+    message: 'New lead viewed Luxury Villa in Beverly Hills',
+    time: '5 minutes ago',
     icon: Eye,
   },
   {
     id: 2,
-    type: "lead",
-    message: "New inquiry from Michael Chen",
-    time: "23 minutes ago",
+    type: 'lead',
+    message: 'New inquiry from Michael Chen',
+    time: '23 minutes ago',
     icon: MessageSquare,
   },
   {
     id: 3,
-    type: "boost",
+    type: 'boost',
     message: "Your listing 'Downtown Penthouse' was featured",
-    time: "1 hour ago",
+    time: '1 hour ago',
     icon: TrendingUp,
   },
   {
     id: 4,
-    type: "client",
-    message: "Sarah Johnson added as client",
-    time: "3 hours ago",
+    type: 'client',
+    message: 'Sarah Johnson added as client',
+    time: '3 hours ago',
     icon: UserPlus,
   },
 ];
 
 const getIconColor = (type: string) => {
   switch (type) {
-    case "view":
-      return "text-primary";
-    case "lead":
-      return "text-success";
-    case "boost":
-      return "text-chart-3";
-    case "client":
-      return "text-chart-5";
+    case 'view':
+      return 'text-primary';
+    case 'lead':
+      return 'text-green-600';
+    case 'boost':
+      return 'text-purple-600';
+    case 'client':
+      return 'text-blue-600';
     default:
-      return "text-muted-foreground";
+      return 'text-muted-foreground';
+  }
+};
+
+const getTypeColor = (type: string) => {
+  switch (type) {
+    case 'view':
+      return 'bg-primary/10 text-primary';
+    case 'lead':
+      return 'bg-green-100 text-green-800';
+    case 'boost':
+      return 'bg-purple-100 text-purple-800';
+    case 'client':
+      return 'bg-blue-100 text-blue-800';
+    default:
+      return 'bg-gray-100 text-gray-800';
   }
 };
 
 export function RecentActivity() {
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle>Recent Activity</CardTitle>
-        <Badge variant="secondary">Live</Badge>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Eye className="h-5 w-5" />
+          Recent Activity
+        </CardTitle>
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
-          {activities.map((activity) => (
-            <div key={activity.id} className="flex items-start gap-3">
-              <div className={`p-2 rounded-lg bg-secondary ${getIconColor(activity.type)}`}>
-                <activity.icon className="h-4 w-4" />
+          {activities.map(activity => {
+            const IconComponent = activity.icon;
+            return (
+              <div key={activity.id} className="flex items-start gap-3">
+                <div className={`mt-0.5 ${getIconColor(activity.type)}`}>
+                  <IconComponent className="h-4 w-4" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-foreground">{activity.message}</p>
+                  <div className="flex items-center gap-2 mt-1">
+                    <Badge className={getTypeColor(activity.type)} variant="secondary">
+                      {activity.type}
+                    </Badge>
+                    <span className="text-xs text-muted-foreground">{activity.time}</span>
+                  </div>
+                </div>
               </div>
-              <div className="flex-1 space-y-1">
-                <p className="text-sm text-foreground">{activity.message}</p>
-                <p className="text-xs text-muted-foreground">{activity.time}</p>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </CardContent>
     </Card>

@@ -1,13 +1,22 @@
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  Legend,
+} from 'recharts';
 
 const data = [
-  { month: "Jan", leads: 12, sales: 3 },
-  { month: "Feb", leads: 19, sales: 5 },
-  { month: "Mar", leads: 15, sales: 4 },
-  { month: "Apr", leads: 25, sales: 7 },
-  { month: "May", leads: 28, sales: 8 },
-  { month: "Jun", leads: 32, sales: 9 },
+  { month: 'Jan', leads: 12, sales: 3 },
+  { month: 'Feb', leads: 19, sales: 5 },
+  { month: 'Mar', leads: 15, sales: 4 },
+  { month: 'Apr', leads: 25, sales: 7 },
+  { month: 'May', leads: 28, sales: 8 },
+  { month: 'Jun', leads: 32, sales: 9 },
 ];
 
 export function PerformanceChart() {
@@ -20,36 +29,49 @@ export function PerformanceChart() {
         <ResponsiveContainer width="100%" height={300}>
           <LineChart data={data}>
             <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-            <XAxis 
-              dataKey="month" 
-              className="text-xs"
-              tick={{ fill: "hsl(var(--muted-foreground))" }}
+            <XAxis
+              dataKey="month"
+              className="text-muted-foreground"
+              tickLine={false}
+              axisLine={false}
             />
-            <YAxis 
-              className="text-xs"
-              tick={{ fill: "hsl(var(--muted-foreground))" }}
-            />
-            <Tooltip 
+            <YAxis className="text-muted-foreground" tickLine={false} axisLine={false} />
+            <Tooltip
               contentStyle={{
-                backgroundColor: "hsl(var(--card))",
-                border: "1px solid hsl(var(--border))",
-                borderRadius: "0.5rem",
+                backgroundColor: 'hsl(var(--background))',
+                borderColor: 'hsl(var(--border))',
+                borderRadius: '0.5rem',
               }}
+              labelStyle={{ color: 'hsl(var(--foreground))' }}
             />
             <Legend />
-            <Line 
-              type="monotone" 
-              dataKey="leads" 
-              stroke="hsl(var(--primary))" 
+            <Line
+              type="monotone"
+              dataKey="leads"
+              stroke="hsl(var(--primary))"
               strokeWidth={2}
-              name="Leads"
+              dot={{ strokeWidth: 2, r: 4, fill: 'hsl(var(--background))' }}
+              activeDot={{
+                r: 6,
+                stroke: 'hsl(var(--primary))',
+                strokeWidth: 2,
+                fill: 'hsl(var(--background))',
+              }}
+              name="Leads Generated"
             />
-            <Line 
-              type="monotone" 
-              dataKey="sales" 
-              stroke="hsl(var(--success))" 
+            <Line
+              type="monotone"
+              dataKey="sales"
+              stroke="hsl(var(--chart-2))"
               strokeWidth={2}
-              name="Sales"
+              dot={{ strokeWidth: 2, r: 4, fill: 'hsl(var(--background))' }}
+              activeDot={{
+                r: 6,
+                stroke: 'hsl(var(--chart-2))',
+                strokeWidth: 2,
+                fill: 'hsl(var(--background))',
+              }}
+              name="Sales Closed"
             />
           </LineChart>
         </ResponsiveContainer>
