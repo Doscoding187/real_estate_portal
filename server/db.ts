@@ -1695,7 +1695,7 @@ export async function getListingById(listingId: number) {
   if (!db) throw new Error('Database not available');
 
   const [listing] = await db.select().from(listings).where(eq(listings.id, listingId)).limit(1);
-  
+
   if (!listing) return null;
 
   // Parse JSON fields
@@ -1716,13 +1716,13 @@ export async function getUserListings(userId: number, status?: string) {
   if (!db) throw new Error('Database not available');
 
   let query = db.select().from(listings).where(eq(listings.userId, userId));
-  
+
   if (status) {
     query = query.where(eq(listings.status, status));
   }
-  
+
   const listingsData = await query.orderBy(desc(listings.createdAt));
-  
+
   // Parse JSON fields
   return listingsData.map(listing => ({
     ...listing,
@@ -1763,11 +1763,14 @@ export async function submitListingForReview(listingId: number) {
   if (!db) throw new Error('Database not available');
 
   // Update listing status
-  await db.update(listings).set({
-    status: 'pending_review',
-    approvalStatus: 'pending',
-    updatedAt: new Date(),
-  }).where(eq(listings.id, listingId));
+  await db
+    .update(listings)
+    .set({
+      status: 'pending_review',
+      approvalStatus: 'pending',
+      updatedAt: new Date(),
+    })
+    .where(eq(listings.id, listingId));
 
   // Add to approval queue
   await db.insert(listingApprovalQueue).values({
@@ -1786,8 +1789,12 @@ export async function getListingAnalytics(listingId: number) {
   const db = await getDb();
   if (!db) throw new Error('Database not available');
 
-  const [analytics] = await db.select().from(listingAnalytics).where(eq(listingAnalytics.listingId, listingId)).limit(1);
-  
+  const [analytics] = await db
+    .select()
+    .from(listingAnalytics)
+    .where(eq(listingAnalytics.listingId, listingId))
+    .limit(1);
+
   if (!analytics) return null;
 
   // Parse JSON fields
@@ -1805,7 +1812,11 @@ export async function getListingMedia(listingId: number) {
   const db = await getDb();
   if (!db) throw new Error('Database not available');
 
-  return await db.select().from(listingMedia).where(eq(listingMedia.listingId, listingId)).orderBy(listingMedia.displayOrder);
+  return await db
+    .select()
+    .from(listingMedia)
+    .where(eq(listingMedia.listingId, listingId))
+    .orderBy(listingMedia.displayOrder);
 }
 
 /**
@@ -1815,23 +1826,26 @@ export async function getApprovalQueue(status?: string) {
   const db = await getDb();
   if (!db) throw new Error('Database not available');
 
-  let query = db.select({
-    id: listingApprovalQueue.id,
-    listingId: listingApprovalQueue.listingId,
-    submittedBy: listingApprovalQueue.submittedBy,
-    submittedAt: listingApprovalQueue.submittedAt,
-    status: listingApprovalQueue.status,
-    priority: listingApprovalQueue.priority,
-    reviewedBy: listingApprovalQueue.reviewedBy,
-    reviewedAt: listingApprovalQueue.reviewedAt,
-    reviewNotes: listingApprovalQueue.reviewNotes,
-    rejectionReason: listingApprovalQueue.rejectionReason,
-    // Join with listings table to get listing details
-    listingTitle: listings.title,
-    listingPropertyType: listings.propertyType,
-    listingAction: listings.action,
-    listingStatus: listings.status,
-  }).from(listingApprovalQueue).leftJoin(listings, eq(listingApprovalQueue.listingId, listings.id));
+  let query = db
+    .select({
+      id: listingApprovalQueue.id,
+      listingId: listingApprovalQueue.listingId,
+      submittedBy: listingApprovalQueue.submittedBy,
+      submittedAt: listingApprovalQueue.submittedAt,
+      status: listingApprovalQueue.status,
+      priority: listingApprovalQueue.priority,
+      reviewedBy: listingApprovalQueue.reviewedBy,
+      reviewedAt: listingApprovalQueue.reviewedAt,
+      reviewNotes: listingApprovalQueue.reviewNotes,
+      rejectionReason: listingApprovalQueue.rejectionReason,
+      // Join with listings table to get listing details
+      listingTitle: listings.title,
+      listingPropertyType: listings.propertyType,
+      listingAction: listings.action,
+      listingStatus: listings.status,
+    })
+    .from(listingApprovalQueue)
+    .leftJoin(listings, eq(listingApprovalQueue.listingId, listings.id));
 
   if (status) {
     query = query.where(eq(listingApprovalQueue.status, status));
@@ -1848,20 +1862,26 @@ export async function approveListing(listingId: number, reviewedBy: number, note
   if (!db) throw new Error('Database not available');
 
   // Update listing status
-  await db.update(listings).set({
-    status: 'published',
-    approvalStatus: 'approved',
-    publishedAt: new Date(),
-    updatedAt: new Date(),
-  }).where(eq(listings.id, listingId));
+  await db
+    .update(listings)
+    .set({
+      status: 'published',
+      approvalStatus: 'approved',
+      publishedAt: new Date(),
+      updatedAt: new Date(),
+    })
+    .where(eq(listings.id, listingId));
 
   // Update approval queue
-  await db.update(listingApprovalQueue).set({
-    status: 'approved',
-    reviewedBy,
-    reviewedAt: new Date(),
-    reviewNotes: notes,
-  }).where(eq(listingApprovalQueue.listingId, listingId));
+  await db
+    .update(listingApprovalQueue)
+    .set({
+      status: 'approved',
+      reviewedBy,
+      reviewedAt: new Date(),
+      reviewNotes: notes,
+    })
+    .where(eq(listingApprovalQueue.listingId, listingId));
 }
 
 /**
@@ -1872,17 +1892,23 @@ export async function rejectListing(listingId: number, reviewedBy: number, reaso
   if (!db) throw new Error('Database not available');
 
   // Update listing status
-  await db.update(listings).set({
-    status: 'rejected',
-    approvalStatus: 'rejected',
-    updatedAt: new Date(),
-  }).where(eq(listings.id, listingId));
+  await db
+    .update(listings)
+    .set({
+      status: 'rejected',
+      approvalStatus: 'rejected',
+      updatedAt: new Date(),
+    })
+    .where(eq(listings.id, listingId));
 
   // Update approval queue
-  await db.update(listingApprovalQueue).set({
-    status: 'rejected',
-    reviewedBy,
-    reviewedAt: new Date(),
-    rejectionReason: reason,
-  }).where(eq(listingApprovalQueue.listingId, listingId));
+  await db
+    .update(listingApprovalQueue)
+    .set({
+      status: 'rejected',
+      reviewedBy,
+      reviewedAt: new Date(),
+      rejectionReason: reason,
+    })
+    .where(eq(listingApprovalQueue.listingId, listingId));
 }

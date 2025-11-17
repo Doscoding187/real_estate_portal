@@ -35,7 +35,7 @@ const PreviewStep: React.FC = () => {
       {/* Listing Preview */}
       <Card className="p-6">
         <h3 className="text-lg font-semibold mb-4">Listing Preview</h3>
-        
+
         <div className="space-y-6">
           {/* Basic Info */}
           <div>
@@ -56,8 +56,9 @@ const PreviewStep: React.FC = () => {
               <div>
                 <p className="text-sm text-gray-500">Property Type</p>
                 <p className="font-semibold">
-                  {state.propertyType 
-                    ? PROPERTY_TYPE_TEMPLATES[state.propertyType as PropertyType]?.label || state.propertyType 
+                  {state.propertyType
+                    ? PROPERTY_TYPE_TEMPLATES[state.propertyType as PropertyType]?.label ||
+                      state.propertyType
                     : 'Not set'}
                 </p>
               </div>
@@ -85,7 +86,7 @@ const PreviewStep: React.FC = () => {
                     </div>
                   </>
                 )}
-                
+
                 {state.action === 'rent' && (
                   <>
                     <div>
@@ -102,7 +103,7 @@ const PreviewStep: React.FC = () => {
                     </div>
                   </>
                 )}
-                
+
                 {state.action === 'auction' && (
                   <>
                     <div>
@@ -130,11 +131,13 @@ const PreviewStep: React.FC = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {Object.entries(state.propertyDetails).map(([key, value]) => (
                   <div key={key}>
-                    <p className="text-sm text-gray-500">
-                      {key.replace(/([A-Z])/g, ' $1').trim()}
-                    </p>
+                    <p className="text-sm text-gray-500">{key.replace(/([A-Z])/g, ' $1').trim()}</p>
                     <p className="font-semibold">
-                      {typeof value === 'boolean' ? (value ? 'Yes' : 'No') : String(value) || 'Not specified'}
+                      {typeof value === 'boolean'
+                        ? value
+                          ? 'Yes'
+                          : 'No'
+                        : String(value) || 'Not specified'}
                     </p>
                   </div>
                 ))}
@@ -173,7 +176,10 @@ const PreviewStep: React.FC = () => {
               <h4 className="font-medium text-gray-900 mb-2">Media ({state.media.length} items)</h4>
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                 {state.media.map((item: any, index: number) => (
-                  <div key={index} className="relative rounded-lg border overflow-hidden aspect-square">
+                  <div
+                    key={index}
+                    className="relative rounded-lg border overflow-hidden aspect-square"
+                  >
                     {item.type === 'image' && item.url && (
                       <img
                         src={item.url}

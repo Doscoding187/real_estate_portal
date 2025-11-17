@@ -42,21 +42,26 @@ const MediaUploadStep: React.FC = () => {
   };
 
   // Validate file
-  const validateFile = (file: File): { isValid: boolean; error?: string; type?: ListingMediaFile['type'] } => {
+  const validateFile = (
+    file: File,
+  ): { isValid: boolean; error?: string; type?: ListingMediaFile['type'] } => {
     const fileType = file.type;
     const fileName = file.name.toLowerCase();
     const fileSizeMB = file.size / (1024 * 1024);
 
     // Determine media type
     let mediaType: ListingMediaFile['type'] | undefined;
-    
+
     if (fileType.startsWith('image/')) {
       mediaType = 'image';
       if (mediaCounts.images >= MEDIA_LIMITS.maxImages) {
         return { isValid: false, error: `Maximum ${MEDIA_LIMITS.maxImages} images allowed` };
       }
       if (fileSizeMB > MEDIA_LIMITS.maxImageSizeMB) {
-        return { isValid: false, error: `Image size exceeds ${MEDIA_LIMITS.maxImageSizeMB}MB limit` };
+        return {
+          isValid: false,
+          error: `Image size exceeds ${MEDIA_LIMITS.maxImageSizeMB}MB limit`,
+        };
       }
       if (!['image/jpeg', 'image/jpg', 'image/png', 'image/webp'].includes(fileType)) {
         return { isValid: false, error: 'Only JPG, PNG, and WebP images are allowed' };
@@ -67,14 +72,20 @@ const MediaUploadStep: React.FC = () => {
         return { isValid: false, error: `Maximum ${MEDIA_LIMITS.maxVideos} videos allowed` };
       }
       if (fileSizeMB > MEDIA_LIMITS.maxVideoSizeMB) {
-        return { isValid: false, error: `Video size exceeds ${MEDIA_LIMITS.maxVideoSizeMB}MB limit` };
+        return {
+          isValid: false,
+          error: `Video size exceeds ${MEDIA_LIMITS.maxVideoSizeMB}MB limit`,
+        };
       }
     } else if (fileType === 'application/pdf' || fileName.endsWith('.pdf')) {
       // Check if it's a floorplan or document
       if (fileName.includes('floor') || fileName.includes('plan')) {
         mediaType = 'floorplan';
         if (mediaCounts.floorplans >= MEDIA_LIMITS.maxFloorplans) {
-          return { isValid: false, error: `Maximum ${MEDIA_LIMITS.maxFloorplans} floorplans allowed` };
+          return {
+            isValid: false,
+            error: `Maximum ${MEDIA_LIMITS.maxFloorplans} floorplans allowed`,
+          };
         }
       } else {
         mediaType = 'pdf';
@@ -86,14 +97,24 @@ const MediaUploadStep: React.FC = () => {
         return { isValid: false, error: 'PDF size exceeds 10MB limit' };
       }
     } else {
-      return { isValid: false, error: 'Unsupported file type. Please upload images, videos, or PDFs.' };
+      return {
+        isValid: false,
+        error: 'Unsupported file type. Please upload images, videos, or PDFs.',
+      };
     }
 
     return { isValid: true, type: mediaType };
   };
 
   // Get video metadata
-  const getVideoMetadata = (file: File): Promise<{ duration: number; width: number; height: number; orientation: 'vertical' | 'horizontal' | 'square' }> => {
+  const getVideoMetadata = (
+    file: File,
+  ): Promise<{
+    duration: number;
+    width: number;
+    height: number;
+    orientation: 'vertical' | 'horizontal' | 'square';
+  }> => {
     return new Promise((resolve, reject) => {
       const video = document.createElement('video');
       video.preload = 'metadata';
@@ -102,23 +123,23 @@ const MediaUploadStep: React.FC = () => {
         const width = video.videoWidth;
         const height = video.videoHeight;
         let orientation: 'vertical' | 'horizontal' | 'square' = 'square';
-        
+
         if (width > height) {
           orientation = 'horizontal';
         } else if (height > width) {
           orientation = 'vertical';
         }
-        
+
         // Clean up
         URL.revokeObjectURL(video.src);
         resolve({ duration, width, height, orientation });
       };
-      
+
       video.onerror = () => {
         URL.revokeObjectURL(video.src);
         reject(new Error('Failed to load video metadata'));
       };
-      
+
       video.src = URL.createObjectURL(file);
     });
   };
@@ -128,7 +149,7 @@ const MediaUploadStep: React.FC = () => {
     try {
       // For now, we'll just add the media to the store without actual upload
       // In a real implementation, this would upload to S3/Cloud storage
-      
+
       const newMediaItem = {
         id: Date.now(),
         url: mediaFile.preview,
@@ -141,7 +162,7 @@ const MediaUploadStep: React.FC = () => {
       };
 
       addMedia(newMediaItem);
-      
+
       return newMediaItem;
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Upload failed';
@@ -186,14 +207,16 @@ const MediaUploadStep: React.FC = () => {
             mediaFile.width = metadata.width;
             mediaFile.height = metadata.height;
             mediaFile.orientation = metadata.orientation;
-            
+
             // Validate video duration
             if (metadata.duration > MEDIA_LIMITS.maxVideoDurationSeconds) {
-              setError(`Video duration exceeds ${MEDIA_LIMITS.maxVideoDurationSeconds} seconds limit`);
+              setError(
+                `Video duration exceeds ${MEDIA_LIMITS.maxVideoDurationSeconds} seconds limit`,
+              );
               URL.revokeObjectURL(mediaFile.preview);
               continue;
             }
-            
+
             // Validate video orientation (require vertical for real estate)
             if (metadata.orientation !== 'vertical') {
               setError('Only vertical videos are allowed for real estate listings');
@@ -301,9 +324,7 @@ const MediaUploadStep: React.FC = () => {
         onDrop={handleDrop}
         onClick={openFilePicker}
         className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${
-          isDragging
-            ? 'border-primary bg-primary/5'
-            : 'border-gray-300 hover:border-gray-400'
+          isDragging ? 'border-primary bg-primary/5' : 'border-gray-300 hover:border-gray-400'
         }`}
       >
         <input
@@ -314,20 +335,21 @@ const MediaUploadStep: React.FC = () => {
           onChange={handleFileInput}
           className="hidden"
         />
-        
+
         <Upload className="w-12 h-12 mx-auto text-gray-400 mb-4" />
         <p className="text-gray-600 mb-4">Drag and drop files here, or click to browse</p>
         <Button type="button">Select Files</Button>
-        <p className="text-xs text-gray-500 mt-2">
-          Supported: JPG, PNG, WebP, MP4, MOV, PDF
-        </p>
+        <p className="text-xs text-gray-500 mt-2">Supported: JPG, PNG, WebP, MP4, MOV, PDF</p>
       </div>
 
       {/* Media Grid */}
       {media.length > 0 && (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
           {media.map((item: ListingMediaFile, index: number) => (
-            <div key={item.id || index} className="relative group rounded-lg border bg-card overflow-hidden aspect-square">
+            <div
+              key={item.id || index}
+              className="relative group rounded-lg border bg-card overflow-hidden aspect-square"
+            >
               {/* Media Preview */}
               {item.type === 'image' && item.url && (
                 <img
@@ -336,24 +358,25 @@ const MediaUploadStep: React.FC = () => {
                   className="w-full h-full object-cover"
                 />
               )}
-              
+
               {item.type === 'video' && (
                 <div className="w-full h-full bg-gray-100 flex items-center justify-center">
                   <Video className="h-8 w-8 text-gray-400" />
                   {item.duration && (
                     <span className="absolute bottom-2 right-2 bg-black/70 text-white text-xs px-1 rounded">
-                      {Math.floor(item.duration / 60)}:{String(Math.floor(item.duration % 60)).padStart(2, '0')}
+                      {Math.floor(item.duration / 60)}:
+                      {String(Math.floor(item.duration % 60)).padStart(2, '0')}
                     </span>
                   )}
                 </div>
               )}
-              
+
               {item.type === 'floorplan' && (
                 <div className="w-full h-full bg-blue-50 flex items-center justify-center">
                   <FileText className="h-8 w-8 text-blue-500" />
                 </div>
               )}
-              
+
               {item.type === 'pdf' && (
                 <div className="w-full h-full bg-red-50 flex items-center justify-center">
                   <FileText className="h-8 w-8 text-red-500" />
@@ -377,7 +400,7 @@ const MediaUploadStep: React.FC = () => {
                 type="button"
                 variant="destructive"
                 size="icon"
-                onClick={(e) => {
+                onClick={e => {
                   e.stopPropagation();
                   removeMediaFile(item.id?.toString() || index.toString());
                 }}
@@ -392,7 +415,7 @@ const MediaUploadStep: React.FC = () => {
                   type="button"
                   variant="secondary"
                   size="sm"
-                  onClick={(e) => {
+                  onClick={e => {
                     e.stopPropagation();
                     setAsPrimary(item.id?.toString() || index.toString());
                   }}

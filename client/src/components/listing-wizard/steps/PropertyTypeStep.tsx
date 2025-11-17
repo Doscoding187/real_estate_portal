@@ -8,20 +8,37 @@ import React from 'react';
 import { useListingWizardStore } from '@/hooks/useListingWizard';
 import { Card } from '@/components/ui/card';
 import { Check } from 'lucide-react';
-import type { PropertyType } from '@/../../shared/listing-types';
+import type { PropertyType, ListingAction } from '@/../../shared/listing-types';
 import { PROPERTY_TYPE_TEMPLATES } from '@/../../shared/listing-types';
 
 const PropertyTypeStep: React.FC = () => {
-  const { propertyType, setPropertyType } = useListingWizardStore();
+  const store: any = useListingWizardStore();
+  const action: ListingAction | undefined = store.action;
+  const propertyType: PropertyType | undefined = store.propertyType;
+  const setPropertyType = store.setPropertyType;
 
   const handleSelect = (value: PropertyType) => {
     setPropertyType(value);
   };
 
+  // Filter property types based on action
+  const getFilteredPropertyTypes = (): PropertyType[] => {
+    const allTypes = Object.keys(PROPERTY_TYPE_TEMPLATES) as PropertyType[];
+
+    // Shared Living is only available for renting
+    if (action && action !== 'rent') {
+      return allTypes.filter(type => type !== 'shared_living');
+    }
+
+    return allTypes;
+  };
+
+  const filteredTypes = getFilteredPropertyTypes();
+
   return (
     <div className="py-8">
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {(Object.keys(PROPERTY_TYPE_TEMPLATES) as PropertyType[]).map(type => {
+        {filteredTypes.map(type => {
           const template = PROPERTY_TYPE_TEMPLATES[type];
           const isSelected = propertyType === type;
 
@@ -68,7 +85,7 @@ const PropertyTypeStep: React.FC = () => {
                     Required Info:
                   </p>
                   <div className="flex flex-wrap gap-1">
-                    {template.requiredFields.slice(0, 3).map(field => (
+                    {template.requiredFields.slice(0, 3).map((field: string) => (
                       <span
                         key={field}
                         className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded"
@@ -101,14 +118,14 @@ const PropertyTypeStep: React.FC = () => {
           <div className="bg-white rounded p-4">
             <p className="text-sm font-semibold text-gray-700 mb-2">You'll be asked to provide:</p>
             <ul className="list-disc list-inside space-y-1 text-sm text-gray-600">
-              {PROPERTY_TYPE_TEMPLATES[propertyType].requiredFields.map(field => (
+              {PROPERTY_TYPE_TEMPLATES[propertyType].requiredFields.map((field: string) => (
                 <li key={field}>
                   {field
                     .replace(/([A-Z])/g, ' $1')
                     .replace(/([a-z])([0-9])/gi, '$1 $2')
                     .trim()
                     .toLowerCase()
-                    .replace(/^./, str => str.toUpperCase())}
+                    .replace(/^./, (str: string) => str.toUpperCase())}
                 </li>
               ))}
             </ul>
@@ -135,9 +152,11 @@ const PropertyTypeStep: React.FC = () => {
           <p>
             <strong>Commercial:</strong> Office spaces, retail, industrial, warehouses
           </p>
-          <p>
-            <strong>Shared Living:</strong> Student accommodation, co-living, room rentals
-          </p>
+          {action === 'rent' && (
+            <p>
+              <strong>Shared Living:</strong> Student accommodation, co-living, room rentals
+            </p>
+          )}
         </div>
       </div>
     </div>

@@ -40,7 +40,9 @@ const LocationStep: React.FC = () => {
         // Check if API key is available
         const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
         if (!apiKey) {
-          setMapError('Google Maps API key is missing. Please configure VITE_GOOGLE_MAPS_API_KEY in your environment.');
+          setMapError(
+            'Google Maps API key is missing. Please configure VITE_GOOGLE_MAPS_API_KEY in your environment.',
+          );
           reject(new Error('Missing API key'));
           return;
         }
@@ -56,7 +58,9 @@ const LocationStep: React.FC = () => {
         };
 
         script.onerror = () => {
-          setMapError('Failed to load Google Maps. Please check your API key and internet connection.');
+          setMapError(
+            'Failed to load Google Maps. Please check your API key and internet connection.',
+          );
           reject(new Error('Failed to load Google Maps'));
         };
 
@@ -76,9 +80,10 @@ const LocationStep: React.FC = () => {
     try {
       // Default center (Johannesburg, South Africa)
       const defaultCenter = { lat: -26.2041, lng: 28.0473 };
-      const initialCenter = location?.latitude && location?.longitude 
-        ? { lat: location.latitude, lng: location.longitude } 
-        : defaultCenter;
+      const initialCenter =
+        location?.latitude && location?.longitude
+          ? { lat: location.latitude, lng: location.longitude }
+          : defaultCenter;
 
       // Initialize map
       const map = new window.google.maps.Map(mapRef.current, {
@@ -135,7 +140,8 @@ const LocationStep: React.FC = () => {
       map: mapInstanceRef.current,
       draggable: true,
       icon: {
-        url: 'data:image/svg+xml;charset=UTF-8,' +
+        url:
+          'data:image/svg+xml;charset=UTF-8,' +
           encodeURIComponent(`
           <svg width="32" height="40" viewBox="0 0 32 40" xmlns="http://www.w3.org/2000/svg">
             <path d="M16 0C7.2 0 0 7.2 0 16c0 8.8 16 24 16 24s16-15.2 16-24C32 7.2 24.8 0 16 0z" fill="#3b82f6"/>
@@ -168,57 +174,62 @@ const LocationStep: React.FC = () => {
     setIsGeocoding(true);
     setMapError(null);
 
-    geocoderRef.current.geocode({ location: latLng }, (results: google.maps.GeocoderResult[] | null, status: google.maps.GeocoderStatus) => {
-      setIsGeocoding(false);
+    geocoderRef.current.geocode(
+      { location: latLng },
+      (results: google.maps.GeocoderResult[] | null, status: google.maps.GeocoderStatus) => {
+        setIsGeocoding(false);
 
-      if (status === 'OK' && results && results[0]) {
-        const addressComponents = results[0].address_components;
-        const formattedAddress = results[0].formatted_address;
-        const placeId = results[0].place_id;
+        if (status === 'OK' && results && results[0]) {
+          const addressComponents = results[0].address_components;
+          const formattedAddress = results[0].formatted_address;
+          const placeId = results[0].place_id;
 
-        // Extract address components
-        let streetNumber = '';
-        let route = '';
-        let city = '';
-        let suburb = '';
-        let province = '';
-        let postalCode = '';
+          // Extract address components
+          let streetNumber = '';
+          let route = '';
+          let city = '';
+          let suburb = '';
+          let province = '';
+          let postalCode = '';
 
-        addressComponents.forEach(component => {
-          const types = component.types;
-          if (types.includes('street_number')) {
-            streetNumber = component.long_name;
-          } else if (types.includes('route')) {
-            route = component.long_name;
-          } else if (types.includes('locality')) {
-            city = component.long_name;
-          } else if (types.includes('sublocality')) {
-            suburb = component.long_name;
-          } else if (types.includes('administrative_area_level_1')) {
-            province = component.long_name;
-          } else if (types.includes('postal_code')) {
-            postalCode = component.long_name;
-          }
-        });
+          addressComponents.forEach(component => {
+            const types = component.types;
+            if (types.includes('street_number')) {
+              streetNumber = component.long_name;
+            } else if (types.includes('route')) {
+              route = component.long_name;
+            } else if (types.includes('locality')) {
+              city = component.long_name;
+            } else if (types.includes('sublocality')) {
+              suburb = component.long_name;
+            } else if (types.includes('administrative_area_level_1')) {
+              province = component.long_name;
+            } else if (types.includes('postal_code')) {
+              postalCode = component.long_name;
+            }
+          });
 
-        const fullAddress = streetNumber ? `${streetNumber} ${route}` : route;
+          const fullAddress = streetNumber ? `${streetNumber} ${route}` : route;
 
-        // Update location in store
-        setLocation({
-          address: fullAddress || formattedAddress,
-          latitude: latLng.lat(),
-          longitude: latLng.lng(),
-          city: city || location?.city || '',
-          suburb: suburb || location?.suburb || '',
-          province: province || location?.province || '',
-          postalCode: postalCode || location?.postalCode || '',
-          placeId: placeId,
-        });
-      } else {
-        console.error('Geocoder failed due to: ' + status);
-        setMapError('Could not determine address for this location. Please enter address details manually.');
-      }
-    });
+          // Update location in store
+          setLocation({
+            address: fullAddress || formattedAddress,
+            latitude: latLng.lat(),
+            longitude: latLng.lng(),
+            city: city || location?.city || '',
+            suburb: suburb || location?.suburb || '',
+            province: province || location?.province || '',
+            postalCode: postalCode || location?.postalCode || '',
+            placeId: placeId,
+          });
+        } else {
+          console.error('Geocoder failed due to: ' + status);
+          setMapError(
+            'Could not determine address for this location. Please enter address details manually.',
+          );
+        }
+      },
+    );
   };
 
   // Get current location
@@ -233,7 +244,7 @@ const LocationStep: React.FC = () => {
       position => {
         const latLng = new window.google.maps.LatLng(
           position.coords.latitude,
-          position.coords.longitude
+          position.coords.longitude,
         );
         mapInstanceRef.current?.setCenter(latLng);
         mapInstanceRef.current?.setZoom(15);
@@ -242,8 +253,10 @@ const LocationStep: React.FC = () => {
       },
       error => {
         console.error('Geolocation error:', error);
-        setMapError('Unable to get your current location. Please enable location services or enter address manually.');
-      }
+        setMapError(
+          'Unable to get your current location. Please enable location services or enter address manually.',
+        );
+      },
     );
   };
 
@@ -262,12 +275,13 @@ const LocationStep: React.FC = () => {
       <div className="space-y-4">
         <div className="flex justify-between items-center">
           <p className="text-sm text-muted-foreground">
-            Click on the map to place a marker or drag the existing marker to set the property location
+            Click on the map to place a marker or drag the existing marker to set the property
+            location
           </p>
-          <Button 
-            type="button" 
-            variant="outline" 
-            size="sm" 
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
             onClick={getCurrentLocation}
             disabled={!isMapLoaded || isGeocoding}
           >
@@ -292,14 +306,15 @@ const LocationStep: React.FC = () => {
               <div className="text-center p-4">
                 <p className="text-red-500 font-medium">{mapError}</p>
                 <p className="text-sm text-muted-foreground mt-2">
-                  Please ensure you have configured your Google Maps API key in the environment variables.
+                  Please ensure you have configured your Google Maps API key in the environment
+                  variables.
                 </p>
               </div>
             </div>
           )}
 
-          <div 
-            ref={mapRef} 
+          <div
+            ref={mapRef}
             className="w-full h-full"
             style={{ display: isMapLoaded && !mapError ? 'block' : 'none' }}
           />
