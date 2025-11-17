@@ -12,7 +12,6 @@ import Favorites from './pages/Favorites';
 import Agents from './pages/Agents';
 import AgentDetail from './pages/AgentDetail';
 import CityPage from './pages/CityPage';
-import ListProperty from './pages/ListProperty';
 import Dashboard from './pages/Dashboard';
 import Login from './pages/Login';
 
@@ -49,6 +48,9 @@ import PropertyDeveloperDashboard from './pages/PropertyDeveloperDashboard';
 // Lovable Integration Hub
 import LovableIntegrationHub from './pages/LovableIntegrationHub';
 
+// Import the new Listing Wizard
+import ListingWizard from './components/listing-wizard/ListingWizard';
+
 function Router() {
   // make sure to consider if you need authentication for certain routes
   return (
@@ -61,7 +63,7 @@ function Router() {
       <Route path="/agent/dashboard" component={AgentDashboard} />
       <Route path="/agent/:id" component={AgentDetail} />
       <Route path="/city/:slug" component={CityPage} />
-      <Route path="/list-property" component={ListProperty} />
+      <Route path="/listings/create" component={ListingWizard} />
       <Route path="/explore" component={ExploreFeed} />
 
       {/* Login and authentication routes should be early in the route list */}

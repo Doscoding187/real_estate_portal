@@ -29,9 +29,7 @@ const TopNavigationBar: React.FC = () => {
             <Shield className="h-8 w-8 text-white" />
             <span className="ml-2 text-xl font-bold">Super Admin</span>
           </div>
-          <span className="text-lg font-medium hidden md:block">
-            HomeFind.za Portal
-          </span>
+          <span className="text-lg font-medium hidden md:block">HomeFind.za Portal</span>
         </div>
 
         <div className="flex items-center space-x-4">
@@ -46,9 +44,7 @@ const TopNavigationBar: React.FC = () => {
               className="flex items-center space-x-2 cursor-pointer focus:outline-none"
             >
               <div className="h-8 w-8 rounded-full bg-blue-500 flex items-center justify-center">
-                <span className="font-semibold">
-                  {user?.name?.charAt(0)?.toUpperCase() || 'A'}
-                </span>
+                <span className="font-semibold">{user?.name?.charAt(0)?.toUpperCase() || 'A'}</span>
               </div>
               <div className="hidden md:block text-left">
                 <p className="text-sm font-medium">{user?.name || 'Admin User'}</p>

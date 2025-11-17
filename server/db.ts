@@ -1596,3 +1596,293 @@ export async function getSubscriptionStats() {
     total: Number(total?.count || 0),
   };
 }
+
+/**
+ * Create a new listing
+ */
+export async function createListing(listingData: any) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+
+  // Start transaction
+  const connection = await db.getConnection();
+  try {
+    await connection.beginTransaction();
+
+    // Create listing record
+    const [listingResult] = await connection.insert(listings).values({
+      userId: listingData.userId,
+      action: listingData.action,
+      propertyType: listingData.propertyType,
+      title: listingData.title,
+      description: listingData.description,
+      pricing: JSON.stringify(listingData.pricing),
+      propertyDetails: JSON.stringify(listingData.propertyDetails),
+      address: listingData.address,
+      latitude: listingData.latitude,
+      longitude: listingData.longitude,
+      city: listingData.city,
+      suburb: listingData.suburb,
+      province: listingData.province,
+      postalCode: listingData.postalCode,
+      placeId: listingData.placeId,
+      slug: listingData.slug,
+      status: 'draft',
+      approvalStatus: 'pending',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+
+    const listingId = Number(listingResult.insertId);
+
+    // Create listing analytics record
+    await connection.insert(listingAnalytics).values({
+      listingId,
+      totalViews: 0,
+      uniqueVisitors: 0,
+      totalLeads: 0,
+      contactFormLeads: 0,
+      whatsappClicks: 0,
+      phoneReveals: 0,
+      bookingViewingRequests: 0,
+      totalFavorites: 0,
+      totalShares: 0,
+      conversionRate: 0,
+      viewsByDay: '{}',
+      trafficSources: '{}',
+      lastUpdated: new Date(),
+    });
+
+    // Add media records
+    if (listingData.media && listingData.media.length > 0) {
+      for (const mediaItem of listingData.media) {
+        await connection.insert(listingMedia).values({
+          listingId,
+          url: mediaItem.url,
+          thumbnailUrl: mediaItem.thumbnailUrl,
+          type: mediaItem.type,
+          fileName: mediaItem.fileName,
+          fileSize: mediaItem.fileSize,
+          width: mediaItem.width,
+          height: mediaItem.height,
+          duration: mediaItem.duration,
+          orientation: mediaItem.orientation,
+          displayOrder: mediaItem.displayOrder,
+          isPrimary: mediaItem.isPrimary ? 1 : 0,
+          processingStatus: mediaItem.processingStatus,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        });
+      }
+    }
+
+    await connection.commit();
+    return listingId;
+  } catch (error) {
+    await connection.rollback();
+    console.error('[Database] Failed to create listing:', error);
+    throw error;
+  } finally {
+    connection.release();
+  }
+}
+
+/**
+ * Get listing by ID
+ */
+export async function getListingById(listingId: number) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+
+  const [listing] = await db.select().from(listings).where(eq(listings.id, listingId)).limit(1);
+  
+  if (!listing) return null;
+
+  // Parse JSON fields
+  const parsedListing = {
+    ...listing,
+    pricing: listing.pricing ? JSON.parse(listing.pricing) : null,
+    propertyDetails: listing.propertyDetails ? JSON.parse(listing.propertyDetails) : null,
+  };
+
+  return parsedListing;
+}
+
+/**
+ * Get user's listings
+ */
+export async function getUserListings(userId: number, status?: string) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+
+  let query = db.select().from(listings).where(eq(listings.userId, userId));
+  
+  if (status) {
+    query = query.where(eq(listings.status, status));
+  }
+  
+  const listingsData = await query.orderBy(desc(listings.createdAt));
+  
+  // Parse JSON fields
+  return listingsData.map(listing => ({
+    ...listing,
+    pricing: listing.pricing ? JSON.parse(listing.pricing) : null,
+    propertyDetails: listing.propertyDetails ? JSON.parse(listing.propertyDetails) : null,
+  }));
+}
+
+/**
+ * Update listing
+ */
+export async function updateListing(listingId: number, updateData: any) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+
+  // Parse JSON fields for update
+  const updateFields: any = {
+    ...updateData,
+    updatedAt: new Date(),
+  };
+
+  if (updateData.pricing) {
+    updateFields.pricing = JSON.stringify(updateData.pricing);
+  }
+
+  if (updateData.propertyDetails) {
+    updateFields.propertyDetails = JSON.stringify(updateData.propertyDetails);
+  }
+
+  await db.update(listings).set(updateFields).where(eq(listings.id, listingId));
+}
+
+/**
+ * Submit listing for review
+ */
+export async function submitListingForReview(listingId: number) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+
+  // Update listing status
+  await db.update(listings).set({
+    status: 'pending_review',
+    approvalStatus: 'pending',
+    updatedAt: new Date(),
+  }).where(eq(listings.id, listingId));
+
+  // Add to approval queue
+  await db.insert(listingApprovalQueue).values({
+    listingId,
+    submittedBy: (await getListingById(listingId))?.userId || 0,
+    submittedAt: new Date(),
+    status: 'pending',
+    priority: 'normal',
+  });
+}
+
+/**
+ * Get listing analytics
+ */
+export async function getListingAnalytics(listingId: number) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+
+  const [analytics] = await db.select().from(listingAnalytics).where(eq(listingAnalytics.listingId, listingId)).limit(1);
+  
+  if (!analytics) return null;
+
+  // Parse JSON fields
+  return {
+    ...analytics,
+    viewsByDay: analytics.viewsByDay ? JSON.parse(analytics.viewsByDay) : {},
+    trafficSources: analytics.trafficSources ? JSON.parse(analytics.trafficSources) : {},
+  };
+}
+
+/**
+ * Get listing media
+ */
+export async function getListingMedia(listingId: number) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+
+  return await db.select().from(listingMedia).where(eq(listingMedia.listingId, listingId)).orderBy(listingMedia.displayOrder);
+}
+
+/**
+ * Get approval queue items
+ */
+export async function getApprovalQueue(status?: string) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+
+  let query = db.select({
+    id: listingApprovalQueue.id,
+    listingId: listingApprovalQueue.listingId,
+    submittedBy: listingApprovalQueue.submittedBy,
+    submittedAt: listingApprovalQueue.submittedAt,
+    status: listingApprovalQueue.status,
+    priority: listingApprovalQueue.priority,
+    reviewedBy: listingApprovalQueue.reviewedBy,
+    reviewedAt: listingApprovalQueue.reviewedAt,
+    reviewNotes: listingApprovalQueue.reviewNotes,
+    rejectionReason: listingApprovalQueue.rejectionReason,
+    // Join with listings table to get listing details
+    listingTitle: listings.title,
+    listingPropertyType: listings.propertyType,
+    listingAction: listings.action,
+    listingStatus: listings.status,
+  }).from(listingApprovalQueue).leftJoin(listings, eq(listingApprovalQueue.listingId, listings.id));
+
+  if (status) {
+    query = query.where(eq(listingApprovalQueue.status, status));
+  }
+
+  return await query.orderBy(desc(listingApprovalQueue.submittedAt));
+}
+
+/**
+ * Approve listing
+ */
+export async function approveListing(listingId: number, reviewedBy: number, notes?: string) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+
+  // Update listing status
+  await db.update(listings).set({
+    status: 'published',
+    approvalStatus: 'approved',
+    publishedAt: new Date(),
+    updatedAt: new Date(),
+  }).where(eq(listings.id, listingId));
+
+  // Update approval queue
+  await db.update(listingApprovalQueue).set({
+    status: 'approved',
+    reviewedBy,
+    reviewedAt: new Date(),
+    reviewNotes: notes,
+  }).where(eq(listingApprovalQueue.listingId, listingId));
+}
+
+/**
+ * Reject listing
+ */
+export async function rejectListing(listingId: number, reviewedBy: number, reason: string) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+
+  // Update listing status
+  await db.update(listings).set({
+    status: 'rejected',
+    approvalStatus: 'rejected',
+    updatedAt: new Date(),
+  }).where(eq(listings.id, listingId));
+
+  // Update approval queue
+  await db.update(listingApprovalQueue).set({
+    status: 'rejected',
+    reviewedBy,
+    reviewedAt: new Date(),
+    rejectionReason: reason,
+  }).where(eq(listingApprovalQueue.listingId, listingId));
+}

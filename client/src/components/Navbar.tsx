@@ -82,7 +82,7 @@ export function Navbar() {
             {isAuthenticated && (
               <Button
                 variant="secondary"
-                onClick={() => setLocation('/list-property')}
+                onClick={() => setLocation('/listings/create')}
                 className="font-semibold"
               >
                 <Plus className="h-4 w-4 mr-2" />
@@ -121,7 +121,7 @@ export function Navbar() {
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
-                    <Link href="/list-property" className="flex items-center gap-2 w-full">
+                    <Link href="/listings/create" className="flex items-center gap-2 w-full">
                       <Home className="h-4 w-4" />
                       List Property
                     </Link>

@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { useLocation } from 'wouter';
 
 const navigation = [
   { name: 'Overview', href: '/agent/dashboard', icon: Home },
@@ -36,6 +37,8 @@ const quickActions = [
 ];
 
 export function AgentSidebar() {
+  const [, setLocation] = useLocation();
+
   return (
     <aside className="hidden lg:flex lg:flex-col lg:w-64 lg:fixed lg:inset-y-0 bg-background border-r">
       <div className="flex flex-col flex-1 min-h-0">
@@ -57,6 +60,11 @@ export function AgentSidebar() {
                 variant={action.variant}
                 className="w-full justify-start h-auto py-2.5 px-3"
                 size="sm"
+                onClick={() => {
+                  if (action.name === 'Add New Listing') {
+                    setLocation('/listings/create');
+                  }
+                }}
               >
                 <action.icon className="mr-2 h-4 w-4 flex-shrink-0" />
                 <span className="text-sm">{action.name}</span>

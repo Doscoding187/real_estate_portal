@@ -200,6 +200,112 @@ export const commissions = mysqlTable("commissions", {
 	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
 });
 
+// Listing Wizard Tables
+export const listings = mysqlTable("listings", {
+	id: int().autoincrement().notNull(),
+	userId: int().notNull().references(() => users.id, { onDelete: "cascade" } ),
+	action: mysqlEnum(['sell','rent','auction']).notNull(),
+	propertyType: mysqlEnum(['apartment','house','farm','land','commercial','shared_living']).notNull(),
+	title: varchar({ length: 255 }).notNull(),
+	description: text().notNull(),
+	pricing: text(), // JSON field for pricing details
+	propertyDetails: text(), // JSON field for property-specific details
+	address: text().notNull(),
+	latitude: varchar({ length: 20 }).notNull(),
+	longitude: varchar({ length: 21 }).notNull(),
+	city: varchar({ length: 100 }).notNull(),
+	suburb: varchar({ length: 100 }),
+	province: varchar({ length: 100 }).notNull(),
+	postalCode: varchar({ length: 10 }),
+	placeId: varchar({ length: 255 }), // Google Maps Place ID
+	slug: varchar({ length: 255 }).notNull(),
+	status: mysqlEnum(['draft','pending_review','approved','published','rejected','archived']).default('draft').notNull(),
+	approvalStatus: mysqlEnum(['pending','reviewing','approved','rejected']).default('pending').notNull(),
+	approvalNotes: text(),
+	rejectionReason: text(),
+	publishedAt: timestamp({ mode: 'string' }),
+	canonicalUrl: varchar({ length: 500 }),
+	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+});
+
+export const listingMedia = mysqlTable("listing_media", {
+	id: int().autoincrement().notNull(),
+	listingId: int().notNull().references(() => listings.id, { onDelete: "cascade" } ),
+	url: text().notNull(),
+	thumbnailUrl: text(),
+	type: mysqlEnum(['image','video','floorplan','pdf']).notNull(),
+	fileName: varchar({ length: 255 }),
+	fileSize: int(),
+	width: int(),
+	height: int(),
+	duration: int(), // for videos
+	orientation: mysqlEnum(['vertical','horizontal','square']),
+	displayOrder: int().notNull(),
+	isPrimary: int().default(0).notNull(),
+	processingStatus: mysqlEnum(['pending','processing','completed','failed']).default('pending').notNull(),
+	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+});
+
+export const listingAnalytics = mysqlTable("listing_analytics", {
+	id: int().autoincrement().notNull(),
+	listingId: int().notNull().references(() => listings.id, { onDelete: "cascade" } ),
+	totalViews: int().default(0).notNull(),
+	uniqueVisitors: int().default(0).notNull(),
+	totalLeads: int().default(0).notNull(),
+	contactFormLeads: int().default(0).notNull(),
+	whatsappClicks: int().default(0).notNull(),
+	phoneReveals: int().default(0).notNull(),
+	bookingViewingRequests: int().default(0).notNull(),
+	totalFavorites: int().default(0).notNull(),
+	totalShares: int().default(0).notNull(),
+	conversionRate: int().default(0).notNull(),
+	viewsByDay: text(), // JSON field for daily view counts
+	trafficSources: text(), // JSON field for traffic source data
+	lastUpdated: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+});
+
+export const listingLeads = mysqlTable("listing_leads", {
+	id: int().autoincrement().notNull(),
+	listingId: int().notNull().references(() => listings.id, { onDelete: "cascade" } ),
+	name: varchar({ length: 255 }).notNull(),
+	email: varchar({ length: 320 }),
+	phone: varchar({ length: 50 }),
+	message: text(),
+	leadType: mysqlEnum(['contact_form','whatsapp_click','phone_reveal','book_viewing','make_offer','request_info']).notNull(),
+	source: varchar({ length: 100 }),
+	status: mysqlEnum(['new','contacted','qualified','viewing_scheduled','offer_made','converted','lost']).default('new').notNull(),
+	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+});
+
+export const listingViewings = mysqlTable("listing_viewings", {
+	id: int().autoincrement().notNull(),
+	listingId: int().notNull().references(() => listings.id, { onDelete: "cascade" } ),
+	prospectId: int().references(() => prospects.id, { onDelete: "cascade" } ),
+	agentId: int().references(() => agents.id, { onDelete: "cascade" } ),
+	scheduledAt: timestamp({ mode: 'string' }).notNull(),
+	durationMinutes: int().default(30).notNull(),
+	status: mysqlEnum(['scheduled','confirmed','completed','cancelled','no_show']).default('scheduled').notNull(),
+	notes: text(),
+	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+});
+
+export const listingApprovalQueue = mysqlTable("listing_approval_queue", {
+	id: int().autoincrement().notNull(),
+	listingId: int().notNull().references(() => listings.id, { onDelete: "cascade" } ),
+	submittedBy: int().notNull().references(() => users.id, { onDelete: "cascade" } ),
+	submittedAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	status: mysqlEnum(['pending','reviewing','approved','rejected']).default('pending').notNull(),
+	priority: mysqlEnum(['low','normal','high','urgent']).default('normal').notNull(),
+	reviewedBy: int().references(() => users.id, { onDelete: "set null" } ),
+	reviewedAt: timestamp({ mode: 'string' }),
+	reviewNotes: text(),
+	rejectionReason: text(),
+});
+
 export const coupons = mysqlTable("coupons", {
 	id: int().autoincrement().notNull(),
 	code: varchar({ length: 50 }).notNull(),

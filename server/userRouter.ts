@@ -13,7 +13,9 @@ import { logAudit } from './_core/auditLog';
 // Validation schemas
 const userFiltersSchema = z.object({
   search: z.string().optional(),
-  role: z.enum(['visitor', 'agent', 'agency_admin', 'property_developer', 'super_admin']).optional(),
+  role: z
+    .enum(['visitor', 'agent', 'agency_admin', 'property_developer', 'super_admin'])
+    .optional(),
   agencyId: z.number().optional(),
   limit: z.number().min(1).max(100).default(20),
   offset: z.number().min(0).default(0),

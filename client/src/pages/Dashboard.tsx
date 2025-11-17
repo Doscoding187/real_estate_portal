@@ -129,7 +129,7 @@ export default function Dashboard() {
                 : 'Manage your property listings'}
             </p>
           </div>
-          <Button onClick={() => setLocation('/list-property')} size="lg">
+          <Button onClick={() => setLocation('/listings/create')} size="lg">
             <Plus className="h-5 w-5 mr-2" />
             List New Property
           </Button>
@@ -311,7 +311,7 @@ export default function Dashboard() {
                 <p className="text-muted-foreground mb-6">
                   Start listing your properties to reach potential buyers and renters
                 </p>
-                <Button onClick={() => setLocation('/list-property')} size="lg">
+                <Button onClick={() => setLocation('/listings/create')} size="lg">
                   <Plus className="h-5 w-5 mr-2" />
                   List Your First Property
                 </Button>

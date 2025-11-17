@@ -176,7 +176,7 @@ export default function AgencyDashboard() {
               <Button
                 variant="outline"
                 className="justify-between h-auto py-4"
-                onClick={() => setLocation('/list-property')}
+                onClick={() => setLocation('/listings/create')}
               >
                 <div className="text-left">
                   <div className="font-semibold flex items-center gap-2">

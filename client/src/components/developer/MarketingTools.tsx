@@ -11,9 +11,9 @@ const MarketingTools: React.FC = () => {
         'Featured placement for 7 days',
         'Priority in search results',
         'Social media promotion',
-        'Email campaign to 5,000 subscribers'
+        'Email campaign to 5,000 subscribers',
       ],
-      popular: false
+      popular: false,
     },
     {
       id: 2,
@@ -26,9 +26,9 @@ const MarketingTools: React.FC = () => {
         'Social media promotion',
         'Email campaign to 15,000 subscribers',
         'Dedicated account manager',
-        'Performance analytics report'
+        'Performance analytics report',
       ],
-      popular: true
+      popular: true,
     },
     {
       id: 3,
@@ -42,17 +42,17 @@ const MarketingTools: React.FC = () => {
         'Email campaign to 30,000 subscribers',
         'Dedicated account manager',
         'Weekly performance reports',
-        'Custom marketing consultation'
+        'Custom marketing consultation',
       ],
-      popular: false
-    }
+      popular: false,
+    },
   ];
 
   const performanceMetrics = [
     { label: 'Total Views', value: '12,482', change: '+12%' },
     { label: 'Lead Generation', value: '342', change: '+8%' },
     { label: 'Engagement Rate', value: '4.8%', change: '+1.2%' },
-    { label: 'Conversion Rate', value: '3.2%', change: '+0.5%' }
+    { label: 'Conversion Rate', value: '3.2%', change: '+0.5%' },
   ];
 
   return (
@@ -80,9 +80,9 @@ const MarketingTools: React.FC = () => {
       <div>
         <h3 className="typ-h3 mb-4">Featured Boost Packages</h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {boostPackages.map((pkg) => (
-            <div 
-              key={pkg.id} 
+          {boostPackages.map(pkg => (
+            <div
+              key={pkg.id}
               className={`card relative ${
                 pkg.popular ? 'border-2 border-blue-500' : 'border border-gray-200'
               }`}
@@ -102,18 +102,24 @@ const MarketingTools: React.FC = () => {
               <ul className="space-y-3 mb-6">
                 {pkg.features.map((feature, index) => (
                   <li key={index} className="flex items-start">
-                    <svg className="w-5 h-5 text-green-500 mr-2 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    <svg
+                      className="w-5 h-5 text-green-500 mr-2 mt-0.5"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M5 13l4 4L19 7"
+                      />
                     </svg>
                     <span>{feature}</span>
                   </li>
                 ))}
               </ul>
-              <button 
-                className={`btn w-full ${
-                  pkg.popular ? 'btn-primary' : 'btn-secondary'
-                }`}
-              >
+              <button className={`btn w-full ${pkg.popular ? 'btn-primary' : 'btn-secondary'}`}>
                 Select Package
               </button>
             </div>
@@ -138,42 +144,44 @@ const MarketingTools: React.FC = () => {
             </thead>
             <tbody>
               {[
-                { 
-                  name: 'Riverside Apartments Launch', 
-                  development: 'Riverside Apartments', 
-                  status: 'Active', 
-                  startDate: 'Oct 15, 2025', 
-                  budget: 'R8,500', 
-                  results: '248 views, 32 leads' 
+                {
+                  name: 'Riverside Apartments Launch',
+                  development: 'Riverside Apartments',
+                  status: 'Active',
+                  startDate: 'Oct 15, 2025',
+                  budget: 'R8,500',
+                  results: '248 views, 32 leads',
                 },
-                { 
-                  name: 'Skyline Towers Promotion', 
-                  development: 'Skyline Towers', 
-                  status: 'Completed', 
-                  startDate: 'Sep 22, 2025', 
-                  budget: 'R12,000', 
-                  results: '512 views, 78 leads' 
+                {
+                  name: 'Skyline Towers Promotion',
+                  development: 'Skyline Towers',
+                  status: 'Completed',
+                  startDate: 'Sep 22, 2025',
+                  budget: 'R12,000',
+                  results: '512 views, 78 leads',
                 },
-                { 
-                  name: 'Garden Villas Social', 
-                  development: 'Garden Villas', 
-                  status: 'Scheduled', 
-                  startDate: 'Nov 20, 2025', 
-                  budget: 'R4,200', 
-                  results: '0 views, 0 leads' 
-                }
+                {
+                  name: 'Garden Villas Social',
+                  development: 'Garden Villas',
+                  status: 'Scheduled',
+                  startDate: 'Nov 20, 2025',
+                  budget: 'R4,200',
+                  results: '0 views, 0 leads',
+                },
               ].map((campaign, index) => (
                 <tr key={index}>
                   <td className="font-medium">{campaign.name}</td>
                   <td>{campaign.development}</td>
                   <td>
-                    <span className={`px-2 py-1 rounded-full text-xs ${
-                      campaign.status === 'Active' 
-                        ? 'bg-green-100 text-green-800' 
-                        : campaign.status === 'Completed' 
-                          ? 'bg-blue-100 text-blue-800' 
-                          : 'bg-yellow-100 text-yellow-800'
-                    }`}>
+                    <span
+                      className={`px-2 py-1 rounded-full text-xs ${
+                        campaign.status === 'Active'
+                          ? 'bg-green-100 text-green-800'
+                          : campaign.status === 'Completed'
+                            ? 'bg-blue-100 text-blue-800'
+                            : 'bg-yellow-100 text-yellow-800'
+                      }`}
+                    >
                       {campaign.status}
                     </span>
                   </td>
