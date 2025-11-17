@@ -28,14 +28,15 @@ export function PerformanceChart() {
       <CardContent>
         <ResponsiveContainer width="100%" height={300}>
           <LineChart data={data}>
-            <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+            <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
             <XAxis
               dataKey="month"
-              className="text-muted-foreground"
+              stroke="#6b7280"
+              fontSize={12}
               tickLine={false}
               axisLine={false}
             />
-            <YAxis className="text-muted-foreground" tickLine={false} axisLine={false} />
+            <YAxis stroke="#6b7280" fontSize={12} tickLine={false} axisLine={false} />
             <Tooltip
               contentStyle={{
                 backgroundColor: 'hsl(var(--background))',
@@ -48,12 +49,12 @@ export function PerformanceChart() {
             <Line
               type="monotone"
               dataKey="leads"
-              stroke="hsl(var(--primary))"
+              stroke="#3B82F6"
               strokeWidth={2}
               dot={{ strokeWidth: 2, r: 4, fill: 'hsl(var(--background))' }}
               activeDot={{
                 r: 6,
-                stroke: 'hsl(var(--primary))',
+                stroke: '#3B82F6',
                 strokeWidth: 2,
                 fill: 'hsl(var(--background))',
               }}
@@ -62,12 +63,12 @@ export function PerformanceChart() {
             <Line
               type="monotone"
               dataKey="sales"
-              stroke="hsl(var(--chart-2))"
+              stroke="#16A34A"
               strokeWidth={2}
               dot={{ strokeWidth: 2, r: 4, fill: 'hsl(var(--background))' }}
               activeDot={{
                 r: 6,
-                stroke: 'hsl(var(--chart-2))',
+                stroke: '#16A34A',
                 strokeWidth: 2,
                 fill: 'hsl(var(--background))',
               }}
