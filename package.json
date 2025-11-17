@@ -22,7 +22,8 @@
     "format": "prettier --write client/src/**/*.{ts,tsx,json} server/**/*.{ts,tsx,json} shared/**/*.{ts,tsx,json}",
     "test": "vitest run",
     "db:push": "drizzle-kit generate && drizzle-kit migrate",
-    "db:generate": "drizzle-kit generate"
+    "db:generate": "drizzle-kit generate",
+    "process-lovable": "node scripts/process-lovable-components.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.693.0",

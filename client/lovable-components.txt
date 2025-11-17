@@ -1,0 +1,33 @@
+# Lovable Components Queue
+# Add components here in the following format:
+#
+# ---
+# Name: Component Name
+# Type: page|component|ui-element|design-token|asset
+# Description: Brief description of the component
+# Tags: comma, separated, tags
+# ---
+# Component code here
+# ---
+#
+# Example:
+# ---
+# Name: PropertyCard
+# Type: component
+# Description: Card component for displaying property information
+# Tags: property, card, listing
+# ---
+# import React from 'react';
+# import { Card, CardContent } from '@/components/ui/card';
+# 
+# export function PropertyCard({ property }) {
+#   return (
+#     <Card>
+#       <CardContent>
+#         <h3>{property.name}</h3>
+#         <p>{property.description}</p>
+#       </CardContent>
+#     </Card>
+#   );
+# }
+# ---
