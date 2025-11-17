@@ -6,46 +6,49 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { 
-  Copy, 
-  Download, 
-  Upload, 
-  FileCode, 
-  Component, 
-  Palette, 
-  Code, 
+import {
+  Copy,
+  Upload,
+  FileCode,
+  Component,
+  Palette,
+  Code,
   Eye,
   CheckCircle,
   AlertCircle,
   Plus,
   Trash2,
   Save,
-  FolderOpen
+  FileJson,
+  Image,
+  Layers,
 } from 'lucide-react';
 
 interface LovableComponent {
   id: string;
   name: string;
-  type: 'page' | 'component' | 'ui-element';
+  type: 'page' | 'component' | 'ui-element' | 'design-token' | 'asset';
   code: string;
   description: string;
   status: 'pending' | 'in-progress' | 'review' | 'integrated';
   createdAt: Date;
+  tags: string[];
 }
 
 export default function LovableIntegrationHub() {
   const [components, setComponents] = useState<LovableComponent[]>([]);
   const [newComponent, setNewComponent] = useState({
     name: '',
-    type: 'component' as 'page' | 'component' | 'ui-element',
+    type: 'component' as 'page' | 'component' | 'ui-element' | 'design-token' | 'asset',
     code: '',
-    description: ''
+    description: '',
+    tags: '',
   });
   const [activeTab, setActiveTab] = useState('components');
 
   const addComponent = () => {
     if (!newComponent.name || !newComponent.code) return;
-    
+
     const component: LovableComponent = {
       id: Date.now().toString(),
       name: newComponent.name,
@@ -53,15 +56,20 @@ export default function LovableIntegrationHub() {
       code: newComponent.code,
       description: newComponent.description,
       status: 'pending',
-      createdAt: new Date()
+      createdAt: new Date(),
+      tags: newComponent.tags
+        .split(',')
+        .map(tag => tag.trim())
+        .filter(tag => tag),
     };
-    
+
     setComponents([...components, component]);
     setNewComponent({
       name: '',
       type: 'component',
       code: '',
-      description: ''
+      description: '',
+      tags: '',
     });
   };
 
@@ -70,9 +78,9 @@ export default function LovableIntegrationHub() {
   };
 
   const updateComponentStatus = (id: string, status: LovableComponent['status']) => {
-    setComponents(components.map(component => 
-      component.id === id ? { ...component, status } : component
-    ));
+    setComponents(
+      components.map(component => (component.id === id ? { ...component, status } : component)),
+    );
   };
 
   const copyToClipboard = (text: string) => {
@@ -81,20 +89,50 @@ export default function LovableIntegrationHub() {
 
   const getStatusColor = (status: LovableComponent['status']) => {
     switch (status) {
-      case 'pending': return 'bg-gray-500';
-      case 'in-progress': return 'bg-blue-500';
-      case 'review': return 'bg-yellow-500';
-      case 'integrated': return 'bg-green-500';
-      default: return 'bg-gray-500';
+      case 'pending':
+        return 'bg-gray-500';
+      case 'in-progress':
+        return 'bg-blue-500';
+      case 'review':
+        return 'bg-yellow-500';
+      case 'integrated':
+        return 'bg-green-500';
+      default:
+        return 'bg-gray-500';
     }
   };
 
   const getTypeIcon = (type: LovableComponent['type']) => {
     switch (type) {
-      case 'page': return <FileCode className="h-4 w-4" />;
-      case 'component': return <Component className="h-4 w-4" />;
-      case 'ui-element': return <Palette className="h-4 w-4" />;
-      default: return <Code className="h-4 w-4" />;
+      case 'page':
+        return <FileCode className="h-4 w-4" />;
+      case 'component':
+        return <Component className="h-4 w-4" />;
+      case 'ui-element':
+        return <Palette className="h-4 w-4" />;
+      case 'design-token':
+        return <FileJson className="h-4 w-4" />;
+      case 'asset':
+        return <Image className="h-4 w-4" />;
+      default:
+        return <Code className="h-4 w-4" />;
+    }
+  };
+
+  const getTypeLabel = (type: LovableComponent['type']) => {
+    switch (type) {
+      case 'page':
+        return 'Page';
+      case 'component':
+        return 'Component';
+      case 'ui-element':
+        return 'UI Element';
+      case 'design-token':
+        return 'Design Token';
+      case 'asset':
+        return 'Asset';
+      default:
+        return 'Component';
     }
   };
 
@@ -115,9 +153,10 @@ export default function LovableIntegrationHub() {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="components">Components</TabsTrigger>
             <TabsTrigger value="add">Add New</TabsTrigger>
+            <TabsTrigger value="assets">Assets</TabsTrigger>
             <TabsTrigger value="instructions">Instructions</TabsTrigger>
           </TabsList>
 
@@ -139,7 +178,7 @@ export default function LovableIntegrationHub() {
               </Card>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {components.map((component) => (
+                {components.map(component => (
                   <Card key={component.id} className="hover:shadow-md transition-shadow">
                     <CardHeader className="pb-3">
                       <div className="flex items-start justify-between">
@@ -147,9 +186,7 @@ export default function LovableIntegrationHub() {
                           {getTypeIcon(component.type)}
                           <CardTitle className="text-lg">{component.name}</CardTitle>
                         </div>
-                        <Badge 
-                          className={`${getStatusColor(component.status)} text-white`}
-                        >
+                        <Badge className={`${getStatusColor(component.status)} text-white`}>
                           {component.status}
                         </Badge>
                       </div>
@@ -161,41 +198,51 @@ export default function LovableIntegrationHub() {
                       <div className="flex items-center justify-between mb-4">
                         <div className="flex items-center gap-2">
                           <span className="text-xs px-2 py-1 bg-muted rounded-full">
-                            {component.type}
+                            {getTypeLabel(component.type)}
                           </span>
                           <span className="text-xs text-muted-foreground">
                             Added {component.createdAt.toLocaleDateString()}
                           </span>
                         </div>
                       </div>
-                      
+
+                      {component.tags.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mb-4">
+                          {component.tags.map((tag, index) => (
+                            <Badge key={index} variant="secondary" className="text-xs">
+                              {tag}
+                            </Badge>
+                          ))}
+                        </div>
+                      )}
+
                       <div className="flex flex-wrap gap-2">
-                        <Button 
-                          size="sm" 
+                        <Button
+                          size="sm"
                           variant="outline"
                           onClick={() => copyToClipboard(component.code)}
                         >
                           <Copy className="h-3 w-3 mr-1" />
                           Copy Code
                         </Button>
-                        <Button 
-                          size="sm" 
+                        <Button
+                          size="sm"
                           variant="outline"
                           onClick={() => updateComponentStatus(component.id, 'in-progress')}
                         >
                           <CheckCircle className="h-3 w-3 mr-1" />
                           Start Integration
                         </Button>
-                        <Button 
-                          size="sm" 
+                        <Button
+                          size="sm"
                           variant="outline"
                           onClick={() => updateComponentStatus(component.id, 'integrated')}
                         >
                           <Eye className="h-3 w-3 mr-1" />
                           Mark Integrated
                         </Button>
-                        <Button 
-                          size="sm" 
+                        <Button
+                          size="sm"
                           variant="outline"
                           onClick={() => removeComponent(component.id)}
                         >
@@ -229,16 +276,16 @@ export default function LovableIntegrationHub() {
                     id="component-name"
                     placeholder="e.g., PropertyCard, DashboardPage"
                     value={newComponent.name}
-                    onChange={(e) => setNewComponent({...newComponent, name: e.target.value})}
+                    onChange={e => setNewComponent({ ...newComponent, name: e.target.value })}
                   />
                 </div>
-                
+
                 <div className="space-y-2">
                   <Label htmlFor="component-type">Component Type</Label>
                   <div className="grid grid-cols-3 gap-2">
                     <Button
                       variant={newComponent.type === 'page' ? 'default' : 'outline'}
-                      onClick={() => setNewComponent({...newComponent, type: 'page'})}
+                      onClick={() => setNewComponent({ ...newComponent, type: 'page' })}
                       className="flex items-center gap-2"
                     >
                       <FileCode className="h-4 w-4" />
@@ -246,7 +293,7 @@ export default function LovableIntegrationHub() {
                     </Button>
                     <Button
                       variant={newComponent.type === 'component' ? 'default' : 'outline'}
-                      onClick={() => setNewComponent({...newComponent, type: 'component'})}
+                      onClick={() => setNewComponent({ ...newComponent, type: 'component' })}
                       className="flex items-center gap-2"
                     >
                       <Component className="h-4 w-4" />
@@ -254,57 +301,114 @@ export default function LovableIntegrationHub() {
                     </Button>
                     <Button
                       variant={newComponent.type === 'ui-element' ? 'default' : 'outline'}
-                      onClick={() => setNewComponent({...newComponent, type: 'ui-element'})}
+                      onClick={() => setNewComponent({ ...newComponent, type: 'ui-element' })}
                       className="flex items-center gap-2"
                     >
                       <Palette className="h-4 w-4" />
                       UI Element
                     </Button>
+                    <Button
+                      variant={newComponent.type === 'design-token' ? 'default' : 'outline'}
+                      onClick={() => setNewComponent({ ...newComponent, type: 'design-token' })}
+                      className="flex items-center gap-2"
+                    >
+                      <FileJson className="h-4 w-4" />
+                      Design Token
+                    </Button>
+                    <Button
+                      variant={newComponent.type === 'asset' ? 'default' : 'outline'}
+                      onClick={() => setNewComponent({ ...newComponent, type: 'asset' })}
+                      className="flex items-center gap-2"
+                    >
+                      <Image className="h-4 w-4" />
+                      Asset
+                    </Button>
                   </div>
                 </div>
-                
+
                 <div className="space-y-2">
                   <Label htmlFor="component-description">Description</Label>
                   <Input
                     id="component-description"
                     placeholder="Brief description of what this component does"
                     value={newComponent.description}
-                    onChange={(e) => setNewComponent({...newComponent, description: e.target.value})}
+                    onChange={e =>
+                      setNewComponent({ ...newComponent, description: e.target.value })
+                    }
                   />
                 </div>
-                
+
+                <div className="space-y-2">
+                  <Label htmlFor="component-tags">Tags (comma separated)</Label>
+                  <Input
+                    id="component-tags"
+                    placeholder="e.g., dashboard, analytics, property"
+                    value={newComponent.tags}
+                    onChange={e => setNewComponent({ ...newComponent, tags: e.target.value })}
+                  />
+                </div>
+
                 <div className="space-y-2">
                   <Label htmlFor="component-code">Component Code</Label>
                   <Textarea
                     id="component-code"
                     placeholder="Paste the React/TypeScript code from your Lovable component here..."
                     value={newComponent.code}
-                    onChange={(e) => setNewComponent({...newComponent, code: e.target.value})}
+                    onChange={e => setNewComponent({ ...newComponent, code: e.target.value })}
                     rows={15}
                     className="font-mono text-sm"
                   />
                 </div>
-                
+
                 <div className="flex justify-end gap-2">
-                  <Button 
+                  <Button
                     variant="outline"
                     onClick={() => {
                       setNewComponent({
                         name: '',
                         type: 'component',
                         code: '',
-                        description: ''
+                        description: '',
+                        tags: '',
                       });
                     }}
                   >
                     Clear
                   </Button>
-                  <Button 
+                  <Button
                     onClick={addComponent}
                     disabled={!newComponent.name || !newComponent.code}
                   >
                     <Save className="h-4 w-4 mr-2" />
                     Add to Queue
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Assets Tab */}
+          <TabsContent value="assets" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Image className="h-5 w-5" />
+                  Asset Management
+                </CardTitle>
+                <p className="text-muted-foreground">
+                  Manage design assets, images, and other resources from Lovable
+                </p>
+              </CardHeader>
+              <CardContent>
+                <div className="text-center py-12">
+                  <Layers className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <h3 className="text-lg font-medium mb-2">Asset Management Coming Soon</h3>
+                  <p className="text-muted-foreground mb-4">
+                    This feature will allow you to manage design assets from Lovable
+                  </p>
+                  <Button variant="outline" onClick={() => setActiveTab('add')}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Asset
                   </Button>
                 </div>
               </CardContent>
@@ -332,17 +436,25 @@ export default function LovableIntegrationHub() {
                     <li>Click "Add to Queue"</li>
                   </ol>
                 </div>
-                
+
                 <div className="space-y-2">
                   <h3 className="font-semibold">Integration Process</h3>
                   <ul className="list-disc list-inside space-y-2 text-sm">
-                    <li><strong>Pending</strong> - Component added but not yet worked on</li>
-                    <li><strong>In Progress</strong> - Currently integrating the component</li>
-                    <li><strong>Review</strong> - Integration complete, pending review</li>
-                    <li><strong>Integrated</strong> - Component successfully added to codebase</li>
+                    <li>
+                      <strong>Pending</strong> - Component added but not yet worked on
+                    </li>
+                    <li>
+                      <strong>In Progress</strong> - Currently integrating the component
+                    </li>
+                    <li>
+                      <strong>Review</strong> - Integration complete, pending review
+                    </li>
+                    <li>
+                      <strong>Integrated</strong> - Component successfully added to codebase
+                    </li>
                   </ul>
                 </div>
-                
+
                 <div className="space-y-2">
                   <h3 className="font-semibold">Best Practices</h3>
                   <ul className="list-disc list-inside space-y-2 text-sm">
@@ -351,18 +463,19 @@ export default function LovableIntegrationHub() {
                     <li>Test components in isolation before full integration</li>
                     <li>Update component status as you progress through integration</li>
                     <li>Remove components from this hub once fully integrated</li>
+                    <li>Use tags to categorize components for easier searching</li>
                   </ul>
                 </div>
-                
+
                 <div className="bg-muted p-4 rounded-lg">
                   <h4 className="font-semibold flex items-center gap-2 mb-2">
                     <AlertCircle className="h-4 w-4" />
                     Important Note
                   </h4>
                   <p className="text-sm">
-                    This hub is for staging components only. Actual integration requires 
-                    adapting the Lovable code to match your existing codebase structure, 
-                    dependencies, and styling system.
+                    This hub is for staging components only. Actual integration requires adapting
+                    the Lovable code to match your existing codebase structure, dependencies, and
+                    styling system.
                   </p>
                 </div>
               </CardContent>
