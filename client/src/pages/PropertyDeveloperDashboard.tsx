@@ -5,12 +5,15 @@ import AnalyticsPanel from '../components/developer/AnalyticsPanel';
 import MessagesCenter from '../components/developer/MessagesCenter';
 import SettingsPanel from '../components/developer/SettingsPanel';
 import MarketingTools from '../components/developer/MarketingTools';
+import Overview from '../components/developer/Overview';
 
 const PropertyDeveloperDashboard: React.FC = () => {
-  const [activeSection, setActiveSection] = useState<DeveloperSection>('developments');
+  const [activeSection, setActiveSection] = useState<DeveloperSection>('dashboard');
 
   const renderContent = () => {
     switch (activeSection) {
+      case 'dashboard':
+        return <Overview />;
       case 'analytics':
         return <AnalyticsPanel />;
       case 'messages':
