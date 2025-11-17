@@ -57,7 +57,7 @@ export default [
     },
   },
   {
-    files: ['server/**/*.{ts,tsx,js,jsx}', 'shared/**/*.{ts,tsx,js,jsx}'],
+    files: ['server/**/*.{ts,tsx,js,jsx}', 'shared/**/*.{ts,tsx,js,jsx}', 'scripts/**/*.{ts,tsx,js,jsx}'],
     languageOptions: {
       parser: tsParser,
       parserOptions: {

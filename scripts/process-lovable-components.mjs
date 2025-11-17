@@ -1,39 +1,41 @@
+/* eslint-disable no-undef */
 import { readFileSync, writeFileSync } from 'fs';
 import { join } from 'path';
 
 // Function to parse components from the text file
 function parseComponentsFromFile(filePath) {
   const content = readFileSync(filePath, 'utf8');
+  // Normalize line endings to handle both Windows and Unix formats
+  const normalizedContent = content.replace(/\r\n/g, '\n');
+  
+  // Split by the delimiter pattern (handle both \n---\n and \n---\r\n)
+  const componentSections = normalizedContent.split('\n---\n').filter(section => section.trim() && !section.startsWith('#'));
+  
   const components = [];
   
-  // Split by the delimiter pattern
-  const componentBlocks = content.split('\n---\n').filter(block => block.trim());
-  
-  // Process each block
-  for (let i = 0; i < componentBlocks.length; i++) {
-    const block = componentBlocks[i].trim();
+  // Process each section
+  for (let i = 0; i < componentSections.length; i++) {
+    const section = componentSections[i].trim();
     
-    // Skip header comments
-    if (block.startsWith('#')) {
-      continue;
-    }
+    // Skip empty sections
+    if (!section) continue;
     
-    // Check if this is a component block (starts with Name:)
-    if (block.startsWith('Name:')) {
+    // Check if this is a component section (contains metadata)
+    if (section.startsWith('Name:')) {
       try {
-        // Get the next block which should be the code
-        const codeBlock = componentBlocks[i + 1];
+        // Get the next section which should be the code
+        const codeSection = componentSections[i + 1];
         
-        if (codeBlock) {
+        if (codeSection) {
           // Parse the component metadata
-          const lines = block.split('\n');
+          const lines = section.split('\n');
           const component = {
             id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
             name: '',
             type: 'component',
             description: '',
             tags: [],
-            code: codeBlock.trim(),
+            code: codeSection.trim(),
             status: 'pending',
             createdAt: new Date()
           };
@@ -52,10 +54,10 @@ function parseComponentsFromFile(filePath) {
           }
           
           components.push(component);
-          i++; // Skip the next block since we've processed it as code
+          i++; // Skip the next section since we've processed it as code
         }
       } catch (error) {
-        console.error('Error parsing component block:', error);
+        console.error('Error parsing component section:', error);
       }
     }
   }
