@@ -1,176 +1,193 @@
 import React from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { TrendingUp, Users, Eye, MousePointerClick } from 'lucide-react';
+import { MetricCard } from '@/components/MetricCard';
+import {
+  LineChart,
+  Line,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+} from 'recharts';
+
+const trafficData = [
+  { month: 'Jan', views: 2400, clicks: 1200 },
+  { month: 'Feb', views: 3200, clicks: 1600 },
+  { month: 'Mar', views: 2800, clicks: 1400 },
+  { month: 'Apr', views: 3900, clicks: 2100 },
+  { month: 'May', views: 4200, clicks: 2400 },
+  { month: 'Jun', views: 5100, clicks: 2900 },
+];
+
+const developmentData = [
+  { name: 'Sunset Heights', leads: 127 },
+  { name: 'Riverside Gardens', leads: 89 },
+  { name: 'Ocean View Villas', leads: 156 },
+  { name: 'Mountain Peak', leads: 64 },
+  { name: 'City Center Lofts', leads: 42 },
+];
+
+const sourceData = [
+  { name: 'Direct', value: 35, color: 'hsl(var(--chart-1))' },
+  { name: 'Search', value: 30, color: 'hsl(var(--chart-2))' },
+  { name: 'Social', value: 20, color: 'hsl(var(--chart-3))' },
+  { name: 'Referral', value: 15, color: 'hsl(var(--chart-4))' },
+];
 
 const AnalyticsPanel: React.FC = () => {
-  // Sample data for the charts
-  const leadsOverTimeData = [
-    { month: 'Jan', leads: 45 },
-    { month: 'Feb', leads: 52 },
-    { month: 'Mar', leads: 48 },
-    { month: 'Apr', leads: 61 },
-    { month: 'May', leads: 55 },
-    { month: 'Jun', leads: 67 },
-  ];
-
-  const leadsPerDevelopmentData = [
-    { development: 'Riverside Apartments', leads: 124 },
-    { development: 'Downtown Lofts', leads: 98 },
-    { development: 'Garden Villas', leads: 87 },
-    { development: 'Skyline Towers', leads: 112 },
-    { development: 'Harbor Views', leads: 76 },
-  ];
-
-  const conversionFunnelData = [
-    { stage: 'Views', count: 1240, percentage: 100 },
-    { stage: 'Inquiries', count: 310, percentage: 25 },
-    { stage: 'Showings', count: 155, percentage: 12.5 },
-    { stage: 'Offers', count: 62, percentage: 5 },
-    { stage: 'Sales', count: 43, percentage: 3.5 },
-  ];
-
-  const trafficSourcesData = [
-    { source: 'Direct', visitors: 1240, percentage: 40 },
-    { source: 'Search', visitors: 870, percentage: 28 },
-    { source: 'Social', visitors: 620, percentage: 20 },
-    { source: 'Referral', visitors: 310, percentage: 10 },
-    { source: 'Email', visitors: 62, percentage: 2 },
-  ];
-
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-fade-in">
       {/* Header */}
-      <div className="flex justify-between items-center">
-        <h2 className="typ-h2">Analytics Overview</h2>
-        <div className="flex gap-3">
-          <select className="input w-auto">
-            <option>Last 30 Days</option>
-            <option>Last 7 Days</option>
-            <option>Last 90 Days</option>
-            <option>Year to Date</option>
-          </select>
-          <button className="btn btn-primary">Export Report</button>
-        </div>
+      <div>
+        <h1 className="text-3xl font-bold text-foreground mb-2">Analytics</h1>
+        <p className="text-muted-foreground">
+          Track your development performance and marketing metrics
+        </p>
       </div>
 
-      {/* Metrics Grid */}
+      {/* Overview Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="card flex flex-col">
-          <div className="text-gray-500 mb-2">Total Leads</div>
-          <div className="typ-numeric-xl text-blue-600">1,240</div>
-          <div className="text-green-500 text-sm mt-1">↑ 12% from last period</div>
-        </div>
-        <div className="card flex flex-col">
-          <div className="text-gray-500 mb-2">Conversion Rate</div>
-          <div className="typ-numeric-xl text-blue-600">3.5%</div>
-          <div className="text-green-500 text-sm mt-1">↑ 0.8% from last period</div>
-        </div>
-        <div className="card flex flex-col">
-          <div className="text-gray-500 mb-2">Avg. Deal Size</div>
-          <div className="typ-numeric-xl text-blue-600">R2.4M</div>
-          <div className="text-red-500 text-sm mt-1">↓ 2% from last period</div>
-        </div>
-        <div className="card flex flex-col">
-          <div className="text-gray-500 mb-2">Properties Sold</div>
-          <div className="typ-numeric-xl text-blue-600">43</div>
-          <div className="text-green-500 text-sm mt-1">↑ 8% from last period</div>
-        </div>
+        <MetricCard
+          title="Total Views"
+          value="45,231"
+          change="+18.2% from last month"
+          changeType="positive"
+          icon={Eye}
+        />
+        <MetricCard
+          title="Click-through Rate"
+          value="12.4%"
+          change="+2.3% from last month"
+          changeType="positive"
+          icon={MousePointerClick}
+        />
+        <MetricCard
+          title="Total Leads"
+          value="478"
+          change="+24.1% from last month"
+          changeType="positive"
+          icon={Users}
+        />
+        <MetricCard
+          title="Conversion Rate"
+          value="8.9%"
+          change="+1.2% from last month"
+          changeType="positive"
+          icon={TrendingUp}
+        />
       </div>
 
-      {/* Charts Grid */}
+      {/* Traffic Overview */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Traffic Overview</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ResponsiveContainer width="100%" height={350}>
+            <LineChart data={trafficData}>
+              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+              <XAxis dataKey="month" stroke="hsl(var(--muted-foreground))" fontSize={12} />
+              <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: 'hsl(var(--card))',
+                  border: '1px solid hsl(var(--border))',
+                  borderRadius: '8px',
+                }}
+              />
+              <Line
+                type="monotone"
+                dataKey="views"
+                stroke="hsl(var(--chart-1))"
+                strokeWidth={2}
+                name="Views"
+              />
+              <Line
+                type="monotone"
+                dataKey="clicks"
+                stroke="hsl(var(--chart-3))"
+                strokeWidth={2}
+                name="Clicks"
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        </CardContent>
+      </Card>
+
+      {/* Development Performance and Traffic Sources */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Leads Over Time */}
-        <div className="card">
-          <h3 className="typ-h3 mb-4">Leads Over Time</h3>
-          <div className="h-64 flex items-center justify-center bg-gray-50 rounded-16">
-            <div className="text-center">
-              <div className="text-gray-400 mb-2">Chart Visualization</div>
-              <div className="text-sm text-gray-500">
-                {leadsOverTimeData.map((item, index) => (
-                  <div key={index} className="flex items-center justify-between py-1">
-                    <span className="w-16">{item.month}</span>
-                    <div 
-                      className="bg-blue-500 h-6 rounded-full mr-2"
-                      style={{ width: `${item.leads * 2}px` }}
-                    ></div>
-                    <span className="w-8">{item.leads}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
+        <Card>
+          <CardHeader>
+            <CardTitle>Leads by Development</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={developmentData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                <XAxis
+                  dataKey="name"
+                  stroke="hsl(var(--muted-foreground))"
+                  fontSize={11}
+                  angle={-45}
+                  textAnchor="end"
+                  height={80}
+                />
+                <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: 'hsl(var(--card))',
+                    border: '1px solid hsl(var(--border))',
+                    borderRadius: '8px',
+                  }}
+                />
+                <Bar dataKey="leads" fill="hsl(var(--accent))" radius={[8, 8, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
 
-        {/* Leads per Development */}
-        <div className="card">
-          <h3 className="typ-h3 mb-4">Leads per Development</h3>
-          <div className="h-64 flex items-center justify-center bg-gray-50 rounded-16">
-            <div className="text-center">
-              <div className="text-gray-400 mb-2">Bar Chart Visualization</div>
-              <div className="text-sm text-gray-500">
-                {leadsPerDevelopmentData.map((item, index) => (
-                  <div key={index} className="flex items-center justify-between py-1">
-                    <span className="w-32 text-left truncate">{item.development}</span>
-                    <div 
-                      className="bg-green-500 h-6 rounded-full mr-2"
-                      style={{ width: `${item.leads / 2}px` }}
-                    ></div>
-                    <span className="w-8">{item.leads}</span>
-                  </div>
-                ))}
-              </div>
+        <Card>
+          <CardHeader>
+            <CardTitle>Traffic Sources</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={300}>
+              <PieChart>
+                <Pie
+                  data={sourceData}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={60}
+                  outerRadius={100}
+                  paddingAngle={5}
+                  dataKey="value"
+                >
+                  {sourceData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                </Pie>
+                <Tooltip />
+              </PieChart>
+            </ResponsiveContainer>
+            <div className="grid grid-cols-2 gap-4 mt-4">
+              {sourceData.map(source => (
+                <div key={source.name} className="flex items-center gap-2">
+                  <div className="h-3 w-3 rounded-full" style={{ backgroundColor: source.color }} />
+                  <span className="text-sm text-muted-foreground">
+                    {source.name}: {source.value}%
+                  </span>
+                </div>
+              ))}
             </div>
-          </div>
-        </div>
-
-        {/* Conversion Funnel */}
-        <div className="card">
-          <h3 className="typ-h3 mb-4">Conversion Funnel</h3>
-          <div className="h-64 flex items-center justify-center bg-gray-50 rounded-16">
-            <div className="text-center w-full">
-              <div className="text-gray-400 mb-2">Funnel Visualization</div>
-              <div className="px-4">
-                {conversionFunnelData.map((item, index) => (
-                  <div key={index} className="mb-2">
-                    <div className="flex justify-between text-xs mb-1">
-                      <span>{item.stage}</span>
-                      <span>{item.count} ({item.percentage}%)</span>
-                    </div>
-                    <div className="h-8 bg-gray-200 rounded-full overflow-hidden">
-                      <div 
-                        className="h-full bg-gradient-to-r from-blue-400 to-blue-600 rounded-full"
-                        style={{ width: `${item.percentage}%` }}
-                      ></div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Traffic Sources */}
-        <div className="card">
-          <h3 className="typ-h3 mb-4">Traffic Sources</h3>
-          <div className="h-64 flex items-center justify-center bg-gray-50 rounded-16">
-            <div className="text-center">
-              <div className="text-gray-400 mb-2">Pie Chart Visualization</div>
-              <div className="text-sm text-gray-500">
-                {trafficSourcesData.map((item, index) => (
-                  <div key={index} className="flex items-center justify-between py-1">
-                    <div className="flex items-center">
-                      <div 
-                        className="w-3 h-3 rounded-full mr-2"
-                        style={{ backgroundColor: ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6'][index] }}
-                      ></div>
-                      <span className="w-16">{item.source}</span>
-                    </div>
-                    <span>{item.visitors}</span>
-                    <span className="w-12">{item.percentage}%</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
