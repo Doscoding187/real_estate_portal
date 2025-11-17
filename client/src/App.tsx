@@ -46,6 +46,9 @@ import DevelopersPage from './pages/admin/DevelopersPage';
 import UserDashboard from './pages/UserDashboard';
 import PropertyDeveloperDashboard from './pages/PropertyDeveloperDashboard';
 
+// Lovable Integration Hub
+import LovableIntegrationHub from './pages/LovableIntegrationHub';
+
 function Router() {
   // make sure to consider if you need authentication for certain routes
   return (
@@ -97,6 +100,15 @@ function Router() {
         component={() => (
           <SuperAdminDashboard>
             <DevelopersPage />
+          </SuperAdminDashboard>
+        )}
+      />
+      {/* Lovable Integration Hub Route */}
+      <Route
+        path="/admin/lovable-hub"
+        component={() => (
+          <SuperAdminDashboard>
+            <LovableIntegrationHub />
           </SuperAdminDashboard>
         )}
       />
