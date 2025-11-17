@@ -35,10 +35,10 @@ const developmentData = [
 ];
 
 const sourceData = [
-  { name: 'Direct', value: 35, color: 'hsl(var(--chart-1))' },
-  { name: 'Search', value: 30, color: 'hsl(var(--chart-2))' },
-  { name: 'Social', value: 20, color: 'hsl(var(--chart-3))' },
-  { name: 'Referral', value: 15, color: 'hsl(var(--chart-4))' },
+  { name: 'Direct', value: 35, color: '#3b82f6' }, // blue-500
+  { name: 'Search', value: 30, color: '#10b981' }, // emerald-500
+  { name: 'Social', value: 20, color: '#f59e0b' }, // amber-500
+  { name: 'Referral', value: 15, color: '#ef4444' }, // red-500
 ];
 
 const AnalyticsPanel: React.FC = () => {
@@ -105,16 +105,20 @@ const AnalyticsPanel: React.FC = () => {
               <Line
                 type="monotone"
                 dataKey="views"
-                stroke="hsl(var(--chart-1))"
+                stroke="#3b82f6"
                 strokeWidth={2}
                 name="Views"
+                dot={{ strokeWidth: 2, r: 4 }}
+                activeDot={{ r: 6, strokeWidth: 2 }}
               />
               <Line
                 type="monotone"
                 dataKey="clicks"
-                stroke="hsl(var(--chart-3))"
+                stroke="#10b981"
                 strokeWidth={2}
                 name="Clicks"
+                dot={{ strokeWidth: 2, r: 4 }}
+                activeDot={{ r: 6, strokeWidth: 2 }}
               />
             </LineChart>
           </ResponsiveContainer>
@@ -147,7 +151,7 @@ const AnalyticsPanel: React.FC = () => {
                     borderRadius: '8px',
                   }}
                 />
-                <Bar dataKey="leads" fill="hsl(var(--accent))" radius={[8, 8, 0, 0]} />
+                <Bar dataKey="leads" fill="#3b82f6" radius={[8, 8, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>
