@@ -1,57 +1,57 @@
-import { 
-  Home, 
-  Building2, 
-  Users, 
-  BarChart3, 
-  DollarSign, 
-  Megaphone, 
-  Calendar, 
-  GraduationCap, 
-  Settings, 
-  Plus, 
-  Eye, 
-  TrendingUp, 
-  Share2 
-} from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import {
+  Home,
+  Building2,
+  Users,
+  BarChart3,
+  DollarSign,
+  Megaphone,
+  Calendar,
+  GraduationCap,
+  Settings,
+  Plus,
+  Eye,
+  TrendingUp,
+  Share2,
+} from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 
 const navigation = [
-  { name: "Overview", href: "/agent/dashboard", icon: Home },
-  { name: "Listings", href: "/agent/listings", icon: Building2 },
-  { name: "Leads & Clients", href: "/agent/leads", icon: Users },
-  { name: "Analytics", href: "/agent/analytics", icon: BarChart3 },
-  { name: "Commission", href: "/agent/commission", icon: DollarSign },
-  { name: "Marketing", href: "/agent/marketing", icon: Megaphone },
-  { name: "Calendar", href: "/agent/calendar", icon: Calendar },
-  { name: "Training", href: "/agent/training", icon: GraduationCap },
-  { name: "Settings", href: "/agent/settings", icon: Settings },
+  { name: 'Overview', href: '/agent/dashboard', icon: Home },
+  { name: 'Listings', href: '/agent/listings', icon: Building2 },
+  { name: 'Leads & Clients', href: '/agent/leads', icon: Users },
+  { name: 'Analytics', href: '/agent/analytics', icon: BarChart3 },
+  { name: 'Commission', href: '/agent/commission', icon: DollarSign },
+  { name: 'Marketing', href: '/agent/marketing', icon: Megaphone },
+  { name: 'Calendar', href: '/agent/calendar', icon: Calendar },
+  { name: 'Training', href: '/agent/training', icon: GraduationCap },
+  { name: 'Settings', href: '/agent/settings', icon: Settings },
 ];
 
 const quickActions = [
-  { name: "Add New Listing", icon: Plus, variant: "default" as const },
-  { name: "View Leads", icon: Eye, variant: "secondary" as const },
-  { name: "Promote Listing", icon: TrendingUp, variant: "secondary" as const },
-  { name: "Share Profile", icon: Share2, variant: "secondary" as const },
+  { name: 'Add New Listing', icon: Plus, variant: 'default' as const },
+  { name: 'View Leads', icon: Eye, variant: 'secondary' as const },
+  { name: 'Promote Listing', icon: TrendingUp, variant: 'secondary' as const },
+  { name: 'Share Profile', icon: Share2, variant: 'secondary' as const },
 ];
 
 export function AgentSidebar() {
   return (
-    <aside className="hidden lg:flex lg:flex-col lg:w-64 lg:fixed lg:inset-y-0 bg-sidebar border-r border-sidebar-border">
+    <aside className="hidden lg:flex lg:flex-col lg:w-64 lg:fixed lg:inset-y-0 bg-background border-r">
       <div className="flex flex-col flex-1 min-h-0">
         {/* Logo */}
-        <div className="flex items-center h-16 flex-shrink-0 px-6 border-b border-sidebar-border">
+        <div className="flex items-center h-16 flex-shrink-0 px-6 border-b">
           <Building2 className="h-8 w-8 text-primary" />
-          <span className="ml-3 text-xl font-bold text-sidebar-foreground">Agent Portal</span>
+          <span className="ml-3 text-xl font-bold text-foreground">Agent Portal</span>
         </div>
 
         {/* Quick Actions */}
-        <div className="px-3 pt-4 pb-3 border-b border-sidebar-border">
+        <div className="px-3 pt-4 pb-3 border-b">
           <h3 className="px-3 mb-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
             Quick Actions
           </h3>
           <div className="space-y-2">
-            {quickActions.map((action) => (
+            {quickActions.map(action => (
               <Button
                 key={action.name}
                 variant={action.variant}
@@ -67,13 +67,13 @@ export function AgentSidebar() {
 
         {/* Navigation */}
         <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-          {navigation.map((item) => (
+          {navigation.map(item => (
             <a
               key={item.name}
               href={item.href}
               className={cn(
-                "flex items-center px-3 py-2.5 text-sm font-medium rounded-lg text-sidebar-foreground hover:bg-sidebar-accent transition-colors",
-                window.location.pathname === item.href && "bg-sidebar-accent text-sidebar-primary"
+                'flex items-center px-3 py-2.5 text-sm font-medium rounded-lg text-foreground hover:bg-accent hover:text-accent-foreground transition-colors',
+                window.location.pathname === item.href && 'bg-accent text-accent-foreground',
               )}
             >
               <item.icon className="mr-3 h-5 w-5 flex-shrink-0" />
@@ -83,7 +83,7 @@ export function AgentSidebar() {
         </nav>
 
         {/* User Profile Section */}
-        <div className="flex-shrink-0 p-4 border-t border-sidebar-border">
+        <div className="flex-shrink-0 p-4 border-t">
           <div className="flex items-center">
             <div className="flex-shrink-0">
               <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
@@ -91,7 +91,7 @@ export function AgentSidebar() {
               </div>
             </div>
             <div className="ml-3">
-              <p className="text-sm font-medium text-sidebar-foreground">John Doe</p>
+              <p className="text-sm font-medium text-foreground">John Doe</p>
               <p className="text-xs text-muted-foreground">Premium Agent</p>
             </div>
           </div>
