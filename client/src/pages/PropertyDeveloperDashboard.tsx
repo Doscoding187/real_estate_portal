@@ -30,11 +30,11 @@ const PropertyDeveloperDashboard: React.FC = () => {
 
   return (
     <SidebarProvider>
-      <div className="flex h-screen bg-gray-50">
+      <div className="flex h-screen w-screen bg-gray-50 overflow-hidden">
         <DeveloperSidebar active={activeSection} onChange={setActiveSection} />
-        <div className="flex-1 flex flex-col overflow-hidden">
+        <div className="flex flex-col flex-1 min-w-0">
           {/* Header */}
-          <header className="bg-white shadow-sm z-10">
+          <header className="bg-white shadow-sm z-10 flex-shrink-0">
             <div className="flex items-center justify-between p-4">
               <div>
                 <h1 className="typ-h1">Property Developer Dashboard</h1>
@@ -65,7 +65,7 @@ const PropertyDeveloperDashboard: React.FC = () => {
           </header>
 
           {/* Main Content */}
-          <main className="flex-1 overflow-y-auto p-6">{renderContent()}</main>
+          <main className="flex-1 overflow-auto p-6">{renderContent()}</main>
         </div>
       </div>
     </SidebarProvider>
