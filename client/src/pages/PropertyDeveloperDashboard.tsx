@@ -1,130 +1,69 @@
-import React from 'react';
-import { useLocation } from 'wouter';
-import { useAuth } from '@/_core/hooks/useAuth';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { SidebarInset, SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
-import { Building2, Bed, Square, Eye, Plus } from 'lucide-react';
-import { trpc } from '@/lib/trpc';
-import DeveloperSidebar, { DeveloperSection } from '@/components/developer/DeveloperSidebar';
-import Overview from '@/components/developer/Overview';
-import DevelopmentsList from '@/components/developer/DevelopmentsList';
-import UnitsManager from '@/components/developer/UnitsManager';
-import LeadsManager from '@/components/developer/LeadsManager';
-import TeamManagement from '@/components/developer/TeamManagement';
-import DocumentsMedia from '@/components/developer/DocumentsMedia';
-import MarketingCampaigns from '@/components/developer/MarketingCampaigns';
-import MarketingTools from '@/components/developer/MarketingTools';
-import IntegrationsPanel from '@/components/developer/IntegrationsPanel';
-import BillingPanel from '@/components/developer/BillingPanel';
-import SupportCenter from '@/components/developer/SupportCenter';
-import AnalyticsPanel from '@/components/developer/AnalyticsPanel';
-import MessagesCenter from '@/components/developer/MessagesCenter';
-import SettingsPanel from '@/components/developer/SettingsPanel';
+import React, { useState } from 'react';
+import DeveloperSidebar, { DeveloperSection } from '../components/developer/DeveloperSidebar';
+import DevelopmentsList from '../components/developer/DevelopmentsList';
+import AnalyticsPanel from '../components/developer/AnalyticsPanel';
+import MessagesCenter from '../components/developer/MessagesCenter';
+import SettingsPanel from '../components/developer/SettingsPanel';
+import MarketingTools from '../components/developer/MarketingTools';
 
-export default function PropertyDeveloperDashboard() {
-  const [, setLocation] = useLocation();
-  const { isAuthenticated, user, loading } = useAuth();
-  const [section, setSection] = React.useState<DeveloperSection>('dashboard');
+const PropertyDeveloperDashboard: React.FC = () => {
+  const [activeSection, setActiveSection] = useState<DeveloperSection>('developments');
 
-  // Fetch developer dashboard data using existing TRPC endpoints
-  const { data: properties, isLoading: propertiesLoading } =
-    trpc.properties.myProperties.useQuery();
-
-  // Show loading spinner while auth is being checked
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Redirect if not authenticated or not a property developer
-  if (!isAuthenticated) {
-    setLocation('/login');
-    return null;
-  }
-
-  if (user?.role !== 'property_developer') {
-    setLocation('/dashboard');
-    return null;
-  }
+  const renderContent = () => {
+    switch (activeSection) {
+      case 'analytics':
+        return <AnalyticsPanel />;
+      case 'messages':
+        return <MessagesCenter />;
+      case 'settings':
+        return <SettingsPanel />;
+      case 'marketing':
+        return <MarketingTools />;
+      default:
+        return <DevelopmentsList />;
+    }
+  };
 
   return (
-    <SidebarProvider>
-      <DeveloperSidebar active={section} onChange={setSection} className="w-64" />
-      <SidebarInset>
-        <div className="px-4 py-6 w-full">
-          <div className="flex items-center gap-3 mb-6">
-            <SidebarTrigger />
-            <Building2 className="h-6 w-6 text-primary" />
-            <h1 className="typ-h2">Developer Dashboard</h1>
-            <Badge variant="secondary">Property Developer</Badge>
-          </div>
-
-          {section === 'dashboard' && <Overview />}
-          {section === 'developments' && <DevelopmentsList />}
-          {section === 'units' && <UnitsManager />}
-          {section === 'leads' && <LeadsManager />}
-          {section === 'analytics' && <AnalyticsPanel />}
-          {section === 'team' && <TeamManagement />}
-          {section === 'documents' && <DocumentsMedia />}
-          {section === 'marketing' && <MarketingTools />}
-          {section === 'integrations' && <IntegrationsPanel />}
-          {section === 'billing' && <BillingPanel />}
-          {section === 'support' && <SupportCenter />}
-          {section === 'messages' && <MessagesCenter />}
-          {section === 'settings' && <SettingsPanel />}
-
-          {section === 'developments' || section === 'units' ? null : null}
-          {section === 'dashboard' && (
-            <div className="mt-8">
-              <Card className="card">
-                <CardHeader>
-                  <CardTitle className="typ-h3">Recent Listings</CardTitle>
-                  <CardDescription>Recently added property listings</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  {propertiesLoading ? (
-                    <p className="text-muted-foreground">Loading listings...</p>
-                  ) : (properties?.length ?? 0) === 0 ? (
-                    <p className="text-muted-foreground">No listings yet.</p>
-                  ) : (
-                    <ul className="space-y-3">
-                      {properties!.slice(0, 3).map((listing: any) => (
-                        <li
-                          key={listing.id}
-                          className="flex items-center justify-between border-light rounded-12 p-3"
-                        >
-                          <div className="flex-1">
-                            <div className="font-medium">{listing.title}</div>
-                            <div className="text-sm text-muted-foreground">
-                              {listing.city}, {listing.province}
-                            </div>
-                          </div>
-                          <Button
-                            variant="outline"
-                            className="btn btn-secondary"
-                            size="sm"
-                            onClick={() => setLocation(`/property/${listing.id}`)}
-                          >
-                            View
-                          </Button>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </CardContent>
-              </Card>
+    <div className="flex h-screen bg-gray-50">
+      <DeveloperSidebar active={activeSection} onChange={setActiveSection} />
+      <div className="flex-1 flex flex-col overflow-hidden">
+        {/* Header */}
+        <header className="bg-white shadow-sm z-10">
+          <div className="flex items-center justify-between p-4">
+            <div>
+              <h1 className="typ-h1">Property Developer Dashboard</h1>
+              <p className="text-gray-500 text-sm">
+                Manage your developments and track performance
+              </p>
             </div>
-          )}
-        </div>
-      </SidebarInset>
-    </SidebarProvider>
+            <div className="flex items-center space-x-4">
+              <button className="relative p-2 text-gray-500 hover:text-gray-700">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
+                  />
+                </svg>
+                <span className="absolute top-0 right-0 block h-2 w-2 rounded-full bg-red-500"></span>
+              </button>
+              <div className="flex items-center">
+                <div className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center text-white font-medium">
+                  SD
+                </div>
+                <span className="ml-2 font-medium">Skyline Developments</span>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        {/* Main Content */}
+        <main className="flex-1 overflow-y-auto p-6">{renderContent()}</main>
+      </div>
+    </div>
   );
-}
+};
+
+export default PropertyDeveloperDashboard;
