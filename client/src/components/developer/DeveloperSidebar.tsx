@@ -82,7 +82,10 @@ export function DeveloperSidebar({ active, onChange, className }: Props) {
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton isActive={active === 'analytics'} onClick={() => onChange('analytics')}>
+                <SidebarMenuButton
+                  isActive={active === 'analytics'}
+                  onClick={() => onChange('analytics')}
+                >
                   <LayoutDashboard />
                   <span>Analytics</span>
                 </SidebarMenuButton>
@@ -141,7 +144,10 @@ export function DeveloperSidebar({ active, onChange, className }: Props) {
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton isActive={active === 'messages'} onClick={() => onChange('messages')}>
+                <SidebarMenuButton
+                  isActive={active === 'messages'}
+                  onClick={() => onChange('messages')}
+                >
                   <LifeBuoy />
                   <span>Messages</span>
                 </SidebarMenuButton>
@@ -165,7 +171,10 @@ export function DeveloperSidebar({ active, onChange, className }: Props) {
             </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>
-            <SidebarMenuButton isActive={active === 'settings'} onClick={() => onChange('settings')}>
+            <SidebarMenuButton
+              isActive={active === 'settings'}
+              onClick={() => onChange('settings')}
+            >
               <LayoutDashboard />
               <span>Settings</span>
             </SidebarMenuButton>

@@ -17,19 +17,24 @@ const steps = [
 export default function DevelopmentWizard({ onClose }: { onClose?: () => void }) {
   const [step, setStep] = React.useState(0);
 
-  const next = () => setStep((s) => Math.min(s + 1, steps.length - 1));
-  const prev = () => setStep((s) => Math.max(s - 1, 0));
+  const next = () => setStep(s => Math.min(s + 1, steps.length - 1));
+  const prev = () => setStep(s => Math.max(s - 1, 0));
 
   return (
     <Card className="card">
       <CardHeader>
         <CardTitle className="typ-h3">Create New Development</CardTitle>
-        <CardDescription>Step {step + 1} of {steps.length}: {steps[step]}</CardDescription>
+        <CardDescription>
+          Step {step + 1} of {steps.length}: {steps[step]}
+        </CardDescription>
       </CardHeader>
       <CardContent>
         <div className="flex items-center gap-2 mb-4">
           {steps.map((label, idx) => (
-            <div key={label} className={`flex-1 h-2 rounded-12 ${idx <= step ? 'bg-primary' : 'bg-secondary'}`} />
+            <div
+              key={label}
+              className={`flex-1 h-2 rounded-12 ${idx <= step ? 'bg-primary' : 'bg-secondary'}`}
+            />
           ))}
         </div>
 
@@ -65,8 +70,12 @@ export default function DevelopmentWizard({ onClose }: { onClose?: () => void })
 
         {step === 2 && (
           <div className="space-y-3">
-            <div className="text-sm text-muted-foreground">Drag & drop images/videos/brochures here.</div>
-            <div className="h-40 rounded-16 border-light flex items-center justify-center">Dropzone placeholder</div>
+            <div className="text-sm text-muted-foreground">
+              Drag & drop images/videos/brochures here.
+            </div>
+            <div className="h-40 rounded-16 border-light flex items-center justify-center">
+              Dropzone placeholder
+            </div>
           </div>
         )}
 
@@ -86,40 +95,59 @@ export default function DevelopmentWizard({ onClose }: { onClose?: () => void })
                 <Input className="input" placeholder="Optional" />
               </div>
             </div>
-            <div className="text-sm text-muted-foreground">Detailed tiered pricing UI placeholder.</div>
+            <div className="text-sm text-muted-foreground">
+              Detailed tiered pricing UI placeholder.
+            </div>
           </div>
         )}
 
         {step === 4 && (
           <div className="space-y-3">
-            <div className="text-sm text-muted-foreground">Add floor plans with images, sizes, and prices.</div>
-            <div className="h-40 rounded-16 border-light flex items-center justify-center">Floor plan manager placeholder</div>
+            <div className="text-sm text-muted-foreground">
+              Add floor plans with images, sizes, and prices.
+            </div>
+            <div className="h-40 rounded-16 border-light flex items-center justify-center">
+              Floor plan manager placeholder
+            </div>
           </div>
         )}
 
         {step === 5 && (
           <div className="space-y-3">
-            <div className="text-sm text-muted-foreground">Upload PDFs, Excel, and other documents.</div>
-            <div className="h-40 rounded-16 border-light flex items-center justify-center">Documents uploader placeholder</div>
+            <div className="text-sm text-muted-foreground">
+              Upload PDFs, Excel, and other documents.
+            </div>
+            <div className="h-40 rounded-16 border-light flex items-center justify-center">
+              Documents uploader placeholder
+            </div>
           </div>
         )}
 
         {step === 6 && (
           <div className="space-y-3">
-            <div className="text-sm text-muted-foreground">Preview the landing page before publishing.</div>
+            <div className="text-sm text-muted-foreground">
+              Preview the landing page before publishing.
+            </div>
             <div className="h-56 rounded-16 bg-secondary" />
           </div>
         )}
 
         <div className="mt-6 flex items-center justify-between">
           <div className="space-x-2">
-            <Button className="btn btn-secondary" onClick={prev} disabled={step === 0}>Back</Button>
-            <Button className="btn btn-primary" onClick={step === steps.length - 1 ? onClose : next}>
+            <Button className="btn btn-secondary" onClick={prev} disabled={step === 0}>
+              Back
+            </Button>
+            <Button
+              className="btn btn-primary"
+              onClick={step === steps.length - 1 ? onClose : next}
+            >
               {step === steps.length - 1 ? 'Finish' : 'Next'}
             </Button>
           </div>
           {onClose && (
-            <Button variant="ghost" onClick={onClose}>Cancel</Button>
+            <Button variant="ghost" onClick={onClose}>
+              Cancel
+            </Button>
           )}
         </div>
       </CardContent>

@@ -12,7 +12,9 @@ export default function MarketingTools() {
             <CardDescription>Boost visibility across the platform</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
-            <div className="text-sm text-muted-foreground">Choose a featured package and duration.</div>
+            <div className="text-sm text-muted-foreground">
+              Choose a featured package and duration.
+            </div>
             <Button className="btn btn-primary w-full">Purchase Feature</Button>
           </CardContent>
         </Card>

@@ -16,7 +16,7 @@ export default function MessagesCenter() {
           <div className="lg:col-span-1 space-y-2">
             <Input className="input" placeholder="Search conversations" />
             <div className="border-light rounded-16 p-3 space-y-2 h-72 overflow-auto">
-              {[1,2,3].map((i) => (
+              {[1, 2, 3].map(i => (
                 <div key={i} className="p-2 rounded-12 hover:bg-muted cursor-pointer transition">
                   <div className="font-medium">Conversation #{i}</div>
                   <div className="text-xs text-muted-foreground">Last message preview…</div>
@@ -26,7 +26,9 @@ export default function MessagesCenter() {
           </div>
           <div className="lg:col-span-2 flex flex-col gap-3">
             <div className="border-light rounded-16 p-3 h-60 overflow-auto">
-              <div className="text-sm text-muted-foreground">Select a conversation to view messages.</div>
+              <div className="text-sm text-muted-foreground">
+                Select a conversation to view messages.
+              </div>
             </div>
             <div className="space-y-2">
               <Textarea className="input" placeholder="Type your message..." rows={3} />
@@ -44,7 +46,7 @@ export default function MessagesCenter() {
           <CardDescription>System and activity updates</CardDescription>
         </CardHeader>
         <CardContent className="space-y-2">
-          {[1,2,3].map((i) => (
+          {[1, 2, 3].map(i => (
             <div key={i} className="border-light rounded-12 p-3 text-sm">
               Notification item #{i}
             </div>
