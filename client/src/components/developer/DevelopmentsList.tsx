@@ -90,9 +90,9 @@ const DevelopmentsList: React.FC = () => {
   );
 
   const statusColors = {
-    active: 'bg-success/20 text-success border-success',
-    paused: 'bg-warning/20 text-warning border-warning',
-    draft: 'bg-muted text-muted-foreground',
+    active: 'bg-green-100 text-green-800 border-green-200',
+    paused: 'bg-yellow-100 text-yellow-800 border-yellow-200',
+    draft: 'bg-gray-100 text-gray-800 border-gray-200',
   };
 
   return (
