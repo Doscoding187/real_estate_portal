@@ -107,6 +107,59 @@ const PropertyDetailsStep: React.FC = () => {
     { value: 'shared_living', label: 'Shared Living' },
   ];
 
+  // Property setting options based on property type
+  const getPropertySettingOptions = () => {
+    if (!propertyType) return propertySettings;
+
+    switch (propertyType) {
+      case 'apartment':
+        // For apartments, only show "sectional title" as the property setting
+        return [{ value: 'sectional_title', label: 'Sectional Title' } as any];
+      case 'house':
+        // For houses, show specific options
+        return [
+          { value: 'freehold', label: 'Freehold' },
+          { value: 'complex', label: 'Complex' },
+          { value: 'gated_community', label: 'Gated Community' },
+          { value: 'estate_living', label: 'Estate Living' },
+        ] as any;
+      case 'land':
+        // For land, show similar options to houses
+        return [
+          { value: 'freehold', label: 'Freehold' },
+          { value: 'complex', label: 'Complex' },
+          { value: 'gated_community', label: 'Gated Community' },
+          { value: 'estate_living', label: 'Estate Living' },
+        ] as any;
+      case 'commercial':
+        // For commercial, show similar options but can be adjusted as needed
+        return [
+          { value: 'freehold', label: 'Freehold' },
+          { value: 'complex', label: 'Complex' },
+          { value: 'gated_community', label: 'Gated Community' },
+          { value: 'estate_living', label: 'Estate Living' },
+        ] as any;
+      default:
+        return propertySettings;
+    }
+  };
+
+  // Set default property setting based on property type
+  useEffect(() => {
+    if (propertyType && !propertyDetails.propertySetting) {
+      const options = getPropertySettingOptions();
+      if (options.length > 0) {
+        // For apartment, automatically set to sectional_title
+        if (propertyType === 'apartment') {
+          updatePropertyDetail('propertySetting', 'sectional_title');
+        } else {
+          // For other types, set to the first available option
+          updatePropertyDetail('propertySetting', options[0].value);
+        }
+      }
+    }
+  }, [propertyType, propertyDetails.propertySetting, updatePropertyDetail]);
+
   const parkingTypes: { value: ParkingType; label: string }[] = [
     { value: 'open', label: 'Open' },
     { value: 'covered', label: 'Covered' },
@@ -240,7 +293,7 @@ const PropertyDetailsStep: React.FC = () => {
                   <SelectValue placeholder="Select property setting" />
                 </SelectTrigger>
                 <SelectContent>
-                  {propertySettings.map(setting => (
+                  {getPropertySettingOptions().map(setting => (
                     <SelectItem key={setting.value} value={setting.value}>
                       {setting.label}
                     </SelectItem>

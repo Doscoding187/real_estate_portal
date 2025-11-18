@@ -102,7 +102,12 @@ export type PropertySetting =
   | 'farm'
   | 'land'
   | 'commercial'
-  | 'shared_living';
+  | 'shared_living'
+  | 'sectional_title'
+  | 'freehold'
+  | 'estate_living'
+  | 'complex'
+  | 'gated_community';
 
 export type ParkingType = 'open' | 'covered' | 'garage' | 'none';
 
