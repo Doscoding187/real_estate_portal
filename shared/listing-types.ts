@@ -7,6 +7,15 @@
 // Step 1: Action Types
 export type ListingAction = 'sell' | 'rent' | 'auction';
 
+// Listing Badges
+export type ListingBadge =
+  | 'ready_to_move'
+  | 'under_construction'
+  | 'off_plan'
+  | 'move_in_ready'
+  | 'fixer_upper'
+  | 'renovated';
+
 // Step 2: Property Types
 export type PropertyType = 'apartment' | 'house' | 'farm' | 'land' | 'commercial' | 'shared_living';
 
@@ -170,6 +179,9 @@ export interface ListingWizardState {
 
   // Step 1: Action
   action?: ListingAction;
+
+  // Step 1.5: Listing Badges (new step)
+  badges?: ListingBadge[];
 
   // Step 2: Property Type
   propertyType?: PropertyType;
@@ -387,5 +399,39 @@ export const PROPERTY_TYPE_TEMPLATES: Record<
     icon: '🛏️',
     description: 'Student accommodation, co-living spaces',
     requiredFields: ['roomsAvailable', 'bathroomTypePerRoom'],
+  },
+};
+
+// Badge templates (for UI)
+export const BADGE_TEMPLATES: Record<
+  ListingBadge,
+  {
+    label: string;
+    description: string;
+  }
+> = {
+  ready_to_move: {
+    label: 'Ready to Move',
+    description: 'Property is ready for immediate occupancy',
+  },
+  under_construction: {
+    label: 'Under Construction',
+    description: 'Property is currently under construction',
+  },
+  off_plan: {
+    label: 'Off-Plan',
+    description: 'Property is being sold from architectural plans',
+  },
+  move_in_ready: {
+    label: 'Move-in Ready',
+    description: 'Property is fully finished and ready for occupancy',
+  },
+  fixer_upper: {
+    label: 'Fixer-Upper',
+    description: 'Property needs renovation or repair work',
+  },
+  renovated: {
+    label: 'Renovated',
+    description: 'Property has been recently renovated',
   },
 };

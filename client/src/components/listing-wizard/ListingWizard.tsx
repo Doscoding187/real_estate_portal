@@ -14,17 +14,19 @@ import { CheckCircle2, Circle } from 'lucide-react';
 // Import wizard steps
 import ActionStep from './steps/ActionStep';
 import PropertyTypeStep from './steps/PropertyTypeStep';
+import BadgesStep from './steps/BadgesStep';
 import BasicInfoStep from './steps/BasicInfoStep';
 import PricingStep from './steps/PricingStep';
 import LocationStep from './steps/LocationStep';
 import MediaUploadStep from './steps/MediaUploadStep';
 import PreviewStep from './steps/PreviewStep';
 
-const TOTAL_STEPS = 7;
+const TOTAL_STEPS = 8;
 
 const STEP_TITLES = [
   'What are you doing?',
   'Property Type',
+  'Listing Badges',
   'Basic Information',
   'Pricing Details',
   'Location',
@@ -33,16 +35,15 @@ const STEP_TITLES = [
 ];
 
 const ListingWizard: React.FC = () => {
-  const {
-    currentStep,
-    completedSteps,
-    goToStep,
-    nextStep,
-    prevStep,
-    markStepComplete,
-    validate,
-    errors,
-  } = useListingWizardStore();
+  const store: any = useListingWizardStore();
+  const currentStep: number = store.currentStep;
+  const completedSteps: number[] = store.completedSteps;
+  const goToStep = store.goToStep;
+  const nextStep = store.nextStep;
+  const prevStep = store.prevStep;
+  const markStepComplete = store.markStepComplete;
+  const validate = store.validate;
+  const errors: any[] = store.errors;
 
   const handleNext = () => {
     if (validate()) {
@@ -64,14 +65,16 @@ const ListingWizard: React.FC = () => {
       case 2:
         return <PropertyTypeStep />;
       case 3:
-        return <BasicInfoStep />;
+        return <BadgesStep />;
       case 4:
-        return <PricingStep />;
+        return <BasicInfoStep />;
       case 5:
-        return <LocationStep />;
+        return <PricingStep />;
       case 6:
-        return <MediaUploadStep />;
+        return <LocationStep />;
       case 7:
+        return <MediaUploadStep />;
+      case 8:
         return <PreviewStep />;
       default:
         return <ActionStep />;
@@ -167,11 +170,12 @@ const ListingWizard: React.FC = () => {
               {currentStep === 1 &&
                 'Select whether you want to sell, rent, or auction your property'}
               {currentStep === 2 && 'Choose the type of property you want to list'}
-              {currentStep === 3 && 'Provide basic information about your property'}
-              {currentStep === 4 && 'Enter pricing and financial details'}
-              {currentStep === 5 && 'Pin your property location on the map'}
-              {currentStep === 6 && 'Upload images, videos, and documents'}
-              {currentStep === 7 && 'Review your listing before submitting'}
+              {currentStep === 3 && 'Select optional badges to highlight your property features'}
+              {currentStep === 4 && 'Provide basic information about your property'}
+              {currentStep === 5 && 'Enter pricing and financial details'}
+              {currentStep === 6 && 'Pin your property location on the map'}
+              {currentStep === 7 && 'Upload images, videos, and documents'}
+              {currentStep === 8 && 'Review your listing before submitting'}
             </CardDescription>
           </CardHeader>
           <CardContent>{renderStep()}</CardContent>
@@ -182,7 +186,7 @@ const ListingWizard: React.FC = () => {
           <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
             <h4 className="text-red-800 font-semibold mb-2">Please fix the following errors:</h4>
             <ul className="list-disc list-inside space-y-1">
-              {errors.map((error, index) => (
+              {errors.map((error: any, index: number) => (
                 <li key={index} className="text-red-700 text-sm">
                   {error.message}
                 </li>

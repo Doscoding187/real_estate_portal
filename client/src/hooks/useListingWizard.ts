@@ -27,6 +27,11 @@ interface ListingWizardStore extends ListingWizardState {
   // Step 1: Action
   setAction: (action: ListingAction) => void;
 
+  // Step 1.5: Badges
+  setBadges: (badges: ListingBadge[]) => void;
+  addBadge: (badge: ListingBadge) => void;
+  removeBadge: (badge: ListingBadge) => void;
+
   // Step 2: Property Type
   setPropertyType: (propertyType: PropertyType) => void;
 
@@ -117,6 +122,23 @@ export const useListingWizardStore = create<ListingWizardStore>()(
         set({ action });
         // Clear pricing when action changes
         set({ pricing: undefined });
+      },
+
+      // Step 1.5: Badges
+      setBadges: badges => {
+        set({ badges });
+      },
+
+      addBadge: badge => {
+        const currentBadges = get().badges || [];
+        if (!currentBadges.includes(badge)) {
+          set({ badges: [...currentBadges, badge] });
+        }
+      },
+
+      removeBadge: badge => {
+        const currentBadges = get().badges || [];
+        set({ badges: currentBadges.filter(b => b !== badge) });
       },
 
       // Step 2: Property Type
