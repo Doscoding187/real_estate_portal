@@ -9,6 +9,8 @@ import { useListingWizardStore } from '@/hooks/useListingWizard';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import {
   Select,
   SelectContent,
@@ -18,18 +20,18 @@ import {
 } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Card } from '@/components/ui/card';
+import { X } from 'lucide-react';
 import type { PropertyType } from '@/../../shared/listing-types';
 
 const BasicInfoStep: React.FC = () => {
-  const {
-    title,
-    description,
-    propertyType,
-    propertyDetails = {},
-    setTitle,
-    setDescription,
-    updatePropertyDetail,
-  } = useListingWizardStore();
+  const store: any = useListingWizardStore();
+  const title = store.title;
+  const description = store.description;
+  const propertyType = store.propertyType;
+  const propertyDetails = store.propertyDetails || {};
+  const setTitle = store.setTitle;
+  const setDescription = store.setDescription;
+  const updatePropertyDetail = store.updatePropertyDetail;
 
   const renderPropertyFields = () => {
     if (!propertyType) return null;
@@ -102,6 +104,14 @@ const BasicInfoStep: React.FC = () => {
         </p>
 
         <AmenitiesFeaturesFields details={propertyDetails} updateDetail={updatePropertyDetail} />
+      </Card>
+
+      {/* Additional Rooms & Specifications */}
+      <Card className="p-6">
+        <h3 className="text-lg font-semibold mb-4">Additional Rooms & Specifications</h3>
+        <p className="text-gray-600 mb-4">Select predefined rooms or add custom specifications.</p>
+
+        <AdditionalRoomsSpecsFields details={propertyDetails} updateDetail={updatePropertyDetail} />
       </Card>
     </div>
   );
@@ -542,6 +552,156 @@ const AmenitiesFeaturesFields: React.FC<{ details: any; updateDetail: any }> = (
           </Label>
         </div>
       ))}
+    </div>
+  );
+};
+
+// Additional Rooms & Specifications Fields Component
+const AdditionalRoomsSpecsFields: React.FC<{ details: any; updateDetail: any }> = ({
+  details,
+  updateDetail,
+}) => {
+  // Define common additional rooms & specs options
+  const commonOptions = [
+    { id: 'scullery', label: 'Scullery' },
+    { id: 'walkInCloset', label: 'Walk-in Closet' },
+    { id: 'homeOffice', label: 'Home Office' },
+    { id: 'pantry', label: 'Pantry' },
+    { id: 'braaiBalcony', label: 'Braai Balcony' },
+    { id: 'utilityRoom', label: 'Utility Room' },
+    { id: 'laundryRoom', label: 'Laundry Room' },
+    { id: 'study', label: 'Study' },
+    { id: 'storeroom', label: 'Storeroom' },
+    { id: 'guestToilet', label: 'Guest Toilet' },
+    { id: 'powderRoom', label: 'Powder Room' },
+    { id: 'mediaRoom', label: 'Media Room' },
+  ];
+
+  // Handle checkbox change for predefined options
+  const handleOptionChange = (optionId: string, checked: boolean) => {
+    // Get current additional rooms array or initialize as empty array
+    const currentRooms = details.additionalRoomsSpecs || [];
+
+    if (checked) {
+      // Add option if checked
+      updateDetail('additionalRoomsSpecs', [...currentRooms, optionId]);
+    } else {
+      // Remove option if unchecked
+      updateDetail(
+        'additionalRoomsSpecs',
+        currentRooms.filter((id: string) => id !== optionId),
+      );
+    }
+  };
+
+  // Handle custom input change
+  const [customInput, setCustomInput] = React.useState('');
+
+  const addCustomRoom = () => {
+    if (customInput.trim()) {
+      // Get current additional rooms array or initialize as empty array
+      const currentRooms = details.additionalRoomsSpecs || [];
+
+      // Add custom room if it doesn't already exist
+      if (!currentRooms.includes(customInput.trim())) {
+        updateDetail('additionalRoomsSpecs', [...currentRooms, customInput.trim()]);
+        setCustomInput('');
+      }
+    }
+  };
+
+  // Handle removal of custom rooms
+  const removeCustomRoom = (room: string) => {
+    const currentRooms = details.additionalRoomsSpecs || [];
+    updateDetail(
+      'additionalRoomsSpecs',
+      currentRooms.filter((r: string) => r !== room),
+    );
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {commonOptions.map(option => (
+          <div key={option.id} className="flex items-center space-x-2">
+            <Checkbox
+              id={`room-${option.id}`}
+              checked={(details.additionalRoomsSpecs || []).includes(option.id)}
+              onCheckedChange={checked => handleOptionChange(option.id, !!checked)}
+            />
+            <Label htmlFor={`room-${option.id}`} className="text-sm">
+              {option.label}
+            </Label>
+          </div>
+        ))}
+      </div>
+
+      {/* Custom Room Input */}
+      <div className="pt-4 border-t border-gray-200">
+        <Label className="block mb-2">Add Custom Room/Specification</Label>
+        <div className="flex gap-2">
+          <Input
+            placeholder="e.g., Wine Cellar, Rooftop Terrace, etc."
+            value={customInput}
+            onChange={e => setCustomInput(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && addCustomRoom()}
+          />
+          <Button onClick={addCustomRoom} size="sm">
+            Add
+          </Button>
+        </div>
+        <p className="text-xs text-gray-500 mt-1">
+          Press Enter or click "Add" to include custom rooms/specifications
+        </p>
+      </div>
+
+      {/* Selected Rooms Display */}
+      {details.additionalRoomsSpecs && details.additionalRoomsSpecs.length > 0 && (
+        <div className="pt-4">
+          <Label className="block mb-2">Selected Rooms & Specifications</Label>
+          <div className="flex flex-wrap gap-2">
+            {details.additionalRoomsSpecs.map((room: string) => (
+              <Badge key={room} variant="secondary" className="flex items-center gap-1">
+                {room}
+                <button
+                  onClick={() => removeCustomRoom(room)}
+                  className="ml-1 hover:bg-gray-200 rounded-full p-0.5"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </Badge>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Guide for Agents */}
+      <div className="pt-4 bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <h4 className="font-semibold text-blue-900 mb-2">📋 Guide for Agents</h4>
+        <ul className="text-blue-800 text-sm list-disc list-inside space-y-1">
+          <li>
+            <strong>Scullery:</strong> A small room or area used for washing dishes and cleaning
+            utensils
+          </li>
+          <li>
+            <strong>Walk-in Closet:</strong> A closet large enough to walk into, often with built-in
+            storage
+          </li>
+          <li>
+            <strong>Home Office:</strong> A dedicated room or area for working from home
+          </li>
+          <li>
+            <strong>Pantry:</strong> A small storage room for food, dishes, and kitchen supplies
+          </li>
+          <li>
+            <strong>Braai Balcony:</strong> A balcony with a built-in braai (barbecue) area
+          </li>
+          <li>
+            <strong>Utility Room:</strong> A room for housing utilities like washing machine, dryer,
+            etc.
+          </li>
+        </ul>
+      </div>
     </div>
   );
 };
