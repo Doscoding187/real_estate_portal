@@ -15,14 +15,15 @@ import { Badge } from '@/components/ui/badge';
 const BadgesStep: React.FC = () => {
   const store: any = useListingWizardStore();
   const badges: ListingBadge[] = store.badges || [];
-  const addBadge = store.addBadge;
-  const removeBadge = store.removeBadge;
+  const setBadges = store.setBadges;
 
-  const handleToggleBadge = (badge: ListingBadge) => {
+  const handleSelectBadge = (badge: ListingBadge) => {
+    // If badge is already selected, remove it (deselect)
     if (badges.includes(badge)) {
-      removeBadge(badge);
+      setBadges(badges.filter(b => b !== badge));
     } else {
-      addBadge(badge);
+      // Select only this badge (single selection)
+      setBadges([badge]);
     }
   };
 
@@ -40,8 +41,8 @@ const BadgesStep: React.FC = () => {
       <div className="mb-8">
         <h2 className="text-2xl font-bold mb-2">Listing Badges</h2>
         <p className="text-gray-600">
-          Select optional badges to highlight special features of your property. These badges will
-          appear on your listing to attract more attention.
+          Select one badge to highlight a special feature of your property. This badge will appear
+          on your listing to attract more attention.
         </p>
       </div>
 
@@ -53,7 +54,7 @@ const BadgesStep: React.FC = () => {
           return (
             <Card
               key={badge}
-              onClick={() => handleToggleBadge(badge)}
+              onClick={() => handleSelectBadge(badge)}
               className={`relative cursor-pointer transition-all duration-300 hover:shadow-lg ${
                 isSelected
                   ? 'border-2 border-blue-500 shadow-lg'
@@ -97,7 +98,7 @@ const BadgesStep: React.FC = () => {
       {/* Selected Badges Preview */}
       {badges.length > 0 && (
         <div className="mt-8 p-6 bg-green-50 border border-green-200 rounded-lg">
-          <h4 className="font-semibold text-green-900 mb-3">✅ Selected Badges</h4>
+          <h4 className="font-semibold text-green-900 mb-3">✅ Selected Badge</h4>
           <div className="flex flex-wrap gap-2">
             {badges.map((badge: ListingBadge) => (
               <Badge key={badge} variant="default" className="text-sm">
@@ -116,8 +117,8 @@ const BadgesStep: React.FC = () => {
             <h4 className="font-semibold text-blue-900 mb-2">💡 Badge Tips</h4>
             <ul className="text-blue-800 text-sm list-disc list-inside space-y-1">
               <li>Badges help your listing stand out in search results</li>
-              <li>Only select badges that accurately describe your property</li>
-              <li>You can add more badge types in the future as they become available</li>
+              <li>Select the badge that best describes your property</li>
+              <li>Click on a selected badge to deselect it</li>
             </ul>
           </div>
         </div>
