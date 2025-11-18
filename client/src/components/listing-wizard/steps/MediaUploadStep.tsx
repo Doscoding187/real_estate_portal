@@ -7,13 +7,18 @@ import React, { useState, useCallback, useRef } from 'react';
 import { useListingWizardStore } from '@/hooks/useListingWizard';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Upload, X, Image as ImageIcon, Video, FileText, AlertCircle } from 'lucide-react';
+import { Upload, X, Image as ImageIcon, Video, FileText, AlertCircle, Play } from 'lucide-react';
 import { trpc } from '@/lib/trpc';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import type { MediaFile as ListingMediaFile } from '@/../../shared/listing-types';
 
 const MediaUploadStep: React.FC = () => {
-  const { media, addMedia, removeMedia, setMainMedia } = useListingWizardStore();
+  const store: any = useListingWizardStore();
+  const media = store.media || [];
+  const addMedia = store.addMedia;
+  const removeMedia = store.removeMedia;
+  const setMainMedia = store.setMainMedia;
+
   const [isDragging, setIsDragging] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -42,69 +47,70 @@ const MediaUploadStep: React.FC = () => {
   };
 
   // Validate file
-  const validateFile = (
-    file: File,
-  ): { isValid: boolean; error?: string; type?: ListingMediaFile['type'] } => {
-    const fileType = file.type;
-    const fileName = file.name.toLowerCase();
-    const fileSizeMB = file.size / (1024 * 1024);
+  const validateFile = useCallback(
+    (file: File): { isValid: boolean; error?: string; type?: ListingMediaFile['type'] } => {
+      const fileType = file.type;
+      const fileName = file.name.toLowerCase();
+      const fileSizeMB = file.size / (1024 * 1024);
 
-    // Determine media type
-    let mediaType: ListingMediaFile['type'] | undefined;
+      // Determine media type
+      let mediaType: ListingMediaFile['type'] | undefined;
 
-    if (fileType.startsWith('image/')) {
-      mediaType = 'image';
-      if (mediaCounts.images >= MEDIA_LIMITS.maxImages) {
-        return { isValid: false, error: `Maximum ${MEDIA_LIMITS.maxImages} images allowed` };
-      }
-      if (fileSizeMB > MEDIA_LIMITS.maxImageSizeMB) {
-        return {
-          isValid: false,
-          error: `Image size exceeds ${MEDIA_LIMITS.maxImageSizeMB}MB limit`,
-        };
-      }
-      if (!['image/jpeg', 'image/jpg', 'image/png', 'image/webp'].includes(fileType)) {
-        return { isValid: false, error: 'Only JPG, PNG, and WebP images are allowed' };
-      }
-    } else if (fileType.startsWith('video/')) {
-      mediaType = 'video';
-      if (mediaCounts.videos >= MEDIA_LIMITS.maxVideos) {
-        return { isValid: false, error: `Maximum ${MEDIA_LIMITS.maxVideos} videos allowed` };
-      }
-      if (fileSizeMB > MEDIA_LIMITS.maxVideoSizeMB) {
-        return {
-          isValid: false,
-          error: `Video size exceeds ${MEDIA_LIMITS.maxVideoSizeMB}MB limit`,
-        };
-      }
-    } else if (fileType === 'application/pdf' || fileName.endsWith('.pdf')) {
-      // Check if it's a floorplan or document
-      if (fileName.includes('floor') || fileName.includes('plan')) {
-        mediaType = 'floorplan';
-        if (mediaCounts.floorplans >= MEDIA_LIMITS.maxFloorplans) {
+      if (fileType.startsWith('image/')) {
+        mediaType = 'image';
+        if (mediaCounts.images >= MEDIA_LIMITS.maxImages) {
+          return { isValid: false, error: `Maximum ${MEDIA_LIMITS.maxImages} images allowed` };
+        }
+        if (fileSizeMB > MEDIA_LIMITS.maxImageSizeMB) {
           return {
             isValid: false,
-            error: `Maximum ${MEDIA_LIMITS.maxFloorplans} floorplans allowed`,
+            error: `Image size exceeds ${MEDIA_LIMITS.maxImageSizeMB}MB limit`,
           };
         }
-      } else {
-        mediaType = 'pdf';
-        if (mediaCounts.pdfs >= MEDIA_LIMITS.maxPdfs) {
-          return { isValid: false, error: `Maximum ${MEDIA_LIMITS.maxPdfs} documents allowed` };
+        if (!['image/jpeg', 'image/jpg', 'image/png', 'image/webp'].includes(fileType)) {
+          return { isValid: false, error: 'Only JPG, PNG, and WebP images are allowed' };
         }
+      } else if (fileType.startsWith('video/')) {
+        mediaType = 'video';
+        if (mediaCounts.videos >= MEDIA_LIMITS.maxVideos) {
+          return { isValid: false, error: `Maximum ${MEDIA_LIMITS.maxVideos} videos allowed` };
+        }
+        if (fileSizeMB > MEDIA_LIMITS.maxVideoSizeMB) {
+          return {
+            isValid: false,
+            error: `Video size exceeds ${MEDIA_LIMITS.maxVideoSizeMB}MB limit`,
+          };
+        }
+      } else if (fileType === 'application/pdf' || fileName.endsWith('.pdf')) {
+        // Check if it's a floorplan or document
+        if (fileName.includes('floor') || fileName.includes('plan')) {
+          mediaType = 'floorplan';
+          if (mediaCounts.floorplans >= MEDIA_LIMITS.maxFloorplans) {
+            return {
+              isValid: false,
+              error: `Maximum ${MEDIA_LIMITS.maxFloorplans} floorplans allowed`,
+            };
+          }
+        } else {
+          mediaType = 'pdf';
+          if (mediaCounts.pdfs >= MEDIA_LIMITS.maxPdfs) {
+            return { isValid: false, error: `Maximum ${MEDIA_LIMITS.maxPdfs} documents allowed` };
+          }
+        }
+        if (fileSizeMB > 10) {
+          return { isValid: false, error: 'PDF size exceeds 10MB limit' };
+        }
+      } else {
+        return {
+          isValid: false,
+          error: 'Unsupported file type. Please upload images, videos, or PDFs.',
+        };
       }
-      if (fileSizeMB > 10) {
-        return { isValid: false, error: 'PDF size exceeds 10MB limit' };
-      }
-    } else {
-      return {
-        isValid: false,
-        error: 'Unsupported file type. Please upload images, videos, or PDFs.',
-      };
-    }
 
-    return { isValid: true, type: mediaType };
-  };
+      return { isValid: true, type: mediaType };
+    },
+    [mediaCounts],
+  );
 
   // Get video metadata
   const getVideoMetadata = (
@@ -145,30 +151,33 @@ const MediaUploadStep: React.FC = () => {
   };
 
   // Upload file
-  const uploadFile = async (mediaFile: any): Promise<any> => {
-    try {
-      // For now, we'll just add the media to the store without actual upload
-      // In a real implementation, this would upload to S3/Cloud storage
+  const uploadFile = useCallback(
+    async (mediaFile: any): Promise<any> => {
+      try {
+        // For now, we'll just add the media to the store without actual upload
+        // In a real implementation, this would upload to S3/Cloud storage
 
-      const newMediaItem = {
-        id: Date.now(),
-        url: mediaFile.preview,
-        type: mediaFile.type,
-        fileName: mediaFile.name,
-        fileSize: mediaFile.size,
-        displayOrder: media.length,
-        isPrimary: media.length === 0, // First media is primary by default
-        processingStatus: 'completed',
-      };
+        const newMediaItem = {
+          id: Date.now(),
+          url: mediaFile.preview,
+          type: mediaFile.type,
+          fileName: mediaFile.name,
+          fileSize: mediaFile.size,
+          displayOrder: media.length,
+          isPrimary: media.length === 0, // First media is primary by default
+          processingStatus: 'completed',
+        };
 
-      addMedia(newMediaItem);
+        addMedia(newMediaItem);
 
-      return newMediaItem;
-    } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : 'Upload failed';
-      throw err;
-    }
-  };
+        return newMediaItem;
+      } catch (err) {
+        const errorMsg = err instanceof Error ? err.message : 'Upload failed';
+        throw err;
+      }
+    },
+    [media.length, addMedia],
+  );
 
   // Handle files
   const handleFiles = useCallback(
@@ -245,7 +254,7 @@ const MediaUploadStep: React.FC = () => {
         }
       }
     },
-    [media, mediaCounts],
+    [validateFile, uploadFile],
   );
 
   // Drag and drop handlers
@@ -292,6 +301,101 @@ const MediaUploadStep: React.FC = () => {
   // Open file picker
   const openFilePicker = () => {
     fileInputRef.current?.click();
+  };
+
+  // Helper function to render media preview
+  const renderMediaPreview = (item: ListingMediaFile) => {
+    if (item.type === 'image' && item.url) {
+      return (
+        <div className="aspect-video bg-gray-100 flex items-center justify-center">
+          <img src={item.url} alt="Primary media" className="w-full h-full object-cover" />
+        </div>
+      );
+    }
+
+    if (item.type === 'video') {
+      return (
+        <div className="aspect-video bg-gray-900 flex items-center justify-center relative">
+          <Video className="h-12 w-12 text-white" />
+          {item.duration && (
+            <span className="absolute bottom-2 right-2 bg-black/70 text-white text-xs px-1 rounded">
+              {Math.floor(item.duration / 60)}:
+              {String(Math.floor(item.duration % 60)).padStart(2, '0')}
+            </span>
+          )}
+          <div className="absolute inset-0 flex items-center justify-center">
+            <Button variant="secondary" size="icon" className="bg-black/50 hover:bg-black/70">
+              <Play className="h-6 w-6 text-white" />
+            </Button>
+          </div>
+        </div>
+      );
+    }
+
+    if (item.type === 'floorplan') {
+      return (
+        <div className="aspect-video bg-blue-50 flex items-center justify-center">
+          <FileText className="h-12 w-12 text-blue-500" />
+        </div>
+      );
+    }
+
+    if (item.type === 'pdf') {
+      return (
+        <div className="aspect-video bg-red-50 flex items-center justify-center">
+          <FileText className="h-12 w-12 text-red-500" />
+        </div>
+      );
+    }
+
+    return (
+      <div className="aspect-video bg-gray-100 flex items-center justify-center">
+        <FileText className="h-12 w-12 text-gray-400" />
+      </div>
+    );
+  };
+
+  // Helper function to render media thumbnails
+  const renderMediaThumbnail = (item: ListingMediaFile) => {
+    if (item.type === 'image' && item.url) {
+      return <img src={item.url} alt={`Media ${item.id}`} className="w-full h-full object-cover" />;
+    }
+
+    if (item.type === 'video') {
+      return (
+        <div className="w-full h-full bg-gray-900 flex items-center justify-center">
+          <Video className="h-6 w-6 text-white" />
+          {item.duration && (
+            <span className="absolute bottom-1 right-1 bg-black/70 text-white text-xs px-1 rounded">
+              {Math.floor(item.duration / 60)}:
+              {String(Math.floor(item.duration % 60)).padStart(2, '0')}
+            </span>
+          )}
+        </div>
+      );
+    }
+
+    if (item.type === 'floorplan') {
+      return (
+        <div className="w-full h-full bg-blue-100 flex items-center justify-center">
+          <FileText className="h-6 w-6 text-blue-500" />
+        </div>
+      );
+    }
+
+    if (item.type === 'pdf') {
+      return (
+        <div className="w-full h-full bg-red-100 flex items-center justify-center">
+          <FileText className="h-6 w-6 text-red-500" />
+        </div>
+      );
+    }
+
+    return (
+      <div className="w-full h-full bg-gray-100 flex items-center justify-center">
+        <FileText className="h-6 w-6 text-gray-400" />
+      </div>
+    );
   };
 
   return (
@@ -342,90 +446,135 @@ const MediaUploadStep: React.FC = () => {
         <p className="text-xs text-gray-500 mt-2">Supported: JPG, PNG, WebP, MP4, MOV, PDF</p>
       </div>
 
-      {/* Media Grid */}
+      {/* Primary Media Preview */}
       {media.length > 0 && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-          {media.map((item: ListingMediaFile, index: number) => (
-            <div
-              key={item.id || index}
-              className="relative group rounded-lg border bg-card overflow-hidden aspect-square"
-            >
-              {/* Media Preview */}
-              {item.type === 'image' && item.url && (
-                <img
-                  src={item.url}
-                  alt={`Media ${index + 1}`}
-                  className="w-full h-full object-cover"
-                />
-              )}
-
-              {item.type === 'video' && (
-                <div className="w-full h-full bg-gray-100 flex items-center justify-center">
-                  <Video className="h-8 w-8 text-gray-400" />
-                  {item.duration && (
-                    <span className="absolute bottom-2 right-2 bg-black/70 text-white text-xs px-1 rounded">
-                      {Math.floor(item.duration / 60)}:
-                      {String(Math.floor(item.duration % 60)).padStart(2, '0')}
-                    </span>
-                  )}
+        <div className="space-y-4">
+          <h4 className="font-medium">Primary Display Media</h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Primary Media */}
+            {media.find((m: ListingMediaFile) => m.isPrimary) ? (
+              <div className="border rounded-lg overflow-hidden">
+                {renderMediaPreview(media.find((m: ListingMediaFile) => m.isPrimary)!)}
+                <div className="p-3 bg-gray-50 flex justify-between items-center">
+                  <span className="text-sm font-medium text-primary">Primary Media</span>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      const primaryMedia = media.find((m: ListingMediaFile) => m.isPrimary);
+                      if (primaryMedia) {
+                        removeMediaFile(
+                          primaryMedia.id?.toString() || media.indexOf(primaryMedia).toString(),
+                        );
+                      }
+                    }}
+                  >
+                    Remove
+                  </Button>
                 </div>
-              )}
-
-              {item.type === 'floorplan' && (
-                <div className="w-full h-full bg-blue-50 flex items-center justify-center">
-                  <FileText className="h-8 w-8 text-blue-500" />
-                </div>
-              )}
-
-              {item.type === 'pdf' && (
-                <div className="w-full h-full bg-red-50 flex items-center justify-center">
-                  <FileText className="h-8 w-8 text-red-500" />
-                </div>
-              )}
-
-              {/* Primary Badge */}
-              {item.isPrimary && (
-                <div className="absolute top-2 left-2 bg-primary text-primary-foreground text-xs font-medium px-2 py-1 rounded">
-                  Primary
-                </div>
-              )}
-
-              {/* Media Type Badge */}
-              <div className="absolute top-2 right-2 bg-black/50 text-white text-xs font-medium px-1.5 py-0.5 rounded capitalize">
-                {item.type}
               </div>
+            ) : (
+              <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
+                <ImageIcon className="w-12 h-12 mx-auto text-gray-400 mb-4" />
+                <p className="text-gray-600">No primary media selected</p>
+                <p className="text-sm text-gray-500 mt-2">
+                  Upload an image or video to set as primary display
+                </p>
+              </div>
+            )}
 
-              {/* Remove Button */}
-              <Button
-                type="button"
-                variant="destructive"
-                size="icon"
-                onClick={e => {
-                  e.stopPropagation();
-                  removeMediaFile(item.id?.toString() || index.toString());
-                }}
-                className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
+            {/* Gallery Preview */}
+            <div>
+              <h5 className="font-medium mb-3">
+                Gallery Media (
+                {media.length - (media.find((m: ListingMediaFile) => m.isPrimary) ? 1 : 0)} items)
+              </h5>
+              <div className="grid grid-cols-3 gap-2 max-h-64 overflow-y-auto p-2 border rounded-lg">
+                {media
+                  .filter((m: ListingMediaFile) => !m.isPrimary)
+                  .map((item: ListingMediaFile, index: number) => (
+                    <div
+                      key={item.id || index}
+                      className="relative group rounded border overflow-hidden aspect-square cursor-pointer"
+                      onClick={() => setAsPrimary(item.id?.toString() || index.toString())}
+                    >
+                      {renderMediaThumbnail(item)}
+                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+                        <span className="opacity-0 group-hover:opacity-100 text-white text-xs font-medium bg-black/50 px-2 py-1 rounded">
+                          Set Primary
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                {media.filter((m: ListingMediaFile) => !m.isPrimary).length === 0 && (
+                  <div className="col-span-3 text-center py-4 text-gray-500">
+                    <p className="text-sm">No additional gallery media</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Media Grid (Additional uploads) */}
+      {media.length > 0 && (
+        <div>
+          <h4 className="font-medium mb-3">All Uploaded Media</h4>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+            {media.map((item: ListingMediaFile, index: number) => (
+              <div
+                key={item.id || index}
+                className="relative group rounded-lg border bg-card overflow-hidden aspect-square"
               >
-                <X className="h-4 w-4" />
-              </Button>
+                {/* Media Preview */}
+                {renderMediaThumbnail(item)}
 
-              {/* Set as Primary Button */}
-              {!item.isPrimary && (
+                {/* Primary Badge */}
+                {item.isPrimary && (
+                  <div className="absolute top-2 left-2 bg-primary text-primary-foreground text-xs font-medium px-2 py-1 rounded">
+                    Primary
+                  </div>
+                )}
+
+                {/* Media Type Badge */}
+                <div className="absolute top-2 right-2 bg-black/50 text-white text-xs font-medium px-1.5 py-0.5 rounded capitalize">
+                  {item.type}
+                </div>
+
+                {/* Remove Button */}
                 <Button
                   type="button"
-                  variant="secondary"
-                  size="sm"
+                  variant="destructive"
+                  size="icon"
                   onClick={e => {
                     e.stopPropagation();
-                    setAsPrimary(item.id?.toString() || index.toString());
+                    removeMediaFile(item.id?.toString() || index.toString());
                   }}
-                  className="absolute bottom-2 left-2 text-xs h-6 px-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                  className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
                 >
-                  Set Primary
+                  <X className="h-4 w-4" />
                 </Button>
-              )}
-            </div>
-          ))}
+
+                {/* Set as Primary Button */}
+                {!item.isPrimary && (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    onClick={e => {
+                      e.stopPropagation();
+                      setAsPrimary(item.id?.toString() || index.toString());
+                    }}
+                    className="absolute bottom-2 left-2 text-xs h-6 px-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    Set Primary
+                  </Button>
+                )}
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
