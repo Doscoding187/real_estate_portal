@@ -89,6 +89,115 @@ export interface SharedLivingFields {
   depositRequired?: number;
 }
 
+// New interfaces for the additional requirements
+export type PropertySetting =
+  | 'apartment'
+  | 'house'
+  | 'farm'
+  | 'land'
+  | 'commercial'
+  | 'shared_living';
+
+export type ParkingType = 'open' | 'covered' | 'garage' | 'none';
+
+export type AdditionalRoom =
+  | 'pantry'
+  | 'laundry_room'
+  | 'study'
+  | 'storeroom'
+  | 'walk_in_closet'
+  | 'utility_room'
+  | string; // For custom room names
+
+export type Amenity =
+  | 'pool'
+  | 'gym'
+  | 'clubhouse'
+  | 'braai_area'
+  | 'kids_play_area'
+  | 'elevator'
+  | 'garden'
+  | 'backup_power'
+  | 'fibre_ready'
+  | 'parking_bay'
+  | 'access_control'
+  | 'cctv'
+  | 'electric_fence'
+  | 'security_guard_house'
+  | 'borehole';
+
+// 12-Item Standard Set
+export type OwnershipType =
+  | 'sectional_title'
+  | 'freehold'
+  | 'estate_living'
+  | 'complex'
+  | 'gated_community';
+
+export type PowerBackup = 'solar_system' | 'inverter_battery' | 'generator' | 'none';
+
+export type ElectricitySource = 'prepaid' | 'municipal' | 'eskom' | 'solar_supplemented';
+
+export type SecurityLevel =
+  | '24_hour_security'
+  | 'cctv'
+  | 'access_control'
+  | 'security_patrol'
+  | 'electric_fence'
+  | 'standard';
+
+export type InternetAvailability = 'fibre_ready' | 'adsl' | 'lte_wireless' | '5g' | 'none';
+
+export type WaterSupply = 'municipal' | 'prepaid' | 'borehole' | 'water_storage' | 'backup_tanks';
+
+export type Furnishing = 'unfurnished' | 'semi_furnished' | 'fully_furnished';
+
+export type FlooringType =
+  | 'tiles'
+  | 'laminated_wood'
+  | 'vinyl'
+  | 'carpet'
+  | 'hardwood'
+  | 'polished_concrete';
+
+export type WaterHeating =
+  | 'electric_geyser'
+  | 'solar_geyser'
+  | 'gas_water_heater'
+  | 'heat_pump'
+  | 'hybrid_system';
+
+// Extended property details interface
+export interface ExtendedPropertyDetails {
+  // Basic property details
+  propertySetting: PropertySetting;
+  bedrooms?: number;
+  bathrooms?: number;
+  parkingType?: ParkingType;
+  unitSizeM2?: number;
+  floorNumber?: number;
+
+  // Additional rooms
+  additionalRooms?: AdditionalRoom[];
+
+  // Amenities
+  amenities?: Amenity[];
+
+  // 12-Item Standard Set
+  ownershipType?: OwnershipType;
+  powerBackup?: PowerBackup;
+  ratesTaxes?: number;
+  electricitySource?: ElectricitySource;
+  securityLevel?: SecurityLevel;
+  petFriendly?: boolean;
+  internetAvailability?: InternetAvailability;
+  waterSupply?: WaterSupply;
+  furnishing?: Furnishing;
+  flooringType?: FlooringType;
+  leviesHoaOperatingCosts?: number;
+  waterHeating?: WaterHeating;
+}
+
 // Union type for all property details
 export type PropertyDetails =
   | ApartmentFields
@@ -96,7 +205,8 @@ export type PropertyDetails =
   | FarmFields
   | LandFields
   | CommercialFields
-  | SharedLivingFields;
+  | SharedLivingFields
+  | ExtendedPropertyDetails;
 
 // Step 3: Pricing Fields
 export interface SellPricing {

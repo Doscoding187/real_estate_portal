@@ -15,18 +15,20 @@ import { CheckCircle2, Circle } from 'lucide-react';
 import ActionStep from './steps/ActionStep';
 import PropertyTypeStep from './steps/PropertyTypeStep';
 import BadgesStep from './steps/BadgesStep';
+import PropertyDetailsStep from './steps/PropertyDetailsStep';
 import BasicInfoStep from './steps/BasicInfoStep';
 import PricingStep from './steps/PricingStep';
 import LocationStep from './steps/LocationStep';
 import MediaUploadStep from './steps/MediaUploadStep';
 import PreviewStep from './steps/PreviewStep';
 
-const TOTAL_STEPS = 8;
+const TOTAL_STEPS = 9;
 
 const STEP_TITLES = [
   'What are you doing?',
   'Property Type',
   'Listing Badges',
+  'Property Details',
   'Basic Information',
   'Pricing Details',
   'Location',
@@ -67,14 +69,16 @@ const ListingWizard: React.FC = () => {
       case 3:
         return <BadgesStep />;
       case 4:
-        return <BasicInfoStep />;
+        return <PropertyDetailsStep />;
       case 5:
-        return <PricingStep />;
+        return <BasicInfoStep />;
       case 6:
-        return <LocationStep />;
+        return <PricingStep />;
       case 7:
-        return <MediaUploadStep />;
+        return <LocationStep />;
       case 8:
+        return <MediaUploadStep />;
+      case 9:
         return <PreviewStep />;
       default:
         return <ActionStep />;
@@ -171,11 +175,12 @@ const ListingWizard: React.FC = () => {
                 'Select whether you want to sell, rent, or auction your property'}
               {currentStep === 2 && 'Choose the type of property you want to list'}
               {currentStep === 3 && 'Select optional badges to highlight your property features'}
-              {currentStep === 4 && 'Provide basic information about your property'}
-              {currentStep === 5 && 'Enter pricing and financial details'}
-              {currentStep === 6 && 'Pin your property location on the map'}
-              {currentStep === 7 && 'Upload images, videos, and documents'}
-              {currentStep === 8 && 'Review your listing before submitting'}
+              {currentStep === 4 && 'Provide detailed information about your property'}
+              {currentStep === 5 && 'Provide basic information about your property'}
+              {currentStep === 6 && 'Enter pricing and financial details'}
+              {currentStep === 7 && 'Pin your property location on the map'}
+              {currentStep === 8 && 'Upload images, videos, and documents'}
+              {currentStep === 9 && 'Review your listing before submitting'}
             </CardDescription>
           </CardHeader>
           <CardContent>{renderStep()}</CardContent>
