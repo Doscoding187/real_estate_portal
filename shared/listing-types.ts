@@ -32,6 +32,7 @@ export interface ApartmentFields {
   balcony?: boolean;
   petFriendly?: boolean;
   amenities?: ('pool' | 'gym' | 'lift' | 'security' | '24hr_security' | 'concierge' | 'fiber')[];
+  amenitiesFeatures?: string[];
 }
 
 export interface HouseFields {
@@ -46,6 +47,7 @@ export interface HouseFields {
   boundaryWalls?: boolean;
   security?: 'alarm' | 'electric_fence' | 'security_estate' | 'none';
   ratesTaxes?: number;
+  amenitiesFeatures?: string[];
 }
 
 export interface FarmFields {
@@ -57,6 +59,7 @@ export interface FarmFields {
   staffQuarters?: boolean;
   farmSuitability?: ('crops' | 'livestock' | 'game' | 'vineyards' | 'orchards')[];
   residenceIncluded?: boolean;
+  amenitiesFeatures?: string[];
 }
 
 export interface LandFields {
@@ -66,6 +69,7 @@ export interface LandFields {
   topography?: 'flat' | 'sloped' | 'mixed';
   developmentRights?: string;
   boundaryFences?: boolean;
+  amenitiesFeatures?: string[];
 }
 
 export interface CommercialFields {
@@ -77,6 +81,7 @@ export interface CommercialFields {
   zoningBusinessUse?: string;
   amenitiesCommercial?: ('reception' | 'kitchen' | 'boardroom' | 'server_room')[];
   pricePerM2?: number;
+  amenitiesFeatures?: string[];
 }
 
 export interface SharedLivingFields {
@@ -87,6 +92,7 @@ export interface SharedLivingFields {
   furnished?: boolean;
   internetIncluded?: boolean;
   depositRequired?: number;
+  amenitiesFeatures?: string[];
 }
 
 // New interfaces for the additional requirements
@@ -182,6 +188,9 @@ export interface ExtendedPropertyDetails {
 
   // Amenities
   amenities?: Amenity[];
+
+  // Amenities & Features
+  amenitiesFeatures?: string[];
 
   // 12-Item Standard Set
   ownershipType?: OwnershipType;

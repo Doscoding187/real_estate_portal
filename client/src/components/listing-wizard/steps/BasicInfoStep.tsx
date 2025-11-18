@@ -93,6 +93,16 @@ const BasicInfoStep: React.FC = () => {
         <h3 className="text-lg font-semibold mb-4">Property Details</h3>
         {renderPropertyFields()}
       </Card>
+
+      {/* Amenities & Features */}
+      <Card className="p-6">
+        <h3 className="text-lg font-semibold mb-4">Lifestyle & Amenities</h3>
+        <p className="text-gray-600 mb-4">
+          Select features that appeal to a buyer's desired way of living.
+        </p>
+
+        <AmenitiesFeaturesFields details={propertyDetails} updateDetail={updatePropertyDetail} />
+      </Card>
     </div>
   );
 };
@@ -473,5 +483,67 @@ const SharedLivingFields: React.FC<{ details: any; updateDetail: any }> = ({
     </div>
   </div>
 );
+
+// Amenities & Features Fields Component
+const AmenitiesFeaturesFields: React.FC<{ details: any; updateDetail: any }> = ({
+  details,
+  updateDetail,
+}) => {
+  // Define amenities & features options
+  const amenitiesOptions = [
+    { id: 'waterfront', label: 'Waterfront' },
+    { id: 'mountainView', label: 'Mountain View' },
+    { id: 'cityView', label: 'City View' },
+    { id: 'gatedCommunity', label: 'Gated Community' },
+    { id: 'swimmingPool', label: 'Swimming Pool' },
+    { id: 'garden', label: 'Garden' },
+    { id: 'smartHome', label: 'Smart Home' },
+    { id: 'fullyFurnished', label: 'Fully Furnished' },
+    { id: 'renovated', label: 'Renovated' },
+    { id: 'energyEfficient', label: 'Energy Efficient' },
+    { id: 'gym', label: 'Gym' },
+    { id: 'braaiArea', label: 'Braai Area' },
+    { id: 'joggingTrails', label: 'Jogging Trails' },
+    { id: 'kidsPlayArea', label: 'Kids Play Area' },
+    { id: 'balcony', label: 'Balcony' },
+    { id: 'openPlanLiving', label: 'Open Plan Living' },
+    { id: 'builtInCupboards', label: 'Built-in Cupboards' },
+    { id: 'ensuiteBathroom', label: 'Ensuite Bathroom' },
+  ];
+
+  // Handle checkbox change
+  const handleAmenityChange = (amenityId: string, checked: boolean) => {
+    // Get current amenities array or initialize as empty array
+    const currentAmenities = details.amenitiesFeatures || [];
+
+    if (checked) {
+      // Add amenity if checked
+      updateDetail('amenitiesFeatures', [...currentAmenities, amenityId]);
+    } else {
+      // Remove amenity if unchecked
+      updateDetail(
+        'amenitiesFeatures',
+        currentAmenities.filter((id: string) => id !== amenityId),
+      );
+    }
+  };
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+      {amenitiesOptions.map(amenity => (
+        <div key={amenity.id} className="flex items-center space-x-2">
+          <Checkbox
+            id={amenity.id}
+            checked={(details.amenitiesFeatures || []).includes(amenity.id)}
+            onCheckedChange={checked => handleAmenityChange(amenity.id, !!checked)}
+          />
+          <Label htmlFor={amenity.id} className="text-sm">
+            {amenity.label}
+          </Label>
+        </div>
+      ))}
+    </div>
+  );
+};
 
 export default BasicInfoStep;
