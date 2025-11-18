@@ -273,6 +273,15 @@ export const useListingWizardStore = create<ListingWizardStore>()(
         }
 
         if (state.currentStep >= 3) {
+          // Step 3 is Listing Badges - no required fields
+        }
+
+        if (state.currentStep >= 4) {
+          // Step 4 is Property Details - no required fields at step level
+        }
+
+        if (state.currentStep >= 5) {
+          // Step 5 is Basic Information - validate title and description
           if (!state.title || state.title.length < 10) {
             errors.push({ field: 'title', message: 'Title must be at least 10 characters' });
           }
@@ -284,19 +293,22 @@ export const useListingWizardStore = create<ListingWizardStore>()(
           }
         }
 
-        if (state.currentStep >= 4) {
+        if (state.currentStep >= 6) {
+          // Step 6 is Pricing Details - validate pricing information
           if (!state.pricing) {
             errors.push({ field: 'pricing', message: 'Please provide pricing information' });
           }
         }
 
-        if (state.currentStep >= 5) {
+        if (state.currentStep >= 7) {
+          // Step 7 is Location - validate location information
           if (!state.location) {
             errors.push({ field: 'location', message: 'Please provide location information' });
           }
         }
 
-        if (state.currentStep >= 6) {
+        if (state.currentStep >= 8) {
+          // Step 8 is Media Upload - validate media requirements
           if (state.media.length === 0) {
             errors.push({ field: 'media', message: 'Please upload at least one image or video' });
           }
