@@ -1,43 +1,37 @@
 import { useLocation } from 'wouter';
 import { useAuth } from '@/_core/hooks/useAuth';
-import { SoftDashboardLayout } from '@/components/layout/SoftDashboardLayout';
-import { GlassCard } from '@/components/ui/glass-card';
-import { PastelBadge } from '@/components/ui/pastel-badge';
+import { Navbar } from '@/components/Navbar';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { motion } from 'framer-motion';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Home,
   Heart,
   Eye,
+  Calendar,
+  MessageSquare,
   Search,
   Bell,
   Settings,
-  TrendingUp,
+  User,
 } from 'lucide-react';
 import { trpc } from '@/lib/trpc';
-
-const navItems = [
-  { icon: Home, label: 'Overview', path: '/dashboard' },
-  { icon: Heart, label: 'Favorites', path: '/favorites' },
-  { icon: Search, label: 'Search', path: '/properties' },
-  { icon: Bell, label: 'Notifications', path: '/dashboard/notifications' },
-  { icon: Settings, label: 'Settings', path: '/dashboard/settings' },
-];
 
 export default function UserDashboard() {
   const [, setLocation] = useLocation();
   const { isAuthenticated, user, loading } = useAuth();
 
-  // Fetch user dashboard data
+  // Fetch user dashboard data using existing TRPC endpoints
   const { data: favorites, isLoading: favoritesLoading } = trpc.favorites.list.useQuery();
 
   // Show loading spinner while auth is being checked
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#F4F7FA] flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600 mx-auto mb-4"></div>
-          <p className="text-slate-400">Loading...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading...</p>
         </div>
       </div>
     );
@@ -55,168 +49,210 @@ export default function UserDashboard() {
   }
 
   return (
-    <SoftDashboardLayout
-      navItems={navItems}
-      title="My Dashboard"
-      subtitle="Your personalized property search hub"
-    >
-      {/* Top KPI Area */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="grid grid-cols-4 gap-8 mb-12"
-      >
-        <div>
-          <p className="text-slate-400 text-sm mb-2">Favorites</p>
-          <p className="text-4xl font-bold text-slate-800">{favorites?.length || 0}</p>
-          <div className="flex items-center gap-2 mt-2">
-            <Heart className="h-4 w-4 text-rose-600" />
-            <span className="text-rose-600 text-sm font-medium">Saved</span>
-          </div>
+    <div className="min-h-screen bg-background">
+      <Navbar />
+      <div className="container mx-auto px-4 py-8">
+        <div className="flex items-center gap-3 mb-8">
+          <User className="h-8 w-8 text-primary" />
+          <h1 className="text-3xl font-bold">My Dashboard</h1>
+          <Badge variant="secondary">User</Badge>
         </div>
-        <div>
-          <p className="text-slate-400 text-sm mb-2">Recently Viewed</p>
-          <p className="text-4xl font-bold text-slate-800">0</p>
-        </div>
-        <div>
-          <p className="text-slate-400 text-sm mb-2">Saved Searches</p>
-          <p className="text-4xl font-bold text-slate-800">0</p>
-        </div>
-        <div>
-          <p className="text-slate-400 text-sm mb-2">Notifications</p>
-          <p className="text-4xl font-bold text-slate-800">0</p>
-        </div>
-      </motion.div>
 
-      {/* Main Content Grid */}
-      <div className="grid grid-cols-2 gap-8 mb-8">
-        {/* Favorite Properties */}
-        <motion.div
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.1 }}
-        >
-          <GlassCard className="p-8">
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <h3 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
-                  <Heart className="h-6 w-6 text-rose-600" />
-                  Favorite Properties
-                </h3>
-                <p className="text-slate-400 text-sm">Your saved properties</p>
-              </div>
-              <PastelBadge variant="rose">{favorites?.length || 0} Saved</PastelBadge>
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+          <Card>
+            <CardHeader className="pb-3">
+              <CardDescription>Favorites</CardDescription>
+              <CardTitle className="text-3xl">{favorites?.length || 0}</CardTitle>
+            </CardHeader>
+          </Card>
+          <Card>
+            <CardHeader className="pb-3">
+              <CardDescription>Recently Viewed</CardDescription>
+              <CardTitle className="text-3xl">0</CardTitle>
+            </CardHeader>
+          </Card>
+          <Card>
+            <CardHeader className="pb-3">
+              <CardDescription>Saved Searches</CardDescription>
+              <CardTitle className="text-3xl">0</CardTitle>
+            </CardHeader>
+          </Card>
+          <Card>
+            <CardHeader className="pb-3">
+              <CardDescription>Notifications</CardDescription>
+              <CardTitle className="text-3xl">0</CardTitle>
+            </CardHeader>
+          </Card>
+        </div>
+
+        {/* Main Content Tabs */}
+        <Tabs defaultValue="overview" className="w-full">
+          <TabsList className="grid w-full grid-cols-5">
+            <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="favorites">Favorites</TabsTrigger>
+            <TabsTrigger value="recent">Recently Viewed</TabsTrigger>
+            <TabsTrigger value="searches">Saved Searches</TabsTrigger>
+            <TabsTrigger value="notifications">Notifications</TabsTrigger>
+          </TabsList>
+
+          {/* Overview Tab */}
+          <TabsContent value="overview" className="space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Heart className="h-5 w-5" />
+                    Favorite Properties
+                  </CardTitle>
+                  <CardDescription>Your saved properties</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {favoritesLoading ? (
+                    <p className="text-muted-foreground">Loading favorites...</p>
+                  ) : (favorites?.length ?? 0) === 0 ? (
+                    <p className="text-muted-foreground">No favorites yet.</p>
+                  ) : (
+                    <ul className="space-y-3">
+                      {favorites!.slice(0, 5).map((property: any) => (
+                        <li
+                          key={property.id}
+                          className="flex items-center justify-between border-b pb-2"
+                        >
+                          <div className="flex-1">
+                            <div className="font-medium">{property.title}</div>
+                            <div className="text-sm text-muted-foreground">
+                              {property.city}, {property.province}
+                            </div>
+                          </div>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setLocation(`/property/${property.id}`)}
+                          >
+                            View
+                          </Button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Eye className="h-5 w-5" />
+                    Recently Viewed
+                  </CardTitle>
+                  <CardDescription>Properties you've recently viewed</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-muted-foreground">No recently viewed properties.</p>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
+          {/* Favorites Tab */}
+          <TabsContent value="favorites" className="space-y-4">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-2xl font-bold">My Favorite Properties</h2>
             </div>
 
             {favoritesLoading ? (
-              <p className="text-slate-400">Loading favorites...</p>
+              <p className="text-muted-foreground">Loading favorites...</p>
             ) : (favorites?.length ?? 0) === 0 ? (
-              <div className="text-center py-12">
-                <Heart className="h-16 w-16 text-slate-300 mx-auto mb-4" />
-                <p className="text-slate-400 mb-4">No favorites yet</p>
-                <Button
-                  onClick={() => setLocation('/properties')}
-                  className="bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-600 hover:to-pink-700"
-                >
-                  Browse Properties
-                </Button>
-              </div>
+              <Card>
+                <CardContent className="py-8 text-center">
+                  <Heart className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <p className="text-muted-foreground">You haven't favorited any properties yet.</p>
+                  <Button className="mt-4" onClick={() => setLocation('/properties')}>
+                    Browse Properties
+                  </Button>
+                </CardContent>
+              </Card>
             ) : (
-              <div className="space-y-4">
-                {favorites!.slice(0, 5).map((property: any) => (
-                  <div
-                    key={property.id}
-                    className="flex items-center justify-between p-4 rounded-2xl bg-white/50 hover:bg-white/70 transition-all"
-                  >
-                    <div className="flex-1">
-                      <div className="font-semibold text-slate-800">{property.title}</div>
-                      <div className="text-sm text-slate-500">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {favorites!.map((property: any) => (
+                  <Card key={property.id} className="hover:shadow-lg transition-shadow">
+                    <CardContent className="p-4">
+                      <div className="flex items-start justify-between mb-2">
+                        <h3 className="font-semibold text-lg line-clamp-1">{property.title}</h3>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setLocation(`/property/${property.id}`)}
+                        >
+                          View
+                        </Button>
+                      </div>
+                      <div className="text-sm text-muted-foreground mb-2">
                         {property.city}, {property.province}
                       </div>
-                      <div className="text-lg font-bold text-emerald-600 mt-1">
+                      <div className="text-lg font-bold text-primary">
                         R {property.price?.toLocaleString()}
                       </div>
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setLocation(`/property/${property.id}`)}
-                      className="rounded-xl"
-                    >
-                      View
-                    </Button>
-                  </div>
+                    </CardContent>
+                  </Card>
                 ))}
               </div>
             )}
-          </GlassCard>
-        </motion.div>
+          </TabsContent>
 
-        {/* Recently Viewed */}
-        <motion.div
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.2 }}
-        >
-          <GlassCard className="p-8">
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <h3 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
-                  <Eye className="h-6 w-6 text-blue-600" />
-                  Recently Viewed
-                </h3>
-                <p className="text-slate-400 text-sm">Properties you've checked out</p>
-              </div>
+          {/* Recently Viewed Tab */}
+          <TabsContent value="recent" className="space-y-4">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-2xl font-bold">Recently Viewed Properties</h2>
             </div>
 
-            <div className="text-center py-12">
-              <Eye className="h-16 w-16 text-slate-300 mx-auto mb-4" />
-              <p className="text-slate-400 mb-4">No recently viewed properties</p>
-              <Button
-                onClick={() => setLocation('/properties')}
-                className="bg-gradient-to-r from-blue-500 to-cyan-600 hover:from-blue-600 hover:to-cyan-700"
-              >
-                Explore Properties
+            <Card>
+              <CardContent className="py-8 text-center">
+                <Eye className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <p className="text-muted-foreground">You haven't viewed any properties recently.</p>
+                <Button className="mt-4" onClick={() => setLocation('/properties')}>
+                  Browse Properties
+                </Button>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Saved Searches Tab */}
+          <TabsContent value="searches" className="space-y-4">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-2xl font-bold">Saved Searches</h2>
+              <Button>
+                <Search className="h-4 w-4 mr-2" />
+                Save New Search
               </Button>
             </div>
-          </GlassCard>
-        </motion.div>
-      </div>
 
-      {/* Saved Searches */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.3 }}
-      >
-        <GlassCard className="p-8">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h3 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
-                <Search className="h-6 w-6 text-purple-600" />
-                Saved Searches
-              </h3>
-              <p className="text-slate-400 text-sm">Quick access to your search criteria</p>
+            <Card>
+              <CardContent className="py-8 text-center">
+                <Search className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <p className="text-muted-foreground">You haven't saved any searches yet.</p>
+                <Button className="mt-4" onClick={() => setLocation('/properties')}>
+                  Search Properties
+                </Button>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Notifications Tab */}
+          <TabsContent value="notifications" className="space-y-4">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-2xl font-bold">Notifications</h2>
             </div>
-            <Button className="bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700">
-              <Search className="h-4 w-4 mr-2" />
-              Save New Search
-            </Button>
-          </div>
 
-          <div className="text-center py-12">
-            <Search className="h-16 w-16 text-slate-300 mx-auto mb-4" />
-            <p className="text-slate-400 mb-4">No saved searches yet</p>
-            <Button
-              onClick={() => setLocation('/properties')}
-              variant="outline"
-              className="rounded-xl"
-            >
-              Search Properties
-            </Button>
-          </div>
-        </GlassCard>
-      </motion.div>
-    </SoftDashboardLayout>
+            <Card>
+              <CardContent className="py-8 text-center">
+                <Bell className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <p className="text-muted-foreground">No notifications at this time.</p>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+      </div>
+    </div>
   );
 }
