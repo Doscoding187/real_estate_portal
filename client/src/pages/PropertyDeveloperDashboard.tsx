@@ -30,20 +30,20 @@ const PropertyDeveloperDashboard: React.FC = () => {
 
   return (
     <SidebarProvider>
-      <div className="flex h-screen w-screen bg-gray-50 overflow-hidden">
+      <div className="flex h-screen w-screen bg-[#F4F7FA] overflow-hidden">
         <DeveloperSidebar active={activeSection} onChange={setActiveSection} />
         <div className="flex flex-col flex-1 min-w-0">
           {/* Header */}
-          <header className="bg-white shadow-sm z-10 flex-shrink-0">
+          <header className="bg-white/70 backdrop-blur-sm shadow-[0_4px_20px_rgba(8,_112,_184,_0.06)] z-10 flex-shrink-0">
             <div className="flex items-center justify-between p-4">
               <div>
-                <h1 className="typ-h1">Property Developer Dashboard</h1>
-                <p className="text-gray-500 text-sm">
+                <h1 className="text-3xl font-bold text-slate-800">Property Developer Dashboard</h1>
+                <p className="text-slate-500 text-sm">
                   Manage your developments and track performance
                 </p>
               </div>
               <div className="flex items-center space-x-4">
-                <button className="relative p-2 text-gray-500 hover:text-gray-700">
+                <button className="relative p-2 text-slate-500 hover:text-slate-700">
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path
                       strokeLinecap="round"
@@ -52,13 +52,13 @@ const PropertyDeveloperDashboard: React.FC = () => {
                       d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
                     />
                   </svg>
-                  <span className="absolute top-0 right-0 block h-2 w-2 rounded-full bg-red-500"></span>
+                  <span className="absolute top-0 right-0 block h-2 w-2 rounded-full bg-rose-500"></span>
                 </button>
                 <div className="flex items-center">
-                  <div className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center text-white font-medium">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white font-medium shadow-md">
                     SD
                   </div>
-                  <span className="ml-2 font-medium">Skyline Developments</span>
+                  <span className="ml-2 font-medium text-slate-800">Skyline Developments</span>
                 </div>
               </div>
             </div>

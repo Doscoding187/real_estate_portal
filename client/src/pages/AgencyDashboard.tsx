@@ -37,10 +37,10 @@ export default function AgencyDashboard() {
   // Show loading spinner while auth is being checked
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen bg-[#F4F7FA] flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600 mx-auto mb-4"></div>
+          <p className="text-slate-400">Loading...</p>
         </div>
       </div>
     );
@@ -58,18 +58,18 @@ export default function AgencyDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-[#F4F7FA]">
       <Navbar />
       <div className="container mx-auto px-4 py-8">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-3">
-            <Building2 className="h-8 w-8 text-primary" />
+            <Building2 className="h-8 w-8 text-emerald-600" />
             <div>
-              <h1 className="text-3xl font-bold">Agency Dashboard</h1>
-              <p className="text-muted-foreground">Monitor performance and manage your team</p>
+              <h1 className="text-4xl font-bold text-slate-800">Agency Dashboard</h1>
+              <p className="text-slate-500">Monitor performance and manage your team</p>
             </div>
-            <Badge variant="default">Agency Admin</Badge>
+            <Badge className="bg-gradient-to-r from-emerald-100 to-teal-100 text-emerald-700 border-emerald-200">Agency Admin</Badge>
           </div>
 
           <Button onClick={() => setLocation('/agency/agents')}>

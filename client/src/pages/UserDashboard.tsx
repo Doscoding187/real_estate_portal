@@ -28,10 +28,10 @@ export default function UserDashboard() {
   // Show loading spinner while auth is being checked
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen bg-[#F4F7FA] flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600 mx-auto mb-4"></div>
+          <p className="text-slate-400">Loading...</p>
         </div>
       </div>
     );
@@ -49,39 +49,39 @@ export default function UserDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-[#F4F7FA]">
       <Navbar />
       <div className="container mx-auto px-4 py-8">
         <div className="flex items-center gap-3 mb-8">
-          <User className="h-8 w-8 text-primary" />
-          <h1 className="text-3xl font-bold">My Dashboard</h1>
-          <Badge variant="secondary">User</Badge>
+          <User className="h-8 w-8 text-emerald-600" />
+          <h1 className="text-4xl font-bold text-slate-800">My Dashboard</h1>
+          <Badge className="bg-gradient-to-r from-emerald-100 to-teal-100 text-emerald-700 border-emerald-200">User</Badge>
         </div>
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <Card>
+          <Card className="bg-white/70 backdrop-blur-sm rounded-[1.5rem] border-white/40 shadow-[0_8px_30px_rgba(8,_112,_184,_0.06)] hover:shadow-[0_12px_40px_rgba(8,_112,_184,_0.1)] transition-all">
             <CardHeader className="pb-3">
-              <CardDescription>Favorites</CardDescription>
-              <CardTitle className="text-3xl">{favorites?.length || 0}</CardTitle>
+              <CardDescription className="text-slate-500">Favorites</CardDescription>
+              <CardTitle className="text-3xl text-slate-800">{favorites?.length || 0}</CardTitle>
             </CardHeader>
           </Card>
-          <Card>
+          <Card className="bg-white/70 backdrop-blur-sm rounded-[1.5rem] border-white/40 shadow-[0_8px_30px_rgba(8,_112,_184,_0.06)] hover:shadow-[0_12px_40px_rgba(8,_112,_184,_0.1)] transition-all">
             <CardHeader className="pb-3">
-              <CardDescription>Recently Viewed</CardDescription>
-              <CardTitle className="text-3xl">0</CardTitle>
+              <CardDescription className="text-slate-500">Recently Viewed</CardDescription>
+              <CardTitle className="text-3xl text-slate-800">0</CardTitle>
             </CardHeader>
           </Card>
-          <Card>
+          <Card className="bg-white/70 backdrop-blur-sm rounded-[1.5rem] border-white/40 shadow-[0_8px_30px_rgba(8,_112,_184,_0.06)] hover:shadow-[0_12px_40px_rgba(8,_112,_184,_0.1)] transition-all">
             <CardHeader className="pb-3">
-              <CardDescription>Saved Searches</CardDescription>
-              <CardTitle className="text-3xl">0</CardTitle>
+              <CardDescription className="text-slate-500">Saved Searches</CardDescription>
+              <CardTitle className="text-3xl text-slate-800">0</CardTitle>
             </CardHeader>
           </Card>
-          <Card>
+          <Card className="bg-white/70 backdrop-blur-sm rounded-[1.5rem] border-white/40 shadow-[0_8px_30px_rgba(8,_112,_184,_0.06)] hover:shadow-[0_12px_40px_rgba(8,_112,_184,_0.1)] transition-all">
             <CardHeader className="pb-3">
-              <CardDescription>Notifications</CardDescription>
-              <CardTitle className="text-3xl">0</CardTitle>
+              <CardDescription className="text-slate-500">Notifications</CardDescription>
+              <CardTitle className="text-3xl text-slate-800">0</CardTitle>
             </CardHeader>
           </Card>
         </div>
