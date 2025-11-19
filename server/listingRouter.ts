@@ -393,15 +393,10 @@ export const listingRouter = router({
   submitForReview: protectedProcedure
     .input(z.object({ listingId: z.number() }))
     .mutation(async ({ ctx, input }) => {
-      const userId = ctx.user?.id;
-      if (!userId) {
-        throw new TRPCError({ code: 'UNAUTHORIZED' });
-      }
-
       try {
         // Verify ownership
         const listing = await db.getListingById(input.listingId);
-        if (!listing || listing.userId !== userId) {
+        if (!listing || listing.userId !== ctx.user?.id) {
           throw new TRPCError({
             code: 'FORBIDDEN',
             message: 'Not authorized to submit this listing',
