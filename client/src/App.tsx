@@ -36,7 +36,7 @@ import { RequireSuperAdmin } from '@/components/RequireSuperAdmin';
 import { RequireRole } from '@/components/RequireRole';
 import SuperAdminDashboard from '@/pages/admin/SuperAdminDashboard';
 // Super Admin Dashboard Pages
-import CommandCenterOverview from './pages/admin/CommandCenterOverview';
+import OverviewPage from './pages/admin/OverviewPage';
 import AgenciesPage from './pages/admin/AgenciesPage';
 import UsersPage from './pages/admin/UsersPage';
 import DevelopersPage from './pages/admin/DevelopersPage';
@@ -80,7 +80,7 @@ function Router() {
         path="/admin"
         component={() => (
           <SuperAdminDashboard>
-            <CommandCenterOverview />
+            <OverviewPage />
           </SuperAdminDashboard>
         )}
       />
@@ -88,7 +88,7 @@ function Router() {
         path="/admin/overview"
         component={() => (
           <SuperAdminDashboard>
-            <CommandCenterOverview />
+            <OverviewPage />
           </SuperAdminDashboard>
         )}
       />
