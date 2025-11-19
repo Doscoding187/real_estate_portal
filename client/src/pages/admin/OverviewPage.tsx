@@ -41,23 +41,23 @@ const StatCard: React.FC<StatCardProps> = ({
   change,
 }) => {
   return (
-    <Card>
+    <Card className="bg-white/70 backdrop-blur-sm rounded-[1.5rem] border-white/40 shadow-[0_8px_30px_rgba(8,_112,_184,_0.06)] hover:shadow-[0_12px_40px_rgba(8,_112,_184,_0.1)] transition-all">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <div className={`p-2 rounded-full ${color}`}>{icon}</div>
         {trend && (
           <div className="flex items-center">
             {trend === 'up' ? (
-              <TrendingUp className="h-4 w-4 text-green-500" />
+              <TrendingUp className="h-4 w-4 text-emerald-500" />
             ) : (
-              <TrendingDown className="h-4 w-4 text-red-500" />
+              <TrendingDown className="h-4 w-4 text-rose-500" />
             )}
           </div>
         )}
       </CardHeader>
       <CardContent>
-        <div className="text-2xl font-bold">{value}</div>
-        <p className="text-xs text-muted-foreground">{label}</p>
-        {change && <p className="text-xs text-muted-foreground mt-1">{change}</p>}
+        <div className="text-2xl font-bold text-slate-800">{value}</div>
+        <p className="text-xs text-slate-500">{label}</p>
+        {change && <p className="text-xs text-slate-500 mt-1">{change}</p>}
       </CardContent>
     </Card>
   );
@@ -85,9 +85,9 @@ const RevenueChart: React.FC = () => {
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      <Card>
+      <Card className="bg-white/70 backdrop-blur-sm rounded-[1.5rem] border-white/40 shadow-[0_8px_30px_rgba(8,_112,_184,_0.06)]">
         <CardHeader>
-          <CardTitle>Revenue Overview</CardTitle>
+          <CardTitle className="text-slate-800">Revenue Overview</CardTitle>
         </CardHeader>
         <CardContent>
           <ResponsiveContainer width="100%" height={300}>
@@ -102,9 +102,9 @@ const RevenueChart: React.FC = () => {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="bg-white/70 backdrop-blur-sm rounded-[1.5rem] border-white/40 shadow-[0_8px_30px_rgba(8,_112,_184,_0.06)]">
         <CardHeader>
-          <CardTitle>User Growth</CardTitle>
+          <CardTitle className="text-slate-800">User Growth</CardTitle>
         </CardHeader>
         <CardContent>
           <ResponsiveContainer width="100%" height={300}>
@@ -195,8 +195,8 @@ const OverviewPage: React.FC = () => {
     <div>
       {/* Header */}
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-foreground">Dashboard Overview</h1>
-        <p className="text-muted-foreground">Welcome back! Here's what's happening today.</p>
+        <h1 className="text-4xl font-bold text-slate-800">Dashboard Overview</h1>
+        <p className="text-slate-500">Welcome back! Here's what's happening today.</p>
       </div>
 
       {/* Key Metrics */}
@@ -210,9 +210,9 @@ const OverviewPage: React.FC = () => {
       <RevenueChart />
 
       {/* Recent Activity */}
-      <Card className="mt-6">
+      <Card className="mt-6 bg-white/70 backdrop-blur-sm rounded-[1.5rem] border-white/40 shadow-[0_8px_30px_rgba(8,_112,_184,_0.06)]">
         <CardHeader>
-          <CardTitle>Recent Activity</CardTitle>
+          <CardTitle className="text-slate-800">Recent Activity</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
@@ -222,9 +222,9 @@ const OverviewPage: React.FC = () => {
                   <Activity className="h-4 w-4 text-blue-600" />
                 </div>
                 <div className="ml-3">
-                  <p className="text-sm font-medium text-foreground">{activity.user}</p>
-                  <p className="text-sm text-muted-foreground">{activity.action}</p>
-                  <p className="text-xs text-muted-foreground">{activity.time}</p>
+                  <p className="text-sm font-medium text-slate-800">{activity.user}</p>
+                  <p className="text-sm text-slate-500">{activity.action}</p>
+                  <p className="text-xs text-slate-400">{activity.time}</p>
                 </div>
               </div>
             ))}

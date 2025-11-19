@@ -54,8 +54,8 @@ export default function SuperAdminDashboard({ children }: { children: React.Reac
   // Show loading state while checking auth
   if (loading) {
     return (
-      <div className="flex h-screen items-center justify-center">
-        <span className="text-slate-600">Checking access…</span>
+      <div className="flex h-screen items-center justify-center bg-[#F4F7FA]">
+        <span className="text-slate-400">Checking access…</span>
       </div>
     );
   }
@@ -67,7 +67,7 @@ export default function SuperAdminDashboard({ children }: { children: React.Reac
   }
 
   return (
-    <div className="flex flex-col min-h-screen bg-background">
+    <div className="flex flex-col min-h-screen bg-[#F4F7FA]">
       <TopNavigationBar />
       <div className="flex flex-1">
         {/* Sidebar */}
