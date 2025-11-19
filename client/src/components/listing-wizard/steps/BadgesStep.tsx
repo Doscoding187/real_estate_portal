@@ -45,7 +45,7 @@ const BadgesStep: React.FC = () => {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {badgeTypes.map((badge: ListingBadge) => {
           const template = BADGE_TEMPLATES[badge];
           const isSelected = badges.includes(badge);
@@ -67,30 +67,28 @@ const BadgesStep: React.FC = () => {
                 </div>
               )}
 
-              <div className="p-4 flex items-center gap-4">
+              <div className="p-4 flex flex-col items-center text-center space-y-3">
                 {/* Badge Preview */}
-                <div className="flex-shrink-0">
-                  <Badge
-                    variant="secondary"
-                    className={`text-sm font-medium ${
-                      isSelected ? 'bg-blue-100 text-blue-700' : ''
-                    }`}
-                  >
-                    {template.label}
-                  </Badge>
-                </div>
+                <Badge
+                  variant="secondary"
+                  className={`text-sm font-medium ${
+                    isSelected ? 'bg-blue-100 text-blue-700' : ''
+                  }`}
+                >
+                  {template.label}
+                </Badge>
 
-                {/* Text Content */}
-                <div className="flex-1 min-w-0">
-                  <h3
-                    className={`text-lg font-bold transition-colors ${
-                      isSelected ? 'text-blue-600' : 'text-gray-900'
-                    }`}
-                  >
-                    {template.label}
-                  </h3>
-                  <p className="text-gray-600 text-sm mt-0.5">{template.description}</p>
-                </div>
+                {/* Label */}
+                <h3
+                  className={`text-lg font-bold transition-colors ${
+                    isSelected ? 'text-blue-600' : 'text-gray-900'
+                  }`}
+                >
+                  {template.label}
+                </h3>
+
+                {/* Description */}
+                <p className="text-gray-600 text-sm">{template.description}</p>
               </div>
             </Card>
           );
