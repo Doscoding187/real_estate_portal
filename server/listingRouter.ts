@@ -29,7 +29,7 @@ const createListingSchema = z.object({
     // Sell fields
     askingPrice: z.number().optional(),
     negotiable: z.boolean().optional(),
-    transferCostEstimate: z.number().optional(),
+    transferCostEstimate: z.number().nullable().optional(),
     // Rent fields
     monthlyRent: z.number().optional(),
     deposit: z.number().optional(),
@@ -53,8 +53,8 @@ const createListingSchema = z.object({
     postalCode: z.string().optional(),
     placeId: z.string().optional(),
   }),
-  mediaIds: z.array(z.number()),
-  mainMediaId: z.number().optional(),
+  mediaIds: z.array(z.string()),
+  mainMediaId: z.string().optional(),
   status: z.enum(['draft', 'pending_review']).optional(),
 });
 
