@@ -40,14 +40,14 @@ export function AgentDashboardOverview() {
   const [activeTab, setActiveTab] = useState('overview');
 
   return (
-    <div className="flex min-h-screen bg-background">
+    <div className="flex min-h-screen bg-[#F4F7FA]">
       {/* Main Content */}
       <div className="flex-1">
         {/* Header */}
-        <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b bg-background px-6">
+        <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b bg-white/70 backdrop-blur-sm shadow-sm px-6">
           <div className="flex-1">
-            <h1 className="text-2xl font-bold text-foreground">Dashboard Overview</h1>
-            <p className="text-sm text-muted-foreground">
+            <h1 className="text-3xl font-bold text-slate-800">Dashboard Overview</h1>
+            <p className="text-sm text-slate-500">
               Welcome back, John! Here's your performance summary.
             </p>
           </div>
@@ -105,9 +105,9 @@ export function AgentDashboardOverview() {
 
             <TabsContent value="overview" className="space-y-6">
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <Card>
+                <Card className="bg-white/70 backdrop-blur-sm rounded-[1.5rem] border-white/40 shadow-[0_8px_30px_rgba(8,_112,_184,_0.06)]">
                   <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
+                    <CardTitle className="flex items-center gap-2 text-slate-800">
                       <BarChart3 className="h-5 w-5" />
                       Performance Metrics
                     </CardTitle>
@@ -115,28 +115,28 @@ export function AgentDashboardOverview() {
                   <CardContent>
                     <div className="space-y-4">
                       <div className="flex justify-between items-center">
-                        <span className="text-muted-foreground">Conversion Rate</span>
-                        <span className="font-medium">24.8%</span>
+                        <span className="text-slate-500">Conversion Rate</span>
+                        <span className="font-medium text-slate-800">24.8%</span>
                       </div>
                       <div className="flex justify-between items-center">
-                        <span className="text-muted-foreground">Avg. Deal Size</span>
-                        <span className="font-medium">$425,000</span>
+                        <span className="text-slate-500">Avg. Deal Size</span>
+                        <span className="font-medium text-slate-800">$425,000</span>
                       </div>
                       <div className="flex justify-between items-center">
-                        <span className="text-muted-foreground">Response Time</span>
-                        <span className="font-medium">2.3 hours</span>
+                        <span className="text-slate-500">Response Time</span>
+                        <span className="font-medium text-slate-800">2.3 hours</span>
                       </div>
                       <div className="flex justify-between items-center">
-                        <span className="text-muted-foreground">Client Satisfaction</span>
-                        <span className="font-medium">4.8/5.0</span>
+                        <span className="text-slate-500">Client Satisfaction</span>
+                        <span className="font-medium text-slate-800">4.8/5.0</span>
                       </div>
                     </div>
                   </CardContent>
                 </Card>
 
-                <Card>
+                <Card className="bg-white/70 backdrop-blur-sm rounded-[1.5rem] border-white/40 shadow-[0_8px_30px_rgba(8,_112,_184,_0.06)]">
                   <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
+                    <CardTitle className="flex items-center gap-2 text-slate-800">
                       <PieChart className="h-5 w-5" />
                       Lead Sources
                     </CardTitle>

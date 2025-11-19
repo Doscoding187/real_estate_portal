@@ -40,17 +40,17 @@ export function AgentSidebar() {
   const [, setLocation] = useLocation();
 
   return (
-    <aside className="hidden lg:flex lg:flex-col lg:w-64 lg:fixed lg:inset-y-0 bg-background border-r">
+    <aside className="hidden lg:flex lg:flex-col lg:w-64 lg:fixed lg:inset-y-0 bg-white/70 backdrop-blur-xl border-r border-white/40 shadow-[0_8px_30px_rgba(8,_112,_184,_0.06)]">
       <div className="flex flex-col flex-1 min-h-0">
         {/* Logo */}
-        <div className="flex items-center h-16 flex-shrink-0 px-6 border-b">
-          <Building2 className="h-8 w-8 text-primary" />
-          <span className="ml-3 text-xl font-bold text-foreground">Agent Portal</span>
+        <div className="flex items-center h-16 flex-shrink-0 px-6 border-b border-white/40">
+          <Building2 className="h-8 w-8 text-emerald-600" />
+          <span className="ml-3 text-xl font-bold text-slate-800">Agent Portal</span>
         </div>
 
         {/* Quick Actions */}
-        <div className="px-3 pt-4 pb-3 border-b">
-          <h3 className="px-3 mb-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+        <div className="px-3 pt-4 pb-3 border-b border-white/40">
+          <h3 className="px-3 mb-2 text-xs font-semibold text-slate-500 uppercase tracking-wider">
             Quick Actions
           </h3>
           <div className="space-y-2">
@@ -80,8 +80,8 @@ export function AgentSidebar() {
               key={item.name}
               href={item.href}
               className={cn(
-                'flex items-center px-3 py-2.5 text-sm font-medium rounded-lg text-foreground hover:bg-accent hover:text-accent-foreground transition-colors',
-                window.location.pathname === item.href && 'bg-accent text-accent-foreground',
+                'flex items-center px-3 py-2.5 text-sm font-medium rounded-xl text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 transition-all',
+                window.location.pathname === item.href && 'bg-gradient-to-r from-emerald-100 to-teal-100 text-emerald-700 shadow-md',
               )}
             >
               <item.icon className="mr-3 h-5 w-5 flex-shrink-0" />
@@ -91,16 +91,16 @@ export function AgentSidebar() {
         </nav>
 
         {/* User Profile Section */}
-        <div className="flex-shrink-0 p-4 border-t">
+        <div className="flex-shrink-0 p-4 border-t border-white/40">
           <div className="flex items-center">
             <div className="flex-shrink-0">
-              <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                <span className="text-sm font-semibold text-primary">JD</span>
+              <div className="h-10 w-10 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-md">
+                <span className="text-sm font-semibold text-white">JD</span>
               </div>
             </div>
             <div className="ml-3">
-              <p className="text-sm font-medium text-foreground">John Doe</p>
-              <p className="text-xs text-muted-foreground">Premium Agent</p>
+              <p className="text-sm font-medium text-slate-800">John Doe</p>
+              <p className="text-xs text-slate-500">Premium Agent</p>
             </div>
           </div>
         </div>
