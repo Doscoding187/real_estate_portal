@@ -53,8 +53,10 @@ const createListingSchema = z.object({
     postalCode: z.string().optional(),
     placeId: z.string().optional(),
   }),
-  mediaIds: z.array(z.string()),
-  mainMediaId: z.string().optional(),
+  // Fix mediaIds to accept both strings and numbers, then convert to strings
+  mediaIds: z.array(z.union([z.string(), z.number()])),
+  // Fix mainMediaId to accept both string and number, then convert to number
+  mainMediaId: z.union([z.string(), z.number()]).optional(),
   status: z.enum(['draft', 'pending_review']).optional(),
 });
 
@@ -76,14 +78,24 @@ export const listingRouter = router({
         .replace(/^-+|-+$/g, '');
 
       // Prepare media array from mediaIds (which are S3 keys/URLs)
-      const media = input.mediaIds.map((id, index) => ({
-        id, // S3 key
-        url: id, // For now, use the ID as the URL (it's already the S3 key)
-        type: 'image' as const, // Default to image; adjust if you have type info
-        displayOrder: index,
-        isPrimary: input.mainMediaId ? id === input.mainMediaId : index === 0,
-        processingStatus: 'completed' as const,
-      }));
+      const media = input.mediaIds.map((id, index) => {
+        // Convert to string if it's a number
+        const stringId = typeof id === 'number' ? id.toString() : id;
+        // Convert mainMediaId to string for comparison
+        let mainMediaStringId = null;
+        if (input.mainMediaId) {
+          mainMediaStringId = typeof input.mainMediaId === 'number' ? input.mainMediaId.toString() : input.mainMediaId;
+        }
+        
+        return {
+          id: stringId, // S3 key
+          url: stringId, // For now, use the ID as the URL (it's already the S3 key)
+          type: 'image' as const, // Default to image; adjust if you have type info
+          displayOrder: index,
+          isPrimary: mainMediaStringId ? stringId === mainMediaStringId : index === 0,
+          processingStatus: 'completed' as const,
+        };
+      });
 
       // Create listing in database
       const listingId = await db.createListing({
@@ -465,7 +477,10 @@ export const listingRouter = router({
         return { success: true };
       } catch (error) {
         console.error('Error rejecting listing:', error);
-        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to reject listing' });
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to reject listing',
+        });
       }
     }),
 

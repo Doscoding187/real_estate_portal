@@ -16,6 +16,8 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Button } from '@/components/ui/button';
 import { CalendarIcon } from 'lucide-react';
 import { format } from 'date-fns';
+import { BondCalculator } from '@/components/BondCalculator';
+import { calculateTransferCosts, calculateMonthlyRepayment } from '@/lib/bond-calculator';
 import type { SellPricing, RentPricing, AuctionPricing } from '@/../../shared/listing-types';
 
 const PricingStep: React.FC = () => {
@@ -49,21 +51,31 @@ const SellPricingForm: React.FC<{
   pricing?: SellPricing;
   setPricing: (pricing: any) => void;
 }> = ({ pricing = {} as SellPricing, setPricing }) => {
+  const [showBondCalculator, setShowBondCalculator] = React.useState(false);
+  const [estimatedBondRepayment, setEstimatedBondRepayment] = React.useState<number | null>(null);
+
   const handleChange = (field: keyof SellPricing, value: any) => {
     setPricing({ ...pricing, [field]: value });
   };
 
-  const calculateTransferCost = (price: number) => {
-    // Simplified transfer cost calculation (South African rates)
-    // Actual calculation would be more complex
-    const transferDuty = price * 0.05; // 5% estimate
-    const bondCosts = price * 0.03; // 3% estimate
-    return Math.round(transferDuty + bondCosts);
-  };
-
+  // Auto-calculate transfer costs using accurate SA rates
   React.useEffect(() => {
     if (pricing.askingPrice && !pricing.transferCostEstimate) {
-      handleChange('transferCostEstimate', calculateTransferCost(pricing.askingPrice));
+      // Temporarily disable transfer cost calculation
+      // const costs = calculateTransferCosts(pricing.askingPrice);
+      // handleChange('transferCostEstimate', costs.total);
+    }
+  }, [pricing.askingPrice]);
+
+  // Calculate estimated bond repayment for display
+  React.useEffect(() => {
+    if (pricing.askingPrice) {
+      const monthlyPayment = calculateMonthlyRepayment(
+        pricing.askingPrice * 0.9, // 10% deposit assumption
+        11.75, // Current SA prime rate
+        20, // 20 year term
+      );
+      setEstimatedBondRepayment(monthlyPayment);
     }
   }, [pricing.askingPrice]);
 
@@ -93,6 +105,29 @@ const SellPricingForm: React.FC<{
             )}
           </div>
 
+          {/* Estimated Bond Repayment Preview */}
+          {estimatedBondRepayment && (
+            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium text-green-900">Estimated Bond Repayment</span>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowBondCalculator(!showBondCalculator)}
+                >
+                  {showBondCalculator ? 'Hide' : 'View'} Calculator
+                </Button>
+              </div>
+              <div className="text-2xl font-bold text-green-600">
+                R {Math.round(estimatedBondRepayment).toLocaleString('en-ZA')} /month
+              </div>
+              <p className="text-xs text-gray-600 mt-1">
+                Based on 10% deposit over 20 years at 11.75% p.a.
+              </p>
+            </div>
+          )}
+
           {/* Negotiable */}
           <div className="flex items-center space-x-2">
             <Checkbox
@@ -105,8 +140,8 @@ const SellPricingForm: React.FC<{
             </Label>
           </div>
 
-          {/* Transfer Cost Estimate */}
-          <div>
+          {/* Transfer Cost Estimate - REMOVED */}
+          {/* <div>
             <Label htmlFor="transferCostEstimate">Transfer Cost Estimate (R)</Label>
             <Input
               id="transferCostEstimate"
@@ -120,11 +155,16 @@ const SellPricingForm: React.FC<{
               min="0"
             />
             <p className="text-xs text-gray-500 mt-1">
-              Includes transfer duty, bond costs, and legal fees (estimated)
+              Includes transfer duty, bond costs, and legal fees (auto-calculated)
             </p>
-          </div>
+          </div> */}
         </div>
       </div>
+
+      {/* Bond Calculator */}
+      {showBondCalculator && pricing.askingPrice && (
+        <BondCalculator propertyPrice={pricing.askingPrice} showTransferCosts={true} />
+      )}
 
       {/* Pricing Tips */}
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
