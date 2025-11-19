@@ -12,6 +12,10 @@ import {
   scheduledViewings,
   recentlyViewed,
   agents,
+  // Add listings-related tables
+  listings,
+  listingMedia,
+  listingAnalytics,
 } from '../drizzle/schema';
 import { ENV } from './_core/env';
 
@@ -1604,86 +1608,85 @@ export async function createListing(listingData: any) {
   const db = await getDb();
   if (!db) throw new Error('Database not available');
 
-  // Start transaction
-  const connection = await db.getConnection();
   try {
-    await connection.beginTransaction();
+    // Use Drizzle transaction API
+    const listingId = await db.transaction(async (tx) => {
+      // Create listing record
+      // Convert latitude and longitude to strings to match schema
+      const [listingResult] = await tx.insert(listings).values({
+        userId: listingData.userId,
+        action: listingData.action,
+        propertyType: listingData.propertyType,
+        title: listingData.title,
+        description: listingData.description,
+        pricing: JSON.stringify(listingData.pricing),
+        propertyDetails: JSON.stringify(listingData.propertyDetails),
+        address: listingData.address,
+        latitude: String(listingData.latitude), // Convert to string
+        longitude: String(listingData.longitude), // Convert to string
+        city: listingData.city,
+        suburb: listingData.suburb,
+        province: listingData.province,
+        postalCode: listingData.postalCode,
+        placeId: listingData.placeId,
+        slug: listingData.slug,
+        status: 'draft',
+        approvalStatus: 'pending',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
 
-    // Create listing record
-    const [listingResult] = await connection.insert(listings).values({
-      userId: listingData.userId,
-      action: listingData.action,
-      propertyType: listingData.propertyType,
-      title: listingData.title,
-      description: listingData.description,
-      pricing: JSON.stringify(listingData.pricing),
-      propertyDetails: JSON.stringify(listingData.propertyDetails),
-      address: listingData.address,
-      latitude: listingData.latitude,
-      longitude: listingData.longitude,
-      city: listingData.city,
-      suburb: listingData.suburb,
-      province: listingData.province,
-      postalCode: listingData.postalCode,
-      placeId: listingData.placeId,
-      slug: listingData.slug,
-      status: 'draft',
-      approvalStatus: 'pending',
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    });
+      const newListingId = Number(listingResult.insertId);
 
-    const listingId = Number(listingResult.insertId);
+      // Create listing analytics record
+      await tx.insert(listingAnalytics).values({
+        listingId: newListingId,
+        totalViews: 0,
+        uniqueVisitors: 0,
+        totalLeads: 0,
+        contactFormLeads: 0,
+        whatsappClicks: 0,
+        phoneReveals: 0,
+        bookingViewingRequests: 0,
+        totalFavorites: 0,
+        totalShares: 0,
+        conversionRate: 0,
+        viewsByDay: '{}',
+        trafficSources: '{}',
+        lastUpdated: new Date(),
+      });
 
-    // Create listing analytics record
-    await connection.insert(listingAnalytics).values({
-      listingId,
-      totalViews: 0,
-      uniqueVisitors: 0,
-      totalLeads: 0,
-      contactFormLeads: 0,
-      whatsappClicks: 0,
-      phoneReveals: 0,
-      bookingViewingRequests: 0,
-      totalFavorites: 0,
-      totalShares: 0,
-      conversionRate: 0,
-      viewsByDay: '{}',
-      trafficSources: '{}',
-      lastUpdated: new Date(),
-    });
-
-    // Add media records
-    if (listingData.media && listingData.media.length > 0) {
-      for (const mediaItem of listingData.media) {
-        await connection.insert(listingMedia).values({
-          listingId,
-          url: mediaItem.url,
-          thumbnailUrl: mediaItem.thumbnailUrl,
-          type: mediaItem.type,
-          fileName: mediaItem.fileName,
-          fileSize: mediaItem.fileSize,
-          width: mediaItem.width,
-          height: mediaItem.height,
-          duration: mediaItem.duration,
-          orientation: mediaItem.orientation,
-          displayOrder: mediaItem.displayOrder,
-          isPrimary: mediaItem.isPrimary ? 1 : 0,
-          processingStatus: mediaItem.processingStatus,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        });
+      // Add media records
+      if (listingData.media && listingData.media.length > 0) {
+        for (const mediaItem of listingData.media) {
+          await tx.insert(listingMedia).values({
+            listingId: newListingId,
+            url: mediaItem.url,
+            thumbnailUrl: mediaItem.thumbnailUrl,
+            type: mediaItem.type,
+            fileName: mediaItem.fileName,
+            fileSize: mediaItem.fileSize,
+            width: mediaItem.width,
+            height: mediaItem.height,
+            duration: mediaItem.duration,
+            orientation: mediaItem.orientation,
+            displayOrder: mediaItem.displayOrder,
+            isPrimary: mediaItem.isPrimary ? 1 : 0,
+            processingStatus: mediaItem.processingStatus,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          });
+        }
       }
-    }
 
-    await connection.commit();
+      return newListingId;
+    });
+
     return listingId;
   } catch (error) {
-    await connection.rollback();
     console.error('[Database] Failed to create listing:', error);
+    console.error('[Database] Error details:', error.message);
     throw error;
-  } finally {
-    connection.release();
   }
 }
 
