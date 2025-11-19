@@ -262,7 +262,7 @@ export interface LocationData {
 export type MediaType = 'image' | 'video' | 'floorplan' | 'pdf';
 
 export interface MediaFile {
-  id?: number;
+  id?: string;
   file?: File;
   url: string;
   type: MediaType;
@@ -326,7 +326,7 @@ export interface ListingWizardState {
 
   // Step 5: Media
   media: MediaFile[];
-  mainMediaId?: number;
+  mainMediaId?: string;
   displayMediaType?: 'image' | 'video';
 
   // Validation
@@ -351,8 +351,8 @@ export interface CreateListingRequest {
   pricing: PricingFields;
   propertyDetails: Partial<PropertyDetails>;
   location: LocationData;
-  mediaIds: number[]; // IDs of uploaded media
-  mainMediaId?: number;
+  mediaIds: string[]; // IDs of uploaded media (S3 keys)
+  mainMediaId?: string;
   status?: 'draft' | 'pending_review';
 }
 

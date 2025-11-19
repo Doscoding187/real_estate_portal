@@ -46,7 +46,7 @@ const ListingWizard: React.FC = () => {
     setSubmitError(null);
 
     try {
-      // Prepare listing data with proper type conversions
+      // Prepare listing data with proper type handling (using string IDs)
       const listingData = {
         action: store.action!,
         propertyType: store.propertyType!,
@@ -55,28 +55,22 @@ const ListingWizard: React.FC = () => {
         pricing: {
           ...store.pricing!,
           // Ensure transferCostEstimate is either a number or undefined (not null)
-          ...(store.pricing!.transferCostEstimate !== null && 
-            store.pricing!.transferCostEstimate !== undefined && 
-            !isNaN(Number(store.pricing!.transferCostEstimate))
-            ? { transferCostEstimate: Number(store.pricing!.transferCostEstimate) }
+          // Only include for sell listings which have this field
+          ...('transferCostEstimate' in store.pricing! 
+            ? (store.pricing!.transferCostEstimate !== null && 
+               store.pricing!.transferCostEstimate !== undefined && 
+               !isNaN(Number(store.pricing!.transferCostEstimate))
+               ? { transferCostEstimate: Number(store.pricing!.transferCostEstimate) }
+               : {})
             : {}),
         },
         propertyDetails: store.propertyDetails || {},
         location: store.location!,
-        // Convert media IDs to numbers
-        mediaIds: store.media
-          .map((m: any) => {
-            // Handle both string and number IDs
-            const id = typeof m.id === 'string' ? parseInt(m.id, 10) : m.id;
-            return isNaN(id) ? 0 : id; // Fallback to 0 if parsing fails
-          })
-          .filter((id: number) => id > 0), // Remove invalid IDs
-        // Convert mainMediaId to number
-        mainMediaId: store.mainMediaId
-          ? typeof store.mainMediaId === 'string'
-            ? parseInt(store.mainMediaId, 10)
-            : store.mainMediaId
-          : undefined,
+        // Send media IDs as strings (no numeric conversion)
+        mediaIds: store.media.map((m: any) => m.id?.toString() || ''),
+        // Send mainMediaId as string or undefined
+        mainMediaId: store.mainMediaId?.toString() || 
+          (store.media.length > 0 ? store.media[0].id?.toString() : undefined),
         status: 'pending_review' as const,
       };
 
