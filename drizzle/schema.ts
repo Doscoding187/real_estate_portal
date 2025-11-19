@@ -1,5 +1,5 @@
 import { mysqlTable, mysqlSchema, AnyMySqlColumn, int, varchar, text, timestamp, foreignKey, mysqlEnum, index, decimal, json, boolean } from "drizzle-orm/mysql-core"
-import { sql } from "drizzle-orm"
+import { sql, type InferSelectModel, type InferInsertModel } from "drizzle-orm"
 
 export const agencies = mysqlTable("agencies", {
 	id: int().autoincrement().notNull(),
@@ -1224,3 +1224,27 @@ export const videos = mysqlTable("videos", {
 	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
 	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
 });
+
+export type User = InferSelectModel<typeof users>;
+export type InsertUser = InferInsertModel<typeof users>;
+
+export type Property = InferSelectModel<typeof properties>;
+export type InsertProperty = InferInsertModel<typeof properties>;
+
+export type PropertyImage = InferSelectModel<typeof propertyImages>;
+export type InsertPropertyImage = InferInsertModel<typeof propertyImages>;
+
+export type Agency = InferSelectModel<typeof agencies>;
+export type InsertAgency = InferInsertModel<typeof agencies>;
+
+export type Prospect = InferSelectModel<typeof prospects>;
+export type InsertProspect = InferInsertModel<typeof prospects>;
+
+export type Listing = InferSelectModel<typeof listings>;
+export type InsertListing = InferInsertModel<typeof listings>;
+
+export type ListingMedia = InferSelectModel<typeof listingMedia>;
+export type InsertListingMedia = InferInsertModel<typeof listingMedia>;
+
+export type ListingAnalytics = InferSelectModel<typeof listingAnalytics>;
+export type InsertListingAnalytics = InferInsertModel<typeof listingAnalytics>;

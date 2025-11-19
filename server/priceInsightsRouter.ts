@@ -531,14 +531,7 @@ export const priceInsightsRouter = router({
       switch (input.sortBy) {
         case 'interactions':
           // Use a subquery to count interactions
-          const interactionsQuery = db
-            .select({
-              suburbId: suburbs.id,
-              interactionCount: count(userBehaviorEvents.id),
-            })
-            .from(suburbs)
-            .leftJoin(userBehaviorEvents, eq(suburbs.id, userBehaviorEvents.suburbId))
-            .groupBy(suburbs.id);
+          // Optimization: Direct join is used below, no need for separate subquery
 
           const results = await db
             .select({

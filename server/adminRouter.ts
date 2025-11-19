@@ -403,10 +403,8 @@ export const adminRouter = router({
       const conditions: any[] = [];
       if (input.status) conditions.push(eq(properties.status, input.status));
       if (input.agencyId) {
-        // Join with agents to filter by agency
-        conditions.push(
-          sql`EXISTS (SELECT 1 FROM agents WHERE agents.id = properties.agentId AND agents.agencyId = ${input.agencyId})`,
-        );
+        // Filter by agency using the joined agents table
+        conditions.push(eq(agents.agencyId, input.agencyId));
       }
       if (input.search) {
         conditions.push(
@@ -434,6 +432,7 @@ export const adminRouter = router({
             featured: properties.featured,
           })
           .from(properties)
+          .leftJoin(agents, eq(properties.agentId, agents.id))
           .where(where)
           .limit(input.limit)
           .offset(offset)
@@ -441,6 +440,7 @@ export const adminRouter = router({
         db
           .select({ count: sql<number>`count(*)` })
           .from(properties)
+          .leftJoin(agents, eq(properties.agentId, agents.id))
           .where(where),
       ]);
 

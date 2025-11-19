@@ -17,6 +17,8 @@ import {
   listingMedia,
   listingAnalytics,
   listingApprovalQueue,
+  agencies,
+  commissions,
 } from '../drizzle/schema';
 import { ENV } from './_core/env';
 
@@ -1497,53 +1499,44 @@ export async function getPlatformAnalytics() {
     };
   }
 
-  const { agencies, properties, agents, commissions } = require('../drizzle/schema');
+  // Schema tables are already imported at top level
 
-  // Get counts
-  const [userCount] = await db.select({ count: sql<number>`count(*)` }).from(users);
-  const [agencyCount] = await db.select({ count: sql<number>`count(*)` }).from(agencies);
-  const [propertyCount] = await db.select({ count: sql<number>`count(*)` }).from(properties);
-  const [activePropertyCount] = await db
-    .select({ count: sql<number>`count(*)` })
-    .from(properties)
-    .where(eq(properties.status, 'available'));
-  const [agentCount] = await db.select({ count: sql<number>`count(*)` }).from(agents);
-  const [paidSubsCount] = await db
-    .select({ count: sql<number>`count(*)` })
-    .from(agencies)
-    .where(sql`${agencies.subscriptionPlan} != 'free'`);
+  // Get counts in a single query
+  const [counts] = await db.execute(sql`
+    SELECT
+      (SELECT COUNT(*) FROM ${users}) as userCount,
+      (SELECT COUNT(*) FROM ${agencies}) as agencyCount,
+      (SELECT COUNT(*) FROM ${properties}) as propertyCount,
+      (SELECT COUNT(*) FROM ${properties} WHERE ${properties.status} = 'available') as activePropertyCount,
+      (SELECT COUNT(*) FROM ${agents}) as agentCount,
+      (SELECT COUNT(*) FROM ${agencies} WHERE ${agencies.subscriptionPlan} != 'free') as paidSubsCount
+  `);
 
   // Monthly revenue (from commissions) - assume last 30 days
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-  const [monthlyRevenue] = await db
-    .select({ total: sql<number>`sum(${commissions.amount})` })
-    .from(commissions)
-    .where(sql`${commissions.createdAt} >= ${thirtyDaysAgo}`);
+  // Growth metrics
+  const [growth] = await db.execute(sql`
+    SELECT
+      (SELECT SUM(${commissions.amount}) FROM ${commissions} WHERE ${commissions.createdAt} >= ${thirtyDaysAgo}) as monthlyRevenue,
+      (SELECT COUNT(*) FROM ${users} WHERE ${users.createdAt} >= ${thirtyDaysAgo}) as userGrowth,
+      (SELECT COUNT(*) FROM ${properties} WHERE ${properties.createdAt} >= ${thirtyDaysAgo}) as propertyGrowth
+  `);
 
-  // User growth (new users in last 30 days)
-  const [recentUsers] = await db
-    .select({ count: sql<number>`count(*)` })
-    .from(users)
-    .where(sql`${users.createdAt} >= ${thirtyDaysAgo}`);
-
-  // Property growth (new properties in last 30 days)
-  const [recentProperties] = await db
-    .select({ count: sql<number>`count(*)` })
-    .from(properties)
-    .where(sql`${properties.createdAt} >= ${thirtyDaysAgo}`);
+  const countsRow = (counts as any)[0];
+  const growthRow = (growth as any)[0];
 
   return {
-    totalUsers: Number(userCount?.count || 0),
-    totalAgencies: Number(agencyCount?.count || 0),
-    totalProperties: Number(propertyCount?.count || 0),
-    activeProperties: Number(activePropertyCount?.count || 0),
-    totalAgents: Number(agentCount?.count || 0),
-    paidSubscriptions: Number(paidSubsCount?.count || 0),
-    monthlyRevenue: Number(monthlyRevenue?.total || 0) / 100, // Convert cents to currency units
-    userGrowth: Number(recentUsers?.count || 0),
-    propertyGrowth: Number(recentProperties?.count || 0),
+    totalUsers: Number(countsRow.userCount || 0),
+    totalAgencies: Number(countsRow.agencyCount || 0),
+    totalProperties: Number(countsRow.propertyCount || 0),
+    activeProperties: Number(countsRow.activePropertyCount || 0),
+    totalAgents: Number(countsRow.agentCount || 0),
+    paidSubscriptions: Number(countsRow.paidSubsCount || 0),
+    monthlyRevenue: Number(growthRow.monthlyRevenue || 0) / 100, // Convert cents to currency units
+    userGrowth: Number(growthRow.userGrowth || 0),
+    propertyGrowth: Number(growthRow.propertyGrowth || 0),
   };
 }
 
