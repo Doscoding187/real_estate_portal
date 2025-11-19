@@ -16,6 +16,7 @@ import {
   listings,
   listingMedia,
   listingAnalytics,
+  listingApprovalQueue,
 } from '../drizzle/schema';
 import { ENV } from './_core/env';
 
