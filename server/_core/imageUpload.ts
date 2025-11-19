@@ -24,6 +24,10 @@ if (useS3) {
   console.log(`   Region: ${ENV.awsRegion}`);
   console.log(`   Bucket: ${ENV.s3BucketName}`);
   console.log(`   CloudFront: ${ENV.cloudFrontUrl || 'Not configured (using S3 direct)'}`);
+  const maskedKey = ENV.awsAccessKeyId
+    ? `${ENV.awsAccessKeyId.slice(0, 4)}...${ENV.awsAccessKeyId.slice(-4)}`
+    : 'N/A';
+  console.log(`   AccessKeyId: ${maskedKey}`);
 
   s3Client = new S3Client({
     region: ENV.awsRegion,

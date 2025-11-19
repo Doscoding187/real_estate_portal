@@ -90,19 +90,14 @@ export function ImageUploader({
       // Construct the final URL using the CloudFront URL or S3 bucket URL
       let finalUrl: string;
 
-      // The key is the S3 object key, we need to prepend the CloudFront URL or S3 bucket URL
-      if (url.includes('cloudfront.net')) {
-        // Extract CloudFront domain from the presigned URL
-        const urlObj = new URL(url);
-        const cloudfrontDomain = `${urlObj.protocol}//${urlObj.hostname}`;
-        finalUrl = `${cloudfrontDomain}/${key}`;
-      } else if (url.includes('s3.amazonaws.com')) {
-        // Extract S3 bucket URL from the presigned URL
-        const urlObj = new URL(url);
-        finalUrl = `${urlObj.protocol}//${urlObj.hostname}/${key}`;
+      // Use the CloudFront URL from environment variables if available, otherwise construct S3 URL
+      const cloudFrontUrl = import.meta.env.VITE_CLOUDFRONT_URL;
+      const s3BucketUrl = `https://${import.meta.env.VITE_S3_BUCKET_NAME}.s3.${import.meta.env.VITE_AWS_REGION}.amazonaws.com`;
+      
+      if (cloudFrontUrl) {
+        finalUrl = `${cloudFrontUrl}/${key}`;
       } else {
-        // Storage proxy - use the key as-is
-        finalUrl = key;
+        finalUrl = `${s3BucketUrl}/${key}`;
       }
 
       console.log('[Upload] File uploaded successfully:', finalUrl);
