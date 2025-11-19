@@ -46,8 +46,8 @@ const PropertyTypeStep: React.FC = () => {
   const filteredTypes = getFilteredPropertyTypes();
 
   return (
-    <div className="py-8">
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    <div className="py-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {filteredTypes.map(type => {
           const template = PROPERTY_TYPE_TEMPLATES[type];
           const isSelected = propertyType === type;
@@ -56,29 +56,31 @@ const PropertyTypeStep: React.FC = () => {
             <Card
               key={type}
               onClick={() => handleSelect(type)}
-              className={`relative cursor-pointer transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 ${
+              className={`relative cursor-pointer transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5 ${
                 isSelected
-                  ? 'border-2 border-blue-500 shadow-xl bg-gradient-to-br from-blue-50 to-white'
+                  ? 'border-2 border-blue-500 shadow-lg bg-gradient-to-br from-blue-50 to-white'
                   : 'border-2 border-gray-200 hover:border-gray-300 bg-white'
               }`}
             >
               {/* Selection Indicator */}
               {isSelected && (
-                <div className="absolute top-4 right-4 bg-blue-500 rounded-full p-1">
-                  <Check className="w-5 h-5 text-white" />
+                <div className="absolute top-3 right-3 bg-blue-500 rounded-full p-1">
+                  <Check className="w-4 h-4 text-white" />
                 </div>
               )}
 
-              <div className="p-6 flex flex-col space-y-4">
+              <div className="p-4 flex items-center gap-4">
                 {/* Icon */}
                 <div
-                  className={`transition-all ${isSelected ? 'scale-110' : 'scale-100'}`}
+                  className={`flex-shrink-0 p-3 rounded-xl transition-all ${
+                    isSelected ? 'bg-blue-100' : 'bg-gray-100'
+                  }`}
                 >
                   {(() => {
                     const IconComponent = ICON_MAP[template.icon];
                     return IconComponent ? (
                       <IconComponent
-                        className={`w-12 h-12 ${
+                        className={`w-8 h-8 ${
                           isSelected ? 'text-blue-600' : 'text-gray-600'
                         }`}
                       />
@@ -86,76 +88,35 @@ const PropertyTypeStep: React.FC = () => {
                   })()}
                 </div>
 
-                {/* Label */}
-                <h3
-                  className={`text-xl font-bold transition-colors ${
-                    isSelected ? 'text-blue-600' : 'text-gray-900'
-                  }`}
-                >
-                  {template.label}
-                </h3>
-
-                {/* Description */}
-                <p className="text-gray-600 text-sm min-h-[40px]">{template.description}</p>
+                {/* Text Content */}
+                <div className="flex-1 min-w-0">
+                  <h3
+                    className={`text-lg font-bold transition-colors ${
+                      isSelected ? 'text-blue-600' : 'text-gray-900'
+                    }`}
+                  >
+                    {template.label}
+                  </h3>
+                  <p className="text-gray-600 text-sm mt-0.5">{template.description}</p>
+                </div>
               </div>
             </Card>
           );
         })}
       </div>
 
-      {/* Property Type Details */}
+      {/* Confirmation Banner */}
       {propertyType && (
-        <div className="mt-8 p-6 bg-green-50 border border-green-200 rounded-lg">
-          <h4 className="font-semibold text-green-900 mb-3">
-            ✅ Selected: {PROPERTY_TYPE_TEMPLATES[propertyType].label}
+        <div className="mt-6 p-4 bg-green-50 border border-green-200 rounded-lg">
+          <h4 className="font-semibold text-green-900 flex items-center gap-2">
+            <Check className="w-5 h-5" />
+            Selected: {PROPERTY_TYPE_TEMPLATES[propertyType].label}
           </h4>
-          <p className="text-green-800 text-sm mb-3">
+          <p className="text-green-800 text-sm mt-1">
             {PROPERTY_TYPE_TEMPLATES[propertyType].description}
           </p>
-          <div className="bg-white rounded p-4">
-            <p className="text-sm font-semibold text-gray-700 mb-2">You'll be asked to provide:</p>
-            <ul className="list-disc list-inside space-y-1 text-sm text-gray-600">
-              {PROPERTY_TYPE_TEMPLATES[propertyType].requiredFields.map((field: string) => (
-                <li key={field}>
-                  {field
-                    .replace(/([A-Z])/g, ' $1')
-                    .replace(/([a-z])([0-9])/gi, '$1 $2')
-                    .trim()
-                    .toLowerCase()
-                    .replace(/^./, (str: string) => str.toUpperCase())}
-                </li>
-              ))}
-            </ul>
-          </div>
         </div>
       )}
-
-      {/* Help Banner */}
-      <div className="mt-8 p-6 bg-blue-50 border border-blue-200 rounded-lg">
-        <h4 className="font-semibold text-blue-900 mb-2">💡 Choose the Right Type</h4>
-        <div className="text-blue-800 text-sm space-y-2">
-          <p>
-            <strong>Apartment:</strong> Sectional title properties, flats, units in complexes
-          </p>
-          <p>
-            <strong>House:</strong> Freestanding homes with private land
-          </p>
-          <p>
-            <strong>Farm:</strong> Agricultural properties, smallholdings with farming potential
-          </p>
-          <p>
-            <strong>Land/Plot:</strong> Vacant land, development plots, stands
-          </p>
-          <p>
-            <strong>Commercial:</strong> Office spaces, retail, industrial, warehouses
-          </p>
-          {action === 'rent' && (
-            <p>
-              <strong>Shared Living:</strong> Student accommodation, co-living, room rentals
-            </p>
-          )}
-        </div>
-      </div>
     </div>
   );
 };
