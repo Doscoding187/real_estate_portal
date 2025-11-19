@@ -11,8 +11,7 @@ import { useAuth } from '@/_core/hooks/useAuth';
 import ActionStep from './steps/ActionStep';
 import PropertyTypeStep from './steps/PropertyTypeStep';
 import BadgesStep from './steps/BadgesStep';
-import PropertyDetailsStep from './steps/PropertyDetailsStep';
-import BasicInfoStep from './steps/BasicInfoStep';
+import PropertyInformationStep from './steps/PropertyInformationStep';
 import PricingStep from './steps/PricingStep';
 import LocationStep from './steps/LocationStep';
 import MediaUploadStep from './steps/MediaUploadStep';
@@ -129,16 +128,14 @@ const ListingWizard: React.FC = () => {
       case 3:
         return <BadgesStep />;
       case 4:
-        return <PropertyDetailsStep />;
+        return <PropertyInformationStep />;
       case 5:
-        return <BasicInfoStep />;
-      case 6:
         return <PricingStep />;
-      case 7:
+      case 6:
         return <LocationStep />;
-      case 8:
+      case 7:
         return <MediaUploadStep />;
-      case 9:
+      case 8:
         return <PreviewStep />;
       default:
         return <ActionStep />;
@@ -146,15 +143,14 @@ const ListingWizard: React.FC = () => {
   };
 
   // Calculate progress percentage
-  const progress = (store.currentStep / 9) * 100;
+  const progress = (store.currentStep / 8) * 100;
 
   // Step titles for progress indicator
   const stepTitles = [
     'Action',
-    'Property Type',
+    'Type',
     'Badges',
-    'Details',
-    'Basic Info',
+    'Information',
     'Pricing',
     'Location',
     'Media',
@@ -162,12 +158,14 @@ const ListingWizard: React.FC = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="container mx-auto px-4 max-w-4xl">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50 py-8">
+      <div className="container mx-auto px-4 max-w-5xl">
         {/* Header */}
         <div className="mb-8 text-center">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Create New Listing</h1>
-          <p className="text-gray-600">Follow the steps to create your property listing</p>
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-3">
+            Create New Listing
+          </h1>
+          <p className="text-gray-600 text-lg">Follow the steps to create your property listing</p>
         </div>
 
 
@@ -213,7 +211,9 @@ const ListingWizard: React.FC = () => {
         </div>
 
         {/* Step Content */}
-        <div className="bg-white rounded-lg shadow-sm border p-6 mb-8">{getCurrentStep()}</div>
+        <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-8 mb-8">
+          {getCurrentStep()}
+        </div>
 
         {/* Navigation */}
         <div className="flex items-center justify-between">
@@ -226,8 +226,12 @@ const ListingWizard: React.FC = () => {
             Previous
           </Button>
 
-          {store.currentStep < 9 ? (
-            <Button onClick={store.nextStep} disabled={isSubmitting}>
+          {store.currentStep < 8 ? (
+            <Button 
+              onClick={store.nextStep} 
+              disabled={isSubmitting}
+              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 shadow-lg"
+            >
               Next
               <ArrowRight className="h-4 w-4 ml-2" />
             </Button>
@@ -235,7 +239,7 @@ const ListingWizard: React.FC = () => {
             <Button
               onClick={handleSubmit}
               disabled={isSubmitting}
-              className="bg-green-600 hover:bg-green-700"
+              className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 shadow-lg"
             >
               {isSubmitting ? 'Submitting...' : 'Submit Listing'}
               <Home className="h-4 w-4 ml-2" />

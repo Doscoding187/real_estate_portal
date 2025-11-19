@@ -57,15 +57,17 @@ const ActionStep: React.FC = () => {
             <Card
               key={option.value}
               onClick={() => handleSelect(option.value)}
-              className={`relative cursor-pointer transition-all duration-300 hover:shadow-lg ${
+              className={`relative cursor-pointer transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 ${
                 isSelected
-                  ? `border-2 border-${option.color}-500 shadow-lg`
-                  : 'border-2 border-gray-200 hover:border-gray-300'
+                  ? `border-2 shadow-xl bg-gradient-to-br ${option.color === 'blue' ? 'from-blue-50 to-blue-100 border-blue-400' : option.color === 'green' ? 'from-green-50 to-green-100 border-green-400' : 'from-purple-50 to-purple-100 border-purple-400'}`
+                  : 'border-2 border-gray-200 hover:border-gray-300 bg-white'
               }`}
             >
               {/* Selection Indicator */}
               {isSelected && (
-                <div className={`absolute top-4 right-4 bg-${option.color}-500 rounded-full p-1`}>
+                <div className={`absolute top-4 right-4 rounded-full p-1 shadow-lg ${
+                  option.color === 'blue' ? 'bg-blue-500' : option.color === 'green' ? 'bg-green-500' : 'bg-purple-500'
+                }`}>
                   <Check className="w-5 h-5 text-white" />
                 </div>
               )}
@@ -73,9 +75,9 @@ const ActionStep: React.FC = () => {
               <div className="p-8 flex flex-col items-center text-center space-y-4">
                 {/* Icon */}
                 <div
-                  className={`p-4 rounded-full transition-all ${
+                  className={`p-4 rounded-full transition-all shadow-md ${
                     isSelected
-                      ? `bg-${option.color}-100 text-${option.color}-600`
+                      ? option.color === 'blue' ? 'bg-blue-100 text-blue-600' : option.color === 'green' ? 'bg-green-100 text-green-600' : 'bg-purple-100 text-purple-600'
                       : 'bg-gray-100 text-gray-600'
                   }`}
                 >
@@ -85,7 +87,7 @@ const ActionStep: React.FC = () => {
                 {/* Label */}
                 <h3
                   className={`text-2xl font-bold transition-colors ${
-                    isSelected ? `text-${option.color}-600` : 'text-gray-900'
+                    isSelected ? option.color === 'blue' ? 'text-blue-600' : option.color === 'green' ? 'text-green-600' : 'text-purple-600' : 'text-gray-900'
                   }`}
                 >
                   {option.label}

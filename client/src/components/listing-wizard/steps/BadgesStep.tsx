@@ -55,10 +55,10 @@ const BadgesStep: React.FC = () => {
             <Card
               key={badge}
               onClick={() => handleSelectBadge(badge)}
-              className={`relative cursor-pointer transition-all duration-300 hover:shadow-lg ${
+              className={`relative cursor-pointer transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 ${
                 isSelected
-                  ? 'border-2 border-blue-500 shadow-lg'
-                  : 'border-2 border-gray-200 hover:border-gray-300'
+                  ? 'border-2 border-blue-500 shadow-xl bg-gradient-to-br from-blue-50 to-white'
+                  : 'border-2 border-gray-200 hover:border-gray-300 bg-white'
               }`}
             >
               {/* Selection Indicator */}
