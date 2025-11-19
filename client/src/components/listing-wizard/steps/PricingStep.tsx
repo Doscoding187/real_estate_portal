@@ -112,7 +112,10 @@ const SellPricingForm: React.FC<{
               id="transferCostEstimate"
               type="number"
               value={pricing.transferCostEstimate || ''}
-              onChange={e => handleChange('transferCostEstimate', parseFloat(e.target.value))}
+              onChange={e => {
+                const value = e.target.value ? parseFloat(e.target.value) : null;
+                handleChange('transferCostEstimate', value);
+              }}
               placeholder="Estimated transfer and bond costs"
               min="0"
             />

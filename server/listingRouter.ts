@@ -75,6 +75,16 @@ export const listingRouter = router({
         .replace(/[^a-z0-9]+/g, '-')
         .replace(/^-+|-+$/g, '');
 
+      // Prepare media array from mediaIds (which are S3 keys/URLs)
+      const media = input.mediaIds.map((id, index) => ({
+        id, // S3 key
+        url: id, // For now, use the ID as the URL (it's already the S3 key)
+        type: 'image' as const, // Default to image; adjust if you have type info
+        displayOrder: index,
+        isPrimary: input.mainMediaId ? id === input.mainMediaId : index === 0,
+        processingStatus: 'completed' as const,
+      }));
+
       // Create listing in database
       const listingId = await db.createListing({
         userId,
@@ -93,7 +103,7 @@ export const listingRouter = router({
         postalCode: input.location.postalCode,
         placeId: input.location.placeId,
         slug,
-        media: [], // Media will be added separately
+        media,
       });
 
       // Set approval status based on account verification
