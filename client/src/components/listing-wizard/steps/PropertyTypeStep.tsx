@@ -7,9 +7,19 @@
 import React from 'react';
 import { useListingWizardStore } from '@/hooks/useListingWizard';
 import { Card } from '@/components/ui/card';
-import { Check } from 'lucide-react';
+import { Check, Building2, Home, Wheat, Map, Store, Users } from 'lucide-react';
 import type { PropertyType, ListingAction } from '@/../../shared/listing-types';
 import { PROPERTY_TYPE_TEMPLATES } from '@/../../shared/listing-types';
+
+// Icon map for dynamic rendering
+const ICON_MAP: Record<string, React.ElementType> = {
+  Building2,
+  Home,
+  Wheat,
+  Map,
+  Store,
+  Users,
+};
 
 const PropertyTypeStep: React.FC = () => {
   const store: any = useListingWizardStore();
@@ -62,9 +72,18 @@ const PropertyTypeStep: React.FC = () => {
               <div className="p-6 flex flex-col space-y-4">
                 {/* Icon */}
                 <div
-                  className={`text-5xl transition-all ${isSelected ? 'scale-110' : 'scale-100'}`}
+                  className={`transition-all ${isSelected ? 'scale-110' : 'scale-100'}`}
                 >
-                  {template.icon}
+                  {(() => {
+                    const IconComponent = ICON_MAP[template.icon];
+                    return IconComponent ? (
+                      <IconComponent
+                        className={`w-12 h-12 ${
+                          isSelected ? 'text-blue-600' : 'text-gray-600'
+                        }`}
+                      />
+                    ) : null;
+                  })()}
                 </div>
 
                 {/* Label */}
@@ -78,28 +97,6 @@ const PropertyTypeStep: React.FC = () => {
 
                 {/* Description */}
                 <p className="text-gray-600 text-sm min-h-[40px]">{template.description}</p>
-
-                {/* Required Fields Preview */}
-                <div className="pt-4 border-t border-gray-200">
-                  <p className="text-xs font-semibold text-gray-500 mb-2 uppercase">
-                    Required Info:
-                  </p>
-                  <div className="flex flex-wrap gap-1">
-                    {template.requiredFields.slice(0, 3).map((field: string) => (
-                      <span
-                        key={field}
-                        className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded"
-                      >
-                        {field.replace(/([A-Z])/g, ' $1').trim()}
-                      </span>
-                    ))}
-                    {template.requiredFields.length > 3 && (
-                      <span className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded">
-                        +{template.requiredFields.length - 3} more
-                      </span>
-                    )}
-                  </div>
-                </div>
               </div>
             </Card>
           );

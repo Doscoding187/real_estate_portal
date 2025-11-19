@@ -7,15 +7,15 @@
 import React from 'react';
 import { useListingWizardStore } from '@/hooks/useListingWizard';
 import { Card } from '@/components/ui/card';
-import { Building2, Home, Gavel, Check } from 'lucide-react';
+import { Check, Home, Key, Gavel } from 'lucide-react';
 import type { ListingAction } from '@/../../shared/listing-types';
 
 const ACTION_OPTIONS: {
   value: ListingAction;
   label: string;
-  icon: React.ReactNode;
+  icon: JSX.Element;
   description: string;
-  color: string;
+  color: 'blue' | 'green' | 'purple';
 }[] = [
   {
     value: 'sell',
@@ -27,15 +27,15 @@ const ACTION_OPTIONS: {
   {
     value: 'rent',
     label: 'Rent',
-    icon: <Building2 className="w-8 h-8" />,
-    description: 'List your property for rent',
+    icon: <Key className="w-8 h-8" />,
+    description: 'Offer your property for rental',
     color: 'green',
   },
   {
     value: 'auction',
     label: 'Auction',
     icon: <Gavel className="w-8 h-8" />,
-    description: 'List your property for auction',
+    description: 'Sell via auction process',
     color: 'purple',
   },
 ];
@@ -95,33 +95,6 @@ const ActionStep: React.FC = () => {
 
                 {/* Description */}
                 <p className="text-gray-600 text-sm">{option.description}</p>
-
-                {/* Additional Info */}
-                <div className="pt-4 border-t border-gray-200 w-full">
-                  <ul className="text-left text-sm text-gray-600 space-y-2">
-                    {option.value === 'sell' && (
-                      <>
-                        <li>• Set asking price</li>
-                        <li>• Negotiable options</li>
-                        <li>• Transfer cost estimates</li>
-                      </>
-                    )}
-                    {option.value === 'rent' && (
-                      <>
-                        <li>• Monthly rental price</li>
-                        <li>• Deposit & lease terms</li>
-                        <li>• Availability date</li>
-                      </>
-                    )}
-                    {option.value === 'auction' && (
-                      <>
-                        <li>• Starting bid amount</li>
-                        <li>• Reserve price</li>
-                        <li>• Auction date & time</li>
-                      </>
-                    )}
-                  </ul>
-                </div>
               </div>
             </Card>
           );

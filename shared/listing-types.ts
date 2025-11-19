@@ -492,37 +492,37 @@ export const PROPERTY_TYPE_TEMPLATES: Record<
 > = {
   apartment: {
     label: 'Apartment',
-    icon: '🏢',
+    icon: 'Building2',
     description: 'Flats, units, and sectional title properties',
     requiredFields: ['bedrooms', 'bathrooms', 'unitSizeM2', 'propertySettings'],
   },
   house: {
     label: 'House',
-    icon: '🏠',
+    icon: 'Home',
     description: 'Freestanding homes with land',
     requiredFields: ['bedrooms', 'bathrooms', 'erfSizeM2', 'houseAreaM2'],
   },
   farm: {
     label: 'Farm',
-    icon: '🌾',
+    icon: 'Wheat',
     description: 'Agricultural properties and farms',
     requiredFields: ['landSizeHa', 'farmSuitability'],
   },
   land: {
     label: 'Land/Plot',
-    icon: '🗺️',
+    icon: 'Map',
     description: 'Vacant land and development plots',
     requiredFields: ['landSizeM2OrHa', 'zoning'],
   },
   commercial: {
     label: 'Commercial',
-    icon: '🏢',
+    icon: 'Store',
     description: 'Office, retail, industrial properties',
     requiredFields: ['subtype', 'floorAreaM2'],
   },
   shared_living: {
     label: 'Shared Living',
-    icon: '🛏️',
+    icon: 'Users',
     description: 'Student accommodation, co-living spaces',
     requiredFields: ['roomsAvailable', 'bathroomTypePerRoom'],
   },
