@@ -303,14 +303,20 @@ export async function getPropertyImages(propertyId: number) {
 /**
  * Get all properties owned by a user
  */
-export async function getUserProperties(userId: number): Promise<Property[]> {
+export async function getUserProperties(
+  userId: number,
+  limit: number = 20,
+  offset: number = 0,
+): Promise<Property[]> {
   const db = await getDb();
   if (!db) throw new Error('Database not available');
   return await db
     .select()
     .from(properties)
     .where(eq(properties.ownerId, userId))
-    .orderBy(desc(properties.createdAt));
+    .orderBy(desc(properties.createdAt))
+    .limit(limit)
+    .offset(offset);
 }
 
 /**
@@ -1714,7 +1720,12 @@ export async function getListingById(listingId: number) {
 /**
  * Get user's listings
  */
-export async function getUserListings(userId: number, status?: string) {
+export async function getUserListings(
+  userId: number,
+  status?: string,
+  limit: number = 20,
+  offset: number = 0
+) {
   const db = await getDb();
   if (!db) throw new Error('Database not available');
 
@@ -1724,7 +1735,10 @@ export async function getUserListings(userId: number, status?: string) {
     query = query.where(eq(listings.status, status));
   }
 
-  const listingsData = await query.orderBy(desc(listings.createdAt));
+  const listingsData = await query
+    .orderBy(desc(listings.createdAt))
+    .limit(limit)
+    .offset(offset);
 
   // Parse JSON fields
   return listingsData.map(listing => ({

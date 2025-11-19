@@ -1,4 +1,4 @@
-import { mysqlTable, mysqlSchema, AnyMySqlColumn, int, varchar, text, timestamp, foreignKey, mysqlEnum } from "drizzle-orm/mysql-core"
+import { mysqlTable, mysqlSchema, AnyMySqlColumn, int, varchar, text, timestamp, foreignKey, mysqlEnum, index } from "drizzle-orm/mysql-core"
 import { sql } from "drizzle-orm"
 
 export const agencies = mysqlTable("agencies", {
@@ -705,6 +705,17 @@ export const properties = mysqlTable("properties", {
 	mainImage: varchar({ length: 1024 }),
 	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
 	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+}, (table) => {
+	return {
+		priceIdx: index("price_idx").on(table.price),
+		statusIdx: index("status_idx").on(table.status),
+		cityIdx: index("city_idx").on(table.city),
+		provinceIdx: index("province_idx").on(table.province),
+		propertyTypeIdx: index("property_type_idx").on(table.propertyType),
+		listingTypeIdx: index("listing_type_idx").on(table.listingType),
+		bedroomsIdx: index("bedrooms_idx").on(table.bedrooms),
+		bathroomsIdx: index("bathrooms_idx").on(table.bathrooms),
+	}
 });
 
 export const propertyImages = mysqlTable("propertyImages", {
@@ -965,7 +976,13 @@ export const users = mysqlTable("users", {
 	emailVerificationToken: varchar({ length: 255 }),
 	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
 	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
 	lastSignedIn: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+}, (table) => {
+	return {
+		emailIdx: index("email_idx").on(table.email),
+		roleIdx: index("role_idx").on(table.role),
+	}
 });
 
 export const videoLikes = mysqlTable("videoLikes", {

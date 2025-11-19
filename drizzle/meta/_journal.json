@@ -22,6 +22,13 @@
       "when": 1762870000000,
       "tag": "0002_add_property_developer_role",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "5",
+      "when": 1763554610895,
+      "tag": "0003_messy_payback",
+      "breakpoints": true
     }
   ]
 }

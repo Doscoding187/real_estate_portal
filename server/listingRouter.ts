@@ -214,10 +214,10 @@ export const listingRouter = router({
       }
 
       try {
-        // Fetch user's listings
-        const listings = await db.getUserListings(userId, input.status);
+        // Fetch user's listings with pagination
+        const listings = await db.getUserListings(userId, input.status, input.limit, input.offset);
 
-        return listings.slice(input.offset, input.offset + input.limit);
+        return listings;
       } catch (error) {
         console.error('Error fetching user listings:', error);
         throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to fetch listings' });
