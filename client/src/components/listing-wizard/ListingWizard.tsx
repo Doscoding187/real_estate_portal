@@ -7,6 +7,7 @@ import React, { useState, useEffect } from 'react';
 import { useListingWizardStore } from '@/hooks/useListingWizard';
 import { trpc } from '@/lib/trpc';
 import { useLocation } from 'wouter';
+import { useAuth } from '@/_core/hooks/useAuth';
 import ActionStep from './steps/ActionStep';
 import PropertyTypeStep from './steps/PropertyTypeStep';
 import BadgesStep from './steps/BadgesStep';
@@ -23,16 +24,19 @@ import { ArrowLeft, ArrowRight, Home } from 'lucide-react';
 const ListingWizard: React.FC = () => {
   const store = useListingWizardStore();
   const [location, setLocation] = useLocation();
+  const { user } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
   // TRPC mutation for creating listing
   const createListingMutation = trpc.listing.create.useMutation();
+  // TRPC mutation for submitting for review
+  const submitForReviewMutation = trpc.listing.submitForReview.useMutation();
 
   // Redirect if submitted
   useEffect(() => {
     if (store.status === 'submitted' && createListingMutation.data) {
-      setLocation(`/listings/${createListingMutation.data.id}`);
+      // Instead of redirecting to the listing page, we'll handle the redirect after submit for review
     }
   }, [store.status, createListingMutation.data, setLocation]);
 
@@ -71,7 +75,7 @@ const ListingWizard: React.FC = () => {
         // Send mainMediaId as string or undefined
         mainMediaId: store.mainMediaId?.toString() || 
           (store.media.length > 0 ? store.media[0].id?.toString() : undefined),
-        status: 'pending_review' as const,
+        status: 'draft' as const, // Start as draft
       };
 
       console.log('Submitting listing data:', listingData);
@@ -80,8 +84,32 @@ const ListingWizard: React.FC = () => {
       const result = await createListingMutation.mutateAsync(listingData);
       console.log('Listing created:', result);
 
-      // Update store status
-      store.submitForReview();
+      // Submit for review
+      try {
+        await submitForReviewMutation.mutateAsync({ listingId: result.id });
+        console.log('Listing submitted for review');
+        
+        // Show success message
+        alert('Listing submitted for review successfully!');
+        
+        // Redirect based on user role
+        if (window.history.length > 1) {
+          window.history.back();
+        } else {
+          // Fallback redirects based on role
+          if (user?.role === 'agent') {
+            setLocation('/agent/dashboard');
+          } else if (user?.role === 'property_developer') {
+            setLocation('/developer/dashboard');
+          } else {
+            setLocation('/'); // Default fallback
+          }
+        }
+      } catch (reviewError: any) {
+        console.error('Error submitting for review:', reviewError);
+        alert('Listing created but failed to submit for review. Please try again later.');
+        // Keep as draft and stay on page
+      }
     } catch (error: any) {
       console.error('Error submitting listing:', error);
       setSubmitError(
