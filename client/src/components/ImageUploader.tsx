@@ -78,22 +78,34 @@ export function ImageUploader({
       });
 
       if (!uploadResponse.ok) {
-        throw new Error(`Upload failed: ${uploadResponse.statusText}`);
+        const errorText = await uploadResponse.text().catch(() => '');
+        throw new Error(
+          `Upload failed: ${uploadResponse.statusText}${errorText ? ` - ${errorText}` : ''}`,
+        );
       }
 
       // Update progress
       updateImage(imageFile.id, { progress: 90 });
 
-      // Construct the final URL
+      // Construct the final URL using the CloudFront URL or S3 bucket URL
       let finalUrl: string;
-      if (url.includes('s3.amazonaws.com') || url.includes('cloudfront.net')) {
-        // S3 URL - extract the base URL
+
+      // The key is the S3 object key, we need to prepend the CloudFront URL or S3 bucket URL
+      if (url.includes('cloudfront.net')) {
+        // Extract CloudFront domain from the presigned URL
         const urlObj = new URL(url);
-        finalUrl = `${urlObj.origin}/${key}`;
+        const cloudfrontDomain = `${urlObj.protocol}//${urlObj.hostname}`;
+        finalUrl = `${cloudfrontDomain}/${key}`;
+      } else if (url.includes('s3.amazonaws.com')) {
+        // Extract S3 bucket URL from the presigned URL
+        const urlObj = new URL(url);
+        finalUrl = `${urlObj.protocol}//${urlObj.hostname}/${key}`;
       } else {
-        // Storage proxy - use the key
+        // Storage proxy - use the key as-is
         finalUrl = key;
       }
+
+      console.log('[Upload] File uploaded successfully:', finalUrl);
 
       // Complete upload
       updateImage(imageFile.id, {
@@ -106,6 +118,7 @@ export function ImageUploader({
       return { ...imageFile, url: finalUrl, uploaded: true };
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Upload failed';
+      console.error('[Upload] Upload failed:', errorMsg);
       updateImage(imageFile.id, {
         uploading: false,
         error: errorMsg,

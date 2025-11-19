@@ -17,6 +17,7 @@ import { googleMapsRouter } from './googleMapsRouter';
 import { priceInsightsRouter } from './priceInsightsRouter';
 import { devRouter } from './devRouter'; // ⚠️ DEV ONLY - Remove before production
 import { listingRouter } from './listingRouter';
+import { uploadRouter } from './uploadRouter';
 
 export const appRouter = router({
   system: systemRouter,
@@ -32,6 +33,7 @@ export const appRouter = router({
   googleMaps: googleMapsRouter,
   priceInsights: priceInsightsRouter,
   listing: listingRouter,
+  upload: uploadRouter,
   dev: devRouter, // ⚠️ DEV ONLY - Remove before production
 
   auth: router({

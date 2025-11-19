@@ -20,6 +20,11 @@ const useS3 = Boolean(
 let s3Client: S3Client | null = null;
 
 if (useS3) {
+  console.log('✅ AWS S3 Configuration detected:');
+  console.log(`   Region: ${ENV.awsRegion}`);
+  console.log(`   Bucket: ${ENV.s3BucketName}`);
+  console.log(`   CloudFront: ${ENV.cloudFrontUrl || 'Not configured (using S3 direct)'}`);
+
   s3Client = new S3Client({
     region: ENV.awsRegion,
     credentials: {
@@ -27,6 +32,13 @@ if (useS3) {
       secretAccessKey: ENV.awsSecretAccessKey,
     },
   });
+} else {
+  console.warn('⚠️  AWS S3 not fully configured. Missing:');
+  if (!ENV.awsAccessKeyId) console.warn('   - AWS_ACCESS_KEY_ID');
+  if (!ENV.awsSecretAccessKey) console.warn('   - AWS_SECRET_ACCESS_KEY');
+  if (!ENV.awsRegion) console.warn('   - AWS_REGION');
+  if (!ENV.s3BucketName) console.warn('   - S3_BUCKET_NAME');
+  console.warn('   Falling back to storage proxy for image uploads');
 }
 
 // Image sizes to generate
@@ -193,13 +205,17 @@ export async function generatePresignedUploadUrl(
   propertyId: string,
 ): Promise<{ uploadUrl: string; key: string }> {
   if (!useS3 || !s3Client) {
-    throw new Error('S3 not configured');
+    throw new Error(
+      'AWS S3 is not configured. Please check your environment variables (AWS_REGION, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, S3_BUCKET_NAME)',
+    );
   }
 
   try {
     // Generate a unique key for the file
     const fileExtension = filename.split('.').pop() || 'jpg';
     const key = `properties/${propertyId}/${Date.now()}-${crypto.randomUUID()}.${fileExtension}`;
+
+    console.log(`[S3] Generating presigned URL for: ${key}`);
 
     // Generate presigned URL
     const command = new PutObjectCommand({
@@ -210,9 +226,14 @@ export async function generatePresignedUploadUrl(
 
     const uploadUrl = await getSignedUrl(s3Client, command, { expiresIn: 3600 }); // 1 hour expiry
 
+    console.log(`[S3] Presigned URL generated successfully for: ${key}`);
+
     return { uploadUrl, key };
   } catch (error) {
-    console.error('Failed to generate presigned URL:', error);
+    console.error('[S3] Failed to generate presigned URL:', error);
+    if (error instanceof Error) {
+      throw new Error(`Failed to generate upload URL: ${error.message}`);
+    }
     throw new Error('Failed to generate upload URL');
   }
 }
