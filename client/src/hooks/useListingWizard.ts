@@ -360,6 +360,8 @@ export const useListingWizardStore = create<ListingWizardStore>()(
 
       reset: () => {
         set(initialState);
+        // Clear persisted storage to ensure fresh start
+        localStorage.removeItem('listing-wizard-storage');
       },
 
       loadListing: async listingId => {

@@ -32,7 +32,15 @@ const ListingWizard: React.FC = () => {
   // TRPC mutation for submitting for review
   const submitForReviewMutation = trpc.listing.submitForReview.useMutation();
 
-  // Redirect if submitted
+  // Reset wizard if it was previously submitted (on mount)
+  useEffect(() => {
+    if (store.status === 'submitted') {
+      console.log('Wizard was previously submitted, resetting for new listing...');
+      store.reset();
+    }
+  }, []); // Run only on mount
+
+  // Redirect if submitted (legacy - keeping for safety)
   useEffect(() => {
     if (store.status === 'submitted' && createListingMutation.data) {
       // Instead of redirecting to the listing page, we'll handle the redirect after submit for review
@@ -91,6 +99,9 @@ const ListingWizard: React.FC = () => {
 
         // Show success message
         alert('Listing submitted for review successfully!');
+
+        // Reset wizard state for next listing
+        store.reset();
 
         // Redirect based on user role using the proper navigation strategy
         if (window.history.length > 1) {
