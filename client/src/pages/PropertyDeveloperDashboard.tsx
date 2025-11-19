@@ -1,75 +1,250 @@
-import React, { useState } from 'react';
-import DeveloperSidebar, { DeveloperSection } from '../components/developer/DeveloperSidebar';
-import DevelopmentsList from '../components/developer/DevelopmentsList';
-import AnalyticsPanel from '../components/developer/AnalyticsPanel';
-import MessagesCenter from '../components/developer/MessagesCenter';
-import SettingsPanel from '../components/developer/SettingsPanel';
-import MarketingTools from '../components/developer/MarketingTools';
-import Overview from '../components/developer/Overview';
-import { SidebarProvider } from '@/components/ui/sidebar';
+import { useLocation } from 'wouter';
+import { useAuth } from '@/_core/hooks/useAuth';
+import { SoftDashboardLayout } from '@/components/layout/SoftDashboardLayout';
+import { GlassCard } from '@/components/ui/glass-card';
+import { PastelBadge } from '@/components/ui/pastel-badge';
+import { Button } from '@/components/ui/button';
+import { motion } from 'framer-motion';
+import {
+  Home,
+  Building2,
+  BarChart3,
+  FileText,
+  Users,
+  TrendingUp,
+  Plus,
+  MapPin,
+} from 'lucide-react';
 
-const PropertyDeveloperDashboard: React.FC = () => {
-  const [activeSection, setActiveSection] = useState<DeveloperSection>('dashboard');
+const navItems = [
+  { icon: Home, label: 'Overview', path: '/developer/dashboard' },
+  { icon: Building2, label: 'Projects', path: '/developer/projects' },
+  { icon: MapPin, label: 'Developments', path: '/developer/developments' },
+  { icon: BarChart3, label: 'Analytics', path: '/developer/analytics' },
+  { icon: FileText, label: 'Documents', path: '/developer/documents' },
+];
 
-  const renderContent = () => {
-    switch (activeSection) {
-      case 'dashboard':
-        return <Overview />;
-      case 'analytics':
-        return <AnalyticsPanel />;
-      case 'messages':
-        return <MessagesCenter />;
-      case 'settings':
-        return <SettingsPanel />;
-      case 'marketing':
-        return <MarketingTools />;
-      default:
-        return <DevelopmentsList />;
-    }
-  };
+export default function PropertyDeveloperDashboard() {
+  const [, setLocation] = useLocation();
+  const { isAuthenticated, user, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#F4F7FA] flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600 mx-auto mb-4"></div>
+          <p className="text-slate-400">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    setLocation('/login');
+    return null;
+  }
+
+  if (user?.role !== 'property_developer') {
+    setLocation('/dashboard');
+    return null;
+  }
 
   return (
-    <SidebarProvider>
-      <div className="flex h-screen w-screen bg-gray-50 overflow-hidden">
-        <DeveloperSidebar active={activeSection} onChange={setActiveSection} />
-        <div className="flex flex-col flex-1 min-w-0">
-          {/* Header */}
-          <header className="bg-white shadow-sm z-10 flex-shrink-0">
-            <div className="flex items-center justify-between p-4">
+    <SoftDashboardLayout
+      navItems={navItems}
+      title="Developer Dashboard"
+      subtitle="Manage your property developments and projects"
+    >
+      {/* Top KPI Area */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="grid grid-cols-4 gap-8 mb-12"
+      >
+        <div>
+          <p className="text-slate-400 text-sm mb-2">Total Portfolio Value</p>
+          <p className="text-4xl font-bold text-slate-800">R 45.2M</p>
+          <div className="flex items-center gap-2 mt-2">
+            <TrendingUp className="h-4 w-4 text-emerald-600" />
+            <span className="text-emerald-600 text-sm font-medium">+22.5%</span>
+          </div>
+        </div>
+        <div>
+          <p className="text-slate-400 text-sm mb-2">Active Projects</p>
+          <p className="text-4xl font-bold text-slate-800">8</p>
+        </div>
+        <div>
+          <p className="text-slate-400 text-sm mb-2">Units Available</p>
+          <p className="text-4xl font-bold text-slate-800">124</p>
+          <div className="flex items-center gap-2 mt-2">
+            <Building2 className="h-4 w-4 text-blue-600" />
+            <span className="text-blue-600 text-sm font-medium">32 sold this month</span>
+          </div>
+        </div>
+        <div>
+          <p className="text-slate-400 text-sm mb-2">Completion Rate</p>
+          <p className="text-4xl font-bold text-slate-800">87%</p>
+          <PastelBadge variant="mint" className="mt-2">On Track</PastelBadge>
+        </div>
+      </motion.div>
+
+      {/* Main Content Grid */}
+      <div className="grid grid-cols-2 gap-8 mb-8">
+        {/* Active Projects */}
+        <motion.div
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.1 }}
+        >
+          <GlassCard className="p-8">
+            <div className="flex items-center justify-between mb-6">
               <div>
-                <h1 className="typ-h1">Property Developer Dashboard</h1>
-                <p className="text-gray-500 text-sm">
-                  Manage your developments and track performance
-                </p>
+                <h3 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
+                  <Building2 className="h-6 w-6 text-blue-600" />
+                  Active Projects
+                </h3>
+                <p className="text-slate-400 text-sm">Your current developments</p>
               </div>
-              <div className="flex items-center space-x-4">
-                <button className="relative p-2 text-gray-500 hover:text-gray-700">
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
-                    />
-                  </svg>
-                  <span className="absolute top-0 right-0 block h-2 w-2 rounded-full bg-red-500"></span>
-                </button>
-                <div className="flex items-center">
-                  <div className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center text-white font-medium">
-                    SD
+              <Button
+                onClick={() => setLocation('/developer/projects/new')}
+                className="bg-gradient-to-r from-blue-500 to-cyan-600 hover:from-blue-600 hover:to-cyan-700"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                New Project
+              </Button>
+            </div>
+
+            <div className="space-y-4">
+              {[
+                { name: 'Sandton Heights', location: 'Sandton, JHB', units: 45, sold: 32, progress: 87 },
+                { name: 'Waterfront Residences', location: 'V&A, Cape Town', units: 38, sold: 28, progress: 92 },
+                { name: 'Pretoria Gardens', location: 'Pretoria East', units: 41, sold: 18, progress: 65 },
+              ].map((project, i) => (
+                <div
+                  key={i}
+                  className="p-4 rounded-2xl bg-white/50 hover:bg-white/70 transition-all"
+                >
+                  <div className="flex items-start justify-between mb-3">
+                    <div>
+                      <div className="font-semibold text-slate-800">{project.name}</div>
+                      <div className="text-sm text-slate-500 flex items-center gap-1">
+                        <MapPin className="h-3 w-3" />
+                        {project.location}
+                      </div>
+                    </div>
+                    <PastelBadge variant="sky">{project.progress}% Complete</PastelBadge>
                   </div>
-                  <span className="ml-2 font-medium">Skyline Developments</span>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-slate-600">{project.sold}/{project.units} units sold</span>
+                    <span className="text-emerald-600 font-medium">R {(project.sold * 2.5).toFixed(1)}M revenue</span>
+                  </div>
+                  <div className="w-full bg-slate-200 rounded-full h-2 mt-2">
+                    <div
+                      className="bg-gradient-to-r from-blue-500 to-cyan-600 h-2 rounded-full"
+                      style={{ width: `${project.progress}%` }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </GlassCard>
+        </motion.div>
+
+        {/* Sales Performance */}
+        <motion.div
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.2 }}
+        >
+          <GlassCard className="p-8">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h3 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
+                  <TrendingUp className="h-6 w-6 text-emerald-600" />
+                  Sales Performance
+                </h3>
+                <p className="text-slate-400 text-sm">Monthly breakdown</p>
+              </div>
+              <PastelBadge variant="mint">This Month</PastelBadge>
+            </div>
+
+            <div className="space-y-6">
+              <div className="p-6 rounded-2xl bg-gradient-to-br from-emerald-50 to-teal-50">
+                <p className="text-slate-600 text-sm mb-2">Total Sales</p>
+                <p className="text-4xl font-bold text-emerald-700">R 12.4M</p>
+                <p className="text-emerald-600 text-sm font-medium mt-2">+18.5% from last month</p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="p-4 rounded-2xl bg-white/50 text-center">
+                  <p className="text-slate-400 text-sm mb-2">Units Sold</p>
+                  <p className="text-3xl font-bold text-slate-800">32</p>
+                </div>
+                <div className="p-4 rounded-2xl bg-white/50 text-center">
+                  <p className="text-slate-400 text-sm mb-2">Avg Price</p>
+                  <p className="text-3xl font-bold text-slate-800">R 3.9M</p>
+                </div>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-white/50">
+                <p className="text-slate-600 text-sm mb-3">Top Selling Project</p>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-semibold text-slate-800">Waterfront Residences</p>
+                    <p className="text-sm text-slate-500">Cape Town</p>
+                  </div>
+                  <PastelBadge variant="mint">28 sold</PastelBadge>
                 </div>
               </div>
             </div>
-          </header>
-
-          {/* Main Content */}
-          <main className="flex-1 overflow-auto p-6">{renderContent()}</main>
-        </div>
+          </GlassCard>
+        </motion.div>
       </div>
-    </SidebarProvider>
-  );
-};
 
-export default PropertyDeveloperDashboard;
+      {/* Project Timeline */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.3 }}
+      >
+        <GlassCard className="p-8">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h3 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
+                <FileText className="h-6 w-6 text-purple-600" />
+                Project Milestones
+              </h3>
+              <p className="text-slate-400 text-sm">Upcoming deadlines and completions</p>
+            </div>
+            <PastelBadge variant="lavender">Next 30 Days</PastelBadge>
+          </div>
+
+          <div className="grid grid-cols-4 gap-6">
+            {[
+              { milestone: 'Foundation Complete', project: 'Sandton Heights', date: 'Dec 15', status: 'On Track' },
+              { milestone: 'Roof Installation', project: 'Waterfront Res.', date: 'Dec 20', status: 'Ahead' },
+              { milestone: 'Interior Finish', project: 'Pretoria Gardens', date: 'Dec 28', status: 'Delayed' },
+              { milestone: 'Final Inspection', project: 'Sandton Heights', date: 'Jan 5', status: 'Scheduled' },
+            ].map((item, i) => (
+              <div key={i} className="p-4 rounded-2xl bg-white/50">
+                <PastelBadge
+                  variant={
+                    item.status === 'On Track' ? 'mint' :
+                    item.status === 'Ahead' ? 'sky' :
+                    item.status === 'Delayed' ? 'rose' : 'lavender'
+                  }
+                  className="mb-3"
+                >
+                  {item.status}
+                </PastelBadge>
+                <p className="font-semibold text-slate-800 text-sm mb-1">{item.milestone}</p>
+                <p className="text-xs text-slate-500 mb-2">{item.project}</p>
+                <p className="text-xs text-purple-600 font-medium">{item.date}</p>
+              </div>
+            ))}
+          </div>
+        </GlassCard>
+      </motion.div>
+    </SoftDashboardLayout>
+  );
+}
