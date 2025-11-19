@@ -60,12 +60,12 @@ const ListingWizard: React.FC = () => {
           ...store.pricing!,
           // Ensure transferCostEstimate is either a number or undefined (not null)
           // Only include for sell listings which have this field
-          ...('transferCostEstimate' in store.pricing! 
-            ? (store.pricing!.transferCostEstimate !== null && 
-               store.pricing!.transferCostEstimate !== undefined && 
-               !isNaN(Number(store.pricing!.transferCostEstimate))
-               ? { transferCostEstimate: Number(store.pricing!.transferCostEstimate) }
-               : {})
+          ...('transferCostEstimate' in store.pricing!
+            ? store.pricing!.transferCostEstimate !== null &&
+              store.pricing!.transferCostEstimate !== undefined &&
+              !isNaN(Number(store.pricing!.transferCostEstimate))
+              ? { transferCostEstimate: Number(store.pricing!.transferCostEstimate) }
+              : {}
             : {}),
         },
         propertyDetails: store.propertyDetails || {},
@@ -73,7 +73,8 @@ const ListingWizard: React.FC = () => {
         // Send media IDs as strings (no numeric conversion)
         mediaIds: store.media.map((m: any) => m.id?.toString() || ''),
         // Send mainMediaId as string or undefined
-        mainMediaId: store.mainMediaId?.toString() || 
+        mainMediaId:
+          store.mainMediaId?.toString() ||
           (store.media.length > 0 ? store.media[0].id?.toString() : undefined),
         status: 'draft' as const, // Start as draft
       };
@@ -88,21 +89,21 @@ const ListingWizard: React.FC = () => {
       try {
         await submitForReviewMutation.mutateAsync({ listingId: result.id });
         console.log('Listing submitted for review');
-        
+
         // Show success message
         alert('Listing submitted for review successfully!');
-        
-        // Redirect based on user role
+
+        // Redirect based on user role using the proper navigation strategy
         if (window.history.length > 1) {
           window.history.back();
         } else {
           // Fallback redirects based on role
           if (user?.role === 'agent') {
-            setLocation('/agent/dashboard');
+            window.location.href = '/agent/dashboard';
           } else if (user?.role === 'property_developer') {
-            setLocation('/developer/dashboard');
+            window.location.href = '/developer/dashboard';
           } else {
-            setLocation('/'); // Default fallback
+            window.location.href = '/'; // Default fallback
           }
         }
       } catch (reviewError: any) {
@@ -112,9 +113,7 @@ const ListingWizard: React.FC = () => {
       }
     } catch (error: any) {
       console.error('Error submitting listing:', error);
-      setSubmitError(
-        error.message || 'Failed to submit listing. Please try again.'
-      );
+      setSubmitError(error.message || 'Failed to submit listing. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -167,20 +166,14 @@ const ListingWizard: React.FC = () => {
       <div className="container mx-auto px-4 max-w-4xl">
         {/* Header */}
         <div className="mb-8 text-center">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Create New Listing
-          </h1>
-          <p className="text-gray-600">
-            Follow the steps to create your property listing
-          </p>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Create New Listing</h1>
+          <p className="text-gray-600">Follow the steps to create your property listing</p>
         </div>
 
         {/* Progress Indicator */}
         <div className="mb-8">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-medium text-gray-700">
-              Step {store.currentStep} of 9
-            </span>
+            <span className="text-sm font-medium text-gray-700">Step {store.currentStep} of 9</span>
             <span className="text-sm font-medium text-gray-700">
               {stepTitles[store.currentStep - 1]}
             </span>
@@ -189,9 +182,7 @@ const ListingWizard: React.FC = () => {
         </div>
 
         {/* Step Content */}
-        <div className="bg-white rounded-lg shadow-sm border p-6 mb-8">
-          {getCurrentStep()}
-        </div>
+        <div className="bg-white rounded-lg shadow-sm border p-6 mb-8">{getCurrentStep()}</div>
 
         {/* Navigation */}
         <div className="flex items-center justify-between">
@@ -205,10 +196,7 @@ const ListingWizard: React.FC = () => {
           </Button>
 
           {store.currentStep < 9 ? (
-            <Button
-              onClick={store.nextStep}
-              disabled={isSubmitting}
-            >
+            <Button onClick={store.nextStep} disabled={isSubmitting}>
               Next
               <ArrowRight className="h-4 w-4 ml-2" />
             </Button>
@@ -234,9 +222,7 @@ const ListingWizard: React.FC = () => {
         {/* API Error */}
         {createListingMutation.error && (
           <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
-            <p className="text-red-800">
-              Error: {createListingMutation.error.message}
-            </p>
+            <p className="text-red-800">Error: {createListingMutation.error.message}</p>
           </div>
         )}
       </div>

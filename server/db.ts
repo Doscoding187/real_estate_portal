@@ -1620,16 +1620,30 @@ export async function createListing(listingData: any) {
       // Create listing record
       // Convert latitude and longitude to strings to match schema
       const [listingResult] = await tx.insert(listings).values({
-        userId: listingData.userId,
+        ownerId: listingData.userId,
         action: listingData.action,
         propertyType: listingData.propertyType,
         title: listingData.title,
         description: listingData.description,
-        pricing: JSON.stringify(listingData.pricing),
-        propertyDetails: JSON.stringify(listingData.propertyDetails),
+        
+        // Map pricing fields
+        askingPrice: listingData.pricing.askingPrice ? String(listingData.pricing.askingPrice) : null,
+        negotiable: listingData.pricing.negotiable ? 1 : 0,
+        transferCostEstimate: listingData.pricing.transferCostEstimate ? String(listingData.pricing.transferCostEstimate) : null,
+        monthlyRent: listingData.pricing.monthlyRent ? String(listingData.pricing.monthlyRent) : null,
+        deposit: listingData.pricing.deposit ? String(listingData.pricing.deposit) : null,
+        leaseTerms: listingData.pricing.leaseTerms,
+        availableFrom: listingData.pricing.availableFrom ? new Date(listingData.pricing.availableFrom).toISOString().slice(0, 19).replace('T', ' ') : null,
+        utilitiesIncluded: listingData.pricing.utilitiesIncluded ? 1 : 0,
+        startingBid: listingData.pricing.startingBid ? String(listingData.pricing.startingBid) : null,
+        reservePrice: listingData.pricing.reservePrice ? String(listingData.pricing.reservePrice) : null,
+        auctionDateTime: listingData.pricing.auctionDateTime ? new Date(listingData.pricing.auctionDateTime).toISOString().slice(0, 19).replace('T', ' ') : null,
+        auctionTermsDocumentUrl: listingData.pricing.auctionTermsDocumentUrl,
+
+        propertyDetails: listingData.propertyDetails, // Pass object directly for JSON column
         address: listingData.address,
-        latitude: String(listingData.latitude), // Convert to string
-        longitude: String(listingData.longitude), // Convert to string
+        latitude: String(listingData.latitude),
+        longitude: String(listingData.longitude),
         city: listingData.city,
         suburb: listingData.suburb,
         province: listingData.province,
@@ -1638,8 +1652,8 @@ export async function createListing(listingData: any) {
         slug: listingData.slug,
         status: 'draft',
         approvalStatus: 'pending',
-        createdAt: new Date(),
-        updatedAt: new Date(),
+        createdAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
+        updatedAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
       });
 
       const newListingId = Number(listingResult.insertId);
@@ -1656,10 +1670,10 @@ export async function createListing(listingData: any) {
         bookingViewingRequests: 0,
         totalFavorites: 0,
         totalShares: 0,
-        conversionRate: 0,
-        viewsByDay: '{}',
-        trafficSources: '{}',
-        lastUpdated: new Date(),
+        conversionRate: '0',
+        viewsByDay: {},
+        trafficSources: {},
+        lastUpdated: new Date().toISOString().slice(0, 19).replace('T', ' '),
       });
 
       // Add media records
@@ -1667,11 +1681,11 @@ export async function createListing(listingData: any) {
         for (const mediaItem of listingData.media) {
           await tx.insert(listingMedia).values({
             listingId: newListingId,
-            url: mediaItem.url,
+            originalUrl: mediaItem.url,
             thumbnailUrl: mediaItem.thumbnailUrl,
-            type: mediaItem.type,
-            fileName: mediaItem.fileName,
-            fileSize: mediaItem.fileSize,
+            mediaType: mediaItem.type,
+            originalFileName: mediaItem.fileName,
+            originalFileSize: mediaItem.fileSize,
             width: mediaItem.width,
             height: mediaItem.height,
             duration: mediaItem.duration,
@@ -1679,8 +1693,8 @@ export async function createListing(listingData: any) {
             displayOrder: mediaItem.displayOrder,
             isPrimary: mediaItem.isPrimary ? 1 : 0,
             processingStatus: mediaItem.processingStatus,
-            createdAt: new Date(),
-            updatedAt: new Date(),
+            createdAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
+            uploadedAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
           });
         }
       }
