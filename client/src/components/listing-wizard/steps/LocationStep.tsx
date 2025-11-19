@@ -262,8 +262,24 @@ const LocationStep: React.FC = () => {
 
   // Handle manual address input changes
   const handleAddressChange = (field: keyof typeof location, value: string) => {
+    console.log('Updating location field:', field, 'with value:', value);
+    console.log('Current location state:', location);
     if (location) {
-      setLocation({ ...location, [field]: value });
+      const newLocation = { ...location, [field]: value };
+      console.log('New location state:', newLocation);
+      setLocation(newLocation);
+    } else {
+      // Initialize location object if it doesn't exist
+      const newLocation = {
+        address: '',
+        latitude: 0,
+        longitude: 0,
+        city: '',
+        province: '',
+        [field]: value,
+      } as any;
+      console.log('Initializing location state:', newLocation);
+      setLocation(newLocation);
     }
   };
 

@@ -10,6 +10,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { CheckCircle2, Circle } from 'lucide-react';
+import { trpc } from '@/lib/trpc';
+import { useLocation } from 'wouter';
 
 // Import wizard steps
 import ActionStep from './steps/ActionStep';
@@ -47,6 +49,11 @@ const ListingWizard: React.FC = () => {
   const validate = store.validate;
   const errors: any[] = store.errors;
 
+  // TRPC mutations for creating and submitting listings
+  const createMutation = trpc.listing.create.useMutation();
+  const submitMutation = trpc.listing.submitForReview.useMutation();
+  const [, setLocation] = useLocation();
+
   const handleNext = () => {
     if (validate()) {
       markStepComplete(currentStep);
@@ -56,6 +63,54 @@ const ListingWizard: React.FC = () => {
 
   const handlePrevious = () => {
     prevStep();
+  };
+
+  // Handle submission from the ListingWizard component
+  const handleSubmit = async () => {
+    console.log('handleSubmit called');
+    // Validate before submission
+    if (!store.validate()) {
+      console.log('Validation failed');
+      return;
+    }
+
+    console.log('Validation passed, submitting listing');
+    try {
+      // Prepare listing data
+      const listingData = {
+        action: store.action!,
+        propertyType: store.propertyType!,
+        title: store.title,
+        description: store.description,
+        pricing: store.pricing!,
+        propertyDetails: store.propertyDetails || {},
+        location: store.location!,
+        mediaIds: store.media.map((m: any) => m.id as number),
+        mainMediaId: store.mainMediaId,
+        status: 'pending_review' as const,
+      };
+      
+      console.log('Prepared listing data:', listingData);
+
+      // Create the listing
+      const result = await createMutation.mutateAsync(listingData);
+      console.log('Listing created:', result);
+
+      if (result?.id) {
+        // Submit for review
+        await submitMutation.mutateAsync({ listingId: result.id });
+        console.log('Listing submitted for review');
+
+        // Update the wizard state
+        store.submitForReview();
+        
+        // Redirect agent to their dashboard
+        setLocation('/agent/dashboard');
+      }
+    } catch (error) {
+      console.error('Error submitting listing:', error);
+      // Handle error (show notification, etc.)
+    }
   };
 
   const progress = ((currentStep - 1) / (TOTAL_STEPS - 1)) * 100;
@@ -222,10 +277,13 @@ const ListingWizard: React.FC = () => {
               </Button>
             ) : (
               <Button
-                onClick={() => useListingWizardStore.getState().submitForReview()}
+                onClick={handleSubmit}
                 className="px-8 bg-green-600 hover:bg-green-700"
+                disabled={createMutation.isPending || submitMutation.isPending}
               >
-                Submit for Review
+                {createMutation.isPending || submitMutation.isPending
+                  ? 'Submitting...'
+                  : 'Submit for Review'}
               </Button>
             )}
           </div>

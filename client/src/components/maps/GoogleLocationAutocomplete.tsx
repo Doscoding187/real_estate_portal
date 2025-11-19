@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { MapPin, Search, Navigation, Loader2, AlertCircle } from 'lucide-react';
 
@@ -64,8 +65,8 @@ export function GoogleLocationAutocomplete({
   const [selectedIndex, setSelectedIndex] = useState(-1);
 
   const inputRef = useRef<HTMLInputElement>(null);
-  const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
-  const placesServiceRef = useRef<google.maps.places.PlacesService | null>(null);
+  const autocompleteRef = useRef<any>(null);
+  const placesServiceRef = useRef<any>(null);
 
   // Load Google Maps Places API
   useEffect(() => {
@@ -110,7 +111,7 @@ export function GoogleLocationAutocomplete({
     placesServiceRef.current = new window.google.maps.places.PlacesService(map);
 
     // Initialize autocomplete
-    const options: google.maps.places.AutocompleteOptions = {
+    const options: any = {
       types: ['(cities)'], // Focus on cities/places
       componentRestrictions: { country: 'za' }, // South Africa
     };
@@ -152,64 +153,69 @@ export function GoogleLocationAutocomplete({
 
   // Debounced search function
   const searchPlaces = useCallback(
-    debounce(async (searchQuery: string) => {
-      if (!searchQuery.trim() || !placesServiceRef.current) {
-        setPredictions([]);
-        setIsOpen(false);
-        return;
-      }
+    (searchQuery: string) => {
+      const debouncedSearch = debounce(async (query: string) => {
+        if (!query.trim() || !placesServiceRef.current) {
+          setPredictions([]);
+          setIsOpen(false);
+          return;
+        }
 
-      setIsLoading(true);
-      setError(null);
+        setIsLoading(true);
+        setError(null);
 
-      try {
-        const request: google.maps.places.TextSearchRequest = {
-          query: searchQuery,
-          location: locationBias
-            ? new window.google.maps.LatLng(locationBias.latitude, locationBias.longitude)
-            : undefined,
-          radius: radius,
-          type: 'establishment',
-        };
+        try {
+          const request: any = {
+            query: query,
+            location: locationBias
+              ? new window.google.maps.LatLng(locationBias.latitude, locationBias.longitude)
+              : undefined,
+            radius: radius,
+            type: 'establishment',
+          };
 
-        placesServiceRef.current.textSearch(request, (results: any[], status: string) => {
+          placesServiceRef.current.textSearch(request, (results: any[], status: string) => {
+            setIsLoading(false);
+
+            if (status === window.google.maps.places.PlacesServiceStatus.OK && results) {
+              const placePredictions: PlacePrediction[] = results.slice(0, 5).map(place => ({
+                place_id: place.place_id,
+                description: place.formatted_address || place.name || '',
+                structured_formatting: {
+                  main_text: place.name || '',
+                  secondary_text: place.formatted_address || place.vicinity || '',
+                  main_text_matched_substrings: [],
+                },
+                types: place.types || [],
+                matched_substrings: [],
+              }));
+
+              setPredictions(placePredictions);
+              setIsOpen(true);
+              setSelectedIndex(-1);
+            } else {
+              setPredictions([]);
+              setIsOpen(false);
+            }
+          });
+        } catch (error) {
+          console.error('Places search error:', error);
+          setError('Failed to search locations');
           setIsLoading(false);
+          setPredictions([]);
+          setIsOpen(false);
+        }
+      }, 300);
 
-          if (status === window.google.maps.places.PlacesServiceStatus.OK && results) {
-            const placePredictions: PlacePrediction[] = results.slice(0, 5).map(place => ({
-              place_id: place.place_id,
-              description: place.formatted_address || place.name || '',
-              structured_formatting: {
-                main_text: place.name || '',
-                secondary_text: place.formatted_address || place.vicinity || '',
-                main_text_matched_substrings: [],
-              },
-              types: place.types || [],
-              matched_substrings: [],
-            }));
-
-            setPredictions(placePredictions);
-            setIsOpen(true);
-            setSelectedIndex(-1);
-          } else {
-            setPredictions([]);
-            setIsOpen(false);
-          }
-        });
-      } catch (error) {
-        console.error('Places search error:', error);
-        setError('Failed to search locations');
-        setIsLoading(false);
-        setPredictions([]);
-        setIsOpen(false);
-      }
-    }, 300),
+      return debouncedSearch(searchQuery);
+    },
     [locationBias, radius],
   );
 
   // Handle input change
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
+    console.log('GoogleLocationAutocomplete input changed:', value);
     setQuery(value);
     setSelectedIndex(-1);
 

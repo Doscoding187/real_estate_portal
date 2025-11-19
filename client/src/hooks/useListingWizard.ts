@@ -17,6 +17,8 @@ import type {
   ValidationError,
   ListingBadge,
 } from '../../../shared/listing-types';
+import { trpc } from '@/lib/trpc';
+import { useLocation } from 'wouter';
 
 interface ListingWizardStore extends ListingWizardState {
   // Navigation
@@ -57,6 +59,7 @@ interface ListingWizardStore extends ListingWizardState {
   updateMedia: (index: number, updates: Partial<MediaFile>) => void;
   reorderMedia: (fromIndex: number, toIndex: number) => void;
   setMainMedia: (mediaId: number) => void;
+  setDisplayMediaType: (type: 'image' | 'video') => void;
 
   // Validation
   addError: (error: ValidationError) => void;
@@ -231,6 +234,11 @@ export const useListingWizardStore = create<ListingWizardStore>()(
         }
       },
 
+      // Add this function
+      setDisplayMediaType: type => {
+        set({ displayMediaType: type });
+      },
+
       // Validation
       addError: error => {
         const currentErrors = get().errors;
@@ -344,14 +352,10 @@ export const useListingWizardStore = create<ListingWizardStore>()(
         }
 
         set({ status: 'submitting' });
-        try {
-          // TODO: Implement API call to submit for review
-          console.log('Submitting for review...', get());
-          set({ status: 'submitted' });
-        } catch (error) {
-          console.error('Error submitting:', error);
-          set({ status: 'draft' });
-        }
+
+        // The actual TRPC calls will be made in the component
+        // This just sets the status to submitted to trigger the redirect
+        set({ status: 'submitted' });
       },
 
       reset: () => {
@@ -382,6 +386,8 @@ export const useListingWizardStore = create<ListingWizardStore>()(
         badges: state.badges,
         currentStep: state.currentStep,
         completedSteps: state.completedSteps,
+        displayMediaType: state.displayMediaType, // Add this line
+        mainMediaId: state.mainMediaId, // Add this line to persist mainMediaId
       }),
     },
   ),

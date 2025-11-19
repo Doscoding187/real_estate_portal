@@ -179,3 +179,40 @@ export async function deletePropertyImages(imageUrls: string[]): Promise<void> {
     throw new Error('Failed to delete images');
   }
 }
+
+/**
+ * Generate presigned URL for S3 upload
+ * @param filename - Name of the file to upload
+ * @param contentType - MIME type of the file
+ * @param propertyId - Property ID for organizing uploads
+ * @returns Object containing upload URL and key
+ */
+export async function generatePresignedUploadUrl(
+  filename: string,
+  contentType: string,
+  propertyId: string,
+): Promise<{ uploadUrl: string; key: string }> {
+  if (!useS3 || !s3Client) {
+    throw new Error('S3 not configured');
+  }
+
+  try {
+    // Generate a unique key for the file
+    const fileExtension = filename.split('.').pop() || 'jpg';
+    const key = `properties/${propertyId}/${Date.now()}-${crypto.randomUUID()}.${fileExtension}`;
+
+    // Generate presigned URL
+    const command = new PutObjectCommand({
+      Bucket: ENV.s3BucketName,
+      Key: key,
+      ContentType: contentType,
+    });
+
+    const uploadUrl = await getSignedUrl(s3Client, command, { expiresIn: 3600 }); // 1 hour expiry
+
+    return { uploadUrl, key };
+  } catch (error) {
+    console.error('Failed to generate presigned URL:', error);
+    throw new Error('Failed to generate upload URL');
+  }
+}

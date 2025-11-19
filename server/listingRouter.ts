@@ -251,21 +251,25 @@ export const listingRouter = router({
       z.object({
         listingId: z.number().optional(),
         type: z.enum(['image', 'video', 'floorplan', 'pdf']),
-        // File upload handled separately via presigned URL
+        filename: z.string(),
+        contentType: z.string(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
       try {
-        // Generate presigned URL for S3
-        // For now, we'll return a mock URL
-        // In a real implementation, this would integrate with your storage solution
+        // Import the S3 upload service
+        const { generatePresignedUploadUrl } = await import('./_core/imageUpload');
 
-        const uploadUrl = `https://example-storage.com/upload/${Date.now()}`;
-        const mediaId = Date.now(); // Mock ID
+        // Generate presigned URL for S3
+        const result = await generatePresignedUploadUrl(
+          input.filename,
+          input.contentType,
+          input.listingId?.toString() || 'draft',
+        );
 
         return {
-          uploadUrl,
-          mediaId,
+          uploadUrl: result.uploadUrl,
+          mediaId: result.key, // Use the S3 key as media ID
         };
       } catch (error) {
         console.error('Error generating media upload URL:', error);

@@ -277,6 +277,7 @@ export interface MediaFile {
   displayOrder: number;
   isPrimary: boolean;
   processingStatus?: 'pending' | 'processing' | 'completed' | 'failed';
+  fileData?: string; // Base64 encoded file data for persistence
 }
 
 export interface MediaUploadLimits {
@@ -326,6 +327,7 @@ export interface ListingWizardState {
   // Step 5: Media
   media: MediaFile[];
   mainMediaId?: number;
+  displayMediaType?: 'image' | 'video';
 
   // Validation
   errors: ValidationError[];

@@ -32,6 +32,7 @@ export function Navbar() {
     { href: '/properties', label: 'Properties' },
     { href: '/explore', label: 'Explore', icon: Play },
     { href: '/agents', label: 'Agents' },
+    { href: '/listing-template', label: 'Listing Template' },
     { href: '/dashboard', label: 'My Properties', protected: true },
     { href: '/favorites', label: 'Favorites', icon: Heart, protected: true },
   ];

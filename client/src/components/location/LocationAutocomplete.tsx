@@ -69,6 +69,7 @@ export function LocationAutocomplete({
   );
 
   const handleSelect = (location: LocationOption) => {
+    console.log('Location selected:', location);
     setSearchQuery(location.name);
     onValueChange(location.name);
     if (onLocationSelect) {
@@ -78,6 +79,7 @@ export function LocationAutocomplete({
   };
 
   const handleInputChange = (newValue: string) => {
+    console.log('LocationAutocomplete input changed:', newValue);
     setSearchQuery(newValue);
     onValueChange(newValue);
   };

@@ -7,8 +7,22 @@ import React from 'react';
 import { useListingWizardStore } from '@/hooks/useListingWizard';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import type { PropertyType } from '@/../../shared/listing-types';
 import { PROPERTY_TYPE_TEMPLATES } from '@/../../shared/listing-types';
+import {
+  MapPin,
+  Bed,
+  Bath,
+  Maximize,
+  Heart,
+  Share2,
+  Calendar,
+  Eye,
+  CheckCircle2,
+} from 'lucide-react';
+import { useLocation } from 'wouter';
+import { trpc } from '@/lib/trpc';
 
 const PreviewStep: React.FC = () => {
   const state = useListingWizardStore();
@@ -30,218 +44,224 @@ const PreviewStep: React.FC = () => {
     return new Date(date).toLocaleDateString('en-ZA');
   };
 
+  // Get primary media
+  const primaryMedia = state.media.find((m: any) => m.isPrimary);
+
+  // Get amenities list
+  const amenitiesList = state.propertyDetails?.amenitiesFeatures || [];
+
+  // Calculate area based on property type
+  const getPropertyArea = () => {
+    if (!state.propertyDetails) return 'N/A';
+
+    if (state.propertyType === 'apartment') {
+      return (state.propertyDetails as any).unitSizeM2 || 'N/A';
+    } else if (state.propertyType === 'house') {
+      return (
+        (state.propertyDetails as any).erfSizeM2 ||
+        (state.propertyDetails as any).houseAreaM2 ||
+        'N/A'
+      );
+    } else if (state.propertyType === 'land') {
+      return (state.propertyDetails as any).landSizeM2OrHa || 'N/A';
+    } else if (state.propertyType === 'farm') {
+      return (state.propertyDetails as any).landSizeHa || 'N/A';
+    } else if (state.propertyType === 'commercial') {
+      return (state.propertyDetails as any).floorAreaM2 || 'N/A';
+    }
+    return 'N/A';
+  };
+
   return (
     <div className="space-y-6">
-      {/* Listing Preview */}
-      <Card className="p-6">
-        <h3 className="text-lg font-semibold mb-4">Listing Preview</h3>
+      {/* Full Property Preview - Mimics PropertyDetail page */}
+      <div className="bg-white rounded-lg shadow-sm border">
+        {/* Property Header */}
+        <div className="p-6 border-b">
+          <div className="flex items-start justify-between">
+            <div>
+              <h1 className="text-3xl font-bold mb-2">{state.title || 'Untitled Property'}</h1>
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <MapPin className="h-5 w-5" />
+                <span>
+                  {state.location?.address || 'Address not specified'},
+                  {state.location?.city || 'City not specified'},
+                  {state.location?.province || 'Province not specified'}
+                </span>
+              </div>
+            </div>
+            <Badge className="bg-accent text-accent-foreground">Preview</Badge>
+          </div>
+        </div>
 
-        <div className="space-y-6">
-          {/* Basic Info */}
-          <div>
-            <h4 className="font-medium text-gray-900 mb-2">Basic Information</h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <p className="text-sm text-gray-500">Title</p>
-                <p className="font-semibold">{state.title || 'No title'}</p>
+        {/* Image Gallery */}
+        <div className="p-6 border-b">
+          <div className="rounded-lg overflow-hidden mb-4">
+            {primaryMedia ? (
+              <div className="w-full h-[500px] bg-gray-100 flex items-center justify-center">
+                {primaryMedia.type === 'image' ? (
+                  <img
+                    src={primaryMedia.url}
+                    alt="Primary media"
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="text-center">
+                    <div className="bg-gray-200 border-2 border-dashed rounded-xl w-16 h-16 mx-auto" />
+                    <p className="mt-2 text-gray-500">Video Preview</p>
+                  </div>
+                )}
               </div>
-              <div>
-                <p className="text-sm text-gray-500">Description</p>
-                <p className="font-semibold">{state.description || 'No description'}</p>
+            ) : (
+              <div className="w-full h-[500px] bg-muted flex items-center justify-center">
+                <span className="text-muted-foreground">No Primary Media Selected</span>
               </div>
-              <div>
-                <p className="text-sm text-gray-500">Action</p>
-                <p className="font-semibold capitalize">{state.action || 'Not set'}</p>
+            )}
+          </div>
+
+          {state.media.length > 1 && (
+            <div className="grid grid-cols-4 gap-4">
+              {state.media.slice(0, 4).map((item: any, index: number) => (
+                <div key={index} className="aspect-square bg-gray-100 rounded-lg overflow-hidden">
+                  {item.type === 'image' ? (
+                    <img
+                      src={item.url}
+                      alt={`Media ${index + 1}`}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <div className="text-center">
+                        <div className="bg-gray-200 border-2 border-dashed rounded-xl w-8 h-8 mx-auto" />
+                        <p className="text-xs mt-1 text-gray-500">Video</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 p-6">
+          {/* Main Content */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Property Details */}
+            <div className="bg-card rounded-lg border p-6">
+              <div className="flex items-center gap-6 py-4 border-y">
+                {(state.propertyDetails as any)?.bedrooms && (
+                  <div className="flex items-center gap-2">
+                    <Bed className="h-5 w-5 text-muted-foreground" />
+                    <span className="font-semibold">{(state.propertyDetails as any).bedrooms}</span>
+                    <span className="text-sm text-muted-foreground">Bedrooms</span>
+                  </div>
+                )}
+                {(state.propertyDetails as any)?.bathrooms && (
+                  <div className="flex items-center gap-2">
+                    <Bath className="h-5 w-5 text-muted-foreground" />
+                    <span className="font-semibold">
+                      {(state.propertyDetails as any).bathrooms}
+                    </span>
+                    <span className="text-sm text-muted-foreground">Bathrooms</span>
+                  </div>
+                )}
+                <div className="flex items-center gap-2">
+                  <Maximize className="h-5 w-5 text-muted-foreground" />
+                  <span className="font-semibold">{getPropertyArea()}</span>
+                  <span className="text-sm text-muted-foreground">m²</span>
+                </div>
               </div>
-              <div>
-                <p className="text-sm text-gray-500">Property Type</p>
-                <p className="font-semibold">
-                  {state.propertyType
-                    ? PROPERTY_TYPE_TEMPLATES[state.propertyType as PropertyType]?.label ||
-                      state.propertyType
-                    : 'Not set'}
+
+              {/* Description */}
+              <div className="mt-6">
+                <h2 className="text-xl font-semibold mb-3">Description</h2>
+                <p className="text-muted-foreground leading-relaxed">
+                  {state.description || 'No description provided'}
                 </p>
+              </div>
+
+              {/* Amenities */}
+              {amenitiesList.length > 0 && (
+                <div className="mt-6">
+                  <h2 className="text-xl font-semibold mb-3">Amenities</h2>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                    {amenitiesList.map((amenity: string, index: number) => (
+                      <div key={index} className="flex items-center gap-2">
+                        <CheckCircle2 className="h-5 w-5 text-accent" />
+                        <span>{amenity}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Additional Details */}
+              <div className="mt-6 grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <span className="text-muted-foreground">Property Type:</span>
+                  <span className="ml-2 font-semibold capitalize">
+                    {state.propertyType || 'Not specified'}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Listing Type:</span>
+                  <span className="ml-2 font-semibold capitalize">
+                    {state.action || 'Not specified'}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Eye className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-muted-foreground">0 views (preview)</span>
+                </div>
               </div>
             </div>
           </div>
 
-          {/* Pricing */}
-          {state.pricing && (
-            <div>
-              <h4 className="font-medium text-gray-900 mb-2">Pricing</h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {state.action === 'sell' && (
-                  <>
-                    <div>
-                      <p className="text-sm text-gray-500">Asking Price</p>
-                      <p className="font-semibold">
-                        {formatCurrency((state.pricing as any).askingPrice)}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-500">Negotiable</p>
-                      <p className="font-semibold">
-                        {(state.pricing as any).negotiable ? 'Yes' : 'No'}
-                      </p>
-                    </div>
-                  </>
-                )}
-
-                {state.action === 'rent' && (
-                  <>
-                    <div>
-                      <p className="text-sm text-gray-500">Monthly Rent</p>
-                      <p className="font-semibold">
-                        {formatCurrency((state.pricing as any).monthlyRent)}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-500">Deposit</p>
-                      <p className="font-semibold">
-                        {formatCurrency((state.pricing as any).deposit)}
-                      </p>
-                    </div>
-                  </>
-                )}
-
-                {state.action === 'auction' && (
-                  <>
-                    <div>
-                      <p className="text-sm text-gray-500">Starting Bid</p>
-                      <p className="font-semibold">
-                        {formatCurrency((state.pricing as any).startingBid)}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-500">Auction Date</p>
-                      <p className="font-semibold">
-                        {formatDate((state.pricing as any).auctionDateTime)}
-                      </p>
-                    </div>
-                  </>
-                )}
+          {/* Sidebar */}
+          <div className="space-y-6">
+            <div className="bg-card rounded-lg border p-6 sticky top-20">
+              <div className="mb-6">
+                <div className="text-3xl font-bold text-primary mb-1">
+                  {state.pricing
+                    ? state.action === 'sell'
+                      ? formatCurrency((state.pricing as any).askingPrice)
+                      : state.action === 'rent'
+                        ? formatCurrency((state.pricing as any).monthlyRent)
+                        : formatCurrency((state.pricing as any).startingBid)
+                    : 'Price not specified'}
+                </div>
+                <div className="text-sm text-muted-foreground capitalize">
+                  For {state.action || 'sale'}
+                </div>
               </div>
-            </div>
-          )}
 
-          {/* Property Details */}
-          {state.propertyDetails && (
-            <div>
-              <h4 className="font-medium text-gray-900 mb-2">Property Details</h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {Object.entries(state.propertyDetails).map(([key, value]) => (
-                  <div key={key}>
-                    <p className="text-sm text-gray-500">{key.replace(/([A-Z])/g, ' $1').trim()}</p>
-                    <p className="font-semibold">
-                      {typeof value === 'boolean'
-                        ? value
-                          ? 'Yes'
-                          : 'No'
-                        : String(value) || 'Not specified'}
-                    </p>
-                  </div>
-                ))}
+              <div className="space-y-3">
+                <Button className="w-full bg-accent hover:bg-accent/90" size="lg">
+                  Contact Owner
+                </Button>
+                <Button variant="outline" className="w-full" size="lg">
+                  <Heart className="h-5 w-5 mr-2" />
+                  Save to Favorites
+                </Button>
+                <Button variant="outline" className="w-full" size="lg">
+                  <Share2 className="h-5 w-5 mr-2" />
+                  Share Property
+                </Button>
               </div>
-            </div>
-          )}
 
-          {/* Location */}
-          {state.location && (
-            <div>
-              <h4 className="font-medium text-gray-900 mb-2">Location</h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm text-gray-500">Address</p>
-                  <p className="font-semibold">{state.location.address || 'Not specified'}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">City</p>
-                  <p className="font-semibold">{state.location.city || 'Not specified'}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">Suburb</p>
-                  <p className="font-semibold">{state.location.suburb || 'Not specified'}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">Province</p>
-                  <p className="font-semibold">{state.location.province || 'Not specified'}</p>
+              <div className="mt-6 pt-6 border-t text-sm text-muted-foreground">
+                <div className="flex items-center gap-2 mb-2">
+                  <Calendar className="h-4 w-4" />
+                  <span>Listed today (preview)</span>
                 </div>
               </div>
             </div>
-          )}
-
-          {/* Media */}
-          {state.media.length > 0 && (
-            <div>
-              <h4 className="font-medium text-gray-900 mb-2">Media ({state.media.length} items)</h4>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                {state.media.map((item: any, index: number) => (
-                  <div
-                    key={index}
-                    className="relative rounded-lg border overflow-hidden aspect-square"
-                  >
-                    {item.type === 'image' && item.url && (
-                      <img
-                        src={item.url}
-                        alt={`Media ${index + 1}`}
-                        className="w-full h-full object-cover"
-                      />
-                    )}
-                    {item.type === 'video' && (
-                      <div className="w-full h-full bg-gray-100 flex items-center justify-center">
-                        <div className="text-center">
-                          <div className="bg-gray-200 border-2 border-dashed rounded-xl w-16 h-16 mx-auto" />
-                          <p className="text-xs mt-2">Video</p>
-                        </div>
-                      </div>
-                    )}
-                    {item.type === 'floorplan' && (
-                      <div className="w-full h-full bg-blue-50 flex items-center justify-center">
-                        <div className="text-center">
-                          <div className="bg-blue-100 border-2 border-dashed rounded-xl w-16 h-16 mx-auto" />
-                          <p className="text-xs mt-2">Floorplan</p>
-                        </div>
-                      </div>
-                    )}
-                    {item.type === 'pdf' && (
-                      <div className="w-full h-full bg-red-50 flex items-center justify-center">
-                        <div className="text-center">
-                          <div className="bg-red-100 border-2 border-dashed rounded-xl w-16 h-16 mx-auto" />
-                          <p className="text-xs mt-2">PDF</p>
-                        </div>
-                      </div>
-                    )}
-                    {item.isPrimary && (
-                      <div className="absolute top-1 left-1 bg-primary text-primary-foreground text-xs px-1.5 py-0.5 rounded">
-                        Primary
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+          </div>
         </div>
-      </Card>
+      </div>
 
       {/* Submission Info */}
-      <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-        <h4 className="font-semibold text-green-900 mb-2">✅ Ready to Submit</h4>
-        <p className="text-sm text-green-800">
-          Your listing will be submitted for review. You'll be notified once it's approved and
-          published.
-        </p>
-      </div>
-
-      {/* Submit Button */}
-      <div className="flex justify-end">
-        <Button
-          onClick={() => state.submitForReview()}
-          className="px-8 bg-green-600 hover:bg-green-700"
-        >
-          Submit for Review
-        </Button>
-      </div>
+      {/* Removed as per user request - submission is handled by the ListingWizard component */}
     </div>
   );
 };

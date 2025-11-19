@@ -54,22 +54,35 @@ export default function ListingOversight() {
   const [actionReason, setActionReason] = useState('');
   const [isActionDialogOpen, setIsActionDialogOpen] = useState(false);
 
-  const { data, isLoading, refetch } = trpc.admin.listProperties.useQuery({
-    limit: 50,
+  // Use the listing approval queue endpoint instead of admin.listProperties
+  const { data, isLoading, refetch } = trpc.listing.getApprovalQueue.useQuery({
     status: statusFilter !== 'all' ? (statusFilter as any) : undefined,
-    search: searchTerm || undefined,
   });
 
-  const moderateMutation = trpc.admin.moderateProperty.useMutation({
+  // Use listing approve/reject mutations instead of admin.moderateProperty
+  const approveMutation = trpc.listing.approve.useMutation({
     onSuccess: () => {
-      toast.success('Property status updated');
+      toast.success('Property approved successfully');
       refetch();
       setIsActionDialogOpen(false);
       setSelectedProperty(null);
       setActionReason('');
     },
     onError: error => {
-      toast.error(error.message || 'Failed to update property');
+      toast.error(error.message || 'Failed to approve property');
+    },
+  });
+
+  const rejectMutation = trpc.listing.reject.useMutation({
+    onSuccess: () => {
+      toast.success('Property rejected successfully');
+      refetch();
+      setIsActionDialogOpen(false);
+      setSelectedProperty(null);
+      setActionReason('');
+    },
+    onError: error => {
+      toast.error(error.message || 'Failed to reject property');
     },
   });
 
@@ -87,11 +100,17 @@ export default function ListingOversight() {
   const confirmModeration = () => {
     if (!selectedProperty) return;
 
-    moderateMutation.mutate({
-      propertyId: selectedProperty.id,
-      action: selectedProperty.action,
-      reason: actionReason,
-    });
+    if (selectedProperty.action === 'approve') {
+      approveMutation.mutate({
+        listingId: selectedProperty.listingId,
+        notes: actionReason,
+      });
+    } else if (selectedProperty.action === 'reject') {
+      rejectMutation.mutate({
+        listingId: selectedProperty.listingId,
+        reason: actionReason,
+      });
+    }
   };
 
   const getStatusBadgeVariant = (status: string) => {
@@ -127,7 +146,7 @@ export default function ListingOversight() {
               size="sm"
               variant="default"
               onClick={() => handleModerate(property, 'approve')}
-              disabled={moderateMutation.isPending}
+              disabled={approveMutation.isPending || rejectMutation.isPending}
             >
               <CheckCircle className="h-3 w-3 mr-1" />
               Approve
@@ -136,24 +155,12 @@ export default function ListingOversight() {
               size="sm"
               variant="destructive"
               onClick={() => handleModerate(property, 'reject')}
-              disabled={moderateMutation.isPending}
+              disabled={approveMutation.isPending || rejectMutation.isPending}
             >
               <XCircle className="h-3 w-3 mr-1" />
               Reject
             </Button>
           </div>
-        );
-      case 'available':
-        return (
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => handleModerate(property, 'archive')}
-            disabled={moderateMutation.isPending}
-          >
-            <Archive className="h-3 w-3 mr-1" />
-            Archive
-          </Button>
         );
       default:
         return null;
@@ -221,7 +228,7 @@ export default function ListingOversight() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{data?.pagination.total || 0}</div>
+              <div className="text-2xl font-bold">{data?.length || 0}</div>
             </CardContent>
           </Card>
           <Card>
@@ -232,27 +239,27 @@ export default function ListingOversight() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-orange-600">
-                {data?.properties.filter((p: any) => p.status === 'pending').length || 0}
+                {data?.filter((p: any) => p.status === 'pending').length || 0}
               </div>
             </CardContent>
           </Card>
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Active</CardTitle>
+              <CardTitle className="text-sm font-medium text-muted-foreground">Approved</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-green-600">
-                {data?.properties.filter((p: any) => p.status === 'available').length || 0}
+                {data?.filter((p: any) => p.status === 'approved').length || 0}
               </div>
             </CardContent>
           </Card>
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Archived</CardTitle>
+              <CardTitle className="text-sm font-medium text-muted-foreground">Rejected</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-red-600">
-                {data?.properties.filter((p: any) => p.status === 'archived').length || 0}
+                {data?.filter((p: any) => p.status === 'rejected').length || 0}
               </div>
             </CardContent>
           </Card>
@@ -266,52 +273,43 @@ export default function ListingOversight() {
           <CardContent>
             {isLoading ? (
               <div className="py-12 text-center text-muted-foreground">Loading properties...</div>
-            ) : !data?.properties.length ? (
+            ) : !data?.length ? (
               <div className="py-12 text-center text-muted-foreground">No properties found.</div>
             ) : (
               <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Property</TableHead>
-                    <TableHead>Price</TableHead>
-                    <TableHead>Location</TableHead>
+                    <TableHead>Type</TableHead>
+                    <TableHead>Action</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead>Listed</TableHead>
+                    <TableHead>Submitted</TableHead>
                     <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {data.properties.map((property: any) => (
+                  {data.map((property: any) => (
                     <TableRow key={property.id}>
                       <TableCell>
                         <div>
-                          <div className="font-medium">{property.title}</div>
-                          <div className="text-sm text-muted-foreground flex items-center gap-1">
-                            <Home className="h-3 w-3" />
-                            Owner #{property.ownerId}
+                          <div className="font-medium">{property.listingTitle}</div>
+                          <div className="text-sm text-muted-foreground">
+                            Submitted by User #{property.submittedBy}
                           </div>
                         </div>
                       </TableCell>
                       <TableCell>
-                        <div className="flex items-center gap-1">
-                          <DollarSign className="h-4 w-4 text-muted-foreground" />
-                          {formatPrice(property.price)}
-                        </div>
+                        <Badge variant="outline">{property.listingPropertyType}</Badge>
                       </TableCell>
                       <TableCell>
-                        <div className="flex items-center gap-1">
-                          <MapPin className="h-3 w-3 text-muted-foreground" />
-                          <span className="text-sm">
-                            {property.city}, {property.province}
-                          </span>
-                        </div>
+                        <Badge variant="secondary">{property.listingAction}</Badge>
                       </TableCell>
                       <TableCell>
                         <Badge variant={getStatusBadgeVariant(property.status)}>
                           {property.status}
                         </Badge>
                       </TableCell>
-                      <TableCell>{new Date(property.createdAt).toLocaleDateString()}</TableCell>
+                      <TableCell>{new Date(property.submittedAt).toLocaleDateString()}</TableCell>
                       <TableCell>{getActionButton(property)}</TableCell>
                     </TableRow>
                   ))}
@@ -328,9 +326,8 @@ export default function ListingOversight() {
               <DialogTitle>
                 {selectedProperty?.action === 'approve' && 'Approve Property Listing'}
                 {selectedProperty?.action === 'reject' && 'Reject Property Listing'}
-                {selectedProperty?.action === 'archive' && 'Archive Property Listing'}
               </DialogTitle>
-              <DialogDescription>{selectedProperty?.title}</DialogDescription>
+              <DialogDescription>{selectedProperty?.listingTitle}</DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
               <div>
@@ -347,12 +344,17 @@ export default function ListingOversight() {
                 </Button>
                 <Button
                   onClick={confirmModeration}
-                  disabled={moderateMutation.isPending}
+                  disabled={approveMutation.isPending || rejectMutation.isPending}
                   variant={selectedProperty?.action === 'reject' ? 'destructive' : 'default'}
                 >
-                  {selectedProperty?.action === 'approve' && 'Approve'}
-                  {selectedProperty?.action === 'reject' && 'Reject'}
-                  {selectedProperty?.action === 'archive' && 'Archive'}
+                  {approveMutation.isPending || rejectMutation.isPending ? (
+                    'Processing...'
+                  ) : (
+                    <>
+                      {selectedProperty?.action === 'approve' && 'Approve'}
+                      {selectedProperty?.action === 'reject' && 'Reject'}
+                    </>
+                  )}
                 </Button>
               </div>
             </div>

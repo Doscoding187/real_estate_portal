@@ -7,6 +7,8 @@ import React, { useState, useCallback, useRef } from 'react';
 import { useListingWizardStore } from '@/hooks/useListingWizard';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Label } from '@/components/ui/label';
 import { Upload, X, Image as ImageIcon, Video, FileText, AlertCircle, Play } from 'lucide-react';
 import { trpc } from '@/lib/trpc';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -18,6 +20,13 @@ const MediaUploadStep: React.FC = () => {
   const addMedia = store.addMedia;
   const removeMedia = store.removeMedia;
   const setMainMedia = store.setMainMedia;
+  const displayMediaType = store.displayMediaType || 'image';
+  const setDisplayMediaType = store.setDisplayMediaType;
+
+  // Get primary media based on selected display type
+  const primaryMedia = media.find(
+    (m: ListingMediaFile) => m.isPrimary && m.type === displayMediaType,
+  );
 
   const [isDragging, setIsDragging] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -25,7 +34,7 @@ const MediaUploadStep: React.FC = () => {
 
   // Note: In a real implementation, this would call the actual trpc endpoint
   // For now, we're using a mock implementation
-  // const presignMutation = trpc.listing.uploadMedia.useMutation();
+  const presignMutation = trpc.listing.uploadMedia.useMutation();
 
   // Media limits from shared types
   const MEDIA_LIMITS = {
@@ -154,21 +163,51 @@ const MediaUploadStep: React.FC = () => {
   const uploadFile = useCallback(
     async (mediaFile: any): Promise<any> => {
       try {
-        // For now, we'll just add the media to the store without actual upload
-        // In a real implementation, this would upload to S3/Cloud storage
+        // Get presigned URL from backend
+        const uploadResponse = await presignMutation.mutateAsync({
+          type: mediaFile.type,
+          filename: mediaFile.name,
+          contentType: mediaFile.file.type,
+          // listingId will be added when the listing is actually created
+        } as any); // Type assertion to bypass potential TypeScript error
+
+        // Upload file directly to S3 using the presigned URL
+        const uploadResult = await fetch(uploadResponse.uploadUrl, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': mediaFile.file.type,
+          },
+          body: mediaFile.file,
+        });
+
+        if (!uploadResult.ok) {
+          throw new Error('Failed to upload file to S3');
+        }
+
+        // Check if this should be the primary media
+        const shouldSetAsPrimary =
+          media.length === 0 || // First media item
+          (!store.mainMediaId && mediaFile.type === displayMediaType); // No main media set yet and matches display type
 
         const newMediaItem = {
-          id: Date.now(),
-          url: mediaFile.preview,
+          id: uploadResponse.mediaId, // Use the S3 key as ID
+          url: uploadResponse.uploadUrl, // Store the S3 URL
           type: mediaFile.type,
           fileName: mediaFile.name,
           fileSize: mediaFile.size,
           displayOrder: media.length,
-          isPrimary: media.length === 0, // First media is primary by default
+          isPrimary: shouldSetAsPrimary,
           processingStatus: 'completed',
+          // Store the file data as base64 for persistence
+          fileData: mediaFile.fileData, // This will be added during file processing
         };
 
         addMedia(newMediaItem);
+
+        // If this should be the primary media, set it as main
+        if (shouldSetAsPrimary) {
+          setMainMedia(newMediaItem.id);
+        }
 
         return newMediaItem;
       } catch (err) {
@@ -176,7 +215,15 @@ const MediaUploadStep: React.FC = () => {
         throw err;
       }
     },
-    [media.length, addMedia],
+    [
+      media.length,
+      addMedia,
+      displayMediaType,
+      media,
+      setMainMedia,
+      store.mainMediaId,
+      presignMutation,
+    ],
   );
 
   // Handle files
@@ -198,6 +245,14 @@ const MediaUploadStep: React.FC = () => {
           continue;
         }
 
+        // Convert file to base64 for persistence
+        const fileData = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+
         // Create media file object
         const mediaFile: any = {
           file,
@@ -206,6 +261,7 @@ const MediaUploadStep: React.FC = () => {
           type: validation.type!,
           name: file.name,
           size: file.size,
+          fileData, // Store base64 data for persistence
         };
 
         // For videos, get metadata
@@ -305,10 +361,12 @@ const MediaUploadStep: React.FC = () => {
 
   // Helper function to render media preview
   const renderMediaPreview = (item: ListingMediaFile) => {
-    if (item.type === 'image' && item.url) {
+    // Check if we have fileData that can be used to reconstruct the image
+    if (item.type === 'image' && (item.url || item.fileData)) {
+      const imageUrl = item.url || item.fileData;
       return (
         <div className="aspect-video bg-gray-100 flex items-center justify-center">
-          <img src={item.url} alt="Primary media" className="w-full h-full object-cover" />
+          <img src={imageUrl} alt="Primary media" className="w-full h-full object-cover" />
         </div>
       );
     }
@@ -357,8 +415,10 @@ const MediaUploadStep: React.FC = () => {
 
   // Helper function to render media thumbnails
   const renderMediaThumbnail = (item: ListingMediaFile) => {
-    if (item.type === 'image' && item.url) {
-      return <img src={item.url} alt={`Media ${item.id}`} className="w-full h-full object-cover" />;
+    // Check if we have fileData that can be used to reconstruct the image
+    if (item.type === 'image' && (item.url || item.fileData)) {
+      const imageUrl = item.url || item.fileData;
+      return <img src={imageUrl} alt={`Media ${item.id}`} className="w-full h-full object-cover" />;
     }
 
     if (item.type === 'video') {
@@ -402,6 +462,31 @@ const MediaUploadStep: React.FC = () => {
     <Card className="p-6 space-y-6">
       <h3 className="text-lg font-semibold">Upload Media</h3>
 
+      {/* Display Media Type Selection - Always show this first */}
+      <div className="space-y-4">
+        <h4 className="font-medium">Select Primary Display Media Type</h4>
+        <RadioGroup
+          value={displayMediaType}
+          onValueChange={setDisplayMediaType}
+          className="flex gap-4"
+        >
+          <div className="flex items-center space-x-2">
+            <RadioGroupItem value="image" id="image" />
+            <Label htmlFor="image" className="flex items-center gap-2">
+              <ImageIcon className="h-4 w-4" />
+              Image
+            </Label>
+          </div>
+          <div className="flex items-center space-x-2">
+            <RadioGroupItem value="video" id="video" />
+            <Label htmlFor="video" className="flex items-center gap-2">
+              <Video className="h-4 w-4" />
+              Video
+            </Label>
+          </div>
+        </RadioGroup>
+      </div>
+
       {/* Upload Limits Info */}
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
         <h4 className="font-semibold text-blue-900 mb-2">📸 Media Guidelines</h4>
@@ -421,159 +506,159 @@ const MediaUploadStep: React.FC = () => {
         </Alert>
       )}
 
-      {/* Upload Area */}
-      <div
-        onDragOver={handleDragOver}
-        onDragLeave={handleDragLeave}
-        onDrop={handleDrop}
-        onClick={openFilePicker}
-        className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${
-          isDragging ? 'border-primary bg-primary/5' : 'border-gray-300 hover:border-gray-400'
-        }`}
-      >
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/*,video/*,.pdf"
-          multiple
-          onChange={handleFileInput}
-          className="hidden"
-        />
+      {/* Primary Media Upload Box */}
+      <div className="space-y-4">
+        <h4 className="font-medium">
+          Upload Primary {displayMediaType === 'image' ? 'Image' : 'Video'}
+        </h4>
+        {/* Upload Area for Primary Media */}
+        <div
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+          onClick={openFilePicker}
+          className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${
+            isDragging ? 'border-primary bg-primary/5' : 'border-gray-300 hover:border-gray-400'
+          }`}
+        >
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept={displayMediaType === 'image' ? 'image/*' : 'video/*'}
+            multiple
+            onChange={handleFileInput}
+            className="hidden"
+          />
 
-        <Upload className="w-12 h-12 mx-auto text-gray-400 mb-4" />
-        <p className="text-gray-600 mb-4">Drag and drop files here, or click to browse</p>
-        <Button type="button">Select Files</Button>
-        <p className="text-xs text-gray-500 mt-2">Supported: JPG, PNG, WebP, MP4, MOV, PDF</p>
+          <Upload className="w-12 h-12 mx-auto text-gray-400 mb-4" />
+          <p className="text-gray-600 mb-4">
+            Drag and drop your primary {displayMediaType} here, or click to browse
+          </p>
+          <Button type="button">
+            Select Primary {displayMediaType === 'image' ? 'Image' : 'Video'}
+          </Button>
+          <p className="text-xs text-gray-500 mt-2">
+            Supported: {displayMediaType === 'image' ? 'JPG, PNG, WebP' : 'MP4, MOV'}
+          </p>
+        </div>
       </div>
 
       {/* Primary Media Preview */}
-      {media.length > 0 && (
+      {primaryMedia && (
         <div className="space-y-4">
           <h4 className="font-medium">Primary Display Media</h4>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Primary Media */}
-            {media.find((m: ListingMediaFile) => m.isPrimary) ? (
-              <div className="border rounded-lg overflow-hidden">
-                {renderMediaPreview(media.find((m: ListingMediaFile) => m.isPrimary)!)}
-                <div className="p-3 bg-gray-50 flex justify-between items-center">
-                  <span className="text-sm font-medium text-primary">Primary Media</span>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      const primaryMedia = media.find((m: ListingMediaFile) => m.isPrimary);
-                      if (primaryMedia) {
-                        removeMediaFile(
-                          primaryMedia.id?.toString() || media.indexOf(primaryMedia).toString(),
-                        );
-                      }
-                    }}
-                  >
-                    Remove
-                  </Button>
-                </div>
-              </div>
-            ) : (
-              <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
-                <ImageIcon className="w-12 h-12 mx-auto text-gray-400 mb-4" />
-                <p className="text-gray-600">No primary media selected</p>
-                <p className="text-sm text-gray-500 mt-2">
-                  Upload an image or video to set as primary display
-                </p>
-              </div>
-            )}
-
-            {/* Gallery Preview */}
-            <div>
-              <h5 className="font-medium mb-3">
-                Gallery Media (
-                {media.length - (media.find((m: ListingMediaFile) => m.isPrimary) ? 1 : 0)} items)
-              </h5>
-              <div className="grid grid-cols-3 gap-2 max-h-64 overflow-y-auto p-2 border rounded-lg">
-                {media
-                  .filter((m: ListingMediaFile) => !m.isPrimary)
-                  .map((item: ListingMediaFile, index: number) => (
-                    <div
-                      key={item.id || index}
-                      className="relative group rounded border overflow-hidden aspect-square cursor-pointer"
-                      onClick={() => setAsPrimary(item.id?.toString() || index.toString())}
-                    >
-                      {renderMediaThumbnail(item)}
-                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
-                        <span className="opacity-0 group-hover:opacity-100 text-white text-xs font-medium bg-black/50 px-2 py-1 rounded">
-                          Set Primary
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                {media.filter((m: ListingMediaFile) => !m.isPrimary).length === 0 && (
-                  <div className="col-span-3 text-center py-4 text-gray-500">
-                    <p className="text-sm">No additional gallery media</p>
-                  </div>
-                )}
-              </div>
+          <div className="border rounded-lg overflow-hidden">
+            {renderMediaPreview(primaryMedia)}
+            <div className="p-3 bg-gray-50 flex justify-between items-center">
+              <span className="text-sm font-medium text-primary">Primary Media</span>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  removeMediaFile(
+                    primaryMedia.id?.toString() || media.indexOf(primaryMedia).toString(),
+                  );
+                }}
+              >
+                Remove
+              </Button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Media Grid (Additional uploads) */}
+      {/* Gallery Media Upload Box */}
+      <div className="space-y-4">
+        <h4 className="font-medium">Upload Additional Media</h4>
+        {/* Upload Area for Gallery Media */}
+        <div
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+          onClick={openFilePicker}
+          className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${
+            isDragging ? 'border-primary bg-primary/5' : 'border-gray-300 hover:border-gray-400'
+          }`}
+        >
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*,video/*,.pdf"
+            multiple
+            onChange={handleFileInput}
+            className="hidden"
+          />
+
+          <Upload className="w-12 h-12 mx-auto text-gray-400 mb-4" />
+          <p className="text-gray-600 mb-4">
+            Drag and drop additional media here, or click to browse
+          </p>
+          <Button type="button">Select Additional Media</Button>
+          <p className="text-xs text-gray-500 mt-2">Supported: JPG, PNG, WebP, MP4, MOV, PDF</p>
+        </div>
+      </div>
+
+      {/* Gallery Preview */}
       {media.length > 0 && (
         <div>
-          <h4 className="font-medium mb-3">All Uploaded Media</h4>
+          <h4 className="font-medium mb-3">
+            Gallery Media ({media.length - (primaryMedia ? 1 : 0)} items)
+          </h4>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-            {media.map((item: ListingMediaFile, index: number) => (
-              <div
-                key={item.id || index}
-                className="relative group rounded-lg border bg-card overflow-hidden aspect-square"
-              >
-                {/* Media Preview */}
-                {renderMediaThumbnail(item)}
-
-                {/* Primary Badge */}
-                {item.isPrimary && (
-                  <div className="absolute top-2 left-2 bg-primary text-primary-foreground text-xs font-medium px-2 py-1 rounded">
-                    Primary
-                  </div>
-                )}
-
-                {/* Media Type Badge */}
-                <div className="absolute top-2 right-2 bg-black/50 text-white text-xs font-medium px-1.5 py-0.5 rounded capitalize">
-                  {item.type}
-                </div>
-
-                {/* Remove Button */}
-                <Button
-                  type="button"
-                  variant="destructive"
-                  size="icon"
-                  onClick={e => {
-                    e.stopPropagation();
-                    removeMediaFile(item.id?.toString() || index.toString());
-                  }}
-                  className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
+            {media
+              .filter((m: ListingMediaFile) => !m.isPrimary || m.type !== displayMediaType)
+              .map((item: ListingMediaFile, index: number) => (
+                <div
+                  key={item.id || index}
+                  className="relative group rounded-lg border bg-card overflow-hidden aspect-square"
                 >
-                  <X className="h-4 w-4" />
-                </Button>
+                  {/* Media Preview */}
+                  {renderMediaThumbnail(item)}
 
-                {/* Set as Primary Button */}
-                {!item.isPrimary && (
+                  {/* Primary Badge */}
+                  {item.isPrimary && (
+                    <div className="absolute top-2 left-2 bg-primary text-primary-foreground text-xs font-medium px-2 py-1 rounded">
+                      Primary
+                    </div>
+                  )}
+
+                  {/* Media Type Badge */}
+                  <div className="absolute top-2 right-2 bg-black/50 text-white text-xs font-medium px-1.5 py-0.5 rounded capitalize">
+                    {item.type}
+                  </div>
+
+                  {/* Remove Button */}
                   <Button
                     type="button"
-                    variant="secondary"
-                    size="sm"
+                    variant="destructive"
+                    size="icon"
                     onClick={e => {
                       e.stopPropagation();
-                      setAsPrimary(item.id?.toString() || index.toString());
+                      removeMediaFile(item.id?.toString() || index.toString());
                     }}
-                    className="absolute bottom-2 left-2 text-xs h-6 px-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                    className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
                   >
-                    Set Primary
+                    <X className="h-4 w-4" />
                   </Button>
-                )}
-              </div>
-            ))}
+
+                  {/* Set as Primary Button */}
+                  {!item.isPrimary && item.type === displayMediaType && (
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      onClick={e => {
+                        e.stopPropagation();
+                        setAsPrimary(item.id?.toString() || index.toString());
+                      }}
+                      className="absolute bottom-2 left-2 text-xs h-6 px-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      Set Primary
+                    </Button>
+                  )}
+                </div>
+              ))}
           </div>
         </div>
       )}

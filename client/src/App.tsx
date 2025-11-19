@@ -50,6 +50,7 @@ import LovableIntegrationHub from './pages/LovableIntegrationHub';
 
 // Import the new Listing Wizard
 import ListingWizard from './components/listing-wizard/ListingWizard';
+import ListingTemplate from './pages/ListingTemplate';
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -64,6 +65,7 @@ function Router() {
       <Route path="/agent/:id" component={AgentDetail} />
       <Route path="/city/:slug" component={CityPage} />
       <Route path="/listings/create" component={ListingWizard} />
+      <Route path="/listing-template" component={ListingTemplate} />
       <Route path="/explore" component={ExploreFeed} />
 
       {/* Login and authentication routes should be early in the route list */}
@@ -111,6 +113,15 @@ function Router() {
         component={() => (
           <SuperAdminDashboard>
             <LovableIntegrationHub />
+          </SuperAdminDashboard>
+        )}
+      />
+      {/* Listing Approval Queue Route */}
+      <Route
+        path="/admin/listing-approvals"
+        component={() => (
+          <SuperAdminDashboard>
+            <ListingOversight />
           </SuperAdminDashboard>
         )}
       />
