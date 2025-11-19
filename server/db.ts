@@ -1721,14 +1721,34 @@ export async function getListingById(listingId: number) {
 
   if (!listing) return null;
 
-  // Parse JSON fields
-  const parsedListing = {
-    ...listing,
-    pricing: listing.pricing ? JSON.parse(listing.pricing) : null,
-    propertyDetails: listing.propertyDetails ? JSON.parse(listing.propertyDetails) : null,
+  if (!listing) return null;
+
+  // Construct pricing object from individual columns
+  const pricing = {
+    askingPrice: listing.askingPrice ? Number(listing.askingPrice) : undefined,
+    negotiable: listing.negotiable === 1,
+    transferCostEstimate: listing.transferCostEstimate ? Number(listing.transferCostEstimate) : undefined,
+    monthlyRent: listing.monthlyRent ? Number(listing.monthlyRent) : undefined,
+    deposit: listing.deposit ? Number(listing.deposit) : undefined,
+    leaseTerms: listing.leaseTerms,
+    availableFrom: listing.availableFrom ? new Date(listing.availableFrom) : undefined,
+    utilitiesIncluded: listing.utilitiesIncluded === 1,
+    startingBid: listing.startingBid ? Number(listing.startingBid) : undefined,
+    reservePrice: listing.reservePrice ? Number(listing.reservePrice) : undefined,
+    auctionDateTime: listing.auctionDateTime ? new Date(listing.auctionDateTime) : undefined,
+    auctionTermsDocumentUrl: listing.auctionTermsDocumentUrl,
   };
 
-  return parsedListing;
+  // propertyDetails is already an object if using json() type in schema
+  // but if it's null, we should handle it
+  const propertyDetails = listing.propertyDetails || {};
+
+  return {
+    ...listing,
+    userId: listing.ownerId, // Map ownerId to userId for compatibility
+    pricing,
+    propertyDetails,
+  };
 }
 
 /**
@@ -1743,7 +1763,7 @@ export async function getUserListings(
   const db = await getDb();
   if (!db) throw new Error('Database not available');
 
-  let query = db.select().from(listings).where(eq(listings.userId, userId));
+  let query = db.select().from(listings).where(eq(listings.ownerId, userId));
 
   if (status) {
     query = query.where(eq(listings.status, status));
@@ -1754,12 +1774,32 @@ export async function getUserListings(
     .limit(limit)
     .offset(offset);
 
-  // Parse JSON fields
-  return listingsData.map(listing => ({
-    ...listing,
-    pricing: listing.pricing ? JSON.parse(listing.pricing) : null,
-    propertyDetails: listing.propertyDetails ? JSON.parse(listing.propertyDetails) : null,
-  }));
+  // Map fields
+  return listingsData.map(listing => {
+    const pricing = {
+      askingPrice: listing.askingPrice ? Number(listing.askingPrice) : undefined,
+      negotiable: listing.negotiable === 1,
+      transferCostEstimate: listing.transferCostEstimate ? Number(listing.transferCostEstimate) : undefined,
+      monthlyRent: listing.monthlyRent ? Number(listing.monthlyRent) : undefined,
+      deposit: listing.deposit ? Number(listing.deposit) : undefined,
+      leaseTerms: listing.leaseTerms,
+      availableFrom: listing.availableFrom ? new Date(listing.availableFrom) : undefined,
+      utilitiesIncluded: listing.utilitiesIncluded === 1,
+      startingBid: listing.startingBid ? Number(listing.startingBid) : undefined,
+      reservePrice: listing.reservePrice ? Number(listing.reservePrice) : undefined,
+      auctionDateTime: listing.auctionDateTime ? new Date(listing.auctionDateTime) : undefined,
+      auctionTermsDocumentUrl: listing.auctionTermsDocumentUrl,
+    };
+
+    const propertyDetails = listing.propertyDetails || {};
+
+    return {
+      ...listing,
+      userId: listing.ownerId,
+      pricing,
+      propertyDetails,
+    };
+  });
 }
 
 /**
@@ -1769,19 +1809,32 @@ export async function updateListing(listingId: number, updateData: any) {
   const db = await getDb();
   if (!db) throw new Error('Database not available');
 
-  // Parse JSON fields for update
+  // Prepare update fields
   const updateFields: any = {
     ...updateData,
-    updatedAt: new Date(),
+    updatedAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
   };
 
+  // Map pricing fields if present
   if (updateData.pricing) {
-    updateFields.pricing = JSON.stringify(updateData.pricing);
+    if (updateData.pricing.askingPrice !== undefined) updateFields.askingPrice = updateData.pricing.askingPrice ? String(updateData.pricing.askingPrice) : null;
+    if (updateData.pricing.negotiable !== undefined) updateFields.negotiable = updateData.pricing.negotiable ? 1 : 0;
+    if (updateData.pricing.transferCostEstimate !== undefined) updateFields.transferCostEstimate = updateData.pricing.transferCostEstimate ? String(updateData.pricing.transferCostEstimate) : null;
+    if (updateData.pricing.monthlyRent !== undefined) updateFields.monthlyRent = updateData.pricing.monthlyRent ? String(updateData.pricing.monthlyRent) : null;
+    if (updateData.pricing.deposit !== undefined) updateFields.deposit = updateData.pricing.deposit ? String(updateData.pricing.deposit) : null;
+    if (updateData.pricing.leaseTerms !== undefined) updateFields.leaseTerms = updateData.pricing.leaseTerms;
+    if (updateData.pricing.availableFrom !== undefined) updateFields.availableFrom = updateData.pricing.availableFrom ? new Date(updateData.pricing.availableFrom).toISOString().slice(0, 19).replace('T', ' ') : null;
+    if (updateData.pricing.utilitiesIncluded !== undefined) updateFields.utilitiesIncluded = updateData.pricing.utilitiesIncluded ? 1 : 0;
+    if (updateData.pricing.startingBid !== undefined) updateFields.startingBid = updateData.pricing.startingBid ? String(updateData.pricing.startingBid) : null;
+    if (updateData.pricing.reservePrice !== undefined) updateFields.reservePrice = updateData.pricing.reservePrice ? String(updateData.pricing.reservePrice) : null;
+    if (updateData.pricing.auctionDateTime !== undefined) updateFields.auctionDateTime = updateData.pricing.auctionDateTime ? new Date(updateData.pricing.auctionDateTime).toISOString().slice(0, 19).replace('T', ' ') : null;
+    if (updateData.pricing.auctionTermsDocumentUrl !== undefined) updateFields.auctionTermsDocumentUrl = updateData.pricing.auctionTermsDocumentUrl;
+    
+    delete updateFields.pricing;
   }
 
-  if (updateData.propertyDetails) {
-    updateFields.propertyDetails = JSON.stringify(updateData.propertyDetails);
-  }
+  // propertyDetails is json() type, so pass object directly
+  // No need to stringify
 
   await db.update(listings).set(updateFields).where(eq(listings.id, listingId));
 }
@@ -1799,15 +1852,19 @@ export async function submitListingForReview(listingId: number) {
     .set({
       status: 'pending_review',
       approvalStatus: 'pending',
-      updatedAt: new Date(),
+      updatedAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
     })
     .where(eq(listings.id, listingId));
+
+  // Get listing to find owner
+  const listing = await getListingById(listingId);
+  if (!listing) throw new Error('Listing not found');
 
   // Add to approval queue
   await db.insert(listingApprovalQueue).values({
     listingId,
-    submittedBy: (await getListingById(listingId))?.userId || 0,
-    submittedAt: new Date(),
+    submittedBy: listing.ownerId,
+    submittedAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
     status: 'pending',
     priority: 'normal',
   });
