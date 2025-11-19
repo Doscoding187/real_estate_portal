@@ -267,9 +267,16 @@ export const listingRouter = router({
           input.listingId?.toString() || 'draft',
         );
 
+        // Build the public CDN URL (CloudFront preferred)
+        const { ENV } = await import('./_core/env');
+        const cdnUrl =
+          ENV.cloudFrontUrl || `https://${ENV.s3BucketName}.s3.${ENV.awsRegion}.amazonaws.com`;
+        const publicUrl = `${cdnUrl}/${result.key}`;
+
         return {
           uploadUrl: result.uploadUrl,
           mediaId: result.key, // Use the S3 key as media ID
+          publicUrl,
         };
       } catch (error) {
         console.error('Error generating media upload URL:', error);

@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { protectedProcedure, router } from './_core/trpc';
 import { generatePresignedUploadUrl } from './_core/imageUpload';
+import { ENV } from './_core/env';
 import crypto from 'crypto';
 
 /**
@@ -32,9 +33,15 @@ export const uploadRouter = router({
           propertyId,
         );
 
+        // Build the public URL using CloudFront if configured, otherwise S3 bucket URL
+        const cdnUrl =
+          ENV.cloudFrontUrl || `https://${ENV.s3BucketName}.s3.${ENV.awsRegion}.amazonaws.com`;
+        const publicUrl = `${cdnUrl}/${result.key}`;
+
         return {
           url: result.uploadUrl,
           key: result.key,
+          publicUrl,
         };
       } catch (error) {
         console.error('Failed to generate presigned URL:', error);

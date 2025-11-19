@@ -60,7 +60,7 @@ export function ImageUploader({
       updateImage(imageFile.id, { uploading: true, progress: 0 });
 
       // Get presigned URL
-      const { url, key } = await presignMutation.mutateAsync({
+      const { url, key, publicUrl } = await presignMutation.mutateAsync({
         filename: imageFile.file.name,
         contentType: imageFile.file.type,
       });
@@ -87,18 +87,8 @@ export function ImageUploader({
       // Update progress
       updateImage(imageFile.id, { progress: 90 });
 
-      // Construct the final URL using the CloudFront URL or S3 bucket URL
-      let finalUrl: string;
-
-      // Use the CloudFront URL from environment variables if available, otherwise construct S3 URL
-      const cloudFrontUrl = import.meta.env.VITE_CLOUDFRONT_URL;
-      const s3BucketUrl = `https://${import.meta.env.VITE_S3_BUCKET_NAME}.s3.${import.meta.env.VITE_AWS_REGION}.amazonaws.com`;
-      
-      if (cloudFrontUrl) {
-        finalUrl = `${cloudFrontUrl}/${key}`;
-      } else {
-        finalUrl = `${s3BucketUrl}/${key}`;
-      }
+      // Use the publicUrl returned by the server instead of constructing it client-side
+      const finalUrl = publicUrl;
 
       console.log('[Upload] File uploaded successfully:', finalUrl);
 

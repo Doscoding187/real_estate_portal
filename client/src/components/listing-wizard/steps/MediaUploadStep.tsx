@@ -191,7 +191,7 @@ const MediaUploadStep: React.FC = () => {
 
         const newMediaItem = {
           id: uploadResponse.mediaId, // Use the S3 key as ID
-          url: uploadResponse.uploadUrl, // Store the S3 URL
+          url: uploadResponse.publicUrl || uploadResponse.uploadUrl, // Use public CDN URL
           type: mediaFile.type,
           fileName: mediaFile.name,
           fileSize: mediaFile.size,
