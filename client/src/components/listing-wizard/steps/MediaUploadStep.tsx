@@ -151,7 +151,7 @@ const MediaUploadStep: React.FC = () => {
           <Label className="text-base font-medium">
             Primary {displayMediaType === 'image' ? 'Image' : 'Video'}
           </Label>
-          <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+          <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 transition-colors">
             <Input
               type="file"
               accept={displayMediaType === 'image' ? 'image/*' : 'video/*'}
@@ -160,20 +160,21 @@ const MediaUploadStep: React.FC = () => {
               id="primary-media"
               multiple
             />
-            <Label htmlFor="primary-media" className="cursor-pointer">
-              <div className="flex flex-col items-center justify-center gap-3">
-                <Upload className="h-8 w-8 text-gray-400" />
-                <div>
-                  <p className="font-medium">
-                    Select Primary {displayMediaType === 'image' ? 'Image' : 'Video'}
-                  </p>
-                  <p className="text-sm text-gray-500 mt-1">
-                    Supported: {displayMediaType === 'image' ? 'JPG, PNG, WebP' : 'MP4, MOV'} (Select multiple files with Ctrl/Cmd)
-                  </p>
-                </div>
-                <Button type="button" disabled={isUploading}>
-                  {isUploading ? 'Uploading...' : 'Choose Files'}
-                </Button>
+            <Label 
+              htmlFor="primary-media" 
+              className="cursor-pointer flex flex-col items-center justify-center gap-3"
+            >
+              <Upload className="h-8 w-8 text-gray-400" />
+              <div>
+                <p className="font-medium">
+                  Select Primary {displayMediaType === 'image' ? 'Image' : 'Video'}
+                </p>
+                <p className="text-sm text-gray-500 mt-1">
+                  Supported: {displayMediaType === 'image' ? 'JPG, PNG, WebP' : 'MP4, MOV'} (Select multiple files with Ctrl/Cmd)
+                </p>
+              </div>
+              <div className={`inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                {isUploading ? 'Uploading...' : 'Choose Files'}
               </div>
             </Label>
           </div>
@@ -184,7 +185,7 @@ const MediaUploadStep: React.FC = () => {
           <Label className="text-base font-medium">
             Additional Media
           </Label>
-          <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+          <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 transition-colors">
             <Input
               type="file"
               accept="image/*,video/*"
@@ -193,18 +194,19 @@ const MediaUploadStep: React.FC = () => {
               id="additional-media"
               multiple
             />
-            <Label htmlFor="additional-media" className="cursor-pointer">
-              <div className="flex flex-col items-center justify-center gap-3">
-                <Upload className="h-8 w-8 text-gray-400" />
-                <div>
-                  <p className="font-medium">Add More Media</p>
-                  <p className="text-sm text-gray-500 mt-1">
-                    Supported: JPG, PNG, WebP, MP4, MOV (Select multiple files with Ctrl/Cmd)
-                  </p>
-                </div>
-                <Button type="button" variant="outline" disabled={isUploading}>
-                  {isUploading ? 'Uploading...' : 'Choose Files'}
-                </Button>
+            <Label 
+              htmlFor="additional-media" 
+              className="cursor-pointer flex flex-col items-center justify-center gap-3"
+            >
+              <Upload className="h-8 w-8 text-gray-400" />
+              <div>
+                <p className="font-medium">Add More Media</p>
+                <p className="text-sm text-gray-500 mt-1">
+                  Supported: JPG, PNG, WebP, MP4, MOV (Select multiple files with Ctrl/Cmd)
+                </p>
+              </div>
+              <div className={`inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2 ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                {isUploading ? 'Uploading...' : 'Choose Files'}
               </div>
             </Label>
           </div>

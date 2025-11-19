@@ -170,15 +170,46 @@ const ListingWizard: React.FC = () => {
           <p className="text-gray-600">Follow the steps to create your property listing</p>
         </div>
 
-        {/* Progress Indicator */}
+
+        {/* Step Indicator */}
         <div className="mb-8">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-medium text-gray-700">Step {store.currentStep} of 9</span>
-            <span className="text-sm font-medium text-gray-700">
-              {stepTitles[store.currentStep - 1]}
-            </span>
+          <div className="flex items-center justify-between">
+            {stepTitles.map((title, index) => {
+              const stepNumber = index + 1;
+              const isCompleted = stepNumber < store.currentStep;
+              const isCurrent = stepNumber === store.currentStep;
+              
+              return (
+                <React.Fragment key={stepNumber}>
+                  <div className="flex flex-col items-center">
+                    <div
+                      className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold text-sm transition-all ${
+                        isCompleted
+                          ? 'bg-green-500 text-white'
+                          : isCurrent
+                          ? 'bg-blue-600 text-white ring-4 ring-blue-100'
+                          : 'bg-gray-200 text-gray-500'
+                      }`}
+                    >
+                      {isCompleted ? (
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                        </svg>
+                      ) : (
+                        stepNumber
+                      )}
+                    </div>
+                    <span className={`text-xs mt-2 text-center max-w-[80px] ${isCurrent ? 'font-semibold text-gray-900' : 'text-gray-500'}`}>
+                      {title}
+                    </span>
+                  </div>
+                  {stepNumber < 9 && (
+                    <div className={`flex-1 h-0.5 mx-2 ${isCompleted ? 'bg-green-500' : 'bg-gray-200'}`} />
+                  )}
+                </React.Fragment>
+              );
+            })}
           </div>
-          <Progress value={progress} className="w-full" />
         </div>
 
         {/* Step Content */}
