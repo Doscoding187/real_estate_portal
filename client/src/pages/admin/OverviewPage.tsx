@@ -92,11 +92,24 @@ const RevenueChart: React.FC = () => {
         <CardContent>
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={mockRevenueData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" />
-              <YAxis />
-              <Tooltip />
-              <Bar dataKey="revenue" fill="#3b82f6" />
+              <defs>
+                <linearGradient id="revenueGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#10b981" stopOpacity={0.8} />
+                  <stop offset="100%" stopColor="#14b8a6" stopOpacity={0.3} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" strokeOpacity={0.5} />
+              <XAxis dataKey="name" stroke="#94a3b8" style={{ fontSize: '12px' }} />
+              <YAxis stroke="#94a3b8" style={{ fontSize: '12px' }} />
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                  border: 'none',
+                  borderRadius: '12px',
+                  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)'
+                }}
+              />
+              <Bar dataKey="revenue" fill="url(#revenueGradient)" radius={[8, 8, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </CardContent>
@@ -109,11 +122,32 @@ const RevenueChart: React.FC = () => {
         <CardContent>
           <ResponsiveContainer width="100%" height={300}>
             <LineChart data={mockUserGrowthData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" />
-              <YAxis />
-              <Tooltip />
-              <Line type="monotone" dataKey="users" stroke="#10b981" strokeWidth={2} />
+              <defs>
+                <linearGradient id="userGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#8b5cf6" stopOpacity={0.3} />
+                  <stop offset="100%" stopColor="#8b5cf6" stopOpacity={0.05} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" strokeOpacity={0.5} />
+              <XAxis dataKey="name" stroke="#94a3b8" style={{ fontSize: '12px' }} />
+              <YAxis stroke="#94a3b8" style={{ fontSize: '12px' }} />
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                  border: 'none',
+                  borderRadius: '12px',
+                  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)'
+                }}
+              />
+              <Line
+                type="monotone"
+                dataKey="users"
+                stroke="#8b5cf6"
+                strokeWidth={3}
+                dot={{ fill: '#8b5cf6', r: 4 }}
+                activeDot={{ r: 6, fill: '#8b5cf6' }}
+                fill="url(#userGradient)"
+              />
             </LineChart>
           </ResponsiveContainer>
         </CardContent>
