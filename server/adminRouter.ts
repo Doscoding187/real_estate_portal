@@ -16,6 +16,9 @@ import {
   auditLogs,
   properties,
   platformSettings,
+  listings,
+  listingMedia,
+  agents,
 } from '../drizzle/schema';
 import { eq, desc, and, or, like, sql } from 'drizzle-orm';
 import { logAudit, AuditActions } from './_core/auditLog';
@@ -380,7 +383,16 @@ export const adminRouter = router({
         page: z.number().default(1),
         limit: z.number().default(50),
         status: z
-          .enum(['available', 'sold', 'rented', 'pending', 'draft', 'published', 'archived'])
+          .enum([
+            'draft',
+            'pending_review',
+            'approved',
+            'published',
+            'rejected',
+            'archived',
+            'sold',
+            'rented',
+          ])
           .optional(),
         agencyId: z.number().optional(),
         search: z.string().optional(),
@@ -401,53 +413,82 @@ export const adminRouter = router({
 
       // Build where conditions
       const conditions: any[] = [];
-      if (input.status) conditions.push(eq(properties.status, input.status));
+      if (input.status) conditions.push(eq(listings.status, input.status));
       if (input.agencyId) {
-        // Filter by agency using the joined agents table
-        conditions.push(eq(agents.agencyId, input.agencyId));
+        conditions.push(eq(listings.agencyId, input.agencyId));
       }
       if (input.search) {
         conditions.push(
           or(
-            like(properties.title, `%${input.search}%`),
-            like(properties.address, `%${input.search}%`),
-            like(properties.city, `%${input.search}%`),
+            like(listings.title, `%${input.search}%`),
+            like(listings.address, `%${input.search}%`),
+            like(listings.city, `%${input.search}%`),
+            like(listings.slug, `%${input.search}%`),
           ),
         );
       }
 
       const where = conditions.length > 0 ? and(...conditions) : undefined;
 
-      const [propertiesList, totalResult] = await Promise.all([
+      const [listingsList, totalResult] = await Promise.all([
         db
           .select({
-            id: properties.id,
-            title: properties.title,
-            price: properties.price,
-            status: properties.status,
-            city: properties.city,
-            createdAt: properties.createdAt,
-            ownerId: properties.ownerId,
-            agentId: properties.agentId,
-            featured: properties.featured,
+            id: listings.id,
+            title: listings.title,
+            askingPrice: listings.askingPrice,
+            monthlyRent: listings.monthlyRent,
+            status: listings.status,
+            approvalStatus: listings.approvalStatus,
+            city: listings.city,
+            createdAt: listings.createdAt,
+            propertyDetails: listings.propertyDetails,
+            action: listings.action,
+            
+            // Agent Info
+            agent: {
+              id: agents.id,
+              firstName: agents.firstName,
+              lastName: agents.lastName,
+              profileImage: agents.profileImage,
+              isVerified: agents.isVerified,
+            },
+
+            // Owner Info (fallback)
+            owner: {
+              id: users.id,
+              firstName: users.firstName,
+              lastName: users.lastName,
+              email: users.email,
+            },
+
+            // Media
+            thumbnail: listingMedia.thumbnailUrl,
+            mediaType: listingMedia.mediaType,
           })
-          .from(properties)
-          .leftJoin(agents, eq(properties.agentId, agents.id))
+          .from(listings)
+          .leftJoin(agents, eq(listings.agentId, agents.id))
+          .leftJoin(users, eq(listings.ownerId, users.id))
+          .leftJoin(listingMedia, eq(listings.mainMediaId, listingMedia.id))
           .where(where)
           .limit(input.limit)
           .offset(offset)
-          .orderBy(desc(properties.createdAt)),
+          .orderBy(desc(listings.createdAt)),
         db
           .select({ count: sql<number>`count(*)` })
-          .from(properties)
-          .leftJoin(agents, eq(properties.agentId, agents.id))
+          .from(listings)
           .where(where),
       ]);
 
       const total = Number(totalResult[0]?.count || 0);
 
       return {
-        properties: propertiesList,
+        properties: listingsList.map(l => ({
+          ...l,
+          // Normalize price for display
+          price: l.action === 'rent' ? Number(l.monthlyRent) : Number(l.askingPrice),
+          // Calculate Vibe Score (Mock for now, can be enhanced)
+          vibeScore: Math.floor(Math.random() * 30) + 70, // Random 70-100 for demo
+        })),
         pagination: {
           page: input.page,
           limit: input.limit,
@@ -456,6 +497,36 @@ export const adminRouter = router({
         },
       };
     }),
+
+  /**
+   * Super Admin: Get Property Listing Stats (Health Monitor)
+   */
+  getPropertiesStats: superAdminProcedure.query(async ({ ctx }) => {
+    const db = await getDb();
+    if (!db) throw new Error('Database not available');
+
+    const [stats] = await db
+      .select({
+        totalInventoryValue: sql<string>`sum(${listings.askingPrice})`,
+        newListingsToday: sql<number>`count(case when ${listings.createdAt} >= DATE_SUB(NOW(), INTERVAL 24 HOUR) then 1 end)`,
+        pendingApprovals: sql<number>`count(case when ${listings.approvalStatus} = 'pending' then 1 end)`,
+      })
+      .from(listings)
+      .where(eq(listings.status, 'published')); // Only count published for inventory value? Or all?
+      // Let's count all active listings for inventory value
+    
+    // Actually, let's do a separate query for pending approvals to be safe on where clause
+    const [pendingResult] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(listings)
+      .where(eq(listings.approvalStatus, 'pending'));
+
+    return {
+      totalInventoryValue: Number(stats?.totalInventoryValue || 0),
+      newListingsToday: Number(stats?.newListingsToday || 0),
+      pendingApprovals: Number(pendingResult?.count || 0),
+    };
+  }),
 
   /**
    * Super Admin: Moderate property listing (approve/reject)
