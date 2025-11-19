@@ -40,6 +40,7 @@ import OverviewPage from './pages/admin/OverviewPage';
 import AgenciesPage from './pages/admin/AgenciesPage';
 import UsersPage from './pages/admin/UsersPage';
 import DevelopersPage from './pages/admin/DevelopersPage';
+import PropertiesPage from './pages/admin/PropertiesPage';
 
 // Import new role-based dashboards
 import UserDashboard from './pages/UserDashboard';
@@ -76,6 +77,14 @@ function Router() {
 
       {/* Super Admin Dashboard Routes */}
       <Route
+        path="/admin"
+        component={() => (
+          <SuperAdminDashboard>
+            <OverviewPage />
+          </SuperAdminDashboard>
+        )}
+      />
+      <Route
         path="/admin/overview"
         component={() => (
           <SuperAdminDashboard>
@@ -107,6 +116,15 @@ function Router() {
           </SuperAdminDashboard>
         )}
       />
+      <Route
+        path="/admin/properties"
+        component={() => (
+          <SuperAdminDashboard>
+            <PropertiesPage />
+          </SuperAdminDashboard>
+        )}
+      />
+
       {/* Lovable Integration Hub Route */}
       <Route
         path="/admin/lovable-hub"
@@ -122,14 +140,6 @@ function Router() {
         component={() => (
           <SuperAdminDashboard>
             <ListingOversight />
-          </SuperAdminDashboard>
-        )}
-      />
-      <Route
-        path="/admin"
-        component={() => (
-          <SuperAdminDashboard>
-            <OverviewPage />
           </SuperAdminDashboard>
         )}
       />
