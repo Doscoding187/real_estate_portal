@@ -240,19 +240,6 @@ const BasicInformationStep: React.FC = () => {
       </Card>
 
       {/* Property Highlights (4 fields per type) */}
-      {propertyType && (
-        <Card className="bg-white/70 backdrop-blur-sm rounded-[1.5rem] border-white/40 shadow-[0_8px_30px_rgba(8,_112,_184,_0.06)] p-6">
-          <div className="flex items-center gap-2 mb-4">
-            <Home className="w-5 h-5 text-blue-600" />
-            <h3 className="text-lg font-bold text-slate-800">Property Highlights</h3>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Apartment Highlights */}
-            {propertyType === 'apartment' && (
-              <>
-                <div>
-                  <Label htmlFor="bedrooms" className="text-slate-700">Bedrooms *</Label>
                   <Input
                     id="bedrooms"
                     type="number"
