@@ -106,7 +106,7 @@ const BasicInformationStep: React.FC = () => {
         <div className="flex items-center gap-2 mb-4">
           <Home className="w-5 h-5 text-indigo-600" />
           <h3 className="text-lg font-bold text-slate-800">
-            {propertyType === 'farm' ? 'Farm Type' : 'Property Category'}
+            {propertyType === 'farm' ? 'Farm Type' : propertyType === 'land' ? 'Land Type' : 'Property Category'}
           </h3>
         </div>
 
@@ -148,8 +148,43 @@ const BasicInformationStep: React.FC = () => {
               </Card>
             ))}
           </div>
+        ) : propertyType === 'land' ? (
+          /* Land-specific categories */
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {[
+              { value: 'residential_land', label: 'Residential Land', description: 'Zoned for residential development' },
+              { value: 'estate_plot', label: 'Estate Plot', description: 'Land within a residential estate' },
+              { value: 'industrial_land', label: 'Industrial Land', description: 'Zoned for industrial/commercial use' },
+            ].map((category) => (
+              <Card
+                key={category.value}
+                onClick={() => updateBasicInfo('propertyCategory', category.value)}
+                className={`cursor-pointer transition-all p-4 ${
+                  basicInfo.propertyCategory === category.value
+                    ? 'border-2 border-blue-500 bg-blue-50'
+                    : 'border-2 border-gray-200 hover:border-gray-300'
+                }`}
+              >
+                <div className="flex flex-col items-center text-center gap-2">
+                  <div className={`p-2 rounded-lg ${
+                    basicInfo.propertyCategory === category.value ? 'bg-blue-100' : 'bg-gray-100'
+                  }`}>
+                    <Home className={`w-6 h-6 ${
+                      basicInfo.propertyCategory === category.value ? 'text-blue-600' : 'text-gray-600'
+                    }`} />
+                  </div>
+                  <div>
+                    <h4 className={`font-bold ${
+                      basicInfo.propertyCategory === category.value ? 'text-blue-600' : 'text-gray-900'
+                    }`}>{category.label}</h4>
+                    <p className="text-xs text-gray-600 mt-1">{category.description}</p>
+                  </div>
+                </div>
+              </Card>
+            ))}
+          </div>
         ) : (
-          /* Standard categories for non-farm properties */
+          /* Standard categories for other properties */
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Card
               onClick={() => updateBasicInfo('propertyCategory', 'existing')}
