@@ -351,16 +351,31 @@ const BasicInformationStep: React.FC = () => {
             {/* Farm Highlights */}
             {propertyType === 'farm' && (
               <>
-                <div>
-                  <Label htmlFor="landSizeHa" className="text-slate-700">Total Land Size (Ha) *</Label>
-                  <Input
-                    id="landSizeHa"
-                    type="number"
-                    value={propertyDetails.landSizeHa || ''}
-                    onChange={(e) => store.updatePropertyDetail('landSizeHa', Number(e.target.value))}
-                    placeholder="e.g., 50"
-                    className="mt-1"
-                  />
+                <div className="md:col-span-2">
+                  <Label htmlFor="landSizeHa" className="text-slate-700">Total Land Size *</Label>
+                  <div className="flex gap-2 mt-1">
+                    <Input
+                      id="landSizeHa"
+                      type="number"
+                      value={propertyDetails.landSizeHa || ''}
+                      onChange={(e) => store.updatePropertyDetail('landSizeHa', Number(e.target.value))}
+                      placeholder="e.g., 50"
+                      className="flex-1"
+                    />
+                    <Select
+                      value={basicInfo.landSizeUnit || 'hectares'}
+                      onValueChange={(value) => updateBasicInfo('landSizeUnit', value)}
+                    >
+                      <SelectTrigger className="w-32">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="m2">m²</SelectItem>
+                        <SelectItem value="acres">Acres</SelectItem>
+                        <SelectItem value="hectares">Hectares</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
                 <div>
                   <Label htmlFor="zoningAgricultural" className="text-slate-700">Zoning Category *</Label>
@@ -412,16 +427,31 @@ const BasicInformationStep: React.FC = () => {
             {/* Land Highlights */}
             {propertyType === 'land' && (
               <>
-                <div>
-                  <Label htmlFor="landSizeM2OrHa" className="text-slate-700">Plot Size (m²) *</Label>
-                  <Input
-                    id="landSizeM2OrHa"
-                    type="number"
-                    value={propertyDetails.landSizeM2OrHa || ''}
-                    onChange={(e) => store.updatePropertyDetail('landSizeM2OrHa', Number(e.target.value))}
-                    placeholder="e.g., 1000"
-                    className="mt-1"
-                  />
+                <div className="md:col-span-2">
+                  <Label htmlFor="landSizeM2OrHa" className="text-slate-700">Plot Size *</Label>
+                  <div className="flex gap-2 mt-1">
+                    <Input
+                      id="landSizeM2OrHa"
+                      type="number"
+                      value={propertyDetails.landSizeM2OrHa || ''}
+                      onChange={(e) => store.updatePropertyDetail('landSizeM2OrHa', Number(e.target.value))}
+                      placeholder="e.g., 1000"
+                      className="flex-1"
+                    />
+                    <Select
+                      value={basicInfo.landSizeUnit || 'm2'}
+                      onValueChange={(value) => updateBasicInfo('landSizeUnit', value)}
+                    >
+                      <SelectTrigger className="w-32">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="m2">m²</SelectItem>
+                        <SelectItem value="acres">Acres</SelectItem>
+                        <SelectItem value="hectares">Hectares</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
                 <div>
                   <Label htmlFor="zoning" className="text-slate-700">Zoning Type *</Label>
