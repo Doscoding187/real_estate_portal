@@ -16,7 +16,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
-import { MapPin, DollarSign, Home, Calendar, Info, Check, Award } from 'lucide-react';
+import { MapPin, DollarSign, Home, Calendar, Info, Check, Award, Store, Building2, Factory, Warehouse, Layers } from 'lucide-react';
 import type { ListingAction, PropertyType, ListingBadge } from '@/../../shared/listing-types';
 import { BADGE_TEMPLATES } from '@/../../shared/listing-types';
 
@@ -170,6 +170,46 @@ const BasicInformationStep: React.FC = () => {
                     basicInfo.propertyCategory === category.value ? 'bg-blue-100' : 'bg-gray-100'
                   }`}>
                     <Home className={`w-6 h-6 ${
+                      basicInfo.propertyCategory === category.value ? 'text-blue-600' : 'text-gray-600'
+                    }`} />
+                  </div>
+                  <div>
+                    <h4 className={`font-bold ${
+                      basicInfo.propertyCategory === category.value ? 'text-blue-600' : 'text-gray-900'
+                    }`}>{category.label}</h4>
+                    <p className="text-xs text-gray-600 mt-1">{category.description}</p>
+                  </div>
+                </div>
+              </Card>
+            ))}
+          </div>
+        ) : propertyType === 'commercial' ? (
+          /* Commercial-specific categories */
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {[
+              { value: 'retail', label: 'Retail', description: 'Shops, malls, and showrooms', icon: Store },
+              { value: 'office', label: 'Office', description: 'Office space and business parks', icon: Building2 },
+              { value: 'industrial', label: 'Industrial', description: 'Factories and manufacturing', icon: Factory },
+              { value: 'warehouse', label: 'Warehouse', description: 'Storage and distribution', icon: Warehouse },
+              { value: 'mixed', label: 'Mixed Use', description: 'Combined commercial/residential', icon: Layers },
+            ].map((category) => (
+              <Card
+                key={category.value}
+                onClick={() => {
+                  updateBasicInfo('propertyCategory', category.value);
+                  store.updatePropertyDetail('subtype', category.value);
+                }}
+                className={`cursor-pointer transition-all p-4 ${
+                  basicInfo.propertyCategory === category.value
+                    ? 'border-2 border-blue-500 bg-blue-50'
+                    : 'border-2 border-gray-200 hover:border-gray-300'
+                }`}
+              >
+                <div className="flex flex-col items-center text-center gap-2">
+                  <div className={`p-2 rounded-lg ${
+                    basicInfo.propertyCategory === category.value ? 'bg-blue-100' : 'bg-gray-100'
+                  }`}>
+                    <category.icon className={`w-6 h-6 ${
                       basicInfo.propertyCategory === category.value ? 'text-blue-600' : 'text-gray-600'
                     }`} />
                   </div>
@@ -520,23 +560,6 @@ const BasicInformationStep: React.FC = () => {
                     placeholder="e.g., 500"
                     className="mt-1"
                   />
-                </div>
-                <div>
-                  <Label htmlFor="subtype" className="text-slate-700">Property Use Type *</Label>
-                  <Select
-                    value={propertyDetails.subtype || ''}
-                    onValueChange={(value) => store.updatePropertyDetail('subtype', value)}
-                  >
-                    <SelectTrigger className="mt-1">
-                      <SelectValue placeholder="Select use type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="retail">Retail</SelectItem>
-                      <SelectItem value="office">Office</SelectItem>
-                      <SelectItem value="warehouse">Warehouse</SelectItem>
-                      <SelectItem value="industrial">Industrial</SelectItem>
-                    </SelectContent>
-                  </Select>
                 </div>
                 <div>
                   <Label htmlFor="parkingBays" className="text-slate-700">Parking Availability *</Label>
