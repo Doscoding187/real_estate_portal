@@ -41,7 +41,10 @@ interface ListingWizardStore extends ListingWizardState {
   setDescription: (description: string) => void;
   setBasicInfo: (basicInfo: Partial<any>) => void;
 
-  // Step 3: Pricing
+  // Additional Info
+  setAdditionalInfo: (additionalInfo: Partial<any>) => void;
+
+  // Step 4: Pricing
   setPricing: (pricing: PricingFields) => void;
 
   // Property Details
@@ -153,6 +156,11 @@ export const useListingWizardStore = create<ListingWizardStore>()(
 
       setBasicInfo: basicInfo => {
         set({ basicInfo });
+      },
+
+      // Additional Info
+      setAdditionalInfo: additionalInfo => {
+        set({ additionalInfo });
       },
 
       // Step 3: Pricing

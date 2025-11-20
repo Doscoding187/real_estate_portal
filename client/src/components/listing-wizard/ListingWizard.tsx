@@ -11,6 +11,7 @@ import { useAuth } from '@/_core/hooks/useAuth';
 import ActionStep from './steps/ActionStep';
 import PropertyTypeStep from './steps/PropertyTypeStep';
 import BasicInformationStep from './steps/BasicInformationStep';
+import { AdditionalInformationStep } from './steps/AdditionalInformationStep';
 import PricingStep from './steps/PricingStep';
 import LocationStep from './steps/LocationStep';
 import MediaUploadStep from './steps/MediaUploadStep';
@@ -138,12 +139,14 @@ const ListingWizard: React.FC = () => {
       case 3:
         return <BasicInformationStep />;
       case 4:
-        return <PricingStep />;
+        return <AdditionalInformationStep />;
       case 5:
-        return <LocationStep />;
+        return <PricingStep />;
       case 6:
-        return <MediaUploadStep />;
+        return <LocationStep />;
       case 7:
+        return <MediaUploadStep />;
+      case 8:
         return <PreviewStep />;
       default:
         return <ActionStep />;
@@ -151,13 +154,14 @@ const ListingWizard: React.FC = () => {
   };
 
   // Calculate progress percentage
-  const progress = (store.currentStep / 7) * 100;
+  const progress = (store.currentStep / 8) * 100;
 
   // Step titles for progress indicator
   const stepTitles = [
     'Action',
     'Type',
     'Basic Info',
+    'Additional Info',
     'Pricing',
     'Location',
     'Media',

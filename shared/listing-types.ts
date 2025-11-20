@@ -278,6 +278,41 @@ export interface BasicInformation {
   completionDate?: Date;
   developerName?: string;
   unitTypes?: string;
+  developmentName?: string;
+  propertyCategory?: string;
+  landSizeUnit?: string;
+  possessionStatus?: string;
+  leaseExpiryDate?: string;
+  propertyAge?: number;
+}
+
+// Additional Information Fields (Step 4 - New)
+export interface AdditionalInformation {
+  // Residential Land
+  landSurveyReport?: 'available' | 'in_progress' | 'not_available';
+  soilSurvey?: 'available' | 'in_progress' | 'not_available';
+  environmentalAssessment?: 'not_required' | 'completed' | 'required_not_completed';
+  waterAvailability?: 'connected' | 'nearby' | 'not_available';
+  electricityAvailability?: 'connected' | 'nearby' | 'not_available';
+  sewageAvailability?: 'municipal' | 'septic_required' | 'not_available';
+  
+  // Estate Plot
+  hoaDocuments?: 'available' | 'in_progress' | 'not_available';
+  buildingGuidelines?: 'available' | 'in_progress' | 'not_available';
+  estateWater?: 'included' | 'not_included';
+  estateElectricity?: 'included' | 'not_included';
+  estateSewage?: 'included' | 'not_included';
+  estateFibre?: 'available' | 'in_progress' | 'not_available';
+  developmentPhase?: 'phase_1' | 'phase_2' | 'phase_3' | 'completed';
+  
+  // Industrial Land
+  boundarySurvey?: 'available' | 'in_progress' | 'not_available';
+  soilLoadTest?: 'available' | 'in_progress' | 'not_available';
+  eia?: 'completed' | 'required_not_completed' | 'not_required';
+  truckAccess?: 'available' | 'limited' | 'not_available';
+  electricitySupply?: 'three_phase' | 'single_phase' | 'nearby' | 'not_available';
+  waterSupply?: 'industrial' | 'municipal_domestic' | 'not_available';
+  wastewaterSystem?: 'industrial' | 'municipal' | 'septic_required';
 }
 
 
@@ -346,12 +381,15 @@ export interface ListingWizardState {
   // Step 2: Property Type
   propertyType?: PropertyType;
 
-  // Step 4: Basic Info
+  // Step 3: Basic Info
   title: string;
   description: string;
   basicInfo?: Partial<BasicInformation>;
 
-  // Step 3: Pricing
+  // Step 4: Additional Information (NEW)
+  additionalInfo?: AdditionalInformation;
+
+  // Step 5: Pricing
   pricing?: PricingFields;
 
   // Property Details
