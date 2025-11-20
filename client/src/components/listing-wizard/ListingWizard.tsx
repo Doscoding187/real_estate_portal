@@ -10,7 +10,6 @@ import { useLocation } from 'wouter';
 import { useAuth } from '@/_core/hooks/useAuth';
 import ActionStep from './steps/ActionStep';
 import PropertyTypeStep from './steps/PropertyTypeStep';
-import BadgesStep from './steps/BadgesStep';
 import BasicInformationStep from './steps/BasicInformationStep';
 import PricingStep from './steps/PricingStep';
 import LocationStep from './steps/LocationStep';
@@ -137,16 +136,14 @@ const ListingWizard: React.FC = () => {
       case 2:
         return <PropertyTypeStep />;
       case 3:
-        return <BadgesStep />;
-      case 4:
         return <BasicInformationStep />;
-      case 5:
+      case 4:
         return <PricingStep />;
-      case 6:
+      case 5:
         return <LocationStep />;
-      case 7:
+      case 6:
         return <MediaUploadStep />;
-      case 8:
+      case 7:
         return <PreviewStep />;
       default:
         return <ActionStep />;
@@ -154,13 +151,12 @@ const ListingWizard: React.FC = () => {
   };
 
   // Calculate progress percentage
-  const progress = (store.currentStep / 8) * 100;
+  const progress = (store.currentStep / 7) * 100;
 
   // Step titles for progress indicator
   const stepTitles = [
     'Action',
     'Type',
-    'Badges',
     'Basic Info',
     'Pricing',
     'Location',

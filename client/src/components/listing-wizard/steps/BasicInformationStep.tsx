@@ -15,8 +15,10 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { MapPin, DollarSign, Home, Calendar, Info } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { MapPin, DollarSign, Home, Calendar, Info, Check, Award } from 'lucide-react';
 import type { ListingAction, PropertyType, ListingBadge } from '@/../../shared/listing-types';
+import { BADGE_TEMPLATES } from '@/../../shared/listing-types';
 
 // South African provinces
 const SA_PROVINCES = [
@@ -569,6 +571,87 @@ const BasicInformationStep: React.FC = () => {
           </div>
         </Card>
       )}
+
+      {/* Listing Badges Section */}
+      <Card className="bg-white/70 backdrop-blur-sm rounded-[1.5rem] border-white/40 shadow-[0_8px_30px_rgba(8,_112,_184,_0.06)] p-6">
+        <div className="flex items-center gap-2 mb-4">
+          <Award className="w-5 h-5 text-purple-600" />
+          <h3 className="text-lg font-bold text-slate-800">Listing Badge</h3>
+        </div>
+        <p className="text-sm text-slate-600 mb-4">
+          Select one badge to highlight a special feature of your property (optional).
+        </p>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {(['ready_to_move', 'under_construction', 'off_plan', 'move_in_ready', 'fixer_upper', 'renovated'] as ListingBadge[]).map((badge) => {
+            const template = BADGE_TEMPLATES[badge];
+            const isSelected = badges.includes(badge);
+
+            return (
+              <Card
+                key={badge}
+                onClick={() => {
+                  // Toggle badge selection (single selection)
+                  if (isSelected) {
+                    store.setBadges([]);
+                  } else {
+                    store.setBadges([badge]);
+                  }
+                }}
+                className={`cursor-pointer transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5 ${
+                  isSelected
+                    ? 'border-2 border-blue-500 shadow-lg bg-gradient-to-br from-blue-50 to-white'
+                    : 'border-2 border-gray-200 hover:border-gray-300 bg-white'
+                }`}
+              >
+                {/* Selection Indicator */}
+                {isSelected && (
+                  <div className="absolute top-3 right-3 bg-blue-500 rounded-full p-1">
+                    <Check className="w-4 h-4 text-white" />
+                  </div>
+                )}
+
+                <div className="p-4 flex flex-col items-center text-center space-y-3">
+                  {/* Badge Preview */}
+                  <Badge
+                    variant="secondary"
+                    className={`text-sm font-medium ${
+                      isSelected ? 'bg-blue-100 text-blue-700' : ''
+                    }`}
+                  >
+                    {template.label}
+                  </Badge>
+
+                  {/* Label */}
+                  <h3
+                    className={`text-lg font-bold transition-colors ${
+                      isSelected ? 'text-blue-600' : 'text-gray-900'
+                    }`}
+                  >
+                    {template.label}
+                  </h3>
+
+                  {/* Description */}
+                  <p className="text-gray-600 text-sm">{template.description}</p>
+                </div>
+              </Card>
+            );
+          })}
+        </div>
+
+        {/* Selected Badge Confirmation */}
+        {badges.length > 0 && (
+          <div className="mt-6 p-4 bg-green-50 border border-green-200 rounded-lg">
+            <h4 className="font-semibold text-green-900 flex items-center gap-2">
+              <Check className="w-5 h-5" />
+              Selected Badge: {BADGE_TEMPLATES[badges[0]].label}
+            </h4>
+            <p className="text-green-800 text-sm mt-1">
+              {BADGE_TEMPLATES[badges[0]].description}
+            </p>
+          </div>
+        )}
+      </Card>
     </div>
   );
 };
