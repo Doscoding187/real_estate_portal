@@ -101,64 +101,107 @@ const BasicInformationStep: React.FC = () => {
         </div>
       </Card>
 
-      {/* Property Category Selection (for all transactions) */}
+      {/* Property Category Selection */}
       <Card className="bg-white/70 backdrop-blur-sm rounded-[1.5rem] border-white/40 shadow-[0_8px_30px_rgba(8,_112,_184,_0.06)] p-6">
         <div className="flex items-center gap-2 mb-4">
           <Home className="w-5 h-5 text-indigo-600" />
-          <h3 className="text-lg font-bold text-slate-800">Property Category</h3>
+          <h3 className="text-lg font-bold text-slate-800">
+            {propertyType === 'farm' ? 'Farm Type' : 'Property Category'}
+          </h3>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Card
-            onClick={() => updateBasicInfo('propertyCategory', 'existing')}
-            className={`cursor-pointer transition-all p-4 ${
-              basicInfo.propertyCategory === 'existing'
-                ? 'border-2 border-blue-500 bg-blue-50'
-                : 'border-2 border-gray-200 hover:border-gray-300'
-            }`}
-          >
-            <div className="flex items-center gap-3">
-              <div className={`p-2 rounded-lg ${
-                basicInfo.propertyCategory === 'existing' ? 'bg-blue-100' : 'bg-gray-100'
-              }`}>
-                <Home className={`w-6 h-6 ${
-                  basicInfo.propertyCategory === 'existing' ? 'text-blue-600' : 'text-gray-600'
-                }`} />
+        {/* Farm-specific categories */}
+        {propertyType === 'farm' ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {[
+              { value: 'crop_farm', label: 'Crop Farm', description: 'Agricultural crop production' },
+              { value: 'aquaculture', label: 'Aquaculture', description: 'Fish and aquatic farming' },
+              { value: 'livestock_farm', label: 'Livestock Farm', description: 'Animal husbandry and ranching' },
+              { value: 'mixed_farm', label: 'Mixed Farm', description: 'Combined crop and livestock' },
+              { value: 'game_farm', label: 'Game Farm', description: 'Wildlife and game breeding' },
+              { value: 'smallholding', label: 'Smallholding / Lifestyle Farm', description: 'Small-scale or lifestyle farming' },
+            ].map((category) => (
+              <Card
+                key={category.value}
+                onClick={() => updateBasicInfo('propertyCategory', category.value)}
+                className={`cursor-pointer transition-all p-4 ${
+                  basicInfo.propertyCategory === category.value
+                    ? 'border-2 border-blue-500 bg-blue-50'
+                    : 'border-2 border-gray-200 hover:border-gray-300'
+                }`}
+              >
+                <div className="flex flex-col items-center text-center gap-2">
+                  <div className={`p-2 rounded-lg ${
+                    basicInfo.propertyCategory === category.value ? 'bg-blue-100' : 'bg-gray-100'
+                  }`}>
+                    <Home className={`w-6 h-6 ${
+                      basicInfo.propertyCategory === category.value ? 'text-blue-600' : 'text-gray-600'
+                    }`} />
+                  </div>
+                  <div>
+                    <h4 className={`font-bold ${
+                      basicInfo.propertyCategory === category.value ? 'text-blue-600' : 'text-gray-900'
+                    }`}>{category.label}</h4>
+                    <p className="text-xs text-gray-600 mt-1">{category.description}</p>
+                  </div>
+                </div>
+              </Card>
+            ))}
+          </div>
+        ) : (
+          /* Standard categories for non-farm properties */
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Card
+              onClick={() => updateBasicInfo('propertyCategory', 'existing')}
+              className={`cursor-pointer transition-all p-4 ${
+                basicInfo.propertyCategory === 'existing'
+                  ? 'border-2 border-blue-500 bg-blue-50'
+                  : 'border-2 border-gray-200 hover:border-gray-300'
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <div className={`p-2 rounded-lg ${
+                  basicInfo.propertyCategory === 'existing' ? 'bg-blue-100' : 'bg-gray-100'
+                }`}>
+                  <Home className={`w-6 h-6 ${
+                    basicInfo.propertyCategory === 'existing' ? 'text-blue-600' : 'text-gray-600'
+                  }`} />
+                </div>
+                <div>
+                  <h4 className={`font-bold ${
+                    basicInfo.propertyCategory === 'existing' ? 'text-blue-600' : 'text-gray-900'
+                  }`}>Existing Property</h4>
+                  <p className="text-sm text-gray-600">Previously owned or occupied</p>
+                </div>
               </div>
-              <div>
-                <h4 className={`font-bold ${
-                  basicInfo.propertyCategory === 'existing' ? 'text-blue-600' : 'text-gray-900'
-                }`}>Existing Property</h4>
-                <p className="text-sm text-gray-600">Previously owned or occupied</p>
-              </div>
-            </div>
-          </Card>
+            </Card>
 
-          <Card
-            onClick={() => updateBasicInfo('propertyCategory', 'new_development')}
-            className={`cursor-pointer transition-all p-4 ${
-              basicInfo.propertyCategory === 'new_development'
-                ? 'border-2 border-blue-500 bg-blue-50'
-                : 'border-2 border-gray-200 hover:border-gray-300'
-            }`}
-          >
-            <div className="flex items-center gap-3">
-              <div className={`p-2 rounded-lg ${
-                basicInfo.propertyCategory === 'new_development' ? 'bg-blue-100' : 'bg-gray-100'
-              }`}>
-                <Home className={`w-6 h-6 ${
-                  basicInfo.propertyCategory === 'new_development' ? 'text-blue-600' : 'text-gray-600'
-                }`} />
+            <Card
+              onClick={() => updateBasicInfo('propertyCategory', 'new_development')}
+              className={`cursor-pointer transition-all p-4 ${
+                basicInfo.propertyCategory === 'new_development'
+                  ? 'border-2 border-blue-500 bg-blue-50'
+                  : 'border-2 border-gray-200 hover:border-gray-300'
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <div className={`p-2 rounded-lg ${
+                  basicInfo.propertyCategory === 'new_development' ? 'bg-blue-100' : 'bg-gray-100'
+                }`}>
+                  <Home className={`w-6 h-6 ${
+                    basicInfo.propertyCategory === 'new_development' ? 'text-blue-600' : 'text-gray-600'
+                  }`} />
+                </div>
+                <div>
+                  <h4 className={`font-bold ${
+                    basicInfo.propertyCategory === 'new_development' ? 'text-blue-600' : 'text-gray-900'
+                  }`}>New Development</h4>
+                  <p className="text-sm text-gray-600">New construction or development</p>
+                </div>
               </div>
-              <div>
-                <h4 className={`font-bold ${
-                  basicInfo.propertyCategory === 'new_development' ? 'text-blue-600' : 'text-gray-900'
-                }`}>New Development</h4>
-                <p className="text-sm text-gray-600">New construction or development</p>
-              </div>
-            </div>
-          </Card>
-        </div>
+            </Card>
+          </div>
+        )}
       </Card>
 
       {/* Property Highlights (4 fields per type) */}
