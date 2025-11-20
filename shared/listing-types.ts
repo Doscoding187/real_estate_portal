@@ -246,6 +246,35 @@ export interface AuctionPricing {
 
 export type PricingFields = SellPricing | RentPricing | AuctionPricing;
 
+// Basic Information Fields (Step 4)
+export interface BasicInformation {
+  // Universal fields
+  title: string;
+  description: string;
+  province: string;
+  city: string;
+  suburb?: string;
+  streetAddress: string;
+  
+  // Transaction-specific fields (already in pricing, but some additional ones)
+  availabilityStatus?: string;
+  leaseTerm?: string;
+  occupationDate?: Date;
+  depositAmount?: number;
+  auctionVenue?: string;
+  
+  // Property highlights (4 per type) - stored in propertyDetails
+  // These are defined in the property-specific interfaces above
+  
+  // Status-specific fields (based on badge)
+  noticePeriod?: string;
+  currentRentalIncome?: number;
+  completionDate?: Date;
+  developerName?: string;
+  unitTypes?: string;
+}
+
+
 // Step 4: Location
 export interface LocationData {
   address: string;
@@ -311,9 +340,10 @@ export interface ListingWizardState {
   // Step 2: Property Type
   propertyType?: PropertyType;
 
-  // Basic Info
+  // Step 4: Basic Info
   title: string;
   description: string;
+  basicInfo?: Partial<BasicInformation>;
 
   // Step 3: Pricing
   pricing?: PricingFields;

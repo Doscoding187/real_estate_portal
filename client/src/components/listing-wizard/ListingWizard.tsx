@@ -11,7 +11,7 @@ import { useAuth } from '@/_core/hooks/useAuth';
 import ActionStep from './steps/ActionStep';
 import PropertyTypeStep from './steps/PropertyTypeStep';
 import BadgesStep from './steps/BadgesStep';
-import PropertyInformationStep from './steps/PropertyInformationStep';
+import BasicInformationStep from './steps/BasicInformationStep';
 import PricingStep from './steps/PricingStep';
 import LocationStep from './steps/LocationStep';
 import MediaUploadStep from './steps/MediaUploadStep';
@@ -139,7 +139,7 @@ const ListingWizard: React.FC = () => {
       case 3:
         return <BadgesStep />;
       case 4:
-        return <PropertyInformationStep />;
+        return <BasicInformationStep />;
       case 5:
         return <PricingStep />;
       case 6:
@@ -161,7 +161,7 @@ const ListingWizard: React.FC = () => {
     'Action',
     'Type',
     'Badges',
-    'Information',
+    'Basic Info',
     'Pricing',
     'Location',
     'Media',
