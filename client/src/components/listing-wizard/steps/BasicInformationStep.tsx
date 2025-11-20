@@ -628,13 +628,19 @@ const BasicInformationStep: React.FC = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {(() => {
-              // Filter badges based on property category
-              const existingPropertyBadges: ListingBadge[] = ['ready_to_move', 'move_in_ready', 'fixer_upper', 'renovated'];
-              const newDevelopmentBadges: ListingBadge[] = ['under_construction', 'off_plan'];
+              // Filter badges based on property type and category
+              let availableBadges: ListingBadge[] = [];
               
-              const availableBadges = basicInfo.propertyCategory === 'existing' 
-                ? existingPropertyBadges 
-                : newDevelopmentBadges;
+              // For farms, show farm-specific badges
+              if (propertyType === 'farm') {
+                availableBadges = ['water_rights', 'going_concern', 'game_fenced', 'irrigation', 'organic_certified', 'export_quality'];
+              }
+              // For non-farm properties
+              else if (basicInfo.propertyCategory === 'existing') {
+                availableBadges = ['ready_to_move', 'move_in_ready', 'fixer_upper', 'renovated'];
+              } else if (basicInfo.propertyCategory === 'new_development') {
+                availableBadges = ['under_construction', 'off_plan'];
+              }
 
               return availableBadges.map((badge) => {
                 const template = BADGE_TEMPLATES[badge];

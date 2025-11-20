@@ -14,7 +14,13 @@ export type ListingBadge =
   | 'off_plan'
   | 'move_in_ready'
   | 'fixer_upper'
-  | 'renovated';
+  | 'renovated'
+  | 'water_rights'
+  | 'going_concern'
+  | 'game_fenced'
+  | 'irrigation'
+  | 'organic_certified'
+  | 'export_quality';
 
 // Step 2: Property Types
 export type PropertyType = 'apartment' | 'house' | 'farm' | 'land' | 'commercial' | 'shared_living';
@@ -588,6 +594,44 @@ export const BADGE_TEMPLATES: Record<
   },
   renovated: {
     label: 'Renovated',
-    description: 'Property has been recently renovated',
+    description: 'Recently updated with modern finishes',
+    icon: 'sparkles',
+    color: 'purple',
+  },
+  water_rights: {
+    label: 'Water Rights',
+    description: 'Registered water rights included',
+    icon: 'droplets',
+    color: 'blue',
+  },
+  going_concern: {
+    label: 'Going Concern',
+    description: 'Sold as an operational business',
+    icon: 'briefcase',
+    color: 'green',
+  },
+  game_fenced: {
+    label: 'Game Fenced',
+    description: 'Fully fenced for game farming',
+    icon: 'fence',
+    color: 'orange',
+  },
+  irrigation: {
+    label: 'Irrigation',
+    description: 'Established irrigation infrastructure',
+    icon: 'sprout',
+    color: 'cyan',
+  },
+  organic_certified: {
+    label: 'Organic Certified',
+    description: 'Certified organic production',
+    icon: 'leaf',
+    color: 'green',
+  },
+  export_quality: {
+    label: 'Export Quality',
+    description: 'Produces export-grade commodities',
+    icon: 'globe',
+    color: 'indigo',
   },
 };
