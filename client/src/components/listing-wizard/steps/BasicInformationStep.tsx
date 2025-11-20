@@ -351,7 +351,7 @@ const BasicInformationStep: React.FC = () => {
             {/* Farm Highlights */}
             {propertyType === 'farm' && (
               <>
-                <div className="md:col-span-2">
+                <div>
                   <Label htmlFor="landSizeHa" className="text-slate-700">Total Land Size *</Label>
                   <div className="flex gap-2 mt-1">
                     <Input
