@@ -428,7 +428,7 @@ const BasicInformationStep: React.FC = () => {
             {/* Land Highlights */}
             {propertyType === 'land' && (
               <>
-                <div className="md:col-span-2">
+                <div>
                   <Label htmlFor="landSizeM2OrHa" className="text-slate-700">Plot Size *</Label>
                   <div className="flex gap-2 mt-1">
                     <Input
