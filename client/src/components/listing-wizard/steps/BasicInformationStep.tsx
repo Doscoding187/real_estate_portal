@@ -360,7 +360,7 @@ const BasicInformationStep: React.FC = () => {
                       value={propertyDetails.landSizeHa || ''}
                       onChange={(e) => store.updatePropertyDetail('landSizeHa', Number(e.target.value))}
                       placeholder="e.g., 50"
-                      className="flex-1"
+                      className="w-48"
                     />
                     <Select
                       value={basicInfo.landSizeUnit || 'hectares'}
@@ -436,7 +436,7 @@ const BasicInformationStep: React.FC = () => {
                       value={propertyDetails.landSizeM2OrHa || ''}
                       onChange={(e) => store.updatePropertyDetail('landSizeM2OrHa', Number(e.target.value))}
                       placeholder="e.g., 1000"
-                      className="flex-1"
+                      className="w-48"
                     />
                     <Select
                       value={basicInfo.landSizeUnit || 'm2'}
