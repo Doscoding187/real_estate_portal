@@ -16,7 +16,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
-import { MapPin, DollarSign, Home, Calendar, Info, Check, Award, Store, Building2, Factory, Warehouse, Layers } from 'lucide-react';
+import { MapPin, DollarSign, Home, Calendar, Info, Check, Award, Store, Building2, Factory, Warehouse, Layers, DoorOpen, GraduationCap, Users } from 'lucide-react';
 import type { ListingAction, PropertyType, ListingBadge } from '@/../../shared/listing-types';
 import { BADGE_TEMPLATES } from '@/../../shared/listing-types';
 
@@ -218,6 +218,42 @@ const BasicInformationStep: React.FC = () => {
                       basicInfo.propertyCategory === category.value ? 'text-blue-600' : 'text-gray-900'
                     }`}>{category.label}</h4>
                     <p className="text-xs text-gray-600 mt-1">{category.description}</p>
+                  </div>
+                </div>
+              </Card>
+            ))}
+          </div>
+        ) : propertyType === 'shared_living' ? (
+          /* Shared Living rental categories */
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {[
+              { value: 'room_rental', label: 'Room Rental', description: 'Single room in shared accommodation', icon: DoorOpen },
+              { value: 'cottage', label: 'Cottage/Granny Flat', description: 'Separate unit on property', icon: Home },
+              { value: 'student_accommodation', label: 'Student Accommodation', description: 'Purpose-built student housing', icon: GraduationCap },
+              { value: 'co_living', label: 'Co-Living Space', description: 'Modern shared living arrangement', icon: Users },
+            ].map((category) => (
+              <Card
+                key={category.value}
+                onClick={() => updateBasicInfo('propertyCategory', category.value)}
+                className={`cursor-pointer transition-all p-4 ${
+                  basicInfo.propertyCategory === category.value
+                    ? 'border-2 border-blue-500 bg-blue-50'
+                    : 'border-2 border-gray-200 hover:border-gray-300'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <div className={`p-2 rounded-lg ${
+                    basicInfo.propertyCategory === category.value ? 'bg-blue-100' : 'bg-gray-100'
+                  }`}>
+                    <category.icon className={`w-6 h-6 ${
+                      basicInfo.propertyCategory === category.value ? 'text-blue-600' : 'text-gray-600'
+                    }`} />
+                  </div>
+                  <div>
+                    <h4 className={`font-bold ${
+                      basicInfo.propertyCategory === category.value ? 'text-blue-600' : 'text-gray-900'
+                    }`}>{category.label}</h4>
+                    <p className="text-sm text-gray-600">{category.description}</p>
                   </div>
                 </div>
               </Card>
