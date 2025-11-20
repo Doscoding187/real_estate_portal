@@ -99,239 +99,65 @@ const BasicInformationStep: React.FC = () => {
         </div>
       </Card>
 
-      {/* Location Section */}
+      {/* Property Category Selection (for all transactions) */}
       <Card className="bg-white/70 backdrop-blur-sm rounded-[1.5rem] border-white/40 shadow-[0_8px_30px_rgba(8,_112,_184,_0.06)] p-6">
         <div className="flex items-center gap-2 mb-4">
-          <MapPin className="w-5 h-5 text-emerald-600" />
-          <h3 className="text-lg font-bold text-slate-800">Location</h3>
+          <Home className="w-5 h-5 text-indigo-600" />
+          <h3 className="text-lg font-bold text-slate-800">Property Category</h3>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Province */}
-          <div>
-            <Label htmlFor="province" className="text-slate-700">Province *</Label>
-            <Select
-              value={basicInfo.province || ''}
-              onValueChange={(value) => updateBasicInfo('province', value)}
-            >
-              <SelectTrigger className="mt-1">
-                <SelectValue placeholder="Select province" />
-              </SelectTrigger>
-              <SelectContent>
-                {SA_PROVINCES.map((province) => (
-                  <SelectItem key={province} value={province}>
-                    {province}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          <Card
+            onClick={() => updateBasicInfo('propertyCategory', 'existing')}
+            className={`cursor-pointer transition-all p-4 ${
+              basicInfo.propertyCategory === 'existing'
+                ? 'border-2 border-blue-500 bg-blue-50'
+                : 'border-2 border-gray-200 hover:border-gray-300'
+            }`}
+          >
+            <div className="flex items-center gap-3">
+              <div className={`p-2 rounded-lg ${
+                basicInfo.propertyCategory === 'existing' ? 'bg-blue-100' : 'bg-gray-100'
+              }`}>
+                <Home className={`w-6 h-6 ${
+                  basicInfo.propertyCategory === 'existing' ? 'text-blue-600' : 'text-gray-600'
+                }`} />
+              </div>
+              <div>
+                <h4 className={`font-bold ${
+                  basicInfo.propertyCategory === 'existing' ? 'text-blue-600' : 'text-gray-900'
+                }`}>Existing Property</h4>
+                <p className="text-sm text-gray-600">Previously owned or occupied</p>
+              </div>
+            </div>
+          </Card>
 
-          {/* City */}
-          <div>
-            <Label htmlFor="city" className="text-slate-700">City / Town *</Label>
-            <Input
-              id="city"
-              value={basicInfo.city || ''}
-              onChange={(e) => updateBasicInfo('city', e.target.value)}
-              placeholder="e.g., Johannesburg"
-              className="mt-1"
-            />
-          </div>
-
-          {/* Suburb */}
-          <div>
-            <Label htmlFor="suburb" className="text-slate-700">Suburb</Label>
-            <Input
-              id="suburb"
-              value={basicInfo.suburb || ''}
-              onChange={(e) => updateBasicInfo('suburb', e.target.value)}
-              placeholder="e.g., Sandton"
-              className="mt-1"
-            />
-          </div>
-
-          {/* Street Address */}
-          <div>
-            <Label htmlFor="streetAddress" className="text-slate-700">Street Address *</Label>
-            <Input
-              id="streetAddress"
-              value={basicInfo.streetAddress || ''}
-              onChange={(e) => updateBasicInfo('streetAddress', e.target.value)}
-              placeholder="e.g., 123 Main Road"
-              className="mt-1"
-            />
-          </div>
+          <Card
+            onClick={() => updateBasicInfo('propertyCategory', 'new_development')}
+            className={`cursor-pointer transition-all p-4 ${
+              basicInfo.propertyCategory === 'new_development'
+                ? 'border-2 border-blue-500 bg-blue-50'
+                : 'border-2 border-gray-200 hover:border-gray-300'
+            }`}
+          >
+            <div className="flex items-center gap-3">
+              <div className={`p-2 rounded-lg ${
+                basicInfo.propertyCategory === 'new_development' ? 'bg-blue-100' : 'bg-gray-100'
+              }`}>
+                <Home className={`w-6 h-6 ${
+                  basicInfo.propertyCategory === 'new_development' ? 'text-blue-600' : 'text-gray-600'
+                }`} />
+              </div>
+              <div>
+                <h4 className={`font-bold ${
+                  basicInfo.propertyCategory === 'new_development' ? 'text-blue-600' : 'text-gray-900'
+                }`}>New Development</h4>
+                <p className="text-sm text-gray-600">New construction or development</p>
+              </div>
+            </div>
+          </Card>
         </div>
       </Card>
-
-      {/* Transaction-Specific Fields */}
-      {action && (
-        <Card className="bg-white/70 backdrop-blur-sm rounded-[1.5rem] border-white/40 shadow-[0_8px_30px_rgba(8,_112,_184,_0.06)] p-6">
-          <div className="flex items-center gap-2 mb-4">
-            <DollarSign className="w-5 h-5 text-purple-600" />
-            <h3 className="text-lg font-bold text-slate-800">
-              {action === 'sell' && 'Selling Details'}
-              {action === 'rent' && 'Rental Details'}
-              {action === 'auction' && 'Auction Details'}
-            </h3>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Selling Fields */}
-            {action === 'sell' && (
-              <>
-                <div>
-                  <Label htmlFor="askingPrice" className="text-slate-700">Asking Price (R) *</Label>
-                  <Input
-                    id="askingPrice"
-                    type="number"
-                    value={pricing.askingPrice || ''}
-                    onChange={(e) => store.setPricing({ ...pricing, askingPrice: Number(e.target.value) })}
-                    placeholder="e.g., 2500000"
-                    className="mt-1"
-                  />
-                </div>
-
-                <div className="flex items-center space-x-2 pt-6">
-                  <Switch
-                    id="negotiable"
-                    checked={pricing.negotiable || false}
-                    onCheckedChange={(checked) => store.setPricing({ ...pricing, negotiable: checked })}
-                  />
-                  <Label htmlFor="negotiable" className="text-slate-700">Price is negotiable</Label>
-                </div>
-
-                <div className="md:col-span-2">
-                  <Label htmlFor="availabilityStatus" className="text-slate-700">Availability Status</Label>
-                  <Select
-                    value={basicInfo.availabilityStatus || ''}
-                    onValueChange={(value) => updateBasicInfo('availabilityStatus', value)}
-                  >
-                    <SelectTrigger className="mt-1">
-                      <SelectValue placeholder="Select status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="vacant">Vacant</SelectItem>
-                      <SelectItem value="occupied">Occupied</SelectItem>
-                      <SelectItem value="ready_to_move">Ready to Move</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </>
-            )}
-
-            {/* Renting Fields */}
-            {action === 'rent' && (
-              <>
-                <div>
-                  <Label htmlFor="monthlyRent" className="text-slate-700">Monthly Rent (R) *</Label>
-                  <Input
-                    id="monthlyRent"
-                    type="number"
-                    value={pricing.monthlyRent || ''}
-                    onChange={(e) => store.setPricing({ ...pricing, monthlyRent: Number(e.target.value) })}
-                    placeholder="e.g., 15000"
-                    className="mt-1"
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="deposit" className="text-slate-700">Deposit Required (R) *</Label>
-                  <Input
-                    id="deposit"
-                    type="number"
-                    value={pricing.deposit || ''}
-                    onChange={(e) => store.setPricing({ ...pricing, deposit: Number(e.target.value) })}
-                    placeholder="e.g., 15000"
-                    className="mt-1"
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="leaseTerm" className="text-slate-700">Lease Term</Label>
-                  <Select
-                    value={basicInfo.leaseTerm || ''}
-                    onValueChange={(value) => updateBasicInfo('leaseTerm', value)}
-                  >
-                    <SelectTrigger className="mt-1">
-                      <SelectValue placeholder="Select lease term" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="6_months">6 Months</SelectItem>
-                      <SelectItem value="12_months">12 Months</SelectItem>
-                      <SelectItem value="24_months">24 Months</SelectItem>
-                      <SelectItem value="flexible">Flexible</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div>
-                  <Label htmlFor="occupationDate" className="text-slate-700">Available From</Label>
-                  <Input
-                    id="occupationDate"
-                    type="date"
-                    value={basicInfo.occupationDate || ''}
-                    onChange={(e) => updateBasicInfo('occupationDate', e.target.value)}
-                    className="mt-1"
-                  />
-                </div>
-              </>
-            )}
-
-            {/* Auction Fields */}
-            {action === 'auction' && (
-              <>
-                <div>
-                  <Label htmlFor="startingBid" className="text-slate-700">Starting Bid (R) *</Label>
-                  <Input
-                    id="startingBid"
-                    type="number"
-                    value={pricing.startingBid || ''}
-                    onChange={(e) => store.setPricing({ ...pricing, startingBid: Number(e.target.value) })}
-                    placeholder="e.g., 1000000"
-                    className="mt-1"
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="reservePrice" className="text-slate-700">Reserve Price (R)</Label>
-                  <Input
-                    id="reservePrice"
-                    type="number"
-                    value={pricing.reservePrice || ''}
-                    onChange={(e) => store.setPricing({ ...pricing, reservePrice: Number(e.target.value) })}
-                    placeholder="e.g., 1500000"
-                    className="mt-1"
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="auctionDateTime" className="text-slate-700">Auction Date & Time *</Label>
-                  <Input
-                    id="auctionDateTime"
-                    type="datetime-local"
-                    value={pricing.auctionDateTime || ''}
-                    onChange={(e) => store.setPricing({ ...pricing, auctionDateTime: e.target.value })}
-                    className="mt-1"
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="auctionVenue" className="text-slate-700">Auction Venue / Online Link</Label>
-                  <Input
-                    id="auctionVenue"
-                    value={basicInfo.auctionVenue || ''}
-                    onChange={(e) => updateBasicInfo('auctionVenue', e.target.value)}
-                    placeholder="e.g., Online via Zoom or Physical Address"
-                    className="mt-1"
-                  />
-                </div>
-              </>
-            )}
-          </div>
-        </Card>
-      )}
 
       {/* Property Highlights (4 fields per type) */}
       {propertyType && (
@@ -628,8 +454,8 @@ const BasicInformationStep: React.FC = () => {
         </Card>
       )}
 
-      {/* Status-Specific Fields */}
-      {badge && (hasStatus('occupied') || hasStatus('off_plan', 'under_construction')) && (
+      {/* Additional Details - Based on Property Category */}
+      {basicInfo.propertyCategory && (
         <Card className="bg-white/70 backdrop-blur-sm rounded-[1.5rem] border-white/40 shadow-[0_8px_30px_rgba(8,_112,_184,_0.06)] p-6">
           <div className="flex items-center gap-2 mb-4">
             <Calendar className="w-5 h-5 text-orange-600" />
@@ -637,48 +463,82 @@ const BasicInformationStep: React.FC = () => {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Occupied Fields */}
-            {hasStatus('occupied') && (
+            {/* Existing Property Fields */}
+            {basicInfo.propertyCategory === 'existing' && (
               <>
                 <div>
-                  <Label htmlFor="noticePeriod" className="text-slate-700">Notice Period Required</Label>
+                  <Label htmlFor="possessionStatus" className="text-slate-700">Possession Status *</Label>
+                  <Select
+                    value={basicInfo.possessionStatus || ''}
+                    onValueChange={(value) => updateBasicInfo('possessionStatus', value)}
+                  >
+                    <SelectTrigger className="mt-1">
+                      <SelectValue placeholder="Select status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="vacant">Vacant</SelectItem>
+                      <SelectItem value="owner_occupied">Owner Occupied</SelectItem>
+                      <SelectItem value="tenant_occupied">Tenant Occupied</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {basicInfo.possessionStatus === 'tenant_occupied' && (
+                  <>
+                    <div>
+                      <Label htmlFor="currentRentalIncome" className="text-slate-700">Current Rental Income (R/month)</Label>
+                      <Input
+                        id="currentRentalIncome"
+                        type="number"
+                        value={basicInfo.currentRentalIncome || ''}
+                        onChange={(e) => updateBasicInfo('currentRentalIncome', Number(e.target.value))}
+                        placeholder="e.g., 12000"
+                        className="mt-1"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="leaseExpiryDate" className="text-slate-700">Lease Expiry Date</Label>
+                      <Input
+                        id="leaseExpiryDate"
+                        type="date"
+                        value={basicInfo.leaseExpiryDate || ''}
+                        onChange={(e) => updateBasicInfo('leaseExpiryDate', e.target.value)}
+                        className="mt-1"
+                      />
+                    </div>
+                  </>
+                )}
+
+                <div>
+                  <Label htmlFor="occupancyDate" className="text-slate-700">Available From</Label>
                   <Input
-                    id="noticePeriod"
-                    value={basicInfo.noticePeriod || ''}
-                    onChange={(e) => updateBasicInfo('noticePeriod', e.target.value)}
-                    placeholder="e.g., 30 days"
+                    id="occupancyDate"
+                    type="date"
+                    value={basicInfo.occupancyDate || ''}
+                    onChange={(e) => updateBasicInfo('occupancyDate', e.target.value)}
                     className="mt-1"
                   />
                 </div>
+
                 <div>
-                  <Label htmlFor="currentRentalIncome" className="text-slate-700">Current Rental Income (R)</Label>
+                  <Label htmlFor="propertyAge" className="text-slate-700">Property Age (years)</Label>
                   <Input
-                    id="currentRentalIncome"
+                    id="propertyAge"
                     type="number"
-                    value={basicInfo.currentRentalIncome || ''}
-                    onChange={(e) => updateBasicInfo('currentRentalIncome', Number(e.target.value))}
-                    placeholder="e.g., 12000"
+                    value={basicInfo.propertyAge || ''}
+                    onChange={(e) => updateBasicInfo('propertyAge', Number(e.target.value))}
+                    placeholder="e.g., 10"
                     className="mt-1"
                   />
                 </div>
               </>
             )}
 
-            {/* Off-Plan / Under Construction Fields */}
-            {hasStatus('off_plan', 'under_construction') && (
+            {/* New Development Fields */}
+            {basicInfo.propertyCategory === 'new_development' && (
               <>
                 <div>
-                  <Label htmlFor="completionDate" className="text-slate-700">Completion Date</Label>
-                  <Input
-                    id="completionDate"
-                    type="date"
-                    value={basicInfo.completionDate || ''}
-                    onChange={(e) => updateBasicInfo('completionDate', e.target.value)}
-                    className="mt-1"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="developerName" className="text-slate-700">Developer Name</Label>
+                  <Label htmlFor="developerName" className="text-slate-700">Developer Name *</Label>
                   <Input
                     id="developerName"
                     value={basicInfo.developerName || ''}
@@ -687,6 +547,47 @@ const BasicInformationStep: React.FC = () => {
                     className="mt-1"
                   />
                 </div>
+
+                <div>
+                  <Label htmlFor="developmentName" className="text-slate-700">Development Name *</Label>
+                  <Input
+                    id="developmentName"
+                    value={basicInfo.developmentName || ''}
+                    onChange={(e) => updateBasicInfo('developmentName', e.target.value)}
+                    placeholder="e.g., Sunset Gardens Estate"
+                    className="mt-1"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="completionDate" className="text-slate-700">Expected Completion Date *</Label>
+                  <Input
+                    id="completionDate"
+                    type="date"
+                    value={basicInfo.completionDate || ''}
+                    onChange={(e) => updateBasicInfo('completionDate', e.target.value)}
+                    className="mt-1"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="developmentPhase" className="text-slate-700">Development Phase</Label>
+                  <Select
+                    value={basicInfo.developmentPhase || ''}
+                    onValueChange={(value) => updateBasicInfo('developmentPhase', value)}
+                  >
+                    <SelectTrigger className="mt-1">
+                      <SelectValue placeholder="Select phase" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="planning">Planning Stage</SelectItem>
+                      <SelectItem value="under_construction">Under Construction</SelectItem>
+                      <SelectItem value="nearing_completion">Nearing Completion</SelectItem>
+                      <SelectItem value="ready_to_move">Ready to Move In</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
                 <div className="md:col-span-2">
                   <Label htmlFor="unitTypes" className="text-slate-700">Unit Types Available</Label>
                   <Input
