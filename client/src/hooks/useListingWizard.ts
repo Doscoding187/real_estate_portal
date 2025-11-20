@@ -372,7 +372,17 @@ export const useListingWizardStore = create<ListingWizardStore>()(
       },
 
       reset: () => {
-        set(initialState);
+        set({
+          ...initialState,
+          action: undefined,
+          propertyType: undefined,
+          pricing: undefined,
+          propertyDetails: undefined,
+          location: undefined,
+          basicInfo: undefined,
+          additionalInfo: undefined,
+          mainMediaId: undefined,
+        });
         // Clear persisted storage to ensure fresh start
         localStorage.removeItem('listing-wizard-storage');
       },

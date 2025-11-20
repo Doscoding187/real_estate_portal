@@ -8,7 +8,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { FileText, Droplets, Zap, Building2, Truck, Shield, Waves, Home, Warehouse } from 'lucide-react';
+import { FileText, Droplets, Zap, Building2, Truck, Shield, Waves, Home, Warehouse, Users } from 'lucide-react';
 
 export function AdditionalInformationStep() {
   const store = useListingWizardStore();
@@ -820,6 +820,127 @@ export function AdditionalInformationStep() {
             </div>
           </div>
         </Card>
+      )}
+
+      {/* Shared Living */}
+      {propertyType === 'shared_living' && (
+        <Card className="bg-white/70 backdrop-blur-sm rounded-[1.5rem] border-white/40 shadow-[0_8px_30px_rgba(8,_112,_184,_0.06)] p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <Users className="w-5 h-5 text-purple-600" />
+            <h3 className="text-lg font-bold text-slate-800">Shared Living Details</h3>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="roomType" className="text-slate-700">
+                Room Type
+              </Label>
+              <Select
+                value={additionalInfo.roomType || ''}
+                onValueChange={(value) => updateAdditionalInfo('roomType', value)}
+              >
+                <SelectTrigger className="mt-1">
+                  <SelectValue placeholder="Select room type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="private">Private Room</SelectItem>
+                  <SelectItem value="shared">Shared Room</SelectItem>
+                  <SelectItem value="dorm">Dormitory</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label htmlFor="occupancy" className="text-slate-700">
+                Max Occupancy
+              </Label>
+              <input
+                type="number"
+                id="occupancy"
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 mt-1"
+                value={additionalInfo.occupancy || ''}
+                onChange={(e) => updateAdditionalInfo('occupancy', Number(e.target.value))}
+                placeholder="e.g. 2"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="bathroomType" className="text-slate-700">
+                Bathroom
+              </Label>
+              <Select
+                value={additionalInfo.bathroomType || ''}
+                onValueChange={(value) => updateAdditionalInfo('bathroomType', value)}
+              >
+                <SelectTrigger className="mt-1">
+                  <SelectValue placeholder="Select bathroom type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="private">Private</SelectItem>
+                  <SelectItem value="shared">Shared</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label htmlFor="kitchenAccess" className="text-slate-700">
+                Kitchen Access
+              </Label>
+              <Select
+                value={additionalInfo.kitchenAccess || ''}
+                onValueChange={(value) => updateAdditionalInfo('kitchenAccess', value)}
+              >
+                <SelectTrigger className="mt-1">
+                  <SelectValue placeholder="Select access type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="private">Private</SelectItem>
+                  <SelectItem value="shared">Shared</SelectItem>
+                  <SelectItem value="none">None</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="md:col-span-2">
+              <Label className="text-slate-700 mb-2 block">Shared Amenities</Label>
+              <div className="grid grid-cols-2 gap-2">
+                {['Lounge Area', 'Dining Area', 'Laundry Facilities', 'Gym', 'Outdoor Space', 'Study Area'].map((feature) => {
+                  const isSelected = (additionalInfo.sharedAmenities || []).includes(feature);
+                  return (
+                    <div 
+                      key={feature}
+                      className={`flex items-center p-3 rounded-lg border cursor-pointer transition-all ${
+                        isSelected 
+                          ? 'bg-purple-50 border-purple-200 text-purple-700' 
+                          : 'bg-white border-slate-200 hover:border-slate-300'
+                      }`}
+                      onClick={() => {
+                        const current = additionalInfo.sharedAmenities || [];
+                        const updated = isSelected
+                          ? current.filter((i: string) => i !== feature)
+                          : [...current, feature];
+                        updateAdditionalInfo('sharedAmenities', updated);
+                      }}
+                    >
+                      <Users className={`w-4 h-4 mr-2 ${isSelected ? 'text-purple-600' : 'text-slate-400'}`} />
+                      <span className="text-sm font-medium">{feature}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </Card>
+      )}
+
+      {/* Fallback for missing category (e.g. Land without category selected) */}
+      {propertyType === 'land' && !['residential_land', 'estate_plot', 'industrial_land'].includes(propertyCategory) && (
+        <div className="p-6 bg-yellow-50 border border-yellow-200 rounded-lg text-center">
+          <h3 className="text-lg font-semibold text-yellow-800 mb-2">Property Category Required</h3>
+          <p className="text-yellow-700 mb-4">
+            Please go back to the Basic Information step and select a specific Land Category (Residential, Estate, or Industrial) to see additional options.
+          </p>
+        </div>
       )}
     </div>
   );
