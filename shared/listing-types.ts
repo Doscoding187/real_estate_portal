@@ -313,6 +313,29 @@ export interface AdditionalInformation {
   electricitySupply?: 'three_phase' | 'single_phase' | 'nearby' | 'not_available';
   waterSupply?: 'industrial' | 'municipal_domestic' | 'not_available';
   wastewaterSystem?: 'industrial' | 'municipal' | 'septic_required';
+
+  // Apartment / Flat
+  bodyCorporateRules?: 'available' | 'on_request' | 'not_available';
+  petPolicy?: 'pets_allowed' | 'cats_only' | 'no_pets' | 'with_permission';
+  floorNumber?: number;
+  elevatorAccess?: 'yes' | 'no';
+
+  // House
+  securityFeatures?: string[]; // e.g., 'alarm', 'electric_fence', 'beams', 'cctv'
+  poolType?: 'chlorine' | 'salt_water' | 'heated' | 'none';
+  gardenService?: 'included' | 'optional' | 'none';
+  
+  // Commercial
+  loadingZones?: 'available' | 'shared' | 'none';
+  ceilingHeight?: number; // in meters
+  amperage?: number; // in amps
+  backupPower?: 'generator' | 'ups' | 'solar' | 'none';
+
+  // Farm
+  waterRights?: 'registered' | 'in_process' | 'none';
+  fencingType?: 'game' | 'cattle' | 'electric' | 'partial' | 'none';
+  soilAnalysis?: 'available' | 'on_request' | 'none';
+  infrastructure?: string[]; // e.g., 'sheds', 'silos', 'staff_quarters'
 }
 
 
