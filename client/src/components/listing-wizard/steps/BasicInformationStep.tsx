@@ -563,7 +563,7 @@ const BasicInformationStep: React.FC = () => {
             )}
           </div>
         </Card>
-      )}
+
 
       {/* Possession Status & Additional Details */}
       {(propertyType === 'house' || propertyType === 'apartment') && (
