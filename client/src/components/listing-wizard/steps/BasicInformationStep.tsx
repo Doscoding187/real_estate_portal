@@ -316,6 +316,7 @@ const BasicInformationStep: React.FC = () => {
       </Card>
 
       {/* Property Highlights (4 fields per type) */}
+      {propertyType !== 'shared_living' && (
       <Card className="p-6 bg-white/50 backdrop-blur-sm border-slate-200/60 shadow-sm">
         <div className="flex items-center gap-3 mb-6 pb-4 border-b border-slate-100">
           <div className="p-2 bg-blue-100 rounded-lg">
@@ -622,6 +623,7 @@ const BasicInformationStep: React.FC = () => {
             )}
           </div>
         </Card>
+      )}
 
 
       {/* Possession Status & Additional Details */}
