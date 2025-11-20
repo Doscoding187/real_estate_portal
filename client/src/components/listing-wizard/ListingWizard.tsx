@@ -18,7 +18,15 @@ import MediaUploadStep from './steps/MediaUploadStep';
 import PreviewStep from './steps/PreviewStep';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { ArrowLeft, ArrowRight, Home } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Home, FileText, Trash2 } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 
 const ListingWizard: React.FC = () => {
   const store = useListingWizardStore();
@@ -26,19 +34,40 @@ const ListingWizard: React.FC = () => {
   const { user } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [showResumeDraftDialog, setShowResumeDraftDialog] = useState(false);
 
   // TRPC mutation for creating listing
   const createListingMutation = trpc.listing.create.useMutation();
   // TRPC mutation for submitting for review
   const submitForReviewMutation = trpc.listing.submitForReview.useMutation();
 
-  // Reset wizard if it was previously submitted (on mount)
+  // Check for draft on mount and show resume dialog
   useEffect(() => {
+    // If previously submitted, reset
     if (store.status === 'submitted') {
       console.log('Wizard was previously submitted, resetting for new listing...');
       store.reset();
+      return;
+    }
+
+    // Check if there's a draft (currentStep > 1 or has action/propertyType)
+    const hasDraft = store.currentStep > 1 || store.action || store.propertyType;
+    
+    if (hasDraft) {
+      setShowResumeDraftDialog(true);
     }
   }, []); // Run only on mount
+
+  // Handle resume draft decision
+  const handleResumeDraft = () => {
+    setShowResumeDraftDialog(false);
+    // Keep existing state - user continues where they left off
+  };
+
+  const handleStartFresh = () => {
+    setShowResumeDraftDialog(false);
+    store.reset();
+  };
 
   // Redirect if submitted (legacy - keeping for safety)
   useEffect(() => {
@@ -170,6 +199,55 @@ const ListingWizard: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50 py-8">
+      {/* Resume Draft Dialog */}
+      <Dialog open={showResumeDraftDialog} onOpenChange={setShowResumeDraftDialog}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-xl">
+              <FileText className="w-6 h-6 text-blue-600" />
+              Resume Draft Listing?
+            </DialogTitle>
+            <DialogDescription className="text-base pt-2">
+              You have an unfinished listing in progress. Would you like to continue where you left off or start a new listing?
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="py-4">
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <div className="flex items-start gap-3">
+                <FileText className="w-5 h-5 text-blue-600 mt-0.5" />
+                <div>
+                  <p className="font-medium text-slate-800">Draft Details</p>
+                  <p className="text-sm text-slate-600 mt-1">
+                    Step {store.currentStep} of 8
+                    {store.propertyType && ` • ${store.propertyType.charAt(0).toUpperCase() + store.propertyType.slice(1)}`}
+                    {store.action && ` • ${store.action.charAt(0).toUpperCase() + store.action.slice(1)}`}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              onClick={handleStartFresh}
+              className="gap-2"
+            >
+              <Trash2 className="w-4 h-4" />
+              Start New
+            </Button>
+            <Button
+              onClick={handleResumeDraft}
+              className="gap-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+            >
+              <FileText className="w-4 h-4" />
+              Resume Draft
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <div className="container mx-auto px-4 max-w-5xl">
         {/* Header */}
         <div className="mb-8 text-center">
