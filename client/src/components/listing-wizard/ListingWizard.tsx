@@ -18,7 +18,7 @@ import MediaUploadStep from './steps/MediaUploadStep';
 import PreviewStep from './steps/PreviewStep';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { ArrowLeft, ArrowRight, Home, FileText, Trash2 } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Home, FileText, Trash2, Save, Check } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -36,6 +36,8 @@ const ListingWizard: React.FC = () => {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [showResumeDraftDialog, setShowResumeDraftDialog] = useState(false);
   const [wizardKey, setWizardKey] = useState(0); // Force re-render on reset
+  const [isSavingDraft, setIsSavingDraft] = useState(false);
+  const [draftSaved, setDraftSaved] = useState(false);
 
   // TRPC mutation for creating listing
   const createListingMutation = trpc.listing.create.useMutation();
@@ -69,6 +71,25 @@ const ListingWizard: React.FC = () => {
     setShowResumeDraftDialog(false);
     store.reset();
     setWizardKey(prev => prev + 1); // Force re-render
+  };
+
+  // Handle save draft
+  const handleSaveDraft = async () => {
+    setIsSavingDraft(true);
+    setDraftSaved(false);
+    
+    try {
+      // The draft is already auto-saved via Zustand persist
+      // This is just for user feedback
+      await new Promise(resolve => setTimeout(resolve, 500)); // Simulate save
+      
+      setDraftSaved(true);
+      setTimeout(() => setDraftSaved(false), 2000); // Hide success message after 2s
+    } catch (error) {
+      console.error('Error saving draft:', error);
+    } finally {
+      setIsSavingDraft(false);
+    }
   };
 
   // Redirect if submitted (legacy - keeping for safety)
@@ -308,14 +329,36 @@ const ListingWizard: React.FC = () => {
 
         {/* Navigation */}
         <div className="flex items-center justify-between">
-          <Button
-            variant="outline"
-            onClick={store.prevStep}
-            disabled={store.currentStep === 1 || isSubmitting}
-          >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Previous
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={store.prevStep}
+              disabled={store.currentStep === 1 || isSubmitting}
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Previous
+            </Button>
+            
+            {/* Save Draft Button */}
+            <Button
+              variant="outline"
+              onClick={handleSaveDraft}
+              disabled={isSavingDraft || isSubmitting}
+              className={`gap-2 ${draftSaved ? 'border-green-500 text-green-600' : ''}`}
+            >
+              {draftSaved ? (
+                <>
+                  <Check className="h-4 w-4" />
+                  Saved
+                </>
+              ) : (
+                <>
+                  <Save className="h-4 w-4" />
+                  {isSavingDraft ? 'Saving...' : 'Save Draft'}
+                </>
+              )}
+            </Button>
+          </div>
 
           {store.currentStep < 8 ? (
             <Button 
