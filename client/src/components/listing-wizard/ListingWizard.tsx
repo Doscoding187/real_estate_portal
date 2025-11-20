@@ -35,6 +35,7 @@ const ListingWizard: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [showResumeDraftDialog, setShowResumeDraftDialog] = useState(false);
+  const [wizardKey, setWizardKey] = useState(0); // Force re-render on reset
 
   // TRPC mutation for creating listing
   const createListingMutation = trpc.listing.create.useMutation();
@@ -67,6 +68,7 @@ const ListingWizard: React.FC = () => {
   const handleStartFresh = () => {
     setShowResumeDraftDialog(false);
     store.reset();
+    setWizardKey(prev => prev + 1); // Force re-render
   };
 
   // Redirect if submitted (legacy - keeping for safety)
@@ -300,7 +302,7 @@ const ListingWizard: React.FC = () => {
         </div>
 
         {/* Step Content */}
-        <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-8 mb-8">
+        <div key={wizardKey} className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-8 mb-8">
           {getCurrentStep()}
         </div>
 
