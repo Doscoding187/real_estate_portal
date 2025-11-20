@@ -546,6 +546,9 @@ const BasicInformationStep: React.FC = () => {
                     placeholder="e.g., ABC Developments"
                     className="mt-1"
                   />
+                  <p className="text-xs text-slate-500 mt-1">
+                    This will link to registered developers or prompt for registration
+                  </p>
                 </div>
 
                 <div>
@@ -557,46 +560,9 @@ const BasicInformationStep: React.FC = () => {
                     placeholder="e.g., Sunset Gardens Estate"
                     className="mt-1"
                   />
-                </div>
-
-                <div>
-                  <Label htmlFor="completionDate" className="text-slate-700">Expected Completion Date *</Label>
-                  <Input
-                    id="completionDate"
-                    type="date"
-                    value={basicInfo.completionDate || ''}
-                    onChange={(e) => updateBasicInfo('completionDate', e.target.value)}
-                    className="mt-1"
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="developmentPhase" className="text-slate-700">Development Phase</Label>
-                  <Select
-                    value={basicInfo.developmentPhase || ''}
-                    onValueChange={(value) => updateBasicInfo('developmentPhase', value)}
-                  >
-                    <SelectTrigger className="mt-1">
-                      <SelectValue placeholder="Select phase" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="planning">Planning Stage</SelectItem>
-                      <SelectItem value="under_construction">Under Construction</SelectItem>
-                      <SelectItem value="nearing_completion">Nearing Completion</SelectItem>
-                      <SelectItem value="ready_to_move">Ready to Move In</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="md:col-span-2">
-                  <Label htmlFor="unitTypes" className="text-slate-700">Unit Types Available</Label>
-                  <Input
-                    id="unitTypes"
-                    value={basicInfo.unitTypes || ''}
-                    onChange={(e) => updateBasicInfo('unitTypes', e.target.value)}
-                    placeholder="e.g., 1-bed, 2-bed, 3-bed apartments"
-                    className="mt-1"
-                  />
+                  <p className="text-xs text-slate-500 mt-1">
+                    Select from registered developments or add new
+                  </p>
                 </div>
               </>
             )}
