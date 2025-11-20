@@ -287,55 +287,63 @@ export interface BasicInformation {
 }
 
 // Additional Information Fields (Step 4 - New)
+// Additional Information Fields (Step 4 - New Redesign)
+export type FurnishingStatus = 'unfurnished' | 'semi_furnished' | 'fully_furnished';
+export type FlooringType = 'tile' | 'carpet' | 'wood' | 'laminate' | 'concrete' | 'other';
+export type PetPolicy = 'allowed' | 'cats_only' | 'no_pets' | 'by_arrangement';
+export type RoofType = 'tile' | 'metal' | 'slate' | 'thatch' | 'concrete' | 'other';
+export type WallType = 'brick' | 'plaster' | 'wood' | 'stone' | 'concrete' | 'other';
+export type WindowType = 'steel' | 'aluminium' | 'wood' | 'pvc' | 'other';
+export type SecurityFeature = 'alarm' | 'electric_fence' | 'beams' | 'cctv' | '24hr_guard' | 'access_control';
+export type OutdoorFeature = 'pool' | 'garden' | 'braai_area' | 'patio' | 'balcony' | 'deck';
+
+export type CommercialGrade = 'a_grade' | 'b_grade' | 'c_grade' | 'premium';
+export type AirConditioning = 'central' | 'split_units' | 'evaporative' | 'none';
+export type InternetAccess = 'fibre' | 'adsl' | 'lte' | '5g' | 'satellite' | 'none';
+export type TruckAccess = 'superlink' | 'rigid' | 'small_truck' | 'none';
+
+export type IrrigationType = 'pivot' | 'drip' | 'flood' | 'micro' | 'none';
+export type FarmWaterSource = 'borehole' | 'river' | 'dam' | 'municipal' | 'rainwater';
+export type FarmFencing = 'game' | 'cattle' | 'electric' | 'barbed_wire' | 'mesh' | 'none';
+export type FarmTopography = 'flat' | 'sloped' | 'hilly' | 'mountainous' | 'mixed';
+
+export type HouseRule = 'no_smoking' | 'no_overnight_guests' | 'quiet_hours' | 'no_parties' | 'clean_up_after_self';
+export type BillIncluded = 'water' | 'electricity' | 'wifi' | 'cleaning' | 'gas';
+
 export interface AdditionalInformation {
-  // Residential Land
-  landSurveyReport?: 'available' | 'in_progress' | 'not_available';
-  soilSurvey?: 'available' | 'in_progress' | 'not_available';
-  environmentalAssessment?: 'not_required' | 'completed' | 'required_not_completed';
-  waterAvailability?: 'connected' | 'nearby' | 'not_available';
-  electricityAvailability?: 'connected' | 'nearby' | 'not_available';
-  sewageAvailability?: 'municipal' | 'septic_required' | 'not_available';
-  
-  // Estate Plot
-  hoaDocuments?: 'available' | 'in_progress' | 'not_available';
-  buildingGuidelines?: 'available' | 'in_progress' | 'not_available';
-  estateWater?: 'included' | 'not_included';
-  estateElectricity?: 'included' | 'not_included';
-  estateSewage?: 'included' | 'not_included';
-  estateFibre?: 'available' | 'in_progress' | 'not_available';
-  developmentPhase?: 'phase_1' | 'phase_2' | 'phase_3' | 'completed';
-  
-  // Industrial Land
-  boundarySurvey?: 'available' | 'in_progress' | 'not_available';
-  soilLoadTest?: 'available' | 'in_progress' | 'not_available';
-  eia?: 'completed' | 'required_not_completed' | 'not_required';
-  truckAccess?: 'available' | 'limited' | 'not_available';
-  electricitySupply?: 'three_phase' | 'single_phase' | 'nearby' | 'not_available';
-  waterSupply?: 'industrial' | 'municipal_domestic' | 'not_available';
-  wastewaterSystem?: 'industrial' | 'municipal' | 'septic_required';
+  // Residential (House / Apartment)
+  furnishingStatus?: FurnishingStatus;
+  flooring?: FlooringType;
+  petPolicy?: PetPolicy;
+  roofType?: RoofType;
+  wallType?: WallType;
+  windowType?: WindowType;
+  securityFeatures?: SecurityFeature[];
+  outdoorFeatures?: OutdoorFeature[];
 
-  // Apartment / Flat
-  bodyCorporateRules?: 'available' | 'on_request' | 'not_available';
-  petPolicy?: 'pets_allowed' | 'cats_only' | 'no_pets' | 'with_permission';
-  floorNumber?: number;
-  elevatorAccess?: 'yes' | 'no';
-
-  // House
-  securityFeatures?: string[]; // e.g., 'alarm', 'electric_fence', 'beams', 'cctv'
-  poolType?: 'chlorine' | 'salt_water' | 'heated' | 'none';
-  gardenService?: 'included' | 'optional' | 'none';
-  
-  // Commercial
-  loadingZones?: 'available' | 'shared' | 'none';
-  ceilingHeight?: number; // in meters
-  amperage?: number; // in amps
-  backupPower?: 'generator' | 'ups' | 'solar' | 'none';
+  // Commercial / Industrial
+  grade?: CommercialGrade;
+  airConditioning?: AirConditioning;
+  internetAccess?: InternetAccess;
+  loadingDocks?: number;
+  truckAccess?: TruckAccess;
+  parkingRatio?: number; // Bays per 100m²
 
   // Farm
-  waterRights?: 'registered' | 'in_process' | 'none';
-  fencingType?: 'game' | 'cattle' | 'electric' | 'partial' | 'none';
-  soilAnalysis?: 'available' | 'on_request' | 'none';
-  infrastructure?: string[]; // e.g., 'sheds', 'silos', 'staff_quarters'
+  arableLandHa?: number;
+  grazingLandHa?: number;
+  irrigationType?: IrrigationType;
+  waterSources?: FarmWaterSource[];
+  fencing?: FarmFencing;
+  topography?: FarmTopography;
+
+  // Shared Living
+  houseRules?: HouseRule[];
+  billsIncluded?: BillIncluded[];
+  minimumStayMonths?: number;
+  
+  // Legacy / Other (Keep generic if needed or remove if fully replacing)
+  amenitiesFeatures?: string[];
 }
 
 

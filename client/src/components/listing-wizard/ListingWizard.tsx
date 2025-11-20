@@ -55,7 +55,7 @@ const ListingWizard: React.FC = () => {
 
     // Check if there's a draft (currentStep > 1 or has action/propertyType)
     const hasDraft = store.currentStep > 1 || store.action || store.propertyType;
-    
+
     if (hasDraft) {
       setShowResumeDraftDialog(true);
     }
@@ -77,12 +77,12 @@ const ListingWizard: React.FC = () => {
   const handleSaveDraft = async () => {
     setIsSavingDraft(true);
     setDraftSaved(false);
-    
+
     try {
       // The draft is already auto-saved via Zustand persist
       // This is just for user feedback
       await new Promise(resolve => setTimeout(resolve, 500)); // Simulate save
-      
+
       setDraftSaved(true);
       setTimeout(() => setDraftSaved(false), 2000); // Hide success message after 2s
     } catch (error) {
@@ -231,10 +231,11 @@ const ListingWizard: React.FC = () => {
               Resume Draft Listing?
             </DialogTitle>
             <DialogDescription className="text-base pt-2">
-              You have an unfinished listing in progress. Would you like to continue where you left off or start a new listing?
+              You have an unfinished listing in progress. Would you like to continue where you left
+              off or start a new listing?
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="py-4">
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
               <div className="flex items-start gap-3">
@@ -243,8 +244,10 @@ const ListingWizard: React.FC = () => {
                   <p className="font-medium text-slate-800">Draft Details</p>
                   <p className="text-sm text-slate-600 mt-1">
                     Step {store.currentStep} of 8
-                    {store.propertyType && ` • ${store.propertyType.charAt(0).toUpperCase() + store.propertyType.slice(1)}`}
-                    {store.action && ` • ${store.action.charAt(0).toUpperCase() + store.action.slice(1)}`}
+                    {store.propertyType &&
+                      ` • ${store.propertyType.charAt(0).toUpperCase() + store.propertyType.slice(1)}`}
+                    {store.action &&
+                      ` • ${store.action.charAt(0).toUpperCase() + store.action.slice(1)}`}
                   </p>
                 </div>
               </div>
@@ -252,11 +255,7 @@ const ListingWizard: React.FC = () => {
           </div>
 
           <DialogFooter className="gap-2 sm:gap-0">
-            <Button
-              variant="outline"
-              onClick={handleStartFresh}
-              className="gap-2"
-            >
+            <Button variant="outline" onClick={handleStartFresh} className="gap-2">
               <Trash2 className="w-4 h-4" />
               Start New
             </Button>
@@ -280,7 +279,6 @@ const ListingWizard: React.FC = () => {
           <p className="text-gray-600 text-lg">Follow the steps to create your property listing</p>
         </div>
 
-
         {/* Step Indicator */}
         <div className="mb-8">
           <div className="flex items-center justify-between">
@@ -288,7 +286,7 @@ const ListingWizard: React.FC = () => {
               const stepNumber = index + 1;
               const isCompleted = stepNumber < store.currentStep;
               const isCurrent = stepNumber === store.currentStep;
-              
+
               return (
                 <React.Fragment key={stepNumber}>
                   <div className="flex flex-col items-center">
@@ -297,24 +295,38 @@ const ListingWizard: React.FC = () => {
                         isCompleted
                           ? 'bg-green-500 text-white'
                           : isCurrent
-                          ? 'bg-blue-600 text-white ring-4 ring-blue-100'
-                          : 'bg-gray-200 text-gray-500'
+                            ? 'bg-blue-600 text-white ring-4 ring-blue-100'
+                            : 'bg-gray-200 text-gray-500'
                       }`}
                     >
                       {isCompleted ? (
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                        <svg
+                          className="w-5 h-5"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={3}
+                            d="M5 13l4 4L19 7"
+                          />
                         </svg>
                       ) : (
                         stepNumber
                       )}
                     </div>
-                    <span className={`text-xs mt-2 text-center max-w-[80px] ${isCurrent ? 'font-semibold text-gray-900' : 'text-gray-500'}`}>
+                    <span
+                      className={`text-xs mt-2 text-center max-w-[80px] ${isCurrent ? 'font-semibold text-gray-900' : 'text-gray-500'}`}
+                    >
                       {title}
                     </span>
                   </div>
-                  {stepNumber < 9 && (
-                    <div className={`flex-1 h-0.5 mx-2 ${isCompleted ? 'bg-green-500' : 'bg-gray-200'}`} />
+                  {stepNumber < 8 && (
+                    <div
+                      className={`flex-1 h-0.5 mx-2 ${isCompleted ? 'bg-green-500' : 'bg-gray-200'}`}
+                    />
                   )}
                 </React.Fragment>
               );
@@ -323,7 +335,10 @@ const ListingWizard: React.FC = () => {
         </div>
 
         {/* Step Content */}
-        <div key={wizardKey} className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-8 mb-8">
+        <div
+          key={wizardKey}
+          className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-8 mb-8"
+        >
           {getCurrentStep()}
         </div>
 
@@ -338,7 +353,7 @@ const ListingWizard: React.FC = () => {
               <ArrowLeft className="h-4 w-4 mr-2" />
               Previous
             </Button>
-            
+
             {/* Save Draft Button */}
             <Button
               variant="outline"
@@ -361,8 +376,8 @@ const ListingWizard: React.FC = () => {
           </div>
 
           {store.currentStep < 8 ? (
-            <Button 
-              onClick={store.nextStep} 
+            <Button
+              onClick={store.nextStep}
               disabled={isSubmitting}
               className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 shadow-lg"
             >

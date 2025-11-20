@@ -240,52 +240,66 @@ const BasicInformationStep: React.FC = () => {
       </Card>
 
       {/* Property Highlights (4 fields per type) */}
-                  <Input
-                    id="bedrooms"
-                    type="number"
-                    value={propertyDetails.bedrooms || ''}
-                    onChange={(e) => store.updatePropertyDetail('bedrooms', Number(e.target.value))}
-                    placeholder="e.g., 3"
-                    className="mt-1"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="bathrooms" className="text-slate-700">Bathrooms *</Label>
-                  <Input
-                    id="bathrooms"
-                    type="number"
-                    value={propertyDetails.bathrooms || ''}
-                    onChange={(e) => store.updatePropertyDetail('bathrooms', Number(e.target.value))}
-                    placeholder="e.g., 2"
-                    className="mt-1"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="unitSizeM2" className="text-slate-700">Unit Size (m²) *</Label>
-                  <Input
-                    id="unitSizeM2"
-                    type="number"
-                    value={propertyDetails.unitSizeM2 || ''}
-                    onChange={(e) => store.updatePropertyDetail('unitSizeM2', Number(e.target.value))}
-                    placeholder="e.g., 120"
-                    className="mt-1"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="floorNumber" className="text-slate-700">Floor Number *</Label>
-                  <Input
-                    id="floorNumber"
-                    type="number"
-                    value={propertyDetails.floorNumber || ''}
-                    onChange={(e) => store.updatePropertyDetail('floorNumber', Number(e.target.value))}
-                    placeholder="e.g., 5"
-                    className="mt-1"
-                  />
-                </div>
-              </>
-            )}
+      <Card className="p-6 bg-white/50 backdrop-blur-sm border-slate-200/60 shadow-sm">
+        <div className="flex items-center gap-3 mb-6 pb-4 border-b border-slate-100">
+          <div className="p-2 bg-blue-100 rounded-lg">
+            <Home className="w-5 h-5 text-blue-600" />
+          </div>
+          <h3 className="text-lg font-semibold text-slate-800">Property Details</h3>
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Apartment Highlights */}
+          {(propertyType === 'apartment') && (
+            <>
+              <div>
+                <Label htmlFor="bedrooms" className="text-slate-700">Bedrooms *</Label>
+                <Input
+                  id="bedrooms"
+                  type="number"
+                  value={propertyDetails.bedrooms || ''}
+                  onChange={(e) => store.updatePropertyDetail('bedrooms', Number(e.target.value))}
+                  placeholder="e.g., 3"
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label htmlFor="bathrooms" className="text-slate-700">Bathrooms *</Label>
+                <Input
+                  id="bathrooms"
+                  type="number"
+                  value={propertyDetails.bathrooms || ''}
+                  onChange={(e) => store.updatePropertyDetail('bathrooms', Number(e.target.value))}
+                  placeholder="e.g., 2"
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label htmlFor="unitSizeM2" className="text-slate-700">Unit Size (m²) *</Label>
+                <Input
+                  id="unitSizeM2"
+                  type="number"
+                  value={propertyDetails.unitSizeM2 || ''}
+                  onChange={(e) => store.updatePropertyDetail('unitSizeM2', Number(e.target.value))}
+                  placeholder="e.g., 120"
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label htmlFor="floorNumber" className="text-slate-700">Floor Number *</Label>
+                <Input
+                  id="floorNumber"
+                  type="number"
+                  value={propertyDetails.floorNumber || ''}
+                  onChange={(e) => store.updatePropertyDetail('floorNumber', Number(e.target.value))}
+                  placeholder="e.g., 5"
+                  className="mt-1"
+                />
+              </div>
+            </>
+          )}
 
-            {/* House Highlights */}
+          {/* House Highlights */}
             {(propertyType === 'house') && (
               <>
                 <div>
@@ -551,6 +565,23 @@ const BasicInformationStep: React.FC = () => {
         </Card>
       )}
 
+      {/* Possession Status & Additional Details */}
+      {(propertyType === 'house' || propertyType === 'apartment') && (
+        <Card className="p-6 bg-white/50 backdrop-blur-sm border-slate-200/60 shadow-sm">
+          <div className="flex items-center gap-3 mb-6 pb-4 border-b border-slate-100">
+            <div className="p-2 bg-purple-100 rounded-lg">
+              <Home className="w-5 h-5 text-purple-600" />
+            </div>
+            <h3 className="text-lg font-semibold text-slate-800">Additional Information</h3>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {basicInfo.propertyCategory === 'resale' && (
+              <>
+                <div>
+                  <Label htmlFor="possessionStatus" className="text-slate-700">Possession Status *</Label>
+                  <Select
+                    value={basicInfo.possessionStatus || ''}
                     onValueChange={(value) => updateBasicInfo('possessionStatus', value)}
                   >
                     <SelectTrigger className="mt-1">

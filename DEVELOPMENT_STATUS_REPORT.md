@@ -64,24 +64,6 @@ This report provides a comprehensive overview of the current state of the real e
 
 3. **Admin Dashboard**
    - User management with role assignment
-   - Platform analytics and reporting
-   - Content moderation capabilities
-   - System configuration management
-
-### Property Management
-
-1. **Listing Creation Wizard**
-   - Multi-step form for comprehensive property listing creation
-   - Property details collection (type, size, rooms, amenities)
-   - Pricing and availability configuration
-   - Location mapping with geolocation support
-   - Media upload with image optimization
-   - Draft saving and submission workflow
-
-2. **Property Search & Discovery**
-   - Advanced search filters (location, price, property type, features)
-   - Map-based property visualization
-   - Saved searches and favorites management
    - Property comparison functionality
 
 ### Additional Features
