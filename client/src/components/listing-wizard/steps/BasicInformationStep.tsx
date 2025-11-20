@@ -551,22 +551,6 @@ const BasicInformationStep: React.FC = () => {
         </Card>
       )}
 
-      {/* Additional Details - Based on Property Category */}
-      {basicInfo.propertyCategory && (
-        <Card className="bg-white/70 backdrop-blur-sm rounded-[1.5rem] border-white/40 shadow-[0_8px_30px_rgba(8,_112,_184,_0.06)] p-6">
-          <div className="flex items-center gap-2 mb-4">
-            <Calendar className="w-5 h-5 text-orange-600" />
-            <h3 className="text-lg font-bold text-slate-800">Additional Details</h3>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Existing Property Fields */}
-            {basicInfo.propertyCategory === 'existing' && (
-              <>
-                <div>
-                  <Label htmlFor="possessionStatus" className="text-slate-700">Possession Status *</Label>
-                  <Select
-                    value={basicInfo.possessionStatus || ''}
                     onValueChange={(value) => updateBasicInfo('possessionStatus', value)}
                   >
                     <SelectTrigger className="mt-1">
