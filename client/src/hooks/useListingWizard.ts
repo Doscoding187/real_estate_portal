@@ -399,6 +399,8 @@ export const useListingWizardStore = create<ListingWizardStore>()(
         location: state.location,
         media: state.media,
         badges: state.badges,
+        basicInfo: state.basicInfo,
+        additionalInfo: state.additionalInfo,
         currentStep: state.currentStep,
         completedSteps: state.completedSteps,
         displayMediaType: state.displayMediaType, // Add this line
