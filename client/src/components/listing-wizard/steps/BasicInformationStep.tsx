@@ -615,8 +615,8 @@ const BasicInformationStep: React.FC = () => {
         </Card>
       )}
 
-      {/* Listing Badges Section */}
-      {basicInfo.propertyCategory && (
+      {/* Listing Badges Section - Only for non-farm properties */}
+      {basicInfo.propertyCategory && propertyType !== 'farm' && (
         <Card className="bg-white/70 backdrop-blur-sm rounded-[1.5rem] border-white/40 shadow-[0_8px_30px_rgba(8,_112,_184,_0.06)] p-6">
           <div className="flex items-center gap-2 mb-4">
             <Award className="w-5 h-5 text-purple-600" />
