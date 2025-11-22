@@ -94,16 +94,25 @@ export function PropertyImageGallery({ images, propertyTitle }: PropertyImageGal
           </>
         )}
 
-        {/* Expand Button */}
-        <Button
-          variant="secondary"
-          size="sm"
-          className="absolute bottom-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity"
-          onClick={() => setIsLightboxOpen(true)}
-        >
-          <ZoomIn className="h-4 w-4 mr-2" />
-          View All Photos
-        </Button>
+        {/* Expand Buttons */}
+        <div className="absolute bottom-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => setIsLightboxOpen(true)}
+          >
+            <ZoomIn className="h-4 w-4 mr-2" />
+            View All Photos
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            className="bg-orange-500 hover:bg-orange-600 text-white border-0"
+          >
+            <ZoomIn className="h-4 w-4 mr-2" />
+            View All Videos
+          </Button>
+        </div>
       </div>
 
       {/* Thumbnail Grid */}
