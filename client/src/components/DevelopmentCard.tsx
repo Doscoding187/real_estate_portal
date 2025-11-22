@@ -36,7 +36,7 @@ export function DevelopmentCard({
   image,
   unitTypes = [],
   highlights = [],
-  developer,
+  developer = { name: '', isFeatured: false },
   imageCount = 15,
   isFeatured = false,
   isNewBooking = false,
