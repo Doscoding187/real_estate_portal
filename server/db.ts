@@ -1943,24 +1943,138 @@ export async function approveListing(listingId: number, reviewedBy: number, note
   const db = await getDb();
   if (!db) throw new Error('Database not available');
 
-  // Update listing status
+  // 1. Get full listing data
+  const listing = await getListingById(listingId);
+  if (!listing) throw new Error('Listing not found');
+
+  // 2. Prepare property data
+  // Parse pricing JSON if it's a string
+  let pricingData: any = {};
+  if (listing.pricing) {
+    try {
+      pricingData = typeof listing.pricing === 'string' ? JSON.parse(listing.pricing) : listing.pricing;
+    } catch (e) {
+      console.error('Failed to parse pricing:', e);
+    }
+  }
+  
+  // Determine price based on listing type
+  let price = 0;
+  price = pricingData.askingPrice || pricingData.monthlyRent || pricingData.startingBid || 0;
+
+  // Parse propertyDetails JSON if it's a string
+  let details: any = {};
+  if (listing.propertyDetails) {
+    try {
+      details = typeof listing.propertyDetails === 'string' ? JSON.parse(listing.propertyDetails) : listing.propertyDetails;
+    } catch (e) {
+      console.error('Failed to parse propertyDetails:', e);
+    }
+  }
+  
+  const bedrooms = Number(details.bedrooms) || 0;
+  const bathrooms = Number(details.bathrooms) || 0;
+  
+  // Determine area (prioritize building size, not land size)
+  const area = 
+    Number(details.unitSizeM2) || 
+    Number(details.houseAreaM2) || 
+    Number(details.floorAreaM2) || 
+    0;
+
+  // Map amenities
+  const amenitiesList = [
+    ...(details.amenities || []),
+    ...(details.amenitiesFeatures || []),
+    ...(details.securityFeatures || []),
+    ...(details.outdoorFeatures || [])
+  ];
+  const amenitiesString = amenitiesList.length > 0 ? amenitiesList.join(',') : null;
+
+  // 3. Insert into properties table
+  
+  const [propertyResult] = await db.insert(properties).values({
+    title: listing.title,
+    description: listing.description,
+    propertyType: listing.propertyType,
+    listingType: listing.action === 'sell' ? 'sale' : listing.action === 'rent' ? 'rent' : 'auction', // Map 'sell' to 'sale'
+    transactionType: listing.action === 'sell' ? 'sale' : listing.action === 'rent' ? 'rent' : 'auction',
+    price: price,
+    bedrooms: bedrooms,
+    bathrooms: bathrooms,
+    area: area,
+    address: listing.address,
+    city: listing.city,
+    province: listing.province,
+    zipCode: listing.postalCode,
+    latitude: String(listing.latitude),
+    longitude: String(listing.longitude),
+    // IDs for relations (would need lookup logic for IDs, skipping for now or using defaults)
+    locationText: `${listing.city}, ${listing.province}`,
+    placeId: listing.placeId,
+    amenities: amenitiesString,
+    status: 'available', // Make it live immediately
+    featured: listing.featured || 0,
+    views: 0,
+    enquiries: 0,
+    agentId: listing.agentId,
+    ownerId: listing.ownerId,
+    propertySettings: JSON.stringify(details),
+    levies: Number(details.levies) || Number(details.leviesHoaOperatingCosts) || null,
+    ratesAndTaxes: Number(details.ratesTaxes) || null,
+    createdAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
+    updatedAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
+  });
+
+  const newPropertyId = Number(propertyResult.insertId);
+
+  // 4. Sync Media
+  const mediaItems = await getListingMedia(listingId);
+  
+  if (mediaItems && mediaItems.length > 0) {
+    // Find main image to update property record
+    const mainMedia = mediaItems.find(m => m.isPrimary && m.mediaType === 'image') || mediaItems.find(m => m.mediaType === 'image');
+    
+    if (mainMedia) {
+      await db.update(properties)
+        .set({ mainImage: mainMedia.processedUrl || mainMedia.originalUrl })
+        .where(eq(properties.id, newPropertyId));
+    }
+
+    // Insert all images into propertyImages table
+    for (const item of mediaItems) {
+      if (item.mediaType === 'image') {
+        await db.insert(propertyImages).values({
+          propertyId: newPropertyId,
+          imageUrl: item.processedUrl || item.originalUrl,
+          isPrimary: item.isPrimary ? 1 : 0,
+          displayOrder: item.displayOrder,
+          createdAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
+        });
+      }
+      // Note: Videos are stored in properties.videoUrl or separate table depending on schema
+      // For now we only sync images to propertyImages as per schema
+    }
+  }
+
+  // 5. Update listing status
   await db
     .update(listings)
     .set({
       status: 'published',
       approvalStatus: 'approved',
-      publishedAt: new Date(),
-      updatedAt: new Date(),
+      publishedAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
+      updatedAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
     })
     .where(eq(listings.id, listingId));
 
-  // Update approval queue
+  // 6. Update approval queue
   await db
     .update(listingApprovalQueue)
     .set({
       status: 'approved',
       reviewedBy,
-      reviewedAt: new Date(),
+      reviewedAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
       reviewNotes: notes,
     })
     .where(eq(listingApprovalQueue.listingId, listingId));

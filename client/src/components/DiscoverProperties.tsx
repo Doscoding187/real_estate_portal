@@ -16,24 +16,20 @@ interface PropertyType {
 }
 
 const propertyTypes: PropertyType[] = [
+  // Sale Properties
   {
-    type: 'Shops',
-    image: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=800&h=600&fit=crop',
+    type: 'Houses',
+    image: 'https://images.unsplash.com/photo-1613490493576-7fde63acd811?w=800&h=600&fit=crop',
     listingType: 'sale',
   },
   {
-    type: 'Builder Floors',
-    image: 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=800&h=600&fit=crop',
-    listingType: 'sale',
-  },
-  {
-    type: 'Penthouses',
-    image: 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=800&h=600&fit=crop',
-    listingType: 'sale',
-  },
-  {
-    type: 'Flats',
+    type: 'Apartments',
     image: 'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=800&h=600&fit=crop',
+    listingType: 'sale',
+  },
+  {
+    type: 'Townhouses',
+    image: 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=800&h=600&fit=crop',
     listingType: 'sale',
   },
   {
@@ -42,10 +38,16 @@ const propertyTypes: PropertyType[] = [
     listingType: 'sale',
   },
   {
-    type: 'Villas',
-    image: 'https://images.unsplash.com/photo-1613490493576-7fde63acd811?w=800&h=600&fit=crop',
+    type: 'Shops',
+    image: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=800&h=600&fit=crop',
     listingType: 'sale',
   },
+  {
+    type: 'Penthouses',
+    image: 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=800&h=600&fit=crop',
+    listingType: 'sale',
+  },
+  // Rent Properties
   {
     type: 'Apartments',
     image: 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=800&h=600&fit=crop',
@@ -57,13 +59,13 @@ const propertyTypes: PropertyType[] = [
     listingType: 'rent',
   },
   {
-    type: 'Studios',
-    image: 'https://images.unsplash.com/photo-1536376072261-38c75010e6c9?w=800&h=600&fit=crop',
+    type: 'Townhouses',
+    image: 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=800&h=600&fit=crop',
     listingType: 'rent',
   },
   {
-    type: 'Townhouses',
-    image: 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=800&h=600&fit=crop',
+    type: 'Studios',
+    image: 'https://images.unsplash.com/photo-1536376072261-38c75010e6c9?w=800&h=600&fit=crop',
     listingType: 'rent',
   },
 ];
@@ -118,96 +120,124 @@ export function DiscoverProperties() {
   return (
     <div className="py-16 bg-muted/30">
       <div className="container">
-        <h2 className="text-3xl md:text-4xl font-bold mb-8">
+        <h2 className="text-2xl md:text-3xl font-bold mb-8">
           Discover More Real Estate Properties in South Africa
         </h2>
 
         {/* City Tabs */}
         <div className="flex flex-wrap gap-2 mb-8">
           {cities.map(city => (
-            <Button
+            <button
               key={city}
-              variant={selectedCity === city ? 'default' : 'outline'}
               onClick={() => setSelectedCity(city)}
-              className="rounded-md"
+              className={`
+                px-6 py-2.5 rounded-full text-sm font-medium transition-all duration-300 border
+                ${
+                  selectedCity === city
+                    ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white border-transparent shadow-md scale-105'
+                    : 'bg-white text-muted-foreground border-gray-200 hover:border-blue-200 hover:bg-blue-50 hover:text-blue-600'
+                }
+              `}
             >
               {city}
-            </Button>
+            </button>
           ))}
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           {/* Left Sidebar - Listing Type Toggle */}
           <div className="lg:col-span-3">
-            <Card className="p-0 overflow-hidden">
+            <Card className="p-0 overflow-hidden border-gray-100 shadow-sm bg-white/50 backdrop-blur-sm">
               {/* Properties for Sale */}
-              <div className="border-b">
+              <div className="border-b border-gray-100">
                 <button
                   onClick={handleSaleClick}
-                  className="w-full p-4 flex items-center justify-between hover:bg-muted/50 transition-colors"
+                  className={`w-full p-4 flex items-center justify-between transition-all duration-300 ${
+                    saleExpanded 
+                      ? 'bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700' 
+                      : 'hover:bg-gray-50 text-foreground'
+                  }`}
                 >
                   <span className="font-semibold">Properties for Sale</span>
                   <ChevronRightIcon
-                    className={`h-5 w-5 transition-transform ${saleExpanded ? 'rotate-90' : ''}`}
+                    className={`h-5 w-5 transition-transform duration-300 ${saleExpanded ? 'rotate-90 text-blue-600' : 'text-muted-foreground'}`}
                   />
                 </button>
-                {saleExpanded && (
-                  <div className="px-4 pb-4">
-                    <p className="text-sm text-muted-foreground">
+                <div 
+                  className={`overflow-hidden transition-all duration-300 ease-in-out ${
+                    saleExpanded ? 'max-h-48 opacity-100' : 'max-h-0 opacity-0'
+                  }`}
+                >
+                  <div className="px-4 pb-4 pt-2 bg-gradient-to-r from-blue-50/50 to-indigo-50/50">
+                    <p className="text-sm text-muted-foreground leading-relaxed">
                       Properties for sale in {selectedCity} offer a versatile mix of affordable
                       apartments, premium homes, and commercial units. Customise your search by
                       property type, budget, and BHK preference to find options that match your
                       requirements.
                     </p>
                   </div>
-                )}
+                </div>
               </div>
 
               {/* Properties for Rent */}
               <div>
                 <button
                   onClick={handleRentClick}
-                  className="w-full p-4 flex items-center justify-between hover:bg-muted/50 transition-colors"
+                  className={`w-full p-4 flex items-center justify-between transition-all duration-300 ${
+                    rentExpanded 
+                      ? 'bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700' 
+                      : 'hover:bg-gray-50 text-foreground'
+                  }`}
                 >
                   <span className="font-semibold">Properties for Rent</span>
                   <ChevronDown
-                    className={`h-5 w-5 transition-transform ${rentExpanded ? 'rotate-180' : ''}`}
+                    className={`h-5 w-5 transition-transform duration-300 ${rentExpanded ? 'rotate-180 text-blue-600' : 'text-muted-foreground'}`}
                   />
                 </button>
-                {rentExpanded && (
-                  <div className="px-4 pb-4">
-                    <p className="text-sm text-muted-foreground">
+                <div 
+                  className={`overflow-hidden transition-all duration-300 ease-in-out ${
+                    rentExpanded ? 'max-h-48 opacity-100' : 'max-h-0 opacity-0'
+                  }`}
+                >
+                  <div className="px-4 pb-4 pt-2 bg-gradient-to-r from-blue-50/50 to-indigo-50/50">
+                    <p className="text-sm text-muted-foreground leading-relaxed">
                       Properties for rent in {selectedCity} include a wide range of apartments,
                       houses, and studios. Filter by budget, location, and amenities to find the
                       perfect rental that suits your lifestyle.
                     </p>
                   </div>
-                )}
+                </div>
               </div>
             </Card>
           </div>
 
           {/* Right Side - Property Carousel */}
-          <div className="lg:col-span-9 relative">
-            <div className="overflow-hidden" ref={emblaRef}>
+          <div className="lg:col-span-9 relative group/carousel">
+            <div className="overflow-hidden rounded-xl" ref={emblaRef}>
               <div className="flex gap-4">
                 {filteredProperties.map((property, idx) => (
                   <div
                     key={idx}
                     className="flex-[0_0_100%] min-w-0 sm:flex-[0_0_50%] lg:flex-[0_0_33.333%]"
                   >
-                    <Card className="overflow-hidden group cursor-pointer hover:shadow-lg transition-shadow">
-                      <div className="relative aspect-[4/3] overflow-hidden">
+                    <Card className="overflow-hidden group cursor-pointer hover:shadow-xl transition-all duration-500 border-0 h-full">
+                      <div className="relative h-[400px] overflow-hidden">
                         <img
                           src={property.image}
                           alt={property.type}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
                         />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
-                        <div className="absolute bottom-0 left-0 right-0 p-4 text-white">
-                          <h3 className="text-xl font-bold mb-1">{property.type}</h3>
-                          <p className="text-sm text-white/90">
-                            for {listingType === 'sale' ? 'Sale' : 'Rent'} in {selectedCity}
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-80 group-hover:opacity-90 transition-opacity duration-300" />
+                        
+                        {/* Content Overlay */}
+                        <div className="absolute bottom-0 left-0 right-0 p-6 text-white transform translate-y-2 group-hover:translate-y-0 transition-transform duration-300">
+                          <div className="w-12 h-1 bg-blue-500 mb-4 rounded-full transform origin-left scale-x-0 group-hover:scale-x-100 transition-transform duration-500 delay-100" />
+                          <h3 className="text-2xl font-bold mb-2">{property.type}</h3>
+                          <p className="text-sm text-white/90 font-medium flex items-center gap-2">
+                            <span className="bg-white/20 backdrop-blur-md px-2 py-1 rounded text-xs uppercase tracking-wider">
+                              {listingType === 'sale' ? 'For Sale' : 'For Rent'}
+                            </span>
+                            <span>in {selectedCity}</span>
                           </p>
                         </div>
                       </div>
@@ -221,7 +251,7 @@ export function DiscoverProperties() {
             <Button
               variant="secondary"
               size="icon"
-              className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 rounded-full shadow-lg z-10"
+              className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 rounded-full shadow-lg z-10 opacity-0 group-hover/carousel:opacity-100 transition-all duration-300 hover:scale-110 bg-white/90 hover:bg-white text-blue-900"
               onClick={scrollPrev}
             >
               <ChevronLeft className="h-5 w-5" />
@@ -229,7 +259,7 @@ export function DiscoverProperties() {
             <Button
               variant="secondary"
               size="icon"
-              className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 rounded-full shadow-lg z-10"
+              className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 rounded-full shadow-lg z-10 opacity-0 group-hover/carousel:opacity-100 transition-all duration-300 hover:scale-110 bg-white/90 hover:bg-white text-blue-900"
               onClick={scrollNext}
             >
               <ChevronRight className="h-5 w-5" />

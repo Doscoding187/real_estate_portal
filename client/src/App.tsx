@@ -53,6 +53,9 @@ import LovableIntegrationHub from './pages/LovableIntegrationHub';
 import ListingWizard from './components/listing-wizard/ListingWizard';
 import ListingTemplate from './pages/ListingTemplate';
 
+// Import Development Wizard
+import CreateDevelopment from './pages/CreateDevelopment';
+
 function Router() {
   // make sure to consider if you need authentication for certain routes
   return (
@@ -67,6 +70,7 @@ function Router() {
       <Route path="/city/:slug" component={CityPage} />
       <Route path="/listings/create" component={ListingWizard} />
       <Route path="/listing-template" component={ListingTemplate} />
+      <Route path="/developments/create" component={CreateDevelopment} />
       <Route path="/explore" component={ExploreFeed} />
 
       {/* Login and authentication routes should be early in the route list */}

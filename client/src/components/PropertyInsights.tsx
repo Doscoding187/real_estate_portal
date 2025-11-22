@@ -115,11 +115,11 @@ export function PropertyInsights() {
   return (
     <div className="py-16 bg-white">
       <div className="container">
-        <div className="mb-8">
-          <h2 className="text-3xl md:text-4xl font-bold mb-2">
+        <div className="mb-10">
+          <h2 className="text-2xl md:text-3xl font-bold mb-3">
             Property Price Insights in South Africa
           </h2>
-          <p className="text-muted-foreground text-lg">
+          <p className="text-muted-foreground text-base max-w-2xl">
             Get accurate property price insights in South Africa with city-wise trends, median
             rates, and micro-market comparisons. Make smarter investment choices backed by real-time
             data and location benchmarks.
@@ -142,60 +142,57 @@ export function PropertyInsights() {
           {Object.keys(cityData).map(city => (
             <TabsContent key={city} value={city} className="mt-6">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                {/* Property Rates Heatmap */}
-                <Card className="bg-teal-50 border-teal-200">
+                {/* Average Price Map */}
+                <Card className="group hover:shadow-lg transition-all duration-300 border-0 bg-gradient-to-br from-blue-50 to-indigo-50">
                   <CardHeader>
                     <div className="flex items-center gap-2">
-                      <Map className="h-5 w-5 text-teal-600" />
-                      <CardTitle className="text-lg">Property Rates Heatmap</CardTitle>
+                      <div className="p-2 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-500">
+                        <Map className="h-5 w-5 text-white" />
+                      </div>
+                      <CardTitle className="text-lg font-semibold">Average Price Map</CardTitle>
                     </div>
                     <p className="text-sm text-muted-foreground">in {city}</p>
                   </CardHeader>
                   <CardContent>
-                    <div className="flex items-start gap-2 mb-4">
-                      <TrendingUp className="h-4 w-4 text-muted-foreground mt-1" />
-                      <p className="text-sm text-muted-foreground">
-                        An Interactive Map to help you understand a City's Real Estate
-                      </p>
-                    </div>
-                    <div className="bg-teal-100 rounded-lg h-40 flex items-center justify-center mb-4">
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Interactive map showing average property prices across different areas
+                    </p>
+                    <div className="bg-white/80 backdrop-blur-sm rounded-xl h-40 flex items-center justify-center mb-4 border border-blue-100 group-hover:border-blue-200 transition-colors">
                       <div className="text-center">
-                        <Map className="h-16 w-16 text-teal-600 mx-auto mb-2" />
-                        <p className="text-sm text-teal-700">Interactive Map View</p>
+                        <Map className="h-16 w-16 text-blue-500 mx-auto mb-2" />
+                        <p className="text-sm text-blue-600 font-medium">Interactive Map View</p>
                       </div>
                     </div>
-                    <Button variant="outline" className="w-full">
-                      Explore Now
+                    <Button variant="outline" className="w-full border-blue-200 text-blue-600 hover:bg-blue-50">
+                      Explore Map
                     </Button>
                   </CardContent>
                 </Card>
 
                 {/* Asking Price */}
-                <Card className="bg-orange-50 border-orange-200">
+                <Card className="group hover:shadow-lg transition-all duration-300 border-0 bg-gradient-to-br from-orange-50 to-amber-50">
                   <CardHeader>
                     <div className="flex items-center gap-2">
-                      <BarChart3 className="h-5 w-5 text-orange-600" />
-                      <CardTitle className="text-lg">Asking Price</CardTitle>
+                      <div className="p-2 rounded-lg bg-gradient-to-br from-orange-500 to-amber-500">
+                        <BarChart3 className="h-5 w-5 text-white" />
+                      </div>
+                      <CardTitle className="text-lg font-semibold">Asking Price</CardTitle>
                     </div>
                     <p className="text-sm text-muted-foreground">in {city}</p>
                   </CardHeader>
                   <CardContent>
-                    <div className="flex items-start gap-2 mb-4">
-                      <TrendingUp className="h-4 w-4 text-muted-foreground mt-1" />
-                      <p className="text-sm text-muted-foreground">
-                        {city} has {data.listings.toLocaleString()} Listings on Marketplaces with
-                        Median Price of R {(data.medianPrice / 1000000).toFixed(2)}M
-                      </p>
-                    </div>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      {city} has {data.listings.toLocaleString()} listings with median price of R {(data.medianPrice / 1000000).toFixed(2)}M
+                    </p>
                     <div className="space-y-2 mb-4">
                       {data.priceRanges.map((range, idx) => (
                         <div key={idx} className="flex items-center gap-2">
-                          <span className="text-xs text-muted-foreground w-24 text-right">
+                          <span className="text-xs text-muted-foreground w-24 text-right font-medium">
                             {range.range}
                           </span>
-                          <div className="flex-1 bg-orange-100 rounded-full h-6 overflow-hidden">
+                          <div className="flex-1 bg-white/80 backdrop-blur-sm rounded-full h-6 overflow-hidden border border-orange-100">
                             <div
-                              className="bg-orange-500 h-full flex items-center justify-end pr-2"
+                              className="bg-gradient-to-r from-orange-500 to-amber-500 h-full flex items-center justify-end pr-2"
                               style={{ width: `${(range.count / maxCount) * 100}%` }}
                             >
                               {range.count > maxCount * 0.3 && (
@@ -214,46 +211,51 @@ export function PropertyInsights() {
                   </CardContent>
                 </Card>
 
-                {/* Govt. Registrations */}
-                <Card className="bg-pink-50 border-pink-200">
+                {/* Market Activity */}
+                <Card className="group hover:shadow-lg transition-all duration-300 border-0 bg-gradient-to-br from-emerald-50 to-teal-50">
                   <CardHeader>
                     <div className="flex items-center gap-2">
-                      <FileText className="h-5 w-5 text-pink-600" />
-                      <CardTitle className="text-lg">Govt. Registrations</CardTitle>
+                      <div className="p-2 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-500">
+                        <TrendingUp className="h-5 w-5 text-white" />
+                      </div>
+                      <CardTitle className="text-lg font-semibold">Market Activity</CardTitle>
                     </div>
                     <p className="text-sm text-muted-foreground">in {city}</p>
                   </CardHeader>
                   <CardContent>
-                    <div className="flex items-start gap-2 mb-6">
-                      <TrendingUp className="h-4 w-4 text-muted-foreground mt-1" />
-                      <p className="text-sm text-muted-foreground">
-                        {data.transactions.toLocaleString()} Sales Transactions Registered in {city}
-                      </p>
-                    </div>
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between p-3 bg-white rounded-lg border">
-                        <div className="flex items-center gap-2">
-                          <BarChart3 className="h-4 w-4 text-muted-foreground" />
-                          <span className="text-sm text-muted-foreground">Sales Transactions</span>
+                    <p className="text-sm text-muted-foreground mb-6">
+                      Current market activity and listing trends in {city}
+                    </p>
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between p-4 bg-white/80 backdrop-blur-sm rounded-xl border border-emerald-100 group-hover:border-emerald-200 transition-colors">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 rounded-lg bg-emerald-100">
+                            <BarChart3 className="h-4 w-4 text-emerald-600" />
+                          </div>
+                          <span className="text-sm text-muted-foreground font-medium">Active Listings</span>
                         </div>
-                        <span className="font-semibold">{data.transactions.toLocaleString()}</span>
+                        <span className="font-semibold text-lg">{data.listings.toLocaleString()}</span>
                       </div>
-                      <div className="flex items-center justify-between p-3 bg-white rounded-lg border">
-                        <div className="flex items-center gap-2">
-                          <TrendingUp className="h-4 w-4 text-muted-foreground" />
-                          <span className="text-sm text-muted-foreground">Gross Sales Value</span>
+                      <div className="flex items-center justify-between p-4 bg-white/80 backdrop-blur-sm rounded-xl border border-emerald-100 group-hover:border-emerald-200 transition-colors">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 rounded-lg bg-emerald-100">
+                            <TrendingUp className="h-4 w-4 text-emerald-600" />
+                          </div>
+                          <span className="text-sm text-muted-foreground font-medium">Avg. Price/m²</span>
                         </div>
-                        <span className="font-semibold">
-                          R {(data.grossValue / 1000000000).toFixed(1)}B
+                        <span className="font-semibold text-lg">
+                          R {data.registeredRate.toLocaleString()}
                         </span>
                       </div>
-                      <div className="flex items-center justify-between p-3 bg-white rounded-lg border">
-                        <div className="flex items-center gap-2">
-                          <FileText className="h-4 w-4 text-muted-foreground" />
-                          <span className="text-sm text-muted-foreground">Registered Rate</span>
+                      <div className="flex items-center justify-between p-4 bg-white/80 backdrop-blur-sm rounded-xl border border-emerald-100 group-hover:border-emerald-200 transition-colors">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 rounded-lg bg-emerald-100">
+                            <FileText className="h-4 w-4 text-emerald-600" />
+                          </div>
+                          <span className="text-sm text-muted-foreground font-medium">Median Price</span>
                         </div>
-                        <span className="font-semibold">
-                          R {data.registeredRate.toLocaleString()} / m²
+                        <span className="font-semibold text-lg">
+                          R {(data.medianPrice / 1000000).toFixed(2)}M
                         </span>
                       </div>
                     </div>
@@ -261,33 +263,34 @@ export function PropertyInsights() {
                 </Card>
 
                 {/* Micromarket Price Comparison */}
-                <Card className="bg-purple-50 border-purple-200">
+                <Card className="group hover:shadow-lg transition-all duration-300 border-0 bg-gradient-to-br from-purple-50 to-pink-50">
                   <CardHeader>
                     <div className="flex items-center gap-2">
-                      <TrendingUp className="h-5 w-5 text-purple-600" />
-                      <CardTitle className="text-lg">Micromarket Price Comparison</CardTitle>
+                      <div className="p-2 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500">
+                        <TrendingUp className="h-5 w-5 text-white" />
+                      </div>
+                      <CardTitle className="text-lg font-semibold">Micromarket Comparison</CardTitle>
                     </div>
                     <p className="text-sm text-muted-foreground">in {city}</p>
                   </CardHeader>
                   <CardContent>
-                    <div className="flex items-start gap-2 mb-6">
-                      <TrendingUp className="h-4 w-4 text-muted-foreground mt-1" />
-                      <p className="text-sm text-muted-foreground">
-                        {city} avg. price is R {data.registeredRate.toLocaleString()} / m²
-                      </p>
-                    </div>
-                    <div className="space-y-3">
+                    <p className="text-sm text-muted-foreground mb-6">
+                      {city} avg. price is R {data.registeredRate.toLocaleString()} / m²
+                    </p>
+                    <div className="space-y-4">
                       {data.micromarkets.map((market, idx) => (
-                        <div key={idx} className="space-y-1">
+                        <div key={idx} className="space-y-2">
                           <div className="flex items-center justify-between">
-                            <span className="text-sm font-medium">
+                            <span className="text-sm font-semibold text-foreground">
+                              {market.area}
+                            </span>
+                            <span className="text-sm font-semibold text-purple-600">
                               R {market.price.toLocaleString()}
                             </span>
-                            <span className="text-sm text-muted-foreground">{market.area}</span>
                           </div>
-                          <div className="w-full bg-purple-100 rounded-full h-2">
+                          <div className="w-full bg-white/80 backdrop-blur-sm rounded-full h-2.5 border border-purple-100">
                             <div
-                              className="bg-purple-600 h-2 rounded-full"
+                              className="bg-gradient-to-r from-purple-500 to-pink-500 h-2.5 rounded-full transition-all duration-500"
                               style={{
                                 width: `${(market.price / Math.max(...data.micromarkets.map(m => m.price))) * 100}%`,
                               }}

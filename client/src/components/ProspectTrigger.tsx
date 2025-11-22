@@ -18,35 +18,35 @@ export function ProspectTrigger({
   const [isDashboardOpen, setIsDashboardOpen] = useState(false);
   const [hasInteracted, setHasInteracted] = useState(false);
 
-  // Auto-show dashboard after scrolling or time-based interaction
-  useEffect(() => {
-    const handleScroll = () => {
-      if (!hasInteracted && window.scrollY > 300) {
-        setHasInteracted(true);
-        // Delay auto-show slightly for better UX
-        setTimeout(() => {
-          setIsDashboardOpen(true);
-        }, 2000);
-      }
-    };
+  // Auto-show dashboard disabled for better UX (only show on user click, like Zillow)
+  // useEffect(() => {
+  //   const handleScroll = () => {
+  //     if (!hasInteracted && window.scrollY > 300) {
+  //       setHasInteracted(true);
+  //       // Delay auto-show slightly for better UX
+  //       setTimeout(() => {
+  //         setIsDashboardOpen(true);
+  //       }, 2000);
+  //     }
+  //   };
 
-    const handleTimeBased = () => {
-      if (!hasInteracted) {
-        setHasInteracted(true);
-        setTimeout(() => {
-          setIsDashboardOpen(true);
-        }, 15000); // Show after 15 seconds of browsing
-      }
-    };
+  //   const handleTimeBased = () => {
+  //     if (!hasInteracted) {
+  //       setHasInteracted(true);
+  //       setTimeout(() => {
+  //         setIsDashboardOpen(true);
+  //       }, 15000); // Show after 15 seconds of browsing
+  //     }
+  //   };
 
-    window.addEventListener('scroll', handleScroll);
-    const timer = setTimeout(handleTimeBased, 15000);
+  //   window.addEventListener('scroll', handleScroll);
+  //   const timer = setTimeout(handleTimeBased, 15000);
 
-    return () => {
-      window.removeEventListener('scroll', handleScroll);
-      clearTimeout(timer);
-    };
-  }, [hasInteracted]);
+  //   return () => {
+  //     window.removeEventListener('scroll', handleScroll);
+  //     clearTimeout(timer);
+  //   };
+  // }, [hasInteracted]);
 
   if (variant === 'button') {
     return (

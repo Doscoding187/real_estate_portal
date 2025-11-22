@@ -87,12 +87,12 @@ export function TopDevelopers() {
   ];
 
   return (
-    <section className="py-16 bg-background">
+    <section className="py-16 bg-muted/30">
       <div className="container">
         {/* Section Header */}
         <div className="mb-8">
-          <h2 className="text-3xl md:text-4xl font-bold mb-3">Top Developers in South Africa</h2>
-          <p className="text-muted-foreground text-lg max-w-3xl">
+          <h2 className="text-2xl md:text-3xl font-bold mb-3">Top Developers in South Africa</h2>
+          <p className="text-muted-foreground text-lg max-w-2xl">
             The top developers in South Africa offer expertise, high-quality construction, and a
             proven track record of timely delivery. Their projects offer a mix of ready-to-move
             homes, under-construction units, and new launches across key cities.
@@ -100,7 +100,7 @@ export function TopDevelopers() {
         </div>
 
         {/* Developers Carousel */}
-        <div className="relative">
+        <div className="relative group/carousel">
           <Carousel
             opts={{
               align: 'start',
@@ -108,14 +108,14 @@ export function TopDevelopers() {
             }}
             className="w-full"
           >
-            <CarouselContent className="-ml-4">
+            <CarouselContent className="-ml-6">
               {developers.map(developer => (
-                <CarouselItem key={developer.id} className="pl-4 md:basis-1/2 lg:basis-1/3">
-                  <Card className="h-full hover:shadow-xl transition-shadow duration-300">
+                <CarouselItem key={developer.id} className="pl-6 md:basis-1/2 lg:basis-1/3">
+                  <Card className="h-full hover:shadow-xl transition-all duration-300 border-0 bg-white/50 backdrop-blur-sm group">
                     <CardContent className="p-6">
                       {/* Developer Header */}
                       <div className="flex items-start gap-4 mb-6">
-                        <div className="w-20 h-20 rounded-lg bg-gradient-to-br from-primary/10 to-secondary/10 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                        <div className="w-20 h-20 rounded-2xl bg-white flex items-center justify-center flex-shrink-0 overflow-hidden shadow-sm border border-gray-100 group-hover:scale-105 transition-transform duration-300">
                           <img
                             src={developer.logo}
                             alt={developer.name}
@@ -123,19 +123,21 @@ export function TopDevelopers() {
                           />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <h3 className="font-bold text-xl mb-2 line-clamp-2">{developer.name}</h3>
-                          <div className="grid grid-cols-2 gap-3 text-sm">
+                          <h3 className="font-bold text-xl mb-3 text-gray-900 line-clamp-2 group-hover:text-blue-600 transition-colors">
+                            {developer.name}
+                          </h3>
+                          <div className="grid grid-cols-2 gap-4">
                             <div>
-                              <div className="font-bold text-2xl text-primary">
+                              <div className="font-bold text-xl text-gray-900">
                                 {developer.totalProjects}
                               </div>
-                              <div className="text-muted-foreground text-xs">Total Projects</div>
+                              <div className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Projects</div>
                             </div>
                             <div>
-                              <div className="font-bold text-2xl text-primary">
+                              <div className="font-bold text-xl text-gray-900">
                                 {developer.experience}
                               </div>
-                              <div className="text-muted-foreground text-xs">Years Experience</div>
+                              <div className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Years Exp.</div>
                             </div>
                           </div>
                         </div>
@@ -144,31 +146,37 @@ export function TopDevelopers() {
                       {/* Project Categories */}
                       <div className="space-y-3">
                         <Link href={`/developments?developer=${developer.id}&status=completed`}>
-                          <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors cursor-pointer group">
-                            <span className="text-sm font-medium">
+                          <div className="flex items-center justify-between p-3 rounded-xl bg-white border border-gray-100 hover:border-blue-200 hover:shadow-md transition-all cursor-pointer group/link">
+                            <span className="text-sm font-medium text-gray-700 group-hover/link:text-blue-600 transition-colors">
                               Ready to Move ({developer.readyToMove})
                             </span>
-                            <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                            <div className="h-6 w-6 rounded-full bg-gray-50 flex items-center justify-center group-hover/link:bg-blue-50 transition-colors">
+                              <ChevronRight className="h-3.5 w-3.5 text-gray-400 group-hover/link:text-blue-600 transition-colors" />
+                            </div>
                           </div>
                         </Link>
 
                         <Link
                           href={`/developments?developer=${developer.id}&status=under_construction`}
                         >
-                          <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors cursor-pointer group">
-                            <span className="text-sm font-medium">
+                          <div className="flex items-center justify-between p-3 rounded-xl bg-white border border-gray-100 hover:border-blue-200 hover:shadow-md transition-all cursor-pointer group/link">
+                            <span className="text-sm font-medium text-gray-700 group-hover/link:text-blue-600 transition-colors">
                               Under Construction ({developer.underConstruction})
                             </span>
-                            <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                            <div className="h-6 w-6 rounded-full bg-gray-50 flex items-center justify-center group-hover/link:bg-blue-50 transition-colors">
+                              <ChevronRight className="h-3.5 w-3.5 text-gray-400 group-hover/link:text-blue-600 transition-colors" />
+                            </div>
                           </div>
                         </Link>
 
                         <Link href={`/developments?developer=${developer.id}&status=coming_soon`}>
-                          <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors cursor-pointer group">
-                            <span className="text-sm font-medium">
+                          <div className="flex items-center justify-between p-3 rounded-xl bg-white border border-gray-100 hover:border-blue-200 hover:shadow-md transition-all cursor-pointer group/link">
+                            <span className="text-sm font-medium text-gray-700 group-hover/link:text-blue-600 transition-colors">
                               New Launch ({developer.newLaunch})
                             </span>
-                            <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                            <div className="h-6 w-6 rounded-full bg-gray-50 flex items-center justify-center group-hover/link:bg-blue-50 transition-colors">
+                              <ChevronRight className="h-3.5 w-3.5 text-gray-400 group-hover/link:text-blue-600 transition-colors" />
+                            </div>
                           </div>
                         </Link>
                       </div>
@@ -177,15 +185,15 @@ export function TopDevelopers() {
                 </CarouselItem>
               ))}
             </CarouselContent>
-            <CarouselPrevious className="hidden md:flex -left-4" />
-            <CarouselNext className="hidden md:flex -right-4" />
+            <CarouselPrevious className="hidden md:flex -left-4 opacity-0 group-hover/carousel:opacity-100 transition-all duration-300 bg-white/90 hover:bg-white text-blue-900 border-0 shadow-lg hover:scale-110" />
+            <CarouselNext className="hidden md:flex -right-4 opacity-0 group-hover/carousel:opacity-100 transition-all duration-300 bg-white/90 hover:bg-white text-blue-900 border-0 shadow-lg hover:scale-110" />
           </Carousel>
         </div>
 
         {/* View All Link */}
-        <div className="mt-8">
+        <div className="mt-8 text-center md:text-left">
           <Link href="/developments">
-            <Button variant="link" className="text-lg font-semibold group">
+            <Button variant="link" className="text-lg font-semibold group text-blue-600 hover:text-blue-700 p-0 h-auto hover:no-underline">
               View All Real Estate Developers in South Africa
               <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
             </Button>

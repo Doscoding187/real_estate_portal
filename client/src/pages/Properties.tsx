@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useLocation } from 'wouter';
-import { Navbar } from '@/components/Navbar';
-import { SearchBar, SearchFilters } from '@/components/SearchBar';
-import PropertyCard from '@/components/PropertyCard';
+import { ListingNavbar } from '@/components/ListingNavbar';
+import { SearchFilters } from '@/components/SearchBar';
+import { SidebarFilters } from '@/components/SidebarFilters';
+import PropertyCardList from '@/components/PropertyCardList';
 import { normalizePropertyForUI } from '@/lib/normalizers';
 import { Button } from '@/components/ui/button';
 import { trpc } from '@/lib/trpc';
-import { Building2, Loader2 } from 'lucide-react';
+import { Building2, Loader2, MapPin, LayoutGrid, List } from 'lucide-react';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { toast } from 'sonner';
 
@@ -52,16 +53,12 @@ export default function Properties() {
     },
   });
 
-  const removeFavoriteMutation = trpc.favorites.remove.useMutation({
-    onSuccess: () => {
-      toast.success('Removed from favorites');
-    },
-    onError: () => {
-      toast.error('Failed to remove from favorites');
-    },
-  });
-
   const handleSearch = (newFilters: SearchFilters) => {
+    setFilters(prev => ({ ...prev, ...newFilters }));
+    setPage(0);
+  };
+
+  const handleFilterChange = (newFilters: SearchFilters) => {
     setFilters(newFilters);
     setPage(0);
   };
@@ -71,95 +68,88 @@ export default function Properties() {
       toast.error('Please login to save favorites');
       return;
     }
-    // For now, just add to favorites (in real app, check if already favorited)
     addFavoriteMutation.mutate({ propertyId: parseInt(propertyId) });
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <Navbar />
+    <div className="min-h-screen bg-slate-50">
+      <ListingNavbar />
 
-      <div className="bg-primary/5 py-8">
-        <div className="container">
-          <h1 className="text-3xl font-bold mb-6">Search Properties</h1>
-          <SearchBar onSearch={handleSearch} />
-        </div>
-      </div>
-
-      <div className="container py-8">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h2 className="text-2xl font-semibold">
-              {properties && properties.length > 0
-                ? `${properties.length} Properties Found`
-                : 'Available Properties'}
-            </h2>
-            {Object.keys(filters).length > 0 && (
-              <p className="text-muted-foreground mt-1">Showing results for your search</p>
-            )}
+      <div className="container pt-24 pb-8">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          {/* Sidebar Filters - Hidden on mobile, visible on large screens */}
+          <div className="hidden lg:block lg:col-span-3">
+            <div className="sticky top-24">
+              <SidebarFilters filters={filters} onFilterChange={handleFilterChange} />
+            </div>
           </div>
-        </div>
 
-        {isLoading ? (
-          <div className="flex items-center justify-center py-20">
-            <Loader2 className="h-12 w-12 animate-spin text-primary" />
-          </div>
-        ) : properties && properties.length > 0 ? (
-          <>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {properties.map(property => {
-                const p = normalizePropertyForUI(property);
-                return p ? (
-                  <PropertyCard
-                    key={p.id}
-                    {...p}
-                    onFavoriteClick={() => handleFavoriteClick(p.id)}
-                  />
-                ) : null;
-              })}
+          {/* Main Content Area */}
+          <div className="col-span-1 lg:col-span-9">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+              <div>
+                <h2 className="text-xl font-bold text-slate-800">
+                  {properties && properties.length > 0
+                    ? `${properties.length} Properties Found`
+                    : 'Available Properties'}
+                </h2>
+                {Object.keys(filters).length > 0 && (
+                  <p className="text-sm text-slate-500 mt-1">
+                    Results for {filters.city || 'All Cities'} 
+                    {filters.propertyType && ` • ${filters.propertyType}`}
+                  </p>
+                )}
+              </div>
+              
+              <div className="flex items-center gap-3">
+                {/* Mobile Filter Toggle */}
+                <Button variant="outline" className="lg:hidden border-slate-200 text-slate-600">
+                  <List className="h-4 w-4 mr-2" /> Filters
+                </Button>
+
+                <select className="bg-transparent text-sm font-medium text-slate-600 focus:outline-none cursor-pointer border-none ring-0">
+                  <option>Sort by: Featured</option>
+                  <option>Price: Low to High</option>
+                  <option>Price: High to Low</option>
+                  <option>Newest Listed</option>
+                </select>
+              </div>
             </div>
 
-            {properties.length === limit && (
-              <div className="flex justify-center mt-12">
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    onClick={() => setPage(Math.max(0, page - 1))}
-                    disabled={page === 0}
-                  >
-                    Previous
-                  </Button>
-                  <Button variant="outline" onClick={() => setPage(page + 1)}>
-                    Next
-                  </Button>
-                </div>
+            {/* Properties Grid */}
+            {isLoading ? (
+              <div className="flex items-center justify-center py-20">
+                <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+              </div>
+            ) : properties && properties.length > 0 ? (
+              <div className="flex flex-col gap-4">
+                {properties.map((property) => {
+                  const normalized = normalizePropertyForUI(property);
+                  if (!normalized) return null;
+                  
+                  return (
+                    <PropertyCardList
+                      key={normalized.id}
+                      {...normalized}
+                      onFavoriteClick={() => handleFavoriteClick(normalized.id)}
+                    />
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-20 text-center">
+                <Building2 className="h-16 w-16 text-slate-300 mb-4" />
+                <h3 className="text-lg font-semibold text-slate-700 mb-2">
+                  No properties found
+                </h3>
+                <p className="text-slate-500 max-w-md">
+                  Try adjusting your filters or search criteria to find more properties.
+                </p>
               </div>
             )}
-          </>
-        ) : (
-          <div className="text-center py-20 bg-muted/30 rounded-lg">
-            <Building2 className="h-20 w-20 mx-auto text-muted-foreground mb-4" />
-            <h3 className="text-xl font-semibold mb-2">No Properties Found</h3>
-            <p className="text-muted-foreground mb-6">
-              Try adjusting your search filters to find more results
-            </p>
-            <Button
-              onClick={() => {
-                setFilters({});
-                setPage(0);
-              }}
-            >
-              Clear Filters
-            </Button>
           </div>
-        )}
-      </div>
-
-      <footer className="bg-muted/30 py-8 mt-12">
-        <div className="container text-center text-muted-foreground">
-          <p>&copy; 2025 Real Estate Portal. All rights reserved.</p>
         </div>
-      </footer>
+      </div>
     </div>
   );
 }

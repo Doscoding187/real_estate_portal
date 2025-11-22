@@ -191,7 +191,7 @@ export default function CityPage() {
                     .map(property => {
                       const p = normalizePropertyForUI(property);
                       return p ? (
-                        <CarouselItem key={p.id} className="pl-4 md:basis-1/2 lg:basis-1/4">
+                        <CarouselItem key={p.id} className="pl-4 md:basis-1/2 lg:basis-1/2 xl:basis-1/2">
                           <PropertyCard {...p} />
                         </CarouselItem>
                       ) : null;
@@ -310,7 +310,7 @@ export default function CityPage() {
         <div className="py-12 bg-white">
           <div className="container">
             <h2 className="text-2xl md:text-3xl font-bold mb-6">Featured Properties</h2>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <div className="flex flex-col gap-6">
               {featuredProperties && featuredProperties.length > 0 ? (
                 featuredProperties.map(p => {
                   const np = normalizePropertyForUI(p);

@@ -208,11 +208,11 @@ export function TopLocalities() {
   const localities = localitiesData[selectedCity] || [];
 
   return (
-    <div className="py-16 bg-white">
+    <div className="py-16 bg-muted/30">
       <div className="container">
         <div className="mb-8">
-          <h2 className="text-3xl md:text-4xl font-bold mb-3">Top Localities in South Africa</h2>
-          <p className="text-muted-foreground text-lg">
+          <h2 className="text-2xl md:text-3xl font-bold mb-3">Top Localities in South Africa</h2>
+          <p className="text-muted-foreground text-lg max-w-2xl">
             Discover South Africa's best localities known for liveability, infrastructure, and
             connectivity. Explore top neighbourhoods in major cities, offering insights on new
             construction, rental trends, and average prices.
@@ -222,90 +222,104 @@ export function TopLocalities() {
         {/* City Tabs */}
         <div className="flex flex-wrap gap-2 mb-8">
           {cities.map(city => (
-            <Button
+            <button
               key={city}
-              variant={selectedCity === city ? 'default' : 'outline'}
               onClick={() => setSelectedCity(city)}
-              className="rounded-md"
+              className={`
+                px-6 py-2.5 rounded-full text-sm font-medium transition-all duration-300 border
+                ${
+                  selectedCity === city
+                    ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white border-transparent shadow-md scale-105'
+                    : 'bg-white text-muted-foreground border-gray-200 hover:border-blue-200 hover:bg-blue-50 hover:text-blue-600'
+                }
+              `}
             >
               {city}
-            </Button>
+            </button>
           ))}
         </div>
 
         {/* Localities Carousel */}
-        <div className="relative">
-          <div className="overflow-hidden" ref={emblaRef}>
+        <div className="relative group/carousel">
+          <div className="overflow-hidden rounded-xl" ref={emblaRef}>
             <div className="flex gap-6">
               {localities.map((locality, idx) => (
                 <div
                   key={idx}
                   className="flex-[0_0_100%] min-w-0 sm:flex-[0_0_50%] lg:flex-[0_0_33.333%]"
                 >
-                  <Card className="hover:shadow-lg transition-shadow">
+                  <Card className="hover:shadow-xl transition-all duration-300 border-0 bg-white/50 backdrop-blur-sm group h-full">
                     <CardContent className="p-6">
                       {/* Header with map and locality name */}
-                      <div className="flex items-start gap-3 mb-4">
-                        <div className="w-16 h-16 bg-teal-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                          <MapPin className="h-8 w-8 text-teal-600" />
+                      <div className="flex items-start gap-4 mb-6">
+                        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-teal-500 to-emerald-500 flex items-center justify-center flex-shrink-0 shadow-lg shadow-teal-500/20 group-hover:scale-110 transition-transform duration-300">
+                          <MapPin className="h-8 w-8 text-white" />
                         </div>
                         <div className="flex-1">
-                          <h3 className="font-semibold text-lg mb-1">
-                            {locality.name}, {locality.city}
+                          <h3 className="font-bold text-xl mb-2 text-gray-900">
+                            {locality.name}
                           </h3>
-                          <div className="flex items-center gap-1 text-sm">
-                            <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                            <span className="font-medium">{locality.rating}</span>
-                            <span className="text-muted-foreground">
-                              • ({locality.reviews} Reviews)
+                          <div className="flex items-center gap-2 text-sm">
+                            <div className="flex items-center gap-1 bg-yellow-50 px-2 py-0.5 rounded-md border border-yellow-100">
+                              <Star className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400" />
+                              <span className="font-bold text-yellow-700">{locality.rating}</span>
+                            </div>
+                            <span className="text-muted-foreground text-xs">
+                              ({locality.reviews} Reviews)
                             </span>
                           </div>
                         </div>
                       </div>
 
                       {/* Pricing Info */}
-                      <div className="grid grid-cols-2 gap-4 mb-4 pb-4 border-b">
+                      <div className="grid grid-cols-2 gap-4 mb-6 p-4 bg-gray-50/80 rounded-xl border border-gray-100">
                         <div>
-                          <p className="text-sm text-muted-foreground mb-1">Average Sale Price</p>
-                          <p className="font-semibold">
-                            R {locality.avgSalePrice.toLocaleString()}/m²
+                          <p className="text-xs text-muted-foreground mb-1 font-medium uppercase tracking-wide">Avg. Sale Price</p>
+                          <p className="font-bold text-gray-900">
+                            R {locality.avgSalePrice.toLocaleString()}<span className="text-xs text-muted-foreground font-normal">/m²</span>
                           </p>
                         </div>
                         <div>
-                          <p className="text-sm text-muted-foreground mb-1">Average Rental</p>
-                          <p className="font-semibold">R {locality.avgRental}/m²</p>
+                          <p className="text-xs text-muted-foreground mb-1 font-medium uppercase tracking-wide">Avg. Rental</p>
+                          <p className="font-bold text-gray-900">
+                            R {locality.avgRental}<span className="text-xs text-muted-foreground font-normal">/m²</span>
+                          </p>
                         </div>
                       </div>
 
                       {/* Property Links */}
-                      <div className="space-y-2">
+                      <div className="space-y-3">
                         <a
                           href="#"
-                          className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors group"
+                          className="flex items-center justify-between p-3 rounded-xl bg-white border border-gray-100 hover:border-blue-200 hover:shadow-md transition-all group/link"
                         >
                           <div>
-                            <p className="font-medium text-sm">
+                            <p className="font-semibold text-sm text-gray-900 group-hover/link:text-blue-600 transition-colors">
                               {locality.propertiesForSale.toLocaleString()} Properties for Sale
                             </p>
                             <p className="text-xs text-muted-foreground">
-                              in {locality.name}, {locality.city}
+                              in {locality.name}
                             </p>
                           </div>
-                          <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-foreground group-hover:translate-x-1 transition-all" />
+                          <div className="h-8 w-8 rounded-full bg-gray-50 flex items-center justify-center group-hover/link:bg-blue-50 transition-colors">
+                            <ArrowRight className="h-4 w-4 text-gray-400 group-hover/link:text-blue-600 group-hover/link:translate-x-0.5 transition-all" />
+                          </div>
                         </a>
                         <a
                           href="#"
-                          className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors group"
+                          className="flex items-center justify-between p-3 rounded-xl bg-white border border-gray-100 hover:border-blue-200 hover:shadow-md transition-all group/link"
                         >
                           <div>
-                            <p className="font-medium text-sm">
+                            <p className="font-semibold text-sm text-gray-900 group-hover/link:text-blue-600 transition-colors">
                               {locality.propertiesForRent.toLocaleString()} Properties for Rent
                             </p>
                             <p className="text-xs text-muted-foreground">
-                              in {locality.name}, {locality.city}
+                              in {locality.name}
                             </p>
                           </div>
-                          <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-foreground group-hover:translate-x-1 transition-all" />
+                          <div className="h-8 w-8 rounded-full bg-gray-50 flex items-center justify-center group-hover/link:bg-blue-50 transition-colors">
+                            <ArrowRight className="h-4 w-4 text-gray-400 group-hover/link:text-blue-600 group-hover/link:translate-x-0.5 transition-all" />
+                          </div>
                         </a>
                       </div>
                     </CardContent>
@@ -319,7 +333,7 @@ export function TopLocalities() {
           <Button
             variant="secondary"
             size="icon"
-            className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 rounded-full shadow-lg z-10"
+            className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 rounded-full shadow-lg z-10 opacity-0 group-hover/carousel:opacity-100 transition-all duration-300 hover:scale-110 bg-white/90 hover:bg-white text-blue-900"
             onClick={scrollPrev}
           >
             <ChevronLeft className="h-5 w-5" />
@@ -327,7 +341,7 @@ export function TopLocalities() {
           <Button
             variant="secondary"
             size="icon"
-            className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 rounded-full shadow-lg z-10"
+            className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 rounded-full shadow-lg z-10 opacity-0 group-hover/carousel:opacity-100 transition-all duration-300 hover:scale-110 bg-white/90 hover:bg-white text-blue-900"
             onClick={scrollNext}
           >
             <ChevronRight className="h-5 w-5" />
@@ -335,12 +349,12 @@ export function TopLocalities() {
         </div>
 
         {/* View All Link */}
-        <div className="mt-6">
+        <div className="mt-8 text-center md:text-left">
           <a
             href="#"
-            className="inline-flex items-center gap-2 text-primary font-medium hover:underline"
+            className="inline-flex items-center gap-2 text-blue-600 font-semibold hover:text-blue-700 hover:underline transition-colors"
           >
-            Localities in {selectedCity}
+            View all localities in {selectedCity}
             <ArrowRight className="h-4 w-4" />
           </a>
         </div>

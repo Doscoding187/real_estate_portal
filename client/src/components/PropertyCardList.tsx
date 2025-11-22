@@ -1,5 +1,6 @@
+import React from 'react';
 import { Button } from './ui/button';
-import { Heart, MapPin, Bed, Bath, Square, Image as ImageIcon, PlayCircle } from 'lucide-react';
+import { Heart, MapPin, Bed, Bath, Square, Building2, Image as ImageIcon, PlayCircle } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import { OptimizedImageCard } from './OptimizedImage';
 import { Badge } from './ui/badge';
@@ -18,7 +19,7 @@ interface AgentInfo {
   image?: string;
 }
 
-export interface PropertyCardProps {
+export interface PropertyCardListProps {
   id: string;
   title: string;
   price: number;
@@ -41,7 +42,7 @@ export interface PropertyCardProps {
   videoCount?: number;
 }
 
-const PropertyCard: React.FC<PropertyCardProps> = ({
+const PropertyCardList: React.FC<PropertyCardListProps> = ({
   id,
   title,
   price,
@@ -87,14 +88,14 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
   };
 
   return (
-    <div className="group relative w-full bg-white rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-all overflow-hidden flex flex-col cursor-pointer" onClick={() => setLocation(`/property/${id}`)}>
-      {/* Image  Section */}
-      <div className="relative w-full h-64 overflow-hidden">
+    <div className="group relative bg-white rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-all overflow-hidden flex flex-col md:flex-row h-auto max-w-[840px]">
+      {/* Image Section (Left) -40% width */}
+      <div className="relative w-full md:w-[40%] h-64 md:h-auto md:aspect-square shrink-0 overflow-hidden cursor-pointer" onClick={() => setLocation(`/property/${id}`)}>
         {isMultiSizeImage ? (
           <OptimizedImageCard
             images={image as ImageUrls}
             alt={title}
-            aspectRatio="16/9"
+            aspectRatio="1/1"
             className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
           />
         ) : (
@@ -160,17 +161,14 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
         </div>
       </div>
 
-      {/* Content Section */}
-      <div className="p-6 flex flex-col flex-1">
-        <div className="flex-1">
+      {/* Content Section (Right) - 60% width */}
+      <div className="flex-1 p-6 flex flex-col justify-between">
+        <div>
           {/* Header: Title → Location → Price */}
           <div className="mb-5">
             <h3 
               className="text-xl font-bold text-slate-900 hover:text-blue-600 transition-colors cursor-pointer mb-2 line-clamp-2"
-              onClick={(e) => {
-                e.stopPropagation();
-                setLocation(`/property/${id}`);
-              }}
+              onClick={() => setLocation(`/property/${id}`)}
             >
               {title}
             </h3>
@@ -271,10 +269,9 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
             </Button>
           </div>
         </div>
-        </div>
       </div>
-
+    </div>
   );
 };
 
-export default PropertyCard;
+export default PropertyCardList;

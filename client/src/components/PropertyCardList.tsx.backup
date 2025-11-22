@@ -1,5 +1,5 @@
 import { Button } from './ui/button';
-import { Heart, MapPin, Bed, Bath, Square, Image as ImageIcon, PlayCircle } from 'lucide-react';
+import { Heart, MapPin, Bed, Bath, Maximize, Car, Image as ImageIcon, PlayCircle } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import { OptimizedImageCard } from './OptimizedImage';
 import { Badge } from './ui/badge';
@@ -28,7 +28,6 @@ export interface PropertyCardProps {
   bedrooms?: number;
   bathrooms?: number;
   area?: number;
-  yardSize?: number; // Separate yard/land/plot size
   propertyType?: string;
   listingType?: string;
   status?: string;
@@ -51,7 +50,6 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
   bedrooms,
   bathrooms,
   area,
-  yardSize, // Yard/land size
   propertyType,
   listingType,
   status = "Ready to Move",
@@ -66,35 +64,15 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
   const [, setLocation] = useLocation();
   const isMultiSizeImage = typeof image === 'object' && 'medium' in image;
 
-  // Determine area label based on property type
-  const getAreaLabel = () => {
-    const type = propertyType?.toLowerCase();
-    if (type === 'commercial') return ' (Floor)';
-    return ''; // Default for apartments and houses - just show as Size
-  };
-
-  // Check if we should show yard/land size (for houses, plots, farms)
-  const showsYardSize = () => {
-    const type = propertyType?.toLowerCase();
-    return type === 'house' || type === 'plot' || type === 'farm';
-  };
-
-  // Get yard/land label based on property type
-  const getYardLabel = () => {
-    const type = propertyType?.toLowerCase();
-    if (type === 'plot' || type === 'farm') return 'Land';
-    return 'Yard'; // Houses
-  };
-
   return (
-    <div className="group relative w-full bg-white rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-all overflow-hidden flex flex-col cursor-pointer" onClick={() => setLocation(`/property/${id}`)}>
-      {/* Image  Section */}
-      <div className="relative w-full h-64 overflow-hidden">
+    <div className="group relative bg-white rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-all overflow-hidden flex flex-col md:flex-row h-auto max-w-[840px] w-full">
+      {/* Image Section (Left) - 40% width */}
+      <div className="relative w-full md:w-[40%] h-64 md:h-auto md:aspect-square shrink-0 overflow-hidden cursor-pointer" onClick={() => setLocation(`/property/${id}`)}>
         {isMultiSizeImage ? (
           <OptimizedImageCard
             images={image as ImageUrls}
             alt={title}
-            aspectRatio="16/9"
+            aspectRatio="1/1"
             className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
           />
         ) : (
@@ -102,23 +80,16 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
             src={image as string}
             alt={title}
             loading="lazy"
-            onError={(e) => {
-              const target = e.target as HTMLImageElement;
-              target.onerror = null;
-              target.src = 'https://placehold.co/600x400/e2e8f0/64748b?text=No+Image';
-            }}
             className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
           />
         )}
         
         {/* Badges */}
         <div className="absolute top-3 left-3 flex flex-col gap-2">
-          {/* Property Type Badge */}
-          {propertyType && (
-            <Badge className="bg-white/90 backdrop-blur-sm hover:bg-white text-slate-700 border-0">
-              {propertyType}
-            </Badge>
-          )}
+          {/* Verified Badge (Always present or passed via props) */}
+          <Badge className="bg-white/90 backdrop-blur-sm hover:bg-white text-slate-700 border-0">
+            Verified
+          </Badge>
           
           {/* Dynamic Badges */}
           {badges?.map((badge, index) => (
@@ -160,61 +131,46 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
         </div>
       </div>
 
-      {/* Content Section */}
-      <div className="p-6 flex flex-col flex-1">
-        <div className="flex-1">
-          {/* Header: Title → Location → Price */}
+      {/* Content Section (Right) - 60% width */}
+      <div className="flex-1 p-6 flex flex-col justify-between">
+        <div>
+          {/* Header: Price -> Title -> Location */}
           <div className="mb-5">
-            <h3 
-              className="text-xl font-bold text-slate-900 hover:text-blue-600 transition-colors cursor-pointer mb-2 line-clamp-2"
-              onClick={(e) => {
-                e.stopPropagation();
-                setLocation(`/property/${id}`);
-              }}
-            >
-              {title}
-            </h3>
-
-            <div className="flex items-center gap-1.5 text-slate-600 text-sm mb-3">
-              <MapPin className="h-4 w-4 text-slate-400" />
-              <span>{location}</span>
+             <div className="text-2xl font-bold text-[#1e1b4b] mb-1">
+              {formatCurrency(price)}
             </div>
             
-            <div className="text-2xl font-bold text-[#1e1b4b]">
-              {formatCurrency(price)}
+            <h3 
+              className="text-xl font-bold text-slate-900 hover:text-blue-600 transition-colors cursor-pointer mb-2 line-clamp-1"
+              onClick={() => setLocation(`/property/${id}`)}
+            >
+              {bedrooms ? `${bedrooms} Bedroom ` : ''}{propertyType} in {location.split(',')[0]}
+            </h3>
+
+            <div className="flex items-center text-slate-500 text-sm">
+              <MapPin className="h-4 w-4 mr-1.5 text-slate-400" />
+              <span className="truncate">{location}</span>
             </div>
           </div>
 
-          {/* Specs */}
-          <div className="flex items-center gap-4 text-sm text-slate-700 mb-4 flex-wrap">
-            {/* Building/Floor Size (always show if available) */}
+          {/* Specs Row */}
+          <div className="flex items-center gap-6 mb-5 text-slate-600">
             {area && (
-              <div className="flex items-center gap-1.5">
-                <Square className="h-4 w-4 text-slate-400" />
-                <span className="font-medium">
-                  Size {area.toLocaleString()} m²{getAreaLabel()}
-                </span>
+              <div className="flex items-center gap-2">
+                <Maximize className="h-5 w-5 text-slate-400" />
+                <span className="text-sm font-medium">{area}m² <span className="text-slate-500 font-normal">Size</span></span>
               </div>
             )}
             {bedrooms && (
-              <div className="flex items-center gap-1.5">
-                <Bed className="h-4 w-4 text-slate-400" />
-                <span className="font-medium">{bedrooms} Bed</span>
+              <div className="flex items-center gap-2">
+                <Bed className="h-5 w-5 text-slate-400" />
+                <span className="text-sm font-medium">{bedrooms} <span className="text-slate-500 font-normal">Bed</span></span>
               </div>
             )}
             {bathrooms && (
-              <div className="flex items-center gap-1.5">
-                <Bath className="h-4 w-4 text-slate-400" />
-                <span className="font-medium">{bathrooms} Bath</span>
-              </div>
-            )}
-            {/* Yard/Land Size (only for houses, plots, farms) */}
-            {showsYardSize() && yardSize && (
-              <div className="flex items-center gap-1.5">
-                <Square className="h-4 w-4 text-slate-400" />
-                <span className="font-medium">
-                  {getYardLabel()} {yardSize.toLocaleString()} m²
-                </span>
+              <div className="flex items-center gap-2">
+                <Bath className="h-5 w-5 text-slate-400" />
+                <span className="text-sm font-medium">{bathrooms} <span className="text-slate-500 font-normal">Bath</span></span>
               </div>
             )}
           </div>
