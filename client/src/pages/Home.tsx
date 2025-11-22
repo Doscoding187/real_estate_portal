@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useLocation } from 'wouter';
 import { EnhancedNavbar } from '@/components/EnhancedNavbar';
 import { EnhancedHero } from '@/components/EnhancedHero';
-import { DevelopmentCard } from '@/components/DevelopmentCard';
+import { SimpleDevelopmentCard } from '@/components/SimpleDevelopmentCard';
 import { ProspectTrigger } from '@/components/ProspectTrigger';
 import { Button } from '@/components/ui/button';
 import { Building2, Home as HomeIcon, Building, Warehouse, MapPin, Tractor } from 'lucide-react';
@@ -116,12 +116,12 @@ export default function Home() {
       {/* Enhanced Hero Section */}
       <EnhancedHero />
 
-      {/* Hot Selling Projects Section */}
+      {/* Hot Selling Developments Section */}
       <div className="py-16 bg-white">
         <div className="container">
           <div className="mb-10">
             <h2 className="text-2xl md:text-3xl font-bold mb-3">
-              Hot Selling Real Estate Projects in South Africa
+              Hot Selling Real Estate Developments in South Africa
             </h2>
             <p className="text-muted-foreground text-base max-w-3xl">
               A handpicked collection of the country's most in-demand residential developments.
@@ -147,7 +147,7 @@ export default function Home() {
                 {developmentsByProvince[province] && developmentsByProvince[province].length > 0 ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                     {developmentsByProvince[province].map(development => (
-                      <DevelopmentCard key={development.id} {...development} />
+                      <SimpleDevelopmentCard key={development.id} {...development} />
                     ))}
                   </div>
                 ) : (
