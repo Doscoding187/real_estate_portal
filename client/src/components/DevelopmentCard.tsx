@@ -34,7 +34,7 @@ export function DevelopmentCard({
   location,
   description,
   image,
-  unitTypes,
+  unitTypes = [],
   highlights = [],
   developer,
   imageCount = 15,
