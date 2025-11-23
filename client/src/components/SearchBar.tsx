@@ -22,6 +22,16 @@ export interface SearchFilters {
   minPrice?: number;
   maxPrice?: number;
   minBedrooms?: number;
+  minArea?: number;
+  maxArea?: number;
+  amenities?: string[];
+  postedBy?: string[];
+  possessionStatus?: string[];
+  status?: string;
+  minLat?: number;
+  maxLat?: number;
+  minLng?: number;
+  maxLng?: number;
 }
 
 export function SearchBar({ onSearch, compact = false }: SearchBarProps) {

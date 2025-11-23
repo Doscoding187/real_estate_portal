@@ -571,4 +571,79 @@ export const locationRouter = router({
 
       return heatmapData;
     }),
+
+  /**
+   * Save a location from Google Places API to database
+   * This auto-populates our locations table when agents/developers submit properties
+   */
+  saveGooglePlaceLocation: publicProcedure
+    .input(
+      z.object({
+        placeId: z.string(),
+        name: z.string(),
+        fullAddress: z.string(),
+        types: z.array(z.string()),
+        latitude: z.number().optional(),
+        longitude: z.number().optional(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+
+      // Determine location type
+      let locationType = 'location';
+      if (input.types.includes('locality') || input.types.includes('administrative_area_level_2')) {
+        locationType = 'city';
+      } else if (input.types.includes('sublocality') || input.types.includes('neighborhood')) {
+        locationType = 'suburb';
+      }
+
+      // Extract province from full address (usually in format: "Name, Province, South Africa")
+      const addressParts = input.fullAddress.split(',').map(p => p.trim());
+      const province = addressParts.length > 1 ? addressParts[addressParts.length - 2] : null;
+
+      try {
+        // Check if location already exists
+        const [existing] = await db.execute(sql`
+          SELECT id FROM locations WHERE place_id = ${input.placeId}
+        `);
+
+        if (Array.isArray(existing) && existing.length > 0) {
+          const locationId = (existing[0] as any).id;
+          // Update existing location
+          await db.execute(sql`
+            UPDATE locations 
+            SET name = ${input.name},
+                full_address = ${input.fullAddress},
+                location_type = ${locationType},
+                province = ${province},
+                latitude = ${input.latitude || null},
+                longitude = ${input.longitude || null},
+                updated_at = CURRENT_TIMESTAMP
+            WHERE place_id = ${input.placeId}
+          `);
+          
+          return {
+            success: true,
+            locationId: locationId,
+            message: 'Location updated successfully',
+          };
+        } else {
+          // Insert new location
+          const [result] = await db.execute(sql`
+            INSERT INTO locations (place_id, name, full_address, location_type, province, latitude, longitude)
+            VALUES (${input.placeId}, ${input.name}, ${input.fullAddress}, ${locationType}, ${province || null}, ${input.latitude || null}, ${input.longitude || null})
+          `);
+
+          return {
+            success: true,
+            locationId: (result as any).insertId,
+            message: 'Location saved successfully',
+          };
+        }
+      } catch (error) {
+        console.error('Failed to save Google Place location:', error);
+        throw new Error('Failed to save location to database');
+      }
+    }),
 });

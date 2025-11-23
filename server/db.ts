@@ -1,26 +1,55 @@
-import { and, desc, eq, gte, inArray, like, lte, or, sql } from 'drizzle-orm';
+import {
+  eq,
+  desc,
+  and,
+  like,
+  gte,
+  lte,
+  inArray,
+  or,
+  sql,
+  SQL,
+  isNull,
+  isNotNull,
+  not,
+  ne,
+  count,
+  avg,
+  min,
+  max,
+  sum,
+  aliasedTable,
+  getTableColumns,
+} from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/mysql2';
 import mysql from 'mysql2/promise';
 import {
-  favorites,
+  users,
   properties,
   propertyImages,
-  users,
-  platformSettings,
-  prospects,
-  prospectFavorites,
-  scheduledViewings,
-  recentlyViewed,
+  favorites,
+  savedSearches,
   agents,
-  // Add listings-related tables
+  agencies,
+  leads,
   listings,
   listingMedia,
   listingAnalytics,
   listingApprovalQueue,
-  agencies,
-  commissions,
+  prospects,
+  prospectFavorites,
+  scheduledViewings,
+  recentlyViewed,
 } from '../drizzle/schema';
 import { ENV } from './_core/env';
+import { type InferSelectModel, type InferInsertModel } from 'drizzle-orm';
+
+export type User = InferSelectModel<typeof users>;
+export type InsertUser = InferInsertModel<typeof users>;
+export type Property = InferSelectModel<typeof properties>;
+export type InsertProperty = InferInsertModel<typeof properties>;
+export type InsertPropertyImage = InferInsertModel<typeof propertyImages>;
+export type Prospect = InferSelectModel<typeof prospects>;
 
 let _db: any = null;
 
@@ -420,6 +449,12 @@ export interface PropertySearchParams {
   minArea?: number;
   maxArea?: number;
   status?: string;
+  amenities?: string[];
+  postedBy?: string[];
+  minLat?: number;
+  maxLat?: number;
+  minLng?: number;
+  maxLng?: number;
   limit?: number;
   offset?: number;
 }
@@ -462,6 +497,48 @@ export async function searchProperties(params: PropertySearchParams) {
   }
   if (params.status) {
     conditions.push(eq(properties.status, params.status as any));
+  }
+
+  // Amenities filter
+  if (params.amenities && params.amenities.length > 0) {
+    for (const amenity of params.amenities) {
+      conditions.push(like(properties.amenities, `%${amenity}%`));
+    }
+  }
+
+  // Posted By filter
+  if (params.postedBy && params.postedBy.length > 0) {
+    const roleConditions = [];
+    if (params.postedBy.includes('Owner')) {
+      roleConditions.push(eq(users.role, 'visitor'));
+    }
+    if (params.postedBy.includes('Dealer') || params.postedBy.includes('Agent')) {
+      roleConditions.push(or(eq(users.role, 'agent'), eq(users.role, 'agency_admin')));
+    }
+    if (params.postedBy.includes('Builder') || params.postedBy.includes('Developer')) {
+      roleConditions.push(eq(users.role, 'property_developer'));
+    }
+
+    if (roleConditions.length > 0) {
+      conditions.push(
+        inArray(
+          properties.ownerId,
+          db.select({ id: users.id }).from(users).where(or(...roleConditions)),
+        ),
+      );
+    }
+  }
+
+  // Bounds filter
+  if (params.minLat !== undefined && params.maxLat !== undefined) {
+    conditions.push(
+      sql`CAST(${properties.latitude} AS DECIMAL(10, 6)) >= ${params.minLat} AND CAST(${properties.latitude} AS DECIMAL(10, 6)) <= ${params.maxLat}`
+    );
+  }
+  if (params.minLng !== undefined && params.maxLng !== undefined) {
+    conditions.push(
+      sql`CAST(${properties.longitude} AS DECIMAL(10, 6)) >= ${params.minLng} AND CAST(${properties.longitude} AS DECIMAL(10, 6)) <= ${params.maxLng}`
+    );
   }
 
   let query = db.select().from(properties);

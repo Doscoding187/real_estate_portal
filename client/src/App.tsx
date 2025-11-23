@@ -5,6 +5,11 @@ import { Route, Switch } from 'wouter';
 import ErrorBoundary from './components/ErrorBoundary';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { BrandingProvider } from './contexts/BrandingContext';
+import { ComparisonProvider } from './contexts/ComparisonContext';
+import { ComparisonBar } from './components/ComparisonBar';
+import { GuestActivityProvider } from './contexts/GuestActivityContext';
+import { GuestUserBanner } from './components/GuestUserBanner';
+import { useGuestDataMigration } from './hooks/useGuestDataMigration';
 import Home from './pages/Home';
 import Properties from './pages/Properties';
 import PropertyDetail from './pages/PropertyDetail';
@@ -58,7 +63,13 @@ import CreateDevelopment from './pages/CreateDevelopment';
 import DevelopmentsDemo from './pages/DevelopmentsDemo';
 import DevelopmentDetail from './pages/DevelopmentDetail';
 
+// Import Comparison Page
+import CompareProperties from './pages/CompareProperties';
+
 function Router() {
+  // Auto-migrate guest data on login
+  useGuestDataMigration();
+  
   // make sure to consider if you need authentication for certain routes
   return (
     <Switch>
@@ -76,6 +87,7 @@ function Router() {
       <Route path="/developments" component={DevelopmentsDemo} />
       <Route path="/development/:id" component={DevelopmentDetail} />
       <Route path="/explore" component={ExploreFeed} />
+      <Route path="/compare" component={CompareProperties} />
 
       {/* Login and authentication routes should be early in the route list */}
       <Route path="/login" component={Login} />
@@ -208,10 +220,16 @@ function App() {
           defaultTheme="light"
           // switchable
         >
-          <TooltipProvider>
-            <Toaster />
-            <Router />
-          </TooltipProvider>
+          <GuestActivityProvider>
+            <ComparisonProvider>
+              <TooltipProvider>
+                <Toaster />
+                <Router />
+                <ComparisonBar />
+                <GuestUserBanner />
+              </TooltipProvider>
+            </ComparisonProvider>
+          </GuestActivityProvider>
         </ThemeProvider>
       </BrandingProvider>
     </ErrorBoundary>

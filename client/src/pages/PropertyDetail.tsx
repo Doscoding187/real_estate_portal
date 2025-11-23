@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { useRoute, useLocation } from 'wouter';
 import { ListingNavbar } from '@/components/ListingNavbar';
 import { Button } from '@/components/ui/button';
@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { trpc } from '@/lib/trpc';
 import { useAuth } from '@/_core/hooks/useAuth';
+import { useGuestActivity } from '@/contexts/GuestActivityContext';
 import { toast } from 'sonner';
 import { formatCurrency } from '@/lib/utils';
 import {
@@ -65,6 +66,7 @@ export default function PropertyDetail() {
   const [, params] = useRoute('/property/:id');
   const [, setLocation] = useLocation();
   const { isAuthenticated } = useAuth();
+  const { addViewedProperty, addGuestFavorite, removeGuestFavorite, isGuestFavorite } = useGuestActivity();
   const propertyId = params?.id ? parseInt(params.id) : 0;
 
   const [isContactModalOpen, setIsContactModalOpen] = useState(false);
@@ -99,7 +101,14 @@ export default function PropertyDetail() {
 
   const handleFavoriteClick = () => {
     if (!isAuthenticated) {
-      toast.error('Please login to save favorites');
+      // For guest users, use localStorage
+      if (isGuestFavorite(propertyId)) {
+        removeGuestFavorite(propertyId);
+        toast.success('Removed from guest favorites');
+      } else {
+        addGuestFavorite(propertyId);
+        toast.success('Added to guest favorites! Login to save permanently.');
+      }
       return;
     }
     addFavoriteMutation.mutate({ propertyId });
@@ -131,6 +140,13 @@ export default function PropertyDetail() {
       </div>
     );
   }
+
+  // Track view for guest users
+  React.useEffect(() => {
+    if (propertyId > 0) {
+      addViewedProperty(propertyId);
+    }
+  }, [propertyId, addViewedProperty]);
 
   const { property, images, agent } = data;
   

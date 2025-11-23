@@ -18,7 +18,8 @@ import { priceInsightsRouter } from './priceInsightsRouter';
 import { devRouter } from './devRouter'; // ⚠️ DEV ONLY - Remove before production
 import { listingRouter } from './listingRouter';
 import { uploadRouter } from './uploadRouter';
-import { settingsRouter } from './settingsRouter';
+import { savedSearchRouter } from './savedSearchRouter';
+import { guestMigrationRouter } from './guestMigrationRouter';
 
 export const appRouter = router({
   system: systemRouter,
@@ -36,6 +37,8 @@ export const appRouter = router({
   listing: listingRouter,
   upload: uploadRouter,
   settings: settingsRouter,
+  savedSearch: savedSearchRouter,
+  guestMigration: guestMigrationRouter,
   dev: devRouter, // ⚠️ DEV ONLY - Remove before production
 
   auth: router({
@@ -78,6 +81,12 @@ export const appRouter = router({
           minArea: z.number().optional(),
           maxArea: z.number().optional(),
           status: z.enum(['available', 'sold', 'rented', 'pending']).optional(),
+          amenities: z.array(z.string()).optional(),
+          postedBy: z.array(z.string()).optional(),
+          minLat: z.number().optional(),
+          maxLat: z.number().optional(),
+          minLng: z.number().optional(),
+          maxLng: z.number().optional(),
           limit: z.number().default(20),
           offset: z.number().default(0),
         }),

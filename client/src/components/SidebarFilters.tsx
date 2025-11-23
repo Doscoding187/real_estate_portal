@@ -15,9 +15,23 @@ import { SearchFilters } from './SearchBar';
 interface SidebarFiltersProps {
   filters: SearchFilters;
   onFilterChange: (newFilters: SearchFilters) => void;
+  onSaveSearch?: () => void;
 }
 
-export function SidebarFilters({ filters, onFilterChange }: SidebarFiltersProps) {
+const AMENITIES = [
+  'Pool',
+  'Gym',
+  'Garden',
+  'Security',
+  'Parking',
+  'Balcony',
+  'Pet Friendly',
+  'Furnished',
+  'Air Conditioning',
+  'Wi-Fi',
+];
+
+export function SidebarFilters({ filters, onFilterChange, onSaveSearch }: SidebarFiltersProps) {
   // Local state for sliders to avoid excessive re-renders/fetches while dragging
   const [priceRange, setPriceRange] = useState<[number, number]>([
     filters.minPrice || 0,
@@ -64,18 +78,62 @@ export function SidebarFilters({ filters, onFilterChange }: SidebarFiltersProps)
     }
   };
 
+  const handleAreaChange = (value: number[]) => {
+    setAreaRange([value[0], value[1]]);
+  };
+
+  const handleAreaCommit = (value: number[]) => {
+    onFilterChange({
+      ...filters,
+      minArea: value[0],
+      maxArea: value[1],
+    });
+  };
+
+  const handleCheckboxFilterChange = (
+    category: 'amenities' | 'postedBy' | 'possessionStatus',
+    value: string,
+    checked: boolean
+  ) => {
+    const currentValues = filters[category] || [];
+    let newValues: string[];
+
+    if (checked) {
+      newValues = [...currentValues, value];
+    } else {
+      newValues = currentValues.filter((v) => v !== value);
+    }
+
+    onFilterChange({
+      ...filters,
+      [category]: newValues.length > 0 ? newValues : undefined,
+    });
+  };
+
   return (
     <div className="w-full bg-white rounded-lg border border-slate-200 shadow-sm p-4">
       <div className="flex items-center justify-between mb-4">
         <h3 className="font-bold text-lg text-slate-800">Filters</h3>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="text-blue-600 hover:text-blue-800 h-auto p-0 text-xs font-medium"
-          onClick={() => onFilterChange({})}
-        >
-          Reset all
-        </Button>
+        <div className="flex gap-2">
+          {onSaveSearch && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 text-xs"
+              onClick={onSaveSearch}
+            >
+              Save
+            </Button>
+          )}
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-blue-600 hover:text-blue-800 h-auto p-0 text-xs font-medium"
+            onClick={() => onFilterChange({})}
+          >
+            Reset all
+          </Button>
+        </div>
       </div>
 
       <Accordion type="multiple" defaultValue={['budget', 'type', 'bedrooms']} className="w-full">
@@ -167,7 +225,13 @@ export function SidebarFilters({ filters, onFilterChange }: SidebarFiltersProps)
             <div className="space-y-3 pt-2">
               {['Ready to move', 'Under construction'].map((status) => (
                 <div key={status} className="flex items-center space-x-2">
-                  <Checkbox id={`status-${status}`} />
+                  <Checkbox
+                    id={`status-${status}`}
+                    checked={filters.possessionStatus?.includes(status)}
+                    onCheckedChange={(checked) =>
+                      handleCheckboxFilterChange('possessionStatus', status, checked as boolean)
+                    }
+                  />
                   <Label
                     htmlFor={`status-${status}`}
                     className="text-sm font-medium leading-none cursor-pointer text-slate-600"
@@ -189,12 +253,46 @@ export function SidebarFilters({ filters, onFilterChange }: SidebarFiltersProps)
             <div className="space-y-3 pt-2">
               {['Owner', 'Dealer', 'Builder'].map((poster) => (
                 <div key={poster} className="flex items-center space-x-2">
-                  <Checkbox id={`poster-${poster}`} />
+                  <Checkbox
+                    id={`poster-${poster}`}
+                    checked={filters.postedBy?.includes(poster)}
+                    onCheckedChange={(checked) =>
+                      handleCheckboxFilterChange('postedBy', poster, checked as boolean)
+                    }
+                  />
                   <Label
                     htmlFor={`poster-${poster}`}
                     className="text-sm font-medium leading-none cursor-pointer text-slate-600"
                   >
                     {poster}
+                  </Label>
+                </div>
+              ))}
+            </div>
+          </AccordionContent>
+        </AccordionItem>
+
+        {/* Amenities */}
+        <AccordionItem value="amenities">
+          <AccordionTrigger className="text-sm font-bold text-slate-700 hover:no-underline">
+            Amenities
+          </AccordionTrigger>
+          <AccordionContent>
+            <div className="space-y-3 pt-2">
+              {AMENITIES.map((amenity) => (
+                <div key={amenity} className="flex items-center space-x-2">
+                  <Checkbox
+                    id={`amenity-${amenity}`}
+                    checked={filters.amenities?.includes(amenity)}
+                    onCheckedChange={(checked) =>
+                      handleCheckboxFilterChange('amenities', amenity, checked as boolean)
+                    }
+                  />
+                  <Label
+                    htmlFor={`amenity-${amenity}`}
+                    className="text-sm font-medium leading-none cursor-pointer text-slate-600"
+                  >
+                    {amenity}
                   </Label>
                 </div>
               ))}
@@ -211,13 +309,16 @@ export function SidebarFilters({ filters, onFilterChange }: SidebarFiltersProps)
             <div className="px-2 pt-2 pb-6">
               <Slider
                 defaultValue={[0, 5000]}
+                value={[areaRange[0], areaRange[1]]}
                 max={5000}
                 step={100}
+                onValueChange={handleAreaChange}
+                onValueCommit={handleAreaCommit}
                 className="mb-4"
               />
               <div className="flex items-center justify-between text-xs text-slate-500">
-                <span>0 sq ft</span>
-                <span>5000+ sq ft</span>
+                <span>{areaRange[0]} sq ft</span>
+                <span>{areaRange[1]}+ sq ft</span>
               </div>
             </div>
           </AccordionContent>

@@ -12,7 +12,7 @@ function getEnvVar(name: string, fallback: string) {
 // ===== App URLs & Settings =====
 export const VITE_API_URL = getEnvVar('VITE_API_URL', 'http://localhost:3000');
 export const VITE_APP_LOGO = getEnvVar('VITE_APP_LOGO', '/logo.png');
-export const VITE_APP_TITLE = getEnvVar('VITE_APP_TITLE', 'Real Estate Portal');
+export const VITE_APP_TITLE = getEnvVar('VITE_APP_TITLE', 'Property Listify');
 
 // ===== Aliases for backward compatibility =====
 export const APP_TITLE = VITE_APP_TITLE;

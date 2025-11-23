@@ -1,6 +1,7 @@
 import React from 'react';
 import { Button } from './ui/button';
-import { Heart, MapPin, Bed, Bath, Square, Building2, Image as ImageIcon, PlayCircle } from 'lucide-react';
+import { Heart, MapPin, Bed, Bath, Square, Building2, Image as ImageIcon, PlayCircle, Plus, Check } from 'lucide-react';
+import { useComparison } from '@/contexts/ComparisonContext';
 import { formatCurrency } from '@/lib/utils';
 import { OptimizedImageCard } from './OptimizedImage';
 import { Badge } from './ui/badge';
@@ -68,7 +69,19 @@ const PropertyCardList: React.FC<PropertyCardListProps> = ({
   highlights,
 }) => {
   const [, setLocation] = useLocation();
+  const { addToComparison, removeFromComparison, isInComparison, canAddMore } = useComparison();
   const isMultiSizeImage = typeof image === 'object' && 'medium' in image;
+  const propertyId = parseInt(id);
+  const inComparison = isInComparison(propertyId);
+
+  const handleComparisonToggle = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (inComparison) {
+      removeFromComparison(propertyId);
+    } else {
+      addToComparison(propertyId);
+    }
+  };
 
   // Determine area label based on property type
   const getAreaLabel = () => {
@@ -132,20 +145,43 @@ const PropertyCardList: React.FC<PropertyCardListProps> = ({
           ))}
         </div>
 
-        {/* Favorite Button */}
-        {onFavoriteClick && (
+        {/* Action Buttons */}
+        <div className="absolute top-4 right-4 flex gap-2">
+          {/* Comparison Button */}
           <Button
             variant="ghost"
             size="icon"
-            className="absolute top-4 right-4 rounded-full bg-black/30 hover:bg-black/50 text-white backdrop-blur-sm h-9 w-9 border border-white/20"
-            onClick={(e) => {
-              e.stopPropagation();
-              onFavoriteClick();
-            }}
+            className={`rounded-full backdrop-blur-sm h-9 w-9 border transition-all ${
+              inComparison
+                ? 'bg-blue-600 hover:bg-blue-700 text-white border-blue-600'
+                : 'bg-black/30 hover:bg-black/50 text-white border-white/20'
+            }`}
+            onClick={handleComparisonToggle}
+            disabled={!inComparison && !canAddMore}
+            title={inComparison ? 'Remove from comparison' : 'Add to comparison'}
           >
-            <Heart className="h-5 w-5" />
+            {inComparison ? (
+              <Check className="h-5 w-5" />
+            ) : (
+              <Plus className="h-5 w-5" />
+            )}
           </Button>
-        )}
+
+          {/* Favorite Button */}
+          {onFavoriteClick && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="rounded-full bg-black/30 hover:bg-black/50 text-white backdrop-blur-sm h-9 w-9 border border-white/20"
+              onClick={(e) => {
+                e.stopPropagation();
+                onFavoriteClick();
+              }}
+            >
+              <Heart className="h-5 w-5" />
+            </Button>
+          )}
+        </div>
         
         {/* Media Count Overlay */}
         <div className="absolute bottom-4 right-4 flex gap-2">

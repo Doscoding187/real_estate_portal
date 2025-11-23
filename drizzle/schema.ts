@@ -1248,3 +1248,37 @@ export type InsertListingMedia = InferInsertModel<typeof listingMedia>;
 
 export type ListingAnalytics = InferSelectModel<typeof listingAnalytics>;
 export type InsertListingAnalytics = InferInsertModel<typeof listingAnalytics>;
+
+export const savedSearches = mysqlTable("saved_searches", {
+	id: int().autoincrement().notNull(),
+	userId: int().notNull().references(() => users.id, { onDelete: "cascade" } ),
+	name: varchar({ length: 255 }).notNull(),
+	criteria: json().notNull(),
+	notificationFrequency: mysqlEnum(['never', 'daily', 'weekly']).default('never'),
+	lastNotifiedAt: timestamp({ mode: 'string' }),
+	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+});
+
+export type SavedSearch = InferSelectModel<typeof savedSearches>;
+export type InsertSavedSearch = InferInsertModel<typeof savedSearches>;
+
+export const locations = mysqlTable("locations", {
+	id: int().autoincrement().notNull().primaryKey(),
+	placeId: varchar("place_id", { length: 255 }).notNull().unique(),
+	name: varchar("name", { length: 255 }).notNull(),
+	fullAddress: text("full_address").notNull(),
+	locationType: varchar("location_type", { length: 50 }).notNull(),
+	province: varchar("province", { length: 100 }),
+	country: varchar("country", { length: 100 }).default('South Africa'),
+	latitude: decimal("latitude", { precision: 10, scale: 8 }),
+	longitude: decimal("longitude", { precision: 11, scale: 8 }),
+	createdAt: timestamp("created_at", { mode: 'string' }).default(sql`CURRENT_TIMESTAMP`),
+	updatedAt: timestamp("updated_at", { mode: 'string' }).default(sql`CURRENT_TIMESTAMP`).onUpdateNow(),
+}, (table) => {
+	return {
+		placeIdIdx: index("idx_locations_place_id").on(table.placeId),
+		nameIdx: index("idx_locations_name").on(table.name),
+		typeIdx: index("idx_locations_type").on(table.locationType),
+	}
+});

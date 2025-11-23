@@ -44,16 +44,7 @@ export function Navbar() {
           {/* Logo */}
           <Link href="/">
             <div className="flex items-center gap-2 cursor-pointer">
-              {branding?.logoUrl ? (
-                <img
-                  src={branding.logoUrl}
-                  alt={branding.companyName || 'Logo'}
-                  className="h-8 w-8 object-contain"
-                />
-              ) : (
-                <Home className="h-6 w-6" />
-              )}
-              <span className="text-xl font-bold">
+              <span className="text-2xl font-bold tracking-tight text-white hover:text-secondary transition-colors">
                 {isWhiteLabel ? branding?.companyName || APP_TITLE : APP_TITLE}
               </span>
             </div>
@@ -67,8 +58,8 @@ export function Navbar() {
                 <Link
                   key={link.href}
                   href={link.href}
-                  className={`flex items-center gap-2 hover:text-secondary transition-colors ${
-                    location === link.href ? 'text-secondary font-semibold' : ''
+                  className={`flex items-center gap-2 hover:text-blue-200 transition-colors font-medium ${
+                    location === link.href ? 'text-blue-200 font-semibold border-b-2 border-blue-200 pb-1' : 'text-white'
                   }`}
                 >
                   {link.icon && <link.icon className="h-4 w-4" />}
