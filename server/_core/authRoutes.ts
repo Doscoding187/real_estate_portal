@@ -16,7 +16,7 @@ export function registerAuthRoutes(app: Express) {
    */
   app.post('/api/auth/register', async (req: Request, res: Response) => {
     try {
-      const { email, password, name } = req.body;
+      const { email, password, name, role } = req.body;
 
       // Validate input
       if (!email || !password) {
@@ -38,7 +38,11 @@ export function registerAuthRoutes(app: Express) {
       }
 
       // Register user (sends verification email)
-      await authService.register(email, password, name);
+      // Allow specific roles if requested, otherwise default to 'visitor'
+      const allowedRoles = ['agent', 'agency_admin', 'property_developer', 'visitor'];
+      const requestedRole = allowedRoles.includes(role) ? role : 'visitor';
+      
+      await authService.register(email, password, name, requestedRole as any);
 
       // Return success message - user must verify email before logging in
       res.status(201).json({

@@ -172,6 +172,7 @@ class AuthService {
     email: string,
     password: string,
     name?: string,
+    role: 'visitor' | 'agent' | 'agency_admin' | 'property_developer' = 'visitor',
   ): Promise<{ user: User; sessionToken: string }> {
     // Check if user already exists
     const existingUser = await db.getUserByEmail(email);
@@ -192,7 +193,8 @@ class AuthService {
       name: name || email.split('@')[0],
       emailVerified: 0,
       loginMethod: 'email',
-      role: 'visitor', // Default role for new registrations
+      role: role, // Use requested role
+      isSubaccount: 0,
       emailVerificationToken,
     });
 

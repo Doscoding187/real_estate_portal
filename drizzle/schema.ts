@@ -1186,7 +1186,7 @@ export const users = mysqlTable("users", {
 	emailVerified: int().notNull(),
 	role: mysqlEnum(['visitor','agent','agency_admin','property_developer','super_admin']).default('visitor').notNull(),
 	agencyId: int().references(() => agencies.id, { onDelete: "set null" } ),
-	isSubaccount: int().notNull(),
+	isSubaccount: int().default(0).notNull(),
 	passwordResetToken: varchar({ length: 255 }),
 	passwordResetTokenExpiresAt: timestamp({ mode: 'string' }),
 	emailVerificationToken: varchar({ length: 255 }),
