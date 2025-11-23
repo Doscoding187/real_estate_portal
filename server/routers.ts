@@ -20,6 +20,7 @@ import { listingRouter } from './listingRouter';
 import { uploadRouter } from './uploadRouter';
 import { savedSearchRouter } from './savedSearchRouter';
 import { guestMigrationRouter } from './guestMigrationRouter';
+import { settingsRouter } from './settingsRouter';
 
 export const appRouter = router({
   system: systemRouter,
