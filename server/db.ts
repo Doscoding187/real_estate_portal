@@ -806,7 +806,7 @@ export async function getLocationsByType(type: string) {
   return await db
     .select()
     .from(locations)
-    .where(eq(locations.type, type as any));
+    .where(eq(locations.locationType, type as any));
 }
 
 // ==================== AGENCY DASHBOARD ANALYTICS ====================

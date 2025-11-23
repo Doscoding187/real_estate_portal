@@ -715,19 +715,7 @@ export const locationSearchCache = mysqlTable("location_search_cache", {
 	expiresAt: timestamp({ mode: 'string' }).notNull(),
 });
 
-export const locations = mysqlTable("locations", {
-	id: int().autoincrement().notNull(),
-	name: varchar({ length: 200 }).notNull(),
-	slug: varchar({ length: 200 }).notNull(),
-	type: mysqlEnum(['province','city','suburb','neighborhood']).notNull(),
-	parentId: int(),
-	description: text(),
-	latitude: varchar({ length: 50 }),
-	longitude: varchar({ length: 50 }),
-	propertyCount: int(),
-	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
-	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
-});
+
 
 export const marketInsightsCache = mysqlTable("market_insights_cache", {
 	id: int().autoincrement().notNull(),
