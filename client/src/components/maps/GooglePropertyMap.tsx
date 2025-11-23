@@ -50,7 +50,7 @@ interface GooglePropertyMapProps {
   showFilters?: boolean;
   onPropertySelect?: (property: PropertyMarker) => void;
   onBoundsChange?: (bounds: google.maps.LatLngBounds) => void;
-  className?: string;
+  minimal?: boolean;
 }
 
 export function GooglePropertyMap({
@@ -62,6 +62,7 @@ export function GooglePropertyMap({
   onPropertySelect,
   onBoundsChange,
   className,
+  minimal = false,
 }: GooglePropertyMapProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<google.maps.Map | null>(null);
@@ -118,10 +119,10 @@ export function GooglePropertyMap({
               stylers: [{ visibility: 'off' }],
             },
           ],
-          mapTypeControl: showControls,
-          streetViewControl: showControls,
-          fullscreenControl: showControls,
-          zoomControl: showControls,
+          mapTypeControl: !minimal && showControls,
+          streetViewControl: !minimal && showControls,
+          fullscreenControl: !minimal && showControls,
+          zoomControl: !minimal && showControls,
         });
 
         mapInstanceRef.current = map;
@@ -143,7 +144,7 @@ export function GooglePropertyMap({
     };
 
     initMap();
-  }, [center, zoom, mapType, showControls, loadGoogleMapsAPI, onBoundsChange]);
+  }, [center, zoom, mapType, showControls, minimal, loadGoogleMapsAPI, onBoundsChange]);
 
   // Update markers when properties change
   useEffect(() => {
@@ -337,7 +338,7 @@ export function GooglePropertyMap({
   return (
     <div className={`space-y-4 ${className}`}>
       {/* Map Controls */}
-      {showControls && (
+      {!minimal && showControls && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -396,7 +397,7 @@ export function GooglePropertyMap({
       )}
 
       {/* Nearby Amenities List */}
-      {showNearby && nearbyAmenities.length > 0 && (
+      {!minimal && showNearby && nearbyAmenities.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle className="text-lg">Nearby Amenities</CardTitle>
@@ -432,15 +433,23 @@ export function GooglePropertyMap({
       )}
 
       {/* Map Container */}
-      <Card className="overflow-hidden">
-        <CardContent className="p-0">
-          <div
-            ref={mapRef}
-            className="w-full h-96 md:h-[500px] lg:h-[600px]"
-            style={{ minHeight: '400px' }}
-          />
-        </CardContent>
-      </Card>
+      {minimal ? (
+        <div
+          ref={mapRef}
+          className="w-full h-full"
+          style={{ minHeight: '100%' }}
+        />
+      ) : (
+        <Card className="overflow-hidden">
+          <CardContent className="p-0">
+            <div
+              ref={mapRef}
+              className="w-full h-96 md:h-[500px] lg:h-[600px]"
+              style={{ minHeight: '400px' }}
+            />
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

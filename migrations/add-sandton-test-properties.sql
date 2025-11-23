@@ -1,0 +1,158 @@
+-- =====================================================
+-- ADD TEST PROPERTIES IN SAME SUBURB
+-- Creates additional properties in Sandton for testing
+-- the "Property Listings in [Suburb]" section
+-- =====================================================
+
+USE real_estate_portal;
+
+-- First, update property 90001 to have a suburb if it doesn't already
+UPDATE properties 
+SET suburb = 'Sandton', 
+    latitude = '-26.1076', 
+    longitude = '28.0567'
+WHERE id = 90001;
+
+-- Add test properties in Sandton suburb
+INSERT INTO properties (
+  id,
+  title, 
+  description, 
+  propertyType, 
+  listingType, 
+  transactionType, 
+  price, 
+  bedrooms, 
+  bathrooms, 
+  area, 
+  address, 
+  city, 
+  suburb,
+  province, 
+  zipCode, 
+  latitude,
+  longitude,
+  amenities, 
+  yearBuilt, 
+  status, 
+  featured, 
+  agentId, 
+  ownerId,
+  mainImage
+) VALUES
+-- Property 1: Luxury House in Sandton
+(90002,
+ 'Elegant Family Home in Sandton',
+ 'Beautiful 4-bedroom house with modern finishes, spacious garden, and pool. Located in the heart of Sandton with easy access to schools and shopping centers.',
+ 'house',
+ 'sale',
+ 'sale',
+ 5850000,
+ 4,
+ 3,
+ 380,
+ '45 Rivonia Road, Sandton',
+ 'Johannesburg',
+ 'Sandton',
+ 'Gauteng',
+ '2196',
+ '-26.1076',
+ '28.0567',
+ '["Pool", "Garden", "Double Garage", "Security System", "Modern Kitchen"]',
+ 2019,
+ 'available',
+ 0,
+ 1,
+ 1,
+ 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=800'
+),
+
+-- Property 2: Modern Apartment in Sandton
+(90003,
+ 'Luxury 2-Bed Apartment - Sandton CBD',
+ 'Stunning 2-bedroom apartment with panoramic city views. Premium finishes, open-plan living, and access to world-class amenities.',
+ 'apartment',
+ 'sale',
+ 'sale',
+ 3200000,
+ 2,
+ 2,
+ 95,
+ 'Unit 2104, Sandton Towers',
+ 'Johannesburg',
+ 'Sandton',
+ 'Gauteng',
+ '2196',
+ '-26.1076',
+ '28.0567',
+ '["Gym", "Pool", "24h Security", "Parking Bay", "Balcony", "City Views"]',
+ 2021,
+ 'available',
+ 1,
+ 1,
+ 1,
+ 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=800'
+),
+
+-- Property 3: Townhouse in Sandton
+(90004,
+ 'Modern Townhouse in Secure Estate',
+ 'Spacious 3-bedroom townhouse in gated community. Perfect for families with excellent security and amenities.',
+ 'townhouse',
+ 'sale',
+ 'sale',
+ 4100000,
+ 3,
+ 2,
+ 210,
+ '12 Morningside Drive, Sandton',
+ 'Johannesburg',
+ 'Sandton',
+ 'Gauteng',
+ '2196',
+ '-26.1076',
+ '28.0567',
+ '["Security Estate", "Garden", "Single Garage", "Pet Friendly", "Clubhouse"]',
+ 2020,
+ 'available',
+ 0,
+ 2,
+ 2,
+ 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=800'
+),
+
+-- Property 4: Villa in Sandton
+(90005,
+ 'Exclusive Sandton Villa with Pool',
+ 'Magnificent 5-bedroom villa in prestigious Sandton neighborhood. Features include infinity pool, home cinema, and landscaped gardens.',
+ 'villa',
+ 'sale',
+ 'sale',
+ 12500000,
+ 5,
+ 4,
+ 520,
+ '78 Katherine Street, Sandton',
+ 'Johannesburg',
+ 'Sandton',
+ 'Gauteng',
+ '2196',
+ '-26.1076',
+ '28.0567',
+ '["Infinity Pool", "Home Cinema", "Wine Cellar", "Staff Quarters", "Triple Garage", "Smart Home"]',
+ 2022,
+ 'available',
+ 1,
+ 1,
+ 1,
+ 'https://images.unsplash.com/photo-1613490493576-7fde63acd811?w=800'
+);
+
+-- Verify the insertions
+SELECT '✅ Test properties added successfully!' AS status;
+
+SELECT '🏠 Properties in Sandton:' AS info;
+SELECT id, title, propertyType, bedrooms, bathrooms, area, CONCAT('R', FORMAT(price, 0)) as price, suburb
+FROM properties 
+WHERE suburb = 'Sandton'
+ORDER BY id;

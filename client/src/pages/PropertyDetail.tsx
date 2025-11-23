@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useRoute, useLocation } from 'wouter';
 import { ListingNavbar } from '@/components/ListingNavbar';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
@@ -46,6 +47,9 @@ import { BondCalculator } from '@/components/BondCalculator';
 import PropertyCard from '@/components/PropertyCard';
 import { SidebarContactForm } from '@/components/property/SidebarContactForm';
 import { ResponsiveHighlights } from '@/components/ResponsiveHighlights';
+import { NearbyLandmarks } from '@/components/property/NearbyLandmarks';
+import { SuburbInsights } from '@/components/property/SuburbInsights';
+import { LocalityGuide } from '@/components/property/LocalityGuide';
 
 const amenityIcons: Record<string, any> = {
   parking: Car,
@@ -129,9 +133,34 @@ export default function PropertyDetail() {
   }
 
   const { property, images, agent } = data;
-  const amenitiesList = property.amenities ? JSON.parse(property.amenities) : [];
+  
+  // Safely parse amenities with error handling
+  let amenitiesList:string[] = [];
+  try {
+    if (property.amenities) {
+      amenitiesList = typeof property.amenities === 'string' 
+        ? JSON.parse(property.amenities) 
+        : property.amenities;
+    }
+  } catch (error) {
+    console.error('Error parsing amenities:', error);
+    amenitiesList = [];
+  }
+  
   // Use highlights if available (from features/amenities)
-  const highlights = property.features ? JSON.parse(property.features) : amenitiesList;
+  let highlights: string[] = [];
+  try {
+    if (property.features) {
+      highlights = typeof property.features === 'string' 
+        ? JSON.parse(property.features) 
+        : property.features;
+    } else {
+      highlights = amenitiesList;
+    }
+  } catch (error) {
+    console.error('Error parsing features:', error);
+    highlights = amenitiesList;
+  }
   
   const description = property.description || '';
   const shouldTruncate = description.length > 300;
@@ -331,7 +360,7 @@ export default function PropertyDetail() {
               <CardHeader className="bg-slate-50/50 border-b border-slate-100">
                 <CardTitle className="text-xl font-bold text-slate-900">About This Property</CardTitle>
               </CardHeader>
-              <CardContent className="p-6">
+              <CardContent className="p-4">
                 <p className="text-slate-600 leading-relaxed whitespace-pre-line">
                   {displayDescription}
                 </p>
@@ -352,69 +381,69 @@ export default function PropertyDetail() {
               <CardHeader className="bg-slate-50/50 border-b border-slate-100">
                 <CardTitle className="text-xl font-bold text-slate-900">Property Features & Specifications</CardTitle>
               </CardHeader>
-              <CardContent className="p-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  <div className="flex items-start gap-3 p-3 bg-slate-50 rounded-lg">
+              <CardContent className="p-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                  <div className="flex items-start gap-2 p-2.5 bg-slate-50 rounded-lg">
                     <Home className="h-5 w-5 text-orange-500 mt-0.5" />
                     <div>
                       <p className="text-sm text-slate-500">Ownership Type</p>
                       <p className="font-semibold text-slate-900">Freehold</p>
                     </div>
                   </div>
-                  <div className="flex items-start gap-3 p-3 bg-slate-50 rounded-lg">
+                  <div className="flex items-start gap-2 p-2.5 bg-slate-50 rounded-lg">
                     <Zap className="h-5 w-5 text-orange-500 mt-0.5" />
                     <div>
                       <p className="text-sm text-slate-500">Power Backup</p>
                       <p className="font-semibold text-slate-900">Full Backup</p>
                     </div>
                   </div>
-                  <div className="flex items-start gap-3 p-3 bg-slate-50 rounded-lg">
+                  <div className="flex items-start gap-2 p-2.5 bg-slate-50 rounded-lg">
                     <Shield className="h-5 w-5 text-orange-500 mt-0.5" />
                     <div>
                       <p className="text-sm text-slate-500">Security</p>
                       <p className="font-semibold text-slate-900">24/7 Security</p>
                     </div>
                   </div>
-                  <div className="flex items-start gap-3 p-3 bg-slate-50 rounded-lg">
+                  <div className="flex items-start gap-2 p-2.5 bg-slate-50 rounded-lg">
                     <Droplets className="h-5 w-5 text-orange-500 mt-0.5" />
                     <div>
                       <p className="text-sm text-slate-500">Water Supply</p>
                       <p className="font-semibold text-slate-900">Municipal</p>
                     </div>
                   </div>
-                  <div className="flex items-start gap-3 p-3 bg-slate-50 rounded-lg">
+                  <div className="flex items-start gap-2 p-2.5 bg-slate-50 rounded-lg">
                     <Wifi className="h-5 w-5 text-orange-500 mt-0.5" />
                     <div>
                       <p className="text-sm text-slate-500">Internet</p>
                       <p className="font-semibold text-slate-900">Fiber Ready</p>
                     </div>
                   </div>
-                  <div className="flex items-start gap-3 p-3 bg-slate-50 rounded-lg">
+                  <div className="flex items-start gap-2 p-2.5 bg-slate-50 rounded-lg">
                     <Building2 className="h-5 w-5 text-orange-500 mt-0.5" />
                     <div>
                       <p className="text-sm text-slate-500">Flooring</p>
                       <p className="font-semibold text-slate-900">Tiled</p>
                     </div>
                   </div>
-                  <div className="flex items-start gap-3 p-3 bg-slate-50 rounded-lg">
+                  <div className="flex items-start gap-2 p-2.5 bg-slate-50 rounded-lg">
                     <Car className="h-5 w-5 text-orange-500 mt-0.5" />
                     <div>
                       <p className="text-sm text-slate-500">Parking Type</p>
                       <p className="font-semibold text-slate-900">Covered Garage</p>
                     </div>
                   </div>
-                  <div className="flex items-start gap-3 p-3 bg-slate-50 rounded-lg">
+                  <div className="flex items-start gap-2 p-2.5 bg-slate-50 rounded-lg">
                     <CheckCircle2 className="h-5 w-5 text-orange-500 mt-0.5" />
                     <div>
                       <p className="text-sm text-slate-500">Pet Friendly</p>
                       <p className="font-semibold text-slate-900">Yes</p>
                     </div>
                   </div>
-                  <div className="flex items-start gap-3 p-3 bg-slate-50 rounded-lg">
+                  <div className="flex items-start gap-2 p-2.5 bg-slate-50 rounded-lg">
                     <Zap className="h-5 w-5 text-orange-500 mt-0.5" />
                     <div>
-                      <p className="text-sm text-slate-500">Energy Efficiency</p>
-                      <p className="font-semibold text-slate-900">A+ Rated</p>
+                      <p className="text-sm text-slate-500">Electricity</p>
+                      <p className="font-semibold text-slate-900">Prepaid</p>
                     </div>
                   </div>
                 </div>
@@ -422,347 +451,192 @@ export default function PropertyDetail() {
             </Card>
 
             {/* 2.3 Agent Overview */}
-            <Card className="border-slate-200 shadow-sm">
-              <CardHeader className="bg-slate-50/50 border-b border-slate-100">
-                <CardTitle className="text-xl font-bold text-slate-900">Agent Overview</CardTitle>
-              </CardHeader>
-              <CardContent className="p-6">
-                <div className="flex flex-col md:flex-row gap-6">
-                  <div className="w-20 h-20 rounded-full bg-slate-100 overflow-hidden border-2 border-slate-200 shrink-0">
-                    {agent?.image ? (
-                      <img src={agent.image} alt={agent.name} className="w-full h-full object-cover" />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center bg-slate-200 text-slate-500 font-bold text-xl">
-                        {agent?.name?.charAt(0) || 'A'}
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="text-lg font-bold text-slate-900">{agent?.name || 'Property Agent'}</h3>
-                    <p className="text-slate-500 text-sm mb-2">Real Estate Portal Agent</p>
-                    <div className="grid grid-cols-2 gap-4 mb-4">
-                      <div>
-                        <p className="text-sm text-slate-500">Experience</p>
-                        <p className="font-semibold text-slate-900">5+ Years</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-slate-500">Total Listings</p>
-                        <p className="font-semibold text-slate-900">120+</p>
-                      </div>
+            {/* 2.3 Agent Overview */}
+            <div className="bg-slate-50 rounded-xl p-6 border border-slate-200 shadow-sm">
+              <div className="flex items-center gap-4 mb-6 pb-4 border-b border-slate-200">
+                <h3 className="text-xl font-bold text-slate-900">Agent Overview</h3>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                {/* Left Column: Agent Profile Card */}
+                <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-100">
+                  {/* Header Area */}
+                  <div className="flex items-center gap-4 mb-6">
+                    <div className="w-16 h-16 rounded-full bg-slate-100 overflow-hidden border-2 border-slate-200 shrink-0">
+                      {agent?.image ? (
+                        <img src={agent.image} alt={agent.name} className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center bg-slate-200 text-slate-500 font-bold text-xl">
+                          {agent?.name?.charAt(0) || 'A'}
+                        </div>
+                      )}
                     </div>
-                    
-                    {/* Contact Form in Agent Section */}
-                    <div className="space-y-3 mt-4 p-4 bg-slate-50 rounded-lg">
-                      <input type="text" placeholder="Your Name" className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm" />
-                      <input type="email" placeholder="Your Email" className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm" />
-                      <input type="tel" placeholder="Your Phone" className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm" />
-                      <Button className="w-full bg-green-500 hover:bg-green-600 text-white">
-                        <span className="mr-2">💬</span> WhatsApp Agent
-                      </Button>
+                    <div>
+                      <h4 className="text-lg font-bold text-slate-900">{agent?.name || 'Property Agent'}</h4>
+                      <Badge className="bg-orange-500 hover:bg-orange-600 text-white border-none rounded-full px-3 py-0.5 text-xs font-medium mt-1">
+                        PRO AGENT
+                      </Badge>
                     </div>
                   </div>
+
+                  {/* Stats Row */}
+                  <div className="flex gap-4 mb-6">
+                    <div className="flex-1 bg-slate-50 rounded-lg p-3 text-center border border-slate-100">
+                      <div className="flex items-center justify-center gap-2 mb-1">
+                        <div className="text-3xl font-bold text-orange-500">
+                          {agent?.experience || 9}
+                        </div>
+                      </div>
+                      <p className="text-xs text-slate-500 font-medium">years of Experience</p>
+                    </div>
+                    <div className="flex-1 bg-slate-50 rounded-lg p-3 text-center border border-slate-100">
+                      <div className="flex items-center justify-center gap-2 mb-1">
+                        <div className="text-3xl font-bold text-orange-500">
+                          {agent?.totalListings || 54}
+                        </div>
+                      </div>
+                      <p className="text-xs text-slate-500 font-medium">Total Listings</p>
+                    </div>
+                  </div>
+
+                  {/* Current Listings Button */}
+                  <Button variant="outline" className="w-full justify-between h-12 rounded-lg border-slate-200 hover:bg-slate-50 hover:text-slate-900 group">
+                    <span className="font-medium text-slate-700">Current Listings</span>
+                    <div className="flex items-center gap-2">
+                      <span className="bg-slate-100 text-slate-600 text-xs font-bold px-2 py-1 rounded-full group-hover:bg-white">
+                        {agent?.totalListings || 53}
+                      </span>
+                      <ChevronRight className="h-4 w-4 text-slate-400" />
+                    </div>
+                  </Button>
                 </div>
-              </CardContent>
-            </Card>
+
+                {/* Right Column: Contact Form */}
+                <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-100 flex flex-col h-full">
+                  <div className="space-y-4 flex-1">
+                    <div className="space-y-1">
+                      <Input 
+                        placeholder="Name" 
+                        className="bg-slate-50 border-slate-200 focus:border-orange-500 focus:ring-orange-500/20 h-11" 
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Input 
+                        type="email" 
+                        placeholder="Email ID" 
+                        className="bg-slate-50 border-slate-200 focus:border-orange-500 focus:ring-orange-500/20 h-11" 
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Input 
+                        type="tel" 
+                        placeholder="Phone Number" 
+                        className="bg-slate-50 border-slate-200 focus:border-orange-500 focus:ring-orange-500/20 h-11" 
+                      />
+                    </div>
+                  </div>
+                  
+                  <Button className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold h-12 rounded-lg mt-6 shadow-sm">
+                    Whatsapp Agent
+                  </Button>
+                </div>
+              </div>
+            </div>
 
             {/* 2.4 Nearby Landmarks */}
+            <NearbyLandmarks property={property} />
+
+            {/* 2.5 Suburb Reviews & Insights */}
             <Card className="border-slate-200 shadow-sm">
-              <CardHeader className="bg-slate-50/50 border-b border-slate-100">
-                <CardTitle className="text-xl font-bold text-slate-900">Nearby Landmarks</CardTitle>
-              </CardHeader>
               <CardContent className="p-6">
-                {/* Map */}
-                <div className="rounded-xl overflow-hidden border border-slate-200 h-[300px] mb-4">
-                  {property.latitude && property.longitude ? (
-                    <GooglePropertyMap
-                      center={{ lat: property.latitude, lng: property.longitude }}
-                      zoom={14}
-                      properties={[
-                        {
-                          id: property.id,
-                          title: property.title,
-                          price: property.price,
-                          propertyType: property.propertyType,
-                          listingType: property.listingType,
-                          latitude: property.latitude,
-                          longitude: property.longitude,
-                          address: property.address,
-                          city: property.city,
-                          bedrooms: property.bedrooms,
-                          bathrooms: property.bathrooms,
-                          area: property.area,
-                        },
-                      ]}
-                      showControls={false}
-                      showFilters={false}
-                      className="h-full w-full"
-                    />
-                  ) : (
-                    <div className="h-full w-full bg-slate-100 flex items-center justify-center text-slate-400">
-                      Map not available
-                    </div>
-                  )}
-                </div>
-
-                {/* Category Tabs */}
-                <div className="flex gap-2 mb-4 flex-wrap">
-                  <Badge className="bg-orange-500 text-white cursor-pointer">Education</Badge>
-                  <Badge variant="outline" className="cursor-pointer">Health</Badge>
-                  <Badge variant="outline" className="cursor-pointer">Transport</Badge>
-                  <Badge variant="outline" className="cursor-pointer">Shopping</Badge>
-                  <Badge variant="outline" className="cursor-pointer">Entertainment</Badge>
-                </div>
-
-                {/* Landmarks List */}
-                <div className="space-y-2">
-                  <div className="flex justify-between items-center p-3 bg-slate-50 rounded-lg">
-                    <span className="text-slate-900 font-medium">Reddam House School</span>
-                    <span className="text-sm text-slate-500">1.2 km</span>
-                  </div>
-                  <div className="flex justify-between items-center p-3 bg-slate-50 rounded-lg">
-                    <span className="text-slate-900 font-medium">St Peter's College</span>
-                    <span className="text-sm text-slate-500">2.5 km</span>
-                  </div>
-                  <div className="flex justify-between items-center p-3 bg-slate-50 rounded-lg">
-                    <span className="text-slate-900 font-medium">University of Johannesburg</span>
-                    <span className="text-sm text-slate-500">5.1 km</span>
-                  </div>
-                </div>
-
-                <Button variant="outline" className="w-full mt-4">View More</Button>
+                <SuburbInsights 
+                  suburbName={property.suburb || property.city} 
+                  isDevelopment={!!property.developmentId}
+                />
               </CardContent>
             </Card>
 
-            {/* 2.5 Ratings & Local Reviews Summary */}
-            <Card className="border-slate-200 shadow-sm">
-              <CardHeader className="bg-slate-50/50 border-b border-slate-100">
-                <CardTitle className="text-xl font-bold text-slate-900">Location Ratings & Reviews</CardTitle>
-              </CardHeader>
-              <CardContent className="p-6">
-                <div className="mb-4">
-                  <h4 className="text-lg font-semibold text-slate-900 mb-2">{property.city}, {property.province}</h4>
-                  <div className="flex items-center gap-2 mb-4">
-                    <div className="flex gap-1">
-                      {[1, 2, 3, 4, 5].map((star) => (
-                        <div key={star} className="w-5 h-5 bg-amber-400 rounded-sm" />
-                      ))}
-                    </div>
-                    <span className="text-sm text-slate-600">(4.5 out of 5)</span>
-                  </div>
-                </div>
-
-                {/* Feature Ratings */}
-                <div className="space-y-3 mb-6">
-                  <div>
-                    <div className="flex justify-between text-sm mb-1">
-                      <span className="text-slate-600">Connectivity</span>
-                      <span className="font-semibold text-slate-900">4.8/5</span>
-                    </div>
-                    <div className="w-full bg-slate-200 rounded-full h-2">
-                      <div className="bg-orange-500 h-2 rounded-full" style={{width: '96%'}}></div>
-                    </div>
-                  </div>
-                  <div>
-                    <div className="flex justify-between text-sm mb-1">
-                      <span className="text-slate-600">Safety & Security</span>
-                      <span className="font-semibold text-slate-900">4.6/5</span>
-                    </div>
-                    <div className="w-full bg-slate-200 rounded-full h-2">
-                      <div className="bg-orange-500 h-2 rounded-full" style={{width: '92%'}}></div>
-                    </div>
-                  </div>
-                  <div>
-                    <div className="flex justify-between text-sm mb-1">
-                      <span className="text-slate-600">Infrastructure</span>
-                      <span className="font-semibold text-slate-900">4.3/5</span>
-                    </div>
-                    <div className="w-full bg-slate-200 rounded-full h-2">
-                      <div className="bg-orange-500 h-2 rounded-full" style={{width: '86%'}}></div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Good Things & Improvements */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="p-4 bg-green-50 rounded-lg">
-                    <h5 className="font-semibold text-green-900 mb-2">Good Things</h5>
-                    <ul className="text-sm text-green-700 space-y-1">
-                      <li>• Great connectivity to highways</li>
-                      <li>• Close to shopping centers</li>
-                      <li>• Good schools nearby</li>
-                    </ul>
-                  </div>
-                  <div className="p-4 bg-amber-50 rounded-lg">
-                    <h5 className="font-semibold text-amber-900 mb-2">Needs Improvement</h5>
-                    <ul className="text-sm text-amber-700 space-y-1">
-                      <li>• Public transport options</li>
-                      <li>• More parks needed</li>
-                    </ul>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* 2.6 Resident Reviews */}
-            <Card className="border-slate-200 shadow-sm">
-              <CardHeader className="bg-slate-50/50 border-b border-slate-100">
-                <CardTitle className="text-xl font-bold text-slate-900">Resident Reviews</CardTitle>
-              </CardHeader>
-              <CardContent className="p-6">
-                <div className="space-y-4">
-                  {/* Review 1 */}
-                  <div className="p-4 border border-slate-200 rounded-lg">
-                    <div className="flex items-start justify-between mb-3">
-                      <div>
-                        <h5 className="font-semibold text-slate-900">John Smith</h5>
-                        <p className="text-sm text-slate-500">Resident for 2 years</p>
-                      </div>
-                      <div className="flex gap-1">
-                        {[1, 2, 3, 4, 5].map((star) => (
-                          <div key={star} className="w-4 h-4 bg-amber-400 rounded-sm" />
-                        ))}
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4 mb-3">
-                      <div>
-                        <p className="text-xs text-green-600 font-medium mb-1">Positive</p>
-                        <p className="text-sm text-slate-600">Great neighborhood, quiet area</p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-amber-600 font-medium mb-1">Negative</p>
-                        <p className="text-sm text-slate-600">Could use more street lighting</p>
-                      </div>
-                    </div>
-                    <Button variant="link" className="p-0 h-auto text-blue-600 text-sm">Read more</Button>
-                  </div>
-
-                  {/* Review 2 */}
-                  <div className="p-4 border border-slate-200 rounded-lg">
-                    <div className="flex items-start justify-between mb-3">
-                      <div>
-                        <h5 className="font-semibold text-slate-900">Sarah Johnson</h5>
-                        <p className="text-sm text-slate-500">Resident for 3 years</p>
-                      </div>
-                      <div className="flex gap-1">
-                        {[1, 2, 3, 4].map((star) => (
-                          <div key={star} className="w-4 h-4 bg-amber-400 rounded-sm" />
-                        ))}
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4 mb-3">
-                      <div>
-                        <p className="text-xs text-green-600 font-medium mb-1">Positive</p>
-                        <p className="text-sm text-slate-600">Excellent schools, safe area</p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-amber-600 font-medium mb-1">Negative</p>
-                        <p className="text-sm text-slate-600">Traffic during peak hours</p>
-                      </div>
-                    </div>
-                    <Button variant="link" className="p-0 h-auto text-blue-600 text-sm">Read more</Button>
-                  </div>
-                </div>
-
-                <Button variant="outline" className="w-full mt-4">View All Reviews</Button>
-              </CardContent>
-            </Card>
+            {/* 2.6 Locality Guide */}
+            <LocalityGuide 
+              suburb={property.suburb || property.city} 
+              city={property.city}
+            />
           </div>
 
           {/* RIGHT COLUMN (4 columns) */}
-          <div className="col-span-12 lg:col-span-4 space-y-6">
-            
-            {/* 2.7 Why You Should Consider This Property */}
-            <Card className="border-slate-200 shadow-sm">
-              <CardHeader className="bg-slate-50/50 border-b border-slate-100">
-                <CardTitle className="text-lg font-bold text-slate-900">Why Consider This Property</CardTitle>
-              </CardHeader>
-              <CardContent className="p-6">
-                <div className="space-y-3 mb-4">
-                  <div className="flex items-start gap-3">
-                    <CheckCircle2 className="h-5 w-5 text-[#005ca8] mt-0.5 shrink-0" />
-                    <p className="text-sm text-slate-700">Fresh construction with modern amenities</p>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <CheckCircle2 className="h-5 w-5 text-[#005ca8] mt-0.5 shrink-0" />
-                    <p className="text-sm text-slate-700">Prime location with excellent connectivity</p>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <CheckCircle2 className="h-5 w-5 text-[#005ca8] mt-0.5 shrink-0" />
-                    <p className="text-sm text-slate-700">Top-rated schools and hospitals nearby</p>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <CheckCircle2 className="h-5 w-5 text-[#005ca8] mt-0.5 shrink-0" />
-                    <p className="text-sm text-slate-700">High ROI potential in growing area</p>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <CheckCircle2 className="h-5 w-5 text-[#005ca8] mt-0.5 shrink-0" />
-                    <p className="text-sm text-slate-700">Gated community with 24/7 security</p>
-                  </div>
-                </div>
-                <Button className="w-full bg-orange-500 hover:bg-orange-600 text-white">
-                  Request More Info
-                </Button>
-              </CardContent>
-            </Card>
-
-            {/* 2.8 Contact Seller Form */}
-            <Card className="border-slate-200 shadow-lg">
-              <div className="bg-[#005ca8] p-4 text-white rounded-t-xl">
-                <h3 className="font-bold text-lg">Contact Seller</h3>
+          <div className="col-span-12 lg:col-span-4">
+            {/* Buyability Calculator - Sticky */}
+            <div className="sticky top-24 space-y-4">
+              <BondCalculator propertyPrice={property.price} showTransferCosts={true} />
+              
+              {/* Disclaimer */}
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                <p className="text-xs text-yellow-800">
+                  <strong>Disclaimer:</strong> These calculations are estimates only. Actual bond approval, interest rates, and transfer costs may vary based on individual circumstances and bank policies. Consult with a bond originator or financial advisor for accurate figures.
+                </p>
               </div>
-              <CardContent className="p-6">
-                <SidebarContactForm />
-              </CardContent>
-            </Card>
-
-            {/* 2.9 Loan Estimate / Promotional Card */}
-            <Card className="border-slate-200 shadow-sm">
-              <CardHeader className="bg-slate-50/50 border-b border-slate-100">
-                <CardTitle className="text-base font-semibold text-slate-800 flex items-center gap-2">
-                  <Calculator className="h-4 w-4 text-blue-600" />
-                  Home Loan Estimate
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-4">
-                <BondCalculator defaultPrice={property.price} />
-                <div className="mt-4 p-3 bg-blue-50 rounded-lg">
-                  <h5 className="font-semibold text-blue-900 text-sm mb-2">Benefits</h5>
-                  <ul className="text-xs text-blue-700 space-y-1">
-                    <li>• Competitive interest rates</li>
-                    <li>• Quick approval process</li>
-                    <li>• Flexible repayment options</li>
-                  </ul>
-                  <Button variant="outline" className="w-full mt-3 border-blue-300 text-blue-700 hover:bg-blue-100 text-sm">
-                    Check Eligibility Now
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+            </div>
           </div>
         </div>
 
         {/* SECTION 3 - FULL WIDTH FOOTER - Similar Properties */}
         {similarProperties.length > 0 && (
           <div className="mt-12">
-            <h3 className="text-2xl font-bold text-slate-900 mb-6">Similar Properties in This Area</h3>
+            <h3 className="text-2xl font-bold text-slate-900 mb-6">
+              Property Listings in {property.suburb || property.city}
+            </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               {similarProperties.map((prop) => (
                 <div
                   key={prop.id}
                   onClick={() => setLocation(`/property/${prop.id}`)}
-                  className="cursor-pointer hover:scale-[1.02] transition-transform duration-300"
+                  className="group cursor-pointer bg-white rounded-xl border border-slate-200 shadow-sm hover:shadow-lg transition-all overflow-hidden"
                 >
-                  <PropertyCard
-                    id={prop.id.toString()}
-                    title={prop.title}
-                    price={prop.price}
-                    location={`${prop.city}, ${prop.province}`}
-                    image={prop.mainImage || '/placeholder-property.jpg'}
-                    description={prop.description?.slice(0, 100)}
-                    bedrooms={prop.bedrooms}
-                    bathrooms={prop.bathrooms}
-                    area={prop.area}
-                  />
+                  {/* Image */}
+                  <div className="relative h-48 overflow-hidden bg-slate-100">
+                    <img
+                      src={prop.mainImage || '/placeholder-property.jpg'}
+                      alt={prop.title}
+                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                    />
+                  </div>
+
+                  {/* Content */}
+                  <div className="p-4 space-y-3">
+                    {/* Title */}
+                    <h4 className="font-bold text-slate-900 line-clamp-1 text-base">
+                      {prop.title}
+                    </h4>
+
+                    {/* Property Details */}
+                    <div className="grid grid-cols-2 gap-2 text-sm">
+                      <div className="flex items-center gap-1.5 text-slate-600">
+                        <Square className="h-4 w-4 text-slate-400" />
+                        <span>{prop.area} m²</span>
+                      </div>
+                      <div className="flex items-center gap-1.5 text-slate-600">
+                        <Bed className="h-4 w-4 text-slate-400" />
+                        <span>{prop.bedrooms || 0} Beds</span>
+                      </div>
+                      <div className="flex items-center gap-1.5 text-slate-600">
+                        <Bath className="h-4 w-4 text-slate-400" />
+                        <span>{prop.bathrooms || 0} Baths</span>
+                      </div>
+                      {(prop.propertyType === 'house' || prop.propertyType === 'villa') && (
+                        <div className="flex items-center gap-1.5 text-slate-600">
+                          <Square className="h-4 w-4 text-slate-400" />
+                          <span>{prop.area ? Math.round(prop.area * 0.3) : 0} m² Yard</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Price */}
+                    <div className="pt-2 border-t border-slate-100">
+                      <p className="text-xl font-bold text-[#005ca8]">
+                        R {prop.price.toLocaleString()}
+                      </p>
+                    </div>
+                  </div>
                 </div>
               ))}
             </div>

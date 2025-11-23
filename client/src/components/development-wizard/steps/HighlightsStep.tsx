@@ -4,7 +4,8 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
-import { X } from 'lucide-react';
+import { Card } from '@/components/ui/card';
+import { X, Sparkles, FileText, Calendar, Plus } from 'lucide-react';
 import { useState } from 'react';
 
 const commonAmenities = [
@@ -61,114 +62,130 @@ export function HighlightsStep() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold text-slate-900 mb-2">Development Highlights</h2>
-        <p className="text-slate-600">Describe your development and its key features</p>
-      </div>
-
       {/* Description */}
-      <div className="space-y-2">
-        <Label htmlFor="description">
-          Description <span className="text-red-500">*</span>
-        </Label>
-        <Textarea
-          id="description"
-          placeholder="Describe the development, its location, and what makes it special..."
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          rows={5}
-        />
-        <p className="text-sm text-slate-500">{description.length} characters</p>
-      </div>
+      <Card className="bg-white/70 backdrop-blur-sm rounded-[1.5rem] border-white/40 shadow-[0_8px_30px_rgba(8,_112,_184,_0.06)] p-6">
+        <div className="flex items-center gap-2 mb-4">
+          <FileText className="w-5 h-5 text-blue-600" />
+          <h3 className="text-lg font-bold text-slate-800">Description</h3>
+        </div>
+        
+        <div className="space-y-2">
+          <Label htmlFor="description" className="text-slate-700">
+            About the Development <span className="text-red-500">*</span>
+          </Label>
+          <Textarea
+            id="description"
+            placeholder="Describe the development, its location, and what makes it special..."
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            rows={5}
+            className="resize-none"
+          />
+          <p className="text-xs text-slate-500 text-right">{description.length} characters</p>
+        </div>
+      </Card>
 
       {/* Development Details */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="totalUnits">Total Units in Development</Label>
-          <Input
-            id="totalUnits"
-            type="number"
-            min="0"
-            placeholder="e.g., 120"
-            value={totalUnits || ''}
-            onChange={(e) => setTotalUnits(parseInt(e.target.value) || 0)}
-          />
+      <Card className="bg-white/70 backdrop-blur-sm rounded-[1.5rem] border-white/40 shadow-[0_8px_30px_rgba(8,_112,_184,_0.06)] p-6">
+        <div className="flex items-center gap-2 mb-4">
+          <Calendar className="w-5 h-5 text-indigo-600" />
+          <h3 className="text-lg font-bold text-slate-800">Key Details</h3>
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="completionDate">Expected Completion Date</Label>
-          <Input
-            id="completionDate"
-            type="date"
-            value={completionDate || ''}
-            onChange={(e) => setCompletionDate(e.target.value)}
-          />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="totalUnits" className="text-slate-700">Total Units in Development</Label>
+            <Input
+              id="totalUnits"
+              type="number"
+              min="0"
+              placeholder="e.g., 120"
+              value={totalUnits || ''}
+              onChange={(e) => setTotalUnits(parseInt(e.target.value) || 0)}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="completionDate" className="text-slate-700">Expected Completion Date</Label>
+            <Input
+              id="completionDate"
+              type="date"
+              value={completionDate || ''}
+              onChange={(e) => setCompletionDate(e.target.value)}
+            />
+          </div>
         </div>
-      </div>
+      </Card>
 
       {/* Amenities */}
-      <div className="space-y-3">
-        <Label>Amenities & Features</Label>
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-          {commonAmenities.map((amenity) => (
-            <div key={amenity} className="flex items-center space-x-2">
-              <Checkbox
-                id={amenity}
-                checked={amenities.includes(amenity)}
-                onCheckedChange={() => toggleAmenity(amenity)}
-              />
-              <Label
-                htmlFor={amenity}
-                className="text-sm font-normal cursor-pointer"
-              >
-                {amenity}
-              </Label>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Custom Highlights */}
-      <div className="space-y-3">
-        <Label htmlFor="highlights">Additional Highlights</Label>
-        <div className="flex gap-2">
-          <Input
-            id="highlights"
-            placeholder="e.g., North-East Facing, Near Shopping Mall"
-            value={newHighlight}
-            onChange={(e) => setNewHighlight(e.target.value)}
-            onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addHighlight())}
-          />
-          <button
-            type="button"
-            onClick={addHighlight}
-            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
-          >
-            Add
-          </button>
+      <Card className="bg-white/70 backdrop-blur-sm rounded-[1.5rem] border-white/40 shadow-[0_8px_30px_rgba(8,_112,_184,_0.06)] p-6">
+        <div className="flex items-center gap-2 mb-4">
+          <Sparkles className="w-5 h-5 text-purple-600" />
+          <h3 className="text-lg font-bold text-slate-800">Amenities & Features</h3>
         </div>
 
-        {highlights.length > 0 && (
-          <div className="flex flex-wrap gap-2 mt-3">
-            {highlights.map((highlight, index) => (
-              <Badge key={index} variant="secondary" className="px-3 py-1">
-                {highlight}
-                <button
-                  onClick={() => removeHighlight(highlight)}
-                  className="ml-2 hover:text-red-600"
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+            {commonAmenities.map((amenity) => (
+              <div key={amenity} className="flex items-center space-x-2 p-2 rounded-lg hover:bg-slate-50 transition-colors">
+                <Checkbox
+                  id={amenity}
+                  checked={amenities.includes(amenity)}
+                  onCheckedChange={() => toggleAmenity(amenity)}
+                  className="border-slate-300 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
+                />
+                <Label
+                  htmlFor={amenity}
+                  className="text-sm font-normal cursor-pointer text-slate-700"
                 >
-                  <X className="h-3 w-3" />
-                </button>
-              </Badge>
+                  {amenity}
+                </Label>
+              </div>
             ))}
           </div>
-        )}
-      </div>
 
-      <div className="pt-4 border-t border-slate-200">
-        <p className="text-sm text-slate-600">
-          Highlight what makes your development unique and attractive to buyers
-        </p>
+          {/* Custom Highlights */}
+          <div className="space-y-3 pt-4 border-t border-slate-100">
+            <Label htmlFor="highlights" className="text-slate-700 font-medium">Additional Highlights</Label>
+            <div className="flex gap-2">
+              <Input
+                id="highlights"
+                placeholder="e.g., North-East Facing, Near Shopping Mall"
+                value={newHighlight}
+                onChange={(e) => setNewHighlight(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addHighlight())}
+              />
+              <button
+                type="button"
+                onClick={addHighlight}
+                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors flex items-center gap-2"
+              >
+                <Plus className="w-4 h-4" /> Add
+              </button>
+            </div>
+
+            {highlights.length > 0 && (
+              <div className="flex flex-wrap gap-2 mt-3">
+                {highlights.map((highlight, index) => (
+                  <Badge key={index} variant="secondary" className="px-3 py-1 bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-100">
+                    {highlight}
+                    <button
+                      onClick={() => removeHighlight(highlight)}
+                      className="ml-2 hover:text-red-600 transition-colors"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </Badge>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </Card>
+
+      <div className="flex items-center gap-2 text-sm text-slate-500 px-2">
+        <Sparkles className="w-4 h-4" />
+        <p>Highlight what makes your development unique and attractive to buyers</p>
       </div>
     </div>
   );

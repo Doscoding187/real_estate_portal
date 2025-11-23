@@ -90,5 +90,18 @@ export function normalizePropertyForUI(raw: any): PropertyCardProps | null {
     badges: badges.length > 0 ? badges : undefined,
     imageCount,
     videoCount,
+    highlights: (() => {
+      const source = raw.features || raw.amenities || raw.highlights;
+      if (Array.isArray(source)) return source;
+      if (typeof source === 'string') {
+        try {
+          const parsed = JSON.parse(source);
+          return Array.isArray(parsed) ? parsed : undefined;
+        } catch (e) {
+          return undefined;
+        }
+      }
+      return undefined;
+    })(),
   };
 }

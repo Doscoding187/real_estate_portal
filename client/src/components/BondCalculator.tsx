@@ -16,6 +16,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
+import { Button } from '@/components/ui/button';
 import { Calculator, TrendingUp, Home, DollarSign } from 'lucide-react';
 import {
   calculateBondRepayment,
@@ -28,6 +29,7 @@ import {
   type SABank,
   type BondTerm,
 } from '@/lib/bond-calculator';
+import { trpc } from '@/lib/trpc';
 
 interface BondCalculatorProps {
   propertyPrice: number;
@@ -42,12 +44,15 @@ export function BondCalculator({
   showTransferCosts = false,
   compact = false,
 }: BondCalculatorProps) {
-  const [bank, setBank] = useState<SABank>('Standard Bank');
-  const [depositPercentage, setDepositPercentage] = useState(10);
+  // Fetch SARB Prime Rate from database
+  const { data: sarbData } = trpc.settings.getSARBPrimeRate.useQuery();
+  const SARB_PRIME_RATE = sarbData?.rate || 10.50; // Fallback to 10.50 if not loaded
+  
+  const [depositPercentage, setDepositPercentage] = useState(0); // Default to 0% for 100% bond
   const [termYears, setTermYears] = useState<BondTerm>(20);
   const [customRate, setCustomRate] = useState<number | null>(null);
 
-  const interestRate = customRate ?? getBankRate(bank);
+  const interestRate = customRate ?? SARB_PRIME_RATE;
 
   const calculation = calculateBondRepayment({
     propertyPrice,
@@ -55,6 +60,9 @@ export function BondCalculator({
     interestRate,
     termYears,
   });
+
+  // Calculate required gross monthly income (banks typically require repayment to be max 30% of gross income)
+  const requiredGrossIncome = Math.ceil(calculation.monthlyRepayment / 0.3);
 
   const transferCosts = showTransferCosts ? calculateTransferCosts(propertyPrice) : null;
 
@@ -91,8 +99,8 @@ export function BondCalculator({
             <Calculator className="h-6 w-6 text-green-600" />
           </div>
           <div>
-            <h3 className="text-xl font-bold">Bond Repayment Calculator</h3>
-            <p className="text-sm text-gray-600">Calculate your estimated monthly bond repayment</p>
+            <h3 className="text-xl font-bold">Buyability Calculator</h3>
+            <p className="text-sm text-gray-600">Calculate your property affordability and costs</p>
           </div>
         </div>
 
@@ -113,27 +121,10 @@ export function BondCalculator({
 
         {/* Calculator Inputs */}
         <div className="space-y-4">
-          {/* Bank Selection */}
-          <div className="space-y-2">
-            <Label htmlFor="bank">Select Bank</Label>
-            <Select value={bank} onValueChange={value => setBank(value as SABank)}>
-              <SelectTrigger id="bank">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {Object.keys(SA_BANKS).map(bankName => (
-                  <SelectItem key={bankName} value={bankName}>
-                    {bankName}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
           {/* Interest Rate */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <Label htmlFor="rate">Interest Rate</Label>
+              <Label htmlFor="rate">Interest Rate (SARB Prime Rate)</Label>
               <span className="text-sm font-medium text-green-600">
                 {interestRate.toFixed(2)}% p.a.
               </span>
@@ -149,7 +140,7 @@ export function BondCalculator({
               }}
               placeholder="Custom rate (optional)"
             />
-            <p className="text-xs text-gray-500">Current SA Prime Rate: 11.75% p.a. (SARB 2025)</p>
+            <p className="text-xs text-gray-500">Current SA Prime Rate: 10.50% p.a. (SARB Repo: 7.00%)</p>
           </div>
 
           {/* Deposit Percentage */}
@@ -172,7 +163,7 @@ export function BondCalculator({
               className="w-full"
             />
             <div className="flex justify-between text-xs text-gray-500">
-              <span>0%</span>
+              <span>0% (100% Bond)</span>
               <span>50%</span>
             </div>
           </div>
@@ -200,94 +191,82 @@ export function BondCalculator({
 
         <Separator />
 
-        {/* Calculation Results */}
-        <div className="space-y-4">
-          {/* Monthly Repayment - Highlighted */}
-          <div className="bg-gradient-to-br from-green-50 to-blue-50 rounded-lg p-4 border-2 border-green-200">
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-2">
-                <DollarSign className="h-5 w-5 text-green-600" />
-                <span className="font-medium text-gray-700">Monthly Repayment</span>
-              </div>
-              <span className="text-3xl font-bold text-green-600">
-                {formatSARandShort(calculation.monthlyRepayment)}
-              </span>
+        {/* Calculation Results - Compact Grid Layout */}
+        <div className="grid grid-cols-2 gap-3">
+          {/* Loan Amount */}
+          <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
+            <div className="flex items-center gap-1.5 mb-1">
+              <Home className="h-4 w-4 text-blue-600" />
+              <span className="text-xs font-medium text-gray-700">Loan Amount</span>
             </div>
-            <p className="text-xs text-gray-600 text-right">
-              Over {termYears} years at {interestRate.toFixed(2)}% p.a.
+            <div className="text-xl font-bold text-blue-600">
+              {formatSARandShort(calculation.loanAmount)}
+            </div>
+            <p className="text-[10px] text-gray-600 mt-0.5">
+              {depositPercentage}% deposit
             </p>
           </div>
 
-          {/* Loan Details */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="bg-gray-50 rounded-lg p-3">
-              <div className="text-xs text-gray-600 mb-1">Loan Amount</div>
-              <div className="text-lg font-bold text-gray-900">
-                {formatSARandShort(calculation.loanAmount)}
-              </div>
+          {/* Monthly Repayment */}
+          <div className="bg-gradient-to-br from-green-50 to-blue-50 rounded-lg p-3 border-2 border-green-200">
+            <div className="flex items-center gap-1.5 mb-1">
+              <DollarSign className="h-4 w-4 text-green-600" />
+              <span className="text-xs font-medium text-gray-700">Monthly</span>
             </div>
-            <div className="bg-gray-50 rounded-lg p-3">
-              <div className="text-xs text-gray-600 mb-1">Total Interest</div>
-              <div className="text-lg font-bold text-orange-600">
-                {formatSARandShort(calculation.totalInterest)}
-              </div>
+            <div className="text-xl font-bold text-green-600">
+              {formatSARandShort(calculation.monthlyRepayment)}
             </div>
+            <p className="text-[10px] text-gray-600 mt-0.5">
+              {termYears} years @ {interestRate.toFixed(2)}%
+            </p>
           </div>
 
-          <div className="bg-gray-50 rounded-lg p-3">
-            <div className="text-xs text-gray-600 mb-1">Total Repayment</div>
-            <div className="text-lg font-bold text-gray-900">
-              {formatSARandShort(calculation.totalRepayment)}
+          {/* Required Gross Income */}
+          <div className="bg-orange-50 rounded-lg p-3 border border-orange-200">
+            <div className="flex items-center gap-1.5 mb-1">
+              <TrendingUp className="h-4 w-4 text-orange-600" />
+              <span className="text-xs font-medium text-gray-700">Income Needed</span>
             </div>
+            <div className="text-xl font-bold text-orange-600">
+              {formatSARandShort(requiredGrossIncome)}
+            </div>
+            <p className="text-[10px] text-gray-600 mt-0.5">
+              Per month (30% ratio)
+            </p>
           </div>
+
+          {/* Estimated Transfer Costs */}
+          {transferCosts && (
+            <div className="bg-purple-50 rounded-lg p-3 border border-purple-200">
+              <div className="flex items-center gap-1.5 mb-1">
+                <Calculator className="h-4 w-4 text-purple-600" />
+                <span className="text-xs font-medium text-gray-700">Transfer Costs</span>
+              </div>
+              <div className="text-xl font-bold text-purple-600">
+                {formatSARandShort(transferCosts.total)}
+              </div>
+              <p className="text-[10px] text-gray-600 mt-0.5">
+                Incl. duty & fees
+              </p>
+            </div>
+          )}
         </div>
 
-        {/* Transfer Costs */}
-        {showTransferCosts && transferCosts && (
-          <>
-            <Separator />
-            <div className="space-y-3">
-              <div className="flex items-center gap-2">
-                <TrendingUp className="h-5 w-5 text-blue-600" />
-                <h4 className="font-semibold">Estimated Transfer Costs</h4>
-              </div>
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Transfer Duty</span>
-                  <span className="font-medium">
-                    {formatSARandShort(transferCosts.transferDuty)}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Bond Registration</span>
-                  <span className="font-medium">
-                    {formatSARandShort(transferCosts.bondRegistration)}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Attorney Fees</span>
-                  <span className="font-medium">
-                    {formatSARandShort(transferCosts.transferAttorney + transferCosts.bondAttorney)}
-                  </span>
-                </div>
-                <Separator />
-                <div className="flex justify-between font-bold text-base">
-                  <span>Total Transfer Costs</span>
-                  <span className="text-blue-600">{formatSARandShort(transferCosts.total)}</span>
-                </div>
-              </div>
-            </div>
-          </>
-        )}
-
-        {/* Disclaimer */}
-        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
-          <p className="text-xs text-yellow-800">
-            <strong>Disclaimer:</strong> These calculations are estimates only. Actual bond
-            approval, interest rates, and transfer costs may vary based on individual circumstances
-            and bank policies. Consult with a bond originator or financial advisor for accurate
-            figures.
-          </p>
+        {/* Call to Action - Bond Qualification */}
+        <Separator />
+        <div className="bg-gradient-to-br from-orange-50 to-blue-50 rounded-lg p-4 border-2 border-orange-200">
+          <div className="text-center mb-3">
+            <h4 className="text-base font-bold text-slate-900 mb-1">Ready to Buy?</h4>
+            <p className="text-xs text-slate-600">Check your bond qualification with our trusted partners</p>
+          </div>
+          <Button className="w-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-semibold py-6 text-base shadow-lg hover:shadow-xl transition-all">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2">
+              <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+              <polyline points="9 22 9 12 15 12 15 22"/>
+            </svg>
+            Check Bond Qualification
+          </Button>
+          <p className="text-[10px] text-slate-500 text-center mt-2">Free pre-qualification with our bond originator partners</p>
         </div>
       </div>
     </Card>

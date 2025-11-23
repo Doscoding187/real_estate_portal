@@ -1,7 +1,8 @@
-import { Heart, Star } from 'lucide-react';
+import { Heart, Star, MapPin } from 'lucide-react';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { useLocation } from 'wouter';
+import { ResponsiveHighlights } from './ResponsiveHighlights';
 
 export interface DevelopmentCardProps {
   id: string;
@@ -109,7 +110,7 @@ export function DevelopmentCard({
       </div>
 
       {/* Content Section (Right) - 60% width */}
-      <div className="flex-1 p-6 flex flex-col justify-between">
+      <div className="flex-1 p-6 flex flex-col justify-between min-w-0">
         <div>
           {/* Header */}
           <div className="mb-4">
@@ -134,16 +135,17 @@ export function DevelopmentCard({
               )}
             </div>
 
-            <div className="text-slate-600 text-sm mb-3">
+            <div className="flex items-center text-slate-600 text-sm mb-3">
+              <MapPin className="h-3.5 w-3.5 mr-1" />
               {location}
             </div>
           </div>
 
           {/* Unit Types with Pricing */}
-          <div className="flex gap-3 mb-4 flex-wrap">
+          <div className="flex gap-3 mb-4 overflow-x-auto pb-2 -mx-2 px-2 scrollbar-thin scrollbar-thumb-slate-200 scrollbar-track-transparent">
             {unitTypes.map((unit, index) => (
-              <div key={index} className="flex-1 min-w-[140px] border border-slate-200 rounded-lg p-3 hover:border-blue-400 hover:bg-blue-50/50 transition-colors">
-                <div className="text-xs text-slate-600 mb-1">{unit.label}</div>
+              <div key={index} className="flex-none w-[160px] border border-slate-200 rounded-lg p-3 hover:border-blue-400 hover:bg-blue-50/50 transition-colors bg-slate-50/30">
+                <div className="text-xs text-slate-600 mb-1 truncate" title={unit.label}>{unit.label}</div>
                 <div className="text-lg font-bold text-[#1e1b4b]">
                   From {formatPrice(unit.priceFrom)}
                 </div>
@@ -159,26 +161,8 @@ export function DevelopmentCard({
           {/* Highlights */}
           {highlights.length > 0 && (
             <div className="mb-4">
-              <span className="text-sm font-semibold text-slate-700 mr-2">Highlights :</span>
-              <div className="inline-flex flex-wrap gap-2 mt-1">
-                {highlights.slice(0, 2).map((highlight, index) => (
-                  <Badge 
-                    key={index} 
-                    variant="outline" 
-                    className="text-xs bg-slate-50 border-slate-200 text-slate-700"
-                  >
-                    {highlight}
-                  </Badge>
-                ))}
-                {highlights.length > 2 && (
-                  <Badge 
-                    variant="outline" 
-                    className="text-xs bg-slate-50 border-slate-200 text-slate-700"
-                  >
-                    +{highlights.length - 2}
-                  </Badge>
-                )}
-              </div>
+              <span className="text-sm font-semibold text-slate-700 block mb-1">Highlights :</span>
+              <ResponsiveHighlights items={highlights} />
             </div>
           )}
         </div>

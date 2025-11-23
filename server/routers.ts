@@ -18,6 +18,7 @@ import { priceInsightsRouter } from './priceInsightsRouter';
 import { devRouter } from './devRouter'; // ⚠️ DEV ONLY - Remove before production
 import { listingRouter } from './listingRouter';
 import { uploadRouter } from './uploadRouter';
+import { settingsRouter } from './settingsRouter';
 
 export const appRouter = router({
   system: systemRouter,
@@ -34,6 +35,7 @@ export const appRouter = router({
   priceInsights: priceInsightsRouter,
   listing: listingRouter,
   upload: uploadRouter,
+  settings: settingsRouter,
   dev: devRouter, // ⚠️ DEV ONLY - Remove before production
 
   auth: router({

@@ -55,6 +55,8 @@ import ListingTemplate from './pages/ListingTemplate';
 
 // Import Development Wizard
 import CreateDevelopment from './pages/CreateDevelopment';
+import DevelopmentsDemo from './pages/DevelopmentsDemo';
+import DevelopmentDetail from './pages/DevelopmentDetail';
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -71,6 +73,8 @@ function Router() {
       <Route path="/listings/create" component={ListingWizard} />
       <Route path="/listing-template" component={ListingTemplate} />
       <Route path="/developments/create" component={CreateDevelopment} />
+      <Route path="/developments" component={DevelopmentsDemo} />
+      <Route path="/development/:id" component={DevelopmentDetail} />
       <Route path="/explore" component={ExploreFeed} />
 
       {/* Login and authentication routes should be early in the route list */}

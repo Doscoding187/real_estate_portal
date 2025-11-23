@@ -4,6 +4,7 @@ import { formatCurrency } from '@/lib/utils';
 import { OptimizedImageCard } from './OptimizedImage';
 import { Badge } from './ui/badge';
 import { useLocation } from 'wouter';
+import { ResponsiveHighlights } from './ResponsiveHighlights';
 
 interface ImageUrls {
   thumbnail: string;
@@ -39,6 +40,7 @@ export interface PropertyCardProps {
   badges?: string[];
   imageCount?: number;
   videoCount?: number;
+  highlights?: string[];
 }
 
 const PropertyCard: React.FC<PropertyCardProps> = ({
@@ -62,6 +64,7 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
   badges,
   imageCount = 15,
   videoCount = 2,
+  highlights,
 }) => {
   const [, setLocation] = useLocation();
   const isMultiSizeImage = typeof image === 'object' && 'medium' in image;
@@ -224,6 +227,13 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
             <p className="text-slate-500 text-sm leading-relaxed line-clamp-2 mb-5">
               {description}
             </p>
+          )}
+
+          {/* Highlights */}
+          {highlights && highlights.length > 0 && (
+            <div className="mb-5">
+              <ResponsiveHighlights items={highlights} />
+            </div>
           )}
         </div>
 

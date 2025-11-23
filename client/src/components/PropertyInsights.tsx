@@ -127,12 +127,12 @@ export function PropertyInsights() {
         </div>
 
         <Tabs value={selectedCity} onValueChange={setSelectedCity} className="w-full">
-          <TabsList className="w-full justify-start flex-wrap h-auto gap-2 bg-muted/30 mb-8 p-2">
+        <TabsList className="flex flex-wrap justify-start gap-2 mb-8 bg-transparent p-0 h-auto">
             {Object.keys(cityData).map(city => (
               <TabsTrigger
                 key={city}
                 value={city}
-                className="data-[state=active]:bg-primary data-[state=active]:text-white px-6 py-2 rounded-md"
+                className="px-6 py-2.5 rounded-full text-sm font-medium transition-all duration-300 border bg-white text-muted-foreground border-gray-200 hover:border-blue-200 hover:bg-blue-50 hover:text-blue-600 data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-indigo-600 data-[state=active]:text-white data-[state=active]:border-transparent data-[state=active]:shadow-md data-[state=active]:scale-105"
               >
                 {city}
               </TabsTrigger>

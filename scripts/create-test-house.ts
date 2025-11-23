@@ -37,7 +37,7 @@ async function main() {
   await db.insert(listings).values({
     ownerId: 1, // User/owner ID
     title: '4 Bedroom Family House with Large Garden',
-    description: 'Beautiful family home with spacious living areas, modern kitchen, and a large garden perfect for children and pets. Features include a swimming pool, braai area, and secure parking.',
+    description: 'This contemporary 3-bedroom apartment delivers a refined blend of comfort, style, and modern urban living within a premium, meticulously maintained residential estate. Step into a bright open-plan layout featuring a fully equipped modern kitchen with high-quality finishes, generous living and dining areas, and expansive balconies that extend your space for relaxation, morning coffee, or evening entertainment.\n\nThe complex offers 24/7 security with strict access control, CCTV monitoring, secure basement parking, and beautifully landscaped communal areas designed for residents\' comfort. Additional amenities may include a swimming pool, fitness facilities, children\'s play zones, and dedicated onsite management, ensuring a hassle-free lifestyle.\n\nLocated in the vibrant heart of Sandton, the apartment provides unbeatable proximity to major corporate offices, the Gautrain station, upscale shopping centers, fine dining restaurants, and essential conveniences. Whether you\'re a professional seeking easy access to business districts or a family looking for a safe, modern environment, this property delivers exceptional value, convenience, and long-term appeal.',
     propertyType: 'house',
     action: 'sell',
     status: 'pending_review',

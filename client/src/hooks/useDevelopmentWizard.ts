@@ -14,6 +14,7 @@ export interface MediaItem {
   file?: File;
   url: string;
   type: 'image' | 'video' | 'floorplan';
+  category?: 'featured' | 'general' | 'amenities' | 'outdoors' | 'videos';
   isPrimary: boolean;
   displayOrder: number;
 }
