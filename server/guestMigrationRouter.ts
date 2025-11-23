@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { protectedProcedure, router } from './_core/trpc';
-import { db } from './db';
+import { getDb } from './db';
 import { favorites, recentlyViewed } from '../drizzle/schema';
 import { TRPCError } from '@trpc/server';
 
@@ -15,6 +15,8 @@ export const guestMigrationRouter = router({
     )
     .mutation(async ({ input, ctx }) => {
       const userId = ctx.user.id;
+      const db = await getDb();
+      if (!db) throw new Error('Database not available');
 
       try {
         // Migrate viewed properties

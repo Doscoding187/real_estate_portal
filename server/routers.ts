@@ -281,7 +281,7 @@ export const appRouter = router({
         }),
       )
       .mutation(async ({ ctx, input }) => {
-        const existing = await db.getFavorite(ctx.user.id, input.propertyId);
+        const existing = await db.isFavorite(ctx.user.id, input.propertyId);
         if (existing) {
           await db.removeFavorite(ctx.user.id, input.propertyId);
           return { favorited: false };
