@@ -230,24 +230,8 @@ export default function EnhancedAgentDashboard() {
                 <CardHeader>
                   <CardTitle>Recent Activity</CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-3">
-                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                      <span className="text-sm">New lead assigned: John Smith</span>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                      <span className="text-sm">Showing confirmed for tomorrow</span>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
-                      <span className="text-sm">Commission approved: R15,000</span>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
-                      <span className="text-sm">Offer received on Property ABC</span>
-                    </div>
+                  <div className="text-center py-8 text-muted-foreground">
+                    <p className="text-sm">No recent activity</p>
                   </div>
                 </CardContent>
               </Card>
