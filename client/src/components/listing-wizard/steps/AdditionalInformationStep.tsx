@@ -27,7 +27,8 @@ import {
   Sofa,
   Mountain,
   X,
-  Plus
+  Plus,
+  Flame
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -368,20 +369,25 @@ export function AdditionalInformationStep() {
 
           {renderSelect('electricitySupply', 'Electricity Supply', [
             { value: 'prepaid', label: 'Prepaid' },
-            { value: 'billed', label: 'Billed' },
-            { value: 'included', label: 'Included in Rent' },
+            { value: 'municipality', label: 'Municipality' },
+            { value: 'eskom', label: 'Eskom' },
+            { value: 'off_grid', label: 'Off-grid' },
           ], 'Select supply', Lightbulb)}
 
           {renderSelect('waterSupply', 'Water Supply', [
-            { value: 'municipal', label: 'Municipal' },
+            { value: 'prepaid', label: 'Prepaid' },
+            { value: 'municipality', label: 'Municipality' },
             { value: 'borehole', label: 'Borehole' },
-            { value: 'tank', label: 'Water Tank' },
-            { value: 'grey_water', label: 'Grey Water System' },
           ], 'Select water', Droplets)}
+
+          {renderSelect('waterHeating', 'Water Heating', [
+            { value: 'electric_geyser', label: 'Electric Geyser' },
+            { value: 'solar_geyser', label: 'Solar Geyser' },
+            { value: 'hybrid', label: 'Hybrid' },
+          ], 'Select heating', Flame)}
 
           {renderSelect('internetAccess', 'Internet Access', [
             { value: 'fibre', label: 'Fibre' },
-            { value: 'lte', label: 'LTE / 5G' },
             { value: 'adsl', label: 'ADSL' },
             { value: 'satellite', label: 'Satellite' },
             { value: 'none', label: 'None' },
