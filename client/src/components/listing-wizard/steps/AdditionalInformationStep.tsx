@@ -3,6 +3,7 @@ import { useListingWizardStore } from '@/hooks/useListingWizard';
 import { Card } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 import {
   Select,
   SelectContent,
@@ -24,7 +25,9 @@ import {
   Lightbulb,
   Warehouse,
   Sofa,
-  Mountain
+  Mountain,
+  X,
+  Plus
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -32,6 +35,7 @@ export function AdditionalInformationStep() {
   const store = useListingWizardStore();
   const propertyType = store.propertyType;
   const additionalInfo = store.additionalInfo || {};
+  const [tagInputs, setTagInputs] = React.useState<Record<string, string>>({});
 
   const updateAdditionalInfo = (field: string, value: any) => {
     store.setAdditionalInfo({ ...additionalInfo, [field]: value });
@@ -43,6 +47,34 @@ export function AdditionalInformationStep() {
       ? currentItems.filter((i) => i !== item)
       : [...currentItems, item];
     updateAdditionalInfo(field, newItems);
+  };
+
+  const handleTagInputChange = (field: string, value: string) => {
+    setTagInputs(prev => ({ ...prev, [field]: value }));
+  };
+
+  const addTag = (field: string) => {
+    const value = tagInputs[field]?.trim();
+    if (!value) return;
+
+    const currentItems = (additionalInfo[field as keyof typeof additionalInfo] as string[]) || [];
+    if (!currentItems.includes(value)) {
+      updateAdditionalInfo(field, [...currentItems, value]);
+    }
+    setTagInputs(prev => ({ ...prev, [field]: '' }));
+  };
+
+  const removeTag = (field: string, tagToRemove: string) => {
+    const currentItems = (additionalInfo[field as keyof typeof additionalInfo] as string[]) || [];
+    const newItems = currentItems.filter(item => item !== tagToRemove);
+    updateAdditionalInfo(field, newItems);
+  };
+
+  const handleKeyDown = (field: string, e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      addTag(field);
+    }
   };
 
   const renderSelect = (
@@ -125,6 +157,61 @@ export function AdditionalInformationStep() {
     );
   };
 
+  const renderTagInput = (field: string, label: string, placeholder: string, icon?: React.ElementType) => {
+    const currentTags = (additionalInfo[field as keyof typeof additionalInfo] as string[]) || [];
+    
+    return (
+      <div className="space-y-3 col-span-full">
+        <Label htmlFor={field} className="text-slate-700 font-medium text-base flex items-center gap-2">
+          {icon && React.createElement(icon, { className: "w-4 h-4 text-emerald-600" })}
+          {label}
+        </Label>
+        
+        <div className="flex gap-2">
+          <Input
+            id={field}
+            value={tagInputs[field] || ''}
+            onChange={(e) => handleTagInputChange(field, e.target.value)}
+            onKeyDown={(e) => handleKeyDown(field, e)}
+            placeholder={placeholder}
+            className="bg-white border-slate-200 focus:ring-emerald-500 rounded-xl"
+          />
+          <Button 
+            type="button" 
+            onClick={() => addTag(field)}
+            className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl px-4"
+          >
+            <Plus className="w-4 h-4 mr-1" /> Add
+          </Button>
+        </div>
+
+        {currentTags.length > 0 && (
+          <div className="flex flex-wrap gap-2 mt-3">
+            {currentTags.map((tag, index) => (
+              <div 
+                key={`${tag}-${index}`}
+                className="flex items-center gap-1 bg-emerald-50 text-emerald-700 border border-emerald-200 px-3 py-1.5 rounded-full text-sm font-medium animate-in fade-in zoom-in duration-200"
+              >
+                {tag}
+                <button
+                  type="button"
+                  onClick={() => removeTag(field, tag)}
+                  className="ml-1 p-0.5 hover:bg-emerald-100 rounded-full transition-colors"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+        
+        {currentTags.length === 0 && (
+          <p className="text-sm text-slate-400 italic">No items added yet.</p>
+        )}
+      </div>
+    );
+  };
+
   const renderNumberInput = (field: string, label: string, placeholder: string, suffix?: string, icon?: React.ElementType) => (
     <div className="space-y-2">
       <Label htmlFor={field} className="text-slate-700 font-medium flex items-center gap-2">
@@ -162,30 +249,22 @@ export function AdditionalInformationStep() {
 
       {/* 1. Property Highlights */}
       <Card className="p-6 bg-white/60 backdrop-blur-xl border-slate-200/60 shadow-sm rounded-2xl space-y-6">
-        {renderMultiSelect('propertyHighlights', 'Property Highlights', [
-          { value: 'high_ceilings', label: 'High Ceilings', icon: Maximize },
-          { value: 'modern_finishes', label: 'Modern Finishes', icon: Check },
-          { value: 'open_plan', label: 'Open Plan', icon: Maximize },
-          { value: 'natural_light', label: 'Natural Light', icon: Trees },
-          { value: 'newly_renovated', label: 'Newly Renovated', icon: Check },
-          { value: 'pet_friendly', label: 'Pet Friendly', icon: Trees },
-          { value: 'secure', label: 'Secure', icon: Shield },
-          { value: 'scenic_view', label: 'Scenic View', icon: Mountain },
-        ])}
+        {renderTagInput(
+          'propertyHighlights', 
+          'Property Highlights', 
+          'Type a highlight and press Enter (e.g., High Ceilings, Modern Finishes)', 
+          Maximize
+        )}
       </Card>
 
       {/* 2. Additional Rooms */}
       <Card className="p-6 bg-white/60 backdrop-blur-xl border-slate-200/60 shadow-sm rounded-2xl space-y-6">
-        {renderMultiSelect('additionalRooms', 'Additional Rooms', [
-          { value: 'study', label: 'Study / Office', icon: Sofa },
-          { value: 'staff_quarters', label: 'Staff Quarters', icon: Home },
-          { value: 'scullery', label: 'Scullery', icon: Droplets },
-          { value: 'laundry', label: 'Laundry Room', icon: Droplets },
-          { value: 'pantry', label: 'Pantry', icon: Warehouse },
-          { value: 'storage', label: 'Storage Room', icon: Warehouse },
-          { value: 'gym', label: 'Gym', icon: Maximize },
-          { value: 'entertainment', label: 'Entertainment Area', icon: Sofa },
-        ])}
+        {renderTagInput(
+          'additionalRooms', 
+          'Additional Rooms', 
+          'Type a room and press Enter (e.g., Study, Staff Quarters)', 
+          Sofa
+        )}
       </Card>
 
       {/* 3. Property Setting & Utilities */}
