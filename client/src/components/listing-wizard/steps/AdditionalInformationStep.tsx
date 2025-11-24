@@ -316,7 +316,7 @@ export function AdditionalInformationStep() {
       <Card className="p-6 bg-white/60 backdrop-blur-xl border-slate-200/60 shadow-sm rounded-2xl space-y-6">
         {renderHybridInput(
           'additionalRooms', 
-          'Additional Rooms', 
+          'Additional Rooms & Specs', 
           'Add custom room...', 
           Sofa,
           [
