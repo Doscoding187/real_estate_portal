@@ -16,6 +16,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useLocation } from 'wouter';
+import { useAuth } from '@/_core/hooks/useAuth';
 
 const navigation = [
   { name: 'Overview', href: '/agent/dashboard', icon: Home },
@@ -38,6 +39,16 @@ const quickActions = [
 
 export function AgentSidebar() {
   const [, setLocation] = useLocation();
+  const { user } = useAuth();
+
+  const initials = user?.name
+    ? user.name
+        .split(' ')
+        .map(n => n[0])
+        .join('')
+        .toUpperCase()
+        .slice(0, 2)
+    : 'AG';
 
   return (
     <aside className="hidden lg:flex lg:flex-col lg:w-64 lg:fixed lg:inset-y-0 bg-white/80 backdrop-blur-xl border-r border-white/20 shadow-[0_8px_30px_rgba(8,_112,_184,_0.06)] z-20">
@@ -110,12 +121,12 @@ export function AgentSidebar() {
           <div className="flex items-center p-2 rounded-xl hover:bg-white/60 transition-colors cursor-pointer group">
             <div className="flex-shrink-0">
               <div className="h-10 w-10 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-md group-hover:scale-105 transition-transform duration-300">
-                <span className="text-sm font-bold text-white">JD</span>
+                <span className="text-sm font-bold text-white">{initials}</span>
               </div>
             </div>
             <div className="ml-3">
-              <p className="text-sm font-bold text-slate-800 group-hover:text-emerald-700 transition-colors">John Doe</p>
-              <p className="text-xs text-slate-500 font-medium">Premium Agent</p>
+              <p className="text-sm font-bold text-slate-800 group-hover:text-emerald-700 transition-colors">{user?.name || 'Agent'}</p>
+              <p className="text-xs text-slate-500 font-medium">Real Estate Agent</p>
             </div>
             <Settings className="ml-auto h-4 w-4 text-slate-400 group-hover:text-emerald-500 transition-colors" />
           </div>
