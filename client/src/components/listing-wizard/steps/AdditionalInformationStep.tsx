@@ -341,15 +341,22 @@ export function AdditionalInformationStep() {
           <h3 className="text-lg font-semibold text-slate-800">Setting & Utilities</h3>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {renderSelect('propertySetting', 'Property Setting', [
-            { value: 'urban', label: 'Urban' },
-            { value: 'suburban', label: 'Suburban' },
-            { value: 'rural', label: 'Rural' },
-            { value: 'estate', label: 'Estate' },
+            { value: 'gated_community', label: 'Gated Community' },
+            { value: 'standalone', label: 'Standalone' },
             { value: 'complex', label: 'Complex' },
-            { value: 'freestanding', label: 'Free-standing' },
+            { value: 'estate_living', label: 'Estate Living' },
           ], 'Select setting', Building2)}
+
+          {additionalInfo.propertySetting === 'estate_living' && renderSelect('estateType', 'Estate Type', [
+            { value: 'security_estate', label: 'Security Estate' },
+            { value: 'golf_estate', label: 'Golf Estate' },
+            { value: 'equestrian_estate', label: 'Equestrian Estate' },
+            { value: 'country_estate', label: 'Country Estate' },
+            { value: 'nature_estate', label: 'Nature Estate' },
+            { value: 'eco_estate', label: 'Eco Estate' },
+          ], 'Select estate type', Trees)}
 
           {renderSelect('powerBackup', 'Power Backup', [
             { value: 'none', label: 'None' },
