@@ -71,7 +71,7 @@ const SellPricingForm: React.FC<{
   React.useEffect(() => {
     if (pricing.askingPrice) {
       const monthlyPayment = calculateMonthlyRepayment(
-        pricing.askingPrice * 0.9, // 10% deposit assumption
+        pricing.askingPrice, // 0% deposit assumption
         11.75, // Current SA prime rate
         20, // 20 year term
       );
@@ -123,7 +123,7 @@ const SellPricingForm: React.FC<{
                 R {Math.round(estimatedBondRepayment).toLocaleString('en-ZA')} /month
               </div>
               <p className="text-xs text-gray-600 mt-1">
-                Based on 10% deposit over 20 years at 11.75% p.a.
+                Based on 0% deposit over 20 years at 11.75% p.a.
               </p>
             </div>
           )}
