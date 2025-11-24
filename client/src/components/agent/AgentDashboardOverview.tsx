@@ -20,6 +20,8 @@ import {
   ExternalLink,
   AlertCircle,
 } from 'lucide-react';
+import { trpc } from '@/lib/trpc';
+import { useAuth } from '@/_core/hooks/useAuth';
 import { LeadPipeline } from '@/components/agent/LeadPipeline';
 import { CommissionTracker } from '@/components/agent/CommissionTracker';
 import { ShowingsCalendar } from '@/components/agent/ShowingsCalendar';
@@ -38,6 +40,16 @@ interface StatCardProps {
 
 export function AgentDashboardOverview() {
   const [activeTab, setActiveTab] = useState('overview');
+  const { isAuthenticated, user } = useAuth();
+
+  // Queries
+  const { data: stats, isLoading: statsLoading } = trpc.agent.getDashboardStats.useQuery(
+    undefined,
+    {
+      enabled: isAuthenticated && user?.role === 'agent',
+      retry: false,
+    },
+  );
 
   return (
     <div className="flex min-h-screen bg-[#F4F7FA]">
@@ -48,7 +60,7 @@ export function AgentDashboardOverview() {
           <div className="flex-1">
             <h1 className="text-3xl font-bold text-slate-800">Dashboard Overview</h1>
             <p className="text-sm text-slate-500">
-              Welcome back, John! Here's your performance summary.
+              Welcome back, {user?.name?.split(' ')[0] || 'Agent'}! Here's your performance summary.
             </p>
           </div>
         </header>
@@ -59,34 +71,34 @@ export function AgentDashboardOverview() {
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
             <StatCard
               title="Active Listings"
-              value={24}
+              value={statsLoading ? '—' : (stats?.activeListings ?? 0)}
               icon={Building2}
-              trend={{ value: '12% from last month', positive: true }}
+              // trend={{ value: '12% from last month', positive: true }}
             />
             <StatCard
               title="Leads Received"
-              value={156}
+              value={statsLoading ? '—' : (stats?.newLeadsThisWeek ?? 0)}
               icon={Users}
-              trend={{ value: '8% from last month', positive: true }}
+              // trend={{ value: '8% from last month', positive: true }}
             />
             <StatCard
-              title="Commission Earned"
-              value="$45,200"
+              title="Commission Pending"
+              value={statsLoading ? '—' : `R ${((stats?.commissionsPending ?? 0) / 100).toLocaleString()}`}
               icon={DollarSign}
-              trend={{ value: '23% from last month', positive: true }}
+              // trend={{ value: '23% from last month', positive: true }}
             />
             <StatCard
-              title="Profile Views"
-              value="3,420"
-              icon={Eye}
-              trend={{ value: '5% from last month', positive: true }}
+              title="Showings Today"
+              value={statsLoading ? '—' : (stats?.showingsToday ?? 0)}
+              icon={Calendar}
+              // trend={{ value: '5% from last month', positive: true }}
             />
           </div>
 
           {/* Charts and Activity Grid */}
           <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
             <div className="xl:col-span-2">
-              <PerformanceChart />
+              <PerformanceChart data={[]} />
             </div>
             <div>
               <RecentActivity />
@@ -113,23 +125,8 @@ export function AgentDashboardOverview() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="space-y-4">
-                      <div className="flex justify-between items-center">
-                        <span className="text-slate-500">Conversion Rate</span>
-                        <span className="font-medium text-slate-800">24.8%</span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-slate-500">Avg. Deal Size</span>
-                        <span className="font-medium text-slate-800">$425,000</span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-slate-500">Response Time</span>
-                        <span className="font-medium text-slate-800">2.3 hours</span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-slate-500">Client Satisfaction</span>
-                        <span className="font-medium text-slate-800">4.8/5.0</span>
-                      </div>
+                    <div className="text-center py-8 text-muted-foreground">
+                      <p className="text-sm">No performance metrics available yet</p>
                     </div>
                   </CardContent>
                 </Card>
@@ -142,35 +139,8 @@ export function AgentDashboardOverview() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="space-y-3">
-                      <div className="flex justify-between items-center">
-                        <div className="flex items-center gap-2">
-                          <div className="w-3 h-3 rounded-full bg-blue-500"></div>
-                          <span>Website</span>
-                        </div>
-                        <span className="font-medium">35%</span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <div className="flex items-center gap-2">
-                          <div className="w-3 h-3 rounded-full bg-green-500"></div>
-                          <span>Referrals</span>
-                        </div>
-                        <span className="font-medium">28%</span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <div className="flex items-center gap-2">
-                          <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
-                          <span>Social Media</span>
-                        </div>
-                        <span className="font-medium">22%</span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <div className="flex items-center gap-2">
-                          <div className="w-3 h-3 rounded-full bg-purple-500"></div>
-                          <span>Direct</span>
-                        </div>
-                        <span className="font-medium">15%</span>
-                      </div>
+                    <div className="text-center py-8 text-muted-foreground">
+                      <p className="text-sm">No lead source data available yet</p>
                     </div>
                   </CardContent>
                 </Card>
