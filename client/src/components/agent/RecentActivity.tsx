@@ -2,36 +2,13 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Eye, MessageSquare, TrendingUp, UserPlus } from 'lucide-react';
 
-const activities = [
-  {
-    id: 1,
-    type: 'view',
-    message: 'New lead viewed Luxury Villa in Beverly Hills',
-    time: '5 minutes ago',
-    icon: Eye,
-  },
-  {
-    id: 2,
-    type: 'lead',
-    message: 'New inquiry from Michael Chen',
-    time: '23 minutes ago',
-    icon: MessageSquare,
-  },
-  {
-    id: 3,
-    type: 'boost',
-    message: "Your listing 'Downtown Penthouse' was featured",
-    time: '1 hour ago',
-    icon: TrendingUp,
-  },
-  {
-    id: 4,
-    type: 'client',
-    message: 'Sarah Johnson added as client',
-    time: '3 hours ago',
-    icon: UserPlus,
-  },
-];
+const activities: {
+  id: number;
+  type: string;
+  message: string;
+  time: string;
+  icon: any;
+}[] = [];
 
 const getIconColor = (type: string) => {
   switch (type) {
@@ -74,25 +51,31 @@ export function RecentActivity() {
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
-          {activities.map(activity => {
-            const IconComponent = activity.icon;
-            return (
-              <div key={activity.id} className="flex items-start gap-3">
-                <div className={`mt-0.5 ${getIconColor(activity.type)}`}>
-                  <IconComponent className="h-4 w-4" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm text-foreground">{activity.message}</p>
-                  <div className="flex items-center gap-2 mt-1">
-                    <Badge className={getTypeColor(activity.type)} variant="secondary">
-                      {activity.type}
-                    </Badge>
-                    <span className="text-xs text-muted-foreground">{activity.time}</span>
+          {activities.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <p className="text-sm">No recent activity</p>
+            </div>
+          ) : (
+            activities.map(activity => {
+              const IconComponent = activity.icon;
+              return (
+                <div key={activity.id} className="flex items-start gap-3">
+                  <div className={`mt-0.5 ${getIconColor(activity.type)}`}>
+                    <IconComponent className="h-4 w-4" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-foreground">{activity.message}</p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <Badge className={getTypeColor(activity.type)} variant="secondary">
+                        {activity.type}
+                      </Badge>
+                      <span className="text-xs text-muted-foreground">{activity.time}</span>
+                    </div>
                   </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })
+          )}
         </div>
       </CardContent>
     </Card>
