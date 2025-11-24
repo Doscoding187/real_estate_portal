@@ -13,25 +13,18 @@ import {
 import { 
   Home, 
   Building2, 
-  Warehouse, 
-  Wheat, 
-  Users, 
-  Shield, 
-  Trees, 
-  Wifi, 
-  Wind, 
   Zap,
+  Wifi, 
+  Shield, 
   Droplets,
-  Fence,
-  Mountain,
-  Truck,
-  Check,
-  Sofa,
-  PawPrint,
-  Sun,
+  Coins,
+  Trees,
   Maximize,
-  Layers,
-  Waves
+  Check,
+  Lightbulb,
+  Warehouse,
+  Sofa,
+  Mountain
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -56,15 +49,19 @@ export function AdditionalInformationStep() {
     field: string, 
     label: string, 
     options: { value: string; label: string }[], 
-    placeholder: string
+    placeholder: string,
+    icon?: React.ElementType
   ) => (
     <div className="space-y-2">
-      <Label htmlFor={field} className="text-slate-700 font-medium">{label}</Label>
+      <Label htmlFor={field} className="text-slate-700 font-medium flex items-center gap-2">
+        {icon && React.createElement(icon, { className: "w-4 h-4 text-emerald-600" })}
+        {label}
+      </Label>
       <Select
         value={(additionalInfo[field as keyof typeof additionalInfo] as string) || ''}
         onValueChange={(value) => updateAdditionalInfo(field, value)}
       >
-        <SelectTrigger id={field} className="bg-white border-slate-200 focus:ring-blue-500">
+        <SelectTrigger id={field} className="bg-white border-slate-200 focus:ring-emerald-500 rounded-xl">
           <SelectValue placeholder={placeholder} />
         </SelectTrigger>
         <SelectContent>
@@ -104,17 +101,17 @@ export function AdditionalInformationStep() {
                 className={cn(
                   "cursor-pointer rounded-xl border p-3 transition-all duration-200 flex items-center gap-3 group relative overflow-hidden",
                   isSelected
-                    ? "bg-blue-50 border-blue-500 text-blue-700 shadow-sm"
-                    : "bg-white border-slate-200 hover:border-blue-300 hover:bg-slate-50 text-slate-600"
+                    ? "bg-emerald-50 border-emerald-500 text-emerald-700 shadow-sm"
+                    : "bg-white border-slate-200 hover:border-emerald-300 hover:bg-slate-50 text-slate-600"
                 )}
               >
                 {isSelected && (
-                  <div className="absolute top-0 right-0 w-0 h-0 border-t-[16px] border-r-[16px] border-t-blue-500 border-r-transparent rotate-90" />
+                  <div className="absolute top-0 right-0 w-0 h-0 border-t-[16px] border-r-[16px] border-t-emerald-500 border-r-transparent rotate-90" />
                 )}
                 {Icon && (
                   <div className={cn(
                     "p-2 rounded-lg transition-colors",
-                    isSelected ? "bg-blue-100 text-blue-600" : "bg-slate-100 text-slate-500 group-hover:text-blue-500"
+                    isSelected ? "bg-emerald-100 text-emerald-600" : "bg-slate-100 text-slate-500 group-hover:text-emerald-500"
                   )}>
                     <Icon className="w-4 h-4" />
                   </div>
@@ -128,9 +125,12 @@ export function AdditionalInformationStep() {
     );
   };
 
-  const renderNumberInput = (field: string, label: string, placeholder: string, suffix?: string) => (
+  const renderNumberInput = (field: string, label: string, placeholder: string, suffix?: string, icon?: React.ElementType) => (
     <div className="space-y-2">
-      <Label htmlFor={field} className="text-slate-700 font-medium">{label}</Label>
+      <Label htmlFor={field} className="text-slate-700 font-medium flex items-center gap-2">
+        {icon && React.createElement(icon, { className: "w-4 h-4 text-emerald-600" })}
+        {label}
+      </Label>
       <div className="relative">
         <Input
           id={field}
@@ -139,7 +139,7 @@ export function AdditionalInformationStep() {
           placeholder={placeholder}
           value={additionalInfo[field as keyof typeof additionalInfo] || ''}
           onChange={(e) => updateAdditionalInfo(field, Number(e.target.value))}
-          className="bg-white border-slate-200 focus:ring-blue-500 pr-12"
+          className="bg-white border-slate-200 focus:ring-emerald-500 pr-12 rounded-xl"
         />
         {suffix && (
           <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-slate-400 text-sm">
@@ -150,271 +150,125 @@ export function AdditionalInformationStep() {
     </div>
   );
 
-  // --- Residential Section ---
-  const renderResidential = () => (
-    <div className="space-y-8">
-      <Card className="p-6 bg-white/50 backdrop-blur-sm border-slate-200/60 shadow-sm space-y-6">
-        <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
-          <div className="p-2 bg-blue-100 rounded-lg text-blue-600">
-            <Sofa className="w-5 h-5" />
-          </div>
-          <h3 className="text-lg font-semibold text-slate-800">Interior Details</h3>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {renderSelect('furnishingStatus', 'Furnishing Status', [
-            { value: 'unfurnished', label: 'Unfurnished' },
-            { value: 'semi_furnished', label: 'Semi-Furnished' },
-            { value: 'fully_furnished', label: 'Fully Furnished' },
-          ], 'Select status')}
-          {renderSelect('flooring', 'Flooring Type', [
-            { value: 'tile', label: 'Tile' },
-            { value: 'carpet', label: 'Carpet' },
-            { value: 'wood', label: 'Wood' },
-            { value: 'laminate', label: 'Laminate' },
-            { value: 'concrete', label: 'Concrete' },
-            { value: 'other', label: 'Other' },
-          ], 'Select flooring')}
-          {renderSelect('petPolicy', 'Pet Policy', [
-            { value: 'allowed', label: 'Pets Allowed' },
-            { value: 'cats_only', label: 'Cats Only' },
-            { value: 'no_pets', label: 'No Pets' },
-            { value: 'by_arrangement', label: 'By Arrangement' },
-          ], 'Select policy')}
-        </div>
+  return (
+    <div className="py-6 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      {/* Header */}
+      <div className="text-center mb-8">
+        <h2 className="text-2xl font-bold text-slate-800">Property Details</h2>
+        <p className="text-slate-500 mt-2">
+          Add specific features and details to make your listing stand out.
+        </p>
+      </div>
+
+      {/* 1. Property Highlights */}
+      <Card className="p-6 bg-white/60 backdrop-blur-xl border-slate-200/60 shadow-sm rounded-2xl space-y-6">
+        {renderMultiSelect('propertyHighlights', 'Property Highlights', [
+          { value: 'high_ceilings', label: 'High Ceilings', icon: Maximize },
+          { value: 'modern_finishes', label: 'Modern Finishes', icon: Check },
+          { value: 'open_plan', label: 'Open Plan', icon: Maximize },
+          { value: 'natural_light', label: 'Natural Light', icon: Trees },
+          { value: 'newly_renovated', label: 'Newly Renovated', icon: Check },
+          { value: 'pet_friendly', label: 'Pet Friendly', icon: Trees },
+          { value: 'secure', label: 'Secure', icon: Shield },
+          { value: 'scenic_view', label: 'Scenic View', icon: Mountain },
+        ])}
       </Card>
 
-      <Card className="p-6 bg-white/50 backdrop-blur-sm border-slate-200/60 shadow-sm space-y-6">
-        <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
-          <div className="p-2 bg-orange-100 rounded-lg text-orange-600">
-            <Home className="w-5 h-5" />
-          </div>
-          <h3 className="text-lg font-semibold text-slate-800">Exterior Details</h3>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {renderSelect('roofType', 'Roof Type', [
-            { value: 'tile', label: 'Tile' },
-            { value: 'metal', label: 'Metal / Zinc' },
-            { value: 'slate', label: 'Slate' },
-            { value: 'thatch', label: 'Thatch' },
-            { value: 'concrete', label: 'Concrete' },
-            { value: 'other', label: 'Other' },
-          ], 'Select roof')}
-          {renderSelect('wallType', 'Wall Type', [
-            { value: 'brick', label: 'Brick' },
-            { value: 'plaster', label: 'Plaster' },
-            { value: 'wood', label: 'Wood' },
-            { value: 'stone', label: 'Stone' },
-            { value: 'concrete', label: 'Concrete' },
-            { value: 'other', label: 'Other' },
-          ], 'Select wall')}
-          {renderSelect('windowType', 'Window Type', [
-            { value: 'aluminium', label: 'Aluminium' },
-            { value: 'steel', label: 'Steel' },
-            { value: 'wood', label: 'Wood' },
-            { value: 'pvc', label: 'PVC' },
-            { value: 'other', label: 'Other' },
-          ], 'Select window')}
-        </div>
+      {/* 2. Additional Rooms */}
+      <Card className="p-6 bg-white/60 backdrop-blur-xl border-slate-200/60 shadow-sm rounded-2xl space-y-6">
+        {renderMultiSelect('additionalRooms', 'Additional Rooms', [
+          { value: 'study', label: 'Study / Office', icon: Sofa },
+          { value: 'staff_quarters', label: 'Staff Quarters', icon: Home },
+          { value: 'scullery', label: 'Scullery', icon: Droplets },
+          { value: 'laundry', label: 'Laundry Room', icon: Droplets },
+          { value: 'pantry', label: 'Pantry', icon: Warehouse },
+          { value: 'storage', label: 'Storage Room', icon: Warehouse },
+          { value: 'gym', label: 'Gym', icon: Maximize },
+          { value: 'entertainment', label: 'Entertainment Area', icon: Sofa },
+        ])}
       </Card>
 
-      <Card className="p-6 bg-white/50 backdrop-blur-sm border-slate-200/60 shadow-sm space-y-6">
-        <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
-          <div className="p-2 bg-green-100 rounded-lg text-green-600">
-            <Trees className="w-5 h-5" />
-          </div>
-          <h3 className="text-lg font-semibold text-slate-800">Amenities & Features</h3>
-        </div>
-        <div className="grid grid-cols-1 gap-8">
-          {renderMultiSelect('securityFeatures', 'Security Features', [
-            { value: 'alarm', label: 'Alarm System', icon: Shield },
-            { value: 'electric_fence', label: 'Electric Fence', icon: Zap },
-            { value: 'beams', label: 'Outdoor Beams', icon: Sun },
-            { value: 'cctv', label: 'CCTV Cameras', icon: Check },
-            { value: '24hr_guard', label: '24hr Guard', icon: Shield },
-            { value: 'access_control', label: 'Access Control', icon: Check },
-          ])}
-          {renderMultiSelect('outdoorFeatures', 'Outdoor Features', [
-            { value: 'pool', label: 'Swimming Pool', icon: Droplets },
-            { value: 'garden', label: 'Garden', icon: Trees },
-            { value: 'braai_area', label: 'Braai Area', icon: Sun },
-            { value: 'patio', label: 'Patio', icon: Maximize },
-            { value: 'balcony', label: 'Balcony', icon: Maximize },
-            { value: 'deck', label: 'Deck', icon: Layers },
-          ])}
-        </div>
-      </Card>
-    </div>
-  );
-
-  // --- Commercial Section ---
-  const renderCommercial = () => (
-    <div className="space-y-8">
-      <Card className="p-6 bg-white/50 backdrop-blur-sm border-slate-200/60 shadow-sm space-y-6">
-        <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
-          <div className="p-2 bg-slate-100 rounded-lg text-slate-600">
+      {/* 3. Property Setting & Utilities */}
+      <Card className="p-6 bg-white/60 backdrop-blur-xl border-slate-200/60 shadow-sm rounded-2xl space-y-6">
+        <div className="flex items-center gap-3 border-b border-slate-100 pb-4 mb-4">
+          <div className="p-2 bg-emerald-100 rounded-lg text-emerald-600">
             <Building2 className="w-5 h-5" />
           </div>
-          <h3 className="text-lg font-semibold text-slate-800">Building Specifications</h3>
+          <h3 className="text-lg font-semibold text-slate-800">Setting & Utilities</h3>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {renderSelect('grade', 'Building Grade', [
-            { value: 'premium', label: 'Premium Grade' },
-            { value: 'a_grade', label: 'A-Grade' },
-            { value: 'b_grade', label: 'B-Grade' },
-            { value: 'c_grade', label: 'C-Grade' },
-          ], 'Select grade')}
-          {renderSelect('airConditioning', 'Air Conditioning', [
-            { value: 'central', label: 'Central AC' },
-            { value: 'split_units', label: 'Split Units' },
-            { value: 'evaporative', label: 'Evaporative' },
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {renderSelect('propertySetting', 'Property Setting', [
+            { value: 'urban', label: 'Urban' },
+            { value: 'suburban', label: 'Suburban' },
+            { value: 'rural', label: 'Rural' },
+            { value: 'estate', label: 'Estate' },
+            { value: 'complex', label: 'Complex' },
+            { value: 'freestanding', label: 'Free-standing' },
+          ], 'Select setting', Building2)}
+
+          {renderSelect('powerBackup', 'Power Backup', [
             { value: 'none', label: 'None' },
-          ], 'Select AC type')}
+            { value: 'generator', label: 'Generator' },
+            { value: 'inverter', label: 'Inverter' },
+            { value: 'solar', label: 'Solar' },
+            { value: 'ups', label: 'UPS' },
+          ], 'Select backup', Zap)}
+
+          {renderSelect('electricitySupply', 'Electricity Supply', [
+            { value: 'prepaid', label: 'Prepaid' },
+            { value: 'billed', label: 'Billed' },
+            { value: 'included', label: 'Included in Rent' },
+          ], 'Select supply', Lightbulb)}
+
+          {renderSelect('waterSupply', 'Water Supply', [
+            { value: 'municipal', label: 'Municipal' },
+            { value: 'borehole', label: 'Borehole' },
+            { value: 'tank', label: 'Water Tank' },
+            { value: 'grey_water', label: 'Grey Water System' },
+          ], 'Select water', Droplets)}
+
           {renderSelect('internetAccess', 'Internet Access', [
             { value: 'fibre', label: 'Fibre' },
             { value: 'lte', label: 'LTE / 5G' },
             { value: 'adsl', label: 'ADSL' },
             { value: 'satellite', label: 'Satellite' },
             { value: 'none', label: 'None' },
-          ], 'Select internet')}
+          ], 'Select internet', Wifi)}
         </div>
       </Card>
 
-      <Card className="p-6 bg-white/50 backdrop-blur-sm border-slate-200/60 shadow-sm space-y-6">
-        <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
-          <div className="p-2 bg-blue-100 rounded-lg text-blue-600">
-            <Truck className="w-5 h-5" />
-          </div>
-          <h3 className="text-lg font-semibold text-slate-800">Logistics & Access</h3>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {renderNumberInput('loadingDocks', 'Loading Docks', '0', 'docks')}
-          {renderSelect('truckAccess', 'Truck Access', [
-            { value: 'superlink', label: 'Superlink' },
-            { value: 'rigid', label: 'Rigid' },
-            { value: 'small_truck', label: 'Small Truck' },
-            { value: 'none', label: 'None' },
-          ], 'Select access')}
-          {renderNumberInput('parkingRatio', 'Parking Ratio', '0', 'bays/100m²')}
-        </div>
-      </Card>
-    </div>
-  );
-
-  // --- Farm Section ---
-  const renderFarm = () => (
-    <div className="space-y-8">
-      {propertyType === 'farm' && (
-        <Card className="p-6 bg-white/50 backdrop-blur-sm border-slate-200/60 shadow-sm space-y-6">
-          <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
-            <div className="p-2 bg-green-100 rounded-lg text-green-600">
-              <Wheat className="w-5 h-5" />
-            </div>
-            <h3 className="text-lg font-semibold text-slate-800">Land Usage</h3>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {renderNumberInput('arableLandHa', 'Arable Land', '0', 'ha')}
-            {renderNumberInput('grazingLandHa', 'Grazing Land', '0', 'ha')}
-            {renderSelect('irrigationType', 'Irrigation Type', [
-              { value: 'pivot', label: 'Center Pivot' },
-              { value: 'drip', label: 'Drip' },
-              { value: 'flood', label: 'Flood' },
-              { value: 'micro', label: 'Micro' },
-              { value: 'none', label: 'None' },
-            ], 'Select irrigation')}
-          </div>
-        </Card>
-      )}
-
-      <Card className="p-6 bg-white/50 backdrop-blur-sm border-slate-200/60 shadow-sm space-y-6">
-        <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
+      {/* 4. Costs */}
+      <Card className="p-6 bg-white/60 backdrop-blur-xl border-slate-200/60 shadow-sm rounded-2xl space-y-6">
+        <div className="flex items-center gap-3 border-b border-slate-100 pb-4 mb-4">
           <div className="p-2 bg-amber-100 rounded-lg text-amber-600">
-            <Fence className="w-5 h-5" />
+            <Coins className="w-5 h-5" />
           </div>
-          <h3 className="text-lg font-semibold text-slate-800">
-            {propertyType === 'farm' ? 'Infrastructure & Features' : 'Land Features'}
-          </h3>
+          <h3 className="text-lg font-semibold text-slate-800">Monthly Costs</h3>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-          {renderSelect('fencing', 'Fencing Type', [
-            { value: 'game', label: 'Game Fencing' },
-            { value: 'cattle', label: 'Cattle Fencing' },
-            { value: 'electric', label: 'Electric' },
-            { value: 'barbed_wire', label: 'Barbed Wire' },
-            { value: 'mesh', label: 'Mesh' },
-            { value: 'none', label: 'None' },
-          ], 'Select fencing')}
-          {renderSelect('topography', 'Topography', [
-            { value: 'flat', label: 'Flat' },
-            { value: 'sloped', label: 'Sloped' },
-            { value: 'hilly', label: 'Hilly' },
-            { value: 'mountainous', label: 'Mountainous' },
-            { value: 'mixed', label: 'Mixed' },
-          ], 'Select topography')}
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {renderNumberInput('ratesAndTaxes', 'Rates & Taxes', '0.00', 'R', Coins)}
+          
+          {(propertyType === 'apartment' || additionalInfo.propertySetting === 'estate' || additionalInfo.propertySetting === 'complex') && (
+            renderNumberInput('levies', 'Levies', '0.00', 'R', Coins)
+          )}
         </div>
-        {renderMultiSelect('waterSources', 'Water Sources', [
-          { value: 'borehole', label: 'Borehole', icon: Droplets },
-          { value: 'river', label: 'River / Stream', icon: Waves },
-          { value: 'dam', label: 'Dam', icon: Droplets },
-          { value: 'municipal', label: 'Municipal', icon: Building2 },
-          { value: 'rainwater', label: 'Rainwater Harvesting', icon: Droplets },
+      </Card>
+
+      {/* 5. Security */}
+      <Card className="p-6 bg-white/60 backdrop-blur-xl border-slate-200/60 shadow-sm rounded-2xl space-y-6">
+        {renderMultiSelect('securityFeatures', 'Security Features', [
+          { value: 'alarm', label: 'Alarm System', icon: Shield },
+          { value: 'electric_fence', label: 'Electric Fence', icon: Zap },
+          { value: 'beams', label: 'Outdoor Beams', icon: Check },
+          { value: 'cctv', label: 'CCTV Cameras', icon: Check },
+          { value: '24hr_guard', label: '24hr Guard', icon: Shield },
+          { value: 'access_control', label: 'Access Control', icon: Check },
+          { value: 'intercom', label: 'Intercom', icon: Check },
+          { value: 'security_gates', label: 'Security Gates', icon: Shield },
         ])}
       </Card>
-    </div>
-  );
-
-  // --- Shared Living Section ---
-  const renderSharedLiving = () => (
-    <div className="space-y-8">
-      <Card className="p-6 bg-white/50 backdrop-blur-sm border-slate-200/60 shadow-sm space-y-6">
-        <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
-          <div className="p-2 bg-purple-100 rounded-lg text-purple-600">
-            <Users className="w-5 h-5" />
-          </div>
-          <h3 className="text-lg font-semibold text-slate-800">Living Arrangements</h3>
-        </div>
-        <div className="grid grid-cols-1 gap-8">
-          {renderNumberInput('minimumStayMonths', 'Minimum Stay', '1', 'months')}
-          {renderMultiSelect('billsIncluded', 'Bills Included in Rent', [
-            { value: 'water', label: 'Water', icon: Droplets },
-            { value: 'electricity', label: 'Electricity', icon: Zap },
-            { value: 'wifi', label: 'WiFi / Internet', icon: Wifi },
-            { value: 'cleaning', label: 'Cleaning Service', icon: Check },
-            { value: 'gas', label: 'Gas', icon: Wind },
-          ])}
-          {renderMultiSelect('houseRules', 'House Rules', [
-            { value: 'no_smoking', label: 'No Smoking', icon: Check },
-            { value: 'no_overnight_guests', label: 'No Overnight Guests', icon: Users },
-            { value: 'quiet_hours', label: 'Quiet Hours', icon: Check },
-            { value: 'no_parties', label: 'No Parties', icon: Check },
-            { value: 'clean_up_after_self', label: 'Clean Up After Self', icon: Check },
-          ])}
-        </div>
-      </Card>
-    </div>
-  );
-
-  return (
-    <div className="py-6 space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      {/* Header */}
-      <div className="text-center mb-8">
-        <h2 className="text-2xl font-bold text-slate-800">Additional Details</h2>
-        <p className="text-slate-500 mt-2">
-          Tell us more about the specific features of your property.
-        </p>
-      </div>
-
-      {/* Dynamic Content based on Property Type */}
-      {(propertyType === 'house' || propertyType === 'apartment') && renderResidential()}
-      {propertyType === 'commercial' && renderCommercial()}
-      {(propertyType === 'farm' || propertyType === 'land') && renderFarm()}
-      {propertyType === 'shared_living' && renderSharedLiving()}
-
-      {/* Fallback for unhandled types (shouldn't happen with current types but good for safety) */}
-      {!['house', 'apartment', 'commercial', 'farm', 'land', 'shared_living'].includes(propertyType || '') && (
-        <Card className="p-8 text-center border-dashed border-2 border-slate-200 bg-slate-50/50">
-          <p className="text-slate-500">No additional specific details required for this property type.</p>
-        </Card>
-      )}
     </div>
   );
 }
