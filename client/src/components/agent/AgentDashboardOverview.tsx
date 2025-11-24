@@ -52,21 +52,21 @@ export function AgentDashboardOverview() {
   );
 
   return (
-    <div className="flex min-h-screen bg-[#F4F7FA]">
+    <div className="flex min-h-screen bg-slate-50/50">
       {/* Main Content */}
       <div className="flex-1">
         {/* Header */}
-        <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b bg-white/70 backdrop-blur-sm shadow-sm px-6">
+        <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b border-white/20 bg-white/80 backdrop-blur-xl px-6 transition-all duration-300">
           <div className="flex-1">
-            <h1 className="text-3xl font-bold text-slate-800">Dashboard Overview</h1>
-            <p className="text-sm text-slate-500">
+            <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Dashboard Overview</h1>
+            <p className="text-sm text-slate-500 font-medium">
               Welcome back, {user?.name?.split(' ')[0] || 'Agent'}! Here's your performance summary.
             </p>
           </div>
         </header>
 
         {/* Dashboard Content */}
-        <main className="p-6 space-y-6">
+        <main className="p-6 space-y-8 max-w-[1600px] mx-auto">
           {/* Stats Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
             <StatCard
@@ -107,59 +107,88 @@ export function AgentDashboardOverview() {
 
           {/* Detailed Sections */}
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-5">
-              <TabsTrigger value="overview">Overview</TabsTrigger>
-              <TabsTrigger value="leads">Leads Pipeline</TabsTrigger>
-              <TabsTrigger value="calendar">Calendar</TabsTrigger>
-              <TabsTrigger value="commission">Commission</TabsTrigger>
-              <TabsTrigger value="notifications">Notifications</TabsTrigger>
+            <TabsList className="grid w-full grid-cols-5 p-1 bg-slate-100/50 backdrop-blur-sm rounded-2xl mb-8">
+              <TabsTrigger 
+                value="overview"
+                className="rounded-xl data-[state=active]:bg-white data-[state=active]:text-emerald-600 data-[state=active]:shadow-sm transition-all duration-300"
+              >
+                Overview
+              </TabsTrigger>
+              <TabsTrigger 
+                value="leads"
+                className="rounded-xl data-[state=active]:bg-white data-[state=active]:text-emerald-600 data-[state=active]:shadow-sm transition-all duration-300"
+              >
+                Leads Pipeline
+              </TabsTrigger>
+              <TabsTrigger 
+                value="calendar"
+                className="rounded-xl data-[state=active]:bg-white data-[state=active]:text-emerald-600 data-[state=active]:shadow-sm transition-all duration-300"
+              >
+                Calendar
+              </TabsTrigger>
+              <TabsTrigger 
+                value="commission"
+                className="rounded-xl data-[state=active]:bg-white data-[state=active]:text-emerald-600 data-[state=active]:shadow-sm transition-all duration-300"
+              >
+                Commission
+              </TabsTrigger>
+              <TabsTrigger 
+                value="notifications"
+                className="rounded-xl data-[state=active]:bg-white data-[state=active]:text-emerald-600 data-[state=active]:shadow-sm transition-all duration-300"
+              >
+                Notifications
+              </TabsTrigger>
             </TabsList>
 
-            <TabsContent value="overview" className="space-y-6">
+            <TabsContent value="overview" className="space-y-6 animate-in fade-in-50 duration-500 slide-in-from-bottom-2">
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <Card className="bg-white/70 backdrop-blur-sm rounded-[1.5rem] border-white/40 shadow-[0_8px_30px_rgba(8,_112,_184,_0.06)]">
+                <Card className="bg-white/60 backdrop-blur-xl rounded-3xl border-white/20 shadow-sm hover:shadow-md transition-all duration-300">
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2 text-slate-800">
-                      <BarChart3 className="h-5 w-5" />
+                      <div className="p-2 bg-blue-50 rounded-xl">
+                        <BarChart3 className="h-5 w-5 text-blue-600" />
+                      </div>
                       Performance Metrics
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-center py-8 text-muted-foreground">
-                      <p className="text-sm">No performance metrics available yet</p>
+                    <div className="text-center py-12 text-slate-400">
+                      <p className="text-sm font-medium">No performance metrics available yet</p>
                     </div>
                   </CardContent>
                 </Card>
 
-                <Card className="bg-white/70 backdrop-blur-sm rounded-[1.5rem] border-white/40 shadow-[0_8px_30px_rgba(8,_112,_184,_0.06)]">
+                <Card className="bg-white/60 backdrop-blur-xl rounded-3xl border-white/20 shadow-sm hover:shadow-md transition-all duration-300">
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2 text-slate-800">
-                      <PieChart className="h-5 w-5" />
+                      <div className="p-2 bg-purple-50 rounded-xl">
+                        <PieChart className="h-5 w-5 text-purple-600" />
+                      </div>
                       Lead Sources
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-center py-8 text-muted-foreground">
-                      <p className="text-sm">No lead source data available yet</p>
+                    <div className="text-center py-12 text-slate-400">
+                      <p className="text-sm font-medium">No lead source data available yet</p>
                     </div>
                   </CardContent>
                 </Card>
               </div>
             </TabsContent>
 
-            <TabsContent value="leads">
+            <TabsContent value="leads" className="animate-in fade-in-50 duration-500 slide-in-from-bottom-2">
               <LeadPipeline />
             </TabsContent>
 
-            <TabsContent value="calendar">
+            <TabsContent value="calendar" className="animate-in fade-in-50 duration-500 slide-in-from-bottom-2">
               <ShowingsCalendar />
             </TabsContent>
 
-            <TabsContent value="commission">
+            <TabsContent value="commission" className="animate-in fade-in-50 duration-500 slide-in-from-bottom-2">
               <CommissionTracker />
             </TabsContent>
 
-            <TabsContent value="notifications">
+            <TabsContent value="notifications" className="animate-in fade-in-50 duration-500 slide-in-from-bottom-2">
               <NotificationCenter />
             </TabsContent>
           </Tabs>
