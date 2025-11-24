@@ -58,6 +58,7 @@ export function AdditionalInformationStep() {
     if (!value) return;
 
     const currentItems = (additionalInfo[field as keyof typeof additionalInfo] as string[]) || [];
+    // Prevent duplicates (case-insensitive check could be added here if desired)
     if (!currentItems.includes(value)) {
       updateAdditionalInfo(field, [...currentItems, value]);
     }
@@ -157,16 +158,27 @@ export function AdditionalInformationStep() {
     );
   };
 
-  const renderTagInput = (field: string, label: string, placeholder: string, icon?: React.ElementType) => {
+  const renderHybridInput = (
+    field: string, 
+    label: string, 
+    placeholder: string, 
+    icon: React.ElementType | undefined,
+    options: { value: string; label: string; icon?: React.ElementType }[]
+  ) => {
     const currentTags = (additionalInfo[field as keyof typeof additionalInfo] as string[]) || [];
     
+    // Separate tags into "Predefined" (in options) and "Custom" (not in options)
+    const predefinedValues = options.map(o => o.value);
+    const customTags = currentTags.filter(tag => !predefinedValues.includes(tag));
+
     return (
-      <div className="space-y-3 col-span-full">
+      <div className="space-y-4 col-span-full">
         <Label htmlFor={field} className="text-slate-700 font-medium text-base flex items-center gap-2">
           {icon && React.createElement(icon, { className: "w-4 h-4 text-emerald-600" })}
           {label}
         </Label>
         
+        {/* Input for Custom Tags */}
         <div className="flex gap-2">
           <Input
             id={field}
@@ -185,18 +197,19 @@ export function AdditionalInformationStep() {
           </Button>
         </div>
 
-        {currentTags.length > 0 && (
-          <div className="flex flex-wrap gap-2 mt-3">
-            {currentTags.map((tag, index) => (
+        {/* Display Custom Tags */}
+        {customTags.length > 0 && (
+          <div className="flex flex-wrap gap-2">
+            {customTags.map((tag, index) => (
               <div 
-                key={`${tag}-${index}`}
-                className="flex items-center gap-1 bg-emerald-50 text-emerald-700 border border-emerald-200 px-3 py-1.5 rounded-full text-sm font-medium animate-in fade-in zoom-in duration-200"
+                key={`custom-${tag}-${index}`}
+                className="flex items-center gap-1 bg-emerald-100 text-emerald-800 border border-emerald-200 px-3 py-1.5 rounded-full text-sm font-medium animate-in fade-in zoom-in duration-200"
               >
                 {tag}
                 <button
                   type="button"
                   onClick={() => removeTag(field, tag)}
-                  className="ml-1 p-0.5 hover:bg-emerald-100 rounded-full transition-colors"
+                  className="ml-1 p-0.5 hover:bg-emerald-200 rounded-full transition-colors"
                 >
                   <X className="w-3 h-3" />
                 </button>
@@ -204,10 +217,42 @@ export function AdditionalInformationStep() {
             ))}
           </div>
         )}
-        
-        {currentTags.length === 0 && (
-          <p className="text-sm text-slate-400 italic">No items added yet.</p>
-        )}
+
+        {/* Predefined Options Grid */}
+        <div className="space-y-2">
+          <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Common Features</p>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+            {options.map((opt) => {
+              const isSelected = currentTags.includes(opt.value);
+              const Icon = opt.icon;
+              return (
+                <div
+                  key={opt.value}
+                  onClick={() => toggleArrayItem(field, opt.value)}
+                  className={cn(
+                    "cursor-pointer rounded-xl border p-3 transition-all duration-200 flex items-center gap-3 group relative overflow-hidden",
+                    isSelected
+                      ? "bg-emerald-50 border-emerald-500 text-emerald-700 shadow-sm"
+                      : "bg-white border-slate-200 hover:border-emerald-300 hover:bg-slate-50 text-slate-600"
+                  )}
+                >
+                  {isSelected && (
+                    <div className="absolute top-0 right-0 w-0 h-0 border-t-[16px] border-r-[16px] border-t-emerald-500 border-r-transparent rotate-90" />
+                  )}
+                  {Icon && (
+                    <div className={cn(
+                      "p-2 rounded-lg transition-colors",
+                      isSelected ? "bg-emerald-100 text-emerald-600" : "bg-slate-100 text-slate-500 group-hover:text-emerald-500"
+                    )}>
+                      <Icon className="w-4 h-4" />
+                    </div>
+                  )}
+                  <span className="font-medium text-sm">{opt.label}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
       </div>
     );
   };
@@ -249,21 +294,41 @@ export function AdditionalInformationStep() {
 
       {/* 1. Property Highlights */}
       <Card className="p-6 bg-white/60 backdrop-blur-xl border-slate-200/60 shadow-sm rounded-2xl space-y-6">
-        {renderTagInput(
+        {renderHybridInput(
           'propertyHighlights', 
           'Property Highlights', 
-          'Type a highlight and press Enter (e.g., High Ceilings, Modern Finishes)', 
-          Maximize
+          'Add custom highlight...', 
+          Maximize,
+          [
+            { value: 'High Ceilings', label: 'High Ceilings', icon: Maximize },
+            { value: 'Modern Finishes', label: 'Modern Finishes', icon: Check },
+            { value: 'Open Plan', label: 'Open Plan', icon: Maximize },
+            { value: 'Natural Light', label: 'Natural Light', icon: Trees },
+            { value: 'Newly Renovated', label: 'Newly Renovated', icon: Check },
+            { value: 'Pet Friendly', label: 'Pet Friendly', icon: Trees },
+            { value: 'Secure', label: 'Secure', icon: Shield },
+            { value: 'Scenic View', label: 'Scenic View', icon: Mountain },
+          ]
         )}
       </Card>
 
       {/* 2. Additional Rooms */}
       <Card className="p-6 bg-white/60 backdrop-blur-xl border-slate-200/60 shadow-sm rounded-2xl space-y-6">
-        {renderTagInput(
+        {renderHybridInput(
           'additionalRooms', 
           'Additional Rooms', 
-          'Type a room and press Enter (e.g., Study, Staff Quarters)', 
-          Sofa
+          'Add custom room...', 
+          Sofa,
+          [
+            { value: 'Study / Office', label: 'Study / Office', icon: Sofa },
+            { value: 'Staff Quarters', label: 'Staff Quarters', icon: Home },
+            { value: 'Scullery', label: 'Scullery', icon: Droplets },
+            { value: 'Laundry Room', label: 'Laundry Room', icon: Droplets },
+            { value: 'Pantry', label: 'Pantry', icon: Warehouse },
+            { value: 'Storage Room', label: 'Storage Room', icon: Warehouse },
+            { value: 'Gym', label: 'Gym', icon: Maximize },
+            { value: 'Entertainment Area', label: 'Entertainment Area', icon: Sofa },
+          ]
         )}
       </Card>
 
