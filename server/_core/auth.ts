@@ -13,7 +13,7 @@ import crypto from 'crypto';
 import type { User } from '../../drizzle/schema';
 import * as db from '../db';
 import { ENV } from './env';
-import { EmailService } from './emailService';
+import { sendVerificationEmail, sendPasswordResetEmail } from './email';
 
 export type SessionPayload = {
   userId: number;
@@ -205,13 +205,17 @@ class AuthService {
     }
 
     // Send verification email
-    const verificationLink = `${ENV.appUrl}/verify-email?token=${emailVerificationToken}`;
-    await EmailService.sendEmail({
-      to: user.email!,
-      subject: 'Verify Your Email Address',
-      html: `<p>Welcome! Please verify your email address by clicking the link below:</p><a href="${verificationLink}">${verificationLink}</a>`,
-      text: `Welcome! Please verify your email address by copying and pasting this link into your browser: ${verificationLink}`,
-    });
+    try {
+      await sendVerificationEmail({
+        to: user.email!,
+        verificationToken: emailVerificationToken,
+        name: user.name || undefined,
+      });
+      console.log('[Auth] Verification email sent successfully');
+    } catch (emailError) {
+      console.error('[Auth] Failed to send verification email:', emailError);
+      // Don't throw error - allow registration to complete even if email fails
+    }
 
     // Create session token
     const sessionToken = await this.createSessionToken(
