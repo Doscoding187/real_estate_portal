@@ -114,9 +114,38 @@ export const appRouter = router({
       )
       .query(async ({ input }) => {
         await db.incrementPropertyViews(input.id);
-        // Use getListingById to support the new listings table
-        const property = await db.getListingById(input.id);
-        const images = await db.getListingMedia(input.id);
+        
+        // Try listings table first (new)
+        const listing = await db.getListingById(input.id);
+        if (listing) {
+          const images = await db.getListingMedia(input.id);
+          
+          // Transform listing to match property structure for backward compatibility
+          const propertyDetails = listing.propertyDetails as any || {};
+          const transformedProperty = {
+            ...listing,
+            // Map pricing fields
+            price: listing.askingPrice || listing.monthlyRent || listing.startingBid || 0,
+            listingType: listing.action, // 'sell', 'rent', 'auction'
+            transactionType: listing.action,
+            // Extract property details from JSON
+            bedrooms: propertyDetails.bedrooms || 0,
+            bathrooms: propertyDetails.bathrooms || 0,
+            area: propertyDetails.erfSizeM2 || propertyDetails.unitSizeM2 || propertyDetails.landSizeM2OrHa || 0,
+            amenities: propertyDetails.amenitiesFeatures || [],
+            features: propertyDetails.amenitiesFeatures || [],
+            // Map location fields
+            zipCode: listing.postalCode,
+            // Keep original fields
+            ownerId: listing.ownerId,
+          };
+          
+          return { property: transformedProperty, images };
+        }
+        
+        // Fallback to properties table (old)
+        const property = await db.getPropertyById(input.id);
+        const images = await db.getPropertyImages(input.id);
         return { property, images };
       }),
 
