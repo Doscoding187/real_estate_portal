@@ -6,61 +6,52 @@
 import React, { useState, useCallback } from 'react';
 import { useListingWizardStore } from '@/hooks/useListingWizard';
 import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { trpc } from '@/lib/trpc';
-import { X, Upload, Image, Video, GripVertical } from 'lucide-react';
+import { Upload, Video, GripVertical } from 'lucide-react';
 import type { MediaFile } from '@/../../shared/listing-types';
 import {
-  DragDropContext,
-  Droppable,
-  Draggable,
-  DropResult,
-  DraggableProvided,
-  DraggableStateSnapshot,
-} from 'react-beautiful-dnd';
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+  DragOverlay,
+  DragStartEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  rectSortingStrategy,
+} from '@dnd-kit/sortable';
+import { SortableMediaItem } from './SortableMediaItem';
 
-import { StrictModeDroppable } from '@/components/StrictModeDroppable';
-
-// ... (inside component)
-
-            <DragDropContext onDragEnd={handleMediaReorder}>
-              <StrictModeDroppable droppableId="media-list">
-                {(provided, snapshot) => (
-                  <div
-                    ref={provided.innerRef}
-                    {...provided.droppableProps}
-                    className={`grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 transition-colors ${
-                      snapshot.isDraggingOver ? 'bg-blue-50 rounded-lg p-2' : ''
-                    }`}
-                  >
-                    {store.media.map((media, index) => (
-                      <Draggable
-                        key={media.id || index}
-                        draggableId={String(media.id || index)}
-                        index={index}
-                      >
-                        {(providedDraggable: DraggableProvided, snapshotDraggable: DraggableStateSnapshot) => {
-                          const dragHandleProps = providedDraggable.dragHandleProps ?? providedDraggable.draggableProps;
-                          return (
-                            <div
-                              ref={providedDraggable.innerRef}
-                              {...providedDraggable.draggableProps}
-                              {...dragHandleProps}
-                              style={getDraggableStyle(providedDraggable.draggableProps.style, snapshotDraggable)}
-                              className={`relative group ${
-                                snapshotDraggable.isDragging ? 'opacity-70 rbd-dragging' : ''
-                              }`}
-                            >
+const MediaUploadStep: React.FC = () => {
   const store = useListingWizardStore();
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [isDraggingPrimary, setIsDraggingPrimary] = useState(false);
   const [isDraggingAdditional, setIsDraggingAdditional] = useState(false);
+  const [activeId, setActiveId] = useState<string | null>(null);
   
   // TRPC mutation for media upload
   const uploadMediaMutation = trpc.listing.uploadMedia.useMutation();
+
+  // Sensors for drag and drop
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8, // Require 8px movement before drag starts (prevents accidental clicks)
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
 
   // Handle file selection
   const handleFileSelect = useCallback(async (files: FileList | null, isPrimary: boolean = false) => {
@@ -217,30 +208,30 @@ import { StrictModeDroppable } from '@/components/StrictModeDroppable';
     handleFileSelect(e.dataTransfer.files);
   };
 
-  // Handle reordering of uploaded media
-  const handleMediaReorder = (result: DropResult) => {
-    if (!result.destination) return;
-
-    const sourceIndex = result.source.index;
-    const destinationIndex = result.destination.index;
-
-    if (sourceIndex === destinationIndex) return;
-
-    // Use store's reorderMedia method
-    store.reorderMedia(sourceIndex, destinationIndex);
+  // dnd-kit handlers
+  const handleDragStart = (event: DragStartEvent) => {
+    setActiveId(event.active.id as string);
   };
 
-  // Helper: safe provided style merging (prevents transform override issues)
-  const getDraggableStyle = (
-    providedStyle: any,
-    snapshot: DraggableStateSnapshot
-  ): React.CSSProperties => {
-    return {
-      ...providedStyle,
-      transform: providedStyle?.transform ?? undefined,
-      zIndex: snapshot.isDragging ? 9999 : undefined,
-    };
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (active.id !== over?.id) {
+      const oldIndex = store.media.findIndex((item, index) => (item.id || String(index)) === active.id);
+      const newIndex = store.media.findIndex((item, index) => (item.id || String(index)) === over?.id);
+
+      if (oldIndex !== -1 && newIndex !== -1) {
+        store.reorderMedia(oldIndex, newIndex);
+      }
+    }
+
+    setActiveId(null);
   };
+
+  // Get active media item for drag overlay
+  const activeMedia = activeId 
+    ? store.media.find((item, index) => (item.id || String(index)) === activeId) 
+    : null;
 
   return (
     <Card className="p-6">
@@ -343,94 +334,53 @@ import { StrictModeDroppable } from '@/components/StrictModeDroppable';
               <h4 className="font-medium">Uploaded Media</h4>
               <p className="text-sm text-gray-500">Drag to reorder</p>
             </div>
-            <DragDropContext onDragEnd={handleMediaReorder}>
-              <Droppable droppableId="media-list">
-                {(provided, snapshot) => (
-                  <div
-                    ref={provided.innerRef}
-                    {...provided.droppableProps}
-                    className={`flex flex-wrap gap-4 transition-colors ${
-                      snapshot.isDraggingOver ? 'bg-blue-50 rounded-lg p-2' : ''
-                    }`}
-                  >
-                    {store.media.map((media, index) => (
-                      <Draggable
-                        key={media.id || index}
-                        draggableId={String(media.id || index)}
-                        index={index}
-                      >
-                        {(providedDraggable: DraggableProvided, snapshotDraggable: DraggableStateSnapshot) => {
-                          const dragHandleProps = providedDraggable.dragHandleProps ?? providedDraggable.draggableProps;
-                          return (
-                            <div
-                              ref={providedDraggable.innerRef}
-                              {...providedDraggable.draggableProps}
-                              {...dragHandleProps}
-                              style={getDraggableStyle(providedDraggable.draggableProps.style, snapshotDraggable)}
-                              className={`relative group w-[calc(50%-0.5rem)] sm:w-[calc(33.333%-0.667rem)] md:w-[calc(25%-0.75rem)] ${
-                                snapshotDraggable.isDragging ? 'opacity-70 rbd-dragging' : ''
-                              }`}
-                            >
-                            <div
-                              className={`aspect-square rounded-lg overflow-hidden border-2 transition-colors cursor-grab active:cursor-grabbing ${
-                                media.isPrimary ? 'border-blue-500' : 'border-gray-200 hover:border-blue-300'
-                              } shadow-sm`}
-                            >
-                              {media.type === 'image' ? (
-                                <img
-                                  src={media.url}
-                                  alt={`Uploaded ${media.fileName}`}
-                                  className="w-full h-full object-cover pointer-events-none select-none"
-                                  draggable={false}
-                                />
-                              ) : (
-                                <div className="w-full h-full bg-gray-100 flex items-center justify-center">
-                                  <Video className="h-8 w-8 text-gray-400" />
-                                </div>
-                              )}
-                              
-                              {/* Drag Indicator - Always visible */}
-                              <div className="absolute top-2 left-2 bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded p-1.5 shadow-lg pointer-events-none">
-                                <GripVertical className="h-4 w-4 pointer-events-none" />
-                              </div>
-                            </div>
-                            {media.isPrimary && (
-                              <div className="absolute top-2 right-12 bg-blue-500 text-white text-xs px-2 py-1 rounded shadow-md">
-                                Primary
-                              </div>
-                            )}
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant="destructive"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleRemoveMedia(index);
-                              }}
-                              className="absolute top-2 right-2 h-7 w-7 p-0 opacity-0 group-hover:opacity-100 transition-opacity bg-red-500 hover:bg-red-600 text-white"
-                            >
-                              <X className="h-4 w-4" />
-                            </Button>
-                            {!media.isPrimary && (
-                              <Button
-                                type="button"
-                                size="sm"
-                                variant="outline"
-                                onClick={() => media.id && handleSetMainMedia(media.id)}
-                                className="w-full mt-2 text-xs"
-                              >
-                                Set as Primary
-                              </Button>
-                            </div>
-                          );
-                        }}
-                      </Draggable>
-                    ))}
-                    {provided.placeholder}
+            
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragStart={handleDragStart}
+              onDragEnd={handleDragEnd}
+            >
+              <SortableContext
+                items={store.media.map((m, i) => m.id || String(i))}
+                strategy={rectSortingStrategy}
+              >
+                <div className="flex flex-wrap gap-4">
+                  {store.media.map((media, index) => (
+                    <SortableMediaItem
+                      key={media.id || index}
+                      media={media}
+                      index={index}
+                      onRemove={handleRemoveMedia}
+                      onSetPrimary={handleSetMainMedia}
+                    />
+                  ))}
+                </div>
+              </SortableContext>
+
+              <DragOverlay adjustScale={true}>
+                {activeMedia ? (
+                  <div className="w-full h-full opacity-80 cursor-grabbing">
+                    <div className="aspect-square rounded-lg overflow-hidden border-2 border-blue-500 shadow-xl bg-white">
+                      {activeMedia.type === 'image' ? (
+                        <img
+                          src={activeMedia.url}
+                          alt={`Uploaded ${activeMedia.fileName}`}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-gray-100 flex items-center justify-center">
+                          <Video className="h-8 w-8 text-gray-400" />
+                        </div>
+                      )}
+                      <div className="absolute top-2 left-2 bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded p-1.5 shadow-lg">
+                        <GripVertical className="h-4 w-4" />
+                      </div>
+                    </div>
                   </div>
-                )}
-              </Droppable>
-            </DragDropContext>
+                ) : null}
+              </DragOverlay>
+            </DndContext>
           </div>
         )}
 
