@@ -294,12 +294,14 @@ const MediaUploadStep: React.FC = () => {
               <p className="text-sm text-gray-500">Drag to reorder</p>
             </div>
             <DragDropContext onDragEnd={handleMediaReorder}>
-              <Droppable droppableId="media-list" direction="horizontal">
-                {(provided) => (
+              <Droppable droppableId="media-list">
+                {(provided, snapshot) => (
                   <div
                     ref={provided.innerRef}
                     {...provided.droppableProps}
-                    className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4"
+                    className={`grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 transition-colors ${
+                      snapshot.isDraggingOver ? 'bg-blue-50 rounded-lg p-2' : ''
+                    }`}
                   >
                     {store.media.map((media, index) => (
                       <Draggable
