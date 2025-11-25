@@ -3,7 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { Droppable, Draggable, DragDropContext } from '@hello-pangea/dnd';
+// TODO: Migrate to dnd-kit for drag-and-drop functionality
+// import { Droppable, Draggable, DragDropContext } from '@hello-pangea/dnd';
 import {
   Users,
   Mail,
@@ -243,68 +244,44 @@ export function LeadPipeline({ className }: LeadPipelineProps) {
         </Card>
       )}
 
-      {/* Kanban Board */}
-      <DragDropContext onDragEnd={handleDragEnd}>
-        <div className="grid grid-cols-5 gap-4 overflow-x-auto">
-          {PIPELINE_STAGES.map(stage => {
-            const column = pipeline[stage.id];
-            const leads = filteredLeads(column.leads);
+      {/* Kanban Board - Drag-and-drop temporarily disabled */}
+      <div className="grid grid-cols-5 gap-4 overflow-x-auto">
+        {PIPELINE_STAGES.map(stage => {
+          const column = pipeline[stage.id];
+          const leads = filteredLeads(column.leads);
 
-            return (
-              <div key={stage.id} className="flex flex-col min-w-80">
-                <Card className="h-fit">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="flex items-center gap-2 text-sm">
-                      <div className={`w-3 h-3 rounded-full ${stage.color}`}></div>
-                      {stage.title}
-                      <Badge variant="outline" className="ml-auto">
-                        {leads.length}
-                      </Badge>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="pt-0">
-                    <Droppable droppableId={stage.id}>
-                      {(provided, snapshot) => (
-                        <div
-                          ref={provided.innerRef}
-                          {...provided.droppableProps}
-                          className={`space-y-3 min-h-[200px] p-1 rounded transition-colors ${
-                            snapshot.isDraggingOver ? 'bg-blue-50' : ''
-                          }`}
-                        >
-                          {leads.map((lead, index) => (
-                            <Draggable key={lead.id} draggableId={lead.id.toString()} index={index}>
-                              {(provided, snapshot) => (
-                                <div
-                                  ref={provided.innerRef}
-                                  {...provided.draggableProps}
-                                  {...provided.dragHandleProps}
-                                  className={`transform transition-transform ${
-                                    snapshot.isDragging ? 'rotate-5 scale-105' : ''
-                                  }`}
-                                >
-                                  <LeadCard lead={lead} />
-                                </div>
-                              )}
-                            </Draggable>
-                          ))}
-                          {provided.placeholder}
-                          {leads.length === 0 && (
-                            <div className="text-center py-8 text-muted-foreground">
-                              <Plus className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                              <p className="text-sm">No leads</p>
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </Droppable>
-                  </CardContent>
-                </Card>
-              </div>
-            );
-          })}
-        </div>
-      </DragDropContext>
+          return (
+            <div key={stage.id} className="flex flex-col min-w-80">
+              <Card className="h-fit">
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center gap-2 text-sm">
+                    <div className={`w-3 h-3 rounded-full ${stage.color}`}></div>
+                    {stage.title}
+                    <Badge variant="outline" className="ml-auto">
+                      {leads.length}
+                    </Badge>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="pt-0">
+                  <div className="space-y-3 min-h-[200px] p-1 rounded">
+                    {leads.map((lead) => (
+                      <div key={lead.id}>
+                        <LeadCard lead={lead} />
+                      </div>
+                    ))}
+                    {leads.length === 0 && (
+                      <div className="text-center py-8 text-muted-foreground">
+                        <Plus className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                        <p className="text-sm">No leads</p>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
