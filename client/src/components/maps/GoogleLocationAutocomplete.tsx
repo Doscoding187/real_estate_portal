@@ -78,7 +78,7 @@ export function GoogleLocationAutocomplete({
         }
 
         const script = document.createElement('script');
-        script.src = `https://maps.googleapis.com/maps/api/js?key=${import.meta.env.VITE_GOOGLE_MAPS_API_KEY || ''}&libraries=places,geometry&callback=initGooglePlaces`;
+        script.src = `https://maps.googleapis.com/maps/api/js?key=${import.meta.env.VITE_GOOGLE_MAPS_API_KEY || ''}&libraries=places,geometry&loading=async&callback=initGooglePlaces`;
         script.async = true;
         script.defer = true;
 
@@ -112,7 +112,7 @@ export function GoogleLocationAutocomplete({
 
     // Initialize autocomplete
     const options: any = {
-      types: ['(cities)'], // Focus on cities/places
+      types: ['address'], // Enable street address autocomplete
       componentRestrictions: { country: 'za' }, // South Africa
     };
 
