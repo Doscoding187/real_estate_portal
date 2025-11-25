@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { MapPin, Navigation, Loader2 } from 'lucide-react';
+import { GoogleLocationAutocomplete } from '@/components/maps/GoogleLocationAutocomplete';
 
 declare global {
   interface Window {
@@ -260,7 +261,8 @@ const LocationStep: React.FC = () => {
     );
   };
 
-  const handleAddressChange = (field: keyof typeof location, value: string) => {
+  // Handle manual address input changes
+  const handleAddressChange = (field: string, value: string) => {
     if (location) {
       const newLocation = { ...location, [field]: value };
       setLocation(newLocation);
@@ -275,6 +277,40 @@ const LocationStep: React.FC = () => {
         [field]: value,
       } as any;
       setLocation(newLocation);
+    }
+  };
+
+  // Handle place selection from autocomplete
+  const handlePlaceSelect = (place: {
+    place_id: string;
+    name: string;
+    address: string;
+    latitude: number;
+    longitude: number;
+    formatted_address: string;
+    types: string[];
+  }) => {
+    // Update location in store
+    setLocation({
+      address: place.formatted_address,
+      latitude: place.latitude,
+      longitude: place.longitude,
+      city: location?.city || '',
+      suburb: location?.suburb || '',
+      province: location?.province || '',
+      postalCode: location?.postalCode || '',
+      placeId: place.place_id,
+    });
+
+    // Place marker on map if map is loaded
+    if (mapInstanceRef.current && window.google) {
+      const latLng = new window.google.maps.LatLng(place.latitude, place.longitude);
+      mapInstanceRef.current.setCenter(latLng);
+      mapInstanceRef.current.setZoom(15);
+      placeMarker(latLng);
+      
+      // Trigger reverse geocode to get full address details
+      reverseGeocode(latLng);
     }
   };
 
@@ -343,10 +379,15 @@ const LocationStep: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="col-span-2">
           <Label>Full Address *</Label>
-          <Input
-            placeholder="Street address"
-            value={location?.address || ''}
-            onChange={e => handleAddressChange('address', e.target.value)}
+          <GoogleLocationAutocomplete
+            onSelect={handlePlaceSelect}
+            placeholder="Search for an address..."
+            showCurrentLocation={false}
+            locationBias={
+              location?.latitude && location?.longitude
+                ? { latitude: location.latitude, longitude: location.longitude }
+                : { latitude: -26.2041, longitude: 28.0473 }
+            }
           />
         </div>
         <div>
