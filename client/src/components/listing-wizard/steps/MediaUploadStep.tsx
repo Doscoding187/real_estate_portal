@@ -349,7 +349,7 @@ import { StrictModeDroppable } from '@/components/StrictModeDroppable';
                   <div
                     ref={provided.innerRef}
                     {...provided.droppableProps}
-                    className={`grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 transition-colors ${
+                    className={`flex flex-wrap gap-4 transition-colors ${
                       snapshot.isDraggingOver ? 'bg-blue-50 rounded-lg p-2' : ''
                     }`}
                   >
@@ -367,7 +367,7 @@ import { StrictModeDroppable } from '@/components/StrictModeDroppable';
                               {...providedDraggable.draggableProps}
                               {...dragHandleProps}
                               style={getDraggableStyle(providedDraggable.draggableProps.style, snapshotDraggable)}
-                              className={`relative group ${
+                              className={`relative group w-[calc(50%-0.5rem)] sm:w-[calc(33.333%-0.667rem)] md:w-[calc(25%-0.75rem)] ${
                                 snapshotDraggable.isDragging ? 'opacity-70 rbd-dragging' : ''
                               }`}
                             >
