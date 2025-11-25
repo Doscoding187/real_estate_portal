@@ -17,6 +17,8 @@ const MediaUploadStep: React.FC = () => {
   const store = useListingWizardStore();
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [isDraggingPrimary, setIsDraggingPrimary] = useState(false);
+  const [isDraggingAdditional, setIsDraggingAdditional] = useState(false);
   
   // TRPC mutation for media upload
   const uploadMediaMutation = trpc.listing.uploadMedia.useMutation();
@@ -136,6 +138,46 @@ const MediaUploadStep: React.FC = () => {
   // Get display media type
   const displayMediaType = store.displayMediaType || 'image';
 
+  // Drag and drop handlers for primary media
+  const handlePrimaryDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingPrimary(true);
+  };
+
+  const handlePrimaryDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingPrimary(false);
+  };
+
+  const handlePrimaryDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingPrimary(false);
+    handleFileSelect(e.dataTransfer.files, true);
+  };
+
+  // Drag and drop handlers for additional media
+  const handleAdditionalDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingAdditional(true);
+  };
+
+  const handleAdditionalDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingAdditional(false);
+  };
+
+  const handleAdditionalDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingAdditional(false);
+    handleFileSelect(e.dataTransfer.files);
+  };
+
   return (
     <Card className="p-6">
       <div className="space-y-6">
@@ -151,7 +193,16 @@ const MediaUploadStep: React.FC = () => {
           <Label className="text-base font-medium">
             Primary {displayMediaType === 'image' ? 'Image' : 'Video'}
           </Label>
-          <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 transition-colors">
+          <div 
+            className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
+              isDraggingPrimary 
+                ? 'border-blue-500 bg-blue-50' 
+                : 'border-gray-300 hover:border-gray-400'
+            }`}
+            onDragOver={handlePrimaryDragOver}
+            onDragLeave={handlePrimaryDragLeave}
+            onDrop={handlePrimaryDrop}
+          >
             <Input
               type="file"
               accept={displayMediaType === 'image' ? 'image/*' : 'video/*'}
@@ -167,10 +218,10 @@ const MediaUploadStep: React.FC = () => {
               <Upload className="h-8 w-8 text-gray-400" />
               <div>
                 <p className="font-medium">
-                  Select Primary {displayMediaType === 'image' ? 'Image' : 'Video'}
+                  {isDraggingPrimary ? 'Drop files here' : `Click to upload or drag ${displayMediaType === 'image' ? 'images' : 'videos'}`}
                 </p>
                 <p className="text-sm text-gray-500 mt-1">
-                  Supported: {displayMediaType === 'image' ? 'JPG, PNG, WebP' : 'MP4, MOV'} (Select multiple files with Ctrl/Cmd)
+                  Supported: {displayMediaType === 'image' ? 'JPG, PNG, WebP' : 'MP4, MOV'} (Select multiple files)
                 </p>
               </div>
               <div className={`inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}`}>
@@ -185,7 +236,16 @@ const MediaUploadStep: React.FC = () => {
           <Label className="text-base font-medium">
             Additional Media
           </Label>
-          <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 transition-colors">
+          <div 
+            className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
+              isDraggingAdditional 
+                ? 'border-blue-500 bg-blue-50' 
+                : 'border-gray-300 hover:border-gray-400'
+            }`}
+            onDragOver={handleAdditionalDragOver}
+            onDragLeave={handleAdditionalDragLeave}
+            onDrop={handleAdditionalDrop}
+          >
             <Input
               type="file"
               accept="image/*,video/*"
@@ -200,9 +260,9 @@ const MediaUploadStep: React.FC = () => {
             >
               <Upload className="h-8 w-8 text-gray-400" />
               <div>
-                <p className="font-medium">Add More Media</p>
+                <p className="font-medium">{isDraggingAdditional ? 'Drop files here' : 'Click to upload or drag and drop'}</p>
                 <p className="text-sm text-gray-500 mt-1">
-                  Supported: JPG, PNG, WebP, MP4, MOV (Select multiple files with Ctrl/Cmd)
+                  Supported: JPG, PNG, WebP, MP4, MOV (Select multiple files)
                 </p>
               </div>
               <div className={`inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2 ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}`}>
