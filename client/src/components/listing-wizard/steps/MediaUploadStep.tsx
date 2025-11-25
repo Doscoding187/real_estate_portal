@@ -21,7 +21,38 @@ import {
   DraggableStateSnapshot,
 } from 'react-beautiful-dnd';
 
-const MediaUploadStep: React.FC = () => {
+import { StrictModeDroppable } from '@/components/StrictModeDroppable';
+
+// ... (inside component)
+
+            <DragDropContext onDragEnd={handleMediaReorder}>
+              <StrictModeDroppable droppableId="media-list" direction="horizontal">
+                {(provided, snapshot) => (
+                  <div
+                    ref={provided.innerRef}
+                    {...provided.droppableProps}
+                    className={`grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 transition-colors ${
+                      snapshot.isDraggingOver ? 'bg-blue-50 rounded-lg p-2' : ''
+                    }`}
+                  >
+                    {store.media.map((media, index) => (
+                      <Draggable
+                        key={media.id || index}
+                        draggableId={String(media.id || index)}
+                        index={index}
+                      >
+                        {(providedDraggable: DraggableProvided, snapshotDraggable: DraggableStateSnapshot) => {
+                          const dragHandleProps = providedDraggable.dragHandleProps ?? providedDraggable.draggableProps;
+                          return (
+                            <div
+                              ref={providedDraggable.innerRef}
+                              {...providedDraggable.draggableProps}
+                              {...dragHandleProps}
+                              style={getDraggableStyle(providedDraggable.draggableProps.style, snapshotDraggable)}
+                              className={`relative group ${
+                                snapshotDraggable.isDragging ? 'opacity-70 rbd-dragging' : ''
+                              }`}
+                            >
   const store = useListingWizardStore();
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
