@@ -26,7 +26,7 @@ import { StrictModeDroppable } from '@/components/StrictModeDroppable';
 // ... (inside component)
 
             <DragDropContext onDragEnd={handleMediaReorder}>
-              <StrictModeDroppable droppableId="media-list" direction="horizontal">
+              <StrictModeDroppable droppableId="media-list">
                 {(provided, snapshot) => (
                   <div
                     ref={provided.innerRef}
