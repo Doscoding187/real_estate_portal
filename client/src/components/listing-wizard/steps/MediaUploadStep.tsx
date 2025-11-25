@@ -12,7 +12,14 @@ import { Input } from '@/components/ui/input';
 import { trpc } from '@/lib/trpc';
 import { X, Upload, Image, Video, GripVertical } from 'lucide-react';
 import type { MediaFile } from '@/../../shared/listing-types';
-import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd';
+import {
+  DragDropContext,
+  Droppable,
+  Draggable,
+  DropResult,
+  DraggableProvided,
+  DraggableStateSnapshot,
+} from 'react-beautiful-dnd';
 
 const MediaUploadStep: React.FC = () => {
   const store = useListingWizardStore();
@@ -192,6 +199,18 @@ const MediaUploadStep: React.FC = () => {
     store.reorderMedia(sourceIndex, destinationIndex);
   };
 
+  // Helper: safe provided style merging (prevents transform override issues)
+  const getDraggableStyle = (
+    providedStyle: any,
+    snapshot: DraggableStateSnapshot
+  ): React.CSSProperties => {
+    return {
+      ...providedStyle,
+      transform: providedStyle?.transform ?? undefined,
+      zIndex: snapshot.isDragging ? 9999 : undefined,
+    };
+  };
+
   return (
     <Card className="p-6">
       <div className="space-y-6">
@@ -309,18 +328,18 @@ const MediaUploadStep: React.FC = () => {
                         draggableId={String(media.id || index)}
                         index={index}
                       >
-                        {(provided, snapshot) => (
-                          <div
-                            ref={provided.innerRef}
-                            {...provided.draggableProps}
-                            {...provided.dragHandleProps}
-                            style={{
-                              ...provided.draggableProps.style,
-                            }}
-                            className={`relative group ${
-                              snapshot.isDragging ? 'opacity-70 rbd-dragging' : ''
-                            }`}
-                          >
+                        {(providedDraggable: DraggableProvided, snapshotDraggable: DraggableStateSnapshot) => {
+                          const dragHandleProps = providedDraggable.dragHandleProps ?? providedDraggable.draggableProps;
+                          return (
+                            <div
+                              ref={providedDraggable.innerRef}
+                              {...providedDraggable.draggableProps}
+                              {...dragHandleProps}
+                              style={getDraggableStyle(providedDraggable.draggableProps.style, snapshotDraggable)}
+                              className={`relative group ${
+                                snapshotDraggable.isDragging ? 'opacity-70 rbd-dragging' : ''
+                              }`}
+                            >
                             <div
                               className={`aspect-square rounded-lg overflow-hidden border-2 transition-colors cursor-grab active:cursor-grabbing ${
                                 media.isPrimary ? 'border-blue-500' : 'border-gray-200 hover:border-blue-300'
@@ -340,8 +359,8 @@ const MediaUploadStep: React.FC = () => {
                               )}
                               
                               {/* Drag Indicator - Always visible */}
-                              <div className="absolute top-2 left-2 bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded p-1.5 shadow-lg">
-                                <GripVertical className="h-4 w-4" />
+                              <div className="absolute top-2 left-2 bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded p-1.5 shadow-lg pointer-events-none">
+                                <GripVertical className="h-4 w-4 pointer-events-none" />
                               </div>
                             </div>
                             {media.isPrimary && (
@@ -371,9 +390,9 @@ const MediaUploadStep: React.FC = () => {
                               >
                                 Set as Primary
                               </Button>
-                            )}
-                          </div>
-                        )}
+                            </div>
+                          );
+                        }}
                       </Draggable>
                     ))}
                     {provided.placeholder}
