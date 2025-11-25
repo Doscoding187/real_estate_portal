@@ -188,13 +188,21 @@ export default function PropertiesPage() {
                             <DropdownMenuContent align="end">
                               <DropdownMenuLabel>Actions</DropdownMenuLabel>
                               <DropdownMenuItem
-                                onClick={() => setLocation(`/property/${property.id}`)}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setLocation(`/property/${property.id}`);
+                                }}
                               >
                                 View Details
                               </DropdownMenuItem>
                               <DropdownMenuSeparator />
-                              <DropdownMenuItem>Edit Property</DropdownMenuItem>
-                              <DropdownMenuItem className="text-destructive">
+                              <DropdownMenuItem onClick={(e) => e.stopPropagation()}>
+                                Edit Property
+                              </DropdownMenuItem>
+                              <DropdownMenuItem 
+                                className="text-destructive"
+                                onClick={(e) => e.stopPropagation()}
+                              >
                                 Delete Property
                               </DropdownMenuItem>
                             </DropdownMenuContent>
