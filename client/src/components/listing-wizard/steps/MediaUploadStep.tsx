@@ -12,7 +12,7 @@ import { Input } from '@/components/ui/input';
 import { trpc } from '@/lib/trpc';
 import { X, Upload, Image, Video, GripVertical } from 'lucide-react';
 import type { MediaFile } from '@/../../shared/listing-types';
-import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
+import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd';
 
 const MediaUploadStep: React.FC = () => {
   const store = useListingWizardStore();
@@ -314,9 +314,11 @@ const MediaUploadStep: React.FC = () => {
                             ref={provided.innerRef}
                             {...provided.draggableProps}
                             {...provided.dragHandleProps}
-                            style={provided.draggableProps.style}
+                            style={{
+                              ...provided.draggableProps.style,
+                            }}
                             className={`relative group ${
-                              snapshot.isDragging ? 'opacity-50 pointer-events-none' : 'opacity-100'
+                              snapshot.isDragging ? 'opacity-70 rbd-dragging' : ''
                             }`}
                           >
                             <div

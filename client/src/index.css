@@ -3,6 +3,11 @@
 /* Ikhaya Design System utilities & components */
 @import '../../design-system/components.css';
 
+/* React Beautiful DnD - Fix for drag layer z-index */
+.rbd-dragging {
+  z-index: 9999 !important;
+}
+
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
