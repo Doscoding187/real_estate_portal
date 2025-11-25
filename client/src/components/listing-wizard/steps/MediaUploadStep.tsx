@@ -311,18 +311,22 @@ const MediaUploadStep: React.FC = () => {
                           <div
                             ref={provided.innerRef}
                             {...provided.draggableProps}
-                            className="relative group"
+                            {...provided.dragHandleProps}
+                            className={`relative group transition-all duration-200 ${
+                              snapshot.isDragging ? 'z-50 scale-105' : 'z-0'
+                            }`}
                           >
                             <div
-                              className={`aspect-square rounded-lg overflow-hidden border-2 transition-shadow ${
-                                media.isPrimary ? 'border-blue-500' : 'border-gray-200'
-                              } ${snapshot.isDragging ? 'shadow-2xl ring-2 ring-blue-500' : ''}`}
+                              className={`aspect-square rounded-lg overflow-hidden border-2 transition-all cursor-grab active:cursor-grabbing ${
+                                media.isPrimary ? 'border-blue-500' : 'border-gray-200 hover:border-blue-300'
+                              } ${snapshot.isDragging ? 'shadow-2xl ring-4 ring-blue-400 ring-opacity-50' : 'shadow-sm'}`}
                             >
                               {media.type === 'image' ? (
                                 <img
                                   src={media.url}
                                   alt={`Uploaded ${media.fileName}`}
-                                  className="w-full h-full object-cover"
+                                  className="w-full h-full object-cover pointer-events-none select-none"
+                                  draggable={false}
                                 />
                               ) : (
                                 <div className="w-full h-full bg-gray-100 flex items-center justify-center">
@@ -330,30 +334,28 @@ const MediaUploadStep: React.FC = () => {
                                 </div>
                               )}
                               
-                              {/* Drag Handle */}
-                              <div
-                                {...provided.dragHandleProps}
-                                className="absolute top-2 left-2 bg-white/90 rounded p-1 cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity"
-                              >
-                                <GripVertical className="h-4 w-4 text-gray-600" />
+                              {/* Drag Indicator - Always visible */}
+                              <div className="absolute top-2 left-2 bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded p-1.5 shadow-lg">
+                                <GripVertical className="h-4 w-4" />
                               </div>
                             </div>
                             {media.isPrimary && (
-                              <div className="absolute top-2 right-2 bg-blue-500 text-white text-xs px-2 py-1 rounded">
+                              <div className="absolute top-2 right-12 bg-blue-500 text-white text-xs px-2 py-1 rounded shadow-md">
                                 Primary
                               </div>
                             )}
-                            <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                              <Button
-                                type="button"
-                                size="sm"
-                                variant="destructive"
-                                onClick={() => handleRemoveMedia(index)}
-                                className="h-6 w-6 p-0"
-                              >
-                                <X className="h-3 w-3" />
-                              </Button>
-                            </div>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="destructive"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleRemoveMedia(index);
+                              }}
+                              className="absolute top-2 right-2 h-7 w-7 p-0 opacity-0 group-hover:opacity-100 transition-opacity bg-red-500 hover:bg-red-600 text-white"
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
                             {!media.isPrimary && (
                               <Button
                                 type="button"
