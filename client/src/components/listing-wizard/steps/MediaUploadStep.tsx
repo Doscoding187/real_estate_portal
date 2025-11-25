@@ -294,7 +294,7 @@ const MediaUploadStep: React.FC = () => {
               <p className="text-sm text-gray-500">Drag to reorder</p>
             </div>
             <DragDropContext onDragEnd={handleMediaReorder}>
-              <Droppable droppableId="media-list" direction="horizontal">
+              <Droppable droppableId="media-list">
                 {(provided, snapshot) => (
                   <div
                     ref={provided.innerRef}
