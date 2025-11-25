@@ -314,14 +314,14 @@ const MediaUploadStep: React.FC = () => {
                             ref={provided.innerRef}
                             {...provided.draggableProps}
                             {...provided.dragHandleProps}
-                            className={`relative group transition-all duration-200 ${
-                              snapshot.isDragging ? 'z-50 scale-105' : 'z-0'
+                            className={`relative group transition-opacity duration-200 ${
+                              snapshot.isDragging ? 'opacity-50' : 'opacity-100'
                             }`}
                           >
                             <div
                               className={`aspect-square rounded-lg overflow-hidden border-2 transition-all cursor-grab active:cursor-grabbing ${
                                 media.isPrimary ? 'border-blue-500' : 'border-gray-200 hover:border-blue-300'
-                              } ${snapshot.isDragging ? 'shadow-2xl ring-4 ring-blue-400 ring-opacity-50' : 'shadow-sm'}`}
+                              } ${snapshot.isDragging ? 'shadow-2xl ring-4 ring-blue-400' : 'shadow-sm'}`}
                             >
                               {media.type === 'image' ? (
                                 <img
