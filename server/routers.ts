@@ -114,8 +114,9 @@ export const appRouter = router({
       )
       .query(async ({ input }) => {
         await db.incrementPropertyViews(input.id);
-        const property = await db.getPropertyById(input.id);
-        const images = await db.getPropertyImages(input.id);
+        // Use getListingById to support the new listings table
+        const property = await db.getListingById(input.id);
+        const images = await db.getListingMedia(input.id);
         return { property, images };
       }),
 
