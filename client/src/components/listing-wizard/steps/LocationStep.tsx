@@ -48,7 +48,7 @@ const LocationStep: React.FC = () => {
         }
 
         const script = document.createElement('script');
-        script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&callback=initMap`;
+        script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&loading=async&callback=initMap`;
         script.async = true;
         script.defer = true;
 
@@ -260,13 +260,9 @@ const LocationStep: React.FC = () => {
     );
   };
 
-  // Handle manual address input changes
   const handleAddressChange = (field: keyof typeof location, value: string) => {
-    console.log('Updating location field:', field, 'with value:', value);
-    console.log('Current location state:', location);
     if (location) {
       const newLocation = { ...location, [field]: value };
-      console.log('New location state:', newLocation);
       setLocation(newLocation);
     } else {
       // Initialize location object if it doesn't exist
@@ -278,7 +274,6 @@ const LocationStep: React.FC = () => {
         province: '',
         [field]: value,
       } as any;
-      console.log('Initializing location state:', newLocation);
       setLocation(newLocation);
     }
   };
