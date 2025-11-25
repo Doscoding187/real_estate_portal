@@ -10,8 +10,9 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { trpc } from '@/lib/trpc';
-import { X, Upload, Image, Video } from 'lucide-react';
+import { X, Upload, Image, Video, GripVertical } from 'lucide-react';
 import type { MediaFile } from '@/../../shared/listing-types';
+import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 
 const MediaUploadStep: React.FC = () => {
   const store = useListingWizardStore();
@@ -178,6 +179,19 @@ const MediaUploadStep: React.FC = () => {
     handleFileSelect(e.dataTransfer.files);
   };
 
+  // Handle reordering of uploaded media
+  const handleMediaReorder = (result: DropResult) => {
+    if (!result.destination) return;
+
+    const sourceIndex = result.source.index;
+    const destinationIndex = result.destination.index;
+
+    if (sourceIndex === destinationIndex) return;
+
+    // Use store's reorderMedia method
+    store.reorderMedia(sourceIndex, destinationIndex);
+  };
+
   return (
     <Card className="p-6">
       <div className="space-y-6">
@@ -275,55 +289,91 @@ const MediaUploadStep: React.FC = () => {
         {/* Uploaded Media Preview */}
         {store.media.length > 0 && (
           <div className="space-y-4">
-            <h4 className="font-medium">Uploaded Media</h4>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-              {store.media.map((media, index) => (
-                <div key={media.id || index} className="relative group">
-                  <div className={`aspect-square rounded-lg overflow-hidden border-2 ${
-                    media.isPrimary ? 'border-blue-500' : 'border-gray-200'
-                  }`}>
-                    {media.type === 'image' ? (
-                      <img
-                        src={media.url}
-                        alt={`Uploaded ${media.fileName}`}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-full h-full bg-gray-100 flex items-center justify-center">
-                        <Video className="h-8 w-8 text-gray-400" />
-                      </div>
-                    )}
-                  </div>
-                  {media.isPrimary && (
-                    <div className="absolute top-2 left-2 bg-blue-500 text-white text-xs px-2 py-1 rounded">
-                      Primary
-                    </div>
-                  )}
-                  <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="destructive"
-                      onClick={() => handleRemoveMedia(index)}
-                      className="h-6 w-6 p-0"
-                    >
-                      <X className="h-3 w-3" />
-                    </Button>
-                  </div>
-                  {!media.isPrimary && (
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      onClick={() => media.id && handleSetMainMedia(media.id)}
-                      className="w-full mt-2 text-xs"
-                    >
-                      Set as Primary
-                    </Button>
-                  )}
-                </div>
-              ))}
+            <div className="flex items-center justify-between">
+              <h4 className="font-medium">Uploaded Media</h4>
+              <p className="text-sm text-gray-500">Drag to reorder</p>
             </div>
+            <DragDropContext onDragEnd={handleMediaReorder}>
+              <Droppable droppableId="media-list" direction="horizontal">
+                {(provided) => (
+                  <div
+                    ref={provided.innerRef}
+                    {...provided.droppableProps}
+                    className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4"
+                  >
+                    {store.media.map((media, index) => (
+                      <Draggable
+                        key={media.id || index}
+                        draggableId={String(media.id || index)}
+                        index={index}
+                      >
+                        {(provided, snapshot) => (
+                          <div
+                            ref={provided.innerRef}
+                            {...provided.draggableProps}
+                            className="relative group"
+                          >
+                            <div
+                              className={`aspect-square rounded-lg overflow-hidden border-2 transition-shadow ${
+                                media.isPrimary ? 'border-blue-500' : 'border-gray-200'
+                              } ${snapshot.isDragging ? 'shadow-2xl ring-2 ring-blue-500' : ''}`}
+                            >
+                              {media.type === 'image' ? (
+                                <img
+                                  src={media.url}
+                                  alt={`Uploaded ${media.fileName}`}
+                                  className="w-full h-full object-cover"
+                                />
+                              ) : (
+                                <div className="w-full h-full bg-gray-100 flex items-center justify-center">
+                                  <Video className="h-8 w-8 text-gray-400" />
+                                </div>
+                              )}
+                              
+                              {/* Drag Handle */}
+                              <div
+                                {...provided.dragHandleProps}
+                                className="absolute top-2 left-2 bg-white/90 rounded p-1 cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity"
+                              >
+                                <GripVertical className="h-4 w-4 text-gray-600" />
+                              </div>
+                            </div>
+                            {media.isPrimary && (
+                              <div className="absolute top-2 right-2 bg-blue-500 text-white text-xs px-2 py-1 rounded">
+                                Primary
+                              </div>
+                            )}
+                            <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="destructive"
+                                onClick={() => handleRemoveMedia(index)}
+                                className="h-6 w-6 p-0"
+                              >
+                                <X className="h-3 w-3" />
+                              </Button>
+                            </div>
+                            {!media.isPrimary && (
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                onClick={() => media.id && handleSetMainMedia(media.id)}
+                                className="w-full mt-2 text-xs"
+                              >
+                                Set as Primary
+                              </Button>
+                            )}
+                          </div>
+                        )}
+                      </Draggable>
+                    ))}
+                    {provided.placeholder}
+                  </div>
+                )}
+              </Droppable>
+            </DragDropContext>
           </div>
         )}
 
