@@ -314,13 +314,10 @@ const MediaUploadStep: React.FC = () => {
                             ref={provided.innerRef}
                             {...provided.draggableProps}
                             {...provided.dragHandleProps}
+                            style={provided.draggableProps.style}
                             className={`relative group ${
                               snapshot.isDragging ? 'opacity-50 pointer-events-none' : 'opacity-100'
                             }`}
-                            style={{
-                              ...provided.draggableProps.style,
-                              transform: provided.draggableProps.style?.transform,
-                            }}
                           >
                             <div
                               className={`aspect-square rounded-lg overflow-hidden border-2 transition-colors cursor-grab active:cursor-grabbing ${
