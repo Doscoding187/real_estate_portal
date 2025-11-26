@@ -662,4 +662,275 @@ export const adminRouter = router({
 
       return { success: true };
     }),
+
+  /**
+   * Super Admin: Get comprehensive revenue analytics
+   */
+  getRevenueAnalytics: superAdminProcedure
+    .input(
+      z.object({
+        startDate: z.string().optional(),
+        endDate: z.string().optional(),
+      }).optional(),
+    )
+    .query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new Error('Database not available');
+
+      const startDate = input?.startDate ? new Date(input.startDate) : new Date(Date.now() - 90 * 24 * 60 * 60 * 1000); // Default: 90 days ago
+      const endDate = input?.endDate ? new Date(input.endDate) : new Date();
+
+      // Get commission revenue
+      const [commissionStats] = await db.execute(sql`
+        SELECT
+          COUNT(*) as totalCommissions,
+          SUM(CASE WHEN status = 'paid' THEN amount ELSE 0 END) as paidCommissions,
+          SUM(CASE WHEN status = 'pending' THEN amount ELSE 0 END) as pendingCommissions,
+          SUM(CASE WHEN status = 'approved' THEN amount ELSE 0 END) as approvedCommissions,
+          SUM(amount) as totalCommissionAmount,
+          AVG(CASE WHEN status = 'paid' THEN amount ELSE NULL END) as avgCommission
+        FROM ${commissions}
+        WHERE ${commissions.createdAt} >= ${startDate} AND ${commissions.createdAt} <= ${endDate}
+      `);
+
+      // Get subscription revenue
+      const [subscriptionStats] = await db.execute(sql`
+        SELECT
+          COUNT(DISTINCT ${agencySubscriptions.agencyId}) as activeSubscriptions,
+          COUNT(CASE WHEN ${agencySubscriptions.status} = 'active' THEN 1 END) as currentlyActive,
+          COUNT(CASE WHEN ${agencySubscriptions.status} = 'trialing' THEN 1 END) as trialing
+        FROM ${agencySubscriptions}
+        WHERE ${agencySubscriptions.currentPeriodStart} >= ${startDate} 
+          AND ${agencySubscriptions.currentPeriodStart} <= ${endDate}
+      `);
+
+      // Get invoice revenue
+      const [invoiceStats] = await db.execute(sql`
+        SELECT
+          COUNT(*) as totalInvoices,
+          SUM(CASE WHEN status = 'paid' THEN amount ELSE 0 END) as paidInvoices,
+          SUM(CASE WHEN status = 'open' THEN amount ELSE 0 END) as openInvoices,
+          SUM(amount) as totalInvoiceAmount
+        FROM ${invoices}
+        WHERE ${invoices.createdAt} >= ${startDate} AND ${invoices.createdAt} <= ${endDate}
+      `);
+
+      const commRow = (commissionStats as any)[0];
+      const subsRow = (subscriptionStats as any)[0];
+      const invRow = (invoiceStats as any)[0];
+
+      const totalRevenue = Number(commRow.paidCommissions || 0) + Number(invRow.paidInvoices || 0);
+      const pendingRevenue = Number(commRow.pendingCommissions || 0) + Number(invRow.openInvoices || 0);
+
+      return {
+        totalRevenue: totalRevenue / 100, // Convert cents to currency
+        pendingRevenue: pendingRevenue / 100,
+        commissionRevenue: Number(commRow.paidCommissions || 0) / 100,
+        subscriptionRevenue: Number(invRow.paidInvoices || 0) / 100,
+        totalCommissions: Number(commRow.totalCommissions || 0),
+        paidCommissions: Number(commRow.paidCommissions || 0) / 100,
+        pendingCommissions: Number(commRow.pendingCommissions || 0) / 100,
+        approvedCommissions: Number(commRow.approvedCommissions || 0) / 100,
+        avgCommission: Number(commRow.avgCommission || 0) / 100,
+        activeSubscriptions: Number(subsRow.activeSubscriptions || 0),
+        currentlyActive: Number(subsRow.currentlyActive || 0),
+        trialing: Number(subsRow.trialing || 0),
+        totalInvoices: Number(invRow.totalInvoices || 0),
+        paidInvoices: Number(invRow.paidInvoices || 0) / 100,
+        openInvoices: Number(invRow.openInvoices || 0) / 100,
+      };
+    }),
+
+  /**
+   * Super Admin: Get commission breakdown
+   */
+  getCommissionBreakdown: superAdminProcedure
+    .input(
+      z.object({
+        page: z.number().default(1),
+        limit: z.number().default(50),
+        status: z.enum(['pending', 'approved', 'paid', 'cancelled']).optional(),
+        transactionType: z.enum(['sale', 'rent', 'referral', 'other']).optional(),
+        startDate: z.string().optional(),
+        endDate: z.string().optional(),
+      }),
+    )
+    .query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new Error('Database not available');
+
+      const offset = (input.page - 1) * input.limit;
+      const conditions: any[] = [];
+
+      if (input.status) conditions.push(eq(commissions.status, input.status));
+      if (input.transactionType) conditions.push(eq(commissions.transactionType, input.transactionType));
+      if (input.startDate) conditions.push(gte(commissions.createdAt, new Date(input.startDate)));
+      if (input.endDate) conditions.push(lte(commissions.createdAt, new Date(input.endDate)));
+
+      const where = conditions.length > 0 ? and(...conditions) : undefined;
+
+      const [commissionsList, totalResult] = await Promise.all([
+        db
+          .select({
+            id: commissions.id,
+            amount: commissions.amount,
+            percentage: commissions.percentage,
+            status: commissions.status,
+            transactionType: commissions.transactionType,
+            description: commissions.description,
+            payoutDate: commissions.payoutDate,
+            paymentReference: commissions.paymentReference,
+            createdAt: commissions.createdAt,
+            agent: {
+              id: agents.id,
+              firstName: agents.firstName,
+              lastName: agents.lastName,
+              displayName: agents.displayName,
+            },
+            property: {
+              id: properties.id,
+              title: properties.title,
+              address: properties.address,
+            },
+          })
+          .from(commissions)
+          .leftJoin(agents, eq(commissions.agentId, agents.id))
+          .leftJoin(properties, eq(commissions.propertyId, properties.id))
+          .where(where)
+          .limit(input.limit)
+          .offset(offset)
+          .orderBy(desc(commissions.createdAt)),
+        db
+          .select({ count: sql<number>`count(*)` })
+          .from(commissions)
+          .where(where),
+      ]);
+
+      const total = Number(totalResult[0]?.count || 0);
+
+      return {
+        commissions: commissionsList.map(c => ({
+          ...c,
+          amount: Number(c.amount) / 100, // Convert cents to currency
+        })),
+        pagination: {
+          page: input.page,
+          limit: input.limit,
+          total,
+          totalPages: Math.ceil(total / input.limit),
+        },
+      };
+    }),
+
+  /**
+   * Super Admin: Get subscription revenue analytics
+   */
+  getSubscriptionRevenue: superAdminProcedure.query(async () => {
+    const db = await getDb();
+    if (!db) throw new Error('Database not available');
+
+    // Get subscription breakdown by plan
+    const subscriptionsByPlan = await db
+      .select({
+        planId: agencySubscriptions.planId,
+        planName: plans.name,
+        count: sql<number>`count(*)`,
+        status: agencySubscriptions.status,
+      })
+      .from(agencySubscriptions)
+      .leftJoin(plans, eq(agencySubscriptions.planId, plans.id))
+      .groupBy(agencySubscriptions.planId, agencySubscriptions.status, plans.name);
+
+    // Get MRR (Monthly Recurring Revenue)
+    const [mrrResult] = await db.execute(sql`
+      SELECT 
+        SUM(${plans.price}) as monthlyRecurringRevenue
+      FROM ${agencySubscriptions}
+      LEFT JOIN ${plans} ON ${agencySubscriptions.planId} = ${plans.id}
+      WHERE ${agencySubscriptions.status} = 'active'
+        AND ${plans.interval} = 'month'
+    `);
+
+    const mrrRow = (mrrResult as any)[0];
+
+    return {
+      subscriptionsByPlan,
+      monthlyRecurringRevenue: Number(mrrRow?.monthlyRecurringRevenue || 0) / 100,
+    };
+  }),
+
+  /**
+   * Super Admin: Get revenue by period (for charts)
+   */
+  getRevenueByPeriod: superAdminProcedure
+    .input(
+      z.object({
+        period: z.enum(['daily', 'weekly', 'monthly']).default('monthly'),
+        months: z.number().default(6),
+      }),
+    )
+    .query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new Error('Database not available');
+
+      const monthsAgo = new Date();
+      monthsAgo.setMonth(monthsAgo.getMonth() - input.months);
+
+      // Get commission revenue by period
+      const commissionRevenue = await db.execute(sql`
+        SELECT 
+          DATE_FORMAT(${commissions.createdAt}, '%Y-%m') as period,
+          SUM(CASE WHEN status = 'paid' THEN amount ELSE 0 END) as revenue,
+          COUNT(*) as count
+        FROM ${commissions}
+        WHERE ${commissions.createdAt} >= ${monthsAgo}
+        GROUP BY DATE_FORMAT(${commissions.createdAt}, '%Y-%m')
+        ORDER BY period ASC
+      `);
+
+      // Get invoice revenue by period
+      const invoiceRevenue = await db.execute(sql`
+        SELECT 
+          DATE_FORMAT(${invoices.createdAt}, '%Y-%m') as period,
+          SUM(CASE WHEN status = 'paid' THEN amount ELSE 0 END) as revenue,
+          COUNT(*) as count
+        FROM ${invoices}
+        WHERE ${invoices.createdAt} >= ${monthsAgo}
+        GROUP BY DATE_FORMAT(${invoices.createdAt}, '%Y-%m')
+        ORDER BY period ASC
+      `);
+
+      // Combine and format data
+      const periodMap = new Map();
+      
+      (commissionRevenue as any[]).forEach(row => {
+        periodMap.set(row.period, {
+          period: row.period,
+          commissionRevenue: Number(row.revenue || 0) / 100,
+          commissionCount: Number(row.count || 0),
+          subscriptionRevenue: 0,
+          subscriptionCount: 0,
+        });
+      });
+
+      (invoiceRevenue as any[]).forEach(row => {
+        const existing = periodMap.get(row.period) || {
+          period: row.period,
+          commissionRevenue: 0,
+          commissionCount: 0,
+          subscriptionRevenue: 0,
+          subscriptionCount: 0,
+        };
+        existing.subscriptionRevenue = Number(row.revenue || 0) / 100;
+        existing.subscriptionCount = Number(row.count || 0);
+        periodMap.set(row.period, existing);
+      });
+
+      const revenueData = Array.from(periodMap.values()).map(item => ({
+        ...item,
+        totalRevenue: item.commissionRevenue + item.subscriptionRevenue,
+      }));
+
+      return revenueData;
+    }),
 });
