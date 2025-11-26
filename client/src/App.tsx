@@ -52,6 +52,7 @@ import SubscriptionManagementPage from './pages/admin/SubscriptionManagementPage
 import AnalyticsPage from './pages/admin/AnalyticsPage';
 import MarketingCampaignsPage from './pages/admin/MarketingCampaignsPage';
 import CreateCampaignWizard from './pages/admin/CreateCampaignWizard';
+import CampaignDetailsPage from './pages/admin/CampaignDetailsPage';
 
 // Import new role-based dashboards
 import UserDashboard from './pages/UserDashboard';
@@ -179,6 +180,14 @@ function Router() {
         component={() => (
           <SuperAdminDashboard>
             <CreateCampaignWizard />
+          </SuperAdminDashboard>
+        )}
+      />
+      <Route
+        path="/admin/marketing/:id"
+        component={() => (
+          <SuperAdminDashboard>
+            <CampaignDetailsPage />
           </SuperAdminDashboard>
         )}
       />
