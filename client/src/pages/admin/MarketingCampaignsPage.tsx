@@ -30,10 +30,15 @@ const MarketingCampaignsPage: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   
   // Determine owner type and ID based on user role
-  // For now, assuming admin can see all or acting as an agent
-  // In a real scenario, we'd pass the correct owner info
-  const ownerType = user?.role === 'agency_admin' ? 'agency' : 'agent';
-  const ownerId = user?.agencyId || user?.id || 0;
+  const isSuperAdmin = user?.role === 'admin' || user?.role === 'super_admin';
+  
+  const ownerType = !isSuperAdmin 
+    ? (user?.role === 'agency_admin' ? 'agency' : 'agent') 
+    : undefined;
+    
+  const ownerId = !isSuperAdmin 
+    ? (user?.agencyId || user?.id || 0) 
+    : undefined;
 
   const { data: campaigns, isLoading } = trpc.marketing.listCampaigns.useQuery({
     ownerType: ownerType as any,
@@ -150,6 +155,7 @@ const MarketingCampaignsPage: React.FC = () => {
             <TableHeader>
               <TableRow>
                 <TableHead>Campaign Name</TableHead>
+                {isSuperAdmin && <TableHead>Owner</TableHead>}
                 <TableHead>Type</TableHead>
                 <TableHead>Target</TableHead>
                 <TableHead>Status</TableHead>
@@ -174,6 +180,11 @@ const MarketingCampaignsPage: React.FC = () => {
                 campaigns?.map((campaign) => (
                   <TableRow key={campaign.id} className="cursor-pointer hover:bg-slate-50" onClick={() => navigate(`/admin/marketing/${campaign.id}`)}>
                     <TableCell className="font-medium">{campaign.campaignName}</TableCell>
+                    {isSuperAdmin && (
+                      <TableCell className="text-slate-500 text-sm">
+                        {campaign.ownerType === 'agency' ? 'Agency' : 'Agent'} #{campaign.ownerId}
+                      </TableCell>
+                    )}
                     <TableCell className="capitalize">{campaign.campaignType.replace('_', ' ')}</TableCell>
                     <TableCell className="capitalize">{campaign.targetType.replace('_', ' ')}</TableCell>
                     <TableCell>{getStatusBadge(campaign.status)}</TableCell>
