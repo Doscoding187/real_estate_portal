@@ -141,43 +141,17 @@ export default function ListingOversight() {
     switch (property.status) {
       case 'pending':
         return (
-          <div className="flex gap-1">
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={(e) => {
-                e.stopPropagation();
-                setLocation(`/admin/review/${property.id}`);
-              }}
-            >
-              <Eye className="h-3 w-3 mr-1" />
-              Review
-            </Button>
-            <Button
-              size="sm"
-              variant="default"
-              onClick={(e) => {
-                e.stopPropagation();
-                handleModerate(property, 'approve');
-              }}
-              disabled={approveMutation.isPending || rejectMutation.isPending}
-            >
-              <CheckCircle className="h-3 w-3 mr-1" />
-              Approve
-            </Button>
-            <Button
-              size="sm"
-              variant="destructive"
-              onClick={(e) => {
-                e.stopPropagation();
-                handleModerate(property, 'reject');
-              }}
-              disabled={approveMutation.isPending || rejectMutation.isPending}
-            >
-              <XCircle className="h-3 w-3 mr-1" />
-              Reject
-            </Button>
-          </div>
+          <Button
+            size="sm"
+            className="bg-blue-600 hover:bg-blue-700 text-white w-full"
+            onClick={(e) => {
+              e.stopPropagation();
+              setLocation(`/admin/review/${property.id}`);
+            }}
+          >
+            <Eye className="h-3 w-3 mr-2" />
+            Review Property
+          </Button>
         );
       default:
         return null;
