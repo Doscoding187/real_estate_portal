@@ -178,39 +178,17 @@ export default function PropertiesPage() {
                             : 'N/A'}
                         </TableCell>
                         <TableCell className="text-right">
-                          <DropdownMenu modal={false}>
-                            <DropdownMenuTrigger asChild>
-                              <Button 
-                                variant="ghost" 
-                                className="h-8 w-8 p-0"
-                                onClick={(e) => e.stopPropagation()}
-                              >
-                                <span className="sr-only">Open menu</span>
-                                <MoreHorizontal className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                              <DropdownMenuItem
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setLocation(`/property/${property.id}`);
-                                }}
-                              >
-                                View Details
-                              </DropdownMenuItem>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem onClick={(e) => e.stopPropagation()}>
-                                Edit Property
-                              </DropdownMenuItem>
-                              <DropdownMenuItem 
-                                className="text-destructive"
-                                onClick={(e) => e.stopPropagation()}
-                              >
-                                Delete Property
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
+                          <Button
+                            size="sm"
+                            className="bg-blue-600 hover:bg-blue-700 text-white"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setLocation(`/admin/review/${property.id}`);
+                            }}
+                          >
+                            <Eye className="h-3 w-3 mr-2" />
+                            Review Property
+                          </Button>
                         </TableCell>
                       </TableRow>
                     ))}
