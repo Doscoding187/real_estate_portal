@@ -676,6 +676,94 @@ export const invoices = mysqlTable("invoices", {
 	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
 });
 
+export const subscriptionTransactions = mysqlTable("subscription_transactions", {
+	id: int().autoincrement().notNull(),
+	subscriptionId: int().references(() => agencySubscriptions.id, { onDelete: "set null" }),
+	agencyId: int().references(() => agencies.id, { onDelete: "cascade" }),
+	userId: int().references(() => users.id, { onDelete: "set null" }),
+	amount: int().notNull(), // in cents
+	currency: varchar({ length: 3 }).default('ZAR').notNull(),
+	status: mysqlEnum(['pending','completed','failed','refunded']).default('pending').notNull(),
+	revenueCategory: mysqlEnum(['developer','agency','agent','vendor']).notNull(),
+	billingPeriodStart: timestamp({ mode: 'string' }),
+	billingPeriodEnd: timestamp({ mode: 'string' }),
+	stripePaymentIntentId: varchar({ length: 100 }),
+	paymentMethod: varchar({ length: 50 }),
+	description: text(),
+	metadata: text(),
+	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	paidAt: timestamp({ mode: 'string' }),
+});
+
+export const advertisingCampaigns = mysqlTable("advertising_campaigns", {
+	id: int().autoincrement().notNull(),
+	campaignType: mysqlEnum(['banner_ad','boosted_development','sponsored_listing']).notNull(),
+	advertiserId: int().notNull(), // userId or agencyId
+	advertiserType: mysqlEnum(['developer','agency','agent','vendor']).notNull(),
+	amount: int().notNull(), // in cents
+	currency: varchar({ length: 3 }).default('ZAR').notNull(),
+	status: mysqlEnum(['draft','active','paused','completed','cancelled']).default('draft').notNull(),
+	impressions: int().default(0).notNull(),
+	clicks: int().default(0).notNull(),
+	ctr: decimal({ precision: 5, scale: 2 }), // click-through rate percentage
+	cpm: decimal({ precision: 10, scale: 2 }), // cost per thousand impressions
+	cpc: decimal({ precision: 10, scale: 2 }), // cost per click
+	placement: mysqlEnum(['homepage','listing_page','media_hub','dashboard','search_results']),
+	targetAudience: text(), // JSON with targeting criteria
+	developmentId: int().references(() => developments.id, { onDelete: "set null" }),
+	listingId: int().references(() => listings.id, { onDelete: "set null" }),
+	startDate: timestamp({ mode: 'string' }).notNull(),
+	endDate: timestamp({ mode: 'string' }),
+	budget: int(), // total budget in cents
+	spentAmount: int().default(0).notNull(), // amount spent so far
+	metadata: text(),
+	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+});
+
+export const revenueForecasts = mysqlTable("revenue_forecasts", {
+	id: int().autoincrement().notNull(),
+	forecastPeriod: mysqlEnum(['30_days','90_days','quarter','year']).notNull(),
+	revenueCategory: mysqlEnum(['subscriptions','advertising','total','developer','agency','agent','vendor']).notNull(),
+	predictedAmount: int().notNull(), // in cents
+	currency: varchar({ length: 3 }).default('ZAR').notNull(),
+	confidence: decimal({ precision: 5, scale: 2 }), // confidence percentage (0-100)
+	forecastMethod: varchar({ length: 50 }), // e.g., 'linear_regression', 'seasonal_arima'
+	historicalDataPoints: int(), // number of data points used
+	actualAmount: int(), // filled in after the period ends
+	accuracy: decimal({ precision: 5, scale: 2 }), // calculated accuracy percentage
+	metadata: text(), // JSON with additional forecast details
+	generatedAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	periodStartDate: timestamp({ mode: 'string' }).notNull(),
+	periodEndDate: timestamp({ mode: 'string' }).notNull(),
+});
+
+export const failedPayments = mysqlTable("failed_payments", {
+	id: int().autoincrement().notNull(),
+	subscriptionId: int().references(() => agencySubscriptions.id, { onDelete: "set null" }),
+	invoiceId: int().references(() => invoices.id, { onDelete: "set null" }),
+	agencyId: int().references(() => agencies.id, { onDelete: "cascade" }),
+	userId: int().references(() => users.id, { onDelete: "set null" }),
+	amount: int().notNull(), // in cents
+	currency: varchar({ length: 3 }).default('ZAR').notNull(),
+	failureReason: text(),
+	failureCode: varchar({ length: 100 }),
+	retryCount: int().default(0).notNull(),
+	maxRetries: int().default(3).notNull(),
+	status: mysqlEnum(['pending_retry','retrying','resolved','abandoned','customer_action_required']).default('pending_retry').notNull(),
+	nextRetryAt: timestamp({ mode: 'string' }),
+	lastRetryAt: timestamp({ mode: 'string' }),
+	resolvedAt: timestamp({ mode: 'string' }),
+	churnRisk: mysqlEnum(['low','medium','high','critical']),
+	notificationsSent: int().default(0).notNull(),
+	lastNotificationAt: timestamp({ mode: 'string' }),
+	stripePaymentIntentId: varchar({ length: 100 }),
+	metadata: text(),
+	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+});
+
+
 export const leadActivities = mysqlTable("lead_activities", {
 	id: int().autoincrement().notNull(),
 	leadId: int().notNull().references(() => leads.id, { onDelete: "cascade" } ),
