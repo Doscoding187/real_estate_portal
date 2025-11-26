@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { trpc } from '@/lib/trpc';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/_core/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {

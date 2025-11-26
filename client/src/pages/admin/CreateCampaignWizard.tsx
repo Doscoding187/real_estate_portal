@@ -1,16 +1,3 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'wouter';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft, Check } from 'lucide-react';
-import { trpc } from '@/lib/trpc';
-import { useAuth } from '@/contexts/AuthContext';
-import { toast } from 'sonner';
-
-// Steps
-import Step1Details from '@/components/marketing/wizard/Step1Details';
-import Step2Target from '@/components/marketing/wizard/Step2Target';
-import Step3Targeting from '@/components/marketing/wizard/Step3Targeting';
 import Step4Budget from '@/components/marketing/wizard/Step4Budget';
 import Step5Channels from '@/components/marketing/wizard/Step5Channels';
 import Step6Creative from '@/components/marketing/wizard/Step6Creative';
