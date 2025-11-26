@@ -10,6 +10,10 @@ import { toast } from 'sonner';
 // Steps
 import Step1Details from '@/components/marketing/wizard/Step1Details';
 import Step2Target from '@/components/marketing/wizard/Step2Target';
+import Step3Targeting from '@/components/marketing/wizard/Step3Targeting';
+import Step4Budget from '@/components/marketing/wizard/Step4Budget';
+import Step5Channels from '@/components/marketing/wizard/Step5Channels';
+import Step6Creative from '@/components/marketing/wizard/Step6Creative';
 import Step7Review from '@/components/marketing/wizard/Step7Review';
 
 const STEPS = [
@@ -81,7 +85,6 @@ const CreateCampaignWizard: React.FC = () => {
         </div>
         <div className="flex items-center gap-2">
             <Button variant="outline" onClick={() => navigate('/admin/marketing')}>Cancel</Button>
-            {/* Next button is handled inside steps or at bottom */}
         </div>
       </div>
 
@@ -134,45 +137,41 @@ const CreateCampaignWizard: React.FC = () => {
                 campaignId={campaignId}
             />
           )}
-          {currentStep === 3 && (
-            <div className="text-center py-10 space-y-4">
-              <p className="text-lg font-medium">Step 3: Audience Targeting</p>
-              <p className="text-slate-500">Configure location, buyer profiles, and price ranges</p>
-              <div className="flex justify-between pt-6 max-w-3xl mx-auto">
-                <Button variant="outline" onClick={handleBack}>Back</Button>
-                <Button onClick={handleNext} className="bg-blue-600 hover:bg-blue-700">Next Step</Button>
-              </div>
-            </div>
+          {currentStep === 3 && campaignId && (
+            <Step3Targeting
+                data={formData}
+                updateData={updateFormData}
+                onNext={handleNext}
+                onBack={handleBack}
+                campaignId={campaignId}
+            />
           )}
-          {currentStep === 4 && (
-            <div className="text-center py-10 space-y-4">
-              <p className="text-lg font-medium">Step 4: Budget & Schedule</p>
-              <p className="text-slate-500">Set your budget and campaign duration</p>
-              <div className="flex justify-between pt-6 max-w-3xl mx-auto">
-                <Button variant="outline" onClick={handleBack}>Back</Button>
-                <Button onClick={handleNext} className="bg-blue-600 hover:bg-blue-700">Next Step</Button>
-              </div>
-            </div>
+          {currentStep === 4 && campaignId && (
+            <Step4Budget
+                data={formData}
+                updateData={updateFormData}
+                onNext={handleNext}
+                onBack={handleBack}
+                campaignId={campaignId}
+            />
           )}
-          {currentStep === 5 && (
-            <div className="text-center py-10 space-y-4">
-              <p className="text-lg font-medium">Step 5: Channel Selection</p>
-              <p className="text-slate-500">Choose where your campaign will appear</p>
-              <div className="flex justify-between pt-6 max-w-3xl mx-auto">
-                <Button variant="outline" onClick={handleBack}>Back</Button>
-                <Button onClick={handleNext} className="bg-blue-600 hover:bg-blue-700">Next Step</Button>
-              </div>
-            </div>
+          {currentStep === 5 && campaignId && (
+            <Step5Channels
+                data={formData}
+                updateData={updateFormData}
+                onNext={handleNext}
+                onBack={handleBack}
+                campaignId={campaignId}
+            />
           )}
-          {currentStep === 6 && (
-            <div className="text-center py-10 space-y-4">
-              <p className="text-lg font-medium">Step 6: Creative Assets</p>
-              <p className="text-slate-500">Upload images, videos, and write ad copy</p>
-              <div className="flex justify-between pt-6 max-w-3xl mx-auto">
-                <Button variant="outline" onClick={handleBack}>Back</Button>
-                <Button onClick={handleNext} className="bg-blue-600 hover:bg-blue-700">Next Step</Button>
-              </div>
-            </div>
+          {currentStep === 6 && campaignId && (
+            <Step6Creative
+                data={formData}
+                updateData={updateFormData}
+                onNext={handleNext}
+                onBack={handleBack}
+                campaignId={campaignId}
+            />
           )}
           {currentStep === 7 && campaignId && (
             <Step7Review
