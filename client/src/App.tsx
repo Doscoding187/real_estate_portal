@@ -50,6 +50,8 @@ import AdminPropertyReview from './pages/admin/AdminPropertyReview';
 import RevenueCenterPage from './pages/admin/RevenueCenterPage';
 import SubscriptionManagementPage from './pages/admin/SubscriptionManagementPage';
 import AnalyticsPage from './pages/admin/AnalyticsPage';
+import MarketingCampaignsPage from './pages/admin/MarketingCampaignsPage';
+import CreateCampaignWizard from './pages/admin/CreateCampaignWizard';
 
 // Import new role-based dashboards
 import UserDashboard from './pages/UserDashboard';
@@ -161,6 +163,22 @@ function Router() {
         component={() => (
           <SuperAdminDashboard>
             <SubscriptionManagementPage />
+          </SuperAdminDashboard>
+        )}
+      />
+      <Route
+        path="/admin/marketing"
+        component={() => (
+          <SuperAdminDashboard>
+            <MarketingCampaignsPage />
+          </SuperAdminDashboard>
+        )}
+      />
+      <Route
+        path="/admin/marketing/create"
+        component={() => (
+          <SuperAdminDashboard>
+            <CreateCampaignWizard />
           </SuperAdminDashboard>
         )}
       />

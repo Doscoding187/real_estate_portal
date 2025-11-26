@@ -1377,8 +1377,123 @@ export const locations = mysqlTable("locations", {
 	updatedAt: timestamp("updated_at", { mode: 'string' }).default(sql`CURRENT_TIMESTAMP`).onUpdateNow(),
 }, (table) => {
 	return {
-		placeIdIdx: index("idx_locations_place_id").on(table.placeId),
-		nameIdx: index("idx_locations_name").on(table.name),
-		typeIdx: index("idx_locations_type").on(table.locationType),
 	}
 });
+
+// Marketing Campaigns Module
+
+export const marketingCampaigns = mysqlTable("marketing_campaigns", {
+	id: int().autoincrement().notNull().primaryKey(),
+	ownerType: mysqlEnum(['agent', 'developer', 'agency']).notNull(),
+	ownerId: int().notNull(), // Can reference agents.id, users.id (for developers), or agencies.id
+	campaignName: varchar({ length: 255 }).notNull(),
+	campaignType: mysqlEnum(['listing_boost', 'lead_generation', 'brand_awareness', 'development_launch', 'agent_promotion']).notNull(),
+	description: text(),
+	status: mysqlEnum(['draft', 'active', 'paused', 'completed', 'scheduled']).default('draft').notNull(),
+	targetType: mysqlEnum(['listing', 'development', 'agent_profile', 'agency_page']).notNull(),
+	targetId: int().notNull(),
+	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+});
+
+export const campaignTargeting = mysqlTable("campaign_targeting", {
+	id: int().autoincrement().notNull().primaryKey(),
+	campaignId: int().notNull().references(() => marketingCampaigns.id, { onDelete: "cascade" }),
+	locationTargeting: json(), // Array of strings
+	buyerProfile: json(), // Array of enums
+	priceRange: json(), // { min: number, max: number }
+	propertyType: json(), // Array of enums
+	customTags: json(), // Array of strings
+	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+});
+
+export const campaignBudgets = mysqlTable("campaign_budgets", {
+	id: int().autoincrement().notNull().primaryKey(),
+	campaignId: int().notNull().references(() => marketingCampaigns.id, { onDelete: "cascade" }),
+	budgetType: mysqlEnum(['daily', 'lifetime', 'subscription']).notNull(),
+	budgetAmount: decimal({ precision: 10, scale: 2 }).notNull(),
+	billingMethod: mysqlEnum(['ppc', 'ppv', 'per_lead', 'per_boost', 'flat_fee']).notNull(),
+	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+});
+
+export const campaignSchedules = mysqlTable("campaign_schedules", {
+	id: int().autoincrement().notNull().primaryKey(),
+	campaignId: int().notNull().references(() => marketingCampaigns.id, { onDelete: "cascade" }),
+	startDate: timestamp({ mode: 'string' }).notNull(),
+	endDate: timestamp({ mode: 'string' }),
+	autoPace: boolean().default(true),
+	frequency: mysqlEnum(['one_time', 'weekly', 'monthly']).default('one_time'),
+	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+});
+
+export const campaignChannels = mysqlTable("campaign_channels", {
+	id: int().autoincrement().notNull().primaryKey(),
+	campaignId: int().notNull().references(() => marketingCampaigns.id, { onDelete: "cascade" }),
+	type: mysqlEnum(['feed', 'search', 'carousel', 'email', 'push', 'showcase', 'retargeting']).notNull(),
+	enabled: boolean().default(false).notNull(),
+	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+});
+
+export const campaignCreatives = mysqlTable("campaign_creatives", {
+	id: int().autoincrement().notNull().primaryKey(),
+	campaignId: int().notNull().references(() => marketingCampaigns.id, { onDelete: "cascade" }),
+	images: json(), // Array of file IDs/URLs
+	videos: json(), // Array of file IDs/URLs
+	headlines: json(), // Array of strings
+	descriptions: json(), // Array of strings
+	cta: mysqlEnum(['view_listing', 'book_viewing', 'contact_agent', 'download_brochure', 'pre_qualify']).default('view_listing'),
+	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+});
+
+export const campaignPerformance = mysqlTable("campaign_performance", {
+	id: int().autoincrement().notNull().primaryKey(),
+	campaignId: int().notNull().references(() => marketingCampaigns.id, { onDelete: "cascade" }),
+	impressions: int().default(0).notNull(),
+	clicks: int().default(0).notNull(),
+	profileViews: int().default(0).notNull(),
+	leadSubmissions: int().default(0).notNull(),
+	whatsappClicks: int().default(0).notNull(),
+	viewingsBooked: int().default(0).notNull(),
+	spend: decimal({ precision: 10, scale: 2 }).default('0.00').notNull(),
+	date: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(), // Daily stats
+});
+
+export const campaignLeads = mysqlTable("campaign_leads", {
+	id: int().autoincrement().notNull().primaryKey(),
+	campaignId: int().notNull().references(() => marketingCampaigns.id, { onDelete: "cascade" }),
+	listingId: int(),
+	developmentId: int(),
+	channel: mysqlEnum(['feed', 'search', 'carousel', 'email', 'push', 'showcase', 'retargeting']),
+	leadId: int(), // Reference to a leads table if it exists, or just store data here
+	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+});
+
+// Export types
+export type MarketingCampaign = InferSelectModel<typeof marketingCampaigns>;
+export type InsertMarketingCampaign = InferInsertModel<typeof marketingCampaigns>;
+
+export type CampaignTargeting = InferSelectModel<typeof campaignTargeting>;
+export type InsertCampaignTargeting = InferInsertModel<typeof campaignTargeting>;
+
+export type CampaignBudget = InferSelectModel<typeof campaignBudgets>;
+export type InsertCampaignBudget = InferInsertModel<typeof campaignBudgets>;
+
+export type CampaignSchedule = InferSelectModel<typeof campaignSchedules>;
+export type InsertCampaignSchedule = InferInsertModel<typeof campaignSchedules>;
+
+export type CampaignChannel = InferSelectModel<typeof campaignChannels>;
+export type InsertCampaignChannel = InferInsertModel<typeof campaignChannels>;
+
+export type CampaignCreative = InferSelectModel<typeof campaignCreatives>;
+export type InsertCampaignCreative = InferInsertModel<typeof campaignCreatives>;
+
+export type CampaignPerformance = InferSelectModel<typeof campaignPerformance>;
+export type InsertCampaignPerformance = InferInsertModel<typeof campaignPerformance>;
+
+export type CampaignLead = InferSelectModel<typeof campaignLeads>;
+export type InsertCampaignLead = InferInsertModel<typeof campaignLeads>;

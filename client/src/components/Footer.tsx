@@ -118,7 +118,7 @@ export function Footer() {
             <h4 className="text-white font-semibold mb-3">Subscribe to our newsletter</h4>
             <div className="flex gap-2">
               <Input 
-                placeholder="Your email" 
+                placeholder="Enter your email" 
                 className="bg-slate-800 border-slate-700 text-white placeholder:text-slate-500 focus-visible:ring-blue-500"
               />
               <Button size="icon" className="bg-blue-600 hover:bg-blue-700 shrink-0">

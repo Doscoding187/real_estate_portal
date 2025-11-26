@@ -10,10 +10,21 @@ import * as db from './server/db';
 async function createTestUser() {
   console.log('🔧 Creating test user...\n');
 
-  // Test user credentials
-  const testEmail = 'test@example.com';
-  const testPassword = 'password123';
-  const testName = 'Test User';
+  // NOTE: Default test user credentials have been removed for security
+  // Users should provide their own credentials when running this script
+  console.log('⚠️  This script requires manual input of user credentials for security.');
+  console.log('💡 Please modify this script with your own test credentials before running.\n');
+  
+  console.log('🔧 To create a test user:');
+  console.log('   1. Uncomment the credential lines below');
+  console.log('   2. Replace with your own secure test credentials');
+  console.log('   3. Run: pnpm tsx create-test-user.ts\n');
+
+  /*
+  // Test user credentials - COMMENTED OUT FOR SECURITY
+  const testEmail = 'your-test-email@example.com';  // Change this
+  const testPassword = 'your-secure-password';       // Change this
+  const testName = 'Your Test User';                // Change this
 
   try {
     // Check if user already exists
@@ -29,9 +40,7 @@ async function createTestUser() {
         console.log('   2. Implement password reset feature');
         console.log('   3. Use a different email to create new user\n');
       } else {
-        console.log('✅ You can login with:');
-        console.log(`   Email: ${testEmail}`);
-        console.log(`   Password: (your existing password)\n`);
+        console.log('✅ You can login with your existing credentials\n');
       }
       return;
     }
@@ -42,7 +51,7 @@ async function createTestUser() {
     console.log('✅ Test user created successfully!\n');
     console.log('Login credentials:');
     console.log(`   Email: ${testEmail}`);
-    console.log(`   Password: ${testPassword}`);
+    console.log(`   Password: [YOUR SECURE PASSWORD]\n`);
     console.log(`   Role: ${user.role}\n`);
     
     console.log('🚀 You can now login at: http://localhost:5173/login\n');
@@ -54,6 +63,7 @@ async function createTestUser() {
     console.log('   2. Verify MySQL is running');
     console.log('   3. Ensure users table exists (run migrations)\n');
   }
+  */
 }
 
 createTestUser().catch(console.error);

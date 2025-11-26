@@ -69,7 +69,7 @@ function CityDropdownContent() {
       {/* Search Bar with Autosuggest */}
       <div className="mb-6">
         <LocationAutosuggest
-          placeholder="search"
+          placeholder="Search location"
           onSelect={(location) => {
             // Save location to database
             trpc.location.saveGooglePlaceLocation.mutate({

@@ -21,6 +21,7 @@ import { uploadRouter } from './uploadRouter';
 import { savedSearchRouter } from './savedSearchRouter';
 import { guestMigrationRouter } from './guestMigrationRouter';
 import { settingsRouter } from './settingsRouter';
+import { marketingRouter } from './marketingRouter';
 
 export const appRouter = router({
   system: systemRouter,
@@ -41,6 +42,7 @@ export const appRouter = router({
   savedSearch: savedSearchRouter,
   guestMigration: guestMigrationRouter,
   dev: devRouter, // ⚠️ DEV ONLY - Remove before production
+  marketing: marketingRouter,
 
   auth: router({
     me: publicProcedure.query(opts => opts.ctx.user),

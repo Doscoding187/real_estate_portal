@@ -611,11 +611,11 @@ export default function IntegrationsPanel() {
         <CardContent className="space-y-3">
           <div>
             <label className="text-sm">Webhook URL</label>
-            <Input placeholder="https://example.com/webhook" />
+            <Input placeholder="Enter webhook URL" />
           </div>
           <div>
             <label className="text-sm">API Key</label>
-            <Input placeholder="********" type="password" />
+            <Input placeholder="Enter API key" type="password" />
           </div>
           <Button>Save</Button>
         </CardContent>
@@ -719,7 +719,7 @@ export default function SupportCenter() {
           <CardDescription>Search common questions</CardDescription>
         </CardHeader>
         <CardContent className="space-y-2">
-          <Input placeholder="Search help..." />
+          <Input placeholder="Search help articles" />
           <div className="text-sm text-muted-foreground">No results yet.</div>
         </CardContent>
       </Card>
@@ -729,8 +729,8 @@ export default function SupportCenter() {
           <CardDescription>Our team will get back to you</CardDescription>
         </CardHeader>
         <CardContent className="space-y-2">
-          <Input placeholder="Subject" />
-          <Textarea placeholder="Describe your issue" />
+          <Input placeholder="Enter subject" />
+          <Textarea placeholder="Describe your issue or question" />
           <Button>Send</Button>
         </CardContent>
       </Card>

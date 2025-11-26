@@ -38,7 +38,7 @@ export function ListingNavbar() {
           {/* Input */}
           <input
             type="text"
-            placeholder="Add more..."
+            placeholder="Add more"
             className="flex-1 px-3 py-2 text-sm outline-none text-gray-700 placeholder:text-gray-400"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}

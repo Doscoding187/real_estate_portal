@@ -236,7 +236,7 @@ const DeveloperDashboard: React.FC = () => {
               <div className="relative">
                 <input
                   type="text"
-                  placeholder="Search..."
+                  placeholder="Search"
                   className="pl-10 pr-4 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
                 <div className="absolute left-3 top-2.5 text-slate-400">
@@ -396,7 +396,7 @@ const DeveloperDashboard: React.FC = () => {
                   <div className="flex space-x-2">
                     <input
                       type="text"
-                      placeholder="Search leads..."
+                      placeholder="Search leads"
                       className="px-4 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                     <Button variant="primary">
@@ -654,7 +654,7 @@ const DeveloperDashboard: React.FC = () => {
                       <input
                         type="text"
                         className="mt-1 block w-full border border-slate-300 rounded-md shadow-sm p-2"
-                        defaultValue="Skyline Properties"
+                        
                       />
                     </div>
                     
@@ -663,7 +663,7 @@ const DeveloperDashboard: React.FC = () => {
                       <input
                         type="email"
                         className="mt-1 block w-full border border-slate-300 rounded-md shadow-sm p-2"
-                        defaultValue="contact@skylineproperties.com"
+                        
                       />
                     </div>
                     
@@ -672,7 +672,7 @@ const DeveloperDashboard: React.FC = () => {
                       <input
                         type="tel"
                         className="mt-1 block w-full border border-slate-300 rounded-md shadow-sm p-2"
-                        defaultValue="(555) 123-4567"
+                        
                       />
                     </div>
                     
@@ -681,7 +681,7 @@ const DeveloperDashboard: React.FC = () => {
                       <textarea
                         className="mt-1 block w-full border border-slate-300 rounded-md shadow-sm p-2"
                         rows={3}
-                        defaultValue="123 Business Ave, Suite 100\nNew York, NY 10001"
+                        
                       />
                     </div>
                     
@@ -690,7 +690,7 @@ const DeveloperDashboard: React.FC = () => {
                       <input
                         type="url"
                         className="mt-1 block w-full border border-slate-300 rounded-md shadow-sm p-2"
-                        defaultValue="https://www.skylineproperties.com"
+                        
                       />
                     </div>
                     
@@ -724,7 +724,7 @@ const DeveloperDashboard: React.FC = () => {
                         <input
                           type="text"
                           className="flex-1 border border-slate-300 rounded-md shadow-sm p-2"
-                          defaultValue="#3b82f6"
+                          
                         />
                       </div>
                     </div>
@@ -811,7 +811,7 @@ const DeveloperDashboard: React.FC = () => {
                     <input
                       type="text"
                       className="mt-1 block w-full border border-slate-300 rounded-md shadow-sm p-2"
-                      placeholder="Enter development name"
+                      placeholder="Development name"
                     />
                   </div>
                   
@@ -820,7 +820,7 @@ const DeveloperDashboard: React.FC = () => {
                     <input
                       type="text"
                       className="mt-1 block w-full border border-slate-300 rounded-md shadow-sm p-2"
-                      placeholder="Enter location"
+                      placeholder="Location"
                     />
                   </div>
                   
@@ -829,7 +829,7 @@ const DeveloperDashboard: React.FC = () => {
                     <input
                       type="number"
                       className="mt-1 block w-full border border-slate-300 rounded-md shadow-sm p-2"
-                      placeholder="Enter number of units"
+                      placeholder="Number of units"
                     />
                   </div>
                   
@@ -912,7 +912,7 @@ const DeveloperDashboard: React.FC = () => {
                     <textarea
                       className="mt-1 block w-full border border-slate-300 rounded-md shadow-sm p-2"
                       rows={3}
-                      placeholder="Add notes about this lead..."
+                      placeholder="Add notes"
                     />
                   </div>
                   
@@ -956,7 +956,7 @@ const DeveloperDashboard: React.FC = () => {
                     <input
                       type="email"
                       className="flex-1 border border-slate-300 rounded-l-md p-2"
-                      placeholder="Enter email address"
+                      placeholder="Email address"
                     />
                     <Button variant="primary" className="rounded-l-none" onClick={handleInviteTeamMember}>
                       Invite
@@ -1043,7 +1043,7 @@ const DeveloperDashboard: React.FC = () => {
                       <input
                         type="text"
                         className="mt-1 block w-full border border-slate-300 rounded-md shadow-sm p-2"
-                        placeholder="Enter subject"
+                        placeholder="Subject"
                       />
                     </div>
                     
@@ -1061,7 +1061,7 @@ const DeveloperDashboard: React.FC = () => {
                       <label className="block text-sm font-medium text-slate-700">Description</label>
                       <textarea
                         className="mt-1 block w-full border border-slate-300 rounded-md shadow-sm p-2"
-                        placeholder="Describe your issue or question"
+                        placeholder="Describe your issue"
                         rows={5}
                       />
                     </div>

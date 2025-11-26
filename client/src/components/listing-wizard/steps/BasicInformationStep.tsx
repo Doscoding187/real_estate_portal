@@ -78,7 +78,7 @@ const BasicInformationStep: React.FC = () => {
               id="title"
               value={title}
               onChange={(e) => updateTitle(e.target.value)}
-              placeholder="e.g., Modern 3-Bedroom Apartment in Sandton"
+              placeholder="Enter property title"
               className="mt-1"
               maxLength={100}
             />
@@ -92,7 +92,7 @@ const BasicInformationStep: React.FC = () => {
               id="description"
               value={description}
               onChange={(e) => updateDescription(e.target.value)}
-              placeholder="Describe your property in detail..."
+              placeholder="Enter property description"
               className="mt-1 min-h-[120px]"
               maxLength={2000}
             />
@@ -336,7 +336,7 @@ const BasicInformationStep: React.FC = () => {
                   type="number"
                   value={propertyDetails.bedrooms || ''}
                   onChange={(e) => store.updatePropertyDetail('bedrooms', Number(e.target.value))}
-                  placeholder="e.g., 3"
+                  placeholder="Enter number of bedrooms"
                   className="mt-1"
                 />
               </div>
@@ -347,7 +347,7 @@ const BasicInformationStep: React.FC = () => {
                   type="number"
                   value={propertyDetails.bathrooms || ''}
                   onChange={(e) => store.updatePropertyDetail('bathrooms', Number(e.target.value))}
-                  placeholder="e.g., 2"
+                  placeholder="Enter number of bathrooms"
                   className="mt-1"
                 />
               </div>
@@ -358,7 +358,7 @@ const BasicInformationStep: React.FC = () => {
                   type="number"
                   value={propertyDetails.unitSizeM2 || ''}
                   onChange={(e) => store.updatePropertyDetail('unitSizeM2', Number(e.target.value))}
-                  placeholder="e.g., 120"
+                  placeholder="Enter unit size in m²"
                   className="mt-1"
                 />
               </div>
@@ -369,7 +369,7 @@ const BasicInformationStep: React.FC = () => {
                   type="number"
                   value={propertyDetails.floorNumber || ''}
                   onChange={(e) => store.updatePropertyDetail('floorNumber', Number(e.target.value))}
-                  placeholder="e.g., 5"
+                  placeholder="Enter floor number"
                   className="mt-1"
                 />
               </div>

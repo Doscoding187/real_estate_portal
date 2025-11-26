@@ -346,7 +346,7 @@ const BasicInfoStep: React.FC<StepProps> = ({ onNext }) => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <Label htmlFor="name">Agency Name *</Label>
-            <Input id="name" {...register('name')} placeholder="Your Real Estate Agency" />
+            <Input id="name" {...register('name')} placeholder="Enter agency name" />
             {errors.name && <p className="text-sm text-red-600">{errors.name.message}</p>}
           </div>
 
@@ -356,20 +356,20 @@ const BasicInfoStep: React.FC<StepProps> = ({ onNext }) => {
               id="email"
               type="email"
               {...register('email')}
-              placeholder="contact@agency.com"
+              placeholder="Enter email address"
             />
             {errors.email && <p className="text-sm text-red-600">{errors.email.message}</p>}
           </div>
 
           <div>
             <Label htmlFor="phone">Phone Number</Label>
-            <Input id="phone" {...register('phone')} placeholder="+27 21 123 4567" />
+            <Input id="phone" {...register('phone')} placeholder="Enter phone number" />
             {errors.phone && <p className="text-sm text-red-600">{errors.phone.message}</p>}
           </div>
 
           <div>
             <Label htmlFor="website">Website</Label>
-            <Input id="website" {...register('website')} placeholder="https://agency.com" />
+            <Input id="website" {...register('website')} placeholder="Enter website URL" />
             {errors.website && <p className="text-sm text-red-600">{errors.website.message}</p>}
           </div>
 
@@ -378,20 +378,20 @@ const BasicInfoStep: React.FC<StepProps> = ({ onNext }) => {
             <Input
               id="address"
               {...register('address')}
-              placeholder="123 Main Street, City, Province"
+              placeholder="Enter full address"
             />
             {errors.address && <p className="text-sm text-red-600">{errors.address.message}</p>}
           </div>
 
           <div>
             <Label htmlFor="city">City *</Label>
-            <Input id="city" {...register('city')} placeholder="Cape Town" />
+            <Input id="city" {...register('city')} placeholder="Enter city" />
             {errors.city && <p className="text-sm text-red-600">{errors.city.message}</p>}
           </div>
 
           <div>
             <Label htmlFor="province">Province *</Label>
-            <Input id="province" {...register('province')} placeholder="Western Cape" />
+            <Input id="province" {...register('province')} placeholder="Enter province" />
             {errors.province && <p className="text-sm text-red-600">{errors.province.message}</p>}
           </div>
         </div>
@@ -401,7 +401,7 @@ const BasicInfoStep: React.FC<StepProps> = ({ onNext }) => {
           <Textarea
             id="description"
             {...register('description')}
-            placeholder="Tell us about your agency, your experience, and what makes you unique..."
+            placeholder="Enter agency description"
             rows={4}
           />
           {errors.description && (
