@@ -42,7 +42,7 @@ const StatCard: React.FC<StatCardProps> = ({
   change,
 }) => {
   return (
-    <GlassCard className="border-white/40 shadow-[0_8px_30px_rgba(8,_112,_184,_0.06)] hover:shadow-[0_12px_40px_rgba(8,_112,_184,_0.1)] transition-all">
+    <GlassCard className="border-white/40 shadow-[0_8px_30px_rgba(8,_112,_184,_0.06)] hover:shadow-[0_12px_40px_rgba(8,_112,_184,_0.1)] transition-all py-6">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <div className={`p-2 rounded-full ${color}`}>{icon}</div>
         {trend && (
@@ -86,7 +86,7 @@ const RevenueChart: React.FC = () => {
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      <GlassCard className="border-white/40 shadow-[0_8px_30px_rgba(8,_112,_184,_0.06)]">
+      <GlassCard className="border-white/40 shadow-[0_8px_30px_rgba(8,_112,_184,_0.06)] py-6">
         <CardHeader>
           <CardTitle className="text-slate-800">Revenue Overview</CardTitle>
         </CardHeader>
@@ -116,7 +116,7 @@ const RevenueChart: React.FC = () => {
         </CardContent>
       </GlassCard>
 
-      <GlassCard className="border-white/40 shadow-[0_8px_30px_rgba(8,_112,_184,_0.06)]">
+      <GlassCard className="border-white/40 shadow-[0_8px_30px_rgba(8,_112,_184,_0.06)] py-6">
         <CardHeader>
           <CardTitle className="text-slate-800">User Growth</CardTitle>
         </CardHeader>
@@ -245,7 +245,7 @@ const OverviewPage: React.FC = () => {
       <RevenueChart />
 
       {/* Recent Activity */}
-      <GlassCard className="mt-6 border-white/40 shadow-[0_8px_30px_rgba(8,_112,_184,_0.06)]">
+      <GlassCard className="mt-6 border-white/40 shadow-[0_8px_30px_rgba(8,_112,_184,_0.06)] py-6">
         <CardHeader>
           <CardTitle className="text-slate-800">Recent Activity</CardTitle>
         </CardHeader>
