@@ -62,12 +62,15 @@ const amenityIcons: Record<string, any> = {
   electricity: Zap,
 };
 
-export default function PropertyDetail() {
+export default function PropertyDetail(props: { propertyId?: number } & any) {
+  const { propertyId: propPropertyId } = props;
   const [, params] = useRoute('/property/:id');
   const [, setLocation] = useLocation();
   const { isAuthenticated } = useAuth();
   const { addViewedProperty, addGuestFavorite, removeGuestFavorite, isGuestFavorite } = useGuestActivity();
-  const propertyId = params?.id ? parseInt(params.id) : 0;
+  
+  // Use prop if provided, otherwise try to get from route
+  const propertyId = propPropertyId || (params?.id ? parseInt(params.id) : 0);
 
   const [isContactModalOpen, setIsContactModalOpen] = useState(false);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);

@@ -144,6 +144,17 @@ export default function ListingOversight() {
           <div className="flex gap-1">
             <Button
               size="sm"
+              variant="outline"
+              onClick={(e) => {
+                e.stopPropagation();
+                setLocation(`/admin/review/${property.id}`);
+              }}
+            >
+              <Eye className="h-3 w-3 mr-1" />
+              Review
+            </Button>
+            <Button
+              size="sm"
               variant="default"
               onClick={(e) => {
                 e.stopPropagation();
