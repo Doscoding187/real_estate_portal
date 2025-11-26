@@ -18,6 +18,7 @@ import {
   Code,
   User,
   Star,
+  DollarSign,
 } from 'lucide-react';
 
 const SidebarNavigation: React.FC = () => {
@@ -56,7 +57,8 @@ const SidebarNavigation: React.FC = () => {
           path: '/admin/subscriptions',
           icon: CreditCard,
         },
-        { name: 'Financial Tracking', path: '/admin/financials', icon: BarChart3 },
+        { name: 'Platform Analytics', path: '/admin/analytics', icon: BarChart3 },
+        { name: 'Financial Tracking', path: '/admin/financials', icon: DollarSign },
         { name: 'Content Manager', path: '/admin/content', icon: FileText },
         {
           name: 'Communications',

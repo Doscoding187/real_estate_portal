@@ -49,6 +49,7 @@ import PropertiesPage from './pages/admin/PropertiesPage';
 import AdminPropertyReview from './pages/admin/AdminPropertyReview';
 import RevenueCenterPage from './pages/admin/RevenueCenterPage';
 import SubscriptionManagementPage from './pages/admin/SubscriptionManagementPage';
+import AnalyticsPage from './pages/admin/AnalyticsPage';
 
 // Import new role-based dashboards
 import UserDashboard from './pages/UserDashboard';
@@ -160,6 +161,14 @@ function Router() {
         component={() => (
           <SuperAdminDashboard>
             <SubscriptionManagementPage />
+          </SuperAdminDashboard>
+        )}
+      />
+      <Route
+        path="/admin/analytics"
+        component={() => (
+          <SuperAdminDashboard>
+            <AnalyticsPage />
           </SuperAdminDashboard>
         )}
       />

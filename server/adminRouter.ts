@@ -1135,4 +1135,45 @@ export const adminRouter = router({
         total: Number(totalResult[0]?.count || 0),
       };
     }),
+
+  /**
+   * Super Admin: Get General Platform Analytics
+   */
+  getGeneralAnalytics: superAdminProcedure
+    .query(async () => {
+      const db = await getDb();
+      if (!db) throw new Error('Database not available');
+
+      const [
+        totalUsers,
+        totalAgencies,
+        totalListings,
+        activeListings,
+        totalAgents,
+        recentUsers,
+        recentListings
+      ] = await Promise.all([
+        db.select({ count: sql<number>`count(*)` }).from(users),
+        db.select({ count: sql<number>`count(*)` }).from(agencies),
+        db.select({ count: sql<number>`count(*)` }).from(listings),
+        db.select({ count: sql<number>`count(*)` }).from(listings).where(eq(listings.status, 'active')),
+        db.select({ count: sql<number>`count(*)` }).from(users).where(eq(users.role, 'agent')),
+        db.select().from(users).orderBy(desc(users.createdAt)).limit(5),
+        db.select().from(listings).orderBy(desc(listings.createdAt)).limit(5)
+      ]);
+
+      return {
+        counts: {
+          users: Number(totalUsers[0]?.count || 0),
+          agencies: Number(totalAgencies[0]?.count || 0),
+          listings: Number(totalListings[0]?.count || 0),
+          activeListings: Number(activeListings[0]?.count || 0),
+          agents: Number(totalAgents[0]?.count || 0),
+        },
+        recentActivity: {
+          users: recentUsers,
+          listings: recentListings,
+        }
+      };
+    }),
 });
