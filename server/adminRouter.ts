@@ -16,6 +16,14 @@ import {
   auditLogs,
   properties,
   platformSettings,
+  commissions,
+  agencySubscriptions,
+  invoices,
+  plans,
+  subscriptionTransactions,
+  advertisingCampaigns,
+  revenueForecasts,
+  failedPayments,
   listings,
   listingMedia,
   agents,
@@ -932,5 +940,199 @@ export const adminRouter = router({
       }));
 
       return revenueData;
+    }),
+
+  /**
+   * Super Admin: Get revenue breakdown by category
+   */
+  getRevenueByCategory: superAdminProcedure
+    .input(z.object({
+      startDate: z.string().optional(),
+      endDate: z.string().optional(),
+    }))
+    .query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new Error('Database not available');
+
+      // Use subscriptionTransactions for accurate categorization
+      const revenueByCategory = await db.execute(sql`
+        SELECT 
+          revenueCategory,
+          SUM(amount) as totalRevenue,
+          COUNT(*) as transactionCount
+        FROM ${subscriptionTransactions}
+        WHERE status = 'completed'
+        ${input.startDate ? sql`AND createdAt >= ${input.startDate}` : sql``}
+        ${input.endDate ? sql`AND createdAt <= ${input.endDate}` : sql``}
+        GROUP BY revenueCategory
+      `);
+
+      // Get Ad revenue
+      const adRevenue = await db.execute(sql`
+        SELECT 
+          SUM(spentAmount) as totalRevenue,
+          COUNT(*) as campaignCount
+        FROM ${advertisingCampaigns}
+        WHERE status = 'active' OR status = 'completed'
+        ${input.startDate ? sql`AND createdAt >= ${input.startDate}` : sql``}
+        ${input.endDate ? sql`AND createdAt <= ${input.endDate}` : sql``}
+      `);
+
+      return {
+        subscriptions: (revenueByCategory as any[]).map(row => ({
+          category: row.revenueCategory,
+          revenue: Number(row.totalRevenue || 0) / 100,
+          count: Number(row.transactionCount || 0),
+        })),
+        advertising: {
+          revenue: Number((adRevenue as any)[0]?.totalRevenue || 0) / 100,
+          count: Number((adRevenue as any)[0]?.campaignCount || 0),
+        }
+      };
+    }),
+
+  /**
+   * Super Admin: Get LTV Analytics
+   */
+  getLTVAnalytics: superAdminProcedure
+    .query(async () => {
+      const db = await getDb();
+      if (!db) throw new Error('Database not available');
+
+      // Calculate Average Revenue Per User (ARPU)
+      // Total Revenue / Total Paying Users
+      
+      const totalRevenueResult = await db.execute(sql`
+        SELECT SUM(amount) as total FROM ${subscriptionTransactions} WHERE status = 'completed'
+      `);
+      
+      const totalPayingUsersResult = await db.execute(sql`
+        SELECT COUNT(DISTINCT agencyId) as count FROM ${agencySubscriptions} WHERE status = 'active'
+      `);
+
+      const totalRevenue = Number((totalRevenueResult as any)[0]?.total || 0) / 100;
+      const totalUsers = Number((totalPayingUsersResult as any)[0]?.count || 1); // Avoid div by zero
+
+      const arpu = totalRevenue / totalUsers;
+
+      // Calculate Churn Rate (simplified)
+      // Cancelled Subscriptions / Total Subscriptions
+      const churnResult = await db.execute(sql`
+        SELECT 
+          COUNT(CASE WHEN status = 'canceled' THEN 1 END) as cancelled,
+          COUNT(*) as total
+        FROM ${agencySubscriptions}
+      `);
+
+      const cancelled = Number((churnResult as any)[0]?.cancelled || 0);
+      const totalSubs = Number((churnResult as any)[0]?.total || 1);
+      const churnRate = (cancelled / totalSubs) * 100;
+
+      // Estimated LTV = ARPU / Churn Rate (monthly)
+      // This is a very basic approximation
+      const ltv = churnRate > 0 ? arpu / (churnRate / 100) : 0;
+
+      return {
+        arpu,
+        churnRate,
+        ltv,
+        totalRevenue,
+        activeSubscribers: totalUsers,
+      };
+    }),
+
+  /**
+   * Super Admin: Get Revenue Forecast
+   */
+  getRevenueForecast: superAdminProcedure
+    .input(z.object({
+      period: z.enum(['30_days', '90_days', 'quarter', 'year']).default('30_days'),
+    }))
+    .query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new Error('Database not available');
+
+      // Get latest forecast from database
+      const [forecast] = await db
+        .select()
+        .from(revenueForecasts)
+        .where(eq(revenueForecasts.forecastPeriod, input.period))
+        .orderBy(desc(revenueForecasts.createdAt))
+        .limit(1);
+
+      if (forecast) {
+        return {
+          ...forecast,
+          predictedAmount: Number(forecast.predictedAmount) / 100,
+          confidenceScore: Number(forecast.confidenceScore),
+        };
+      }
+
+      // If no forecast exists, generate a simple one on the fly (fallback)
+      // Linear projection based on last 3 months
+      const threeMonthsAgo = new Date();
+      threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+
+      const recentRevenue = await db.execute(sql`
+        SELECT SUM(amount) as total 
+        FROM ${subscriptionTransactions} 
+        WHERE status = 'completed' 
+        AND createdAt >= ${threeMonthsAgo}
+      `);
+
+      const totalRecent = Number((recentRevenue as any)[0]?.total || 0) / 100;
+      const monthlyAverage = totalRecent / 3;
+      
+      let multiplier = 1;
+      if (input.period === '90_days' || input.period === 'quarter') multiplier = 3;
+      if (input.period === 'year') multiplier = 12;
+
+      return {
+        forecastPeriod: input.period,
+        predictedAmount: monthlyAverage * multiplier,
+        confidenceScore: 0.7, // Moderate confidence for simple projection
+        methodology: 'linear_projection_fallback',
+        createdAt: new Date(),
+      };
+    }),
+
+  /**
+   * Super Admin: Get Failed Payments
+   */
+  getFailedPayments: superAdminProcedure
+    .input(z.object({
+      page: z.number().default(1),
+      limit: z.number().default(20),
+    }))
+    .query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new Error('Database not available');
+
+      const offset = (input.page - 1) * input.limit;
+
+      const [failures, totalResult] = await Promise.all([
+        db
+          .select({
+            payment: failedPayments,
+            agency: agencies,
+          })
+          .from(failedPayments)
+          .leftJoin(agencies, eq(failedPayments.agencyId, agencies.id))
+          .limit(input.limit)
+          .offset(offset)
+          .orderBy(desc(failedPayments.createdAt)),
+        db
+          .select({ count: sql<number>`count(*)` })
+          .from(failedPayments),
+      ]);
+
+      return {
+        failures: failures.map(f => ({
+          ...f.payment,
+          amount: Number(f.payment.amount) / 100,
+          agencyName: f.agency?.name || 'Unknown',
+        })),
+        total: Number(totalResult[0]?.count || 0),
+      };
     }),
 });
