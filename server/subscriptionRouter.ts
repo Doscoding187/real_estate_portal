@@ -9,6 +9,7 @@ import {
   coupons,
   agencies,
   users,
+  paymentProofs,
 } from '../drizzle/schema';
 import { eq, and, desc, gte, lte, sql } from 'drizzle-orm';
 import { recordSubscriptionTransaction, recordFailedPayment } from './revenueCenterSync';
@@ -43,6 +44,235 @@ const isAdmin = t.middleware(async ({ ctx, next }) => {
 const adminProcedure = authenticatedProcedure.use(isAdmin);
 
 export const subscriptionRouter = router({
+  /**
+   * Get banking details for EFT payments
+   */
+  getBankingDetails: authenticatedProcedure.query(() => {
+    return {
+      bankName: 'Standard Bank',
+      accountName: 'Real Estate Portal',
+      accountNumber: '123456789',
+      branchCode: '051001',
+      accountType: 'Cheque',
+      referencePrefix: 'SUB-',
+    };
+  }),
+
+  /**
+   * Submit proof of payment for manual verification
+   */
+  submitPaymentProof: authenticatedProcedure
+    .input(z.object({
+      invoiceId: z.number().optional(),
+      amount: z.number(), // in cents
+      paymentMethod: z.enum(['eft', 'bank_transfer', 'cash_deposit', 'other']),
+      referenceNumber: z.string().optional(),
+      proofOfPaymentUrl: z.string().optional(),
+      paymentDate: z.string(), // ISO date string
+      bankName: z.string().optional(),
+      accountHolderName: z.string().optional(),
+      notes: z.string().optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
+
+      // Get user's agency
+      const [agency] = await db
+        .select()
+        .from(agencies)
+        .where(eq(agencies.id, ctx.user.agencyId))
+        .limit(1);
+
+      if (!agency) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Agency not found' });
+      }
+
+      // Get active subscription if not provided
+      let subscriptionId: number | null = null;
+      const [sub] = await db
+        .select()
+        .from(agencySubscriptions)
+        .where(
+          and(
+            eq(agencySubscriptions.agencyId, agency.id),
+            eq(agencySubscriptions.status, 'active')
+          )
+        )
+        .limit(1);
+      
+      if (sub) {
+        subscriptionId = sub.id;
+      }
+
+      const result = await db.insert(paymentProofs).values({
+        invoiceId: input.invoiceId,
+        subscriptionId: subscriptionId,
+        agencyId: agency.id,
+        userId: ctx.user.id,
+        amount: input.amount,
+        currency: 'ZAR',
+        paymentMethod: input.paymentMethod,
+        referenceNumber: input.referenceNumber,
+        proofOfPaymentUrl: input.proofOfPaymentUrl,
+        bankName: input.bankName,
+        accountHolderName: input.accountHolderName,
+        paymentDate: input.paymentDate,
+        notes: input.notes,
+        status: 'pending',
+      });
+
+      return {
+        success: true,
+        paymentProofId: result[0].insertId,
+        message: 'Payment proof submitted successfully. Verification may take 24-48 hours.',
+      };
+    }),
+
+  /**
+   * Admin: Get payment proofs
+   */
+  getPaymentProofs: adminProcedure
+    .input(z.object({
+      status: z.enum(['pending', 'verified', 'rejected', 'expired']).optional(),
+      page: z.number().default(1),
+      limit: z.number().default(20),
+    }))
+    .query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
+
+      const offset = (input.page - 1) * input.limit;
+      const conditions: any[] = [];
+
+      if (input.status) {
+        conditions.push(eq(paymentProofs.status, input.status));
+      }
+
+      const where = conditions.length > 0 ? and(...conditions) : undefined;
+
+      const [proofs, totalResult] = await Promise.all([
+        db
+          .select({
+            proof: paymentProofs,
+            agency: agencies,
+            user: users,
+          })
+          .from(paymentProofs)
+          .leftJoin(agencies, eq(paymentProofs.agencyId, agencies.id))
+          .leftJoin(users, eq(paymentProofs.userId, users.id))
+          .where(where)
+          .limit(input.limit)
+          .offset(offset)
+          .orderBy(desc(paymentProofs.createdAt)),
+        db
+          .select({ count: sql<number>`count(*)` })
+          .from(paymentProofs)
+          .where(where),
+      ]);
+
+      const total = Number(totalResult[0]?.count || 0);
+
+      return {
+        proofs: proofs.map(p => ({
+          ...p.proof,
+          agencyName: p.agency?.name,
+          submittedBy: p.user ? `${p.user.firstName} ${p.user.lastName}` : 'Unknown',
+        })),
+        pagination: {
+          page: input.page,
+          limit: input.limit,
+          total,
+          totalPages: Math.ceil(total / input.limit),
+        },
+      };
+    }),
+
+  /**
+   * Admin: Verify or reject payment proof
+   */
+  verifyPayment: adminProcedure
+    .input(z.object({
+      paymentProofId: z.number(),
+      status: z.enum(['verified', 'rejected']),
+      rejectionReason: z.string().optional(),
+      notes: z.string().optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
+
+      const [proof] = await db
+        .select()
+        .from(paymentProofs)
+        .where(eq(paymentProofs.id, input.paymentProofId))
+        .limit(1);
+
+      if (!proof) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Payment proof not found' });
+      }
+
+      if (proof.status !== 'pending') {
+        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Payment proof already processed' });
+      }
+
+      await db
+        .update(paymentProofs)
+        .set({
+          status: input.status,
+          verifiedBy: ctx.user.id,
+          verifiedAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
+          rejectionReason: input.rejectionReason,
+          notes: input.notes,
+        })
+        .where(eq(paymentProofs.id, input.paymentProofId));
+
+      // If verified, record transaction in Revenue Center and update invoice/subscription
+      if (input.status === 'verified') {
+        // 1. Record in Revenue Center
+        // Determine revenue category (simplified)
+        let revenueCategory: 'developer' | 'agency' | 'agent' | 'vendor' = 'agency';
+        
+        await recordSubscriptionTransaction({
+          subscriptionId: proof.subscriptionId || 0,
+          agencyId: proof.agencyId,
+          userId: proof.userId,
+          amount: proof.amount,
+          currency: proof.currency,
+          status: 'completed',
+          revenueCategory,
+          paymentMethod: proof.paymentMethod,
+          description: `Manual EFT Payment - Ref: ${proof.referenceNumber}`,
+          metadata: { paymentProofId: proof.id },
+        });
+
+        // 2. Update Invoice if linked
+        if (proof.invoiceId) {
+          await db
+            .update(invoices)
+            .set({
+              status: 'paid',
+              paidAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
+            })
+            .where(eq(invoices.id, proof.invoiceId));
+        }
+
+        // 3. Update Subscription if needed (e.g. activate trial or extend)
+        if (proof.subscriptionId) {
+           // Logic to extend subscription would go here
+           // For now, just ensure it's active
+           await db
+             .update(agencySubscriptions)
+             .set({ status: 'active' })
+             .where(eq(agencySubscriptions.id, proof.subscriptionId));
+        }
+      }
+
+      return {
+        success: true,
+        message: `Payment proof ${input.status}`,
+      };
+    }),
   /**
    * Get all available subscription plans
    */

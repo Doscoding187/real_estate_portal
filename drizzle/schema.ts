@@ -774,6 +774,30 @@ export const leadActivities = mysqlTable("lead_activities", {
 	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
 });
 
+export const paymentProofs = mysqlTable("payment_proofs", {
+	id: int().autoincrement().notNull(),
+	invoiceId: int().references(() => invoices.id, { onDelete: "set null" }),
+	subscriptionId: int().references(() => agencySubscriptions.id, { onDelete: "set null" }),
+	agencyId: int().notNull().references(() => agencies.id, { onDelete: "cascade" }),
+	userId: int().notNull().references(() => users.id, { onDelete: "cascade" }),
+	amount: int().notNull(), // in cents
+	currency: varchar({ length: 3 }).default('ZAR').notNull(),
+	paymentMethod: mysqlEnum(['eft','bank_transfer','cash_deposit','other']).default('eft').notNull(),
+	referenceNumber: varchar({ length: 100 }), // Bank reference or transaction ID
+	proofOfPaymentUrl: text(), // URL to uploaded proof image/PDF
+	bankName: varchar({ length: 100 }),
+	accountHolderName: varchar({ length: 200 }),
+	paymentDate: timestamp({ mode: 'string' }).notNull(),
+	status: mysqlEnum(['pending','verified','rejected','expired']).default('pending').notNull(),
+	verifiedBy: int().references(() => users.id, { onDelete: "set null" }),
+	verifiedAt: timestamp({ mode: 'string' }),
+	rejectionReason: text(),
+	notes: text(),
+	metadata: text(),
+	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+});
+
 export const leads = mysqlTable("leads", {
 	id: int().autoincrement().notNull(),
 	propertyId: int().references(() => properties.id, { onDelete: "set null" } ),
