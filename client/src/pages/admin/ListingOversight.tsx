@@ -145,7 +145,10 @@ export default function ListingOversight() {
             <Button
               size="sm"
               variant="default"
-              onClick={() => handleModerate(property, 'approve')}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleModerate(property, 'approve');
+              }}
               disabled={approveMutation.isPending || rejectMutation.isPending}
             >
               <CheckCircle className="h-3 w-3 mr-1" />
@@ -154,7 +157,10 @@ export default function ListingOversight() {
             <Button
               size="sm"
               variant="destructive"
-              onClick={() => handleModerate(property, 'reject')}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleModerate(property, 'reject');
+              }}
               disabled={approveMutation.isPending || rejectMutation.isPending}
             >
               <XCircle className="h-3 w-3 mr-1" />
