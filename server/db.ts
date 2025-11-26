@@ -461,42 +461,33 @@ export interface PropertySearchParams {
 
 export async function searchProperties(params: PropertySearchParams) {
   const db = await getDb();
-  if (!db) throw new Error('Database not available');
+  if (!db) return [];
 
-  const conditions = [];
+  const conditions: SQL[] = [];
 
-  if (params.city) {
-    conditions.push(like(properties.city, `%${params.city}%`));
-  }
-  if (params.province) {
-    conditions.push(eq(properties.province, params.province));
-  }
-  if (params.propertyType) {
-    conditions.push(eq(properties.propertyType, params.propertyType as any));
-  }
-  if (params.listingType) {
-    conditions.push(eq(properties.listingType, params.listingType as any));
-  }
-  if (params.minPrice !== undefined) {
-    conditions.push(gte(properties.price, params.minPrice));
-  }
-  if (params.maxPrice !== undefined) {
-    conditions.push(lte(properties.price, params.maxPrice));
-  }
-  if (params.minBedrooms !== undefined) {
-    conditions.push(gte(properties.bedrooms, params.minBedrooms));
-  }
-  if (params.maxBedrooms !== undefined) {
-    conditions.push(lte(properties.bedrooms, params.maxBedrooms));
-  }
-  if (params.minArea !== undefined) {
-    conditions.push(gte(properties.area, params.minArea));
-  }
-  if (params.maxArea !== undefined) {
-    conditions.push(lte(properties.area, params.maxArea));
-  }
-  if (params.status) {
-    conditions.push(eq(properties.status, params.status as any));
+  // Build WHERE conditions
+  if (params.city) conditions.push(like(properties.city, `%${params.city}%`));
+  if (params.province) conditions.push(like(properties.province, `%${params.province}%`));
+  if (params.propertyType) conditions.push(eq(properties.propertyType, params.propertyType));
+  if (params.listingType) conditions.push(eq(properties.listingType, params.listingType));
+  if (params.minPrice) conditions.push(gte(properties.price, params.minPrice));
+  if (params.maxPrice) conditions.push(lte(properties.price, params.maxPrice));
+  if (params.minBedrooms) conditions.push(gte(properties.bedrooms, params.minBedrooms));
+  if (params.maxBedrooms) conditions.push(lte(properties.bedrooms, params.maxBedrooms));
+  if (params.minArea) conditions.push(gte(properties.area, params.minArea));
+  if (params.maxArea) conditions.push(lte(properties.area, params.maxArea));
+  if (params.status) conditions.push(eq(properties.status, params.status));
+
+  // Bounding box search
+  if (params.minLat && params.maxLat && params.minLng && params.maxLng) {
+    conditions.push(
+      and(
+        gte(sql`CAST(${properties.latitude} AS DECIMAL)`, params.minLat),
+        lte(sql`CAST(${properties.latitude} AS DECIMAL)`, params.maxLat),
+        gte(sql`CAST(${properties.longitude} AS DECIMAL)`, params.minLng),
+        lte(sql`CAST(${properties.longitude} AS DECIMAL)`, params.maxLng),
+      )!,
+    );
   }
 
   // Amenities filter
@@ -556,7 +547,33 @@ export async function searchProperties(params: PropertySearchParams) {
     query = query.offset(params.offset) as any;
   }
 
-  return await query;
+  const results = await query;
+
+  // Get boosted listings for search channel
+  try {
+    const { getBoostedListingsForChannel } = await import('./campaignBoost');
+    const boostedIds = await getBoostedListingsForChannel('search', 3);
+
+    if (boostedIds.length > 0) {
+      // Fetch boosted properties
+      const boostedProperties = await db
+        .select()
+        .from(properties)
+        .where(inArray(properties.id, boostedIds));
+
+      // Remove boosted from regular results to avoid duplicates
+      const filteredResults = results.filter(
+        (prop: any) => !boostedIds.includes(prop.id)
+      );
+
+      // Merge: boosted first, then regular
+      return [...boostedProperties, ...filteredResults].slice(0, params.limit || 20);
+    }
+  } catch (error) {
+    console.error('Error applying campaign boost:', error);
+  }
+
+  return results;
 }
 
 export async function getFeaturedProperties(limit: number = 6) {
