@@ -99,6 +99,13 @@ export default function PropertyDetail() {
     },
   });
 
+  // Track view for guest users - MUST be before conditional returns
+  React.useEffect(() => {
+    if (propertyId > 0) {
+      addViewedProperty(propertyId);
+    }
+  }, [propertyId, addViewedProperty]);
+
   const handleFavoriteClick = () => {
     if (!isAuthenticated) {
       // For guest users, use localStorage
@@ -140,13 +147,6 @@ export default function PropertyDetail() {
       </div>
     );
   }
-
-  // Track view for guest users
-  React.useEffect(() => {
-    if (propertyId > 0) {
-      addViewedProperty(propertyId);
-    }
-  }, [propertyId, addViewedProperty]);
 
   const { property, images, agent } = data;
   
