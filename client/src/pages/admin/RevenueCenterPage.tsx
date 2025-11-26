@@ -319,6 +319,7 @@ const RevenueCenterPage: React.FC = () => {
                       activeDot={{ r: 6 }}
                       fill="url(#totalRevenue)"
                       name="Total Revenue"
+                      isAnimationActive={false}
                     />
                     <Line
                       type="monotone"
@@ -327,6 +328,7 @@ const RevenueCenterPage: React.FC = () => {
                       strokeWidth={2}
                       dot={{ fill: '#10b981', r: 3 }}
                       name="Commissions"
+                      isAnimationActive={false}
                     />
                     <Line
                       type="monotone"
@@ -335,6 +337,7 @@ const RevenueCenterPage: React.FC = () => {
                       strokeWidth={2}
                       dot={{ fill: '#8b5cf6', r: 3 }}
                       name="Subscriptions"
+                      isAnimationActive={false}
                     />
                   </LineChart>
                 </ResponsiveContainer>
@@ -503,6 +506,7 @@ const RevenueCenterPage: React.FC = () => {
                         outerRadius={100}
                         fill="#8884d8"
                         dataKey="value"
+                        isAnimationActive={false}
                         label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
                       >
                         {pieChartData.map((entry, index) => (

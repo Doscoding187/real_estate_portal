@@ -143,6 +143,7 @@ const AnalyticsPage: React.FC = () => {
                   fill="#8884d8"
                   paddingAngle={5}
                   dataKey="value"
+                  isAnimationActive={false}
                   label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
                 >
                   {userDistribution.map((entry, index) => (
@@ -168,7 +169,7 @@ const AnalyticsPage: React.FC = () => {
                 <XAxis type="number" />
                 <YAxis dataKey="name" type="category" width={100} />
                 <Tooltip />
-                <Bar dataKey="value" fill="#3b82f6" radius={[0, 4, 4, 0]}>
+                <Bar dataKey="value" fill="#3b82f6" radius={[0, 4, 4, 0]} isAnimationActive={false}>
                   {listingStats.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={index === 0 ? '#10b981' : '#94a3b8'} />
                   ))}

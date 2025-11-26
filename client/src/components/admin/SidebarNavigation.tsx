@@ -33,7 +33,6 @@ const SidebarNavigation: React.FC = () => {
       title: 'REVENUE & ANALYTICS',
       items: [
         { name: 'Revenue Center', path: '/admin/revenue', icon: TrendingUp },
-        { name: 'Analytics & Reports', path: '/admin/analytics', icon: BarChart },
         { name: 'Marketing Campaigns', path: '/admin/marketing', icon: Megaphone },
         { name: 'Partner Network', path: '/admin/partners', icon: Handshake },
         { name: 'Developers', path: '/admin/developers', icon: Code },
