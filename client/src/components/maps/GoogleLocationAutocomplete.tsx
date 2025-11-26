@@ -65,7 +65,7 @@ export function GoogleLocationAutocomplete({
   const [selectedIndex, setSelectedIndex] = useState(-1);
 
   const inputRef = useRef<HTMLInputElement>(null);
-  const autocompleteRef = useRef<any>(null);
+  const autocompleteServiceRef = useRef<any>(null);
   const placesServiceRef = useRef<any>(null);
 
   // Load Google Maps Places API
@@ -77,8 +77,16 @@ export function GoogleLocationAutocomplete({
           return;
         }
 
+        // Check if API key is available
+        const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+        if (!apiKey) {
+          setError('Google Maps API key is missing. Please configure VITE_GOOGLE_MAPS_API_KEY in your environment.');
+          reject(new Error('Missing API key'));
+          return;
+        }
+
         const script = document.createElement('script');
-        script.src = `https://maps.googleapis.com/maps/api/js?key=${import.meta.env.VITE_GOOGLE_MAPS_API_KEY || ''}&libraries=places,geometry&loading=async&callback=initGooglePlaces`;
+        script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places,geometry&loading=async&callback=initGooglePlaces`;
         script.async = true;
         script.defer = true;
 
@@ -103,129 +111,77 @@ export function GoogleLocationAutocomplete({
 
   // Initialize autocomplete service
   useEffect(() => {
-    if (!window.google || !inputRef.current) return;
+    if (!window.google) return;
 
-    // Initialize Places service (requires a map, but we can use a dummy div)
-    const mapDiv = document.createElement('div');
-    const map = new window.google.maps.Map(mapDiv);
-    placesServiceRef.current = new window.google.maps.places.PlacesService(map);
-
-    // Initialize autocomplete
-    const options: any = {
-      types: ['address'], // Enable street address autocomplete
-      componentRestrictions: { country: 'za' }, // South Africa
-    };
-
-    if (locationBias) {
-      options.bounds = {
-        north: locationBias.latitude + radius / 111320, // Rough conversion: 1 degree lat ≈ 111km
-        south: locationBias.latitude - radius / 111320,
-        east:
-          locationBias.longitude +
-          radius / (111320 * Math.cos((locationBias.latitude * Math.PI) / 180)),
-        west:
-          locationBias.longitude -
-          radius / (111320 * Math.cos((locationBias.latitude * Math.PI) / 180)),
-      };
+    try {
+      // Initialize Places service (requires a map, but we can use a dummy div)
+      const mapDiv = document.createElement('div');
+      const map = new window.google.maps.Map(mapDiv);
+      placesServiceRef.current = new window.google.maps.places.PlacesService(map);
+      
+      // Initialize autocomplete service
+      autocompleteServiceRef.current = new window.google.maps.places.AutocompleteService();
+    } catch (err) {
+      console.error('Error initializing Google Places:', err);
+      setError('Failed to initialize Google Places. Please try again.');
     }
+  }, []);
 
-    autocompleteRef.current = new window.google.maps.places.Autocomplete(inputRef.current, options);
-
-    // Listen for place changes
-    autocompleteRef.current.addListener('place_changed', () => {
-      const place = autocompleteRef.current!.getPlace();
-      if (place.geometry && place.geometry.location) {
-        onSelect({
-          place_id: place.place_id,
-          name: place.name || '',
-          address: place.formatted_address || place.vicinity || '',
-          latitude: place.geometry.location.lat(),
-          longitude: place.geometry.location.lng(),
-          formatted_address: place.formatted_address || '',
-          types: place.types || [],
-        });
-
-        setQuery(place.formatted_address || place.name || '');
-        setIsOpen(false);
-      }
-    });
-  }, [locationBias, radius, onSelect]);
-
-  // Debounced search function
-  const searchPlaces = useCallback(
-    (searchQuery: string) => {
-      const debouncedSearch = debounce(async (query: string) => {
-        if (!query.trim() || !placesServiceRef.current) {
-          setPredictions([]);
-          setIsOpen(false);
-          return;
-        }
-
-        setIsLoading(true);
-        setError(null);
-
-        try {
-          const request: any = {
-            query: query,
-            location: locationBias
-              ? new window.google.maps.LatLng(locationBias.latitude, locationBias.longitude)
-              : undefined,
-            radius: radius,
-            type: 'establishment',
-          };
-
-          placesServiceRef.current.textSearch(request, (results: any[], status: string) => {
-            setIsLoading(false);
-
-            if (status === window.google.maps.places.PlacesServiceStatus.OK && results) {
-              const placePredictions: PlacePrediction[] = results.slice(0, 5).map(place => ({
-                place_id: place.place_id,
-                description: place.formatted_address || place.name || '',
-                structured_formatting: {
-                  main_text: place.name || '',
-                  secondary_text: place.formatted_address || place.vicinity || '',
-                  main_text_matched_substrings: [],
-                },
-                types: place.types || [],
-                matched_substrings: [],
-              }));
-
-              setPredictions(placePredictions);
-              setIsOpen(true);
-              setSelectedIndex(-1);
-            } else {
-              setPredictions([]);
-              setIsOpen(false);
-            }
-          });
-        } catch (error) {
-          console.error('Places search error:', error);
-          setError('Failed to search locations');
-          setIsLoading(false);
-          setPredictions([]);
-          setIsOpen(false);
-        }
-      }, 300);
-
-      return debouncedSearch(searchQuery);
-    },
-    [locationBias, radius],
-  );
-
-  // Handle input change
+  // Handle input change with autocomplete predictions
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
-    console.log('GoogleLocationAutocomplete input changed:', value);
     setQuery(value);
     setSelectedIndex(-1);
 
-    if (value.trim()) {
-      searchPlaces(value);
+    if (value.trim().length > 2 && autocompleteServiceRef.current) {
+      // Use the autocomplete service for predictions
+      getPlacePredictions(value);
     } else {
       setPredictions([]);
       setIsOpen(false);
     }
   };
+
+  // Get place predictions using AutocompleteService
+  const getPlacePredictions = useCallback((input: string) => {
+    if (!autocompleteServiceRef.current || !input.trim()) return;
+
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const request: any = {
+        input: input,
+        types: ['address'], // Focus on addresses
+        componentRestrictions: { country: 'za' }, // South Africa
+      };
+
+      // Add location bias if available
+      if (locationBias) {
+        request.location = new window.google.maps.LatLng(locationBias.latitude, locationBias.longitude);
+        request.radius = radius;
+      }
+
+      autocompleteServiceRef.current.getPlacePredictions(request, (predictions: PlacePrediction[] | null, status: string) => {
+        setIsLoading(false);
+
+        if (status === window.google.maps.places.PlacesServiceStatus.OK && predictions) {
+          setPredictions(predictions.slice(0, 5));
+          setIsOpen(true);
+          setSelectedIndex(-1);
+        } else {
+          setPredictions([]);
+          setIsOpen(false);
+        }
+      });
+    } catch (error) {
+      console.error('Error getting place predictions:', error);
+      setError('Failed to get location suggestions');
+      setIsLoading(false);
+      setPredictions([]);
+      setIsOpen(false);
+    }
+  }, [locationBias, radius]);
 
   // Handle keyboard navigation
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -411,6 +367,7 @@ export function GoogleLocationAutocomplete({
                     : 'hover:bg-muted/50'
                 }`}
                 onClick={() => selectPrediction(prediction)}
+                onMouseEnter={() => setSelectedIndex(index)}
               >
                 <div className="flex items-start gap-3">
                   <MapPin className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
@@ -437,16 +394,4 @@ export function GoogleLocationAutocomplete({
       )}
     </div>
   );
-}
-
-// Debounce utility function
-function debounce<T extends (...args: any[]) => any>(
-  func: T,
-  wait: number,
-): (...args: Parameters<T>) => void {
-  let timeout: NodeJS.Timeout;
-  return (...args: Parameters<T>) => {
-    clearTimeout(timeout);
-    timeout = setTimeout(() => func(...args), wait);
-  };
 }
