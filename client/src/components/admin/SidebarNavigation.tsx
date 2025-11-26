@@ -76,7 +76,7 @@ const SidebarNavigation: React.FC = () => {
   ];
 
   return (
-    <div className="flex flex-col h-full bg-white border-r border-slate-200 w-full">
+    <div className="flex flex-col h-full bg-white/60 backdrop-blur-xl border-r border-white/40 w-full">
       <div className="flex-1 overflow-y-auto pt-6 pb-6">
         <div className="flex flex-col px-6">
           {navigationGroups.map(group => (
@@ -91,10 +91,10 @@ const SidebarNavigation: React.FC = () => {
                     <button
                       key={item.name}
                       onClick={() => setLocation(item.path)}
-                      className={`flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-colors w-full text-left ${
+                      className={`flex items-center px-3 py-2.5 text-sm font-medium rounded-xl transition-all duration-200 w-full text-left ${
                         isActive
-                          ? 'bg-blue-100 text-blue-700'
-                          : 'text-slate-700 hover:bg-slate-100 hover:text-slate-900'
+                          ? 'bg-gradient-to-r from-blue-50 to-blue-100/50 text-blue-700 shadow-sm'
+                          : 'text-slate-600 hover:bg-white/50 hover:text-slate-900'
                       }`}
                     >
                       <item.icon className="h-5 w-5 mr-3" />

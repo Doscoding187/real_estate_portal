@@ -67,7 +67,7 @@ export default function SuperAdminDashboard({ children }: { children: React.Reac
   }
 
   return (
-    <div className="flex flex-col min-h-screen bg-[#F4F7FA]">
+    <div className="flex flex-col min-h-screen bg-gradient-to-br from-[#F4F7FA] to-[#EEF2F6]">
       <TopNavigationBar />
       <div className="flex flex-1">
         {/* Sidebar */}

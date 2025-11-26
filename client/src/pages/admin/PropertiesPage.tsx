@@ -3,7 +3,8 @@ import { useLocation } from 'wouter';
 import { trpc } from '@/lib/trpc';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { GlassCard } from '@/components/ui/glass-card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -21,15 +22,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Eye, Search, Filter, MoreHorizontal } from 'lucide-react';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+import { Eye, Search, Filter } from 'lucide-react';
 
 interface Property {
   id: number;
@@ -89,21 +82,21 @@ export default function PropertiesPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-transparent">
       <div className="container mx-auto px-4 py-8">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-3">
             <Eye className="h-8 w-8 text-primary" />
             <div>
-              <h1 className="text-3xl font-bold">Property Listings</h1>
-              <p className="text-muted-foreground">Manage all properties on the platform</p>
+              <h1 className="text-3xl font-bold text-slate-800">Property Listings</h1>
+              <p className="text-slate-500">Manage all properties on the platform</p>
             </div>
           </div>
         </div>
 
         {/* Filters */}
-        <Card className="mb-6">
+        <GlassCard className="mb-6 border-white/40 shadow-[0_8px_30px_rgba(8,_112,_184,_0.06)]">
           <CardContent className="pt-6">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="relative">
@@ -112,11 +105,11 @@ export default function PropertiesPage() {
                   placeholder="Search by title, city..."
                   value={searchTerm}
                   onChange={e => setSearchTerm(e.target.value)}
-                  className="pl-10"
+                  className="pl-10 bg-white/50 border-slate-200 focus:bg-white transition-all"
                 />
               </div>
               <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger>
+                <SelectTrigger className="bg-white/50 border-slate-200 focus:bg-white transition-all">
                   <SelectValue placeholder="Filter by status..." />
                 </SelectTrigger>
                 <SelectContent>
@@ -128,18 +121,18 @@ export default function PropertiesPage() {
                   <SelectItem value="archived">Archived</SelectItem>
                 </SelectContent>
               </Select>
-              <Button variant="outline" className="flex items-center gap-2">
+              <Button variant="outline" className="flex items-center gap-2 bg-white/50 hover:bg-white">
                 <Filter className="h-4 w-4" />
                 Advanced Filters
               </Button>
             </div>
           </CardContent>
-        </Card>
+        </GlassCard>
 
         {/* Properties Table */}
-        <Card>
+        <GlassCard className="border-white/40 shadow-[0_8px_30px_rgba(8,_112,_184,_0.06)]">
           <CardHeader>
-            <CardTitle>All Properties</CardTitle>
+            <CardTitle className="text-slate-800">All Properties</CardTitle>
           </CardHeader>
           <CardContent>
             {isLoading ? (
@@ -150,29 +143,29 @@ export default function PropertiesPage() {
               <>
                 <Table>
                   <TableHeader>
-                    <TableRow>
-                      <TableHead>Title</TableHead>
-                      <TableHead>Location</TableHead>
-                      <TableHead>Price</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Created</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
+                    <TableRow className="hover:bg-transparent border-slate-200">
+                      <TableHead className="text-slate-500">Title</TableHead>
+                      <TableHead className="text-slate-500">Location</TableHead>
+                      <TableHead className="text-slate-500">Price</TableHead>
+                      <TableHead className="text-slate-500">Status</TableHead>
+                      <TableHead className="text-slate-500">Created</TableHead>
+                      <TableHead className="text-right text-slate-500">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {data?.properties?.map((property: Property) => (
-                      <TableRow key={property.id}>
-                        <TableCell className="font-medium">
+                      <TableRow key={property.id} className="hover:bg-white/40 border-slate-100 transition-colors">
+                        <TableCell className="font-medium text-slate-700">
                           {property.title || 'Untitled'}
                         </TableCell>
-                        <TableCell>{property.city || 'Unknown'}</TableCell>
-                        <TableCell>{formatPrice(property.price)}</TableCell>
+                        <TableCell className="text-slate-600">{property.city || 'Unknown'}</TableCell>
+                        <TableCell className="text-slate-600">{formatPrice(property.price)}</TableCell>
                         <TableCell>
                           <Badge variant={getStatusBadgeVariant(property.status || 'unknown')}>
                             {property.status || 'Unknown'}
                           </Badge>
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="text-slate-600">
                           {property.createdAt
                             ? new Date(property.createdAt).toLocaleDateString()
                             : 'N/A'}
@@ -180,7 +173,7 @@ export default function PropertiesPage() {
                         <TableCell className="text-right">
                           <Button
                             size="sm"
-                            className="bg-blue-600 hover:bg-blue-700 text-white"
+                            className="bg-blue-600 hover:bg-blue-700 text-white shadow-sm hover:shadow-md transition-all"
                             onClick={(e) => {
                               e.stopPropagation();
                               setLocation(`/admin/review/${property.id}`);
@@ -202,6 +195,7 @@ export default function PropertiesPage() {
                     size="sm"
                     onClick={() => setPage(p => Math.max(1, p - 1))}
                     disabled={page === 1}
+                    className="bg-white/50 hover:bg-white"
                   >
                     Previous
                   </Button>
@@ -213,6 +207,7 @@ export default function PropertiesPage() {
                     size="sm"
                     onClick={() => setPage(p => p + 1)}
                     disabled={page >= (data?.pagination?.totalPages || 1)}
+                    className="bg-white/50 hover:bg-white"
                   >
                     Next
                   </Button>
@@ -220,7 +215,7 @@ export default function PropertiesPage() {
               </>
             )}
           </CardContent>
-        </Card>
+        </GlassCard>
       </div>
     </div>
   );

@@ -4,7 +4,8 @@ import { trpc } from '@/lib/trpc';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { Navbar } from '@/components/Navbar';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { GlassCard } from '@/components/ui/glass-card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -159,7 +160,7 @@ export default function ListingOversight() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-transparent">
       <Navbar />
       <div className="container mx-auto px-4 py-8">
         {/* Header */}
@@ -170,14 +171,14 @@ export default function ListingOversight() {
             </Button>
             <Eye className="h-8 w-8 text-primary" />
             <div>
-              <h1 className="text-3xl font-bold">Listing Oversight</h1>
+              <h1 className="text-3xl font-bold text-slate-800">Listing Oversight</h1>
               <p className="text-muted-foreground">Review and moderate property listings</p>
             </div>
           </div>
         </div>
 
         {/* Filters */}
-        <Card className="mb-6">
+        <GlassCard className="mb-6 border-white/40 shadow-[0_8px_30px_rgba(8,_112,_184,_0.06)]">
           <CardContent className="pt-6">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="relative">
@@ -186,11 +187,11 @@ export default function ListingOversight() {
                   placeholder="Search by title or address..."
                   value={searchTerm}
                   onChange={e => setSearchTerm(e.target.value)}
-                  className="pl-10"
+                  className="pl-10 bg-white/50 border-slate-200 focus:bg-white transition-all"
                 />
               </div>
               <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger>
+                <SelectTrigger className="bg-white/50 border-slate-200 focus:bg-white transition-all">
                   <SelectValue placeholder="Filter by status..." />
                 </SelectTrigger>
                 <SelectContent>
@@ -202,27 +203,27 @@ export default function ListingOversight() {
                   <SelectItem value="archived">Archived</SelectItem>
                 </SelectContent>
               </Select>
-              <Button variant="outline" className="flex items-center gap-2">
+              <Button variant="outline" className="flex items-center gap-2 bg-white/50 hover:bg-white">
                 <Filter className="h-4 w-4" />
                 Advanced Filters
               </Button>
             </div>
           </CardContent>
-        </Card>
+        </GlassCard>
 
         {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          <Card>
+          <GlassCard className="border-white/40 shadow-[0_8px_30px_rgba(8,_112,_184,_0.06)]">
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-medium text-muted-foreground">
                 Total Listings
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{data?.length || 0}</div>
+              <div className="text-2xl font-bold text-slate-800">{data?.length || 0}</div>
             </CardContent>
-          </Card>
-          <Card>
+          </GlassCard>
+          <GlassCard className="border-white/40 shadow-[0_8px_30px_rgba(8,_112,_184,_0.06)]">
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-medium text-muted-foreground">
                 Pending Review
@@ -233,8 +234,8 @@ export default function ListingOversight() {
                 {data?.filter((p: any) => p.status === 'pending').length || 0}
               </div>
             </CardContent>
-          </Card>
-          <Card>
+          </GlassCard>
+          <GlassCard className="border-white/40 shadow-[0_8px_30px_rgba(8,_112,_184,_0.06)]">
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-medium text-muted-foreground">Approved</CardTitle>
             </CardHeader>
@@ -243,8 +244,8 @@ export default function ListingOversight() {
                 {data?.filter((p: any) => p.status === 'approved').length || 0}
               </div>
             </CardContent>
-          </Card>
-          <Card>
+          </GlassCard>
+          <GlassCard className="border-white/40 shadow-[0_8px_30px_rgba(8,_112,_184,_0.06)]">
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-medium text-muted-foreground">Rejected</CardTitle>
             </CardHeader>
@@ -253,13 +254,13 @@ export default function ListingOversight() {
                 {data?.filter((p: any) => p.status === 'rejected').length || 0}
               </div>
             </CardContent>
-          </Card>
+          </GlassCard>
         </div>
 
         {/* Properties Table */}
-        <Card>
+        <GlassCard className="border-white/40 shadow-[0_8px_30px_rgba(8,_112,_184,_0.06)]">
           <CardHeader>
-            <CardTitle>Property Listings</CardTitle>
+            <CardTitle className="text-slate-800">Property Listings</CardTitle>
           </CardHeader>
           <CardContent>
             {isLoading ? (
@@ -269,21 +270,21 @@ export default function ListingOversight() {
             ) : (
               <Table>
                 <TableHeader>
-                  <TableRow>
-                    <TableHead>Property</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Action</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Submitted</TableHead>
-                    <TableHead>Actions</TableHead>
+                  <TableRow className="hover:bg-transparent border-slate-200">
+                    <TableHead className="text-slate-500">Property</TableHead>
+                    <TableHead className="text-slate-500">Type</TableHead>
+                    <TableHead className="text-slate-500">Action</TableHead>
+                    <TableHead className="text-slate-500">Status</TableHead>
+                    <TableHead className="text-slate-500">Submitted</TableHead>
+                    <TableHead className="text-slate-500">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {data.map((property: any) => (
-                    <TableRow key={property.id}>
+                    <TableRow key={property.id} className="hover:bg-white/40 border-slate-100 transition-colors">
                       <TableCell>
                         <div>
-                          <div className="font-medium">{property.listingTitle}</div>
+                          <div className="font-medium text-slate-700">{property.listingTitle}</div>
                           <div className="text-sm text-muted-foreground">
                             Submitted by User #{property.submittedBy}
                           </div>
@@ -300,7 +301,7 @@ export default function ListingOversight() {
                           {property.status}
                         </Badge>
                       </TableCell>
-                      <TableCell>{new Date(property.submittedAt).toLocaleDateString()}</TableCell>
+                      <TableCell className="text-slate-600">{new Date(property.submittedAt).toLocaleDateString()}</TableCell>
                       <TableCell>{getActionButton(property)}</TableCell>
                     </TableRow>
                   ))}
@@ -308,7 +309,7 @@ export default function ListingOversight() {
               </Table>
             )}
           </CardContent>
-        </Card>
+        </GlassCard>
 
         {/* Moderation Dialog */}
         <Dialog open={isActionDialogOpen} onOpenChange={setIsActionDialogOpen}>
