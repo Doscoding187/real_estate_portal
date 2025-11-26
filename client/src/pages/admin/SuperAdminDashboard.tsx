@@ -23,8 +23,8 @@ export default function SuperAdminDashboard({ children }: { children: React.Reac
       return;
     }
 
-    // If user is not a super admin, redirect to login
-    if (user?.role !== 'super_admin') {
+    // If user is not a super admin or admin, redirect to login
+    if (user?.role !== 'super_admin' && user?.role !== 'admin') {
       setLocation('/login');
       return;
     }
