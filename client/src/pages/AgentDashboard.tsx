@@ -1,5 +1,6 @@
 import { useLocation } from 'wouter';
 import { useAuth } from '@/_core/hooks/useAuth';
+import { trpc } from '@/lib/trpc';
 import { AgentSidebar } from '@/components/agent/AgentSidebar';
 import { AgentDashboardOverview } from '@/components/agent/AgentDashboardOverview';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
@@ -10,8 +11,23 @@ export default function AgentDashboard() {
   const [, setLocation] = useLocation();
   const { isAuthenticated, user, loading } = useAuth();
 
+  // Check if agent profile exists
+  const { data: agentProfile, isLoading: isLoadingProfile } = trpc.agent.getDashboardStats.useQuery(
+    undefined,
+    {
+      enabled: isAuthenticated && user?.role === 'agent',
+      retry: false,
+      onError: (error) => {
+        // If agent profile not found, redirect to setup
+        if (error.message.includes('Agent profile not found')) {
+          setLocation('/agent/setup');
+        }
+      },
+    }
+  );
+
   // Show loading spinner while auth is being checked
-  if (loading) {
+  if (loading || isLoadingProfile) {
     return (
       <div className="min-h-screen bg-[#F4F7FA] flex items-center justify-center">
         <div className="text-center">

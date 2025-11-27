@@ -23,6 +23,7 @@ import Login from './pages/Login';
 import AgencyDashboard from './pages/AgencyDashboard';
 import AgentDashboard from './pages/AgentDashboard';
 import AgentListings from './pages/agent/AgentListings';
+import AgentSetup from './pages/AgentSetup';
 import AgencyList from './pages/admin/AgencyList';
 import CreateAgency from './pages/admin/CreateAgency';
 import UserManagement from './pages/admin/UserManagement';
@@ -88,6 +89,7 @@ function Router() {
       <Route path="/agents" component={Agents} />
       <Route path="/agent/dashboard" component={AgentDashboard} />
       <Route path="/agent/listings" component={AgentListings} />
+      <Route path="/agent/setup" component={AgentSetup} />
       <Route path="/agent/:id" component={AgentDetail} />
       <Route path="/city/:slug" component={CityPage} />
       <Route path="/listings/create" component={ListingWizard} />
