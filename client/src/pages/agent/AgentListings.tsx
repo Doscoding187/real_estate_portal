@@ -44,20 +44,51 @@ export default function AgentListings() {
   const getStatusForTab = (tab: string) => {
     switch (tab) {
       case 'active': return 'available';
-      case 'pending': return 'pending';
+      case 'pending': return 'pending_review';
+      case 'draft': return 'draft';
       case 'sold': return 'sold';
       case 'archived': return 'archived';
       default: return 'all';
     }
   };
 
-  // Fetch listings
-  const { data: listings, isLoading } = trpc.agent.getMyListings.useQuery({
+  const isDraftOrPending = activeTab === 'draft' || activeTab === 'pending';
+
+  // Fetch agent listings (for Active, Sold, Archived)
+  const { data: agentListings, isLoading: isLoadingAgent } = trpc.agent.getMyListings.useQuery({
     status: getStatusForTab(activeTab) as any,
     limit: 50,
   }, {
-    enabled: !!user,
+    enabled: !!user && !isDraftOrPending,
   });
+
+  // Fetch draft/pending listings (from listings table)
+  const { data: draftListings, isLoading: isLoadingDraft } = trpc.listing.myListings.useQuery({
+    status: getStatusForTab(activeTab) as any,
+    limit: 50,
+  }, {
+    enabled: !!user && isDraftOrPending,
+  });
+
+  const isLoading = isDraftOrPending ? isLoadingDraft : isLoadingAgent;
+
+  // Normalize data
+  const listings = isDraftOrPending 
+    ? draftListings?.map((l: any) => ({
+        id: l.id,
+        title: l.title,
+        address: l.address,
+        city: l.city,
+        price: l.pricing?.askingPrice || l.pricing?.monthlyRent || l.pricing?.startingBid || 0,
+        bedrooms: l.propertyDetails?.bedrooms || 0,
+        bathrooms: l.propertyDetails?.bathrooms || 0,
+        houseAreaM2: l.propertyDetails?.houseAreaM2 || l.propertyDetails?.unitSizeM2 || l.propertyDetails?.floorAreaM2 || 0,
+        primaryImage: l.primaryImage,
+        status: l.status === 'pending_review' ? 'pending' : l.status,
+        views: 0, // Drafts don't have views
+        enquiries: 0, // Drafts don't have enquiries
+      }))
+    : agentListings;
 
   // Redirect if not authenticated
   if (!loading && !isAuthenticated) {
@@ -70,7 +101,7 @@ export default function AgentListings() {
     return null;
   }
 
-  const filteredListings = listings?.filter(listing => 
+  const filteredListings = listings?.filter((listing: any) => 
     listing.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
     listing.address?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     listing.city?.toLowerCase().includes(searchQuery.toLowerCase())
@@ -132,17 +163,20 @@ export default function AgentListings() {
 
           {/* Tabs */}
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full max-w-2xl grid-cols-4 p-1 bg-slate-100/50 backdrop-blur-sm rounded-2xl mb-6">
+            <TabsList className="grid w-full max-w-3xl grid-cols-5 p-1 bg-slate-100/50 backdrop-blur-sm rounded-2xl mb-6">
               <TabsTrigger value="active" className="rounded-xl data-[state=active]:bg-white data-[state=active]:text-emerald-600 data-[state=active]:shadow-sm transition-all duration-300">
                 Active
               </TabsTrigger>
               <TabsTrigger value="pending" className="rounded-xl data-[state=active]:bg-white data-[state=active]:text-amber-600 data-[state=active]:shadow-sm transition-all duration-300">
                 Pending
               </TabsTrigger>
+              <TabsTrigger value="draft" className="rounded-xl data-[state=active]:bg-white data-[state=active]:text-slate-600 data-[state=active]:shadow-sm transition-all duration-300">
+                Drafts
+              </TabsTrigger>
               <TabsTrigger value="sold" className="rounded-xl data-[state=active]:bg-white data-[state=active]:text-blue-600 data-[state=active]:shadow-sm transition-all duration-300">
                 Sold
               </TabsTrigger>
-              <TabsTrigger value="archived" className="rounded-xl data-[state=active]:bg-white data-[state=active]:text-slate-600 data-[state=active]:shadow-sm transition-all duration-300">
+              <TabsTrigger value="archived" className="rounded-xl data-[state=active]:bg-white data-[state=active]:text-slate-400 data-[state=active]:shadow-sm transition-all duration-300">
                 Archived
               </TabsTrigger>
             </TabsList>
@@ -167,7 +201,7 @@ export default function AgentListings() {
                   <p className="text-slate-500 mt-1">
                     {searchQuery ? "Try adjusting your search terms" : `You don't have any ${activeTab} listings yet`}
                   </p>
-                  {!searchQuery && activeTab === 'active' && (
+                  {!searchQuery && (activeTab === 'active' || activeTab === 'draft') && (
                     <Button 
                       onClick={() => setLocation('/listings/create')}
                       className="mt-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl"
@@ -178,7 +212,7 @@ export default function AgentListings() {
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                  {filteredListings?.map((listing) => (
+                  {filteredListings?.map((listing: any) => (
                     <div 
                       key={listing.id}
                       className="group bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden flex flex-col"
@@ -194,6 +228,7 @@ export default function AgentListings() {
                           <Badge className={
                             listing.status === 'available' ? 'bg-emerald-500/90 text-white' :
                             listing.status === 'pending' ? 'bg-amber-500/90 text-white' :
+                            listing.status === 'draft' ? 'bg-slate-500/90 text-white' :
                             listing.status === 'sold' ? 'bg-blue-500/90 text-white' :
                             'bg-slate-500/90 text-white'
                           }>
@@ -212,9 +247,11 @@ export default function AgentListings() {
                               <DropdownMenuItem onClick={() => setLocation(`/listings/create?id=${listing.id}&edit=true`)}>
                                 <Edit className="h-4 w-4 mr-2" /> Edit Listing
                               </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => setLocation(`/property/${listing.id}`)}>
-                                <Eye className="h-4 w-4 mr-2" /> View Public Page
-                              </DropdownMenuItem>
+                              {listing.status === 'available' && (
+                                <DropdownMenuItem onClick={() => setLocation(`/property/${listing.id}`)}>
+                                  <Eye className="h-4 w-4 mr-2" /> View Public Page
+                                </DropdownMenuItem>
+                              )}
                               <DropdownMenuItem className="text-red-600 focus:text-red-600">
                                 <Trash2 className="h-4 w-4 mr-2" /> Archive Listing
                               </DropdownMenuItem>

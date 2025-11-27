@@ -1851,6 +1851,8 @@ export async function getUserListings(
   const db = await getDb();
   if (!db) throw new Error('Database not available');
 
+  const { listingMedia } = require('../drizzle/schema');
+
   let query = db.select().from(listings).where(eq(listings.ownerId, userId));
 
   if (status) {
@@ -1862,32 +1864,46 @@ export async function getUserListings(
     .limit(limit)
     .offset(offset);
 
-  // Map fields
-  return listingsData.map(listing => {
-    const pricing = {
-      askingPrice: listing.askingPrice ? Number(listing.askingPrice) : undefined,
-      negotiable: listing.negotiable === 1,
-      transferCostEstimate: listing.transferCostEstimate ? Number(listing.transferCostEstimate) : undefined,
-      monthlyRent: listing.monthlyRent ? Number(listing.monthlyRent) : undefined,
-      deposit: listing.deposit ? Number(listing.deposit) : undefined,
-      leaseTerms: listing.leaseTerms,
-      availableFrom: listing.availableFrom ? new Date(listing.availableFrom) : undefined,
-      utilitiesIncluded: listing.utilitiesIncluded === 1,
-      startingBid: listing.startingBid ? Number(listing.startingBid) : undefined,
-      reservePrice: listing.reservePrice ? Number(listing.reservePrice) : undefined,
-      auctionDateTime: listing.auctionDateTime ? new Date(listing.auctionDateTime) : undefined,
-      auctionTermsDocumentUrl: listing.auctionTermsDocumentUrl,
-    };
+  // Fetch primary images
+  const listingsWithImages = await Promise.all(
+    listingsData.map(async (listing) => {
+      const images = await db
+        .select()
+        .from(listingMedia)
+        .where(eq(listingMedia.listingId, listing.id))
+        .orderBy(listingMedia.displayOrder)
+        .limit(1);
 
-    const propertyDetails = listing.propertyDetails || {};
+      const primaryImage = images.length > 0 ? images[0].originalUrl : null;
 
-    return {
-      ...listing,
-      userId: listing.ownerId,
-      pricing,
-      propertyDetails,
-    };
-  });
+      const pricing = {
+        askingPrice: listing.askingPrice ? Number(listing.askingPrice) : undefined,
+        negotiable: listing.negotiable === 1,
+        transferCostEstimate: listing.transferCostEstimate ? Number(listing.transferCostEstimate) : undefined,
+        monthlyRent: listing.monthlyRent ? Number(listing.monthlyRent) : undefined,
+        deposit: listing.deposit ? Number(listing.deposit) : undefined,
+        leaseTerms: listing.leaseTerms,
+        availableFrom: listing.availableFrom ? new Date(listing.availableFrom) : undefined,
+        utilitiesIncluded: listing.utilitiesIncluded === 1,
+        startingBid: listing.startingBid ? Number(listing.startingBid) : undefined,
+        reservePrice: listing.reservePrice ? Number(listing.reservePrice) : undefined,
+        auctionDateTime: listing.auctionDateTime ? new Date(listing.auctionDateTime) : undefined,
+        auctionTermsDocumentUrl: listing.auctionTermsDocumentUrl,
+      };
+
+      const propertyDetails = listing.propertyDetails || {};
+
+      return {
+        ...listing,
+        userId: listing.ownerId,
+        pricing,
+        propertyDetails,
+        primaryImage,
+      };
+    })
+  );
+
+  return listingsWithImages;
 }
 
 /**
