@@ -291,7 +291,6 @@ const MediaUploadStep: React.FC = () => {
               <DragDropContext onDragEnd={onDragEnd}>
                 <Droppable
                   droppableId="media-grid"
-                  direction="horizontal"
                   getContainerForClone={() => document.getElementById('rbdnd-portal')!}
                   renderClone={(provided: DraggableProvided, snapshot: DraggableStateSnapshot, rubric: any) => {
                   const media = store.media[rubric.source.index];
