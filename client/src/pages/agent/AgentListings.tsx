@@ -76,33 +76,54 @@ export default function AgentListings() {
   // Mutations for properties (Active, Sold, Archived tabs)
   const archivePropertyMutation = trpc.agent.archiveProperty.useMutation({
     onSuccess: () => {
+      console.log('Archive property success');
       utils.agent.getMyListings.invalidate();
+    },
+    onError: (error) => {
+      console.error('Archive property error:', error);
+      alert('Failed to archive property: ' + error.message);
     },
   });
 
   const deletePropertyMutation = trpc.agent.deleteProperty.useMutation({
     onSuccess: () => {
+      console.log('Delete property success');
       utils.agent.getMyListings.invalidate();
+    },
+    onError: (error) => {
+      console.error('Delete property error:', error);
+      alert('Failed to delete property: ' + error.message);
     },
   });
 
   // Mutations for listings (Draft, Pending tabs)
   const archiveListingMutation = trpc.listing.archive.useMutation({
     onSuccess: () => {
+      console.log('Archive listing success');
       utils.listing.myListings.invalidate();
       refetchDrafts();
+    },
+    onError: (error) => {
+      console.error('Archive listing error:', error);
+      alert('Failed to archive listing: ' + error.message);
     },
   });
 
   const deleteListingMutation = trpc.listing.delete.useMutation({
     onSuccess: () => {
+      console.log('Delete listing success');
       utils.listing.myListings.invalidate();
       refetchDrafts();
+    },
+    onError: (error) => {
+      console.error('Delete listing error:', error);
+      alert('Failed to delete listing: ' + error.message);
     },
   });
 
   // Helper functions to use the correct mutation
   const handleArchive = (listingId: number) => {
+    console.log('handleArchive called', { listingId, isDraftOrPending });
     if (confirm('Are you sure you want to archive this listing?')) {
       if (isDraftOrPending) {
         archiveListingMutation.mutate({ id: listingId });
@@ -113,6 +134,7 @@ export default function AgentListings() {
   };
 
   const handleDelete = (listingId: number) => {
+    console.log('handleDelete called', { listingId, isDraftOrPending });
     if (confirm('Are you sure you want to permanently delete this listing? This action cannot be undone.')) {
       if (isDraftOrPending) {
         deleteListingMutation.mutate({ id: listingId });
