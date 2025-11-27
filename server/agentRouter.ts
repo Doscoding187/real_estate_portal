@@ -325,7 +325,9 @@ export const agentRouter = router({
       }
 
       // Build query conditions
-      const conditions = [eq(properties.agentId, agentRecord.id)];
+      const conditions: any[] = [
+        sql`(${properties.agentId} = ${agentRecord.id} OR ${properties.ownerId} = ${ctx.user.id})`
+      ];
       if (input.status && input.status !== 'all') {
         conditions.push(eq(properties.status, input.status as any));
       }

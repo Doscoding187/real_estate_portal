@@ -1707,42 +1707,48 @@ export async function createListing(listingData: any) {
     const listingId = await db.transaction(async (tx) => {
       // Create listing record
       // Convert latitude and longitude to strings to match schema
-      const [listingResult] = await tx.insert(listings).values({
-        ownerId: listingData.userId,
-        action: listingData.action,
-        propertyType: listingData.propertyType,
-        title: listingData.title,
-        description: listingData.description,
-        
-        // Map pricing fields
-        askingPrice: listingData.pricing.askingPrice ? String(listingData.pricing.askingPrice) : null,
-        negotiable: listingData.pricing.negotiable ? 1 : 0,
-        transferCostEstimate: listingData.pricing.transferCostEstimate ? String(listingData.pricing.transferCostEstimate) : null,
-        monthlyRent: listingData.pricing.monthlyRent ? String(listingData.pricing.monthlyRent) : null,
-        deposit: listingData.pricing.deposit ? String(listingData.pricing.deposit) : null,
-        leaseTerms: listingData.pricing.leaseTerms,
-        availableFrom: listingData.pricing.availableFrom ? new Date(listingData.pricing.availableFrom).toISOString().slice(0, 19).replace('T', ' ') : null,
-        utilitiesIncluded: listingData.pricing.utilitiesIncluded ? 1 : 0,
-        startingBid: listingData.pricing.startingBid ? String(listingData.pricing.startingBid) : null,
-        reservePrice: listingData.pricing.reservePrice ? String(listingData.pricing.reservePrice) : null,
-        auctionDateTime: listingData.pricing.auctionDateTime ? new Date(listingData.pricing.auctionDateTime).toISOString().slice(0, 19).replace('T', ' ') : null,
-        auctionTermsDocumentUrl: listingData.pricing.auctionTermsDocumentUrl,
+        // Look up agent ID
+        const { agents } = require('../drizzle/schema');
+        const [agent] = await tx.select().from(agents).where(eq(agents.userId, listingData.userId)).limit(1);
+        const agentId = agent ? agent.id : null;
 
-        propertyDetails: listingData.propertyDetails, // Pass object directly for JSON column
-        address: listingData.address,
-        latitude: String(listingData.latitude),
-        longitude: String(listingData.longitude),
-        city: listingData.city,
-        suburb: listingData.suburb,
-        province: listingData.province,
-        postalCode: listingData.postalCode,
-        placeId: listingData.placeId,
-        slug: listingData.slug,
-        status: 'draft',
-        approvalStatus: 'pending',
-        createdAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
-        updatedAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
-      });
+        const [listingResult] = await tx.insert(listings).values({
+          ownerId: listingData.userId,
+          agentId: agentId,
+          action: listingData.action,
+          propertyType: listingData.propertyType,
+          title: listingData.title,
+          description: listingData.description,
+          
+          // Map pricing fields
+          askingPrice: listingData.pricing.askingPrice ? String(listingData.pricing.askingPrice) : null,
+          negotiable: listingData.pricing.negotiable ? 1 : 0,
+          transferCostEstimate: listingData.pricing.transferCostEstimate ? String(listingData.pricing.transferCostEstimate) : null,
+          monthlyRent: listingData.pricing.monthlyRent ? String(listingData.pricing.monthlyRent) : null,
+          deposit: listingData.pricing.deposit ? String(listingData.pricing.deposit) : null,
+          leaseTerms: listingData.pricing.leaseTerms,
+          availableFrom: listingData.pricing.availableFrom ? new Date(listingData.pricing.availableFrom).toISOString().slice(0, 19).replace('T', ' ') : null,
+          utilitiesIncluded: listingData.pricing.utilitiesIncluded ? 1 : 0,
+          startingBid: listingData.pricing.startingBid ? String(listingData.pricing.startingBid) : null,
+          reservePrice: listingData.pricing.reservePrice ? String(listingData.pricing.reservePrice) : null,
+          auctionDateTime: listingData.pricing.auctionDateTime ? new Date(listingData.pricing.auctionDateTime).toISOString().slice(0, 19).replace('T', ' ') : null,
+          auctionTermsDocumentUrl: listingData.pricing.auctionTermsDocumentUrl,
+
+          propertyDetails: listingData.propertyDetails, // Pass object directly for JSON column
+          address: listingData.address,
+          latitude: String(listingData.latitude),
+          longitude: String(listingData.longitude),
+          city: listingData.city,
+          suburb: listingData.suburb,
+          province: listingData.province,
+          postalCode: listingData.postalCode,
+          placeId: listingData.placeId,
+          slug: listingData.slug,
+          status: 'draft',
+          approvalStatus: 'pending',
+          createdAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
+          updatedAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
+        });
 
       const newListingId = Number(listingResult.insertId);
 

@@ -63,11 +63,21 @@ export default function AgentListings() {
   });
 
   // Fetch draft/pending listings (from listings table)
-  const { data: draftListings, isLoading: isLoadingDraft } = trpc.listing.myListings.useQuery({
+  const { data: draftListings, isLoading: isLoadingDraft, refetch: refetchDrafts } = trpc.listing.myListings.useQuery({
     status: getStatusForTab(activeTab) as any,
     limit: 50,
   }, {
     enabled: !!user && isDraftOrPending,
+  });
+
+  const utils = trpc.useContext();
+  const deleteListingMutation = trpc.listing.delete.useMutation({
+    onSuccess: () => {
+      utils.agent.getMyListings.invalidate();
+      utils.listing.myListings.invalidate();
+      // Also refetch manually to be safe
+      refetchDrafts();
+    },
   });
 
   const isLoading = isDraftOrPending ? isLoadingDraft : isLoadingAgent;
@@ -267,8 +277,15 @@ export default function AgentListings() {
                                   <Eye className="h-4 w-4 mr-2" /> View Public Page
                                 </DropdownMenuItem>
                               )}
-                              <DropdownMenuItem className="text-red-600 focus:text-red-600">
-                                <Trash2 className="h-4 w-4 mr-2" /> Archive Listing
+                              <DropdownMenuItem 
+                                className="text-red-600 focus:text-red-600"
+                                onClick={() => {
+                                  if (confirm('Are you sure you want to delete this listing?')) {
+                                    deleteListingMutation.mutate({ id: listing.id });
+                                  }
+                                }}
+                              >
+                                <Trash2 className="h-4 w-4 mr-2" /> Delete Listing
                               </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
