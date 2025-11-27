@@ -59,18 +59,15 @@ const PreviewStep: React.FC = () => {
     ...(state.additionalInfo?.securityFeatures || []),
   ];
 
-  // Calculate area based on property type
+  // Calculate house/building area (not yard/land)
   const getPropertyArea = () => {
     if (!state.propertyDetails) return 0;
 
     if (state.propertyType === 'apartment') {
       return Number((state.propertyDetails as any).unitSizeM2) || 0;
     } else if (state.propertyType === 'house') {
-      return (
-        Number((state.propertyDetails as any).erfSizeM2) ||
-        Number((state.propertyDetails as any).houseAreaM2) ||
-        0
-      );
+      // For houses, return house area (not yard/erf size)
+      return Number((state.propertyDetails as any).houseAreaM2) || 0;
     } else if (state.propertyType === 'land') {
       return Number((state.propertyDetails as any).landSizeM2OrHa) || 0;
     } else if (state.propertyType === 'farm') {
@@ -79,6 +76,16 @@ const PreviewStep: React.FC = () => {
       return Number((state.propertyDetails as any).floorAreaM2) || 0;
     }
     return 0;
+  };
+
+  // Get yard/land size separately (for houses)
+  const getYardSize = () => {
+    if (!state.propertyDetails) return undefined;
+    
+    if (state.propertyType === 'house') {
+      return Number((state.propertyDetails as any).erfSizeM2) || undefined;
+    }
+    return undefined;
   };
 
   // Get price
@@ -109,6 +116,7 @@ const PreviewStep: React.FC = () => {
           bedrooms={Number((state.propertyDetails as any)?.bedrooms) || 0}
           bathrooms={Number((state.propertyDetails as any)?.bathrooms) || 0}
           area={getPropertyArea()}
+          yardSize={getYardSize()}
           propertyType={state.propertyType ? state.propertyType.charAt(0).toUpperCase() + state.propertyType.slice(1) : 'Property'}
           listingType={state.action}
           agent={{
