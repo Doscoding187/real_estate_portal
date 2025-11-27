@@ -13,7 +13,7 @@ import { Upload, Video, GripVertical } from 'lucide-react';
 import type { MediaFile } from '@/../../shared/listing-types';
 import {
   DndContext,
-  closestCenter,
+  closestCorners,
   KeyboardSensor,
   PointerSensor,
   useSensor,
@@ -337,7 +337,7 @@ const MediaUploadStep: React.FC = () => {
             
             <DndContext
               sensors={sensors}
-              collisionDetection={closestCenter}
+              collisionDetection={closestCorners}
               onDragStart={handleDragStart}
               onDragEnd={handleDragEnd}
             >

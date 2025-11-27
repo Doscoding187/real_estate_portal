@@ -28,7 +28,7 @@ export const SortableMediaItem: React.FC<SortableMediaItemProps> = ({
   } = useSortable({ id: media.id || String(index) });
 
   const style = {
-    transform: CSS.Transform.toString(transform),
+    transform: CSS.Translate.toString(transform),
     transition,
     zIndex: isDragging ? 999 : 'auto',
     opacity: isDragging ? 0.5 : 1,
