@@ -46,11 +46,29 @@ const registerSchema = z
       ),
     confirmPassword: z.string(),
     role: z.enum(['visitor', 'agent', 'agency_admin', 'property_developer']).default('visitor'),
+    // Agent profile fields (conditional)
+    agentDisplayName: z.string().optional(),
+    agentPhone: z.string().optional(),
+    agentBio: z.string().optional(),
+    agentLicense: z.string().optional(),
+    agentSpecializations: z.array(z.string()).optional(),
   })
   .refine(data => data.password === data.confirmPassword, {
     message: "Passwords don't match",
     path: ['confirmPassword'],
-  });
+  })
+  .refine(
+    data => {
+      if (data.role === 'agent') {
+        return data.agentDisplayName && data.agentDisplayName.length >= 2 && data.agentPhone && data.agentPhone.length >= 10;
+      }
+      return true;
+    },
+    {
+      message: 'Display name and phone number are required for agent registration',
+      path: ['agentDisplayName'],
+    },
+  );
 
 type LoginFormData = z.infer<typeof loginSchema>;
 type RegisterFormData = z.infer<typeof registerSchema>;
@@ -87,8 +105,15 @@ export default function Login() {
       password: '',
       confirmPassword: '',
       role: 'visitor',
+      agentDisplayName: '',
+      agentPhone: '',
+      agentBio: '',
+      agentLicense: '',
+      agentSpecializations: [],
     },
   });
+
+  const selectedRole = registerForm.watch('role');
 
   const onLogin = async (data: LoginFormData) => {
     setIsLoading(true);
@@ -127,20 +152,31 @@ export default function Login() {
   const onRegister = async (data: RegisterFormData) => {
     setIsLoading(true);
     try {
-      await apiFetch('/auth/register', {
+      const payload: any = {
+        name: data.name,
+        email: data.email,
+        password: data.password,
+        role: data.role,
+      };
+
+      // Add agent profile if role is agent
+      if (data.role === 'agent') {
+        payload.agentProfile = {
+          displayName: data.agentDisplayName!,
+          phoneNumber: data.agentPhone!,
+          bio: data.agentBio,
+          licenseNumber: data.agentLicense,
+          specializations: data.agentSpecializations,
+        };
+      }
+
+      const result = await apiFetch('/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: data.name,
-          email: data.email,
-          password: data.password,
-          role: data.role
-        }),
+        body: JSON.stringify(payload),
       });
       
-      toast.success(
-        'Account created successfully! Please check your email to verify your account.',
-      );
+      toast.success(result.message || 'Account created successfully! Please check your email to verify your account.');
       setActiveTab('login');
       registerForm.reset();
     } catch (error) {
@@ -491,13 +527,98 @@ export default function Login() {
                                   <HardHat className="mb-2 h-6 w-6" />
                                   <span className="text-xs font-medium">Developer</span>
                                 </Label>
-                              </FormItem>
                             </RadioGroup>
                           </FormControl>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
+
+                    {/* Agent Profile Fields - Show only when role is 'agent' */}
+                    {selectedRole === 'agent' && (
+                      <div className="space-y-4 p-4 bg-blue-50/50 dark:bg-blue-900/10 rounded-xl border border-blue-200 dark:border-blue-800">
+                        <div className="text-sm font-medium text-blue-900 dark:text-blue-100">
+                          Agent Profile Information
+                        </div>
+                        
+                        <FormField
+                          control={registerForm.control}
+                          name="agentDisplayName"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Display Name *</FormLabel>
+                              <FormControl>
+                                <Input 
+                                  placeholder="John Smith" 
+                                  className="bg-white dark:bg-slate-800"
+                                  {...field} 
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={registerForm.control}
+                          name="agentPhone"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Phone Number *</FormLabel>
+                              <FormControl>
+                                <Input 
+                                  type="tel"
+                                  placeholder="+27 12 345 6789" 
+                                  className="bg-white dark:bg-slate-800"
+                                  {...field} 
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={registerForm.control}
+                          name="agentLicense"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>License Number (Optional)</FormLabel>
+                              <FormControl>
+                                <Input 
+                                  placeholder="FFC1234567" 
+                                  className="bg-white dark:bg-slate-800"
+                                  {...field} 
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={registerForm.control}
+                          name="agentBio"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Bio (Optional)</FormLabel>
+                              <FormControl>
+                                <Input 
+                                  placeholder="Brief description of your experience..." 
+                                  className="bg-white dark:bg-slate-800"
+                                  {...field} 
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <div className="text-xs text-blue-700 dark:text-blue-300">
+                          Your agent profile will be reviewed by our team before activation.
+                        </div>
+                      </div>
+                    )}
 
                     <Button 
                       type="submit" 
