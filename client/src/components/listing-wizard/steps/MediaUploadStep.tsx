@@ -4,10 +4,23 @@ import { Card } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { trpc } from '@/lib/trpc';
-import { Upload, Video, GripVertical, X } from 'lucide-react';
+import { Upload, Video, GripVertical } from 'lucide-react';
 import type { MediaFile } from '@/../../shared/listing-types';
-import { DragDropContext, Droppable, Draggable, DropResult, DroppableProvided, DraggableProvided, DraggableStateSnapshot } from 'react-beautiful-dnd';
-import { Button } from '@/components/ui/button';
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+  DragOverlay,
+  DragStartEvent,
+} from '@dnd-kit/core';
+import {
+  SortableContext,
+  rectSortingStrategy,
+} from '@dnd-kit/sortable';
+import { SortableMediaItem } from './SortableMediaItem';
 
 const MediaUploadStep: React.FC = () => {
   const store = useListingWizardStore();
@@ -15,9 +28,19 @@ const MediaUploadStep: React.FC = () => {
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [isDraggingPrimary, setIsDraggingPrimary] = useState(false);
   const [isDraggingAdditional, setIsDraggingAdditional] = useState(false);
+  const [activeId, setActiveId] = useState<string | null>(null);
   
   // TRPC mutation for media upload
   const uploadMediaMutation = trpc.listing.uploadMedia.useMutation();
+
+  // Sensors for drag and drop
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8, // Require 8px movement before drag starts
+      },
+    })
+  );
 
   // Handle file selection
   const handleFileSelect = useCallback(async (files: FileList | null, isPrimary: boolean = false) => {
@@ -172,17 +195,30 @@ const MediaUploadStep: React.FC = () => {
     handleFileSelect(e.dataTransfer.files);
   };
 
-  // react-beautiful-dnd handler
-  const onDragEnd = (result: DropResult) => {
-    if (!result.destination) return;
-
-    const oldIndex = result.source.index;
-    const newIndex = result.destination.index;
-
-    if (oldIndex !== newIndex) {
-      store.reorderMedia(oldIndex, newIndex);
-    }
+  // @dnd-kit handlers
+  const handleDragStart = (event: DragStartEvent) => {
+    setActiveId(event.active.id as string);
   };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (active.id !== over?.id) {
+      const oldIndex = store.media.findIndex((item, index) => (item.id || String(index)) === active.id);
+      const newIndex = store.media.findIndex((item, index) => (item.id || String(index)) === over?.id);
+
+      if (oldIndex !== -1 && newIndex !== -1) {
+        store.reorderMedia(oldIndex, newIndex);
+      }
+    }
+
+    setActiveId(null);
+  };
+
+  // Get active media item for drag overlay
+  const activeMedia = activeId 
+    ? store.media.find((item, index) => (item.id || String(index)) === activeId) 
+    : null;
 
   return (
     <Card className="p-6">
@@ -286,133 +322,54 @@ const MediaUploadStep: React.FC = () => {
               <p className="text-sm text-gray-500">Drag to reorder</p>
             </div>
             
-            {/* Force transform-none to fix drag offset caused by parent transforms */}
+            {/* Transform isolation wrapper */}
             <div className="transform-none">
-              <DragDropContext onDragEnd={onDragEnd}>
-                <Droppable
-                  droppableId="media-grid"
-                  direction="vertical"
-                  getContainerForClone={() => document.getElementById('rbdnd-portal')!}
-                  renderClone={(provided: DraggableProvided, snapshot: DraggableStateSnapshot, rubric: any) => {
-                  const media = store.media[rubric.source.index];
-                  return (
-                    <div
-                      ref={provided.innerRef}
-                      {...provided.draggableProps}
-                      {...provided.dragHandleProps}
-                      className="w-[140px] h-[140px] rounded-lg border-2 border-blue-500 shadow-xl overflow-hidden bg-white"
-                      style={{
-                        ...provided.draggableProps.style,
-                        width: 140,
-                        height: 140,
-                      }}
-                    >
-                      {media.type === "image" ? (
-                        <img
-                          src={media.url}
-                          alt={media.fileName}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <div className="w-full h-full bg-gray-100 flex items-center justify-center">
-                          <Video className="h-8 w-8 text-gray-400" />
-                        </div>
-                      )}
-                    </div>
-                  );
-                }}
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragStart={handleDragStart}
+                onDragEnd={handleDragEnd}
               >
-                {(provided: DroppableProvided) => (
-                  <div
-                    ref={provided.innerRef}
-                    {...provided.droppableProps}
-                    className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 rbd-vertical-list"
-                  >
+                <SortableContext
+                  items={store.media.map((m, i) => m.id || String(i))}
+                  strategy={rectSortingStrategy}
+                >
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                     {store.media.map((media, index) => (
-                      <Draggable
+                      <SortableMediaItem
                         key={media.id || index}
-                        draggableId={media.id?.toString() || String(index)}
+                        media={media}
                         index={index}
-                      >
-                        {(provided: DraggableProvided, snapshot: DraggableStateSnapshot) => (
-                          <div
-                            ref={provided.innerRef}
-                            {...provided.draggableProps}
-                            className={`relative rounded-lg overflow-hidden border group ${
-                              snapshot.isDragging
-                                ? "border-blue-500 shadow-lg opacity-0" // Hide original when dragging (clone is shown)
-                                : media.isPrimary ? "border-blue-500" : "border-gray-200 hover:border-blue-300"
-                            } bg-white aspect-square`}
-                            style={{
-                              ...provided.draggableProps.style,
-                              userSelect: "none",
-                            }}
-                          >
-                            {/* Drag handle */}
-                            <div
-                              {...provided.dragHandleProps}
-                              className="absolute top-2 left-2 bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded p-1.5 shadow-lg cursor-grab active:cursor-grabbing z-10"
-                            >
-                              <GripVertical className="h-4 w-4" />
-                            </div>
+                        onRemove={handleRemoveMedia}
+                        onSetPrimary={handleSetMainMedia}
+                      />
+                    ))}
+                  </div>
+                </SortableContext>
 
-                            {/* Remove Button */}
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant="destructive"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleRemoveMedia(index);
-                              }}
-                              className="absolute top-2 right-2 h-7 w-7 p-0 opacity-0 group-hover:opacity-100 transition-opacity bg-red-500 hover:bg-red-600 text-white z-10"
-                            >
-                              <X className="h-4 w-4" />
-                            </Button>
-
-                            {/* Primary Badge */}
-                            {media.isPrimary && (
-                              <div className="absolute top-2 right-12 bg-blue-500 text-white text-xs px-2 py-1 rounded shadow-md pointer-events-none z-10">
-                                Primary
-                              </div>
-                            )}
-
-                            {/* Set Primary Button */}
-                            {!media.isPrimary && (
-                              <div className="absolute bottom-2 left-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
-                                <Button
-                                  type="button"
-                                  size="sm"
-                                  variant="secondary"
-                                  onClick={() => media.id && handleSetMainMedia(media.id as any)}
-                                  className="w-full text-xs bg-white/90 hover:bg-white text-black"
-                                >
-                                  Set as Primary
-                                </Button>
-                              </div>
-                            )}
-
-                            {/* Media Preview */}
-                            {media.type === "image" ? (
-                              <img
-                                src={media.url}
-                                alt={media.fileName}
-                                className="w-full h-full object-cover"
-                              />
-                            ) : (
-                              <div className="w-full h-full bg-gray-100 flex items-center justify-center">
-                                <Video className="h-8 w-8 text-gray-400" />
-                              </div>
-                            )}
+                <DragOverlay>
+                  {activeMedia ? (
+                    <div className="w-40 h-40 opacity-80 cursor-grabbing">
+                      <div className="aspect-square rounded-lg overflow-hidden border-2 border-blue-500 shadow-xl bg-white">
+                        {activeMedia.type === 'image' ? (
+                          <img
+                            src={activeMedia.url}
+                            alt={`Uploaded ${activeMedia.fileName}`}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full bg-gray-100 flex items-center justify-center">
+                            <Video className="h-8 w-8 text-gray-400" />
                           </div>
                         )}
-                      </Draggable>
-                    ))}
-                    {provided.placeholder}
-                  </div>
-                )}
-                </Droppable>
-              </DragDropContext>
+                        <div className="absolute top-2 left-2 bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded p-1.5 shadow-lg">
+                          <GripVertical className="h-4 w-4" />
+                        </div>
+                      </div>
+                    </div>
+                  ) : null}
+                </DragOverlay>
+              </DndContext>
             </div>
           </div>
         )}

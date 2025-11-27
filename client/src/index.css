@@ -3,17 +3,8 @@
 /* Ikhaya Design System utilities & components */
 @import '../../design-system/components.css';
 
-/* React Beautiful DnD - Fix for drag layer z-index */
-.rbd-dragging {
-  z-index: 9999 !important;
-}
-
-/* React Beautiful DnD - Grid Fix: Trick RBDND into treating grid as vertical list */
-.rbd-vertical-list > * {
-  width: 100%;
-}
-
 @custom-variant dark (&:is(.dark *));
+
 
 @theme inline {
   --radius-sm: calc(var(--radius) - 4px);
