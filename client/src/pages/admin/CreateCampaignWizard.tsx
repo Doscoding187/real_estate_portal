@@ -1,3 +1,16 @@
+import React, { useState } from 'react';
+import { useLocation } from 'wouter';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { ArrowLeft, Check } from 'lucide-react';
+import { trpc } from '@/lib/trpc';
+import { useAuth } from '@/_core/hooks/useAuth';
+import { toast } from 'sonner';
+
+// Steps
+import Step1Details from '@/components/marketing/wizard/Step1Details';
+import Step2Target from '@/components/marketing/wizard/Step2Target';
+import Step3Targeting from '@/components/marketing/wizard/Step3Targeting';
 import Step4Budget from '@/components/marketing/wizard/Step4Budget';
 import Step5Channels from '@/components/marketing/wizard/Step5Channels';
 import Step6Creative from '@/components/marketing/wizard/Step6Creative';
@@ -14,7 +27,7 @@ const STEPS = [
 ];
 
 const CreateCampaignWizard: React.FC = () => {
-  const navigate = useNavigate();
+  const [, setLocation] = useLocation();
   const { user } = useAuth();
   const [currentStep, setCurrentStep] = useState(1);
   const [campaignId, setCampaignId] = useState<number | null>(null);
@@ -47,7 +60,7 @@ const CreateCampaignWizard: React.FC = () => {
 
   const handleBack = () => {
     if (currentStep === 1) {
-      navigate('/admin/marketing');
+      setLocation('/admin/marketing');
     } else {
       setCurrentStep(prev => Math.max(prev - 1, 1));
     }
@@ -71,7 +84,7 @@ const CreateCampaignWizard: React.FC = () => {
           </div>
         </div>
         <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={() => navigate('/admin/marketing')}>Cancel</Button>
+            <Button variant="outline" onClick={() => setLocation('/admin/marketing')}>Cancel</Button>
         </div>
       </div>
 

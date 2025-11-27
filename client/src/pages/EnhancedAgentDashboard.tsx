@@ -230,6 +230,7 @@ export default function EnhancedAgentDashboard() {
                 <CardHeader>
                   <CardTitle>Recent Activity</CardTitle>
                 </CardHeader>
+                <CardContent>
                   <div className="text-center py-8 text-muted-foreground">
                     <p className="text-sm">No recent activity</p>
                   </div>

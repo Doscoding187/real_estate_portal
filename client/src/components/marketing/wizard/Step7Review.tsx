@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Check, Rocket } from 'lucide-react';
 import { trpc } from '@/lib/trpc';
 import { toast } from 'sonner';
-import { useNavigate } from 'wouter';
+import { useLocation } from 'wouter';
 
 interface Step7Props {
   data: any;
@@ -14,7 +14,7 @@ interface Step7Props {
 }
 
 const Step7Review: React.FC<Step7Props> = ({ data, campaignId, onBack }) => {
-  const navigate = useNavigate();
+  const [, setLocation] = useLocation();
   const updateCampaignMutation = trpc.marketing.updateCampaign.useMutation();
 
   const handleLaunch = async () => {
@@ -26,7 +26,7 @@ const Step7Review: React.FC<Step7Props> = ({ data, campaignId, onBack }) => {
         },
       });
       toast.success('Campaign launched successfully!');
-      navigate('/admin/marketing');
+      setLocation('/admin/marketing');
     } catch (error) {
       toast.error('Failed to launch campaign');
     }
@@ -34,7 +34,7 @@ const Step7Review: React.FC<Step7Props> = ({ data, campaignId, onBack }) => {
 
   const handleSaveDraft = async () => {
     toast.success('Campaign saved as draft');
-    navigate('/admin/marketing');
+    setLocation('/admin/marketing');
   };
 
   return (

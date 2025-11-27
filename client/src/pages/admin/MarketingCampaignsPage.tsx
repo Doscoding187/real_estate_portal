@@ -21,12 +21,12 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Plus, Search, Filter, Megaphone, TrendingUp, Users, DollarSign } from 'lucide-react';
-import { useNavigate } from 'wouter';
+import { useLocation } from 'wouter';
 import { format } from 'date-fns';
 
 const MarketingCampaignsPage: React.FC = () => {
   const { user } = useAuth();
-  const navigate = useNavigate();
+  const [, setLocation] = useLocation();
   const [statusFilter, setStatusFilter] = useState<string>('all');
   
   // Determine owner type and ID based on user role
@@ -68,7 +68,7 @@ const MarketingCampaignsPage: React.FC = () => {
           <h1 className="text-2xl font-bold text-slate-900">Marketing Campaigns</h1>
           <p className="text-slate-500">Manage your internal promotions and boosts</p>
         </div>
-        <Button onClick={() => navigate('/admin/marketing/create')} className="bg-blue-600 hover:bg-blue-700">
+        <Button onClick={() => setLocation('/admin/marketing/create')} className="bg-blue-600 hover:bg-blue-700">
           <Plus className="w-4 h-4 mr-2" />
           Create Campaign
         </Button>
@@ -178,7 +178,7 @@ const MarketingCampaignsPage: React.FC = () => {
                 </TableRow>
               ) : (
                 campaigns?.map((campaign) => (
-                  <TableRow key={campaign.id} className="cursor-pointer hover:bg-slate-50" onClick={() => navigate(`/admin/marketing/${campaign.id}`)}>
+                  <TableRow key={campaign.id} className="cursor-pointer hover:bg-slate-50" onClick={() => setLocation(`/admin/marketing/${campaign.id}`)}>
                     <TableCell className="font-medium">{campaign.campaignName}</TableCell>
                     {isSuperAdmin && (
                       <TableCell className="text-slate-500 text-sm">
