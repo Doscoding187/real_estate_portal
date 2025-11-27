@@ -258,7 +258,7 @@ const PropertyCardList: React.FC<PropertyCardListProps> = ({
 
           {/* Description Preview */}
           {description && (
-            <p className="text-slate-500 text-sm leading-relaxed line-clamp-2 mb-5">
+            <p className="text-slate-500 text-sm leading-relaxed line-clamp-1 mb-5">
               {description}
             </p>
           )}

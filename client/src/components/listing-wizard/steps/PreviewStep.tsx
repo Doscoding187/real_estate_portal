@@ -112,7 +112,7 @@ const PreviewStep: React.FC = () => {
           price={getPrice()}
           location={`${state.location?.address || ''}, ${state.location?.city || ''}`}
           image={primaryMedia?.url || '/assets/placeholder.jpg'}
-          description={state.description?.split('.')[0] + '.' || undefined}
+          description={state.description}
           bedrooms={Number((state.propertyDetails as any)?.bedrooms) || 0}
           bathrooms={Number((state.propertyDetails as any)?.bathrooms) || 0}
           area={getPropertyArea()}
@@ -126,7 +126,7 @@ const PreviewStep: React.FC = () => {
           badges={state.badges?.map(b => b.label)}
           imageCount={imageCount}
           videoCount={videoCount}
-          highlights={amenitiesList.slice(0, 5)}
+          highlights={amenitiesList}
         />
       </div>
 
