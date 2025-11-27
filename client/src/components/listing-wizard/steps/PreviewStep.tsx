@@ -52,8 +52,12 @@ const PreviewStep: React.FC = () => {
   const imageCount = state.media.filter((m: any) => m.type === 'image').length;
   const videoCount = state.media.filter((m: any) => m.type === 'video').length;
 
-  // Get amenities list
-  const amenitiesList = state.propertyDetails?.amenitiesFeatures || [];
+  // Get amenities list from additionalInfo (where they're actually stored)
+  const amenitiesList = [
+    ...(state.additionalInfo?.propertyHighlights || []),
+    ...(state.additionalInfo?.additionalRooms || []),
+    ...(state.additionalInfo?.securityFeatures || []),
+  ];
 
   // Calculate area based on property type
   const getPropertyArea = () => {
