@@ -14,8 +14,9 @@ import {
   users,
   notifications,
 } from '../drizzle/schema';
-import { eq, and, desc, gte, lte, sql, count, inArray, like } from 'drizzle-orm';
+import { eq, and, desc, gte, lte, sql, count, inArray, like, or } from 'drizzle-orm';
 import { EmailService } from './_core/emailService';
+import { ENV } from './_core/env';
 
 // Pipeline stages for Kanban board
 const PIPELINE_STAGES = ['new', 'contacted', 'viewing', 'offer', 'closed'] as const;
@@ -299,40 +300,45 @@ export const agentRouter = router({
 
   /**
    * Get agent's listings with images
+   * Get agent's listings
    */
   getMyListings: agentProcedure
     .input(
       z.object({
-        status: z
-          .enum(['all', 'available', 'sold', 'rented', 'pending', 'draft', 'published', 'archived'])
-          .optional(),
-        limit: z.number().optional().default(50),
-        offset: z.number().optional().default(0),
+        status: z.string().optional(),
+        limit: z.number().default(50),
       }),
     )
     .query(async ({ ctx, input }) => {
       const db = await getDb();
 
-      // Get agent record
+      // Try to get agent record, but don't fail if it doesn't exist
       const [agentRecord] = await db
         .select()
         .from(agents)
         .where(eq(agents.userId, ctx.user.id))
         .limit(1);
 
-      if (!agentRecord) {
-        throw new Error('Agent profile not found');
+      // Build conditions - use agentId if profile exists, otherwise use ownerId
+      const conditions = [];
+      
+      if (agentRecord) {
+        // User has agent profile - query by agentId OR ownerId
+        conditions.push(
+          or(
+            eq(properties.agentId, agentRecord.id),
+            eq(properties.ownerId, ctx.user.id)
+          )
+        );
+      } else {
+        // No agent profile - query by ownerId only
+        conditions.push(eq(properties.ownerId, ctx.user.id));
       }
 
-      // Build query conditions
-      const conditions: any[] = [
-        sql`(${properties.agentId} = ${agentRecord.id} OR ${properties.ownerId} = ${ctx.user.id})`
-      ];
       if (input.status && input.status !== 'all') {
         conditions.push(eq(properties.status, input.status as any));
       }
 
-      // Fetch properties
       const listings = await db
         .select()
         .from(properties)
@@ -445,6 +451,43 @@ export const agentRouter = router({
 
       await db.delete(properties).where(eq(properties.id, input.id));
       return { success: true };
+    }),
+
+  /**
+   * Create agent profile
+   */
+  createProfile: agentProcedure
+    .input(
+      z.object({
+        displayName: z.string().min(2).max(100),
+        phoneNumber: z.string().min(10).max(20),
+        bio: z.string().max(1000).optional(),
+        profilePhoto: z.string().optional(),
+        licenseNumber: z.string().optional(),
+        specializations: z.array(z.string()).optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const db = await getDb();
+
+      // Check if agent profile already exists
+      const [existing] = await db
+        .select()
+        .from(agents)
+        .where(eq(agents.userId, ctx.user.id))
+        .limit(1);
+
+      if (existing) {
+        throw new Error('Agent profile already exists');
+      }
+
+      // Create agent profile
+      const agentId = await db.createAgentProfile({
+        userId: ctx.user.id,
+        ...input,
+      });
+
+      return { success: true, agentId };
     }),
 
   /**

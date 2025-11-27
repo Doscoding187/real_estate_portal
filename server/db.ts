@@ -2282,3 +2282,33 @@ export async function archiveListing(id: number) {
     .set({ status: 'archived', updatedAt: new Date().toISOString().slice(0, 19).replace('T', ' ') })
     .where(eq(listings.id, id));
 }
+
+/**
+ * Create agent profile
+ */
+export async function createAgentProfile(data: {
+  userId: number;
+  displayName: string;
+  phoneNumber: string;
+  bio?: string;
+  profilePhoto?: string;
+  licenseNumber?: string;
+  specializations?: string[];
+}) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+
+  const result = await db.insert(agents).values({
+    userId: data.userId,
+    displayName: data.displayName,
+    phoneNumber: data.phoneNumber,
+    bio: data.bio || null,
+    profilePhoto: data.profilePhoto || null,
+    licenseNumber: data.licenseNumber || null,
+    specializations: data.specializations ? data.specializations.join(',') : null,
+    createdAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
+    updatedAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
+  });
+
+  return Number(result[0].insertId);
+}
