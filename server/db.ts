@@ -2234,6 +2234,11 @@ export async function rejectListing(listingId: number, reviewedBy: number, reaso
 export async function deleteProperty(id: number) {
   const db = await getDb();
   if (!db) throw new Error('Database not available');
+  
+  // Delete related images first to avoid foreign key constraint errors
+  await db.delete(propertyImages).where(eq(propertyImages.propertyId, id));
+  
+  // Now delete the property
   await db.delete(properties).where(eq(properties.id, id));
 }
 
@@ -2255,6 +2260,14 @@ export async function archiveProperty(id: number) {
 export async function deleteListing(id: number) {
   const db = await getDb();
   if (!db) throw new Error('Database not available');
+  
+  // Delete related media first to avoid foreign key constraint errors
+  await db.delete(listingMedia).where(eq(listingMedia.listingId, id));
+  
+  // Delete from approval queue if exists
+  await db.delete(listingApprovalQueue).where(eq(listingApprovalQueue.listingId, id));
+  
+  // Now delete the listing
   await db.delete(listings).where(eq(listings.id, id));
 }
 
