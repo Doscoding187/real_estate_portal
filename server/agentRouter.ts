@@ -333,39 +333,104 @@ export const agentRouter = router({
       }
 
       // Fetch properties
-      const propertyList = await db
+      const listings = await db
         .select()
         .from(properties)
         .where(and(...conditions))
         .orderBy(desc(properties.createdAt))
-        .limit(input.limit)
-        .offset(input.offset);
+        .limit(input.limit);
 
-      // Fetch images and enquiries count for each property
-      const propertiesWithDetails = await Promise.all(
-        propertyList.map(async (property: any) => {
+      // Fetch primary images
+      const listingsWithImages = await Promise.all(
+        listings.map(async (property) => {
           const images = await db
             .select()
             .from(propertyImages)
             .where(eq(propertyImages.propertyId, property.id))
-            .orderBy(propertyImages.displayOrder);
+            .orderBy(propertyImages.displayOrder)
+            .limit(1);
 
-          const [enquiriesResult] = await db
-            .select({ count: count() })
-            .from(leads)
-            .where(eq(leads.propertyId, property.id));
+          const cdnUrl = ENV.cloudFrontUrl || `https://${ENV.s3BucketName}.s3.${ENV.awsRegion}.amazonaws.com`;
+          const primaryImage = images.length > 0 
+            ? (images[0].imageUrl.startsWith('http') ? images[0].imageUrl : `${cdnUrl}/${images[0].imageUrl}`)
+            : null;
 
           return {
             ...property,
-            primaryImage:
-              images.find((img: any) => img.isPrimary === 1)?.imageUrl || images[0]?.imageUrl,
-            imageCount: images.length,
-            enquiries: enquiriesResult?.count || 0,
+            primaryImage,
+            imageCount: 0, // TODO: Get actual count
+            enquiries: property.enquiries || 0,
           };
-        }),
+        })
       );
 
-      return propertiesWithDetails;
+      return listingsWithImages;
+    }),
+
+  /**
+   * Archive property
+   */
+  archiveProperty: agentProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ ctx, input }) => {
+      const db = await getDb();
+      // Verify ownership
+      const [property] = await db
+        .select()
+        .from(properties)
+        .where(and(eq(properties.id, input.id), eq(properties.ownerId, ctx.user.id)))
+        .limit(1);
+
+      if (!property) {
+        // Try checking agentId
+        const [agentRecord] = await db.select().from(agents).where(eq(agents.userId, ctx.user.id)).limit(1);
+        if (agentRecord) {
+           const [agentProperty] = await db
+            .select()
+            .from(properties)
+            .where(and(eq(properties.id, input.id), eq(properties.agentId, agentRecord.id)))
+            .limit(1);
+           if (!agentProperty) throw new Error('Property not found or unauthorized');
+        } else {
+           throw new Error('Property not found or unauthorized');
+        }
+      }
+
+      await db.update(properties).set({ status: 'archived' }).where(eq(properties.id, input.id));
+      return { success: true };
+    }),
+
+  /**
+   * Delete property
+   */
+  deleteProperty: agentProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ ctx, input }) => {
+      const db = await getDb();
+      // Verify ownership
+      const [property] = await db
+        .select()
+        .from(properties)
+        .where(and(eq(properties.id, input.id), eq(properties.ownerId, ctx.user.id)))
+        .limit(1);
+
+      if (!property) {
+         // Try checking agentId
+        const [agentRecord] = await db.select().from(agents).where(eq(agents.userId, ctx.user.id)).limit(1);
+        if (agentRecord) {
+           const [agentProperty] = await db
+            .select()
+            .from(properties)
+            .where(and(eq(properties.id, input.id), eq(properties.agentId, agentRecord.id)))
+            .limit(1);
+           if (!agentProperty) throw new Error('Property not found or unauthorized');
+        } else {
+           throw new Error('Property not found or unauthorized');
+        }
+      }
+
+      await db.delete(properties).where(eq(properties.id, input.id));
+      return { success: true };
     }),
 
   /**

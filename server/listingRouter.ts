@@ -225,6 +225,37 @@ export const listingRouter = router({
     }),
 
   /**
+   * Archive listing
+   */
+  archive: protectedProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.user?.id;
+      if (!userId) {
+        throw new TRPCError({ code: 'UNAUTHORIZED' });
+      }
+
+      try {
+        // Verify ownership
+        const listing = await db.getListingById(input.id);
+        if (!listing || listing.userId !== userId) {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'Not authorized to archive this listing',
+          });
+        }
+
+        // Archive listing
+        await db.archiveListing(input.id);
+
+        return { success: true };
+      } catch (error) {
+        console.error('Error archiving listing:', error);
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to archive listing' });
+      }
+    }),
+
+  /**
    * Delete listing
    */
   delete: protectedProcedure
@@ -245,12 +276,8 @@ export const listingRouter = router({
           });
         }
 
-        // Soft delete or hard delete
-        // For now, we'll just update the status to archived
-        await db.updateListing(input.id, {
-          status: 'archived',
-          updatedAt: new Date(),
-        });
+        // Hard delete
+        await db.deleteListing(input.id);
 
         return { success: true };
       } catch (error) {

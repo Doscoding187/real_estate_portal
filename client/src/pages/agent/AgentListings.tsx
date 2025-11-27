@@ -70,15 +70,57 @@ export default function AgentListings() {
     enabled: !!user && isDraftOrPending,
   });
 
+
   const utils = trpc.useContext();
-  const deleteListingMutation = trpc.listing.delete.useMutation({
+  
+  // Mutations for properties (Active, Sold, Archived tabs)
+  const archivePropertyMutation = trpc.agent.archiveProperty.useMutation({
     onSuccess: () => {
       utils.agent.getMyListings.invalidate();
+    },
+  });
+
+  const deletePropertyMutation = trpc.agent.deleteProperty.useMutation({
+    onSuccess: () => {
+      utils.agent.getMyListings.invalidate();
+    },
+  });
+
+  // Mutations for listings (Draft, Pending tabs)
+  const archiveListingMutation = trpc.listing.archive.useMutation({
+    onSuccess: () => {
       utils.listing.myListings.invalidate();
-      // Also refetch manually to be safe
       refetchDrafts();
     },
   });
+
+  const deleteListingMutation = trpc.listing.delete.useMutation({
+    onSuccess: () => {
+      utils.listing.myListings.invalidate();
+      refetchDrafts();
+    },
+  });
+
+  // Helper functions to use the correct mutation
+  const handleArchive = (listingId: number) => {
+    if (confirm('Are you sure you want to archive this listing?')) {
+      if (isDraftOrPending) {
+        archiveListingMutation.mutate({ id: listingId });
+      } else {
+        archivePropertyMutation.mutate({ id: listingId });
+      }
+    }
+  };
+
+  const handleDelete = (listingId: number) => {
+    if (confirm('Are you sure you want to permanently delete this listing? This action cannot be undone.')) {
+      if (isDraftOrPending) {
+        deleteListingMutation.mutate({ id: listingId });
+      } else {
+        deletePropertyMutation.mutate({ id: listingId });
+      }
+    }
+  };
 
   const isLoading = isDraftOrPending ? isLoadingDraft : isLoadingAgent;
 
@@ -278,12 +320,14 @@ export default function AgentListings() {
                                 </DropdownMenuItem>
                               )}
                               <DropdownMenuItem 
+                                className="text-amber-600 focus:text-amber-600"
+                                onClick={() => handleArchive(listing.id)}
+                              >
+                                <AlertCircle className="h-4 w-4 mr-2" /> Archive Listing
+                              </DropdownMenuItem>
+                              <DropdownMenuItem 
                                 className="text-red-600 focus:text-red-600"
-                                onClick={() => {
-                                  if (confirm('Are you sure you want to delete this listing?')) {
-                                    deleteListingMutation.mutate({ id: listing.id });
-                                  }
-                                }}
+                                onClick={() => handleDelete(listing.id)}
                               >
                                 <Trash2 className="h-4 w-4 mr-2" /> Delete Property
 

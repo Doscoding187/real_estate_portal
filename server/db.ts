@@ -2227,3 +2227,45 @@ export async function rejectListing(listingId: number, reviewedBy: number, reaso
     })
     .where(eq(listingApprovalQueue.listingId, listingId));
 }
+
+/**
+ * Delete property (Hard Delete)
+ */
+export async function deleteProperty(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+  await db.delete(properties).where(eq(properties.id, id));
+}
+
+/**
+ * Archive property (Soft Delete)
+ */
+export async function archiveProperty(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+  await db
+    .update(properties)
+    .set({ status: 'archived', updatedAt: new Date().toISOString().slice(0, 19).replace('T', ' ') })
+    .where(eq(properties.id, id));
+}
+
+/**
+ * Delete listing (Hard Delete)
+ */
+export async function deleteListing(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+  await db.delete(listings).where(eq(listings.id, id));
+}
+
+/**
+ * Archive listing (Soft Delete)
+ */
+export async function archiveListing(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+  await db
+    .update(listings)
+    .set({ status: 'archived', updatedAt: new Date().toISOString().slice(0, 19).replace('T', ' ') })
+    .where(eq(listings.id, id));
+}
