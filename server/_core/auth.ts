@@ -173,7 +173,14 @@ class AuthService {
     password: string,
     name?: string,
     role: 'visitor' | 'agent' | 'agency_admin' | 'property_developer' = 'visitor',
-  ): Promise<{ user: User; sessionToken: string }> {
+    agentProfile?: {
+      displayName: string;
+      phoneNumber: string;
+      bio?: string;
+      licenseNumber?: string;
+      specializations?: string[];
+    },
+  ): Promise<number> {
     // Check if user already exists
     const existingUser = await db.getUserByEmail(email);
     if (existingUser) {
@@ -198,6 +205,18 @@ class AuthService {
       emailVerificationToken,
     });
 
+    // Create agent profile if role is agent
+    if (role === 'agent' && agentProfile) {
+      await db.createAgentProfile({
+        userId,
+        displayName: agentProfile.displayName,
+        phoneNumber: agentProfile.phoneNumber,
+        bio: agentProfile.bio,
+        licenseNumber: agentProfile.licenseNumber,
+        specializations: agentProfile.specializations,
+      });
+    }
+
     // Get the created user
     const user = await db.getUserById(userId);
     if (!user) {
@@ -217,14 +236,7 @@ class AuthService {
       // Don't throw error - allow registration to complete even if email fails
     }
 
-    // Create session token
-    const sessionToken = await this.createSessionToken(
-      user.id,
-      user.email!,
-      user.name || user.email!,
-    );
-
-    return { user, sessionToken };
+    return userId;
   }
 
   /**
@@ -257,7 +269,24 @@ class AuthService {
       throw ForbiddenError('Please verify your email address before logging in.');
     }
 
-    // Update last signed in
+    // Check agent status if user is an agent
+    if (user.role === 'agent') {
+      const agentProfile = await db.getAgentByUserId(user.id);
+      if (agentProfile) {
+        if (agentProfile.status === 'pending') {
+          throw new Error('Your agent application is pending review. You will be notified once approved.');
+        }
+        if (agentProfile.status === 'rejected') {
+          const reason = agentProfile.rejectionReason || 'No reason provided';
+          throw new Error(`Your agent application was rejected. Reason: ${reason}`);
+        }
+        if (agentProfile.status === 'suspended') {
+          throw new Error('Your agent account has been suspended. Please contact support.');
+        }
+      }
+    }
+
+    // Update last signed in timestamp
     await db.updateUserLastSignIn(user.id);
 
     // Create session token

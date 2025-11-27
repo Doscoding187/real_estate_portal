@@ -16,7 +16,7 @@ export function registerAuthRoutes(app: Express) {
    */
   app.post('/api/auth/register', async (req: Request, res: Response) => {
     try {
-      const { email, password, name, role } = req.body;
+      const { email, password, name, role, agentProfile } = req.body;
 
       // Validate input
       if (!email || !password) {
@@ -37,17 +37,30 @@ export function registerAuthRoutes(app: Express) {
         });
       }
 
+      // Validate agent profile if role is agent
+      if (role === 'agent') {
+        if (!agentProfile || !agentProfile.displayName || !agentProfile.phoneNumber) {
+          return res.status(400).json({
+            error: 'Agent profile with display name and phone number is required for agent registration',
+          });
+        }
+      }
+
       // Register user (sends verification email)
       // Allow specific roles if requested, otherwise default to 'visitor'
       const allowedRoles = ['agent', 'agency_admin', 'property_developer', 'visitor'];
       const requestedRole = allowedRoles.includes(role) ? role : 'visitor';
       
-      await authService.register(email, password, name, requestedRole as any);
+      const userId = await authService.register(email, password, name, requestedRole as any, agentProfile);
 
       // Return success message - user must verify email before logging in
+      const message = role === 'agent'
+        ? 'Registration successful. Please check your email to verify your account. Your agent profile will be reviewed by our team.'
+        : 'Registration successful. Please check your email to verify your account.';
+
       res.status(201).json({
         success: true,
-        message: 'Registration successful. Please check your email to verify your account.',
+        message,
       });
     } catch (error: any) {
       console.error('[Auth] Registration failed', error);

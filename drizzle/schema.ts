@@ -109,6 +109,10 @@ export const agents = mysqlTable("agents", {
 	totalSales: int(),
 	isVerified: int().notNull(),
 	isFeatured: int().notNull(),
+	status: mysqlEnum(['pending', 'approved', 'rejected', 'suspended']).default('pending').notNull(),
+	rejectionReason: text(),
+	approvedBy: int().references(() => users.id, { onDelete: "set null" } ),
+	approvedAt: timestamp({ mode: 'string' }),
 	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
 	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
 });

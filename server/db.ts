@@ -2301,14 +2301,35 @@ export async function createAgentProfile(data: {
   const result = await db.insert(agents).values({
     userId: data.userId,
     displayName: data.displayName,
-    phoneNumber: data.phoneNumber,
+    phoneNumber: data.phoneNumber || data.displayName, // Use displayName as fallback
     bio: data.bio || null,
     profilePhoto: data.profilePhoto || null,
     licenseNumber: data.licenseNumber || null,
     specializations: data.specializations ? data.specializations.join(',') : null,
+    firstName: data.displayName.split(' ')[0] || data.displayName,
+    lastName: data.displayName.split(' ').slice(1).join(' ') || '',
+    isVerified: 0,
+    isFeatured: 0,
+    status: 'pending', // Default to pending for admin approval
     createdAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
     updatedAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
   });
 
   return Number(result[0].insertId);
+}
+
+/**
+ * Get agent by user ID
+ */
+export async function getAgentByUserId(userId: number) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+
+  const [agent] = await db
+    .select()
+    .from(agents)
+    .where(eq(agents.userId, userId))
+    .limit(1);
+
+  return agent || null;
 }
