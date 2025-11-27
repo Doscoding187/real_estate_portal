@@ -374,26 +374,33 @@ export const agentRouter = router({
     .input(z.object({ id: z.number() }))
     .mutation(async ({ ctx, input }) => {
       const db = await getDb();
-      // Verify ownership
+      
+      // Verify ownership - check both ownerId and agentId
       const [property] = await db
         .select()
         .from(properties)
-        .where(and(eq(properties.id, input.id), eq(properties.ownerId, ctx.user.id)))
+        .where(eq(properties.id, input.id))
         .limit(1);
 
       if (!property) {
-        // Try checking agentId
-        const [agentRecord] = await db.select().from(agents).where(eq(agents.userId, ctx.user.id)).limit(1);
-        if (agentRecord) {
-           const [agentProperty] = await db
-            .select()
-            .from(properties)
-            .where(and(eq(properties.id, input.id), eq(properties.agentId, agentRecord.id)))
-            .limit(1);
-           if (!agentProperty) throw new Error('Property not found or unauthorized');
-        } else {
-           throw new Error('Property not found or unauthorized');
-        }
+        throw new Error('Property not found');
+      }
+
+      // Check if user owns this property (either as owner or as agent)
+      const isOwner = property.ownerId === ctx.user.id;
+      
+      let isAgent = false;
+      if (property.agentId) {
+        const [agentRecord] = await db
+          .select()
+          .from(agents)
+          .where(and(eq(agents.id, property.agentId), eq(agents.userId, ctx.user.id)))
+          .limit(1);
+        isAgent = !!agentRecord;
+      }
+
+      if (!isOwner && !isAgent) {
+        throw new Error('Not authorized to archive this property');
       }
 
       await db.update(properties).set({ status: 'archived' }).where(eq(properties.id, input.id));
@@ -407,26 +414,33 @@ export const agentRouter = router({
     .input(z.object({ id: z.number() }))
     .mutation(async ({ ctx, input }) => {
       const db = await getDb();
-      // Verify ownership
+      
+      // Verify ownership - check both ownerId and agentId
       const [property] = await db
         .select()
         .from(properties)
-        .where(and(eq(properties.id, input.id), eq(properties.ownerId, ctx.user.id)))
+        .where(eq(properties.id, input.id))
         .limit(1);
 
       if (!property) {
-         // Try checking agentId
-        const [agentRecord] = await db.select().from(agents).where(eq(agents.userId, ctx.user.id)).limit(1);
-        if (agentRecord) {
-           const [agentProperty] = await db
-            .select()
-            .from(properties)
-            .where(and(eq(properties.id, input.id), eq(properties.agentId, agentRecord.id)))
-            .limit(1);
-           if (!agentProperty) throw new Error('Property not found or unauthorized');
-        } else {
-           throw new Error('Property not found or unauthorized');
-        }
+        throw new Error('Property not found');
+      }
+
+      // Check if user owns this property (either as owner or as agent)
+      const isOwner = property.ownerId === ctx.user.id;
+      
+      let isAgent = false;
+      if (property.agentId) {
+        const [agentRecord] = await db
+          .select()
+          .from(agents)
+          .where(and(eq(agents.id, property.agentId), eq(agents.userId, ctx.user.id)))
+          .limit(1);
+        isAgent = !!agentRecord;
+      }
+
+      if (!isOwner && !isAgent) {
+        throw new Error('Not authorized to delete this property');
       }
 
       await db.delete(properties).where(eq(properties.id, input.id));
