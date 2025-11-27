@@ -137,7 +137,7 @@ const PreviewStep: React.FC = () => {
             <h4 className="font-medium text-slate-700 mb-2">Features</h4>
             <div className="flex flex-wrap gap-2">
               {amenitiesList.map((amenity: string, index: number) => (
-                <Badge key={index} variant="secondary" className="bg-white border-slate-200">
+                <Badge key={index} variant="secondary" className="bg-emerald-100 text-emerald-800 border-emerald-200">
                   {amenity}
                 </Badge>
               ))}
