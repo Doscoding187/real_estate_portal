@@ -796,4 +796,47 @@ export const subscriptionRouter = router({
         },
       };
     }),
+    /**
+     * Get invoices for current agency
+     */
+    getMyInvoices: authenticatedProcedure
+      .input(z.object({
+        page: z.number().default(1),
+        limit: z.number().default(10),
+      }))
+      .query(async ({ ctx, input }) => {
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
+
+        const offset = (input.page - 1) * input.limit;
+
+        const [results, totalResult] = await Promise.all([
+          db
+            .select()
+            .from(invoices)
+            .where(eq(invoices.agencyId, ctx.user.agencyId))
+            .limit(input.limit)
+            .offset(offset)
+            .orderBy(desc(invoices.createdAt)),
+          db
+            .select({ count: sql<number>`count(*)` })
+            .from(invoices)
+            .where(eq(invoices.agencyId, ctx.user.agencyId)),
+        ]);
+
+        const total = Number(totalResult[0]?.count || 0);
+
+        return {
+          invoices: results.map(inv => ({
+            ...inv,
+            amount: Number(inv.amount) / 100, // Convert to currency
+          })),
+          pagination: {
+            page: input.page,
+            limit: input.limit,
+            total,
+            totalPages: Math.ceil(total / input.limit),
+          },
+        };
+      }),
 });

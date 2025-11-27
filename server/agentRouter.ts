@@ -49,7 +49,14 @@ export const agentRouter = router({
       .limit(1);
 
     if (!agentRecord) {
-      throw new Error('Agent profile not found');
+      // Return empty stats if no agent profile found
+      return {
+        activeListings: 0,
+        newLeadsThisWeek: 0,
+        showingsToday: 0,
+        offersInProgress: 0,
+        commissionsPending: 0,
+      };
     }
 
     const agentId = agentRecord.id;

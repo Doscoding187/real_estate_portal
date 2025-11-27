@@ -19,6 +19,7 @@ import {
   User,
   Star,
   DollarSign,
+  CheckCircle,
 } from 'lucide-react';
 
 const SidebarNavigation: React.FC = () => {
@@ -43,6 +44,7 @@ const SidebarNavigation: React.FC = () => {
       items: [
         { name: 'Agencies', path: '/admin/agencies', icon: Building2 },
         { name: 'Agents', path: '/admin/agents', icon: Users },
+        { name: 'Agent Approvals', path: '/admin/agent-approvals', icon: CheckCircle },
         { name: 'End Users', path: '/admin/end-users', icon: User },
         { name: 'Property Listings', path: '/admin/properties', icon: Home },
         { name: 'Featured Placements', path: '/admin/placements', icon: Star },

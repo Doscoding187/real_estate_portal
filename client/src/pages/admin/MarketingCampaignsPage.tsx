@@ -179,25 +179,6 @@ const MarketingCampaignsPage: React.FC = () => {
               ) : (
                 campaigns?.map((campaign) => (
                   <TableRow key={campaign.id} className="cursor-pointer hover:bg-slate-50" onClick={() => setLocation(`/admin/marketing/${campaign.id}`)}>
-                    <TableCell className="font-medium">{campaign.campaignName}</TableCell>
-                    {isSuperAdmin && (
-                      <TableCell className="text-slate-500 text-sm">
-                        {campaign.ownerType === 'agency' ? 'Agency' : 'Agent'} #{campaign.ownerId}
-                      </TableCell>
-                    )}
-                    <TableCell className="capitalize">{campaign.campaignType.replace('_', ' ')}</TableCell>
-                    <TableCell className="capitalize">{campaign.targetType.replace('_', ' ')}</TableCell>
-                    <TableCell>{getStatusBadge(campaign.status)}</TableCell>
-                    <TableCell>{format(new Date(campaign.createdAt), 'MMM d, yyyy')}</TableCell>
-                    <TableCell className="text-right">
-                      <Button variant="ghost" size="sm">View</Button>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
       </Card>
     </div>
   );

@@ -267,9 +267,16 @@ export const listingRouter = router({
       }
 
       try {
-        // Verify ownership
+        // Verify ownership or super admin status
         const listing = await db.getListingById(input.id);
-        if (!listing || listing.userId !== userId) {
+        if (!listing) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Listing not found' });
+        }
+
+        const isOwner = listing.userId === userId;
+        const isSuperAdmin = ctx.user.role === 'super_admin';
+
+        if (!isOwner && !isSuperAdmin) {
           throw new TRPCError({
             code: 'FORBIDDEN',
             message: 'Not authorized to delete this listing',

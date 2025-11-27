@@ -323,4 +323,47 @@ export const marketingRouter = router({
 
         return { success: true };
       }),
+    /**
+     * Launch Campaign (Process Payment & Activate)
+     */
+    launchCampaign: protectedProcedure
+      .input(
+        z.object({
+          campaignId: z.number(),
+          paymentMethodId: z.string().optional(),
+        })
+      )
+      .mutation(async ({ ctx, input }) => {
+        const db = await getDb();
+        if (!db) throw new Error('Database not available');
+
+        const campaign = await db.query.marketingCampaigns.findFirst({
+          where: eq(marketingCampaigns.id, input.campaignId),
+        });
+
+        if (!campaign) throw new Error('Campaign not found');
+
+        // Verify ownership (simplified for now)
+        // In production, check if ctx.user.id matches ownerId or has admin rights
+
+        // Mock Payment Processing
+        // In production, integrate with Stripe using paymentMethodId
+
+        // Update status to active (or scheduled if start date is future)
+        const schedule = await db.query.campaignSchedules.findFirst({
+            where: eq(campaignSchedules.campaignId, input.campaignId)
+        });
+
+        let newStatus = 'active';
+        if (schedule?.startDate && new Date(schedule.startDate) > new Date()) {
+            newStatus = 'scheduled';
+        }
+
+        await db
+          .update(marketingCampaigns)
+          .set({ status: newStatus as any })
+          .where(eq(marketingCampaigns.id, input.campaignId));
+
+        return { success: true, status: newStatus };
+      }),
 });

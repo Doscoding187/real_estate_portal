@@ -37,6 +37,7 @@ import AcceptInvitation from './pages/AcceptInvitation';
 import ExploreFeed from './pages/ExploreFeed';
 import AgencyOnboarding from './pages/AgencyOnboarding';
 import OnboardingSuccess from './pages/OnboardingSuccess';
+import AgencySubscriptionPage from './pages/agency/SubscriptionPage';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
 import { RequireSuperAdmin } from '@/components/RequireSuperAdmin';
@@ -54,7 +55,9 @@ import SubscriptionManagementPage from './pages/admin/SubscriptionManagementPage
 import AnalyticsPage from './pages/admin/AnalyticsPage';
 import MarketingCampaignsPage from './pages/admin/MarketingCampaignsPage';
 import CreateCampaignWizard from './pages/admin/CreateCampaignWizard';
+import AgentApprovals from './pages/admin/AgentApprovals';
 import CampaignDetailsPage from './pages/admin/CampaignDetailsPage';
+import CampaignInsights from './pages/admin/CampaignInsights';
 
 // Import new role-based dashboards
 import UserDashboard from './pages/UserDashboard';
@@ -204,6 +207,16 @@ function Router() {
         )}
       />
 
+      {/* Campaign Insights Route */}
+      <Route
+        path="/admin/marketing/campaign/:id"
+        component={() => (
+          <SuperAdminDashboard>
+            <CampaignInsights />
+          </SuperAdminDashboard>
+        )}
+      />
+
       {/* Lovable Integration Hub Route */}
       <Route
         path="/admin/lovable-hub"
@@ -222,6 +235,16 @@ function Router() {
           </SuperAdminDashboard>
         )}
       />
+
+      {/* Agent Approval Queue Route */}
+      <Route
+        path="/admin/agent-approvals"
+        component={() => (
+          <SuperAdminDashboard>
+            <AgentApprovals />
+          </SuperAdminDashboard>
+        )}
+      />
       
       {/* Admin Property Review Route */}
       <Route
@@ -233,6 +256,7 @@ function Router() {
       <Route path="/dashboard" component={Dashboard} />
 
       <Route path="/agency/dashboard" component={AgencyDashboard} />
+      <Route path="/agency/subscription" component={AgencySubscriptionPage} />
       <Route path="/agency/onboarding" component={AgencyOnboarding} />
       <Route path="/agency/onboarding/success" component={OnboardingSuccess} />
       <Route path="/agency/invite" component={InviteAgents} />

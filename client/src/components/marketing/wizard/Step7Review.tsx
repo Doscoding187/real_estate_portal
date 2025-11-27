@@ -3,7 +3,6 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Check, Rocket } from 'lucide-react';
-import { trpc } from '@/lib/trpc';
 import { toast } from 'sonner';
 import { useLocation } from 'wouter';
 
@@ -11,26 +10,11 @@ interface Step7Props {
   data: any;
   campaignId: number;
   onBack: () => void;
+  onNext: () => void;
 }
 
-const Step7Review: React.FC<Step7Props> = ({ data, campaignId, onBack }) => {
+const Step7Review: React.FC<Step7Props> = ({ data, campaignId, onBack, onNext }) => {
   const [, setLocation] = useLocation();
-  const updateCampaignMutation = trpc.marketing.updateCampaign.useMutation();
-
-  const handleLaunch = async () => {
-    try {
-      await updateCampaignMutation.mutateAsync({
-        campaignId,
-        data: {
-          status: 'active',
-        },
-      });
-      toast.success('Campaign launched successfully!');
-      setLocation('/admin/marketing');
-    } catch (error) {
-      toast.error('Failed to launch campaign');
-    }
-  };
 
   const handleSaveDraft = async () => {
     toast.success('Campaign saved as draft');
@@ -43,54 +27,67 @@ const Step7Review: React.FC<Step7Props> = ({ data, campaignId, onBack }) => {
         <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
           <Check className="w-8 h-8 text-emerald-600" />
         </div>
-        <h2 className="text-2xl font-bold text-slate-900">Review & Launch</h2>
-        <p className="text-slate-500">Review your campaign settings before launching.</p>
+        <h2 className="text-2xl font-bold text-slate-900">Review Campaign</h2>
+        <p className="text-slate-500">Review your campaign settings before proceeding to payment.</p>
       </div>
 
       <div className="space-y-4">
+        {/* Campaign Details */}
         <Card>
           <CardContent className="p-6 space-y-4">
-            <div>
-              <h3 className="font-semibold text-slate-900 mb-2">Campaign Details</h3>
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Name:</span>
-                  <span className="font-medium">{data.campaignName || 'Untitled Campaign'}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Type:</span>
-                  <Badge variant="outline" className="capitalize">
-                    {data.campaignType?.replace('_', ' ') || 'Not set'}
-                  </Badge>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Target:</span>
-                  <span className="font-medium capitalize">{data.targetType?.replace('_', ' ') || 'Not set'}</span>
-                </div>
+            <div className="flex justify-between items-start">
+              <div>
+                <h3 className="font-semibold text-lg">{data.campaignName || 'Untitled Campaign'}</h3>
+                <p className="text-slate-500 capitalize">{data.campaignType?.replace('_', ' ') || 'Not set'}</p>
+              </div>
+              <Badge variant="outline" className="capitalize">{data.status || 'Draft'}</Badge>
+            </div>
+            <p className="text-sm text-slate-600">{data.description}</p>
+          </CardContent>
+        </Card>
+
+        {/* Target & Audience */}
+        <Card>
+          <CardContent className="p-6 space-y-4">
+            <h3 className="font-semibold">Targeting</h3>
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div>
+                <span className="text-slate-500 block">Locations</span>
+                <span className="font-medium">{data.targeting?.locationTargeting?.join(', ') || 'All Locations'}</span>
+              </div>
+              <div>
+                <span className="text-slate-500 block">Property Types</span>
+                <span className="font-medium">{data.targeting?.propertyType?.join(', ') || 'All Types'}</span>
               </div>
             </div>
+          </CardContent>
+        </Card>
 
-            <div className="border-t pt-4">
-              <h3 className="font-semibold text-slate-900 mb-2">Budget & Schedule</h3>
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Budget Type:</span>
-                  <span className="font-medium capitalize">{data.budgetType || 'Daily'}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Amount:</span>
-                  <span className="font-medium">R {data.budgetAmount || '0.00'}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Billing Method:</span>
-                  <span className="font-medium uppercase">{data.billingMethod || 'PPC'}</span>
-                </div>
+        {/* Budget & Schedule */}
+        <Card>
+          <CardContent className="p-6 space-y-4">
+            <h3 className="font-semibold">Budget & Schedule</h3>
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div>
+                <span className="text-slate-500 block">Budget</span>
+                <span className="font-medium">R {data.budget?.budgetAmount || '0.00'} ({data.budget?.budgetType || 'Daily'})</span>
+              </div>
+              <div>
+                <span className="text-slate-500 block">Schedule</span>
+                <span className="font-medium">
+                  {data.schedule?.startDate ? new Date(data.schedule.startDate).toLocaleDateString() : 'Not set'} 
+                  {data.schedule?.endDate ? ` - ${new Date(data.schedule.endDate).toLocaleDateString()}` : ' (Ongoing)'}
+                </span>
               </div>
             </div>
+          </CardContent>
+        </Card>
 
-            <div className="border-t pt-4">
-              <h3 className="font-semibold text-slate-900 mb-2">Channels</h3>
-              <div className="flex flex-wrap gap-2">
+        {/* Channels */}
+        <Card>
+          <CardContent className="p-6 space-y-4">
+            <h3 className="font-semibold">Channels</h3>
+            <div className="flex flex-wrap gap-2">
                 {data.channels?.filter((c: any) => c.enabled).length > 0 ? (
                   data.channels.filter((c: any) => c.enabled).map((channel: any) => (
                     <Badge key={channel.type} className="bg-blue-100 text-blue-700 capitalize">
@@ -100,27 +97,22 @@ const Step7Review: React.FC<Step7Props> = ({ data, campaignId, onBack }) => {
                 ) : (
                   <span className="text-sm text-slate-500">No channels selected</span>
                 )}
-              </div>
             </div>
           </CardContent>
         </Card>
-
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <p className="text-sm text-blue-900">
-            <strong>Ready to launch?</strong> Your campaign will start running immediately and will be visible across the selected channels.
-          </p>
-        </div>
       </div>
 
-      <div className="flex justify-between pt-6">
-        <Button variant="outline" onClick={onBack}>Back</Button>
-        <div className="flex gap-3">
-          <Button variant="outline" onClick={handleSaveDraft}>
-            Save as Draft
+      <div className="flex justify-between pt-6 border-t">
+        <Button variant="outline" onClick={onBack}>
+          Back
+        </Button>
+        <div className="flex gap-2">
+          <Button variant="ghost" onClick={handleSaveDraft}>
+            Save Draft
           </Button>
-          <Button onClick={handleLaunch} className="bg-emerald-600 hover:bg-emerald-700 min-w-[140px]">
+          <Button onClick={onNext} className="bg-blue-600 hover:bg-blue-700 text-white">
             <Rocket className="w-4 h-4 mr-2" />
-            Launch Campaign
+            Proceed to Payment
           </Button>
         </div>
       </div>

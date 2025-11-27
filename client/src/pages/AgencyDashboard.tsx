@@ -5,7 +5,7 @@ import { Navbar } from '@/components/Navbar';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Building2, UserPlus, Users, ArrowRight, Settings } from 'lucide-react';
+import { Building2, UserPlus, Users, ArrowRight, Settings, CreditCard } from 'lucide-react';
 import { AgencyStatsCards } from '@/components/agency/AgencyStatsCards';
 import { AgencyPerformanceChart } from '@/components/agency/AgencyPerformanceChart';
 import { RecentLeadsTable } from '@/components/agency/RecentLeadsTable';
@@ -72,10 +72,16 @@ export default function AgencyDashboard() {
             <Badge className="bg-gradient-to-r from-emerald-100 to-teal-100 text-emerald-700 border-emerald-200">Agency Admin</Badge>
           </div>
 
-          <Button onClick={() => setLocation('/agency/agents')}>
-            <Settings className="mr-2 h-4 w-4" />
-            Manage Team
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => setLocation('/agency/subscription')}>
+                <CreditCard className="mr-2 h-4 w-4" />
+                Subscription
+            </Button>
+            <Button onClick={() => setLocation('/agency/agents')}>
+                <Settings className="mr-2 h-4 w-4" />
+                Manage Team
+            </Button>
+          </div>
         </div>
 
         {/* Stats Cards */}

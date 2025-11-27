@@ -43,6 +43,7 @@ import {
   Home,
   MapPin,
   DollarSign,
+  Trash2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -54,6 +55,8 @@ export default function ListingOversight() {
   const [selectedProperty, setSelectedProperty] = useState<any>(null);
   const [actionReason, setActionReason] = useState('');
   const [isActionDialogOpen, setIsActionDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [propertyToDelete, setPropertyToDelete] = useState<any>(null);
 
   // Use the listing approval queue endpoint instead of admin.listProperties
   const { data, isLoading, refetch } = trpc.listing.getApprovalQueue.useQuery({
@@ -84,6 +87,18 @@ export default function ListingOversight() {
     },
     onError: error => {
       toast.error(error.message || 'Failed to reject property');
+    },
+  });
+
+  const deleteMutation = trpc.listing.delete.useMutation({
+    onSuccess: () => {
+      toast.success('Property deleted successfully');
+      refetch();
+      setIsDeleteDialogOpen(false);
+      setPropertyToDelete(null);
+    },
+    onError: error => {
+      toast.error(error.message || 'Failed to delete property');
     },
   });
 
@@ -138,24 +153,58 @@ export default function ListingOversight() {
     }).format(price);
   };
 
+  const handleDelete = (property: any) => {
+    setPropertyToDelete(property);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = () => {
+    if (!propertyToDelete) return;
+    deleteMutation.mutate({ id: propertyToDelete.id });
+  };
+
   const getActionButton = (property: any) => {
     switch (property.status) {
       case 'pending':
         return (
-          <Button
-            size="sm"
-            className="bg-blue-600 hover:bg-blue-700 text-white w-full"
-            onClick={(e) => {
-              e.stopPropagation();
-              setLocation(`/admin/review/${property.id}`);
-            }}
-          >
-            <Eye className="h-3 w-3 mr-2" />
-            Review Property
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              size="sm"
+              className="bg-blue-600 hover:bg-blue-700 text-white flex-1"
+              onClick={(e) => {
+                e.stopPropagation();
+                setLocation(`/admin/review/${property.id}`);
+              }}
+            >
+              <Eye className="h-3 w-3 mr-2" />
+              Review
+            </Button>
+            <Button
+              size="sm"
+              variant="destructive"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleDelete(property);
+              }}
+            >
+              <Trash2 className="h-3 w-3" />
+            </Button>
+          </div>
         );
       default:
-        return null;
+        return (
+          <Button
+            size="sm"
+            variant="destructive"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleDelete(property);
+            }}
+          >
+            <Trash2 className="h-3 w-3 mr-2" />
+            Delete
+          </Button>
+        );
     }
   };
 
@@ -349,6 +398,30 @@ export default function ListingOversight() {
                   )}
                 </Button>
               </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Delete Confirmation Dialog */}
+        <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Delete Property Listing</DialogTitle>
+              <DialogDescription>
+                Are you sure you want to delete "{propertyToDelete?.listingTitle}"? This action cannot be undone.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="flex justify-end gap-2 mt-4">
+              <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button
+                onClick={confirmDelete}
+                disabled={deleteMutation.isPending}
+                variant="destructive"
+              >
+                {deleteMutation.isPending ? 'Deleting...' : 'Delete'}
+              </Button>
             </div>
           </DialogContent>
         </Dialog>

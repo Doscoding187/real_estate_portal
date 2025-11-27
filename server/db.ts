@@ -2266,6 +2266,15 @@ export async function deleteListing(id: number) {
   
   // Delete from approval queue if exists
   await db.delete(listingApprovalQueue).where(eq(listingApprovalQueue.listingId, id));
+
+  // Delete analytics
+  await db.delete(listingAnalytics).where(eq(listingAnalytics.listingId, id));
+
+  // Delete leads
+  await db.delete(listingLeads).where(eq(listingLeads.listingId, id));
+
+  // Delete viewings
+  await db.delete(listingViewings).where(eq(listingViewings.listingId, id));
   
   // Now delete the listing
   await db.delete(listings).where(eq(listings.id, id));

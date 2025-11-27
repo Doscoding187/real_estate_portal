@@ -14,7 +14,7 @@ import Step3Targeting from '@/components/marketing/wizard/Step3Targeting';
 import Step4Budget from '@/components/marketing/wizard/Step4Budget';
 import Step5Channels from '@/components/marketing/wizard/Step5Channels';
 import Step6Creative from '@/components/marketing/wizard/Step6Creative';
-import Step7Review from '@/components/marketing/wizard/Step7Review';
+import Step8Billing from '@/components/marketing/wizard/Step8Billing';
 
 const STEPS = [
   { id: 1, name: 'Details' },
@@ -24,6 +24,7 @@ const STEPS = [
   { id: 5, name: 'Channels' },
   { id: 6, name: 'Creative' },
   { id: 7, name: 'Review' },
+  { id: 8, name: 'Billing' },
 ];
 
 const CreateCampaignWizard: React.FC = () => {
@@ -175,6 +176,14 @@ const CreateCampaignWizard: React.FC = () => {
           )}
           {currentStep === 7 && campaignId && (
             <Step7Review
+                data={formData}
+                campaignId={campaignId}
+                onBack={handleBack}
+                onNext={handleNext}
+            />
+          )}
+          {currentStep === 8 && campaignId && (
+            <Step8Billing
                 data={formData}
                 campaignId={campaignId}
                 onBack={handleBack}
