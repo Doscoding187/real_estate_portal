@@ -20,6 +20,7 @@ import {
   SortableContext,
   rectSortingStrategy,
 } from '@dnd-kit/sortable';
+import { createPortal } from 'react-dom';
 import { SortableMediaItem } from './SortableMediaItem';
 
 const MediaUploadStep: React.FC = () => {
@@ -37,7 +38,7 @@ const MediaUploadStep: React.FC = () => {
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
-        distance: 8, // Require 8px movement before drag starts
+        distance: 4, // Require 4px movement before drag starts
       },
     })
   );
@@ -64,9 +65,6 @@ const MediaUploadStep: React.FC = () => {
           setUploadError('Please select only image or video files');
           continue;
         }
-        
-        // Get file extension
-        const fileExtension = file.name.split('.').pop()?.toLowerCase() || '';
         
         // Validate file size (5MB for images, 50MB for videos)
         const maxSize = isValidImage ? 5 * 1024 * 1024 : 50 * 1024 * 1024;
@@ -106,7 +104,7 @@ const MediaUploadStep: React.FC = () => {
           fileName: file.name,
           fileSize: file.size,
           displayOrder: store.media.length + newMediaFiles.length,
-          isPrimary: isPrimary && newMediaFiles.length === 0, // Only first file can be primary
+          isPrimary: isPrimary && newMediaFiles.length === 0,
           processingStatus: 'completed',
         };
         
@@ -136,8 +134,8 @@ const MediaUploadStep: React.FC = () => {
   };
 
   // Set as main media
-  const handleSetMainMedia = (mediaId: number) => {
-    store.setMainMedia(mediaId);
+  const handleSetMainMedia = (mediaId: string) => {
+    store.setMainMedia(mediaId as any);
   };
 
   // Handle primary file input change
@@ -155,7 +153,7 @@ const MediaUploadStep: React.FC = () => {
   // Get display media type
   const displayMediaType = store.displayMediaType || 'image';
 
-  // Drag and drop handlers for primary media
+  // Drag and drop handlers for file upload
   const handlePrimaryDragOver = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -175,7 +173,6 @@ const MediaUploadStep: React.FC = () => {
     handleFileSelect(e.dataTransfer.files, true);
   };
 
-  // Drag and drop handlers for additional media
   const handleAdditionalDragOver = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -322,35 +319,36 @@ const MediaUploadStep: React.FC = () => {
               <p className="text-sm text-gray-500">Drag to reorder</p>
             </div>
             
-            {/* Transform isolation wrapper */}
-            <div className="transform-none">
-              <DndContext
-                sensors={sensors}
-                collisionDetection={closestCenter}
-                onDragStart={handleDragStart}
-                onDragEnd={handleDragEnd}
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragStart={handleDragStart}
+              onDragEnd={handleDragEnd}
+              onDragCancel={() => setActiveId(null)}
+            >
+              <SortableContext
+                items={store.media.map((m, i) => m.id || String(i))}
+                strategy={rectSortingStrategy}
               >
-                <SortableContext
-                  items={store.media.map((m, i) => m.id || String(i))}
-                  strategy={rectSortingStrategy}
-                >
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                    {store.media.map((media, index) => (
-                      <SortableMediaItem
-                        key={media.id || index}
-                        media={media}
-                        index={index}
-                        onRemove={handleRemoveMedia}
-                        onSetPrimary={handleSetMainMedia}
-                      />
-                    ))}
-                  </div>
-                </SortableContext>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 transform-none">
+                  {store.media.map((media, index) => (
+                    <SortableMediaItem
+                      key={media.id || index}
+                      media={media}
+                      index={index}
+                      onRemove={handleRemoveMedia}
+                      onSetPrimary={handleSetMainMedia}
+                    />
+                  ))}
+                </div>
+              </SortableContext>
 
-                <DragOverlay>
+              {/* CRITICAL FIX: Portal-based DragOverlay escapes all parent transforms */}
+              {createPortal(
+                <DragOverlay adjustScale={false}>
                   {activeMedia ? (
-                    <div className="w-40 h-40 opacity-80 cursor-grabbing">
-                      <div className="aspect-square rounded-lg overflow-hidden border-2 border-blue-500 shadow-xl bg-white">
+                    <div className="w-40 h-40 opacity-90 cursor-grabbing">
+                      <div className="aspect-square rounded-lg overflow-hidden border-2 border-blue-500 shadow-2xl bg-white">
                         {activeMedia.type === 'image' ? (
                           <img
                             src={activeMedia.url}
@@ -368,9 +366,10 @@ const MediaUploadStep: React.FC = () => {
                       </div>
                     </div>
                   ) : null}
-                </DragOverlay>
-              </DndContext>
-            </div>
+                </DragOverlay>,
+                document.getElementById('dnd-portal')!
+              )}
+            </DndContext>
           </div>
         )}
 

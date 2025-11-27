@@ -9,7 +9,7 @@ interface SortableMediaItemProps {
   media: MediaFile;
   index: number;
   onRemove: (index: number) => void;
-  onSetPrimary: (id: number) => void;
+  onSetPrimary: (id: string) => void;
 }
 
 export const SortableMediaItem: React.FC<SortableMediaItemProps> = ({
@@ -30,13 +30,15 @@ export const SortableMediaItem: React.FC<SortableMediaItemProps> = ({
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    opacity: isDragging ? 0.5 : 1,
+    opacity: isDragging ? 0.4 : 1,
   };
 
   return (
     <div
       ref={setNodeRef}
       style={style}
+      {...attributes}
+      {...listeners}
       className="relative group w-full"
     >
       <div
@@ -58,11 +60,7 @@ export const SortableMediaItem: React.FC<SortableMediaItemProps> = ({
         )}
 
         {/* Drag Handle */}
-        <div
-          {...attributes}
-          {...listeners}
-          className="absolute top-2 left-2 bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded p-1.5 shadow-lg cursor-grab active:cursor-grabbing touch-none z-10"
-        >
+        <div className="absolute top-2 left-2 bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded p-1.5 shadow-lg cursor-grab active:cursor-grabbing touch-none z-10">
           <GripVertical className="h-4 w-4 pointer-events-none" />
         </div>
 
@@ -94,7 +92,10 @@ export const SortableMediaItem: React.FC<SortableMediaItemProps> = ({
           type="button"
           size="sm"
           variant="outline"
-          onClick={() => media.id && onSetPrimary(media.id as any)}
+          onClick={(e) => {
+            e.stopPropagation();
+            media.id && onSetPrimary(media.id);
+          }}
           className="w-full mt-2 text-xs"
         >
           Set as Primary
