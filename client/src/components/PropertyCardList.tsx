@@ -1,6 +1,6 @@
 import React from 'react';
 import { Button } from './ui/button';
-import { Heart, MapPin, Bed, Bath, Square, Building2, Image as ImageIcon, PlayCircle, Plus, Check } from 'lucide-react';
+import { Heart, MapPin, Bed, Bath, Square, Building2, Image as ImageIcon, PlayCircle, Plus, Check, Home } from 'lucide-react';
 import { useComparison } from '@/contexts/ComparisonContext';
 import { formatCurrency } from '@/lib/utils';
 import { OptimizedImageCard } from './OptimizedImage';
@@ -227,7 +227,7 @@ const PropertyCardList: React.FC<PropertyCardListProps> = ({
             {/* Building/Floor Size (always show if available) */}
             {area && (
               <div className="flex items-center gap-1.5">
-                <Square className="h-4 w-4 text-slate-400" />
+                <Home className="h-4 w-4 text-slate-400" />
                 <span className="font-medium">
                   Size {area.toLocaleString()} m²{getAreaLabel()}
                 </span>
