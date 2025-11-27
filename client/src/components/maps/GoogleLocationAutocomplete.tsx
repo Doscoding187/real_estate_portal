@@ -38,6 +38,7 @@ interface GoogleLocationAutocompleteProps {
     longitude: number;
     formatted_address: string;
     types: string[];
+    address_components?: google.maps.GeocoderAddressComponent[];
   }) => void;
   placeholder?: string;
   className?: string;
@@ -215,7 +216,7 @@ export function GoogleLocationAutocomplete({
 
     const request = {
       placeId: prediction.place_id,
-      fields: ['place_id', 'name', 'formatted_address', 'geometry', 'types'],
+      fields: ['place_id', 'name', 'formatted_address', 'geometry', 'types', 'address_components'],
     };
 
     placesServiceRef.current.getDetails(request, (place: any, status: string) => {
@@ -228,6 +229,7 @@ export function GoogleLocationAutocomplete({
           longitude: place.geometry.location.lng(),
           formatted_address: place.formatted_address || '',
           types: place.types || [],
+          address_components: place.address_components,
         });
 
         setQuery(place.formatted_address || place.name || '');

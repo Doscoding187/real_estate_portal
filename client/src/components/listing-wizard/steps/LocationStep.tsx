@@ -289,16 +289,38 @@ const LocationStep: React.FC = () => {
     longitude: number;
     formatted_address: string;
     types: string[];
+    address_components?: google.maps.GeocoderAddressComponent[];
   }) => {
+    // Extract address components if available
+    let city = '';
+    let suburb = '';
+    let province = '';
+    let postalCode = '';
+
+    if (place.address_components) {
+      place.address_components.forEach(component => {
+        const types = component.types;
+        if (types.includes('locality')) {
+          city = component.long_name;
+        } else if (types.includes('sublocality')) {
+          suburb = component.long_name;
+        } else if (types.includes('administrative_area_level_1')) {
+          province = component.long_name;
+        } else if (types.includes('postal_code')) {
+          postalCode = component.long_name;
+        }
+      });
+    }
+
     // Update location in store
     setLocation({
       address: place.formatted_address,
       latitude: place.latitude,
       longitude: place.longitude,
-      city: location?.city || '',
-      suburb: location?.suburb || '',
-      province: location?.province || '',
-      postalCode: location?.postalCode || '',
+      city: city || location?.city || '',
+      suburb: suburb || location?.suburb || '',
+      province: province || location?.province || '',
+      postalCode: postalCode || location?.postalCode || '',
       placeId: place.place_id,
     });
 
@@ -309,8 +331,10 @@ const LocationStep: React.FC = () => {
       mapInstanceRef.current.setZoom(15);
       placeMarker(latLng);
       
-      // Trigger reverse geocode to get full address details
-      reverseGeocode(latLng);
+      // Only reverse geocode if we didn't get components (fallback)
+      if (!place.address_components) {
+        reverseGeocode(latLng);
+      }
     }
   };
 
