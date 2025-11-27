@@ -1176,4 +1176,112 @@ export const adminRouter = router({
         }
       };
     }),
+
+  /**
+   * Super Admin: Get agents by status for approval
+   */
+  getPendingAgents: superAdminProcedure
+    .input(
+      z.object({
+        status: z.enum(['pending', 'approved', 'rejected', 'suspended']).optional(),
+      }),
+    )
+    .query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new Error('Database not available');
+
+      const where = input.status ? eq(agents.status, input.status) : undefined;
+
+      const agentsList = await db
+        .select({
+          id: agents.id,
+          userId: agents.userId,
+          displayName: agents.displayName,
+          phone: agents.phone,
+          phoneNumber: agents.phone,
+          email: agents.email,
+          bio: agents.bio,
+          licenseNumber: agents.licenseNumber,
+          specializations: agents.specialization,
+          status: agents.status,
+          rejectionReason: agents.rejectionReason,
+          createdAt: agents.createdAt,
+          approvedAt: agents.approvedAt,
+        })
+        .from(agents)
+        .where(where)
+        .orderBy(desc(agents.createdAt));
+
+      return agentsList;
+    }),
+
+  /**
+   * Super Admin: Approve agent application
+   */
+  approveAgent: superAdminProcedure
+    .input(
+      z.object({
+        agentId: z.number(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const db = await getDb();
+      if (!db) throw new Error('Database not available');
+
+      await db
+        .update(agents)
+        .set({
+          status: 'approved',
+          approvedBy: ctx.user.id,
+          approvedAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
+          updatedAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
+        })
+        .where(eq(agents.id, input.agentId));
+
+      await logAudit({
+        userId: ctx.user.id,
+        action: AuditActions.APPROVE_JOIN_REQUEST,
+        targetType: 'agent',
+        targetId: input.agentId,
+        metadata: { status: 'approved' },
+        req: ctx.req,
+      });
+
+      return { success: true };
+    }),
+
+  /**
+   * Super Admin: Reject agent application
+   */
+  rejectAgent: superAdminProcedure
+    .input(
+      z.object({
+        agentId: z.number(),
+        reason: z.string(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const db = await getDb();
+      if (!db) throw new Error('Database not available');
+
+      await db
+        .update(agents)
+        .set({
+          status: 'rejected',
+          rejectionReason: input.reason,
+          updatedAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
+        })
+        .where(eq(agents.id, input.agentId));
+
+      await logAudit({
+        userId: ctx.user.id,
+        action: AuditActions.REJECT_JOIN_REQUEST,
+        targetType: 'agent',
+        targetId: input.agentId,
+        metadata: { status: 'rejected', reason: input.reason },
+        req: ctx.req,
+      });
+
+      return { success: true };
+    }),
 });
