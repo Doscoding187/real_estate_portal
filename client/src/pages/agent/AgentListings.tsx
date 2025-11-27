@@ -285,7 +285,8 @@ export default function AgentListings() {
                                   }
                                 }}
                               >
-                                <Trash2 className="h-4 w-4 mr-2" /> Delete Listing
+                                <Trash2 className="h-4 w-4 mr-2" /> Delete Property
+
                               </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>

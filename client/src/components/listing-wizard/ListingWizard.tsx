@@ -43,9 +43,118 @@ const ListingWizard: React.FC = () => {
   const createListingMutation = trpc.listing.create.useMutation();
   // TRPC mutation for submitting for review
   const submitForReviewMutation = trpc.listing.submitForReview.useMutation();
+  // TRPC mutation for updating listing
+  const updateListingMutation = trpc.listing.update.useMutation();
+
+  // Parse query params
+  const searchParams = new URLSearchParams(window.location.search);
+  const editId = searchParams.get('id');
+  const isEditMode = searchParams.get('edit') === 'true';
+
+  // Fetch existing listing if in edit mode
+  const { data: existingListing, isLoading: isLoadingExisting } = trpc.listing.getById.useQuery(
+    { id: Number(editId) },
+    { enabled: !!editId && isEditMode }
+  );
+
+  // Populate store with existing listing data
+  useEffect(() => {
+    if (existingListing && isEditMode) {
+      console.log('Populating wizard with existing listing:', existingListing);
+      
+      // Reset store first to clear any drafts
+      store.reset();
+      
+      // Set basic fields
+      store.setAction(existingListing.action as any);
+      store.setPropertyType(existingListing.propertyType as any);
+      store.setTitle(existingListing.title);
+      store.setDescription(existingListing.description);
+      
+      // Set pricing
+      const pricing: any = {};
+      if (existingListing.askingPrice) pricing.askingPrice = Number(existingListing.askingPrice);
+      if (existingListing.monthlyRent) pricing.monthlyRent = Number(existingListing.monthlyRent);
+      if (existingListing.deposit) pricing.deposit = Number(existingListing.deposit);
+      if (existingListing.transferCostEstimate) pricing.transferCostEstimate = Number(existingListing.transferCostEstimate);
+      if (existingListing.startingBid) pricing.startingBid = Number(existingListing.startingBid);
+      if (existingListing.reservePrice) pricing.reservePrice = Number(existingListing.reservePrice);
+      if (existingListing.leaseTerms) pricing.leaseTerms = existingListing.leaseTerms;
+      if (existingListing.availableFrom) pricing.availableFrom = new Date(existingListing.availableFrom);
+      if (existingListing.utilitiesIncluded) pricing.utilitiesIncluded = Boolean(existingListing.utilitiesIncluded);
+      if (existingListing.auctionDateTime) pricing.auctionDateTime = new Date(existingListing.auctionDateTime);
+      if (existingListing.auctionTermsDocumentUrl) pricing.auctionTermsDocumentUrl = existingListing.auctionTermsDocumentUrl;
+      if (existingListing.negotiable) pricing.negotiable = Boolean(existingListing.negotiable);
+      
+      store.setPricing(pricing);
+      
+      // Set property details
+      if (existingListing.propertyDetails) {
+        store.setPropertyDetails(existingListing.propertyDetails as any);
+        // Also map to basicInfo/additionalInfo if needed, or just rely on propertyDetails
+        // The wizard seems to split these, so we might need to map them back if they are stored separately in the store
+        // But setPropertyDetails should handle the main ones.
+        // Check if we need to populate additionalInfo for features
+        if ((existingListing.propertyDetails as any).features) {
+             store.setAdditionalInfo({
+                 propertyHighlights: (existingListing.propertyDetails as any).features || [],
+                 // Map other fields if necessary
+             });
+        }
+      }
+      
+      // Set location
+      store.setLocation({
+        address: existingListing.address,
+        latitude: Number(existingListing.latitude),
+        longitude: Number(existingListing.longitude),
+        city: existingListing.city,
+        suburb: existingListing.suburb || '',
+        province: existingListing.province,
+        postalCode: existingListing.postalCode || '',
+        placeId: existingListing.placeId || '',
+      });
+      
+      // Set media
+      if (existingListing.media && existingListing.media.length > 0) {
+        // Clear existing media first (reset did this, but just to be sure)
+        // store.media is [] after reset
+        
+        // We need to map DB media to store MediaFile
+        // This might be tricky if store expects File objects for new uploads
+        // But for existing ones, it should handle URL-based media
+        existingListing.media.forEach((m: any) => {
+            store.addMedia({
+                id: m.id,
+                file: null as any, // No file object for existing media
+                preview: m.originalUrl,
+                type: m.mediaType,
+                progress: 100,
+                displayOrder: m.displayOrder,
+                isPrimary: Boolean(m.isPrimary),
+                description: '',
+            });
+            
+            if (m.isPrimary) {
+                store.setMainMedia(m.id);
+            }
+        });
+      }
+      
+      // Set step to 1 or last step? 
+      // Maybe let user start at 1 to review everything
+      store.goToStep(1);
+      
+      // Disable resume draft dialog
+      setShowResumeDraftDialog(false);
+    }
+  }, [existingListing, isEditMode]);
 
   // Check for draft on mount and show resume dialog
   useEffect(() => {
+    // If editing, don't show draft dialog
+    if (isEditMode) return;
+
     // If previously submitted, reset
     if (store.status === 'submitted') {
       console.log('Wizard was previously submitted, resetting for new listing...');
@@ -59,7 +168,7 @@ const ListingWizard: React.FC = () => {
     if (hasDraft) {
       setShowResumeDraftDialog(true);
     }
-  }, []); // Run only on mount
+  }, [isEditMode]); // Run when isEditMode is determined
 
   // Handle resume draft decision
   const handleResumeDraft = () => {
@@ -141,8 +250,18 @@ const ListingWizard: React.FC = () => {
       console.log('Submitting listing data:', listingData);
 
       // Submit to API
-      const result = await createListingMutation.mutateAsync(listingData);
-      console.log('Listing created:', result);
+      let result;
+      if (isEditMode && editId) {
+          await updateListingMutation.mutateAsync({
+              id: Number(editId),
+              ...listingData
+          });
+          result = { id: Number(editId) };
+          console.log('Listing updated:', result);
+      } else {
+          result = await createListingMutation.mutateAsync(listingData);
+          console.log('Listing created:', result);
+      }
 
       // Submit for review
       try {
