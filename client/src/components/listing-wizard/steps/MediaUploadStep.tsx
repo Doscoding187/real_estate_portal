@@ -358,7 +358,7 @@ const MediaUploadStep: React.FC = () => {
                 </div>
               </SortableContext>
 
-              <DragOverlay adjustScale={true}>
+              <DragOverlay>
                 {activeMedia ? (
                   <div className="w-full h-full opacity-80 cursor-grabbing">
                     <div className="aspect-square rounded-lg overflow-hidden border-2 border-blue-500 shadow-xl bg-white">
