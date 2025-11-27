@@ -1874,7 +1874,10 @@ export async function getUserListings(
         .orderBy(listingMedia.displayOrder)
         .limit(1);
 
-      const primaryImage = images.length > 0 ? images[0].originalUrl : null;
+      const cdnUrl = ENV.cloudFrontUrl || `https://${ENV.s3BucketName}.s3.${ENV.awsRegion}.amazonaws.com`;
+      const primaryImage = images.length > 0 
+        ? (images[0].originalUrl.startsWith('http') ? images[0].originalUrl : `${cdnUrl}/${images[0].originalUrl}`)
+        : null;
 
       const pricing = {
         askingPrice: listing.askingPrice ? Number(listing.askingPrice) : undefined,

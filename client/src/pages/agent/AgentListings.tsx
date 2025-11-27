@@ -183,12 +183,14 @@ export default function AgentListings() {
 
             <TabsContent value={activeTab} className="space-y-6 animate-in fade-in-50 duration-500 slide-in-from-bottom-2">
               {isLoading ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                <div className="flex flex-col gap-4">
                   {[1, 2, 3].map((i) => (
-                    <div key={i} className="bg-white rounded-2xl p-4 space-y-4">
-                      <Skeleton className="h-48 w-full rounded-xl" />
-                      <Skeleton className="h-6 w-3/4" />
-                      <Skeleton className="h-4 w-1/2" />
+                    <div key={i} className="bg-white rounded-2xl p-4 flex gap-4">
+                      <Skeleton className="h-32 w-48 rounded-xl shrink-0" />
+                      <div className="flex-1 space-y-3">
+                        <Skeleton className="h-6 w-3/4" />
+                        <Skeleton className="h-4 w-1/2" />
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -211,14 +213,14 @@ export default function AgentListings() {
                   )}
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                <div className="flex flex-col gap-4">
                   {filteredListings?.map((listing: any) => (
                     <div 
                       key={listing.id}
-                      className="group bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden flex flex-col"
+                      className="group bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden flex flex-col sm:flex-row"
                     >
                       {/* Image */}
-                      <div className="relative h-56 overflow-hidden bg-slate-100">
+                      <div className="relative w-full sm:w-64 h-48 sm:h-auto shrink-0 bg-slate-100">
                         <img 
                           src={listing.primaryImage || '/assets/placeholder.jpg'} 
                           alt={listing.title}
@@ -236,10 +238,23 @@ export default function AgentListings() {
                              listing.status.charAt(0).toUpperCase() + listing.status.slice(1)}
                           </Badge>
                         </div>
-                        <div className="absolute top-3 right-3">
+                      </div>
+
+                      {/* Content */}
+                      <div className="p-5 flex-1 flex flex-col">
+                        <div className="flex justify-between items-start mb-2">
+                          <div>
+                            <h3 className="font-bold text-slate-800 text-lg line-clamp-1 group-hover:text-emerald-600 transition-colors">
+                              {listing.title}
+                            </h3>
+                            <p className="text-slate-500 text-sm flex items-center gap-1 mt-1">
+                              <MapPin className="h-3.5 w-3.5" />
+                              <span className="line-clamp-1">{listing.address}, {listing.city}</span>
+                            </p>
+                          </div>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon" className="h-8 w-8 bg-black/20 hover:bg-black/40 text-white rounded-full backdrop-blur-sm">
+                              <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-slate-600">
                                 <MoreVertical className="h-4 w-4" />
                               </Button>
                             </DropdownMenuTrigger>
@@ -258,49 +273,34 @@ export default function AgentListings() {
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </div>
-                      </div>
 
-                      {/* Content */}
-                      <div className="p-5 flex-1 flex flex-col">
-                        <div className="flex-1">
-                          <div className="flex justify-between items-start mb-2">
-                            <h3 className="font-bold text-slate-800 line-clamp-1 group-hover:text-emerald-600 transition-colors">
-                              {listing.title}
-                            </h3>
+                        <div className="flex items-center gap-6 text-sm text-slate-600 mb-4 mt-2">
+                          <div className="flex items-center gap-2">
+                            <Bed className="h-4 w-4 text-slate-400" />
+                            <span className="font-medium">{listing.bedrooms} Beds</span>
                           </div>
-                          <p className="text-slate-500 text-sm flex items-center gap-1 mb-4">
-                            <MapPin className="h-3.5 w-3.5" />
-                            <span className="line-clamp-1">{listing.address}, {listing.city}</span>
-                          </p>
-
-                          <div className="flex items-center gap-4 text-sm text-slate-600 mb-4">
-                            <div className="flex items-center gap-1.5">
-                              <Bed className="h-4 w-4 text-slate-400" />
-                              <span className="font-medium">{listing.bedrooms}</span>
-                            </div>
-                            <div className="flex items-center gap-1.5">
-                              <Bath className="h-4 w-4 text-slate-400" />
-                              <span className="font-medium">{listing.bathrooms}</span>
-                            </div>
-                            <div className="flex items-center gap-1.5">
-                              <Home className="h-4 w-4 text-slate-400" />
-                              <span className="font-medium">{listing.houseAreaM2 || listing.floorAreaM2 || listing.unitSizeM2 || '-'} m²</span>
-                            </div>
+                          <div className="flex items-center gap-2">
+                            <Bath className="h-4 w-4 text-slate-400" />
+                            <span className="font-medium">{listing.bathrooms} Baths</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Home className="h-4 w-4 text-slate-400" />
+                            <span className="font-medium">{listing.houseAreaM2 || listing.floorAreaM2 || listing.unitSizeM2 || '-'} m²</span>
                           </div>
                         </div>
 
                         <div className="pt-4 border-t border-slate-100 flex items-center justify-between mt-auto">
-                          <div className="text-lg font-bold text-slate-900">
+                          <div className="text-xl font-bold text-slate-900">
                             {formatCurrency(listing.price)}
                           </div>
-                          <div className="flex items-center gap-3 text-xs font-medium text-slate-500">
-                            <div className="flex items-center gap-1" title="Views">
-                              <Eye className="h-3.5 w-3.5" />
-                              <span>{listing.views || 0}</span>
+                          <div className="flex items-center gap-4 text-xs font-medium text-slate-500">
+                            <div className="flex items-center gap-1.5" title="Views">
+                              <Eye className="h-4 w-4" />
+                              <span>{listing.views || 0} Views</span>
                             </div>
-                            <div className="flex items-center gap-1" title="Enquiries">
-                              <AlertCircle className="h-3.5 w-3.5" />
-                              <span>{listing.enquiries || 0}</span>
+                            <div className="flex items-center gap-1.5" title="Enquiries">
+                              <AlertCircle className="h-4 w-4" />
+                              <span>{listing.enquiries || 0} Enquiries</span>
                             </div>
                           </div>
                         </div>
