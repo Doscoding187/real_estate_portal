@@ -8,6 +8,11 @@
   z-index: 9999 !important;
 }
 
+/* React Beautiful DnD - Grid Fix: Trick RBDND into treating grid as vertical list */
+.rbd-vertical-list > * {
+  width: 100%;
+}
+
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {

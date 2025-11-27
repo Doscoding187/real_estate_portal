@@ -291,6 +291,7 @@ const MediaUploadStep: React.FC = () => {
               <DragDropContext onDragEnd={onDragEnd}>
                 <Droppable
                   droppableId="media-grid"
+                  direction="vertical"
                   getContainerForClone={() => document.getElementById('rbdnd-portal')!}
                   renderClone={(provided: DraggableProvided, snapshot: DraggableStateSnapshot, rubric: any) => {
                   const media = store.media[rubric.source.index];
@@ -325,7 +326,7 @@ const MediaUploadStep: React.FC = () => {
                   <div
                     ref={provided.innerRef}
                     {...provided.droppableProps}
-                    className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4"
+                    className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 rbd-vertical-list"
                   >
                     {store.media.map((media, index) => (
                       <Draggable
