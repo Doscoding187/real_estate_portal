@@ -2228,19 +2228,6 @@ export async function rejectListing(listingId: number, reviewedBy: number, reaso
     .where(eq(listingApprovalQueue.listingId, listingId));
 }
 
-/**
- * Delete property (Hard Delete)
- */
-export async function deleteProperty(id: number) {
-  const db = await getDb();
-  if (!db) throw new Error('Database not available');
-  
-  // Delete related images first to avoid foreign key constraint errors
-  await db.delete(propertyImages).where(eq(propertyImages.propertyId, id));
-  
-  // Now delete the property
-  await db.delete(properties).where(eq(properties.id, id));
-}
 
 /**
  * Archive property (Soft Delete)
