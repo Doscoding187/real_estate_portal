@@ -289,7 +289,19 @@ export const listingRouter = router({
         return { success: true };
       } catch (error) {
         console.error('Error deleting listing:', error);
-        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to delete listing' });
+        
+        // If it's already a TRPCError, re-throw it
+        if (error instanceof TRPCError) {
+          throw error;
+        }
+        
+        // Otherwise, wrap it with more details
+        const errorMessage = error instanceof Error ? error.message : 'Failed to delete listing';
+        throw new TRPCError({ 
+          code: 'INTERNAL_SERVER_ERROR', 
+          message: errorMessage,
+          cause: error 
+        });
       }
     }),
 
