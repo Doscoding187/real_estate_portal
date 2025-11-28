@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { useLocation } from 'wouter';
-import { trpc } from '../lib/trpc';
-import { Button } from './ui/button';
-import { Input } from './ui/input';
-import { Textarea } from './ui/textarea';
-import { Label } from './ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
+import { trpc } from '@/lib/trpc';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Upload, User, Phone, FileText, Award, Briefcase, ArrowRight, ArrowLeft } from 'lucide-react';
 
 const SPECIALIZATION_OPTIONS = [
