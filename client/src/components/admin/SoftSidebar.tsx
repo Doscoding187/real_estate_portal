@@ -8,7 +8,8 @@ import {
   FileText, 
   Settings,
   LogOut,
-  Home
+  Home,
+  CheckCircle
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -21,6 +22,7 @@ interface NavItem {
 const navItems: NavItem[] = [
   { icon: LayoutDashboard, label: 'Overview', path: '/admin' },
   { icon: Building2, label: 'Properties', path: '/admin/properties' },
+  { icon: CheckCircle, label: 'Listing Approvals', path: '/admin/listing-approvals' },
   { icon: Building2, label: 'Agencies', path: '/admin/agencies' },
   { icon: Users, label: 'Users', path: '/admin/users' },
   { icon: FileText, label: 'Developers', path: '/admin/developers' },

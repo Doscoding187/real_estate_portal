@@ -47,6 +47,7 @@ const SidebarNavigation: React.FC = () => {
         { name: 'Agent Approvals', path: '/admin/agent-approvals', icon: CheckCircle },
         { name: 'End Users', path: '/admin/end-users', icon: User },
         { name: 'Property Listings', path: '/admin/properties', icon: Home },
+        { name: 'Listing Approvals', path: '/admin/listing-approvals', icon: CheckCircle },
         { name: 'Featured Placements', path: '/admin/placements', icon: Star },
       ],
     },

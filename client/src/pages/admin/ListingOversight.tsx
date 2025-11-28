@@ -57,11 +57,17 @@ export default function ListingOversight() {
   const [isActionDialogOpen, setIsActionDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [propertyToDelete, setPropertyToDelete] = useState<any>(null);
+  const [page, setPage] = useState(1);
+  const limit = 20;
 
   // Use the listing approval queue endpoint instead of admin.listProperties
-  const { data, isLoading, refetch } = trpc.listing.getApprovalQueue.useQuery({
+  const { data: allData, isLoading, refetch } = trpc.listing.getApprovalQueue.useQuery({
     status: statusFilter !== 'all' ? (statusFilter as any) : undefined,
   });
+
+  // Client-side pagination
+  const data = allData ? allData.slice((page - 1) * limit, page * limit) : [];
+  const totalPages = allData ? Math.ceil(allData.length / limit) : 1;
 
   // Use listing approve/reject mutations instead of admin.moderateProperty
   const approveMutation = trpc.listing.approve.useMutation({
@@ -220,7 +226,7 @@ export default function ListingOversight() {
             </Button>
             <Eye className="h-8 w-8 text-primary" />
             <div>
-              <h1 className="text-3xl font-bold text-slate-800">Listing Oversight</h1>
+              <h1 className="text-3xl font-bold text-slate-800">Listing Approvals</h1>
               <p className="text-muted-foreground">Review and moderate property listings</p>
             </div>
           </div>
@@ -269,7 +275,7 @@ export default function ListingOversight() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-slate-800">{data?.length || 0}</div>
+              <div className="text-2xl font-bold text-slate-800">{allData?.length || 0}</div>
             </CardContent>
           </GlassCard>
           <GlassCard className="border-white/40 shadow-[0_8px_30px_rgba(8,_112,_184,_0.06)]">
@@ -280,7 +286,7 @@ export default function ListingOversight() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-orange-600">
-                {data?.filter((p: any) => p.status === 'pending').length || 0}
+                {allData?.filter((p: any) => p.status === 'pending').length || 0}
               </div>
             </CardContent>
           </GlassCard>
@@ -290,7 +296,7 @@ export default function ListingOversight() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-green-600">
-                {data?.filter((p: any) => p.status === 'approved').length || 0}
+                {allData?.filter((p: any) => p.status === 'approved').length || 0}
               </div>
             </CardContent>
           </GlassCard>
@@ -300,7 +306,7 @@ export default function ListingOversight() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-red-600">
-                {data?.filter((p: any) => p.status === 'rejected').length || 0}
+                {allData?.filter((p: any) => p.status === 'rejected').length || 0}
               </div>
             </CardContent>
           </GlassCard>
@@ -317,45 +323,72 @@ export default function ListingOversight() {
             ) : !data?.length ? (
               <div className="py-12 text-center text-muted-foreground">No properties found.</div>
             ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow className="hover:bg-transparent border-slate-200">
-                    <TableHead className="text-slate-500">Property</TableHead>
-                    <TableHead className="text-slate-500">Type</TableHead>
-                    <TableHead className="text-slate-500">Action</TableHead>
-                    <TableHead className="text-slate-500">Status</TableHead>
-                    <TableHead className="text-slate-500">Submitted</TableHead>
-                    <TableHead className="text-slate-500">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {data.map((property: any) => (
-                    <TableRow key={property.id} className="hover:bg-white/40 border-slate-100 transition-colors">
-                      <TableCell>
-                        <div>
-                          <div className="font-medium text-slate-700">{property.listingTitle}</div>
-                          <div className="text-sm text-muted-foreground">
-                            Submitted by User #{property.submittedBy}
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline">{property.listingPropertyType}</Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="secondary">{property.listingAction}</Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={getStatusBadgeVariant(property.status)}>
-                          {property.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-slate-600">{new Date(property.submittedAt).toLocaleDateString()}</TableCell>
-                      <TableCell>{getActionButton(property)}</TableCell>
+              <>
+                <Table>
+                  <TableHeader>
+                    <TableRow className="hover:bg-transparent border-slate-200">
+                      <TableHead className="text-slate-500">Property</TableHead>
+                      <TableHead className="text-slate-500">Type</TableHead>
+                      <TableHead className="text-slate-500">Action</TableHead>
+                      <TableHead className="text-slate-500">Status</TableHead>
+                      <TableHead className="text-slate-500">Submitted</TableHead>
+                      <TableHead className="text-slate-500">Actions</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {data.map((property: any) => (
+                      <TableRow key={property.id} className="hover:bg-white/40 border-slate-100 transition-colors">
+                        <TableCell>
+                          <div>
+                            <div className="font-medium text-slate-700">{property.listingTitle}</div>
+                            <div className="text-sm text-muted-foreground">
+                              Submitted by User #{property.submittedBy}
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline">{property.listingPropertyType}</Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="secondary">{property.listingAction}</Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={getStatusBadgeVariant(property.status)}>
+                            {property.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-slate-600">{new Date(property.submittedAt).toLocaleDateString()}</TableCell>
+                        <TableCell>{getActionButton(property)}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+
+                {/* Pagination */}
+                <div className="flex items-center justify-end space-x-2 py-4">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setPage(p => Math.max(1, p - 1))}
+                    disabled={page === 1}
+                    className="bg-white/50 hover:bg-white"
+                  >
+                    Previous
+                  </Button>
+                  <div className="text-sm text-muted-foreground">
+                    Page {page} of {totalPages}
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setPage(p => p + 1)}
+                    disabled={page >= totalPages}
+                    className="bg-white/50 hover:bg-white"
+                  >
+                    Next
+                  </Button>
+                </div>
+              </>
             )}
           </CardContent>
         </GlassCard>

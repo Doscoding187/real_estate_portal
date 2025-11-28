@@ -22,7 +22,15 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Eye, Search, Filter } from 'lucide-react';
+import { Eye, Search, Filter, Trash2 } from 'lucide-react';
+import { toast } from 'sonner';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 
 interface Property {
   id: number;
@@ -31,6 +39,8 @@ interface Property {
   status: string;
   city: string | null;
   createdAt: string;
+  propertyType?: string | null;
+  userId?: number | null;
 }
 
 export default function PropertiesPage() {
@@ -39,12 +49,27 @@ export default function PropertiesPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [page, setPage] = useState(1);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [propertyToDelete, setPropertyToDelete] = useState<Property | null>(null);
 
   const { data, isLoading } = trpc.admin.listProperties.useQuery({
     page,
     limit: 20,
     search: searchTerm || undefined,
     status: statusFilter !== 'all' ? (statusFilter as any) : undefined,
+  });
+
+  const deleteMutation = trpc.listing.delete.useMutation({
+    onSuccess: () => {
+      toast.success('Property deleted successfully');
+      setIsDeleteDialogOpen(false);
+      setPropertyToDelete(null);
+      // Refetch to update the list
+      window.location.reload();
+    },
+    onError: error => {
+      toast.error(error.message || 'Failed to delete property');
+    },
   });
 
   // Redirect if not authenticated or not super admin
@@ -81,6 +106,16 @@ export default function PropertiesPage() {
     }).format(price);
   };
 
+  const handleDelete = (property: Property) => {
+    setPropertyToDelete(property);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = () => {
+    if (!propertyToDelete) return;
+    deleteMutation.mutate({ id: propertyToDelete.id });
+  };
+
   return (
     <div className="min-h-screen bg-transparent">
       <div className="container mx-auto px-4 py-8">
@@ -89,8 +124,8 @@ export default function PropertiesPage() {
           <div className="flex items-center gap-3">
             <Eye className="h-8 w-8 text-primary" />
             <div>
-              <h1 className="text-3xl font-bold text-slate-800">Property Listings</h1>
-              <p className="text-slate-500">Manage all properties on the platform</p>
+              <h1 className="text-3xl font-bold text-slate-800">Property Management</h1>
+              <p className="text-slate-500">Complete system-level view of all listings</p>
             </div>
           </div>
         </div>
@@ -145,9 +180,11 @@ export default function PropertiesPage() {
                   <TableHeader>
                     <TableRow className="hover:bg-transparent border-slate-200">
                       <TableHead className="text-slate-500">Title</TableHead>
+                      <TableHead className="text-slate-500">Type</TableHead>
                       <TableHead className="text-slate-500">Location</TableHead>
                       <TableHead className="text-slate-500">Price</TableHead>
                       <TableHead className="text-slate-500">Status</TableHead>
+                      <TableHead className="text-slate-500">Submitted By</TableHead>
                       <TableHead className="text-slate-500">Created</TableHead>
                       <TableHead className="text-right text-slate-500">Actions</TableHead>
                     </TableRow>
@@ -158,6 +195,11 @@ export default function PropertiesPage() {
                         <TableCell className="font-medium text-slate-700">
                           {property.title || 'Untitled'}
                         </TableCell>
+                        <TableCell>
+                          <Badge variant="outline">
+                            {property.propertyType || 'N/A'}
+                          </Badge>
+                        </TableCell>
                         <TableCell className="text-slate-600">{property.city || 'Unknown'}</TableCell>
                         <TableCell className="text-slate-600">{formatPrice(property.price)}</TableCell>
                         <TableCell>
@@ -166,22 +208,37 @@ export default function PropertiesPage() {
                           </Badge>
                         </TableCell>
                         <TableCell className="text-slate-600">
+                          User #{property.userId || 'N/A'}
+                        </TableCell>
+                        <TableCell className="text-slate-600">
                           {property.createdAt
                             ? new Date(property.createdAt).toLocaleDateString()
                             : 'N/A'}
                         </TableCell>
                         <TableCell className="text-right">
-                          <Button
-                            size="sm"
-                            className="bg-blue-600 hover:bg-blue-700 text-white shadow-sm hover:shadow-md transition-all"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setLocation(`/admin/review/${property.id}`);
-                            }}
-                          >
-                            <Eye className="h-3 w-3 mr-2" />
-                            Review Property
-                          </Button>
+                          <div className="flex gap-2 justify-end">
+                            <Button
+                              size="sm"
+                              className="bg-blue-600 hover:bg-blue-700 text-white shadow-sm hover:shadow-md transition-all"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setLocation(`/admin/review/${property.id}`);
+                              }}
+                            >
+                              <Eye className="h-3 w-3 mr-2" />
+                              Review
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDelete(property);
+                              }}
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -216,6 +273,30 @@ export default function PropertiesPage() {
             )}
           </CardContent>
         </GlassCard>
+
+        {/* Delete Confirmation Dialog */}
+        <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Delete Property Listing</DialogTitle>
+              <DialogDescription>
+                Are you sure you want to delete "{propertyToDelete?.title}"? This action cannot be undone.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="flex justify-end gap-2 mt-4">
+              <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button
+                onClick={confirmDelete}
+                disabled={deleteMutation.isPending}
+                variant="destructive"
+              >
+                {deleteMutation.isPending ? 'Deleting...' : 'Delete'}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );
