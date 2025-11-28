@@ -36,6 +36,8 @@ import {
   listingMedia,
   listingAnalytics,
   listingApprovalQueue,
+  listingLeads,
+  listingViewings,
   prospects,
   prospectFavorites,
   scheduledViewings,
