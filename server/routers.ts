@@ -22,6 +22,7 @@ import { savedSearchRouter } from './savedSearchRouter';
 import { guestMigrationRouter } from './guestMigrationRouter';
 import { settingsRouter } from './settingsRouter';
 import { marketingRouter } from './marketingRouter';
+import { subscriptionRouter } from './subscriptionRouter';
 
 export const appRouter = router({
   system: systemRouter,
@@ -43,6 +44,7 @@ export const appRouter = router({
   guestMigration: guestMigrationRouter,
   dev: devRouter, // ⚠️ DEV ONLY - Remove before production
   marketing: marketingRouter,
+  subscription: subscriptionRouter,
 
   auth: router({
     me: publicProcedure.query(opts => opts.ctx.user),
@@ -95,7 +97,7 @@ export const appRouter = router({
         }),
       )
       .query(async ({ input }) => {
-        return await db.searchProperties(input);
+        return await db.searchListings(input);
       }),
 
     featured: publicProcedure
@@ -105,7 +107,7 @@ export const appRouter = router({
         }),
       )
       .query(async ({ input }) => {
-        return await db.getFeaturedProperties(input.limit);
+        return await db.getFeaturedListings(input.limit);
       }),
 
     getById: publicProcedure

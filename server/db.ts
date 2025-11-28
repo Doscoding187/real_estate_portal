@@ -2331,3 +2331,228 @@ export async function getAgentByUserId(userId: number) {
 
   return agent || null;
 }
+
+// ==================== LISTINGS SEARCH (NEW) ====================
+
+/**
+ * Transform listing to property format for backward compatibility
+ */
+export function transformListingToProperty(listing: any, media: any[] = []) {
+  const propertyDetails = listing.propertyDetails as any || {};
+  
+  return {
+    id: listing.id,
+    title: listing.title,
+    description: listing.description,
+    // Map price based on action type
+    price: listing.askingPrice || listing.monthlyRent || listing.startingBid || 0,
+    listingType: listing.action, // 'sell', 'rent', 'auction'
+    propertyType: listing.propertyType,
+    // Extract from propertyDetails JSON
+    bedrooms: propertyDetails.bedrooms || 0,
+    bathrooms: propertyDetails.bathrooms || 0,
+    area: propertyDetails.erfSizeM2 || propertyDetails.unitSizeM2 || propertyDetails.landSizeM2OrHa || 0,
+    amenities: propertyDetails.amenitiesFeatures || [],
+    features: propertyDetails.amenitiesFeatures || [],
+    // Location fields
+    city: listing.city,
+    province: listing.province,
+    address: listing.streetAddress,
+    zipCode: listing.postalCode,
+    latitude: listing.latitude,
+    longitude: listing.longitude,
+    // Media
+    images: media.map((m: any) => m.mediaUrl),
+    // Metadata
+    status: listing.status,
+    createdAt: listing.createdAt,
+    updatedAt: listing.updatedAt,
+    userId: listing.userId,
+    ownerId: listing.userId,
+  };
+}
+
+interface ListingSearchParams {
+  city?: string;
+  province?: string;
+  propertyType?: string;
+  listingType?: string;
+  minPrice?: number;
+  maxPrice?: number;
+  minBedrooms?: number;
+  maxBedrooms?: number;
+  minArea?: number;
+  maxArea?: number;
+  status?: string;
+  amenities?: string[];
+  postedBy?: string[];
+  minLat?: number;
+  maxLat?: number;
+  minLng?: number;
+  maxLng?: number;
+  limit?: number;
+  offset?: number;
+}
+
+/**
+ * Search listings (replacement for searchProperties)
+ */
+export async function searchListings(params: ListingSearchParams) {
+  const db = await getDb();
+  if (!db) return [];
+
+  const conditions: SQL[] = [];
+
+  // Only show approved/published listings
+  conditions.push(eq(listings.status, 'approved'));
+
+  // Location filters
+  if (params.city) conditions.push(like(listings.city, `%${params.city}%`));
+  if (params.province) conditions.push(like(listings.province, `%${params.province}%`));
+
+  // Property type filter
+  if (params.propertyType) conditions.push(eq(listings.propertyType, params.propertyType));
+
+  // Listing type filter (map to action)
+  if (params.listingType) {
+    const actionMap: Record<string, string> = {
+      'sale': 'sell',
+      'rent': 'rent',
+      'auction': 'auction',
+      'rent_to_buy': 'rent',
+      'shared_living': 'rent',
+    };
+    const action = actionMap[params.listingType] || params.listingType;
+    conditions.push(eq(listings.action, action as any));
+  }
+
+  // Price filters - handle different price fields based on action
+  if (params.minPrice || params.maxPrice) {
+    const priceConditions: SQL[] = [];
+    
+    if (params.minPrice) {
+      priceConditions.push(
+        or(
+          gte(listings.askingPrice, params.minPrice),
+          gte(listings.monthlyRent, params.minPrice),
+          gte(listings.startingBid, params.minPrice)
+        )!
+      );
+    }
+    
+    if (params.maxPrice) {
+      priceConditions.push(
+        or(
+          lte(listings.askingPrice, params.maxPrice),
+          lte(listings.monthlyRent, params.maxPrice),
+          lte(listings.startingBid, params.maxPrice)
+        )!
+      );
+    }
+    
+    if (priceConditions.length > 0) {
+      conditions.push(and(...priceConditions)!);
+    }
+  }
+
+  // Geographic bounds filter
+  if (params.minLat !== undefined && params.maxLat !== undefined) {
+    conditions.push(
+      sql`CAST(${listings.latitude} AS DECIMAL(10, 6)) >= ${params.minLat} AND CAST(${listings.latitude} AS DECIMAL(10, 6)) <= ${params.maxLat}`
+    );
+  }
+  if (params.minLng !== undefined && params.maxLng !== undefined) {
+    conditions.push(
+      sql`CAST(${listings.longitude} AS DECIMAL(10, 6)) >= ${params.minLng} AND CAST(${listings.longitude} AS DECIMAL(10, 6)) <= ${params.maxLng}`
+    );
+  }
+
+  // Build query
+  let query = db.select().from(listings);
+
+  if (conditions.length > 0) {
+    query = query.where(and(...conditions)) as any;
+  }
+
+  query = query.orderBy(desc(listings.createdAt)) as any;
+
+  if (params.limit) {
+    query = query.limit(params.limit) as any;
+  }
+  if (params.offset) {
+    query = query.offset(params.offset) as any;
+  }
+
+  const results = await query;
+
+  // Fetch media for each listing
+  const listingsWithMedia = await Promise.all(
+    results.map(async (listing) => {
+      const media = await db
+        .select()
+        .from(listingMedia)
+        .where(eq(listingMedia.listingId, listing.id))
+        .orderBy(listingMedia.displayOrder);
+      
+      return transformListingToProperty(listing, media);
+    })
+  );
+
+  // Apply filters that require JSON extraction (bedrooms, bathrooms, area, amenities)
+  let filtered = listingsWithMedia;
+
+  if (params.minBedrooms) {
+    filtered = filtered.filter(p => p.bedrooms >= params.minBedrooms!);
+  }
+  if (params.maxBedrooms) {
+    filtered = filtered.filter(p => p.bedrooms <= params.maxBedrooms!);
+  }
+  if (params.minArea) {
+    filtered = filtered.filter(p => p.area >= params.minArea!);
+  }
+  if (params.maxArea) {
+    filtered = filtered.filter(p => p.area <= params.maxArea!);
+  }
+  if (params.amenities && params.amenities.length > 0) {
+    filtered = filtered.filter(p => 
+      params.amenities!.every(amenity => 
+        p.amenities.some((a: string) => a.toLowerCase().includes(amenity.toLowerCase()))
+      )
+    );
+  }
+
+  return filtered;
+}
+
+/**
+ * Get featured listings (replacement for getFeaturedProperties)
+ */
+export async function getFeaturedListings(limit: number = 6) {
+  const db = await getDb();
+  if (!db) return [];
+
+  const results = await db
+    .select()
+    .from(listings)
+    .where(and(
+      eq(listings.featured, 1),
+      eq(listings.status, 'approved')
+    ))
+    .orderBy(desc(listings.createdAt))
+    .limit(limit);
+
+  // Fetch media for each listing
+  const listingsWithMedia = await Promise.all(
+    results.map(async (listing) => {
+      const media = await db
+        .select()
+        .from(listingMedia)
+        .where(eq(listingMedia.listingId, listing.id))
+        .orderBy(listingMedia.displayOrder);
+      
+      return transformListingToProperty(listing, media);
+    })
+  );
+
+  return listingsWithMedia;
+}

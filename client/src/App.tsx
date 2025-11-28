@@ -52,6 +52,7 @@ import PropertiesPage from './pages/admin/PropertiesPage';
 import AdminPropertyReview from './pages/admin/AdminPropertyReview';
 import RevenueCenterPage from './pages/admin/RevenueCenterPage';
 import SubscriptionManagementPage from './pages/admin/SubscriptionManagementPage';
+import PlanEditor from './pages/admin/PlanEditor';
 import AnalyticsPage from './pages/admin/AnalyticsPage';
 import MarketingCampaignsPage from './pages/admin/MarketingCampaignsPage';
 import CreateCampaignWizard from './pages/admin/CreateCampaignWizard';
@@ -258,6 +259,9 @@ function Router() {
       <Route path="/agency/dashboard" component={AgencyDashboard} />
       <Route path="/agency/subscription" component={AgencySubscriptionPage} />
       <Route path="/agency/onboarding" component={AgencyOnboarding} />
+      <Route path="/admin/subscription-management" component={SubscriptionManagementPage} />
+      <Route path="/admin/plan-editor" component={PlanEditor} />
+      <Route path="/admin/revenue-center" component={RevenueCenterPage} />
       <Route path="/agency/onboarding/success" component={OnboardingSuccess} />
       <Route path="/agency/invite" component={InviteAgents} />
       <Route path="/agency/agents" component={AgentManagement} />

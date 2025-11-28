@@ -665,17 +665,23 @@ export const subscriptionRouter = router({
       name: z.string(),
       displayName: z.string(),
       description: z.string().optional(),
-      price: z.number(), // in currency units (will be converted to cents)
+      price: z.number(), // in currency units
       currency: z.string().default('ZAR'),
       interval: z.enum(['month', 'year']),
       features: z.array(z.string()),
-      limits: z.record(z.any()),
+      limits: z.any(), // Must contain revenueCategory
       isPopular: z.boolean().default(false),
       sortOrder: z.number().default(0),
     }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
+
+      // Ensure revenueCategory is present in limits
+      const limits = input.limits || {};
+      if (!limits.revenueCategory) {
+        limits.revenueCategory = 'owner'; // Default
+      }
 
       const result = await db.insert(plans).values({
         name: input.name,
@@ -685,10 +691,17 @@ export const subscriptionRouter = router({
         currency: input.currency,
         interval: input.interval,
         features: JSON.stringify(input.features),
-        limits: JSON.stringify(input.limits),
+        limits: JSON.stringify(limits),
         isActive: 1,
         isPopular: input.isPopular ? 1 : 0,
         sortOrder: input.sortOrder,
+      });
+
+      await logAudit({
+        userId: ctx.user.id,
+        action: AuditActions.SYSTEM_UPDATE,
+        metadata: { action: 'create_plan', planId: result[0].insertId },
+        req: ctx.req,
       });
 
       return {
@@ -699,48 +712,210 @@ export const subscriptionRouter = router({
     }),
 
   /**
-   * Admin: Update an existing plan
+   * Admin: Update an existing plan (with Versioning)
    */
   updatePlan: adminProcedure
     .input(z.object({
       planId: z.number(),
-      displayName: z.string().optional(),
-      description: z.string().optional(),
-      price: z.number().optional(),
-      features: z.array(z.string()).optional(),
-      limits: z.record(z.any()).optional(),
-      isActive: z.boolean().optional(),
-      isPopular: z.boolean().optional(),
-      sortOrder: z.number().optional(),
+      changes: z.object({
+        displayName: z.string().optional(),
+        description: z.string().optional(),
+        price: z.number().optional(),
+        currency: z.string().optional(),
+        interval: z.enum(['month', 'year']).optional(),
+        features: z.array(z.string()).optional(),
+        limits: z.record(z.any()).optional(),
+        isActive: z.boolean().optional(),
+        isPopular: z.boolean().optional(),
+        sortOrder: z.number().optional(),
+      }),
+      createNewVersion: z.boolean().default(true),
     }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
 
-      const updateData: any = {};
-      if (input.displayName) updateData.displayName = input.displayName;
-      if (input.description) updateData.description = input.description;
-      if (input.price !== undefined) updateData.price = Math.round(input.price * 100);
-      if (input.features) updateData.features = JSON.stringify(input.features);
-      if (input.limits) updateData.limits = JSON.stringify(input.limits);
-      if (input.isActive !== undefined) updateData.isActive = input.isActive ? 1 : 0;
-      if (input.isPopular !== undefined) updateData.isPopular = input.isPopular ? 1 : 0;
-      if (input.sortOrder !== undefined) updateData.sortOrder = input.sortOrder;
+      const oldPlan = await db.query.plans.findFirst({
+        where: eq(plans.id, input.planId),
+      });
 
-      await db
-        .update(plans)
-        .set(updateData)
-        .where(eq(plans.id, input.planId));
+      if (!oldPlan) throw new TRPCError({ code: 'NOT_FOUND', message: 'Plan not found' });
 
-      return {
-        success: true,
-        message: 'Plan updated successfully',
-      };
+      // Merge limits safely
+      const oldLimits = oldPlan.limits ? JSON.parse(oldPlan.limits as string) : {};
+      const newLimits = { ...oldLimits, ...(input.changes.limits || {}) };
+      // Ensure revenueCategory persists
+      if (!newLimits.revenueCategory) {
+          newLimits.revenueCategory = oldLimits.revenueCategory || 'owner';
+      }
+
+      if (input.createNewVersion) {
+        // VERSIONING: Create new plan, archive old
+        const result = await db.insert(plans).values({
+          name: oldPlan.name, // Keep internal name/slug
+          displayName: input.changes.displayName ?? oldPlan.displayName,
+          description: input.changes.description ?? oldPlan.description,
+          price: input.changes.price !== undefined ? Math.round(input.changes.price * 100) : oldPlan.price,
+          currency: input.changes.currency ?? oldPlan.currency,
+          interval: input.changes.interval ?? oldPlan.interval,
+          features: JSON.stringify(input.changes.features ?? JSON.parse(oldPlan.features as string)),
+          limits: JSON.stringify(newLimits),
+          isActive: 1, // New version is active
+          isPopular: input.changes.isPopular !== undefined ? (input.changes.isPopular ? 1 : 0) : oldPlan.isPopular,
+          sortOrder: input.changes.sortOrder ?? oldPlan.sortOrder,
+        });
+
+        // Archive old plan
+        await db.update(plans)
+          .set({ isActive: 0 })
+          .where(eq(plans.id, input.planId));
+
+        await logAudit({
+            userId: ctx.user.id,
+            action: AuditActions.SYSTEM_UPDATE,
+            metadata: { action: 'version_plan', oldPlanId: input.planId, newPlanId: result[0].insertId },
+            req: ctx.req,
+        });
+
+        return {
+          success: true,
+          oldPlanId: input.planId,
+          newPlanId: result[0].insertId,
+          message: 'Plan versioned successfully',
+        };
+
+      } else {
+        // IN-PLACE UPDATE
+        // Strict check: Only allow if no active subscriptions OR changes are cosmetic
+        const isCriticalChange = input.changes.price !== undefined || input.changes.interval !== undefined;
+        
+        if (isCriticalChange) {
+            const activeSubs = await db
+                .select({ count: sql<number>`count(*)` })
+                .from(agencySubscriptions)
+                .where(and(
+                    eq(agencySubscriptions.planId, input.planId),
+                    eq(agencySubscriptions.status, 'active')
+                ));
+            
+            if (Number(activeSubs[0].count) > 0) {
+                throw new TRPCError({ 
+                    code: 'BAD_REQUEST', 
+                    message: 'Cannot modify price/interval of a plan with active subscriptions. Create a new version instead.' 
+                });
+            }
+        }
+
+        const updateData: any = {};
+        if (input.changes.displayName) updateData.displayName = input.changes.displayName;
+        if (input.changes.description) updateData.description = input.changes.description;
+        if (input.changes.price !== undefined) updateData.price = Math.round(input.changes.price * 100);
+        if (input.changes.currency) updateData.currency = input.changes.currency;
+        if (input.changes.interval) updateData.interval = input.changes.interval;
+        if (input.changes.features) updateData.features = JSON.stringify(input.changes.features);
+        if (input.changes.limits) updateData.limits = JSON.stringify(newLimits);
+        if (input.changes.isActive !== undefined) updateData.isActive = input.changes.isActive ? 1 : 0;
+        if (input.changes.isPopular !== undefined) updateData.isPopular = input.changes.isPopular ? 1 : 0;
+        if (input.changes.sortOrder !== undefined) updateData.sortOrder = input.changes.sortOrder;
+
+        await db
+          .update(plans)
+          .set(updateData)
+          .where(eq(plans.id, input.planId));
+
+        await logAudit({
+            userId: ctx.user.id,
+            action: AuditActions.SYSTEM_UPDATE,
+            metadata: { action: 'update_plan', planId: input.planId, changes: input.changes },
+            req: ctx.req,
+        });
+
+        return {
+          success: true,
+          message: 'Plan updated successfully',
+        };
+      }
     }),
 
   /**
-   * Admin: Get all subscriptions with filters
+   * Admin: Toggle Plan Status
    */
+  togglePlanStatus: adminProcedure
+    .input(z.object({
+      planId: z.number(),
+      isActive: z.boolean(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
+
+      await db
+        .update(plans)
+        .set({ isActive: input.isActive ? 1 : 0 })
+        .where(eq(plans.id, input.planId));
+
+      await logAudit({
+        userId: ctx.user.id,
+        action: AuditActions.SYSTEM_UPDATE,
+        metadata: { action: 'toggle_plan_status', planId: input.planId, isActive: input.isActive },
+        req: ctx.req,
+      });
+
+      return { success: true };
+    }),
+
+  /**
+   * Admin: Get Plans List
+   */
+  getPlans: adminProcedure
+    .input(z.object({
+      includeInactive: z.boolean().default(false),
+    }))
+    .query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
+
+      const conditions = [];
+      if (!input.includeInactive) {
+        conditions.push(eq(plans.isActive, 1));
+      }
+
+      const allPlans = await db
+        .select()
+        .from(plans)
+        .where(conditions.length > 0 ? and(...conditions) : undefined)
+        .orderBy(plans.sortOrder);
+
+      return allPlans.map(plan => ({
+        ...plan,
+        features: plan.features ? JSON.parse(plan.features as string) : [],
+        limits: plan.limits ? JSON.parse(plan.limits as string) : {},
+        price: Number(plan.price) / 100,
+      }));
+    }),
+
+  /**
+   * Admin: Get Single Plan
+   */
+  getPlanById: adminProcedure
+    .input(z.object({ planId: z.number() }))
+    .query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
+
+      const plan = await db.query.plans.findFirst({
+        where: eq(plans.id, input.planId),
+      });
+
+      if (!plan) throw new TRPCError({ code: 'NOT_FOUND', message: 'Plan not found' });
+
+      return {
+        ...plan,
+        features: plan.features ? JSON.parse(plan.features as string) : [],
+        limits: plan.limits ? JSON.parse(plan.limits as string) : {},
+        price: Number(plan.price) / 100,
+      };
+    }),
   getAllSubscriptions: adminProcedure
     .input(z.object({
       status: z.enum(['active', 'trialing', 'past_due', 'canceled', 'unpaid']).optional(),

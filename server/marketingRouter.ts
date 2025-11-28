@@ -364,6 +364,32 @@ export const marketingRouter = router({
           .set({ status: newStatus as any })
           .where(eq(marketingCampaigns.id, input.campaignId));
 
+        // Sync to Revenue Center (Mocked)
+        try {
+            const { recordCampaignTransaction } = await import('./revenueCenterSync');
+            
+            // Get budget amount
+            const budget = await db.query.campaignBudgets.findFirst({
+                where: eq(campaignBudgets.campaignId, input.campaignId)
+            });
+
+            if (budget && Number(budget.budgetAmount) > 0) {
+                // Determine agency ID
+                let agencyId = 0;
+                if (campaign.ownerType === 'agency') agencyId = campaign.ownerId;
+                
+                await recordCampaignTransaction({
+                    campaignId: campaign.id,
+                    agencyId: agencyId,
+                    amount: Number(budget.budgetAmount) * 100, // Convert to cents if budget is in currency
+                    description: `Campaign Launch: ${campaign.campaignName}`,
+                    metadata: { mockPayment: true, paymentMethodId: input.paymentMethodId }
+                });
+            }
+        } catch (err) {
+            console.error('Failed to sync campaign launch to Revenue Center:', err);
+        }
+
         return { success: true, status: newStatus };
       }),
 });

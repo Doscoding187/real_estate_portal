@@ -59,6 +59,7 @@ const SidebarNavigation: React.FC = () => {
           path: '/admin/subscriptions',
           icon: CreditCard,
         },
+        { name: 'Plan Editor', path: '/admin/plan-editor', icon: FileText },
         { name: 'Platform Analytics', path: '/admin/analytics', icon: BarChart3 },
         { name: 'Financial Tracking', path: '/admin/financials', icon: DollarSign },
         { name: 'Content Manager', path: '/admin/content', icon: FileText },
