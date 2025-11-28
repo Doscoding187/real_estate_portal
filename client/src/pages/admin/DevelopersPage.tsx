@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Loader2, CheckCircle2, XCircle, Search, Building2, MapPin, Calendar } from "lucide-react";
-import toast from "react-hot-toast";
+import { toast } from "sonner";
 
 export default function DevelopersPage() {
   const [activeTab, setActiveTab] = useState("pending");
