@@ -107,12 +107,14 @@ export default function PropertiesPage() {
   };
 
   const handleDelete = (property: Property) => {
+    console.log('Opening delete dialog for:', property.title);
     setPropertyToDelete(property);
     setIsDeleteDialogOpen(true);
   };
 
   const confirmDelete = () => {
     if (!propertyToDelete) return;
+    console.log('Confirming delete for:', propertyToDelete.id);
     deleteMutation.mutate({ id: propertyToDelete.id });
   };
 
@@ -275,8 +277,17 @@ export default function PropertiesPage() {
         </GlassCard>
 
         {/* Delete Confirmation Dialog */}
-        <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-          <DialogContent>
+        <Dialog 
+          open={isDeleteDialogOpen} 
+          onOpenChange={(open) => {
+            console.log('Dialog onOpenChange:', open);
+            setIsDeleteDialogOpen(open);
+          }}
+        >
+          <DialogContent 
+            onEscapeKeyDown={(e) => e.preventDefault()}
+            onPointerDownOutside={(e) => e.preventDefault()}
+          >
             <DialogHeader>
               <DialogTitle>Delete Property Listing</DialogTitle>
               <DialogDescription>
