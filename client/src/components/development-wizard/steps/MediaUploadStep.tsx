@@ -1,53 +1,98 @@
 import { useDevelopmentWizard } from '@/hooks/useDevelopmentWizard';
-import { Label } from '@/components/ui/label';
-import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Upload, X, Star, Image as ImageIcon, Video, Home, Sparkles, Trees } from 'lucide-react';
-import { useState, useRef } from 'react';
+import { MediaUploadZone } from '@/components/media/MediaUploadZone';
+import { SortableMediaGrid } from '@/components/media/SortableMediaGrid';
+import { Star, Image as ImageIcon, Home, Sparkles, Trees, Video, Lightbulb } from 'lucide-react';
+import { useState, useCallback } from 'react';
+import type { MediaItem as GridMediaItem } from '@/components/media/SortableMediaGrid';
 
 type MediaCategory = 'featured' | 'general' | 'amenities' | 'outdoors' | 'videos';
 
 export function MediaUploadStep() {
-  const { media, addMedia, removeMedia, setPrimaryImage } = useDevelopmentWizard();
+  const { media, addMedia, removeMedia, setPrimaryImage, reorderMedia } = useDevelopmentWizard();
   const [activeCategory, setActiveCategory] = useState<MediaCategory>('featured');
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>, category: MediaCategory) => {
-    const files = e.target.files;
-    if (!files) return;
-
+  // Handle file upload for specific category
+  const handleUpload = useCallback((files: File[], category: MediaCategory) => {
     const isVideoCategory = category === 'videos';
-    const acceptedTypes = isVideoCategory ? 'video/*' : 'image/*';
 
-    Array.from(files).forEach((file) => {
+    files.forEach((file) => {
       const isCorrectType = isVideoCategory 
         ? file.type.startsWith('video/')
         : file.type.startsWith('image/');
 
       if (isCorrectType) {
         const url = URL.createObjectURL(file);
+        const categoryMedia = media.filter(item => item.category === category);
+        
         addMedia({
           file,
           url,
           type: file.type.startsWith('image/') ? 'image' : 'video',
           category,
-          isPrimary: category === 'featured' && getCategoryMedia('featured').length === 0,
+          isPrimary: category === 'featured' && categoryMedia.length === 0,
         });
       }
     });
+  }, [media, addMedia]);
 
-    // Reset input
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
-  };
+  // Get media for specific category
+  const getCategoryMedia = useCallback((category: MediaCategory): GridMediaItem[] => {
+    return media
+      .filter(item => item.category === category)
+      .map(item => ({
+        id: item.id,
+        url: item.url,
+        type: item.type as 'image' | 'video' | 'floorplan' | 'pdf',
+        fileName: item.file?.name,
+        isPrimary: item.isPrimary,
+        displayOrder: item.displayOrder,
+      }));
+  }, [media]);
 
-  const getCategoryMedia = (category: MediaCategory) => {
-    return media.filter(item => item.category === category);
-  };
+  // Handle media reorder within category
+  const handleReorder = useCallback((reorderedMedia: GridMediaItem[], category: MediaCategory) => {
+    // Get all media items for this category
+    const categoryMediaIds = media
+      .filter(item => item.category === category)
+      .map(item => item.id);
 
-  const renderUploadSection = (
+    // Update display order for reordered items
+    reorderedMedia.forEach((item, newIndex) => {
+      const oldIndex = categoryMediaIds.indexOf(item.id);
+      if (oldIndex !== -1 && oldIndex !== newIndex) {
+        // Find the actual index in the full media array
+        const fullArrayIndex = media.findIndex(m => m.id === item.id);
+        if (fullArrayIndex !== -1) {
+          // Calculate the new position in the full array
+          const categoryStartIndex = media.findIndex(m => m.category === category);
+          const newFullArrayIndex = categoryStartIndex + newIndex;
+          
+          // Reorder in the full array
+          const updatedMedia = [...media];
+          const [movedItem] = updatedMedia.splice(fullArrayIndex, 1);
+          updatedMedia.splice(newFullArrayIndex, 0, movedItem);
+          
+          // Update display orders
+          reorderMedia(updatedMedia.map((m, i) => ({ ...m, displayOrder: i })));
+        }
+      }
+    });
+  }, [media, reorderMedia]);
+
+  // Handle media remove
+  const handleRemove = useCallback((id: string) => {
+    removeMedia(id);
+  }, [removeMedia]);
+
+  // Handle set as primary (featured)
+  const handleSetPrimary = useCallback((id: string) => {
+    setPrimaryImage(id);
+  }, [setPrimaryImage]);
+
+  // Render upload section for each category
+  const renderCategorySection = (
     category: MediaCategory,
     title: string,
     description: string,
@@ -59,9 +104,10 @@ export function MediaUploadStep() {
     const canUploadMore = maxFiles ? categoryMedia.length < maxFiles : true;
 
     return (
-      <div className="space-y-4">
+      <div className="space-y-6">
+        {/* Category Header */}
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             {icon}
             <div>
               <h4 className="font-semibold text-slate-800">{title}</h4>
@@ -69,139 +115,104 @@ export function MediaUploadStep() {
             </div>
           </div>
           {maxFiles && (
-            <span className="text-xs text-slate-500 bg-slate-100 px-2 py-1 rounded-full">
+            <span className="text-xs text-slate-500 bg-slate-100 px-3 py-1 rounded-full font-medium">
               {categoryMedia.length}/{maxFiles}
             </span>
           )}
         </div>
 
-        {/* Upload Area */}
+        {/* Upload Zone */}
         {canUploadMore && (
-          <div className="border-2 border-dashed border-slate-300 bg-slate-50/50 rounded-xl p-6 transition-colors hover:bg-slate-50 hover:border-blue-400">
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept={acceptVideo ? 'image/*,video/*' : 'image/*'}
-              multiple={!maxFiles || maxFiles > 1}
-              onChange={(e) => handleFileSelect(e, category)}
-              className="hidden"
-            />
-            
-            <div className="text-center">
-              <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-3">
-                <Upload className="h-6 w-6" />
-              </div>
-              <Button 
-                onClick={() => fileInputRef.current?.click()}
-                variant="outline"
-                size="sm"
-                className="mb-2"
-              >
-                Choose {acceptVideo ? 'Files' : 'Images'}
-              </Button>
-              <p className="text-xs text-slate-500">
-                {acceptVideo ? 'Images or videos' : 'Images only'} • Max 10MB
-              </p>
-            </div>
-          </div>
+          <MediaUploadZone
+            onUpload={(files) => handleUpload(files, category)}
+            maxFiles={maxFiles || 30}
+            maxSizeMB={5}
+            maxVideoSizeMB={50}
+            acceptedTypes={acceptVideo ? ['image/*', 'video/*'] : ['image/*']}
+            existingMediaCount={categoryMedia.length}
+          />
         )}
 
         {/* Media Grid */}
         {categoryMedia.length > 0 && (
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-            {categoryMedia.map((item) => (
-              <div key={item.id} className="relative group rounded-lg overflow-hidden shadow-sm border border-slate-200 aspect-[4/3]">
-                {item.type === 'image' ? (
-                  <img
-                    src={item.url}
-                    alt={category}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <div className="relative w-full h-full bg-slate-900 flex items-center justify-center">
-                    <video
-                      src={item.url}
-                      className="w-full h-full object-cover opacity-80"
-                    />
-                    <Video className="absolute w-8 h-8 text-white/80" />
-                  </div>
-                )}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-medium text-slate-700">
+                {categoryMedia.length} {categoryMedia.length === 1 ? 'item' : 'items'}
+              </p>
+              <p className="text-xs text-slate-500">Drag to reorder</p>
+            </div>
+            
+            <SortableMediaGrid
+              media={categoryMedia}
+              onReorder={(reordered) => handleReorder(reordered, category)}
+              onRemove={handleRemove}
+              onSetPrimary={category === 'featured' ? handleSetPrimary : undefined}
+            />
+          </div>
+        )}
 
-                {/* Primary/Featured Badge */}
-                {item.isPrimary && (
-                  <div className="absolute top-2 left-2 z-10">
-                    <div className="bg-blue-600 text-white text-xs font-medium px-2 py-1 rounded-md flex items-center gap-1 shadow-sm">
-                      <Star className="h-3 w-3 fill-white" />
-                      Featured
-                    </div>
-                  </div>
-                )}
-
-                {/* Actions Overlay */}
-                <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-all duration-200 flex flex-col items-center justify-center gap-2 p-2">
-                  {!item.isPrimary && category === 'featured' && item.type === 'image' && (
-                    <Button
-                      size="sm"
-                      variant="secondary"
-                      className="w-full bg-white/90 hover:bg-white text-xs"
-                      onClick={() => setPrimaryImage(item.id)}
-                    >
-                      Set Featured
-                    </Button>
-                  )}
-                  <Button
-                    size="sm"
-                    variant="destructive"
-                    className="w-full bg-red-500/90 hover:bg-red-600 text-xs"
-                    onClick={() => removeMedia(item.id)}
-                  >
-                    <X className="h-3 w-3 mr-1" /> Remove
-                  </Button>
-                </div>
-              </div>
-            ))}
+        {/* Category-specific tips */}
+        {category === 'featured' && categoryMedia.length === 0 && (
+          <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
+            <p className="text-sm text-orange-800">
+              <strong>Required:</strong> Upload at least one featured image or video for your development.
+            </p>
           </div>
         )}
       </div>
     );
   };
 
-  const featuredCount = getCategoryMedia('featured').length;
-  const generalCount = getCategoryMedia('general').length;
-  const amenitiesCount = getCategoryMedia('amenities').length;
-  const outdoorsCount = getCategoryMedia('outdoors').length;
-  const videosCount = getCategoryMedia('videos').length;
+  // Count media by category
+  const featuredCount = media.filter(m => m.category === 'featured').length;
+  const generalCount = media.filter(m => m.category === 'general').length;
+  const amenitiesCount = media.filter(m => m.category === 'amenities').length;
+  const outdoorsCount = media.filter(m => m.category === 'outdoors').length;
+  const videosCount = media.filter(m => m.category === 'videos').length;
 
   return (
     <div className="space-y-6">
       <Card className="bg-white/70 backdrop-blur-sm rounded-[1.5rem] border-white/40 shadow-[0_8px_30px_rgba(8,_112,_184,_0.06)] p-6">
-        <div className="flex items-center gap-2 mb-4">
-          <ImageIcon className="w-5 h-5 text-blue-600" />
-          <h3 className="text-lg font-bold text-slate-800">Development Media</h3>
+        {/* Header */}
+        <div className="mb-6">
+          <div className="flex items-center gap-2 mb-2">
+            <ImageIcon className="w-5 h-5 text-blue-600" />
+            <h3 className="text-lg font-bold text-slate-800">Development Media</h3>
+          </div>
+          <p className="text-slate-600">
+            Organize your media by category for better presentation. Upload high-quality images and videos.
+          </p>
         </div>
-        <p className="text-slate-600 mb-6">Organize your media by category for better presentation</p>
 
+        {/* Category Tabs */}
         <Tabs value={activeCategory} onValueChange={(v) => setActiveCategory(v as MediaCategory)}>
           <TabsList className="grid w-full grid-cols-5 mb-6">
             <TabsTrigger value="featured" className="text-xs">
+              <Star className="w-3 h-3 mr-1" />
               Featured {featuredCount > 0 && `(${featuredCount})`}
             </TabsTrigger>
             <TabsTrigger value="general" className="text-xs">
+              <Home className="w-3 h-3 mr-1" />
               Photos {generalCount > 0 && `(${generalCount})`}
             </TabsTrigger>
             <TabsTrigger value="amenities" className="text-xs">
+              <Sparkles className="w-3 h-3 mr-1" />
               Amenities {amenitiesCount > 0 && `(${amenitiesCount})`}
             </TabsTrigger>
             <TabsTrigger value="outdoors" className="text-xs">
+              <Trees className="w-3 h-3 mr-1" />
               Outdoors {outdoorsCount > 0 && `(${outdoorsCount})`}
             </TabsTrigger>
             <TabsTrigger value="videos" className="text-xs">
+              <Video className="w-3 h-3 mr-1" />
               Videos {videosCount > 0 && `(${videosCount})`}
             </TabsTrigger>
           </TabsList>
 
+          {/* Featured Tab */}
           <TabsContent value="featured" className="mt-0">
-            {renderUploadSection(
+            {renderCategorySection(
               'featured',
               'Featured Media',
               'Main image or video shown on the development page (1 required)',
@@ -211,8 +222,9 @@ export function MediaUploadStep() {
             )}
           </TabsContent>
 
+          {/* General Photos Tab */}
           <TabsContent value="general" className="mt-0">
-            {renderUploadSection(
+            {renderCategorySection(
               'general',
               'General Photos',
               'Interior, exterior, and unit photos',
@@ -220,8 +232,9 @@ export function MediaUploadStep() {
             )}
           </TabsContent>
 
+          {/* Amenities Tab */}
           <TabsContent value="amenities" className="mt-0">
-            {renderUploadSection(
+            {renderCategorySection(
               'amenities',
               'Amenities',
               'Pool, gym, clubhouse, and other amenities',
@@ -229,8 +242,9 @@ export function MediaUploadStep() {
             )}
           </TabsContent>
 
+          {/* Outdoors Tab */}
           <TabsContent value="outdoors" className="mt-0">
-            {renderUploadSection(
+            {renderCategorySection(
               'outdoors',
               'Outdoor Spaces',
               'Gardens, courtyards, terraces, and outdoor areas',
@@ -238,8 +252,9 @@ export function MediaUploadStep() {
             )}
           </TabsContent>
 
+          {/* Videos Tab */}
           <TabsContent value="videos" className="mt-0">
-            {renderUploadSection(
+            {renderCategorySection(
               'videos',
               'Videos',
               'Virtual tours, walkthroughs, and promotional videos',
@@ -250,19 +265,22 @@ export function MediaUploadStep() {
           </TabsContent>
         </Tabs>
 
-        {media.length === 0 && (
-          <div className="mt-6 p-4 bg-blue-50 text-blue-700 rounded-lg text-sm flex items-center gap-2">
-            <ImageIcon className="w-4 h-4" />
-            <p>Please upload at least one featured image to continue.</p>
+        {/* Upload Tips */}
+        <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <div className="flex items-start gap-3">
+            <Lightbulb className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+            <div>
+              <h4 className="font-semibold text-blue-900 mb-2">Media Tips</h4>
+              <ul className="text-sm text-blue-800 space-y-1">
+                <li>• Upload at least one featured image or video</li>
+                <li>• Use high-quality photos with good lighting</li>
+                <li>• Show different unit types and layouts</li>
+                <li>• Highlight unique amenities and features</li>
+                <li>• Keep videos under 2 minutes for best engagement</li>
+              </ul>
+            </div>
           </div>
-        )}
-
-        {media.length > 0 && featuredCount === 0 && (
-          <div className="mt-6 p-4 bg-orange-50 text-orange-700 rounded-lg text-sm flex items-center gap-2">
-            <Star className="w-4 h-4" />
-            <p>Please upload a featured image or video for your development.</p>
-          </div>
-        )}
+        </div>
       </Card>
     </div>
   );

@@ -9,6 +9,8 @@ import { useListingWizardStore } from '@/hooks/useListingWizard';
 import { Card } from '@/components/ui/card';
 import { Check, Home, Key, Gavel } from 'lucide-react';
 import type { ListingAction } from '@/../../shared/listing-types';
+import { useFieldValidation } from '@/hooks/useFieldValidation';
+import { InlineError } from '@/components/ui/InlineError';
 
 const ACTION_OPTIONS: {
   value: ListingAction;
@@ -43,8 +45,17 @@ const ACTION_OPTIONS: {
 const ActionStep: React.FC = () => {
   const { action, setAction } = useListingWizardStore();
 
+  // Validation
+  const actionValidation = useFieldValidation({
+    field: 'action',
+    value: action,
+    context: { currentStep: 1 },
+    trigger: 'submit',
+  });
+
   const handleSelect = (value: ListingAction) => {
     setAction(value);
+    actionValidation.clearError();
   };
 
   return (
@@ -100,6 +111,16 @@ const ActionStep: React.FC = () => {
           );
         })}
       </div>
+
+      {/* Validation Error */}
+      {actionValidation.error && (
+        <div className="mt-6">
+          <InlineError
+            error={actionValidation.error}
+            show={!!actionValidation.error}
+          />
+        </div>
+      )}
 
       {/* Info Banner */}
       <div className="mt-8 p-6 bg-blue-50 border border-blue-200 rounded-lg">

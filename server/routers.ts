@@ -23,6 +23,7 @@ import { guestMigrationRouter } from './guestMigrationRouter';
 import { settingsRouter } from './settingsRouter';
 import { marketingRouter } from './marketingRouter';
 import { subscriptionRouter } from './subscriptionRouter';
+import { developerRouter } from './developerRouter';
 
 export const appRouter = router({
   system: systemRouter,
@@ -45,6 +46,7 @@ export const appRouter = router({
   dev: devRouter, // ⚠️ DEV ONLY - Remove before production
   marketing: marketingRouter,
   subscription: subscriptionRouter,
+  developer: developerRouter,
 
   auth: router({
     me: publicProcedure.query(opts => opts.ctx.user),

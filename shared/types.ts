@@ -162,3 +162,244 @@ export interface PlanLimits {
   storage_gb: number;
   [key: string]: any;
 }
+
+
+// Developer Subscription Types
+export type SubscriptionTier = 'free_trial' | 'basic' | 'premium';
+export type DeveloperSubscriptionStatus = 'active' | 'cancelled' | 'expired';
+
+export interface DeveloperSubscription {
+  id: number;
+  developerId: number;
+  planId: number | null;
+  tier: SubscriptionTier;
+  status: DeveloperSubscriptionStatus;
+  trialEndsAt: Date | null;
+  currentPeriodStart: Date | null;
+  currentPeriodEnd: Date | null;
+  stripeSubscriptionId: string | null;
+  stripeCustomerId: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface DeveloperSubscriptionLimits {
+  id: number;
+  subscriptionId: number;
+  maxDevelopments: number;
+  maxLeadsPerMonth: number;
+  maxTeamMembers: number;
+  analyticsRetentionDays: number;
+  crmIntegrationEnabled: boolean;
+  advancedAnalyticsEnabled: boolean;
+  bondIntegrationEnabled: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface DeveloperSubscriptionUsage {
+  id: number;
+  subscriptionId: number;
+  developmentsCount: number;
+  leadsThisMonth: number;
+  teamMembersCount: number;
+  lastResetAt: Date;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface DeveloperSubscriptionWithDetails extends DeveloperSubscription {
+  limits: DeveloperSubscriptionLimits;
+  usage: DeveloperSubscriptionUsage;
+}
+
+// Tier configuration constants
+export const SUBSCRIPTION_TIER_LIMITS: Record<SubscriptionTier, Omit<DeveloperSubscriptionLimits, 'id' | 'subscriptionId' | 'createdAt' | 'updatedAt'>> = {
+  free_trial: {
+    maxDevelopments: 1,
+    maxLeadsPerMonth: 50,
+    maxTeamMembers: 1,
+    analyticsRetentionDays: 30,
+    crmIntegrationEnabled: false,
+    advancedAnalyticsEnabled: false,
+    bondIntegrationEnabled: false,
+  },
+  basic: {
+    maxDevelopments: 5,
+    maxLeadsPerMonth: 200,
+    maxTeamMembers: 5,
+    analyticsRetentionDays: 90,
+    crmIntegrationEnabled: false,
+    advancedAnalyticsEnabled: true,
+    bondIntegrationEnabled: true,
+  },
+  premium: {
+    maxDevelopments: 999999, // Effectively unlimited
+    maxLeadsPerMonth: 999999, // Effectively unlimited
+    maxTeamMembers: 50,
+    analyticsRetentionDays: 365,
+    crmIntegrationEnabled: true,
+    advancedAnalyticsEnabled: true,
+    bondIntegrationEnabled: true,
+  },
+};
+
+
+// Development Types
+export type DevelopmentType = 'residential' | 'commercial' | 'mixed_use' | 'estate' | 'complex';
+export type DevelopmentStatus = 'planning' | 'under_construction' | 'completed' | 'coming_soon';
+export type PhaseStatus = 'planning' | 'pre_launch' | 'selling' | 'sold_out' | 'completed';
+
+export interface Development {
+  id: number;
+  developerId: number;
+  name: string;
+  slug: string;
+  description: string | null;
+  developmentType: DevelopmentType;
+  status: DevelopmentStatus;
+  address: string | null;
+  city: string;
+  province: string;
+  latitude: string | null;
+  longitude: string | null;
+  totalUnits: number | null;
+  availableUnits: number | null;
+  priceFrom: number | null;
+  priceTo: number | null;
+  amenities: string[] | null;
+  images: string[] | null;
+  videos: string[] | null;
+  floorPlans: string[] | null;
+  brochures: string[] | null;
+  completionDate: Date | null;
+  isFeatured: boolean;
+  isPublished: boolean;
+  views: number;
+  createdAt: Date;
+  updatedAt: Date;
+  publishedAt: Date | null;
+}
+
+export interface DevelopmentPhase {
+  id: number;
+  developmentId: number;
+  name: string;
+  phaseNumber: number;
+  description: string | null;
+  status: PhaseStatus;
+  totalUnits: number;
+  availableUnits: number;
+  priceFrom: number | null;
+  priceTo: number | null;
+  launchDate: Date | null;
+  completionDate: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface DevelopmentWithPhases extends Development {
+  phases: DevelopmentPhase[];
+}
+
+export interface CreateDevelopmentInput {
+  name: string;
+  developmentType: DevelopmentType;
+  description?: string;
+  address?: string;
+  city: string;
+  province: string;
+  latitude?: string;
+  longitude?: string;
+  priceFrom?: number;
+  priceTo?: number;
+  amenities?: string[];
+  completionDate?: string;
+}
+
+export interface UpdateDevelopmentInput {
+  name?: string;
+  slug?: string;
+  description?: string;
+  developmentType?: DevelopmentType;
+  status?: DevelopmentStatus;
+  address?: string;
+  city?: string;
+  province?: string;
+  latitude?: string;
+  longitude?: string;
+  totalUnits?: number;
+  availableUnits?: number;
+  priceFrom?: number;
+  priceTo?: number;
+  amenities?: string[];
+  images?: string[];
+  videos?: string[];
+  floorPlans?: string[];
+  brochures?: string[];
+  completionDate?: string;
+  isFeatured?: boolean;
+  isPublished?: boolean;
+}
+
+
+// Unit Types
+export type UnitType = 'studio' | '1bed' | '2bed' | '3bed' | '4bed+' | 'penthouse' | 'townhouse' | 'house';
+export type UnitStatus = 'available' | 'reserved' | 'sold';
+
+export interface DevelopmentUnit {
+  id: number;
+  developmentId: number;
+  phaseId: number | null;
+  unitNumber: string;
+  unitType: UnitType;
+  bedrooms: number | null;
+  bathrooms: number | null;
+  size: number | null; // square meters
+  price: number;
+  floorPlan: string | null; // S3 URL
+  floor: number | null;
+  facing: string | null;
+  features: string[] | null;
+  status: UnitStatus;
+  reservedAt: Date | null;
+  reservedBy: number | null; // leadId
+  soldAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface CreateUnitInput {
+  developmentId: number;
+  phaseId?: number;
+  unitNumber: string;
+  unitType: UnitType;
+  bedrooms?: number;
+  bathrooms?: number;
+  size?: number;
+  price: number;
+  floorPlan?: string;
+  floor?: number;
+  facing?: string;
+  features?: string[];
+}
+
+export interface UpdateUnitInput {
+  unitNumber?: string;
+  unitType?: UnitType;
+  bedrooms?: number;
+  bathrooms?: number;
+  size?: number;
+  price?: number;
+  floorPlan?: string;
+  floor?: number;
+  facing?: string;
+  features?: string[];
+  status?: UnitStatus;
+}
+
+export interface BulkCreateUnitsInput {
+  developmentId: number;
+  phaseId?: number;
+  units: Omit<CreateUnitInput, 'developmentId' | 'phaseId'>[];
+}

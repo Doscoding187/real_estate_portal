@@ -36,7 +36,7 @@ const SidebarNavigation: React.FC = () => {
         { name: 'Revenue Center', path: '/admin/revenue', icon: TrendingUp },
         { name: 'Marketing Campaigns', path: '/admin/marketing', icon: Megaphone },
         { name: 'Partner Network', path: '/admin/partners', icon: Handshake },
-        { name: 'Developers', path: '/admin/developers', icon: Code },
+        { name: 'Partner Network', path: '/admin/partners', icon: Handshake },
       ],
     },
     {
@@ -45,6 +45,7 @@ const SidebarNavigation: React.FC = () => {
         { name: 'Agencies', path: '/admin/agencies', icon: Building2 },
         { name: 'Agents', path: '/admin/agents', icon: Users },
         { name: 'Agent Approvals', path: '/admin/agent-approvals', icon: CheckCircle },
+        { name: 'Developers', path: '/admin/developers', icon: Code },
         { name: 'End Users', path: '/admin/end-users', icon: User },
         { name: 'Property Listings', path: '/admin/properties', icon: Home },
         { name: 'Listing Approvals', path: '/admin/listing-approvals', icon: CheckCircle },

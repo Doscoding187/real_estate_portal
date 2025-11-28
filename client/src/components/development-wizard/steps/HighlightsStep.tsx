@@ -7,6 +7,8 @@ import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { X, Sparkles, FileText, Calendar, Plus } from 'lucide-react';
 import { useState } from 'react';
+import { useFieldValidation } from '@/hooks/useFieldValidation';
+import { InlineError } from '@/components/ui/InlineError';
 
 const commonAmenities = [
   'Swimming Pool',
@@ -40,6 +42,21 @@ export function HighlightsStep() {
   } = useDevelopmentWizard();
 
   const [newHighlight, setNewHighlight] = useState('');
+
+  // Validation
+  const descriptionValidation = useFieldValidation({
+    field: 'description',
+    value: description,
+    context: { currentStep: 2 },
+    trigger: 'blur',
+  });
+
+  const totalUnitsValidation = useFieldValidation({
+    field: 'totalUnits',
+    value: totalUnits,
+    context: { currentStep: 2 },
+    trigger: 'blur',
+  });
 
   const toggleAmenity = (amenity: string) => {
     if (amenities.includes(amenity)) {
@@ -75,12 +92,25 @@ export function HighlightsStep() {
           </Label>
           <Textarea
             id="description"
-            placeholder="Describe the development, its location, and what makes it special..."
+            placeholder="Describe the development, its location, and what makes it special (minimum 50 characters)..."
             value={description}
-            onChange={(e) => setDescription(e.target.value)}
+            onChange={(e) => {
+              setDescription(e.target.value);
+              descriptionValidation.clearError();
+            }}
+            onBlur={descriptionValidation.onBlur}
             rows={5}
             className="resize-none"
+            aria-invalid={!!descriptionValidation.error}
           />
+          <div className="flex items-center justify-between">
+            <InlineError
+              error={descriptionValidation.error}
+              show={!!descriptionValidation.error}
+              size="sm"
+            />
+            <p className="text-xs text-slate-500">{description.length}/5000 characters</p>
+          </div>
           <p className="text-xs text-slate-500 text-right">{description.length} characters</p>
         </div>
       </Card>

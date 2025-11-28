@@ -246,6 +246,9 @@ importers:
       '@eslint/js':
         specifier: ^9.39.1
         version: 9.39.1
+      '@fast-check/vitest':
+        specifier: ^0.2.3
+        version: 0.2.3(vitest@2.1.9(@types/node@24.7.0)(jsdom@27.2.0)(lightningcss@1.30.1)(terser@5.44.1))
       '@tailwindcss/typography':
         specifier: ^0.5.15
         version: 0.5.19(tailwindcss@4.1.14)
@@ -324,6 +327,9 @@ importers:
       eslint-plugin-react-hooks:
         specifier: ^7.0.1
         version: 7.0.1(eslint@9.39.0(jiti@2.6.1))
+      fast-check:
+        specifier: ^4.3.0
+        version: 4.3.0
       globals:
         specifier: ^16.5.0
         version: 16.5.0
@@ -1177,6 +1183,11 @@ packages:
   '@eslint/plugin-kit@0.4.1':
     resolution: {integrity: sha512-43/qtrDUokr7LJqoF2c3+RInu/t4zfrpYdoSDfYyhg52rwLV6TnOvdG4fXm7IkSB3wErkcmJS9iEhjVtOSEjjA==}
     engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
+
+  '@fast-check/vitest@0.2.3':
+    resolution: {integrity: sha512-BBjiZOiCvKRfoeuWz62ZpjFfuaLEKSDWXl7Fkli9FBNJGUzBDv7PZdXPGbrUiaTreIFs9I1INrlQgboRBA3H1Q==}
+    peerDependencies:
+      vitest: ^1 || ^2 || ^3 || ^4
 
   '@floating-ui/core@1.7.3':
     resolution: {integrity: sha512-sGnvb5dmrJaKEZ+LDIpguvdX3bDlEllmv4/ClQ9awcmCZrlx5jQyyMWFM5kBI+EyNOCDDiKk8il0zeuX3Zlg/w==}
@@ -3490,6 +3501,10 @@ packages:
     resolution: {integrity: sha512-28HqgMZAmih1Czt9ny7qr6ek2qddF4FclbMzwhCREB6OFfH+rXAnuNCwo1/wFvrtbgsQDb4kSbX9de9lFbrXnA==}
     engines: {node: '>= 0.10.0'}
 
+  fast-check@4.3.0:
+    resolution: {integrity: sha512-JVw/DJSxVKl8uhCb7GrwanT9VWsCIdBkK3WpP37B/Au4pyaspriSjtrY2ApbSFwTg3ViPfniT13n75PhzE7VEQ==}
+    engines: {node: '>=12.17.0'}
+
   fast-deep-equal@3.1.3:
     resolution: {integrity: sha512-f3qQ9oQy9j2AhBe/H9VC91wLmKBCCU/gDOnKNAYG5hswO7BLKj09Hc5HYNz9cGI++xlpDCIgDaitVs03ATR84Q==}
 
@@ -4372,6 +4387,9 @@ packages:
   punycode@2.3.1:
     resolution: {integrity: sha512-vYt7UD1U9Wg6138shLtLOvdAu+8DsC/ilFtEVHcH+wydcSpNE20AfSOduf6MkRFahL5FY7X1oU7nKVZFtfq8Fg==}
     engines: {node: '>=6'}
+
+  pure-rand@7.0.1:
+    resolution: {integrity: sha512-oTUZM/NAZS8p7ANR3SHh30kXB+zK2r2BPcEn/awJIbOvq82WoMN4p62AWWp3Hhw50G0xMsw1mhIBLqHw64EcNQ==}
 
   qs@6.13.0:
     resolution: {integrity: sha512-+38qI9SOr8tfZ4QmJNplMUxqjbe7LKvvZgWdExBOmd+egZTtjLB67Gu0HRX3u/XOq7UU2Nx6nsjvS16Z9uwfpg==}
@@ -6209,6 +6227,11 @@ snapshots:
     dependencies:
       '@eslint/core': 0.17.0
       levn: 0.4.1
+
+  '@fast-check/vitest@0.2.3(vitest@2.1.9(@types/node@24.7.0)(jsdom@27.2.0)(lightningcss@1.30.1)(terser@5.44.1))':
+    dependencies:
+      fast-check: 4.3.0
+      vitest: 2.1.9(@types/node@24.7.0)(jsdom@27.2.0)(lightningcss@1.30.1)(terser@5.44.1)
 
   '@floating-ui/core@1.7.3':
     dependencies:
@@ -8784,6 +8807,10 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
+  fast-check@4.3.0:
+    dependencies:
+      pure-rand: 7.0.1
+
   fast-deep-equal@3.1.3: {}
 
   fast-diff@1.3.0: {}
@@ -9622,6 +9649,8 @@ snapshots:
     optional: true
 
   punycode@2.3.1: {}
+
+  pure-rand@7.0.1: {}
 
   qs@6.13.0:
     dependencies:

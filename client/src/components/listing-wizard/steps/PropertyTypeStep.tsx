@@ -10,6 +10,8 @@ import { Card } from '@/components/ui/card';
 import { Check, Building2, Home, Wheat, Map, Store, Users } from 'lucide-react';
 import type { PropertyType, ListingAction } from '@/../../shared/listing-types';
 import { PROPERTY_TYPE_TEMPLATES } from '@/../../shared/listing-types';
+import { useFieldValidation } from '@/hooks/useFieldValidation';
+import { InlineError } from '@/components/ui/InlineError';
 
 // Icon map for dynamic rendering
 const ICON_MAP: Record<string, React.ElementType> = {
@@ -27,8 +29,17 @@ const PropertyTypeStep: React.FC = () => {
   const propertyType: PropertyType | undefined = store.propertyType;
   const setPropertyType = store.setPropertyType;
 
+  // Validation
+  const propertyTypeValidation = useFieldValidation({
+    field: 'propertyType',
+    value: propertyType,
+    context: { action, currentStep: 2 },
+    trigger: 'submit',
+  });
+
   const handleSelect = (value: PropertyType) => {
     setPropertyType(value);
+    propertyTypeValidation.clearError();
   };
 
   // Filter property types based on action
@@ -104,6 +115,16 @@ const PropertyTypeStep: React.FC = () => {
           );
         })}
       </div>
+
+      {/* Validation Error */}
+      {propertyTypeValidation.error && (
+        <div className="mt-6">
+          <InlineError
+            error={propertyTypeValidation.error}
+            show={!!propertyTypeValidation.error}
+          />
+        </div>
+      )}
 
       {/* Confirmation Banner */}
       {propertyType && (

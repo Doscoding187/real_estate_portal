@@ -75,6 +75,7 @@ import ListingTemplate from './pages/ListingTemplate';
 import CreateDevelopment from './pages/CreateDevelopment';
 import DevelopmentsDemo from './pages/DevelopmentsDemo';
 import DevelopmentDetail from './pages/DevelopmentDetail';
+import DeveloperSetupWizard from './components/developer/DeveloperSetupWizard';
 
 // Import Comparison Page
 import CompareProperties from './pages/CompareProperties';
@@ -101,6 +102,7 @@ function Router() {
       <Route path="/developments/create" component={CreateDevelopment} />
       <Route path="/developments" component={DevelopmentsDemo} />
       <Route path="/development/:id" component={DevelopmentDetail} />
+      <Route path="/developer/setup" component={DeveloperSetupWizard} />
       <Route path="/explore" component={ExploreFeed} />
       <Route path="/compare" component={CompareProperties} />
 

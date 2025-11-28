@@ -10,19 +10,46 @@ export interface EmailData {
 
 // Basic email service (placeholder for actual implementation)
 // In production, you'd integrate with services like SendGrid, AWS SES, etc.
+import { Resend } from 'resend';
+
+const resend = ENV.resendApiKey ? new Resend(ENV.resendApiKey) : null;
+
 export class EmailService {
   static async sendEmail(emailData: EmailData): Promise<boolean> {
     try {
-      console.log('[Email] Sending email:', {
+      // If Resend is configured, use it
+      if (resend) {
+        try {
+          const { data, error } = await resend.emails.send({
+            from: ENV.resendFromEmail,
+            to: emailData.to,
+            subject: emailData.subject,
+            html: emailData.html,
+            text: emailData.text,
+          });
+
+          if (error) {
+            console.error('[Email] Resend API Error:', error);
+            // Fallback to logging if Resend fails? Or just return false?
+            // For now, let's log and return false to indicate failure
+            return false;
+          }
+
+          console.log('[Email] Sent via Resend:', data?.id);
+          return true;
+        } catch (resendError) {
+          console.error('[Email] Resend Exception:', resendError);
+          return false;
+        }
+      }
+
+      // Fallback: Log email to console (Development/No API Key)
+      console.log('[Email] Sending email (Mock/Log):', {
         to: emailData.to,
         subject: emailData.subject,
         // Don't log HTML content for security
       });
 
-      // TODO: Implement actual email sending
-      // This is a placeholder that would be replaced with actual email service integration
-
-      // For now, just log the email (useful for testing)
       if (process.env.NODE_ENV === 'development') {
         console.log('[Email] Development mode - email content:');
         console.log('Subject:', emailData.subject);
@@ -459,6 +486,75 @@ export class EmailService {
     return this.sendEmail({
       to: agentEmail,
       subject: `💰 Offer Received: R${offerAmount} for ${propertyTitle}`,
+      html,
+    });
+  }
+
+  // Developer Workflow Emails
+
+  static async sendDeveloperRegistrationEmail(
+    email: string,
+    name: string
+  ): Promise<boolean> {
+    const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h1>Application Received</h1>
+        <p>Dear ${name},</p>
+        <p>We have received your application to join SA Property Portal as a verified developer.</p>
+        <p>Our team will review your details and get back to you shortly.</p>
+        <p>Best regards,<br>The SA Property Portal Team</p>
+      </div>
+    `;
+
+    return this.sendEmail({
+      to: email,
+      subject: 'Developer Application Received',
+      html,
+    });
+  }
+
+  static async sendDeveloperApprovalEmail(
+    email: string,
+    name: string
+  ): Promise<boolean> {
+    const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h1>Application Approved!</h1>
+        <p>Dear ${name},</p>
+        <p>Congratulations! Your application to join SA Property Portal as a verified developer has been approved.</p>
+        <p>You can now log in to your dashboard and start managing your developments and listings.</p>
+        <p><a href="${process.env.NEXT_PUBLIC_APP_URL}/dashboard" style="background-color: #10b981; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Go to Dashboard</a></p>
+        <p>Best regards,<br>The SA Property Portal Team</p>
+      </div>
+    `;
+
+    return this.sendEmail({
+      to: email,
+      subject: 'Developer Application Approved',
+      html,
+    });
+  }
+
+  static async sendDeveloperRejectionEmail(
+    email: string,
+    name: string,
+    reason: string
+  ): Promise<boolean> {
+    const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h1>Application Update</h1>
+        <p>Dear ${name},</p>
+        <p>Thank you for your interest in joining SA Property Portal.</p>
+        <p>After careful review, we are unable to approve your application at this time.</p>
+        <p><strong>Reason:</strong> ${reason}</p>
+        <p>If you have any questions or would like to appeal this decision, please contact our support team.</p>
+        <p>Best regards,<br>The SA Property Portal Team</p>
+      </div>
+    `;
+
+    return this.sendEmail({
+      to: email,
+      subject: 'Update on your Developer Application',
       html,
     });
   }

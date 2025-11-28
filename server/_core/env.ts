@@ -24,4 +24,7 @@ export const ENV = {
   s3BucketName: process.env.S3_BUCKET_NAME ?? '',
   cloudFrontUrl: process.env.CLOUDFRONT_URL ?? '',
   maxImageSizeMb: parseInt(process.env.MAX_IMAGE_SIZE_MB ?? '10'),
+  // Email configuration
+  resendApiKey: process.env.RESEND_API_KEY ?? '',
+  resendFromEmail: process.env.RESEND_FROM_EMAIL ?? 'onboarding@resend.dev',
 };

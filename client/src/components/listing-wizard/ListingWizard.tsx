@@ -3,8 +3,17 @@
  * Orchestrates the multi-step listing creation process
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useListingWizardStore } from '@/hooks/useListingWizard';
+import { useAutoSave } from '@/hooks/useAutoSave';
+import { SaveStatusIndicator } from '@/components/ui/SaveStatusIndicator';
+import { DraftManager } from '@/components/wizard/DraftManager';
+import { ProgressIndicator, generateSteps, updateStepsWithErrors } from '@/components/wizard/ProgressIndicator';
+import { ErrorAlert } from '@/components/ui/ErrorAlert';
+import { ValidationErrorList } from '@/components/ui/ValidationErrorList';
+import { parseError, getRecoveryStrategy, type AppError } from '@/lib/errors/ErrorRecoveryStrategy';
+import { parseServerValidationErrors, type ValidationErrorResult } from '@/lib/errors/ValidationErrorParser';
+import { handleSessionExpiry, wasSessionExpired, clearSessionExpiryFlags } from '@/lib/auth/SessionExpiryHandler';
 import { trpc } from '@/lib/trpc';
 import { useLocation } from 'wouter';
 import { useAuth } from '@/_core/hooks/useAuth';
@@ -17,16 +26,8 @@ import LocationStep from './steps/LocationStep';
 import MediaUploadStep from './steps/MediaUploadStep';
 import PreviewStep from './steps/PreviewStep';
 import { Button } from '@/components/ui/button';
-import { Progress } from '@/components/ui/progress';
-import { ArrowLeft, ArrowRight, Home, FileText, Trash2, Save, Check } from 'lucide-react';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { ArrowLeft, ArrowRight, Home, Save, Check } from 'lucide-react';
+import { toast } from 'sonner';
 
 const ListingWizard: React.FC = () => {
   const store = useListingWizardStore();
@@ -38,6 +39,38 @@ const ListingWizard: React.FC = () => {
   const [wizardKey, setWizardKey] = useState(0); // Force re-render on reset
   const [isSavingDraft, setIsSavingDraft] = useState(false);
   const [draftSaved, setDraftSaved] = useState(false);
+  const [apiError, setApiError] = useState<AppError | null>(null);
+  const [retryAttempt, setRetryAttempt] = useState(0);
+  const [validationErrors, setValidationErrors] = useState<ValidationErrorResult | null>(null);
+
+  // Auto-save hook - saves draft to localStorage automatically
+  const { lastSaved, isSaving: isAutoSaving, error: autoSaveError } = useAutoSave(
+    {
+      action: store.action,
+      propertyType: store.propertyType,
+      title: store.title,
+      description: store.description,
+      pricing: store.pricing,
+      propertyDetails: store.propertyDetails,
+      location: store.location,
+      media: store.media,
+      badges: store.badges,
+      basicInfo: store.basicInfo,
+      additionalInfo: store.additionalInfo,
+      currentStep: store.currentStep,
+      completedSteps: store.completedSteps,
+      mainMediaId: store.mainMediaId,
+    },
+    {
+      storageKey: 'listing-wizard-storage',
+      debounceMs: 2000,
+      enabled: !isSubmitting && store.currentStep > 1, // Only auto-save after first step
+      onError: (error) => {
+        console.error('Auto-save error:', error);
+        toast.error('Failed to auto-save draft');
+      },
+    }
+  );
 
   // TRPC mutation for creating listing
   const createListingMutation = trpc.listing.create.useMutation();
@@ -150,6 +183,19 @@ const ListingWizard: React.FC = () => {
     }
   }, [existingListing, isEditMode]);
 
+  // Check for session restoration after login
+  useEffect(() => {
+    if (wasSessionExpired()) {
+      console.log('Session was expired, draft should be restored automatically');
+      clearSessionExpiryFlags();
+      
+      // Show a toast to inform user their session was restored
+      toast.success('Welcome back! Your draft has been restored.', {
+        description: 'You can continue where you left off.',
+      });
+    }
+  }, []);
+
   // Check for draft on mount and show resume dialog
   useEffect(() => {
     // If editing, don't show draft dialog
@@ -208,7 +254,7 @@ const ListingWizard: React.FC = () => {
     }
   }, [store.status, createListingMutation.data, setLocation]);
 
-  // Handle form submission
+  // Handle form submission with error recovery
   const handleSubmit = async () => {
     if (!store.validate()) {
       return;
@@ -216,6 +262,8 @@ const ListingWizard: React.FC = () => {
 
     setIsSubmitting(true);
     setSubmitError(null);
+    setApiError(null);
+    setValidationErrors(null);
 
     try {
       // Prepare listing data with proper type handling (using string IDs)
@@ -269,7 +317,7 @@ const ListingWizard: React.FC = () => {
         console.log('Listing submitted for review');
 
         // Show success message
-        alert('Listing submitted for review successfully!');
+        toast.success('Listing submitted for review successfully!');
 
         // Reset wizard state for next listing
         store.reset();
@@ -289,15 +337,89 @@ const ListingWizard: React.FC = () => {
         }
       } catch (reviewError: any) {
         console.error('Error submitting for review:', reviewError);
-        alert('Listing created but failed to submit for review. Please try again later.');
+        
+        // Parse and handle review submission error
+        const appError = parseError(reviewError, { 
+          type: 'server',
+          context: { operation: 'submitForReview' }
+        });
+        setApiError(appError);
+        
+        toast.error('Listing created but failed to submit for review.');
         // Keep as draft and stay on page
       }
     } catch (error: any) {
       console.error('Error submitting listing:', error);
-      setSubmitError(error.message || 'Failed to submit listing. Please try again.');
+      
+      // Parse error and determine recovery strategy
+      const appError = parseError(error, { 
+        type: 'network',
+        context: { operation: 'createListing' }
+      });
+      const strategy = getRecoveryStrategy(appError);
+      
+      // Check if this is a validation error
+      if (appError.type === 'validation') {
+        const validationResult = parseServerValidationErrors(error, 'listing');
+        setValidationErrors(validationResult);
+        
+        // Show toast with summary
+        toast.error('Please fix validation errors', {
+          description: `${validationResult.fieldErrors.length + validationResult.generalErrors.length} error(s) found`,
+        });
+      } else {
+        setApiError(appError);
+        setSubmitError(appError.message);
+        
+        // Show appropriate toast based on error type
+        if (appError.type === 'network') {
+          toast.error('Connection lost. Your draft has been saved.', {
+            description: 'You can retry when your connection is restored.',
+          });
+        } else if (appError.type === 'session') {
+          // Handle session expiry with draft restoration
+          handleSessionExpiry({
+            onSessionExpired: () => {
+              toast.error('Your session has expired. Please log in again.', {
+                description: 'Your draft has been saved and will be restored after login.',
+              });
+            },
+            onDraftSaved: () => {
+              console.log('Draft saved before session expiry redirect');
+            },
+          });
+        } else {
+          toast.error(appError.message);
+        }
+      }
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  // Handle retry for failed submissions
+  const handleRetry = async () => {
+    setRetryAttempt(prev => prev + 1);
+    await handleSubmit();
+  };
+
+  // Clear API error
+  const handleDismissError = () => {
+    setApiError(null);
+    setSubmitError(null);
+  };
+
+  // Handle validation error field click - navigate to step
+  const handleValidationFieldClick = (field: string, step?: number) => {
+    if (step !== undefined) {
+      store.goToStep(step);
+      setValidationErrors(null); // Clear errors after navigation
+    }
+  };
+
+  // Clear validation errors
+  const handleDismissValidationErrors = () => {
+    setValidationErrors(null);
   };
 
   // Get current step component
@@ -339,118 +461,75 @@ const ListingWizard: React.FC = () => {
     'Preview',
   ];
 
+  // Generate steps for progress indicator with error highlighting
+  const progressSteps = useMemo(() => {
+    const steps = generateSteps(stepTitles, store.currentStep, store.completedSteps);
+    
+    // Add error counts if validation errors exist
+    if (validationErrors && validationErrors.affectedSteps.length > 0) {
+      const errorsByStep = new Map<number, number>();
+      
+      validationErrors.fieldErrors.forEach(error => {
+        if (error.step !== undefined) {
+          errorsByStep.set(error.step, (errorsByStep.get(error.step) || 0) + 1);
+        }
+      });
+      
+      return updateStepsWithErrors(steps, errorsByStep);
+    }
+    
+    return steps;
+  }, [stepTitles, store.currentStep, store.completedSteps, validationErrors]);
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50 py-8">
       {/* Resume Draft Dialog */}
-      <Dialog open={showResumeDraftDialog} onOpenChange={setShowResumeDraftDialog}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-xl">
-              <FileText className="w-6 h-6 text-blue-600" />
-              Resume Draft Listing?
-            </DialogTitle>
-            <DialogDescription className="text-base pt-2">
-              You have an unfinished listing in progress. Would you like to continue where you left
-              off or start a new listing?
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="py-4">
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <div className="flex items-start gap-3">
-                <FileText className="w-5 h-5 text-blue-600 mt-0.5" />
-                <div>
-                  <p className="font-medium text-slate-800">Draft Details</p>
-                  <p className="text-sm text-slate-600 mt-1">
-                    Step {store.currentStep} of 8
-                    {store.propertyType &&
-                      ` • ${store.propertyType.charAt(0).toUpperCase() + store.propertyType.slice(1)}`}
-                    {store.action &&
-                      ` • ${store.action.charAt(0).toUpperCase() + store.action.slice(1)}`}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <DialogFooter className="gap-2 sm:gap-0">
-            <Button variant="outline" onClick={handleStartFresh} className="gap-2">
-              <Trash2 className="w-4 h-4" />
-              Start New
-            </Button>
-            <Button
-              onClick={handleResumeDraft}
-              className="gap-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
-            >
-              <FileText className="w-4 h-4" />
-              Resume Draft
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <DraftManager
+        open={showResumeDraftDialog}
+        onOpenChange={setShowResumeDraftDialog}
+        onResume={handleResumeDraft}
+        onStartFresh={handleStartFresh}
+        wizardType="listing"
+        draftData={{
+          currentStep: store.currentStep,
+          totalSteps: 8,
+          action: store.action,
+          propertyType: store.propertyType,
+          address: store.location?.address,
+          lastModified: lastSaved || undefined,
+        }}
+      />
 
       <div className="container mx-auto px-4 max-w-5xl">
         {/* Header */}
-        <div className="mb-8 text-center">
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-3">
-            Create New Listing
-          </h1>
-          <p className="text-gray-600 text-lg">Follow the steps to create your property listing</p>
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-4">
+            <div className="text-center flex-1">
+              <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-3">
+                Create New Listing
+              </h1>
+              <p className="text-gray-600 text-lg">Follow the steps to create your property listing</p>
+            </div>
+            {/* Auto-save status indicator */}
+            {store.currentStep > 1 && (
+              <div className="absolute top-8 right-8">
+                <SaveStatusIndicator
+                  lastSaved={lastSaved}
+                  isSaving={isAutoSaving}
+                  error={autoSaveError}
+                  variant="compact"
+                />
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Step Indicator */}
         <div className="mb-8">
-          <div className="flex items-center justify-between">
-            {stepTitles.map((title, index) => {
-              const stepNumber = index + 1;
-              const isCompleted = stepNumber < store.currentStep;
-              const isCurrent = stepNumber === store.currentStep;
-
-              return (
-                <React.Fragment key={stepNumber}>
-                  <div className="flex flex-col items-center">
-                    <div
-                      className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold text-sm transition-all ${
-                        isCompleted
-                          ? 'bg-green-500 text-white'
-                          : isCurrent
-                            ? 'bg-blue-600 text-white ring-4 ring-blue-100'
-                            : 'bg-gray-200 text-gray-500'
-                      }`}
-                    >
-                      {isCompleted ? (
-                        <svg
-                          className="w-5 h-5"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={3}
-                            d="M5 13l4 4L19 7"
-                          />
-                        </svg>
-                      ) : (
-                        stepNumber
-                      )}
-                    </div>
-                    <span
-                      className={`text-xs mt-2 text-center max-w-[80px] ${isCurrent ? 'font-semibold text-gray-900' : 'text-gray-500'}`}
-                    >
-                      {title}
-                    </span>
-                  </div>
-                  {stepNumber < 8 && (
-                    <div
-                      className={`flex-1 h-0.5 mx-2 ${isCompleted ? 'bg-green-500' : 'bg-gray-200'}`}
-                    />
-                  )}
-                </React.Fragment>
-              );
-            })}
-          </div>
+          <ProgressIndicator
+            steps={progressSteps}
+            onStepClick={(stepNumber) => store.goToStep(stepNumber)}
+          />
         </div>
 
         {/* Step Content */}
@@ -515,17 +594,36 @@ const ListingWizard: React.FC = () => {
           )}
         </div>
 
-        {/* Error Message */}
-        {submitError && (
-          <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
-            <p className="text-red-800">{submitError}</p>
+        {/* Validation Errors */}
+        {validationErrors && (validationErrors.fieldErrors.length > 0 || validationErrors.generalErrors.length > 0) && (
+          <div className="mt-4">
+            <ValidationErrorList
+              fieldErrors={validationErrors.fieldErrors}
+              generalErrors={validationErrors.generalErrors}
+              onFieldClick={handleValidationFieldClick}
+              onDismiss={handleDismissValidationErrors}
+            />
           </div>
         )}
 
-        {/* API Error */}
-        {createListingMutation.error && (
+        {/* Error Alert with Recovery */}
+        {apiError && !validationErrors && (
+          <div className="mt-4">
+            <ErrorAlert
+              type={apiError.type}
+              message={apiError.message}
+              retryable={apiError.isRecoverable}
+              onRetry={handleRetry}
+              onDismiss={handleDismissError}
+              show={true}
+            />
+          </div>
+        )}
+
+        {/* Legacy Error Message (fallback) */}
+        {submitError && !apiError && !validationErrors && (
           <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
-            <p className="text-red-800">Error: {createListingMutation.error.message}</p>
+            <p className="text-red-800">{submitError}</p>
           </div>
         )}
       </div>

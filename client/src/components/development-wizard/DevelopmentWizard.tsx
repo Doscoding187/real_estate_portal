@@ -1,5 +1,12 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useDevelopmentWizard } from '@/hooks/useDevelopmentWizard';
+import { useAutoSave } from '@/hooks/useAutoSave';
+import { SaveStatusIndicator } from '@/components/ui/SaveStatusIndicator';
+import { DraftManager } from '@/components/wizard/DraftManager';
+import { ProgressIndicator, generateSteps } from '@/components/wizard/ProgressIndicator';
+import { ErrorAlert } from '@/components/ui/ErrorAlert';
+import { parseError, type AppError } from '@/lib/errors/ErrorRecoveryStrategy';
+import { handleSessionExpiry, wasSessionExpired, clearSessionExpiryFlags } from '@/lib/auth/SessionExpiryHandler';
 import { Button } from '@/components/ui/button';
 import { useLocation } from 'wouter';
 import { 
@@ -12,7 +19,8 @@ import {
   AlertDialogHeader, 
   AlertDialogTitle 
 } from '@/components/ui/alert-dialog';
-import { ArrowLeft, ArrowRight, Home, Check } from 'lucide-react';
+import { ArrowLeft, ArrowRight } from 'lucide-react';
+import { toast } from 'sonner';
 import React from 'react';
 
 // Import steps
@@ -23,19 +31,92 @@ import { MediaUploadStep } from './steps/MediaUploadStep';
 import { DeveloperInfoStep } from './steps/DeveloperInfoStep';
 import { PreviewStep } from './steps/PreviewStep';
 
-const steps = [
-  { id: 0, title: 'Basic Details' },
-  { id: 1, title: 'Unit Types' },
-  { id: 2, title: 'Highlights' },
-  { id: 3, title: 'Media' },
-  { id: 4, title: 'Developer' },
-  { id: 5, title: 'Preview' },
+const stepTitles = [
+  'Basic Details',
+  'Unit Types',
+  'Highlights',
+  'Media',
+  'Developer',
+  'Preview',
 ];
 
 export function DevelopmentWizard() {
   const [, setLocation] = useLocation();
   const [showExitDialog, setShowExitDialog] = useState(false);
-  const { currentStep, goToStep, nextStep, previousStep, reset } = useDevelopmentWizard();
+  const [showResumeDraftDialog, setShowResumeDraftDialog] = useState(false);
+  const [wizardKey, setWizardKey] = useState(0); // Force re-render on reset
+  const [apiError, setApiError] = useState<AppError | null>(null);
+  const store = useDevelopmentWizard();
+  const { currentStep, goToStep, nextStep, previousStep, reset } = store;
+
+  // Auto-save hook - saves draft to localStorage automatically
+  const { lastSaved, isSaving: isAutoSaving, error: autoSaveError } = useAutoSave(
+    {
+      developmentName: store.developmentName,
+      address: store.address,
+      city: store.city,
+      province: store.province,
+      suburb: store.suburb,
+      postalCode: store.postalCode,
+      latitude: store.latitude,
+      longitude: store.longitude,
+      status: store.status,
+      unitTypes: store.unitTypes,
+      description: store.description,
+      amenities: store.amenities,
+      highlights: store.highlights,
+      completionDate: store.completionDate,
+      totalUnits: store.totalUnits,
+      media: store.media,
+      developerName: store.developerName,
+      contactDetails: store.contactDetails,
+      currentStep: store.currentStep,
+    },
+    {
+      storageKey: 'development-wizard-storage',
+      debounceMs: 2000,
+      enabled: currentStep > 0, // Only auto-save after first step
+      onError: (error) => {
+        console.error('Auto-save error:', error);
+        toast.error('Failed to auto-save draft');
+      },
+    }
+  );
+
+  // Check for session restoration after login
+  useEffect(() => {
+    if (wasSessionExpired()) {
+      console.log('Session was expired, draft should be restored automatically');
+      clearSessionExpiryFlags();
+      
+      // Show a toast to inform user their session was restored
+      toast.success('Welcome back! Your draft has been restored.', {
+        description: 'You can continue where you left off.',
+      });
+    }
+  }, []);
+
+  // Check for draft on mount and show resume dialog
+  useEffect(() => {
+    // Check if there's a draft (currentStep > 0 or has developmentName)
+    const hasDraft = currentStep > 0 || store.developmentName;
+
+    if (hasDraft) {
+      setShowResumeDraftDialog(true);
+    }
+  }, []); // Run only on mount
+
+  // Handle resume draft decision
+  const handleResumeDraft = () => {
+    setShowResumeDraftDialog(false);
+    // Keep existing state - user continues where they left off
+  };
+
+  const handleStartFresh = () => {
+    setShowResumeDraftDialog(false);
+    reset();
+    setWizardKey(prev => prev + 1); // Force re-render
+  };
 
   const handleExit = () => {
     setShowExitDialog(true);
@@ -45,6 +126,48 @@ export function DevelopmentWizard() {
     reset();
     setLocation('/');
   };
+
+  // Handle API errors
+  const handleApiError = (error: any, operation: string) => {
+    const appError = parseError(error, {
+      type: 'network',
+      context: { operation }
+    });
+    setApiError(appError);
+
+    // Show appropriate toast
+    if (appError.type === 'network') {
+      toast.error('Connection lost. Your draft has been saved.', {
+        description: 'You can retry when your connection is restored.',
+      });
+    } else if (appError.type === 'session') {
+      // Handle session expiry with draft restoration
+      handleSessionExpiry({
+        onSessionExpired: () => {
+          toast.error('Your session has expired. Please log in again.', {
+            description: 'Your draft has been saved and will be restored after login.',
+          });
+        },
+        onDraftSaved: () => {
+          console.log('Draft saved before session expiry redirect');
+        },
+      });
+    } else {
+      toast.error(appError.message);
+    }
+  };
+
+  // Clear API error
+  const handleDismissError = () => {
+    setApiError(null);
+  };
+
+  // Generate steps for progress indicator (convert 0-indexed to 1-indexed)
+  const progressSteps = generateSteps(
+    stepTitles,
+    currentStep + 1, // Convert to 1-indexed
+    [] // Development wizard doesn't track completed steps separately
+  );
 
   const renderStep = () => {
     switch (currentStep) {
@@ -67,6 +190,22 @@ export function DevelopmentWizard() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50 py-8">
+      {/* Resume Draft Dialog */}
+      <DraftManager
+        open={showResumeDraftDialog}
+        onOpenChange={setShowResumeDraftDialog}
+        onResume={handleResumeDraft}
+        onStartFresh={handleStartFresh}
+        wizardType="development"
+        draftData={{
+          currentStep: currentStep + 1, // Display as 1-indexed
+          totalSteps: 6,
+          developmentName: store.developmentName,
+          address: store.address,
+          lastModified: lastSaved || undefined,
+        }}
+      />
+
       <div className="container mx-auto px-4 max-w-5xl">
         {/* Header */}
         <div className="mb-8 text-center relative">
@@ -77,6 +216,17 @@ export function DevelopmentWizard() {
           >
             Exit
           </Button>
+          {/* Auto-save status indicator */}
+          {currentStep > 0 && (
+            <div className="absolute top-0 left-0">
+              <SaveStatusIndicator
+                lastSaved={lastSaved}
+                isSaving={isAutoSaving}
+                error={autoSaveError}
+                variant="compact"
+              />
+            </div>
+          )}
           <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-3">
             List a Development
           </h1>
@@ -85,51 +235,17 @@ export function DevelopmentWizard() {
 
         {/* Step Indicator */}
         <div className="mb-8">
-          <div className="flex items-center justify-between">
-            {steps.map((step, index) => {
-              const stepNumber = index + 1;
-              const isCompleted = index < currentStep;
-              const isCurrent = index === currentStep;
-
-              return (
-                <React.Fragment key={step.id}>
-                  <div className="flex flex-col items-center">
-                    <button
-                      onClick={() => goToStep(index)}
-                      disabled={index > currentStep}
-                      className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold text-sm transition-all ${
-                        isCompleted
-                          ? 'bg-green-500 text-white cursor-pointer'
-                          : isCurrent
-                            ? 'bg-blue-600 text-white ring-4 ring-blue-100'
-                            : 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                      }`}
-                    >
-                      {isCompleted ? (
-                        <Check className="w-5 h-5" />
-                      ) : (
-                        stepNumber
-                      )}
-                    </button>
-                    <span
-                      className={`text-xs mt-2 text-center max-w-[80px] ${isCurrent ? 'font-semibold text-gray-900' : 'text-gray-500'}`}
-                    >
-                      {step.title}
-                    </span>
-                  </div>
-                  {index < steps.length - 1 && (
-                    <div
-                      className={`flex-1 h-0.5 mx-2 ${isCompleted ? 'bg-green-500' : 'bg-gray-200'}`}
-                    />
-                  )}
-                </React.Fragment>
-              );
-            })}
-          </div>
+          <ProgressIndicator
+            steps={progressSteps}
+            onStepClick={(stepNumber) => goToStep(stepNumber - 1)} // Convert back to 0-indexed
+          />
         </div>
 
         {/* Step Content */}
-        <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-8 mb-8">
+        <div
+          key={wizardKey}
+          className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-8 mb-8"
+        >
           {renderStep()}
         </div>
 
@@ -145,7 +261,7 @@ export function DevelopmentWizard() {
             Previous
           </Button>
 
-          {currentStep < steps.length - 1 ? (
+          {currentStep < stepTitles.length - 1 ? (
             <Button 
               onClick={nextStep} 
               className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 shadow-lg gap-2"
@@ -164,6 +280,19 @@ export function DevelopmentWizard() {
              null
           )}
         </div>
+
+        {/* Error Alert with Recovery */}
+        {apiError && (
+          <div className="mt-4">
+            <ErrorAlert
+              type={apiError.type}
+              message={apiError.message}
+              retryable={apiError.isRecoverable}
+              onDismiss={handleDismissError}
+              show={true}
+            />
+          </div>
+        )}
       </div>
 
       {/* Exit Confirmation Dialog */}

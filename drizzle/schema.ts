@@ -561,14 +561,64 @@ export const developers = mysqlTable("developers", {
 	rating: int(),
 	reviewCount: int(),
 	isVerified: int().notNull(),
+	// Developer approval workflow
+	userId: int().notNull().references(() => users.id, { onDelete: "cascade" }),
+	status: mysqlEnum(['pending','approved','rejected']).default('pending').notNull(),
+	rejectionReason: text(),
+	// Audit trail
+	approvedBy: int().references(() => users.id, { onDelete: "set null" }),
+	approvedAt: timestamp({ mode: 'string' }),
+	rejectedBy: int().references(() => users.id, { onDelete: "set null" }),
+	rejectedAt: timestamp({ mode: 'string' }),
+	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+});
+
+export const developerSubscriptions = mysqlTable("developer_subscriptions", {
+	id: int().autoincrement().notNull().primaryKey(),
+	developerId: int().notNull().references(() => developers.id, { onDelete: "cascade" }),
+	planId: int().references(() => plans.id, { onDelete: "set null" }),
+	tier: mysqlEnum(['free_trial', 'basic', 'premium']).default('free_trial').notNull(),
+	status: mysqlEnum(['active', 'cancelled', 'expired']).default('active').notNull(),
+	trialEndsAt: timestamp({ mode: 'string' }),
+	currentPeriodStart: timestamp({ mode: 'string' }),
+	currentPeriodEnd: timestamp({ mode: 'string' }),
+	stripeSubscriptionId: varchar({ length: 100 }),
+	stripeCustomerId: varchar({ length: 100 }),
+	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+});
+
+export const developerSubscriptionLimits = mysqlTable("developer_subscription_limits", {
+	id: int().autoincrement().notNull().primaryKey(),
+	subscriptionId: int().notNull().references(() => developerSubscriptions.id, { onDelete: "cascade" }),
+	maxDevelopments: int().default(1).notNull(),
+	maxLeadsPerMonth: int().default(50).notNull(),
+	maxTeamMembers: int().default(1).notNull(),
+	analyticsRetentionDays: int().default(30).notNull(),
+	crmIntegrationEnabled: int().default(0).notNull(),
+	advancedAnalyticsEnabled: int().default(0).notNull(),
+	bondIntegrationEnabled: int().default(0).notNull(),
+	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+});
+
+export const developerSubscriptionUsage = mysqlTable("developer_subscription_usage", {
+	id: int().autoincrement().notNull().primaryKey(),
+	subscriptionId: int().notNull().references(() => developerSubscriptions.id, { onDelete: "cascade" }),
+	developmentsCount: int().default(0).notNull(),
+	leadsThisMonth: int().default(0).notNull(),
+	teamMembersCount: int().default(0).notNull(),
+	lastResetAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
 	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
 	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
 });
 
 export const developments = mysqlTable("developments", {
-	id: int().autoincrement().notNull(),
+	id: int().autoincrement().notNull().primaryKey(),
 	developerId: int().references(() => developers.id, { onDelete: "cascade" } ),
 	name: varchar({ length: 255 }).notNull(),
+	slug: varchar({ length: 255 }).notNull().unique(),
 	description: text(),
 	developmentType: mysqlEnum(['residential','commercial','mixed_use','estate','complex']).notNull(),
 	status: mysqlEnum(['planning','under_construction','completed','coming_soon']).default('planning').notNull(),
@@ -581,12 +631,55 @@ export const developments = mysqlTable("developments", {
 	availableUnits: int(),
 	priceFrom: int(),
 	priceTo: int(),
-	amenities: text(),
-	images: text(),
-	videos: text(),
+	amenities: text(), // JSON array
+	images: text(), // JSON array of S3 URLs
+	videos: text(), // JSON array of S3 URLs
+	floorPlans: text(), // JSON array of S3 URLs
+	brochures: text(), // JSON array of S3 URLs
 	completionDate: timestamp({ mode: 'string' }),
-	isFeatured: int().notNull(),
-	views: int().notNull(),
+	isFeatured: int().default(0).notNull(),
+	isPublished: int().default(0).notNull(),
+	views: int().default(0).notNull(),
+	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+	publishedAt: timestamp({ mode: 'string' }),
+});
+
+export const developmentPhases = mysqlTable("development_phases", {
+	id: int().autoincrement().notNull().primaryKey(),
+	developmentId: int().notNull().references(() => developments.id, { onDelete: "cascade" }),
+	name: varchar({ length: 255 }).notNull(),
+	phaseNumber: int().notNull(),
+	description: text(),
+	status: mysqlEnum(['planning', 'pre_launch', 'selling', 'sold_out', 'completed']).default('planning').notNull(),
+	totalUnits: int().default(0).notNull(),
+	availableUnits: int().default(0).notNull(),
+	priceFrom: int(),
+	priceTo: int(),
+	launchDate: timestamp({ mode: 'string' }),
+	completionDate: timestamp({ mode: 'string' }),
+	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+});
+
+export const developmentUnits = mysqlTable("development_units", {
+	id: int().autoincrement().notNull().primaryKey(),
+	developmentId: int().notNull().references(() => developments.id, { onDelete: "cascade" }),
+	phaseId: int().references(() => developmentPhases.id, { onDelete: "set null" }),
+	unitNumber: varchar({ length: 100 }).notNull(),
+	unitType: mysqlEnum(['studio', '1bed', '2bed', '3bed', '4bed+', 'penthouse', 'townhouse', 'house']).notNull(),
+	bedrooms: int(),
+	bathrooms: decimal({ precision: 3, scale: 1 }),
+	size: decimal({ precision: 10, scale: 2 }), // square meters
+	price: decimal({ precision: 12, scale: 2 }).notNull(),
+	floorPlan: text(), // S3 URL
+	floor: int(),
+	facing: varchar({ length: 50 }),
+	features: text(), // JSON array
+	status: mysqlEnum(['available', 'reserved', 'sold']).default('available').notNull(),
+	reservedAt: timestamp({ mode: 'string' }),
+	reservedBy: int(), // leadId
+	soldAt: timestamp({ mode: 'string' }),
 	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
 	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
 });
@@ -815,6 +908,20 @@ export const leads = mysqlTable("leads", {
 	leadType: mysqlEnum(['inquiry','viewing_request','offer','callback']).default('inquiry').notNull(),
 	status: mysqlEnum(['new','contacted','qualified','converted','closed','viewing_scheduled','offer_sent','lost']).default('new').notNull(),
 	source: varchar({ length: 100 }),
+	// Affordability and qualification fields (Requirements 4.3, 5.3)
+	affordabilityData: json('affordability_data'),
+	qualificationStatus: mysqlEnum('qualification_status', ['qualified', 'partially_qualified', 'unqualified', 'pending']).default('pending'),
+	qualificationScore: int('qualification_score').default(0),
+	leadSource: varchar('lead_source', { length: 100 }),
+	referrerUrl: text('referrer_url'),
+	utmSource: varchar('utm_source', { length: 100 }),
+	utmMedium: varchar('utm_medium', { length: 100 }),
+	utmCampaign: varchar('utm_campaign', { length: 100 }),
+	funnelStage: mysqlEnum('funnel_stage', ['interest', 'affordability', 'qualification', 'viewing', 'offer', 'bond', 'sale']).default('interest'),
+	assignedTo: int('assigned_to'),
+	assignedAt: timestamp('assigned_at', { mode: 'string' }),
+	convertedAt: timestamp('converted_at', { mode: 'string' }),
+	lostReason: text('lost_reason'),
 	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
 	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
 	nextFollowUp: timestamp({ mode: 'string' }),

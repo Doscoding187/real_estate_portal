@@ -42,6 +42,7 @@ import {
   prospectFavorites,
   scheduledViewings,
   recentlyViewed,
+  developers,
 } from '../drizzle/schema';
 import { ENV } from './_core/env';
 import { type InferSelectModel, type InferInsertModel } from 'drizzle-orm';
@@ -470,15 +471,15 @@ export async function searchProperties(params: PropertySearchParams) {
   // Build WHERE conditions
   if (params.city) conditions.push(like(properties.city, `%${params.city}%`));
   if (params.province) conditions.push(like(properties.province, `%${params.province}%`));
-  if (params.propertyType) conditions.push(eq(properties.propertyType, params.propertyType));
-  if (params.listingType) conditions.push(eq(properties.listingType, params.listingType));
+  if (params.propertyType) conditions.push(eq(properties.propertyType, params.propertyType as any));
+  if (params.listingType) conditions.push(eq(properties.listingType, params.listingType as any));
   if (params.minPrice) conditions.push(gte(properties.price, params.minPrice));
   if (params.maxPrice) conditions.push(lte(properties.price, params.maxPrice));
   if (params.minBedrooms) conditions.push(gte(properties.bedrooms, params.minBedrooms));
   if (params.maxBedrooms) conditions.push(lte(properties.bedrooms, params.maxBedrooms));
   if (params.minArea) conditions.push(gte(properties.area, params.minArea));
   if (params.maxArea) conditions.push(lte(properties.area, params.maxArea));
-  if (params.status) conditions.push(eq(properties.status, params.status));
+  if (params.status) conditions.push(eq(properties.status, params.status as any));
 
   // Bounding box search
   if (params.minLat && params.maxLat && params.minLng && params.maxLng) {
@@ -584,7 +585,7 @@ export async function getFeaturedProperties(limit: number = 6) {
   return await db
     .select()
     .from(properties)
-    .where(and(eq(properties.featured, 1), eq(properties.status, 'available')))
+    .where(and(eq(properties.featured, 1), eq(properties.status, 'available' as any)))
     .orderBy(desc(properties.createdAt))
     .limit(limit);
 }
@@ -1184,7 +1185,7 @@ export async function getRecommendedProperties(prospect: Prospect, limit: number
 
   // Build query conditions based on prospect preferences and affordability
   let conditions = [
-    eq(properties.status, 'available'),
+    eq(properties.status, 'available' as any),
     lte(properties.price, prospect.affordabilityMax),
   ];
 
@@ -1216,7 +1217,6 @@ export async function getAgencyPerformanceData(agencyId: number, months: number 
 
   const { properties, leads } = require('../drizzle/schema');
 
-  const performanceData = [];
   const currentDate = new Date();
 
   for (let i = months - 1; i >= 0; i--) {
@@ -1286,7 +1286,7 @@ export async function getAgencyRecentListings(agencyId: number, limit: number = 
       id: properties.id,
       title: properties.title,
       price: properties.price,
-      status: properties.status,
+      status: properties.status as any,
       city: properties.city,
       createdAt: properties.createdAt,
       ownerId: properties.ownerId,
@@ -1351,7 +1351,7 @@ export async function getLeadConversionStats(agencyId: number, months: number = 
       and(
         eq(leads.agencyId, agencyId),
         sql`${leads.createdAt} >= ${startDate}`,
-        or(eq(leads.status, 'converted'), eq(leads.status, 'closed')),
+        or(eq(leads.status, 'converted' as any), eq(leads.status, 'closed' as any)),
       ),
     );
 
@@ -1406,7 +1406,7 @@ export async function getAgencyCommissionStats(agencyId: number, months: number 
     .where(
       and(
         eq(agents.agencyId, agencyId),
-        eq(commissions.status, 'paid'),
+        eq(commissions.status, 'paid' as any),
         sql`${commissions.createdAt} >= ${startDate}`,
       ),
     );
@@ -1419,7 +1419,7 @@ export async function getAgencyCommissionStats(agencyId: number, months: number 
     .where(
       and(
         eq(agents.agencyId, agencyId),
-        eq(commissions.status, 'pending'),
+        eq(commissions.status, 'pending' as any),
         sql`${commissions.createdAt} >= ${startDate}`,
       ),
     );
@@ -1507,7 +1507,7 @@ export async function getAgentPerformanceLeaderboard(agencyId: number, months: n
         .where(
           and(
             eq(properties.agentId, agent.id),
-            eq(properties.status, 'sold'),
+            eq(properties.status, 'sold' as any),
             sql`${properties.updatedAt} >= ${startDate}`,
           ),
         );
@@ -1645,15 +1645,15 @@ export async function getListingStats() {
   const [pending] = await db
     .select({ count: sql<number>`count(*)` })
     .from(properties)
-    .where(eq(properties.status, 'pending'));
+    .where(eq(properties.status, 'pending' as any));
   const [approved] = await db
     .select({ count: sql<number>`count(*)` })
     .from(properties)
-    .where(eq(properties.status, 'available'));
+    .where(eq(properties.status, 'available' as any));
   const [rejected] = await db
     .select({ count: sql<number>`count(*)` })
     .from(properties)
-    .where(eq(properties.status, 'archived')); // Assuming archived means rejected
+    .where(eq(properties.status, 'archived' as any)); // Assuming archived means rejected
   const [total] = await db.select({ count: sql<number>`count(*)` }).from(properties);
 
   return {
@@ -1673,19 +1673,19 @@ export async function getSubscriptionStats() {
   const [free] = await db
     .select({ count: sql<number>`count(*)` })
     .from(agencies)
-    .where(eq(agencies.subscriptionPlan, 'free'));
+    .where(eq(agencies.subscriptionPlan, 'free' as any));
   const [basic] = await db
     .select({ count: sql<number>`count(*)` })
     .from(agencies)
-    .where(eq(agencies.subscriptionPlan, 'basic'));
+    .where(eq(agencies.subscriptionPlan, 'basic' as any));
   const [premium] = await db
     .select({ count: sql<number>`count(*)` })
     .from(agencies)
-    .where(eq(agencies.subscriptionPlan, 'premium'));
+    .where(eq(agencies.subscriptionPlan, 'premium' as any));
   const [enterprise] = await db
     .select({ count: sql<number>`count(*)` })
     .from(agencies)
-    .where(eq(agencies.subscriptionPlan, 'enterprise'));
+    .where(eq(agencies.subscriptionPlan, 'enterprise' as any));
   const [total] = await db.select({ count: sql<number>`count(*)` }).from(agencies);
 
   return {
@@ -1864,7 +1864,7 @@ export async function getUserListings(
   let query = db.select().from(listings).where(eq(listings.ownerId, userId));
 
   if (status) {
-    query = query.where(eq(listings.status, status));
+    query = query.where(eq(listings.status, status as any));
   }
 
   const listingsData = await query
@@ -1965,8 +1965,8 @@ export async function submitListingForReview(listingId: number) {
   await db
     .update(listings)
     .set({
-      status: 'pending_review',
-      approvalStatus: 'pending',
+      status: 'pending_review' as any,
+      approvalStatus: 'pending' as any,
       updatedAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
     })
     .where(eq(listings.id, listingId));
@@ -1980,8 +1980,8 @@ export async function submitListingForReview(listingId: number) {
     listingId,
     submittedBy: listing.ownerId,
     submittedAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
-    status: 'pending',
-    priority: 'normal',
+    status: 'pending' as any,
+    priority: 'normal' as any,
   });
 }
 
@@ -2051,7 +2051,7 @@ export async function getApprovalQueue(status?: string) {
     .leftJoin(listings, eq(listingApprovalQueue.listingId, listings.id));
 
   if (status) {
-    query = query.where(eq(listingApprovalQueue.status, status));
+    query = query.where(eq(listingApprovalQueue.status, status as any));
   }
 
   return await query.orderBy(desc(listingApprovalQueue.submittedAt));
@@ -2134,7 +2134,7 @@ export async function approveListing(listingId: number, reviewedBy: number, note
     locationText: `${listing.city}, ${listing.province}`,
     placeId: listing.placeId,
     amenities: amenitiesString,
-    status: 'available', // Make it live immediately
+    status: 'available' as any, // Make it live immediately
     featured: listing.featured || 0,
     views: 0,
     enquiries: 0,
@@ -2182,8 +2182,8 @@ export async function approveListing(listingId: number, reviewedBy: number, note
   await db
     .update(listings)
     .set({
-      status: 'published',
-      approvalStatus: 'approved',
+      status: 'published' as any,
+      approvalStatus: 'approved' as any,
       publishedAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
       updatedAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
     })
@@ -2193,7 +2193,7 @@ export async function approveListing(listingId: number, reviewedBy: number, note
   await db
     .update(listingApprovalQueue)
     .set({
-      status: 'approved',
+      status: 'approved' as any,
       reviewedBy,
       reviewedAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
       reviewNotes: notes,
@@ -2212,8 +2212,8 @@ export async function rejectListing(listingId: number, reviewedBy: number, reaso
   await db
     .update(listings)
     .set({
-      status: 'rejected',
-      approvalStatus: 'rejected',
+      status: 'rejected' as any,
+      approvalStatus: 'rejected' as any,
       updatedAt: new Date(),
     })
     .where(eq(listings.id, listingId));
@@ -2222,7 +2222,7 @@ export async function rejectListing(listingId: number, reviewedBy: number, reaso
   await db
     .update(listingApprovalQueue)
     .set({
-      status: 'rejected',
+      status: 'rejected' as any,
       reviewedBy,
       reviewedAt: new Date(),
       rejectionReason: reason,
@@ -2239,7 +2239,7 @@ export async function archiveProperty(id: number) {
   if (!db) throw new Error('Database not available');
   await db
     .update(properties)
-    .set({ status: 'archived', updatedAt: new Date().toISOString().slice(0, 19).replace('T', ' ') })
+    .set({ status: 'archived' as any, updatedAt: new Date().toISOString().slice(0, 19).replace('T', ' ') })
     .where(eq(properties.id, id));
 }
 
@@ -2277,7 +2277,7 @@ export async function archiveListing(id: number) {
   if (!db) throw new Error('Database not available');
   await db
     .update(listings)
-    .set({ status: 'archived', updatedAt: new Date().toISOString().slice(0, 19).replace('T', ' ') })
+    .set({ status: 'archived' as any, updatedAt: new Date().toISOString().slice(0, 19).replace('T', ' ') })
     .where(eq(listings.id, id));
 }
 
@@ -2308,7 +2308,7 @@ export async function createAgentProfile(data: {
     lastName: data.displayName.split(' ').slice(1).join(' ') || '',
     isVerified: 0,
     isFeatured: 0,
-    status: 'pending', // Default to pending for admin approval
+    status: 'pending' as any, // Default to pending for admin approval
     createdAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
     updatedAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
   });
@@ -2404,14 +2404,14 @@ export async function searchListings(params: ListingSearchParams) {
   const conditions: SQL[] = [];
 
   // Only show approved/published listings
-  conditions.push(eq(listings.status, 'approved'));
+  conditions.push(eq(listings.status, 'approved' as any));
 
   // Location filters
   if (params.city) conditions.push(like(listings.city, `%${params.city}%`));
   if (params.province) conditions.push(like(listings.province, `%${params.province}%`));
 
   // Property type filter
-  if (params.propertyType) conditions.push(eq(listings.propertyType, params.propertyType));
+  if (params.propertyType) conditions.push(eq(listings.propertyType, params.propertyType as any));
 
   // Listing type filter (map to action)
   if (params.listingType) {
@@ -2433,9 +2433,9 @@ export async function searchListings(params: ListingSearchParams) {
     if (params.minPrice) {
       priceConditions.push(
         or(
-          gte(listings.askingPrice, params.minPrice),
-          gte(listings.monthlyRent, params.minPrice),
-          gte(listings.startingBid, params.minPrice)
+          gte(listings.askingPrice, params.minPrice.toString()),
+          gte(listings.monthlyRent, params.minPrice.toString()),
+          gte(listings.startingBid, params.minPrice.toString())
         )!
       );
     }
@@ -2443,9 +2443,9 @@ export async function searchListings(params: ListingSearchParams) {
     if (params.maxPrice) {
       priceConditions.push(
         or(
-          lte(listings.askingPrice, params.maxPrice),
-          lte(listings.monthlyRent, params.maxPrice),
-          lte(listings.startingBid, params.maxPrice)
+          lte(listings.askingPrice, params.maxPrice.toString()),
+          lte(listings.monthlyRent, params.maxPrice.toString()),
+          lte(listings.startingBid, params.maxPrice.toString())
         )!
       );
     }
@@ -2536,7 +2536,7 @@ export async function getFeaturedListings(limit: number = 6) {
     .from(listings)
     .where(and(
       eq(listings.featured, 1),
-      eq(listings.status, 'approved')
+      eq(listings.status, 'approved' as any)
     ))
     .orderBy(desc(listings.createdAt))
     .limit(limit);
@@ -2555,4 +2555,212 @@ export async function getFeaturedListings(limit: number = 6) {
   );
 
   return listingsWithMedia;
+}
+
+// ==================== DEVELOPER FUNCTIONS ====================
+
+/**
+ * Create developer profile
+ */
+export async function createDeveloper(data: {
+  name: string;
+  description?: string;
+  logo?: string | null;
+  website?: string | null;
+  email: string;
+  phone?: string | null;
+  address?: string | null;
+  city: string;
+  province: string;
+  category: 'residential' | 'commercial' | 'mixed_use' | 'industrial';
+  establishedYear?: number | null;
+  totalProjects?: number;
+  userId: number;
+  status?: 'pending' | 'approved' | 'rejected';
+  isVerified?: number;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+
+  const [result] = await db.insert(developers).values({
+    ...data,
+    isVerified: data.isVerified ?? 0,
+    status: data.status ?? 'pending',
+    totalProjects: data.totalProjects ?? 0,
+    rating: 0,
+    reviewCount: 0,
+  });
+
+  return result.insertId;
+}
+
+/**
+ * Get developer by user ID
+ */
+export async function getDeveloperByUserId(userId: number) {
+  const db = await getDb();
+  if (!db) return null;
+
+  const [developer] = await db
+    .select()
+    .from(developers)
+    .where(eq(developers.userId, userId))
+    .limit(1);
+
+  return developer || null;
+}
+
+/**
+ * Get developer by ID
+ */
+export async function getDeveloperById(id: number) {
+  const db = await getDb();
+  if (!db) return null;
+
+  const [developer] = await db
+    .select()
+    .from(developers)
+    .where(eq(developers.id, id))
+    .limit(1);
+
+  return developer || null;
+}
+
+/**
+ * Update developer profile
+ */
+export async function updateDeveloper(
+  id: number,
+  data: Partial<{
+    name: string;
+    description: string;
+    logo: string | null;
+    website: string | null;
+    email: string;
+    phone: string | null;
+    address: string | null;
+    city: string;
+    province: string;
+    category: 'residential' | 'commercial' | 'mixed_use' | 'industrial';
+    establishedYear: number | null;
+    totalProjects: number;
+  }>
+) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+
+  await db
+    .update(developers)
+    .set({
+      ...data,
+      updatedAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
+    })
+    .where(eq(developers.id, id));
+
+  return true;
+}
+
+/**
+ * List developers with filters
+ */
+export async function listDevelopers(filters: {
+  category?: string;
+  city?: string;
+  province?: string;
+  isVerified?: number;
+  limit?: number;
+  offset?: number;
+}) {
+  const db = await getDb();
+  if (!db) return [];
+
+  const conditions: SQL[] = [eq(developers.status, 'approved')];
+
+  if (filters.category) {
+    conditions.push(eq(developers.category, filters.category as any));
+  }
+  if (filters.city) {
+    conditions.push(like(developers.city, `%${filters.city}%`));
+  }
+  if (filters.province) {
+    conditions.push(like(developers.province, `%${filters.province}%`));
+  }
+  if (typeof filters.isVerified !== 'undefined') {
+    conditions.push(eq(developers.isVerified, filters.isVerified));
+  }
+
+  let query = db
+    .select()
+    .from(developers)
+    .where(and(...conditions))
+    .orderBy(desc(developers.createdAt));
+
+  if (filters.limit) {
+    query = query.limit(filters.limit) as any;
+  }
+  if (filters.offset) {
+    query = query.offset(filters.offset) as any;
+  }
+
+  return await query;
+}
+
+/**
+ * Admin: List pending developers
+ */
+export async function listPendingDevelopers() {
+  const db = await getDb();
+  if (!db) return [];
+
+  return await db
+    .select()
+    .from(developers)
+    .where(eq(developers.status, 'pending'))
+    .orderBy(desc(developers.createdAt));
+}
+
+/**
+ * Admin: Approve developer
+ */
+export async function approveDeveloper(id: number, approvedBy: number) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+
+  await db
+    .update(developers)
+    .set({
+      isVerified: 1,
+      status: 'approved',
+      approvedBy,
+      approvedAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
+      updatedAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
+    })
+    .where(eq(developers.id, id));
+
+  return true;
+}
+
+/**
+ * Admin: Reject developer
+ */
+export async function rejectDeveloper(
+  id: number,
+  rejectedBy: number,
+  reason: string
+) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+
+  await db
+    .update(developers)
+    .set({
+      status: 'rejected',
+      rejectionReason: reason,
+      rejectedBy,
+      rejectedAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
+      updatedAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
+    })
+    .where(eq(developers.id, id));
+
+  return true;
 }

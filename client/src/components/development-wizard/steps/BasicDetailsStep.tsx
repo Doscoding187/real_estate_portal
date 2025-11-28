@@ -4,6 +4,8 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card } from '@/components/ui/card';
 import { Building2, MapPin, Info, Star } from 'lucide-react';
+import { useFieldValidation } from '@/hooks/useFieldValidation';
+import { InlineError } from '@/components/ui/InlineError';
 
 export function BasicDetailsStep() {
   const {
@@ -25,6 +27,40 @@ export function BasicDetailsStep() {
     setRating,
   } = useDevelopmentWizard();
 
+  // Validation context
+  const validationContext = {
+    currentStep: 0,
+  };
+
+  // Field validation
+  const nameValidation = useFieldValidation({
+    field: 'developmentName',
+    value: developmentName,
+    context: validationContext,
+    trigger: 'blur',
+  });
+
+  const addressValidation = useFieldValidation({
+    field: 'address',
+    value: address,
+    context: validationContext,
+    trigger: 'blur',
+  });
+
+  const cityValidation = useFieldValidation({
+    field: 'city',
+    value: city,
+    context: validationContext,
+    trigger: 'blur',
+  });
+
+  const provinceValidation = useFieldValidation({
+    field: 'province',
+    value: province,
+    context: validationContext,
+    trigger: 'blur',
+  });
+
   return (
     <div className="space-y-6">
       {/* Development Name & Status */}
@@ -41,10 +77,21 @@ export function BasicDetailsStep() {
             </Label>
             <Input
               id="developmentName"
-              placeholder="e.g., Eye of Africa, Waterfall Estate"
+              placeholder="e.g., Eye of Africa, Waterfall Estate (minimum 5 characters)"
               value={developmentName}
-              onChange={(e) => setDevelopmentName(e.target.value)}
+              onChange={(e) => {
+                setDevelopmentName(e.target.value);
+                nameValidation.clearError();
+              }}
+              onBlur={nameValidation.onBlur}
               className="mt-1"
+              aria-invalid={!!nameValidation.error}
+              aria-describedby={nameValidation.error ? 'developmentName-error' : undefined}
+            />
+            <InlineError
+              error={nameValidation.error}
+              show={!!nameValidation.error}
+              size="sm"
             />
           </div>
 
@@ -107,8 +154,18 @@ export function BasicDetailsStep() {
               id="address"
               placeholder="Enter street address"
               value={address}
-              onChange={(e) => setAddress(e.target.value)}
+              onChange={(e) => {
+                setAddress(e.target.value);
+                addressValidation.clearError();
+              }}
+              onBlur={addressValidation.onBlur}
               className="mt-1"
+              aria-invalid={!!addressValidation.error}
+            />
+            <InlineError
+              error={addressValidation.error}
+              show={!!addressValidation.error}
+              size="sm"
             />
           </div>
 
@@ -132,8 +189,18 @@ export function BasicDetailsStep() {
                 id="city"
                 placeholder="e.g., Johannesburg"
                 value={city}
-                onChange={(e) => setCity(e.target.value)}
+                onChange={(e) => {
+                  setCity(e.target.value);
+                  cityValidation.clearError();
+                }}
+                onBlur={cityValidation.onBlur}
                 className="mt-1"
+                aria-invalid={!!cityValidation.error}
+              />
+              <InlineError
+                error={cityValidation.error}
+                show={!!cityValidation.error}
+                size="sm"
               />
             </div>
 
@@ -141,8 +208,18 @@ export function BasicDetailsStep() {
               <Label htmlFor="province" className="text-slate-700">
                 Province <span className="text-red-500">*</span>
               </Label>
-              <Select value={province} onValueChange={setProvince}>
-                <SelectTrigger id="province" className="mt-1">
+              <Select
+                value={province}
+                onValueChange={(value) => {
+                  setProvince(value);
+                  provinceValidation.clearError();
+                }}
+              >
+                <SelectTrigger
+                  id="province"
+                  className="mt-1"
+                  aria-invalid={!!provinceValidation.error}
+                >
                   <SelectValue placeholder="Select province" />
                 </SelectTrigger>
                 <SelectContent>
@@ -157,6 +234,11 @@ export function BasicDetailsStep() {
                   <SelectItem value="Northern Cape">Northern Cape</SelectItem>
                 </SelectContent>
               </Select>
+              <InlineError
+                error={provinceValidation.error}
+                show={!!provinceValidation.error}
+                size="sm"
+              />
             </div>
 
             <div>

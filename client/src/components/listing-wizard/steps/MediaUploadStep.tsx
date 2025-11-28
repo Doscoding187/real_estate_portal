@@ -1,80 +1,50 @@
 import React, { useState, useCallback } from 'react';
 import { useListingWizardStore } from '@/hooks/useListingWizard';
 import { Card } from '@/components/ui/card';
-import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
 import { trpc } from '@/lib/trpc';
-import { Upload, Video, GripVertical } from 'lucide-react';
+import { MediaUploadZone } from '@/components/media/MediaUploadZone';
+import { SortableMediaGrid } from '@/components/media/SortableMediaGrid';
+import { UploadProgressList, UploadProgress } from '@/components/media/UploadProgressBar';
+import { Lightbulb } from 'lucide-react';
 import type { MediaFile } from '@/../../shared/listing-types';
-import {
-  DndContext,
-  closestCenter,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  DragEndEvent,
-  DragOverlay,
-  DragStartEvent,
-} from '@dnd-kit/core';
-import {
-  SortableContext,
-  rectSortingStrategy,
-} from '@dnd-kit/sortable';
-import { createPortal } from 'react-dom';
-import { SortableMediaItem } from './SortableMediaItem';
+import type { MediaItem } from '@/components/media/SortableMediaGrid';
 
 const MediaUploadStep: React.FC = () => {
   const store = useListingWizardStore();
-  const [isUploading, setIsUploading] = useState(false);
-  const [uploadError, setUploadError] = useState<string | null>(null);
-  const [isDraggingPrimary, setIsDraggingPrimary] = useState(false);
-  const [isDraggingAdditional, setIsDraggingAdditional] = useState(false);
-  const [activeId, setActiveId] = useState<string | null>(null);
+  const [uploads, setUploads] = useState<UploadProgress[]>([]);
   
   // TRPC mutation for media upload
   const uploadMediaMutation = trpc.listing.uploadMedia.useMutation();
 
-  // Sensors for drag and drop
-  const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 4, // Require 4px movement before drag starts
-      },
-    })
-  );
-
-  // Handle file selection
-  const handleFileSelect = useCallback(async (files: FileList | null, isPrimary: boolean = false) => {
+  // Handle file upload
+  const handleUpload = useCallback(async (files: File[]) => {
     if (!files || files.length === 0) return;
     
-    setIsUploading(true);
-    setUploadError(null);
+    // Create upload progress entries
+    const newUploads: UploadProgress[] = files.map((file, index) => ({
+      id: `upload-${Date.now()}-${index}`,
+      fileName: file.name,
+      progress: 0,
+      status: 'uploading' as const,
+    }));
     
-    try {
-      const newMediaFiles: MediaFile[] = [];
+    setUploads(prev => [...prev, ...newUploads]);
+    
+    // Process each file
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      const uploadId = newUploads[i].id;
+      const startTime = Date.now();
       
-      // Process each selected file
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        
-        // Validate file type
-        const isValidImage = file.type.startsWith('image/');
-        const isValidVideo = file.type.startsWith('video/');
-        
-        if (!isValidImage && !isValidVideo) {
-          setUploadError('Please select only image or video files');
-          continue;
-        }
-        
-        // Validate file size (5MB for images, 50MB for videos)
-        const maxSize = isValidImage ? 5 * 1024 * 1024 : 50 * 1024 * 1024;
-        if (file.size > maxSize) {
-          setUploadError(`File ${file.name} is too large. Max size: ${isValidImage ? '5MB' : '50MB'}`);
-          continue;
-        }
-        
+      try {
         // Determine media type
-        const mediaType = isValidImage ? 'image' : 'video';
+        const isImage = file.type.startsWith('image/');
+        const mediaType = isImage ? 'image' : 'video';
+        
+        // Update progress: requesting upload URL
+        setUploads(prev => prev.map(u => 
+          u.id === uploadId ? { ...u, progress: 10 } : u
+        ));
         
         // Request presigned URL from server
         const uploadData = await uploadMediaMutation.mutateAsync({
@@ -83,18 +53,50 @@ const MediaUploadStep: React.FC = () => {
           contentType: file.type,
         });
         
-        // Upload file directly to S3
-        const response = await fetch(uploadData.uploadUrl, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': file.type,
-          },
-          body: file,
+        // Update progress: uploading to S3
+        setUploads(prev => prev.map(u => 
+          u.id === uploadId ? { ...u, progress: 20 } : u
+        ));
+        
+        // Upload file to S3 with progress tracking
+        const xhr = new XMLHttpRequest();
+        
+        await new Promise<void>((resolve, reject) => {
+          xhr.upload.addEventListener('progress', (e) => {
+            if (e.lengthComputable) {
+              const percentComplete = 20 + (e.loaded / e.total) * 70; // 20-90%
+              const elapsed = (Date.now() - startTime) / 1000;
+              const speed = e.loaded / elapsed;
+              const remaining = (e.total - e.loaded) / speed;
+              
+              setUploads(prev => prev.map(u => 
+                u.id === uploadId 
+                  ? { ...u, progress: Math.round(percentComplete), speed, timeRemaining: remaining }
+                  : u
+              ));
+            }
+          });
+          
+          xhr.addEventListener('load', () => {
+            if (xhr.status >= 200 && xhr.status < 300) {
+              resolve();
+            } else {
+              reject(new Error(`Upload failed with status ${xhr.status}`));
+            }
+          });
+          
+          xhr.addEventListener('error', () => reject(new Error('Network error')));
+          xhr.addEventListener('abort', () => reject(new Error('Upload cancelled')));
+          
+          xhr.open('PUT', uploadData.uploadUrl);
+          xhr.setRequestHeader('Content-Type', file.type);
+          xhr.send(file);
         });
         
-        if (!response.ok) {
-          throw new Error(`Failed to upload ${file.name}`);
-        }
+        // Update progress: finalizing
+        setUploads(prev => prev.map(u => 
+          u.id === uploadId ? { ...u, progress: 95 } : u
+        ));
         
         // Create media file object
         const mediaFile: MediaFile = {
@@ -103,123 +105,90 @@ const MediaUploadStep: React.FC = () => {
           type: mediaType,
           fileName: file.name,
           fileSize: file.size,
-          displayOrder: store.media.length + newMediaFiles.length,
-          isPrimary: isPrimary && newMediaFiles.length === 0,
+          displayOrder: store.media.length,
+          isPrimary: store.media.length === 0, // First upload is primary
           processingStatus: 'completed',
         };
         
-        newMediaFiles.push(mediaFile);
+        // Add to store
+        store.addMedia(mediaFile);
+        
+        // Set as main media if first upload
+        if (store.media.length === 1) {
+          store.setMainMedia(uploadData.mediaId as any);
+        }
+        
+        // Mark as completed
+        setUploads(prev => prev.map(u => 
+          u.id === uploadId ? { ...u, progress: 100, status: 'completed' as const } : u
+        ));
+        
+      } catch (error: any) {
+        console.error('Upload error:', error);
+        setUploads(prev => prev.map(u => 
+          u.id === uploadId 
+            ? { ...u, status: 'error' as const, error: error.message || 'Upload failed' }
+            : u
+        ));
       }
-      
-      // Add uploaded media to store
-      newMediaFiles.forEach(media => {
-        store.addMedia(media);
-      });
-      
-      // Set first uploaded file as main media if none is set
-      if (newMediaFiles.length > 0 && !store.mainMediaId) {
-        store.setMainMedia(newMediaFiles[0].id! as any);
-      }
-    } catch (error: any) {
-      console.error('Upload error:', error);
-      setUploadError(error.message || 'Failed to upload files');
-    } finally {
-      setIsUploading(false);
     }
   }, [store, uploadMediaMutation]);
 
-  // Remove media
-  const handleRemoveMedia = (index: number) => {
-    store.removeMedia(index);
-  };
+  // Convert store media to MediaItem format
+  const mediaItems: MediaItem[] = store.media.map((media, index) => ({
+    id: media.id?.toString() || `media-${index}`,
+    url: media.url,
+    type: media.type as 'image' | 'video' | 'floorplan' | 'pdf',
+    fileName: media.fileName,
+    isPrimary: media.isPrimary,
+    displayOrder: media.displayOrder,
+  }));
 
-  // Set as main media
-  const handleSetMainMedia = (mediaId: string) => {
-    store.setMainMedia(mediaId as any);
-  };
-
-  // Handle primary file input change
-  const handlePrimaryFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    handleFileSelect(e.target.files, true);
-    e.target.value = '';
-  };
-
-  // Handle additional files input change
-  const handleAdditionalFilesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    handleFileSelect(e.target.files);
-    e.target.value = '';
-  };
-
-  // Get display media type
-  const displayMediaType = store.displayMediaType || 'image';
-
-  // Drag and drop handlers for file upload
-  const handlePrimaryDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDraggingPrimary(true);
-  };
-
-  const handlePrimaryDragLeave = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDraggingPrimary(false);
-  };
-
-  const handlePrimaryDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDraggingPrimary(false);
-    handleFileSelect(e.dataTransfer.files, true);
-  };
-
-  const handleAdditionalDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDraggingAdditional(true);
-  };
-
-  const handleAdditionalDragLeave = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDraggingAdditional(false);
-  };
-
-  const handleAdditionalDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDraggingAdditional(false);
-    handleFileSelect(e.dataTransfer.files);
-  };
-
-  // @dnd-kit handlers
-  const handleDragStart = (event: DragStartEvent) => {
-    setActiveId(event.active.id as string);
-  };
-
-  const handleDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event;
-
-    if (active.id !== over?.id) {
-      const oldIndex = store.media.findIndex((item, index) => (item.id || String(index)) === active.id);
-      const newIndex = store.media.findIndex((item, index) => (item.id || String(index)) === over?.id);
-
-      if (oldIndex !== -1 && newIndex !== -1) {
-        store.reorderMedia(oldIndex, newIndex);
+  // Handle media reorder
+  const handleReorder = useCallback((reorderedMedia: MediaItem[]) => {
+    // Update store with new order
+    reorderedMedia.forEach((item, index) => {
+      const storeIndex = store.media.findIndex(m => m.id?.toString() === item.id);
+      if (storeIndex !== -1 && storeIndex !== index) {
+        store.reorderMedia(storeIndex, index);
       }
+    });
+  }, [store]);
+
+  // Handle media remove
+  const handleRemove = useCallback((id: string) => {
+    const index = store.media.findIndex(m => m.id?.toString() === id);
+    if (index !== -1) {
+      store.removeMedia(index);
     }
+  }, [store]);
 
-    setActiveId(null);
-  };
+  // Handle set as primary
+  const handleSetPrimary = useCallback((id: string) => {
+    store.setMainMedia(id as any);
+  }, [store]);
 
-  // Get active media item for drag overlay
-  const activeMedia = activeId 
-    ? store.media.find((item, index) => (item.id || String(index)) === activeId) 
-    : null;
+  // Handle upload cancel
+  const handleCancelUpload = useCallback((id: string) => {
+    setUploads(prev => prev.filter(u => u.id !== id));
+  }, []);
+
+  // Handle upload retry
+  const handleRetryUpload = useCallback((id: string) => {
+    // Remove failed upload from list
+    setUploads(prev => prev.filter(u => u.id !== id));
+    // In a real implementation, you would retry the upload here
+  }, []);
+
+  // Handle upload remove
+  const handleRemoveUpload = useCallback((id: string) => {
+    setUploads(prev => prev.filter(u => u.id !== id));
+  }, []);
 
   return (
     <Card className="p-6">
       <div className="space-y-6">
+        {/* Header */}
         <div>
           <h3 className="text-lg font-semibold mb-2">Upload Media</h3>
           <p className="text-gray-600">
@@ -227,168 +196,59 @@ const MediaUploadStep: React.FC = () => {
           </p>
         </div>
 
-        {/* Primary Media Upload */}
-        <div className="space-y-4">
-          <Label className="text-base font-medium">
-            Primary {displayMediaType === 'image' ? 'Image' : 'Video'}
-          </Label>
-          <div 
-            className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
-              isDraggingPrimary 
-                ? 'border-blue-500 bg-blue-50' 
-                : 'border-gray-300 hover:border-gray-400'
-            }`}
-            onDragOver={handlePrimaryDragOver}
-            onDragLeave={handlePrimaryDragLeave}
-            onDrop={handlePrimaryDrop}
-          >
-            <Input
-              type="file"
-              accept={displayMediaType === 'image' ? 'image/*' : 'video/*'}
-              onChange={handlePrimaryFileChange}
-              className="hidden"
-              id="primary-media"
-              multiple
-            />
-            <Label 
-              htmlFor="primary-media" 
-              className="cursor-pointer flex flex-col items-center justify-center gap-3"
-            >
-              <Upload className="h-8 w-8 text-gray-400" />
-              <div>
-                <p className="font-medium">
-                  {isDraggingPrimary ? 'Drop files here' : `Click to upload or drag ${displayMediaType === 'image' ? 'images' : 'videos'}`}
-                </p>
-                <p className="text-sm text-gray-500 mt-1">
-                  Supported: {displayMediaType === 'image' ? 'JPG, PNG, WebP' : 'MP4, MOV'} (Select multiple files)
-                </p>
-              </div>
-              <div className={`inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}`}>
-                {isUploading ? 'Uploading...' : 'Choose Files'}
-              </div>
-            </Label>
-          </div>
-        </div>
+        {/* Upload Zone */}
+        <MediaUploadZone
+          onUpload={handleUpload}
+          maxFiles={30}
+          maxSizeMB={5}
+          maxVideoSizeMB={50}
+          acceptedTypes={['image/*', 'video/*']}
+          existingMediaCount={store.media.length}
+          disabled={uploads.some(u => u.status === 'uploading')}
+        />
 
-        {/* Additional Media Upload */}
-        <div className="space-y-4">
-          <Label className="text-base font-medium">
-            Additional Media
-          </Label>
-          <div 
-            className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
-              isDraggingAdditional 
-                ? 'border-blue-500 bg-blue-50' 
-                : 'border-gray-300 hover:border-gray-400'
-            }`}
-            onDragOver={handleAdditionalDragOver}
-            onDragLeave={handleAdditionalDragLeave}
-            onDrop={handleAdditionalDrop}
-          >
-            <Input
-              type="file"
-              accept="image/*,video/*"
-              onChange={handleAdditionalFilesChange}
-              className="hidden"
-              id="additional-media"
-              multiple
-            />
-            <Label 
-              htmlFor="additional-media" 
-              className="cursor-pointer flex flex-col items-center justify-center gap-3"
-            >
-              <Upload className="h-8 w-8 text-gray-400" />
-              <div>
-                <p className="font-medium">{isDraggingAdditional ? 'Drop files here' : 'Click to upload or drag and drop'}</p>
-                <p className="text-sm text-gray-500 mt-1">
-                  Supported: JPG, PNG, WebP, MP4, MOV (Select multiple files)
-                </p>
-              </div>
-              <div className={`inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2 ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}`}>
-                {isUploading ? 'Uploading...' : 'Choose Files'}
-              </div>
-            </Label>
-          </div>
-        </div>
+        {/* Upload Progress */}
+        {uploads.length > 0 && (
+          <UploadProgressList
+            uploads={uploads}
+            onCancel={handleCancelUpload}
+            onRetry={handleRetryUpload}
+            onRemove={handleRemoveUpload}
+          />
+        )}
 
-        {/* Uploaded Media Preview */}
+        {/* Uploaded Media Grid */}
         {store.media.length > 0 && (
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <h4 className="font-medium">Uploaded Media</h4>
-              <p className="text-sm text-gray-500">Drag to reorder</p>
+              <h4 className="font-medium">Uploaded Media ({store.media.length})</h4>
+              <p className="text-sm text-gray-500">Drag to reorder • Click star to set primary</p>
             </div>
             
-            <DndContext
-              sensors={sensors}
-              collisionDetection={closestCenter}
-              onDragStart={handleDragStart}
-              onDragEnd={handleDragEnd}
-              onDragCancel={() => setActiveId(null)}
-            >
-              <SortableContext
-                items={store.media.map((m, i) => m.id || String(i))}
-                strategy={rectSortingStrategy}
-              >
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 transform-none">
-                  {store.media.map((media, index) => (
-                    <SortableMediaItem
-                      key={media.id || index}
-                      media={media}
-                      index={index}
-                      onRemove={handleRemoveMedia}
-                      onSetPrimary={handleSetMainMedia}
-                    />
-                  ))}
-                </div>
-              </SortableContext>
-
-              {/* CRITICAL FIX: Portal-based DragOverlay escapes all parent transforms */}
-              {createPortal(
-                <DragOverlay adjustScale={false}>
-                  {activeMedia ? (
-                    <div className="w-40 h-40 opacity-90 cursor-grabbing">
-                      <div className="aspect-square rounded-lg overflow-hidden border-2 border-blue-500 shadow-2xl bg-white">
-                        {activeMedia.type === 'image' ? (
-                          <img
-                            src={activeMedia.url}
-                            alt={`Uploaded ${activeMedia.fileName}`}
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <div className="w-full h-full bg-gray-100 flex items-center justify-center">
-                            <Video className="h-8 w-8 text-gray-400" />
-                          </div>
-                        )}
-                        <div className="absolute top-2 left-2 bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded p-1.5 shadow-lg">
-                          <GripVertical className="h-4 w-4" />
-                        </div>
-                      </div>
-                    </div>
-                  ) : null}
-                </DragOverlay>,
-                document.getElementById('dnd-portal')!
-              )}
-            </DndContext>
-          </div>
-        )}
-
-        {/* Error Message */}
-        {uploadError && (
-          <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
-            <p className="text-red-800 text-sm">{uploadError}</p>
+            <SortableMediaGrid
+              media={mediaItems}
+              onReorder={handleReorder}
+              onRemove={handleRemove}
+              onSetPrimary={handleSetPrimary}
+            />
           </div>
         )}
 
         {/* Upload Tips */}
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <h4 className="font-semibold text-blue-900 mb-2">💡 Upload Tips</h4>
-          <ul className="text-sm text-blue-800 space-y-1">
-            <li>• Use high-quality photos with good lighting</li>
-            <li>• Include wide shots and detailed close-ups</li>
-            <li>• Show all rooms and key features</li>
-            <li>• Keep videos under 60 seconds</li>
-          </ul>
+          <div className="flex items-start gap-3">
+            <Lightbulb className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+            <div>
+              <h4 className="font-semibold text-blue-900 mb-2">Upload Tips</h4>
+              <ul className="text-sm text-blue-800 space-y-1">
+                <li>• Use high-quality photos with good lighting</li>
+                <li>• Include wide shots and detailed close-ups</li>
+                <li>• Show all rooms and key features</li>
+                <li>• Keep videos under 60 seconds</li>
+                <li>• First uploaded image becomes the primary image</li>
+              </ul>
+            </div>
+          </div>
         </div>
       </div>
     </Card>

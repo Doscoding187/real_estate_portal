@@ -19,6 +19,8 @@ import { Badge } from '@/components/ui/badge';
 import { MapPin, DollarSign, Home, Calendar, Info, Check, Award, Store, Building2, Factory, Warehouse, Layers, DoorOpen, GraduationCap, Users } from 'lucide-react';
 import type { ListingAction, PropertyType, ListingBadge } from '@/../../shared/listing-types';
 import { BADGE_TEMPLATES } from '@/../../shared/listing-types';
+import { useFieldValidation } from '@/hooks/useFieldValidation';
+import { InlineError } from '@/components/ui/InlineError';
 
 // South African provinces
 const SA_PROVINCES = [
@@ -47,14 +49,43 @@ const BasicInformationStep: React.FC = () => {
   const pricing = store.pricing || {};
   const propertyDetails = store.propertyDetails || {};
 
+  // Validation context
+  const validationContext = {
+    action,
+    propertyType,
+    currentStep: 3,
+  };
+
+  // Field validation
+  const titleValidation = useFieldValidation({
+    field: 'title',
+    value: title,
+    context: validationContext,
+    trigger: 'blur',
+  });
+
+  const descriptionValidation = useFieldValidation({
+    field: 'description',
+    value: description,
+    context: validationContext,
+    trigger: 'blur',
+  });
+
   // Update handlers
   const updateBasicInfo = (field: string, value: any) => {
     store.setBasicInfo?.({ ...basicInfo, [field]: value }) || 
     store.updatePropertyDetail?.(field, value);
   };
 
-  const updateTitle = (value: string) => store.setTitle(value);
-  const updateDescription = (value: string) => store.setDescription(value);
+  const updateTitle = (value: string) => {
+    store.setTitle(value);
+    titleValidation.clearError();
+  };
+
+  const updateDescription = (value: string) => {
+    store.setDescription(value);
+    descriptionValidation.clearError();
+  };
 
   // Helper to check if a badge is selected
   const hasStatus = (...statuses: ListingBadge[]) => {
@@ -78,11 +109,21 @@ const BasicInformationStep: React.FC = () => {
               id="title"
               value={title}
               onChange={(e) => updateTitle(e.target.value)}
-              placeholder="Enter property title"
+              onBlur={titleValidation.onBlur}
+              placeholder="Enter property title (minimum 10 characters)"
               className="mt-1"
-              maxLength={100}
+              maxLength={255}
+              aria-invalid={!!titleValidation.error}
+              aria-describedby={titleValidation.error ? 'title-error' : undefined}
             />
-            <p className="text-xs text-slate-500 mt-1">{title.length}/100 characters</p>
+            <div className="flex items-center justify-between mt-1">
+              <InlineError
+                error={titleValidation.error}
+                show={!!titleValidation.error}
+                size="sm"
+              />
+              <p className="text-xs text-slate-500">{title.length}/255 characters</p>
+            </div>
           </div>
 
           {/* Property Description */}
@@ -92,11 +133,21 @@ const BasicInformationStep: React.FC = () => {
               id="description"
               value={description}
               onChange={(e) => updateDescription(e.target.value)}
-              placeholder="Enter property description"
+              onBlur={descriptionValidation.onBlur}
+              placeholder="Describe your property in detail (minimum 50 characters)"
               className="mt-1 min-h-[120px]"
-              maxLength={2000}
+              maxLength={5000}
+              aria-invalid={!!descriptionValidation.error}
+              aria-describedby={descriptionValidation.error ? 'description-error' : undefined}
             />
-            <p className="text-xs text-slate-500 mt-1">{description.length}/2000 characters</p>
+            <div className="flex items-center justify-between mt-1">
+              <InlineError
+                error={descriptionValidation.error}
+                show={!!descriptionValidation.error}
+                size="sm"
+              />
+              <p className="text-xs text-slate-500">{description.length}/5000 characters</p>
+            </div>
           </div>
         </div>
       </Card>
