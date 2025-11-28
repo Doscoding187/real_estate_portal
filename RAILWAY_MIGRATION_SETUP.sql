@@ -57,7 +57,18 @@ CREATE TABLE IF NOT EXISTS `developer_subscription_usage` (
   FOREIGN KEY (`subscription_id`) REFERENCES `developer_subscriptions`(`id`) ON DELETE CASCADE
 );
 
--- 5. Enhance developments table
+-- 5. Add developer approval workflow columns
+SELECT 'Adding developer approval workflow columns...' as status;
+ALTER TABLE `developers` 
+ADD COLUMN IF NOT EXISTS `userId` int NOT NULL AFTER `isVerified`,
+ADD COLUMN IF NOT EXISTS `status` enum('pending','approved','rejected') DEFAULT 'pending' NOT NULL AFTER `userId`,
+ADD COLUMN IF NOT EXISTS `rejectionReason` text NULL AFTER `status`,
+ADD COLUMN IF NOT EXISTS `approvedBy` int NULL AFTER `rejectionReason`,
+ADD COLUMN IF NOT EXISTS `approvedAt` timestamp NULL AFTER `approvedBy`,
+ADD COLUMN IF NOT EXISTS `rejectedBy` int NULL AFTER `approvedAt`,
+ADD COLUMN IF NOT EXISTS `rejectedAt` timestamp NULL AFTER `rejectedBy`;
+
+-- 6. Enhance developments table
 SELECT 'Enhancing developments table...' as status;
 ALTER TABLE `developments` 
 ADD COLUMN IF NOT EXISTS `slug` varchar(255) UNIQUE AFTER `name`,
@@ -66,7 +77,7 @@ ADD COLUMN IF NOT EXISTS `brochures` text AFTER `floor_plans`,
 ADD COLUMN IF NOT EXISTS `published_at` timestamp NULL AFTER `updated_at`,
 ADD COLUMN IF NOT EXISTS `is_published` tinyint DEFAULT 0 NOT NULL AFTER `is_featured`;
 
--- 6. Create development_phases table
+-- 7. Create development_phases table
 SELECT 'Creating development_phases table...' as status;
 CREATE TABLE IF NOT EXISTS `development_phases` (
   `id` int AUTO_INCREMENT PRIMARY KEY NOT NULL,
@@ -86,7 +97,7 @@ CREATE TABLE IF NOT EXISTS `development_phases` (
   FOREIGN KEY (`development_id`) REFERENCES `developments`(`id`) ON DELETE CASCADE
 );
 
--- 7. Create development_units table
+-- 8. Create development_units table
 SELECT 'Creating development_units table...' as status;
 CREATE TABLE IF NOT EXISTS `development_units` (
   `id` int AUTO_INCREMENT PRIMARY KEY NOT NULL,
@@ -113,7 +124,7 @@ CREATE TABLE IF NOT EXISTS `development_units` (
   UNIQUE KEY `unique_unit_per_development` (`development_id`, `unit_number`)
 );
 
--- 8. Enhance leads table with affordability fields
+-- 9. Enhance leads table with affordability fields
 SELECT 'Enhancing leads table...' as status;
 ALTER TABLE `leads` 
 ADD COLUMN IF NOT EXISTS `affordability_data` JSON NULL COMMENT 'Buyer affordability calculation results',
@@ -130,7 +141,7 @@ ADD COLUMN IF NOT EXISTS `assigned_at` TIMESTAMP NULL,
 ADD COLUMN IF NOT EXISTS `converted_at` TIMESTAMP NULL,
 ADD COLUMN IF NOT EXISTS `lost_reason` TEXT NULL;
 
--- 9. Create all indexes
+-- 10. Create all indexes
 SELECT 'Creating indexes...' as status;
 
 -- Developer subscriptions indexes
@@ -162,7 +173,11 @@ CREATE INDEX IF NOT EXISTS `idx_leads_funnel_stage` ON `leads` (`funnel_stage`);
 CREATE INDEX IF NOT EXISTS `idx_leads_assigned_to` ON `leads` (`assigned_to`);
 CREATE INDEX IF NOT EXISTS `idx_leads_lead_source` ON `leads` (`lead_source`);
 
--- 10. Verify all tables were created
+-- Add developer indexes
+CREATE INDEX IF NOT EXISTS `idx_developers_userId` ON `developers`(`userId`);
+CREATE INDEX IF NOT EXISTS `idx_developers_status` ON `developers`(`status`);
+
+-- 11. Verify all tables were created
 SELECT 'Migration complete! Verifying tables...' as status;
 SHOW TABLES;
 
