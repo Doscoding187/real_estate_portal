@@ -186,7 +186,30 @@ const RevenueCenterPage: React.FC = () => {
     { name: 'Advertising', value: categoryData.advertising.revenue }
   ].filter(item => item.value > 0) : [];
 
-      <Tabs defaultValue="overview" value={activeTab} onValueChange={setActiveTab} className="w-full">
+  return (
+    <div className="min-h-screen bg-transparent">
+      <div className="container mx-auto px-4 py-8">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h1 className="text-3xl font-bold text-slate-800">Revenue Center</h1>
+            <p className="text-slate-500">Track revenue, commissions, and financial performance</p>
+          </div>
+          <Select value={dateRange} onValueChange={setDateRange}>
+            <SelectTrigger className="w-[180px] bg-white/50">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="30">Last 30 Days</SelectItem>
+              <SelectItem value="60">Last 60 Days</SelectItem>
+              <SelectItem value="90">Last 90 Days</SelectItem>
+              <SelectItem value="180">Last 6 Months</SelectItem>
+              <SelectItem value="365">Last Year</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <Tabs defaultValue="overview" value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="bg-white/50 backdrop-blur-sm border border-white/40 p-1 rounded-xl mb-6">
           <TabsTrigger value="overview" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">
             <Activity className="w-4 h-4 mr-2" />
@@ -605,7 +628,8 @@ const RevenueCenterPage: React.FC = () => {
             </GlassCard>
           </div>
         </TabsContent>
-      </Tabs>
+        </Tabs>
+      </div>
     </div>
   );
 };
