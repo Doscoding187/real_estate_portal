@@ -5,8 +5,6 @@
 
 import { createConnection } from 'mysql2/promise';
 import dotenv from 'dotenv';
-import fs from 'fs';
-import path from 'path';
 
 dotenv.config();
 
@@ -33,42 +31,63 @@ async function runActivitiesMigration() {
 
     console.log('✅ Connected to database\n');
 
-    // Read the migration file
-    const migrationPath = path.join(process.cwd(), 'drizzle/migrations/create-activities-table.sql');
-    const migrationSQL = fs.readFileSync(migrationPath, 'utf-8');
-
-    // Split by semicolons and execute each statement
-    const statements = migrationSQL
-      .split(';')
-      .map(s => s.trim())
-      .filter(s => s.length > 0 && !s.startsWith('--'));
-
-    for (const statement of statements) {
-      if (statement.trim()) {
-        console.log('Executing:', statement.substring(0, 50) + '...');
-        await connection.execute(statement);
-        console.log('✅ Success\n');
-      }
-    }
-
-    // Verify table was created
-    const [tables]: any = await connection.execute(
-      "SHOW TABLES LIKE 'activities'"
-    );
-
-    if (tables.length > 0) {
-      console.log('✅ Activities table created successfully!\n');
-      
-      // Show table structure
+    // Check if table already exists
+    const [existingTables]: any = await connection.execute("SHOW TABLES LIKE 'activities'");
+    
+    if (existingTables.length > 0) {
+      console.log('⚠️  Activities table already exists');
       const [columns]: any = await connection.execute('DESCRIBE activities');
-      console.log('📋 Table structure:');
+      console.log('📋 Current table structure:');
       columns.forEach((col: any) => {
         console.log(`   ${col.Field} (${col.Type})`);
       });
-    } else {
-      console.error('❌ Table creation failed');
-      process.exit(1);
+      return;
     }
+
+    console.log('📝 Creating activities table...\n');
+
+    // Create table
+    await connection.execute(`
+      CREATE TABLE \`activities\` (
+        \`id\` int AUTO_INCREMENT PRIMARY KEY NOT NULL,
+        \`developer_id\` int NOT NULL,
+        \`activity_type\` varchar(50) NOT NULL,
+        \`title\` varchar(255) NOT NULL,
+        \`description\` text,
+        \`metadata\` json COMMENT 'Flexible data storage for activity-specific information',
+        \`related_entity_type\` enum('development', 'unit', 'lead', 'campaign', 'team_member'),
+        \`related_entity_id\` int,
+        \`user_id\` int COMMENT 'User who triggered the activity',
+        \`created_at\` timestamp DEFAULT CURRENT_TIMESTAMP NOT NULL,
+        FOREIGN KEY (\`developer_id\`) REFERENCES \`developers\`(\`id\`) ON DELETE CASCADE,
+        FOREIGN KEY (\`user_id\`) REFERENCES \`users\`(\`id\`) ON DELETE SET NULL
+      )
+    `);
+    console.log('✅ Created activities table');
+
+    // Create indexes
+    console.log('📊 Creating indexes...');
+    
+    await connection.execute('CREATE INDEX `idx_activities_developer_id` ON `activities`(`developer_id`)');
+    console.log('   ✅ Created idx_activities_developer_id');
+    
+    await connection.execute('CREATE INDEX `idx_activities_activity_type` ON `activities`(`activity_type`)');
+    console.log('   ✅ Created idx_activities_activity_type');
+    
+    await connection.execute('CREATE INDEX `idx_activities_created_at` ON `activities`(`created_at`)');
+    console.log('   ✅ Created idx_activities_created_at');
+    
+    await connection.execute('CREATE INDEX `idx_activities_related_entity` ON `activities`(`related_entity_type`, `related_entity_id`)');
+    console.log('   ✅ Created idx_activities_related_entity');
+
+    console.log('\n✅ Activities table created successfully!\n');
+    
+    // Show table structure
+    const [columns]: any = await connection.execute('DESCRIBE activities');
+    console.log('📋 Table structure:');
+    columns.forEach((col: any) => {
+      console.log(`   ${col.Field} (${col.Type})`);
+    });
 
   } catch (error: any) {
     if (error.code === 'ER_TABLE_EXISTS_ERROR') {
