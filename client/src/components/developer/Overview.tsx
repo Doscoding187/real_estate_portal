@@ -28,71 +28,95 @@ export default function Overview() {
   // Show empty state for new developers
   if (isNewDeveloper) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-6">
-        <div className="text-center space-y-4 max-w-md">
-          <div className="w-24 h-24 mx-auto bg-gradient-to-br from-blue-500 to-teal-600 rounded-full flex items-center justify-center">
-            <Building2 className="w-12 h-12 text-white" />
+      <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-8 px-4">
+        <div className="text-center space-y-6 max-w-2xl">
+          {/* Animated Icon */}
+          <div className="relative w-32 h-32 mx-auto">
+            <div className="absolute inset-0 bg-gradient-to-br from-blue-500 via-blue-600 to-indigo-600 rounded-3xl rotate-6 opacity-20 blur-xl animate-pulse"></div>
+            <div className="relative w-full h-full bg-gradient-to-br from-blue-600 to-indigo-600 rounded-3xl flex items-center justify-center shadow-2xl shadow-blue-500/30 transform hover:scale-105 transition-transform duration-300">
+              <Building2 className="w-16 h-16 text-white" />
+            </div>
           </div>
-          <h2 className="text-3xl font-bold text-slate-800">Welcome to Your Dashboard!</h2>
-          <p className="text-slate-600 text-lg">
-            Get started by creating your first development project. Add units, capture leads, and watch your business grow.
-          </p>
+
+          {/* Welcome Text */}
+          <div className="space-y-3">
+            <h2 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+              Welcome to Your Dashboard!
+            </h2>
+            <p className="text-slate-600 text-lg md:text-xl leading-relaxed">
+              Get started by creating your first development project. Add units, capture leads, and watch your business grow.
+            </p>
+          </div>
         </div>
         
-        <div className="flex gap-4">
-          <Button size="lg" className="gap-2">
+        {/* Action Buttons */}
+        <div className="flex flex-col sm:flex-row gap-4">
+          <Button 
+            size="lg" 
+            className="gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg shadow-blue-500/30 rounded-full px-8 py-6 text-base font-semibold transition-all duration-300 hover:scale-105 hover:shadow-xl hover:shadow-blue-500/40"
+          >
             <Plus className="w-5 h-5" />
             Create Your First Development
           </Button>
-          <Button size="lg" variant="outline">
+          <Button 
+            size="lg" 
+            variant="outline"
+            className="rounded-full px-8 py-6 text-base font-semibold border-2 border-slate-200 hover:border-blue-300 hover:bg-blue-50 hover:text-blue-600 transition-all duration-300"
+          >
             View Documentation
           </Button>
         </div>
 
         {/* Quick Start Guide */}
-        <Card className="w-full max-w-2xl mt-8">
-          <CardHeader>
-            <CardTitle>Quick Start Guide</CardTitle>
-            <CardDescription>Follow these steps to get your developer account up and running</CardDescription>
+        <Card className="w-full max-w-3xl mt-8 border-0 shadow-xl shadow-slate-200/50 rounded-3xl overflow-hidden bg-white/80 backdrop-blur-sm">
+          <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-blue-100/50 pb-6">
+            <CardTitle className="text-2xl font-bold text-slate-800">Quick Start Guide</CardTitle>
+            <CardDescription className="text-base text-slate-600">
+              Follow these steps to get your developer account up and running
+            </CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="flex items-start gap-4">
-                <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-semibold flex-shrink-0">
-                  1
+          <CardContent className="p-8">
+            <div className="space-y-6">
+              {[
+                {
+                  number: 1,
+                  title: 'Create a Development',
+                  description: 'Add your property development project with details, location, and images',
+                  gradient: 'from-blue-500 to-blue-600'
+                },
+                {
+                  number: 2,
+                  title: 'Add Units',
+                  description: 'Define your available units with pricing, floor plans, and specifications',
+                  gradient: 'from-indigo-500 to-indigo-600'
+                },
+                {
+                  number: 3,
+                  title: 'Capture Leads',
+                  description: 'Use the affordability calculator to qualify buyers and capture high-quality leads',
+                  gradient: 'from-purple-500 to-purple-600'
+                },
+                {
+                  number: 4,
+                  title: 'Track Performance',
+                  description: 'Monitor your leads, conversions, and sales analytics in real-time',
+                  gradient: 'from-pink-500 to-pink-600'
+                }
+              ].map((step) => (
+                <div key={step.number} className="flex items-start gap-5 group">
+                  <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${step.gradient} flex items-center justify-center font-bold text-white text-lg flex-shrink-0 shadow-lg group-hover:scale-110 transition-transform duration-300`}>
+                    {step.number}
+                  </div>
+                  <div className="flex-1 pt-1">
+                    <h3 className="font-bold text-lg text-slate-800 mb-1 group-hover:text-blue-600 transition-colors">
+                      {step.title}
+                    </h3>
+                    <p className="text-slate-600 leading-relaxed">
+                      {step.description}
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="font-semibold text-slate-800">Create a Development</h3>
-                  <p className="text-sm text-slate-600">Add your property development project with details, location, and images</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-4">
-                <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-semibold flex-shrink-0">
-                  2
-                </div>
-                <div>
-                  <h3 className="font-semibold text-slate-800">Add Units</h3>
-                  <p className="text-sm text-slate-600">Define your available units with pricing, floor plans, and specifications</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-4">
-                <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-semibold flex-shrink-0">
-                  3
-                </div>
-                <div>
-                  <h3 className="font-semibold text-slate-800">Capture Leads</h3>
-                  <p className="text-sm text-slate-600">Use the affordability calculator to qualify buyers and capture high-quality leads</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-4">
-                <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-semibold flex-shrink-0">
-                  4
-                </div>
-                <div>
-                  <h3 className="font-semibold text-slate-800">Track Performance</h3>
-                  <p className="text-sm text-slate-600">Monitor your leads, conversions, and sales analytics in real-time</p>
-                </div>
-              </div>
+              ))}
             </div>
           </CardContent>
         </Card>
