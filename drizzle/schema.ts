@@ -1608,3 +1608,51 @@ export type InsertCampaignPerformance = InferInsertModel<typeof campaignPerforma
 
 export type CampaignLead = InferSelectModel<typeof campaignLeads>;
 export type InsertCampaignLead = InferInsertModel<typeof campaignLeads>;
+
+// Activities table for tracking developer actions
+export const activities = mysqlTable("activities", {
+	id: int().autoincrement().notNull().primaryKey(),
+	developerId: int().notNull().references(() => developers.id, { onDelete: "cascade" }),
+	activityType: varchar({ length: 50 }).notNull(),
+	title: varchar({ length: 255 }).notNull(),
+	description: text(),
+	metadata: json(),
+	relatedEntityType: mysqlEnum(['development', 'unit', 'lead', 'campaign', 'team_member']),
+	relatedEntityId: int(),
+	userId: int().references(() => users.id, { onDelete: "set null" }),
+	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+}, (table) => ({
+	developerIdIdx: index("idx_activities_developer_id").on(table.developerId),
+	activityTypeIdx: index("idx_activities_type").on(table.activityType),
+	createdAtIdx: index("idx_activities_created_at").on(table.createdAt),
+	relatedEntityIdx: index("idx_activities_related_entity").on(table.relatedEntityType, table.relatedEntityId),
+	feedIdx: index("idx_activities_feed").on(table.developerId, table.createdAt),
+}));
+
+export type Activity = InferSelectModel<typeof activities>;
+export type InsertActivity = InferInsertModel<typeof activities>;
+
+// Developer notifications table for mission control notifications
+export const developerNotifications = mysqlTable("developer_notifications", {
+	id: int().autoincrement().notNull().primaryKey(),
+	developerId: int().notNull().references(() => developers.id, { onDelete: "cascade" }),
+	userId: int().references(() => users.id, { onDelete: "set null" }),
+	title: varchar({ length: 255 }).notNull(),
+	body: text().notNull(),
+	type: varchar({ length: 50 }).notNull(),
+	severity: mysqlEnum(['info', 'warning', 'error', 'success']).notNull().default('info'),
+	read: boolean().notNull().default(false),
+	actionUrl: varchar({ length: 500 }),
+	metadata: json(),
+	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+}, (table) => ({
+	developerIdIdx: index("idx_developer_notifications_developer_id").on(table.developerId),
+	userIdIdx: index("idx_developer_notifications_user_id").on(table.userId),
+	readIdx: index("idx_developer_notifications_read").on(table.read),
+	createdAtIdx: index("idx_developer_notifications_created_at").on(table.createdAt),
+	typeIdx: index("idx_developer_notifications_type").on(table.type),
+	feedIdx: index("idx_developer_notifications_feed").on(table.developerId, table.read, table.createdAt),
+}));
+
+export type DeveloperNotification = InferSelectModel<typeof developerNotifications>;
+export type InsertDeveloperNotification = InferInsertModel<typeof developerNotifications>;

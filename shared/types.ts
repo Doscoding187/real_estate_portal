@@ -213,6 +213,46 @@ export interface DeveloperSubscriptionWithDetails extends DeveloperSubscription 
   usage: DeveloperSubscriptionUsage;
 }
 
+// Notification types for the mission control dashboard
+export type NotificationType = 
+  | 'lead_new'
+  | 'lead_qualified'
+  | 'lead_unqualified'
+  | 'viewing_scheduled'
+  | 'viewing_completed'
+  | 'unit_sold'
+  | 'unit_reserved'
+  | 'price_alert'
+  | 'subscription_expiring'
+  | 'subscription_limit_reached'
+  | 'team_member_joined'
+  | 'campaign_performance'
+  | 'system_update';
+
+export type NotificationSeverity = 'info' | 'warning' | 'error' | 'success';
+
+export interface DeveloperNotification {
+  id: number;
+  developerId: number;
+  userId?: number;
+  title: string;
+  body: string;
+  type: NotificationType;
+  severity: NotificationSeverity;
+  read: boolean;
+  actionUrl?: string;
+  metadata?: Record<string, any>;
+  createdAt: Date;
+}
+
+export interface DeveloperNotificationWithUser extends DeveloperNotification {
+  user?: {
+    id: number;
+    name: string;
+    email: string;
+  };
+}
+
 // Tier configuration constants
 export const SUBSCRIPTION_TIER_LIMITS: Record<SubscriptionTier, Omit<DeveloperSubscriptionLimits, 'id' | 'subscriptionId' | 'createdAt' | 'updatedAt'>> = {
   free_trial: {
