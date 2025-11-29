@@ -2597,12 +2597,20 @@ export async function createDeveloper(data: {
   const db = await getDb();
   if (!db) throw new Error('Database not available');
 
+  // Valid category values for the enum
+  const validCategories = ['residential', 'commercial', 'mixed_use', 'industrial'];
+  
+  // Find first valid category from specializations, or use provided category, or default to residential
+  const category = data.category || 
+                   data.specializations?.find(s => validCategories.includes(s)) || 
+                   'residential';
+
   const [result] = await db.insert(developers).values({
     ...data,
     // Convert specializations array to JSON string, or use category as fallback
     specializations: data.specializations ? JSON.stringify(data.specializations) : 
                      data.category ? JSON.stringify([data.category]) : null,
-    category: data.category || data.specializations?.[0] || 'residential', // Keep for backward compatibility
+    category: category as 'residential' | 'commercial' | 'mixed_use' | 'industrial', // Keep for backward compatibility
     isVerified: data.isVerified ?? 0,
     status: data.status ?? 'pending',
     totalProjects: data.totalProjects ?? 0,
