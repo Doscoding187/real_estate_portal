@@ -223,14 +223,25 @@ interface DeveloperFormData {
   province: string;
   
   // Step 3: Portfolio
-  totalProjects?: number;
-  completedProjects?: number;
-  currentProjects?: number;
-  upcomingProjects?: number;
+  totalProjects?: number; // Total since inception
+  completedProjects?: number; // Finished developments
+  currentProjects?: number; // Under construction
+  upcomingProjects?: number; // Planned/proposed
   logo?: string;
   
   // Step 4: Review
   acceptTerms: boolean;
+}
+```
+
+### PortfolioMetrics
+
+```typescript
+interface PortfolioMetrics {
+  totalProjects: number; // Total projects since company inception
+  completedProjects: number; // Successfully completed developments
+  currentProjects: number; // Developments currently under construction
+  upcomingProjects: number; // Planned or proposed projects
 }
 ```
 
@@ -345,6 +356,18 @@ interface AnimationConfig {
 *For any* validation error that occurs, it should be announced to assistive technologies via aria-live regions
 **Validates: Requirements 12.5**
 
+### Property 25: Portfolio metrics grid layout
+*For any* viewport size, the portfolio metrics input fields should be displayed in an appropriate grid layout (1 column on mobile, 2 columns on tablet/desktop)
+**Validates: Requirements 13.2**
+
+### Property 26: Portfolio metrics non-negative validation
+*For any* portfolio metric input value, the system should reject negative numbers and only accept non-negative integers
+**Validates: Requirements 13.3**
+
+### Property 27: Portfolio metrics default values
+*For any* empty portfolio metric field, the system should default the value to zero when saving
+**Validates: Requirements 13.4**
+
 ## Error Handling
 
 ### Validation Errors
@@ -445,6 +468,48 @@ interface AnimationConfig {
 - Draft saving and restoration
 - Error recovery flows
 - Success state and redirect
+
+## Database Schema Changes
+
+### Developers Table Updates
+
+The `developers` table requires additional columns to support granular portfolio metrics:
+
+```sql
+ALTER TABLE developers
+ADD COLUMN completedProjects INT DEFAULT 0,
+ADD COLUMN currentProjects INT DEFAULT 0,
+ADD COLUMN upcomingProjects INT DEFAULT 0;
+```
+
+**Note**: The existing `totalProjects` column will be repurposed to represent "Total Projects Since Inception"
+
+### Migration Strategy
+
+Due to schema drift issues with traditional migrations, we will use `drizzle-kit push` to synchronize the schema:
+
+1. Update `drizzle/schema.ts` with new columns
+2. Run `npx drizzle-kit push:mysql` to sync production database
+3. Existing data will have default values of 0 for new columns
+
+### Backend API Updates
+
+**Developer Router Schema:**
+```typescript
+// createProfile and updateProfile input schemas
+z.object({
+  // ... existing fields
+  totalProjects: z.number().int().min(0).default(0),
+  completedProjects: z.number().int().min(0).default(0),
+  currentProjects: z.number().int().min(0).default(0),
+  upcomingProjects: z.number().int().min(0).default(0),
+  // ... other fields
+})
+```
+
+**Database Functions:**
+- Update `createDeveloper()` in `server/db.ts` to handle new fields
+- Update `updateDeveloper()` in `server/db.ts` to handle new fields
 
 ## Implementation Notes
 

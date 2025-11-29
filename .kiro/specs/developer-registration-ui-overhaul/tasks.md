@@ -6,6 +6,34 @@ This implementation plan transforms the developer registration wizard into a pre
 
 ---
 
+## 0. Database Schema Updates
+
+- [ ] 0.1 Update database schema for portfolio metrics
+  - Update `drizzle/schema.ts` to add new integer columns to developers table:
+    - `completedProjects: int().default(0)`
+    - `currentProjects: int().default(0)`
+    - `upcomingProjects: int().default(0)`
+  - Run `npx drizzle-kit push:mysql` to sync schema to production database
+  - Verify columns are added successfully
+  - _Requirements: 13.1, 13.3, 13.4_
+
+- [ ] 0.2 Update backend API for portfolio metrics
+  - Update `server/developerRouter.ts` createProfile schema to include:
+    - `completedProjects: z.number().int().min(0).default(0)`
+    - `currentProjects: z.number().int().min(0).default(0)`
+    - `upcomingProjects: z.number().int().min(0).default(0)`
+  - Update `server/developerRouter.ts` updateProfile schema with same fields
+  - Update `server/db.ts` createDeveloper function to handle new fields
+  - Update `server/db.ts` updateDeveloper function to handle new fields
+  - _Requirements: 13.3, 13.4_
+
+- [ ] 0.3 Update TypeScript types
+  - Update `shared/types.ts` Developer interface to include new fields
+  - Ensure type safety across frontend and backend
+  - _Requirements: 13.1_
+
+---
+
 ## 1. Core Soft UI Components
 
 - [ ] 1.1 Create GradientButton component
@@ -140,10 +168,17 @@ This implementation plan transforms the developer registration wizard into a pre
 
 - [ ] 4.2 Create MetricGrid component
   - Implement `client/src/components/wizard/MetricGrid.tsx`
-  - Create responsive grid for portfolio metrics
+  - Create responsive grid for portfolio metrics (1 column mobile, 2 columns tablet/desktop)
   - Add stagger animation for metrics appearing
   - Support different metric types with color coding
-  - _Requirements: 6.1_
+  - Support four metrics: totalProjects, completedProjects, currentProjects, upcomingProjects
+  - _Requirements: 6.1, 13.2_
+
+- [ ] 4.3 Write property test for portfolio metrics
+  - **Property 25: Portfolio metrics grid layout**
+  - **Property 26: Portfolio metrics non-negative validation**
+  - **Property 27: Portfolio metrics default values**
+  - **Validates: Requirements 13.2, 13.3, 13.4**
 
 ---
 
@@ -301,11 +336,19 @@ This implementation plan transforms the developer registration wizard into a pre
   - _Requirements: 3.1, 3.3, 3.4_
 
 - [ ] 10.3 Refactor Step 3: Portfolio
+  - Update database schema in `drizzle/schema.ts` to add completedProjects, currentProjects, upcomingProjects columns
+  - Update `server/developerRouter.ts` validation schemas to include new portfolio fields with min(0) validation
+  - Update `server/db.ts` createDeveloper and updateDeveloper functions to handle new fields
   - Replace inputs with GradientInput components
+  - Create responsive grid layout (1 column mobile, 2 columns tablet/desktop) for four metrics:
+    - Total Projects (Since Inception)
+    - Completed Developments
+    - Current Developments (Under Construction)
+    - Upcoming Projects (Planned)
   - Add MetricGrid for portfolio display
   - Replace logo upload with LogoUploadZone
   - Add gradient styling to all elements
-  - _Requirements: 6.1, 6.2, 6.3, 8.1, 8.2, 8.3_
+  - _Requirements: 6.1, 6.2, 6.3, 8.1, 8.2, 8.3, 13.1, 13.2, 13.3, 13.4_
 
 - [ ] 10.4 Refactor Step 4: Review
   - Implement ReviewSection components for each category

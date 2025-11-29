@@ -26,30 +26,53 @@ export class DeveloperSubscriptionService {
     trialEndsAt.setDate(trialEndsAt.getDate() + 14);
 
     // Create subscription with free_trial tier
-    const [subscription] = await db.insert(developerSubscriptions).values({
+    const subscriptionResult = await db.insert(developerSubscriptions).values({
       developerId,
       tier: 'free_trial',
       status: 'active',
       trialEndsAt: trialEndsAt.toISOString(),
       currentPeriodStart: new Date().toISOString(),
       currentPeriodEnd: trialEndsAt.toISOString(),
-    }).returning();
+    });
+    
+    const subscriptionId = subscriptionResult[0].insertId;
 
     // Create limits based on free_trial tier
     const tierLimits = SUBSCRIPTION_TIER_LIMITS.free_trial;
-    const [limits] = await db.insert(developerSubscriptionLimits).values({
-      subscriptionId: subscription.id,
+    const limitsResult = await db.insert(developerSubscriptionLimits).values({
+      subscriptionId,
       ...tierLimits,
-    }).returning();
+    });
+    
+    const limitsId = limitsResult[0].insertId;
 
     // Create usage tracking
-    const [usage] = await db.insert(developerSubscriptionUsage).values({
-      subscriptionId: subscription.id,
+    const usageResult = await db.insert(developerSubscriptionUsage).values({
+      subscriptionId,
       developmentsCount: 0,
       leadsThisMonth: 0,
       teamMembersCount: 0,
       lastResetAt: new Date().toISOString(),
-    }).returning();
+    });
+    
+    const usageId = usageResult[0].insertId;
+
+    // Fetch the created records
+    const subscription = await db.query.developerSubscriptions.findFirst({
+      where: eq(developerSubscriptions.id, subscriptionId),
+    });
+    
+    const limits = await db.query.developerSubscriptionLimits.findFirst({
+      where: eq(developerSubscriptionLimits.id, limitsId),
+    });
+    
+    const usage = await db.query.developerSubscriptionUsage.findFirst({
+      where: eq(developerSubscriptionUsage.id, usageId),
+    });
+
+    if (!subscription || !limits || !usage) {
+      throw new Error('Failed to create subscription');
+    }
 
     return {
       ...subscription,

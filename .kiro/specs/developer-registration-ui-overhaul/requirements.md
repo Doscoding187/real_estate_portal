@@ -87,6 +87,18 @@ This specification defines the requirements for overhauling the developer regist
 4. WHEN hovering over metrics THEN the system SHALL show subtle lift animations
 5. WHEN metrics are zero THEN the system SHALL display encouraging placeholder text with gradient accents
 
+### Requirement 13: Granular Portfolio Metrics Collection
+
+**User Story:** As a property developer, I want to provide detailed information about my project portfolio across different stages, so that potential clients can understand my experience and current capacity.
+
+#### Acceptance Criteria
+
+1. WHEN entering portfolio information THEN the system SHALL provide separate input fields for total projects since inception, completed developments, current developments, and upcoming projects
+2. WHEN displaying portfolio input fields THEN the system SHALL arrange them in a responsive grid layout with clear labels
+3. WHEN validating portfolio metrics THEN the system SHALL ensure all values are non-negative integers
+4. WHEN portfolio fields are empty THEN the system SHALL default values to zero
+5. WHEN reviewing portfolio information THEN the system SHALL display all four metrics with appropriate gradient styling and icons
+
 ### Requirement 7: Specialization Selection Enhancement
 
 **User Story:** As a property developer, I want an engaging way to select my specializations, so that the form feels interactive and modern.
