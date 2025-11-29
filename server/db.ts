@@ -2609,16 +2609,29 @@ export async function createDeveloper(data: {
  * Get developer by user ID
  */
 export async function getDeveloperByUserId(userId: number) {
-  const db = await getDb();
-  if (!db) return null;
+  try {
+    const db = await getDb();
+    if (!db) {
+      console.error('[Database] getDeveloperByUserId: Database not available');
+      return null;
+    }
 
-  const [developer] = await db
-    .select()
-    .from(developers)
-    .where(eq(developers.userId, userId))
-    .limit(1);
+    const [developer] = await db
+      .select()
+      .from(developers)
+      .where(eq(developers.userId, userId))
+      .limit(1);
 
-  return developer || null;
+    return developer || null;
+  } catch (error: any) {
+    console.error('[Database] Error in getDeveloperByUserId for userId:', userId, error);
+    console.error('[Database] Error details:', {
+      message: error.message,
+      code: error.code,
+      sqlMessage: error.sqlMessage,
+    });
+    throw error; // Re-throw to be caught by the router
+  }
 }
 
 /**

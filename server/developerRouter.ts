@@ -75,8 +75,14 @@ export const developerRouter = router({
    * Auth: Protected
    */
   getProfile: protectedProcedure.query(async ({ ctx }) => {
-    const developer = await db.getDeveloperByUserId(ctx.user.id);
-    return developer;
+    try {
+      const developer = await db.getDeveloperByUserId(ctx.user.id);
+      return developer;
+    } catch (error: any) {
+      console.error('[Developer] Error fetching profile for userId:', ctx.user.id, error);
+      // Return null instead of throwing to allow frontend to handle gracefully
+      return null;
+    }
   }),
 
   /**
@@ -402,17 +408,22 @@ export const developerRouter = router({
    * Auth: Protected
    */
   getDevelopments: protectedProcedure.query(async ({ ctx }) => {
-    const developer = await db.getDeveloperByUserId(ctx.user.id);
-    
-    if (!developer) {
-      throw new TRPCError({
-        code: 'NOT_FOUND',
-        message: 'Developer profile not found',
-      });
-    }
+    try {
+      const developer = await db.getDeveloperByUserId(ctx.user.id);
+      
+      if (!developer) {
+        console.log('[Developer] No developer profile found for userId:', ctx.user.id);
+        // Return empty array instead of throwing error
+        return [];
+      }
 
-    const developments = await developmentService.getDeveloperDevelopments(developer.id);
-    return developments;
+      const developments = await developmentService.getDeveloperDevelopments(developer.id);
+      return developments;
+    } catch (error: any) {
+      console.error('[Developer] Error fetching developments for userId:', ctx.user.id, error);
+      // Return empty array to allow frontend to handle gracefully
+      return [];
+    }
   }),
 
   /**

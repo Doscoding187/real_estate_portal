@@ -69,6 +69,30 @@ export default function Overview() {
     );
   }
 
+  // Handle missing developer profile - redirect to setup
+  if (!developerProfile) {
+    return (
+      <Card className="card">
+        <CardContent className="py-12">
+          <div className="text-center space-y-4">
+            <div className="w-16 h-16 mx-auto bg-blue-100 rounded-full flex items-center justify-center">
+              <Building2 className="w-8 h-8 text-blue-600" />
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold text-slate-800">Complete Your Developer Profile</h3>
+              <p className="text-slate-600">
+                You need to complete your developer profile before accessing the dashboard.
+              </p>
+            </div>
+            <Button onClick={() => window.location.href = '/developer/setup'}>
+              Complete Profile Setup
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   // Show empty state for new developers
   if (isNewDeveloper) {
     return (
