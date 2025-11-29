@@ -75,7 +75,7 @@ import ListingTemplate from './pages/ListingTemplate';
 import CreateDevelopment from './pages/CreateDevelopment';
 import DevelopmentsDemo from './pages/DevelopmentsDemo';
 import DevelopmentDetail from './pages/DevelopmentDetail';
-import DeveloperSetupWizard from './components/developer/DeveloperSetupWizard';
+import DeveloperSetupWizard from './components/developer/DeveloperSetupWizardEnhanced';
 
 // Import Comparison Page
 import CompareProperties from './pages/CompareProperties';
