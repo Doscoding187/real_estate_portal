@@ -43,12 +43,21 @@ export const developerRouter = router({
       }
 
       // Check if developer profile already exists
-      const existing = await db.getDeveloperByUserId(ctx.user.id);
-      if (existing) {
-        throw new TRPCError({
-          code: 'CONFLICT',
-          message: 'Developer profile already exists',
-        });
+      try {
+        const existing = await db.getDeveloperByUserId(ctx.user.id);
+        if (existing) {
+          throw new TRPCError({
+            code: 'CONFLICT',
+            message: 'Developer profile already exists',
+          });
+        }
+      } catch (error: any) {
+        // If it's our CONFLICT error, re-throw it
+        if (error.code === 'CONFLICT') {
+          throw error;
+        }
+        // Otherwise, log the error but continue (assume no existing profile)
+        console.error('[Developer] Error checking existing profile, assuming none exists:', error);
       }
 
       const developerId = await db.createDeveloper({
