@@ -10,7 +10,7 @@ import { useForm } from 'react-hook-form';
 import { trpc } from '@/lib/trpc';
 import { toast } from 'sonner';
 import { useLocation } from 'wouter';
-import { Building2, Phone, Briefcase, FileText, Save } from 'lucide-react';
+import { Building2, Phone, Briefcase, FileText, Save, Check } from 'lucide-react';
 
 // Gradient Components
 import { GradientButton } from '@/components/ui/GradientButton';
@@ -19,6 +19,11 @@ import { GradientTextarea } from '@/components/ui/GradientTextarea';
 import { GradientSelect, GradientSelectItem } from '@/components/ui/GradientSelect';
 import { GradientCheckbox } from '@/components/ui/GradientCheckbox';
 import { GradientProgressIndicator } from '@/components/wizard/GradientProgressIndicator';
+
+// Auto-save and Draft Management
+import { useAutoSave } from '@/hooks/useAutoSave';
+import { SaveStatusIndicator } from '@/components/ui/SaveStatusIndicator';
+import { DraftManager } from '@/components/wizard/DraftManager';
 
 type FormValues = {
   name: string;
@@ -71,6 +76,9 @@ export default function DeveloperSetupWizardEnhanced() {
   const [step, setStep] = useState(1);
   const [completedSteps, setCompletedSteps] = useState<number[]>([]);
   const [, setLocation] = useLocation();
+  const [showResumeDraftDialog, setShowResumeDraftDialog] = useState(false);
+  const [isSavingDraft, setIsSavingDraft] = useState(false);
+  const [draftSaved, setDraftSaved] = useState(false);
 
   const {
     register,
@@ -99,6 +107,127 @@ export default function DeveloperSetupWizardEnhanced() {
   const { data: user } = trpc.auth.me.useQuery();
 
   const formValues = watch();
+
+  // Auto-save hook - saves draft to localStorage automatically
+  const { lastSaved, isSaving: isAutoSaving, error: autoSaveError } = useAutoSave(
+    {
+      step,
+      completedSteps,
+      ...formValues,
+    },
+    {
+      storageKey: 'developer-registration-draft',
+      debounceMs: 2000,
+      enabled: step > 1 && !createProfile.isPending, // Only auto-save after first step
+      onError: (error) => {
+        console.error('Auto-save error:', error);
+        toast.error('Failed to auto-save draft');
+      },
+    }
+  );
+
+  // Check for draft on mount and show resume dialog
+  useEffect(() => {
+    const savedDraft = localStorage.getItem('developer-registration-draft');
+    
+    if (savedDraft) {
+      try {
+        const draft = JSON.parse(savedDraft);
+        
+        // Check if there's meaningful progress (beyond step 1 or has data)
+        const hasMeaningfulProgress = 
+          draft.step > 1 || 
+          draft.name || 
+          draft.specializations?.length > 0;
+        
+        if (hasMeaningfulProgress) {
+          setShowResumeDraftDialog(true);
+        }
+      } catch (error) {
+        console.error('Error parsing draft:', error);
+        localStorage.removeItem('developer-registration-draft');
+      }
+    }
+  }, []);
+
+  // Handle resume draft decision
+  const handleResumeDraft = () => {
+    setShowResumeDraftDialog(false);
+    
+    const savedDraft = localStorage.getItem('developer-registration-draft');
+    if (savedDraft) {
+      try {
+        const draft = JSON.parse(savedDraft);
+        
+        // Restore form values
+        reset({
+          name: draft.name || '',
+          specializations: draft.specializations || [],
+          establishedYear: draft.establishedYear || undefined,
+          description: draft.description || '',
+          email: draft.email || user?.email || '',
+          phone: draft.phone || '',
+          website: draft.website || '',
+          address: draft.address || '',
+          city: draft.city || '',
+          province: draft.province || '',
+          totalProjects: draft.totalProjects || 0,
+          completedProjects: draft.completedProjects || 0,
+          currentProjects: draft.currentProjects || 0,
+          upcomingProjects: draft.upcomingProjects || 0,
+          logo: draft.logo || '',
+          acceptTerms: false,
+        });
+        
+        // Restore wizard state
+        setStep(draft.step || 1);
+        setCompletedSteps(draft.completedSteps || []);
+        
+        toast.success('Draft restored successfully!');
+      } catch (error) {
+        console.error('Error restoring draft:', error);
+        toast.error('Failed to restore draft');
+      }
+    }
+  };
+
+  const handleStartFresh = () => {
+    setShowResumeDraftDialog(false);
+    localStorage.removeItem('developer-registration-draft');
+    reset({
+      specializations: [],
+      totalProjects: 0,
+      completedProjects: 0,
+      currentProjects: 0,
+      upcomingProjects: 0,
+      acceptTerms: false,
+    });
+    setStep(1);
+    setCompletedSteps([]);
+    toast.info('Starting fresh registration');
+  };
+
+  // Handle manual save draft
+  const handleSaveDraft = async () => {
+    setIsSavingDraft(true);
+    setDraftSaved(false);
+
+    try {
+      // The draft is already auto-saved via useAutoSave
+      // This is just for user feedback
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      setDraftSaved(true);
+      toast.success('Draft saved successfully!');
+      
+      setTimeout(() => setDraftSaved(false), 2000);
+    } catch (error) {
+      console.error('Error saving draft:', error);
+      toast.error('Failed to save draft');
+    } finally {
+      setIsSavingDraft(false);
+    }
+  };
 
   // Load existing draft or pre-fill email
   useEffect(() => {
@@ -196,6 +325,10 @@ export default function DeveloperSetupWizardEnhanced() {
       });
 
       toast.success('Profile submitted for review successfully!');
+      
+      // Clear the draft from localStorage
+      localStorage.removeItem('developer-registration-draft');
+      
       setLocation('/developer-dashboard');
     } catch (error: any) {
       console.error(error);
@@ -218,15 +351,45 @@ export default function DeveloperSetupWizardEnhanced() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 py-12 px-4 sm:px-6 lg:px-8">
+      {/* Resume Draft Dialog */}
+      <DraftManager
+        open={showResumeDraftDialog}
+        onOpenChange={setShowResumeDraftDialog}
+        onResume={handleResumeDraft}
+        onStartFresh={handleStartFresh}
+        wizardType="listing"
+        draftData={{
+          currentStep: step,
+          totalSteps: 4,
+          developmentName: formValues.name,
+          address: formValues.city && formValues.province 
+            ? `${formValues.city}, ${formValues.province}` 
+            : undefined,
+          lastModified: lastSaved || undefined,
+        }}
+      />
+
       <div className="max-w-4xl mx-auto">
         {/* Header */}
-        <div className="mb-8 text-center">
+        <div className="mb-8 text-center relative">
           <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent mb-2">
             Developer Registration
           </h1>
           <p className="text-gray-600">
             Join our platform as a verified property developer
           </p>
+          
+          {/* Auto-save status indicator */}
+          {step > 1 && (
+            <div className="absolute top-0 right-0">
+              <SaveStatusIndicator
+                lastSaved={lastSaved}
+                isSaving={isAutoSaving}
+                error={autoSaveError}
+                variant="compact"
+              />
+            </div>
+          )}
         </div>
 
         {/* Progress Indicator */}
@@ -613,9 +776,11 @@ export default function DeveloperSetupWizardEnhanced() {
                   <GradientButton
                     type="button"
                     variant="outline"
-                    icon={Save}
+                    icon={draftSaved ? Check : Save}
+                    onClick={handleSaveDraft}
+                    disabled={isSavingDraft}
                   >
-                    Save Draft
+                    {draftSaved ? 'Saved' : isSavingDraft ? 'Saving...' : 'Save Draft'}
                   </GradientButton>
                 )}
 
