@@ -1226,4 +1226,258 @@ export const developerRouter = router({
 
       return stats;
     }),
+
+  // ============================================================================
+  // MISSION CONTROL DASHBOARD PROCEDURES
+  // ============================================================================
+
+  /**
+   * Get dashboard KPIs with caching
+   * Auth: Protected
+   * Requirements: 2.1, 2.2, 2.3, 2.4
+   */
+  getDashboardKPIs: protectedProcedure
+    .input(
+      z.object({
+        timeRange: z.enum(['7d', '30d', '90d']).default('30d'),
+        forceRefresh: z.boolean().default(false),
+      })
+    )
+    .query(async ({ input, ctx }) => {
+      const developer = await db.getDeveloperByUserId(ctx.user.id);
+      
+      if (!developer) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Developer profile not found',
+        });
+      }
+
+      const { getKPIsWithCache } = await import('./services/kpiService');
+      const kpis = await getKPIsWithCache(developer.id, input.timeRange, input.forceRefresh);
+
+      return kpis;
+    }),
+
+  /**
+   * Get activity feed for dashboard
+   * Auth: Protected
+   * Requirements: 5.1, 5.2, 5.3
+   */
+  getActivityFeed: protectedProcedure
+    .input(
+      z.object({
+        limit: z.number().int().min(1).max(100).default(20),
+        offset: z.number().int().min(0).default(0),
+        activityTypes: z.array(z.string()).optional(),
+        startDate: z.date().optional(),
+        endDate: z.date().optional(),
+      })
+    )
+    .query(async ({ input, ctx }) => {
+      const developer = await db.getDeveloperByUserId(ctx.user.id);
+      
+      if (!developer) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Developer profile not found',
+        });
+      }
+
+      const { getActivities } = await import('./services/activityService');
+      const activities = await getActivities({
+        developerId: developer.id,
+        limit: input.limit,
+        offset: input.offset,
+        activityTypes: input.activityTypes as any,
+        startDate: input.startDate,
+        endDate: input.endDate,
+      });
+
+      return activities;
+    }),
+
+  /**
+   * Get notifications for dashboard
+   * Auth: Protected
+   * Requirements: 6.2, 6.3
+   */
+  getNotifications: protectedProcedure
+    .input(
+      z.object({
+        unreadOnly: z.boolean().default(false),
+        limit: z.number().int().min(1).max(100).default(20),
+        offset: z.number().int().min(0).default(0),
+      })
+    )
+    .query(async ({ input, ctx }) => {
+      const developer = await db.getDeveloperByUserId(ctx.user.id);
+      
+      if (!developer) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Developer profile not found',
+        });
+      }
+
+      const { getNotifications } = await import('./services/notificationService');
+      const notifications = await getNotifications({
+        developerId: developer.id,
+        unreadOnly: input.unreadOnly,
+        limit: input.limit,
+        offset: input.offset,
+      });
+
+      return notifications;
+    }),
+
+  /**
+   * Get unread notifications count
+   * Auth: Protected
+   * Requirements: 6.2
+   */
+  getUnreadNotificationsCount: protectedProcedure.query(async ({ ctx }) => {
+    const developer = await db.getDeveloperByUserId(ctx.user.id);
+    
+    if (!developer) {
+      throw new TRPCError({
+        code: 'NOT_FOUND',
+        message: 'Developer profile not found',
+      });
+    }
+
+    const { getUnreadCount } = await import('./services/notificationService');
+    const count = await getUnreadCount(developer.id);
+
+    return { count };
+  }),
+
+  /**
+   * Mark notification as read
+   * Auth: Protected
+   * Requirements: 6.3
+   */
+  markNotificationAsRead: protectedProcedure
+    .input(z.object({ notificationId: z.number().int() }))
+    .mutation(async ({ input, ctx }) => {
+      const developer = await db.getDeveloperByUserId(ctx.user.id);
+      
+      if (!developer) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Developer profile not found',
+        });
+      }
+
+      const { markAsRead } = await import('./services/notificationService');
+      const success = await markAsRead(input.notificationId, developer.id);
+
+      if (!success) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Notification not found',
+        });
+      }
+
+      return { success };
+    }),
+
+  /**
+   * Mark all notifications as read
+   * Auth: Protected
+   * Requirements: 6.3
+   */
+  markAllNotificationsAsRead: protectedProcedure.mutation(async ({ ctx }) => {
+    const developer = await db.getDeveloperByUserId(ctx.user.id);
+    
+    if (!developer) {
+      throw new TRPCError({
+        code: 'NOT_FOUND',
+        message: 'Developer profile not found',
+      });
+    }
+
+    const { markAllAsRead } = await import('./services/notificationService');
+    const count = await markAllAsRead(developer.id);
+
+    return { count };
+  }),
+
+  /**
+   * Dismiss notification
+   * Auth: Protected
+   * Requirements: 6.4
+   */
+  dismissNotification: protectedProcedure
+    .input(z.object({ notificationId: z.number().int() }))
+    .mutation(async ({ input, ctx }) => {
+      const developer = await db.getDeveloperByUserId(ctx.user.id);
+      
+      if (!developer) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Developer profile not found',
+        });
+      }
+
+      const { dismissNotification } = await import('./services/notificationService');
+      const success = await dismissNotification(input.notificationId, developer.id);
+
+      if (!success) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Notification not found',
+        });
+      }
+
+      return { success };
+    }),
+
+  /**
+   * Get development summaries for portfolio overview
+   * Auth: Protected
+   * Requirements: 3.1
+   */
+  getDevelopmentSummaries: protectedProcedure.query(async ({ ctx }) => {
+    const developer = await db.getDeveloperByUserId(ctx.user.id);
+    
+    if (!developer) {
+      throw new TRPCError({
+        code: 'NOT_FOUND',
+        message: 'Developer profile not found',
+      });
+    }
+
+    const developments = await developmentService.getDevelopmentsByDeveloperId(developer.id);
+
+    // Get summary stats for each development
+    const summaries = await Promise.all(
+      developments.map(async (dev) => {
+        const units = await unitService.getUnitsByDevelopmentId(dev.id);
+        const totalUnits = units.length;
+        const availableUnits = units.filter(u => u.status === 'available').length;
+        const soldUnits = units.filter(u => u.status === 'sold').length;
+        const reservedUnits = units.filter(u => u.status === 'reserved').length;
+
+        return {
+          id: dev.id,
+          name: dev.name,
+          status: dev.status,
+          totalUnits,
+          availableUnits,
+          soldUnits,
+          reservedUnits,
+          priceFrom: dev.priceFrom,
+          priceTo: dev.priceTo,
+          city: dev.city,
+          province: dev.province,
+          completionDate: dev.completionDate,
+          isPublished: dev.isPublished,
+          views: dev.views,
+        };
+      })
+    );
+
+    return summaries;
+  }),
 });
