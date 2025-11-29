@@ -17,7 +17,8 @@ export const developerRouter = router({
     .input(
       z.object({
         name: z.string().min(2, 'Company name must be at least 2 characters'),
-        category: z.enum(['residential', 'commercial', 'mixed_use', 'industrial']),
+        specializations: z.array(z.enum(['residential', 'commercial', 'mixed_use', 'industrial']))
+          .min(1, 'Please select at least one development specialization'),
         establishedYear: z.number().int().nullable().optional(),
         description: z.string().nullable().optional(),
         email: z.string().email('Invalid email address'),
@@ -161,7 +162,7 @@ export const developerRouter = router({
         data: z
           .object({
             name: z.string().min(2).optional(),
-            category: z.enum(['residential', 'commercial', 'mixed_use', 'industrial']).optional(),
+            specializations: z.array(z.enum(['residential', 'commercial', 'mixed_use', 'industrial'])).optional(),
             establishedYear: z.number().int().nullable().optional(),
             description: z.string().nullable().optional(),
             email: z.string().email().optional(),

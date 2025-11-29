@@ -556,6 +556,7 @@ export const developers = mysqlTable("developers", {
 	city: varchar({ length: 100 }),
 	province: varchar({ length: 100 }),
 	category: mysqlEnum(['residential','commercial','mixed_use','industrial']).default('residential').notNull(),
+	specializations: text(), // JSON array of specializations
 	establishedYear: int(),
 	totalProjects: int(),
 	rating: int(),

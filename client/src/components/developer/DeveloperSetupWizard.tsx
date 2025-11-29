@@ -14,7 +14,7 @@ import { useLocation } from "wouter";
 
 type FormValues = {
   name: string;
-  category: "residential" | "commercial" | "mixed_use" | "industrial";
+  specializations: string[]; // Array of selected specializations
   establishedYear?: number;
   description?: string;
   email: string;
@@ -41,7 +41,7 @@ export default function DeveloperSetupWizard() {
   const { register, handleSubmit, reset, watch, setValue, formState: { errors, isValid } } = useForm<FormValues>({
     mode: "onChange",
     defaultValues: {
-      category: "residential",
+      specializations: [],
       totalProjects: 0,
       acceptTerms: false
     }
@@ -61,7 +61,9 @@ export default function DeveloperSetupWizard() {
       const data = getProfile.data;
       reset({
         name: data.name,
-        category: data.category as any,
+        specializations: typeof data.specializations === 'string' 
+          ? JSON.parse(data.specializations) 
+          : (data.specializations || []),
         establishedYear: data.establishedYear || undefined,
         description: data.description || "",
         email: data.email || user?.email || "",
@@ -104,7 +106,7 @@ export default function DeveloperSetupWizard() {
 
       await createProfile.mutateAsync({
         name: data.name,
-        category: data.category,
+        specializations: data.specializations,
         establishedYear: data.establishedYear ? Number(data.establishedYear) : null,
         description: data.description || null,
         email: data.email,
@@ -195,21 +197,42 @@ export default function DeveloperSetupWizard() {
                   </div>
 
                   <div className="grid gap-2">
-                    <Label htmlFor="category">Category *</Label>
-                    <Select 
-                      onValueChange={(val) => setValue("category", val as any)} 
-                      defaultValue={formValues.category}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select category" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="residential">Residential</SelectItem>
-                        <SelectItem value="commercial">Commercial</SelectItem>
-                        <SelectItem value="mixed_use">Mixed Use</SelectItem>
-                        <SelectItem value="industrial">Industrial</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <Label>Development Specializations *</Label>
+                    <p className="text-sm text-slate-500">
+                      Select all types of developments your company specializes in
+                    </p>
+                    <div className="space-y-3 border rounded-lg p-4 bg-slate-50">
+                      {[
+                        { value: 'residential', label: 'Residential', description: 'Houses, apartments, estates' },
+                        { value: 'commercial', label: 'Commercial', description: 'Offices, retail, business parks' },
+                        { value: 'mixed_use', label: 'Mixed Use', description: 'Combined residential & commercial' },
+                        { value: 'industrial', label: 'Industrial', description: 'Warehouses, factories, logistics' }
+                      ].map((spec) => (
+                        <div key={spec.value} className="flex items-start space-x-3">
+                          <Checkbox
+                            id={spec.value}
+                            checked={formValues.specializations?.includes(spec.value)}
+                            onCheckedChange={(checked) => {
+                              const current = formValues.specializations || [];
+                              if (checked) {
+                                setValue('specializations', [...current, spec.value]);
+                              } else {
+                                setValue('specializations', current.filter(s => s !== spec.value));
+                              }
+                            }}
+                          />
+                          <div className="grid gap-1 flex-1">
+                            <Label htmlFor={spec.value} className="font-medium cursor-pointer">
+                              {spec.label}
+                            </Label>
+                            <p className="text-xs text-slate-500">{spec.description}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    {formValues.specializations?.length === 0 && (
+                      <p className="text-sm text-red-500">Please select at least one specialization</p>
+                    )}
                   </div>
 
                   <div className="grid gap-2">
@@ -355,8 +378,10 @@ export default function DeveloperSetupWizard() {
                         <p className="text-sm font-medium text-slate-900">{formValues.name}</p>
                       </div>
                       <div>
-                        <p className="text-xs font-medium text-slate-500 uppercase">Category</p>
-                        <p className="text-sm font-medium text-slate-900 capitalize">{formValues.category?.replace('_', ' ')}</p>
+                        <p className="text-xs font-medium text-slate-500 uppercase">Specializations</p>
+                        <p className="text-sm font-medium text-slate-900">
+                          {formValues.specializations?.map(s => s.replace('_', ' ')).join(', ') || 'None selected'}
+                        </p>
                       </div>
                       <div>
                         <p className="text-xs font-medium text-slate-500 uppercase">Email</p>

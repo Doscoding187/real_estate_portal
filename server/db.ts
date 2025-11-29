@@ -2583,7 +2583,8 @@ export async function createDeveloper(data: {
   address?: string | null;
   city: string;
   province: string;
-  category: 'residential' | 'commercial' | 'mixed_use' | 'industrial';
+  category?: 'residential' | 'commercial' | 'mixed_use' | 'industrial'; // Deprecated, use specializations
+  specializations?: string[]; // Array of development types
   establishedYear?: number | null;
   totalProjects?: number;
   userId: number;
@@ -2595,6 +2596,10 @@ export async function createDeveloper(data: {
 
   const [result] = await db.insert(developers).values({
     ...data,
+    // Convert specializations array to JSON string, or use category as fallback
+    specializations: data.specializations ? JSON.stringify(data.specializations) : 
+                     data.category ? JSON.stringify([data.category]) : null,
+    category: data.category || data.specializations?.[0] || 'residential', // Keep for backward compatibility
     isVerified: data.isVerified ?? 0,
     status: data.status ?? 'pending',
     totalProjects: data.totalProjects ?? 0,
@@ -2666,6 +2671,7 @@ export async function updateDeveloper(
     city: string;
     province: string;
     category: 'residential' | 'commercial' | 'mixed_use' | 'industrial';
+    specializations: string[]; // Array of development types
     establishedYear: number | null;
     totalProjects: number;
   }>
@@ -2673,10 +2679,18 @@ export async function updateDeveloper(
   const db = await getDb();
   if (!db) throw new Error('Database not available');
 
+  // Prepare update data with JSON serialization for specializations
+  const updateData: any = { ...data };
+  if (data.specializations) {
+    updateData.specializations = JSON.stringify(data.specializations);
+    // Also update category for backward compatibility (use first specialization)
+    updateData.category = data.specializations[0] || 'residential';
+  }
+
   await db
     .update(developers)
     .set({
-      ...data,
+      ...updateData,
       updatedAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
     })
     .where(eq(developers.id, id));
