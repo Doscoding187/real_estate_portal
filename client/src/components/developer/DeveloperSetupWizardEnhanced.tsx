@@ -448,9 +448,7 @@ export default function DeveloperSetupWizardEnhanced() {
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     <div className="text-center">
                       <p className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-                        {(formValues.completedProjects || 0) +
-                          (formValues.currentProjects || 0) +
-                          (formValues.upcomingProjects || 0)}
+                        {formValues.totalProjects || 0}
                       </p>
                       <p className="text-sm text-gray-600 mt-1">Total</p>
                     </div>
@@ -556,9 +554,7 @@ export default function DeveloperSetupWizardEnhanced() {
                     <div className="grid grid-cols-4 gap-4 text-sm text-center">
                       <div>
                         <p className="text-2xl font-bold text-gray-900">
-                          {(formValues.completedProjects || 0) +
-                            (formValues.currentProjects || 0) +
-                            (formValues.upcomingProjects || 0)}
+                          {formValues.totalProjects || 0}
                         </p>
                         <p className="text-gray-600">Total</p>
                       </div>
