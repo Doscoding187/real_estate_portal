@@ -24,6 +24,9 @@ type FormValues = {
   city: string;
   province: string;
   totalProjects?: number;
+  completedProjects?: number;
+  currentProjects?: number;
+  upcomingProjects?: number;
   logo?: string;
   acceptTerms: boolean;
 };
@@ -43,6 +46,9 @@ export default function DeveloperSetupWizard() {
     defaultValues: {
       specializations: [],
       totalProjects: 0,
+      completedProjects: 0,
+      currentProjects: 0,
+      upcomingProjects: 0,
       acceptTerms: false
     }
   });
@@ -73,6 +79,9 @@ export default function DeveloperSetupWizard() {
         city: data.city || "",
         province: data.province || "",
         totalProjects: data.totalProjects || 0,
+        completedProjects: data.completedProjects || 0,
+        currentProjects: data.currentProjects || 0,
+        upcomingProjects: data.upcomingProjects || 0,
         logo: data.logo || "",
         acceptTerms: false
       });
@@ -116,6 +125,9 @@ export default function DeveloperSetupWizard() {
         city: data.city,
         province: data.province,
         totalProjects: data.totalProjects ? Number(data.totalProjects) : 0,
+        completedProjects: data.completedProjects ? Number(data.completedProjects) : 0,
+        currentProjects: data.currentProjects ? Number(data.currentProjects) : 0,
+        upcomingProjects: data.upcomingProjects ? Number(data.upcomingProjects) : 0,
         logo: data.logo || null,
       });
       
@@ -341,14 +353,47 @@ export default function DeveloperSetupWizard() {
               {/* Step 3: Portfolio */}
               {step === 3 && (
                 <div className="space-y-4">
-                  <div className="grid gap-2">
-                    <Label htmlFor="totalProjects">Total Projects Completed</Label>
-                    <Input 
-                      id="totalProjects" 
-                      type="number"
-                      {...register("totalProjects")} 
-                      placeholder="0"
-                    />
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid gap-2">
+                      <Label htmlFor="totalProjects">Total Projects (Since Inception)</Label>
+                      <Input 
+                        id="totalProjects" 
+                        type="number"
+                        min="0"
+                        {...register("totalProjects")} 
+                        placeholder="0"
+                      />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="completedProjects">Completed Developments</Label>
+                      <Input 
+                        id="completedProjects" 
+                        type="number"
+                        min="0"
+                        {...register("completedProjects")} 
+                        placeholder="0"
+                      />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="currentProjects">Current Developments</Label>
+                      <Input 
+                        id="currentProjects" 
+                        type="number"
+                        min="0"
+                        {...register("currentProjects")} 
+                        placeholder="0"
+                      />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="upcomingProjects">Upcoming Projects</Label>
+                      <Input 
+                        id="upcomingProjects" 
+                        type="number"
+                        min="0"
+                        {...register("upcomingProjects")} 
+                        placeholder="0"
+                      />
+                    </div>
                   </div>
 
                   <div className="grid gap-2">
@@ -392,7 +437,28 @@ export default function DeveloperSetupWizard() {
                         <p className="text-sm font-medium text-slate-900">{formValues.city}, {formValues.province}</p>
                       </div>
                     </div>
-                  </div>
+                      <div>
+                        <p className="text-xs font-medium text-slate-500 uppercase">Portfolio</p>
+                        <div className="grid grid-cols-2 gap-2 mt-1">
+                          <div>
+                            <span className="text-xs text-slate-500">Total:</span>
+                            <span className="ml-1 text-sm font-medium text-slate-900">{formValues.totalProjects || 0}</span>
+                          </div>
+                          <div>
+                            <span className="text-xs text-slate-500">Completed:</span>
+                            <span className="ml-1 text-sm font-medium text-slate-900">{formValues.completedProjects || 0}</span>
+                          </div>
+                          <div>
+                            <span className="text-xs text-slate-500">Current:</span>
+                            <span className="ml-1 text-sm font-medium text-slate-900">{formValues.currentProjects || 0}</span>
+                          </div>
+                          <div>
+                            <span className="text-xs text-slate-500">Upcoming:</span>
+                            <span className="ml-1 text-sm font-medium text-slate-900">{formValues.upcomingProjects || 0}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
 
                   <div className="flex items-start space-x-2">
                     <Checkbox 

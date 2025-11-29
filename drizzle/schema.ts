@@ -559,6 +559,9 @@ export const developers = mysqlTable("developers", {
 	specializations: text(), // JSON array of specializations
 	establishedYear: int(),
 	totalProjects: int(),
+	completedProjects: int(),
+	currentProjects: int(),
+	upcomingProjects: int(),
 	rating: int(),
 	reviewCount: int(),
 	isVerified: int().notNull(),

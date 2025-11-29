@@ -2587,6 +2587,9 @@ export async function createDeveloper(data: {
   specializations?: string[]; // Array of development types
   establishedYear?: number | null;
   totalProjects?: number;
+  completedProjects?: number;
+  currentProjects?: number;
+  upcomingProjects?: number;
   userId: number;
   status?: 'pending' | 'approved' | 'rejected';
   isVerified?: number;
@@ -2603,6 +2606,9 @@ export async function createDeveloper(data: {
     isVerified: data.isVerified ?? 0,
     status: data.status ?? 'pending',
     totalProjects: data.totalProjects ?? 0,
+    completedProjects: data.completedProjects ?? 0,
+    currentProjects: data.currentProjects ?? 0,
+    upcomingProjects: data.upcomingProjects ?? 0,
     rating: 0,
     reviewCount: 0,
   });
@@ -2670,10 +2676,12 @@ export async function updateDeveloper(
     address: string | null;
     city: string;
     province: string;
-    category: 'residential' | 'commercial' | 'mixed_use' | 'industrial';
     specializations: string[]; // Array of development types
     establishedYear: number | null;
     totalProjects: number;
+    completedProjects: number;
+    currentProjects: number;
+    upcomingProjects: number;
   }>
 ) {
   const db = await getDb();

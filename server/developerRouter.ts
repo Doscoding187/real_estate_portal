@@ -27,7 +27,10 @@ export const developerRouter = router({
         address: z.string().nullable().optional(),
         city: z.string().min(1, 'City is required'),
         province: z.string().min(1, 'Province is required'),
-        totalProjects: z.number().int().default(0),
+        totalProjects: z.number().int().min(0).default(0),
+        completedProjects: z.number().int().min(0).default(0),
+        currentProjects: z.number().int().min(0).default(0),
+        upcomingProjects: z.number().int().min(0).default(0),
         logo: z.string().nullable().optional(),
       })
     )
@@ -50,6 +53,12 @@ export const developerRouter = router({
 
       const developerId = await db.createDeveloper({
         ...input,
+        description: input.description || undefined,
+        phone: input.phone || undefined,
+        website: input.website || undefined,
+        address: input.address || undefined,
+        logo: input.logo || undefined,
+        establishedYear: input.establishedYear || undefined,
         userId: ctx.user.id,
         isVerified: 0,
         status: 'pending',
@@ -171,7 +180,10 @@ export const developerRouter = router({
             address: z.string().nullable().optional(),
             city: z.string().optional(),
             province: z.string().optional(),
-            totalProjects: z.number().int().optional(),
+            totalProjects: z.number().int().min(0).optional(),
+            completedProjects: z.number().int().min(0).optional(),
+            currentProjects: z.number().int().min(0).optional(),
+            upcomingProjects: z.number().int().min(0).optional(),
             logo: z.string().nullable().optional(),
           })
           .partial(),
