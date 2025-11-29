@@ -122,6 +122,7 @@ export default function Overview() {
           <Button 
             size="lg" 
             className="gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg shadow-blue-500/30 rounded-full px-8 py-6 text-base font-semibold transition-all duration-300 hover:scale-105 hover:shadow-xl hover:shadow-blue-500/40"
+            onClick={() => window.location.href = '/developer/developments/new'}
           >
             <Plus className="w-5 h-5" />
             Create Your First Development
@@ -130,6 +131,7 @@ export default function Overview() {
             size="lg" 
             variant="outline"
             className="rounded-full px-8 py-6 text-base font-semibold border-2 border-slate-200 hover:border-blue-300 hover:bg-blue-50 hover:text-blue-600 transition-all duration-300"
+            onClick={() => window.open('https://docs.example.com', '_blank')}
           >
             View Documentation
           </Button>
@@ -202,7 +204,7 @@ export default function Overview() {
     <div className="space-y-6">
       {/* Welcome Header with Time Range Selector */}
       <WelcomeHeader 
-        developerName={developerProfile?.companyName || 'Developer'}
+        developerName={developerProfile?.name || 'Developer'}
         selectedTimeRange={timeRange}
         onTimeRangeChange={setTimeRange}
       />

@@ -1,44 +1,22 @@
-import React, { useState } from 'react';
-import DeveloperSidebar, { DeveloperSection } from '../components/developer/DeveloperSidebar';
-import DevelopmentsList from '../components/developer/DevelopmentsList';
-import AnalyticsPanel from '../components/developer/AnalyticsPanel';
-import MessagesCenter from '../components/developer/MessagesCenter';
-import SettingsPanel from '../components/developer/SettingsPanel';
-import MarketingTools from '../components/developer/MarketingTools';
+import React from 'react';
 import Overview from '../components/developer/Overview';
-import { SidebarProvider } from '@/components/ui/sidebar';
+import { EnhancedSidebar } from '../components/developer/EnhancedSidebar';
+import { trpc } from '@/lib/trpc';
 
 const PropertyDeveloperDashboard: React.FC = () => {
-  const [activeSection, setActiveSection] = useState<DeveloperSection>('dashboard');
-
-  const renderContent = () => {
-    switch (activeSection) {
-      case 'dashboard':
-        return <Overview />;
-      case 'analytics':
-        return <AnalyticsPanel />;
-      case 'messages':
-        return <MessagesCenter />;
-      case 'settings':
-        return <SettingsPanel />;
-      case 'marketing':
-        return <MarketingTools />;
-      default:
-        return <DevelopmentsList />;
-    }
-  };
+  // Fetch developer profile for name
+  const { data: developerProfile } = trpc.developer.getProfile.useQuery();
 
   return (
-    <SidebarProvider>
-      <div className="flex h-screen w-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30 overflow-hidden">
-        <DeveloperSidebar active={activeSection} onChange={setActiveSection} />
+    <div className="flex h-screen w-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30 overflow-hidden">
+      <EnhancedSidebar />
         <div className="flex flex-col flex-1 min-w-0">
           {/* Header */}
           <header className="bg-white/80 backdrop-blur-xl shadow-sm border-b border-slate-200/50 z-10 flex-shrink-0">
             <div className="flex items-center justify-between p-6">
               <div>
                 <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-                  Property Developer Dashboard
+                  Mission Control
                 </h1>
                 <p className="text-slate-600 text-sm mt-1">
                   Manage your developments and track performance
@@ -58,10 +36,10 @@ const PropertyDeveloperDashboard: React.FC = () => {
                 </button>
                 <div className="flex items-center gap-3 pl-4 border-l border-slate-200">
                   <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center text-white font-bold text-sm shadow-lg shadow-blue-500/30">
-                    SD
+                    {developerProfile?.name?.substring(0, 2).toUpperCase() || 'DE'}
                   </div>
                   <div className="hidden md:block">
-                    <p className="font-semibold text-slate-800 text-sm">Skyline Developments</p>
+                    <p className="font-semibold text-slate-800 text-sm">{developerProfile?.name || 'Developer'}</p>
                     <p className="text-xs text-slate-500">Premium Account</p>
                   </div>
                 </div>
@@ -69,11 +47,12 @@ const PropertyDeveloperDashboard: React.FC = () => {
             </div>
           </header>
 
-          {/* Main Content */}
-          <main className="flex-1 overflow-auto p-6">{renderContent()}</main>
-        </div>
+        {/* Main Content */}
+        <main className="flex-1 overflow-auto p-6">
+          <Overview />
+        </main>
       </div>
-    </SidebarProvider>
+    </div>
   );
 };
 

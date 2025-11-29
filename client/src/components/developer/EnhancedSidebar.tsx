@@ -151,6 +151,9 @@ export function EnhancedSidebar({ className }: EnhancedSidebarProps) {
   const [location] = useLocation();
   const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set());
 
+  // Fetch developer profile
+  const { data: developerProfile } = trpc.developer.getProfile.useQuery();
+
   // Fetch unread notifications count
   const { data: notificationsData } = trpc.developer.getUnreadNotificationsCount.useQuery(
     undefined,
@@ -160,6 +163,8 @@ export function EnhancedSidebar({ className }: EnhancedSidebarProps) {
   );
 
   const unreadCount = notificationsData?.count || 0;
+  const developerName = developerProfile?.name || 'Developer';
+  const developerInitials = developerName.substring(0, 2).toUpperCase();
 
   const toggleSection = (sectionId: string) => {
     setCollapsedSections((prev) => {
@@ -216,12 +221,12 @@ export function EnhancedSidebar({ className }: EnhancedSidebarProps) {
     >
       {/* Logo/Brand */}
       <div className="flex items-center gap-3 px-6 py-5 border-b border-gray-200">
-        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
-          <Building2 className="w-5 h-5 text-white" />
+        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/30">
+          <span className="text-white font-bold text-sm">{developerInitials}</span>
         </div>
         <div>
-          <h1 className="text-lg font-semibold text-gray-900">Mission Control</h1>
-          <p className="text-xs text-gray-500">Developer Dashboard</p>
+          <h1 className="text-base font-semibold text-gray-900">{developerName}</h1>
+          <p className="text-xs text-gray-500">Mission Control</p>
         </div>
       </div>
 
