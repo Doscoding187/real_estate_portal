@@ -91,6 +91,17 @@ export async function getDb() {
   return _db;
 }
 
+// Export a synchronous db object that throws if not initialized
+// This is for backwards compatibility with existing code
+export const db = new Proxy({} as any, {
+  get(_target, prop) {
+    if (!_db) {
+      throw new Error('Database not initialized. Call getDb() first or use await getDb() in async functions.');
+    }
+    return _db[prop];
+  }
+});
+
 export async function upsertUser(user: InsertUser): Promise<void> {
   if (!user.openId) {
     throw new Error('User openId is required for upsert');
