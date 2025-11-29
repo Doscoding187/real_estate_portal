@@ -253,6 +253,33 @@ export interface DeveloperNotificationWithUser extends DeveloperNotification {
   };
 }
 
+// KPI types for mission control dashboard
+export interface DeveloperKPIs {
+  totalLeads: number;
+  qualifiedLeads: number;
+  conversionRate: number;
+  unitsSold: number;
+  unitsAvailable: number;
+  affordabilityMatchPercent: number;
+  marketingPerformanceScore: number;
+  // Trend data (comparison to previous period)
+  trends: {
+    totalLeads: number; // percentage change
+    qualifiedLeads: number;
+    conversionRate: number;
+    unitsSold: number;
+    affordabilityMatchPercent: number;
+    marketingPerformanceScore: number;
+  };
+}
+
+export interface DeveloperKPICache {
+  kpis: DeveloperKPIs;
+  timeRange: '7d' | '30d' | '90d';
+  calculatedAt: Date;
+  expiresAt: Date;
+}
+
 // Tier configuration constants
 export const SUBSCRIPTION_TIER_LIMITS: Record<SubscriptionTier, Omit<DeveloperSubscriptionLimits, 'id' | 'subscriptionId' | 'createdAt' | 'updatedAt'>> = {
   free_trial: {

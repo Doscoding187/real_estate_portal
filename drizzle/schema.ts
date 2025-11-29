@@ -570,9 +570,14 @@ export const developers = mysqlTable("developers", {
 	approvedAt: timestamp({ mode: 'string' }),
 	rejectedBy: int().references(() => users.id, { onDelete: "set null" }),
 	rejectedAt: timestamp({ mode: 'string' }),
+	// KPI caching for mission control dashboard
+	kpiCache: json(),
+	lastKpiCalculation: timestamp({ mode: 'string' }),
 	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
 	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
-});
+}, (table) => ({
+	lastKpiCalculationIdx: index("idx_developers_last_kpi_calculation").on(table.lastKpiCalculation),
+}));
 
 export const developerSubscriptions = mysqlTable("developer_subscriptions", {
 	id: int().autoincrement().notNull().primaryKey(),
