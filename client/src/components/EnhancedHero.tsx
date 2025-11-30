@@ -14,19 +14,11 @@ import {
   Mic,
   MapPinned,
 } from 'lucide-react';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { Card, CardContent } from '@/components/ui/card';
 
 export function EnhancedHero() {
   const [, setLocation] = useLocation();
   const [activeTab, setActiveTab] = useState('buy');
-  const [selectedCity, setSelectedCity] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [budget, setBudget] = useState('');
   const [propertyType, setPropertyType] = useState('');
@@ -41,19 +33,77 @@ export function EnhancedHero() {
     { id: 'agents', label: 'Agents', icon: Users },
   ];
 
+  const handleCategoryClick = (categoryId: string) => {
+    setActiveTab(categoryId);
+    
+    // Build search params based on category
+    const params = new URLSearchParams();
+    if (searchQuery) params.set('search', searchQuery);
+    
+    // Navigate based on category
+    switch (categoryId) {
+      case 'buy':
+        params.set('listingType', 'sale');
+        setLocation(`/properties?${params.toString()}`);
+        break;
+      case 'rental':
+        params.set('listingType', 'rent');
+        setLocation(`/properties?${params.toString()}`);
+        break;
+      case 'projects':
+        setLocation(`/developments?${params.toString()}`);
+        break;
+      case 'agents':
+        setLocation('/agents');
+        break;
+      case 'pg':
+        params.set('listingType', 'rent');
+        params.set('propertyType', 'shared_living');
+        setLocation(`/properties?${params.toString()}`);
+        break;
+      case 'plot':
+        params.set('propertyType', 'plot_land');
+        setLocation(`/properties?${params.toString()}`);
+        break;
+      case 'commercial':
+        params.set('propertyType', 'commercial');
+        setLocation(`/properties?${params.toString()}`);
+        break;
+      default:
+        setLocation('/properties');
+    }
+  };
+
   const handleSearch = () => {
     const params = new URLSearchParams();
-    if (selectedCity) params.set('city', selectedCity);
+    if (searchQuery) params.set('search', searchQuery);
     if (activeTab === 'buy') params.set('listingType', 'sale');
     if (activeTab === 'rental') params.set('listingType', 'rent');
     if (propertyType) params.set('propertyType', propertyType);
 
-    if (activeTab === 'projects') {
-      setLocation(`/developments?${params.toString()}`);
-    } else if (activeTab === 'agents') {
-      setLocation('/agents');
-    } else {
-      setLocation(`/properties?${params.toString()}`);
+    // Handle category-specific navigation
+    switch (activeTab) {
+      case 'projects':
+        setLocation(`/developments?${params.toString()}`);
+        break;
+      case 'agents':
+        setLocation('/agents');
+        break;
+      case 'pg':
+        params.set('listingType', 'rent');
+        params.set('propertyType', 'shared_living');
+        setLocation(`/properties?${params.toString()}`);
+        break;
+      case 'plot':
+        params.set('propertyType', 'plot_land');
+        setLocation(`/properties?${params.toString()}`);
+        break;
+      case 'commercial':
+        params.set('propertyType', 'commercial');
+        setLocation(`/properties?${params.toString()}`);
+        break;
+      default:
+        setLocation(`/properties?${params.toString()}`);
     }
   };
 
@@ -92,7 +142,7 @@ export function EnhancedHero() {
               return (
                 <button
                   key={category.id}
-                  onClick={() => setActiveTab(category.id)}
+                  onClick={() => handleCategoryClick(category.id)}
                   className={`
                     flex items-center gap-2 px-5 py-3 rounded-lg transition-all font-medium text-sm
                     ${
@@ -115,29 +165,11 @@ export function EnhancedHero() {
           <CardContent className="p-6 md:p-8">
             {/* Main Search Row */}
             <div className="flex flex-col md:flex-row gap-4">
-              {/* City Selector */}
-              <Select value={selectedCity} onValueChange={setSelectedCity}>
-                <SelectTrigger className="w-full md:w-[220px] h-14 text-base border-2 hover:border-primary/50 transition-colors [&>span]:flex [&>span]:items-center [&>span]:gap-2">
-                  <MapPin className="h-5 w-5 text-muted-foreground flex-shrink-0" />
-                  <SelectValue placeholder="Select City" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="johannesburg">Johannesburg</SelectItem>
-                  <SelectItem value="cape-town">Cape Town</SelectItem>
-                  <SelectItem value="durban">Durban</SelectItem>
-                  <SelectItem value="pretoria">Pretoria</SelectItem>
-                  <SelectItem value="port-elizabeth">Port Elizabeth</SelectItem>
-                  <SelectItem value="bloemfontein">Bloemfontein</SelectItem>
-                  <SelectItem value="east-london">East London</SelectItem>
-                  <SelectItem value="polokwane">Polokwane</SelectItem>
-                </SelectContent>
-              </Select>
-
-              {/* Search Input */}
+              {/* Unified Search Input */}
               <div className="flex-1 relative">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                 <Input
-                  placeholder="Search by suburb, area, or property name"
+                  placeholder="Search by city, suburb, area, or property name..."
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
                   onKeyDown={e => e.key === 'Enter' && handleSearch()}
