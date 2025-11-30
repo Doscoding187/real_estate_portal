@@ -125,13 +125,33 @@ export function registerAuthRoutes(app: Express) {
       console.error('❌ Login failed:', error);
       console.error('Error stack:', error.stack);
 
-      if (error.message?.includes('Invalid') || error.message?.includes('verify')) {
-        return res.status(401).json({ error: error.message });
+      // Handle specific error cases with appropriate status codes
+      const errorMessage = error.message || 'Unknown error';
+      
+      if (errorMessage.includes('Invalid email or password') || errorMessage.includes('verify your email')) {
+        return res.status(401).json({ error: errorMessage });
+      }
+
+      if (errorMessage.includes('OAuth login')) {
+        return res.status(403).json({ error: errorMessage });
+      }
+
+      if (errorMessage.includes('pending review') || errorMessage.includes('rejected') || errorMessage.includes('suspended')) {
+        return res.status(403).json({ error: errorMessage });
+      }
+
+      if (errorMessage.includes('JWT_SECRET')) {
+        return res.status(500).json({ error: 'Server configuration error. Please contact support.' });
+      }
+
+      // Database connection errors
+      if (errorMessage.includes('connect') || errorMessage.includes('ECONNREFUSED')) {
+        return res.status(503).json({ error: 'Database service unavailable. Please try again later.' });
       }
 
       res.status(500).json({
         error: 'Login failed',
-        message: error.message,
+        message: errorMessage,
         stack: process.env.NODE_ENV === 'development' ? error.stack : undefined,
       });
     }

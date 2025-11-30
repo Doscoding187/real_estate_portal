@@ -260,21 +260,30 @@ export default function AgencySetupWizard() {
       }
 
       await createAgency.mutateAsync({
-        name: data.name,
-        slug: data.slug,
-        description: data.description || null,
-        website: data.website || null,
-        email: data.email,
-        phone: data.phone || null,
-        address: data.address || null,
-        city: data.city,
-        province: data.province,
-        logo: data.logo || null,
+        basicInfo: {
+          name: data.name,
+          description: data.description || 'A professional real estate agency',
+          email: data.email,
+          phone: data.phone || '',
+          website: data.website || '',
+          address: data.address || '',
+          city: data.city,
+          province: data.province,
+        },
+        branding: {
+          logoUrl: data.logo || undefined,
+          primaryColor: '#3B82F6',
+          secondaryColor: '#6366F1',
+          tagline: '',
+          companyName: data.name,
+        },
+        teamEmails: [],
+        planId: 1, // Default to free plan
       });
 
       toast.success('Agency registered successfully!');
       localStorage.removeItem('agency-registration-draft');
-      setLocation('/agency-dashboard');
+      setLocation('/agency/success');
     } catch (error: any) {
       console.error(error);
       toast.error(error.message || 'Failed to register agency');

@@ -1,4 +1,5 @@
 import 'dotenv/config';
+import { sql } from 'drizzle-orm';
 import express from 'express';
 import cors from 'cors';
 import rateLimit from 'express-rate-limit';
@@ -32,6 +33,13 @@ async function findAvailablePort(startPort: number = 3000): Promise<number> {
 }
 
 async function startServer() {
+  // Check for critical environment variables
+  if (!process.env.JWT_SECRET) {
+    console.error('\n❌ CRITICAL ERROR: JWT_SECRET is not defined in environment variables.');
+    console.error('   Login functionality will fail with HTTP 500 errors.');
+    console.error('   Please set JWT_SECRET in your .env file or deployment configuration.\n');
+  }
+
   const app = express();
   const server = createServer(app);
 
@@ -91,8 +99,25 @@ async function startServer() {
   registerAuthRoutes(app);
 
   // Simple test endpoint for debugging
-  app.get('/api/test', (req, res) => {
-    res.json({ message: 'Backend is running!', timestamp: new Date().toISOString() });
+  app.get('/api/test', async (req, res) => {
+    try {
+      // Try to connect to DB
+      const { db } = await import('../db');
+      await db.execute(sql`SELECT 1`);
+      res.json({ 
+        message: 'Backend is running!', 
+        database: 'Connected', 
+        timestamp: new Date().toISOString() 
+      });
+    } catch (error: any) {
+      console.error('DB Check Failed:', error);
+      res.status(500).json({ 
+        message: 'Backend is running but Database is unavailable', 
+        database: 'Error', 
+        error: error.message,
+        timestamp: new Date().toISOString() 
+      });
+    }
   });
 
   // Stripe webhook endpoint (must be before JSON parsing)

@@ -1,6 +1,6 @@
 import { Link, useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
-import { Heart, User, ChevronDown, MapPin, Home, Briefcase, MapPinned, TrendingUp, Calculator } from 'lucide-react';
+import { Heart, User, ChevronDown, MapPin, Home, Briefcase, MapPinned, TrendingUp, Calculator, Megaphone } from 'lucide-react';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { getLoginUrl } from '@/const';
 import {
@@ -382,6 +382,16 @@ export function EnhancedNavbar() {
                     ))}
                   </div>
                 </NavigationMenuContent>
+              </NavigationMenuItem>
+
+              {/* Advertise Link */}
+              <NavigationMenuItem>
+                <Link href="/advertise">
+                  <NavigationMenuLink className="bg-transparent text-gray-700 hover:bg-blue-50 hover:text-blue-700 font-semibold transition-all px-4 py-2 rounded-md flex items-center gap-2 cursor-pointer">
+                    <Megaphone className="h-4 w-4" />
+                    Advertise
+                  </NavigationMenuLink>
+                </Link>
               </NavigationMenuItem>
 
               {/* Data Badge - Removed */}

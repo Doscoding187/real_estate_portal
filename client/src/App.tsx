@@ -77,9 +77,13 @@ import DevelopmentsDemo from './pages/DevelopmentsDemo';
 import DevelopmentDetail from './pages/DevelopmentDetail';
 import DeveloperSetupWizard from './components/developer/DeveloperSetupWizardEnhanced';
 import DevelopmentsList from './components/developer/DevelopmentsList';
+import AgencySetupWizard from './components/agency/AgencySetupWizard';
 
 // Import Comparison Page
 import CompareProperties from './pages/CompareProperties';
+import AdvertisePage from './pages/AdvertisePage';
+import RoleSelection from './pages/RoleSelection';
+import RegistrationSuccess from './pages/RegistrationSuccess';
 
 function Router() {
   // Auto-migrate guest data on login
@@ -104,14 +108,20 @@ function Router() {
       <Route path="/developments" component={DevelopmentsDemo} />
       <Route path="/development/:id" component={DevelopmentDetail} />
       <Route path="/developer/setup" component={DeveloperSetupWizard} />
+      <Route path="/developer/success" component={() => <RegistrationSuccess role="developer" />} />
+      <Route path="/agency/setup" component={AgencySetupWizard} />
+      <Route path="/agency/success" component={() => <RegistrationSuccess role="agency" />} />
+      <Route path="/agent/success" component={() => <RegistrationSuccess role="agent" />} />
       <Route path="/explore" component={ExploreFeed} />
       <Route path="/compare" component={CompareProperties} />
-
+      
       {/* Login and authentication routes should be early in the route list */}
       <Route path="/login" component={Login} />
       <Route path="/forgot-password" component={ForgotPassword} />
       <Route path="/reset-password" component={ResetPassword} />
       <Route path="/accept-invitation" component={AcceptInvitation} />
+      <Route path="/role-selection" component={RoleSelection} />
+      <Route path="/advertise" component={AdvertisePage} />
 
       {/* Super Admin Dashboard Routes */}
       <Route
