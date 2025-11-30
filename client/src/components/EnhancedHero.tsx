@@ -22,6 +22,40 @@ export function EnhancedHero() {
   const [searchQuery, setSearchQuery] = useState('');
   const [budget, setBudget] = useState('');
   const [propertyType, setPropertyType] = useState('');
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [filteredSuggestions, setFilteredSuggestions] = useState<string[]>([]);
+
+  // Comprehensive South African location data
+  const locationSuggestions = [
+    // Major Cities
+    'Johannesburg', 'Cape Town', 'Durban', 'Pretoria', 'Port Elizabeth', 
+    'Bloemfontein', 'East London', 'Polokwane', 'Nelspruit', 'Kimberley',
+    'Pietermaritzburg', 'George', 'Rustenburg', 'Witbank', 'Middelburg',
+    
+    // Gauteng Suburbs
+    'Sandton', 'Rosebank', 'Fourways', 'Randburg', 'Roodepoort', 'Centurion',
+    'Midrand', 'Bedfordview', 'Bryanston', 'Morningside', 'Rivonia', 'Sunninghill',
+    'Waterfall Estate', 'Dainfern', 'Kyalami', 'Benoni', 'Boksburg', 'Kempton Park',
+    'Edenvale', 'Germiston', 'Alberton', 'Krugersdorp', 'Soweto', 'Alexandra',
+    'Melville', 'Parkhurst', 'Greenside', 'Norwood', 'Houghton', 'Hyde Park',
+    
+    // Cape Town Suburbs
+    'Sea Point', 'Green Point', 'Camps Bay', 'Clifton', 'Bantry Bay', 'Fresnaye',
+    'Constantia', 'Newlands', 'Claremont', 'Rondebosch', 'Observatory', 'Woodstock',
+    'Salt River', 'Pinelands', 'Bellville', 'Stellenbosch', 'Paarl', 'Somerset West',
+    'Strand', 'Gordon\'s Bay', 'Hermanus', 'Franschhoek', 'Hout Bay', 'Noordhoek',
+    'Fish Hoek', 'Muizenberg', 'Kalk Bay', 'Simon\'s Town', 'Blouberg', 'Milnerton',
+    'Century City', 'Table View', 'Parklands', 'Durbanville', 'Brackenfell',
+    
+    // KZN Suburbs
+    'Umhlanga', 'Ballito', 'La Lucia', 'Durban North', 'Morningside', 'Berea',
+    'Glenwood', 'Westville', 'Kloof', 'Hillcrest', 'Pinetown', 'Amanzimtoti',
+    'Umdloti', 'Salt Rock', 'Sheffield Beach', 'Zimbali',
+    
+    // Provinces
+    'Gauteng', 'Western Cape', 'KwaZulu-Natal', 'Eastern Cape', 'Free State',
+    'Limpopo', 'Mpumalanga', 'North West', 'Northern Cape',
+  ];
 
   const categories = [
     { id: 'buy', label: 'Buy', icon: Home },
@@ -32,6 +66,32 @@ export function EnhancedHero() {
     { id: 'commercial', label: 'Commercial', icon: Briefcase },
     { id: 'agents', label: 'Agents', icon: Users },
   ];
+
+  // Handle search input changes with autocomplete
+  const handleSearchChange = (value: string) => {
+    setSearchQuery(value);
+    
+    if (value.trim().length > 0) {
+      const filtered = locationSuggestions
+        .filter(location => 
+          location.toLowerCase().includes(value.toLowerCase())
+        )
+        .slice(0, 8); // Limit to 8 suggestions
+      
+      setFilteredSuggestions(filtered);
+      setShowSuggestions(filtered.length > 0);
+    } else {
+      setShowSuggestions(false);
+      setFilteredSuggestions([]);
+    }
+  };
+
+  // Handle suggestion click
+  const handleSuggestionClick = (suggestion: string) => {
+    setSearchQuery(suggestion);
+    setShowSuggestions(false);
+    setFilteredSuggestions([]);
+  };
 
   const handleCategoryClick = (categoryId: string) => {
     setActiveTab(categoryId);
@@ -167,15 +227,41 @@ export function EnhancedHero() {
             <div className="flex flex-col md:flex-row gap-4">
               {/* Unified Search Input */}
               <div className="flex-1 relative">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground z-10" />
                 <Input
                   placeholder="Search by city, suburb, area, or property name..."
                   value={searchQuery}
-                  onChange={e => setSearchQuery(e.target.value)}
+                  onChange={e => handleSearchChange(e.target.value)}
                   onKeyDown={e => e.key === 'Enter' && handleSearch()}
+                  onFocus={() => {
+                    if (searchQuery.trim().length > 0 && filteredSuggestions.length > 0) {
+                      setShowSuggestions(true);
+                    }
+                  }}
+                  onBlur={() => {
+                    // Delay to allow click on suggestion
+                    setTimeout(() => setShowSuggestions(false), 200);
+                  }}
                   className="pl-12 pr-24 h-14 text-base border-2 hover:border-primary/50 focus:border-primary transition-colors"
                 />
-                <div className="absolute right-2 top-1/2 -translate-y-1/2 flex gap-2">
+                
+                {/* Autocomplete Suggestions Dropdown */}
+                {showSuggestions && filteredSuggestions.length > 0 && (
+                  <div className="absolute top-full left-0 right-0 mt-2 bg-white border-2 border-primary/20 rounded-lg shadow-xl z-50 max-h-80 overflow-y-auto">
+                    {filteredSuggestions.map((suggestion, index) => (
+                      <button
+                        key={index}
+                        onClick={() => handleSuggestionClick(suggestion)}
+                        className="w-full text-left px-4 py-3 hover:bg-blue-50 transition-colors flex items-center gap-3 border-b border-gray-100 last:border-b-0"
+                      >
+                        <MapPin className="h-4 w-4 text-primary flex-shrink-0" />
+                        <span className="text-sm font-medium text-gray-700">{suggestion}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+                
+                <div className="absolute right-2 top-1/2 -translate-y-1/2 flex gap-2 z-10">
                   <Button 
                     variant="ghost" 
                     size="icon" 
