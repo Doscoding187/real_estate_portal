@@ -559,9 +559,9 @@ export const developers = mysqlTable("developers", {
 	specializations: text(), // JSON array of specializations
 	establishedYear: int(),
 	totalProjects: int(),
-	completedProjects: int(),
-	currentProjects: int(),
-	upcomingProjects: int(),
+	completedProjects: int().default(0),
+	currentProjects: int().default(0),
+	upcomingProjects: int().default(0),
 	rating: int(),
 	reviewCount: int(),
 	isVerified: int().notNull(),
@@ -583,6 +583,9 @@ export const developers = mysqlTable("developers", {
 	lastKpiCalculationIdx: index("idx_developers_last_kpi_calculation").on(table.lastKpiCalculation),
 }));
 
+export type Developer = InferSelectModel<typeof developers>;
+export type InsertDeveloper = InferInsertModel<typeof developers>;
+
 export const developerSubscriptions = mysqlTable("developer_subscriptions", {
 	id: int().autoincrement().notNull().primaryKey(),
 	developerId: int().notNull().references(() => developers.id, { onDelete: "cascade" }),
@@ -598,6 +601,9 @@ export const developerSubscriptions = mysqlTable("developer_subscriptions", {
 	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
 });
 
+export type DeveloperSubscription = InferSelectModel<typeof developerSubscriptions>;
+export type InsertDeveloperSubscription = InferInsertModel<typeof developerSubscriptions>;
+
 export const developerSubscriptionLimits = mysqlTable("developer_subscription_limits", {
 	id: int().autoincrement().notNull().primaryKey(),
 	subscriptionId: int().notNull().references(() => developerSubscriptions.id, { onDelete: "cascade" }),
@@ -612,6 +618,9 @@ export const developerSubscriptionLimits = mysqlTable("developer_subscription_li
 	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
 });
 
+export type DeveloperSubscriptionLimits = InferSelectModel<typeof developerSubscriptionLimits>;
+export type InsertDeveloperSubscriptionLimits = InferInsertModel<typeof developerSubscriptionLimits>;
+
 export const developerSubscriptionUsage = mysqlTable("developer_subscription_usage", {
 	id: int().autoincrement().notNull().primaryKey(),
 	subscriptionId: int().notNull().references(() => developerSubscriptions.id, { onDelete: "cascade" }),
@@ -622,6 +631,9 @@ export const developerSubscriptionUsage = mysqlTable("developer_subscription_usa
 	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
 	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
 });
+
+export type DeveloperSubscriptionUsage = InferSelectModel<typeof developerSubscriptionUsage>;
+export type InsertDeveloperSubscriptionUsage = InferInsertModel<typeof developerSubscriptionUsage>;
 
 export const developments = mysqlTable("developments", {
 	id: int().autoincrement().notNull().primaryKey(),
