@@ -76,6 +76,7 @@ import CreateDevelopment from './pages/CreateDevelopment';
 import DevelopmentsDemo from './pages/DevelopmentsDemo';
 import DevelopmentDetail from './pages/DevelopmentDetail';
 import DeveloperSetupWizard from './components/developer/DeveloperSetupWizardEnhanced';
+import DevelopmentsList from './components/developer/DevelopmentsList';
 
 // Import Comparison Page
 import CompareProperties from './pages/CompareProperties';
@@ -272,6 +273,20 @@ function Router() {
       <Route path="/developer/dashboard">
         <RequireRole role="property_developer">
           <PropertyDeveloperDashboard />
+        </RequireRole>
+      </Route>
+
+      {/* Developer - Developments List Route */}
+      <Route path="/developer/developments">
+        <RequireRole role="property_developer">
+          <DevelopmentsList />
+        </RequireRole>
+      </Route>
+
+      {/* Developer - Create Development Route */}
+      <Route path="/developer/developments/new">
+        <RequireRole role="property_developer">
+          <CreateDevelopment />
         </RequireRole>
       </Route>
 
