@@ -2,6 +2,15 @@ import { useState } from 'react';
 import { useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import {
   Home,
   Heart,
@@ -13,6 +22,7 @@ import {
   Search,
   Mic,
   MapPinned,
+  ChevronDown,
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 
@@ -30,6 +40,86 @@ export function EnhancedHero() {
   const [propertyType, setPropertyType] = useState('');
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [filteredSuggestions, setFilteredSuggestions] = useState<LocationSuggestion[]>([]);
+  
+  // Filter panel state
+  const [showFilters, setShowFilters] = useState(false);
+  
+  // Filter values
+  const [filters, setFilters] = useState({
+    // Buy filters
+    propertyIntent: '',
+    propertyTypes: [] as string[],
+    priceMin: '',
+    priceMax: '',
+    
+    // Rental filters
+    furnished: false,
+    leaseTerm: '',
+    budgetMin: '',
+    budgetMax: '',
+    
+    // Development filters
+    developmentType: '',
+    developmentStatus: '',
+    
+    // Plot & Land filters
+    landType: '',
+    sizeMin: '',
+    sizeMax: '',
+    
+    // Commercial filters
+    commercialUseType: '',
+    saleOrRent: 'sale',
+    lotSizeMin: '',
+    lotSizeMax: '',
+    zoning: '',
+    parkingSpaces: '',
+    
+    // Shared Living filters
+    roomType: '',
+    billsIncluded: false,
+    genderPreference: '',
+    
+    // Agent filters
+    agentName: '',
+    agency: '',
+  });
+
+  // Filter configuration
+  const filterConfig = {
+    buy: {
+      intents: ['Residential', 'Commercial', 'Plot/Land', 'Farms & Smallholdings'],
+      propertyTypes: {
+        Residential: ['House', 'Apartment', 'Townhouse', 'Cluster', 'Penthouse', 'Duplex', 'Villa'],
+        Commercial: ['Office', 'Retail', 'Industrial', 'Warehouse', 'Mixed-Use'],
+        'Plot/Land': ['Residential Stand', 'Commercial Stand', 'Agricultural Land'],
+        'Farms & Smallholdings': ['Farm', 'Smallholding', 'Game Farm', 'Lifestyle Farm'],
+      },
+    },
+    rental: {
+      intents: ['Residential', 'Commercial', 'Shared Living'],
+      propertyTypes: {
+        Residential: ['House', 'Apartment', 'Townhouse', 'Cluster', 'Room', 'Studio'],
+        Commercial: ['Office', 'Retail', 'Industrial', 'Warehouse'],
+        'Shared Living': ['Room in Apartment', 'Room in House', 'Co-Living Space', 'Student Accommodation'],
+      },
+      leaseTerms: ['Month-to-month', '6 months', '12 months', '24+ months'],
+    },
+    projects: {
+      types: ['Full Title', 'Sectional Title', 'Security Estate', 'Retirement', 'Co-Living', 'Luxury', 'Affordable Housing'],
+      statuses: ['Off-Plan', 'Under Construction', 'Completed', 'Launching Soon'],
+    },
+    plot: {
+      types: ['Residential', 'Commercial', 'Agricultural', 'Industrial'],
+    },
+    commercial: {
+      useTypes: ['Office', 'Retail', 'Industrial', 'Warehouse', 'Medical', 'Mixed-Use'],
+    },
+    pg: {
+      roomTypes: ['Room in Apartment', 'Room in House', 'Co-Living', 'Student Accommodation'],
+      genderOptions: ['Male Only', 'Female Only', 'Mixed'],
+    },
+  };
 
   // Comprehensive South African location data with context
   const locationSuggestions = [
@@ -184,73 +274,85 @@ export function EnhancedHero() {
 
   const handleCategoryClick = (categoryId: string) => {
     setActiveTab(categoryId);
-    
-    // Build search params based on category
-    const params = new URLSearchParams();
-    if (searchQuery) params.set('search', searchQuery);
-    
-    // Navigate based on category
-    switch (categoryId) {
-      case 'buy':
-        params.set('listingType', 'sale');
-        setLocation(`/properties?${params.toString()}`);
-        break;
-      case 'rental':
-        params.set('listingType', 'rent');
-        setLocation(`/properties?${params.toString()}`);
-        break;
-      case 'projects':
-        setLocation(`/developments?${params.toString()}`);
-        break;
-      case 'agents':
-        setLocation('/agents');
-        break;
-      case 'pg':
-        params.set('listingType', 'rent');
-        params.set('propertyType', 'shared_living');
-        setLocation(`/properties?${params.toString()}`);
-        break;
-      case 'plot':
-        params.set('propertyType', 'plot_land');
-        setLocation(`/properties?${params.toString()}`);
-        break;
-      case 'commercial':
-        params.set('propertyType', 'commercial');
-        setLocation(`/properties?${params.toString()}`);
-        break;
-      default:
-        setLocation('/properties');
+    // Show filters for all categories except agents (which navigates directly)
+    if (categoryId === 'agents') {
+      setLocation('/agents');
+      setShowFilters(false);
+    } else {
+      setShowFilters(true);
     }
+  };
+
+  const handleFilterChange = (key: string, value: any) => {
+    setFilters(prev => ({ ...prev, [key]: value }));
   };
 
   const handleSearch = () => {
     const params = new URLSearchParams();
     if (searchQuery) params.set('search', searchQuery);
-    if (activeTab === 'buy') params.set('listingType', 'sale');
-    if (activeTab === 'rental') params.set('listingType', 'rent');
-    if (propertyType) params.set('propertyType', propertyType);
 
-    // Handle category-specific navigation
+    // Add category-specific filters to params
     switch (activeTab) {
+      case 'buy':
+        params.set('listingType', 'sale');
+        if (filters.propertyIntent) params.set('intent', filters.propertyIntent);
+        if (filters.propertyTypes.length > 0) params.set('propertyTypes', filters.propertyTypes.join(','));
+        if (filters.priceMin) params.set('minPrice', filters.priceMin);
+        if (filters.priceMax) params.set('maxPrice', filters.priceMax);
+        setLocation(`/properties?${params.toString()}`);
+        break;
+
+      case 'rental':
+        params.set('listingType', 'rent');
+        if (filters.furnished) params.set('furnished', 'true');
+        if (filters.leaseTerm) params.set('leaseTerm', filters.leaseTerm);
+        if (filters.budgetMin) params.set('minPrice', filters.budgetMin);
+        if (filters.budgetMax) params.set('maxPrice', filters.budgetMax);
+        if (filters.propertyTypes.length > 0) params.set('propertyTypes', filters.propertyTypes.join(','));
+        setLocation(`/properties?${params.toString()}`);
+        break;
+
       case 'projects':
+        if (filters.developmentType) params.set('type', filters.developmentType);
+        if (filters.developmentStatus) params.set('status', filters.developmentStatus);
+        if (filters.priceMin) params.set('minPrice', filters.priceMin);
+        if (filters.priceMax) params.set('maxPrice', filters.priceMax);
         setLocation(`/developments?${params.toString()}`);
         break;
-      case 'agents':
-        setLocation('/agents');
+
+      case 'plot':
+        params.set('propertyType', 'plot_land');
+        if (filters.landType) params.set('landType', filters.landType);
+        if (filters.sizeMin) params.set('minSize', filters.sizeMin);
+        if (filters.sizeMax) params.set('maxSize', filters.sizeMax);
+        if (filters.priceMin) params.set('minPrice', filters.priceMin);
+        if (filters.priceMax) params.set('maxPrice', filters.priceMax);
+        setLocation(`/properties?${params.toString()}`);
         break;
+
+      case 'commercial':
+        params.set('propertyType', 'commercial');
+        params.set('listingType', filters.saleOrRent);
+        if (filters.commercialUseType) params.set('useType', filters.commercialUseType);
+        if (filters.lotSizeMin) params.set('minSize', filters.lotSizeMin);
+        if (filters.lotSizeMax) params.set('maxSize', filters.lotSizeMax);
+        setLocation(`/properties?${params.toString()}`);
+        break;
+
       case 'pg':
         params.set('listingType', 'rent');
         params.set('propertyType', 'shared_living');
+        if (filters.roomType) params.set('roomType', filters.roomType);
+        if (filters.genderPreference) params.set('gender', filters.genderPreference);
+        if (filters.budgetMin) params.set('minPrice', filters.budgetMin);
+        if (filters.budgetMax) params.set('maxPrice', filters.budgetMax);
         setLocation(`/properties?${params.toString()}`);
         break;
-      case 'plot':
-        params.set('propertyType', 'plot_land');
-        setLocation(`/properties?${params.toString()}`);
+
+      case 'agents':
+        setLocation('/agents');
         break;
-      case 'commercial':
-        params.set('propertyType', 'commercial');
-        setLocation(`/properties?${params.toString()}`);
-        break;
+
       default:
         setLocation(`/properties?${params.toString()}`);
     }
@@ -336,7 +438,7 @@ export function EnhancedHero() {
                 
                 {/* Autocomplete Suggestions Dropdown */}
                 {showSuggestions && filteredSuggestions.length > 0 && (
-                  <div className="absolute top-full left-0 right-0 mt-2 bg-white border-2 border-primary/20 rounded-lg shadow-xl z-50 max-h-80 overflow-y-auto">
+                  <div className="absolute top-full left-0 right-0 mt-2 bg-white border-2 border-primary/20 rounded-lg shadow-xl z-[9999] max-h-80 overflow-y-auto">
                     {filteredSuggestions.map((suggestion, index) => (
                       <button
                         key={index}
@@ -392,6 +494,391 @@ export function EnhancedHero() {
                 Search
               </Button>
             </div>
+
+            {/* Dynamic Filter Panel */}
+            {showFilters && activeTab !== 'agents' && (
+              <div className="mt-6 pt-6 border-t animate-in slide-in-from-top-2 duration-200">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                  
+                  {/* BUY FILTERS */}
+                  {activeTab === 'buy' && (
+                    <>
+                      <div className="space-y-2">
+                        <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Property Intent</Label>
+                        <Select 
+                          value={filters.propertyIntent} 
+                          onValueChange={(val) => handleFilterChange('propertyIntent', val)}
+                        >
+                          <SelectTrigger className="h-10 bg-gray-50/50 border-gray-200">
+                            <SelectValue placeholder="Any Intent" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">Any Intent</SelectItem>
+                            {filterConfig.buy.intents.map(intent => (
+                              <SelectItem key={intent} value={intent}>{intent}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Property Type</Label>
+                        <Select 
+                          value={filters.propertyTypes[0] || ''} 
+                          onValueChange={(val) => handleFilterChange('propertyTypes', [val])}
+                        >
+                          <SelectTrigger className="h-10 bg-gray-50/50 border-gray-200">
+                            <SelectValue placeholder="Any Type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">Any Type</SelectItem>
+                            {(filters.propertyIntent && filterConfig.buy.propertyTypes[filters.propertyIntent as keyof typeof filterConfig.buy.propertyTypes] 
+                              ? filterConfig.buy.propertyTypes[filters.propertyIntent as keyof typeof filterConfig.buy.propertyTypes]
+                              : Object.values(filterConfig.buy.propertyTypes).flat()
+                            ).map((type: string) => (
+                              <SelectItem key={type} value={type}>{type}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Min Price</Label>
+                        <Select 
+                          value={filters.priceMin} 
+                          onValueChange={(val) => handleFilterChange('priceMin', val)}
+                        >
+                          <SelectTrigger className="h-10 bg-gray-50/50 border-gray-200">
+                            <SelectValue placeholder="No Min" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="0">R 0</SelectItem>
+                            <SelectItem value="500000">R 500,000</SelectItem>
+                            <SelectItem value="1000000">R 1,000,000</SelectItem>
+                            <SelectItem value="2000000">R 2,000,000</SelectItem>
+                            <SelectItem value="5000000">R 5,000,000</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Max Price</Label>
+                        <Select 
+                          value={filters.priceMax} 
+                          onValueChange={(val) => handleFilterChange('priceMax', val)}
+                        >
+                          <SelectTrigger className="h-10 bg-gray-50/50 border-gray-200">
+                            <SelectValue placeholder="No Max" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="1000000">R 1,000,000</SelectItem>
+                            <SelectItem value="2000000">R 2,000,000</SelectItem>
+                            <SelectItem value="5000000">R 5,000,000</SelectItem>
+                            <SelectItem value="10000000">R 10,000,000</SelectItem>
+                            <SelectItem value="50000000">R 50,000,000+</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </>
+                  )}
+
+                  {/* RENTAL FILTERS */}
+                  {activeTab === 'rental' && (
+                    <>
+                      <div className="space-y-2">
+                        <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Property Type</Label>
+                        <Select 
+                          value={filters.propertyTypes[0] || ''} 
+                          onValueChange={(val) => handleFilterChange('propertyTypes', [val])}
+                        >
+                          <SelectTrigger className="h-10 bg-gray-50/50 border-gray-200">
+                            <SelectValue placeholder="Any Type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">Any Type</SelectItem>
+                            {Object.values(filterConfig.rental.propertyTypes).flat().map((type: string) => (
+                              <SelectItem key={type} value={type}>{type}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Lease Term</Label>
+                        <Select 
+                          value={filters.leaseTerm} 
+                          onValueChange={(val) => handleFilterChange('leaseTerm', val)}
+                        >
+                          <SelectTrigger className="h-10 bg-gray-50/50 border-gray-200">
+                            <SelectValue placeholder="Any Term" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">Any Term</SelectItem>
+                            {filterConfig.rental.leaseTerms.map(term => (
+                              <SelectItem key={term} value={term}>{term}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Max Budget</Label>
+                        <Select 
+                          value={filters.budgetMax} 
+                          onValueChange={(val) => handleFilterChange('budgetMax', val)}
+                        >
+                          <SelectTrigger className="h-10 bg-gray-50/50 border-gray-200">
+                            <SelectValue placeholder="Any Budget" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="5000">R 5,000</SelectItem>
+                            <SelectItem value="10000">R 10,000</SelectItem>
+                            <SelectItem value="20000">R 20,000</SelectItem>
+                            <SelectItem value="50000">R 50,000+</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="flex items-center space-x-2 h-10 mt-6">
+                        <Checkbox 
+                          id="furnished" 
+                          checked={filters.furnished}
+                          onCheckedChange={(checked) => handleFilterChange('furnished', checked)}
+                        />
+                        <Label htmlFor="furnished" className="font-normal cursor-pointer">Furnished Only</Label>
+                      </div>
+                    </>
+                  )}
+
+                  {/* DEVELOPMENTS FILTERS */}
+                  {activeTab === 'projects' && (
+                    <>
+                      <div className="space-y-2">
+                        <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Development Type</Label>
+                        <Select 
+                          value={filters.developmentType} 
+                          onValueChange={(val) => handleFilterChange('developmentType', val)}
+                        >
+                          <SelectTrigger className="h-10 bg-gray-50/50 border-gray-200">
+                            <SelectValue placeholder="Any Type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">Any Type</SelectItem>
+                            {filterConfig.projects.types.map(type => (
+                              <SelectItem key={type} value={type}>{type}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Status</Label>
+                        <Select 
+                          value={filters.developmentStatus} 
+                          onValueChange={(val) => handleFilterChange('developmentStatus', val)}
+                        >
+                          <SelectTrigger className="h-10 bg-gray-50/50 border-gray-200">
+                            <SelectValue placeholder="Any Status" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">Any Status</SelectItem>
+                            {filterConfig.projects.statuses.map(status => (
+                              <SelectItem key={status} value={status}>{status}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Min Price</Label>
+                        <Input 
+                          type="number" 
+                          placeholder="R Min" 
+                          className="h-10 bg-gray-50/50 border-gray-200"
+                          value={filters.priceMin}
+                          onChange={(e) => handleFilterChange('priceMin', e.target.value)}
+                        />
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Max Price</Label>
+                        <Input 
+                          type="number" 
+                          placeholder="R Max" 
+                          className="h-10 bg-gray-50/50 border-gray-200"
+                          value={filters.priceMax}
+                          onChange={(e) => handleFilterChange('priceMax', e.target.value)}
+                        />
+                      </div>
+                    </>
+                  )}
+
+                  {/* PLOT & LAND FILTERS */}
+                  {activeTab === 'plot' && (
+                    <>
+                      <div className="space-y-2">
+                        <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Land Type</Label>
+                        <Select 
+                          value={filters.landType} 
+                          onValueChange={(val) => handleFilterChange('landType', val)}
+                        >
+                          <SelectTrigger className="h-10 bg-gray-50/50 border-gray-200">
+                            <SelectValue placeholder="Any Type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">Any Type</SelectItem>
+                            {filterConfig.plot.types.map(type => (
+                              <SelectItem key={type} value={type}>{type}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Min Size (m²)</Label>
+                        <Input 
+                          type="number" 
+                          placeholder="Min m²" 
+                          className="h-10 bg-gray-50/50 border-gray-200"
+                          value={filters.sizeMin}
+                          onChange={(e) => handleFilterChange('sizeMin', e.target.value)}
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Max Price</Label>
+                        <Select 
+                          value={filters.priceMax} 
+                          onValueChange={(val) => handleFilterChange('priceMax', val)}
+                        >
+                          <SelectTrigger className="h-10 bg-gray-50/50 border-gray-200">
+                            <SelectValue placeholder="Any Price" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="500000">R 500k</SelectItem>
+                            <SelectItem value="1000000">R 1M</SelectItem>
+                            <SelectItem value="5000000">R 5M</SelectItem>
+                            <SelectItem value="10000000">R 10M+</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </>
+                  )}
+
+                  {/* COMMERCIAL FILTERS */}
+                  {activeTab === 'commercial' && (
+                    <>
+                      <div className="space-y-2">
+                        <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">I want to</Label>
+                        <div className="flex p-1 bg-gray-100 rounded-lg h-10">
+                          <button
+                            onClick={() => handleFilterChange('saleOrRent', 'sale')}
+                            className={`flex-1 rounded-md text-sm font-medium transition-all ${filters.saleOrRent === 'sale' ? 'bg-white shadow-sm text-primary' : 'text-gray-500 hover:text-gray-900'}`}
+                          >
+                            Buy
+                          </button>
+                          <button
+                            onClick={() => handleFilterChange('saleOrRent', 'rent')}
+                            className={`flex-1 rounded-md text-sm font-medium transition-all ${filters.saleOrRent === 'rent' ? 'bg-white shadow-sm text-primary' : 'text-gray-500 hover:text-gray-900'}`}
+                          >
+                            Rent
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Use Type</Label>
+                        <Select 
+                          value={filters.commercialUseType} 
+                          onValueChange={(val) => handleFilterChange('commercialUseType', val)}
+                        >
+                          <SelectTrigger className="h-10 bg-gray-50/50 border-gray-200">
+                            <SelectValue placeholder="Any Use" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">Any Use</SelectItem>
+                            {filterConfig.commercial.useTypes.map(type => (
+                              <SelectItem key={type} value={type}>{type}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Min Size (m²)</Label>
+                        <Input 
+                          type="number" 
+                          placeholder="Min m²" 
+                          className="h-10 bg-gray-50/50 border-gray-200"
+                          value={filters.lotSizeMin}
+                          onChange={(e) => handleFilterChange('lotSizeMin', e.target.value)}
+                        />
+                      </div>
+                    </>
+                  )}
+
+                  {/* SHARED LIVING FILTERS */}
+                  {activeTab === 'pg' && (
+                    <>
+                      <div className="space-y-2">
+                        <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Room Type</Label>
+                        <Select 
+                          value={filters.roomType} 
+                          onValueChange={(val) => handleFilterChange('roomType', val)}
+                        >
+                          <SelectTrigger className="h-10 bg-gray-50/50 border-gray-200">
+                            <SelectValue placeholder="Any Room" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">Any Room</SelectItem>
+                            {filterConfig.pg.roomTypes.map(type => (
+                              <SelectItem key={type} value={type}>{type}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Gender Preference</Label>
+                        <Select 
+                          value={filters.genderPreference} 
+                          onValueChange={(val) => handleFilterChange('genderPreference', val)}
+                        >
+                          <SelectTrigger className="h-10 bg-gray-50/50 border-gray-200">
+                            <SelectValue placeholder="Any" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">Any</SelectItem>
+                            {filterConfig.pg.genderOptions.map(opt => (
+                              <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Max Budget</Label>
+                        <Select 
+                          value={filters.budgetMax} 
+                          onValueChange={(val) => handleFilterChange('budgetMax', val)}
+                        >
+                          <SelectTrigger className="h-10 bg-gray-50/50 border-gray-200">
+                            <SelectValue placeholder="Any Budget" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="3000">R 3,000</SelectItem>
+                            <SelectItem value="5000">R 5,000</SelectItem>
+                            <SelectItem value="8000">R 8,000</SelectItem>
+                            <SelectItem value="10000">R 10,000+</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </>
+                  )}
+
+                </div>
+              </div>
+            )}
 
             {/* Popular Provinces */}
             <div className="mt-6 pt-6 border-t">
