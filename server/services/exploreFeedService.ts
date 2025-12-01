@@ -68,22 +68,28 @@ export class ExploreFeedService {
       // Get user preferences if authenticated
       let userPrefs = null;
       if (userId) {
-        // Check cache for user preferences
-        const prefsCacheKey = CacheKeys.userPreferences(userId);
-        userPrefs = await cache.get(prefsCacheKey);
-        
-        if (!userPrefs) {
-          const prefs = await db
-            .select()
-            .from(exploreUserPreferences)
-            .where(eq(exploreUserPreferences.userId, userId))
-            .limit(1);
-          userPrefs = prefs[0] || null;
+        try {
+          // Check cache for user preferences
+          const prefsCacheKey = CacheKeys.userPreferences(userId);
+          userPrefs = await cache.get(prefsCacheKey);
           
-          // Cache user preferences
-          if (userPrefs) {
-            await cache.set(prefsCacheKey, userPrefs, CacheTTL.USER_PREFERENCES);
+          if (!userPrefs) {
+            const prefs = await db
+              .select()
+              .from(exploreUserPreferences)
+              .where(eq(exploreUserPreferences.userId, userId))
+              .limit(1);
+            userPrefs = prefs[0] || null;
+            
+            // Cache user preferences
+            if (userPrefs) {
+              await cache.set(prefsCacheKey, userPrefs, CacheTTL.USER_PREFERENCES);
+            }
           }
+        } catch (error) {
+          // Table might not exist yet - gracefully continue without preferences
+          console.warn('Could not fetch user preferences:', error);
+          userPrefs = null;
         }
       }
 
