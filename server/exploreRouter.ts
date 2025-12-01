@@ -169,6 +169,59 @@ export const exploreRouter = router({
 
     return tags;
   }),
+
+  // Upload new explore short
+  uploadShort: protectedProcedure
+    .input(
+      z.object({
+        title: z.string().min(1).max(255),
+        caption: z.string().max(500).optional(),
+        mediaUrls: z.array(z.string()).min(1).max(10),
+        highlights: z.array(z.string()).max(4).optional(),
+        listingId: z.number().optional(),
+        developmentId: z.number().optional(),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      const { db } = await import('./db');
+      const { exploreShorts, agents, developers } = await import('../drizzle/schema');
+      const { eq } = await import('drizzle-orm');
+
+      // Get user's agent or developer ID
+      let agentId: number | null = null;
+      let developerId: number | null = null;
+
+      if (ctx.user.role === 'agent') {
+        const agent = await db.select().from(agents).where(eq(agents.userId, ctx.user.id)).limit(1);
+        agentId = agent[0]?.id || null;
+      } else if (ctx.user.role === 'property_developer') {
+        const developer = await db.select().from(developers).where(eq(developers.userId, ctx.user.id)).limit(1);
+        developerId = developer[0]?.id || null;
+      }
+
+      // Create the explore short
+      const result = await db.insert(exploreShorts).values({
+        listingId: input.listingId || null,
+        developmentId: input.developmentId || null,
+        agentId,
+        developerId,
+        title: input.title,
+        caption: input.caption || null,
+        primaryMediaId: 1, // Placeholder - would be actual media ID in production
+        mediaIds: JSON.stringify(input.mediaUrls),
+        highlights: input.highlights ? JSON.stringify(input.highlights.filter(h => h.trim())) : null,
+        performanceScore: 0,
+        boostPriority: 0,
+        isPublished: 1,
+        isFeatured: 0,
+        publishedAt: new Date(),
+      });
+
+      return {
+        success: true,
+        shortId: Number(result.insertId),
+      };
+    }),
 });
 
 export type ExploreRouter = typeof exploreRouter;

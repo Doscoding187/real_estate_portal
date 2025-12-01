@@ -34,6 +34,21 @@ export interface FeedResult {
   metadata?: Record<string, any>;
 }
 
+/**
+ * Transform explore short to include computed fields
+ */
+function transformShort(short: any) {
+  const mediaIds = typeof short.mediaIds === 'string' 
+    ? JSON.parse(short.mediaIds) 
+    : short.mediaIds;
+  
+  return {
+    ...short,
+    primaryMediaUrl: Array.isArray(mediaIds) && mediaIds.length > 0 ? mediaIds[0] : null,
+    mediaUrls: Array.isArray(mediaIds) ? mediaIds : [],
+  };
+}
+
 export class ExploreFeedService {
   /**
    * Get recommended feed for a user
@@ -94,7 +109,7 @@ export class ExploreFeedService {
         .offset(offset);
 
       const result: FeedResult = {
-        shorts,
+        shorts: shorts.map(transformShort),
         feedType: 'recommended',
         hasMore: shorts.length === limit,
         offset: offset + shorts.length,
@@ -151,7 +166,7 @@ export class ExploreFeedService {
       `);
 
       const feedResult: FeedResult = {
-        shorts: result.rows,
+        shorts: result.rows.map(transformShort),
         feedType: 'area',
         hasMore: result.rows.length === limit,
         offset: offset + result.rows.length,
@@ -221,7 +236,7 @@ export class ExploreFeedService {
         `);
 
         return {
-          shorts: result.rows,
+          shorts: result.rows.map(transformShort),
           feedType: 'category',
           hasMore: result.rows.length === limit,
           offset: offset + result.rows.length,
@@ -243,7 +258,7 @@ export class ExploreFeedService {
         .offset(offset);
 
       return {
-        shorts,
+        shorts: shorts.map(transformShort),
         feedType: 'category',
         hasMore: shorts.length === limit,
         offset: offset + shorts.length,
@@ -286,7 +301,7 @@ export class ExploreFeedService {
         .offset(offset);
 
       return {
-        shorts,
+        shorts: shorts.map(transformShort),
         feedType: 'agent',
         hasMore: shorts.length === limit,
         offset: offset + shorts.length,
@@ -329,7 +344,7 @@ export class ExploreFeedService {
         .offset(offset);
 
       return {
-        shorts,
+        shorts: shorts.map(transformShort),
         feedType: 'developer',
         hasMore: shorts.length === limit,
         offset: offset + shorts.length,

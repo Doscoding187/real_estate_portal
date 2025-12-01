@@ -38,6 +38,9 @@ export default function ExploreUpload() {
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [returnPath, setReturnPath] = useState('/agent/dashboard');
 
+  // Upload mutation
+  const uploadMutation = trpc.explore.uploadShort.useMutation();
+
   // Redirect if not authenticated
   if (!isAuthenticated) {
     setLocation('/login');
@@ -126,9 +129,17 @@ export default function ExploreUpload() {
     setIsUploading(true);
 
     try {
-      // TODO: Implement actual upload logic with media upload to S3/storage
-      // For now, just show success modal
-      
+      // Upload to backend
+      const result = await uploadMutation.mutateAsync({
+        title: title.trim(),
+        caption: caption.trim() || undefined,
+        mediaUrls: mediaFiles.map(m => m.url), // Using data URLs for now
+        highlights: highlights.filter(h => h.trim()).length > 0 
+          ? highlights.filter(h => h.trim()) 
+          : undefined,
+        listingId: selectedListingId || undefined,
+      });
+
       // Reset form
       setTitle('');
       setCaption('');
@@ -140,9 +151,10 @@ export default function ExploreUpload() {
       setShowSuccessModal(true);
       
     } catch (error) {
+      console.error('Upload error:', error);
       toast({
         title: 'Upload failed',
-        description: 'There was an error uploading your content. Please try again.',
+        description: error instanceof Error ? error.message : 'There was an error uploading your content. Please try again.',
         variant: 'destructive',
       });
     } finally {

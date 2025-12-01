@@ -2,32 +2,28 @@ import { useState, useEffect } from 'react';
 import { trpc } from '@/lib/trpc';
 import { Loader2, Upload } from 'lucide-react';
 import VideoCard from '@/components/explore/VideoCard';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { useLocation } from 'wouter';
 
 export default function ExploreFeed() {
   const [, setLocation] = useLocation();
-  const { isAuthenticated } = useAuth();
+  const { user, isAuthenticated } = useAuth();
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [filterType, setFilterType] = useState<'all' | 'listing' | 'content'>('all');
+  const [filterType, setFilterType] = useState<'recommended' | 'area' | 'category'>('recommended');
 
-  // Fetch videos based on filter type
-  const { data: allVideos, isLoading: allLoading } = trpc.video.getVideos.useQuery();
-  const { data: listingVideos, isLoading: listingLoading } = trpc.video.getVideosByType.useQuery(
-    { type: 'listing', limit: 20 },
-    { enabled: filterType === 'listing' },
-  );
-  const { data: contentVideos, isLoading: contentLoading } = trpc.video.getVideosByType.useQuery(
-    { type: 'content', limit: 20 },
-    { enabled: filterType === 'content' },
-  );
+  // Fetch explore shorts feed
+  const { data: feedData, isLoading } = trpc.explore.getFeed.useQuery({
+    feedType: filterType,
+    limit: 20,
+    offset: 0,
+    userId: user?.id,
+  });
 
-  // Determine which data to show based on filter
-  const videos =
-    filterType === 'all' ? allVideos : filterType === 'listing' ? listingVideos : contentVideos;
-  const isLoading =
-    filterType === 'all' ? allLoading : filterType === 'listing' ? listingLoading : contentLoading;
+  // Mutation for recording interactions
+  const recordInteractionMutation = trpc.explore.recordInteraction.useMutation();
+
+  const videos = feedData?.shorts || [];
 
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
     const { scrollTop, clientHeight } = e.currentTarget;
@@ -72,14 +68,14 @@ export default function ExploreFeed() {
       <div className="absolute top-0 left-0 right-0 z-50 p-4 flex justify-between items-center">
         <Tabs value={filterType} onValueChange={value => setFilterType(value as any)}>
           <TabsList className="bg-black/80 backdrop-blur-sm">
-            <TabsTrigger value="all" className="text-white data-[state=active]:bg-white/20">
-              All
+            <TabsTrigger value="recommended" className="text-white data-[state=active]:bg-white/20">
+              For You
             </TabsTrigger>
-            <TabsTrigger value="listing" className="text-white data-[state=active]:bg-white/20">
-              Listings
+            <TabsTrigger value="area" className="text-white data-[state=active]:bg-white/20">
+              Area
             </TabsTrigger>
-            <TabsTrigger value="content" className="text-white data-[state=active]:bg-white/20">
-              Content
+            <TabsTrigger value="category" className="text-white data-[state=active]:bg-white/20">
+              Category
             </TabsTrigger>
           </TabsList>
         </Tabs>
@@ -102,14 +98,28 @@ export default function ExploreFeed() {
         className="h-full w-full overflow-y-scroll snap-y snap-mandatory no-scrollbar"
         onScroll={handleScroll}
       >
-        {videos?.map((video, idx) => (
-          <div key={video.id} className="snap-start h-screen w-full">
+        {videos?.map((short, idx) => (
+          <div key={short.id} className="snap-start h-screen w-full">
             <VideoCard
-              video={video}
+              video={{
+                id: short.id,
+                title: short.title,
+                description: short.caption || '',
+                videoUrl: short.primaryMediaUrl || '',
+                thumbnailUrl: short.primaryMediaUrl || '',
+                views: short.viewCount || 0,
+                likes: short.likeCount || 0,
+                userId: short.agentId || short.developerId || 0,
+                createdAt: short.publishedAt || new Date(),
+              }}
               isActive={idx === currentIndex}
               onView={() => {
-                // Increment view count when video becomes active
-                trpc.video.incrementViews.mutate({ videoId: video.id });
+                // Record view interaction
+                recordInteractionMutation.mutate({
+                  shortId: short.id,
+                  interactionType: 'view',
+                  feedType: filterType,
+                });
               }}
             />
           </div>
