@@ -470,3 +470,173 @@ export interface BulkCreateUnitsInput {
   phaseId?: number;
   units: Omit<CreateUnitInput, 'developmentId' | 'phaseId'>[];
 }
+
+
+// Explore Shorts Types
+export type InteractionType =
+  | 'impression'
+  | 'view'
+  | 'skip'
+  | 'save'
+  | 'share'
+  | 'contact'
+  | 'whatsapp'
+  | 'book_viewing';
+
+export type FeedType = 'recommended' | 'area' | 'category' | 'agent' | 'developer';
+
+export type DeviceType = 'mobile' | 'tablet' | 'desktop';
+
+export interface ExploreShort {
+  id: number;
+  listingId?: number;
+  developmentId?: number;
+  agentId?: number;
+  developerId?: number;
+  title: string;
+  caption?: string;
+  primaryMediaId: number;
+  mediaIds: number[];
+  highlights?: string[];
+  performanceScore: number;
+  boostPriority: number;
+  viewCount: number;
+  uniqueViewCount: number;
+  saveCount: number;
+  shareCount: number;
+  skipCount: number;
+  averageWatchTime: number;
+  viewThroughRate: number;
+  saveRate: number;
+  shareRate: number;
+  skipRate: number;
+  isPublished: boolean;
+  isFeatured: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+  publishedAt?: Date;
+}
+
+export interface ExploreInteraction {
+  id: number;
+  shortId: number;
+  userId?: number;
+  sessionId: string;
+  interactionType: InteractionType;
+  duration?: number;
+  timestamp: Date;
+  feedType: FeedType;
+  feedContext?: Record<string, any>;
+  deviceType: DeviceType;
+  userAgent?: string;
+  ipAddress?: string;
+  metadata?: Record<string, any>;
+}
+
+export interface ExploreHighlightTag {
+  id: number;
+  tagKey: string;
+  label: string;
+  icon?: string;
+  color?: string;
+  category?: string;
+  displayOrder: number;
+  isActive: boolean;
+  createdAt: Date;
+}
+
+export interface ExploreUserPreference {
+  id: number;
+  userId: number;
+  preferredLocations?: number[];
+  budgetMin?: number;
+  budgetMax?: number;
+  propertyTypes?: string[];
+  interactionHistory?: InteractionSummary[];
+  savedProperties?: number[];
+  inferredPreferences?: Record<string, any>;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface InteractionSummary {
+  shortId: number;
+  type: InteractionType;
+  timestamp: Date;
+  duration?: number;
+}
+
+// Extended types for frontend use
+export interface PropertyShort extends ExploreShort {
+  property?: {
+    price: number;
+    location: {
+      city: string;
+      suburb?: string;
+      province: string;
+    };
+    specs: {
+      bedrooms?: number;
+      bathrooms?: number;
+      parking?: number;
+    };
+  };
+  media: MediaItem[];
+  highlightTags: ExploreHighlightTag[];
+  agent?: {
+    id: number;
+    name: string;
+    logo?: string;
+    phone?: string;
+    whatsapp?: string;
+  };
+}
+
+export interface MediaItem {
+  id: number;
+  type: 'image' | 'video';
+  url: string;
+  thumbnailUrl?: string;
+  previewUrl?: string;
+  orientation: 'vertical' | 'horizontal' | 'square';
+  duration?: number;
+  width: number;
+  height: number;
+}
+
+// API Request/Response types
+export interface CreateExploreShortInput {
+  listingId?: number;
+  developmentId?: number;
+  title: string;
+  caption?: string;
+  mediaIds: number[];
+  highlights?: string[];
+}
+
+export interface UpdateExploreShortInput {
+  title?: string;
+  caption?: string;
+  highlights?: string[];
+  isPublished?: boolean;
+  isFeatured?: boolean;
+}
+
+export interface RecordInteractionInput {
+  shortId: number;
+  interactionType: InteractionType;
+  duration?: number;
+  feedType: FeedType;
+  feedContext?: Record<string, any>;
+  deviceType: DeviceType;
+}
+
+export interface FeedQuery {
+  feedType: FeedType;
+  limit?: number;
+  offset?: number;
+  location?: string;
+  category?: string;
+  agentId?: number;
+  developerId?: number;
+}

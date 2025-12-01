@@ -1677,3 +1677,145 @@ export const developerNotifications = mysqlTable("developer_notifications", {
 
 export type DeveloperNotification = InferSelectModel<typeof developerNotifications>;
 export type InsertDeveloperNotification = InferInsertModel<typeof developerNotifications>;
+
+// Explore Shorts Tables
+export const exploreShorts = mysqlTable("explore_shorts", {
+  id: int().autoincrement().notNull().primaryKey(),
+  listingId: int().references(() => listings.id, { onDelete: "cascade" }),
+  developmentId: int().references(() => developments.id, { onDelete: "cascade" }),
+  agentId: int().references(() => agents.id, { onDelete: "cascade" }),
+  developerId: int().references(() => developers.id, { onDelete: "cascade" }),
+  
+  title: varchar({ length: 255 }).notNull(),
+  caption: text(),
+  
+  // Media references
+  primaryMediaId: int().notNull(),
+  mediaIds: json().notNull(), // Array of media IDs
+  
+  // Highlights (max 4)
+  highlights: json(), // Array of highlight tag keys
+  
+  // Performance metrics
+  performanceScore: decimal({ precision: 5, scale: 2 }).default('0').notNull(),
+  boostPriority: int().default(0).notNull(),
+  
+  // Engagement metrics
+  viewCount: int().default(0).notNull(),
+  uniqueViewCount: int().default(0).notNull(),
+  saveCount: int().default(0).notNull(),
+  shareCount: int().default(0).notNull(),
+  skipCount: int().default(0).notNull(),
+  averageWatchTime: int().default(0).notNull(), // seconds
+  
+  // Calculated rates
+  viewThroughRate: decimal({ precision: 5, scale: 2 }).default('0').notNull(),
+  saveRate: decimal({ precision: 5, scale: 2 }).default('0').notNull(),
+  shareRate: decimal({ precision: 5, scale: 2 }).default('0').notNull(),
+  skipRate: decimal({ precision: 5, scale: 2 }).default('0').notNull(),
+  
+  // Status
+  isPublished: int().default(1).notNull(),
+  isFeatured: int().default(0).notNull(),
+  
+  // Timestamps
+  createdAt: timestamp({ mode: 'string' }).defaultNow().notNull(),
+  updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+  publishedAt: timestamp({ mode: 'string' }),
+}, (table) => ({
+  listingIdIdx: index("idx_explore_shorts_listing_id").on(table.listingId),
+  developmentIdIdx: index("idx_explore_shorts_development_id").on(table.developmentId),
+  agentIdIdx: index("idx_explore_shorts_agent_id").on(table.agentId),
+  performanceScoreIdx: index("idx_explore_shorts_performance_score").on(table.performanceScore),
+  boostPriorityIdx: index("idx_explore_shorts_boost_priority").on(table.boostPriority),
+  publishedIdx: index("idx_explore_shorts_published").on(table.isPublished, table.publishedAt),
+}));
+
+export type ExploreShort = InferSelectModel<typeof exploreShorts>;
+export type InsertExploreShort = InferInsertModel<typeof exploreShorts>;
+
+export const exploreInteractions = mysqlTable("explore_interactions", {
+  id: int().autoincrement().notNull().primaryKey(),
+  shortId: int().notNull().references(() => exploreShorts.id, { onDelete: "cascade" }),
+  userId: int().references(() => users.id, { onDelete: "set null" }),
+  sessionId: varchar({ length: 255 }).notNull(),
+  
+  interactionType: mysqlEnum([
+    'impression',
+    'view',
+    'skip',
+    'save',
+    'share',
+    'contact',
+    'whatsapp',
+    'book_viewing'
+  ]).notNull(),
+  
+  // Timing data
+  duration: int(), // seconds (for view/hold)
+  timestamp: timestamp({ mode: 'string' }).defaultNow().notNull(),
+  
+  // Context
+  feedType: mysqlEnum(['recommended', 'area', 'category', 'agent', 'developer']).notNull(),
+  feedContext: json(), // Additional context about the feed
+  
+  // Device/location
+  deviceType: mysqlEnum(['mobile', 'tablet', 'desktop']).notNull(),
+  userAgent: text(),
+  ipAddress: varchar({ length: 45 }),
+  
+  // Metadata
+  metadata: json(),
+}, (table) => ({
+  shortIdIdx: index("idx_explore_interactions_short_id").on(table.shortId),
+  userIdIdx: index("idx_explore_interactions_user_id").on(table.userId),
+  sessionIdIdx: index("idx_explore_interactions_session_id").on(table.sessionId),
+  interactionTypeIdx: index("idx_explore_interactions_type").on(table.interactionType),
+  timestampIdx: index("idx_explore_interactions_timestamp").on(table.timestamp),
+}));
+
+export type ExploreInteraction = InferSelectModel<typeof exploreInteractions>;
+export type InsertExploreInteraction = InferInsertModel<typeof exploreInteractions>;
+
+export const exploreHighlightTags = mysqlTable("explore_highlight_tags", {
+  id: int().autoincrement().notNull().primaryKey(),
+  tagKey: varchar({ length: 50 }).notNull().unique(),
+  label: varchar({ length: 100 }).notNull(),
+  icon: varchar({ length: 50 }),
+  color: varchar({ length: 7 }), // Hex color
+  category: varchar({ length: 50 }), // 'status', 'feature', 'financial', etc.
+  displayOrder: int().default(0).notNull(),
+  isActive: int().default(1).notNull(),
+  createdAt: timestamp({ mode: 'string' }).defaultNow().notNull(),
+}, (table) => ({
+  categoryIdx: index("idx_explore_highlight_tags_category").on(table.category),
+  displayOrderIdx: index("idx_explore_highlight_tags_display_order").on(table.displayOrder),
+}));
+
+export type ExploreHighlightTag = InferSelectModel<typeof exploreHighlightTags>;
+export type InsertExploreHighlightTag = InferInsertModel<typeof exploreHighlightTags>;
+
+export const exploreUserPreferences = mysqlTable("explore_user_preferences", {
+  id: int().autoincrement().notNull().primaryKey(),
+  userId: int().notNull().unique().references(() => users.id, { onDelete: "cascade" }),
+  
+  // Preference data
+  preferredLocations: json(), // Array of city/suburb IDs
+  budgetMin: int(),
+  budgetMax: int(),
+  propertyTypes: json(), // Array of preferred types
+  
+  // Behavior tracking
+  interactionHistory: json(), // Recent interactions
+  savedProperties: json(), // Array of property IDs
+  
+  // Calculated preferences
+  inferredPreferences: json(), // ML-derived preferences
+  
+  // Timestamps
+  createdAt: timestamp({ mode: 'string' }).defaultNow().notNull(),
+  updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+});
+
+export type ExploreUserPreference = InferSelectModel<typeof exploreUserPreferences>;
+export type InsertExploreUserPreference = InferInsertModel<typeof exploreUserPreferences>;

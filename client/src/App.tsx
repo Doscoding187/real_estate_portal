@@ -35,6 +35,7 @@ import InviteAgents from './pages/agency/InviteAgents';
 import AgentManagement from './pages/agency/AgentManagement';
 import AcceptInvitation from './pages/AcceptInvitation';
 import ExploreFeed from './pages/ExploreFeed';
+import ExploreShorts from './pages/ExploreShorts';
 import AgencyOnboarding from './pages/AgencyOnboarding';
 import OnboardingSuccess from './pages/OnboardingSuccess';
 import AgencySubscriptionPage from './pages/agency/SubscriptionPage';
@@ -113,6 +114,7 @@ function Router() {
       <Route path="/agency/success" component={() => <RegistrationSuccess role="agency" />} />
       <Route path="/agent/success" component={() => <RegistrationSuccess role="agent" />} />
       <Route path="/explore" component={ExploreFeed} />
+      <Route path="/explore/shorts" component={ExploreShorts} />
       <Route path="/compare" component={CompareProperties} />
       
       {/* Login and authentication routes should be early in the route list */}
