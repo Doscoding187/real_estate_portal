@@ -210,7 +210,7 @@ export const exploreRouter = router({
         primaryMediaId: 1, // Placeholder - would be actual media ID in production
         mediaIds: JSON.stringify(input.mediaUrls),
         highlights: input.highlights ? JSON.stringify(input.highlights.filter(h => h.trim())) : null,
-        performanceScore: "0",
+        performanceScore: 0,
         boostPriority: 0,
         isPublished: 1,
         isFeatured: 0,
