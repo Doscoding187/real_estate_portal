@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useLocation } from 'wouter';
-import { Upload, Image as ImageIcon, Video, X, Plus, Sparkles } from 'lucide-react';
+import { Upload, Image as ImageIcon, Video, X, Plus, Sparkles, CheckCircle, Eye, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -9,6 +9,13 @@ import { Label } from '@/components/ui/label';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { trpc } from '@/lib/trpc';
 import { useToast } from '@/hooks/use-toast';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 
 interface UploadedMedia {
   id: string;
@@ -28,12 +35,22 @@ export default function ExploreUpload() {
   const [highlights, setHighlights] = useState<string[]>(['']);
   const [isUploading, setIsUploading] = useState(false);
   const [selectedListingId, setSelectedListingId] = useState<number | null>(null);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [returnPath, setReturnPath] = useState('/agent/dashboard');
 
   // Redirect if not authenticated
   if (!isAuthenticated) {
     setLocation('/login');
     return null;
   }
+
+  // Determine return path based on user role
+  const getReturnPath = () => {
+    if (user?.role === 'agent') return '/agent/dashboard';
+    if (user?.role === 'property_developer') return '/developer/dashboard';
+    if (user?.role === 'agency_admin') return '/agency/dashboard';
+    return '/dashboard';
+  };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
@@ -110,23 +127,17 @@ export default function ExploreUpload() {
 
     try {
       // TODO: Implement actual upload logic with media upload to S3/storage
-      // For now, just show success message
+      // For now, just show success modal
       
-      toast({
-        title: 'Upload successful!',
-        description: 'Your content has been added to Explore',
-      });
-
       // Reset form
       setTitle('');
       setCaption('');
       setMediaFiles([]);
       setHighlights(['']);
       
-      // Redirect to explore feed
-      setTimeout(() => {
-        setLocation('/explore');
-      }, 1500);
+      // Set return path and show success modal
+      setReturnPath(getReturnPath());
+      setShowSuccessModal(true);
       
     } catch (error) {
       toast({
@@ -343,6 +354,56 @@ export default function ExploreUpload() {
           </div>
         </form>
       </div>
+
+      {/* Success Modal */}
+      <Dialog open={showSuccessModal} onOpenChange={setShowSuccessModal}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-r from-green-100 to-emerald-100">
+              <CheckCircle className="h-10 w-10 text-green-600" />
+            </div>
+            <DialogTitle className="text-center text-2xl">Upload Successful!</DialogTitle>
+            <DialogDescription className="text-center text-base">
+              Your content has been published to Explore and is now live for everyone to see.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="flex flex-col gap-3 mt-4">
+            <Button
+              onClick={() => {
+                setShowSuccessModal(false);
+                window.open('/explore', '_blank');
+              }}
+              className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
+            >
+              <Eye className="mr-2 h-4 w-4" />
+              View on Explore
+            </Button>
+            
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowSuccessModal(false);
+                setLocation(returnPath);
+              }}
+              className="w-full"
+            >
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back to Dashboard
+            </Button>
+            
+            <Button
+              variant="ghost"
+              onClick={() => {
+                setShowSuccessModal(false);
+              }}
+              className="w-full"
+            >
+              Upload Another
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
