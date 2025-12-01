@@ -43,6 +43,7 @@ import {
   scheduledViewings,
   recentlyViewed,
   developers,
+  developments,
 } from '../drizzle/schema';
 import { ENV } from './_core/env';
 import { type InferSelectModel, type InferInsertModel } from 'drizzle-orm';
@@ -730,7 +731,7 @@ export async function searchDevelopers(query: string, limit: number = 10) {
   const db = await getDb();
   if (!db) return [];
 
-  const { developers } = require('../drizzle/schema');
+
 
   return await db
     .select({
@@ -744,7 +745,7 @@ export async function searchDevelopers(query: string, limit: number = 10) {
     .from(developers)
     .where(
       and(
-        like(developers.name, `%${query}%`),
+        sql`LOWER(${developers.name}) LIKE ${`%${query.toLowerCase()}%`}`,
         eq(developers.status, 'approved' as any) // Only show approved developers
       )
     )
@@ -758,10 +759,10 @@ export async function searchDevelopments(query: string, developerId?: number, li
   const db = await getDb();
   if (!db) return [];
 
-  const { developments } = require('../drizzle/schema');
+
 
   const conditions = [
-    like(developments.name, `%${query}%`),
+    sql`LOWER(${developments.name}) LIKE ${`%${query.toLowerCase()}%`}`,
     eq(developments.isPublished, 1), // Only show published developments
   ];
 
