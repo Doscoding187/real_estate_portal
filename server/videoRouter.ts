@@ -34,21 +34,38 @@ export const videoRouter = router({
       }),
     )
     .mutation(async ({ input }) => {
+      // Validate AWS credentials
+      if (!process.env.AWS_ACCESS_KEY_ID || !process.env.AWS_SECRET_ACCESS_KEY) {
+        console.error('AWS credentials not configured');
+        throw new Error('Video upload is not configured. Please contact support.');
+      }
+
       const bucketName = process.env.AWS_S3_BUCKET || 'real-estate-portal-videos';
-      const key = `videos/${Date.now()}-${input.fileName}`;
+      
+      // Generate unique key with timestamp
+      const timestamp = Date.now();
+      const sanitizedFileName = input.fileName.replace(/[^a-zA-Z0-9.-]/g, '_');
+      const key = `videos/${timestamp}-${sanitizedFileName}`;
 
-      const command = new PutObjectCommand({
-        Bucket: bucketName,
-        Key: key,
-        ContentType: input.fileType,
-      });
+      try {
+        const command = new PutObjectCommand({
+          Bucket: bucketName,
+          Key: key,
+          ContentType: input.fileType,
+        });
 
-      const presignedUrl = await getSignedUrl(s3, command, { expiresIn: 3600 }); // 1 hour
+        const presignedUrl = await getSignedUrl(s3, command, { expiresIn: 3600 }); // 1 hour
 
-      return {
-        uploadUrl: presignedUrl,
-        videoUrl: `https://${bucketName}.s3.af-south-1.amazonaws.com/${key}`,
-      };
+        console.log(`Generated presigned URL for: ${key}`);
+
+        return {
+          uploadUrl: presignedUrl,
+          videoUrl: `https://${bucketName}.s3.af-south-1.amazonaws.com/${key}`,
+        };
+      } catch (error: any) {
+        console.error('Failed to generate presigned URL:', error);
+        throw new Error(`Failed to generate upload URL: ${error.message}`);
+      }
     }),
 
   // Upload video with S3 presigned URL

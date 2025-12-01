@@ -30,6 +30,8 @@ export function VideoUploadModal({ open, onClose, onSuccess }: VideoUploadModalP
   });
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadStage, setUploadStage] = useState<'idle' | 'presigning' | 'uploading' | 'saving'>('idle');
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -48,6 +50,8 @@ export function VideoUploadModal({ open, onClose, onSuccess }: VideoUploadModalP
     setForm({ propertyId: '', developmentId: '', caption: '', duration: 0 });
     setSelectedFile(null);
     setUploadProgress(0);
+    setIsUploading(false);
+    setUploadStage('idle');
     setErrors({});
   };
 
@@ -129,41 +133,76 @@ export function VideoUploadModal({ open, onClose, onSuccess }: VideoUploadModalP
   const handleUpload = async () => {
     if (!selectedFile || !validateStep('upload')) return;
 
+    setIsUploading(true);
+    setUploadProgress(0);
+    setErrors({});
+
     try {
       // Step 1: Get presigned URL
-      const { uploadUrl, videoUrl } = await getPresignedUrl.mutateAsync({
+      setUploadStage('presigning');
+      console.log('Getting presigned URL...');
+      
+      const presignedData = await getPresignedUrl.mutateAsync({
         fileName: selectedFile.name,
         fileType: selectedFile.type,
       });
 
+      if (!presignedData?.uploadUrl || !presignedData?.videoUrl) {
+        throw new Error('Failed to get upload URL');
+      }
+
+      const { uploadUrl, videoUrl } = presignedData;
+      console.log('Presigned URL obtained, starting upload to S3...');
+
       // Step 2: Upload to S3
-      const xhr = new XMLHttpRequest();
+      setUploadStage('uploading');
+      
+      await new Promise<void>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
 
-      xhr.upload.addEventListener('progress', e => {
-        if (e.lengthComputable) {
-          const progress = (e.loaded / e.total) * 100;
-          setUploadProgress(progress);
-        }
-      });
+        // Track upload progress
+        xhr.upload.addEventListener('progress', (e) => {
+          if (e.lengthComputable) {
+            const progress = Math.round((e.loaded / e.total) * 100);
+            setUploadProgress(progress);
+            console.log(`Upload progress: ${progress}%`);
+          }
+        });
 
-      const uploadPromise = new Promise<void>((resolve, reject) => {
-        xhr.onload = () => {
-          if (xhr.status === 200) {
+        // Handle successful upload
+        xhr.addEventListener('load', () => {
+          if (xhr.status === 200 || xhr.status === 204) {
+            console.log('S3 upload successful');
             resolve();
           } else {
-            reject(new Error('Upload failed'));
+            console.error('S3 upload failed with status:', xhr.status);
+            reject(new Error(`Upload failed with status ${xhr.status}`));
           }
-        };
-        xhr.onerror = () => reject(new Error('Upload failed'));
+        });
+
+        // Handle network errors
+        xhr.addEventListener('error', () => {
+          console.error('Network error during upload');
+          reject(new Error('Network error during upload'));
+        });
+
+        // Handle aborted uploads
+        xhr.addEventListener('abort', () => {
+          console.error('Upload aborted');
+          reject(new Error('Upload was cancelled'));
+        });
+
+        // Start the upload
+        xhr.open('PUT', uploadUrl);
+        xhr.setRequestHeader('Content-Type', selectedFile.type);
+        xhr.send(selectedFile);
       });
 
-      xhr.open('PUT', uploadUrl);
-      xhr.setRequestHeader('Content-Type', selectedFile.type);
-      xhr.send(selectedFile);
+      // Step 3: Save video record to database
+      setUploadStage('saving');
+      setUploadProgress(100);
+      console.log('Saving video record to database...');
 
-      await uploadPromise;
-
-      // Step 3: Save video record
       await uploadVideo.mutateAsync({
         propertyId: form.propertyId ? parseInt(form.propertyId) : undefined,
         developmentId: form.developmentId ? parseInt(form.developmentId) : undefined,
@@ -173,12 +212,32 @@ export function VideoUploadModal({ open, onClose, onSuccess }: VideoUploadModalP
         duration: form.duration,
       });
 
-      // Success
+      console.log('Video upload complete!');
+
+      // Success - close modal and notify parent
       handleClose();
       onSuccess?.();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Upload failed:', error);
-      setErrors({ upload: 'Upload failed. Please try again.' });
+      
+      // Provide user-friendly error messages
+      let errorMessage = 'Upload failed. Please try again.';
+      
+      if (error.message?.includes('presigned')) {
+        errorMessage = 'Failed to initialize upload. Please check your connection.';
+      } else if (error.message?.includes('Network')) {
+        errorMessage = 'Network error. Please check your internet connection.';
+      } else if (error.message?.includes('status')) {
+        errorMessage = 'Upload to storage failed. Please try again.';
+      } else if (error.message?.includes('database') || uploadStage === 'saving') {
+        errorMessage = 'Video uploaded but failed to save. Please contact support.';
+      }
+      
+      setErrors({ upload: errorMessage });
+      setUploadProgress(0);
+    } finally {
+      setIsUploading(false);
+      setUploadStage('idle');
     }
   };
 
@@ -354,10 +413,14 @@ export function VideoUploadModal({ open, onClose, onSuccess }: VideoUploadModalP
                     </Button>
                   </div>
 
-                  {getPresignedUrl.isLoading && (
+                  {isUploading && (
                     <div className="space-y-2">
                       <div className="flex justify-between text-sm">
-                        <span>Uploading...</span>
+                        <span>
+                          {uploadStage === 'presigning' && 'Preparing upload...'}
+                          {uploadStage === 'uploading' && 'Uploading to cloud...'}
+                          {uploadStage === 'saving' && 'Finalizing...'}
+                        </span>
                         <span>{uploadProgress.toFixed(0)}%</span>
                       </div>
                       <div className="w-full bg-muted rounded-full h-2">
@@ -395,9 +458,9 @@ export function VideoUploadModal({ open, onClose, onSuccess }: VideoUploadModalP
               {step === 'upload' ? (
                 <Button
                   onClick={handleUpload}
-                  disabled={!selectedFile || getPresignedUrl.isLoading || uploadVideo.isLoading}
+                  disabled={!selectedFile || isUploading}
                 >
-                  {getPresignedUrl.isLoading || uploadVideo.isLoading ? (
+                  {isUploading ? (
                     <>
                       <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                       Uploading...
