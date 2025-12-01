@@ -1434,27 +1434,27 @@ export const users = mysqlTable("users", {
 
 export const videoLikes = mysqlTable("videoLikes", {
 	id: int().autoincrement().notNull(),
-	videoId: int().notNull().references(() => videos.id, { onDelete: "cascade" } ),
-	userId: int().notNull().references(() => users.id, { onDelete: "cascade" } ),
-	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	videoId: int("video_id").notNull().references(() => videos.id, { onDelete: "cascade" } ),
+	userId: int("user_id").notNull().references(() => users.id, { onDelete: "cascade" } ),
+	createdAt: timestamp("created_at", { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
 });
 
 export const videos = mysqlTable("videos", {
 	id: int().autoincrement().notNull(),
-	agentId: int().references(() => agents.id, { onDelete: "cascade" } ),
-	propertyId: int().references(() => properties.id, { onDelete: "set null" } ),
-	developmentId: int().references(() => developments.id, { onDelete: "set null" } ),
-	videoUrl: text().notNull(),
+	agentId: int("agent_id").references(() => agents.id, { onDelete: "cascade" } ),
+	propertyId: int("property_id").references(() => properties.id, { onDelete: "set null" } ),
+	developmentId: int("development_id").references(() => developments.id, { onDelete: "set null" } ),
+	videoUrl: text("video_url").notNull(),
 	caption: text(),
 	type: mysqlEnum(['listing','content']).default('content').notNull(),
 	duration: int(),
 	views: int().notNull(),
 	likes: int().notNull(),
 	shares: int().notNull(),
-	isPublished: int().default(1).notNull(),
-	isFeatured: int().notNull(),
-	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
-	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+	isPublished: int("is_published").default(1).notNull(),
+	isFeatured: int("is_featured").notNull(),
+	createdAt: timestamp("created_at", { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
 });
 
 export type User = InferSelectModel<typeof users>;
