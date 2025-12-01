@@ -1,28 +1,26 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { BarChart3, Map, FileText, TrendingUp } from 'lucide-react';
+import { BarChart3, Map, FileText, TrendingUp, Loader2, AlertCircle } from 'lucide-react';
+import { usePriceInsights } from '@/hooks/usePriceInsights';
 
 interface CityData {
-  name: string;
+  cityName: string;
   medianPrice: number;
   listings: number;
-  transactions: number;
-  grossValue: number;
-  registeredRate: number;
+  avgPricePerSqm: number;
   priceRanges: { range: string; count: number }[];
-  micromarkets: { area: string; price: number }[];
+  micromarkets: { area: string; pricePerSqm: number }[];
 }
 
-const cityData: Record<string, CityData> = {
+// Fallback placeholder data for development/error states
+const placeholderCityData: Record<string, CityData> = {
   Johannesburg: {
-    name: 'Johannesburg',
+    cityName: 'Johannesburg',
     medianPrice: 2850000,
     listings: 45655,
-    transactions: 128563,
-    grossValue: 182806000000,
-    registeredRate: 16950,
+    avgPricePerSqm: 16950,
     priceRanges: [
       { range: 'Below R1M', count: 8500 },
       { range: 'R1M-R2M', count: 15200 },
@@ -32,19 +30,17 @@ const cityData: Record<string, CityData> = {
       { range: 'Above R10M', count: 655 },
     ],
     micromarkets: [
-      { area: 'Sandton', price: 46100 },
-      { area: 'Rosebank', price: 34650 },
-      { area: 'Fourways', price: 33100 },
-      { area: 'Midrand', price: 30100 },
+      { area: 'Sandton', pricePerSqm: 46100 },
+      { area: 'Rosebank', pricePerSqm: 34650 },
+      { area: 'Fourways', pricePerSqm: 33100 },
+      { area: 'Midrand', pricePerSqm: 30100 },
     ],
   },
   'Cape Town': {
-    name: 'Cape Town',
+    cityName: 'Cape Town',
     medianPrice: 3250000,
     listings: 52340,
-    transactions: 145230,
-    grossValue: 215430000000,
-    registeredRate: 18500,
+    avgPricePerSqm: 18500,
     priceRanges: [
       { range: 'Below R1M', count: 6200 },
       { range: 'R1M-R2M', count: 12800 },
@@ -54,19 +50,17 @@ const cityData: Record<string, CityData> = {
       { range: 'Above R10M', count: 1840 },
     ],
     micromarkets: [
-      { area: 'Camps Bay', price: 65200 },
-      { area: 'Sea Point', price: 42300 },
-      { area: 'Constantia', price: 38900 },
-      { area: 'Claremont', price: 35400 },
+      { area: 'Camps Bay', pricePerSqm: 65200 },
+      { area: 'Sea Point', pricePerSqm: 42300 },
+      { area: 'Constantia', pricePerSqm: 38900 },
+      { area: 'Claremont', pricePerSqm: 35400 },
     ],
   },
   Pretoria: {
-    name: 'Pretoria',
+    cityName: 'Pretoria',
     medianPrice: 2150000,
     listings: 32450,
-    transactions: 89340,
-    grossValue: 128450000000,
-    registeredRate: 14200,
+    avgPricePerSqm: 14200,
     priceRanges: [
       { range: 'Below R1M', count: 9800 },
       { range: 'R1M-R2M', count: 13500 },
@@ -76,19 +70,17 @@ const cityData: Record<string, CityData> = {
       { range: 'Above R10M', count: 100 },
     ],
     micromarkets: [
-      { area: 'Waterkloof', price: 38500 },
-      { area: 'Menlyn', price: 28900 },
-      { area: 'Centurion', price: 26400 },
-      { area: 'Brooklyn', price: 32100 },
+      { area: 'Waterkloof', pricePerSqm: 38500 },
+      { area: 'Menlyn', pricePerSqm: 28900 },
+      { area: 'Centurion', pricePerSqm: 26400 },
+      { area: 'Brooklyn', pricePerSqm: 32100 },
     ],
   },
   Durban: {
-    name: 'Durban',
+    cityName: 'Durban',
     medianPrice: 1950000,
     listings: 28900,
-    transactions: 76540,
-    grossValue: 98230000000,
-    registeredRate: 12800,
+    avgPricePerSqm: 12800,
     priceRanges: [
       { range: 'Below R1M', count: 11200 },
       { range: 'R1M-R2M', count: 10500 },
@@ -98,17 +90,113 @@ const cityData: Record<string, CityData> = {
       { range: 'Above R10M', count: 100 },
     ],
     micromarkets: [
-      { area: 'Umhlanga', price: 35600 },
-      { area: 'Ballito', price: 28200 },
-      { area: 'La Lucia', price: 32400 },
-      { area: 'Durban North', price: 24800 },
+      { area: 'Umhlanga', pricePerSqm: 35600 },
+      { area: 'Ballito', pricePerSqm: 28200 },
+      { area: 'La Lucia', pricePerSqm: 32400 },
+      { area: 'Durban North', pricePerSqm: 24800 },
     ],
   },
 };
 
 export function PropertyInsights() {
-  const [selectedCity, setSelectedCity] = useState('Johannesburg');
-  const data = cityData[selectedCity];
+  const { data: insightsData, isLoading, error, refetch } = usePriceInsights();
+  const [selectedCity, setSelectedCity] = useState('');
+
+  // Use real data if available, otherwise fall back to placeholder
+  const cityData = insightsData || placeholderCityData;
+  const data = selectedCity ? cityData[selectedCity] : null;
+
+  // Auto-select city with most listings on load
+  useEffect(() => {
+    if (insightsData && !selectedCity) {
+      const topCity = Object.entries(insightsData)
+        .sort(([, a], [, b]) => b.listings - a.listings)[0]?.[0];
+      setSelectedCity(topCity || '');
+    }
+  }, [insightsData, selectedCity]);
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="py-16 bg-white">
+        <div className="container">
+          <div className="mb-10">
+            <h2 className="text-2xl md:text-3xl font-bold mb-3">
+              Property Price Insights in South Africa
+            </h2>
+            <p className="text-muted-foreground text-base max-w-2xl">
+              Get accurate property price insights in South Africa with city-wise trends, median
+              rates, and micro-market comparisons.
+            </p>
+          </div>
+          <div className="flex items-center justify-center py-20">
+            <div className="text-center">
+              <Loader2 className="h-12 w-12 animate-spin text-blue-600 mx-auto mb-4" />
+              <p className="text-muted-foreground">Loading price insights...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="py-16 bg-white">
+        <div className="container">
+          <div className="mb-10">
+            <h2 className="text-2xl md:text-3xl font-bold mb-3">
+              Property Price Insights in South Africa
+            </h2>
+            <p className="text-muted-foreground text-base max-w-2xl">
+              Get accurate property price insights in South Africa with city-wise trends, median
+              rates, and micro-market comparisons.
+            </p>
+          </div>
+          <div className="flex items-center justify-center py-20">
+            <div className="text-center max-w-md">
+              <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold mb-2">Unable to load price insights</h3>
+              <p className="text-muted-foreground mb-4">
+                We're having trouble loading the latest market data. Please try again.
+              </p>
+              <Button onClick={() => refetch()} variant="outline">
+                Retry
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Empty state
+  if (!cityData || Object.keys(cityData).length === 0) {
+    return (
+      <div className="py-16 bg-white">
+        <div className="container">
+          <div className="mb-10">
+            <h2 className="text-2xl md:text-3xl font-bold mb-3">
+              Property Price Insights in South Africa
+            </h2>
+            <p className="text-muted-foreground text-base max-w-2xl">
+              Get accurate property price insights in South Africa with city-wise trends, median
+              rates, and micro-market comparisons.
+            </p>
+          </div>
+          <div className="flex items-center justify-center py-20">
+            <div className="text-center">
+              <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+              <p className="text-muted-foreground">No price insights available yet</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!data) return null;
 
   const maxCount = Math.max(...data.priceRanges.map(r => r.count));
 
@@ -244,7 +332,7 @@ export function PropertyInsights() {
                           <span className="text-sm text-muted-foreground font-medium">Avg. Price/m²</span>
                         </div>
                         <span className="font-semibold text-lg">
-                          R {data.registeredRate.toLocaleString()}
+                          R {data.avgPricePerSqm.toLocaleString()}
                         </span>
                       </div>
                       <div className="flex items-center justify-between p-4 bg-white/80 backdrop-blur-sm rounded-xl border border-emerald-100 group-hover:border-emerald-200 transition-colors">
@@ -275,7 +363,7 @@ export function PropertyInsights() {
                   </CardHeader>
                   <CardContent>
                     <p className="text-sm text-muted-foreground mb-6">
-                      {city} avg. price is R {data.registeredRate.toLocaleString()} / m²
+                      {city} avg. price is R {data.avgPricePerSqm.toLocaleString()} / m²
                     </p>
                     <div className="space-y-4">
                       {data.micromarkets.map((market, idx) => (
@@ -285,14 +373,14 @@ export function PropertyInsights() {
                               {market.area}
                             </span>
                             <span className="text-sm font-semibold text-purple-600">
-                              R {market.price.toLocaleString()}
+                              R {market.pricePerSqm.toLocaleString()}
                             </span>
                           </div>
                           <div className="w-full bg-white/80 backdrop-blur-sm rounded-full h-2.5 border border-purple-100">
                             <div
                               className="bg-gradient-to-r from-purple-500 to-pink-500 h-2.5 rounded-full transition-all duration-500"
                               style={{
-                                width: `${(market.price / Math.max(...data.micromarkets.map(m => m.price))) * 100}%`,
+                                width: `${(market.pricePerSqm / Math.max(...data.micromarkets.map(m => m.pricePerSqm))) * 100}%`,
                               }}
                             />
                           </div>

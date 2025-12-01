@@ -14,7 +14,7 @@ import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
 const s3 = new S3Client({
-  region: 'af-south-1',
+  region: process.env.AWS_REGION || 'eu-north-1',
   credentials: {
     accessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
     secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || '',
@@ -41,6 +41,7 @@ export const videoRouter = router({
       }
 
       const bucketName = process.env.AWS_S3_BUCKET || 'real-estate-portal-videos';
+      const region = process.env.AWS_REGION || 'eu-north-1';
       
       // Generate unique key with timestamp
       const timestamp = Date.now();
@@ -61,7 +62,7 @@ export const videoRouter = router({
 
         return {
           uploadUrl: presignedUrl,
-          videoUrl: `https://${bucketName}.s3.af-south-1.amazonaws.com/${key}`,
+          videoUrl: `https://${bucketName}.s3.${region}.amazonaws.com/${key}`,
         };
       } catch (error: any) {
         console.error('Failed to generate presigned URL:', error);
