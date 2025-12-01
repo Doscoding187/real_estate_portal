@@ -73,6 +73,8 @@ export interface DevelopmentWizardState {
   setSuburb: (suburb: string) => void;
   setPostalCode: (code: string) => void;
   setLatLng: (lat: string, lng: string) => void;
+  setLatitude: (lat: string) => void;
+  setLongitude: (lng: string) => void;
   setDeveloperId: (id: number) => void;
   setStatus: (status: DevelopmentWizardState['status']) => void;
   setRating: (rating: number) => void;
@@ -163,6 +165,8 @@ export const useDevelopmentWizard = create<DevelopmentWizardState>()(
       setSuburb: (suburb) => set({ suburb }),
       setPostalCode: (code) => set({ postalCode: code }),
       setLatLng: (lat, lng) => set({ latitude: lat, longitude: lng }),
+      setLatitude: (lat) => set({ latitude: lat }),
+      setLongitude: (lng) => set({ longitude: lng }),
       setDeveloperId: (id) => set({ developerId: id }),
       setStatus: (status) => set({ status }),
       setRating: (rating) => set({ rating }),

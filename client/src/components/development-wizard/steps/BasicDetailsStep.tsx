@@ -3,9 +3,14 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card } from '@/components/ui/card';
-import { Building2, MapPin, Info, Star } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Building2, MapPin, Info, Star, Eye, EyeOff, AlertTriangle } from 'lucide-react';
 import { useFieldValidation } from '@/hooks/useFieldValidation';
 import { InlineError } from '@/components/ui/InlineError';
+import { LocationMapPicker, LocationData } from '@/components/location/LocationMapPicker';
+import { useCallback, useState } from 'react';
+import { toast } from 'sonner';
 
 export function BasicDetailsStep() {
   const {
@@ -15,6 +20,8 @@ export function BasicDetailsStep() {
     province,
     suburb,
     postalCode,
+    latitude,
+    longitude,
     status,
     rating,
     setDevelopmentName,
@@ -23,9 +30,15 @@ export function BasicDetailsStep() {
     setProvince,
     setSuburb,
     setPostalCode,
+    setLatitude,
+    setLongitude,
     setStatus,
     setRating,
   } = useDevelopmentWizard();
+
+  const [showMap, setShowMap] = useState(true);
+  const [manualOverride, setManualOverride] = useState(false);
+  const [geocodingError, setGeocodingError] = useState<string | null>(null);
 
   // Validation context
   const validationContext = {
@@ -60,6 +73,30 @@ export function BasicDetailsStep() {
     context: validationContext,
     trigger: 'blur',
   });
+
+  const handleLocationSelect = useCallback(
+    (locationData: LocationData) => {
+      if (!manualOverride) {
+        setLatitude(locationData.latitude.toString());
+        setLongitude(locationData.longitude.toString());
+
+        if (locationData.address) setAddress(locationData.address);
+        if (locationData.suburb) setSuburb(locationData.suburb);
+        if (locationData.city) setCity(locationData.city);
+        if (locationData.province) setProvince(locationData.province);
+        if (locationData.postalCode) setPostalCode(locationData.postalCode);
+
+        setGeocodingError(null);
+        toast.success('Address populated from map location');
+      }
+    },
+    [manualOverride, setAddress, setCity, setProvince, setSuburb, setPostalCode, setLatitude, setLongitude]
+  );
+
+  const handleManualEdit = useCallback(() => {
+    setManualOverride(true);
+    toast.info('Manual mode enabled. Move the pin to update address again.');
+  }, []);
 
   return (
     <div className="space-y-6">
@@ -140,10 +177,34 @@ export function BasicDetailsStep() {
 
       {/* Location Details */}
       <Card className="bg-white/70 backdrop-blur-sm rounded-[1.5rem] border-white/40 shadow-[0_8px_30px_rgba(8,_112,_184,_0.06)] p-6">
-        <div className="flex items-center gap-2 mb-4">
-          <MapPin className="w-5 h-5 text-indigo-600" />
-          <h3 className="text-lg font-bold text-slate-800">Location Details</h3>
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <MapPin className="w-5 h-5 text-indigo-600" />
+            <h3 className="text-lg font-bold text-slate-800">Location Details</h3>
+          </div>
+          <Button variant="ghost" size="sm" onClick={() => setShowMap(!showMap)}>
+            {showMap ? <EyeOff className="w-4 h-4 mr-2" /> : <Eye className="w-4 h-4 mr-2" />}
+            {showMap ? 'Hide Map' : 'Show Map'}
+          </Button>
         </div>
+
+        {showMap && (
+          <div className="mb-6">
+            <LocationMapPicker
+              initialLat={latitude ? parseFloat(latitude) : undefined}
+              initialLng={longitude ? parseFloat(longitude) : undefined}
+              onLocationSelect={handleLocationSelect}
+              onGeocodingError={setGeocodingError}
+            />
+
+            {geocodingError && (
+              <Alert variant="destructive" className="mt-4">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertDescription>{geocodingError}</AlertDescription>
+              </Alert>
+            )}
+          </div>
+        )}
 
         <div className="space-y-4">
           <div>
@@ -152,11 +213,12 @@ export function BasicDetailsStep() {
             </Label>
             <Input
               id="address"
-              placeholder="Enter street address"
+              placeholder="Enter street address or use map"
               value={address}
               onChange={(e) => {
                 setAddress(e.target.value);
                 addressValidation.clearError();
+                handleManualEdit();
               }}
               onBlur={addressValidation.onBlur}
               className="mt-1"
