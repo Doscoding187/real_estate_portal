@@ -384,6 +384,15 @@ export function EnhancedNavbar() {
                 </NavigationMenuContent>
               </NavigationMenuItem>
 
+              {/* Explore Link */}
+              <NavigationMenuItem>
+                <Link href="/explore">
+                  <NavigationMenuLink className="bg-transparent text-gray-700 hover:bg-blue-50 hover:text-blue-700 font-semibold transition-all px-4 py-2 rounded-md cursor-pointer">
+                    Explore
+                  </NavigationMenuLink>
+                </Link>
+              </NavigationMenuItem>
+
               {/* Advertise Link */}
               <NavigationMenuItem>
                 <Link href="/advertise">
