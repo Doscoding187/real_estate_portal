@@ -9,6 +9,7 @@ import App from './App';
 import { AuthProvider } from './contexts/AuthContext';
 import { getLoginUrl } from './const';
 import './index.css';
+import './styles/reduced-motion.css';
 
 const queryClient = new QueryClient();
 

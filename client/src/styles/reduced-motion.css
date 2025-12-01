@@ -1,0 +1,82 @@
+/**
+ * Reduced Motion Styles
+ * Respects user's prefers-reduced-motion setting
+ * 
+ * Requirements: 12.4
+ */
+
+/* 
+ * Disable or reduce animations for users who prefer reduced motion
+ * This applies globally to all animated elements
+ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    /* Disable animations */
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    
+    /* Disable transitions */
+    transition-duration: 0.01ms !important;
+    
+    /* Disable smooth scrolling */
+    scroll-behavior: auto !important;
+  }
+
+  /* Specifically disable gradient animations */
+  .animate-gradient {
+    animation: none !important;
+  }
+
+  /* Disable transform animations but keep opacity for fade effects */
+  .animate-in,
+  .animate-out {
+    animation-duration: 0.01ms !important;
+  }
+
+  /* Disable hover scale effects */
+  *:hover {
+    transform: none !important;
+  }
+
+  /* Keep focus indicators visible but remove transitions */
+  *:focus,
+  *:focus-visible {
+    transition: none !important;
+  }
+}
+
+/* 
+ * Utility class to explicitly disable animations
+ * Can be applied programmatically when reduced motion is detected
+ */
+.no-motion {
+  animation: none !important;
+  transition: none !important;
+}
+
+.no-motion *,
+.no-motion *::before,
+.no-motion *::after {
+  animation: none !important;
+  transition: none !important;
+  transform: none !important;
+}
+
+/* 
+ * Utility class for essential animations that should remain
+ * even with reduced motion (like loading spinners)
+ */
+.motion-safe {
+  /* This class allows animations even with reduced motion */
+  /* Use sparingly for critical UI feedback */
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .motion-safe {
+    /* Reduce but don't eliminate essential animations */
+    animation-duration: 0.3s !important;
+    transition-duration: 0.15s !important;
+  }
+}

@@ -82,6 +82,8 @@ export const MetricCard = React.forwardRef<HTMLDivElement, MetricCardProps>(
     return (
       <div
         ref={ref}
+        role="group"
+        aria-label={`${label}: ${value} ${isZero ? `(${emptyMessage})` : ''}`}
         className={cn(
           'relative flex flex-col gap-4 p-6 rounded-xl',
           'bg-white border-2',

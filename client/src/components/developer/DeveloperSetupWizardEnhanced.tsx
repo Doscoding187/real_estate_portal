@@ -26,13 +26,15 @@ import {
   type BasicInfoData,
   type ContactInfoData,
   type PortfolioData,
-  type ReviewData,
 } from '@/components/wizard/steps';
 
 // Auto-save and Draft Management
 import { useAutoSave } from '@/hooks/useAutoSave';
 import { SaveStatusIndicator } from '@/components/ui/SaveStatusIndicator';
 import { DraftManager } from '@/components/wizard/DraftManager';
+import { SkipLink } from '@/components/wizard/SkipLink';
+import { LiveRegion } from '@/components/ui/LiveRegion';
+import { useReducedMotion } from '@/hooks/useReducedMotion';
 
 type FormValues = BasicInfoData & ContactInfoData & PortfolioData & {
   termsAccepted: boolean;
@@ -52,6 +54,10 @@ export default function DeveloperSetupWizardEnhanced() {
   const [showResumeDraftDialog, setShowResumeDraftDialog] = useState(false);
   const [isSavingDraft, setIsSavingDraft] = useState(false);
   const [draftSaved, setDraftSaved] = useState(false);
+  const [stepAnnouncement, setStepAnnouncement] = useState<string>('');
+  
+  // Detect reduced motion preference
+  const prefersReducedMotion = useReducedMotion();
 
   const {
     handleSubmit,
@@ -315,21 +321,27 @@ export default function DeveloperSetupWizardEnhanced() {
   const onNext = () => {
     if (validateStep(step)) {
       setCompletedSteps([...completedSteps, step]);
-      setStep(step + 1);
+      const nextStep = step + 1;
+      setStep(nextStep);
+      setStepAnnouncement(`Moving to step ${nextStep} of 4: ${STEPS[nextStep - 1].title}`);
     } else {
       toast.error('Please fill in all required fields');
+      setStepAnnouncement('Please fill in all required fields before continuing');
     }
   };
 
   const onBack = () => {
     if (step > 1) {
-      setStep(step - 1);
+      const prevStep = step - 1;
+      setStep(prevStep);
+      setStepAnnouncement(`Returning to step ${prevStep} of 4: ${STEPS[prevStep - 1].title}`);
     }
   };
 
   const onStepClick = (stepId: number) => {
     if (completedSteps.includes(stepId)) {
       setStep(stepId);
+      setStepAnnouncement(`Navigating to step ${stepId} of 4: ${STEPS[stepId - 1].title}`);
     }
   };
 
@@ -384,6 +396,16 @@ export default function DeveloperSetupWizardEnhanced() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 py-12 px-4 sm:px-6 lg:px-8">
+      {/* Skip Link for Keyboard Navigation */}
+      <SkipLink targetId="wizard-form-content">
+        Skip to registration form
+      </SkipLink>
+
+      {/* Live Region for Screen Reader Announcements */}
+      <LiveRegion priority="polite">
+        {stepAnnouncement}
+      </LiveRegion>
+
       {/* Resume Draft Dialog */}
       <DraftManager
         open={showResumeDraftDialog}
@@ -436,11 +458,16 @@ export default function DeveloperSetupWizardEnhanced() {
         </div>
 
         {/* Form Card */}
-        <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border-2 border-white p-8">
+        <div 
+          id="wizard-form-content"
+          className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border-2 border-white p-8"
+          role="main"
+          aria-label="Developer registration form"
+        >
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
             {/* Step 1: Basic Info */}
             {step === 1 && (
-              <div className="animate-in fade-in slide-in-from-right-4 duration-300">
+              <div className={prefersReducedMotion ? '' : 'animate-in fade-in slide-in-from-right-4 duration-300'}>
                 <BasicInfoStep
                   data={{
                     name: formValues.name,
@@ -457,7 +484,7 @@ export default function DeveloperSetupWizardEnhanced() {
 
             {/* Step 2: Contact Info */}
             {step === 2 && (
-              <div className="animate-in fade-in-from-right-4 duration-300">
+              <div className={prefersReducedMotion ? '' : 'animate-in fade-in slide-in-from-right-4 duration-300'}>
                 <ContactInfoStep
                   data={{
                     email: formValues.email,
@@ -475,7 +502,7 @@ export default function DeveloperSetupWizardEnhanced() {
 
             {/* Step 3: Portfolio */}
             {step === 3 && (
-              <div className="animate-in fade-in slide-in-from-right-4 duration-300">
+              <div className={prefersReducedMotion ? '' : 'animate-in fade-in slide-in-from-right-4 duration-300'}>
                 <PortfolioStep
                   data={{
                     completedProjects: formValues.completedProjects,
@@ -491,7 +518,7 @@ export default function DeveloperSetupWizardEnhanced() {
 
             {/* Step 4: Review */}
             {step === 4 && (
-              <div className="animate-in fade-in slide-in-from-right-4 duration-300">
+              <div className={prefersReducedMotion ? '' : 'animate-in fade-in slide-in-from-right-4 duration-300'}>
                 <ReviewStep
                   data={{
                     basicInfo: {

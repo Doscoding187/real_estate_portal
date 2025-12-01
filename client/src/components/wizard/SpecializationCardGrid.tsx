@@ -60,6 +60,9 @@ export const SpecializationCardGrid = React.forwardRef<
     },
     ref
   ) => {
+    const gridId = React.useId();
+    const descriptionId = `${gridId}-description`;
+
     const handleSelect = (id: string) => {
       let newSelection: string[];
 
@@ -82,18 +85,39 @@ export const SpecializationCardGrid = React.forwardRef<
       onSelectionChange?.(newSelection);
     };
 
+    const selectionInfo = React.useMemo(() => {
+      const parts: string[] = [];
+      if (minSelections) {
+        parts.push(`Select at least ${minSelections}`);
+      }
+      if (maxSelections) {
+        parts.push(`up to ${maxSelections} specializations`);
+      } else if (!minSelections) {
+        parts.push('Select one or more specializations');
+      }
+      parts.push(`${selectedIds.length} selected`);
+      return parts.join('. ');
+    }, [minSelections, maxSelections, selectedIds.length]);
+
     return (
-      <div
-        ref={ref}
-        className={cn(
-          // Responsive grid layout
-          'grid gap-4',
-          'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3',
-          className
-        )}
-        role="group"
-        aria-label="Development specializations"
-      >
+      <>
+        {/* Hidden description for screen readers */}
+        <div id={descriptionId} className="sr-only">
+          {selectionInfo}
+        </div>
+
+        <div
+          ref={ref}
+          className={cn(
+            // Responsive grid layout
+            'grid gap-4',
+            'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3',
+            className
+          )}
+          role="group"
+          aria-label="Development specializations"
+          aria-describedby={descriptionId}
+        >
         {specializations.map((specialization, index) => (
           <div
             key={specialization.id}
@@ -114,7 +138,8 @@ export const SpecializationCardGrid = React.forwardRef<
             />
           </div>
         ))}
-      </div>
+        </div>
+      </>
     );
   }
 );
