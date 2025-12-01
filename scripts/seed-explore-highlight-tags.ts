@@ -189,20 +189,24 @@ async function seedHighlightTags() {
   console.log("🌱 Seeding Explore Shorts highlight tags...");
 
   try {
+    // Initialize database connection
+    const { getDb } = await import("../server/db");
+    const database = await getDb();
+    
     // Check if tags already exist
-    const existingTags = await db
+    const existingTags = await database
       .select()
       .from(exploreHighlightTags)
       .limit(1);
 
     if (existingTags.length > 0) {
       console.log("⚠️  Tags already exist. Clearing existing tags...");
-      await db.execute(sql`DELETE FROM explore_highlight_tags`);
+      await database.execute(sql`DELETE FROM explore_highlight_tags`);
     }
 
     // Insert all tags
     for (const tag of highlightTags) {
-      await db.insert(exploreHighlightTags).values({
+      await database.insert(exploreHighlightTags).values({
         tagKey: tag.tagKey,
         label: tag.label,
         icon: tag.icon,
