@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { PropertyShort, FeedType } from '@/../../shared/types';
 import { trpc } from '@/lib/trpc';
+import { useToast } from '@/hooks/use-toast';
 
 interface UseShortsFeedOptions {
   feedType: FeedType;
@@ -31,8 +32,10 @@ export function useShortsFeed({
     error: null,
   });
 
+  const { toast } = useToast();
   const loadingRef = useRef(false);
   const offsetRef = useRef(0);
+  const useMockData = useRef(true); // Toggle for development
 
   // Fetch feed data
   const fetchFeed = useCallback(
@@ -45,17 +48,12 @@ export function useShortsFeed({
       try {
         const offset = reset ? 0 : offsetRef.current;
 
-        // TODO: Replace with actual tRPC call
-        // const response = await trpc.explore.getFeed.query({
-        //   feedType,
-        //   limit,
-        //   offset,
-        //   ...(feedId && { agentId: feedId, developerId: feedId }),
-        //   ...(category && { category }),
-        // });
+        let mockCards: PropertyShort[];
 
-        // Mock response for now
-        const mockCards: PropertyShort[] = Array.from({ length: Math.min(limit, 5) }, (_, i) => ({
+        // Use mock data for development (toggle useMockData.current to false for real API)
+        if (useMockData.current) {
+          // Mock response for development
+          mockCards = Array.from({ length: Math.min(limit, 5) }, (_, i) => ({
           id: offset + i + 1,
           listingId: offset + i + 1,
           agentId: 1,
@@ -131,7 +129,22 @@ export function useShortsFeed({
             whatsapp: '+27821234567',
           },
         }));
-        const hasMore = offset < 15; // Simulate having 20 total cards
+          const hasMore = offset < 15; // Simulate having 20 total cards
+        } else {
+          // Real API call (uncomment when backend is ready)
+          // const response = await trpc.explore.getFeed.query({
+          //   feedType,
+          //   limit,
+          //   offset,
+          //   ...(feedType === 'agent' && feedId && { agentId: feedId }),
+          //   ...(feedType === 'developer' && feedId && { developerId: feedId }),
+          //   ...(category && { category }),
+          // });
+          // mockCards = response;
+          mockCards = []; // Placeholder until API is ready
+        }
+
+        const hasMore = mockCards.length === limit;
 
         setState((prev) => ({
           ...prev,
@@ -144,6 +157,11 @@ export function useShortsFeed({
         offsetRef.current = reset ? mockCards.length : offsetRef.current + mockCards.length;
       } catch (error) {
         console.error('Failed to fetch feed:', error);
+        toast({
+          title: 'Error loading properties',
+          description: 'Failed to load properties. Please try again.',
+          variant: 'destructive',
+        });
         setState((prev) => ({
           ...prev,
           isLoading: false,
@@ -153,7 +171,7 @@ export function useShortsFeed({
         loadingRef.current = false;
       }
     },
-    [feedType, feedId, category, limit]
+    [feedType, feedId, category, limit, toast]
   );
 
   // Initial load

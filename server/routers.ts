@@ -24,6 +24,7 @@ import { settingsRouter } from './settingsRouter';
 import { marketingRouter } from './marketingRouter';
 import { subscriptionRouter } from './subscriptionRouter';
 import { developerRouter } from './developerRouter';
+import { exploreRouter } from './exploreRouter';
 
 export const appRouter = router({
   system: systemRouter,
@@ -47,6 +48,7 @@ export const appRouter = router({
   marketing: marketingRouter,
   subscription: subscriptionRouter,
   developer: developerRouter,
+  explore: exploreRouter,
 
   auth: router({
     me: publicProcedure.query(opts => opts.ctx.user),
