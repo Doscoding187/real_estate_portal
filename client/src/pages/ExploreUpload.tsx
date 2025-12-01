@@ -38,7 +38,8 @@ export default function ExploreUpload() {
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [returnPath, setReturnPath] = useState('/agent/dashboard');
 
-  // Upload mutation
+  // Upload mutations
+  const getPresignedUrl = trpc.video.getPresignedUrl.useMutation();
   const uploadMutation = trpc.explore.uploadShort.useMutation();
 
   // Redirect if not authenticated
@@ -129,11 +130,57 @@ export default function ExploreUpload() {
     setIsUploading(true);
 
     try {
-      // Upload to backend
+      // Step 1: Upload all media files to S3
+      const uploadedUrls: string[] = [];
+      
+      for (let i = 0; i < mediaFiles.length; i++) {
+        const media = mediaFiles[i];
+        
+        toast({
+          title: `Uploading ${media.type} ${i + 1}/${mediaFiles.length}`,
+          description: 'Please wait...',
+        });
+
+        // Get presigned URL
+        const presignedData = await getPresignedUrl.mutateAsync({
+          fileName: media.file.name,
+          fileType: media.file.type,
+        });
+
+        if (!presignedData?.uploadUrl || !presignedData?.videoUrl) {
+          throw new Error(`Failed to get upload URL for ${media.file.name}`);
+        }
+
+        // Upload to S3
+        await new Promise<void>((resolve, reject) => {
+          const xhr = new XMLHttpRequest();
+
+          xhr.addEventListener('load', () => {
+            if (xhr.status === 200 || xhr.status === 204) {
+              resolve();
+            } else {
+              reject(new Error(`Upload failed with status ${xhr.status}`));
+            }
+          });
+
+          xhr.addEventListener('error', () => {
+            reject(new Error('Network error during upload'));
+          });
+
+          xhr.open('PUT', presignedData.uploadUrl);
+          xhr.setRequestHeader('Content-Type', media.file.type);
+          xhr.send(media.file);
+        });
+
+        // Store the S3 URL
+        uploadedUrls.push(presignedData.videoUrl);
+      }
+
+      // Step 2: Save to database with S3 URLs
       const result = await uploadMutation.mutateAsync({
         title: title.trim(),
         caption: caption.trim() || undefined,
-        mediaUrls: mediaFiles.map(m => m.url), // Using data URLs for now
+        mediaUrls: uploadedUrls, // Now using S3 URLs instead of data URLs
         highlights: highlights.filter(h => h.trim()).length > 0 
           ? highlights.filter(h => h.trim()) 
           : undefined,
