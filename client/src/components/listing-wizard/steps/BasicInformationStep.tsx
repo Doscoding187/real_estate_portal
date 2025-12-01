@@ -812,7 +812,7 @@ const BasicInformationStep: React.FC = () => {
                         )}
                       </div>
                     </PopoverTrigger>
-                    <PopoverContent className="w-[400px] p-0" align="start">
+                    <PopoverContent className="w-[400px] p-0" align="start" onOpenAutoFocus={(e) => e.preventDefault()}>
                       <Command>
                         <CommandList>
                           {developers && developers.length > 0 ? (
@@ -880,7 +880,7 @@ const BasicInformationStep: React.FC = () => {
                         )}
                       </div>
                     </PopoverTrigger>
-                    <PopoverContent className="w-[400px] p-0" align="start">
+                    <PopoverContent className="w-[400px] p-0" align="start" onOpenAutoFocus={(e) => e.preventDefault()}>
                       <Command>
                         <CommandList>
                           {developments && developments.length > 0 ? (
