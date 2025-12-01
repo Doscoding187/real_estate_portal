@@ -52,10 +52,10 @@ const QUICK_ACTIONS: QuickAction[] = [
   },
   {
     id: 'upload-media',
-    label: 'Upload Media',
-    description: 'Add photos and videos',
+    label: 'Upload to Explore',
+    description: 'Share content on Explore feed',
     icon: Image,
-    path: '/developer/media/upload',
+    path: '/explore/upload',
     gradientFrom: 'from-purple-500',
     gradientTo: 'to-pink-600',
   },

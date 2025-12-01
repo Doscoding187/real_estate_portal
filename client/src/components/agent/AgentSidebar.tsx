@@ -12,6 +12,7 @@ import {
   Eye,
   TrendingUp,
   Share2,
+  Upload,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -32,6 +33,7 @@ const navigation = [
 
 const quickActions = [
   { name: 'Add New Listing', icon: Plus, variant: 'default' as const },
+  { name: 'Upload to Explore', icon: Upload, variant: 'secondary' as const },
   { name: 'View Leads', icon: Eye, variant: 'secondary' as const },
   { name: 'Promote Listing', icon: TrendingUp, variant: 'secondary' as const },
   { name: 'Share Profile', icon: Share2, variant: 'secondary' as const },
@@ -81,6 +83,8 @@ export function AgentSidebar() {
                 onClick={() => {
                   if (action.name === 'Add New Listing') {
                     setLocation('/listings/create');
+                  } else if (action.name === 'Upload to Explore') {
+                    setLocation('/explore/upload');
                   }
                 }}
               >

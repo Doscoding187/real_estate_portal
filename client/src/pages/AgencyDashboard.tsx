@@ -73,6 +73,10 @@ export default function AgencyDashboard() {
           </div>
 
           <div className="flex gap-2">
+            <Button variant="outline" onClick={() => setLocation('/explore/upload')} className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200 text-blue-700 hover:from-blue-100 hover:to-indigo-100">
+                <Building2 className="mr-2 h-4 w-4" />
+                Upload to Explore
+            </Button>
             <Button variant="outline" onClick={() => setLocation('/agency/subscription')}>
                 <CreditCard className="mr-2 h-4 w-4" />
                 Subscription
