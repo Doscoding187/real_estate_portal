@@ -38,7 +38,7 @@ export default function ExploreUpload() {
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [returnPath, setReturnPath] = useState('/agent/dashboard');
 
-  // Upload mutations
+  // Upload mutations - using presigned URL for S3 upload
   const getPresignedUrl = trpc.video.getPresignedUrl.useMutation();
   const uploadMutation = trpc.explore.uploadShort.useMutation();
 
