@@ -7,7 +7,7 @@
  * - Badge/Status (ready_to_move/occupied/off_plan/under_construction)
  */
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useListingWizardStore } from '@/hooks/useListingWizard';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -16,11 +16,15 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
-import { MapPin, DollarSign, Home, Calendar, Info, Check, Award, Store, Building2, Factory, Warehouse, Layers, DoorOpen, GraduationCap, Users } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import { MapPin, DollarSign, Home, Calendar, Info, Check, Award, Store, Building2, Factory, Warehouse, Layers, DoorOpen, GraduationCap, Users, Search, Loader2 } from 'lucide-react';
 import type { ListingAction, PropertyType, ListingBadge } from '@/../../shared/listing-types';
 import { BADGE_TEMPLATES } from '@/../../shared/listing-types';
 import { useFieldValidation } from '@/hooks/useFieldValidation';
 import { InlineError } from '@/components/ui/InlineError';
+import { trpc } from '@/lib/trpc';
+import { useDebounce } from '@/hooks/useDebounce';
 
 // South African provinces
 const SA_PROVINCES = [
@@ -48,6 +52,30 @@ const BasicInformationStep: React.FC = () => {
   const basicInfo = store.basicInfo || {};
   const pricing = store.pricing || {};
   const propertyDetails = store.propertyDetails || {};
+
+  // Autocomplete state for developers
+  const [developerSearchQuery, setDeveloperSearchQuery] = useState('');
+  const [showDeveloperDropdown, setShowDeveloperDropdown] = useState(false);
+  const debouncedDeveloperQuery = useDebounce(developerSearchQuery, 300);
+
+  // Autocomplete state for developments
+  const [developmentSearchQuery, setDevelopmentSearchQuery] = useState('');
+  const [showDevelopmentDropdown, setShowDevelopmentDropdown] = useState(false);
+  const debouncedDevelopmentQuery = useDebounce(developmentSearchQuery, 300);
+
+  // tRPC queries for autocomplete
+  const { data: developers, isLoading: loadingDevelopers } = trpc.developer.searchDevelopers.useQuery(
+    { query: debouncedDeveloperQuery },
+    { enabled: debouncedDeveloperQuery.length >= 2 }
+  );
+
+  const { data: developments, isLoading: loadingDevelopments } = trpc.developer.searchDevelopments.useQuery(
+    { 
+      query: debouncedDevelopmentQuery,
+      developerId: basicInfo.selectedDeveloperId 
+    },
+    { enabled: debouncedDevelopmentQuery.length >= 2 }
+  );
 
   // Validation context
   const validationContext = {
@@ -761,31 +789,141 @@ const BasicInformationStep: React.FC = () => {
             {/* New Development Fields */}
             {basicInfo.propertyCategory === 'new_development' && (
               <>
+                {/* Developer Name Autocomplete */}
                 <div>
                   <Label htmlFor="developerName" className="text-slate-700">Developer Name *</Label>
-                  <Input
-                    id="developerName"
-                    value={basicInfo.developerName || ''}
-                    onChange={(e) => updateBasicInfo('developerName', e.target.value)}
-                    placeholder="e.g., ABC Developments"
-                    className="mt-1"
-                  />
+                  <Popover open={showDeveloperDropdown} onOpenChange={setShowDeveloperDropdown}>
+                    <PopoverTrigger asChild>
+                      <div className="relative">
+                        <Input
+                          id="developerName"
+                          value={basicInfo.developerName || ''}
+                          onChange={(e) => {
+                            updateBasicInfo('developerName', e.target.value);
+                            setDeveloperSearchQuery(e.target.value);
+                            setShowDeveloperDropdown(true);
+                          }}
+                          onFocus={() => setShowDeveloperDropdown(true)}
+                          placeholder="Search for developer..."
+                          className="mt-1"
+                        />
+                        {loadingDevelopers && (
+                          <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 animate-spin text-gray-400" />
+                        )}
+                      </div>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[400px] p-0" align="start">
+                      <Command>
+                        <CommandList>
+                          {developers && developers.length > 0 ? (
+                            <CommandGroup heading="Registered Developers">
+                              {developers.map((dev: any) => (
+                                <CommandItem
+                                  key={dev.id}
+                                  value={dev.name}
+                                  onSelect={() => {
+                                    updateBasicInfo('developerName', dev.name);
+                                    updateBasicInfo('selectedDeveloperId', dev.id);
+                                    setShowDeveloperDropdown(false);
+                                  }}
+                                  className="cursor-pointer"
+                                >
+                                  <div className="flex items-center gap-2 w-full">
+                                    <Building2 className="w-4 h-4 text-blue-600" />
+                                    <div className="flex-1">
+                                      <p className="font-medium">{dev.name}</p>
+                                      <p className="text-xs text-gray-500">
+                                        {dev.city}, {dev.province}
+                                      </p>
+                                    </div>
+                                    <Badge variant="secondary" className="text-xs">
+                                      {dev.status}
+                                    </Badge>
+                                  </div>
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          ) : debouncedDeveloperQuery.length >= 2 && !loadingDevelopers ? (
+                            <CommandEmpty>No developers found. You can still enter a custom name.</CommandEmpty>
+                          ) : (
+                            <CommandEmpty>Type at least 2 characters to search...</CommandEmpty>
+                          )}
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
                   <p className="text-xs text-slate-500 mt-1">
-                    This will link to registered developers or prompt for registration
+                    Search for registered developers or enter a custom name
                   </p>
                 </div>
 
+                {/* Development Name Autocomplete */}
                 <div>
                   <Label htmlFor="developmentName" className="text-slate-700">Development Name *</Label>
-                  <Input
-                    id="developmentName"
-                    value={basicInfo.developmentName || ''}
-                    onChange={(e) => updateBasicInfo('developmentName', e.target.value)}
-                    placeholder="e.g., Sunset Gardens Estate"
-                    className="mt-1"
-                  />
+                  <Popover open={showDevelopmentDropdown} onOpenChange={setShowDevelopmentDropdown}>
+                    <PopoverTrigger asChild>
+                      <div className="relative">
+                        <Input
+                          id="developmentName"
+                          value={basicInfo.developmentName || ''}
+                          onChange={(e) => {
+                            updateBasicInfo('developmentName', e.target.value);
+                            setDevelopmentSearchQuery(e.target.value);
+                            setShowDevelopmentDropdown(true);
+                          }}
+                          onFocus={() => setShowDevelopmentDropdown(true)}
+                          placeholder="Search for development..."
+                          className="mt-1"
+                        />
+                        {loadingDevelopments && (
+                          <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 animate-spin text-gray-400" />
+                        )}
+                      </div>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[400px] p-0" align="start">
+                      <Command>
+                        <CommandList>
+                          {developments && developments.length > 0 ? (
+                            <CommandGroup heading="Published Developments">
+                              {developments.map((dev: any) => (
+                                <CommandItem
+                                  key={dev.id}
+                                  value={dev.name}
+                                  onSelect={() => {
+                                    updateBasicInfo('developmentName', dev.name);
+                                    updateBasicInfo('selectedDevelopmentId', dev.id);
+                                    setShowDevelopmentDropdown(false);
+                                  }}
+                                  className="cursor-pointer"
+                                >
+                                  <div className="flex items-center gap-2 w-full">
+                                    <Home className="w-4 h-4 text-green-600" />
+                                    <div className="flex-1">
+                                      <p className="font-medium">{dev.name}</p>
+                                      <p className="text-xs text-gray-500">
+                                        {dev.city}, {dev.province} • {dev.developmentType}
+                                      </p>
+                                    </div>
+                                    <Badge variant="secondary" className="text-xs">
+                                      {dev.status}
+                                    </Badge>
+                                  </div>
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          ) : debouncedDevelopmentQuery.length >= 2 && !loadingDevelopments ? (
+                            <CommandEmpty>No developments found. You can still enter a custom name.</CommandEmpty>
+                          ) : (
+                            <CommandEmpty>Type at least 2 characters to search...</CommandEmpty>
+                          )}
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
                   <p className="text-xs text-slate-500 mt-1">
-                    Select from registered developments or add new
+                    {basicInfo.selectedDeveloperId 
+                      ? 'Filtered by selected developer' 
+                      : 'Search for developments or enter a custom name'}
                   </p>
                 </div>
               </>

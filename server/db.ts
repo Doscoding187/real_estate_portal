@@ -723,6 +723,68 @@ export async function getDevelopmentProperties(developmentId: number) {
   return await db.select().from(properties).where(eq(properties.developmentId, developmentId));
 }
 
+/**
+ * Search developers by name (for autocomplete)
+ */
+export async function searchDevelopers(query: string, limit: number = 10) {
+  const db = await getDb();
+  if (!db) return [];
+
+  const { developers } = require('../drizzle/schema');
+
+  return await db
+    .select({
+      id: developers.id,
+      name: developers.name,
+      city: developers.city,
+      province: developers.province,
+      status: developers.status,
+      logo: developers.logo,
+    })
+    .from(developers)
+    .where(
+      and(
+        like(developers.name, `%${query}%`),
+        eq(developers.status, 'approved' as any) // Only show approved developers
+      )
+    )
+    .limit(limit);
+}
+
+/**
+ * Search developments by name (for autocomplete)
+ */
+export async function searchDevelopments(query: string, developerId?: number, limit: number = 10) {
+  const db = await getDb();
+  if (!db) return [];
+
+  const { developments } = require('../drizzle/schema');
+
+  const conditions = [
+    like(developments.name, `%${query}%`),
+    eq(developments.isPublished, 1), // Only show published developments
+  ];
+
+  // Filter by developer if provided
+  if (developerId) {
+    conditions.push(eq(developments.developerId, developerId));
+  }
+
+  return await db
+    .select({
+      id: developments.id,
+      name: developments.name,
+      city: developments.city,
+      province: developments.province,
+      developerId: developments.developerId,
+      developmentType: developments.developmentType,
+      status: developments.status,
+    })
+    .from(developments)
+    .where(and(...conditions))
+    .limit(limit);
+}
+
 // ==================== SERVICES ====================
 
 export async function getAllServices() {

@@ -260,6 +260,37 @@ export const developerRouter = router({
     }),
 
   /**
+   * Search developers by name (for autocomplete)
+   * Auth: Public
+   */
+  searchDevelopers: publicProcedure
+    .input(
+      z.object({
+        query: z.string().min(2, 'Search query must be at least 2 characters'),
+        limit: z.number().int().positive().max(20).default(10),
+      })
+    )
+    .query(async ({ input }) => {
+      return await db.searchDevelopers(input.query, input.limit);
+    }),
+
+  /**
+   * Search developments by name (for autocomplete)
+   * Auth: Public
+   */
+  searchDevelopments: publicProcedure
+    .input(
+      z.object({
+        query: z.string().min(2, 'Search query must be at least 2 characters'),
+        developerId: z.number().int().optional(),
+        limit: z.number().int().positive().max(20).default(10),
+      })
+    )
+    .query(async ({ input }) => {
+      return await db.searchDevelopments(input.query, input.developerId, input.limit);
+    }),
+
+  /**
    * Admin: List pending developers
    * Auth: Super admin only
    */
