@@ -813,7 +813,7 @@ const BasicInformationStep: React.FC = () => {
                       </div>
                     </PopoverTrigger>
                     <PopoverContent className="w-[400px] p-0" align="start" onOpenAutoFocus={(e) => e.preventDefault()}>
-                      <Command>
+                      <Command shouldFilter={false}>
                         <CommandList>
                           {developers && developers.length > 0 ? (
                             <CommandGroup heading="Registered Developers">
@@ -822,8 +822,10 @@ const BasicInformationStep: React.FC = () => {
                                   key={dev.id}
                                   value={dev.name}
                                   onSelect={() => {
+                                    console.log('Selected developer:', dev.name);
                                     updateBasicInfo('developerName', dev.name);
                                     updateBasicInfo('selectedDeveloperId', dev.id);
+                                    setDeveloperSearchQuery(dev.name);
                                     setShowDeveloperDropdown(false);
                                   }}
                                   className="cursor-pointer"
@@ -881,7 +883,7 @@ const BasicInformationStep: React.FC = () => {
                       </div>
                     </PopoverTrigger>
                     <PopoverContent className="w-[400px] p-0" align="start" onOpenAutoFocus={(e) => e.preventDefault()}>
-                      <Command>
+                      <Command shouldFilter={false}>
                         <CommandList>
                           {developments && developments.length > 0 ? (
                             <CommandGroup heading="Published Developments">
@@ -890,8 +892,10 @@ const BasicInformationStep: React.FC = () => {
                                   key={dev.id}
                                   value={dev.name}
                                   onSelect={() => {
+                                    console.log('Selected development:', dev.name);
                                     updateBasicInfo('developmentName', dev.name);
                                     updateBasicInfo('selectedDevelopmentId', dev.id);
+                                    setDevelopmentSearchQuery(dev.name);
                                     setShowDevelopmentDropdown(false);
                                   }}
                                   className="cursor-pointer"
