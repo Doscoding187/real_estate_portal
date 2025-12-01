@@ -52,6 +52,7 @@ export const videoRouter = router({
           Bucket: bucketName,
           Key: key,
           ContentType: input.fileType,
+          ChecksumAlgorithm: undefined, // Explicitly disable checksum to prevent CORS/Signature issues
         });
 
         const presignedUrl = await getSignedUrl(s3, command, { expiresIn: 3600 }); // 1 hour
