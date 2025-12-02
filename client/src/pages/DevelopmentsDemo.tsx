@@ -20,8 +20,8 @@ export default function DevelopmentsDemo() {
     <div className="min-h-screen bg-slate-50">
       <ListingNavbar />
 
-      <div className="container pt-24 pb-8">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-12">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8">
           {/* Sidebar Filters - Hidden on mobile, visible on large screens */}
           <div className="hidden lg:block lg:col-span-3">
             <div className="sticky top-24">
@@ -31,7 +31,7 @@ export default function DevelopmentsDemo() {
 
           {/* Main Content Area */}
           <div className="col-span-1 lg:col-span-9">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
               <div>
                 <h2 className="text-xl font-bold text-slate-800">
                   {mockDevelopments.length} New Developments Found
@@ -58,7 +58,7 @@ export default function DevelopmentsDemo() {
 
             {/* Developments Grid */}
             {mockDevelopments.length > 0 ? (
-              <div className="flex flex-col gap-4">
+              <div className="flex flex-col gap-6">
                 {mockDevelopments.map((dev) => (
                   <DevelopmentCard key={dev.id} {...dev} />
                 ))}

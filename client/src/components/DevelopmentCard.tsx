@@ -54,7 +54,7 @@ export function DevelopmentCard({
   };
 
   return (
-    <div className="group relative bg-white rounded-xl border border-slate-200 shadow-sm hover:shadow-lg transition-all overflow-hidden flex flex-col md:flex-row h-auto max-w-[900px]">
+    <div className="group relative bg-white rounded-xl border border-slate-200 shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden flex flex-col md:flex-row h-auto mx-auto w-full">
       {/* Image Section (Left) - 40% width */}
       <div 
         className="relative w-full md:w-[40%] h-64 md:h-auto md:min-h-[320px] shrink-0 overflow-hidden cursor-pointer" 
@@ -110,13 +110,13 @@ export function DevelopmentCard({
       </div>
 
       {/* Content Section (Right) - 60% width */}
-      <div className="flex-1 p-6 flex flex-col justify-between min-w-0">
+      <div className="flex-1 p-5 sm:p-6 lg:p-8 flex flex-col justify-between min-w-0">
         <div>
           {/* Header */}
-          <div className="mb-4">
+          <div className="mb-5">
             <div className="flex items-start justify-between mb-2">
               <h3 
-                className="text-2xl font-bold text-slate-900 hover:text-blue-600 transition-colors cursor-pointer flex items-center gap-2"
+                className="text-xl sm:text-2xl font-bold text-slate-900 hover:text-blue-600 transition-colors cursor-pointer flex items-center gap-2 leading-tight"
                 onClick={() => setLocation(`/development/${id}`)}
               >
                 {title}
@@ -142,9 +142,9 @@ export function DevelopmentCard({
           </div>
 
           {/* Unit Types with Pricing */}
-          <div className="flex gap-3 mb-4 overflow-x-auto pb-2 -mx-2 px-2 scrollbar-thin scrollbar-thumb-slate-200 scrollbar-track-transparent">
+          <div className="flex gap-3 mb-5 overflow-x-auto pb-2 -mx-2 px-2 scrollbar-thin scrollbar-thumb-slate-200 scrollbar-track-transparent">
             {unitTypes.map((unit, index) => (
-              <div key={index} className="flex-none w-[160px] border border-slate-200 rounded-lg p-3 hover:border-blue-400 hover:bg-blue-50/50 transition-colors bg-slate-50/30">
+              <div key={index} className="flex-none w-[160px] sm:w-[180px] border border-slate-200 rounded-lg p-3 hover:border-blue-400 hover:bg-blue-50/50 transition-colors bg-slate-50/30">
                 <div className="text-xs text-slate-600 mb-1 truncate" title={unit.label}>{unit.label}</div>
                 <div className="text-lg font-bold text-[#1e1b4b]">
                   From {formatPrice(unit.priceFrom)}
@@ -154,13 +154,13 @@ export function DevelopmentCard({
           </div>
 
           {/* Description */}
-          <p className="text-sm text-slate-600 line-clamp-2 mb-4">
+          <p className="text-sm sm:text-base text-slate-600 line-clamp-2 mb-5">
             {description}
           </p>
 
           {/* Highlights */}
           {highlights.length > 0 && (
-            <div className="mb-4">
+            <div className="mb-5">
               <span className="text-sm font-semibold text-slate-700 block mb-1">Highlights :</span>
               <ResponsiveHighlights items={highlights} />
             </div>
@@ -168,7 +168,7 @@ export function DevelopmentCard({
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between pt-4 border-t border-slate-100">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pt-4 border-t border-slate-100">
           <div>
             {developer.isFeatured && (
               <Badge className="bg-orange-500 hover:bg-orange-600 text-white text-xs font-semibold mb-1">
@@ -179,7 +179,7 @@ export function DevelopmentCard({
           </div>
 
           <Button 
-            className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6"
+            className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-2.5 w-full sm:w-auto"
             onClick={(e) => {
               e.stopPropagation();
               if (onContactClick) {
