@@ -185,8 +185,8 @@ export function BasicDetailsStep() {
           <Button variant="ghost" size="sm" onClick={() => setShowMap(!showMap)}>
             {showMap ? <EyeOff className="w-4 h-4 mr-2" /> : <Eye className="w-4 h-4 mr-2" />}
             {showMap ? 'Hide Map' : 'Show Map'}
-          </div>
-        )}
+          </Button>
+        </div>
 
         <div className="space-y-4">
           <div>
