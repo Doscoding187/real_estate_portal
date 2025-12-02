@@ -18,6 +18,8 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useLocation } from 'wouter';
 import { useAuth } from '@/_core/hooks/useAuth';
+import { ShareProfileModal } from './ShareProfileModal';
+import { useState } from 'react';
 
 const navigation = [
   { name: 'Overview', href: '/agent/dashboard', icon: Home },
@@ -42,6 +44,10 @@ const quickActions = [
 export function AgentSidebar() {
   const [, setLocation] = useLocation();
   const { user } = useAuth();
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+
+  // TODO: Get actual agent ID from backend
+  const agentId = 2; // Replace with actual agent ID from user context
 
   const initials = user?.name
     ? user.name
@@ -85,6 +91,12 @@ export function AgentSidebar() {
                     setLocation('/listings/create');
                   } else if (action.name === 'Upload to Explore') {
                     setLocation('/explore/upload');
+                  } else if (action.name === 'View Leads') {
+                    setLocation('/agent/leads');
+                  } else if (action.name === 'Promote Listing') {
+                    setLocation('/agent/marketing');
+                  } else if (action.name === 'Share Profile') {
+                    setIsShareModalOpen(true);
                   }
                 }}
               >
@@ -136,6 +148,14 @@ export function AgentSidebar() {
           </div>
         </div>
       </div>
+
+      {/* Share Profile Modal */}
+      <ShareProfileModal
+        isOpen={isShareModalOpen}
+        onClose={() => setIsShareModalOpen(false)}
+        agentId={agentId}
+        agentName={user?.name || 'Agent'}
+      />
     </aside>
   );
 }

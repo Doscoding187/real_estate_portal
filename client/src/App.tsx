@@ -16,6 +16,7 @@ import PropertyDetail from './pages/PropertyDetail';
 import Favorites from './pages/Favorites';
 import Agents from './pages/Agents';
 import AgentDetail from './pages/AgentDetail';
+import AgentPublicProfile from './pages/AgentPublicProfile';
 import CityPage from './pages/CityPage';
 import Dashboard from './pages/Dashboard';
 import Login from './pages/Login';
@@ -116,6 +117,7 @@ function Router() {
       <Route path="/agent/training" component={AgentTrainingSupport} />
       <Route path="/agent/settings" component={AgentSettings} />
       <Route path="/agent/setup" component={AgentSetup} />
+      <Route path="/agent/profile/:agentId" component={AgentPublicProfile} />
       <Route path="/agent/:id" component={AgentDetail} />
       <Route path="/city/:slug" component={CityPage} />
       <Route path="/listings/create" component={ListingWizard} />
