@@ -189,9 +189,33 @@ export function BasicDetailsStep() {
         </div>
 
         <div className="space-y-4">
+          {/* Interactive Map - Show/Hide */}
+          {showMap && (
+            <div className="mb-6">
+              <LocationMapPicker
+                initialLatitude={latitude ? parseFloat(latitude) : -26.2041}
+                initialLongitude={longitude ? parseFloat(longitude) : 28.0473}
+                onLocationSelect={handleLocationSelect}
+                height="400px"
+              />
+              {geocodingError && (
+                <Alert variant="destructive" className="mt-2">
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertDescription>{geocodingError}</AlertDescription>
+                </Alert>
+              )}
+              <Alert className="mt-3 bg-blue-50 border-blue-200">
+                <Info className="h-4 w-4 text-blue-600" />
+                <AlertDescription className="text-blue-900">
+                  <strong>Tip:</strong> For new developments without street addresses, drag the pin to mark your show house location. This helps buyers find you accurately.
+                </AlertDescription>
+              </Alert>
+            </div>
+          )}
+
           <div>
             <Label htmlFor="address" className="text-slate-700">
-              Street Address <span className="text-red-500">*</span>
+              Street Address {!manualOverride && <span className="text-xs text-slate-500">(Auto-filled from map or enter manually)</span>}
             </Label>
             <Input
               id="address"
