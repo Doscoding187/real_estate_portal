@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { LocationPicker } from '../map/LocationPicker';
 
 const DevelopmentWizard: React.FC = () => {
   const [currentStep, setCurrentStep] = useState(0);
@@ -71,65 +72,78 @@ const DevelopmentWizard: React.FC = () => {
         return (
           <div className="space-y-4">
             <h3 className="typ-h3">Location Details</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Street Address
-                </label>
-                <input type="text" className="input w-full" placeholder="123 Main Street" />
+            
+            {/* Interactive Map with Pin Drop */}
+            <LocationPicker
+              onLocationChange={(location) => {
+                console.log('Location selected:', location);
+                // TODO: Save location to form state
+              }}
+              showAddressInput={true}
+            />
+
+            {/* Optional Manual Address Entry */}
+            <div className="mt-6">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="h-px flex-1 bg-gray-200"></div>
+                <span className="text-sm text-gray-500">Or enter address manually (optional)</span>
+                <div className="h-px flex-1 bg-gray-200"></div>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Suburb</label>
-                <input type="text" className="input w-full" placeholder="e.g. Sandton" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">City</label>
-                <input type="text" className="input w-full" placeholder="e.g. Johannesburg" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Postal Code</label>
-                <input type="text" className="input w-full" placeholder="e.g. 2196" />
-              </div>
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Province</label>
-                <select className="input w-full">
-                  <option>Gauteng</option>
-                  <option>Western Cape</option>
-                  <option>KwaZulu-Natal</option>
-                  <option>Eastern Cape</option>
-                  <option>Free State</option>
-                  <option>Limpopo</option>
-                  <option>Mpumalanga</option>
-                  <option>Northern Cape</option>
-                  <option>North West</option>
-                </select>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Street Address (Optional)
+                  </label>
+                  <input 
+                    type="text" 
+                    className="input w-full" 
+                    placeholder="e.g. 123 Main Street (if available)" 
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Leave blank if street address hasn't been assigned yet
+                  </p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Suburb/Area</label>
+                  <input type="text" className="input w-full" placeholder="e.g. Sandton" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">City</label>
+                  <input type="text" className="input w-full" placeholder="e.g. Johannesburg" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Postal Code</label>
+                  <input type="text" className="input w-full" placeholder="e.g. 2196" />
+                </div>
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Province</label>
+                  <select className="input w-full">
+                    <option>Gauteng</option>
+                    <option>Western Cape</option>
+                    <option>KwaZulu-Natal</option>
+                    <option>Eastern Cape</option>
+                    <option>Free State</option>
+                    <option>Limpopo</option>
+                    <option>Mpumalanga</option>
+                    <option>Northern Cape</option>
+                    <option>North West</option>
+                  </select>
+                </div>
               </div>
             </div>
-            <div className="mt-4">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Map Location</label>
-              <div className="h-64 bg-gray-200 rounded-16 flex items-center justify-center">
-                <div className="text-center">
-                  <svg
-                    className="w-12 h-12 text-gray-400 mx-auto"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
-                    />
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
-                    />
-                  </svg>
-                  <p className="mt-2 text-gray-500">Map preview will appear here</p>
-                  <button className="btn btn-secondary mt-2">Select Location</button>
+
+            {/* Show House Location Note */}
+            <div className="mt-4 p-4 bg-blue-50 rounded-xl border border-blue-100">
+              <div className="flex gap-3">
+                <svg className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <div>
+                  <p className="text-sm font-medium text-blue-900">Tip: Pin the Show House Location</p>
+                  <p className="text-sm text-blue-700 mt-1">
+                    For new developments without assigned street addresses, drag the pin to mark where your show houses or sales office is located. This helps buyers find you accurately.
+                  </p>
                 </div>
               </div>
             </div>
