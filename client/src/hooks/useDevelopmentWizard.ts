@@ -36,7 +36,7 @@ export interface MediaItem {
   file?: File;
   url: string;
   type: 'image' | 'video' | 'floorplan';
-  category?: 'featured' | 'general' | 'amenities' | 'outdoors' | 'videos';
+  category?: 'featured' | 'general' | 'floorplans' | 'amenities' | 'outdoors' | 'videos';
   isPrimary: boolean;
   displayOrder: number;
 }
