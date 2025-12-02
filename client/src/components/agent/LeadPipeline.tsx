@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -89,7 +89,7 @@ export function LeadPipeline({ className }: LeadPipelineProps) {
   });
 
   // Update pipeline when data changes
-  React.useEffect(() => {
+  useEffect(() => {
     if (pipelineData) {
       setPipeline({
         new: { id: 'new', title: 'New Leads', leads: pipelineData.new || [], color: 'bg-blue-500' },
