@@ -5,7 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Building2, MapPin, Info, Star, Eye, EyeOff, AlertTriangle } from 'lucide-react';
+import { Building2, MapPin, Info, Star, AlertTriangle } from 'lucide-react';
 import { useFieldValidation } from '@/hooks/useFieldValidation';
 import { InlineError } from '@/components/ui/InlineError';
 import { LocationMapPicker, LocationData } from '@/components/location/LocationMapPicker';
@@ -36,7 +36,6 @@ export function BasicDetailsStep() {
     setRating,
   } = useDevelopmentWizard();
 
-  const [showMap, setShowMap] = useState(true);
   const [manualOverride, setManualOverride] = useState(false);
   const [geocodingError, setGeocodingError] = useState<string | null>(null);
 
@@ -177,41 +176,26 @@ export function BasicDetailsStep() {
 
       {/* Location Details */}
       <Card className="bg-white/70 backdrop-blur-sm rounded-[1.5rem] border-white/40 shadow-[0_8px_30px_rgba(8,_112,_184,_0.06)] p-6">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
-            <MapPin className="w-5 h-5 text-indigo-600" />
-            <h3 className="text-lg font-bold text-slate-800">Location Details</h3>
-          </div>
-          <Button variant="ghost" size="sm" onClick={() => setShowMap(!showMap)}>
-            {showMap ? <EyeOff className="w-4 h-4 mr-2" /> : <Eye className="w-4 h-4 mr-2" />}
-            {showMap ? 'Hide Map' : 'Show Map'}
-          </Button>
+        <div className="flex items-center gap-2 mb-4">
+          <MapPin className="w-5 h-5 text-indigo-600" />
+          <h3 className="text-lg font-bold text-slate-800">Location Details</h3>
         </div>
 
         <div className="space-y-4">
-          {/* Interactive Map - Show/Hide */}
-          {showMap && (
-            <div className="mb-6">
-              <LocationMapPicker
-                initialLatitude={latitude ? parseFloat(latitude) : -26.2041}
-                initialLongitude={longitude ? parseFloat(longitude) : 28.0473}
-                onLocationSelect={handleLocationSelect}
-                height="400px"
-              />
-              {geocodingError && (
-                <Alert variant="destructive" className="mt-2">
-                  <AlertTriangle className="h-4 w-4" />
-                  <AlertDescription>{geocodingError}</AlertDescription>
-                </Alert>
-              )}
-              <Alert className="mt-3 bg-blue-50 border-blue-200">
-                <Info className="h-4 w-4 text-blue-600" />
-                <AlertDescription className="text-blue-900">
-                  <strong>Tip:</strong> For new developments without street addresses, drag the pin to mark your show house location. This helps buyers find you accurately.
-                </AlertDescription>
+          {/* Interactive Map - Always Visible */}
+          <div className="mb-6">
+            <LocationMapPicker
+              initialLat={latitude ? parseFloat(latitude) : -26.2041}
+              initialLng={longitude ? parseFloat(longitude) : 28.0473}
+              onLocationSelect={handleLocationSelect}
+            />
+            {geocodingError && (
+              <Alert variant="destructive" className="mt-2">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertDescription>{geocodingError}</AlertDescription>
               </Alert>
-            </div>
-          )}
+            )}
+          </div>
 
           <div>
             <Label htmlFor="address" className="text-slate-700">
