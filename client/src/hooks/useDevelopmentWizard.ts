@@ -99,7 +99,7 @@ export interface DevelopmentWizardState {
   developerWebsite?: string;
   aboutDeveloper?: string; // Company description
   trackRecord?: string; // Past achievements
-  pastProjects?: Array<{ name: string; year: string; location: string }>;
+  pastProjects: Array<{ name: string; year: string; location: string }>;
   
   // Wizard State
   currentStep: number;
