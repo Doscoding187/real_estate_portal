@@ -22,12 +22,12 @@ import { useAuth } from '@/_core/hooks/useAuth';
 const navigation = [
   { name: 'Overview', href: '/agent/dashboard', icon: Home },
   { name: 'Listings', href: '/agent/listings', icon: Building2 },
-  { name: 'Leads & Clients', href: '/agent/leads', icon: Users },
+  { name: 'Leads & CRM', href: '/agent/leads', icon: Users },
+  { name: 'Marketing Hub', href: '/agent/marketing', icon: Megaphone },
+  { name: 'Earnings', href: '/agent/earnings', icon: DollarSign },
   { name: 'Analytics', href: '/agent/analytics', icon: BarChart3 },
-  { name: 'Commission', href: '/agent/commission', icon: DollarSign },
-  { name: 'Marketing', href: '/agent/marketing', icon: Megaphone },
-  { name: 'Calendar', href: '/agent/calendar', icon: Calendar },
-  { name: 'Training', href: '/agent/training', icon: GraduationCap },
+  { name: 'Productivity', href: '/agent/productivity', icon: Calendar },
+  { name: 'Training & Support', href: '/agent/training', icon: GraduationCap },
   { name: 'Settings', href: '/agent/settings', icon: Settings },
 ];
 

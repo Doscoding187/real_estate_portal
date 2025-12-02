@@ -2,6 +2,7 @@ import { useLocation } from 'wouter';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { trpc } from '@/lib/trpc';
 import { AgentSidebar } from '@/components/agent/AgentSidebar';
+import { AgentTopNav } from '@/components/agent/AgentTopNav';
 import { AgentDashboardOverview } from '@/components/agent/AgentDashboardOverview';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
@@ -67,6 +68,7 @@ export default function AgentDashboard() {
 
       {/* Main Content */}
       <div className="flex-1 lg:pl-64">
+        <AgentTopNav />
         <AgentDashboardOverview />
       </div>
     </div>

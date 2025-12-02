@@ -12,7 +12,7 @@ import { Card } from '@/components/ui/card';
 interface PropertyType {
   type: string;
   image: string;
-  listingType: 'sale' | 'rent';
+  listingType: 'sale' | 'rent' | 'developments';
 }
 
 const propertyTypes: PropertyType[] = [
@@ -68,6 +68,27 @@ const propertyTypes: PropertyType[] = [
     image: 'https://images.unsplash.com/photo-1536376072261-38c75010e6c9?w=800&h=600&fit=crop',
     listingType: 'rent',
   },
+  // New Developments
+  {
+    type: 'Ready to Move',
+    image: 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=800&h=600&fit=crop',
+    listingType: 'developments',
+  },
+  {
+    type: 'New Launch',
+    image: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=800&h=600&fit=crop',
+    listingType: 'developments',
+  },
+  {
+    type: 'Affordable Housing',
+    image: 'https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=800&h=600&fit=crop',
+    listingType: 'developments',
+  },
+  {
+    type: 'Luxury Projects',
+    image: 'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=800&h=600&fit=crop',
+    listingType: 'developments',
+  },
 ];
 
 const cities = [
@@ -81,9 +102,10 @@ const cities = [
 
 export function DiscoverProperties() {
   const [selectedCity, setSelectedCity] = useState('Johannesburg');
-  const [listingType, setListingType] = useState<'sale' | 'rent'>('sale');
+  const [listingType, setListingType] = useState<'sale' | 'rent' | 'developments'>('sale');
   const [saleExpanded, setSaleExpanded] = useState(true);
   const [rentExpanded, setRentExpanded] = useState(false);
+  const [developmentsExpanded, setDevelopmentsExpanded] = useState(false);
 
   const [emblaRef, emblaApi] = useEmblaCarousel({
     align: 'start',
@@ -106,6 +128,7 @@ export function DiscoverProperties() {
     if (!saleExpanded) {
       setListingType('sale');
       setRentExpanded(false);
+      setDevelopmentsExpanded(false);
     }
   };
 
@@ -114,6 +137,45 @@ export function DiscoverProperties() {
     if (!rentExpanded) {
       setListingType('rent');
       setSaleExpanded(false);
+      setDevelopmentsExpanded(false);
+    }
+  };
+
+  const handleDevelopmentsClick = () => {
+    setDevelopmentsExpanded(!developmentsExpanded);
+    if (!developmentsExpanded) {
+      setListingType('developments');
+      setSaleExpanded(false);
+      setRentExpanded(false);
+    }
+  };
+
+  const handleCardClick = (propertyType: string, listingType: 'sale' | 'rent' | 'developments') => {
+    // For developments, navigate to developments page
+    if (listingType === 'developments') {
+      // Map property type to development filter
+      const typeMap: Record<string, string> = {
+        'Ready to Move': 'ready_to_move',
+        'New Launch': 'new_launch',
+        'Affordable Housing': 'affordable',
+        'Luxury Projects': 'luxury'
+      };
+      const filter = typeMap[propertyType] || '';
+      window.location.href = `/developments${filter ? `?type=${filter}` : ''}`;
+    } else {
+      // For sale/rent, navigate to properties page with filters
+      const action = listingType === 'sale' ? 'sale' : 'rent';
+      const typeMap: Record<string, string> = {
+        'Houses': 'house',
+        'Apartments': 'apartment',
+        'Townhouses': 'townhouse',
+        'Office Spaces': 'commercial',
+        'Shops': 'commercial',
+        'Penthouses': 'apartment',
+        'Studios': 'apartment'
+      };
+      const propertyTypeParam = typeMap[propertyType] || '';
+      window.location.href = `/properties?action=${action}${propertyTypeParam ? `&propertyType=${propertyTypeParam}` : ''}`;
     }
   };
 
@@ -147,7 +209,7 @@ export function DiscoverProperties() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           {/* Left Sidebar - Listing Type Toggle */}
           <div className="lg:col-span-3">
-            <Card className="p-0 overflow-hidden border-gray-100 shadow-sm bg-white/50 backdrop-blur-sm">
+            <Card className="p-0 overflow-hidden border-gray-100 shadow-sm bg-white/50 backdrop-blur-sm h-[400px] flex flex-col">
               {/* Properties for Sale */}
               <div className="border-b border-gray-100">
                 <button
@@ -165,16 +227,23 @@ export function DiscoverProperties() {
                 </button>
                 <div 
                   className={`overflow-hidden transition-all duration-300 ease-in-out ${
-                    saleExpanded ? 'max-h-48 opacity-100' : 'max-h-0 opacity-0'
+                    saleExpanded ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
                   }`}
                 >
                   <div className="px-4 pb-4 pt-2 bg-gradient-to-r from-blue-50/50 to-indigo-50/50">
-                    <p className="text-sm text-muted-foreground leading-relaxed">
+                    <p className="text-sm text-muted-foreground leading-relaxed mb-4">
                       Properties for sale in {selectedCity} offer a versatile mix of affordable
                       apartments, premium homes, and commercial units. Customise your search by
-                      property type, budget, and BHK preference to find options that match your
+                      property type, budget, number of bedrooms, and property size to find options that match your
                       requirements.
                     </p>
+                    <a 
+                      href="/properties?action=sale" 
+                      className="text-sm font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1 transition-colors"
+                    >
+                      View All Properties for Sale
+                      <ChevronRightIcon className="h-4 w-4" />
+                    </a>
                   </div>
                 </div>
               </div>
@@ -196,15 +265,59 @@ export function DiscoverProperties() {
                 </button>
                 <div 
                   className={`overflow-hidden transition-all duration-300 ease-in-out ${
-                    rentExpanded ? 'max-h-48 opacity-100' : 'max-h-0 opacity-0'
+                    rentExpanded ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
                   }`}
                 >
                   <div className="px-4 pb-4 pt-2 bg-gradient-to-r from-blue-50/50 to-indigo-50/50">
-                    <p className="text-sm text-muted-foreground leading-relaxed">
+                    <p className="text-sm text-muted-foreground leading-relaxed mb-4">
                       Properties for rent in {selectedCity} include a wide range of apartments,
-                      houses, and studios. Filter by budget, location, and amenities to find the
+                      houses, and studios. Filter by budget, location, number of bedrooms, and amenities to find the
                       perfect rental that suits your lifestyle.
                     </p>
+                    <a 
+                      href="/properties?action=rent" 
+                      className="text-sm font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1 transition-colors"
+                    >
+                      View All Properties for Rent
+                      <ChevronRightIcon className="h-4 w-4" />
+                    </a>
+                  </div>
+                </div>
+              </div>
+
+              {/* New Developments */}
+              <div className="border-t border-gray-100">
+                <button
+                  onClick={handleDevelopmentsClick}
+                  className={`w-full p-4 flex items-center justify-between transition-all duration-300 ${
+                    developmentsExpanded 
+                      ? 'bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700' 
+                      : 'hover:bg-gray-50 text-foreground'
+                  }`}
+                >
+                  <span className="font-semibold">New Developments</span>
+                  <ChevronDown
+                    className={`h-5 w-5 transition-transform duration-300 ${developmentsExpanded ? 'rotate-180 text-blue-600' : 'text-muted-foreground'}`}
+                  />
+                </button>
+                <div 
+                  className={`overflow-hidden transition-all duration-300 ease-in-out ${
+                    developmentsExpanded ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
+                  }`}
+                >
+                  <div className="px-4 pb-4 pt-2 bg-gradient-to-r from-blue-50/50 to-indigo-50/50">
+                    <p className="text-sm text-muted-foreground leading-relaxed mb-4">
+                      New developments in {selectedCity} offer modern homes with innovative layouts,
+                      trusted developers, and competitive pricing. Explore ready-to-move, new launch,
+                      and affordable housing projects that deliver exceptional value.
+                    </p>
+                    <a 
+                      href="/developments" 
+                      className="text-sm font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1 transition-colors"
+                    >
+                      View All New Developments
+                      <ChevronRightIcon className="h-4 w-4" />
+                    </a>
                   </div>
                 </div>
               </div>
@@ -219,6 +332,7 @@ export function DiscoverProperties() {
                   <div
                     key={idx}
                     className="flex-[0_0_100%] min-w-0 sm:flex-[0_0_50%] lg:flex-[0_0_33.333%]"
+                    onClick={() => handleCardClick(property.type, property.listingType)}
                   >
                     <Card className="overflow-hidden group cursor-pointer hover:shadow-xl transition-all duration-500 border-0 h-full">
                       <div className="relative h-[400px] overflow-hidden">
@@ -235,7 +349,7 @@ export function DiscoverProperties() {
                           <h3 className="text-2xl font-bold mb-2">{property.type}</h3>
                           <p className="text-sm text-white/90 font-medium flex items-center gap-2">
                             <span className="bg-white/20 backdrop-blur-md px-2 py-1 rounded text-xs uppercase tracking-wider">
-                              {listingType === 'sale' ? 'For Sale' : 'For Rent'}
+                              {listingType === 'sale' ? 'For Sale' : listingType === 'rent' ? 'For Rent' : 'New Development'}
                             </span>
                             <span>in {selectedCity}</span>
                           </p>

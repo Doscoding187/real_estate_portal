@@ -22,6 +22,7 @@ import { trpc } from '@/lib/trpc';
 import { useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { LocationAutosuggest } from '@/components/LocationAutosuggest';
+import { LocationSelectionModal } from '@/components/LocationSelectionModal';
 
 // City dropdown content component
 function CityDropdownContent() {
@@ -127,8 +128,70 @@ function CityDropdownContent() {
 }
 
 export function EnhancedNavbar() {
-  const { user, isAuthenticated, logout } = useAuth();
-  const [location] = useLocation();
+  const { user, logout } = useAuth();
+  const [location, setLocation] = useLocation();
+  const [showLocationModal, setShowLocationModal] = useState(false);
+  const [pendingNavigation, setPendingNavigation] = useState<{
+    propertyType: string;
+    listingType: 'sale' | 'rent';
+  } | null>(null);
+
+  // Check if user has a recent search location
+  const getLastSearchLocation = () => {
+    try {
+      const saved = localStorage.getItem('lastSearchLocation');
+      if (saved) {
+        const { city, suburb, timestamp } = JSON.parse(saved);
+        // Check if location is less than 24 hours old
+        const isRecent = Date.now() - timestamp < 24 * 60 * 60 * 1000;
+        if (isRecent) {
+          return { city, suburb };
+        }
+      }
+    } catch (e) {
+      console.error('Error reading last search location:', e);
+    }
+    return null;
+  };
+
+  // Handle property link clicks
+  const handlePropertyClick = (e: React.MouseEvent, propertyType: string, listingType: 'sale' | 'rent') => {
+    e.preventDefault();
+    const lastLocation = getLastSearchLocation();
+    
+    if (lastLocation) {
+      // Navigate with saved location
+      const params = new URLSearchParams({
+        type: propertyType,
+        listingType,
+        city: lastLocation.city.toLowerCase(),
+      });
+      if (lastLocation.suburb) {
+        params.append('suburb', lastLocation.suburb.toLowerCase());
+      }
+      setLocation(`/properties?${params.toString()}`);
+    } else {
+      // Show location selection modal
+      setPendingNavigation({ propertyType, listingType });
+      setShowLocationModal(true);
+    }
+  };
+
+  // Handle location selection from modal
+  const handleLocationSelected = (city: string, suburb?: string) => {
+    if (pendingNavigation) {
+      const params = new URLSearchParams({
+        type: pendingNavigation.propertyType,
+        listingType: pendingNavigation.listingType,
+        city: city.toLowerCase(),
+      });
+      if (suburb) {
+        params.append('suburb', suburb.toLowerCase());
+      }
+      setLocation(`/properties?${params.toString()}`);
+      setPendingNavigation(null);
+    }
+  };
   const logoutMutation = trpc.auth.logout.useMutation();
 
   const handleLogout = async () => {
@@ -235,9 +298,9 @@ export function EnhancedNavbar() {
                           <Home className="h-4 w-4 text-blue-600" /> Residential
                         </h4>
                         <ul className="space-y-2 text-sm">
-                          <li><Link href="/properties?type=house&listingType=sale"><span className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1">Houses for Sale</span></Link></li>
-                          <li><Link href="/properties?type=apartment&listingType=sale"><span className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1">Apartments / Flats</span></Link></li>
-                          <li><Link href="/properties?type=townhouse&listingType=sale"><span className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1">Townhouses</span></Link></li>
+                          <li><span onClick={(e) => handlePropertyClick(e, 'house', 'sale')} className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1">Houses for Sale</span></li>
+                          <li><span onClick={(e) => handlePropertyClick(e, 'apartment', 'sale')} className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1">Apartments / Flats</span></li>
+                          <li><span onClick={(e) => handlePropertyClick(e, 'townhouse', 'sale')} className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1">Townhouses</span></li>
                           <li><Link href="/developments"><span className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1">New Developments</span></Link></li>
                         </ul>
                       </div>
@@ -248,9 +311,9 @@ export function EnhancedNavbar() {
                           <Briefcase className="h-4 w-4 text-blue-600" /> Commercial
                         </h4>
                         <ul className="space-y-2 text-sm">
-                          <li><Link href="/properties?type=office&listingType=sale"><span className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1">Office Spaces</span></Link></li>
-                          <li><Link href="/properties?type=retail&listingType=sale"><span className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1">Retail Shops</span></Link></li>
-                          <li><Link href="/properties?type=industrial&listingType=sale"><span className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1">Industrial / Warehouse</span></Link></li>
+                          <li><span onClick={(e) => handlePropertyClick(e, 'office', 'sale')} className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1">Office Spaces</span></li>
+                          <li><span onClick={(e) => handlePropertyClick(e, 'retail', 'sale')} className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1">Retail Shops</span></li>
+                          <li><span onClick={(e) => handlePropertyClick(e, 'industrial', 'sale')} className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1">Industrial / Warehouse</span></li>
                         </ul>
                       </div>
 
@@ -260,9 +323,9 @@ export function EnhancedNavbar() {
                           <MapPinned className="h-4 w-4 text-blue-600" /> Land
                         </h4>
                         <ul className="space-y-2 text-sm">
-                          <li><Link href="/properties?type=land&listingType=sale"><span className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1">Residential Land</span></Link></li>
-                          <li><Link href="/properties?type=commercial-land&listingType=sale"><span className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1">Commercial Land</span></Link></li>
-                          <li><Link href="/properties?type=farm&listingType=sale"><span className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1">Farms</span></Link></li>
+                          <li><span onClick={(e) => handlePropertyClick(e, 'land', 'sale')} className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1">Residential Land</span></li>
+                          <li><span onClick={(e) => handlePropertyClick(e, 'commercial-land', 'sale')} className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1">Commercial Land</span></li>
+                          <li><span onClick={(e) => handlePropertyClick(e, 'farm', 'sale')} className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1">Farms</span></li>
                         </ul>
                       </div>
                     </div>
@@ -299,10 +362,10 @@ export function EnhancedNavbar() {
                           <Home className="h-4 w-4 text-blue-600" /> Residential
                         </h4>
                         <ul className="space-y-2 text-sm">
-                          <li><Link href="/properties?type=apartment&listingType=rent"><span className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1">Apartments for Rent</span></Link></li>
-                          <li><Link href="/properties?type=house&listingType=rent"><span className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1">Houses for Rent</span></Link></li>
-                          <li><Link href="/properties?type=student&listingType=rent"><span className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1">Student Accommodation</span></Link></li>
-                          <li><Link href="/properties?type=room&listingType=rent"><span className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1">Rooms / Flatshares</span></Link></li>
+                          <li><span onClick={(e) => handlePropertyClick(e, 'apartment', 'rent')} className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1">Apartments for Rent</span></li>
+                          <li><span onClick={(e) => handlePropertyClick(e, 'house', 'rent')} className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1">Houses for Rent</span></li>
+                          <li><span onClick={(e) => handlePropertyClick(e, 'student', 'rent')} className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1">Student Accommodation</span></li>
+                          <li><span onClick={(e) => handlePropertyClick(e, 'room', 'rent')} className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1">Rooms / Flatshares</span></li>
                         </ul>
                       </div>
 
@@ -312,9 +375,9 @@ export function EnhancedNavbar() {
                           <Briefcase className="h-4 w-4 text-blue-600" /> Commercial
                         </h4>
                         <ul className="space-y-2 text-sm">
-                          <li><Link href="/properties?type=office&listingType=rent"><span className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1">Offices to Let</span></Link></li>
-                          <li><Link href="/properties?type=retail&listingType=rent"><span className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1">Retail Space</span></Link></li>
-                          <li><Link href="/properties?type=industrial&listingType=rent"><span className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1">Industrial Space</span></Link></li>
+                          <li><span onClick={(e) => handlePropertyClick(e, 'office', 'rent')} className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1">Offices to Let</span></li>
+                          <li><span onClick={(e) => handlePropertyClick(e, 'retail', 'rent')} className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1">Retail Space</span></li>
+                          <li><span onClick={(e) => handlePropertyClick(e, 'industrial', 'rent')} className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1">Industrial Space</span></li>
                         </ul>
                       </div>
 
@@ -346,6 +409,15 @@ export function EnhancedNavbar() {
                     </div>
                   </div>
                 </NavigationMenuContent>
+              </NavigationMenuItem>
+
+              {/* New Developments Link */}
+              <NavigationMenuItem>
+                <Link href="/developments">
+                  <NavigationMenuLink className="bg-transparent text-gray-700 hover:bg-blue-50 hover:text-blue-700 font-semibold transition-all px-4 py-2 rounded-md cursor-pointer">
+                    New Developments
+                  </NavigationMenuLink>
+                </Link>
               </NavigationMenuItem>
 
               {/* Services Dropdown */}
@@ -384,22 +456,28 @@ export function EnhancedNavbar() {
                 </NavigationMenuContent>
               </NavigationMenuItem>
 
-              {/* Explore Link */}
+              {/* Explore Button - Enhanced */}
               <NavigationMenuItem>
                 <Link href="/explore">
-                  <NavigationMenuLink className="bg-transparent text-gray-700 hover:bg-blue-50 hover:text-blue-700 font-semibold transition-all px-4 py-2 rounded-md cursor-pointer">
+                  <Button
+                    size="sm"
+                    className="bg-gradient-to-r from-blue-600 to-blue-700 text-white hover:from-blue-700 hover:to-blue-800 shadow-md hover:shadow-lg hover:scale-105 transition-all duration-200 font-semibold border-0"
+                  >
                     Explore
-                  </NavigationMenuLink>
+                  </Button>
                 </Link>
               </NavigationMenuItem>
 
-              {/* Advertise Link */}
+              {/* Advertise Button - Enhanced CTA */}
               <NavigationMenuItem>
                 <Link href="/advertise">
-                  <NavigationMenuLink className="bg-transparent text-gray-700 hover:bg-blue-50 hover:text-blue-700 font-semibold transition-all px-4 py-2 rounded-md flex items-center gap-2 cursor-pointer">
-                    <Megaphone className="h-4 w-4" />
+                  <Button
+                    size="sm"
+                    className="bg-gradient-to-r from-amber-500 to-yellow-500 text-slate-900 hover:from-amber-600 hover:to-yellow-600 shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-200 font-bold border border-amber-600/30"
+                  >
+                    <Megaphone className="h-4 w-4 mr-2" />
                     Advertise
-                  </NavigationMenuLink>
+                  </Button>
                 </Link>
               </NavigationMenuItem>
 
@@ -430,16 +508,18 @@ export function EnhancedNavbar() {
           {/* Right Side Actions */}
           <div className="flex items-center gap-3">
             {/* Sell or Rent Property Button */}
-            <Button
-              variant="outline"
-              size="sm"
-              className="hidden md:flex border-blue-200 text-blue-600 hover:bg-blue-50 hover:border-blue-300 transition-all font-medium"
-            >
-              List Property
-            </Button>
+            <Link href="/advertise">
+              <Button
+                variant="outline"
+                size="sm"
+                className="hidden md:flex border-blue-200 text-blue-600 hover:bg-blue-50 hover:border-blue-300 transition-all font-medium"
+              >
+                List Property
+              </Button>
+            </Link>
 
             {/* Favorites */}
-            {isAuthenticated && (
+            {!!user && (
               <Link href="/favorites">
                 <Button variant="ghost" size="icon" className="text-foreground hover:bg-blue-50 hover:text-blue-600">
                   <Heart className="h-5 w-5" />
@@ -448,7 +528,7 @@ export function EnhancedNavbar() {
             )}
 
             {/* User Menu */}
-            {isAuthenticated ? (
+            {!!user ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
@@ -495,6 +575,20 @@ export function EnhancedNavbar() {
           </div>
         </div>
       </div>
+
+      {/* Location Selection Modal */}
+      {pendingNavigation && (
+        <LocationSelectionModal
+          open={showLocationModal}
+          onClose={() => {
+            setShowLocationModal(false);
+            setPendingNavigation(null);
+          }}
+          onLocationSelected={handleLocationSelected}
+          propertyType={pendingNavigation.propertyType}
+          listingType={pendingNavigation.listingType}
+        />
+      )}
     </nav>
   );
 }
