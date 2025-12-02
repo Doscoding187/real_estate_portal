@@ -2,10 +2,11 @@ import { useDevelopmentWizard } from '@/hooks/useDevelopmentWizard';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Building2, MapPin, Info, Star, AlertTriangle } from 'lucide-react';
+import { Building2, MapPin, Info, Star, AlertTriangle, TrendingUp, Sparkles, X, CheckCircle2 } from 'lucide-react';
 import { useFieldValidation } from '@/hooks/useFieldValidation';
 import { InlineError } from '@/components/ui/InlineError';
 import { LocationMapPicker, LocationData } from '@/components/location/LocationMapPicker';
@@ -22,8 +23,12 @@ export function BasicDetailsStep() {
     postalCode,
     latitude,
     longitude,
+    gpsAccuracy,
     status,
     rating,
+    totalUnits,
+    projectSize,
+    projectHighlights,
     setDevelopmentName,
     setAddress,
     setCity,
@@ -32,12 +37,18 @@ export function BasicDetailsStep() {
     setPostalCode,
     setLatitude,
     setLongitude,
+    setGpsAccuracy,
     setStatus,
     setRating,
+    setTotalUnits,
+    setProjectSize,
+    addProjectHighlight,
+    removeProjectHighlight,
   } = useDevelopmentWizard();
 
   const [manualOverride, setManualOverride] = useState(false);
   const [geocodingError, setGeocodingError] = useState<string | null>(null);
+  const [newHighlight, setNewHighlight] = useState('');
 
   // Validation context
   const validationContext = {
@@ -78,6 +89,9 @@ export function BasicDetailsStep() {
       if (!manualOverride) {
         setLatitude(locationData.latitude.toString());
         setLongitude(locationData.longitude.toString());
+        
+        // Set GPS accuracy based on geocoding result quality
+        setGpsAccuracy(locationData.formattedAddress ? 'accurate' : 'approximate');
 
         if (locationData.address) setAddress(locationData.address);
         if (locationData.suburb) setSuburb(locationData.suburb);
@@ -89,13 +103,23 @@ export function BasicDetailsStep() {
         toast.success('Address populated from map location');
       }
     },
-    [manualOverride, setAddress, setCity, setProvince, setSuburb, setPostalCode, setLatitude, setLongitude]
+    [manualOverride, setAddress, setCity, setProvince, setSuburb, setPostalCode, setLatitude, setLongitude, setGpsAccuracy]
   );
 
   const handleManualEdit = useCallback(() => {
     setManualOverride(true);
     toast.info('Manual mode enabled. Move the pin to update address again.');
   }, []);
+
+  const handleAddHighlight = () => {
+    if (newHighlight.trim() && projectHighlights.length < 5) {
+      addProjectHighlight(newHighlight.trim());
+      setNewHighlight('');
+      toast.success('Highlight added');
+    } else if (projectHighlights.length >= 5) {
+      toast.error('Maximum 5 highlights allowed');
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -140,10 +164,12 @@ export function BasicDetailsStep() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="pre-launch">Pre-Launch</SelectItem>
-                <SelectItem value="launching-soon">Launching Soon</SelectItem>
-                <SelectItem value="now-selling">Now Selling</SelectItem>
-                <SelectItem value="sold-out">Sold Out</SelectItem>
+                <SelectItem value="now-selling">✅ Now Selling</SelectItem>
+                <SelectItem value="launching-soon">🚀 Launching Soon</SelectItem>
+                <SelectItem value="under-construction">🏗️ Under Construction</SelectItem>
+                <SelectItem value="ready-to-move">🏠 Ready to Move</SelectItem>
+                <SelectItem value="sold-out">⛔ Sold Out</SelectItem>
+                <SelectItem value="phase-1-complete">📊 Phase 1 Complete / Phase 2 Launching</SelectItem>
               </SelectContent>
             </Select>
             <p className="text-xs text-slate-500 mt-1">
@@ -152,23 +178,21 @@ export function BasicDetailsStep() {
           </div>
 
           <div>
-            <Label htmlFor="rating" className="text-slate-700">Rating (Optional)</Label>
+            <Label htmlFor="rating" className="text-slate-700">
+              Rating <span className="text-xs text-slate-500">(Auto-calculated - Read Only)</span>
+            </Label>
             <div className="relative mt-1">
-              <Star className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+              <Star className="absolute left-3 top-2.5 h-4 w-4 text-amber-400 fill-amber-400" />
               <Input
                 id="rating"
                 type="number"
-                min="0"
-                max="5"
-                step="0.1"
-                placeholder="e.g., 4.3"
-                value={rating || ''}
-                onChange={(e) => setRating(parseFloat(e.target.value))}
-                className="pl-9"
+                value={rating || 0}
+                disabled
+                className="pl-9 bg-slate-50 cursor-not-allowed"
               />
             </div>
             <p className="text-xs text-slate-500 mt-1">
-              Average rating out of 5.0 (if applicable)
+              System-computed rating based on reviews, track record, and satisfaction
             </p>
           </div>
         </div>
@@ -176,9 +200,21 @@ export function BasicDetailsStep() {
 
       {/* Location Details */}
       <Card className="bg-white/70 backdrop-blur-sm rounded-[1.5rem] border-white/40 shadow-[0_8px_30px_rgba(8,_112,_184,_0.06)] p-6">
-        <div className="flex items-center gap-2 mb-4">
-          <MapPin className="w-5 h-5 text-indigo-600" />
-          <h3 className="text-lg font-bold text-slate-800">Location Details</h3>
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <MapPin className="w-5 h-5 text-indigo-600" />
+            <h3 className="text-lg font-bold text-slate-800">Location Details</h3>
+          </div>
+          {gpsAccuracy && (
+            <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium ${
+              gpsAccuracy === 'accurate' 
+                ? 'bg-green-50 text-green-700 border border-green-200' 
+                : 'bg-orange-50 text-orange-700 border border-orange-200'
+            }`}>
+              <CheckCircle2 className="w-3.5 h-3.5" />
+              <span>GPS: {gpsAccuracy === 'accurate' ? 'Accurate' : 'Approximate'}</span>
+            </div>
+          )}
         </div>
 
         <div className="space-y-4">
@@ -303,6 +339,126 @@ export function BasicDetailsStep() {
                 className="mt-1"
               />
             </div>
+          </div>
+        </div>
+      </Card>
+
+      {/* Project Overview */}
+      <Card className="bg-white/70 backdrop-blur-sm rounded-[1.5rem] border-white/40 shadow-[0_8px_30px_rgba(8,_112,_184,_0.06)] p-6">
+        <div className="flex items-center gap-2 mb-4">
+          <TrendingUp className="w-5 h-5 text-emerald-600" />
+          <h3 className="text-lg font-bold text-slate-800">Project Overview</h3>
+        </div>
+
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="totalUnits" className="text-slate-700">
+                Total Number of Units <span className="text-red-500">*</span>
+              </Label>
+              <Input
+                id="totalUnits"
+                type="number"
+                min="1"
+                placeholder="e.g., 250"
+                value={totalUnits || ''}
+                onChange={(e) => setTotalUnits(parseInt(e.target.value) || 0)}
+                className="mt-1"
+              />
+              <p className="text-xs text-slate-500 mt-1">
+                Total units available in the entire development
+              </p>
+            </div>
+
+            <div>
+              <Label htmlFor="projectSize" className="text-slate-700">
+                Project Size (Acres)
+              </Label>
+              <Input
+                id="projectSize"
+                type="number"
+                min="0"
+                step="0.1"
+                placeholder="e.g., 5.15"
+                value={projectSize || ''}
+                onChange={(e) => {
+                  const val = parseFloat(e.target.value);
+                  setProjectSize(isNaN(val) ? undefined : val);
+                }}
+                className="mt-1"
+              />
+              <p className="text-xs text-slate-500 mt-1">
+                Total land area of the project
+              </p>
+            </div>
+          </div>
+
+          {/* Project Highlights */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <Label className="text-slate-700">
+                Key Project Highlights <span className="text-xs text-slate-500">(Maximum 5)</span>
+              </Label>
+              <span className="text-xs text-slate-500">
+                {projectHighlights.length}/5
+              </span>
+            </div>
+            
+            {/* Existing Highlights */}
+            {projectHighlights.length > 0 && (
+              <div className="space-y-2 mb-3">
+                {projectHighlights.map((highlight, index) => (
+                  <div 
+                    key={index}
+                    className="flex items-center justify-between p-3 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-100"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Sparkles className="w-4 h-4 text-blue-600" />
+                      <span className="text-sm text-slate-700">{highlight}</span>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => removeProjectHighlight(index)}
+                      className="h-7 w-7 p-0 hover:bg-red-100 hover:text-red-600"
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Add New Highlight */}
+            {projectHighlights.length < 5 && (
+              <div className="flex gap-2">
+                <Input
+                  placeholder="e.g., Air Purification System, Rooftop Gym, Near Gautrain"
+                  value={newHighlight}
+                  onChange={(e) => setNewHighlight(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleAddHighlight();
+                    }
+                  }}
+                  className="flex-1"
+                />
+                <Button
+                  type="button"
+                  onClick={handleAddHighlight}
+                  disabled={!newHighlight.trim()}
+                  className="bg-blue-600 hover:bg-blue-700 px-6"
+                >
+                  Add
+                </Button>
+              </div>
+            )}
+            
+            <p className="text-xs text-slate-500 mt-2">
+              Top 5 selling points that differentiate your development (e.g., "24/7 Power Backup", "Fibre-Ready", "Pet Friendly")
+            </p>
           </div>
         </div>
       </Card>
