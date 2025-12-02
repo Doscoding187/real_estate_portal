@@ -40,7 +40,7 @@ export const videoRouter = router({
         throw new Error('Video upload is not configured. Please contact support.');
       }
 
-      const bucketName = process.env.AWS_S3_BUCKET || 'real-estate-portal-videos';
+      const bucketName = process.env.AWS_S3_BUCKET || 'listify-properties-sa';
       const region = process.env.AWS_REGION || 'eu-north-1';
       
       // Generate unique key with timestamp
