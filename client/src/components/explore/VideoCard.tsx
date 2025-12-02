@@ -14,6 +14,7 @@ export default function VideoCard({ video, isActive, onView }: VideoCardProps) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const [showContact, setShowContact] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [showPauseIcon, setShowPauseIcon] = useState(false);
   const [liked, setLiked] = useState(video.isLiked || false);
 
   const toggleLike = trpc.video.toggleLike.useMutation({
@@ -97,13 +98,27 @@ export default function VideoCard({ video, isActive, onView }: VideoCardProps) {
     if (isPlaying) {
       videoRef.current.pause();
       setIsPlaying(false);
+      setShowPauseIcon(true);
     } else {
       videoRef.current
         .play()
-        .then(() => setIsPlaying(true))
+        .then(() => {
+          setIsPlaying(true);
+          setShowPauseIcon(false);
+        })
         .catch(() => setIsPlaying(false));
     }
   };
+
+  // Auto-hide pause icon after 800ms
+  useEffect(() => {
+    if (showPauseIcon) {
+      const timer = setTimeout(() => {
+        setShowPauseIcon(false);
+      }, 800);
+      return () => clearTimeout(timer);
+    }
+  }, [showPauseIcon]);
 
   return (
     <div className="relative h-full w-full flex items-center justify-center bg-black">
@@ -111,74 +126,86 @@ export default function VideoCard({ video, isActive, onView }: VideoCardProps) {
       <video
         ref={videoRef}
         src={video.videoUrl}
-        className="h-full w-auto max-w-[450px] object-contain"
+        className="h-full w-full object-cover md:w-auto md:max-w-[450px] md:object-contain"
         loop
         muted
         playsInline
         preload="metadata"
         poster={video.thumbnailUrl}
+        onClick={togglePlayPause}
         onLoadedMetadata={() => {
           // Video loaded, ready to play
         }}
       />
 
-      {/* Play/Pause Overlay (for manual control) */}
-      <div className="absolute inset-0 flex items-center justify-center">
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-16 w-16 rounded-full bg-black/50 hover:bg-black/70 text-white"
-          onClick={togglePlayPause}
-        >
-          {isPlaying ? <Pause className="h-8 w-8" /> : <Play className="h-8 w-8 ml-1" />}
-        </Button>
+      {/* Tap to Play/Pause - TikTok Style */}
+      <div 
+        className="absolute inset-0 flex items-center justify-center pointer-events-none"
+        style={{ transition: 'opacity 0.2s ease-in-out' }}
+      >
+        {!isPlaying && (
+          <div className="animate-in fade-in zoom-in duration-200">
+            <div className="h-20 w-20 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center">
+              <Play className="h-10 w-10 text-white ml-1" />
+            </div>
+          </div>
+        )}
+        {showPauseIcon && (
+          <div className="animate-in fade-in zoom-in duration-200">
+            <div className="h-20 w-20 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center">
+              <Pause className="h-10 w-10 text-white" />
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Bottom Overlay */}
-      <div className="absolute bottom-0 left-0 w-full p-5 bg-gradient-to-t from-black/80 via-black/40 to-transparent text-white">
+      <div className="absolute bottom-0 left-0 right-0 p-4 md:p-5 pb-20 md:pb-24 bg-gradient-to-t from-black/90 via-black/60 to-transparent text-white pointer-events-none">
         {video.type === 'listing' ? (
           // Listing Video - Show property details
           <div>
-            <div className="flex items-center justify-between mb-2">
-              <div>
-                <h2 className="font-bold text-lg line-clamp-1">{video.propertyTitle}</h2>
-                <p className="text-sm text-gray-200 line-clamp-1">{video.propertyLocation}</p>
+            <div className="flex items-start justify-between mb-2 gap-3">
+              <div className="flex-1 min-w-0">
+                <h2 className="font-bold text-lg md:text-xl line-clamp-2 mb-1">{video.propertyTitle}</h2>
+                <p className="text-sm md:text-base text-gray-200 line-clamp-1">{video.propertyLocation}</p>
               </div>
               {video.propertyPrice && (
-                <p className="font-bold text-primary text-lg">{formatPrice(video.propertyPrice)}</p>
+                <p className="font-bold text-blue-400 text-lg md:text-xl flex-shrink-0">{formatPrice(video.propertyPrice)}</p>
               )}
             </div>
           </div>
         ) : (
           // Content Video - Show agent info
           <div className="mb-2">
-            <p className="font-semibold">@{video.agentName}</p>
+            <p className="font-semibold text-base md:text-lg">@{video.agentName}</p>
           </div>
         )}
 
         {/* Caption */}
         {video.caption && (
-          <p className="text-sm text-gray-200 line-clamp-2 mb-2">{video.caption}</p>
+          <p className="text-sm md:text-base text-gray-200 line-clamp-2 mb-2">{video.caption}</p>
         )}
 
         {/* Video duration */}
         {video.duration > 0 && (
-          <p className="text-xs text-gray-300">{formatDuration(video.duration)}</p>
+          <p className="text-xs md:text-sm text-gray-300">{formatDuration(video.duration)}</p>
         )}
       </div>
 
       {/* Floating Action Buttons */}
-      <div className="absolute right-4 bottom-24 flex flex-col items-center space-y-4">
+      <div className="absolute right-3 md:right-4 bottom-28 md:bottom-32 flex flex-col items-center space-y-5 md:space-y-6 pointer-events-auto">
         {/* Like Button */}
         <button
           onClick={() => toggleLike.mutate({ videoId: video.id })}
-          className={`flex flex-col items-center transition-all duration-200 ${
-            liked ? 'scale-125 text-red-500' : 'text-white hover:text-red-400 hover:scale-110'
+          className={`flex flex-col items-center transition-all duration-200 active:scale-90 ${
+            liked ? 'scale-110 text-red-500' : 'text-white hover:text-red-400 hover:scale-110'
           }`}
-          disabled={toggleLike.isLoading}
+          disabled={toggleLike.isPending}
         >
-          <Heart className={`h-7 w-7 ${liked ? 'fill-current' : ''}`} />
-          <span className="text-xs mt-1 font-medium">
+          <div className="p-2.5 md:p-3 rounded-full bg-black/30 backdrop-blur-sm">
+            <Heart className={`h-7 w-7 md:h-8 md:w-8 ${liked ? 'fill-current' : ''}`} />
+          </div>
+          <span className="text-xs md:text-sm mt-1 font-semibold drop-shadow-lg">
             {video.likes + (liked ? 1 : 0) + (video.isLiked && !liked ? -1 : 0)}
           </span>
         </button>
@@ -186,24 +213,28 @@ export default function VideoCard({ video, isActive, onView }: VideoCardProps) {
         {/* Share Button */}
         <button
           onClick={handleShare}
-          className="flex flex-col items-center text-white hover:text-blue-400 transition-colors hover:scale-110"
+          className="flex flex-col items-center text-white hover:text-blue-400 transition-all duration-200 hover:scale-110 active:scale-90"
         >
-          <Share2 className="h-7 w-7" />
-          <span className="text-xs mt-1 font-medium">{video.shares || 0}</span>
+          <div className="p-2.5 md:p-3 rounded-full bg-black/30 backdrop-blur-sm">
+            <Share2 className="h-7 w-7 md:h-8 md:w-8" />
+          </div>
+          <span className="text-xs md:text-sm mt-1 font-semibold drop-shadow-lg">{video.shares || 0}</span>
         </button>
 
         {/* Contact Button */}
         <button
           onClick={() => setShowContact(true)}
-          className="flex flex-col items-center text-white hover:text-green-400 transition-colors hover:scale-110"
+          className="flex flex-col items-center text-white hover:text-green-400 transition-all duration-200 hover:scale-110 active:scale-90"
         >
-          <MessageCircle className="h-7 w-7" />
-          <span className="text-xs mt-1 font-medium">Contact</span>
+          <div className="p-2.5 md:p-3 rounded-full bg-black/30 backdrop-blur-sm">
+            <MessageCircle className="h-7 w-7 md:h-8 md:w-8" />
+          </div>
+          <span className="text-xs md:text-sm mt-1 font-semibold drop-shadow-lg">Contact</span>
         </button>
       </div>
 
       {/* Views Counter */}
-      <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-sm rounded-full px-2 py-1 text-white text-xs">
+      <div className="absolute top-4 right-4 bg-black/50 backdrop-blur-sm rounded-full px-3 py-1.5 text-white text-xs md:text-sm font-medium">
         {video.views || 0} views
       </div>
 

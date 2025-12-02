@@ -95,11 +95,16 @@ export default function ExploreFeed() {
 
       {/* Video Feed */}
       <div
-        className="h-full w-full overflow-y-scroll snap-y snap-mandatory no-scrollbar"
+        className="h-full w-full overflow-y-scroll snap-y snap-mandatory scrollbar-hide"
+        style={{
+          scrollSnapType: 'y mandatory',
+          overscrollBehavior: 'contain',
+          WebkitOverflowScrolling: 'touch',
+        }}
         onScroll={handleScroll}
       >
         {videos?.map((short, idx) => (
-          <div key={short.id} className="snap-start h-screen w-full">
+          <div key={short.id} className="snap-start snap-always h-screen w-full">
             <VideoCard
               video={{
                 id: short.id,
