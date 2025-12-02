@@ -122,7 +122,7 @@ export function QuickActions({ className }: QuickActionsProps) {
   };
 
   return (
-    <div className={cn('bg-white rounded-xl border border-gray-200 p-6', className)}>
+    <div className={cn('bg-white rounded-xl border border-gray-100 p-6 shadow-soft', className)}>
       {/* Header */}
       <div className="flex items-center gap-2 mb-6">
         <Zap className="w-5 h-5 text-yellow-500" />
@@ -144,11 +144,11 @@ export function QuickActions({ className }: QuickActionsProps) {
               onMouseLeave={() => setHoveredAction(null)}
               disabled={disabled}
               className={cn(
-                'relative group p-4 rounded-xl border-2 transition-all duration-300',
+                'relative group p-4 rounded-xl border-2 transition-all duration-200',
                 'text-left',
                 disabled
-                  ? 'border-gray-200 bg-gray-50 cursor-not-allowed opacity-60'
-                  : 'border-gray-200 hover:border-transparent hover:shadow-lg hover:scale-105 cursor-pointer'
+                  ? 'border-gray-100 bg-gray-50 cursor-not-allowed opacity-60'
+                  : 'border-gray-100 hover:border-transparent hover:shadow-hover hover:scale-105 cursor-pointer'
               )}
               title={disabled ? getDisabledReason(action) : action.description}
             >
@@ -156,7 +156,7 @@ export function QuickActions({ className }: QuickActionsProps) {
               {!disabled && (
                 <div
                   className={cn(
-                    'absolute inset-0 rounded-xl bg-gradient-to-br opacity-0 group-hover:opacity-100 transition-opacity duration-300',
+                    'absolute inset-0 rounded-xl bg-gradient-to-br opacity-0 group-hover:opacity-100 transition-opacity duration-200',
                     action.gradientFrom,
                     action.gradientTo
                   )}
@@ -168,7 +168,7 @@ export function QuickActions({ className }: QuickActionsProps) {
                 {/* Icon */}
                 <div
                   className={cn(
-                    'w-12 h-12 rounded-lg flex items-center justify-center mb-3 transition-all duration-300',
+                    'w-12 h-12 rounded-xl flex items-center justify-center mb-3 transition-all duration-200 shadow-soft',
                     disabled
                       ? 'bg-gray-200'
                       : cn(

@@ -54,9 +54,9 @@ export function KPICard({
 
   if (loading) {
     return (
-      <div className="bg-white rounded-xl border border-gray-200 p-6 animate-pulse">
+      <div className="bg-white rounded-xl border border-gray-100 p-6 animate-pulse shadow-soft">
         <div className="flex items-start justify-between mb-4">
-          <div className="w-12 h-12 bg-gray-200 rounded-lg" />
+          <div className="w-12 h-12 bg-gray-200 rounded-xl" />
           <div className="w-16 h-6 bg-gray-200 rounded" />
         </div>
         <div className="space-y-2">
@@ -70,8 +70,8 @@ export function KPICard({
   return (
     <div
       className={cn(
-        'bg-white rounded-xl border border-gray-200 p-6',
-        'hover:shadow-lg hover:scale-[1.02] transition-all duration-300',
+        'bg-white rounded-xl border border-gray-100 p-6 shadow-soft',
+        'hover:shadow-hover hover:scale-[1.02] transition-all duration-200',
         'cursor-pointer group'
       )}
     >
@@ -80,11 +80,11 @@ export function KPICard({
         {/* Icon */}
         <div
           className={cn(
-            'w-12 h-12 rounded-lg flex items-center justify-center',
-            'bg-gradient-to-br',
+            'w-12 h-12 rounded-xl flex items-center justify-center',
+            'bg-gradient-to-br shadow-soft',
             gradientFrom,
             gradientTo,
-            'group-hover:scale-110 transition-transform duration-300'
+            'group-hover:scale-110 transition-transform duration-200'
           )}
         >
           <Icon className="w-6 h-6 text-white" />
@@ -113,7 +113,7 @@ export function KPICard({
       {/* Hover Effect Line */}
       <div
         className={cn(
-          'mt-4 h-1 rounded-full bg-gradient-to-r opacity-0 group-hover:opacity-100 transition-opacity duration-300',
+          'mt-4 h-1 rounded-full bg-gradient-to-r opacity-0 group-hover:opacity-100 transition-opacity duration-200',
           gradientFrom,
           gradientTo
         )}

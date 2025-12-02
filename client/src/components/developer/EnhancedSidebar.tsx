@@ -214,14 +214,14 @@ export function EnhancedSidebar({ className }: EnhancedSidebarProps) {
   return (
     <aside
       className={cn(
-        'flex flex-col h-full bg-white border-r border-gray-200',
-        'w-64 transition-all duration-300',
+        'flex flex-col h-full bg-white border-r border-gray-100',
+        'w-64 transition-all duration-300 shadow-soft',
         className
       )}
     >
       {/* Logo/Brand */}
-      <div className="flex items-center gap-3 px-6 py-5 border-b border-gray-200">
-        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/30">
+      <div className="flex items-center gap-3 px-6 py-5 border-b border-gray-100">
+        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-soft">
           <span className="text-white font-bold text-sm">{developerInitials}</span>
         </div>
         <div>
@@ -269,16 +269,16 @@ export function EnhancedSidebar({ className }: EnhancedSidebarProps) {
                       <Link key={item.id} href={item.path}>
                         <a
                           className={cn(
-                            'flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200',
+                            'flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200',
                             'group relative',
                             active
-                              ? 'bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-600 font-medium'
+                              ? 'bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-600 font-medium shadow-soft'
                               : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
                           )}
                         >
                           {/* Active Indicator */}
                           {active && (
-                            <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-gradient-to-b from-blue-500 to-indigo-600 rounded-r-full" />
+                            <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-gradient-to-b from-blue-500 to-indigo-600 rounded-r-full shadow-soft" />
                           )}
 
                           <Icon
@@ -313,21 +313,21 @@ export function EnhancedSidebar({ className }: EnhancedSidebarProps) {
       </nav>
 
       {/* Notifications Bell (Fixed at bottom) */}
-      <div className="border-t border-gray-200 p-4">
+      <div className="border-t border-gray-100 p-4">
         <Link href="/developer/notifications">
           <a
             className={cn(
-              'flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200',
+              'flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200',
               'hover:bg-gray-50 relative',
               isActive('/developer/notifications')
-                ? 'bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-600 font-medium'
+                ? 'bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-600 font-medium shadow-soft'
                 : 'text-gray-700'
             )}
           >
             <Bell className="w-5 h-5" />
             <span>Notifications</span>
             {unreadCount > 0 && (
-              <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+              <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full animate-pulse shadow-soft" />
             )}
           </a>
         </Link>
