@@ -3,13 +3,32 @@ import { persist } from 'zustand/middleware';
 
 export interface UnitType {
   id: string;
-  propertyType: 'full-title-house' | 'apartment' | 'leasehold' | 'penthouse' | 'simplex' | 'duplex';
+  // Ownership & Structure
+  ownershipType: 'full-title' | 'sectional-title' | 'leasehold' | 'life-rights';
+  structuralType: 'apartment' | 'freestanding-house' | 'simplex' | 'duplex' | 'penthouse' | 'plot-and-plan' | 'townhouse' | 'studio';
+  
+  // Configuration
   bedrooms: number;
-  label: string;
+  bathrooms: number;
+  floors?: 'single-storey' | 'double-storey' | 'triplex';
+  label: string; // e.g., "Type 2A", "The Ebony"
+  
+  // Pricing
   priceFrom: number;
-  availableUnits: number;
+  priceTo?: number; // Auto-calculated for price range
+  
+  // Sizes
   unitSize?: number; // in sqm
   yardSize?: number; // in sqm (for freestanding properties)
+  
+  // Availability
+  availableUnits: number;
+  
+  // Media & Description
+  floorPlanImages?: string[]; // URLs to floor plan images
+  configDescription?: string; // Optional description of this config
+  virtualTourLink?: string; // Matterport, YouTube, etc.
+  galleryImages?: string[]; // Unit-specific images
 }
 
 export interface MediaItem {
@@ -30,7 +49,7 @@ export interface ContactDetails {
 }
 
 export interface DevelopmentWizardState {
-  // Basic Details
+  // Basic Details - Step 1
   developmentName: string;
   address: string;
   city: string;
@@ -39,29 +58,48 @@ export interface DevelopmentWizardState {
   postalCode?: string;
   latitude?: string;
   longitude?: string;
-  developerId?: number;
-  status: 'pre-launch' | 'launching-soon' | 'now-selling' | 'sold-out';
-  rating?: number;
+  gpsAccuracy?: 'accurate' | 'approximate'; // GPS accuracy indicator
   
-  // Unit Types
+  developerId?: number;
+  status: 'now-selling' | 'launching-soon' | 'under-construction' | 'ready-to-move' | 'sold-out' | 'phase-1-complete';
+  rating?: number; // Auto-calculated, read-only
+  
+  // Project Overview - Step 1 additions
+  totalUnits: number; // Total units in development
+  projectSize?: number; // in acres
+  projectHighlights: string[]; // Up to 5 key selling points
+  
+  // Unit Configurations - Step 2
   unitTypes: UnitType[];
   
-  // Highlights
+  // Features & Amenities - Step 3
   description: string;
-  amenities: string[];
+  amenities: string[]; // Selected from master list
   highlights: string[];
   completionDate?: string;
-  totalUnits: number;
   
-  // Media
+  // Specifications - Step 3 additions
+  specifications: {
+    walls?: string[]; // e.g., ['Painted', 'Plastered', 'Feature walls']
+    flooring?: string[]; // e.g., ['Tiled', 'Vinyl', 'Laminate']
+    kitchen?: string[]; // e.g., ['Gas/Electric', 'Built-in cupboards']
+    bathrooms?: string[]; // e.g., ['Shower', 'Bath', 'Premium fittings']
+    structure?: string[]; // e.g., ['Concrete frame', 'Brick']
+  };
+  
+  // Media - Step 4
   media: MediaItem[];
   primaryImageIndex: number;
   
-  // Developer Info
+  // Developer Info - Step 5
   developerName: string;
   contactDetails: ContactDetails;
   isFeaturedDealer: boolean;
   companyLogo?: string;
+  developerWebsite?: string;
+  aboutDeveloper?: string; // Company description
+  trackRecord?: string; // Past achievements
+  pastProjects?: Array<{ name: string; year: string; location: string }>;
   
   // Wizard State
   currentStep: number;
@@ -78,9 +116,15 @@ export interface DevelopmentWizardState {
   setLatLng: (lat: string, lng: string) => void;
   setLatitude: (lat: string) => void;
   setLongitude: (lng: string) => void;
+  setGpsAccuracy: (accuracy: 'accurate' | 'approximate') => void;
   setDeveloperId: (id: number) => void;
   setStatus: (status: DevelopmentWizardState['status']) => void;
   setRating: (rating: number) => void;
+  setTotalUnits: (total: number) => void;
+  setProjectSize: (size: number) => void;
+  setProjectHighlights: (highlights: string[]) => void;
+  addProjectHighlight: (highlight: string) => void;
+  removeProjectHighlight: (index: number) => void;
   
   // Unit Types Actions
   addUnitType: (unitType: Omit<UnitType, 'id'>) => void;
@@ -93,7 +137,7 @@ export interface DevelopmentWizardState {
   setAmenities: (amenities: string[]) => void;
   setHighlights: (highlights: string[]) => void;
   setCompletionDate: (date: string) => void;
-  setTotalUnits: (total: number) => void;
+  setSpecifications: (specs: DevelopmentWizardState['specifications']) => void;
   
   // Media Actions
   addMedia: (media: Omit<MediaItem, 'id' | 'displayOrder'>) => void;
@@ -106,6 +150,10 @@ export interface DevelopmentWizardState {
   setContactDetails: (details: ContactDetails) => void;
   setIsFeaturedDealer: (isFeatured: boolean) => void;
   setCompanyLogo: (logo: string) => void;
+  setDeveloperWebsite: (website: string) => void;
+  setAboutDeveloper: (about: string) => void;
+  setTrackRecord: (record: string) => void;
+  setPastProjects: (projects: Array<{ name: string; year: string; location: string }>) => void;
   
   // Wizard Actions
   nextStep: () => void;
@@ -125,9 +173,13 @@ const initialState = {
   postalCode: '',
   latitude: '',
   longitude: '',
+  gpsAccuracy: undefined,
   developerId: undefined,
   status: 'now-selling' as const,
   rating: undefined,
+  totalUnits: 0,
+  projectSize: undefined,
+  projectHighlights: [],
   
   unitTypes: [],
   
@@ -135,7 +187,13 @@ const initialState = {
   amenities: [],
   highlights: [],
   completionDate: undefined,
-  totalUnits: 0,
+  specifications: {
+    walls: [],
+    flooring: [],
+    kitchen: [],
+    bathrooms: [],
+    structure: [],
+  },
   
   media: [],
   primaryImageIndex: 0,
@@ -149,6 +207,10 @@ const initialState = {
   },
   isFeaturedDealer: false,
   companyLogo: undefined,
+  developerWebsite: undefined,
+  aboutDeveloper: undefined,
+  trackRecord: undefined,
+  pastProjects: [],
   
   currentStep: 0,
   isComplete: false,
@@ -170,9 +232,19 @@ export const useDevelopmentWizard = create<DevelopmentWizardState>()(
       setLatLng: (lat, lng) => set({ latitude: lat, longitude: lng }),
       setLatitude: (lat) => set({ latitude: lat }),
       setLongitude: (lng) => set({ longitude: lng }),
+      setGpsAccuracy: (accuracy) => set({ gpsAccuracy: accuracy }),
       setDeveloperId: (id) => set({ developerId: id }),
       setStatus: (status) => set({ status }),
       setRating: (rating) => set({ rating }),
+      setTotalUnits: (total) => set({ totalUnits: total }),
+      setProjectSize: (size) => set({ projectSize: size }),
+      setProjectHighlights: (highlights) => set({ projectHighlights: highlights }),
+      addProjectHighlight: (highlight) => set((state) => ({ 
+        projectHighlights: [...state.projectHighlights, highlight]
+      })),
+      removeProjectHighlight: (index) => set((state) => ({
+        projectHighlights: state.projectHighlights.filter((_, i) => i !== index)
+      })),
       
       // Unit Types Actions
       addUnitType: (unitType) => {
@@ -206,7 +278,7 @@ export const useDevelopmentWizard = create<DevelopmentWizardState>()(
       setAmenities: (amenities) => set({ amenities }),
       setHighlights: (highlights) => set({ highlights }),
       setCompletionDate: (date) => set({ completionDate: date }),
-      setTotalUnits: (total) => set({ totalUnits: total }),
+      setSpecifications: (specs) => set({ specifications: specs }),
       
       // Media Actions
       addMedia: (media) => {
@@ -255,6 +327,10 @@ export const useDevelopmentWizard = create<DevelopmentWizardState>()(
       setContactDetails: (details) => set({ contactDetails: details }),
       setIsFeaturedDealer: (isFeatured) => set({ isFeaturedDealer: isFeatured }),
       setCompanyLogo: (logo) => set({ companyLogo: logo }),
+      setDeveloperWebsite: (website) => set({ developerWebsite: website }),
+      setAboutDeveloper: (about) => set({ aboutDeveloper: about }),
+      setTrackRecord: (record) => set({ trackRecord: record }),
+      setPastProjects: (projects) => set({ pastProjects: projects }),
       
       // Wizard Actions
       nextStep: () => {
