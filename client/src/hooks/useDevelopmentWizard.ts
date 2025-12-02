@@ -3,10 +3,13 @@ import { persist } from 'zustand/middleware';
 
 export interface UnitType {
   id: string;
+  propertyType: 'full-title-house' | 'apartment' | 'leasehold' | 'penthouse' | 'simplex' | 'duplex';
   bedrooms: number;
   label: string;
   priceFrom: number;
   availableUnits: number;
+  unitSize?: number; // in sqm
+  yardSize?: number; // in sqm (for freestanding properties)
 }
 
 export interface MediaItem {
