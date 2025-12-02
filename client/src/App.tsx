@@ -89,6 +89,19 @@ import DeveloperSetupWizard from './components/developer/DeveloperSetupWizardEnh
 import DevelopmentsList from './components/developer/DevelopmentsList';
 import AgencySetupWizard from './components/agency/AgencySetupWizard';
 
+// Import Developer Dashboard Pages
+import DeveloperDevelopmentsPage from './pages/DeveloperDevelopmentsPage';
+import DeveloperLeadsPage from './pages/DeveloperLeadsPage';
+import DeveloperMessagesPage from './pages/DeveloperMessagesPage';
+import DeveloperTasksPage from './pages/DeveloperTasksPage';
+import DeveloperReportsPage from './pages/DeveloperReportsPage';
+import DeveloperAnalyticsPage from './pages/DeveloperAnalyticsPage';
+import DeveloperCampaignsPage from './pages/DeveloperCampaignsPage';
+import DeveloperPerformancePage from './pages/DeveloperPerformancePage';
+import DeveloperSettingsPage from './pages/DeveloperSettingsPage';
+import DeveloperTeamPage from './pages/DeveloperTeamPage';
+import DeveloperSubscriptionPage from './pages/DeveloperSubscriptionPage';
+
 // Import Comparison Page
 import CompareProperties from './pages/CompareProperties';
 import AdvertisePage from './pages/AdvertisePage';
@@ -299,26 +312,22 @@ function Router() {
       <Route path="/agency/invite" component={InviteAgents} />
       <Route path="/agency/agents" component={AgentManagement} />
 
-      {/* Property Developer Dashboard Route */}
-      <Route path="/developer/dashboard">
-        <RequireRole role="property_developer">
-          <PropertyDeveloperDashboard />
-        </RequireRole>
-      </Route>
-
-      {/* Developer - Developments List Route */}
-      <Route path="/developer/developments">
-        <RequireRole role="property_developer">
-          <DevelopmentsList />
-        </RequireRole>
-      </Route>
-
-      {/* Developer - Create Development Route */}
-      <Route path="/developer/developments/new">
-        <RequireRole role="property_developer">
-          <CreateDevelopment />
-        </RequireRole>
-      </Route>
+      {/* Property Developer Dashboard Routes */}
+      <Route path="/developer" component={PropertyDeveloperDashboard} />
+      <Route path="/developer/dashboard" component={PropertyDeveloperDashboard} />
+      <Route path="/developer/developments" component={DeveloperDevelopmentsPage} />
+      <Route path="/developer/developments/new" component={CreateDevelopment} />
+      <Route path="/developer/leads" component={DeveloperLeadsPage} />
+      <Route path="/developer/messages" component={DeveloperMessagesPage} />
+      <Route path="/developer/tasks" component={DeveloperTasksPage} />
+      <Route path="/developer/reports" component={DeveloperReportsPage} />
+      <Route path="/developer/analytics" component={DeveloperAnalyticsPage} />
+      <Route path="/developer/campaigns" component={DeveloperCampaignsPage} />
+      <Route path="/developer/campaigns/new" component={DeveloperCampaignsPage} />
+      <Route path="/developer/performance" component={DeveloperPerformancePage} />
+      <Route path="/developer/settings" component={DeveloperSettingsPage} />
+      <Route path="/developer/settings/team" component={DeveloperTeamPage} />
+      <Route path="/developer/settings/subscription" component={DeveloperSubscriptionPage} />
 
       {/* User Dashboard Route */}
       <Route path="/user/dashboard">
