@@ -53,19 +53,19 @@ export function AgentSidebar() {
     : 'AG';
 
   return (
-    <aside className="hidden lg:flex lg:flex-col lg:w-64 lg:fixed lg:inset-y-0 bg-white/80 backdrop-blur-xl border-r border-white/20 shadow-[0_8px_30px_rgba(8,_112,_184,_0.06)] z-20">
+    <aside className="hidden lg:flex lg:flex-col lg:w-64 lg:fixed lg:inset-y-0 bg-white border-r border-gray-100 shadow-soft z-20">
       <div className="flex flex-col flex-1 min-h-0">
         {/* Logo */}
-        <div className="flex items-center h-16 flex-shrink-0 px-6 border-b border-white/20">
-          <div className="p-2 bg-gradient-to-br from-emerald-50 to-teal-50 rounded-xl shadow-sm">
-            <Building2 className="h-6 w-6 text-emerald-600" />
+        <div className="flex items-center h-16 flex-shrink-0 px-6 border-b border-gray-100">
+          <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl shadow-soft flex items-center justify-center">
+            <Building2 className="h-5 w-5 text-white" />
           </div>
-          <span className="ml-3 text-lg font-bold text-slate-800 tracking-tight">Agent Portal</span>
+          <span className="ml-3 text-lg font-semibold text-gray-900">Agent Portal</span>
         </div>
 
         {/* Quick Actions */}
         <div className="px-4 pt-6 pb-4">
-          <h3 className="px-2 mb-3 text-xs font-bold text-slate-400 uppercase tracking-wider">
+          <h3 className="px-2 mb-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">
             Quick Actions
           </h3>
           <div className="space-y-2">
@@ -74,10 +74,10 @@ export function AgentSidebar() {
                 key={action.name}
                 variant={action.variant}
                 className={cn(
-                  "w-full justify-start h-auto py-2.5 px-3 rounded-xl transition-all duration-300",
+                  "w-full justify-start h-auto py-2.5 px-4 rounded-xl transition-all duration-200",
                   action.variant === 'default' 
-                    ? "bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 shadow-md hover:shadow-lg text-white" 
-                    : "bg-white hover:bg-slate-50 border border-slate-100 text-slate-600 hover:text-emerald-600 shadow-sm hover:shadow-md"
+                    ? "bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 shadow-soft hover:shadow-hover text-white" 
+                    : "bg-gray-50 hover:bg-gray-100 border border-gray-100 text-gray-700 hover:text-blue-600 shadow-sm"
                 )}
                 size="sm"
                 onClick={() => {
@@ -88,7 +88,7 @@ export function AgentSidebar() {
                   }
                 }}
               >
-                <action.icon className={cn("mr-2 h-4 w-4 flex-shrink-0", action.variant === 'secondary' && "text-emerald-500")} />
+                <action.icon className={cn("mr-2.5 h-4 w-4 flex-shrink-0", action.variant === 'secondary' && "text-blue-500")} />
                 <span className="text-sm font-medium">{action.name}</span>
               </Button>
             ))}
@@ -97,7 +97,7 @@ export function AgentSidebar() {
 
         {/* Navigation */}
         <nav className="flex-1 px-4 py-2 space-y-1 overflow-y-auto">
-          <h3 className="px-2 mb-2 text-xs font-bold text-slate-400 uppercase tracking-wider mt-4">
+          <h3 className="px-2 mb-2 text-xs font-semibold text-gray-500 uppercase tracking-wide mt-4">
             Menu
           </h3>
           {navigation.map(item => (
@@ -105,15 +105,15 @@ export function AgentSidebar() {
               key={item.name}
               href={item.href}
               className={cn(
-                'flex items-center px-3 py-2.5 text-sm font-medium rounded-xl transition-all duration-300 group',
+                'flex items-center px-4 py-3 text-sm font-medium rounded-xl transition-all duration-200 group',
                 window.location.pathname === item.href 
-                  ? 'bg-gradient-to-r from-emerald-50 to-teal-50 text-emerald-700 shadow-sm' 
-                  : 'text-slate-600 hover:bg-slate-50 hover:text-emerald-600'
+                  ? 'bg-blue-50 text-blue-700 shadow-sm' 
+                  : 'text-gray-700 hover:bg-gray-50 hover:text-blue-600'
               )}
             >
               <item.icon className={cn(
-                "mr-3 h-5 w-5 flex-shrink-0 transition-colors duration-300",
-                window.location.pathname === item.href ? "text-emerald-600" : "text-slate-400 group-hover:text-emerald-500"
+                "mr-3 h-5 w-5 flex-shrink-0 transition-colors duration-200",
+                window.location.pathname === item.href ? "text-blue-600" : "text-gray-400 group-hover:text-blue-500"
               )} />
               {item.name}
             </a>
@@ -121,18 +121,18 @@ export function AgentSidebar() {
         </nav>
 
         {/* User Profile Section */}
-        <div className="flex-shrink-0 p-4 border-t border-white/20 bg-white/40 backdrop-blur-md">
-          <div className="flex items-center p-2 rounded-xl hover:bg-white/60 transition-colors cursor-pointer group">
+        <div className="flex-shrink-0 p-4 border-t border-gray-100 bg-gray-50/50">
+          <div className="flex items-center p-3 rounded-xl hover:bg-white transition-all duration-200 cursor-pointer group shadow-sm hover:shadow-soft">
             <div className="flex-shrink-0">
-              <div className="h-10 w-10 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-md group-hover:scale-105 transition-transform duration-300">
-                <span className="text-sm font-bold text-white">{initials}</span>
+              <div className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-soft group-hover:scale-105 transition-transform duration-200">
+                <span className="text-sm font-semibold text-white">{initials}</span>
               </div>
             </div>
             <div className="ml-3">
-              <p className="text-sm font-bold text-slate-800 group-hover:text-emerald-700 transition-colors">{user?.name || 'Agent'}</p>
-              <p className="text-xs text-slate-500 font-medium">Real Estate Agent</p>
+              <p className="text-sm font-semibold text-gray-900 group-hover:text-blue-700 transition-colors">{user?.name || 'Agent'}</p>
+              <p className="text-xs text-gray-500">Real Estate Agent</p>
             </div>
-            <Settings className="ml-auto h-4 w-4 text-slate-400 group-hover:text-emerald-500 transition-colors" />
+            <Settings className="ml-auto h-4 w-4 text-gray-400 group-hover:text-blue-500 transition-colors" />
           </div>
         </div>
       </div>

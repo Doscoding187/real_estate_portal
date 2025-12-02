@@ -288,14 +288,14 @@ export function LeadPipeline({ className }: LeadPipelineProps) {
 
 function LeadCard({ lead }: { lead: Lead }) {
   return (
-    <Card className="cursor-grab active:cursor-grabbing hover:shadow-md transition-shadow">
-      <CardContent className="p-3">
-        <div className="space-y-2">
+    <Card className="cursor-grab active:cursor-grabbing hover:shadow-soft transition-all duration-200 border-gray-100">
+      <CardContent className="p-4">
+        <div className="space-y-3">
           {/* Lead Name & Contact */}
           <div className="flex items-start justify-between">
             <div>
-              <h4 className="font-semibold text-sm">{lead.name || 'Unnamed Lead'}</h4>
-              <div className="flex items-center gap-1 text-xs text-muted-foreground">
+              <h4 className="font-semibold text-sm text-gray-900">{lead.name || 'Unnamed Lead'}</h4>
+              <div className="flex items-center gap-1 text-xs text-gray-500 mt-1">
                 <Calendar className="h-3 w-3" />
                 {new Date(lead.createdAt).toLocaleDateString()}
               </div>
@@ -304,11 +304,11 @@ function LeadCard({ lead }: { lead: Lead }) {
 
           {/* Property Info */}
           {lead.property && (
-            <div className="flex items-center gap-2 p-2 bg-gray-50 rounded text-xs">
-              <Home className="h-3 w-3 text-muted-foreground" />
+            <div className="flex items-center gap-2 p-2.5 bg-gray-50 rounded-lg text-xs">
+              <Home className="h-3.5 w-3.5 text-gray-400" />
               <div className="flex-1 min-w-0">
-                <p className="font-medium truncate">{lead.property.title}</p>
-                <p className="text-muted-foreground">
+                <p className="font-medium truncate text-gray-900">{lead.property.title}</p>
+                <p className="text-gray-500">
                   {lead.property.city} • R{lead.property.price.toLocaleString()}
                 </p>
               </div>
@@ -316,29 +316,29 @@ function LeadCard({ lead }: { lead: Lead }) {
           )}
 
           {/* Contact Info */}
-          <div className="space-y-1">
+          <div className="space-y-1.5">
             {lead.email && (
               <div className="flex items-center gap-2 text-xs">
-                <Mail className="h-3 w-3 text-muted-foreground" />
-                <span className="truncate">{lead.email}</span>
+                <Mail className="h-3.5 w-3.5 text-gray-400" />
+                <span className="truncate text-gray-600">{lead.email}</span>
               </div>
             )}
             {lead.phone && (
               <div className="flex items-center gap-2 text-xs">
-                <Phone className="h-3 w-3 text-muted-foreground" />
-                <span>{lead.phone}</span>
+                <Phone className="h-3.5 w-3.5 text-gray-400" />
+                <span className="text-gray-600">{lead.phone}</span>
               </div>
             )}
           </div>
 
           {/* Message Preview */}
           {lead.message && (
-            <p className="text-xs text-muted-foreground line-clamp-2">"{lead.message}"</p>
+            <p className="text-xs text-gray-500 line-clamp-2 italic">"{lead.message}"</p>
           )}
 
           {/* Source */}
           {lead.source && (
-            <Badge variant="outline" className="text-xs">
+            <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
               {lead.source}
             </Badge>
           )}

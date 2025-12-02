@@ -6,17 +6,36 @@ import { Label } from '@/components/ui/label';
 import { Card } from '@/components/ui/card';
 import { AlertCircle, CheckCircle2, Eye, FileCheck, Save, Send } from 'lucide-react';
 import { useState } from 'react';
+import { trpc } from '@/lib/trpc';
+import { toast } from 'sonner';
+import { useLocation } from 'wouter';
 
 export function PreviewStep() {
   const state = useDevelopmentWizard();
+  const [, setLocation] = useLocation();
   const [agreedToTerms, setAgreedToTerms] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // tRPC mutation for creating development
+  const createDevelopment = trpc.developer.createDevelopment.useMutation({
+    onSuccess: (data) => {
+      toast.success('Development submitted successfully!', {
+        description: 'Your development is now under review.',
+      });
+      state.reset();
+      setLocation('/developer/developments');
+    },
+    onError: (error) => {
+      toast.error('Failed to submit development', {
+        description: error.message,
+      });
+    },
+  });
 
   // Generate location string
   const locationString = `${state.unitTypes.map(u => `${u.bedrooms} `).join(', ')}Bed Apartments in ${state.suburb || state.city}`;
 
   // Get primary image
-  const primaryImage = state.media.find(m => m.isPrimary) || state. media[0];
+  const primaryImage = state.media.find(m => m.isPrimary) || state.media[0];
 
   // Validation
   const isValid = 
@@ -35,17 +54,26 @@ export function PreviewStep() {
   const handleSubmit = async () => {
     if (!isValid || !agreedToTerms) return;
 
-    setIsSubmitting(true);
-    
-    // TODO: Submit to backend
-    console.log('Submitting development:', state);
-    
-    // Simulate API call
-    setTimeout(() => {
-      setIsSubmitting(false);
-      alert('Development submitted for review!');
-      state.reset();
-    }, 2000);
+    // Prepare development data
+    createDevelopment.mutate({
+      name: state.developmentName,
+      developmentType: 'residential', // Default type
+      description: state.description,
+      address: state.address,
+      city: state.city,
+      province: state.province,
+      latitude: state.latitude,
+      longitude: state.longitude,
+      showHouseAddress: true, // Default to showing address
+      priceFrom: state.unitTypes.length > 0 
+        ? Math.min(...state.unitTypes.map(u => u.priceFrom))
+        : undefined,
+      priceTo: state.unitTypes.length > 0
+        ? Math.max(...state.unitTypes.map(u => u.priceFrom))
+        : undefined,
+      amenities: state.amenities,
+      completionDate: state.completionDate,
+    });
   };
 
   const handleSaveDraft = () => {
@@ -158,11 +186,11 @@ export function PreviewStep() {
           
           <Button
             onClick={handleSubmit}
-            disabled={!isValid || !agreedToTerms || isSubmitting}
+            disabled={!isValid || !agreedToTerms || createDevelopment.isLoading}
             size="lg"
             className="flex-1 gap-2 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 shadow-lg"
           >
-            {isSubmitting ? (
+            {createDevelopment.isLoading ? (
               'Submitting...'
             ) : (
               <>

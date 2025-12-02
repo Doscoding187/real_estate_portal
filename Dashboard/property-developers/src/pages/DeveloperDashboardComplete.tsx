@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, Legend } from 'recharts';
 import Button from '../components/common/Button';
 import Badge from '../components/common/Badge';
@@ -36,7 +36,7 @@ const XIcon: React.FC = () => (
   </svg>
 );
 
-const DeveloperDashboard: React.FC = () => {
+const DeveloperDashboard: React.FC = () => { // Padding fix applied
   // State for active tab
   const [activeTab, setActiveTab] = useState('overview');
   
@@ -48,10 +48,10 @@ const DeveloperDashboard: React.FC = () => {
   
   // Mock data
   const statsData = [
-    { title: 'Total Developments', value: '24', change: '+12%', icon: '🏢' },
-    { title: 'Active Leads', value: '142', change: '+8%', icon: '👥' },
-    { title: 'Revenue', value: '$1.2M', change: '+15%', icon: '💰' },
-    { title: 'Conversion Rate', value: '24.3%', change: '+3.2%', icon: '📈' },
+    { title: 'Total Developments', value: '24', change: '+12%', icon: 'ðŸ¢' },
+    { title: 'Active Leads', value: '142', change: '+8%', icon: 'ðŸ‘¥' },
+    { title: 'Revenue', value: '$1.2M', change: '+15%', icon: 'ðŸ’°' },
+    { title: 'Conversion Rate', value: '24.3%', change: '+3.2%', icon: 'ðŸ“ˆ' },
   ];
   
   const developmentsData = [
@@ -324,23 +324,25 @@ const DeveloperDashboard: React.FC = () => {
                     <span className="ml-2">Add Development</span>
                   </Button>
                 </div>
-                <Table 
-                  columns={[
-                    { key: 'name', title: 'Development Name' },
-                    { key: 'location', title: 'Location' },
-                    { key: 'units', title: 'Units' },
-                    { key: 'status', title: 'Status', render: (value) => <Badge variant={statusColors[value] || 'default'}>{value}</Badge> },
-                    { key: 'progress', title: 'Progress', render: (value) => (
-                      <div className="w-full bg-slate-200 rounded-full h-2">
-                        <div 
-                          className="bg-blue-600 h-2 rounded-full" 
-                          style={{ width: `${value}%` }}
-                        ></div>
-                      </div>
-                    )},
-                  ]}
-                  data={developmentsData}
-                />
+                <div className="p-4">
+                  <div className="p-4"><Table 
+                    columns={[
+                      { key: 'name', title: 'Development Name' },
+                      { key: 'location', title: 'Location' },
+                      { key: 'units', title: 'Units' },
+                      { key: 'status', title: 'Status', render: (value) => <Badge variant={statusColors[value] || 'default'}>{value}</Badge> },
+                      { key: 'progress', title: 'Progress', render: (value) => (
+                        <div className="w-full bg-slate-200 rounded-full h-2">
+                          <div 
+                            className="bg-blue-600 h-2 rounded-full" 
+                            style={{ width: `${value}%` }}
+                          ></div>
+                        </div>
+                      )},
+                    ]}
+                    data={developmentsData}
+                  />
+                </div>
               </div>
             </div>
           )}
@@ -361,7 +363,7 @@ const DeveloperDashboard: React.FC = () => {
                     <span className="ml-2">Add Development</span>
                   </Button>
                 </div>
-                <Table 
+                <div className="p-4"><Table 
                   columns={[
                     { key: 'name', title: 'Development Name' },
                     { key: 'location', title: 'Location' },
@@ -404,7 +406,7 @@ const DeveloperDashboard: React.FC = () => {
                     </Button>
                   </div>
                 </div>
-                <Table 
+                <div className="p-4"><Table 
                   columns={[
                     { key: 'name', title: 'Name' },
                     { key: 'email', title: 'Email' },
@@ -495,21 +497,21 @@ const DeveloperDashboard: React.FC = () => {
                     label="Conversion Rate"
                     value="24.3%"
                     change="+3.2%"
-                    icon="📈"
+                    icon="ðŸ“ˆ"
                     color="bg-white"
                   />
                   <StatCard 
                     label="Avg. Deal Size"
                     value="$85,000"
                     change="+5.1%"
-                    icon="💰"
+                    icon="ðŸ’°"
                     color="bg-white"
                   />
                   <StatCard 
                     label="Customer Retention"
                     value="87%"
                     change="+2.3%"
-                    icon="🔄"
+                    icon="ðŸ”„"
                     color="bg-white"
                   />
                 </div>
@@ -574,19 +576,19 @@ const DeveloperDashboard: React.FC = () => {
                     </div>
                     <ul className="space-y-2 mb-6">
                       <li className="flex items-center">
-                        <span className="text-green-500 mr-2">✓</span>
+                        <span className="text-green-500 mr-2">âœ“</span>
                         <span>Up to 50 developments</span>
                       </li>
                       <li className="flex items-center">
-                        <span className="text-green-500 mr-2">✓</span>
+                        <span className="text-green-500 mr-2">âœ“</span>
                         <span>Unlimited leads</span>
                       </li>
                       <li className="flex items-center">
-                        <span className="text-green-500 mr-2">✓</span>
+                        <span className="text-green-500 mr-2">âœ“</span>
                         <span>Advanced analytics</span>
                       </li>
                       <li className="flex items-center">
-                        <span className="text-green-500 mr-2">✓</span>
+                        <span className="text-green-500 mr-2">âœ“</span>
                         <span>Priority support</span>
                       </li>
                     </ul>

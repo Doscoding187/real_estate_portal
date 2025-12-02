@@ -143,11 +143,13 @@ This implementation plan covers polishing two wizards (Listing Wizard for proper
   - Display geocoding errors with Alert component
   - _Requirements: 13.4, 13.6, 13.7_
 
-- [ ] 3.5 Add database schema for coordinates
+
+- [x] 3.5 Add database schema for coordinates
   - Create migration to add `latitude`, `longitude`, and `show_house_address` columns to developments table
   - Add index on latitude/longitude for location queries
   - Update development creation/update mutations to save coordinates
   - _Requirements: 13.8_
+
 
 - [ ] 3.6 Implement coordinate persistence
   - Update development save logic to store latitude/longitude

@@ -84,6 +84,7 @@ export class DevelopmentService {
       completionDate: input.completionDate || null,
       isFeatured: 0,
       isPublished: 0,
+      showHouseAddress: input.showHouseAddress === false ? 0 : 1,
       views: 0,
     }).returning();
 
@@ -167,6 +168,10 @@ export class DevelopmentService {
       slug,
       updatedAt: new Date().toISOString(),
     };
+
+    if (input.showHouseAddress !== undefined) {
+      updateData.showHouseAddress = input.showHouseAddress ? 1 : 0;
+    }
 
     // Convert arrays to JSON strings
     if (input.amenities) {

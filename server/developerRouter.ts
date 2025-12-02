@@ -430,6 +430,7 @@ export const developerRouter = router({
         priceTo: z.number().int().positive().optional(),
         amenities: z.array(z.string()).optional(),
         completionDate: z.string().optional(),
+        showHouseAddress: z.boolean().default(true),
       })
     )
     .mutation(async ({ input, ctx }) => {
@@ -542,6 +543,7 @@ export const developerRouter = router({
           floorPlans: z.array(z.string()).optional(),
           brochures: z.array(z.string()).optional(),
           completionDate: z.string().optional(),
+          showHouseAddress: z.boolean().optional(),
         }),
       })
     )

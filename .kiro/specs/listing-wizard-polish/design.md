@@ -731,6 +731,32 @@ interface ProspectFormData {
 }
 ```
 
+## Correctness Properties
+
+*A property is a characteristic or behavior that should hold true across all valid executions of a system-essentially, a formal statement about what the system should do. Properties serve as the bridge between human-readable specifications and machine-verifiable correctness guarantees.*
+
+### Map Pin and Reverse Geocoding Properties
+
+**Property 1: Pin placement accuracy**
+*For any* valid map click coordinates, the system should place a marker at exactly those coordinates
+**Validates: Requirements 13.2**
+
+**Property 2: Geocoding result population**
+*For any* successful geocoding response, all available address components (street, suburb, city, province) should be populated in their respective form fields
+**Validates: Requirements 13.4, 13.5**
+
+**Property 3: Manual entry preservation**
+*For any* manually entered address data, the system should not override that data unless the pin is explicitly moved to a new location
+**Validates: Requirements 13.7**
+
+**Property 4: Coordinate persistence round-trip**
+*For any* development with saved latitude and longitude coordinates, loading that development for editing should display the pin at the exact same coordinates
+**Validates: Requirements 13.8, 13.9**
+
+**Property 5: Graceful geocoding failure**
+*For any* geocoding failure or incomplete result, all address fields should remain editable and accept manual input
+**Validates: Requirements 13.6**
+
 ## Error Handling
 
 ### Error Recovery Strategy
@@ -1011,6 +1037,355 @@ const MobileStepNav: React.FC = () => {
 };
 ```
 
+### 6. Show House Location Pin and Reverse Geocoding
+
+#### LocationMapPicker Component
+
+```typescript
+interface LocationMapPickerProps {
+  initialLat?: number;
+  initialLng?: number;
+  onLocationSelect: (location: LocationData) => void;
+  onGeocodingError?: (error: string) => void;
+}
+
+interface LocationData {
+  latitude: number;
+  longitude: number;
+  address?: string;
+  suburb?: string;
+  city?: string;
+  province?: string;
+  postalCode?: string;
+  formattedAddress?: string;
+}
+
+const LocationMapPicker: React.FC<LocationMapPickerProps> = ({
+  initialLat = -26.2041, // Default to South Africa center
+  initialLng = 28.0473,
+  onLocationSelect,
+  onGeocodingError
+}) => {
+  const [markerPosition, setMarkerPosition] = useState<{lat: number, lng: number} | null>(
+    initialLat && initialLng ? { lat: initialLat, lng: initialLng } : null
+  );
+  const [isGeocoding, setIsGeocoding] = useState(false);
+  const mapRef = useRef<google.maps.Map | null>(null);
+  
+  const handleMapClick = useCallback(async (e: google.maps.MapMouseEvent) => {
+    if (!e.latLng) return;
+    
+    const lat = e.latLng.lat();
+    const lng = e.latLng.lng();
+    
+    setMarkerPosition({ lat, lng });
+    setIsGeocoding(true);
+    
+    try {
+      const geocoder = new google.maps.Geocoder();
+      const result = await geocoder.geocode({ location: { lat, lng } });
+      
+      if (result.results[0]) {
+        const locationData = parseGeocodingResult(result.results[0], lat, lng);
+        onLocationSelect(locationData);
+      } else {
+        onGeocodingError?.('No address found for this location');
+      }
+    } catch (error) {
+      onGeocodingError?.('Failed to retrieve address. Please enter manually.');
+    } finally {
+      setIsGeocoding(false);
+    }
+  }, [onLocationSelect, onGeocodingError]);
+  
+  return (
+    <div className="space-y-4">
+      <div className="relative">
+        <GoogleMap
+          mapContainerStyle={{ width: '100%', height: '400px' }}
+          center={markerPosition || { lat: initialLat, lng: initialLng }}
+          zoom={markerPosition ? 15 : 6}
+          onClick={handleMapClick}
+          onLoad={(map) => { mapRef.current = map; }}
+          options={{
+            streetViewControl: false,
+            mapTypeControl: true,
+            fullscreenControl: true,
+          }}
+        >
+          {markerPosition && (
+            <Marker
+              position={markerPosition}
+              draggable={true}
+              onDragEnd={handleMapClick}
+            />
+          )}
+          
+          <Autocomplete
+            onLoad={(autocomplete) => {
+              autocomplete.addListener('place_changed', () => {
+                const place = autocomplete.getPlace();
+                if (place.geometry?.location) {
+                  const lat = place.geometry.location.lat();
+                  const lng = place.geometry.location.lng();
+                  setMarkerPosition({ lat, lng });
+                  mapRef.current?.panTo({ lat, lng });
+                  mapRef.current?.setZoom(15);
+                  
+                  const locationData = parseGeocodingResult(place, lat, lng);
+                  onLocationSelect(locationData);
+                }
+              });
+            }}
+          >
+            <input
+              type="text"
+              placeholder="Search for a location..."
+              className="absolute top-4 left-4 w-80 px-4 py-2 rounded-lg shadow-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </Autocomplete>
+        </GoogleMap>
+        
+        {isGeocoding && (
+          <div className="absolute inset-0 bg-white/50 flex items-center justify-center">
+            <div className="bg-white p-4 rounded-lg shadow-lg flex items-center gap-2">
+              <Loader2 className="w-5 h-5 animate-spin text-blue-600" />
+              <span className="text-sm font-medium">Retrieving address...</span>
+            </div>
+          </div>
+        )}
+      </div>
+      
+      <div className="flex items-start gap-2 text-sm text-slate-600 bg-blue-50 p-3 rounded-lg">
+        <Info className="w-4 h-4 mt-0.5 flex-shrink-0" />
+        <p>
+          Click on the map or search for a location to drop a pin at your show house. 
+          The address fields will be automatically populated. You can drag the pin to adjust the location.
+        </p>
+      </div>
+    </div>
+  );
+};
+```
+
+#### Geocoding Result Parser
+
+```typescript
+const parseGeocodingResult = (
+  result: google.maps.GeocoderResult | google.maps.places.PlaceResult,
+  lat: number,
+  lng: number
+): LocationData => {
+  const addressComponents = result.address_components || [];
+  
+  const getComponent = (type: string): string | undefined => {
+    const component = addressComponents.find(c => c.types.includes(type));
+    return component?.long_name;
+  };
+  
+  // Extract address components
+  const streetNumber = getComponent('street_number');
+  const route = getComponent('route');
+  const suburb = getComponent('sublocality') || getComponent('sublocality_level_1');
+  const city = getComponent('locality') || getComponent('administrative_area_level_2');
+  const province = getComponent('administrative_area_level_1');
+  const postalCode = getComponent('postal_code');
+  
+  // Build street address
+  const address = [streetNumber, route].filter(Boolean).join(' ');
+  
+  return {
+    latitude: lat,
+    longitude: lng,
+    address: address || undefined,
+    suburb: suburb || undefined,
+    city: city || undefined,
+    province: province || undefined,
+    postalCode: postalCode || undefined,
+    formattedAddress: result.formatted_address
+  };
+};
+```
+
+#### Integration with BasicDetailsStep
+
+```typescript
+// Enhanced BasicDetailsStep with map integration
+export function BasicDetailsStep() {
+  const {
+    address,
+    city,
+    province,
+    suburb,
+    postalCode,
+    latitude,
+    longitude,
+    setAddress,
+    setCity,
+    setProvince,
+    setSuburb,
+    setPostalCode,
+    setLatitude,
+    setLongitude,
+  } = useDevelopmentWizard();
+  
+  const [showMap, setShowMap] = useState(true);
+  const [manualOverride, setManualOverride] = useState(false);
+  const [geocodingError, setGeocodingError] = useState<string | null>(null);
+  
+  const handleLocationSelect = useCallback((locationData: LocationData) => {
+    if (!manualOverride) {
+      setLatitude(locationData.latitude.toString());
+      setLongitude(locationData.longitude.toString());
+      
+      if (locationData.address) setAddress(locationData.address);
+      if (locationData.suburb) setSuburb(locationData.suburb);
+      if (locationData.city) setCity(locationData.city);
+      if (locationData.province) setProvince(locationData.province);
+      if (locationData.postalCode) setPostalCode(locationData.postalCode);
+      
+      setGeocodingError(null);
+      toast.success('Address populated from map location');
+    }
+  }, [manualOverride, setAddress, setCity, setProvince, setSuburb, setPostalCode, setLatitude, setLongitude]);
+  
+  const handleManualEdit = useCallback(() => {
+    setManualOverride(true);
+    toast.info('Manual mode enabled. Move the pin to update address again.');
+  }, []);
+  
+  return (
+    <div className="space-y-6">
+      {/* Development Name & Status section */}
+      
+      {/* Location Details with Map */}
+      <Card className="bg-white/70 backdrop-blur-sm rounded-[1.5rem] border-white/40 shadow-[0_8px_30px_rgba(8,_112,_184,_0.06)] p-6">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <MapPin className="w-5 h-5 text-indigo-600" />
+            <h3 className="text-lg font-bold text-slate-800">Location Details</h3>
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setShowMap(!showMap)}
+          >
+            {showMap ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+            {showMap ? 'Hide Map' : 'Show Map'}
+          </Button>
+        </div>
+        
+        {showMap && (
+          <div className="mb-6">
+            <LocationMapPicker
+              initialLat={latitude ? parseFloat(latitude) : undefined}
+              initialLng={longitude ? parseFloat(longitude) : undefined}
+              onLocationSelect={handleLocationSelect}
+              onGeocodingError={setGeocodingError}
+            />
+            
+            {geocodingError && (
+              <Alert variant="warning" className="mt-4">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertDescription>{geocodingError}</AlertDescription>
+              </Alert>
+            )}
+          </div>
+        )}
+        
+        <div className="space-y-4">
+          <div>
+            <Label htmlFor="address" className="text-slate-700">
+              Street Address <span className="text-red-500">*</span>
+            </Label>
+            <Input
+              id="address"
+              placeholder="Enter street address or use map"
+              value={address}
+              onChange={(e) => {
+                setAddress(e.target.value);
+                handleManualEdit();
+              }}
+              className="mt-1"
+            />
+          </div>
+          
+          {/* Rest of the location fields */}
+        </div>
+      </Card>
+    </div>
+  );
+}
+```
+
+#### Database Schema Updates
+
+```typescript
+// Add to developments table
+interface DevelopmentLocation {
+  latitude?: string;
+  longitude?: string;
+  showHouseAddress?: string; // Separate from main development address
+}
+
+// Migration
+ALTER TABLE developments 
+ADD COLUMN latitude DECIMAL(10, 8),
+ADD COLUMN longitude DECIMAL(11, 8),
+ADD COLUMN show_house_address VARCHAR(500),
+ADD INDEX idx_location (latitude, longitude);
+```
+
+#### Google Maps API Integration
+
+**Required APIs:**
+- Google Maps JavaScript API
+- Geocoding API
+- Places API (for search autocomplete)
+
+**Environment Variables:**
+```env
+VITE_GOOGLE_MAPS_API_KEY=your_api_key_here
+```
+
+**API Key Restrictions:**
+- Restrict to specific domains (production + staging)
+- Enable only required APIs
+- Set usage quotas to prevent abuse
+
+**Cost Considerations:**
+- Geocoding API: $5 per 1000 requests
+- Maps JavaScript API: $7 per 1000 loads
+- Places API Autocomplete: $2.83 per 1000 requests
+- Estimated monthly cost for 10,000 developments: ~$150
+
+#### Error Handling
+
+```typescript
+enum GeocodingErrorType {
+  NO_RESULTS = 'NO_RESULTS',
+  NETWORK_ERROR = 'NETWORK_ERROR',
+  API_LIMIT = 'OVER_QUERY_LIMIT',
+  INVALID_REQUEST = 'INVALID_REQUEST',
+  UNKNOWN = 'UNKNOWN_ERROR'
+}
+
+const handleGeocodingError = (error: GeocodingErrorType): string => {
+  switch (error) {
+    case GeocodingErrorType.NO_RESULTS:
+      return 'No address found for this location. Please enter the address manually.';
+    case GeocodingErrorType.NETWORK_ERROR:
+      return 'Network error. Please check your connection and try again.';
+    case GeocodingErrorType.API_LIMIT:
+      return 'Service temporarily unavailable. Please enter the address manually.';
+    case GeocodingErrorType.INVALID_REQUEST:
+      return 'Invalid location. Please try a different location.';
+    default:
+      return 'Unable to retrieve address. Please enter manually.';
+  }
+};
+```
+
 ## Security Considerations
 
 1. **File Upload Security**
@@ -1027,6 +1402,12 @@ const MobileStepNav: React.FC = () => {
    - Secure session IDs (UUID v4)
    - HttpOnly cookies for authentication
    - CSRF protection on mutations
+
+4. **Google Maps API Security**
+   - Restrict API keys to specific domains
+   - Enable only required APIs
+   - Implement rate limiting on server side
+   - Never expose API keys in client-side code (use environment variables)
 
 ## Deployment Strategy
 

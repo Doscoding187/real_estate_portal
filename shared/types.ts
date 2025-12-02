@@ -346,6 +346,7 @@ export interface Development {
   createdAt: Date;
   updatedAt: Date;
   publishedAt: Date | null;
+  showHouseAddress: boolean;
 }
 
 export interface DevelopmentPhase {
@@ -382,6 +383,7 @@ export interface CreateDevelopmentInput {
   priceTo?: number;
   amenities?: string[];
   completionDate?: string;
+  showHouseAddress?: boolean;
 }
 
 export interface UpdateDevelopmentInput {
@@ -407,6 +409,7 @@ export interface UpdateDevelopmentInput {
   completionDate?: string;
   isFeatured?: boolean;
   isPublished?: boolean;
+  showHouseAddress?: boolean;
 }
 
 

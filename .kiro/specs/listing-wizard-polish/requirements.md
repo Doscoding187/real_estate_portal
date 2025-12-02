@@ -167,3 +167,20 @@ All three features are currently functional but require refinement to improve us
 3. WHEN a user navigates between steps THEN the system SHALL transition within 200ms
 4. WHEN a user calculates buyability THEN the system SHALL return results within 500ms
 5. WHEN a user has a slow connection THEN the system SHALL show loading indicators for operations taking longer than 1 second
+
+### Requirement 13: Show House Location Pin and Reverse Geocoding
+
+**User Story:** As a property developer creating a new development listing, I want to drop a pin on a map to mark the show house location, so that the system can automatically populate the street address, suburb, city, and province - especially for large developments where street names may not yet exist in mapping systems.
+
+#### Acceptance Criteria
+
+1. WHEN a developer views the Location Details section THEN the system SHALL display an interactive map centered on South Africa
+2. WHEN a developer clicks on the map THEN the system SHALL place a draggable pin marker at that location
+3. WHEN a developer drops a pin on the map THEN the system SHALL perform reverse geocoding within 2 seconds to retrieve the address
+4. WHEN reverse geocoding completes successfully THEN the system SHALL auto-populate the street address, suburb, city, and province fields
+5. WHEN a developer drags the pin to a new location THEN the system SHALL update the address fields with the new location data
+6. WHEN reverse geocoding fails or returns incomplete data THEN the system SHALL allow manual entry of address fields
+7. WHEN a developer has manually entered address data THEN the system SHALL preserve that data and not override it unless the pin is moved again
+8. WHEN a developer saves a development with a pin location THEN the system SHALL store the latitude and longitude coordinates
+9. WHEN a developer returns to edit a development with saved coordinates THEN the system SHALL display the map with the pin at the saved location
+10. WHEN the map loads THEN the system SHALL include zoom controls and a search box for finding specific locations

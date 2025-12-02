@@ -664,7 +664,10 @@ export const developments = mysqlTable("developments", {
 	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
 	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
 	publishedAt: timestamp({ mode: 'string' }),
-});
+	showHouseAddress: int().default(1).notNull(),
+}, (table) => ({
+	locationIdx: index("idx_developments_location").on(table.latitude, table.longitude),
+}));
 
 export const developmentPhases = mysqlTable("development_phases", {
 	id: int().autoincrement().notNull().primaryKey(),

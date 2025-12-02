@@ -185,24 +185,6 @@ export function BasicDetailsStep() {
           <Button variant="ghost" size="sm" onClick={() => setShowMap(!showMap)}>
             {showMap ? <EyeOff className="w-4 h-4 mr-2" /> : <Eye className="w-4 h-4 mr-2" />}
             {showMap ? 'Hide Map' : 'Show Map'}
-          </Button>
-        </div>
-
-        {showMap && (
-          <div className="mb-6">
-            <LocationMapPicker
-              initialLat={latitude ? parseFloat(latitude) : undefined}
-              initialLng={longitude ? parseFloat(longitude) : undefined}
-              onLocationSelect={handleLocationSelect}
-              onGeocodingError={setGeocodingError}
-            />
-
-            {geocodingError && (
-              <Alert variant="destructive" className="mt-4">
-                <AlertTriangle className="h-4 w-4" />
-                <AlertDescription>{geocodingError}</AlertDescription>
-              </Alert>
-            )}
           </div>
         )}
 
