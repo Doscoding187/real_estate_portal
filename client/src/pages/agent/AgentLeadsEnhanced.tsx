@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useLocation } from 'wouter';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { AgentSidebar } from '@/components/agent/AgentSidebar';
@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { trpc } from '@/lib/trpc';
 import {
   Menu,
   Search,
@@ -31,6 +32,22 @@ export default function AgentLeadsEnhanced() {
   const [activeView, setActiveView] = useState('pipeline');
   const [searchQuery, setSearchQuery] = useState('');
 
+  // Check if agent profile exists
+  const { data: dashboardStats, isLoading: statsLoading, error } = trpc.agent.getDashboardStats.useQuery(
+    undefined,
+    {
+      enabled: isAuthenticated && user?.role === 'agent',
+      retry: false,
+    }
+  );
+
+  // Redirect to setup if no agent profile found
+  useEffect(() => {
+    if (!statsLoading && error && error.message?.includes('Agent profile not found')) {
+      setLocation('/agent/setup');
+    }
+  }, [error, statsLoading, setLocation]);
+
   if (!loading && !isAuthenticated) {
     setLocation('/login');
     return null;
@@ -39,6 +56,18 @@ export default function AgentLeadsEnhanced() {
   if (!loading && user?.role !== 'agent') {
     setLocation('/dashboard');
     return null;
+  }
+
+  // Show loading while checking for agent profile
+  if (statsLoading || loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#F4F7FA]">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading dashboard...</p>
+        </div>
+      </div>
+    );
   }
 
   const handleLeadClick = (lead: any) => {

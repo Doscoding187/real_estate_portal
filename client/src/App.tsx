@@ -23,6 +23,13 @@ import Login from './pages/Login';
 import AgencyDashboard from './pages/AgencyDashboard';
 import AgentDashboard from './pages/AgentDashboard';
 import AgentListings from './pages/agent/AgentListings';
+import AgentLeadsEnhanced from './pages/agent/AgentLeadsEnhanced';
+import AgentMarketingHub from './pages/agent/AgentMarketingHub';
+import AgentEarnings from './pages/agent/AgentEarnings';
+import AgentAnalytics from './pages/AgentAnalytics';
+import AgentProductivity from './pages/agent/AgentProductivity';
+import AgentTrainingSupport from './pages/agent/AgentTrainingSupport';
+import AgentSettings from './pages/AgentSettings';
 import AgentSetup from './pages/AgentSetup';
 import AgencyList from './pages/admin/AgencyList';
 import CreateAgency from './pages/admin/CreateAgency';
@@ -101,6 +108,13 @@ function Router() {
       <Route path="/agents" component={Agents} />
       <Route path="/agent/dashboard" component={AgentDashboard} />
       <Route path="/agent/listings" component={AgentListings} />
+      <Route path="/agent/leads" component={AgentLeadsEnhanced} />
+      <Route path="/agent/marketing" component={AgentMarketingHub} />
+      <Route path="/agent/earnings" component={AgentEarnings} />
+      <Route path="/agent/analytics" component={AgentAnalytics} />
+      <Route path="/agent/productivity" component={AgentProductivity} />
+      <Route path="/agent/training" component={AgentTrainingSupport} />
+      <Route path="/agent/settings" component={AgentSettings} />
       <Route path="/agent/setup" component={AgentSetup} />
       <Route path="/agent/:id" component={AgentDetail} />
       <Route path="/city/:slug" component={CityPage} />

@@ -12,6 +12,8 @@ import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import type { User } from '../../drizzle/schema';
 import * as db from '../db';
+import { getDb } from '../db';
+import { sql } from 'drizzle-orm';
 import { ENV } from './env';
 import { sendVerificationEmail, sendPasswordResetEmail } from './email';
 
@@ -205,16 +207,23 @@ class AuthService {
       emailVerificationToken,
     });
 
-    // Create agent profile if role is agent
+    // Store agent profile data for creation after email verification
     if (role === 'agent' && agentProfile) {
-      await db.createAgentProfile({
-        userId,
-        displayName: agentProfile.displayName,
-        phoneNumber: agentProfile.phoneNumber,
-        bio: agentProfile.bio,
-        licenseNumber: agentProfile.licenseNumber,
-        specializations: agentProfile.specializations,
-      });
+      const database = await getDb();
+      if (database) {
+        await database.execute(sql`
+          INSERT INTO pending_agent_profiles 
+          (userId, displayName, phoneNumber, bio, licenseNumber, specializations)
+          VALUES (
+            ${userId}, 
+            ${agentProfile.displayName}, 
+            ${agentProfile.phoneNumber}, 
+            ${agentProfile.bio || null}, 
+            ${agentProfile.licenseNumber || null}, 
+            ${agentProfile.specializations ? agentProfile.specializations.join(',') : null}
+          )
+        `);
+      }
     }
 
     // Get the created user
@@ -368,7 +377,38 @@ class AuthService {
       throw new Error('Invalid or expired email verification token.');
     }
 
+    // Verify the email
     await db.verifyUserEmail(user.id);
+
+    // If user is an agent, create agent profile from pending data
+    if (user.role === 'agent') {
+      const database = await getDb();
+      if (database) {
+        // Get pending agent profile data
+        const [pendingProfile] = await database.execute(sql`
+          SELECT * FROM pending_agent_profiles WHERE userId = ${user.id}
+        `);
+
+        if (pendingProfile && pendingProfile.rows && pendingProfile.rows.length > 0) {
+          const profileData = pendingProfile.rows[0] as any;
+
+          // Create agent profile
+          await db.createAgentProfile({
+            userId: user.id,
+            displayName: profileData.displayName,
+            phoneNumber: profileData.phoneNumber,
+            bio: profileData.bio,
+            licenseNumber: profileData.licenseNumber,
+            specializations: profileData.specializations ? profileData.specializations.split(',') : undefined,
+          });
+
+          // Delete pending profile data
+          await database.execute(sql`
+            DELETE FROM pending_agent_profiles WHERE userId = ${user.id}
+          `);
+        }
+      }
+    }
   }
 }
 

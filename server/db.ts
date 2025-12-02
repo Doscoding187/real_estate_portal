@@ -2382,7 +2382,7 @@ export async function createAgentProfile(data: {
     lastName: data.displayName.split(' ').slice(1).join(' ') || '',
     isVerified: 0,
     isFeatured: 0,
-    status: 'pending' as any, // Default to pending for admin approval
+    status: 'pending' as any, // Pending until ID/FFC verification complete
     createdAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
     updatedAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
   });

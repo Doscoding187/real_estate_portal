@@ -55,7 +55,7 @@ export function registerAuthRoutes(app: Express) {
 
       // Return success message - user must verify email before logging in
       const message = role === 'agent'
-        ? 'Registration successful. Please check your email to verify your account. Your agent profile will be reviewed by our team.'
+        ? 'Registration successful! Please check your email to verify your account. Your agent profile will be created after email verification.'
         : 'Registration successful. Please check your email to verify your account.';
 
       res.status(201).json({
