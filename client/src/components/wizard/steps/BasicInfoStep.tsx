@@ -10,7 +10,7 @@ import * as React from 'react';
 import { Building2, Globe, Calendar } from 'lucide-react';
 import { GradientInput } from '../../ui/GradientInput';
 import { GradientTextarea } from '../../ui/GradientTextarea';
-import { GradientSelect } from '../../ui/GradientSelect';
+import { GradientSelect, GradientSelectItem } from '../../ui/GradientSelect';
 import { cn } from '@/lib/utils';
 
 export interface BasicInfoData {
@@ -125,9 +125,9 @@ export const BasicInfoStep = React.forwardRef<HTMLDivElement, BasicInfoStepProps
               error={errors?.category}
             >
               {categoryOptions.map((option) => (
-                <option key={option.value} value={option.value}>
+                <GradientSelectItem key={option.value} value={option.value}>
                   {option.label}
-                </option>
+                </GradientSelectItem>
               ))}
             </GradientSelect>
             {errors?.category && (
@@ -149,9 +149,9 @@ export const BasicInfoStep = React.forwardRef<HTMLDivElement, BasicInfoStepProps
                 error={errors?.establishedYear}
               >
                 {yearOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
+                  <GradientSelectItem key={option.value} value={option.value}>
                     {option.label}
-                  </option>
+                  </GradientSelectItem>
                 ))}
               </GradientSelect>
               {errors?.establishedYear && (
