@@ -22,6 +22,7 @@ import {
 import { ArrowLeft, ArrowRight } from 'lucide-react';
 import { toast } from 'sonner';
 import React from 'react';
+import { trpc } from '@/lib/trpc';
 
 // Import steps
 import { BasicDetailsStep } from './steps/BasicDetailsStep';
@@ -50,6 +51,31 @@ export function DevelopmentWizard() {
   const [apiError, setApiError] = useState<AppError | null>(null);
   const store = useDevelopmentWizard();
   const { currentStep, goToStep, nextStep, previousStep, reset } = store;
+
+  // Fetch developer profile to auto-populate developer info
+  const { data: developerProfile } = trpc.developer.getProfile.useQuery(undefined, {
+    retry: false,
+    refetchOnWindowFocus: false,
+  });
+  const { data: user } = trpc.auth.me.useQuery();
+
+  // Auto-populate developer info from profile when component loads
+  useEffect(() => {
+    // Only populate if fields are empty (don't override existing draft data)
+    if (developerProfile && !store.developerName && !store.contactDetails.email) {
+      store.setDeveloperName(developerProfile.name || '');
+      store.setContactDetails({
+        name: store.contactDetails.name || '',
+        email: developerProfile.email || user?.email || '',
+        phone: developerProfile.phone || '',
+        preferredContact: 'email',
+      });
+      
+      if (developerProfile.logo) {
+        store.setCompanyLogo(developerProfile.logo);
+      }
+    }
+  }, [developerProfile, user]);
 
   // Auto-save hook - saves draft to localStorage automatically
   const { lastSaved, isSaving: isAutoSaving, error: autoSaveError } = useAutoSave(
@@ -98,6 +124,8 @@ export function DevelopmentWizard() {
     }
   }, []);
 
+  const [isInitialized, setIsInitialized] = useState(false);
+
   // Check for draft on mount and show resume dialog
   useEffect(() => {
     // Check if there's a draft (currentStep > 0 or has developmentName)
@@ -106,6 +134,8 @@ export function DevelopmentWizard() {
     if (hasDraft) {
       setShowResumeDraftDialog(true);
     }
+    
+    setIsInitialized(true);
   }, []); // Run only on mount
 
   // Handle resume draft decision
@@ -211,7 +241,17 @@ export function DevelopmentWizard() {
       />
 
       <div className="container mx-auto px-4 max-w-5xl">
-        {/* Header */}
+        {!isInitialized ? (
+          <div className="flex items-center justify-center min-h-[60vh]">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+          </div>
+        ) : showResumeDraftDialog ? (
+          <div className="flex items-center justify-center min-h-[60vh]">
+            {/* Content hidden while dialog is open */}
+          </div>
+        ) : (
+          <>
+            {/* Header */}
         <div className="mb-8 text-center relative">
           <Button 
             variant="ghost" 
@@ -297,6 +337,8 @@ export function DevelopmentWizard() {
             />
           </div>
         )}
+        </>
+      )}
       </div>
 
       {/* Exit Confirmation Dialog */}

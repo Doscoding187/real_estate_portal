@@ -196,15 +196,21 @@ const ListingWizard: React.FC = () => {
     }
   }, []);
 
+  const [isInitialized, setIsInitialized] = useState(false);
+
   // Check for draft on mount and show resume dialog
   useEffect(() => {
     // If editing, don't show draft dialog
-    if (isEditMode) return;
+    if (isEditMode) {
+      setIsInitialized(true);
+      return;
+    }
 
     // If previously submitted, reset
     if (store.status === 'submitted') {
       console.log('Wizard was previously submitted, resetting for new listing...');
       store.reset();
+      setIsInitialized(true);
       return;
     }
 
@@ -214,6 +220,8 @@ const ListingWizard: React.FC = () => {
     if (hasDraft) {
       setShowResumeDraftDialog(true);
     }
+    
+    setIsInitialized(true);
   }, [isEditMode]); // Run when isEditMode is determined
 
   // Handle resume draft decision
@@ -501,7 +509,17 @@ const ListingWizard: React.FC = () => {
       />
 
       <div className="container mx-auto px-4 max-w-5xl">
-        {/* Header */}
+        {!isInitialized ? (
+          <div className="flex items-center justify-center min-h-[60vh]">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+          </div>
+        ) : showResumeDraftDialog ? (
+          <div className="flex items-center justify-center min-h-[60vh]">
+            {/* Content hidden while dialog is open */}
+          </div>
+        ) : (
+          <>
+            {/* Header */}
         <div className="mb-8">
           <div className="flex items-center justify-between mb-4">
             <div className="text-center flex-1">
@@ -626,6 +644,8 @@ const ListingWizard: React.FC = () => {
             <p className="text-red-800">{submitError}</p>
           </div>
         )}
+        </>
+      )}
       </div>
     </div>
   );

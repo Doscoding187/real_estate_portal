@@ -197,7 +197,7 @@ export function LocationMapPicker({
             <input
               type="text"
               placeholder="Search for a location..."
-              className="absolute top-4 left-4 w-80 px-4 py-2 rounded-lg shadow-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="absolute bottom-4 left-4 w-80 px-4 py-2 rounded-lg shadow-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </Autocomplete>
         </GoogleMap>
