@@ -2669,10 +2669,21 @@ export async function createDeveloper(data: {
                    'residential';
 
   const [result] = await db.insert(developers).values({
-    ...data,
+    name: data.name,
+    description: data.description || null,
+    logo: data.logo || null,
+    website: data.website || null,
+    email: data.email || null,
+    phone: data.phone || null,
+    address: data.address || null,
+    city: data.city || null,
+    province: data.province || null,
+    establishedYear: data.establishedYear || null,
+    trackRecord: null, // Will be added later after profile creation
+    pastProjects: null, // Will be added later after profile creation
+    userId: data.userId,
     // Convert specializations array to JSON string, or use category as fallback
-    specializations: data.specializations ? JSON.stringify(data.specializations) : 
-                     data.category ? JSON.stringify([data.category]) : null,
+    specializations: data.specializations ? JSON.stringify(data.specializations) : null,
     category: category as 'residential' | 'commercial' | 'mixed_use' | 'industrial', // Keep for backward compatibility
     isVerified: data.isVerified ?? 0,
     status: data.status ?? 'pending',
