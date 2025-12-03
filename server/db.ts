@@ -2687,12 +2687,19 @@ export async function createDeveloper(data: {
     category: category as 'residential' | 'commercial' | 'mixed_use' | 'industrial', // Keep for backward compatibility
     isVerified: data.isVerified ?? 0,
     status: data.status ?? 'pending',
+    rejectionReason: null, // No rejection reason for new developers
+    approvedBy: null, // Not approved yet
+    approvedAt: null, // Not approved yet
+    rejectedBy: null, // Not rejected yet
+    rejectedAt: null, // Not rejected yet
     totalProjects: data.totalProjects ?? 0,
     completedProjects: data.completedProjects ?? 0,
     currentProjects: data.currentProjects ?? 0,
     upcomingProjects: data.upcomingProjects ?? 0,
     rating: 0,
     reviewCount: 0,
+    kpiCache: null, // No KPI cache initially
+    lastKpiCalculation: null, // No KPI calculation initially
   });
 
   return result.insertId;
