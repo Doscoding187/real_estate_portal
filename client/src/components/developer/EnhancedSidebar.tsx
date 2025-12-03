@@ -159,6 +159,11 @@ export function EnhancedSidebar({ className }: EnhancedSidebarProps) {
     undefined,
     {
       refetchInterval: 30000, // Refetch every 30 seconds
+      retry: false, // Don't retry on error to avoid console spam
+      onError: (error) => {
+        // Silently handle error until backend is deployed
+        console.log('Notification count temporarily unavailable');
+      },
     }
   );
 
