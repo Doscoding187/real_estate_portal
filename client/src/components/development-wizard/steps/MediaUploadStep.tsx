@@ -17,7 +17,7 @@ import {
 import { useState, useCallback } from 'react';
 import type { MediaItem as GridMediaItem } from '@/components/media/SortableMediaGrid';
 
-type MediaCategory = 'featured' | 'general' | 'floorplans' | 'amenities' | 'outdoors' | 'videos';
+type MediaCategory = 'featured' | 'general' | 'amenities' | 'outdoors' | 'videos';
 
 export function MediaUploadStep() {
   const { media, addMedia, removeMedia, setPrimaryImage, reorderMedia } = useDevelopmentWizard();
@@ -229,14 +229,13 @@ export function MediaUploadStep() {
             <h3 className="text-lg font-bold text-slate-800">Development Media</h3>
           </div>
           <p className="text-slate-600">
-            Organize your media by category for better presentation. Upload high-quality images and
-            videos.
+            Upload general media showcasing the overall development (amenities, outdoor spaces, common areas). Unit-specific photos and floor plans will be uploaded in the next step.
           </p>
         </div>
 
         {/* Category Tabs */}
         <Tabs value={activeCategory} onValueChange={v => setActiveCategory(v as MediaCategory)}>
-          <TabsList className="grid w-full grid-cols-6 mb-6">
+          <TabsList className="grid w-full grid-cols-5 mb-6">
             <TabsTrigger value="featured" className="text-xs">
               <Star className="w-3 h-3 mr-1" />
               Featured {featuredCount > 0 && `(${featuredCount})`}
@@ -244,10 +243,6 @@ export function MediaUploadStep() {
             <TabsTrigger value="general" className="text-xs">
               <Home className="w-3 h-3 mr-1" />
               Photos {generalCount > 0 && `(${generalCount})`}
-            </TabsTrigger>
-            <TabsTrigger value="floorplans" className="text-xs">
-              <Layout className="w-3 h-3 mr-1" />
-              Floor Plans {floorplansCount > 0 && `(${floorplansCount})`}
             </TabsTrigger>
             <TabsTrigger value="amenities" className="text-xs">
               <Sparkles className="w-3 h-3 mr-1" />
@@ -279,19 +274,9 @@ export function MediaUploadStep() {
           <TabsContent value="general" className="mt-0">
             {renderCategorySection(
               'general',
-              'General Photos',
-              'Interior, exterior, unit photos, and lobby/entrance areas',
+              'General Development Photos',
+              'Overall exterior views, lobby, entrance areas, building facade',
               <Home className="w-5 h-5 text-blue-500" />,
-            )}
-          </TabsContent>
-
-          {/* Floor Plans Tab */}
-          <TabsContent value="floorplans" className="mt-0">
-            {renderCategorySection(
-              'floorplans',
-              'Floor Plans',
-              'Upload floor plans for each unit type configured in Step 2',
-              <Layout className="w-5 h-5 text-indigo-500" />,
             )}
           </TabsContent>
 
@@ -344,14 +329,7 @@ export function MediaUploadStep() {
                 <li className="flex items-start gap-2">
                   <Home className="w-3.5 h-3.5 mt-0.5 flex-shrink-0 text-blue-600" />
                   <span>
-                    <strong>Photos:</strong> Upload 15-25 high-quality images with natural lighting
-                  </span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <Layout className="w-3.5 h-3.5 mt-0.5 flex-shrink-0 text-indigo-600" />
-                  <span>
-                    <strong>Floor Plans:</strong> Upload one per unit type (increases inquiries by
-                    40%)
+                    <strong>Photos:</strong> Upload 10-15 overall development images with natural lighting
                   </span>
                 </li>
                 <li className="flex items-start gap-2">
@@ -378,7 +356,7 @@ export function MediaUploadStep() {
         </div>
 
         {/* Statistics */}
-        <div className="mt-4 grid grid-cols-2 md:grid-cols-3 gap-3">
+        <div className="mt-4 grid grid-cols-3 gap-3">
           <div className="bg-white border border-slate-200 rounded-lg p-3 text-center">
             <p className="text-2xl font-bold text-slate-900">{media.length}</p>
             <p className="text-xs text-slate-600">Total Media</p>
@@ -390,8 +368,10 @@ export function MediaUploadStep() {
             <p className="text-xs text-slate-600">Images</p>
           </div>
           <div className="bg-white border border-slate-200 rounded-lg p-3 text-center">
-            <p className="text-2xl font-bold text-indigo-600">{floorplansCount}</p>
-            <p className="text-xs text-slate-600">Floor Plans</p>
+            <p className="text-2xl font-bold text-red-600">
+              {media.filter(m => m.type === 'video').length}
+            </p>
+            <p className="text-xs text-slate-600">Videos</p>
           </div>
         </div>
       </Card>

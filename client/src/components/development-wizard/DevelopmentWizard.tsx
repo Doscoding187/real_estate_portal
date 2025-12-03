@@ -28,15 +28,17 @@ import { BasicDetailsStep } from './steps/BasicDetailsStep';
 import { UnitTypesStep } from './steps/UnitTypesStep';
 import { HighlightsStep } from './steps/HighlightsStep';
 import { MediaUploadStep } from './steps/MediaUploadStep';
+import { UnitMediaStep } from './steps/UnitMediaStep';
 import { DeveloperInfoStep } from './steps/DeveloperInfoStep';
 import { PreviewStep } from './steps/PreviewStep';
 
 const stepTitles = [
   'Basic Details',
   'Unit Types',
-  'Highlights',
-  'Media',
-  'Developer',
+  'Features',
+  'Development Media',
+  'Unit Media',
+  'Contact Info',
   'Preview',
 ];
 
@@ -180,8 +182,10 @@ export function DevelopmentWizard() {
       case 3:
         return <MediaUploadStep />;
       case 4:
-        return <DeveloperInfoStep />;
+        return <UnitMediaStep />;
       case 5:
+        return <DeveloperInfoStep />;
+      case 6:
         return <PreviewStep />;
       default:
         return null;
