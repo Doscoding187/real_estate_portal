@@ -71,6 +71,13 @@
       "when": 1764646450591,
       "tag": "0009_curly_frog_thor",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "5",
+      "when": 1764751691661,
+      "tag": "0010_wide_thunderbolts",
+      "breakpoints": true
     }
   ]
 }

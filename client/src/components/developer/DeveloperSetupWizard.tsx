@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Loader2, CheckCircle2, Building2, Phone, Briefcase, FileText } from "lucide-react";
+import { Loader2, CheckCircle2, Building2, Phone, Briefcase, FileText, Plus, X, Trophy, Award } from "lucide-react";
 import { useLocation } from "wouter";
 
 type FormValues = {
@@ -23,6 +23,9 @@ type FormValues = {
   address?: string;
   city: string;
   province: string;
+  // Profile-level information
+  trackRecord?: string; // Company achievements and track record
+  pastProjects?: Array<{ name: string; year: string; location: string }>; // Past projects
   totalProjects?: number;
   completedProjects?: number;
   currentProjects?: number;
@@ -41,10 +44,12 @@ const STEPS = [
 export default function DeveloperSetupWizard() {
   const [step, setStep] = useState(1);
   const [location, setLocation] = useLocation();
+  const [newProject, setNewProject] = useState({ name: '', year: '', location: '' });
   const { register, handleSubmit, reset, watch, setValue, formState: { errors, isValid } } = useForm<FormValues>({
     mode: "onChange",
     defaultValues: {
       specializations: [],
+      pastProjects: [],
       totalProjects: 0,
       completedProjects: 0,
       currentProjects: 0,
@@ -78,6 +83,8 @@ export default function DeveloperSetupWizard() {
         address: data.address || "",
         city: data.city || "",
         province: data.province || "",
+        trackRecord: data.trackRecord || "",
+        pastProjects: data.pastProjects || [],
         totalProjects: data.totalProjects || 0,
         completedProjects: data.completedProjects || 0,
         currentProjects: data.currentProjects || 0,
@@ -124,6 +131,8 @@ export default function DeveloperSetupWizard() {
         address: data.address || null,
         city: data.city,
         province: data.province,
+        trackRecord: data.trackRecord || null,
+        pastProjects: data.pastProjects || [],
         totalProjects: data.totalProjects ? Number(data.totalProjects) : 0,
         completedProjects: data.completedProjects ? Number(data.completedProjects) : 0,
         currentProjects: data.currentProjects ? Number(data.currentProjects) : 0,
@@ -140,6 +149,21 @@ export default function DeveloperSetupWizard() {
   };
 
   const formValues = watch();
+  
+  // Handle adding past project
+  const addPastProject = () => {
+    if (newProject.name && newProject.year && newProject.location) {
+      const currentProjects = formValues.pastProjects || [];
+      setValue('pastProjects', [...currentProjects, newProject]);
+      setNewProject({ name: '', year: '', location: '' });
+    }
+  };
+  
+  // Handle removing past project
+  const removePastProject = (index: number) => {
+    const currentProjects = formValues.pastProjects || [];
+    setValue('pastProjects', currentProjects.filter((_, i) => i !== index));
+  };
 
   if (getProfile.isLoading) {
     return (
@@ -395,8 +419,105 @@ export default function DeveloperSetupWizard() {
                       />
                     </div>
                   </div>
+                  
+                  {/* Track Record Section */}
+                  <div className="grid gap-2 mt-6 pt-6 border-t border-slate-200">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Trophy className="w-5 h-5 text-amber-600" />
+                      <Label htmlFor="trackRecord" className="text-base font-semibold">
+                        Track Record & Achievements
+                      </Label>
+                    </div>
+                    <p className="text-sm text-slate-500 mb-2">
+                      Highlight your company's experience and achievements (e.g., years in business, awards, certifications)
+                    </p>
+                    <Textarea 
+                      id="trackRecord" 
+                      {...register("trackRecord")} 
+                      placeholder="e.g., 20+ years in property development, 50+ successful projects completed, Award-winning developer..."
+                      className="min-h-[100px]"
+                    />
+                    <p className="text-xs text-slate-500">
+                      {formValues.trackRecord?.length || 0}/500 characters
+                    </p>
+                  </div>
+                  
+                  {/* Past Projects Section */}
+                  <div className="grid gap-2 mt-6 pt-6 border-t border-slate-200">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Award className="w-5 h-5 text-emerald-600" />
+                      <Label className="text-base font-semibold">
+                        Past Projects
+                      </Label>
+                    </div>
+                    <p className="text-sm text-slate-500 mb-3">
+                      Showcase previous successful developments to build credibility
+                    </p>
+                    
+                    {/* Existing Past Projects */}
+                    {formValues.pastProjects && formValues.pastProjects.length > 0 && (
+                      <div className="space-y-2 mb-4">
+                        {formValues.pastProjects.map((project, index) => (
+                          <div
+                            key={index}
+                            className="flex items-center justify-between p-3 bg-gradient-to-r from-emerald-50 to-teal-50 rounded-lg border border-emerald-200"
+                          >
+                            <div className="flex-1">
+                              <p className="font-semibold text-slate-900 text-sm">{project.name}</p>
+                              <p className="text-xs text-slate-600">
+                                {project.location} • {project.year}
+                              </p>
+                            </div>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => removePastProject(index)}
+                              className="text-red-600 hover:text-red-700 hover:bg-red-100"
+                            >
+                              <X className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    
+                    {/* Add New Project Form */}
+                    <div className="space-y-3 p-4 border-2 border-dashed border-slate-300 rounded-lg bg-slate-50/50">
+                      <Label className="text-sm font-medium text-slate-700">
+                        Add Past Project (Optional)
+                      </Label>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        <Input
+                          placeholder="Project name"
+                          value={newProject.name}
+                          onChange={(e) => setNewProject({ ...newProject, name: e.target.value })}
+                        />
+                        <Input
+                          placeholder="Year (e.g., 2022)"
+                          value={newProject.year}
+                          onChange={(e) => setNewProject({ ...newProject, year: e.target.value })}
+                        />
+                        <Input
+                          placeholder="Location"
+                          value={newProject.location}
+                          onChange={(e) => setNewProject({ ...newProject, location: e.target.value })}
+                        />
+                      </div>
+                      <Button
+                        type="button"
+                        onClick={addPastProject}
+                        disabled={!newProject.name || !newProject.year || !newProject.location}
+                        className="w-full bg-emerald-600 hover:bg-emerald-700"
+                        size="sm"
+                      >
+                        <Plus className="w-4 h-4 mr-2" />
+                        Add Project
+                      </Button>
+                    </div>
+                  </div>
 
-                  <div className="grid gap-2">
+                  <div className="grid gap-2 mt-6 pt-6 border-t border-slate-200">
                     <Label>Company Logo</Label>
                     <div className="border-2 border-dashed border-slate-200 rounded-lg p-8 text-center hover:bg-slate-50 transition-colors cursor-pointer">
                       <div className="flex flex-col items-center justify-center">
@@ -499,9 +620,9 @@ export default function DeveloperSetupWizard() {
             ) : (
               <Button 
                 onClick={handleSubmit(onSubmit)} 
-                disabled={createProfile.isLoading || !formValues.acceptTerms}
+                disabled={createProfile.isPending || !formValues.acceptTerms}
               >
-                {createProfile.isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {createProfile.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Submit Application
               </Button>
             )}

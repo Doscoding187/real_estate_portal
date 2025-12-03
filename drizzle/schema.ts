@@ -558,6 +558,9 @@ export const developers = mysqlTable("developers", {
 	category: mysqlEnum(['residential','commercial','mixed_use','industrial']).default('residential').notNull(),
 	specializations: text(), // JSON array of specializations
 	establishedYear: int(),
+	// Profile-level information
+	trackRecord: text(), // Company achievements and track record
+	pastProjects: json(), // Array of past projects: [{ name, year, location }]
 	totalProjects: int(),
 	completedProjects: int().default(0),
 	currentProjects: int().default(0),
