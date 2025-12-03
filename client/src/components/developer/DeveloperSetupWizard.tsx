@@ -32,6 +32,10 @@ type FormValues = {
   upcomingProjects?: number;
   logo?: string;
   acceptTerms: boolean;
+  // Backend required fields
+  category?: 'residential' | 'commercial' | 'mixed_use' | 'industrial';
+  isVerified?: number;
+  status?: 'pending' | 'approved' | 'rejected';
 };
 
 const STEPS = [
@@ -138,6 +142,9 @@ export default function DeveloperSetupWizard() {
         currentProjects: data.currentProjects ? Number(data.currentProjects) : 0,
         upcomingProjects: data.upcomingProjects ? Number(data.upcomingProjects) : 0,
         logo: data.logo || null,
+        category: data.specializations?.[0] || 'residential', // Backend required field
+        isVerified: 0, // Backend required field
+        status: 'pending', // Backend required field
       });
       
       toast.success("Profile submitted for review successfully!");
@@ -350,6 +357,8 @@ export default function DeveloperSetupWizard() {
                     <div className="grid gap-2">
                       <Label htmlFor="province">Province *</Label>
                       <Select 
+                        id="province"
+                        name="province"
                         onValueChange={(val) => setValue("province", val)} 
                         defaultValue={formValues.province}
                       >
