@@ -33,15 +33,15 @@ export interface ContactInfoStepProps {
 }
 
 const provinceOptions = [
-  { value: 'western-cape', label: 'Western Cape' },
-  { value: 'gauteng', label: 'Gauteng' },
-  { value: 'kwazulu-natal', label: 'KwaZulu-Natal' },
-  { value: 'eastern-cape', label: 'Eastern Cape' },
-  { value: 'free-state', label: 'Free State' },
-  { value: 'limpopo', label: 'Limpopo' },
-  { value: 'mpumalanga', label: 'Mpumalanga' },
-  { value: 'north-west', label: 'North West' },
-  { value: 'northern-cape', label: 'Northern Cape' },
+  { value: 'Western Cape', label: 'Western Cape' },
+  { value: 'Gauteng', label: 'Gauteng' },
+  { value: 'KwaZulu-Natal', label: 'KwaZulu-Natal' },
+  { value: 'Eastern Cape', label: 'Eastern Cape' },
+  { value: 'Free State', label: 'Free State' },
+  { value: 'Limpopo', label: 'Limpopo' },
+  { value: 'Mpumalanga', label: 'Mpumalanga' },
+  { value: 'North West', label: 'North West' },
+  { value: 'Northern Cape', label: 'Northern Cape' },
 ];
 
 export const ContactInfoStep = React.forwardRef<HTMLDivElement, ContactInfoStepProps>(
