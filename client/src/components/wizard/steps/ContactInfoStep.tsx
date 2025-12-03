@@ -9,7 +9,7 @@
 import * as React from 'react';
 import { Mail, Phone, MapPin } from 'lucide-react';
 import { GradientInput } from '../../ui/GradientInput';
-import { GradientSelect } from '../../ui/GradientSelect';
+import { GradientSelect, GradientSelectItem } from '../../ui/GradientSelect';
 import { LogoUploadZone } from '../LogoUploadZone';
 import { cn } from '@/lib/utils';
 
@@ -149,9 +149,9 @@ export const ContactInfoStep = React.forwardRef<HTMLDivElement, ContactInfoStepP
                 error={errors?.province}
               >
                 {provinceOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
+                  <GradientSelectItem key={option.value} value={option.value}>
                     {option.label}
-                  </option>
+                  </GradientSelectItem>
                 ))}
               </GradientSelect>
               {errors?.province && (
