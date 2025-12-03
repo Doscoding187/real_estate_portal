@@ -1379,11 +1379,9 @@ export const developerRouter = router({
     .query(async ({ input, ctx }) => {
       const developer = await db.getDeveloperByUserId(ctx.user.id);
       
+      // If no developer profile exists yet, return empty array
       if (!developer) {
-        throw new TRPCError({
-          code: 'NOT_FOUND',
-          message: 'Developer profile not found',
-        });
+        return [];
       }
 
       const { getNotifications } = await import('./services/notificationService');
@@ -1405,11 +1403,9 @@ export const developerRouter = router({
   getUnreadNotificationsCount: protectedProcedure.query(async ({ ctx }) => {
     const developer = await db.getDeveloperByUserId(ctx.user.id);
     
+    // If no developer profile exists yet, return 0 count
     if (!developer) {
-      throw new TRPCError({
-        code: 'NOT_FOUND',
-        message: 'Developer profile not found',
-      });
+      return { count: 0 };
     }
 
     const { getUnreadCount } = await import('./services/notificationService');
