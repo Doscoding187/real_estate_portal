@@ -6,6 +6,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Building2, MapPin, Info, Star, AlertTriangle, TrendingUp, Sparkles, X, CheckCircle2 } from 'lucide-react';
 import { useFieldValidation } from '@/hooks/useFieldValidation';
 import { InlineError } from '@/components/ui/InlineError';
@@ -29,6 +30,7 @@ export function BasicDetailsStep() {
     totalUnits,
     projectSize,
     projectHighlights,
+    description,
     setDevelopmentName,
     setAddress,
     setCity,
@@ -44,11 +46,13 @@ export function BasicDetailsStep() {
     setProjectSize,
     addProjectHighlight,
     removeProjectHighlight,
+    setDescription,
   } = useDevelopmentWizard();
 
   const [manualOverride, setManualOverride] = useState(false);
   const [geocodingError, setGeocodingError] = useState<string | null>(null);
   const [newHighlight, setNewHighlight] = useState('');
+  const [noOfficialStreet, setNoOfficialStreet] = useState(false);
 
   // Validation context
   const validationContext = {
@@ -249,12 +253,38 @@ export function BasicDetailsStep() {
               onBlur={addressValidation.onBlur}
               className="mt-1"
               aria-invalid={!!addressValidation.error}
+              disabled={noOfficialStreet}
             />
             <InlineError
               error={addressValidation.error}
-              show={!!addressValidation.error}
+              show={!!addressValidation.error && !noOfficialStreet}
               size="sm"
             />
+          </div>
+
+          {/* No Official Street Toggle */}
+          <div className="flex items-start space-x-3 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+            <Checkbox
+              id="no-official-street"
+              checked={noOfficialStreet}
+              onCheckedChange={(checked) => {
+                setNoOfficialStreet(checked as boolean);
+                if (checked) {
+                  setAddress('');
+                  addressValidation.clearError();
+                  toast.info('Street address validation disabled for new developments');
+                }
+              }}
+              className="mt-0.5"
+            />
+            <div className="flex-1">
+              <Label htmlFor="no-official-street" className="text-sm font-medium text-slate-700 cursor-pointer">
+                No official street address yet
+              </Label>
+              <p className="text-xs text-slate-600 mt-1">
+                Enable this for new developments that don't have an assigned street address. GPS coordinates will be used for location.
+              </p>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -458,6 +488,24 @@ export function BasicDetailsStep() {
             
             <p className="text-xs text-slate-500 mt-2">
               Top 5 selling points that differentiate your development (e.g., "24/7 Power Backup", "Fibre-Ready", "Pet Friendly")
+            </p>
+          </div>
+
+          {/* Project Description */}
+          <div>
+            <Label htmlFor="description" className="text-slate-700">
+              Project Description
+            </Label>
+            <Textarea
+              id="description"
+              placeholder="Describe your development project, its unique features, target market, and what makes it special..."
+              value={description || ''}
+              onChange={(e) => setDescription(e.target.value)}
+              rows={5}
+              className="mt-1 resize-none"
+            />
+            <p className="text-xs text-slate-500 mt-1">
+              Provide a detailed description that will help potential buyers understand your development
             </p>
           </div>
         </div>

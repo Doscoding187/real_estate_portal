@@ -25,7 +25,9 @@ import React from 'react';
 import { trpc } from '@/lib/trpc';
 
 // Import steps
+import { DevelopmentTypeSelector } from './DevelopmentTypeSelector';
 import { BasicDetailsStep } from './steps/BasicDetailsStep';
+import { PhaseDetailsStep } from './steps/PhaseDetailsStep';
 import { UnitTypesStep } from './steps/UnitTypesStep';
 import { HighlightsStep } from './steps/HighlightsStep';
 import { MediaUploadStep } from './steps/MediaUploadStep';
@@ -33,8 +35,22 @@ import { UnitMediaStep } from './steps/UnitMediaStep';
 import { DeveloperInfoStep } from './steps/DeveloperInfoStep';
 import { PreviewStep } from './steps/PreviewStep';
 
-const stepTitles = [
+// Step titles for master development
+const masterStepTitles = [
+  'Choose Type',
   'Basic Details',
+  'Unit Types',
+  'Features',
+  'Development Media',
+  'Unit Media',
+  'Contact Info',
+  'Preview',
+];
+
+// Step titles for phase
+const phaseStepTitles = [
+  'Choose Type',
+  'Phase Details',
   'Unit Types',
   'Features',
   'Development Media',
@@ -95,16 +111,19 @@ export function DevelopmentWizard() {
       if (data.latitude !== undefined) store.setLatitude(data.latitude);
       if (data.longitude !== undefined) store.setLongitude(data.longitude);
       if (data.status) store.setStatus(data.status);
-      if (data.unitTypes) store.setUnitTypes(data.unitTypes);
+      // TODO: Implement proper unit types loading
+      // if (data.unitTypes) store.setUnitTypes(data.unitTypes);
       if (data.description) store.setDescription(data.description);
       if (data.amenities) store.setAmenities(data.amenities);
       if (data.highlights) store.setHighlights(data.highlights);
       if (data.completionDate) store.setCompletionDate(data.completionDate);
       if (data.totalUnits !== undefined) store.setTotalUnits(data.totalUnits);
-      if (data.media) store.setMedia(data.media);
+      // TODO: Implement proper media loading
+      // if (data.media) store.setMedia(data.media);
       if (data.developerName) store.setDeveloperName(data.developerName);
       if (data.contactDetails) store.setContactDetails(data.contactDetails);
-      if (loadedDraft.currentStep !== undefined) store.setCurrentStep(loadedDraft.currentStep);
+      // TODO: Implement proper step navigation
+      // if (loadedDraft.currentStep !== undefined) store.setCurrentStep(loadedDraft.currentStep);
 
       toast.success('Draft loaded successfully', {
         description: 'Continue from where you left off',
@@ -284,27 +303,48 @@ export function DevelopmentWizard() {
   };
 
   // Generate steps for progress indicator (convert 0-indexed to 1-indexed)
+  // Use appropriate step titles based on development type
+  const stepTitles = store.developmentType === 'master' ? masterStepTitles : phaseStepTitles;
   const progressSteps = generateSteps(
     stepTitles,
     currentStep + 1, // Convert to 1-indexed
     [] // Development wizard doesn't track completed steps separately
   );
 
+  const handleTypeSelection = (type: 'master' | 'phase') => {
+    store.setDevelopmentType(type);
+    nextStep(); // Move to next step after selection
+  };
+
   const renderStep = () => {
+    // Step 0 is always the type selector
+    if (currentStep === 0) {
+      return (
+        <DevelopmentTypeSelector
+          onSelect={handleTypeSelection}
+          initialSelection={store.developmentType}
+        />
+      );
+    }
+
+    // Conditional rendering based on development type
+    const isMaster = store.developmentType === 'master';
+    
     switch (currentStep) {
-      case 0:
-        return <BasicDetailsStep />;
       case 1:
-        return <UnitTypesStep />;
+        // Show BasicDetailsStep for master, PhaseDetailsStep for phase
+        return isMaster ? <BasicDetailsStep /> : <PhaseDetailsStep />;
       case 2:
-        return <HighlightsStep />;
+        return <UnitTypesStep />;
       case 3:
-        return <MediaUploadStep />;
+        return <HighlightsStep />;
       case 4:
-        return <UnitMediaStep />;
+        return <MediaUploadStep />;
       case 5:
-        return <DeveloperInfoStep />;
+        return <UnitMediaStep />;
       case 6:
+        return <DeveloperInfoStep />;
+      case 7:
         return <PreviewStep />;
       default:
         return null;
@@ -353,9 +393,9 @@ export function DevelopmentWizard() {
           {currentStep > 0 && (
             <div className="absolute top-0 left-0">
               <SaveStatusIndicator
-                lastSaved={loadedDraft?.lastModified ? new Date(loadedDraft.lastModified) : undefined}
+                lastSaved={loadedDraft?.lastModified ? new Date(loadedDraft.lastModified) : null}
                 isSaving={saveDraftMutation.isPending}
-                error={saveDraftMutation.error}
+                error={saveDraftMutation.error ? new Error(saveDraftMutation.error.message) : null}
                 variant="compact"
               />
             </div>
@@ -382,37 +422,33 @@ export function DevelopmentWizard() {
           {renderStep()}
         </div>
 
-        {/* Navigation Buttons */}
-        <div className="flex justify-between items-center">
-          <Button
-            variant="outline"
-            onClick={previousStep}
-            disabled={currentStep === 0}
-            className="gap-2"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Previous
-          </Button>
-
-          {currentStep < stepTitles.length - 1 ? (
-            <Button 
-              onClick={nextStep} 
-              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 shadow-lg gap-2"
+        {/* Navigation Buttons - Hidden on step 0 (type selection) */}
+        {currentStep > 0 && (
+          <div className="flex justify-between items-center">
+            <Button
+              variant="outline"
+              onClick={previousStep}
+              disabled={currentStep === 0}
+              className="gap-2"
             >
-              Next Step
-              <ArrowRight className="h-4 w-4" />
+              <ArrowLeft className="h-4 w-4" />
+              Previous
             </Button>
-          ) : (
-             // Submit button logic is inside PreviewStep, but we can have a placeholder or handle it here if needed.
-             // For now, PreviewStep handles the submission, so we might hide the "Next" button or change it to "Submit" if we lift state up.
-             // However, the original wizard had the submit button in the PreviewStep or as the final action.
-             // In ListingWizard, the submit button is in the main component.
-             // Let's keep it consistent with the previous DevelopmentWizard logic for now, 
-             // but styled. The PreviewStep in DevelopmentWizard has its own submit button.
-             // We can hide the main "Next" button on the last step.
-             null
-          )}
-        </div>
+
+            {currentStep < stepTitles.length - 1 ? (
+              <Button 
+                onClick={nextStep} 
+                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 shadow-lg gap-2"
+              >
+                Next Step
+                <ArrowRight className="h-4 w-4" />
+              </Button>
+            ) : (
+               // Submit button is inside PreviewStep
+               null
+            )}
+          </div>
+        )}
 
         {/* Error Alert with Recovery */}
         {apiError && (

@@ -404,12 +404,20 @@ export const developmentPhases = mysqlTable("development_phases", {
 	priceTo: int("price_to"),
 	launchDate: timestamp("launch_date", { mode: 'string' }),
 	completionDate: timestamp("completion_date", { mode: 'string' }),
+	// Phase optimization fields
+	specType: mysqlEnum("spec_type", ['affordable','gap','luxury','custom']).default('affordable'),
+	customSpecType: varchar("custom_spec_type", { length: 100 }),
+	finishingDifferences: json("finishing_differences"),
+	phaseHighlights: json("phase_highlights"),
+	latitude: varchar({ length: 50 }),
+	longitude: varchar({ length: 50 }),
 	createdAt: timestamp("created_at", { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
 	updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
 },
 (table) => [
 	index("idx_development_phases_development_id").on(table.developmentId),
 	index("idx_development_phases_status").on(table.status),
+	index("idx_development_phases_spec_type").on(table.specType),
 ]);
 
 export const developmentUnits = mysqlTable("development_units", {

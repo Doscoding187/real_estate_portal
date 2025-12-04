@@ -65,6 +65,9 @@ export interface ContactDetails {
 }
 
 export interface DevelopmentWizardState {
+  // Wizard Flow Control
+  developmentType: 'master' | 'phase' | null; // NEW: Determines which flow to show
+  
   // Basic Details - Step 1
   developmentName: string;
   address: string;
@@ -84,6 +87,24 @@ export interface DevelopmentWizardState {
   totalUnits: number; // Total units in development
   projectSize?: number; // in acres
   projectHighlights: string[]; // Up to 5 key selling points
+  
+  // Phase-Specific Fields (NEW)
+  parentDevelopmentId?: number; // Link to master development
+  phaseName?: string; // e.g., "Phase 2", "Extension 57"
+  phaseNumber?: number;
+  specType?: 'affordable' | 'gap' | 'luxury' | 'custom';
+  customSpecType?: string; // When specType is 'custom'
+  phaseStatus?: string; // Same options as master status
+  unitsInPhase?: number;
+  finishingDifferences?: {
+    kitchen?: string[];
+    bathrooms?: string[];
+    flooring?: string[];
+    electrical?: string[];
+  };
+  phaseHighlights?: string[]; // Phase-specific highlights
+  phaseCompletionDate?: string;
+  phaseDescription?: string;
   
   // Unit Configurations - Step 2
   unitTypes: UnitType[];
@@ -123,6 +144,10 @@ export interface DevelopmentWizardState {
   draftId?: number;
   
   // Actions
+  // Wizard Flow Actions (NEW)
+  setDevelopmentType: (type: 'master' | 'phase' | null) => void;
+  
+  // Basic Details Actions
   setDevelopmentName: (name: string) => void;
   setAddress: (address: string) => void;
   setCity: (city: string) => void;
@@ -137,10 +162,25 @@ export interface DevelopmentWizardState {
   setStatus: (status: DevelopmentWizardState['status']) => void;
   setRating: (rating: number) => void;
   setTotalUnits: (total: number) => void;
-  setProjectSize: (size: number) => void;
+  setProjectSize: (size: number | undefined) => void;
   setProjectHighlights: (highlights: string[]) => void;
   addProjectHighlight: (highlight: string) => void;
   removeProjectHighlight: (index: number) => void;
+  
+  // Phase-Specific Actions (NEW)
+  setParentDevelopmentId: (id: number) => void;
+  setPhaseName: (name: string) => void;
+  setPhaseNumber: (number: number) => void;
+  setSpecType: (type: 'affordable' | 'gap' | 'luxury' | 'custom') => void;
+  setCustomSpecType: (type: string) => void;
+  setPhaseStatus: (status: string) => void;
+  setUnitsInPhase: (units: number) => void;
+  setFinishingDifferences: (differences: DevelopmentWizardState['finishingDifferences']) => void;
+  setPhaseHighlights: (highlights: string[]) => void;
+  addPhaseHighlight: (highlight: string) => void;
+  removePhaseHighlight: (index: number) => void;
+  setPhaseCompletionDate: (date: string) => void;
+  setPhaseDescription: (description: string) => void;
   
   // Unit Types Actions
   addUnitType: (unitType: Omit<UnitType, 'id'>) => void;
@@ -186,6 +226,10 @@ export interface DevelopmentWizardState {
 }
 
 const initialState = {
+  // Wizard Flow
+  developmentType: null as 'master' | 'phase' | null,
+  
+  // Basic Details
   developmentName: '',
   address: '',
   city: '',
@@ -201,6 +245,24 @@ const initialState = {
   totalUnits: 0,
   projectSize: undefined,
   projectHighlights: [],
+  
+  // Phase-Specific Fields
+  parentDevelopmentId: undefined as number | undefined,
+  phaseName: undefined as string | undefined,
+  phaseNumber: undefined as number | undefined,
+  specType: undefined as 'affordable' | 'gap' | 'luxury' | 'custom' | undefined,
+  customSpecType: undefined as string | undefined,
+  phaseStatus: undefined as string | undefined,
+  unitsInPhase: undefined as number | undefined,
+  finishingDifferences: undefined as {
+    kitchen?: string[];
+    bathrooms?: string[];
+    flooring?: string[];
+    electrical?: string[];
+  } | undefined,
+  phaseHighlights: undefined as string[] | undefined,
+  phaseCompletionDate: undefined as string | undefined,
+  phaseDescription: undefined as string | undefined,
   
   unitTypes: [],
   
@@ -243,6 +305,9 @@ export const useDevelopmentWizard = create<DevelopmentWizardState>()(
     (set, get) => ({
       ...initialState,
       
+      // Wizard Flow Actions
+      setDevelopmentType: (type) => set({ developmentType: type }),
+      
       // Basic Details Actions
       setDevelopmentName: (name) => set({ developmentName: name }),
       setAddress: (address) => set({ address }),
@@ -266,6 +331,25 @@ export const useDevelopmentWizard = create<DevelopmentWizardState>()(
       removeProjectHighlight: (index) => set((state) => ({
         projectHighlights: state.projectHighlights.filter((_, i) => i !== index)
       })),
+      
+      // Phase-Specific Actions
+      setParentDevelopmentId: (id) => set({ parentDevelopmentId: id }),
+      setPhaseName: (name) => set({ phaseName: name }),
+      setPhaseNumber: (number) => set({ phaseNumber: number }),
+      setSpecType: (type) => set({ specType: type }),
+      setCustomSpecType: (type) => set({ customSpecType: type }),
+      setPhaseStatus: (status) => set({ phaseStatus: status }),
+      setUnitsInPhase: (units) => set({ unitsInPhase: units }),
+      setFinishingDifferences: (differences) => set({ finishingDifferences: differences }),
+      setPhaseHighlights: (highlights) => set({ phaseHighlights: highlights }),
+      addPhaseHighlight: (highlight) => set((state) => ({
+        phaseHighlights: [...(state.phaseHighlights || []), highlight]
+      })),
+      removePhaseHighlight: (index) => set((state) => ({
+        phaseHighlights: (state.phaseHighlights || []).filter((_, i) => i !== index)
+      })),
+      setPhaseCompletionDate: (date) => set({ phaseCompletionDate: date }),
+      setPhaseDescription: (description) => set({ phaseDescription: description }),
       
       // Unit Types Actions
       addUnitType: (unitType) => {
