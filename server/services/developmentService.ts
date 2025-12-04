@@ -1,4 +1,4 @@
-import { db } from '../db';
+import { getDb } from '../db';
 import { developments, developmentPhases } from '../../drizzle/schema';
 import { eq, and, desc, ne } from 'drizzle-orm';
 import { 
@@ -26,6 +26,9 @@ export class DevelopmentService {
    * Ensure slug is unique by appending number if needed
    */
   private async ensureUniqueSlug(baseSlug: string, developmentId?: number): Promise<string> {
+    const db = await getDb();
+    if (!db) throw new Error('Database not available');
+    
     let slug = baseSlug;
     let counter = 1;
 
@@ -53,6 +56,9 @@ export class DevelopmentService {
     developerId: number,
     input: CreateDevelopmentInput
   ): Promise<Development> {
+    const db = await getDb();
+    if (!db) throw new Error('Database not available');
+    
     // Check tier limits before creating
     const limitCheck = await developerSubscriptionService.checkLimit(developerId, 'developments');
     if (!limitCheck.allowed) {
@@ -98,6 +104,9 @@ export class DevelopmentService {
    * Get development by ID
    */
   async getDevelopment(developmentId: number): Promise<Development | null> {
+    const db = await getDb();
+    if (!db) return null;
+    
     const development = await db.query.developments.findFirst({
       where: eq(developments.id, developmentId),
     });
@@ -109,6 +118,9 @@ export class DevelopmentService {
    * Get development with phases
    */
   async getDevelopmentWithPhases(developmentId: number): Promise<DevelopmentWithPhases | null> {
+    const db = await getDb();
+    if (!db) return null;
+    
     const development = await this.getDevelopment(developmentId);
     if (!development) {
       return null;
@@ -129,6 +141,9 @@ export class DevelopmentService {
    * Get all developments for a developer
    */
   async getDeveloperDevelopments(developerId: number): Promise<Development[]> {
+    const db = await getDb();
+    if (!db) return [];
+    
     const devs = await db.query.developments.findMany({
       where: eq(developments.developerId, developerId),
       orderBy: [desc(developments.createdAt)],
@@ -191,6 +206,9 @@ export class DevelopmentService {
     }
 
     // Update development
+    const db = await getDb();
+    if (!db) throw new Error('Database not available');
+    
     const [updated] = await db.update(developments)
       .set(updateData)
       .where(eq(developments.id, developmentId))
@@ -213,6 +231,9 @@ export class DevelopmentService {
     }
 
     // Delete development (phases will cascade delete)
+    const db = await getDb();
+    if (!db) throw new Error('Database not available');
+    
     await db.delete(developments).where(eq(developments.id, developmentId));
 
     // Decrement usage counter
@@ -272,6 +293,9 @@ export class DevelopmentService {
     }
 
     // Create phase
+    const db = await getDb();
+    if (!db) throw new Error('Database not available');
+    
     const [phase] = await db.insert(developmentPhases).values({
       developmentId,
       name: phaseData.name,
