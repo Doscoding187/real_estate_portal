@@ -1661,9 +1661,9 @@ export const developerRouter = router({
       if (!dbConn) throw new Error('Database not available');
 
       const draft = await dbConn.query.developmentDrafts.findFirst({
-        where: db.and(
-          db.eq(db.developmentDrafts.id, input.id),
-          db.eq(db.developmentDrafts.developerId, developer.id)
+        where: and(
+          eq(developmentDrafts.id, input.id),
+          eq(developmentDrafts.developerId, developer.id)
         ),
       });
 
