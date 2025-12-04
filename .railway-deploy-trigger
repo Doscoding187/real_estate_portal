@@ -1,0 +1,10 @@
+# Railway Deployment Trigger
+# This file forces Railway to redeploy when changed
+# Last deployment trigger: 2025-12-04 18:37:00
+
+## Recent Critical Fixes:
+- Fixed database initialization error in developmentService (getDb() pattern)
+- Added development drafts feature (backend schema + tRPC endpoints)
+- Fixed draft detection in wizard
+
+Deploy hash: 46e715c
