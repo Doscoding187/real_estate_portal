@@ -322,6 +322,9 @@ export class DevelopmentService {
     developerId: number,
     phaseData: Partial<DevelopmentPhase>
   ): Promise<DevelopmentPhase> {
+    const db = await getDb();
+    if (!db) throw new Error('Database not available');
+    
     // Get phase and verify ownership
     const phase = await db.query.developmentPhases.findFirst({
       where: eq(developmentPhases.id, phaseId),
@@ -352,6 +355,9 @@ export class DevelopmentService {
    * Delete phase
    */
   async deletePhase(phaseId: number, developerId: number): Promise<void> {
+    const db = await getDb();
+    if (!db) throw new Error('Database not available');
+    
     // Get phase and verify ownership
     const phase = await db.query.developmentPhases.findFirst({
       where: eq(developmentPhases.id, phaseId),
@@ -374,6 +380,9 @@ export class DevelopmentService {
    * Get phases for a development
    */
   async getDevelopmentPhases(developmentId: number): Promise<DevelopmentPhase[]> {
+    const db = await getDb();
+    if (!db) return [];
+    
     const phases = await db.query.developmentPhases.findMany({
       where: eq(developmentPhases.developmentId, developmentId),
       orderBy: [developmentPhases.phaseNumber],
