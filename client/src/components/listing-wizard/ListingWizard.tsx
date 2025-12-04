@@ -62,7 +62,12 @@ const ListingWizard: React.FC = () => {
       mainMediaId: store.mainMediaId,
     },
     {
-      storageKey: 'listing-wizard-storage',
+      // storageKey: 'listing-wizard-storage', // Don't use this, it conflicts with Zustand persist
+      onSave: async () => {
+        // Zustand persist middleware handles the actual saving to localStorage
+        // This is just to simulate the delay for the UI
+        await new Promise(resolve => setTimeout(resolve, 500));
+      },
       debounceMs: 2000,
       enabled: !isSubmitting && store.currentStep > 1, // Only auto-save after first step
       onError: (error) => {

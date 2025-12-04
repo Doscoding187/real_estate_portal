@@ -8,7 +8,7 @@ import { ErrorAlert } from '@/components/ui/ErrorAlert';
 import { parseError, type AppError } from '@/lib/errors/ErrorRecoveryStrategy';
 import { handleSessionExpiry, wasSessionExpired, clearSessionExpiryFlags } from '@/lib/auth/SessionExpiryHandler';
 import { Button } from '@/components/ui/button';
-import { useLocation } from 'wouter';
+import { useLocation, useRoute } from 'wouter';
 import { 
   AlertDialog, 
   AlertDialogAction, 
@@ -45,12 +45,32 @@ const stepTitles = [
 
 export function DevelopmentWizard() {
   const [, setLocation] = useLocation();
+  const [, params] = useRoute('/developer/create-development');
+  const urlParams = new URLSearchParams(window.location.search);
+  const draftIdFromUrl = urlParams.get('draftId');
+  const [currentDraftId, setCurrentDraftId] = useState<number | undefined>(draftIdFromUrl ? parseInt(draftIdFromUrl) : undefined);
   const [showExitDialog, setShowExitDialog] = useState(false);
   const [showResumeDraftDialog, setShowResumeDraftDialog] = useState(false);
   const [wizardKey, setWizardKey] = useState(0); // Force re-render on reset
   const [apiError, setApiError] = useState<AppError | null>(null);
   const store = useDevelopmentWizard();
   const { currentStep, goToStep, nextStep, previousStep, reset } = store;
+
+  // tRPC hooks for draft operations
+  const { data: loadedDraft, isLoading: isDraftLoading } = trpc.developer.getDraft.useQuery(
+    { id: currentDraftId! },
+    { enabled: !!currentDraftId, retry: false }
+  );
+  const saveDraftMutation = trpc.developer.saveDraft.useMutation({
+    onSuccess: (data) => {
+      if (!currentDraftId) {
+        setCurrentDraftId(data.id);
+      }
+    },
+    onError: (error) => {
+      console.error('Failed to save draft to database:', error);
+    },
+  });
 
   // Fetch developer profile to auto-populate developer info
   const { data: developerProfile } = trpc.developer.getProfile.useQuery(undefined, {
@@ -59,10 +79,43 @@ export function DevelopmentWizard() {
   });
   const { data: user } = trpc.auth.me.useQuery();
 
+  // Load draft from database if draftId is provided
+  useEffect(() => {
+    if (loadedDraft && loadedDraft.draftData) {
+      const data = loadedDraft.draftData as any;
+      console.log('[DevelopmentWizard] Loading draft from database:', data);
+      
+      // Populate store from loaded draft
+      if (data.developmentName) store.setDevelopmentName(data.developmentName);
+      if (data.address) store.setAddress(data.address);
+      if (data.city) store.setCity(data.city);
+      if (data.province) store.setProvince(data.province);
+      if (data.suburb) store.setSuburb(data.suburb);
+      if (data.postalCode) store.setPostalCode(data.postalCode);
+      if (data.latitude !== undefined) store.setLatitude(data.latitude);
+      if (data.longitude !== undefined) store.setLongitude(data.longitude);
+      if (data.status) store.setStatus(data.status);
+      if (data.unitTypes) store.setUnitTypes(data.unitTypes);
+      if (data.description) store.setDescription(data.description);
+      if (data.amenities) store.setAmenities(data.amenities);
+      if (data.highlights) store.setHighlights(data.highlights);
+      if (data.completionDate) store.setCompletionDate(data.completionDate);
+      if (data.totalUnits !== undefined) store.setTotalUnits(data.totalUnits);
+      if (data.media) store.setMedia(data.media);
+      if (data.developerName) store.setDeveloperName(data.developerName);
+      if (data.contactDetails) store.setContactDetails(data.contactDetails);
+      if (loadedDraft.currentStep !== undefined) store.setCurrentStep(loadedDraft.currentStep);
+
+      toast.success('Draft loaded successfully', {
+        description: 'Continue from where you left off',
+      });
+    }
+  }, [loadedDraft]);
+
   // Auto-populate developer info from profile when component loads
   useEffect(() => {
     // Only populate if fields are empty (don't override existing draft data)
-    if (developerProfile && !store.developerName && !store.contactDetails.email) {
+    if (developerProfile && !store.developerName && !store.contactDetails.email && !loadedDraft) {
       store.setDeveloperName(developerProfile.name || '');
       store.setContactDetails({
         name: store.contactDetails.name || '',
@@ -75,46 +128,54 @@ export function DevelopmentWizard() {
         store.setCompanyLogo(developerProfile.logo);
       }
     }
-  }, [developerProfile, user]);
+  }, [developerProfile, user, loadedDraft]);
 
-  // Auto-save hook - saves draft to localStorage automatically
-  const { lastSaved, isSaving: isAutoSaving, error: autoSaveError } = useAutoSave(
-    {
-      developmentName: store.developmentName,
-      address: store.address,
-      city: store.city,
-      province: store.province,
-      suburb: store.suburb,
-      postalCode: store.postalCode,
-      latitude: store.latitude,
-      longitude: store.longitude,
-      status: store.status,
-      unitTypes: store.unitTypes,
-      description: store.description,
-      amenities: store.amenities,
-      highlights: store.highlights,
-      completionDate: store.completionDate,
-      totalUnits: store.totalUnits,
-      media: store.media,
-      developerName: store.developerName,
-      contactDetails: store.contactDetails,
-      currentStep: store.currentStep,
-    },
-    {
-      // storageKey: 'development-wizard-storage', // Don't use this, it conflicts with Zustand persist
-      onSave: async () => {
-        // Zustand persist middleware handles the actual saving to localStorage
-        // This is just to simulate the delay for the UI
-        await new Promise(resolve => setTimeout(resolve, 500));
-      },
-      debounceMs: 2000,
-      enabled: currentStep > 0, // Only auto-save after first step
-      onError: (error) => {
-        console.error('Auto-save error:', error);
-        toast.error('Failed to auto-save draft');
-      },
-    }
-  );
+  // Auto-save to database (in addition to localStorage via Zustand persist)
+  useEffect(() => {
+    const saveToDatabaseTimer = setTimeout(() => {
+      if (currentStep > 0 && !isDraftLoading) {
+        const draftData = {
+          developmentName: store.developmentName,
+          address: store.address,
+          city: store.city,
+          province: store.province,
+          suburb: store.suburb,
+          postalCode: store.postalCode,
+          latitude: store.latitude,
+          longitude: store.longitude,
+          status: store.status,
+          unitTypes: store.unitTypes,
+          description: store.description,
+          amenities: store.amenities,
+          highlights: store.highlights,
+          completionDate: store.completionDate,
+          totalUnits: store.totalUnits,
+          media: store.media,
+          developerName: store.developerName,
+          contactDetails: store.contactDetails,
+        };
+
+        const progress = Math.round((currentStep / 6) * 100);
+
+        saveDraftMutation.mutate({
+          id: currentDraftId,
+          draftData,
+          progress,
+          currentStep,
+        });
+      }
+    }, 3000); // Auto-save every 3 seconds after changes
+
+    return () => clearTimeout(saveToDatabaseTimer);
+  }, [
+    currentStep,
+    store.developmentName,
+    store.address,
+    store.city,
+    store.unitTypes,
+    store.description,
+    store.media,
+  ]);
 
   // Check for session restoration after login
   useEffect(() => {
@@ -131,8 +192,14 @@ export function DevelopmentWizard() {
 
   const [isInitialized, setIsInitialized] = useState(false);
 
-  // Check for draft on mount and show resume dialog
+  // Check for draft on mount and show resume dialog (only if not loading from URL)
   useEffect(() => {
+    // Don't show resume dialog if we're loading a draft from URL
+    if (draftIdFromUrl) {
+      setIsInitialized(true);
+      return;
+    }
+
     // Check if there's a draft with meaningful progress
     const hasDraft = 
       currentStep > 0 || 
@@ -257,7 +324,7 @@ export function DevelopmentWizard() {
           totalSteps: 6,
           developmentName: store.developmentName,
           address: store.address,
-          lastModified: lastSaved || undefined,
+          lastModified: loadedDraft?.lastModified || undefined,
         }}
       />
 
@@ -285,9 +352,9 @@ export function DevelopmentWizard() {
           {currentStep > 0 && (
             <div className="absolute top-0 left-0">
               <SaveStatusIndicator
-                lastSaved={lastSaved}
-                isSaving={isAutoSaving}
-                error={autoSaveError}
+                lastSaved={loadedDraft?.lastModified ? new Date(loadedDraft.lastModified) : undefined}
+                isSaving={saveDraftMutation.isPending}
+                error={saveDraftMutation.error}
                 variant="compact"
               />
             </div>

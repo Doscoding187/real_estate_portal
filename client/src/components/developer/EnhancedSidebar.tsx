@@ -22,6 +22,7 @@ import {
   BarChart3,
   FileText,
   UserPlus,
+  FileEdit,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { trpc } from '@/lib/trpc';
@@ -58,6 +59,12 @@ const MENU_SECTIONS: MenuSection[] = [
         label: 'Developments',
         icon: Building2,
         path: '/developer/developments',
+      },
+      {
+        id: 'drafts',
+        label: 'My Drafts',
+        icon: FileEdit,
+        path: '/developer/drafts',
       },
       {
         id: 'leads',

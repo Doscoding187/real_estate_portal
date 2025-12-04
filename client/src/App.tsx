@@ -101,6 +101,7 @@ import DeveloperPerformancePage from './pages/DeveloperPerformancePage';
 import DeveloperSettingsPage from './pages/DeveloperSettingsPage';
 import DeveloperTeamPage from './pages/DeveloperTeamPage';
 import DeveloperSubscriptionPage from './pages/DeveloperSubscriptionPage';
+import MyDrafts from './pages/developer/MyDrafts';
 
 // Import Comparison Page
 import CompareProperties from './pages/CompareProperties';
@@ -317,6 +318,8 @@ function Router() {
       <Route path="/developer/dashboard" component={PropertyDeveloperDashboard} />
       <Route path="/developer/developments" component={DeveloperDevelopmentsPage} />
       <Route path="/developer/developments/new" component={CreateDevelopment} />
+      <Route path="/developer/create-development" component={CreateDevelopment} />
+      <Route path="/developer/drafts" component={MyDrafts} />
       <Route path="/developer/leads" component={DeveloperLeadsPage} />
       <Route path="/developer/messages" component={DeveloperMessagesPage} />
       <Route path="/developer/tasks" component={DeveloperTasksPage} />
