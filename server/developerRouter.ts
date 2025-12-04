@@ -7,6 +7,8 @@ import { developerSubscriptionService } from './services/developerSubscriptionSe
 import { developmentService } from './services/developmentService';
 import { unitService } from './services/unitService';
 import { calculateAffordabilityCompanion, matchUnitsToAffordability } from './services/affordabilityCompanion';
+import { developmentDrafts } from '../drizzle/schema';
+import { eq, desc, and } from 'drizzle-orm';
 
 export const developerRouter = router({
   /**
@@ -1542,4 +1544,176 @@ export const developerRouter = router({
 
     return summaries;
   }),
+
+  /**
+   * Save development draft
+   * Auth: Protected, must be developer
+   */
+  saveDraft: protectedProcedure
+    .input(
+      z.object({
+        id: z.number().int().optional(), // For updating existing draft
+        draftData: z.object({
+          developmentName: z.string().optional(),
+          address: z.string().optional(),
+          city: z.string().optional(),
+          province: z.string().optional(),
+          suburb: z.string().optional(),
+          postalCode: z.string().optional(),
+          latitude: z.string().optional(),
+          longitude: z.string().optional(),
+          status: z.string().optional(),
+          unitTypes: z.array(z.any()).optional(),
+          description: z.string().optional(),
+          amenities: z.array(z.string()).optional(),
+          highlights: z.array(z.string()).optional(),
+          completionDate: z.string().optional(),
+          totalUnits: z.number().optional(),
+          developerName: z.string().optional(),
+          contactDetails: z.any().optional(),
+          currentStep: z.number().optional(),
+        }),
+        progress: z.number().int().min(0).max(100).optional(),
+        currentStep: z.number().int().min(0).max(6).optional(),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      const developer = await db.getDeveloperByUserId(ctx.user.id);
+      
+      if (!developer) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Developer profile not found',
+        });
+      }
+
+      const dbConn = await db.getDb();
+      if (!dbConn) throw new Error('Database not available');
+
+      const draftName = input.draftData.developmentName || `Draft ${new Date().toLocaleDateString()}`;
+      const progress = input.progress || Math.round((input.currentStep || 0) / 6 * 100);
+
+      if (input.id) {
+        // Update existing draft
+        await dbConn.update(developmentDrafts)
+          .set({
+            draftName,
+            draftData: input.draftData,
+            progress,
+            currentStep: input.currentStep || 0,
+          })
+          .where(eq(developmentDrafts.id, input.id));
+
+        return { id: input.id, message: 'Draft updated successfully' };
+      } else {
+        // Create new draft
+        const [result] = await dbConn.insert(developmentDrafts).values({
+          developerId: developer.id,
+          draftName,
+          draftData: input.draftData,
+          progress,
+          currentStep: input.currentStep || 0,
+        }).returning();
+
+        return { id: result.id, message: 'Draft saved successfully' };
+      }
+    }),
+
+  /**
+   * Get all drafts for logged-in developer
+   * Auth: Protected
+   */
+  getDrafts: protectedProcedure.query(async ({ ctx }) => {
+    const developer = await db.getDeveloperByUserId(ctx.user.id);
+    
+    if (!developer) {
+      return [];
+    }
+
+    const dbConn = await db.getDb();
+    if (!dbConn) return [];
+
+    const drafts = await dbConn.query.developmentDrafts.findMany({
+      where: eq(developmentDrafts.developerId, developer.id),
+      orderBy: [desc(developmentDrafts.lastModified)],
+    });
+
+    return drafts;
+  }),
+
+  /**
+   * Get single draft by ID
+   * Auth: Protected, must own draft
+   */
+  getDraft: protectedProcedure
+    .input(z.object({ id: z.number().int() }))
+    .query(async ({ input, ctx }) => {
+      const developer = await db.getDeveloperByUserId(ctx.user.id);
+      
+      if (!developer) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Developer profile not found',
+        });
+      }
+
+      const dbConn = await db.getDb();
+      if (!dbConn) throw new Error('Database not available');
+
+      const draft = await dbConn.query.developmentDrafts.findFirst({
+        where: db.and(
+          db.eq(db.developmentDrafts.id, input.id),
+          db.eq(db.developmentDrafts.developerId, developer.id)
+        ),
+      });
+
+      if (!draft) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Draft not found',
+        });
+      }
+
+      return draft;
+    }),
+
+  /**
+   * Delete draft
+   * Auth: Protected, must own draft
+   */
+  deleteDraft: protectedProcedure
+    .input(z.object({ id: z.number().int() }))
+    .mutation(async ({ input, ctx }) => {
+      const developer = await db.getDeveloperByUserId(ctx.user.id);
+      
+      if (!developer) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Developer profile not found',
+        });
+      }
+
+      const dbConn = await db.getDb();
+      if (!dbConn) throw new Error('Database not available');
+
+      // Verify ownership
+      const draft = await dbConn.query.developmentDrafts.findFirst({
+        where: and(
+          eq(developmentDrafts.id, input.id),
+          eq(developmentDrafts.developerId, developer.id)
+        ),
+      });
+
+      if (!draft) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Draft not found',
+        });
+      }
+
+      await dbConn.delete(developmentDrafts)
+        .where(eq(developmentDrafts.id, input.id));
+
+      return { message: 'Draft deleted successfully' };
+    }),
 });
