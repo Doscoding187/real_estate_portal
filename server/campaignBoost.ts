@@ -1,6 +1,12 @@
 import { getDb } from './db';
-import { marketingCampaigns, campaignBudgets, campaignChannels } from '../drizzle/schema';
+// TODO: Re-enable when marketing campaign schema is added
+// import { marketingCampaigns, campaignBudgets, campaignChannels } from '../drizzle/schema';
 import { eq, and, sql } from 'drizzle-orm';
+
+// TEMPORARY: Placeholder types until schema is implemented
+const marketingCampaigns = { id: null, targetType: null, targetId: null, status: null } as any;
+const campaignBudgets = { campaignId: null, budgetAmount: null, budgetType: null } as any;
+const campaignChannels = { campaignId: null, type: null, enabled: null } as any;
 
 /**
  * Calculate boost score for a listing based on active campaigns

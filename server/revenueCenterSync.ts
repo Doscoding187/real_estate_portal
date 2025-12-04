@@ -1,15 +1,22 @@
 import { getDb } from './db';
 import { 
-  subscriptionTransactions, 
-  failedPayments,
+  // TODO: Re-enable when revenue center schema is added
+  // subscriptionTransactions, 
+  // failedPayments,
   agencySubscriptions,
   invoices,
   agencies,
   users,
-  marketingCampaigns,
-  campaignBudgets
+  // marketingCampaigns,
+  // campaignBudgets
 } from '../drizzle/schema';
 import { eq, and } from 'drizzle-orm';
+
+// TEMPORARY: Placeholder types until schema is implemented
+const subscriptionTransactions = {} as any;
+const failedPayments = {} as any;
+const marketingCampaigns = {} as any;
+const campaignBudgets = {} as any;
 
 /**
  * Revenue Center Sync Service

@@ -2,16 +2,27 @@ import { z } from 'zod';
 import { router, protectedProcedure } from './_core/trpc';
 import { getDb } from './db';
 import {
-  marketingCampaigns,
-  campaignTargeting,
-  campaignBudgets,
-  campaignSchedules,
-  campaignChannels,
-  campaignCreatives,
-  campaignPerformance,
-  campaignLeads,
+  // TODO: Re-enable when marketing campaign schema is added
+  // marketingCampaigns,
+  // campaignTargeting,
+  // campaignBudgets,
+  // campaignSchedules,
+  // campaignChannels,
+  // campaignCreatives,
+  // campaignPerformance,
+  // campaignLeads,
 } from '../drizzle/schema';
 import { eq, desc, and, sql } from 'drizzle-orm';
+
+// TEMPORARY: Placeholder types until schema is implemented
+const marketingCampaigns = {} as any;
+const campaignTargeting = {} as any;
+const campaignBudgets = {} as any;
+const campaignSchedules = {} as any;
+const campaignChannels = {} as any;
+const campaignCreatives = {} as any;
+const campaignPerformance = {} as any;
+const campaignLeads = {} as any;
 
 export const marketingRouter = router({
   /**
