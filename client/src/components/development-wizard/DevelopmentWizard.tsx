@@ -101,7 +101,12 @@ export function DevelopmentWizard() {
       currentStep: store.currentStep,
     },
     {
-      storageKey: 'development-wizard-storage',
+      // storageKey: 'development-wizard-storage', // Don't use this, it conflicts with Zustand persist
+      onSave: async () => {
+        // Zustand persist middleware handles the actual saving to localStorage
+        // This is just to simulate the delay for the UI
+        await new Promise(resolve => setTimeout(resolve, 500));
+      },
       debounceMs: 2000,
       enabled: currentStep > 0, // Only auto-save after first step
       onError: (error) => {
@@ -128,8 +133,24 @@ export function DevelopmentWizard() {
 
   // Check for draft on mount and show resume dialog
   useEffect(() => {
-    // Check if there's a draft (currentStep > 0 or has developmentName)
-    const hasDraft = currentStep > 0 || store.developmentName;
+    // Check if there's a draft with meaningful progress
+    const hasDraft = 
+      currentStep > 0 || 
+      store.developmentName || 
+      store.address ||
+      store.unitTypes.length > 0 ||
+      store.description ||
+      store.media.length > 0;
+
+    console.log('[DevelopmentWizard] Draft check:', {
+      currentStep,
+      developmentName: store.developmentName,
+      address: store.address,
+      unitTypes: store.unitTypes.length,
+      description: store.description,
+      media: store.media.length,
+      hasDraft
+    });
 
     if (hasDraft) {
       setShowResumeDraftDialog(true);
