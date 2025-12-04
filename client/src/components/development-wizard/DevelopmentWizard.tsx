@@ -131,51 +131,52 @@ export function DevelopmentWizard() {
   }, [developerProfile, user, loadedDraft]);
 
   // Auto-save to database (in addition to localStorage via Zustand persist)
-  useEffect(() => {
-    const saveToDatabaseTimer = setTimeout(() => {
-      if (currentStep > 0 && !isDraftLoading) {
-        const draftData = {
-          developmentName: store.developmentName,
-          address: store.address,
-          city: store.city,
-          province: store.province,
-          suburb: store.suburb,
-          postalCode: store.postalCode,
-          latitude: store.latitude,
-          longitude: store.longitude,
-          status: store.status,
-          unitTypes: store.unitTypes,
-          description: store.description,
-          amenities: store.amenities,
-          highlights: store.highlights,
-          completionDate: store.completionDate,
-          totalUnits: store.totalUnits,
-          media: store.media,
-          developerName: store.developerName,
-          contactDetails: store.contactDetails,
-        };
+  // TEMPORARILY DISABLED - waiting for backend deployment
+  // useEffect(() => {
+  //   const saveToDatabaseTimer = setTimeout(() => {
+  //     if (currentStep > 0 && !isDraftLoading) {
+  //       const draftData = {
+  //         developmentName: store.developmentName,
+  //         address: store.address,
+  //         city: store.city,
+  //         province: store.province,
+  //         suburb: store.suburb,
+  //         postalCode: store.postalCode,
+  //         latitude: store.latitude,
+  //         longitude: store.longitude,
+  //         status: store.status,
+  //         unitTypes: store.unitTypes,
+  //         description: store.description,
+  //         amenities: store.amenities,
+  //         highlights: store.highlights,
+  //         completionDate: store.completionDate,
+  //         totalUnits: store.totalUnits,
+  //         media: store.media,
+  //         developerName: store.developerName,
+  //         contactDetails: store.contactDetails,
+  //       };
 
-        const progress = Math.round((currentStep / 6) * 100);
+  //       const progress = Math.round((currentStep / 6) * 100);
 
-        saveDraftMutation.mutate({
-          id: currentDraftId,
-          draftData,
-          progress,
-          currentStep,
-        });
-      }
-    }, 3000); // Auto-save every 3 seconds after changes
+  //       saveDraftMutation.mutate({
+  //         id: currentDraftId,
+  //         draftData,
+  //         progress,
+  //         currentStep,
+  //       });
+  //     }
+  //   }, 3000); // Auto-save every 3 seconds after changes
 
-    return () => clearTimeout(saveToDatabaseTimer);
-  }, [
-    currentStep,
-    store.developmentName,
-    store.address,
-    store.city,
-    store.unitTypes,
-    store.description,
-    store.media,
-  ]);
+  //   return () => clearTimeout(saveToDatabaseTimer);
+  // }, [
+  //   currentStep,
+  //   store.developmentName,
+  //   store.address,
+  //   store.city,
+  //   store.unitTypes,
+  //   store.description,
+  //   store.media,
+  // ]);
 
   // Check for session restoration after login
   useEffect(() => {
