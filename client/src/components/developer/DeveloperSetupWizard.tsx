@@ -136,7 +136,7 @@ export default function DeveloperSetupWizard() {
         city: data.city,
         province: data.province,
         trackRecord: data.trackRecord || null,
-        pastProjects: data.pastProjects || [],
+        pastProjects: data.pastProjects && data.pastProjects.length > 0 ? data.pastProjects : null, // Send null instead of empty array
         totalProjects: data.totalProjects ? Number(data.totalProjects) : 0,
         completedProjects: data.completedProjects ? Number(data.completedProjects) : 0,
         currentProjects: data.currentProjects ? Number(data.currentProjects) : 0,
