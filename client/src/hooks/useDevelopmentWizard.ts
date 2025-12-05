@@ -21,8 +21,14 @@ export interface UnitType {
   unitSize?: number; // in sqm
   yardSize?: number; // in sqm (for freestanding properties)
   
+  // Parking
+  parking?: 'none' | '1' | '2' | 'carport' | 'garage';
+  
   // Availability
   availableUnits: number;
+  completionDate?: string;
+  depositRequired?: number;
+  internalNotes?: string;
   
   // Media & Description
   floorPlanImages?: string[]; // URLs to floor plan images
@@ -30,22 +36,40 @@ export interface UnitType {
   virtualTourLink?: string; // Matterport, YouTube, etc.
   galleryImages?: string[]; // Unit-specific images
   
-  // Unit-Specific Media (NEW - for Step 5)
-  unitMedia?: {
-    floorPlans: UnitMediaItem[];    // Floor plan PDFs and images
-    interior: UnitMediaItem[];      // Interior photos
-    exterior: UnitMediaItem[];      // Exterior photos
-  };
+  // Unit-Specific Media (NEW - Enhanced)
+  unitMedia?: Array<{
+    id: string;
+    url: string;
+    type: 'image' | 'pdf';
+    category: 'floorplan' | 'interior' | 'exterior' | 'rendering';
+    isPrimary: boolean;
+  }>;
+  
+  // Specification Overrides (NEW)
+  specOverrides?: Record<string, boolean>;
+  kitchenFinish?: string;
+  countertopMaterial?: string;
+  flooringType?: string;
+  bathroomFixtures?: string;
+  wallFinish?: string;
+  energyEfficiency?: string;
+  
+  // Custom Specifications (NEW)
+  customSpecs?: Array<{
+    name: string;
+    value: string;
+  }>;
+  
+  // Upgrade Packs (NEW)
+  upgradePacks?: Array<{
+    id: string;
+    name: string;
+    description: string;
+    price?: number;
+  }>;
 }
 
-export interface UnitMediaItem {
-  id: string;
-  file?: File;
-  url: string;
-  type: 'image' | 'pdf';
-  fileName?: string;
-  displayOrder: number;
-}
+// UnitMediaItem is now part of UnitType.unitMedia array
 
 export interface MediaItem {
   id: string;
@@ -187,11 +211,6 @@ export interface DevelopmentWizardState {
   updateUnitType: (id: string, updates: Partial<UnitType>) => void;
   removeUnitType: (id: string) => void;
   reorderUnitTypes: (unitTypes: UnitType[]) => void;
-  
-  // Unit Media Actions (NEW - for Step 5)
-  addUnitMedia: (unitId: string, category: 'floorPlans' | 'interior' | 'exterior', media: Omit<UnitMediaItem, 'id' | 'displayOrder'>) => void;
-  removeUnitMedia: (unitId: string, category: 'floorPlans' | 'interior' | 'exterior', mediaId: string) => void;
-  reorderUnitMedia: (unitId: string, category: 'floorPlans' | 'interior' | 'exterior', media: UnitMediaItem[]) => void;
   
   // Highlights Actions
   setDescription: (description: string) => void;
@@ -356,11 +375,6 @@ export const useDevelopmentWizard = create<DevelopmentWizardState>()(
         const newUnit: UnitType = {
           ...unitType,
           id: `unit-${Date.now()}-${Math.random()}`,
-          unitMedia: {
-            floorPlans: [],
-            interior: [],
-            exterior: [],
-          },
         };
         set((state) => ({
           unitTypes: [...state.unitTypes, newUnit],
@@ -382,70 +396,6 @@ export const useDevelopmentWizard = create<DevelopmentWizardState>()(
       },
       
       reorderUnitTypes: (unitTypes) => set({ unitTypes }),
-      
-      // Unit Media Actions (NEW)
-      addUnitMedia: (unitId, category, media) => {
-        set((state) => ({
-          unitTypes: state.unitTypes.map((unit) => {
-            if (unit.id !== unitId) return unit;
-            
-            const unitMedia = unit.unitMedia || {
-              floorPlans: [],
-              interior: [],
-              exterior: [],
-            };
-            
-            const categoryMedia = unitMedia[category];
-            const newMedia: UnitMediaItem = {
-              ...media,
-              id: `unit-media-${Date.now()}-${Math.random()}`,
-              displayOrder: categoryMedia.length,
-            };
-            
-            return {
-              ...unit,
-              unitMedia: {
-                ...unitMedia,
-                [category]: [...categoryMedia, newMedia],
-              },
-            };
-          }),
-        }));
-      },
-      
-      removeUnitMedia: (unitId, category, mediaId) => {
-        set((state) => ({
-          unitTypes: state.unitTypes.map((unit) => {
-            if (unit.id !== unitId || !unit.unitMedia) return unit;
-            
-            const filtered = unit.unitMedia[category].filter((m) => m.id !== mediaId);
-            
-            return {
-              ...unit,
-              unitMedia: {
-                ...unit.unitMedia,
-                [category]: filtered.map((m, i) => ({ ...m, displayOrder: i })),
-              },
-            };
-          }),
-        }));
-      },
-      
-      reorderUnitMedia: (unitId, category, media) => {
-        set((state) => ({
-          unitTypes: state.unitTypes.map((unit) => {
-            if (unit.id !== unitId || !unit.unitMedia) return unit;
-            
-            return {
-              ...unit,
-              unitMedia: {
-                ...unit.unitMedia,
-                [category]: media.map((m, i) => ({ ...m, displayOrder: i })),
-              },
-            };
-          }),
-        }));
-      },
       
       // Highlights Actions
       setDescription: (description) => set({ description }),

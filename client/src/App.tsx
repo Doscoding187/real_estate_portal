@@ -88,6 +88,7 @@ import DevelopmentDetail from './pages/DevelopmentDetail';
 import DeveloperSetupWizard from './components/developer/DeveloperSetupWizardEnhanced';
 import DevelopmentsList from './components/developer/DevelopmentsList';
 import AgencySetupWizard from './components/agency/AgencySetupWizard';
+import UnitTypesDemo from './pages/UnitTypesDemo';
 
 // Import Developer Dashboard Pages
 import DeveloperDevelopmentsPage from './pages/DeveloperDevelopmentsPage';
@@ -319,6 +320,7 @@ function Router() {
       <Route path="/developer/developments" component={DeveloperDevelopmentsPage} />
       <Route path="/developer/developments/new" component={CreateDevelopment} />
       <Route path="/developer/create-development" component={CreateDevelopment} />
+      <Route path="/developer/unit-types-demo" component={UnitTypesDemo} />
       <Route path="/developer/drafts" component={MyDrafts} />
       <Route path="/developer/leads" component={DeveloperLeadsPage} />
       <Route path="/developer/messages" component={DeveloperMessagesPage} />

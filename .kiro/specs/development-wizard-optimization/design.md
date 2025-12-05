@@ -21,7 +21,21 @@ DevelopmentWizard (Main Container)
 │   ├── ParentLinkSection
 │   ├── PhaseInformationSection
 │   └── OptionalPhaseDetailsSection (Collapsible)
-├── UnitTypesStep (Existing)
+├── UnitTypesStepEnhanced (NEW - Optimized)
+│   ├── UnitTypeCard (Display Component)
+│   └── UnitTypeModal (4-Tab Modal)
+│       ├── BasicInfoTab
+│       ├── SpecificationsTab
+│       │   ├── InheritedSpecsSection
+│       │   ├── OverridesSection
+│       │   └── CustomSpecsSection
+│       ├── MediaTab
+│       │   ├── FloorPlansUpload
+│       │   ├── InteriorImagesUpload
+│       │   ├── ExteriorImagesUpload
+│       │   ├── RenderingsUpload
+│       │   └── VirtualTourInput
+│       └── ExtrasTab
 ├── HighlightsStep (Existing)
 ├── MediaUploadStep (Existing)
 ├── UnitMediaStep (Existing)
@@ -99,6 +113,92 @@ interface DevelopmentTypeSelectorProps {
    - Phase Highlights
    - Expected Completion Date
    - Phase Description
+
+### UnitTypesStepEnhanced Component (NEW - Optimized)
+
+**Purpose:** Comprehensive unit type management with 4-tab modal interface
+
+**Main View:**
+- Card-based display of configured unit types
+- Quick actions: Add, Edit, Duplicate, Delete
+- Empty state with call-to-action
+- Summary statistics (total types, units, price range)
+
+**UnitTypeCard Component:**
+
+Displays unit type summary:
+- Unit type name
+- Bedrooms, bathrooms, floor size
+- Price range
+- Available units
+- Quick action buttons (Edit, Duplicate, Delete)
+
+**UnitTypeModal Component (4-Tab Interface):**
+
+**Tab 1: Basic Info**
+- Unit Type Name (required)
+- Bedrooms & Bathrooms (required)
+- Floor Size & Yard Size (optional)
+- Price Range (min required, max optional)
+- Parking Options (None/1/2/Carport/Garage)
+- Available Units (required)
+- Completion Date (optional)
+- Deposit Required (optional)
+- Internal Notes (optional, hidden from buyers)
+
+**Tab 2: Specifications**
+
+*Section A: Inherited Master Specifications (Read-only)*
+- Kitchen Type, Countertops, Flooring
+- Bathroom Finish, Geyser, Electricity, Security
+- Displayed with "Inherited from Development Settings" label
+
+*Section B: Unit-Specific Overrides (Toggle-based)*
+- Each spec has "Use Master Spec?" toggle
+- When OFF, field becomes editable
+- Override fields: Kitchen Finish, Countertop Material, Flooring Type, Bathroom Fixtures, Wall Finish, Energy Efficiency
+- Only overridden fields stored in database
+
+*Section C: Custom Specifications (Unlimited)*
+- Repeatable Field Name / Value pairs
+- Add/Remove functionality
+- Examples: "Smart Home Automation" → "Optional"
+
+**Tab 3: Media**
+
+Categories with separate upload zones:
+- Floor Plans (images & PDFs)
+- Interior Images
+- Exterior Images
+- 3D Renderings
+- Virtual Tour Link (URL input)
+
+Features:
+- Drag & drop upload
+- Set primary image per unit type
+- Remove media
+- Category-based organization
+
+**Tab 4: Optional Extras / Upgrade Packs**
+
+Repeatable upgrade list:
+- Upgrade Name (required)
+- Description
+- Price (optional)
+- Add/Remove functionality
+- Total value calculation
+- Example upgrades display
+
+**Inheritance Model:**
+
+```
+Final Unit Specs = Master Specs + Overrides + Custom Specs
+```
+
+This prevents duplication and makes updates efficient:
+- Master specs update → all units inherit automatically
+- Only store differences at unit level
+- Custom specs handle unique requirements
 
 ## Data Models
 
@@ -206,6 +306,137 @@ interface DevelopmentPhase {
 }
 ```
 
+### UnitType Model (NEW - Enhanced)
+
+```typescript
+interface UnitType {
+  id: string;
+  developmentId: number;
+  
+  // Basic Configuration
+  label: string; // e.g., "2 Bedroom Apartment", "60m² Simplex"
+  ownershipType: 'full-title' | 'sectional-title' | 'leasehold' | 'life-rights';
+  structuralType: 'apartment' | 'freestanding-house' | 'simplex' | 'duplex' | 'penthouse' | 'plot-and-plan' | 'townhouse' | 'studio';
+  bedrooms: number;
+  bathrooms: number;
+  floors?: 'single-storey' | 'double-storey' | 'triplex';
+  
+  // Sizes
+  unitSize?: number; // in m²
+  yardSize?: number; // in m² (for freestanding properties)
+  
+  // Pricing
+  priceFrom: number;
+  priceTo?: number;
+  
+  // Parking & Availability
+  parking?: 'none' | '1' | '2' | 'carport' | 'garage';
+  availableUnits: number;
+  completionDate?: string;
+  depositRequired?: number;
+  internalNotes?: string; // Hidden from buyers
+  
+  // Media & Description
+  configDescription?: string;
+  virtualTourLink?: string;
+  unitMedia?: Array<{
+    id: string;
+    url: string;
+    type: 'image' | 'pdf';
+    category: 'floorplan' | 'interior' | 'exterior' | 'rendering';
+    isPrimary: boolean;
+  }>;
+  
+  // Specification Overrides (Inheritance Model)
+  specOverrides?: Record<string, boolean>; // Which specs are overridden
+  kitchenFinish?: string;
+  countertopMaterial?: string;
+  flooringType?: string;
+  bathroomFixtures?: string;
+  wallFinish?: string;
+  energyEfficiency?: string;
+  
+  // Custom Specifications
+  customSpecs?: Array<{
+    name: string;
+    value: string;
+  }>;
+  
+  // Upgrade Packs
+  upgradePacks?: Array<{
+    id: string;
+    name: string;
+    description: string;
+    price?: number;
+  }>;
+  
+  // Metadata
+  displayOrder: number;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+```
+
+**Database Schema for UnitType:**
+
+```sql
+CREATE TABLE unit_types (
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  development_id INT NOT NULL,
+  label VARCHAR(255) NOT NULL,
+  
+  -- Basic Configuration
+  ownership_type ENUM('full-title', 'sectional-title', 'leasehold', 'life-rights'),
+  structural_type ENUM('apartment', 'freestanding-house', 'simplex', 'duplex', 'penthouse', 'plot-and-plan', 'townhouse', 'studio'),
+  bedrooms INT NOT NULL,
+  bathrooms DECIMAL(3,1) NOT NULL,
+  floors ENUM('single-storey', 'double-storey', 'triplex'),
+  
+  -- Sizes & Pricing
+  unit_size INT,
+  yard_size INT,
+  price_from DECIMAL(15,2) NOT NULL,
+  price_to DECIMAL(15,2),
+  
+  -- Parking & Availability
+  parking ENUM('none', '1', '2', 'carport', 'garage'),
+  available_units INT NOT NULL,
+  completion_date DATE,
+  deposit_required DECIMAL(15,2),
+  internal_notes TEXT,
+  
+  -- Media & Description
+  config_description TEXT,
+  virtual_tour_link VARCHAR(500),
+  
+  -- Specification Overrides (JSON)
+  spec_overrides JSON,
+  kitchen_finish VARCHAR(255),
+  countertop_material VARCHAR(255),
+  flooring_type VARCHAR(255),
+  bathroom_fixtures VARCHAR(255),
+  wall_finish VARCHAR(255),
+  energy_efficiency VARCHAR(255),
+  
+  -- Custom Specs & Upgrades (JSON)
+  custom_specs JSON,
+  upgrade_packs JSON,
+  unit_media JSON,
+  
+  -- Metadata
+  display_order INT DEFAULT 0,
+  is_active BOOLEAN DEFAULT TRUE,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  
+  FOREIGN KEY (development_id) REFERENCES developments(id) ON DELETE CASCADE,
+  INDEX idx_development_id (development_id),
+  INDEX idx_price_range (price_from, price_to),
+  INDEX idx_bedrooms_bathrooms (bedrooms, bathrooms)
+);
+```
+
 ### Wizard State Model
 
 ```typescript
@@ -305,6 +536,41 @@ interface DevelopmentWizardState {
 
 *For any* development name input, the system should reject names with fewer than 5 characters
 **Validates: Requirements 9.5**
+
+### Property 11: Unit type specification inheritance
+
+*For any* unit type without specification overrides, the final specifications should equal the master development specifications
+**Validates: Requirements 6C.5**
+
+### Property 12: Specification override storage
+
+*For any* unit type with specification overrides, only the overridden fields should be stored in the database, not the inherited values
+**Validates: Requirements 6C.4**
+
+### Property 13: Unit type required fields validation
+
+*For any* unit type, the system should require unit type name, bedrooms, bathrooms, minimum price, and available units before allowing save
+**Validates: Requirements 6B.1**
+
+### Property 14: Unit media category organization
+
+*For any* uploaded media item, it should be assigned to exactly one category (floorplan, interior, exterior, or rendering)
+**Validates: Requirements 6E.1**
+
+### Property 15: Primary image uniqueness per unit type
+
+*For any* unit type, at most one media item should be marked as primary
+**Validates: Requirements 6E.4**
+
+### Property 16: Upgrade pack total calculation
+
+*For any* unit type with upgrade packs, the total optional value should equal the sum of all upgrade pack prices
+**Validates: Requirements 6F.4**
+
+### Property 17: Unit type duplication creates independent copy
+
+*For any* unit type that is duplicated, the copy should have a unique ID and "(Copy)" appended to the name
+**Validates: Requirements 6A.5**
 
 ## Error Handling
 

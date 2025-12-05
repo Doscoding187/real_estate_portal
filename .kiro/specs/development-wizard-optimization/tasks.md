@@ -182,6 +182,116 @@
     - Add phase description textarea
     - _Requirements: 5.6, 5.7_
 
+- [x] 6A. Implement Unit Types & Configurations step
+  - [x] 6A.1 Create UnitTypeCard display component
+    - Build card layout with unit summary
+    - Add quick action buttons (Edit, Duplicate, Delete)
+    - Display bedrooms, bathrooms, size, price, availability
+    - Implement hover effects and responsive design
+    - _Requirements: 6A.1, 6A.4_
+
+  - [x] 6A.2 Create UnitTypeModal with 4-tab interface
+    - Build modal container with tab navigation
+    - Implement tab switching logic
+    - Add Previous/Next/Save buttons
+    - Handle form state management
+    - _Requirements: 6A.2_
+
+  - [x] 6A.3 Build BasicInfoTab component
+    - Add unit type name input (required)
+    - Add bedrooms & bathrooms inputs (required)
+    - Add floor size & yard size inputs (optional)
+    - Add price range inputs (min required, max optional)
+    - Add parking selector
+    - Add available units input (required)
+    - Add completion date, deposit, internal notes (optional)
+    - _Requirements: 6B.1, 6B.2, 6B.3, 6B.4, 6B.5, 6B.6_
+
+  - [x] 6A.4 Build SpecificationsTab component
+    - Create inherited specs display section (read-only)
+    - Implement toggle-based override system
+    - Add override fields for kitchen, countertops, flooring, bathroom, wall, energy
+    - Create custom specifications section with add/remove
+    - Implement inheritance logic
+    - _Requirements: 6C.1, 6C.2, 6C.3, 6C.4, 6C.5, 6D.1, 6D.2, 6D.3, 6D.4, 6D.5_
+
+  - [x] 6A.5 Build MediaTab component
+    - Create upload zones for floor plans, interior, exterior, renderings
+    - Implement drag & drop functionality
+    - Add primary image selection
+    - Add remove media functionality
+    - Add virtual tour link input
+    - Organize by category
+    - _Requirements: 6E.1, 6E.2, 6E.3, 6E.4, 6E.5, 6E.6, 6E.7_
+
+  - [x] 6A.6 Build ExtrasTab component
+    - Create repeatable upgrade pack list
+    - Add name, description, price fields
+    - Implement add/remove upgrade packs
+    - Calculate total optional value
+    - Display example upgrades
+    - _Requirements: 6F.1, 6F.2, 6F.3, 6F.4, 6F.5_
+
+  - [x] 6A.7 Build UnitTypesStepEnhanced main component
+    - Display unit type cards grid
+    - Implement add new unit type
+    - Implement edit unit type
+    - Implement duplicate unit type
+    - Implement delete unit type with confirmation
+    - Add empty state with call-to-action
+    - Add summary statistics display
+    - _Requirements: 6A.1, 6A.3, 6A.4, 6A.5_
+
+  - [x] 6A.8 Update UnitType interface in wizard state
+    - Add all basic configuration fields
+    - Add specification override fields
+    - Add custom specs array
+    - Add upgrade packs array
+    - Add unit media array
+    - _Requirements: 6B.1, 6C.4, 6D.1, 6E.1, 6F.1_
+
+  - [x] 6A.9 Create database migration for unit_types table
+    - Define table schema with all fields
+    - Add JSON columns for specs, media, upgrades
+    - Create foreign key to developments
+    - Add indexes for performance
+    - Create migration runner script
+    - _Requirements: 6A.1, 6B.1, 6C.4, 6D.5, 6E.1, 6F.1_
+
+  - [x] 6A.10 Integrate UnitTypesStepEnhanced into wizard
+    - Import component in DevelopmentWizard
+    - Replace old UnitTypesStep with enhanced version
+    - Test integration with wizard flow
+    - _Requirements: 6A.1_
+
+  - [ ]* 6A.11 Write property-based tests for unit types
+    - **Property 11: Unit type specification inheritance**
+    - **Validates: Requirements 6C.5**
+
+  - [ ]* 6A.12 Write property-based tests for specification overrides
+    - **Property 12: Specification override storage**
+    - **Validates: Requirements 6C.4**
+
+  - [ ]* 6A.13 Write property-based tests for required fields
+    - **Property 13: Unit type required fields validation**
+    - **Validates: Requirements 6B.1**
+
+  - [ ]* 6A.14 Write property-based tests for media organization
+    - **Property 14: Unit media category organization**
+    - **Validates: Requirements 6E.1**
+
+  - [ ]* 6A.15 Write property-based tests for primary image
+    - **Property 15: Primary image uniqueness per unit type**
+    - **Validates: Requirements 6E.4**
+
+  - [ ]* 6A.16 Write property-based tests for upgrade totals
+    - **Property 16: Upgrade pack total calculation**
+    - **Validates: Requirements 6F.4**
+
+  - [ ]* 6A.17 Write property-based tests for duplication
+    - **Property 17: Unit type duplication creates independent copy**
+    - **Validates: Requirements 6A.5**
+
 - [ ] 7. Update wizard state management
   - [ ] 7.1 Add development type to Zustand store
     - Add `developmentType` field

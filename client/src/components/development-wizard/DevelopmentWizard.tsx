@@ -28,7 +28,7 @@ import { trpc } from '@/lib/trpc';
 import { DevelopmentTypeSelector } from './DevelopmentTypeSelector';
 import { BasicDetailsStep } from './steps/BasicDetailsStep';
 import { PhaseDetailsStep } from './steps/PhaseDetailsStep';
-import { UnitTypesStep } from './steps/UnitTypesStep';
+import { UnitTypesStepEnhanced } from './steps/UnitTypesStepEnhanced';
 import { HighlightsStep } from './steps/HighlightsStep';
 import { MediaUploadStep } from './steps/MediaUploadStep';
 import { UnitMediaStep } from './steps/UnitMediaStep';
@@ -335,7 +335,7 @@ export function DevelopmentWizard() {
         // Show BasicDetailsStep for master, PhaseDetailsStep for phase
         return isMaster ? <BasicDetailsStep /> : <PhaseDetailsStep />;
       case 2:
-        return <UnitTypesStep />;
+        return <UnitTypesStepEnhanced />;
       case 3:
         return <HighlightsStep />;
       case 4:

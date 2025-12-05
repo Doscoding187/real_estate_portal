@@ -93,6 +93,81 @@ This specification defines the optimization of the Developer Listing Wizard for 
 4. WHEN a phase does not override location THEN the system SHALL inherit master development location
 5. THE system SHALL maintain referential integrity between master developments and phases
 
+### Requirement 6A
+
+**User Story:** As a property developer, I want to define multiple unit types with detailed configurations, so that buyers can understand the different options available in my development.
+
+#### Acceptance Criteria
+
+1. WHEN viewing the unit types step THEN the system SHALL display a card-based list of configured unit types
+2. WHEN adding a new unit type THEN the system SHALL open a modal with four tabs: Basic Info, Specifications, Media, and Optional Extras
+3. WHEN no unit types exist THEN the system SHALL display an empty state with a clear call-to-action to add the first unit type
+4. THE system SHALL allow adding, editing, duplicating, and deleting unit types
+5. WHEN duplicating a unit type THEN the system SHALL create a copy with "(Copy)" appended to the name
+
+### Requirement 6B
+
+**User Story:** As a property developer, I want to specify basic unit information with minimal required fields, so that I can quickly configure unit types without unnecessary complexity.
+
+#### Acceptance Criteria
+
+1. WHEN entering basic unit info THEN the system SHALL require unit type name, bedrooms, bathrooms, minimum price, and available units
+2. WHEN entering unit type name THEN the system SHALL accept descriptive names like "2 Bedroom Apartment", "60m² Simplex", or "Bachelor Studio"
+3. WHEN entering floor size THEN the system SHALL accept values in square meters
+4. WHEN entering price range THEN the system SHALL require minimum price and optionally accept maximum price
+5. WHEN selecting parking THEN the system SHALL provide options: None, 1 Bay, 2 Bays, Carport, or Garage
+6. THE system SHALL allow optional fields for completion date, deposit required, and internal notes
+
+### Requirement 6C
+
+**User Story:** As a property developer, I want unit specifications to inherit from master development settings by default, so that I don't have to re-enter common specifications for each unit type.
+
+#### Acceptance Criteria
+
+1. WHEN viewing specifications tab THEN the system SHALL display inherited master specifications as read-only
+2. WHEN master specifications are displayed THEN the system SHALL show kitchen type, countertops, flooring, bathroom finish, geyser, electricity, and security
+3. WHEN a developer wants to override a specification THEN the system SHALL provide a toggle to enable editing for that specific field
+4. WHEN a specification is overridden THEN the system SHALL store only the overridden value in the database
+5. THE system SHALL compute final unit specifications as: Master Specs + Overrides + Custom Specs
+
+### Requirement 6D
+
+**User Story:** As a property developer, I want to add custom specifications for unique unit features, so that I can communicate special characteristics that don't fit standard categories.
+
+#### Acceptance Criteria
+
+1. WHEN adding custom specifications THEN the system SHALL provide repeatable field name/value pairs
+2. WHEN entering custom specs THEN the system SHALL allow unlimited entries
+3. THE system SHALL provide examples like "Smart Home Automation" → "Optional", "Geyser Size" → "200L Solar-Electric Hybrid"
+4. WHEN removing a custom spec THEN the system SHALL delete it without affecting other specifications
+5. THE system SHALL store custom specifications separately from standard specifications
+
+### Requirement 6E
+
+**User Story:** As a property developer, I want to upload unit-specific media organized by category, so that buyers can see floor plans, interior photos, and renderings for each unit type.
+
+#### Acceptance Criteria
+
+1. WHEN uploading media THEN the system SHALL organize files into categories: Floor Plans, Interior Images, Exterior Images, and 3D Renderings
+2. WHEN uploading floor plans THEN the system SHALL accept both images and PDF files
+3. WHEN uploading other media THEN the system SHALL accept image files only
+4. WHEN media is uploaded THEN the system SHALL allow setting one image as primary per unit type
+5. WHEN entering virtual tour THEN the system SHALL accept URLs for Matterport, YouTube, or Vimeo
+6. THE system SHALL support drag-and-drop file upload
+7. THE system SHALL allow reordering and removing media items
+
+### Requirement 6F
+
+**User Story:** As a property developer, I want to define optional upgrade packs for each unit type, so that buyers can see available add-ons and customization options.
+
+#### Acceptance Criteria
+
+1. WHEN adding upgrade packs THEN the system SHALL provide repeatable entries with name, description, and optional price
+2. WHEN entering upgrade name THEN the system SHALL require a descriptive name like "Solar Upgrade" or "Premium Kitchen Pack"
+3. WHEN entering price THEN the system SHALL allow optional pricing (for "Price on Request" scenarios)
+4. THE system SHALL display total optional value by summing all upgrade pack prices
+5. THE system SHALL provide examples like "Solar Upgrade + R18,000", "Premium Kitchen Pack + R12,000"
+
 ### Requirement 7
 
 **User Story:** As a property developer, I want a clean, uncluttered interface with progressive disclosure, so that I can focus on one task at a time without cognitive overload.
