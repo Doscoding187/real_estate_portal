@@ -456,18 +456,35 @@ export const developments = mysqlTable("developments", {
 	name: varchar({ length: 255 }).notNull(),
 	slug: varchar({ length: 255 }),
 	description: text(),
+	rating: decimal({ precision: 3, scale: 2 }), // Auto-calculated rating
 	developmentType: mysqlEnum(['residential','commercial','mixed_use','estate','complex']).notNull(),
-	status: mysqlEnum(['planning','under_construction','completed','coming_soon']).default('planning').notNull(),
+	status: mysqlEnum([
+		'now-selling',
+		'launching-soon',
+		'under-construction',
+		'ready-to-move',
+		'sold-out',
+		'phase-completed',
+		'new-phase-launching',
+		'planning',
+		'completed',
+		'coming_soon'
+	]).default('planning').notNull(),
 	address: text(),
 	city: varchar({ length: 100 }).notNull(),
 	province: varchar({ length: 100 }).notNull(),
+	suburb: varchar({ length: 100 }),
+	postalCode: varchar("postal_code", { length: 20 }),
 	latitude: varchar({ length: 50 }),
 	longitude: varchar({ length: 50 }),
+	gpsAccuracy: mysqlEnum("gps_accuracy", ['accurate', 'approximate']).default('approximate'),
 	totalUnits: int(),
 	availableUnits: int(),
 	priceFrom: int(),
 	priceTo: int(),
-	amenities: text(),
+	amenities: json().$type<string[]>(), // Development amenities (Swimming Pool, Clubhouse, etc.)
+	highlights: json().$type<string[]>(), // Up to 5 development highlights
+	features: json().$type<string[]>(), // Estate-level features (Perimeter Wall, Fibre Ready, etc.)
 	images: text(),
 	videos: text(),
 	floorPlans: text(),
@@ -480,7 +497,15 @@ export const developments = mysqlTable("developments", {
 	views: int().notNull(),
 	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
 	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
-});
+},
+(table) => [
+	index("idx_developments_developer_id").on(table.developerId),
+	index("idx_developments_status").on(table.status),
+	index("idx_developments_gps_accuracy").on(table.gpsAccuracy),
+	index("idx_developments_suburb").on(table.suburb),
+	index("idx_developments_rating").on(table.rating),
+	index("idx_developments_published").on(table.isPublished, table.publishedAt),
+]);
 
 export const developmentDrafts = mysqlTable("development_drafts", {
 	id: int().autoincrement().notNull(),
@@ -495,6 +520,123 @@ export const developmentDrafts = mysqlTable("development_drafts", {
 (table) => [
 	index("idx_dev_drafts_developer_id").on(table.developerId),
 	index("idx_dev_drafts_last_modified").on(table.lastModified),
+]);
+
+// Unit Types Table (Base Configuration)
+export const unitTypes = mysqlTable("unit_types", {
+	id: varchar({ length: 36 }).primaryKey(),
+	developmentId: int("development_id").notNull().references(() => developments.id, { onDelete: "cascade" }),
+	
+	// Basic Configuration
+	name: varchar({ length: 255 }).notNull(),
+	bedrooms: int().notNull(),
+	bathrooms: decimal({ precision: 3, scale: 1 }).notNull(),
+	parking: mysqlEnum(['none', '1', '2', 'carport', 'garage']).default('none'),
+	unitSize: int("unit_size"),
+	yardSize: int("yard_size"),
+	basePriceFrom: decimal("base_price_from", { precision: 15, scale: 2 }).notNull(),
+	basePriceTo: decimal("base_price_to", { precision: 15, scale: 2 }),
+	
+	// Base Features (Defaults for all specs)
+	baseFeatures: json("base_features").$type<{
+		builtInWardrobes: boolean;
+		tiledFlooring: boolean;
+		graniteCounters: boolean;
+		prepaidElectricity: boolean;
+		balcony: boolean;
+		petFriendly: boolean;
+	}>(),
+	
+	// Base Finishes
+	baseFinishes: json("base_finishes").$type<{
+		paintAndWalls?: string;
+		flooringTypes?: string;
+		kitchenFeatures?: string;
+		bathroomFeatures?: string;
+	}>(),
+	
+	// Base Media (Inherited by all specs)
+	baseMedia: json("base_media").$type<{
+		gallery: Array<{ id: string; url: string; isPrimary: boolean }>;
+		floorPlans: Array<{ id: string; url: string; type: 'image' | 'pdf' }>;
+		renders: Array<{ id: string; url: string; type: 'image' | 'video' }>;
+	}>(),
+	
+	// Metadata
+	displayOrder: int("display_order").default(0),
+	isActive: tinyint("is_active").default(1),
+	createdAt: timestamp("created_at", { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+},
+(table) => [
+	index("idx_unit_types_development_id").on(table.developmentId),
+	index("idx_unit_types_price_range").on(table.basePriceFrom, table.basePriceTo),
+	index("idx_unit_types_bedrooms_bathrooms").on(table.bedrooms, table.bathrooms),
+	index("idx_unit_types_display_order").on(table.displayOrder),
+]);
+
+// Spec Variations Table (Specs & Variations)
+export const specVariations = mysqlTable("spec_variations", {
+	id: varchar({ length: 36 }).primaryKey(),
+	unitTypeId: varchar("unit_type_id", { length: 36 }).notNull().references(() => unitTypes.id, { onDelete: "cascade" }),
+	
+	// Basic Info
+	name: varchar({ length: 255 }).notNull(),
+	price: decimal({ precision: 15, scale: 2 }).notNull(),
+	description: text(),
+	
+	// Overrides (optional - only store if different from base)
+	overrides: json().$type<{
+		bedroomsOverride?: number;
+		bathroomsOverride?: number;
+		sizeOverride?: number;
+	}>(),
+	
+	// Feature Overrides
+	featureOverrides: json("feature_overrides").$type<{
+		add?: string[];
+		remove?: string[];
+		replace?: Record<string, string>;
+	}>(),
+	
+	// Spec-Specific Media (overrides base media)
+	media: json().$type<{
+		photos: Array<{ id: string; url: string; isPrimary: boolean }>;
+		floorPlans: Array<{ id: string; url: string; type: 'image' | 'pdf' }>;
+		videos: Array<{ id: string; url: string }>;
+		pdfs: Array<{ id: string; url: string; name: string }>;
+	}>(),
+	
+	// Metadata
+	displayOrder: int("display_order").default(0),
+	isActive: tinyint("is_active").default(1),
+	createdAt: timestamp("created_at", { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+},
+(table) => [
+	index("idx_spec_variations_unit_type_id").on(table.unitTypeId),
+	index("idx_spec_variations_price").on(table.price),
+	index("idx_spec_variations_display_order").on(table.displayOrder),
+]);
+
+// Development Documents Table
+export const developmentDocuments = mysqlTable("development_documents", {
+	id: varchar({ length: 36 }).primaryKey(),
+	developmentId: int("development_id").notNull().references(() => developments.id, { onDelete: "cascade" }),
+	unitTypeId: varchar("unit_type_id", { length: 36 }).references(() => unitTypes.id, { onDelete: "cascade" }),
+	
+	name: varchar({ length: 255 }).notNull(),
+	type: mysqlEnum(['brochure', 'site-plan', 'pricing-sheet', 'estate-rules', 'engineering-pack', 'other']).notNull(),
+	url: varchar({ length: 500 }).notNull(),
+	fileSize: int("file_size"),
+	mimeType: varchar("mime_type", { length: 100 }),
+	
+	uploadedAt: timestamp("uploaded_at", { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+},
+(table) => [
+	index("idx_dev_docs_development_id").on(table.developmentId),
+	index("idx_dev_docs_unit_type_id").on(table.unitTypeId),
+	index("idx_dev_docs_type").on(table.type),
 ]);
 
 export const emailTemplates = mysqlTable("email_templates", {

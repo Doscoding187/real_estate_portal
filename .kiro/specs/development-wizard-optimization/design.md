@@ -2,217 +2,338 @@
 
 ## Overview
 
-This design optimizes the Developer Listing Wizard to provide a streamlined, intuitive experience for creating master developments and multi-phase developments. The optimization focuses on progressive disclosure, map-first location input, and clear separation between master and phase creation flows.
+This design implements a comprehensive 5-step Developer Listing Wizard that enables property developers to create detailed development listings with multiple unit types, spec variations, and complete project information. The system uses progressive disclosure, specification inheritance, and a clean tab-based interface to manage complexity while maintaining simplicity.
+
+The wizard follows industry-standard patterns used by major property platforms (Property24, Zillow New Homes, BuilderTrend) with clear separation between:
+- Development-level information (shared across all units)
+- Unit type defaults (templates for variations)
+- Spec variations (specific configurations with pricing)
 
 ## Architecture
+
+### 5-Step Wizard Flow
+
+```
+Step 1: Development Details
+├── Basic Information (name, status, completion date, description)
+├── Location (pin-drop map with reverse geocoding)
+├── Development Amenities (shared facilities)
+└── Development Highlights (up to 5 key selling points)
+
+Step 2: Unit Types & Configurations
+├── Unit Type Cards (display all configured types)
+└── Unit Type Modal (3-tab interface)
+    ├── Tab A: Base Configuration
+    │   ├── Unit Type Name, Bedrooms, Bathrooms
+    │   ├── Parking, Size, Price Range
+    │   ├── Base Features (defaults for all specs)
+    │   ├── Base Finishes
+    │   └── Base Media
+    ├── Tab B: Specs & Variations
+    │   ├── Spec List (Standard, GAP, Premium, etc.)
+    │   └── Spec Card (expandable)
+    │       ├── Spec Name, Price, Description
+    │       ├── Bedrooms/Bathrooms/Size overrides
+    │       ├── Feature Overrides (add/remove/replace)
+    │       ├── Spec-Specific Media
+    │       └── Spec-Specific Documents
+    └── Tab C: Media
+        ├── Photos
+        ├── Floor Plans
+        ├── Videos
+        └── PDFs
+
+Step 3: Development Features & Specifications
+└── Estate-Level Features (infrastructure, security, utilities)
+
+Step 4: Documents
+└── Document Uploads (brochures, plans, pricing sheets, rules)
+
+Step 5: Review & Publish
+├── Development Summary
+├── Unit Types Summary (with all specs)
+├── Features Summary
+├── Documents Summary
+└── Actions (Save as Draft / Publish)
+```
 
 ### Component Structure
 
 ```
 DevelopmentWizard (Main Container)
-├── DevelopmentTypeSelector (NEW - Step 0)
-│   ├── NewDevelopmentCard
-│   └── NewPhaseCard
-├── BasicDetailsStep (Optimized)
+├── WizardProgress (5-step indicator)
+├── Step1: DevelopmentDetailsStep
 │   ├── BasicInformationSection
-│   ├── LocationSection (Map-First)
-│   └── ProjectOverviewSection
-├── PhaseDetailsStep (NEW)
-│   ├── ParentLinkSection
-│   ├── PhaseInformationSection
-│   └── OptionalPhaseDetailsSection (Collapsible)
-├── UnitTypesStepEnhanced (NEW - Optimized)
-│   ├── UnitTypeCard (Display Component)
-│   └── UnitTypeModal (4-Tab Modal)
-│       ├── BasicInfoTab
-│       ├── SpecificationsTab
-│       │   ├── InheritedSpecsSection
-│       │   ├── OverridesSection
-│       │   └── CustomSpecsSection
-│       ├── MediaTab
-│       │   ├── FloorPlansUpload
-│       │   ├── InteriorImagesUpload
-│       │   ├── ExteriorImagesUpload
-│       │   ├── RenderingsUpload
-│       │   └── VirtualTourInput
-│       └── ExtrasTab
-├── HighlightsStep (Existing)
-├── MediaUploadStep (Existing)
-├── UnitMediaStep (Existing)
-├── DeveloperInfoStep (Existing)
-└── PreviewStep (Existing)
+│   ├── LocationSection (with LocationMapPicker)
+│   ├── DevelopmentAmenitiesSection
+│   └── DevelopmentHighlightsSection
+├── Step2: UnitTypesStep
+│   ├── UnitTypeCard[] (display grid)
+│   ├── EmptyState (when no types)
+│   └── UnitTypeModal
+│       ├── TabNavigation
+│       ├── BaseConfigurationTab
+│       │   ├── BasicInfoSection
+│       │   ├── BaseFeaturesSection
+│       │   ├── BaseFinishesSection
+│       │   └── BaseMediaSection
+│       ├── SpecsVariationsTab
+│       │   ├── SpecCard[] (expandable cards)
+│       │   └── SpecModal
+│       │       ├── SpecBasicInfo
+│       │       ├── FeatureOverrides
+│       │       ├── SpecMedia
+│       │       └── SpecDocuments
+│       └── MediaTab
+│           ├── PhotosUpload
+│           ├── FloorPlansUpload
+│           ├── VideosUpload
+│           └── PDFsUpload
+├── Step3: DevelopmentFeaturesStep
+│   └── FeatureSelector (multi-select)
+├── Step4: DocumentsStep
+│   └── DocumentUploader (categorized)
+└── Step5: ReviewPublishStep
+    ├── DevelopmentSummary
+    ├── UnitTypesSummary
+    ├── FeaturesSummary
+    ├── DocumentsSummary
+    └── PublishActions
 ```
 
-### Data Flow
+### Data Flow & State Management
 
-1. User selects development type (master or phase)
-2. System conditionally renders appropriate step sequence
-3. Form data flows through Zustand store
-4. Auto-save persists to localStorage and database
-5. Submission creates appropriate database records with relationships
+```
+Zustand Store (useDevelopmentWizard)
+├── currentStep: number
+├── developmentData: {
+│   name, status, completionDate, description,
+│   location: { lat, lng, address, gpsAccuracy },
+│   amenities: string[],
+│   highlights: string[]
+│ }
+├── unitTypes: UnitType[] {
+│   id, name, bedrooms, bathrooms, parking, size, priceRange,
+│   baseFeatures: {},
+│   baseFinishes: {},
+│   baseMedia: [],
+│   specs: SpecVariation[] {
+│     id, name, price, description,
+│     overrides: {},
+│     media: [],
+│     documents: []
+│   }
+│ }
+├── developmentFeatures: string[]
+├── documents: Document[]
+└── actions: {
+    setDevelopmentData(),
+    addUnitType(), updateUnitType(), deleteUnitType(),
+    addSpec(), updateSpec(), deleteSpec(),
+    setFeatures(), addDocument(), removeDocument()
+  }
+```
 
 ## Components and Interfaces
 
-### DevelopmentTypeSelector Component
+### Step 1: DevelopmentDetailsStep
 
-**Purpose:** Initial step to determine creation flow
-
-**Props:**
-```typescript
-interface DevelopmentTypeSelectorProps {
-  onSelect: (type: 'master' | 'phase') => void;
-}
-```
-
-**State:**
-- Selected type: 'master' | 'phase' | null
-
-**Behavior:**
-- Displays two large, visually distinct cards
-- Highlights selected card
-- Proceeds to appropriate step sequence on selection
-
-### Optimized BasicDetailsStep Component
+**Purpose:** Capture all development-level information
 
 **Sections:**
 
 1. **Basic Information**
-   - Development Name (text input, min 5 chars)
+   - Development Name (text, min 5 chars, required)
    - Development Status (multi-select badges)
+   - Expected Completion Date (date picker, optional)
    - Developer Name (read-only, auto-filled)
    - Rating (read-only, system-calculated)
+   - Project Description (rich text editor)
 
-2. **Location (Map-First)**
-   - Interactive Map with Pin Drop
-   - GPS Accuracy Indicator
-   - Auto-populated Address Fields
+2. **Location**
+   - Interactive Map with Pin Drop (primary input)
+   - GPS Accuracy Indicator (accurate/approximate)
+   - Auto-populated Address Fields (province, city, suburb)
    - Manual Override Toggle
-   - "No official street yet" option
+   - "No official street yet" checkbox
 
-3. **Project Overview**
-   - Total Units (number input)
-   - Project Size (number input with unit selector)
-   - Project Highlights (tag input, max 5)
-   - Project Description (rich text)
+3. **Development Amenities**
+   - Multi-select checkboxes or badges
+   - Options: Swimming Pool, Clubhouse, Jogging Trails, Parks, Braai Areas, Security Features, Fibre Ready
+   - Visual grouping by category
 
-### PhaseDetailsStep Component (NEW)
+4. **Development Highlights**
+   - Tag input with max 5 entries
+   - Counter display "X/5"
+   - Add/Remove functionality
+   - Example suggestions
 
-**Sections:**
+### Step 2: UnitTypesStep
 
-1. **Link to Parent**
-   - Parent Development Dropdown (filtered by user's developments)
-
-2. **Phase Information**
-   - Phase Name/Number (text input)
-   - Spec Type (select: Affordable/GAP/Luxury/Custom)
-   - Phase Status (multi-select badges)
-
-3. **Optional Phase Details** (Collapsible)
-   - Units in Phase
-   - Finishing Differences (Kitchen/Bathrooms/Flooring/Electrical)
-   - Phase Highlights
-   - Expected Completion Date
-   - Phase Description
-
-### UnitTypesStepEnhanced Component (NEW - Optimized)
-
-**Purpose:** Comprehensive unit type management with 4-tab modal interface
+**Purpose:** Manage unit types with base configurations and spec variations
 
 **Main View:**
-- Card-based display of configured unit types
-- Quick actions: Add, Edit, Duplicate, Delete
-- Empty state with call-to-action
-- Summary statistics (total types, units, price range)
+- Grid of UnitTypeCard components
+- Empty state with "Add Your First Unit Type" CTA
+- Summary statistics (total types, total units, price range)
 
 **UnitTypeCard Component:**
 
-Displays unit type summary:
+Displays:
 - Unit type name
-- Bedrooms, bathrooms, floor size
+- Bedrooms, bathrooms, size
 - Price range
-- Available units
-- Quick action buttons (Edit, Duplicate, Delete)
+- Number of specs
+- Quick actions: Edit, Duplicate, Delete
 
-**UnitTypeModal Component (4-Tab Interface):**
+**UnitTypeModal Component (3-Tab Interface):**
 
-**Tab 1: Basic Info**
-- Unit Type Name (required)
-- Bedrooms & Bathrooms (required)
-- Floor Size & Yard Size (optional)
-- Price Range (min required, max optional)
-- Parking Options (None/1/2/Carport/Garage)
-- Available Units (required)
-- Completion Date (optional)
-- Deposit Required (optional)
-- Internal Notes (optional, hidden from buyers)
+**Tab A: Base Configuration**
 
-**Tab 2: Specifications**
+*Purpose:* Define defaults that apply to all specs within this unit type
 
-*Section A: Inherited Master Specifications (Read-only)*
-- Kitchen Type, Countertops, Flooring
-- Bathroom Finish, Geyser, Electricity, Security
-- Displayed with "Inherited from Development Settings" label
+Sections:
+1. Basic Info
+   - Unit Type Name (required)
+   - Bedrooms & Bathrooms (required)
+   - Parking Allocation (dropdown)
+   - Unit Size & Yard Size (optional)
+   - Base Price Range (min required, max optional)
 
-*Section B: Unit-Specific Overrides (Toggle-based)*
-- Each spec has "Use Master Spec?" toggle
-- When OFF, field becomes editable
-- Override fields: Kitchen Finish, Countertop Material, Flooring Type, Bathroom Fixtures, Wall Finish, Energy Efficiency
-- Only overridden fields stored in database
+2. Base Features (Defaults for all specs)
+   - Built-in Wardrobes (yes/no)
+   - Tiled Flooring (yes/no)
+   - Granite Counters (yes/no)
+   - Prepaid Electricity (yes/no)
+   - Balcony (yes/no)
+   - Pet-Friendly (yes/no)
 
-*Section C: Custom Specifications (Unlimited)*
-- Repeatable Field Name / Value pairs
-- Add/Remove functionality
-- Examples: "Smart Home Automation" → "Optional"
+3. Base Finishes
+   - Paint & Internal Walls (text)
+   - Flooring Types (text)
+   - Kitchen Standard Features (text)
+   - Bathroom Standard Features (text)
 
-**Tab 3: Media**
+4. Base Media
+   - Unit Type Gallery (images)
+   - Floor Plans (images/PDFs)
+   - Renders/Videos (optional)
 
-Categories with separate upload zones:
+**Tab B: Specs & Variations**
+
+*Purpose:* Create multiple pricing/finish variations within the unit type
+
+Display:
+- List of spec cards (Standard Spec, GAP Spec, Premium Spec, etc.)
+- "Add New Spec" button
+- Each spec card shows: name, price, key differences
+
+Spec Card (Expandable):
+- Spec Name (required)
+- Price (required)
+- Bedrooms/Bathrooms override (optional)
+- Size override (optional)
+- Spec Description (text)
+- Feature Overrides
+  - Toggle-based system
+  - Add new features
+  - Remove inherited features
+  - Replace inherited features
+- Spec-Specific Media
+  - Photos, Floor Plans, Videos, PDFs
+  - Overrides unit type base media
+- Spec-Specific Documents
+  - PDF uploads
+
+**Tab C: Media**
+
+*Purpose:* Organize media by category for the unit type
+
+Categories:
+- Photos (images only)
 - Floor Plans (images & PDFs)
-- Interior Images
-- Exterior Images
-- 3D Renderings
-- Virtual Tour Link (URL input)
+- Videos (video files or URLs)
+- PDFs (documents)
 
 Features:
 - Drag & drop upload
-- Set primary image per unit type
+- Set primary image
+- Reorder media
 - Remove media
 - Category-based organization
 
-**Tab 4: Optional Extras / Upgrade Packs**
+### Step 3: DevelopmentFeaturesStep
 
-Repeatable upgrade list:
-- Upgrade Name (required)
-- Description
-- Price (optional)
-- Add/Remove functionality
-- Total value calculation
-- Example upgrades display
+**Purpose:** Specify estate-level infrastructure and features
 
-**Inheritance Model:**
+**Interface:**
+- Multi-select checkboxes or badge selector
+- Options grouped by category:
+  - Security: Perimeter Wall, Controlled Access, Electric Fence, CCTV
+  - Construction: Brick & Mortar, Paved Roads
+  - Utilities: Fibre Ready, Prepaid Electricity, Solar Installations
+  - Lifestyle: Pet-Friendly Estate
 
-```
-Final Unit Specs = Master Specs + Overrides + Custom Specs
-```
+### Step 4: DocumentsStep
 
-This prevents duplication and makes updates efficient:
-- Master specs update → all units inherit automatically
-- Only store differences at unit level
-- Custom specs handle unique requirements
+**Purpose:** Upload supporting documents
+
+**Interface:**
+- Document upload zones by type:
+  - Brochure PDF
+  - Site Development Plan
+  - Pricing Sheet
+  - Estate Rules
+  - Engineering Pack
+  - Additional Forms
+- Each upload shows: filename, size, upload date
+- Remove/Replace functionality
+- Development-wide vs Unit-specific toggle
+
+### Step 5: ReviewPublishStep
+
+**Purpose:** Review all information before publishing
+
+**Sections:**
+
+1. **Development Summary**
+   - Name, Location, Status
+   - Amenities list
+   - Highlights list
+
+2. **Unit Types Summary**
+   - For each unit type:
+     - Core info (beds, baths, size, price range)
+     - All specs with price differences
+     - Media count
+     - Feature differences between specs
+
+3. **Development Features Summary**
+   - Estate-level features list
+
+4. **Documents Summary**
+   - All uploaded documents with names and types
+
+**Actions:**
+- "Save as Draft" button (stores without publishing)
+- "Publish" button (validates and makes public)
 
 ## Data Models
 
-### Enhanced Development Model
+### Development Model
 
 ```typescript
 interface Development {
   id: number;
   developerId: number;
+  
+  // Basic Information
   name: string;
   slug: string;
+  status: 'now-selling' | 'launching-soon' | 'under-construction' | 'ready-to-move' | 'sold-out' | 'phase-completed' | 'new-phase-launching';
+  completionDate?: Date;
   description: string;
-  developmentType: 'residential' | 'commercial' | 'mixed_use' | 'estate' | 'complex';
-  status: 'now-selling' | 'launching-soon' | 'under-construction' | 'ready-to-move' | 'sold-out' | 'phase-1-complete';
+  rating?: number; // auto-calculated
   
   // Location
   address: string;
@@ -224,151 +345,72 @@ interface Development {
   longitude: string;
   gpsAccuracy: 'accurate' | 'approximate';
   
-  // Overview
-  totalUnits: number;
-  availableUnits: number;
-  projectSize?: number; // in acres
-  projectHighlights: string[]; // max 5
+  // Amenities & Highlights
+  amenities: string[]; // ['Swimming Pool', 'Clubhouse', ...]
+  highlights: string[]; // max 5
   
-  // Pricing
-  priceFrom?: number;
-  priceTo?: number;
-  
-  // Media
-  images: string[];
-  videos: string[];
-  floorPlans: string[];
-  brochures: string[];
+  // Features (Estate-Level)
+  features: string[]; // ['Perimeter Wall', 'Fibre Ready', ...]
   
   // Metadata
-  rating?: number; // auto-calculated
   views: number;
   isFeatured: boolean;
   isPublished: boolean;
   publishedAt?: Date;
-  showHouseAddress: boolean;
-  completionDate?: Date;
   
   // Relationships
-  phases?: DevelopmentPhase[];
+  unitTypes?: UnitType[];
+  documents?: Document[];
   
   createdAt: Date;
   updatedAt: Date;
 }
 ```
 
-### DevelopmentPhase Model (NEW)
-
-```typescript
-interface DevelopmentPhase {
-  id: number;
-  developmentId: number; // Foreign key to parent
-  name: string; // e.g., "Phase 2", "Extension 57"
-  phaseNumber: number;
-  description?: string;
-  
-  // Spec Type
-  specType: 'affordable' | 'gap' | 'luxury' | 'custom';
-  customSpecType?: string;
-  
-  // Status
-  status: 'planning' | 'pre-launch' | 'selling' | 'sold-out' | 'completed';
-  
-  // Units
-  totalUnits: number;
-  availableUnits: number;
-  
-  // Pricing
-  priceFrom?: number;
-  priceTo?: number;
-  
-  // Dates
-  launchDate?: Date;
-  completionDate?: Date;
-  
-  // Finishing Differences
-  finishingDifferences?: {
-    kitchen?: string[];
-    bathrooms?: string[];
-    flooring?: string[];
-    electrical?: string[];
-  };
-  
-  // Phase-specific highlights
-  phaseHighlights?: string[];
-  
-  // Location override (optional)
-  latitude?: string;
-  longitude?: string;
-  
-  createdAt: Date;
-  updatedAt: Date;
-}
-```
-
-### UnitType Model (NEW - Enhanced)
+### UnitType Model (with Inheritance)
 
 ```typescript
 interface UnitType {
   id: string;
   developmentId: number;
   
-  // Basic Configuration
-  label: string; // e.g., "2 Bedroom Apartment", "60m² Simplex"
-  ownershipType: 'full-title' | 'sectional-title' | 'leasehold' | 'life-rights';
-  structuralType: 'apartment' | 'freestanding-house' | 'simplex' | 'duplex' | 'penthouse' | 'plot-and-plan' | 'townhouse' | 'studio';
+  // Base Configuration
+  name: string; // "2 Bedroom Apartment", "60m² Simplex"
   bedrooms: number;
   bathrooms: number;
-  floors?: 'single-storey' | 'double-storey' | 'triplex';
+  parking: 'none' | '1' | '2' | 'carport' | 'garage';
+  unitSize?: number; // m²
+  yardSize?: number; // m²
+  basePriceFrom: number;
+  basePriceTo?: number;
   
-  // Sizes
-  unitSize?: number; // in m²
-  yardSize?: number; // in m² (for freestanding properties)
+  // Base Features (Defaults for all specs)
+  baseFeatures: {
+    builtInWardrobes: boolean;
+    tiledFlooring: boolean;
+    graniteCounters: boolean;
+    prepaidElectricity: boolean;
+    balcony: boolean;
+    petFriendly: boolean;
+  };
   
-  // Pricing
-  priceFrom: number;
-  priceTo?: number;
+  // Base Finishes
+  baseFinishes: {
+    paintAndWalls?: string;
+    flooringTypes?: string;
+    kitchenFeatures?: string;
+    bathroomFeatures?: string;
+  };
   
-  // Parking & Availability
-  parking?: 'none' | '1' | '2' | 'carport' | 'garage';
-  availableUnits: number;
-  completionDate?: string;
-  depositRequired?: number;
-  internalNotes?: string; // Hidden from buyers
+  // Base Media (inherited by all specs)
+  baseMedia: {
+    gallery: MediaItem[];
+    floorPlans: MediaItem[];
+    renders: MediaItem[];
+  };
   
-  // Media & Description
-  configDescription?: string;
-  virtualTourLink?: string;
-  unitMedia?: Array<{
-    id: string;
-    url: string;
-    type: 'image' | 'pdf';
-    category: 'floorplan' | 'interior' | 'exterior' | 'rendering';
-    isPrimary: boolean;
-  }>;
-  
-  // Specification Overrides (Inheritance Model)
-  specOverrides?: Record<string, boolean>; // Which specs are overridden
-  kitchenFinish?: string;
-  countertopMaterial?: string;
-  flooringType?: string;
-  bathroomFixtures?: string;
-  wallFinish?: string;
-  energyEfficiency?: string;
-  
-  // Custom Specifications
-  customSpecs?: Array<{
-    name: string;
-    value: string;
-  }>;
-  
-  // Upgrade Packs
-  upgradePacks?: Array<{
-    id: string;
-    name: string;
-    description: string;
-    price?: number;
-  }>;
+  // Spec Variations
+  specs: SpecVariation[];
   
   // Metadata
   displayOrder: number;
@@ -378,51 +420,215 @@ interface UnitType {
 }
 ```
 
-**Database Schema for UnitType:**
+### SpecVariation Model
+
+```typescript
+interface SpecVariation {
+  id: string;
+  unitTypeId: string;
+  
+  // Basic Info
+  name: string; // "Standard Spec", "GAP Spec", "Premium Spec"
+  price: number;
+  description: string;
+  
+  // Overrides (optional - only store if different from base)
+  bedroomsOverride?: number;
+  bathroomsOverride?: number;
+  sizeOverride?: number;
+  
+  // Feature Overrides
+  featureOverrides?: {
+    add?: string[]; // New features not in base
+    remove?: string[]; // Base features to exclude
+    replace?: Record<string, string>; // Base feature replacements
+  };
+  
+  // Spec-Specific Media (overrides base media)
+  media?: {
+    photos: MediaItem[];
+    floorPlans: MediaItem[];
+    videos: MediaItem[];
+    pdfs: MediaItem[];
+  };
+  
+  // Spec-Specific Documents
+  documents?: Document[];
+  
+  // Metadata
+  displayOrder: number;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+```
+
+### MediaItem Model
+
+```typescript
+interface MediaItem {
+  id: string;
+  url: string;
+  type: 'image' | 'pdf' | 'video';
+  category: 'photo' | 'floorplan' | 'render' | 'document';
+  isPrimary: boolean;
+  displayOrder: number;
+  uploadedAt: Date;
+}
+```
+
+### Document Model
+
+```typescript
+interface Document {
+  id: string;
+  developmentId: number;
+  unitTypeId?: string; // optional - for unit-specific docs
+  
+  name: string;
+  type: 'brochure' | 'site-plan' | 'pricing-sheet' | 'estate-rules' | 'engineering-pack' | 'other';
+  url: string;
+  fileSize: number;
+  mimeType: string;
+  
+  uploadedAt: Date;
+}
+```
+
+### Wizard State Model
+
+```typescript
+interface DevelopmentWizardState {
+  // Wizard Flow
+  currentStep: number; // 1-5
+  
+  // Step 1: Development Details
+  developmentData: {
+    name: string;
+    status: string;
+    completionDate?: string;
+    description: string;
+    developerName: string; // read-only
+    rating?: number; // read-only
+    
+    location: {
+      latitude: string;
+      longitude: string;
+      address: string;
+      city: string;
+      province: string;
+      suburb?: string;
+      postalCode?: string;
+      gpsAccuracy?: 'accurate' | 'approximate';
+      noOfficialStreet: boolean;
+    };
+    
+    amenities: string[];
+    highlights: string[]; // max 5
+  };
+  
+  // Step 2: Unit Types
+  unitTypes: UnitType[];
+  
+  // Step 3: Development Features
+  developmentFeatures: string[];
+  
+  // Step 4: Documents
+  documents: Document[];
+  
+  // Actions
+  setCurrentStep: (step: number) => void;
+  setDevelopmentData: (data: Partial<DevelopmentWizardState['developmentData']>) => void;
+  addUnitType: (unitType: UnitType) => void;
+  updateUnitType: (id: string, updates: Partial<UnitType>) => void;
+  deleteUnitType: (id: string) => void;
+  addSpec: (unitTypeId: string, spec: SpecVariation) => void;
+  updateSpec: (unitTypeId: string, specId: string, updates: Partial<SpecVariation>) => void;
+  deleteSpec: (unitTypeId: string, specId: string) => void;
+  setDevelopmentFeatures: (features: string[]) => void;
+  addDocument: (document: Document) => void;
+  removeDocument: (id: string) => void;
+  saveDraft: () => Promise<void>;
+  publish: () => Promise<void>;
+}
+```
+
+## Database Schema
+
+### developments table
+
+```sql
+CREATE TABLE developments (
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  developer_id INT NOT NULL,
+  
+  -- Basic Information
+  name VARCHAR(255) NOT NULL,
+  slug VARCHAR(255) UNIQUE NOT NULL,
+  status ENUM('now-selling', 'launching-soon', 'under-construction', 'ready-to-move', 'sold-out', 'phase-completed', 'new-phase-launching') NOT NULL,
+  completion_date DATE,
+  description TEXT,
+  rating DECIMAL(3,2),
+  
+  -- Location
+  address VARCHAR(500),
+  city VARCHAR(100),
+  province VARCHAR(100),
+  suburb VARCHAR(100),
+  postal_code VARCHAR(20),
+  latitude DECIMAL(10,8) NOT NULL,
+  longitude DECIMAL(11,8) NOT NULL,
+  gps_accuracy ENUM('accurate', 'approximate') DEFAULT 'approximate',
+  
+  -- Amenities & Highlights (JSON)
+  amenities JSON,
+  highlights JSON,
+  
+  -- Features (JSON)
+  features JSON,
+  
+  -- Metadata
+  views INT DEFAULT 0,
+  is_featured BOOLEAN DEFAULT FALSE,
+  is_published BOOLEAN DEFAULT FALSE,
+  published_at TIMESTAMP,
+  
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  
+  FOREIGN KEY (developer_id) REFERENCES users(id) ON DELETE CASCADE,
+  INDEX idx_developer_id (developer_id),
+  INDEX idx_status (status),
+  INDEX idx_location (latitude, longitude),
+  INDEX idx_published (is_published, published_at)
+);
+```
+
+### unit_types table
 
 ```sql
 CREATE TABLE unit_types (
-  id INT PRIMARY KEY AUTO_INCREMENT,
+  id VARCHAR(36) PRIMARY KEY,
   development_id INT NOT NULL,
-  label VARCHAR(255) NOT NULL,
   
-  -- Basic Configuration
-  ownership_type ENUM('full-title', 'sectional-title', 'leasehold', 'life-rights'),
-  structural_type ENUM('apartment', 'freestanding-house', 'simplex', 'duplex', 'penthouse', 'plot-and-plan', 'townhouse', 'studio'),
+  -- Base Configuration
+  name VARCHAR(255) NOT NULL,
   bedrooms INT NOT NULL,
   bathrooms DECIMAL(3,1) NOT NULL,
-  floors ENUM('single-storey', 'double-storey', 'triplex'),
-  
-  -- Sizes & Pricing
+  parking ENUM('none', '1', '2', 'carport', 'garage'),
   unit_size INT,
   yard_size INT,
-  price_from DECIMAL(15,2) NOT NULL,
-  price_to DECIMAL(15,2),
+  base_price_from DECIMAL(15,2) NOT NULL,
+  base_price_to DECIMAL(15,2),
   
-  -- Parking & Availability
-  parking ENUM('none', '1', '2', 'carport', 'garage'),
-  available_units INT NOT NULL,
-  completion_date DATE,
-  deposit_required DECIMAL(15,2),
-  internal_notes TEXT,
+  -- Base Features (JSON)
+  base_features JSON,
   
-  -- Media & Description
-  config_description TEXT,
-  virtual_tour_link VARCHAR(500),
+  -- Base Finishes (JSON)
+  base_finishes JSON,
   
-  -- Specification Overrides (JSON)
-  spec_overrides JSON,
-  kitchen_finish VARCHAR(255),
-  countertop_material VARCHAR(255),
-  flooring_type VARCHAR(255),
-  bathroom_fixtures VARCHAR(255),
-  wall_finish VARCHAR(255),
-  energy_efficiency VARCHAR(255),
-  
-  -- Custom Specs & Upgrades (JSON)
-  custom_specs JSON,
-  upgrade_packs JSON,
-  unit_media JSON,
+  -- Base Media (JSON)
+  base_media JSON,
   
   -- Metadata
   display_order INT DEFAULT 0,
@@ -432,145 +638,121 @@ CREATE TABLE unit_types (
   
   FOREIGN KEY (development_id) REFERENCES developments(id) ON DELETE CASCADE,
   INDEX idx_development_id (development_id),
-  INDEX idx_price_range (price_from, price_to),
+  INDEX idx_price_range (base_price_from, base_price_to),
   INDEX idx_bedrooms_bathrooms (bedrooms, bathrooms)
 );
 ```
 
-### Wizard State Model
+### spec_variations table
 
-```typescript
-interface DevelopmentWizardState {
-  // Wizard Flow
-  developmentType: 'master' | 'phase' | null;
-  currentStep: number;
+```sql
+CREATE TABLE spec_variations (
+  id VARCHAR(36) PRIMARY KEY,
+  unit_type_id VARCHAR(36) NOT NULL,
   
-  // Master Development Fields
-  developmentName: string;
-  address: string;
-  city: string;
-  province: string;
-  suburb?: string;
-  postalCode?: string;
-  latitude: string;
-  longitude: string;
-  gpsAccuracy?: 'accurate' | 'approximate';
-  status: string;
-  rating?: number;
-  totalUnits: number;
-  projectSize?: number;
-  projectHighlights: string[];
+  -- Basic Info
+  name VARCHAR(255) NOT NULL,
+  price DECIMAL(15,2) NOT NULL,
+  description TEXT,
   
-  // Phase Fields
-  parentDevelopmentId?: number;
-  phaseName?: string;
-  phaseNumber?: number;
-  specType?: 'affordable' | 'gap' | 'luxury' | 'custom';
-  customSpecType?: string;
-  phaseStatus?: string;
-  unitsInPhase?: number;
-  finishingDifferences?: {
-    kitchen?: string[];
-    bathrooms?: string[];
-    flooring?: string[];
-    electrical?: string[];
-  };
-  phaseHighlights?: string[];
-  phaseCompletionDate?: string;
-  phaseDescription?: string;
+  -- Overrides (JSON)
+  overrides JSON,
   
-  // ... existing fields
-}
+  -- Feature Overrides (JSON)
+  feature_overrides JSON,
+  
+  -- Spec-Specific Media (JSON)
+  media JSON,
+  
+  -- Metadata
+  display_order INT DEFAULT 0,
+  is_active BOOLEAN DEFAULT TRUE,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  
+  FOREIGN KEY (unit_type_id) REFERENCES unit_types(id) ON DELETE CASCADE,
+  INDEX idx_unit_type_id (unit_type_id),
+  INDEX idx_price (price)
+);
+```
+
+### documents table
+
+```sql
+CREATE TABLE development_documents (
+  id VARCHAR(36) PRIMARY KEY,
+  development_id INT NOT NULL,
+  unit_type_id VARCHAR(36),
+  
+  name VARCHAR(255) NOT NULL,
+  type ENUM('brochure', 'site-plan', 'pricing-sheet', 'estate-rules', 'engineering-pack', 'other') NOT NULL,
+  url VARCHAR(500) NOT NULL,
+  file_size INT,
+  mime_type VARCHAR(100),
+  
+  uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  
+  FOREIGN KEY (development_id) REFERENCES developments(id) ON DELETE CASCADE,
+  FOREIGN KEY (unit_type_id) REFERENCES unit_types(id) ON DELETE CASCADE,
+  INDEX idx_development_id (development_id),
+  INDEX idx_unit_type_id (unit_type_id),
+  INDEX idx_type (type)
+);
 ```
 
 ## Correctness Properties
 
 *A property is a characteristic or behavior that should hold true across all valid executions of a system—essentially, a formal statement about what the system should do. Properties serve as the bridge between human-readable specifications and machine-verifiable correctness guarantees.*
 
-### Property 1: Development type selection determines field visibility
+### Property 1: Development name validation
 
-*For any* wizard session, when a development type is selected, only the fields relevant to that type should be visible and required
-**Validates: Requirements 1.2, 1.3**
+*For any* development name input, the system should reject names with fewer than 5 characters
+**Validates: Requirements 1.3**
 
-### Property 2: Map pin drop populates address fields
+### Property 2: Highlights limit enforcement
 
-*For any* valid GPS coordinates, when a pin is dropped on the map, the system should populate address fields through reverse geocoding
-**Validates: Requirements 3.2, 3.3**
+*For any* development, the number of highlights should never exceed 5
+**Validates: Requirements 4.3**
 
 ### Property 3: GPS accuracy reflects geocoding quality
 
 *For any* reverse geocoding result, the GPS accuracy indicator should be "accurate" for precise results and "approximate" for less precise results
-**Validates: Requirements 3.4, 3.5**
+**Validates: Requirements 2.4, 2.5**
 
-### Property 4: Project highlights are limited to 5
+### Property 4: Specification inheritance
 
-*For any* development, the number of project highlights should never exceed 5
-**Validates: Requirements 4.3**
+*For any* spec variation without overrides, the final features should equal the unit type base features
+**Validates: Requirements 8.1, 8.4**
 
-### Property 5: Phase inherits parent location by default
+### Property 5: Override storage efficiency
 
-*For any* phase without explicit location override, the latitude and longitude should match the parent development
-**Validates: Requirements 6.4**
+*For any* spec variation with overrides, only the overridden fields should be stored in the database, not the inherited values
+**Validates: Requirements 8.3**
 
-### Property 6: Parent development updates on phase creation
-
-*For any* new phase creation, the parent development's phase count and phase list should be automatically updated
-**Validates: Requirements 6.3**
-
-### Property 7: Required fields prevent progression
-
-*For any* wizard step with required fields, the user should not be able to proceed to the next step until all required fields are valid
-**Validates: Requirements 9.1, 9.4**
-
-### Property 8: Auto-save preserves wizard state
-
-*For any* wizard session with changes, the state should be persisted to storage within 3 seconds of the last change
-**Validates: Requirements 8.1**
-
-### Property 9: Resume draft restores exact state
-
-*For any* saved draft, when resumed, all field values should match the saved state exactly
-**Validates: Requirements 8.2**
-
-### Property 10: Development name validation
-
-*For any* development name input, the system should reject names with fewer than 5 characters
-**Validates: Requirements 9.5**
-
-### Property 11: Unit type specification inheritance
-
-*For any* unit type without specification overrides, the final specifications should equal the master development specifications
-**Validates: Requirements 6C.5**
-
-### Property 12: Specification override storage
-
-*For any* unit type with specification overrides, only the overridden fields should be stored in the database, not the inherited values
-**Validates: Requirements 6C.4**
-
-### Property 13: Unit type required fields validation
-
-*For any* unit type, the system should require unit type name, bedrooms, bathrooms, minimum price, and available units before allowing save
-**Validates: Requirements 6B.1**
-
-### Property 14: Unit media category organization
-
-*For any* uploaded media item, it should be assigned to exactly one category (floorplan, interior, exterior, or rendering)
-**Validates: Requirements 6E.1**
-
-### Property 15: Primary image uniqueness per unit type
-
-*For any* unit type, at most one media item should be marked as primary
-**Validates: Requirements 6E.4**
-
-### Property 16: Upgrade pack total calculation
-
-*For any* unit type with upgrade packs, the total optional value should equal the sum of all upgrade pack prices
-**Validates: Requirements 6F.4**
-
-### Property 17: Unit type duplication creates independent copy
+### Property 6: Unit type duplication creates independent copy
 
 *For any* unit type that is duplicated, the copy should have a unique ID and "(Copy)" appended to the name
-**Validates: Requirements 6A.5**
+**Validates: Requirements 5.5**
+
+### Property 7: Primary image uniqueness
+
+*For any* unit type or spec, at most one media item should be marked as primary
+**Validates: Requirements 9.4**
+
+### Property 8: Required fields validation
+
+*For any* wizard step with required fields, the user should not be able to proceed until all required fields are valid
+**Validates: Requirements 15.1, 15.4**
+
+### Property 9: Draft restoration preserves state
+
+*For any* saved draft, when resumed, all field values should match the saved state exactly
+**Validates: Requirements 14.2**
+
+### Property 10: Feature propagation on base update
+
+*For any* unit type base feature update, all specs without overrides for that feature should reflect the new value
+**Validates: Requirements 8.2**
 
 ## Error Handling
 
@@ -580,6 +762,7 @@ interface DevelopmentWizardState {
 - Clear errors on successful correction
 - Prevent form submission with validation errors
 - Show field-specific guidance messages
+- Mark required fields with red asterisk
 
 ### Network Errors
 
@@ -595,15 +778,26 @@ interface DevelopmentWizardState {
 - Allow proceeding with approximate location
 - Validate address format manually
 
+### File Upload Errors
+
+- Validate file types before upload
+- Check file size limits
+- Display upload progress
+- Handle upload failures gracefully
+- Allow retry on failure
+
 ## Testing Strategy
 
 ### Unit Tests
 
-- Test development type selection logic
-- Test field visibility based on type
-- Test validation rules for each field
+- Test development name validation
+- Test highlights limit enforcement
+- Test specification inheritance logic
+- Test override storage
+- Test duplication functionality
+- Test primary image selection
 - Test auto-save debouncing
-- Test draft restoration logic
+- Test draft restoration
 
 ### Property-Based Tests
 
@@ -611,45 +805,9 @@ interface DevelopmentWizardState {
 
 **Configuration:** Minimum 100 iterations per property
 
-**Property 1 Test:** Development type selection determines field visibility
+**Property 1 Test:** Development name validation
 ```typescript
 // Feature: development-wizard-optimization, Property 1
-fc.assert(
-  fc.property(
-    fc.constantFrom('master', 'phase'),
-    (developmentType) => {
-      const visibleFields = getVisibleFields(developmentType);
-      if (developmentType === 'master') {
-        return visibleFields.includes('projectSize') && 
-               visibleFields.includes('projectHighlights');
-      } else {
-        return visibleFields.includes('parentDevelopmentId') && 
-               visibleFields.includes('specType');
-      }
-    }
-  ),
-  { numRuns: 100 }
-);
-```
-
-**Property 4 Test:** Project highlights are limited to 5
-```typescript
-// Feature: development-wizard-optimization, Property 4
-fc.assert(
-  fc.property(
-    fc.array(fc.string(), { minLength: 0, maxLength: 10 }),
-    (highlights) => {
-      const result = addProjectHighlights(highlights);
-      return result.length <= 5;
-    }
-  ),
-  { numRuns: 100 }
-);
-```
-
-**Property 10 Test:** Development name validation
-```typescript
-// Feature: development-wizard-optimization, Property 10
 fc.assert(
   fc.property(
     fc.string(),
@@ -662,17 +820,100 @@ fc.assert(
 );
 ```
 
+**Property 2 Test:** Highlights limit enforcement
+```typescript
+// Feature: development-wizard-optimization, Property 2
+fc.assert(
+  fc.property(
+    fc.array(fc.string(), { minLength: 0, maxLength: 10 }),
+    (highlights) => {
+      const result = addHighlights(highlights);
+      return result.length <= 5;
+    }
+  ),
+  { numRuns: 100 }
+);
+```
+
+**Property 4 Test:** Specification inheritance
+```typescript
+// Feature: development-wizard-optimization, Property 4
+fc.assert(
+  fc.property(
+    fc.record({
+      baseFeatures: fc.object(),
+      overrides: fc.constant({})
+    }),
+    ({ baseFeatures, overrides }) => {
+      const finalFeatures = computeFinalFeatures(baseFeatures, overrides);
+      return JSON.stringify(finalFeatures) === JSON.stringify(baseFeatures);
+    }
+  ),
+  { numRuns: 100 }
+);
+```
+
 ### Integration Tests
 
-- Test complete wizard flow for master development
-- Test complete wizard flow for phase creation
+- Test complete wizard flow from start to publish
+- Test unit type creation with specs
+- Test specification inheritance
 - Test draft save and restore
 - Test navigation between steps
 - Test form submission
 
 ### E2E Tests
 
-- Test user journey from type selection to submission
+- Test user journey from login to published listing
 - Test map interaction and address population
-- Test phase linking to parent development
+- Test unit type and spec management
+- Test media upload and organization
 - Test error recovery scenarios
+
+## Performance Considerations
+
+### Optimization Strategies
+
+1. **Lazy Loading**
+   - Load unit type details only when modal opens
+   - Lazy load media thumbnails
+   - Paginate spec lists for large unit types
+
+2. **Debouncing**
+   - Debounce auto-save (3 seconds)
+   - Debounce search/filter operations
+   - Debounce geocoding requests
+
+3. **Caching**
+   - Cache geocoding results
+   - Cache uploaded media URLs
+   - Cache computed inheritance results
+
+4. **Data Structure Efficiency**
+   - Store only overrides, not full feature sets
+   - Use JSON columns for flexible data
+   - Index frequently queried fields
+
+5. **UI Responsiveness**
+   - Use optimistic updates
+   - Show loading states
+   - Implement skeleton screens
+   - Use virtual scrolling for large lists
+
+## Accessibility
+
+- Keyboard navigation support
+- ARIA labels for all interactive elements
+- Focus management in modals
+- Screen reader announcements for dynamic content
+- Color contrast compliance (WCAG AA)
+- Error messages associated with form fields
+
+## Mobile Responsiveness
+
+- Responsive grid layouts
+- Touch-friendly tap targets (min 44x44px)
+- Mobile-optimized map interface
+- Collapsible sections on small screens
+- Bottom sheet modals on mobile
+- Swipe gestures for navigation
