@@ -1,31 +1,46 @@
 # Implementation Plan
 
-- [ ] 1. Database schema and migrations
-  - [ ] 1.1 Create developments table schema
+- [x] 1. Database schema and migrations
+
+
+
+
+
+  - [x] 1.1 Create developments table schema
+
+
     - Add all fields from design document
     - Create indexes for performance
     - Add foreign keys and constraints
     - _Requirements: 1.1, 2.1, 3.1, 4.1_
 
-  - [ ] 1.2 Create unit_types table schema
+  - [x] 1.2 Create unit_types table schema
+
+
     - Define base configuration fields
     - Add JSON columns for base features, finishes, media
     - Create indexes and foreign keys
     - _Requirements: 5.1, 6.1, 6.3, 6.4, 6.5_
 
-  - [ ] 1.3 Create spec_variations table schema
+  - [x] 1.3 Create spec_variations table schema
+
+
     - Define spec fields with inheritance support
     - Add JSON columns for overrides and media
     - Create indexes and foreign keys
     - _Requirements: 7.1, 7.2, 7.5, 8.3_
 
-  - [ ] 1.4 Create development_documents table schema
+  - [x] 1.4 Create development_documents table schema
+
+
     - Define document fields
     - Add support for development-wide and unit-specific docs
     - Create indexes
     - _Requirements: 11.1, 11.2_
 
-  - [ ] 1.5 Write migration scripts
+  - [x] 1.5 Write migration scripts
+
+
     - Create migration runner
     - Test migrations on development database
     - Prepare rollback scripts
@@ -113,6 +128,14 @@
     - Show example suggestions
     - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.5_
 
+  - [ ] 3.6 Build DevelopmentMediaSection
+    - Hero image upload zone
+    - Development photos multi-upload with drag & drop
+    - Development videos upload
+    - Set primary image functionality
+    - Reorder/remove media
+    - _Requirements: Step 1 Media_
+
 - [ ] 4. Step 2: Unit Types - Main View
   - [ ] 4.1 Create UnitTypesStep component
     - Build main step container
@@ -144,7 +167,7 @@
 - [ ] 5. Step 2: Unit Types - Modal Tab A (Base Configuration)
   - [ ] 5.1 Create UnitTypeModal component
     - Build modal container
-    - Implement 3-tab navigation
+    - Implement 5-tab navigation (Base Configuration, Amenities, Specifications & Finishes, Media, Spec Variations)
     - Add Previous/Next/Save buttons
     - Handle form state
     - _Requirements: 5.2_
@@ -162,58 +185,120 @@
     - Base price range inputs
     - _Requirements: 6.1, 6.2_
 
-  - [ ] 5.4 Build BaseFeaturesSection (Tab A)
+- [ ] 6. Step 2: Unit Types - Modal Tab B (Amenities)
+  - [ ] 6.1 Build AmenitiesTab component
+    - Create tab container
+    - Organize into two sections
+    - _Requirements: 6A.1_
+
+  - [ ] 6.2 Build StandardAmenitiesSection (Tab B)
+    - Display development-level amenities (read-only)
+    - Show visual indication that these are inherited
+    - Display as checkboxes (disabled) or badges
+    - _Requirements: 6A.2, 6A.5_
+
+  - [ ] 6.3 Build AdditionalAmenitiesSection (Tab B)
+    - Multi-select checkboxes for unit type-specific amenities
+    - Options: Built-in Wardrobes, Balcony, Pet-Friendly, Garden, Study Room, En-suite Bathroom
+    - Allow multiple selections
+    - _Requirements: 6A.3, 6A.4, 6A.6_
+
+  - [ ] 6.4 Implement amenity inheritance logic
+    - Combine standard and additional amenities
+    - Display final amenity list
+    - Store only additional amenities in database
+    - _Requirements: 6A.5, 6A.6, 6A.7_
+
+- [ ] 7. Step 2: Unit Types - Modal Tab C (Specifications & Finishes)
+  - [ ] 7.1 Build SpecificationsFinishesTab component
+    - Create tab container
+    - Organize into three sections
+    - _Requirements: 6B.1_
+
+  - [ ] 7.2 Build BuiltInFeaturesSection (Tab C)
     - Built-in wardrobes toggle
     - Tiled flooring toggle
     - Granite counters toggle
-    - Prepaid electricity toggle
-    - Balcony toggle
-    - Pet-friendly toggle
-    - _Requirements: 6.3_
+    - _Requirements: 6B.2_
 
-  - [ ] 5.5 Build BaseFinishesSection (Tab A)
+  - [ ] 7.3 Build FinishesSection (Tab C)
     - Paint & internal walls input
     - Flooring types input
     - Kitchen standard features input
     - Bathroom standard features input
-    - _Requirements: 6.4_
+    - _Requirements: 6B.3_
 
-  - [ ] 5.6 Build BaseMediaSection (Tab A)
-    - Unit type gallery upload
-    - Floor plans upload
-    - Renders/videos upload
+  - [ ] 7.4 Build ElectricalFeaturesSection (Tab C)
+    - Prepaid electricity toggle
+    - _Requirements: 6B.2_
+
+  - [ ] 7.5 Implement specifications storage
+    - Store specifications per unit type
+    - Apply to all specs unless overridden
+    - _Requirements: 6B.4, 6B.5_
+
+- [ ] 8. Step 2: Unit Types - Modal Tab D (Media)
+  - [ ] 8.1 Build MediaTab component
+    - Create tab container
+    - Organize by category
+    - _Requirements: 9.1_
+
+  - [ ] 8.2 Build UnitTypeGalleryUpload section
+    - Multi-image upload
     - Drag & drop support
-    - _Requirements: 6.5_
+    - Set primary image
+    - Reorder/remove
+    - _Requirements: 9.1, 9.3, 9.4, 9.5, 9.6_
 
-- [ ] 6. Step 2: Unit Types - Modal Tab B (Specs & Variations)
-  - [ ] 6.1 Build SpecsVariationsTab component
+  - [ ] 8.3 Build FloorPlansUpload section
+    - Upload images or PDFs
+    - Multiple floor plan support
+    - Reorder/remove
+    - _Requirements: 9.1, 9.2, 9.6_
+
+  - [ ] 8.4 Build RendersVideosUpload section
+    - Video files or URLs
+    - 3D renders
+    - Preview thumbnails
+    - Reorder/remove
+    - _Requirements: 9.1, 9.6_
+
+  - [ ] 8.5 Implement media inheritance
+    - Inherit unit type media to specs
+    - Allow spec-level media overrides
+    - Display inheritance indicator
+    - _Requirements: 9.7_
+
+- [ ] 9. Step 2: Unit Types - Modal Tab E (Spec Variations)
+  - [ ] 9.1 Build SpecVariationsTab component
     - Create tab container
     - Display list of spec cards
     - Add "Add New Spec" button
     - _Requirements: 7.1_
 
-  - [ ] 6.2 Build SpecCard component (expandable)
+  - [ ] 9.2 Build SpecCard component (expandable)
     - Display spec summary (name, price, key differences)
     - Implement expand/collapse
-    - Show inherited vs overridden features
-    - _Requirements: 7.1, 8.5_
+    - Show inherited amenities and specifications
+    - _Requirements: 7.1, 8.6_
 
-  - [ ] 6.3 Build SpecModal/SpecForm component
+  - [ ] 9.3 Build SpecModal/SpecForm component
     - Spec name input
     - Price input
     - Description textarea
     - Bedrooms/bathrooms/size overrides
     - _Requirements: 7.2_
 
-  - [ ] 6.4 Implement feature override system
-    - Display inherited features (read-only)
-    - Add "Override" toggle per feature
-    - Allow adding new features
-    - Allow removing inherited features
-    - Allow replacing inherited features
-    - _Requirements: 7.5, 8.1, 8.3_
+  - [ ] 9.4 Implement amenity and specification override system
+    - Display inherited amenities (read-only)
+    - Display inherited specifications (read-only)
+    - Add "Override" toggle per amenity/specification
+    - Allow adding new amenities
+    - Allow removing inherited amenities
+    - Allow overriding specifications
+    - _Requirements: 7.5, 8.2, 8.4_
 
-  - [ ] 6.5 Build spec-specific media uploader
+  - [ ] 9.5 Build spec-specific media uploader
     - Photos upload
     - Floor plans upload
     - Videos upload
@@ -221,163 +306,125 @@
     - Category-based organization
     - _Requirements: 7.3_
 
-  - [ ] 6.6 Build spec-specific document uploader
+  - [ ] 9.6 Build spec-specific document uploader
     - PDF upload for spec documents
     - Display uploaded documents
     - Remove functionality
     - _Requirements: 7.4_
 
-  - [ ] 6.7 Implement specification inheritance logic
+  - [ ] 9.7 Implement complete inheritance logic
     - computeFinalFeatures() function
-    - Merge base features with overrides
-    - Handle add/remove/replace operations
-    - Display computed result
-    - _Requirements: 8.1, 8.2, 8.3, 8.4, 8.5_
+    - Merge development amenities + unit type amenities + unit type specifications + spec overrides
+    - Handle add/remove operations for amenities
+    - Handle specification overrides
+    - Display computed result with source indicators
+    - _Requirements: 8.1, 8.2, 8.3, 8.4, 8.5, 8.6_
 
-- [ ] 7. Step 2: Unit Types - Modal Tab C (Media)
-  - [ ] 7.1 Build MediaTab component
-    - Create tab container
-    - Organize by category
-    - _Requirements: 9.1_
-
-  - [ ] 7.2 Build category upload sections
-    - Photos upload zone
-    - Floor plans upload zone (images & PDFs)
-    - Videos upload zone
-    - PDFs upload zone
-    - _Requirements: 9.1, 9.2, 9.3_
-
-  - [ ] 7.3 Implement media management features
-    - Drag & drop upload
-    - Set primary image
-    - Reorder media
-    - Remove media
-    - Preview functionality
-    - _Requirements: 9.4, 9.5, 9.6_
-
-  - [ ] 7.4 Implement media inheritance
-    - Inherit unit type base media to specs
-    - Allow spec-level media overrides
-    - Display inheritance indicator
-    - _Requirements: 9.7_
-
-- [ ] 8. Step 3: Development Features & Specifications
-  - [ ] 8.1 Create DevelopmentFeaturesStep component
+- [ ] 10. Step 3: Phase Details & Infrastructure
+  - [ ] 10.1 Create PhaseDetailsStep component
     - Build step container
-    - Create feature selector UI
+    - Organize into two sections
     - _Requirements: 10.1_
 
-  - [ ] 8.2 Build FeatureSelector component
+  - [ ] 10.2 Build PhaseInformationSection
+    - Phase name input
+    - Phase number input
+    - Expected completion date picker
+    - Phase status dropdown (Planning, Under Construction, Completed)
+    - _Requirements: 10.1_
+
+  - [ ] 10.3 Build DevelopmentInfrastructureSection
     - Multi-select checkboxes or badges
-    - Group by category (Security, Construction, Utilities, Lifestyle)
-    - Display selected features
-    - _Requirements: 10.1, 10.2_
+    - Group by category (Security, Construction, Utilities)
+    - Options: Perimeter Wall, Controlled Access, Electric Fence, CCTV, Brick & Mortar, Paved Roads, Fibre Ready, Solar Installations
+    - Display selected infrastructure
+    - _Requirements: 10.2, 10.3_
 
-  - [ ] 8.3 Implement feature selection logic
-    - Add/remove features
+  - [ ] 10.4 Implement infrastructure storage
     - Store as array
-    - Distinguish from unit-specific features
-    - _Requirements: 10.2, 10.3, 10.4_
+    - Development-level only (no unit-specific fields)
+    - _Requirements: 10.4, 10.5_
 
-- [ ] 9. Step 4: Documents
-  - [ ] 9.1 Create DocumentsStep component
-    - Build step container
-    - Create document upload zones
-    - _Requirements: 11.1_
-
-  - [ ] 9.2 Build DocumentUploader component
-    - Upload zones by type (Brochure, Site Plan, Pricing Sheet, etc.)
-    - Display uploaded documents
-    - Show filename, size, upload date
-    - Remove/replace functionality
-    - _Requirements: 11.1, 11.3, 11.4_
-
-  - [ ] 9.3 Implement document categorization
-    - Development-wide vs unit-specific toggle
-    - Validate file types (PDF only)
-    - Validate file size limits
-    - _Requirements: 11.2, 11.5_
-
-- [ ] 10. Step 5: Review & Publish
-  - [ ] 10.1 Create ReviewPublishStep component
+- [ ] 11. Step 4: Review & Publish
+  - [ ] 11.1 Create ReviewPublishStep component
     - Build step container
     - Organize summary sections
     - _Requirements: 12.1_
 
-  - [ ] 10.2 Build DevelopmentSummary component
+  - [ ] 11.2 Build DevelopmentSummary component
     - Display name, location, status
-    - Show amenities list
+    - Show development amenities list (inherited by all unit types)
     - Show highlights list
+    - Show media summary (hero image, photos, videos)
     - _Requirements: 12.1_
 
-  - [ ] 10.3 Build UnitTypesSummary component
+  - [ ] 11.3 Build UnitTypesSummary component
     - Display each unit type
     - Show core info (beds, baths, size, price range)
-    - List all specs with price differences
+    - Show standard amenities (inherited from development)
+    - Show additional amenities (unit type-specific)
+    - Show specifications & finishes
+    - List all spec variations with price differences
     - Show media count
-    - Highlight feature differences between specs
+    - Highlight amenity and specification differences between specs
     - _Requirements: 12.2_
 
-  - [ ] 10.4 Build FeaturesSummary component
-    - Display estate-level features
+  - [ ] 11.4 Build PhaseInfrastructureSummary component
+    - Display phase information (name, number, completion date, status)
+    - Display estate-level infrastructure features
     - Group by category
     - _Requirements: 12.3_
 
-  - [ ] 10.5 Build DocumentsSummary component
-    - List all uploaded documents
-    - Show names and types
-    - _Requirements: 12.4_
-
-  - [ ] 10.6 Implement publish actions
+  - [ ] 11.5 Implement publish actions
     - "Save as Draft" button
     - "Publish" button
     - Validate all required fields
     - Handle success/error states
     - _Requirements: 12.5, 12.6, 12.7_
 
-- [ ] 11. Wizard navigation and progress
-  - [ ] 11.1 Create WizardProgress component
-    - Display 5-step indicator
+- [ ] 12. Wizard navigation and progress
+  - [ ] 12.1 Create WizardProgress component
+    - Display 4-step indicator
     - Show current step
     - Show completed steps
     - Allow clicking to navigate
     - _Requirements: 16.1, 16.2, 16.5_
 
-  - [ ] 11.2 Implement step navigation logic
+  - [ ] 12.2 Implement step navigation logic
     - Previous/Next buttons
     - Disable Previous on first step
     - Replace Next with actions on last step
     - Validate before proceeding
     - _Requirements: 16.3, 16.4_
 
-  - [ ] 11.3 Implement step validation
+  - [ ] 12.3 Implement step validation
     - Validate required fields per step
     - Prevent progression with errors
     - Show validation errors
     - _Requirements: 15.1, 15.2, 15.3_
 
-- [ ] 12. Validation and error handling
-  - [ ] 12.1 Implement field-level validation
+- [ ] 13. Validation and error handling
+  - [ ] 13.1 Implement field-level validation
     - Development name (min 5 chars)
     - Required field validation
     - Format validation (email, phone, etc.)
     - _Requirements: 15.1, 15.5_
 
-  - [ ] 12.2 Build inline error display
+  - [ ] 13.2 Build inline error display
     - Show errors on blur
     - Clear errors on correction
     - Display specific guidance
     - Mark required fields with asterisk
     - _Requirements: 15.1, 15.2, 15.3, 15.4_
 
-  - [ ] 12.3 Implement geocoding error handling
+  - [ ] 13.3 Implement geocoding error handling
     - Catch API errors
     - Display user-friendly messages
     - Provide retry option
     - Fall back to manual entry
     - _Requirements: 2.3_
 
-  - [ ] 12.4 Implement file upload error handling
+  - [ ] 13.4 Implement file upload error handling
     - Validate file types
     - Check file size limits
     - Display upload progress
@@ -385,47 +432,47 @@
     - Allow retry
     - _Requirements: 11.5_
 
-- [ ] 13. Auto-save and draft management
-  - [ ] 13.1 Implement auto-save functionality
+- [ ] 14. Auto-save and draft management
+  - [ ] 14.1 Implement auto-save functionality
     - Debounce changes (3 seconds)
     - Save to localStorage
     - Save to database (when available)
     - _Requirements: 14.1_
 
-  - [ ] 13.2 Build save status indicator
+  - [ ] 14.2 Build save status indicator
     - Show "Saving...", "Saved", or error state
     - Display last saved timestamp
     - Position in wizard header
     - _Requirements: 14.4_
 
-  - [ ] 13.3 Implement draft restoration
+  - [ ] 14.3 Implement draft restoration
     - Check for existing draft on mount
     - Show resume dialog
     - Restore all field values
     - Clear draft on fresh start
     - _Requirements: 14.2, 14.3_
 
-  - [ ] 13.4 Implement draft persistence
+  - [ ] 14.4 Implement draft persistence
     - Persist across browser sessions
     - Handle localStorage limits
     - Sync with database
     - _Requirements: 14.5_
 
-- [ ] 14. Backend API endpoints
-  - [ ] 14.1 Create development CRUD endpoints
+- [ ] 15. Backend API endpoints
+  - [ ] 15.1 Create development CRUD endpoints
     - POST /api/developer/developments (create)
     - GET /api/developer/developments/:id (read)
     - PUT /api/developer/developments/:id (update)
     - DELETE /api/developer/developments/:id (delete)
     - _Requirements: 1.1, 12.6, 12.7_
 
-  - [ ] 14.2 Create unit type endpoints
+  - [ ] 15.2 Create unit type endpoints
     - POST /api/developer/developments/:id/unit-types
     - PUT /api/developer/unit-types/:id
     - DELETE /api/developer/unit-types/:id
     - _Requirements: 5.1, 5.4_
 
-  - [ ] 14.3 Create spec variation endpoints
+  - [ ] 15.3 Create spec variation endpoints
     - POST /api/developer/unit-types/:id/specs
     - PUT /api/developer/specs/:id
     - DELETE /api/developer/specs/:id
@@ -496,50 +543,50 @@
     - _Requirements: Performance_
 
 - [ ] 16. Testing
-  - [ ]* 16.1 Write unit tests for validation
+  - [ ] 16.1 Write unit tests for validation
     - Test development name validation
     - Test highlights limit enforcement
     - Test required field validation
     - _Requirements: 1.3, 4.3, 15.5_
 
-  - [ ]* 16.2 Write unit tests for inheritance logic
+  - [ ] 16.2 Write unit tests for inheritance logic
     - Test computeFinalFeatures()
     - Test override merging
     - Test add/remove/replace operations
     - _Requirements: 8.1, 8.3, 8.4_
 
-  - [ ]* 16.3 Write property-based tests
+  - [ ] 16.3 Write property-based tests
     - **Property 1: Development name validation**
     - **Validates: Requirements 1.3**
 
-  - [ ]* 16.4 Write property-based tests
+  - [ ] 16.4 Write property-based tests
     - **Property 2: Highlights limit enforcement**
     - **Validates: Requirements 4.3**
 
-  - [ ]* 16.5 Write property-based tests
+  - [ ] 16.5 Write property-based tests
     - **Property 4: Specification inheritance**
     - **Validates: Requirements 8.1, 8.4**
 
-  - [ ]* 16.6 Write property-based tests
+  - [ ] 16.6 Write property-based tests
     - **Property 5: Override storage efficiency**
     - **Validates: Requirements 8.3**
 
-  - [ ]* 16.7 Write property-based tests
+  - [ ] 16.7 Write property-based tests
     - **Property 6: Unit type duplication**
     - **Validates: Requirements 5.5**
 
-  - [ ]* 16.8 Write property-based tests
+  - [ ] 16.8 Write property-based tests
     - **Property 7: Primary image uniqueness**
     - **Validates: Requirements 9.4**
 
-  - [ ]* 16.9 Write integration tests
+  - [ ] 16.9 Write integration tests
     - Test complete wizard flow
     - Test unit type and spec management
     - Test draft save and restore
     - Test navigation between steps
     - _Requirements: All_
 
-  - [ ]* 16.10 Write E2E tests
+  - [ ] 16.10 Write E2E tests
     - Test user journey from start to publish
     - Test map interaction
     - Test media upload
