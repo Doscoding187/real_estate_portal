@@ -70,6 +70,7 @@ export default function Overview() {
   }
 
   // Handle missing developer profile - redirect to setup
+  // Only show this if profile truly doesn't exist (not just pending verification)
   if (!developerProfile) {
     return (
       <Card className="card">
@@ -86,6 +87,68 @@ export default function Overview() {
             </div>
             <Button onClick={() => window.location.href = '/developer/setup'}>
               Complete Profile Setup
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Show pending verification message if profile exists but not verified/approved
+  if (developerProfile && developerProfile.status === 'pending') {
+    return (
+      <Card className="card">
+        <CardContent className="py-12">
+          <div className="text-center space-y-4">
+            <div className="w-16 h-16 mx-auto bg-amber-100 rounded-full flex items-center justify-center">
+              <ClipboardList className="w-8 h-8 text-amber-600" />
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold text-slate-800">Profile Under Review</h3>
+              <p className="text-slate-600">
+                Your developer profile has been submitted and is currently under review by our admin team. 
+                You'll receive an email notification once your profile is approved.
+              </p>
+              <p className="text-sm text-slate-500 mt-2">
+                This usually takes 1-2 business days.
+              </p>
+            </div>
+            <div className="flex gap-3 justify-center">
+              <Button variant="outline" onClick={() => window.location.href = '/developer/setup'}>
+                Edit Profile
+              </Button>
+              <Button onClick={() => window.location.reload()}>
+                Refresh Status
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Show rejection message if profile was rejected
+  if (developerProfile && developerProfile.status === 'rejected') {
+    return (
+      <Card className="card">
+        <CardContent className="py-12">
+          <div className="text-center space-y-4">
+            <div className="w-16 h-16 mx-auto bg-red-100 rounded-full flex items-center justify-center">
+              <span className="text-2xl">❌</span>
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold text-slate-800">Profile Rejected</h3>
+              <p className="text-slate-600">
+                Unfortunately, your developer profile was not approved.
+              </p>
+              {developerProfile.rejectionReason && (
+                <p className="text-sm text-slate-600 mt-2 p-3 bg-red-50 rounded-lg">
+                  <strong>Reason:</strong> {developerProfile.rejectionReason}
+                </p>
+              )}
+            </div>
+            <Button onClick={() => window.location.href = '/developer/setup'}>
+              Update and Resubmit Profile
             </Button>
           </div>
         </CardContent>
