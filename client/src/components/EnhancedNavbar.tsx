@@ -1,6 +1,7 @@
 import { Link, useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
-import { Heart, User, ChevronDown, MapPin, Home, Briefcase, MapPinned, TrendingUp, Calculator, Megaphone } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Heart, User, ChevronDown, MapPin, Home, Briefcase, MapPinned, TrendingUp, Calculator, Megaphone, Key, Building2, Lightbulb } from 'lucide-react';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { getLoginUrl } from '@/const';
 import {
@@ -249,9 +250,22 @@ export function EnhancedNavbar() {
     { label: 'Interior Design', href: '#' },
   ];
 
-  const resourcesOptions = [
-    { label: 'Property Insights', href: '#' },
+  const ownersOptions = [
+    { label: 'Sell Your Property', href: '/advertise' },
+    { label: 'Rent Out Your Property', href: '/advertise' },
+    { label: 'Property Valuation', href: '#' },
+    { label: 'Manage Listings', href: '/dashboard' },
+  ];
+
+  const developersOptions = [
+    { label: 'List Development', href: '/developer' },
+    { label: 'Developer Dashboard', href: '/developer/dashboard' },
+    { label: 'Marketing Tools', href: '#' },
+  ];
+
+  const insightsOptions = [
     { label: 'Market Trends', href: '#' },
+    { label: 'Property Insights', href: '#' },
     { label: 'Buying Guide', href: '#' },
     { label: 'Selling Guide', href: '#' },
     { label: 'Blog', href: '#' },
@@ -283,10 +297,10 @@ export function EnhancedNavbar() {
                 </NavigationMenuContent>
               </NavigationMenuItem>
 
-              {/* Buy Mega Menu */}
+              {/* For Buyers Mega Menu */}
               <NavigationMenuItem>
                 <NavigationMenuTrigger className="bg-transparent text-gray-700 hover:bg-blue-50 hover:text-blue-700 data-[state=open]:bg-blue-100 data-[state=open]:text-blue-700 font-semibold transition-all">
-                  Buy
+                  For Buyers
                 </NavigationMenuTrigger>
                 <NavigationMenuContent>
                   <div className="w-[800px] p-0 overflow-hidden flex">
@@ -347,10 +361,10 @@ export function EnhancedNavbar() {
                 </NavigationMenuContent>
               </NavigationMenuItem>
 
-              {/* Rent Mega Menu */}
+              {/* For Renters Mega Menu */}
               <NavigationMenuItem>
                 <NavigationMenuTrigger className="bg-transparent text-gray-700 hover:bg-blue-50 hover:text-blue-700 data-[state=open]:bg-blue-100 data-[state=open]:text-blue-700 font-semibold transition-all">
-                  Rent
+                  For Renters
                 </NavigationMenuTrigger>
                 <NavigationMenuContent>
                   <div className="w-[800px] p-0 overflow-hidden flex">
@@ -411,23 +425,14 @@ export function EnhancedNavbar() {
                 </NavigationMenuContent>
               </NavigationMenuItem>
 
-              {/* New Developments Link */}
-              <NavigationMenuItem>
-                <Link href="/developments">
-                  <NavigationMenuLink className="bg-transparent text-gray-700 hover:bg-blue-50 hover:text-blue-700 font-semibold transition-all px-4 py-2 rounded-md cursor-pointer">
-                    New Developments
-                  </NavigationMenuLink>
-                </Link>
-              </NavigationMenuItem>
-
-              {/* Services Dropdown */}
+              {/* For Owners Dropdown */}
               <NavigationMenuItem>
                 <NavigationMenuTrigger className="bg-transparent text-gray-700 hover:bg-blue-50 hover:text-blue-700 data-[state=open]:bg-blue-100 data-[state=open]:text-blue-700 font-semibold transition-all">
-                  Services
+                  For Owners
                 </NavigationMenuTrigger>
                 <NavigationMenuContent>
                   <div className="w-[250px] p-2">
-                    {servicesOptions.map(option => (
+                    {ownersOptions.map(option => (
                       <a key={option.href} href={option.href}>
                         <NavigationMenuLink className="block p-3 hover:bg-blue-50 hover:text-blue-600 rounded-md transition-colors">
                           {option.label}
@@ -438,14 +443,32 @@ export function EnhancedNavbar() {
                 </NavigationMenuContent>
               </NavigationMenuItem>
 
-              {/* Resources Dropdown */}
+              {/* For Developers Dropdown */}
               <NavigationMenuItem>
                 <NavigationMenuTrigger className="bg-transparent text-gray-700 hover:bg-blue-50 hover:text-blue-700 data-[state=open]:bg-blue-100 data-[state=open]:text-blue-700 font-semibold transition-all">
-                  Resources
+                  For Developers
                 </NavigationMenuTrigger>
                 <NavigationMenuContent>
                   <div className="w-[250px] p-2">
-                    {resourcesOptions.map(option => (
+                    {developersOptions.map(option => (
+                      <a key={option.href} href={option.href}>
+                        <NavigationMenuLink className="block p-3 hover:bg-blue-50 hover:text-blue-600 rounded-md transition-colors">
+                          {option.label}
+                        </NavigationMenuLink>
+                      </a>
+                    ))}
+                  </div>
+                </NavigationMenuContent>
+              </NavigationMenuItem>
+
+              {/* Insights Dropdown */}
+              <NavigationMenuItem>
+                <NavigationMenuTrigger className="bg-transparent text-gray-700 hover:bg-blue-50 hover:text-blue-700 data-[state=open]:bg-blue-100 data-[state=open]:text-blue-700 font-semibold transition-all">
+                  Insights
+                </NavigationMenuTrigger>
+                <NavigationMenuContent>
+                  <div className="w-[250px] p-2">
+                    {insightsOptions.map(option => (
                       <a key={option.href} href={option.href}>
                         <NavigationMenuLink className="block p-3 hover:bg-blue-50 hover:text-blue-600 rounded-md transition-colors">
                           {option.label}
@@ -460,10 +483,14 @@ export function EnhancedNavbar() {
               <NavigationMenuItem>
                 <Link href="/explore">
                   <Button
+                    variant="outline"
                     size="sm"
-                    className="bg-gradient-to-r from-blue-600 to-blue-700 text-white hover:from-blue-700 hover:to-blue-800 shadow-md hover:shadow-lg hover:scale-105 transition-all duration-200 font-semibold border-0"
+                    className="relative border-blue-600 text-blue-600 hover:bg-blue-50 hover:border-blue-700 transition-all duration-200 font-semibold"
                   >
                     Explore
+                    <Badge className="ml-2 bg-blue-600 text-white text-[10px] px-1.5 py-0 h-4 border-0">
+                      NEW
+                    </Badge>
                   </Button>
                 </Link>
               </NavigationMenuItem>
@@ -473,10 +500,10 @@ export function EnhancedNavbar() {
                 <Link href="/advertise">
                   <Button
                     size="sm"
-                    className="bg-gradient-to-r from-amber-500 to-yellow-500 text-slate-900 hover:from-amber-600 hover:to-yellow-600 shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-200 font-bold border border-amber-600/30"
+                    className="bg-gradient-to-r from-blue-700 to-blue-800 text-white hover:from-blue-800 hover:to-blue-900 shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-200 font-bold border border-blue-600"
                   >
                     <Megaphone className="h-4 w-4 mr-2" />
-                    Advertise
+                    Advertise with us
                   </Button>
                 </Link>
               </NavigationMenuItem>
@@ -507,17 +534,6 @@ export function EnhancedNavbar() {
 
           {/* Right Side Actions */}
           <div className="flex items-center gap-3">
-            {/* Sell or Rent Property Button */}
-            <Link href="/advertise">
-              <Button
-                variant="outline"
-                size="sm"
-                className="hidden md:flex border-blue-200 text-blue-600 hover:bg-blue-50 hover:border-blue-300 transition-all font-medium"
-              >
-                List Property
-              </Button>
-            </Link>
-
             {/* Favorites */}
             {!!user && (
               <Link href="/favorites">
@@ -564,10 +580,10 @@ export function EnhancedNavbar() {
               </DropdownMenu>
             ) : (
               <Button
-                variant="default"
+                variant="outline"
                 size="sm"
                 onClick={() => (window.location.href = getLoginUrl())}
-                className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-md hover:shadow-lg transition-all font-medium"
+                className="border-gray-300 text-gray-700 hover:bg-gray-50 hover:border-gray-400 transition-all font-medium"
               >
                 Login
               </Button>

@@ -17,43 +17,44 @@ The wizard follows industry-standard patterns used by major property platforms (
 Step 1: Development Details
 ├── Basic Information (name, status, completion date, description)
 ├── Location (pin-drop map with reverse geocoding)
-├── Development Amenities (shared facilities)
-└── Development Highlights (up to 5 key selling points)
+├── Development Amenities (shared facilities - inherited by all unit types)
+├── Development Highlights (up to 5 key selling points)
+└── Development Media (hero image, photos, videos)
 
 Step 2: Unit Types & Configurations
 ├── Unit Type Cards (display all configured types)
-└── Unit Type Modal (3-tab interface)
+└── Unit Type Modal (5-tab interface)
     ├── Tab A: Base Configuration
     │   ├── Unit Type Name, Bedrooms, Bathrooms
     │   ├── Parking, Size, Price Range
-    │   ├── Base Features (defaults for all specs)
-    │   ├── Base Finishes
-    │   └── Base Media
-    ├── Tab B: Specs & Variations
-    │   ├── Spec List (Standard, GAP, Premium, etc.)
-    │   └── Spec Card (expandable)
-    │       ├── Spec Name, Price, Description
-    │       ├── Bedrooms/Bathrooms/Size overrides
-    │       ├── Feature Overrides (add/remove/replace)
-    │       ├── Spec-Specific Media
-    │       └── Spec-Specific Documents
-    └── Tab C: Media
-        ├── Photos
-        ├── Floor Plans
-        ├── Videos
-        └── PDFs
+    ├── Tab B: Amenities
+    │   ├── Standard Amenities (inherited from development, read-only)
+    │   └── Additional Amenities (unit type-specific, selectable)
+    ├── Tab C: Specifications & Finishes
+    │   ├── Built-in Features (wardrobes, flooring, counters)
+    │   ├── Finishes (paint, flooring types, kitchen, bathroom)
+    │   └── Electrical Features (prepaid electricity, etc.)
+    ├── Tab D: Media
+    │   ├── Unit Type Gallery (photos)
+    │   ├── Floor Plans (images/PDFs)
+    │   └── Renders/Videos
+    └── Tab E: Spec Variations
+        ├── Spec List (Standard, GAP, Premium, etc.)
+        └── Spec Card (expandable)
+            ├── Spec Name, Price, Description
+            ├── Bedrooms/Bathrooms/Size overrides
+            ├── Amenity & Specification Overrides (add/remove/replace)
+            ├── Spec-Specific Media
+            └── Spec-Specific Documents
 
-Step 3: Development Features & Specifications
-└── Estate-Level Features (infrastructure, security, utilities)
+Step 3: Phase Details & Infrastructure
+├── Phase Information (name, number, completion date, status)
+└── Development Infrastructure (estate-level only: walls, security, roads, utilities)
 
-Step 4: Documents
-└── Document Uploads (brochures, plans, pricing sheets, rules)
-
-Step 5: Review & Publish
+Step 4: Review & Publish
 ├── Development Summary
-├── Unit Types Summary (with all specs)
-├── Features Summary
-├── Documents Summary
+├── Unit Types Summary (with amenities, specs, and variations)
+├── Phase & Infrastructure Summary
 └── Actions (Save as Draft / Publish)
 ```
 
@@ -61,43 +62,48 @@ Step 5: Review & Publish
 
 ```
 DevelopmentWizard (Main Container)
-├── WizardProgress (5-step indicator)
+├── WizardProgress (4-step indicator)
 ├── Step1: DevelopmentDetailsStep
 │   ├── BasicInformationSection
 │   ├── LocationSection (with LocationMapPicker)
-│   ├── DevelopmentAmenitiesSection
-│   └── DevelopmentHighlightsSection
+│   ├── DevelopmentAmenitiesSection (inherited by all unit types)
+│   ├── DevelopmentHighlightsSection
+│   └── DevelopmentMediaSection
+│       ├── HeroImageUpload
+│       ├── DevelopmentPhotosUpload
+│       └── DevelopmentVideosUpload
 ├── Step2: UnitTypesStep
 │   ├── UnitTypeCard[] (display grid)
 │   ├── EmptyState (when no types)
 │   └── UnitTypeModal
-│       ├── TabNavigation
+│       ├── TabNavigation (5 tabs)
 │       ├── BaseConfigurationTab
-│       │   ├── BasicInfoSection
-│       │   ├── BaseFeaturesSection
-│       │   ├── BaseFinishesSection
-│       │   └── BaseMediaSection
-│       ├── SpecsVariationsTab
-│       │   ├── SpecCard[] (expandable cards)
-│       │   └── SpecModal
-│       │       ├── SpecBasicInfo
-│       │       ├── FeatureOverrides
-│       │       ├── SpecMedia
-│       │       └── SpecDocuments
-│       └── MediaTab
-│           ├── PhotosUpload
-│           ├── FloorPlansUpload
-│           ├── VideosUpload
-│           └── PDFsUpload
-├── Step3: DevelopmentFeaturesStep
-│   └── FeatureSelector (multi-select)
-├── Step4: DocumentsStep
-│   └── DocumentUploader (categorized)
-└── Step5: ReviewPublishStep
+│       │   └── BasicInfoSection (name, beds, baths, parking, size, price)
+│       ├── AmenitiesTab
+│       │   ├── StandardAmenitiesSection (inherited from development, read-only)
+│       │   └── AdditionalAmenitiesSection (unit type-specific, multi-select)
+│       ├── SpecificationsFinishesTab
+│       │   ├── BuiltInFeaturesSection (wardrobes, flooring, counters)
+│       │   ├── FinishesSection (paint, flooring types, kitchen, bathroom)
+│       │   └── ElectricalFeaturesSection (prepaid electricity, etc.)
+│       ├── MediaTab
+│       │   ├── UnitTypeGalleryUpload
+│       │   ├── FloorPlansUpload
+│       │   └── RendersVideosUpload
+│       └── SpecVariationsTab
+│           ├── SpecCard[] (expandable cards)
+│           └── SpecModal
+│               ├── SpecBasicInfo
+│               ├── AmenitySpecificationOverrides
+│               ├── SpecMedia
+│               └── SpecDocuments
+├── Step3: PhaseDetailsStep
+│   ├── PhaseInformationSection (name, number, completion date, status)
+│   └── DevelopmentInfrastructureSection (estate-level only: walls, security, roads, utilities)
+└── Step4: ReviewPublishStep
     ├── DevelopmentSummary
-    ├── UnitTypesSummary
-    ├── FeaturesSummary
-    ├── DocumentsSummary
+    ├── UnitTypesSummary (with amenities, specs, variations)
+    ├── PhaseInfrastructureSummary
     └── PublishActions
 ```
 
@@ -109,28 +115,42 @@ Zustand Store (useDevelopmentWizard)
 ├── developmentData: {
 │   name, status, completionDate, description,
 │   location: { lat, lng, address, gpsAccuracy },
-│   amenities: string[],
-│   highlights: string[]
+│   amenities: string[], // Inherited by all unit types as "standard amenities"
+│   highlights: string[],
+│   media: { heroImage, photos: [], videos: [] }
 │ }
 ├── unitTypes: UnitType[] {
 │   id, name, bedrooms, bathrooms, parking, size, priceRange,
-│   baseFeatures: {},
-│   baseFinishes: {},
 │   baseMedia: [],
+│   amenities: {
+│     standard: string[], // Inherited from development (read-only)
+│     additional: string[] // Unit type-specific
+│   },
+│   specifications: {
+│     builtInFeatures: {},
+│     finishes: {},
+│     electrical: {}
+│   },
 │   specs: SpecVariation[] {
 │     id, name, price, description,
-│     overrides: {},
+│     overrides: {
+│       amenities: {},
+│       specifications: {}
+│     },
 │     media: [],
 │     documents: []
 │   }
 │ }
-├── developmentFeatures: string[]
-├── documents: Document[]
+├── phaseDetails: {
+│   phaseName, phaseNumber, completionDate, status,
+│   infrastructure: string[] // Estate-level only
+│ }
 └── actions: {
     setDevelopmentData(),
     addUnitType(), updateUnitType(), deleteUnitType(),
+    setUnitTypeAmenities(), setUnitTypeSpecifications(),
     addSpec(), updateSpec(), deleteSpec(),
-    setFeatures(), addDocument(), removeDocument()
+    setPhaseDetails(), setInfrastructure()
   }
 ```
 
@@ -168,9 +188,14 @@ Zustand Store (useDevelopmentWizard)
    - Add/Remove functionality
    - Example suggestions
 
+5. **Development Media**
+   - Hero Image Upload (single image, recommended dimensions)
+   - Development Photos (multi-image, drag & drop, reordering, set primary)
+   - Development Videos (video files or URLs, thumbnails, reorder/remove)
+
 ### Step 2: UnitTypesStep
 
-**Purpose:** Manage unit types with base configurations and spec variations
+**Purpose:** Manage unit types with amenities, specifications, and spec variations
 
 **Main View:**
 - Grid of UnitTypeCard components
@@ -186,11 +211,11 @@ Displays:
 - Number of specs
 - Quick actions: Edit, Duplicate, Delete
 
-**UnitTypeModal Component (3-Tab Interface):**
+**UnitTypeModal Component (5-Tab Interface):**
 
 **Tab A: Base Configuration**
 
-*Purpose:* Define defaults that apply to all specs within this unit type
+*Purpose:* Define core unit type information
 
 Sections:
 1. Basic Info
@@ -200,26 +225,62 @@ Sections:
    - Unit Size & Yard Size (optional)
    - Base Price Range (min required, max optional)
 
-2. Base Features (Defaults for all specs)
+**Tab B: Amenities**
+
+*Purpose:* Define amenities at two levels
+
+Sections:
+1. Standard Amenities (Read-Only)
+   - Display all development-level amenities
+   - Visual indication that these apply to all units
+   - Inherited from Step 1
+
+2. Additional Amenities (Unit Type-Specific)
+   - Multi-select checkboxes
+   - Options: Built-in Wardrobes, Balcony, Pet-Friendly, Garden, Study Room, En-suite Bathroom
+   - These are added on top of standard amenities
+
+**Tab C: Specifications & Finishes**
+
+*Purpose:* Define specifications and finishes for this unit type
+
+Sections:
+1. Built-in Features
    - Built-in Wardrobes (yes/no)
    - Tiled Flooring (yes/no)
    - Granite Counters (yes/no)
-   - Prepaid Electricity (yes/no)
-   - Balcony (yes/no)
-   - Pet-Friendly (yes/no)
 
-3. Base Finishes
+2. Finishes
    - Paint & Internal Walls (text)
    - Flooring Types (text)
    - Kitchen Standard Features (text)
    - Bathroom Standard Features (text)
 
-4. Base Media
-   - Unit Type Gallery (images)
-   - Floor Plans (images/PDFs)
-   - Renders/Videos (optional)
+3. Electrical Features
+   - Prepaid Electricity (yes/no)
 
-**Tab B: Specs & Variations**
+**Tab D: Media**
+
+*Purpose:* Upload media specific to this unit type
+
+Sections:
+1. Unit Type Gallery
+   - Multi-image upload
+   - Drag & drop support
+   - Set primary image
+   - Reorder/remove
+
+2. Floor Plans
+   - Upload images or PDFs
+   - Multiple floor plan support
+   - Reorder/remove
+
+3. Renders/Videos
+   - Video files or URLs
+   - 3D renders
+   - Preview thumbnails
+
+**Tab E: Spec Variations**
 
 *Purpose:* Create multiple pricing/finish variations within the unit type
 
@@ -234,63 +295,36 @@ Spec Card (Expandable):
 - Bedrooms/Bathrooms override (optional)
 - Size override (optional)
 - Spec Description (text)
-- Feature Overrides
-  - Toggle-based system
-  - Add new features
-  - Remove inherited features
-  - Replace inherited features
+- Amenity & Specification Overrides
+  - Add/remove amenities beyond unit type
+  - Override specifications (built-in features, finishes, electrical)
 - Spec-Specific Media
   - Photos, Floor Plans, Videos, PDFs
   - Overrides unit type base media
 - Spec-Specific Documents
   - PDF uploads
 
-**Tab C: Media**
+### Step 3: PhaseDetailsStep
 
-*Purpose:* Organize media by category for the unit type
+**Purpose:** Specify phase information and estate-level infrastructure (development-level only, no unit-specific fields)
 
-Categories:
-- Photos (images only)
-- Floor Plans (images & PDFs)
-- Videos (video files or URLs)
-- PDFs (documents)
+**Sections:**
 
-Features:
-- Drag & drop upload
-- Set primary image
-- Reorder media
-- Remove media
-- Category-based organization
+1. **Phase Information**
+   - Phase Name (text, optional)
+   - Phase Number (number, optional)
+   - Expected Completion Date (date picker)
+   - Phase Status (dropdown: Planning, Under Construction, Completed)
 
-### Step 3: DevelopmentFeaturesStep
+2. **Development Infrastructure** (Estate-Level Only)
+   - Multi-select checkboxes or badge selector
+   - Options grouped by category:
+     - Security: Perimeter Wall, Controlled Access, Electric Fence, CCTV
+     - Construction: Brick & Mortar, Paved Roads
+     - Utilities: Fibre Ready, Solar Installations
+   - Note: No unit-specific configurations here - those are in Step 3
 
-**Purpose:** Specify estate-level infrastructure and features
-
-**Interface:**
-- Multi-select checkboxes or badge selector
-- Options grouped by category:
-  - Security: Perimeter Wall, Controlled Access, Electric Fence, CCTV
-  - Construction: Brick & Mortar, Paved Roads
-  - Utilities: Fibre Ready, Prepaid Electricity, Solar Installations
-  - Lifestyle: Pet-Friendly Estate
-
-### Step 4: DocumentsStep
-
-**Purpose:** Upload supporting documents
-
-**Interface:**
-- Document upload zones by type:
-  - Brochure PDF
-  - Site Development Plan
-  - Pricing Sheet
-  - Estate Rules
-  - Engineering Pack
-  - Additional Forms
-- Each upload shows: filename, size, upload date
-- Remove/Replace functionality
-- Development-wide vs Unit-specific toggle
-
-### Step 5: ReviewPublishStep
+### Step 4: ReviewPublishStep
 
 **Purpose:** Review all information before publishing
 
@@ -298,21 +332,23 @@ Features:
 
 1. **Development Summary**
    - Name, Location, Status
-   - Amenities list
+   - Development amenities list (inherited by all unit types)
    - Highlights list
+   - Media summary (hero image, photos, videos)
 
 2. **Unit Types Summary**
    - For each unit type:
      - Core info (beds, baths, size, price range)
-     - All specs with price differences
+     - Standard amenities (inherited from development)
+     - Additional amenities (unit type-specific)
+     - Specifications & finishes
+     - All spec variations with price differences
      - Media count
-     - Feature differences between specs
+     - Amenity and specification differences between specs
 
-3. **Development Features Summary**
-   - Estate-level features list
-
-4. **Documents Summary**
-   - All uploaded documents with names and types
+3. **Phase & Infrastructure Summary**
+   - Phase information (name, number, completion date, status)
+   - Estate-level infrastructure features
 
 **Actions:**
 - "Save as Draft" button (stores without publishing)
@@ -345,12 +381,25 @@ interface Development {
   longitude: string;
   gpsAccuracy: 'accurate' | 'approximate';
   
-  // Amenities & Highlights
-  amenities: string[]; // ['Swimming Pool', 'Clubhouse', ...]
+  // Amenities & Highlights (Inherited by all unit types)
+  amenities: string[]; // ['Swimming Pool', 'Clubhouse', ...] - becomes "standard amenities" for unit types
   highlights: string[]; // max 5
   
-  // Features (Estate-Level)
-  features: string[]; // ['Perimeter Wall', 'Fibre Ready', ...]
+  // Development Media (Step 2)
+  media: {
+    heroImage?: MediaItem;
+    photos: MediaItem[];
+    videos: MediaItem[];
+  };
+  
+  // Phase Details & Infrastructure (Step 4 - Development-Level Only)
+  phaseDetails: {
+    phaseName?: string;
+    phaseNumber?: number;
+    expectedCompletion?: Date;
+    phaseStatus?: string;
+  };
+  infrastructure: string[]; // Estate-level only: ['Perimeter Wall', 'Controlled Access', 'Paved Roads', ...]
   
   // Metadata
   views: number;
@@ -360,7 +409,6 @@ interface Development {
   
   // Relationships
   unitTypes?: UnitType[];
-  documents?: Document[];
   
   createdAt: Date;
   updatedAt: Date;
@@ -384,22 +432,28 @@ interface UnitType {
   basePriceFrom: number;
   basePriceTo?: number;
   
-  // Base Features (Defaults for all specs)
-  baseFeatures: {
-    builtInWardrobes: boolean;
-    tiledFlooring: boolean;
-    graniteCounters: boolean;
-    prepaidElectricity: boolean;
-    balcony: boolean;
-    petFriendly: boolean;
+  // Amenities (Two-Level System)
+  amenities: {
+    standard: string[]; // Inherited from development (read-only)
+    additional: string[]; // Unit type-specific: ['Built-in Wardrobes', 'Balcony', 'Pet-Friendly', 'Garden', 'Study Room', 'En-suite Bathroom']
   };
   
-  // Base Finishes
-  baseFinishes: {
-    paintAndWalls?: string;
-    flooringTypes?: string;
-    kitchenFeatures?: string;
-    bathroomFeatures?: string;
+  // Specifications & Finishes (Unit Type Level)
+  specifications: {
+    builtInFeatures: {
+      builtInWardrobes: boolean;
+      tiledFlooring: boolean;
+      graniteCounters: boolean;
+    };
+    finishes: {
+      paintAndWalls?: string;
+      flooringTypes?: string;
+      kitchenFeatures?: string;
+      bathroomFeatures?: string;
+    };
+    electrical: {
+      prepaidElectricity: boolean;
+    };
   };
   
   // Base Media (inherited by all specs)
@@ -437,11 +491,17 @@ interface SpecVariation {
   bathroomsOverride?: number;
   sizeOverride?: number;
   
-  // Feature Overrides
-  featureOverrides?: {
-    add?: string[]; // New features not in base
-    remove?: string[]; // Base features to exclude
-    replace?: Record<string, string>; // Base feature replacements
+  // Amenity & Specification Overrides
+  overrides?: {
+    amenities?: {
+      add?: string[]; // Additional amenities beyond unit type
+      remove?: string[]; // Unit type amenities to exclude
+    };
+    specifications?: {
+      builtInFeatures?: Partial<UnitType['specifications']['builtInFeatures']>;
+      finishes?: Partial<UnitType['specifications']['finishes']>;
+      electrical?: Partial<UnitType['specifications']['electrical']>;
+    };
   };
   
   // Spec-Specific Media (overrides base media)

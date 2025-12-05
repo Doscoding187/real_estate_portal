@@ -4,6 +4,12 @@
 
 This specification defines the comprehensive Developer Listing Wizard for the real estate marketplace platform. The wizard enables property developers to create detailed listings for residential developments with multiple unit types, spec variations, and complete project information. The system implements a clean, scalable 5-step process with progressive disclosure, specification inheritance, and industry-standard data organization.
 
+**Wizard Flow:**
+- **Step 1:** Development Details (name, location, amenities, highlights, development media)
+- **Step 2:** Unit Types & Configurations (with amenities, specifications & finishes, and media per unit type)
+- **Step 3:** Phase Details & Infrastructure (development-level only, no unit-specific fields)
+- **Step 4:** Review & Publish
+
 ## Glossary
 
 - **Development**: A residential property development project with multiple unit types
@@ -71,12 +77,12 @@ This specification defines the comprehensive Developer Listing Wizard for the re
 
 ### Requirement 5: Unit Types Management
 
-**User Story:** As a property developer, I want to define multiple unit types with detailed configurations, so that buyers can understand the different options available in my development.
+**User Story:** As a property developer, I want to define multiple unit types with detailed configurations including amenities and specifications, so that buyers can understand the different options available in my development.
 
 #### Acceptance Criteria
 
 1. WHEN viewing the unit types step THEN the system SHALL display a card-based list of configured unit types
-2. WHEN adding a new unit type THEN the system SHALL open a modal with three tabs: Base Configuration, Specs & Variations, and Media
+2. WHEN adding a new unit type THEN the system SHALL open a modal with four tabs: Base Configuration, Amenities, Specifications & Finishes, and Media
 3. WHEN no unit types exist THEN the system SHALL display an empty state with a clear call-to-action to add the first unit type
 4. THE system SHALL allow adding, editing, duplicating, and deleting unit types
 5. WHEN duplicating a unit type THEN the system SHALL create a copy with "(Copy)" appended to the name
@@ -89,10 +95,36 @@ This specification defines the comprehensive Developer Listing Wizard for the re
 
 1. WHEN entering base configuration THEN the system SHALL require unit type name, bedrooms, bathrooms, parking allocation, size, and base price range
 2. WHEN entering unit type name THEN the system SHALL accept descriptive names like "2 Bedroom Apartment", "60m² Simplex", or "Bachelor Studio"
-3. WHEN defining base features THEN the system SHALL provide fields for Built-in Wardrobes, Tiled Flooring, Granite Counters, Prepaid Electricity, Balcony, and Pet-Friendly status
-4. WHEN defining base finishes THEN the system SHALL provide fields for Paint & Internal Walls, Flooring Types, Kitchen Standard Features, and Bathroom Standard Features
-5. WHEN uploading base media THEN the system SHALL accept Unit Type Gallery images, Floor Plans, and Renders/Videos
-6. THE system SHALL apply base configuration to all specs within the unit type unless overridden
+3. WHEN uploading base media THEN the system SHALL accept Unit Type Gallery images, Floor Plans, and Renders/Videos
+4. THE system SHALL apply base configuration to all specs within the unit type unless overridden
+5. THE system SHALL store only unit-level information without development-wide specifications
+
+### Requirement 6A: Unit Type Amenities
+
+**User Story:** As a property developer, I want to specify amenities at both the development level and per unit type, so that buyers understand which features are standard across all units and which are specific to certain unit types.
+
+#### Acceptance Criteria
+
+1. WHEN configuring unit type amenities THEN the system SHALL display two sections: Standard Amenities and Additional Amenities
+2. WHEN viewing Standard Amenities THEN the system SHALL show all development-wide amenities as read-only checkboxes with visual indication that they apply to all units
+3. WHEN adding Additional Amenities THEN the system SHALL provide selectable options specific to the unit type including Built-in Wardrobes, Balcony, Pet-Friendly, Garden, Study Room, and En-suite Bathroom
+4. WHEN selecting additional amenities THEN the system SHALL allow multiple selections per unit type
+5. THE system SHALL inherit standard amenities from development level automatically
+6. THE system SHALL store additional amenities separately per unit type
+7. WHEN displaying unit type amenities THEN the system SHALL combine standard and additional amenities in the final listing
+
+### Requirement 6B: Unit Type Specifications & Finishes
+
+**User Story:** As a property developer, I want to define specifications and finishes for each unit type, so that buyers understand the quality and features of different unit configurations.
+
+#### Acceptance Criteria
+
+1. WHEN defining unit type specifications THEN the system SHALL provide fields for Built-in Features, Flooring, Kitchen Finishes, Bathroom Finishes, and Electrical Features
+2. WHEN entering built-in features THEN the system SHALL provide options for Built-in Wardrobes, Tiled Flooring, Granite Counters, and Prepaid Electricity
+3. WHEN defining finishes THEN the system SHALL provide fields for Paint & Internal Walls, Flooring Types, Kitchen Standard Features, and Bathroom Standard Features
+4. THE system SHALL apply specifications to all specs within the unit type unless overridden at spec variation level
+5. THE system SHALL store specifications per unit type, not at development level
+6. WHEN a spec variation overrides specifications THEN the system SHALL display the override clearly
 
 ### Requirement 7: Spec Variations Within Unit Types
 
@@ -104,20 +136,21 @@ This specification defines the comprehensive Developer Listing Wizard for the re
 2. WHEN creating a spec THEN the system SHALL require spec name, price, bedrooms/bathrooms, size, and spec description
 3. WHEN defining spec-specific media THEN the system SHALL allow uploading photos, floor plans, videos, and PDFs unique to that spec
 4. WHEN defining spec-specific documents THEN the system SHALL accept PDF uploads
-5. THE system SHALL allow feature overrides where specs can add, remove, or replace inherited features
-6. THE system SHALL inherit unit type base features unless explicitly overridden at spec level
+5. THE system SHALL allow amenity and specification overrides where specs can add, remove, or replace inherited features
+6. THE system SHALL inherit unit type amenities and specifications unless explicitly overridden at spec level
 
 ### Requirement 8: Specification Inheritance Model
 
-**User Story:** As a property developer, I want specifications to inherit from unit type defaults automatically, so that I don't duplicate data and can make efficient updates.
+**User Story:** As a property developer, I want specifications and amenities to inherit from development and unit type defaults automatically, so that I don't duplicate data and can make efficient updates.
 
 #### Acceptance Criteria
 
-1. WHEN a spec is created THEN the system SHALL inherit all base features from the unit type automatically
-2. WHEN base features are updated THEN the system SHALL propagate changes to all specs that haven't overridden those features
-3. WHEN a spec overrides a feature THEN the system SHALL store only the override, not the full feature set
-4. THE system SHALL compute final spec features as: Unit Type Base Features + Spec Overrides
-5. THE system SHALL display inherited features with clear visual indication of their source
+1. WHEN a unit type is created THEN the system SHALL inherit all development-level amenities automatically as standard amenities
+2. WHEN a spec variation is created THEN the system SHALL inherit all unit type amenities and specifications automatically
+3. WHEN unit type amenities or specifications are updated THEN the system SHALL propagate changes to all specs that haven't overridden those features
+4. WHEN a spec overrides an amenity or specification THEN the system SHALL store only the override, not the full feature set
+5. THE system SHALL compute final spec features as: Development Amenities + Unit Type Amenities + Unit Type Specifications + Spec Overrides
+6. THE system SHALL display inherited features with clear visual indication of their source (development-level, unit type-level, or spec-level)
 
 ### Requirement 9: Unit Type Media Management
 
@@ -133,17 +166,18 @@ This specification defines the comprehensive Developer Listing Wizard for the re
 6. THE system SHALL allow reordering and removing media items
 7. THE system SHALL inherit unit type media to all specs unless replaced at spec level
 
-### Requirement 10: Development Features & Specifications
+### Requirement 10: Phase Details & Development Infrastructure
 
-**User Story:** As a property developer, I want to specify estate-level features and infrastructure, so that buyers understand the overall development quality and amenities.
+**User Story:** As a property developer, I want to specify phase-specific information and estate-level infrastructure, so that buyers understand the development timeline and overall project quality.
 
 #### Acceptance Criteria
 
-1. WHEN adding development features THEN the system SHALL provide selectable options including Perimeter Wall, Controlled Access, Electric Fence, CCTV, Pet-Friendly Estate, Brick & Mortar Construction, Paved Roads, Fibre Ready, Prepaid Electricity, and Solar Installations
-2. WHEN selecting features THEN the system SHALL allow multiple selections
-3. THE system SHALL distinguish between development features (estate-level) and unit-specific features
-4. THE system SHALL store features as an array in the database
-5. THE system SHALL display selected features on the development listing page
+1. WHEN entering phase details THEN the system SHALL provide fields for Phase Name, Phase Number, Expected Completion Date, and Phase Status
+2. WHEN adding development infrastructure THEN the system SHALL provide selectable options including Perimeter Wall, Controlled Access, Electric Fence, CCTV, Brick & Mortar Construction, Paved Roads, Fibre Ready, and Solar Installations
+3. WHEN selecting infrastructure features THEN the system SHALL allow multiple selections
+4. THE system SHALL store only development-level information without unit-specific configurations
+5. THE system SHALL distinguish between development infrastructure (estate-level) and unit-specific features
+6. THE system SHALL display selected infrastructure features on the development listing page
 
 ### Requirement 11: Document Management
 
