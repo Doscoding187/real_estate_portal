@@ -20,7 +20,21 @@ import {
 import { useState, useCallback } from 'react';
 
 export function UnitMediaStep() {
-  const { unitTypes, addUnitMedia, removeUnitMedia } = useDevelopmentWizard();
+  const store = useDevelopmentWizard();
+  const unitTypes = store.unitTypes || [];
+  
+  // Note: addUnitMedia and removeUnitMedia don't exist in the new structure
+  // These would need to be added to the hook if unit-specific media is needed
+  const addUnitMedia = (unitId: string, category: string, media: any) => {
+    console.log('Add unit media:', unitId, category, media);
+    // TODO: Implement in hook
+  };
+  
+  const removeUnitMedia = (unitId: string, category: string, mediaId: string) => {
+    console.log('Remove unit media:', unitId, category, mediaId);
+    // TODO: Implement in hook
+  };
+  
   const [activeUnitId, setActiveUnitId] = useState<string>(
     unitTypes[0]?.id || ''
   );

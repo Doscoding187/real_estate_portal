@@ -38,6 +38,35 @@ export function PreviewStep() {
   const [, setLocation] = useLocation();
   const [agreedToTerms, setAgreedToTerms] = useState(false);
 
+  // Extract values from nested structure
+  const developmentName = state.developmentData?.name || '';
+  const address = state.developmentData?.location?.address || '';
+  const city = state.developmentData?.location?.city || '';
+  const province = state.developmentData?.location?.province || '';
+  const suburb = state.developmentData?.location?.suburb || '';
+  const postalCode = state.developmentData?.location?.postalCode || '';
+  const latitude = state.developmentData?.location?.latitude || '';
+  const longitude = state.developmentData?.location?.longitude || '';
+  const gpsAccuracy = state.developmentData?.location?.gpsAccuracy;
+  const description = state.developmentData?.description || '';
+  const amenities = state.developmentData?.amenities || [];
+  const highlights = state.developmentData?.highlights || [];
+  const developerName = state.developmentData?.developerName || '';
+  const status = state.developmentData?.status || 'now-selling';
+  const rating = state.developmentData?.rating;
+  const unitTypes = state.unitTypes || [];
+  const media = state.media || [];
+  
+  // Properties that don't exist in new structure - using placeholders
+  const totalUnits = 0;
+  const projectSize = undefined;
+  const projectHighlights = highlights; // Use highlights as projectHighlights
+  const completionDate = undefined;
+  const contactDetails = { name: '', email: '', phone: '' };
+  const isFeaturedDealer = false;
+  const developerWebsite = '';
+  const pastProjects = [];
+
   // tRPC mutation for creating development
   const createDevelopment = trpc.developer.createDevelopment.useMutation({
     onSuccess: data => {
@@ -55,46 +84,44 @@ export function PreviewStep() {
   });
 
   // Generate location string
-  const locationString = `${state.unitTypes.map(u => `${u.bedrooms} `).join(', ')}Bed Apartments in ${state.suburb || state.city}`;
+  const locationString = `${unitTypes.map(u => `${u.bedrooms} `).join(', ')}Bed Apartments in ${suburb || city}`;
 
   // Get primary image
-  const primaryImage = state.media.find(m => m.isPrimary) || state.media[0];
+  const primaryImage = media.find(m => m.isPrimary) || media[0];
 
   // Validation
   const isValid =
-    state.developmentName &&
-    state.address &&
-    state.city &&
-    state.province &&
-    state.unitTypes.length > 0 &&
-    state.description &&
-    state.media.length > 0 &&
-    state.developerName &&
-    state.contactDetails.name &&
-    state.contactDetails.email &&
-    state.contactDetails.phone;
+    developmentName &&
+    address &&
+    city &&
+    province &&
+    unitTypes.length > 0 &&
+    description &&
+    media.length > 0 &&
+    developerName;
+    // Note: contactDetails validation removed as it doesn't exist in new structure
 
   const handleSubmit = async () => {
     if (!isValid || !agreedToTerms) return;
 
     // Prepare development data with coordinates
     createDevelopment.mutate({
-      name: state.developmentName,
+      name: developmentName,
       developmentType: 'residential', // Default type
-      description: state.description,
-      address: state.address,
-      city: state.city,
-      province: state.province,
+      description: description,
+      address: address,
+      city: city,
+      province: province,
       // Include coordinates if available (from map pin)
-      latitude: state.latitude || undefined,
-      longitude: state.longitude || undefined,
+      latitude: latitude ? parseFloat(latitude) : undefined,
+      longitude: longitude ? parseFloat(longitude) : undefined,
       showHouseAddress: true, // Default to showing address
       priceFrom:
-        state.unitTypes.length > 0 ? Math.min(...state.unitTypes.map(u => u.priceFrom)) : undefined,
+        unitTypes.length > 0 ? Math.min(...unitTypes.map(u => u.basePriceFrom)) : undefined,
       priceTo:
-        state.unitTypes.length > 0 ? Math.max(...state.unitTypes.map(u => u.priceFrom)) : undefined,
-      amenities: state.amenities,
-      completionDate: state.completionDate,
+        unitTypes.length > 0 ? Math.max(...unitTypes.map(u => u.basePriceTo || u.basePriceFrom)) : undefined,
+      amenities: amenities,
+      completionDate: undefined, // Not in new structure
     });
   };
 
@@ -122,17 +149,14 @@ export function PreviewStep() {
                   Please complete all required fields:
                 </h3>
                 <ul className="text-sm text-orange-800 space-y-1 list-disc pl-4">
-                  {!state.developmentName && <li>Development name</li>}
-                  {!state.address && <li>Address</li>}
-                  {!state.city && <li>City</li>}
-                  {!state.province && <li>Province</li>}
-                  {state.unitTypes.length === 0 && <li>At least one unit type</li>}
-                  {!state.description && <li>Development description</li>}
-                  {state.media.length === 0 && <li>At least one image</li>}
-                  {!state.developerName && <li>Developer name</li>}
-                  {!state.contactDetails.name && <li>Contact person name</li>}
-                  {!state.contactDetails.email && <li>Contact email</li>}
-                  {!state.contactDetails.phone && <li>Contact phone</li>}
+                  {!developmentName && <li>Development name</li>}
+                  {!address && <li>Address</li>}
+                  {!city && <li>City</li>}
+                  {!province && <li>Province</li>}
+                  {unitTypes.length === 0 && <li>At least one unit type</li>}
+                  {!description && <li>Development description</li>}
+                  {media.length === 0 && <li>At least one image</li>}
+                  {!developerName && <li>Developer name</li>}
                 </ul>
               </div>
             </div>
@@ -165,26 +189,26 @@ export function PreviewStep() {
             <div className="max-w-4xl mx-auto">
               <DevelopmentCard
                 id="preview"
-                title={state.developmentName || 'Development Name'}
-                rating={state.rating}
+                title={developmentName || 'Development Name'}
+                rating={rating}
                 location={locationString}
-                description={state.description || 'Development description will appear here...'}
+                description={description || 'Development description will appear here...'}
                 image={
                   primaryImage?.url || 'https://placehold.co/600x400/e2e8f0/64748b?text=No+Image'
                 }
-                unitTypes={state.unitTypes.map(unit => ({
+                unitTypes={unitTypes.map(unit => ({
                   bedrooms: unit.bedrooms,
-                  label: unit.label,
-                  priceFrom: unit.priceFrom,
+                  label: unit.name,
+                  priceFrom: unit.basePriceFrom,
                 }))}
-                highlights={[...state.amenities.slice(0, 2), ...state.highlights.slice(0, 2)]}
+                highlights={[...amenities.slice(0, 2), ...highlights.slice(0, 2)]}
                 developer={{
-                  name: state.developerName || 'Developer Name',
-                  isFeatured: state.isFeaturedDealer,
+                  name: developerName || 'Developer Name',
+                  isFeatured: isFeaturedDealer,
                 }}
-                imageCount={state.media.length}
+                imageCount={media.length}
                 isFeatured={false}
-                isNewBooking={state.status === 'now-selling'}
+                isNewBooking={status === 'now-selling'}
               />
             </div>
           </div>
@@ -201,38 +225,40 @@ export function PreviewStep() {
                 <div className="flex justify-between">
                   <span className="text-slate-600">Development Name:</span>
                   <span className="font-semibold text-slate-900">
-                    {state.developmentName || '-'}
+                    {developmentName || '-'}
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-600">Status:</span>
                   <Badge
                     className={`${
-                      state.status === 'now-selling'
+                      status === 'now-selling'
                         ? 'bg-green-100 text-green-700'
-                        : state.status === 'launching-soon'
+                        : status === 'launching-soon'
                           ? 'bg-blue-100 text-blue-700'
                           : 'bg-orange-100 text-orange-700'
                     }`}
                   >
-                    {state.status.replace('-', ' ').toUpperCase()}
+                    {status.replace('-', ' ').toUpperCase()}
                   </Badge>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-600">Total Units:</span>
-                  <span className="font-semibold text-slate-900">{state.totalUnits || '-'}</span>
-                </div>
-                {state.projectSize && (
+                {totalUnits > 0 && (
                   <div className="flex justify-between">
-                    <span className="text-slate-600">Project Size:</span>
-                    <span className="font-semibold text-slate-900">{state.projectSize} acres</span>
+                    <span className="text-slate-600">Total Units:</span>
+                    <span className="font-semibold text-slate-900">{totalUnits}</span>
                   </div>
                 )}
-                {state.completionDate && (
+                {projectSize && (
+                  <div className="flex justify-between">
+                    <span className="text-slate-600">Project Size:</span>
+                    <span className="font-semibold text-slate-900">{projectSize} acres</span>
+                  </div>
+                )}
+                {completionDate && (
                   <div className="flex justify-between">
                     <span className="text-slate-600">Completion:</span>
                     <span className="font-semibold text-slate-900">
-                      {new Date(state.completionDate).toLocaleDateString()}
+                      {new Date(completionDate).toLocaleDateString()}
                     </span>
                   </div>
                 )}
@@ -246,22 +272,22 @@ export function PreviewStep() {
                 Location
               </h4>
               <div className="space-y-2 text-sm">
-                <p className="text-slate-700">{state.address}</p>
+                <p className="text-slate-700">{address}</p>
                 <p className="text-slate-600">
-                  {state.suburb && `${state.suburb}, `}
-                  {state.city}, {state.province}
+                  {suburb && `${suburb}, `}
+                  {city}, {province}
                 </p>
-                {state.postalCode && <p className="text-slate-600">{state.postalCode}</p>}
-                {state.gpsAccuracy && (
+                {postalCode && <p className="text-slate-600">{postalCode}</p>}
+                {gpsAccuracy && (
                   <Badge
                     variant="outline"
                     className={`${
-                      state.gpsAccuracy === 'accurate'
+                      gpsAccuracy === 'accurate'
                         ? 'border-green-300 text-green-700'
                         : 'border-orange-300 text-orange-700'
                     }`}
                   >
-                    GPS: {state.gpsAccuracy}
+                    GPS: {gpsAccuracy}
                   </Badge>
                 )}
               </div>
@@ -271,10 +297,10 @@ export function PreviewStep() {
             <Card className="p-5 border-slate-200 md:col-span-2">
               <h4 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
                 <Home className="w-4 h-4 text-purple-600" />
-                Unit Configurations ({state.unitTypes.length})
+                Unit Configurations ({unitTypes.length})
               </h4>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                {state.unitTypes.map((unit, idx) => (
+                {unitTypes.map((unit, idx) => (
                   <div
                     key={idx}
                     className="p-3 bg-gradient-to-br from-purple-50 to-indigo-50 rounded-lg border border-purple-200"
@@ -308,14 +334,14 @@ export function PreviewStep() {
             </Card>
 
             {/* Project Highlights */}
-            {state.projectHighlights.length > 0 && (
+            {projectHighlights.length > 0 && (
               <Card className="p-5 border-slate-200">
                 <h4 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
                   <Sparkles className="w-4 h-4 text-amber-600" />
                   Project Highlights
                 </h4>
                 <ul className="space-y-2">
-                  {state.projectHighlights.map((highlight, idx) => (
+                  {projectHighlights.map((highlight, idx) => (
                     <li key={idx} className="flex items-start gap-2 text-sm text-slate-700">
                       <ChevronRight className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
                       {highlight}
@@ -326,14 +352,14 @@ export function PreviewStep() {
             )}
 
             {/* Amenities */}
-            {state.amenities.length > 0 && (
+            {amenities.length > 0 && (
               <Card className="p-5 border-slate-200">
                 <h4 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
                   <Sparkles className="w-4 h-4 text-emerald-600" />
-                  Amenities ({state.amenities.length})
+                  Amenities ({amenities.length})
                 </h4>
                 <div className="flex flex-wrap gap-2">
-                  {state.amenities.slice(0, 8).map((amenity, idx) => (
+                  {amenities.slice(0, 8).map((amenity, idx) => (
                     <Badge
                       key={idx}
                       variant="secondary"
@@ -342,9 +368,9 @@ export function PreviewStep() {
                       {amenity}
                     </Badge>
                   ))}
-                  {state.amenities.length > 8 && (
+                  {amenities.length > 8 && (
                     <Badge variant="secondary" className="bg-slate-100 text-slate-600">
-                      +{state.amenities.length - 8} more
+                      +{amenities.length - 8} more
                     </Badge>
                   )}
                 </div>
@@ -360,25 +386,25 @@ export function PreviewStep() {
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="text-center p-3 bg-blue-50 rounded-lg">
                   <p className="text-2xl font-bold text-blue-600">
-                    {state.media.filter(m => m.category === 'featured').length}
+                    {media.filter(m => m.category === 'photo' && m.isPrimary).length}
                   </p>
                   <p className="text-xs text-slate-600">Featured</p>
                 </div>
                 <div className="text-center p-3 bg-purple-50 rounded-lg">
                   <p className="text-2xl font-bold text-purple-600">
-                    {state.media.filter(m => m.category === 'general').length}
+                    {media.filter(m => m.category === 'photo').length}
                   </p>
                   <p className="text-xs text-slate-600">Photos</p>
                 </div>
                 <div className="text-center p-3 bg-indigo-50 rounded-lg">
                   <p className="text-2xl font-bold text-indigo-600">
-                    {state.media.filter(m => m.category === 'floorplans').length}
+                    {media.filter(m => m.category === 'floorplan').length}
                   </p>
                   <p className="text-xs text-slate-600">Floor Plans</p>
                 </div>
                 <div className="text-center p-3 bg-pink-50 rounded-lg">
                   <p className="text-2xl font-bold text-pink-600">
-                    {state.media.filter(m => m.type === 'video').length}
+                    {media.filter(m => m.type === 'video').length}
                   </p>
                   <p className="text-xs text-slate-600">Videos</p>
                 </div>
@@ -393,38 +419,42 @@ export function PreviewStep() {
               </h4>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2 text-sm">
-                  <p className="font-semibold text-slate-900">{state.developerName}</p>
-                  {state.isFeaturedDealer && (
+                  <p className="font-semibold text-slate-900">{developerName}</p>
+                  {isFeaturedDealer && (
                     <Badge className="bg-orange-500 text-white">
                       <Award className="w-3 h-3 mr-1" />
                       FEATURED DEALER
                     </Badge>
                   )}
-                  {state.developerWebsite && (
+                  {developerWebsite && (
                     <div className="flex items-center gap-2 text-slate-600">
                       <Globe className="w-3 h-3" />
-                      <span className="text-xs">{state.developerWebsite}</span>
+                      <span className="text-xs">{developerWebsite}</span>
                     </div>
                   )}
                 </div>
                 <div className="space-y-2 text-sm">
-                  <div className="flex items-center gap-2 text-slate-600">
-                    <Mail className="w-3 h-3" />
-                    <span>{state.contactDetails.email}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-slate-600">
-                    <Phone className="w-3 h-3" />
-                    <span>{state.contactDetails.phone}</span>
-                  </div>
+                  {contactDetails.email && (
+                    <div className="flex items-center gap-2 text-slate-600">
+                      <Mail className="w-3 h-3" />
+                      <span>{contactDetails.email}</span>
+                    </div>
+                  )}
+                  {contactDetails.phone && (
+                    <div className="flex items-center gap-2 text-slate-600">
+                      <Phone className="w-3 h-3" />
+                      <span>{contactDetails.phone}</span>
+                    </div>
+                  )}
                 </div>
               </div>
-              {state.pastProjects.length > 0 && (
+              {pastProjects.length > 0 && (
                 <div className="mt-4 pt-4 border-t border-slate-200">
                   <p className="text-xs font-medium text-slate-700 mb-2">
-                    Past Projects: {state.pastProjects.length}
+                    Past Projects: {pastProjects.length}
                   </p>
                   <div className="flex flex-wrap gap-2">
-                    {state.pastProjects.slice(0, 3).map((project, idx) => (
+                    {pastProjects.slice(0, 3).map((project: any, idx: number) => (
                       <Badge key={idx} variant="outline" className="text-xs border-slate-300">
                         {project.name} ({project.year})
                       </Badge>

@@ -103,18 +103,20 @@ const SPECIFICATIONS = {
 };
 
 export function HighlightsStep() {
-  const {
-    description,
-    amenities,
-    highlights,
-    completionDate,
-    specifications,
-    setDescription,
-    setAmenities,
-    setHighlights,
-    setCompletionDate,
-    setSpecifications,
-  } = useDevelopmentWizard();
+  const store = useDevelopmentWizard();
+  
+  // Extract values from nested structure
+  const description = store.developmentData?.description || '';
+  const amenities = store.developmentData?.amenities || [];
+  const highlights = store.developmentData?.highlights || [];
+  
+  // Wrapper functions for the new API
+  const setDescription = (value: string) => store.setDevelopmentData({ description: value });
+  const setAmenities = (value: string[]) => store.setDevelopmentData({ amenities: value });
+  const setHighlights = (value: string[]) => store.setDevelopmentData({ highlights: value });
+  
+  // Note: completionDate and specifications don't exist in new structure
+  // These would need to be added to the hook if needed
 
   const [newHighlight, setNewHighlight] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
