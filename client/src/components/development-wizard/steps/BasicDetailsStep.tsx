@@ -15,39 +15,37 @@ import { useCallback, useState } from 'react';
 import { toast } from 'sonner';
 
 export function BasicDetailsStep() {
-  const {
-    developmentName,
-    address,
-    city,
-    province,
-    suburb,
-    postalCode,
-    latitude,
-    longitude,
-    gpsAccuracy,
-    status,
-    rating,
-    totalUnits,
-    projectSize,
-    projectHighlights,
-    description,
-    setDevelopmentName,
-    setAddress,
-    setCity,
-    setProvince,
-    setSuburb,
-    setPostalCode,
-    setLatitude,
-    setLongitude,
-    setGpsAccuracy,
-    setStatus,
-    setRating,
-    setTotalUnits,
-    setProjectSize,
-    addProjectHighlight,
-    removeProjectHighlight,
-    setDescription,
-  } = useDevelopmentWizard();
+  const store = useDevelopmentWizard();
+  
+  // Extract values from nested structure
+  const developmentName = store.developmentData?.name || '';
+  const address = store.developmentData?.location?.address || '';
+  const city = store.developmentData?.location?.city || '';
+  const province = store.developmentData?.location?.province || '';
+  const suburb = store.developmentData?.location?.suburb || '';
+  const postalCode = store.developmentData?.location?.postalCode || '';
+  const latitude = store.developmentData?.location?.latitude || '';
+  const longitude = store.developmentData?.location?.longitude || '';
+  const gpsAccuracy = store.developmentData?.location?.gpsAccuracy;
+  const status = store.developmentData?.status || 'now-selling';
+  const rating = store.developmentData?.rating;
+  const description = store.developmentData?.description || '';
+  const projectHighlights = store.developmentData?.highlights || [];
+  
+  // Wrapper functions for the new API
+  const setDevelopmentName = (value: string) => store.setDevelopmentData({ name: value });
+  const setAddress = (value: string) => store.setLocation({ address: value });
+  const setCity = (value: string) => store.setLocation({ city: value });
+  const setProvince = (value: string) => store.setLocation({ province: value });
+  const setSuburb = (value: string) => store.setLocation({ suburb: value });
+  const setPostalCode = (value: string) => store.setLocation({ postalCode: value });
+  const setLatitude = (value: string) => store.setLocation({ latitude: value });
+  const setLongitude = (value: string) => store.setLocation({ longitude: value });
+  const setGpsAccuracy = (value: 'accurate' | 'approximate') => store.setLocation({ gpsAccuracy: value });
+  const setStatus = (value: any) => store.setDevelopmentData({ status: value });
+  const setDescription = (value: string) => store.setDevelopmentData({ description: value });
+  const addProjectHighlight = (value: string) => store.addHighlight(value);
+  const removeProjectHighlight = (index: number) => store.removeHighlight(index);
 
   const [manualOverride, setManualOverride] = useState(false);
   const [geocodingError, setGeocodingError] = useState<string | null>(null);
@@ -181,24 +179,26 @@ export function BasicDetailsStep() {
             </p>
           </div>
 
-          <div>
-            <Label htmlFor="rating" className="text-slate-700">
-              Rating <span className="text-xs text-slate-500">(Auto-calculated - Read Only)</span>
-            </Label>
-            <div className="relative mt-1">
-              <Star className="absolute left-3 top-2.5 h-4 w-4 text-amber-400 fill-amber-400" />
-              <Input
-                id="rating"
-                type="number"
-                value={rating || 0}
-                disabled
-                className="pl-9 bg-slate-50 cursor-not-allowed"
-              />
+          {rating !== undefined && (
+            <div>
+              <Label htmlFor="rating" className="text-slate-700">
+                Rating <span className="text-xs text-slate-500">(Auto-calculated - Read Only)</span>
+              </Label>
+              <div className="relative mt-1">
+                <Star className="absolute left-3 top-2.5 h-4 w-4 text-amber-400 fill-amber-400" />
+                <Input
+                  id="rating"
+                  type="number"
+                  value={rating || 0}
+                  disabled
+                  className="pl-9 bg-slate-50 cursor-not-allowed"
+                />
+              </div>
+              <p className="text-xs text-slate-500 mt-1">
+                System-computed rating based on reviews, track record, and satisfaction
+              </p>
             </div>
-            <p className="text-xs text-slate-500 mt-1">
-              System-computed rating based on reviews, track record, and satisfaction
-            </p>
-          </div>
+          )}
         </div>
       </Card>
 
@@ -381,48 +381,6 @@ export function BasicDetailsStep() {
         </div>
 
         <div className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="totalUnits" className="text-slate-700">
-                Total Number of Units <span className="text-red-500">*</span>
-              </Label>
-              <Input
-                id="totalUnits"
-                type="number"
-                min="1"
-                placeholder="e.g., 250"
-                value={totalUnits || ''}
-                onChange={(e) => setTotalUnits(parseInt(e.target.value) || 0)}
-                className="mt-1"
-              />
-              <p className="text-xs text-slate-500 mt-1">
-                Total units available in the entire development
-              </p>
-            </div>
-
-            <div>
-              <Label htmlFor="projectSize" className="text-slate-700">
-                Project Size (Acres)
-              </Label>
-              <Input
-                id="projectSize"
-                type="number"
-                min="0"
-                step="0.1"
-                placeholder="e.g., 5.15"
-                value={projectSize || ''}
-                onChange={(e) => {
-                  const val = parseFloat(e.target.value);
-                  setProjectSize(isNaN(val) ? undefined : val);
-                }}
-                className="mt-1"
-              />
-              <p className="text-xs text-slate-500 mt-1">
-                Total land area of the project
-              </p>
-            </div>
-          </div>
-
           {/* Project Highlights */}
           <div>
             <div className="flex items-center justify-between mb-2">
