@@ -32,6 +32,10 @@ export function useFollowNeighbourhood({
         onUnfollowSuccess();
       }
     },
+    onError: (error) => {
+      console.error('Failed to toggle follow:', error);
+      // Optionally show a toast notification
+    },
   });
 
   const toggleFollow = useCallback(() => {

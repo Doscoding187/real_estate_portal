@@ -7,13 +7,15 @@ import { useState, useCallback } from 'react';
 import { trpc } from '../lib/trpc';
 
 interface UseSavePropertyOptions {
-  propertyId: number;
+  contentId: number;
+  propertyId?: number;
   initialSaved?: boolean;
   onSaveSuccess?: () => void;
   onUnsaveSuccess?: () => void;
 }
 
 export function useSaveProperty({
+  contentId,
   propertyId,
   initialSaved = false,
   onSaveSuccess,
@@ -42,11 +44,15 @@ export function useSaveProperty({
         onUnsaveSuccess();
       }
     },
+    onError: (error) => {
+      console.error('Failed to toggle save:', error);
+      // Optionally show a toast notification
+    },
   });
 
   const toggleSave = useCallback(() => {
-    toggleSaveMutation.mutate({ propertyId });
-  }, [propertyId, toggleSaveMutation]);
+    toggleSaveMutation.mutate({ contentId, propertyId });
+  }, [contentId, propertyId, toggleSaveMutation]);
 
   return {
     isSaved,
