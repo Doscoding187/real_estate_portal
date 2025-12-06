@@ -1,57 +1,32 @@
 /**
  * Upload Progress Bar Component
  * 
- * Displays upload progress for individual files with speed and time remaining
+ * Displays individual upload progress for each file with speed and time remaining
  */
 
 import React, { useEffect, useState } from 'react';
-import { motion } from 'framer-motion';
-import { X, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Loader2, X, CheckCircle2, AlertCircle, FileImage, FileVideo } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 
 export interface UploadProgress {
-  /**
-   * Unique identifier for the upload
-   */
   id: string;
-  
-  /**
-   * File name
-   */
-  fileName: string;
-  
-  /**
-   * Upload progress (0-100)
-   */
-  progress: number;
-  
-  /**
-   * Upload status
-   */
-  status: 'uploading' | 'completed' | 'error';
-  
-  /**
-   * Upload speed in bytes per second
-   */
-  speed?: number;
-  
-  /**
-   * Time remaining in seconds
-   */
-  timeRemaining?: number;
-  
-  /**
-   * Error message if status is 'error'
-   */
+  file?: File; // Optional for backwards compatibility
+  fileName?: string; // Alternative to file
+  progress: number; // 0-100
+  status: 'uploading' | 'completed' | 'error' | 'cancelled';
   error?: string;
+  uploadSpeed?: number; // bytes per second
+  timeRemaining?: number; // seconds
+  speed?: number; // alias for uploadSpeed
 }
 
 export interface UploadProgressBarProps {
   /**
-   * Upload progress data
+   * Upload progress items
    */
-  upload: UploadProgress;
+  uploads: UploadProgress[];
   
   /**
    * Callback when cancel button is clicked
@@ -59,12 +34,12 @@ export interface UploadProgressBarProps {
   onCancel?: (id: string) => void;
   
   /**
-   * Callback when retry button is clicked (for errors)
+   * Callback when retry button is clicked
    */
   onRetry?: (id: string) => void;
   
   /**
-   * Callback when remove button is clicked (for completed/error)
+   * Callback when remove completed/error item is clicked
    */
   onRemove?: (id: string) => void;
   
@@ -75,7 +50,7 @@ export interface UploadProgressBarProps {
 }
 
 /**
- * Format bytes to human-readable string
+ * Format bytes to human-readable size
  */
 const formatBytes = (bytes: number): string => {
   if (bytes === 0) return '0 B';
@@ -95,59 +70,49 @@ const formatTime = (seconds: number): string => {
   return `${minutes}m ${remainingSeconds}s`;
 };
 
-export const UploadProgressBar: React.FC<UploadProgressBarProps> = ({
-  upload,
-  onCancel,
-  onRetry,
-  onRemove,
-  className,
-}) => {
-  const { id, fileName, progress, status, speed, timeRemaining, error } = upload;
-  const [isHovered, setIsHovered] = useState(false);
+/**
+ * Individual upload progress item
+ */
+const UploadProgressItem: React.FC<{
+  upload: UploadProgress;
+  onCancel?: (id: string) => void;
+  onRetry?: (id: string) => void;
+  onRemove?: (id: string) => void;
+}> = ({ upload, onCancel, onRetry, onRemove }) => {
+  const [autoRemoveTimer, setAutoRemoveTimer] = useState<NodeJS.Timeout | null>(null);
 
   // Auto-remove completed uploads after 3 seconds
   useEffect(() => {
-    if (status === 'completed' && onRemove) {
+    if (upload.status === 'completed' && onRemove) {
       const timer = setTimeout(() => {
-        onRemove(id);
+        onRemove(upload.id);
       }, 3000);
+      setAutoRemoveTimer(timer);
       return () => clearTimeout(timer);
     }
-  }, [status, id, onRemove]);
+  }, [upload.status, upload.id, onRemove]);
+
+  // Get file type icon
+  const getFileIcon = () => {
+    const fileType = upload.file?.type || '';
+    const fileName = upload.fileName || upload.file?.name || '';
+    if (fileType.startsWith('video/') || fileName.endsWith('.mp4') || fileName.endsWith('.mov')) {
+      return <FileVideo className="w-5 h-5 text-blue-600" />;
+    }
+    return <FileImage className="w-5 h-5 text-blue-600" />;
+  };
 
   // Get status icon
   const getStatusIcon = () => {
-    switch (status) {
+    switch (upload.status) {
       case 'uploading':
         return <Loader2 className="w-4 h-4 text-blue-600 animate-spin" />;
       case 'completed':
-        return <CheckCircle className="w-4 h-4 text-green-600" />;
+        return <CheckCircle2 className="w-4 h-4 text-green-600" />;
       case 'error':
         return <AlertCircle className="w-4 h-4 text-red-600" />;
-    }
-  };
-
-  // Get progress bar color
-  const getProgressColor = () => {
-    switch (status) {
-      case 'uploading':
-        return 'bg-blue-600';
-      case 'completed':
-        return 'bg-green-600';
-      case 'error':
-        return 'bg-red-600';
-    }
-  };
-
-  // Get background color
-  const getBackgroundColor = () => {
-    switch (status) {
-      case 'uploading':
-        return 'bg-blue-50 border-blue-200';
-      case 'completed':
-        return 'bg-green-50 border-green-200';
-      case 'error':
-        return 'bg-red-50 border-red-200';
+      case 'cancelled':
+        return <X className="w-4 h-4 text-gray-600" />;
     }
   };
 
@@ -155,99 +120,111 @@ export const UploadProgressBar: React.FC<UploadProgressBarProps> = ({
     <motion.div
       initial={{ opacity: 0, y: -10 }}
       animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: 10 }}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
+      exit={{ opacity: 0, x: 20 }}
       className={cn(
-        'relative p-4 rounded-lg border transition-all',
-        getBackgroundColor(),
-        className
+        'p-4 rounded-lg border transition-colors',
+        upload.status === 'uploading' && 'bg-blue-50 border-blue-200',
+        upload.status === 'completed' && 'bg-green-50 border-green-200',
+        upload.status === 'error' && 'bg-red-50 border-red-200',
+        upload.status === 'cancelled' && 'bg-gray-50 border-gray-200'
       )}
     >
       <div className="flex items-start gap-3">
-        {/* Status Icon */}
+        {/* File Icon */}
         <div className="flex-shrink-0 mt-0.5">
-          {getStatusIcon()}
+          {getFileIcon()}
         </div>
 
-        {/* Content */}
+        {/* File Info */}
         <div className="flex-1 min-w-0">
           {/* File Name */}
-          <p className="text-sm font-medium text-gray-900 truncate mb-1">
-            {fileName}
-          </p>
+          <div className="flex items-center gap-2 mb-1">
+            <p className="text-sm font-medium text-gray-900 truncate">
+              {upload.fileName || upload.file?.name || 'Unknown file'}
+            </p>
+            {getStatusIcon()}
+          </div>
+
+          {/* File Size */}
+          {upload.file?.size && (
+            <p className="text-xs text-gray-500 mb-2">
+              {formatBytes(upload.file.size)}
+            </p>
+          )}
 
           {/* Progress Bar */}
-          {status === 'uploading' && (
+          {upload.status === 'uploading' && (
             <div className="space-y-1">
-              <div className="w-full bg-white/50 rounded-full h-2 overflow-hidden">
+              <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
                 <motion.div
                   initial={{ width: 0 }}
-                  animate={{ width: `${progress}%` }}
+                  animate={{ width: `${upload.progress}%` }}
                   transition={{ duration: 0.3 }}
-                  className={cn('h-full', getProgressColor())}
+                  className="h-full bg-blue-600 rounded-full"
                 />
               </div>
 
-              {/* Upload Info */}
+              {/* Upload Stats */}
               <div className="flex items-center justify-between text-xs text-gray-600">
-                <span>{progress}%</span>
-                <div className="flex items-center gap-2">
-                  {speed && (
-                    <span>{formatBytes(speed)}/s</span>
-                  )}
-                  {timeRemaining !== undefined && (
-                    <span>• {formatTime(timeRemaining)} remaining</span>
-                  )}
-                </div>
+                <span>{upload.progress}%</span>
+                {upload.uploadSpeed && (
+                  <span>{formatBytes(upload.uploadSpeed)}/s</span>
+                )}
+                {upload.timeRemaining && (
+                  <span>{formatTime(upload.timeRemaining)} remaining</span>
+                )}
               </div>
             </div>
           )}
 
-          {/* Completed Message */}
-          {status === 'completed' && (
-            <p className="text-xs text-green-600">
-              Upload completed successfully
-            </p>
+          {/* Error Message */}
+          {upload.status === 'error' && upload.error && (
+            <p className="text-xs text-red-600 mt-1">{upload.error}</p>
           )}
 
-          {/* Error Message */}
-          {status === 'error' && error && (
-            <p className="text-xs text-red-600">
-              {error}
-            </p>
+          {/* Success Message */}
+          {upload.status === 'completed' && (
+            <p className="text-xs text-green-600 mt-1">Upload completed</p>
+          )}
+
+          {/* Cancelled Message */}
+          {upload.status === 'cancelled' && (
+            <p className="text-xs text-gray-600 mt-1">Upload cancelled</p>
           )}
         </div>
 
         {/* Action Buttons */}
-        <div className="flex-shrink-0 flex items-center gap-1">
-          {status === 'uploading' && onCancel && (
+        <div className="flex-shrink-0 flex gap-1">
+          {upload.status === 'uploading' && onCancel && (
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => onCancel(id)}
+              onClick={() => onCancel(upload.id)}
               className="h-8 w-8 p-0 hover:bg-red-100"
             >
               <X className="w-4 h-4 text-gray-600" />
             </Button>
           )}
 
-          {status === 'error' && onRetry && (
+          {upload.status === 'error' && onRetry && (
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => onRetry(id)}
+              onClick={() => onRetry(upload.id)}
               className="h-8 px-2 text-xs hover:bg-blue-100"
             >
               Retry
             </Button>
           )}
 
-          {(status === 'completed' || status === 'error') && onRemove && (
+          {(upload.status === 'completed' || upload.status === 'error' || upload.status === 'cancelled') && onRemove && (
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => onRemove(id)}
+              onClick={() => {
+                if (autoRemoveTimer) clearTimeout(autoRemoveTimer);
+                onRemove(upload.id);
+              }}
               className="h-8 w-8 p-0 hover:bg-gray-200"
             >
               <X className="w-4 h-4 text-gray-600" />
@@ -260,57 +237,82 @@ export const UploadProgressBar: React.FC<UploadProgressBarProps> = ({
 };
 
 /**
- * Upload Progress List Component
- * 
- * Displays a list of upload progress bars
+ * Upload Progress Bar Component
  */
-export interface UploadProgressListProps {
-  /**
-   * List of uploads
-   */
-  uploads: UploadProgress[];
-  
-  /**
-   * Callback when cancel button is clicked
-   */
-  onCancel?: (id: string) => void;
-  
-  /**
-   * Callback when retry button is clicked
-   */
-  onRetry?: (id: string) => void;
-  
-  /**
-   * Callback when remove button is clicked
-   */
-  onRemove?: (id: string) => void;
-  
-  /**
-   * Additional CSS classes
-   */
-  className?: string;
-}
-
-export const UploadProgressList: React.FC<UploadProgressListProps> = ({
+export const UploadProgressBar: React.FC<UploadProgressBarProps> = ({
   uploads,
   onCancel,
   onRetry,
   onRemove,
   className,
 }) => {
-  if (uploads.length === 0) return null;
+  if (uploads.length === 0) {
+    return null;
+  }
+
+  // Calculate overall stats
+  const totalUploads = uploads.length;
+  const completedUploads = uploads.filter(u => u.status === 'completed').length;
+  const failedUploads = uploads.filter(u => u.status === 'error').length;
+  const activeUploads = uploads.filter(u => u.status === 'uploading').length;
 
   return (
-    <div className={cn('space-y-2', className)}>
-      {uploads.map(upload => (
-        <UploadProgressBar
-          key={upload.id}
-          upload={upload}
-          onCancel={onCancel}
-          onRetry={onRetry}
-          onRemove={onRemove}
-        />
-      ))}
+    <div className={cn('space-y-4', className)}>
+      {/* Overall Progress Header */}
+      {activeUploads > 0 && (
+        <div className="flex items-center justify-between p-3 bg-blue-50 border border-blue-200 rounded-lg">
+          <div className="flex items-center gap-2">
+            <Loader2 className="w-4 h-4 text-blue-600 animate-spin" />
+            <span className="text-sm font-medium text-blue-900">
+              Uploading {activeUploads} {activeUploads === 1 ? 'file' : 'files'}...
+            </span>
+          </div>
+          <span className="text-xs text-blue-700">
+            {completedUploads}/{totalUploads} completed
+          </span>
+        </div>
+      )}
+
+      {/* Individual Upload Progress Items */}
+      <AnimatePresence mode="popLayout">
+        {uploads.map(upload => (
+          <UploadProgressItem
+            key={upload.id}
+            upload={upload}
+            onCancel={onCancel}
+            onRetry={onRetry}
+            onRemove={onRemove}
+          />
+        ))}
+      </AnimatePresence>
+
+      {/* Summary (when all uploads are done) */}
+      {activeUploads === 0 && totalUploads > 0 && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className={cn(
+            'p-3 rounded-lg border text-sm',
+            failedUploads > 0
+              ? 'bg-yellow-50 border-yellow-200 text-yellow-900'
+              : 'bg-green-50 border-green-200 text-green-900'
+          )}
+        >
+          {failedUploads > 0 ? (
+            <span>
+              {completedUploads} {completedUploads === 1 ? 'file' : 'files'} uploaded successfully,{' '}
+              {failedUploads} failed
+            </span>
+          ) : (
+            <span>
+              All {completedUploads} {completedUploads === 1 ? 'file' : 'files'} uploaded successfully
+            </span>
+          )}
+        </motion.div>
+      )}
     </div>
   );
 };
+
+// Alias for backwards compatibility
+export const UploadProgressList = UploadProgressBar;

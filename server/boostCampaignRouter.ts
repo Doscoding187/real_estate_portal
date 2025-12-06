@@ -5,7 +5,7 @@
  */
 
 import { z } from 'zod';
-import { router, protectedProcedure } from './trpc';
+import { router, protectedProcedure } from './_core/trpc';
 import { boostCampaignService } from './services/boostCampaignService';
 
 const targetAudienceSchema = z.object({
