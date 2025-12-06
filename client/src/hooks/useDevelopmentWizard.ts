@@ -766,12 +766,17 @@ const createActions = (
     const state = get();
     const allMedia: MediaItem[] = [];
     
+    // Guard against undefined state during initialization
+    if (!state || !state.developmentData || !state.developmentData.media) {
+      return allMedia;
+    }
+    
     // Collect from developmentData.media
     if (state.developmentData.media.heroImage) {
       allMedia.push({ ...state.developmentData.media.heroImage, category: 'featured' as any });
     }
-    state.developmentData.media.photos.forEach(p => allMedia.push({ ...p, category: 'photo' }));
-    state.developmentData.media.videos.forEach(v => allMedia.push({ ...v, category: 'video' as any }));
+    state.developmentData.media.photos?.forEach(p => allMedia.push({ ...p, category: 'photo' }));
+    state.developmentData.media.videos?.forEach(v => allMedia.push({ ...v, category: 'video' as any }));
     
     return allMedia;
   },
