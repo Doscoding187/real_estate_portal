@@ -110,6 +110,10 @@ import AdvertisePage from './pages/AdvertisePage';
 import RoleSelection from './pages/RoleSelection';
 import RegistrationSuccess from './pages/RegistrationSuccess';
 
+// Import SearchResults page for SEO-friendly URLs
+import SearchResults from './pages/SearchResults';
+import SuburbPage from './pages/SuburbPage';
+
 function Router() {
   // Auto-migrate guest data on login
   useGuestDataMigration();
@@ -118,6 +122,14 @@ function Router() {
   return (
     <Switch>
       <Route path={'/'} component={Home} />
+      
+      {/* SEO-friendly property search routes (more specific first) */}
+      <Route path="/properties/:listingType/:propertyType/:location/:suburb" component={SearchResults} />
+      <Route path="/properties/:listingType/:propertyType/:location" component={SearchResults} />
+      <Route path="/properties/:listingType/:propertyType" component={SearchResults} />
+      <Route path="/properties/:listingType" component={SearchResults} />
+      
+      {/* Legacy properties route (query params) */}
       <Route path="/properties" component={Properties} />
       <Route path="/property/:id" component={PropertyDetail} />
       <Route path="/favorites" component={Favorites} />
@@ -135,6 +147,7 @@ function Router() {
       <Route path="/agent/profile/:agentId" component={AgentPublicProfile} />
       <Route path="/agent/:id" component={AgentDetail} />
       <Route path="/city/:slug" component={CityPage} />
+      <Route path="/suburb/:city/:suburb" component={SuburbPage} />
       <Route path="/listings/create" component={ListingWizard} />
       <Route path="/listing-template" component={ListingTemplate} />
       <Route path="/developments/create" component={CreateDevelopment} />
@@ -157,6 +170,7 @@ function Router() {
       <Route path="/accept-invitation" component={AcceptInvitation} />
       <Route path="/role-selection" component={RoleSelection} />
       <Route path="/advertise" component={AdvertisePage} />
+
 
       {/* Super Admin Dashboard Routes */}
       <Route

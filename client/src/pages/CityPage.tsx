@@ -1,16 +1,17 @@
-import { useState } from 'react';
-import { useParams, Link } from 'wouter';
-import { Navbar } from '@/components/Navbar';
+import { useState, useMemo } from 'react';
+import { useParams, Link, useLocation } from 'wouter';
+import { ListingNavbar } from '@/components/ListingNavbar';
 import PropertyCard from '@/components/PropertyCard';
 import { normalizePropertyForUI } from '@/lib/normalizers';
 import { SearchBar, SearchFilters } from '@/components/SearchBar';
-import { MapPin, Building2, TrendingUp, Home, ChevronRight, ArrowRight, Star } from 'lucide-react';
+import { MapPin, Building2, TrendingUp, Home, ChevronRight, ArrowRight, Star, Building, Warehouse, Tractor } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { trpc } from '@/lib/trpc';
 import { Skeleton } from '@/components/ui/skeleton';
+import { generatePropertyUrl, slugify } from '@/lib/urlUtils';
 import {
   Carousel,
   CarouselContent,
@@ -41,6 +42,7 @@ const cityData: Record<string, { name: string; province: string; icon: string }>
 
 export default function CityPage() {
   const params = useParams();
+  const [, setLocation] = useLocation();
   const citySlug = params.slug as string;
   const city = cityData[citySlug];
 
@@ -49,7 +51,7 @@ export default function CityPage() {
   // Fetch properties for this city
   const { data: properties, isLoading: propertiesLoading } = trpc.properties.search.useQuery({
     city: city?.name,
-    limit: 8,
+    limit: 20, // Fetch more to calculate counts
   });
 
   // Fetch developments for this city
@@ -61,11 +63,50 @@ export default function CityPage() {
     limit: 4,
   });
 
+  // Calculate property type counts
+  const propertyTypeCounts = useMemo(() => {
+    if (!properties) return {};
+    return properties.reduce((acc, p) => {
+      const type = p.propertyType || 'other';
+      acc[type] = (acc[type] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+  }, [properties]);
+
+  // Property type cards with icons
+  const propertyTypeCards = [
+    { type: 'apartment', label: 'Apartments', icon: Building2, gradient: 'from-blue-500 to-indigo-500' },
+    { type: 'house', label: 'Houses', icon: Home, gradient: 'from-emerald-500 to-teal-500' },
+    { type: 'townhouse', label: 'Townhouses', icon: Building, gradient: 'from-purple-500 to-pink-500' },
+    { type: 'commercial', label: 'Commercial', icon: Warehouse, gradient: 'from-orange-500 to-amber-500' },
+    { type: 'farm', label: 'Farms', icon: Tractor, gradient: 'from-green-600 to-lime-500' },
+  ];
+
+  // Enhanced suburbs data with clickable links
+  const suburbs = [
+    { name: 'Sandton', slug: 'sandton', properties: propertyTypeCounts['apartment'] || 45, avgPrice: 'R 4,500,000' },
+    { name: 'Rosebank', slug: 'rosebank', properties: propertyTypeCounts['house'] || 32, avgPrice: 'R 3,200,000' },
+    { name: 'Midrand', slug: 'midrand', properties: propertyTypeCounts['townhouse'] || 28, avgPrice: 'R 2,800,000' },
+    { name: 'Fourways', slug: 'fourways', properties: 41, avgPrice: 'R 3,500,000' },
+    { name: 'Bryanston', slug: 'bryanston', properties: 38, avgPrice: 'R 5,200,000' },
+    { name: 'Centurion', slug: 'centurion', properties: 52, avgPrice: 'R 2,100,000' },
+  ];
+
+  // Handle search from the hero
+  const handleSearch = (filters: SearchFilters) => {
+    const url = generatePropertyUrl({
+      listingType: filters.listingType as any,
+      propertyType: filters.propertyType,
+      city: city?.name,
+    });
+    setLocation(url);
+  };
+
   if (!city) {
     return (
       <div className="min-h-screen flex flex-col bg-background">
-        <Navbar />
-        <div className="container py-16 text-center">
+        <ListingNavbar />
+        <div className="container py-16 text-center pt-24">
           <MapPin className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
           <h2 className="text-2xl font-bold mb-2">City Not Found</h2>
           <p className="text-muted-foreground mb-6">
@@ -88,20 +129,13 @@ export default function CityPage() {
     { icon: '🔑', title: 'Rental Agreement', url: '#' },
   ];
 
-  const localities = [
-    { name: 'Sandton', properties: 1245, avgPrice: 'R 4,500,000' },
-    { name: 'Rosebank', properties: 856, avgPrice: 'R 3,200,000' },
-    { name: 'Midrand', properties: 1089, avgPrice: 'R 2,800,000' },
-    { name: 'Fourways', properties: 967, avgPrice: 'R 3,500,000' },
-  ];
-
   return (
     <div className="min-h-screen flex flex-col bg-background">
-      <Navbar />
+      <ListingNavbar />
 
       <main className="flex-1">
         {/* Hero Section */}
-        <div className="bg-gradient-to-r from-[#0A2540] to-[#0F4C75] text-white py-12">
+        <div className="bg-gradient-to-r from-[#0A2540] to-[#0F4C75] text-white py-12 pt-24">
           <div className="container">
             <div className="flex items-center gap-3 mb-4">
               <span className="text-5xl">{city.icon}</span>
@@ -110,6 +144,9 @@ export default function CityPage() {
                 <div className="flex items-center gap-2 text-white/80 mt-2">
                   <MapPin className="h-5 w-5" />
                   <span className="text-lg">{city.province}</span>
+                  <Badge variant="secondary" className="ml-2 bg-white/20 text-white">
+                    {properties?.length || 0}+ Properties
+                  </Badge>
                 </div>
               </div>
             </div>
@@ -122,7 +159,36 @@ export default function CityPage() {
         {/* Search Bar */}
         <div className="bg-white border-b py-6">
           <div className="container">
-            <SearchBar onSearch={filters => console.log(filters)} />
+            <SearchBar onSearch={handleSearch} />
+          </div>
+        </div>
+
+        {/* Property Type Quick Links */}
+        <div className="py-8 bg-white border-b">
+          <div className="container">
+            <h2 className="text-lg font-semibold mb-4">Browse by Property Type</h2>
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+              {propertyTypeCards.map(({ type, label, icon: Icon, gradient }) => (
+                <Link 
+                  key={type} 
+                  href={generatePropertyUrl({ listingType: 'sale', propertyType: type, city: city.name })}
+                >
+                  <Card className="group cursor-pointer hover:shadow-lg transition-all duration-300 overflow-hidden">
+                    <CardContent className="p-4 flex items-center gap-3">
+                      <div className={`p-2.5 rounded-lg bg-gradient-to-br ${gradient} group-hover:scale-110 transition-transform`}>
+                        <Icon className="h-5 w-5 text-white" />
+                      </div>
+                      <div>
+                        <p className="font-medium text-sm">{label}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {propertyTypeCounts[type] || 0} listings
+                        </p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </Link>
+              ))}
+            </div>
           </div>
         </div>
 
@@ -277,12 +343,15 @@ export default function CityPage() {
           </div>
         )}
 
-        {/* Top Localities */}
+        {/* Top Localities / Suburbs */}
         <div className="py-12 bg-muted/30">
           <div className="container">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl md:text-3xl font-bold">Top Localities in {city.name}</h2>
-              <Link href={`/properties?city=${city.name}`}>
+              <div>
+                <h2 className="text-2xl md:text-3xl font-bold">Top Suburbs in {city.name}</h2>
+                <p className="text-muted-foreground mt-1">Explore popular neighborhoods and their property trends</p>
+              </div>
+              <Link href={generatePropertyUrl({ listingType: 'sale', city: city.name })}>
                 <Button variant="outline">
                   View All
                   <ChevronRight className="ml-2 h-4 w-4" />
@@ -290,17 +359,28 @@ export default function CityPage() {
               </Link>
             </div>
 
-            {/* Localities Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-              {localities.map((loc, idx) => (
-                <Card key={idx} className="p-4 hover:shadow-md transition-shadow">
-                  <CardContent>
-                    <h3 className="font-bold text-lg mb-1">{loc.name}</h3>
-                    <p className="text-sm text-muted-foreground">
-                      {loc.properties} listings • Avg: {loc.avgPrice}
-                    </p>
-                  </CardContent>
-                </Card>
+            {/* Suburbs Grid with Links */}
+            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
+              {suburbs.map((suburb) => (
+                <Link 
+                  key={suburb.slug} 
+                  href={`/suburb/${citySlug}/${suburb.slug}`}
+                >
+                  <Card className="p-4 hover:shadow-lg hover:border-primary/30 transition-all cursor-pointer group">
+                    <CardContent className="p-0">
+                      <div className="flex items-center gap-2 mb-2">
+                        <MapPin className="h-4 w-4 text-primary" />
+                        <h3 className="font-bold text-base group-hover:text-primary transition-colors">{suburb.name}</h3>
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        {suburb.properties} listings
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Avg: {suburb.avgPrice}
+                      </p>
+                    </CardContent>
+                  </Card>
+                </Link>
               ))}
             </div>
           </div>

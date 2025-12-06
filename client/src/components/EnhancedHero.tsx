@@ -25,6 +25,7 @@ import {
   ChevronDown,
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
+import { generatePropertyUrl } from '@/lib/urlUtils';
 
 type LocationSuggestion = {
   name: string;
@@ -288,73 +289,88 @@ export function EnhancedHero() {
   };
 
   const handleSearch = () => {
-    const params = new URLSearchParams();
-    if (searchQuery) params.set('search', searchQuery);
-
-    // Add category-specific filters to params
+    // Build SEO-friendly URLs using the utility
     switch (activeTab) {
-      case 'buy':
-        params.set('listingType', 'sale');
-        if (filters.propertyIntent) params.set('intent', filters.propertyIntent);
-        if (filters.propertyTypes.length > 0) params.set('propertyTypes', filters.propertyTypes.join(','));
-        if (filters.priceMin) params.set('minPrice', filters.priceMin);
-        if (filters.priceMax) params.set('maxPrice', filters.priceMax);
-        setLocation(`/properties?${params.toString()}`);
+      case 'buy': {
+        const url = generatePropertyUrl({
+          listingType: 'sale',
+          propertyType: filters.propertyTypes[0]?.toLowerCase(),
+          city: searchQuery || undefined,
+          minPrice: filters.priceMin ? parseInt(filters.priceMin) : undefined,
+          maxPrice: filters.priceMax ? parseInt(filters.priceMax) : undefined,
+        });
+        setLocation(url);
         break;
+      }
 
-      case 'rental':
-        params.set('listingType', 'rent');
-        if (filters.furnished) params.set('furnished', 'true');
-        if (filters.leaseTerm) params.set('leaseTerm', filters.leaseTerm);
-        if (filters.budgetMin) params.set('minPrice', filters.budgetMin);
-        if (filters.budgetMax) params.set('maxPrice', filters.budgetMax);
-        if (filters.propertyTypes.length > 0) params.set('propertyTypes', filters.propertyTypes.join(','));
-        setLocation(`/properties?${params.toString()}`);
+      case 'rental': {
+        const url = generatePropertyUrl({
+          listingType: 'rent',
+          propertyType: filters.propertyTypes[0]?.toLowerCase(),
+          city: searchQuery || undefined,
+          minPrice: filters.budgetMin ? parseInt(filters.budgetMin) : undefined,
+          maxPrice: filters.budgetMax ? parseInt(filters.budgetMax) : undefined,
+          furnished: filters.furnished,
+        });
+        setLocation(url);
         break;
+      }
 
-      case 'projects':
+      case 'projects': {
+        const params = new URLSearchParams();
+        if (searchQuery) params.set('search', searchQuery);
         if (filters.developmentType) params.set('type', filters.developmentType);
         if (filters.developmentStatus) params.set('status', filters.developmentStatus);
         if (filters.priceMin) params.set('minPrice', filters.priceMin);
         if (filters.priceMax) params.set('maxPrice', filters.priceMax);
         setLocation(`/developments?${params.toString()}`);
         break;
+      }
 
-      case 'plot':
-        params.set('propertyType', 'plot_land');
-        if (filters.landType) params.set('landType', filters.landType);
-        if (filters.sizeMin) params.set('minSize', filters.sizeMin);
-        if (filters.sizeMax) params.set('maxSize', filters.sizeMax);
-        if (filters.priceMin) params.set('minPrice', filters.priceMin);
-        if (filters.priceMax) params.set('maxPrice', filters.priceMax);
-        setLocation(`/properties?${params.toString()}`);
+      case 'plot': {
+        const url = generatePropertyUrl({
+          listingType: 'sale',
+          propertyType: 'land',
+          city: searchQuery || undefined,
+          minPrice: filters.priceMin ? parseInt(filters.priceMin) : undefined,
+          maxPrice: filters.priceMax ? parseInt(filters.priceMax) : undefined,
+        });
+        setLocation(url);
         break;
+      }
 
-      case 'commercial':
-        params.set('propertyType', 'commercial');
-        params.set('listingType', filters.saleOrRent);
-        if (filters.commercialUseType) params.set('useType', filters.commercialUseType);
-        if (filters.lotSizeMin) params.set('minSize', filters.lotSizeMin);
-        if (filters.lotSizeMax) params.set('maxSize', filters.lotSizeMax);
-        setLocation(`/properties?${params.toString()}`);
+      case 'commercial': {
+        const url = generatePropertyUrl({
+          listingType: filters.saleOrRent as 'sale' | 'rent',
+          propertyType: 'commercial',
+          city: searchQuery || undefined,
+        });
+        setLocation(url);
         break;
+      }
 
-      case 'pg':
-        params.set('listingType', 'rent');
-        params.set('propertyType', 'shared_living');
-        if (filters.roomType) params.set('roomType', filters.roomType);
-        if (filters.genderPreference) params.set('gender', filters.genderPreference);
-        if (filters.budgetMin) params.set('minPrice', filters.budgetMin);
-        if (filters.budgetMax) params.set('maxPrice', filters.budgetMax);
-        setLocation(`/properties?${params.toString()}`);
+      case 'pg': {
+        const url = generatePropertyUrl({
+          listingType: 'rent',
+          propertyType: 'shared_living',
+          city: searchQuery || undefined,
+          minPrice: filters.budgetMin ? parseInt(filters.budgetMin) : undefined,
+          maxPrice: filters.budgetMax ? parseInt(filters.budgetMax) : undefined,
+        });
+        setLocation(url);
         break;
+      }
 
       case 'agents':
         setLocation('/agents');
         break;
 
-      default:
-        setLocation(`/properties?${params.toString()}`);
+      default: {
+        const url = generatePropertyUrl({
+          city: searchQuery || undefined,
+        });
+        setLocation(url);
+      }
     }
   };
 
