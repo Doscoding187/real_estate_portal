@@ -255,6 +255,17 @@ export interface DevelopmentWizardState {
   setIsComplete: (isComplete: boolean) => void;
   setDraftId: (id: number) => void;
   reset: () => void;
+  
+  // Backward compatibility methods
+  goToStep: (step: number) => void;
+  removeUnitType: (id: string) => void;
+  media: MediaItem[];
+  addMedia: (item: Omit<MediaItem, 'id' | 'displayOrder'> & { category?: string }) => void;
+  removeMedia: (id: string) => void;
+  setPrimaryImage: (id: string) => void;
+  reorderMedia: (reorderedMedia: MediaItem[]) => void;
+  developmentType: 'master' | 'phase';
+  setDevelopmentType: (type: 'master' | 'phase') => void;
 }
 
 const initialState: Omit<DevelopmentWizardState, keyof ReturnType<typeof createActions>> = {
@@ -732,6 +743,138 @@ const createActions = (
   setIsComplete: (isComplete: boolean) => set({ isComplete }),
   setDraftId: (id: number) => set({ draftId: id }),
   reset: () => set(initialState),
+  
+  // ============================================
+  // BACKWARD COMPATIBILITY LAYER
+  // These methods provide compatibility with older components
+  // ============================================
+  
+  // Legacy navigation (0-indexed)
+  goToStep: (step: number) => {
+    set({ currentStep: step });
+  },
+  
+  // Legacy unit type methods
+  removeUnitType: (id: string) => {
+    set((state: DevelopmentWizardState) => ({
+      unitTypes: state.unitTypes.filter((unit: UnitType) => unit.id !== id)
+    }));
+  },
+  
+  // Legacy media methods (flat array interface)
+  get media() {
+    const state = get();
+    const allMedia: MediaItem[] = [];
+    
+    // Collect from developmentData.media
+    if (state.developmentData.media.heroImage) {
+      allMedia.push({ ...state.developmentData.media.heroImage, category: 'featured' as any });
+    }
+    state.developmentData.media.photos.forEach(p => allMedia.push({ ...p, category: 'photo' }));
+    state.developmentData.media.videos.forEach(v => allMedia.push({ ...v, category: 'video' as any }));
+    
+    return allMedia;
+  },
+  
+  addMedia: (item: Omit<MediaItem, 'id' | 'displayOrder'> & { category?: string }) => {
+    const state = get();
+    const newItem: MediaItem = {
+      ...item,
+      id: `media-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      displayOrder: state.developmentData.media.photos.length,
+    };
+    
+    const categoryStr = (item as any).category as string;
+    if (categoryStr === 'featured' || item.isPrimary) {
+      set((state: DevelopmentWizardState) => ({
+        developmentData: {
+          ...state.developmentData,
+          media: {
+            ...state.developmentData.media,
+            heroImage: newItem
+          }
+        }
+      }));
+    } else if (item.type === 'video') {
+      set((state: DevelopmentWizardState) => ({
+        developmentData: {
+          ...state.developmentData,
+          media: {
+            ...state.developmentData.media,
+            videos: [...state.developmentData.media.videos, newItem]
+          }
+        }
+      }));
+    } else {
+      set((state: DevelopmentWizardState) => ({
+        developmentData: {
+          ...state.developmentData,
+          media: {
+            ...state.developmentData.media,
+            photos: [...state.developmentData.media.photos, newItem]
+          }
+        }
+      }));
+    }
+  },
+  
+  removeMedia: (id: string) => {
+    set((state: DevelopmentWizardState) => ({
+      developmentData: {
+        ...state.developmentData,
+        media: {
+          heroImage: state.developmentData.media.heroImage?.id === id ? undefined : state.developmentData.media.heroImage,
+          photos: state.developmentData.media.photos.filter(p => p.id !== id),
+          videos: state.developmentData.media.videos.filter(v => v.id !== id),
+        }
+      }
+    }));
+  },
+  
+  setPrimaryImage: (id: string) => {
+    const state = get();
+    const allPhotos = state.developmentData.media.photos;
+    const photo = allPhotos.find(p => p.id === id);
+    if (photo) {
+      set((state: DevelopmentWizardState) => ({
+        developmentData: {
+          ...state.developmentData,
+          media: {
+            ...state.developmentData.media,
+            heroImage: { ...photo, isPrimary: true },
+            photos: state.developmentData.media.photos.map(p => ({ ...p, isPrimary: p.id === id }))
+          }
+        }
+      }));
+    }
+  },
+  
+  reorderMedia: (reorderedMedia: MediaItem[]) => {
+    set((state: DevelopmentWizardState) => ({
+      developmentData: {
+        ...state.developmentData,
+        media: {
+          ...state.developmentData.media,
+          photos: reorderedMedia.filter(m => m.type === 'image').map((m, i) => ({ ...m, displayOrder: i })),
+          videos: reorderedMedia.filter(m => m.type === 'video').map((m, i) => ({ ...m, displayOrder: i })),
+        }
+      }
+    }));
+  },
+  
+  // Legacy development type
+  get developmentType() {
+    return 'master' as const;
+  },
+  
+  setDevelopmentType: (type: 'master' | 'phase') => {
+    // Store in phaseDetails if it's a phase
+    if (type === 'phase') {
+      set((state: DevelopmentWizardState) => ({
+        phaseDetails: { ...state.phaseDetails, phaseStatus: 'phase' }
+      }));
+    }
+  },
 });
 
 export const useDevelopmentWizard = create<DevelopmentWizardState>()(

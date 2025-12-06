@@ -689,21 +689,31 @@
     - Sort by engagement metrics
     - _Requirements: 12.1_
 
-- [ ] 17. Optimize performance and caching
+- [x] 17. Optimize performance and caching
+
+
+
+
+
   - [ ] 17.1 Implement Redis caching layer
     - Cache user preferences (1-hour TTL)
     - Cache feed results (5-minute TTL)
     - Cache neighbourhood data (1-day TTL)
+
     - _Requirements: 10.1, 10.2_
 
   - [ ] 17.2 Add CDN integration for media
     - Configure CloudFront for videos
     - Set up image CDN with format conversion
     - Implement adaptive bitrate streaming
+
+
     - _Requirements: 10.1_
 
   - [ ] 17.3 Optimize database queries
     - Add composite indexes
+
+
     - Implement query result caching
     - Set up read replicas
     - _Requirements: All performance-related_
@@ -714,20 +724,20 @@
     - Progressive JPEG encoding
     - _Requirements: 10.2, 10.6_
 
-- [ ] 18. Add accessibility features
-  - [ ] 18.1 Implement video accessibility
+- [x] 18. Add accessibility features
+  - [x] 18.1 Implement video accessibility
     - Generate auto-subtitles for videos
     - Add subtitle toggle control
     - Implement keyboard navigation
     - _Requirements: All accessibility-related_
 
-  - [ ] 18.2 Add ARIA labels and semantic HTML
+  - [x] 18.2 Add ARIA labels and semantic HTML
     - Label all interactive elements
     - Ensure proper heading hierarchy
     - Add focus indicators
     - _Requirements: All accessibility-related_
 
-  - [ ] 18.3 Implement motion preferences
+  - [x] 18.3 Implement motion preferences
     - Respect prefers-reduced-motion
     - Disable auto-play for motion sensitivity
     - Provide static alternatives

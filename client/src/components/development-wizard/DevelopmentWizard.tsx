@@ -101,28 +101,47 @@ export function DevelopmentWizard() {
       const data = loadedDraft.draftData as any;
       console.log('[DevelopmentWizard] Loading draft from database:', data);
       
-      // Populate store from loaded draft
-      if (data.developmentName) store.setDevelopmentName(data.developmentName);
-      if (data.address) store.setAddress(data.address);
-      if (data.city) store.setCity(data.city);
-      if (data.province) store.setProvince(data.province);
-      if (data.suburb) store.setSuburb(data.suburb);
-      if (data.postalCode) store.setPostalCode(data.postalCode);
-      if (data.latitude !== undefined) store.setLatitude(data.latitude);
-      if (data.longitude !== undefined) store.setLongitude(data.longitude);
-      if (data.status) store.setStatus(data.status);
-      // TODO: Implement proper unit types loading
-      // if (data.unitTypes) store.setUnitTypes(data.unitTypes);
-      if (data.description) store.setDescription(data.description);
-      if (data.amenities) store.setAmenities(data.amenities);
-      if (data.highlights) store.setHighlights(data.highlights);
-      if (data.completionDate) store.setCompletionDate(data.completionDate);
-      if (data.totalUnits !== undefined) store.setTotalUnits(data.totalUnits);
-      // TODO: Implement proper media loading
-      // if (data.media) store.setMedia(data.media);
-      if (data.developerName) store.setDeveloperName(data.developerName);
-      if (data.contactDetails) store.setContactDetails(data.contactDetails);
-      // TODO: Implement proper step navigation
+      // Populate store from loaded draft using new API
+      if (data.developmentName || data.name) {
+        store.setDevelopmentData({ name: data.developmentName || data.name });
+      }
+      if (data.description) {
+        store.setDevelopmentData({ description: data.description });
+      }
+      if (data.status) {
+        store.setDevelopmentData({ status: data.status });
+      }
+      if (data.completionDate) {
+        store.setDevelopmentData({ completionDate: data.completionDate });
+      }
+      if (data.developerName) {
+        store.setDevelopmentData({ developerName: data.developerName });
+      }
+      
+      // Load location data
+      if (data.address || data.city || data.province || data.latitude || data.longitude) {
+        store.setLocation({
+          address: data.address || '',
+          city: data.city || '',
+          province: data.province || '',
+          suburb: data.suburb || '',
+          postalCode: data.postalCode || '',
+          latitude: data.latitude?.toString() || '',
+          longitude: data.longitude?.toString() || '',
+        });
+      }
+      
+      // Load amenities
+      if (data.amenities && Array.isArray(data.amenities)) {
+        store.setDevelopmentData({ amenities: data.amenities });
+      }
+      
+      // Load highlights
+      if (data.highlights && Array.isArray(data.highlights)) {
+        store.setDevelopmentData({ highlights: data.highlights });
+      }
+      
+      // TODO: Implement proper unit types and media loading
       // if (loadedDraft.currentStep !== undefined) store.setCurrentStep(loadedDraft.currentStep);
 
       toast.success('Draft loaded successfully', {
@@ -134,18 +153,13 @@ export function DevelopmentWizard() {
   // Auto-populate developer info from profile when component loads
   useEffect(() => {
     // Only populate if fields are empty (don't override existing draft data)
-    if (developerProfile && !store.developerName && !store.contactDetails.email && !loadedDraft) {
-      store.setDeveloperName(developerProfile.name || '');
-      store.setContactDetails({
-        name: store.contactDetails.name || '',
-        email: developerProfile.email || user?.email || '',
-        phone: developerProfile.phone || '',
-        preferredContact: 'email',
+    if (developerProfile && !store.developmentData?.developerName && !loadedDraft) {
+      store.setDevelopmentData({ 
+        developerName: developerProfile.name || '' 
       });
       
-      if (developerProfile.logo) {
-        store.setCompanyLogo(developerProfile.logo);
-      }
+      // Note: Contact details are now handled differently in the new structure
+      // The developer info step will use the profile data directly
     }
   }, [developerProfile, user, loadedDraft]);
 
@@ -223,19 +237,19 @@ export function DevelopmentWizard() {
     // Check if there's a draft with meaningful progress
     const hasDraft = 
       currentStep > 0 || 
-      store.developmentName || 
-      store.address ||
-      store.unitTypes.length > 0 ||
-      store.description ||
-      store.media.length > 0;
+      store.developmentData?.name || 
+      store.developmentData?.location?.address ||
+      (store.unitTypes?.length || 0) > 0 ||
+      store.developmentData?.description ||
+      (store.developmentData?.media?.photos?.length || 0) > 0;
 
     console.log('[DevelopmentWizard] Draft check:', {
       currentStep,
-      developmentName: store.developmentName,
-      address: store.address,
-      unitTypes: store.unitTypes.length,
-      description: store.description,
-      media: store.media.length,
+      developmentName: store.developmentData?.name,
+      address: store.developmentData?.location?.address,
+      unitTypes: store.unitTypes?.length || 0,
+      description: store.developmentData?.description,
+      media: store.developmentData?.media?.photos?.length || 0,
       hasDraft
     });
 
@@ -363,8 +377,8 @@ export function DevelopmentWizard() {
         draftData={{
           currentStep: currentStep + 1, // Display as 1-indexed
           totalSteps: 6,
-          developmentName: store.developmentName,
-          address: store.address,
+          developmentName: store.developmentData?.name || '',
+          address: store.developmentData?.location?.address || '',
           lastModified: loadedDraft?.lastModified || undefined,
         }}
       />

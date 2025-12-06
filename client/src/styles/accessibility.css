@@ -1,0 +1,459 @@
+/**
+ * Accessibility Styles for Explore Discovery Engine
+ * 
+ * Includes:
+ * - Screen reader only utilities
+ * - Focus indicators
+ * - Reduced motion support
+ * - High contrast mode support
+ * - Skip link styles
+ */
+
+/* ============================================
+   Screen Reader Only
+   ============================================ */
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+.not-sr-only {
+  position: static;
+  width: auto;
+  height: auto;
+  padding: 0;
+  margin: 0;
+  overflow: visible;
+  clip: auto;
+  white-space: normal;
+}
+
+/* ============================================
+   Focus Indicators
+   ============================================ */
+
+/* Default focus ring */
+:focus {
+  outline: none;
+}
+
+:focus-visible {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+/* Focus ring for dark backgrounds */
+.focus-light:focus-visible {
+  outline-color: white;
+}
+
+/* High contrast focus */
+.focus-high-contrast:focus-visible {
+  outline: 3px solid #facc15;
+  outline-offset: 3px;
+}
+
+/* Custom focus styles for interactive elements */
+button:focus-visible,
+a:focus-visible,
+[role="button"]:focus-visible,
+[tabindex="0"]:focus-visible {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Focus within for containers */
+.focus-within-ring:focus-within {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+  border-radius: 8px;
+}
+
+/* ============================================
+   Reduced Motion
+   ============================================ */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  /* Disable video autoplay indicator */
+  video[autoplay] {
+    animation: none !important;
+  }
+
+  /* Static loading indicators */
+  .animate-spin,
+  .animate-pulse,
+  .animate-bounce {
+    animation: none !important;
+  }
+
+  /* Disable parallax effects */
+  .parallax {
+    transform: none !important;
+  }
+
+  /* Disable hover animations */
+  .hover-animate:hover {
+    transform: none !important;
+  }
+}
+
+/* Motion-safe animations */
+@media (prefers-reduced-motion: no-preference) {
+  .motion-safe\:animate-fade-in {
+    animation: fade-in 300ms ease-out forwards;
+  }
+
+  .motion-safe\:animate-slide-up {
+    animation: slide-up 300ms ease-out forwards;
+  }
+
+  .motion-safe\:animate-slide-down {
+    animation: slide-down 300ms ease-out forwards;
+  }
+
+  .motion-safe\:animate-scale-in {
+    animation: scale-in 300ms ease-out forwards;
+  }
+}
+
+/* Animation keyframes */
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slide-up {
+  from { 
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to { 
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slide-down {
+  from { 
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to { 
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes scale-in {
+  from { 
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to { 
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* ============================================
+   High Contrast Mode
+   ============================================ */
+
+@media (prefers-contrast: high) {
+  /* Increase border visibility */
+  button,
+  input,
+  select,
+  textarea,
+  [role="button"] {
+    border: 2px solid currentColor !important;
+  }
+
+  /* Increase focus visibility */
+  :focus-visible {
+    outline-width: 3px !important;
+    outline-offset: 3px !important;
+  }
+
+  /* Ensure text contrast */
+  .text-gray-400,
+  .text-gray-500,
+  .text-gray-600 {
+    color: #374151 !important;
+  }
+
+  /* Ensure background contrast */
+  .bg-gray-100,
+  .bg-gray-200 {
+    background-color: #e5e7eb !important;
+  }
+}
+
+/* Forced colors mode (Windows High Contrast) */
+@media (forced-colors: active) {
+  /* Use system colors */
+  button,
+  [role="button"] {
+    border: 2px solid ButtonText;
+    background: ButtonFace;
+    color: ButtonText;
+  }
+
+  button:hover,
+  [role="button"]:hover {
+    background: Highlight;
+    color: HighlightText;
+  }
+
+  :focus-visible {
+    outline: 3px solid Highlight;
+  }
+
+  /* Ensure links are visible */
+  a {
+    color: LinkText;
+  }
+
+  a:visited {
+    color: VisitedText;
+  }
+}
+
+/* ============================================
+   Skip Links
+   ============================================ */
+
+.skip-link {
+  position: absolute;
+  top: -100%;
+  left: 0;
+  z-index: 9999;
+  padding: 0.5rem 1rem;
+  background: #3b82f6;
+  color: white;
+  text-decoration: none;
+  font-weight: 600;
+  border-radius: 0 0 0.5rem 0;
+  transition: top 0.2s ease;
+}
+
+.skip-link:focus {
+  top: 0;
+  outline: 2px solid white;
+  outline-offset: 2px;
+}
+
+/* ============================================
+   Touch Target Sizes
+   ============================================ */
+
+/* Ensure minimum touch target size (44x44px per WCAG) */
+.touch-target {
+  min-width: 44px;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Larger touch targets for mobile */
+@media (pointer: coarse) {
+  button,
+  a,
+  [role="button"],
+  input[type="checkbox"],
+  input[type="radio"] {
+    min-width: 44px;
+    min-height: 44px;
+  }
+}
+
+/* ============================================
+   Text Spacing (WCAG 1.4.12)
+   ============================================ */
+
+/* Support for user text spacing preferences */
+.text-spacing-support {
+  line-height: 1.5 !important;
+  letter-spacing: 0.12em !important;
+  word-spacing: 0.16em !important;
+}
+
+.text-spacing-support p {
+  margin-bottom: 2em !important;
+}
+
+/* ============================================
+   Color Blind Support
+   ============================================ */
+
+/* Don't rely solely on color - add patterns/icons */
+.status-success {
+  color: #22c55e;
+}
+
+.status-success::before {
+  content: "✓ ";
+}
+
+.status-error {
+  color: #ef4444;
+}
+
+.status-error::before {
+  content: "✕ ";
+}
+
+.status-warning {
+  color: #f59e0b;
+}
+
+.status-warning::before {
+  content: "⚠ ";
+}
+
+/* ============================================
+   Video Captions
+   ============================================ */
+
+video::cue {
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  font-size: 1rem;
+  line-height: 1.5;
+  padding: 0.25rem 0.5rem;
+}
+
+video::cue(b) {
+  font-weight: bold;
+}
+
+video::cue(i) {
+  font-style: italic;
+}
+
+/* Custom caption styling */
+.video-captions {
+  position: absolute;
+  bottom: 60px;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: 80%;
+  text-align: center;
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
+/* ============================================
+   Loading States
+   ============================================ */
+
+/* Accessible loading indicator */
+.loading-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.loading-indicator::before {
+  content: "";
+  width: 1rem;
+  height: 1rem;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .loading-indicator::before {
+    animation: none;
+    border-style: dotted;
+  }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ============================================
+   Form Accessibility
+   ============================================ */
+
+/* Required field indicator */
+.required-field::after {
+  content: " *";
+  color: #ef4444;
+}
+
+/* Error state */
+.field-error {
+  border-color: #ef4444 !important;
+}
+
+.field-error:focus-visible {
+  outline-color: #ef4444;
+}
+
+/* Error message */
+.error-message {
+  color: #ef4444;
+  font-size: 0.875rem;
+  margin-top: 0.25rem;
+}
+
+.error-message::before {
+  content: "⚠ ";
+}
+
+/* ============================================
+   Landmark Regions
+   ============================================ */
+
+/* Visual indicators for landmarks (dev mode) */
+.show-landmarks [role="banner"],
+.show-landmarks header {
+  outline: 2px dashed #3b82f6;
+}
+
+.show-landmarks [role="navigation"],
+.show-landmarks nav {
+  outline: 2px dashed #22c55e;
+}
+
+.show-landmarks [role="main"],
+.show-landmarks main {
+  outline: 2px dashed #f59e0b;
+}
+
+.show-landmarks [role="contentinfo"],
+.show-landmarks footer {
+  outline: 2px dashed #8b5cf6;
+}
+
+.show-landmarks [role="complementary"],
+.show-landmarks aside {
+  outline: 2px dashed #ec4899;
+}
