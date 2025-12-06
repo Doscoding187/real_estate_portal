@@ -78,6 +78,13 @@
       "when": 1764751691661,
       "tag": "0010_wide_thunderbolts",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "5",
+      "when": 1765000000000,
+      "tag": "0011_add_explore_tables",
+      "breakpoints": true
     }
   ]
 }

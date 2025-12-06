@@ -388,7 +388,6 @@ export default function VideoCard({ video, isActive, onView }: VideoCardProps) {
           )}
         </div>
       </div>
-      </div>
 
       {/* Enhanced Floating Action Buttons - Google Style */}
       <div className="absolute right-3 md:right-4 bottom-28 md:bottom-32 flex flex-col items-center space-y-5 md:space-y-6 pointer-events-auto">

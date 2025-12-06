@@ -175,26 +175,26 @@ export const auditLogs = mysqlTable("audit_logs", {
 	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
 });
 
-export const billingTransactions = mysqlTable("billing_transactions", {
-	id: int().autoincrement().notNull(),
-	userId: int("user_id").notNull().references(() => users.id, { onDelete: "cascade" } ),
-	subscriptionId: int("subscription_id"),
-	transactionType: mysqlEnum("transaction_type", ['subscription_create','subscription_renew','upgrade','downgrade','addon_purchase','refund','failed_payment','trial_conversion']).notNull(),
-	amountZar: int("amount_zar").notNull(),
-	currency: varchar({ length: 3 }).default('ZAR'),
-	status: mysqlEnum(['pending','completed','failed','refunded']).default('pending'),
-	paymentGateway: mysqlEnum("payment_gateway", ['stripe','paystack','manual']).notNull(),
-	gatewayTransactionId: varchar("gateway_transaction_id", { length: 255 }),
-	gatewayInvoiceId: varchar("gateway_invoice_id", { length: 255 }),
-	description: text(),
-	metadata: json(),
-	createdAt: timestamp("created_at", { mode: 'string' }).default('CURRENT_TIMESTAMP'),
-	updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow().onUpdateNow(),
-},
-(table) => [
-	index("idx_user").on(table.userId),
-	index("idx_status").on(table.status),
-]);
+// export const billing_transactions = mysqlTable("billing_transactions", {
+// 	id: int().autoincrement().notNull(),
+// 	userId: int("user_id").notNull().references(() => users.id, { onDelete: "cascade" } ),
+// 	subscriptionId: int("subscription_id"),
+// 	transactionType: mysqlEnum("transaction_type", ['subscription_create','subscription_renew','upgrade','downgrade','addon_purchase','refund','failed_payment','trial_conversion']).notNull(),
+// 	amountZar: int("amount_zar").notNull(),
+// 	currency: varchar({ length: 3 }).default('ZAR'),
+// 	status: mysqlEnum(['pending','completed','failed','refunded']).default('pending'),
+// 	paymentGateway: mysqlEnum("payment_gateway", ['stripe','paystack','manual']).notNull(),
+// 	gatewayTransactionId: varchar("gateway_transaction_id", { length: 255 }),
+// 	gatewayInvoiceId: varchar("gateway_invoice_id", { length: 255 }),
+// 	description: text(),
+// 	metadata: json(),
+// 	createdAt: timestamp("created_at", { mode: 'string' }).default('CURRENT_TIMESTAMP'),
+// 	updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow().onUpdateNow(),
+// },
+// (table) => [
+// 	index("idx_user").on(table.userId),
+// 	index("idx_status").on(table.status),
+// ]);
 
 export const boostCredits = mysqlTable("boost_credits", {
 	id: int().autoincrement().notNull(),
@@ -639,6 +639,62 @@ export const developmentDocuments = mysqlTable("development_documents", {
 	index("idx_dev_docs_type").on(table.type),
 ]);
 
+export const exploreCategories = mysqlTable("explore_categories", {
+	id: int().autoincrement().notNull(),
+	name: varchar({ length: 100 }).notNull(),
+	slug: varchar({ length: 100 }).notNull(),
+	icon: varchar({ length: 50 }),
+	image: text(),
+	type: mysqlEnum(['lifestyle', 'property', 'investment', 'demographic']).default('lifestyle').notNull(),
+	displayOrder: int().default(0),
+	isActive: int().default(1),
+	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+});
+
+export const exploreTopics = mysqlTable("explore_topics", {
+	id: int().autoincrement().notNull(),
+	name: varchar({ length: 100 }).notNull(),
+	slug: varchar({ length: 100 }).notNull(),
+	description: text(),
+	coverImage: text(),
+	type: mysqlEnum(['curated', 'algorithmic', 'seasonal', 'sponsored']).default('curated').notNull(),
+	isActive: int().default(1),
+	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+});
+
+export const exploreNeighbourhoodStories = mysqlTable("explore_neighbourhood_stories", {
+	id: int().autoincrement().notNull(),
+	suburbId: int("suburb_id").references(() => suburbs.id, { onDelete: "cascade" }),
+	title: varchar({ length: 255 }).notNull(),
+	coverImage: text("cover_image"),
+	videoUrl: text("video_url"),
+	storyData: json("story_data"),
+	category: varchar({ length: 100 }),
+	isPublished: int("is_published").default(1),
+	createdAt: timestamp("created_at", { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+},
+(table) => [
+	index("idx_ens_suburb_id").on(table.suburbId),
+]);
+
+export const exploreSponsorships = mysqlTable("explore_sponsorships", {
+	id: int().autoincrement().notNull(),
+	targetType: mysqlEnum("target_type", ['listing', 'development', 'agent', 'video', 'neighbourhood']).notNull(),
+	targetId: int("target_id").notNull(),
+	tier: mysqlEnum(['basic', 'premium', 'exclusive']).default('basic').notNull(),
+	startDate: timestamp("start_date", { mode: 'string' }).notNull(),
+	endDate: timestamp("end_date", { mode: 'string' }).notNull(),
+	impressionsTarget: int("impressions_target"),
+	impressionsDelivered: int("impressions_delivered").default(0),
+	clicksDelivered: int("clicks_delivered").default(0),
+	status: mysqlEnum(['active', 'scheduled', 'completed', 'paused']).default('scheduled').notNull(),
+	createdAt: timestamp("created_at", { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+},
+(table) => [
+	index("idx_es_target").on(table.targetType, table.targetId),
+	index("idx_es_status").on(table.status),
+]);
+
 export const emailTemplates = mysqlTable("email_templates", {
 	id: int().autoincrement().notNull(),
 	templateKey: varchar({ length: 100 }).notNull(),
@@ -751,6 +807,9 @@ export const exploreShorts = mysqlTable("explore_shorts", {
 	developmentId: int("development_id"),
 	agentId: int("agent_id"),
 	developerId: int("developer_id"),
+	contentType: mysqlEnum("content_type", ['property_tour', 'development_promo', 'agent_intro', 'neighbourhood_tour', 'market_insight', 'lifestyle', 'education']).default('property_tour').notNull(),
+	topicId: int("topic_id").references(() => exploreTopics.id, { onDelete: 'set null' }),
+	categoryId: int("category_id").references(() => exploreCategories.id, { onDelete: 'set null' }),
 	title: varchar({ length: 255 }).notNull(),
 	caption: text(),
 	primaryMediaId: int("primary_media_id").notNull(),
@@ -1714,3 +1773,212 @@ export const videos = mysqlTable("videos", {
 	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
 	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
 });
+
+// ============================================================================
+// EXPLORE DISCOVERY ENGINE TABLES
+// ============================================================================
+
+export const exploreContent = mysqlTable("explore_content", {
+	id: int().autoincrement().notNull(),
+	contentType: varchar("content_type", { length: 50 }).notNull(),
+	referenceId: int("reference_id").notNull(),
+	creatorId: int("creator_id"),
+	title: varchar({ length: 255 }),
+	description: text(),
+	thumbnailUrl: varchar("thumbnail_url", { length: 500 }),
+	videoUrl: varchar("video_url", { length: 500 }),
+	metadata: json(),
+	tags: json(),
+	lifestyleCategories: json("lifestyle_categories"),
+	locationLat: decimal("location_lat", { precision: 10, scale: 8 }),
+	locationLng: decimal("location_lng", { precision: 11, scale: 8 }),
+	priceMin: int("price_min"),
+	priceMax: int("price_max"),
+	viewCount: int("view_count").default(0),
+	engagementScore: decimal("engagement_score", { precision: 5, scale: 2 }).default('0'),
+	isActive: tinyint("is_active").default(1),
+	isFeatured: tinyint("is_featured").default(0),
+	createdAt: timestamp("created_at", { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+},
+(table) => [
+	index("idx_explore_content_type").on(table.contentType),
+	index("idx_explore_content_creator").on(table.creatorId),
+	index("idx_explore_content_location").on(table.locationLat, table.locationLng),
+	index("idx_explore_content_engagement").on(table.engagementScore),
+	index("idx_explore_content_active").on(table.isActive, table.createdAt),
+]);
+
+export const exploreDiscoveryVideos = mysqlTable("explore_discovery_videos", {
+	id: int().autoincrement().notNull(),
+	exploreContentId: int("explore_content_id").notNull().references(() => exploreContent.id, { onDelete: "cascade" }),
+	propertyId: int("property_id").references(() => properties.id, { onDelete: "set null" }),
+	developmentId: int("development_id").references(() => developments.id, { onDelete: "set null" }),
+	videoUrl: varchar("video_url", { length: 500 }).notNull(),
+	thumbnailUrl: varchar("thumbnail_url", { length: 500 }).notNull(),
+	duration: int().notNull(),
+	transcodedUrls: json("transcoded_urls"),
+	musicTrack: varchar("music_track", { length: 255 }),
+	hasSubtitles: tinyint("has_subtitles").default(0),
+	subtitleUrl: varchar("subtitle_url", { length: 500 }),
+	totalViews: int("total_views").default(0),
+	totalWatchTime: int("total_watch_time").default(0),
+	completionRate: decimal("completion_rate", { precision: 5, scale: 2 }).default('0'),
+	saveCount: int("save_count").default(0),
+	shareCount: int("share_count").default(0),
+	clickThroughCount: int("click_through_count").default(0),
+	createdAt: timestamp("created_at", { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+},
+(table) => [
+	index("idx_explore_discovery_videos_content").on(table.exploreContentId),
+	index("idx_explore_discovery_videos_property").on(table.propertyId),
+	index("idx_explore_discovery_videos_development").on(table.developmentId),
+	index("idx_explore_discovery_videos_performance").on(table.completionRate, table.totalViews),
+]);
+
+export const exploreNeighbourhoods = mysqlTable("explore_neighbourhoods", {
+	id: int().autoincrement().notNull(),
+	name: varchar({ length: 255 }).notNull(),
+	slug: varchar({ length: 255 }).notNull(),
+	city: varchar({ length: 100 }),
+	province: varchar({ length: 100 }),
+	heroBannerUrl: varchar("hero_banner_url", { length: 500 }),
+	description: text(),
+	locationLat: decimal("location_lat", { precision: 10, scale: 8 }),
+	locationLng: decimal("location_lng", { precision: 11, scale: 8 }),
+	boundaryPolygon: json("boundary_polygon"),
+	amenities: json(),
+	safetyRating: decimal("safety_rating", { precision: 3, scale: 2 }),
+	walkabilityScore: int("walkability_score"),
+	avgPropertyPrice: int("avg_property_price"),
+	priceTrend: json("price_trend"),
+	highlights: json(),
+	followerCount: int("follower_count").default(0),
+	propertyCount: int("property_count").default(0),
+	videoCount: int("video_count").default(0),
+	createdAt: timestamp("created_at", { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+},
+(table) => [
+	index("idx_explore_neighbourhoods_location").on(table.locationLat, table.locationLng),
+	index("idx_explore_neighbourhoods_slug").on(table.slug),
+	index("idx_explore_neighbourhoods_city").on(table.city, table.province),
+]);
+
+export const exploreUserPreferencesNew = mysqlTable("explore_user_preferences_new", {
+	id: int().autoincrement().notNull(),
+	userId: int("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+	priceRangeMin: int("price_range_min"),
+	priceRangeMax: int("price_range_max"),
+	preferredLocations: json("preferred_locations"),
+	preferredPropertyTypes: json("preferred_property_types"),
+	preferredLifestyleCategories: json("preferred_lifestyle_categories"),
+	followedNeighbourhoods: json("followed_neighbourhoods"),
+	followedCreators: json("followed_creators"),
+	engagementHistory: json("engagement_history"),
+	lastActive: timestamp("last_active", { mode: 'string' }).default('CURRENT_TIMESTAMP'),
+	createdAt: timestamp("created_at", { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+},
+(table) => [
+	index("idx_explore_user_pref_user").on(table.userId),
+	index("idx_explore_user_pref_active").on(table.lastActive),
+]);
+
+export const exploreFeedSessions = mysqlTable("explore_feed_sessions", {
+	id: int().autoincrement().notNull(),
+	userId: int("user_id").references(() => users.id, { onDelete: "set null" }),
+	sessionStart: timestamp("session_start", { mode: 'string' }).default('CURRENT_TIMESTAMP'),
+	sessionEnd: timestamp("session_end", { mode: 'string' }),
+	totalDuration: int("total_duration"),
+	videosViewed: int("videos_viewed").default(0),
+	videosCompleted: int("videos_completed").default(0),
+	propertiesSaved: int("properties_saved").default(0),
+	clickThroughs: int("click_throughs").default(0),
+	deviceType: varchar("device_type", { length: 50 }),
+	sessionData: json("session_data"),
+},
+(table) => [
+	index("idx_explore_sessions_user").on(table.userId),
+	index("idx_explore_sessions_start").on(table.sessionStart),
+]);
+
+export const exploreEngagements = mysqlTable("explore_engagements", {
+	id: int().autoincrement().notNull(),
+	userId: int("user_id").references(() => users.id, { onDelete: "set null" }),
+	contentId: int("content_id").notNull().references(() => exploreContent.id, { onDelete: "cascade" }),
+	engagementType: varchar("engagement_type", { length: 50 }).notNull(),
+	watchTime: int("watch_time"),
+	completed: tinyint().default(0),
+	sessionId: int("session_id").references(() => exploreFeedSessions.id, { onDelete: "set null" }),
+	createdAt: timestamp("created_at", { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+},
+(table) => [
+	index("idx_explore_engagement_user").on(table.userId),
+	index("idx_explore_engagement_content").on(table.contentId),
+	index("idx_explore_engagement_type").on(table.engagementType),
+	index("idx_explore_engagement_created").on(table.createdAt),
+]);
+
+export const exploreBoostCampaigns = mysqlTable("explore_boost_campaigns", {
+	id: int().autoincrement().notNull(),
+	creatorId: int("creator_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+	contentId: int("content_id").notNull().references(() => exploreContent.id, { onDelete: "cascade" }),
+	campaignName: varchar("campaign_name", { length: 255 }),
+	budget: decimal({ precision: 10, scale: 2 }),
+	spent: decimal({ precision: 10, scale: 2 }).default('0'),
+	durationDays: int("duration_days"),
+	startDate: timestamp("start_date", { mode: 'string' }).default('CURRENT_TIMESTAMP'),
+	endDate: timestamp("end_date", { mode: 'string' }),
+	targetAudience: json("target_audience"),
+	status: varchar({ length: 50 }).default('active'),
+	impressions: int().default(0),
+	clicks: int().default(0),
+	conversions: int().default(0),
+	costPerClick: decimal("cost_per_click", { precision: 10, scale: 2 }),
+	createdAt: timestamp("created_at", { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+},
+(table) => [
+	index("idx_boost_campaigns_creator").on(table.creatorId),
+	index("idx_boost_campaigns_status").on(table.status),
+	index("idx_boost_campaigns_dates").on(table.startDate, table.endDate),
+	index("idx_boost_campaigns_active").on(table.status, table.endDate),
+]);
+
+export const exploreSavedProperties = mysqlTable("explore_saved_properties", {
+	id: int().autoincrement().notNull(),
+	userId: int("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+	contentId: int("content_id").notNull().references(() => exploreContent.id, { onDelete: "cascade" }),
+	collectionName: varchar("collection_name", { length: 255 }).default('Default'),
+	notes: text(),
+	createdAt: timestamp("created_at", { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+},
+(table) => [
+	index("unique_user_content").on(table.userId, table.contentId),
+	index("idx_explore_saved_user").on(table.userId, table.createdAt),
+	index("idx_explore_saved_collection").on(table.userId, table.collectionName),
+]);
+
+export const exploreNeighbourhoodFollows = mysqlTable("explore_neighbourhood_follows", {
+	id: int().autoincrement().notNull(),
+	userId: int("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+	neighbourhoodId: int("neighbourhood_id").notNull().references(() => exploreNeighbourhoods.id, { onDelete: "cascade" }),
+	createdAt: timestamp("created_at", { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+},
+(table) => [
+	index("unique_user_neighbourhood").on(table.userId, table.neighbourhoodId),
+	index("idx_explore_neighbourhood_follows_user").on(table.userId),
+]);
+
+export const exploreCreatorFollows = mysqlTable("explore_creator_follows", {
+	id: int().autoincrement().notNull(),
+	userId: int("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+	creatorId: int("creator_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+	createdAt: timestamp("created_at", { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+},
+(table) => [
+	index("unique_user_creator").on(table.userId, table.creatorId),
+	index("idx_explore_creator_follows_user").on(table.userId),
+	index("idx_explore_creator_follows_creator").on(table.creatorId),
+]);

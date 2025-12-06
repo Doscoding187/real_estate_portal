@@ -25,6 +25,12 @@ import { marketingRouter } from './marketingRouter';
 import { subscriptionRouter } from './subscriptionRouter';
 import { developerRouter } from './developerRouter';
 import { exploreRouter } from './exploreRouter';
+import { exploreVideoUploadRouter } from './exploreVideoUploadRouter';
+import { recommendationEngineRouter } from './recommendationEngineRouter';
+import { exploreApiRouter } from './exploreApiRouter';
+import { boostCampaignRouter } from './boostCampaignRouter';
+import { exploreAnalyticsRouter } from './exploreAnalyticsRouter';
+import { similarPropertiesRouter } from './similarPropertiesRouter';
 
 export const appRouter = router({
   system: systemRouter,
@@ -49,6 +55,12 @@ export const appRouter = router({
   subscription: subscriptionRouter,
   developer: developerRouter,
   explore: exploreRouter,
+  exploreVideoUpload: exploreVideoUploadRouter,
+  recommendationEngine: recommendationEngineRouter,
+  exploreApi: exploreApiRouter,
+  boostCampaign: boostCampaignRouter,
+  exploreAnalytics: exploreAnalyticsRouter,
+  similarProperties: similarPropertiesRouter,
 
   auth: router({
     me: publicProcedure.query(opts => opts.ctx.user),

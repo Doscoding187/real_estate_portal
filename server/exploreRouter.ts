@@ -170,6 +170,16 @@ export const exploreRouter = router({
     return tags;
   }),
 
+  // Get categories
+  getCategories: publicProcedure.query(async () => {
+    return exploreFeedService.getCategories();
+  }),
+
+  // Get topics
+  getTopics: publicProcedure.query(async () => {
+    return exploreFeedService.getTopics();
+  }),
+
   // Upload new explore short
   uploadShort: protectedProcedure
     .input(

@@ -2,6 +2,9 @@ import { db } from "../db";
 import {
   exploreShorts,
   exploreUserPreferences,
+  exploreCategories,
+  exploreTopics,
+  exploreNeighbourhoodStories,
   listings,
   developments,
 } from "../../drizzle/schema";
@@ -383,6 +386,26 @@ export class ExploreFeedService {
       default:
         throw new Error(`Unknown feed type: ${feedType}`);
     }
+  }
+  /**
+   * Get all active categories for the selector
+   */
+  async getCategories() {
+    return await db
+      .select()
+      .from(exploreCategories)
+      .where(eq(exploreCategories.isActive, 1))
+      .orderBy(exploreCategories.displayOrder);
+  }
+
+  /**
+   * Get all active topics for Deep Dive zone
+   */
+  async getTopics() {
+    return await db
+      .select()
+      .from(exploreTopics)
+      .where(eq(exploreTopics.isActive, 1));
   }
 }
 

@@ -46,10 +46,16 @@
     - Prepare rollback scripts
     - _Requirements: All database requirements_
 
-- [-] 2. State management setup
+- [x] 2. State management setup
 
 
-  - [-] 2.1 Create Zustand store structure
+
+
+
+
+  - [x] 2.1 Create Zustand store structure
+
+
 
 
 
@@ -58,44 +64,53 @@
     - Add persistence middleware for auto-save
     - _Requirements: 14.1, 14.5_
 
-  - [ ] 2.2 Implement development data actions
+  - [x] 2.2 Implement development data actions
+
     - setDevelopmentData()
     - setLocation()
     - addAmenity(), removeAmenity()
     - addHighlight(), removeHighlight()
     - _Requirements: 1.1, 2.1, 3.1, 4.1_
 
-  - [ ] 2.3 Implement unit type actions
+  - [x] 2.3 Implement unit type actions
+
     - addUnitType(), updateUnitType(), deleteUnitType()
     - duplicateUnitType()
     - setBaseFeatures(), setBaseFinishes()
     - _Requirements: 5.1, 5.4, 5.5, 6.1_
 
-  - [ ] 2.4 Implement spec variation actions
+  - [x] 2.4 Implement spec variation actions
+
     - addSpec(), updateSpec(), deleteSpec()
     - setSpecOverrides()
     - computeFinalFeatures() (inheritance logic)
     - _Requirements: 7.1, 8.1, 8.3, 8.4_
 
-  - [ ] 2.5 Implement document and feature actions
+  - [x] 2.5 Implement document and feature actions
+
     - setDevelopmentFeatures()
     - addDocument(), removeDocument()
     - _Requirements: 10.1, 11.1_
 
-  - [ ] 2.6 Implement wizard navigation actions
+  - [x] 2.6 Implement wizard navigation actions
+
     - setCurrentStep()
     - validateStep()
     - canProceed()
     - _Requirements: 16.1, 16.2_
 
-  - [ ] 2.7 Implement save and publish actions
+  - [x] 2.7 Implement save and publish actions
+
     - saveDraft()
     - publish()
     - Auto-save with debouncing
     - _Requirements: 12.6, 12.7, 14.1_
 
 - [ ] 3. Step 1: Development Details
-  - [ ] 3.1 Create DevelopmentDetailsStep component
+  - [x] 3.1 Create DevelopmentDetailsStep component
+
+
+
     - Build main step container
     - Implement section layout
     - Add step validation
