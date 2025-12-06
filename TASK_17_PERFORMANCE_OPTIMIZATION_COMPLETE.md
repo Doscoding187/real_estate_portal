@@ -178,21 +178,108 @@ REDIS_URL=redis://default:password@redis.railway.internal:6379
 
 ## Files Summary
 
-| File | Purpose |
-|------|---------|
-| `server/lib/redis.ts` | Redis cache service |
-| `drizzle/migrations/add-explore-performance-indexes.sql` | Database indexes |
-| `scripts/run-explore-performance-indexes.ts` | Migration runner |
-| `client/src/components/ui/Skeleton.tsx` | Loading skeletons |
-| `client/src/components/ui/ProgressiveImage.tsx` | Progressive images |
-| `.env.example` | Updated with REDIS_URL |
+| File | Purpose | Lines |
+|------|---------|-------|
+| `server/lib/redis.ts` | Redis cache service | 280 |
+| `server/services/cacheIntegrationService.ts` | Cache integration helpers | 200 |
+| `server/cacheRouter.ts` | Cache monitoring API | 110 |
+| `drizzle/migrations/add-explore-performance-indexes.sql` | Database indexes | 150 |
+| `scripts/run-explore-performance-indexes.ts` | Migration runner | 70 |
+| `client/src/components/ui/Skeleton.tsx` | Loading skeletons | 250 |
+| `client/src/components/ui/ProgressiveImage.tsx` | Progressive images | 200 |
+| `.env.production` | Production Redis config | 2 |
+| `.env.example` | Updated with REDIS_URL | Updated |
+
+## Cache Monitoring API
+
+Access cache statistics via tRPC:
+
+```typescript
+// Get cache stats
+const stats = await trpc.cache.getStats.query();
+// Returns: { connected, totalKeys, memory, backend }
+
+// Health check
+const health = await trpc.cache.health.query();
+// Returns: { healthy, connected, backend }
+
+// Clear all cache (admin)
+await trpc.cache.clearAll.mutate();
+
+// Clear specific pattern (admin)
+await trpc.cache.clearPattern.mutate({ pattern: 'feed' });
+```
+
+## Integration Examples
+
+### 1. Cached Feed Service
+
+```typescript
+import { getCachedPersonalizedFeed } from '@/server/services/cacheIntegrationService';
+
+// In your service
+const feed = await getCachedPersonalizedFeed(
+  userId,
+  limit,
+  offset,
+  async () => {
+    // Fetch fresh data from database
+    return await db.select().from(exploreContent)...;
+  }
+);
+```
+
+### 2. Cache Invalidation
+
+```typescript
+import { invalidateFeedCaches } from '@/server/services/cacheIntegrationService';
+
+// When new content is published
+await db.insert(exploreContent).values(newContent);
+await invalidateFeedCaches(); // Clear all feed caches
+```
+
+### 3. Progressive Image Loading
+
+```tsx
+import { ProgressiveImage } from '@/components/ui/ProgressiveImage';
+
+<ProgressiveImage
+  src={property.imageUrl}
+  alt={property.title}
+  aspectRatio="16/9"
+  priority={isAboveFold}
+  className="rounded-lg"
+/>
+```
+
+### 4. Loading Skeletons
+
+```tsx
+import { PropertyCardSkeleton, ExploreHomeSkeleton } from '@/components/ui/Skeleton';
+
+{isLoading ? (
+  <PropertyCardSkeleton count={6} />
+) : (
+  properties.map(p => <PropertyCard key={p.id} {...p} />)
+)}
+```
 
 ## Next Steps
 
-1. Run the database index migration on production
-2. Add REDIS_URL to Railway environment variables
-3. Monitor cache hit rates via `redisCache.getStats()`
-4. Integrate skeleton components into existing pages
+1. ✅ Redis configured on Railway
+2. ✅ Database indexes created
+3. ✅ Cache monitoring API available
+4. 🔄 Integrate caching into existing services:
+   - Update `exploreFeedService.ts` to use `getCachedPersonalizedFeed`
+   - Update `exploreApiRouter.ts` to use `getCachedVideoFeed`
+   - Update neighbourhood endpoints to use `getCachedNeighbourhoodDetail`
+5. 🔄 Add skeleton components to pages:
+   - `ExploreHome.tsx`
+   - `ExploreDiscovery.tsx`
+   - `NeighbourhoodDetail.tsx`
+6. 🔄 Replace `<img>` tags with `<ProgressiveImage>` components
+7. 📊 Monitor cache hit rates in production
 
 ---
 

@@ -169,7 +169,7 @@ export default function VideoCard({ video, isActive, onView }: VideoCardProps) {
             className="h-full w-auto max-w-full object-contain"
             loading="lazy"
             onDoubleClick={handleDoubleTap}
-            onClick={togglePropertyDetails}
+            onClick={() => setShowPropertyDetails(!showPropertyDetails)}
           />
         ) : (
           // Actual Video
@@ -226,7 +226,7 @@ export default function VideoCard({ video, isActive, onView }: VideoCardProps) {
         {showPropertyDetails && video.type === 'listing' && (
           <div 
             className="absolute inset-0 bg-black/80 backdrop-blur-sm flex flex-col p-6 pointer-events-auto cursor-pointer"
-            onClick={togglePropertyDetails}
+            onClick={() => setShowPropertyDetails(false)}
           >
             <div className="flex-1 overflow-y-auto">
               <div className="mb-6">

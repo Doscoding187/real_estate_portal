@@ -96,7 +96,7 @@ export const exploreVideoUploadRouter = router({
 
       // Trigger video processing pipeline (transcoding, thumbnails, etc.)
       // This runs asynchronously and doesn't block the response
-      processUploadedVideo(result.exploreVideoId, input.videoUrl).catch((error) => {
+      processUploadedVideo(result.exploreVideoId, input.videoUrl, input.duration).catch((error) => {
         console.error('[ExploreVideoUpload] Video processing failed:', error);
         // In production, this would trigger an alert or retry mechanism
       });
@@ -207,6 +207,47 @@ export const exploreVideoUploadRouter = router({
       return {
         success: true,
         message: 'Transcoded URLs updated successfully',
+      };
+    }),
+
+  /**
+   * Get transcoding status for a video
+   * Requirements 8.2: Track video processing status
+   */
+  getTranscodingStatus: protectedProcedure
+    .input(
+      z.object({
+        exploreVideoId: z.number(),
+      }),
+    )
+    .query(async ({ input }) => {
+      const { getTranscodingStatus } = await import('./services/videoProcessingService');
+      const status = await getTranscodingStatus(input.exploreVideoId);
+
+      return {
+        success: true,
+        data: status,
+      };
+    }),
+
+  /**
+   * Validate video file
+   * Requirements 8.1, 8.4: Validate video format and duration
+   */
+  validateVideoFile: protectedProcedure
+    .input(
+      z.object({
+        videoUrl: z.string().url(),
+        duration: z.number().optional(),
+      }),
+    )
+    .query(async ({ input }) => {
+      const { validateVideoFile } = await import('./services/videoProcessingService');
+      const validation = await validateVideoFile(input.videoUrl, input.duration);
+
+      return {
+        valid: validation.valid,
+        errors: validation.errors,
       };
     }),
 });

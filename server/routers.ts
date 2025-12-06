@@ -31,6 +31,7 @@ import { exploreVideoUploadRouter } from './exploreVideoUploadRouter';
 // import { boostCampaignRouter } from './boostCampaignRouter'; // TODO: Fix syntax errors in this file
 import { exploreAnalyticsRouter } from './exploreAnalyticsRouter';
 import { similarPropertiesRouter } from './similarPropertiesRouter';
+import { cacheRouter } from './cacheRouter';
 
 export const appRouter = router({
   system: systemRouter,
@@ -61,6 +62,7 @@ export const appRouter = router({
   // boostCampaign: boostCampaignRouter, // TODO: Fix syntax errors in this file
   exploreAnalytics: exploreAnalyticsRouter,
   similarProperties: similarPropertiesRouter,
+  cache: cacheRouter,
 
   auth: router({
     me: publicProcedure.query(opts => opts.ctx.user),
