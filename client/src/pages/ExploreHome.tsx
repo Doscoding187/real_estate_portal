@@ -1,19 +1,22 @@
-import { useState } from 'react';
-import { Play, Grid3x3, SlidersHorizontal } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Play, Grid3x3, SlidersHorizontal, MapPin } from 'lucide-react';
 import { DiscoveryCardFeed } from '@/components/explore-discovery/DiscoveryCardFeed';
 import { ExploreVideoFeed } from '@/components/explore-discovery/ExploreVideoFeed';
 import { LifestyleCategorySelector } from '@/components/explore-discovery/LifestyleCategorySelector';
 import { FilterPanel } from '@/components/explore-discovery/FilterPanel';
+import { PersonalizedContentBlock } from '@/components/explore-discovery/PersonalizedContentBlock';
 import { useCategoryFilter } from '@/hooks/useCategoryFilter';
 import { usePropertyFilters } from '@/hooks/usePropertyFilters';
+import { usePersonalizedContent } from '@/hooks/usePersonalizedContent';
 import { DiscoveryItem } from '@/hooks/useDiscoveryFeed';
 
-type ViewMode = 'cards' | 'videos';
+type ViewMode = 'home' | 'cards' | 'videos';
 
 export default function ExploreHome() {
-  const [viewMode, setViewMode] = useState<ViewMode>('cards');
+  const [viewMode, setViewMode] = useState<ViewMode>('home');
   const { selectedCategoryId, setSelectedCategoryId } = useCategoryFilter();
   const [showFilters, setShowFilters] = useState(false);
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | undefined>();
   
   const {
     filters,
@@ -25,6 +28,29 @@ export default function ExploreHome() {
     clearFilters,
     getFilterCount,
   } = usePropertyFilters();
+
+  // Get personalized content sections
+  const { sections, isLoading: sectionsLoading } = usePersonalizedContent({
+    categoryId: selectedCategoryId,
+    location: userLocation,
+  });
+
+  // Get user location for "Popular Near You"
+  useEffect(() => {
+    if ('geolocation' in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setUserLocation({
+            lat: position.coords.latitude,
+            lng: position.coords.longitude,
+          });
+        },
+        (error) => {
+          console.log('Location access denied:', error);
+        }
+      );
+    }
+  }, []);
 
   const handleItemClick = (item: DiscoveryItem) => {
     console.log('Item clicked:', item);
@@ -39,6 +65,12 @@ export default function ExploreHome() {
     }
   };
 
+  const handleSeeAll = (sectionType: string) => {
+    console.log('See all:', sectionType);
+    // Navigate to full view of section
+    setViewMode('cards');
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -49,6 +81,17 @@ export default function ExploreHome() {
             
             {/* View mode toggle */}
             <div className="flex items-center gap-2 bg-gray-100 rounded-full p-1">
+              <button
+                onClick={() => setViewMode('home')}
+                className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                  viewMode === 'home'
+                    ? 'bg-white text-gray-900 shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                <MapPin className="w-4 h-4" />
+                <span>Home</span>
+              </button>
               <button
                 onClick={() => setViewMode('cards')}
                 className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-colors ${
@@ -86,7 +129,57 @@ export default function ExploreHome() {
 
       {/* Content */}
       <main className="max-w-7xl mx-auto">
-        {viewMode === 'cards' ? (
+        {viewMode === 'home' ? (
+          <div className="py-6">
+            {/* Personalized Content Sections */}
+            {sectionsLoading ? (
+              <>
+                <PersonalizedContentBlock
+                  title="Loading..."
+                  items={[]}
+                  onItemClick={handleItemClick}
+                  isLoading={true}
+                />
+                <PersonalizedContentBlock
+                  title="Loading..."
+                  items={[]}
+                  onItemClick={handleItemClick}
+                  isLoading={true}
+                />
+              </>
+            ) : (
+              sections.map((section) => (
+                <PersonalizedContentBlock
+                  key={section.id}
+                  title={section.title}
+                  subtitle={section.subtitle}
+                  items={section.items}
+                  onItemClick={handleItemClick}
+                  onSeeAll={() => handleSeeAll(section.type)}
+                />
+              ))
+            )}
+
+            {/* Empty state */}
+            {!sectionsLoading && sections.length === 0 && (
+              <div className="text-center py-12">
+                <MapPin className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                  Start Exploring
+                </h3>
+                <p className="text-gray-600 mb-6">
+                  Discover properties tailored to your preferences
+                </p>
+                <button
+                  onClick={() => setViewMode('cards')}
+                  className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  Browse All Properties
+                </button>
+              </div>
+            )}
+          </div>
+        ) : viewMode === 'cards' ? (
           <div className="py-6">
             <DiscoveryCardFeed
               categoryId={selectedCategoryId}

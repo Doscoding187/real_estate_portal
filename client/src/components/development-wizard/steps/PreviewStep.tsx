@@ -77,7 +77,7 @@ export function PreviewStep() {
   const handleSubmit = async () => {
     if (!isValid || !agreedToTerms) return;
 
-    // Prepare development data
+    // Prepare development data with coordinates
     createDevelopment.mutate({
       name: state.developmentName,
       developmentType: 'residential', // Default type
@@ -85,8 +85,9 @@ export function PreviewStep() {
       address: state.address,
       city: state.city,
       province: state.province,
-      latitude: state.latitude,
-      longitude: state.longitude,
+      // Include coordinates if available (from map pin)
+      latitude: state.latitude || undefined,
+      longitude: state.longitude || undefined,
       showHouseAddress: true, // Default to showing address
       priceFrom:
         state.unitTypes.length > 0 ? Math.min(...state.unitTypes.map(u => u.priceFrom)) : undefined,

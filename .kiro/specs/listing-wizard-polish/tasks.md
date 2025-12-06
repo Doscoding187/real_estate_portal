@@ -151,30 +151,39 @@ This implementation plan covers polishing two wizards (Listing Wizard for proper
   - _Requirements: 13.8_
 
 
-- [ ] 3.6 Implement coordinate persistence
+- [x] 3.6 Implement coordinate persistence
+
+
+
   - Update development save logic to store latitude/longitude
   - Update development load logic to retrieve coordinates
   - Display saved pin location when editing existing development
   - Center map on saved coordinates when available
+
   - _Requirements: 13.8, 13.9_
 
 - [ ] 3.7 Write property test for pin placement accuracy
   - **Property 1: Pin placement accuracy**
   - **Validates: Requirements 13.2**
+
   - Test that clicking at random coordinates places marker at exact location
   - Use property-based testing with random lat/lng values
 
 - [ ] 3.8 Write property test for geocoding population
   - **Property 2: Geocoding result population**
+
   - **Validates: Requirements 13.4, 13.5**
   - Test that geocoding results populate all available address fields
   - Use mock geocoding responses with various address components
 
-- [ ] 3.9 Write property test for manual entry preservation
+- [x] 3.9 Write property test for manual entry preservation
+
   - **Property 3: Manual entry preservation**
   - **Validates: Requirements 13.7**
   - Test that manually entered data is not overridden until pin moves
   - Test with various manual edit scenarios
+
+
 
 - [ ] 3.10 Write property test for coordinate round-trip
   - **Property 4: Coordinate persistence round-trip**
@@ -193,51 +202,45 @@ This implementation plan covers polishing two wizards (Listing Wizard for proper
 ## Phase 4: Media Upload Enhancements
 
 - [x] 4. Create enhanced media upload zone
-
-
   - Create `client/src/components/media/MediaUploadZone.tsx` with drag-and-drop
   - Add visual feedback for drag-over state (blue border)
   - Implement file validation (type, size)
   - Show error messages for invalid files
-
-
   - _Requirements: 3.1, 3.4, 3.6_
 
-- [ ] 4.1 Add upload progress indicators
+- [x] 4.1 Add upload progress indicators
   - Create `client/src/components/media/UploadProgressBar.tsx`
-
-
   - Show individual progress for each file
   - Display upload speed and time remaining
   - Add cancel button for in-progress uploads
   - _Requirements: 3.2_
 
-- [ ] 4.2 Implement media reordering
+- [x] 4.2 Implement media reordering
   - Create `client/src/components/media/SortableMediaGrid.tsx` using @dnd-kit
   - Add drag handles to media thumbnails
   - Show visual feedback during drag (opacity, shadow)
   - Update display order on drop
   - _Requirements: 3.3_
 
-- [ ] 4.3 Add primary media selection
+- [x] 4.3 Add primary media selection
   - Add "Set as Primary" button to media thumbnails
   - Display "Primary" badge on selected image
   - Ensure only one primary media item
   - _Requirements: 3.4_
 
-- [ ] 4.4 Add media type indicators
+- [x] 4.4 Add media type indicators
   - Display video icon overlay on video thumbnails
   - Display PDF icon for document uploads
   - Display floorplan icon for floorplan uploads
   - _Requirements: 3.5_
 
-- [ ] 4.5 Update Listing Wizard media step
+- [x] 4.5 Update Listing Wizard media step
   - Replace existing media upload with new `MediaUploadZone`
   - Integrate `SortableMediaGrid` for reordering
   - Add primary media selection UI
   - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5_
 
-- [ ] 4.6 Update Development Wizard media step
+- [x] 4.6 Update Development Wizard media step
   - Replace existing media upload with new `MediaUploadZone`
   - Add media categorization (featured, amenities, outdoors, videos)
   - Integrate `SortableMediaGrid` for reordering
@@ -343,40 +346,41 @@ This implementation plan covers polishing two wizards (Listing Wizard for proper
 
 ## Phase 7: Error Recovery & Feedback
 
-- [ ] 7. Create error recovery system
+- [x] 7. Create error recovery system
   - Create `client/src/lib/errors/ErrorRecoveryStrategy.ts`
   - Define error types (network, validation, server, upload)
   - Implement retry logic for recoverable errors
   - Add error logging for debugging
   - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5_
 
-- [ ] 7.1 Create ErrorAlert component
+- [x] 7.1 Create ErrorAlert component
   - Create `client/src/components/ui/ErrorAlert.tsx`
   - Display error message with icon
   - Add "Retry" button for recoverable errors
   - Add "Dismiss" button to close alert
   - _Requirements: 6.1, 6.2, 6.4_
 
-- [ ] 7.2 Add network error handling
+- [x] 7.2 Add network error handling
   - Detect network failures during API calls
   - Show "Connection lost" message with draft saved confirmation
   - Implement automatic retry with exponential backoff
   - _Requirements: 6.1_
 
-- [ ] 7.3 Add server validation error handling
+- [x] 7.3 Add server validation error handling
   - Parse server validation errors from API responses
   - Map errors to specific form fields
   - Highlight affected steps in progress indicator
   - _Requirements: 6.2, 6.5_
 
-- [ ] 7.4 Add session expiry handling
+- [x] 7.4 Add session expiry handling
   - Detect 401 Unauthorized responses
   - Show "Session expired" dialog
   - Save draft before redirecting to login
   - Restore draft after re-authentication
+
   - _Requirements: 6.3_
 
-- [ ] 7.5 Add upload error handling
+- [x] 7.5 Add upload error handling
   - Show retry button next to failed uploads
   - Display specific error message (file too large, invalid type, etc.)
   - Allow removing failed uploads

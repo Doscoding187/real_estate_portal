@@ -665,8 +665,8 @@
     - **Property 49: Sponsored content configuration**
     - **Validates: Requirements 11.6**
 
-- [ ] 16. Implement personalized content sections
-  - [ ] 16.1 Create "For You" content block
+- [x] 16. Implement personalized content sections
+  - [x] 16.1 Create "For You" content block
     - Generate personalized recommendations
     - Display in horizontal scroll
     - _Requirements: 12.1, 12.5_
@@ -675,7 +675,7 @@
     - **Property 53: For You personalization**
     - **Validates: Requirements 12.5**
 
-  - [ ] 16.3 Build "Popular Near You" section
+  - [x] 16.3 Build "Popular Near You" section
     - Use user location for filtering
     - Show trending local properties
     - _Requirements: 12.1, 12.6_
@@ -684,7 +684,7 @@
     - **Property 54: Location-based popular content**
     - **Validates: Requirements 12.6**
 
-  - [ ] 16.5 Add "New Developments" and "Trending" sections
+  - [x] 16.5 Add "New Developments" and "Trending" sections
     - Filter by development status
     - Sort by engagement metrics
     - _Requirements: 12.1_

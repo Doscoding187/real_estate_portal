@@ -13,6 +13,7 @@ import { RecentListingsTable } from '@/components/agency/RecentListingsTable';
 import { LeadConversionAnalytics } from '@/components/agency/LeadConversionAnalytics';
 import { CommissionEarningsDashboard } from '@/components/agency/CommissionEarningsDashboard';
 import { AgentPerformanceLeaderboard } from '@/components/agency/AgentPerformanceLeaderboard';
+import { AgencyExploreOverview } from '@/components/explore-analytics/AgencyExploreOverview';
 
 export default function AgencyDashboard() {
   const [, setLocation] = useLocation();
@@ -107,6 +108,9 @@ export default function AgencyDashboard() {
 
         {/* Performance Chart */}
         <AgencyPerformanceChart data={performanceData || []} isLoading={performanceLoading} />
+
+        {/* Explore Performance Overview */}
+        <AgencyExploreOverview />
 
         {/* Advanced Analytics */}
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">

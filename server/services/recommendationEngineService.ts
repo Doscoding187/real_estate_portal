@@ -1,51 +1,25 @@
 /**
  * Recommendation Engine Service
- * Handles personalized content recommendations based on user behavior and preferences
+ * Intelligent personalization and content ranking
  * Requirements: 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 7.3, 7.4
  */
 
 import { db } from '../db';
 import {
   exploreContent,
-  exploreDiscoveryVideos,
   exploreUserPreferencesNew,
   exploreEngagements,
-  exploreFeedSessions,
-  properties,
-  developments,
+  exploreBoostCampaigns,
 } from '../../drizzle/schema';
-import { eq, and, desc, sql, gte, lte, inArray } from 'drizzle-orm';
+import { eq, desc, sql, and, gte } from 'drizzle-orm';
 
-export interface UserContext {
+interface UserContext {
   userId: number;
+  sessionHistory?: number[];
   location?: { lat: number; lng: number };
-  sessionHistory: number[]; // Content IDs viewed in this session
-  activeFilters?: FilterSet;
-  deviceInfo?: DeviceInfo;
 }
 
-export interface FilterSet {
-  propertyTypes?: string[];
-  priceRange?: { min: number; max: number };
-  lifestyleCategories?: string[];
-  locations?: string[];
-}
-
-export interface DeviceInfo {
-  type: 'mobile' | 'tablet' | 'desktop';
-  os?: string;
-  browser?: string;
-}
-
-export interface EngagementSignal {
-  contentId: number;
-  engagementType: 'view' | 'save' | 'share' | 'click' | 'skip' | 'complete';
-  watchTime?: number; // seconds
-  completed?: boolean;
-  timestamp: Date;
-}
-
-export interface UserProfile {
+interface UserProfile {
   userId: number;
   priceRangeMin?: number;
   priceRangeMax?: number;
@@ -54,487 +28,251 @@ export interface UserProfile {
   preferredLifestyleCategories: string[];
   followedNeighbourhoods: number[];
   followedCreators: number[];
-  engagementHistory: EngagementSignal[];
-  lastActive: Date;
 }
 
-export interface RecommendedContent {
-  id: number;
-  contentType: string;
-  title: string;
-  thumbnailUrl: string;
-  videoUrl?: string;
-  score: number; // Recommendation score
-  reason: string; // Why this was recommended
-}
-
-/**
- * Record engagement signal
- * Requirements 2.3, 2.4: Track completion and skip signals
- */
-export async function recordEngagement(
-  userId: number,
-  contentId: number,
-  engagement: EngagementSignal,
-  sessionId?: number,
-): Promise<void> {
-  try {
-    // Record engagement in database
-    await db.insert(exploreEngagements).values({
-      userId,
-      contentId,
-      engagementType: engagement.engagementType,
-      watchTime: engagement.watchTime || null,
-      completed: engagement.completed || false,
-      sessionId: sessionId || null,
-    });
-
-    console.log(`[RecommendationEngine] Recorded ${engagement.engagementType} for user ${userId}, content ${contentId}`);
-
-    // Update user profile asynchronously
-    updateUserProfileFromEngagement(userId, contentId, engagement).catch((error) => {
-      console.error('[RecommendationEngine] Failed to update user profile:', error);
-    });
-  } catch (error: any) {
-    console.error('[RecommendationEngine] Failed to record engagement:', error);
-    throw new Error(`Failed to record engagement: ${error.message}`);
-  }
-}
-
-/**
- * Update user profile based on engagement
- * Requirements 2.1, 2.2, 2.5: Learn from price range, neighbourhood, and property type interactions
- */
-async function updateUserProfileFromEngagement(
-  userId: number,
-  contentId: number,
-  engagement: EngagementSignal,
-): Promise<void> {
-  try {
-    // Get content details
-    const content = await db
-      .select()
-      .from(exploreContent)
-      .where(eq(exploreContent.id, contentId))
-      .limit(1);
-
-    if (!content[0]) {
-      console.warn(`[RecommendationEngine] Content ${contentId} not found`);
-      return;
-    }
-
-    const contentData = content[0];
-
-    // Get or create user preferences
-    let userPrefs = await db
+class RecommendationEngineService {
+  /**
+   * Get user profile for personalization
+   */
+  async getUserProfile(userId: number): Promise<UserProfile> {
+    const profile = await db
       .select()
       .from(exploreUserPreferencesNew)
       .where(eq(exploreUserPreferencesNew.userId, userId))
       .limit(1);
 
-    if (!userPrefs[0]) {
-      // Create new preferences
-      await db.insert(exploreUserPreferencesNew).values({
+    if (!profile[0]) {
+      // Return default profile
+      return {
         userId,
-        priceRangeMin: null,
-        priceRangeMax: null,
-        preferredLocations: JSON.stringify([]),
-        preferredPropertyTypes: JSON.stringify([]),
-        preferredLifestyleCategories: JSON.stringify([]),
-        followedNeighbourhoods: JSON.stringify([]),
-        followedCreators: JSON.stringify([]),
-        engagementHistory: JSON.stringify([]),
-        lastActive: new Date(),
-      });
-
-      userPrefs = await db
-        .select()
-        .from(exploreUserPreferencesNew)
-        .where(eq(exploreUserPreferencesNew.userId, userId))
-        .limit(1);
+        preferredLocations: [],
+        preferredPropertyTypes: [],
+        preferredLifestyleCategories: [],
+        followedNeighbourhoods: [],
+        followedCreators: [],
+      };
     }
-
-    const prefs = userPrefs[0];
-
-    // Parse existing preferences
-    const preferredLocations = JSON.parse(prefs.preferredLocations as string || '[]') as string[];
-    const preferredPropertyTypes = JSON.parse(prefs.preferredPropertyTypes as string || '[]') as string[];
-    const preferredCategories = JSON.parse(prefs.preferredLifestyleCategories as string || '[]') as string[];
-    const engagementHistory = JSON.parse(prefs.engagementHistory as string || '[]') as EngagementSignal[];
-
-    // Update based on engagement type
-    if (engagement.engagementType === 'complete' || engagement.engagementType === 'save') {
-      // Positive signals - learn preferences
-
-      // Requirement 2.1: Learn price range
-      if (contentData.priceMin && contentData.priceMax) {
-        const currentMin = prefs.priceRangeMin || contentData.priceMin;
-        const currentMax = prefs.priceRangeMax || contentData.priceMax;
-
-        // Adjust price range to include this content
-        const newMin = Math.min(currentMin, contentData.priceMin);
-        const newMax = Math.max(currentMax, contentData.priceMax);
-
-        await db
-          .update(exploreUserPreferencesNew)
-          .set({
-            priceRangeMin: newMin,
-            priceRangeMax: newMax,
-          })
-          .where(eq(exploreUserPreferencesNew.userId, userId));
-      }
-
-      // Requirement 2.5: Learn property type preferences
-      if (contentData.metadata) {
-        const metadata = JSON.parse(contentData.metadata as string || '{}');
-        if (metadata.propertyType && !preferredPropertyTypes.includes(metadata.propertyType)) {
-          preferredPropertyTypes.push(metadata.propertyType);
-        }
-      }
-
-      // Learn lifestyle categories
-      if (contentData.lifestyleCategories) {
-        const categories = JSON.parse(contentData.lifestyleCategories as string || '[]') as string[];
-        for (const category of categories) {
-          if (!preferredCategories.includes(category)) {
-            preferredCategories.push(category);
-          }
-        }
-      }
-    }
-
-    // Add to engagement history (keep last 100)
-    engagementHistory.unshift(engagement);
-    if (engagementHistory.length > 100) {
-      engagementHistory.pop();
-    }
-
-    // Update preferences
-    await db
-      .update(exploreUserPreferencesNew)
-      .set({
-        preferredPropertyTypes: JSON.stringify(preferredPropertyTypes),
-        preferredLifestyleCategories: JSON.stringify(preferredCategories),
-        engagementHistory: JSON.stringify(engagementHistory),
-        lastActive: new Date(),
-      })
-      .where(eq(exploreUserPreferencesNew.userId, userId));
-
-    console.log(`[RecommendationEngine] Updated user profile for user ${userId}`);
-  } catch (error: any) {
-    console.error('[RecommendationEngine] Failed to update user profile:', error);
-    throw error;
-  }
-}
-
-/**
- * Get user profile
- * Requirements 2.6: Consider user location, budget signals, property type preferences, and watch time patterns
- */
-export async function getUserProfile(userId: number): Promise<UserProfile | null> {
-  try {
-    const prefs = await db
-      .select()
-      .from(exploreUserPreferencesNew)
-      .where(eq(exploreUserPreferencesNew.userId, userId))
-      .limit(1);
-
-    if (!prefs[0]) {
-      return null;
-    }
-
-    const pref = prefs[0];
 
     return {
       userId,
-      priceRangeMin: pref.priceRangeMin || undefined,
-      priceRangeMax: pref.priceRangeMax || undefined,
-      preferredLocations: JSON.parse(pref.preferredLocations as string || '[]'),
-      preferredPropertyTypes: JSON.parse(pref.preferredPropertyTypes as string || '[]'),
-      preferredLifestyleCategories: JSON.parse(pref.preferredLifestyleCategories as string || '[]'),
-      followedNeighbourhoods: JSON.parse(pref.followedNeighbourhoods as string || '[]'),
-      followedCreators: JSON.parse(pref.followedCreators as string || '[]'),
-      engagementHistory: JSON.parse(pref.engagementHistory as string || '[]'),
-      lastActive: pref.lastActive || new Date(),
+      priceRangeMin: profile[0].priceRangeMin || undefined,
+      priceRangeMax: profile[0].priceRangeMax || undefined,
+      preferredLocations: profile[0].preferredLocations || [],
+      preferredPropertyTypes: profile[0].preferredPropertyTypes || [],
+      preferredLifestyleCategories: profile[0].preferredLifestyleCategories || [],
+      followedNeighbourhoods: profile[0].followedNeighbourhoods || [],
+      followedCreators: profile[0].followedCreators || [],
     };
-  } catch (error: any) {
-    console.error('[RecommendationEngine] Failed to get user profile:', error);
-    return null;
-  }
-}
-
-/**
- * Calculate preference score for content
- * Requirements 2.6: Multi-factor recommendation
- */
-function calculatePreferenceScore(
-  content: any,
-  userProfile: UserProfile,
-  context: UserContext,
-): number {
-  let score = 0;
-
-  // Price range match (0-30 points)
-  if (userProfile.priceRangeMin && userProfile.priceRangeMax && content.priceMin && content.priceMax) {
-    const userMidpoint = (userProfile.priceRangeMin + userProfile.priceRangeMax) / 2;
-    const contentMidpoint = (content.priceMin + content.priceMax) / 2;
-    const priceRange = userProfile.priceRangeMax - userProfile.priceRangeMin;
-
-    if (priceRange > 0) {
-      const priceDiff = Math.abs(userMidpoint - contentMidpoint);
-      const priceScore = Math.max(0, 30 - (priceDiff / priceRange) * 30);
-      score += priceScore;
-    }
   }
 
-  // Lifestyle category match (0-25 points)
-  if (content.lifestyleCategories) {
-    const contentCategories = JSON.parse(content.lifestyleCategories || '[]') as string[];
-    const matchingCategories = contentCategories.filter((cat: string) =>
-      userProfile.preferredLifestyleCategories.includes(cat),
-    );
-    score += (matchingCategories.length / Math.max(contentCategories.length, 1)) * 25;
-  }
+  /**
+   * Generate personalized feed
+   * Requirements: 2.1, 2.6, 7.3, 7.4, 12.5
+   */
+  async generatePersonalizedFeed(context: UserContext, limit: number = 20): Promise<any[]> {
+    const userProfile = await this.getUserProfile(context.userId);
 
-  // Property type match (0-20 points)
-  if (content.metadata) {
-    const metadata = JSON.parse(content.metadata || '{}');
-    if (metadata.propertyType && userProfile.preferredPropertyTypes.includes(metadata.propertyType)) {
-      score += 20;
-    }
-  }
-
-  // Creator follow bonus (0-15 points)
-  if (content.creatorId && userProfile.followedCreators.includes(content.creatorId)) {
-    score += 15;
-  }
-
-  // Recency bonus (0-10 points) - Requirement 7.3
-  const ageInDays = (Date.now() - new Date(content.createdAt).getTime()) / (1000 * 60 * 60 * 24);
-  if (ageInDays <= 7) {
-    score += 10 * (1 - ageInDays / 7);
-  }
-
-  return score;
-}
-
-/**
- * Generate personalized feed
- * Requirements 2.1, 2.6, 7.3, 7.4: Personalized recommendations with recency and multi-factor scoring
- */
-export async function generatePersonalizedFeed(
-  context: UserContext,
-  limit: number = 20,
-): Promise<RecommendedContent[]> {
-  try {
-    console.log(`[RecommendationEngine] Generating personalized feed for user ${context.userId}`);
-
-    // Get user profile
-    const userProfile = await getUserProfile(context.userId);
-
-    // Get candidate content (active, not in session history)
+    // Get candidate content
     let query = db
       .select()
       .from(exploreContent)
       .where(eq(exploreContent.isActive, 1));
 
-    // Exclude already viewed in this session
-    if (context.sessionHistory.length > 0) {
-      query = query.where(sql`${exploreContent.id} NOT IN (${context.sessionHistory.join(',')})`);
+    // Exclude session history
+    if (context.sessionHistory && context.sessionHistory.length > 0) {
+      query = query.where(
+        sql`${exploreContent.id} NOT IN (${context.sessionHistory.join(',')})`
+      );
     }
 
-    const candidates = await query.limit(100); // Get more candidates for ranking
+    // Order by engagement score and recency
+    query = query.orderBy(desc(exploreContent.engagementScore), desc(exploreContent.createdAt));
 
-    // Score and rank content
-    const scoredContent = candidates.map((content: any) => {
-      const score = userProfile
-        ? calculatePreferenceScore(content, userProfile, context)
-        : content.engagementScore || 0;
+    // Get more candidates than needed for scoring
+    query = query.limit(limit * 3);
 
-      return {
-        id: content.id,
-        contentType: content.contentType,
-        title: content.title || '',
-        thumbnailUrl: content.thumbnailUrl || '',
-        videoUrl: content.videoUrl || undefined,
-        score,
-        reason: userProfile ? 'Based on your preferences' : 'Popular content',
-      };
-    });
+    const candidates = await query;
 
-    // Sort by score and return top results
-    scoredContent.sort((a: any, b: any) => b.score - a.score);
+    // Score and rank candidates
+    const scored = candidates.map((item) => ({
+      ...item,
+      personalizedScore: this.calculatePersonalizedScore(item, userProfile, context),
+    }));
 
-    const recommendations = scoredContent.slice(0, limit);
+    // Sort by personalized score
+    scored.sort((a, b) => b.personalizedScore - a.personalizedScore);
 
-    console.log(`[RecommendationEngine] Generated ${recommendations.length} recommendations`);
-
-    return recommendations;
-  } catch (error: any) {
-    console.error('[RecommendationEngine] Failed to generate personalized feed:', error);
-    throw new Error(`Failed to generate personalized feed: ${error.message}`);
+    // Return top items
+    return scored.slice(0, limit);
   }
-}
 
-/**
- * Create or update feed session
- * Requirements 2.6: Track session duration and interactions
- */
-export async function createFeedSession(
-  userId: number,
-  deviceType?: string,
-): Promise<number> {
-  try {
-    const result = await db.insert(exploreFeedSessions).values({
-      userId,
-      sessionStart: new Date(),
-      sessionEnd: null,
-      totalDuration: null,
-      videosViewed: 0,
-      videosCompleted: 0,
-      propertiesSaved: 0,
-      clickThroughs: 0,
-      deviceType: deviceType || null,
-      sessionData: JSON.stringify({}),
-    });
+  /**
+   * Calculate personalized score for content
+   * Requirements: 2.6
+   */
+  private calculatePersonalizedScore(
+    content: any,
+    profile: UserProfile,
+    context: UserContext
+  ): number {
+    let score = 0;
 
-    const sessionId = Number(result.insertId);
+    // Base engagement score (0-40 points)
+    score += Math.min((content.engagementScore || 0) * 4, 40);
 
-    console.log(`[RecommendationEngine] Created feed session ${sessionId} for user ${userId}`);
-
-    return sessionId;
-  } catch (error: any) {
-    console.error('[RecommendationEngine] Failed to create feed session:', error);
-    throw new Error(`Failed to create feed session: ${error.message}`);
-  }
-}
-
-/**
- * Close feed session
- */
-export async function closeFeedSession(sessionId: number): Promise<void> {
-  try {
-    const session = await db
-      .select()
-      .from(exploreFeedSessions)
-      .where(eq(exploreFeedSessions.id, sessionId))
-      .limit(1);
-
-    if (!session[0]) {
-      console.warn(`[RecommendationEngine] Session ${sessionId} not found`);
-      return;
+    // Price range match (0-20 points)
+    if (profile.priceRangeMin && profile.priceRangeMax && content.priceMin && content.priceMax) {
+      const priceOverlap = this.calculatePriceOverlap(
+        profile.priceRangeMin,
+        profile.priceRangeMax,
+        content.priceMin,
+        content.priceMax
+      );
+      score += priceOverlap * 20;
     }
 
-    const sessionStart = new Date(session[0].sessionStart);
-    const sessionEnd = new Date();
-    const duration = Math.floor((sessionEnd.getTime() - sessionStart.getTime()) / 1000); // seconds
+    // Lifestyle category match (0-15 points)
+    if (content.lifestyleCategories && profile.preferredLifestyleCategories.length > 0) {
+      const categoryMatch = content.lifestyleCategories.some((cat: string) =>
+        profile.preferredLifestyleCategories.includes(cat)
+      );
+      if (categoryMatch) score += 15;
+    }
 
-    await db
-      .update(exploreFeedSessions)
-      .set({
-        sessionEnd,
-        totalDuration: duration,
-      })
-      .where(eq(exploreFeedSessions.id, sessionId));
+    // Creator follow bonus (0-10 points)
+    if (content.creatorId && profile.followedCreators.includes(content.creatorId)) {
+      score += 10;
+    }
 
-    console.log(`[RecommendationEngine] Closed feed session ${sessionId}, duration: ${duration}s`);
-  } catch (error: any) {
-    console.error('[RecommendationEngine] Failed to close feed session:', error);
-    throw new Error(`Failed to close feed session: ${error.message}`);
+    // Recency bonus (0-10 points)
+    const daysSinceCreation = Math.floor(
+      (Date.now() - new Date(content.createdAt).getTime()) / (1000 * 60 * 60 * 24)
+    );
+    if (daysSinceCreation <= 7) {
+      score += 10 * (1 - daysSinceCreation / 7);
+    }
+
+    // Location proximity bonus (0-5 points)
+    if (context.location && content.locationLat && content.locationLng) {
+      const distance = this.calculateDistance(
+        context.location.lat,
+        context.location.lng,
+        content.locationLat,
+        content.locationLng
+      );
+      if (distance < 50) {
+        // Within 50km
+        score += 5 * (1 - distance / 50);
+      }
+    }
+
+    return score;
   }
-}
+
+  /**
+   * Calculate price range overlap (0-1)
+   */
+  private calculatePriceOverlap(
+    userMin: number,
+    userMax: number,
+    contentMin: number,
+    contentMax: number
+  ): number {
+    const overlapMin = Math.max(userMin, contentMin);
+    const overlapMax = Math.min(userMax, contentMax);
+
+    if (overlapMin > overlapMax) return 0;
+
+    const overlapRange = overlapMax - overlapMin;
+    const userRange = userMax - userMin;
+
+    return overlapRange / userRange;
+  }
+
+  /**
+   * Calculate distance between two coordinates (Haversine formula)
+   */
+  private calculateDistance(lat1: number, lng1: number, lat2: number, lng2: number): number {
+    const R = 6371; // Earth's radius in km
+    const dLat = this.toRad(lat2 - lat1);
+    const dLng = this.toRad(lng2 - lng1);
+
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(this.toRad(lat1)) *
+        Math.cos(this.toRad(lat2)) *
+        Math.sin(dLng / 2) *
+        Math.sin(dLng / 2);
+
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+  }
+
+  private toRad(degrees: number): number {
+    return (degrees * Math.PI) / 180;
+  }
 
   /**
    * Inject boosted content into feed
-   * Requirement 9.2: Increase content's appearance frequency in relevant user feeds
-   * Requirement 9.3: Display "Sponsored" label
-   * Requirement 9.6: Limit sponsored items to 1 per every 10 organic items
+   * Requirements: 9.2, 9.3, 9.6
    */
-  async injectBoostedContent(
-    feed: any[],
-    userProfile: UserProfile
-  ): Promise<any[]> {
-    // Import boost service dynamically to avoid circular dependency
-    const { boostCampaignService } = await import('./boostCampaignService');
-    
-    // Get active campaigns
-    const activeCampaigns = await boostCampaignService.getActiveCampaigns();
-    
+  async injectBoostedContent(feed: any[], userProfile: UserProfile): Promise<any[]> {
+    // Get active boost campaigns
+    const now = new Date();
+    const activeCampaigns = await db
+      .select()
+      .from(exploreBoostCampaigns)
+      .where(
+        and(
+          eq(exploreBoostCampaigns.status, 'active'),
+          gte(exploreBoostCampaigns.endDate, now)
+        )
+      )
+      .orderBy(desc(exploreBoostCampaigns.budget));
+
     if (activeCampaigns.length === 0) {
       return feed;
     }
 
-    // Filter campaigns based on user profile and targeting
-    const relevantCampaigns = activeCampaigns.filter((campaign) => {
-      const targeting = campaign.targetAudience || {};
-      
-      // Check price range targeting
-      if (targeting.priceRange && userProfile.priceRangeMin && userProfile.priceRangeMax) {
-        const userAvgPrice = (userProfile.priceRangeMin + userProfile.priceRangeMax) / 2;
-        if (userAvgPrice < targeting.priceRange.min || userAvgPrice > targeting.priceRange.max) {
-          return false;
-        }
-      }
+    // Get boosted content
+    const boostedContentIds = activeCampaigns.map((c) => c.contentId);
+    const boostedContent = await db
+      .select()
+      .from(exploreContent)
+      .where(sql`${exploreContent.id} IN (${boostedContentIds.join(',')})`);
 
-      // Check property type targeting
-      if (targeting.propertyTypes && targeting.propertyTypes.length > 0) {
-        if (!userProfile.preferredPropertyTypes || userProfile.preferredPropertyTypes.length === 0) {
-          return true; // Include if user has no preferences
-        }
-        const hasMatch = targeting.propertyTypes.some((type: string) =>
-          userProfile.preferredPropertyTypes?.includes(type)
-        );
-        if (!hasMatch) {
-          return false;
-        }
-      }
-
-      return true;
+    // Create map of content to campaigns
+    const contentCampaignMap = new Map();
+    activeCampaigns.forEach((campaign) => {
+      contentCampaignMap.set(campaign.contentId, campaign);
     });
 
-    if (relevantCampaigns.length === 0) {
-      return feed;
-    }
-
-    // Get content for relevant campaigns
-    const campaignContentIds = relevantCampaigns.map((c) => c.contentId);
-    const boostedContent = await db.query.exploreContent.findMany({
-      where: inArray(exploreContent.id, campaignContentIds),
-      with: {
-        videos: true,
-      },
-    });
-
-    // Create a map of content ID to campaign ID for tracking
-    const contentToCampaignMap = new Map();
-    relevantCampaigns.forEach((campaign) => {
-      contentToCampaignMap.set(campaign.contentId, campaign.id);
-    });
-
-    // Inject boosted content at 1:10 ratio (every 10th item)
+    // Inject boosted content at 1:10 ratio
     const result = [];
-    let organicCount = 0;
+    let organicIndex = 0;
     let boostedIndex = 0;
 
-    for (let i = 0; i < feed.length; i++) {
-      result.push(feed[i]);
-      organicCount++;
-
-      // Every 10 organic items, inject a boosted item
-      if (organicCount === 10 && boostedIndex < boostedContent.length) {
-        const boosted = boostedContent[boostedIndex];
-        const campaignId = contentToCampaignMap.get(boosted.id);
-        
-        // Mark as sponsored and add campaign ID for tracking
+    while (organicIndex < feed.length || boostedIndex < boostedContent.length) {
+      // Add 10 organic items
+      for (let i = 0; i < 10 && organicIndex < feed.length; i++) {
         result.push({
-          ...boosted,
-          isSponsored: true,
-          sponsoredLabel: 'Sponsored',
-          campaignId,
+          ...feed[organicIndex],
+          isSponsored: false,
         });
+        organicIndex++;
+      }
 
+      // Add 1 boosted item
+      if (boostedIndex < boostedContent.length) {
+        const boostedItem = boostedContent[boostedIndex];
+        const campaign = contentCampaignMap.get(boostedItem.id);
+
+        result.push({
+          ...boostedItem,
+          isSponsored: true,
+          campaignId: campaign?.id,
+        });
         boostedIndex++;
-        organicCount = 0; // Reset counter
       }
     }
 

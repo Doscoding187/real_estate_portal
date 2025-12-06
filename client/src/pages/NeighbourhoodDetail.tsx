@@ -5,12 +5,13 @@
  */
 
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, MapPin, Heart, Users, Home, Video, Check } from 'lucide-react';
+import { ArrowLeft, MapPin, Users, Home, Video, Check } from 'lucide-react';
 import { useNeighbourhoodDetail } from '@/hooks/useNeighbourhoodDetail';
 import { AmenityDisplay } from '@/components/explore-discovery/AmenityDisplay';
 import { PriceStatistics } from '@/components/explore-discovery/PriceStatistics';
 import { VideoCard } from '@/components/explore-discovery/cards/VideoCard';
 import { PropertyCard } from '@/components/explore-discovery/cards/PropertyCard';
+import { FollowButton } from '@/components/explore-discovery/FollowButton';
 
 export default function NeighbourhoodDetail() {
   const { id } = useParams<{ id: string }>();
@@ -95,28 +96,14 @@ export default function NeighbourhoodDetail() {
                 </div>
               </div>
 
-              {/* Follow button */}
-              <button
-                onClick={toggleFollow}
-                disabled={isTogglingFollow}
-                className={`flex items-center gap-2 px-6 py-3 rounded-full font-medium transition-all ${
-                  isFollowing
-                    ? 'bg-white text-blue-600 hover:bg-gray-100'
-                    : 'bg-blue-600 text-white hover:bg-blue-700'
-                }`}
-              >
-                {isFollowing ? (
-                  <>
-                    <Check className="w-5 h-5" />
-                    <span>Following</span>
-                  </>
-                ) : (
-                  <>
-                    <Heart className="w-5 h-5" />
-                    <span>Follow</span>
-                  </>
-                )}
-              </button>
+              {/* Follow button - Requirements 5.6, 13.1 */}
+              <FollowButton
+                type="neighbourhood"
+                targetId={neighbourhoodId}
+                initialFollowing={isFollowing}
+                variant="default"
+                size="lg"
+              />
             </div>
           </div>
         </div>
@@ -202,15 +189,15 @@ export default function NeighbourhoodDetail() {
                   key={video.id}
                   video={{
                     id: video.id,
-                    type: 'video',
                     title: video.title,
                     thumbnailUrl: video.thumbnailUrl || '',
                     duration: video.duration || 0,
-                    viewCount: video.viewCount,
+                    views: video.viewCount || 0,
                     creatorName: 'Agent',
-                    creatorAvatar: null,
+                    creatorAvatar: undefined,
                   }}
                   onClick={() => console.log('Play video', video.id)}
+                  onSave={() => console.log('Save video', video.id)}
                 />
               ))}
             </div>

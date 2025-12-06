@@ -23,6 +23,7 @@ import {
   FileText,
   UserPlus,
   FileEdit,
+  Video,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { trpc } from '@/lib/trpc';
@@ -109,6 +110,12 @@ const MENU_SECTIONS: MenuSection[] = [
         label: 'Analytics',
         icon: TrendingUp,
         path: '/developer/analytics',
+      },
+      {
+        id: 'explore',
+        label: 'Explore Analytics',
+        icon: Video,
+        path: '/developer/explore',
       },
       {
         id: 'campaigns',

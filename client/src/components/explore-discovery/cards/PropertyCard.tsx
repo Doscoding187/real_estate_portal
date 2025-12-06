@@ -1,5 +1,6 @@
-import { Heart, MapPin, Bed, Bath, Square } from 'lucide-react';
+import { MapPin, Bed, Bath, Square } from 'lucide-react';
 import { useState } from 'react';
+import { SaveButton } from '../SaveButton';
 
 interface PropertyCardProps {
   property: {
@@ -20,7 +21,6 @@ interface PropertyCardProps {
 }
 
 export function PropertyCard({ property, onClick, onSave }: PropertyCardProps) {
-  const [isSaved, setIsSaved] = useState(property.isSaved || false);
   const [imageLoaded, setImageLoaded] = useState(false);
 
   const formatPrice = () => {
@@ -35,12 +35,6 @@ export function PropertyCard({ property, onClick, onSave }: PropertyCardProps) {
       return `${formatter.format(property.price)} - ${formatter.format(property.priceMax)}`;
     }
     return formatter.format(property.price);
-  };
-
-  const handleSave = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setIsSaved(!isSaved);
-    onSave();
   };
 
   return (
@@ -63,18 +57,16 @@ export function PropertyCard({ property, onClick, onSave }: PropertyCardProps) {
           loading="lazy"
         />
         
-        {/* Save button */}
-        <button
-          onClick={handleSave}
-          className="absolute top-3 right-3 w-10 h-10 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center hover:bg-white transition-colors z-10"
-          aria-label={isSaved ? 'Unsave property' : 'Save property'}
-        >
-          <Heart
-            className={`w-5 h-5 transition-all ${
-              isSaved ? 'fill-red-500 text-red-500' : 'text-gray-700'
-            }`}
+        {/* Save button - Requirements 14.1, 14.2 */}
+        <div className="absolute top-3 right-3 z-10">
+          <SaveButton
+            propertyId={property.id}
+            initialSaved={property.isSaved}
+            variant="card"
+            size="md"
+            onSaveSuccess={onSave}
           />
-        </button>
+        </div>
 
         {/* Property type badge */}
         <div className="absolute top-3 left-3 px-3 py-1 bg-black/70 backdrop-blur-sm rounded-full text-white text-xs font-medium">

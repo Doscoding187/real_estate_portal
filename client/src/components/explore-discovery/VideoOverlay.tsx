@@ -4,8 +4,9 @@
  * Requirements: 1.3, 1.4, 1.5, 1.7
  */
 
-import { Heart, Share2, User, ExternalLink, MapPin, Bed, Bath, Home } from 'lucide-react';
-import { useState } from 'react';
+import { Share2, User, ExternalLink, Home } from 'lucide-react';
+import { SaveButton } from './SaveButton';
+import { FollowButton } from './FollowButton';
 
 interface VideoOverlayProps {
   video: {
@@ -34,12 +35,6 @@ export function VideoOverlay({
   onViewListing,
   onToggleMute,
 }: VideoOverlayProps) {
-  const [isSaved, setIsSaved] = useState(false);
-
-  const handleSave = () => {
-    setIsSaved(!isSaved);
-    onSave();
-  };
 
   // Format price
   const formatPrice = () => {
@@ -106,23 +101,17 @@ export function VideoOverlay({
 
       {/* Right side action buttons */}
       <div className="absolute right-4 bottom-32 z-20 flex flex-col gap-4">
-        {/* Save button - Requirement 1.4 */}
-        <button
-          onClick={handleSave}
-          className="flex flex-col items-center gap-1 group"
-          aria-label={isSaved ? 'Unsave property' : 'Save property'}
-        >
-          <div className="p-3 bg-black/50 rounded-full group-hover:bg-black/70 transition-colors">
-            <Heart
-              className={`w-6 h-6 ${
-                isSaved ? 'fill-red-500 text-red-500' : 'text-white'
-              }`}
+        {/* Save button - Requirement 1.4, 14.1, 14.2 */}
+        <div className="flex flex-col items-center gap-1">
+          {video.propertyId && (
+            <SaveButton
+              propertyId={video.propertyId}
+              variant="overlay"
+              size="lg"
+              onSaveSuccess={onSave}
             />
-          </div>
-          <span className="text-white text-xs font-medium">
-            {isSaved ? 'Saved' : 'Save'}
-          </span>
-        </button>
+          )}
+        </div>
 
         {/* Share button */}
         <button
@@ -136,6 +125,17 @@ export function VideoOverlay({
           <span className="text-white text-xs font-medium">Share</span>
         </button>
 
+        {/* Follow Creator button - Requirement 1.5, 13.2 */}
+        <div className="flex flex-col items-center gap-1">
+          <FollowButton
+            type="creator"
+            targetId={video.creatorId}
+            variant="ghost"
+            size="sm"
+            showIcon={false}
+          />
+        </div>
+
         {/* Profile button - Requirement 1.5 */}
         <button
           onClick={() => {
@@ -148,7 +148,7 @@ export function VideoOverlay({
           <div className="p-3 bg-black/50 rounded-full group-hover:bg-black/70 transition-colors">
             <User className="w-6 h-6 text-white" />
           </div>
-          <span className="text-white text-xs font-medium">Agent</span>
+          <span className="text-white text-xs font-medium">Profile</span>
         </button>
       </div>
 
