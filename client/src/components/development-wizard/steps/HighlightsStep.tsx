@@ -109,14 +109,22 @@ export function HighlightsStep() {
   const description = store.developmentData?.description || '';
   const amenities = store.developmentData?.amenities || [];
   const highlights = store.developmentData?.highlights || [];
+  const completionDate = store.developmentData?.completionDate || '';
   
   // Wrapper functions for the new API
   const setDescription = (value: string) => store.setDevelopmentData({ description: value });
   const setAmenities = (value: string[]) => store.setDevelopmentData({ amenities: value });
   const setHighlights = (value: string[]) => store.setDevelopmentData({ highlights: value });
+  const setCompletionDate = (value: string) => store.setDevelopmentData({ completionDate: value });
   
-  // Note: completionDate and specifications don't exist in new structure
-  // These would need to be added to the hook if needed
+  // Specifications state (local to this component for now)
+  const [specifications, setSpecifications] = useState<{
+    walls?: string[];
+    flooring?: string[];
+    kitchen?: string[];
+    bathrooms?: string[];
+    structure?: string[];
+  }>({});
 
   const [newHighlight, setNewHighlight] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');

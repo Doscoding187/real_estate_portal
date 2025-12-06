@@ -1,3 +1,4 @@
+import React from 'react';
 import { useDevelopmentWizard } from '@/hooks/useDevelopmentWizard';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -8,22 +9,24 @@ import { Building, User, Phone, Mail, Contact, Upload, X, Info } from 'lucide-re
 export function DeveloperInfoStep() {
   const store = useDevelopmentWizard();
   
-  // Note: contactDetails and companyLogo don't exist in the new structure
-  // For now, we'll use placeholder values - these features may need to be added to the hook
-  const contactDetails = { name: '', email: '', phone: '', preferredContact: 'email' as const };
-  const companyLogo = '';
+  // Use local state for contact details and logo (not in main hook yet)
+  const [contactDetails, setContactDetails] = React.useState({
+    name: '',
+    email: '',
+    phone: '',
+    preferredContact: 'email' as const
+  });
+  const [companyLogo, setCompanyLogo] = React.useState('');
   
   const updateContact = (field: string, value: string) => {
-    // TODO: Implement contact details storage in the new hook structure
-    console.log('Update contact:', field, value);
+    setContactDetails(prev => ({ ...prev, [field]: value }));
   };
 
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       const url = URL.createObjectURL(file);
-      // TODO: Implement logo storage in the new hook structure
-      console.log('Upload logo:', url);
+      setCompanyLogo(url);
     }
   };
 

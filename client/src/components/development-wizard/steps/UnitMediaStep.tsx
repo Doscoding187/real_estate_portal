@@ -1,5 +1,4 @@
 import { useDevelopmentWizard } from '@/hooks/useDevelopmentWizard';
-import type { UnitMediaItem } from '@/hooks/useDevelopmentWizard';
 import { Card } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
@@ -23,16 +22,31 @@ export function UnitMediaStep() {
   const store = useDevelopmentWizard();
   const unitTypes = store.unitTypes || [];
   
-  // Note: addUnitMedia and removeUnitMedia don't exist in the new structure
-  // These would need to be added to the hook if unit-specific media is needed
+  // Local state for unit media (not in main hook yet)
+  const [unitMedia, setUnitMedia] = useState<Record<string, {
+    floorPlans: any[];
+    interior: any[];
+    exterior: any[];
+  }>>({});
+  
   const addUnitMedia = (unitId: string, category: string, media: any) => {
-    console.log('Add unit media:', unitId, category, media);
-    // TODO: Implement in hook
+    setUnitMedia(prev => ({
+      ...prev,
+      [unitId]: {
+        ...prev[unitId],
+        [category]: [...(prev[unitId]?.[category as keyof typeof prev[typeof unitId]] || []), media]
+      }
+    }));
   };
   
   const removeUnitMedia = (unitId: string, category: string, mediaId: string) => {
-    console.log('Remove unit media:', unitId, category, mediaId);
-    // TODO: Implement in hook
+    setUnitMedia(prev => ({
+      ...prev,
+      [unitId]: {
+        ...prev[unitId],
+        [category]: (prev[unitId]?.[category as keyof typeof prev[typeof unitId]] || []).filter((m: any) => m.id !== mediaId)
+      }
+    }));
   };
   
   const [activeUnitId, setActiveUnitId] = useState<string>(
@@ -73,7 +87,8 @@ export function UnitMediaStep() {
   
   // Get media counts
   const getMediaCount = (category: 'floorPlans' | 'interior' | 'exterior') => {
-    return activeUnit?.unitMedia?.[category]?.length || 0;
+    if (!activeUnitId) return 0;
+    return unitMedia[activeUnitId]?.[category]?.length || 0;
   };
 
   if (unitTypes.length === 0) {
@@ -137,7 +152,7 @@ export function UnitMediaStep() {
                 <div className="flex items-center gap-2 py-1">
                   <Home className="w-4 h-4" />
                   <div className="text-left">
-                    <p className="font-semibold text-sm">{unit.label}</p>
+                    <p className="font-semibold text-sm">{unit.name}</p>
                     <p className="text-xs text-slate-600">
                       {unit.bedrooms} Bed • {unit.bathrooms} Bath
                     </p>
@@ -157,24 +172,11 @@ export function UnitMediaStep() {
                     <div className="flex items-start justify-between">
                       <div>
                         <h4 className="font-bold text-slate-900 mb-2">
-                          {activeUnit.label}
+                          {activeUnit.name}
                         </h4>
                         <div className="flex gap-2 mb-2 flex-wrap">
                           <Badge className="bg-blue-100 text-blue-700 text-xs">
-                            {activeUnit.ownershipType
-                              .split('-')
-                              .map(
-                                (w) => w.charAt(0).toUpperCase() + w.slice(1)
-                              )
-                              .join(' ')}
-                          </Badge>
-                          <Badge className="bg-purple-100 text-purple-700 text-xs">
-                            {activeUnit.structuralType
-                              .split('-')
-                              .map(
-                                (w) => w.charAt(0).toUpperCase() + w.slice(1)
-                              )
-                              .join(' ')}
+                            {activeUnit.parking}
                           </Badge>
                         </div>
                         <div className="flex gap-4 text-sm text-slate-600">
@@ -197,9 +199,9 @@ export function UnitMediaStep() {
                       <div className="text-right">
                         <p className="text-sm text-slate-600">Price</p>
                         <p className="text-lg font-bold text-purple-700">
-                          R{activeUnit.priceFrom.toLocaleString()}
-                          {activeUnit.priceTo &&
-                            ` - R${activeUnit.priceTo.toLocaleString()}`}
+                          R{activeUnit.basePriceFrom.toLocaleString()}
+                          {activeUnit.basePriceTo &&
+                            ` - R${activeUnit.basePriceTo.toLocaleString()}`}
                         </p>
                       </div>
                     </div>
