@@ -47,6 +47,7 @@ import InviteAgents from './pages/agency/InviteAgents';
 import AgentManagement from './pages/agency/AgentManagement';
 import AcceptInvitation from './pages/AcceptInvitation';
 import ExploreFeed from './pages/ExploreFeed';
+import ExploreHome from './pages/ExploreHome';
 import ExploreShorts from './pages/ExploreShorts';
 import ExploreUpload from './pages/ExploreUpload';
 import AgencyOnboarding from './pages/AgencyOnboarding';
@@ -172,10 +173,14 @@ function Router() {
       <Route path="/agency/setup" component={AgencySetupWizard} />
       <Route path="/agency/success" component={() => <RegistrationSuccess role="agency" />} />
       <Route path="/agent/success" component={() => <RegistrationSuccess role="agent" />} />
-      <Route path="/explore" component={ExploreFeed} />
+      
+      {/* Explore routes - MUST come before location catch-all routes */}
+      <Route path="/explore/home" component={ExploreHome} />
       <Route path="/explore/shorts" component={ExploreShorts} />
       <Route path="/explore/upload" component={ExploreUpload} />
       <Route path="/explore/component-demo" component={ExploreComponentDemo} />
+      <Route path="/explore" component={ExploreFeed} />
+      
       <Route path="/compare" component={CompareProperties} />
       
       {/* Login and authentication routes should be early in the route list */}

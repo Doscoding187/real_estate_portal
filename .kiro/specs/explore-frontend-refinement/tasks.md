@@ -652,6 +652,19 @@ This implementation plan breaks down the Explore frontend refinement into discre
   - Run final Lighthouse audit
   - _Requirements: 10.6_
 
+- [x] 42.1 Fix deployment and routing issues
+  - Fixed SimpleDevelopmentCard import (was stale build cache)
+  - Added missing `/explore/home` route to App.tsx
+  - Verified all Explore routes are properly configured
+  - _Requirements: 11.6_
+
+- [x] 42.2 Fix route matching order (CORS errors)
+  - Reordered Explore routes to come BEFORE catch-all location routes
+  - Fixed `/explore/home` being matched by `/:province/:city` pattern
+  - Eliminated CORS errors from incorrect location data fetching
+  - Documented routing best practices
+  - _Requirements: 11.6_
+
 ---
 
 ## Checkpoint Tasks
