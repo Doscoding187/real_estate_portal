@@ -89,6 +89,7 @@ import DeveloperSetupWizard from './components/developer/DeveloperSetupWizardEnh
 import DevelopmentsList from './components/developer/DevelopmentsList';
 import AgencySetupWizard from './components/agency/AgencySetupWizard';
 import UnitTypesDemo from './pages/UnitTypesDemo';
+import ExploreComponentDemo from './pages/ExploreComponentDemo';
 
 // Import Developer Dashboard Pages
 import DeveloperDevelopmentsPage from './pages/DeveloperDevelopmentsPage';
@@ -161,6 +162,7 @@ function Router() {
       <Route path="/explore" component={ExploreFeed} />
       <Route path="/explore/shorts" component={ExploreShorts} />
       <Route path="/explore/upload" component={ExploreUpload} />
+      <Route path="/explore/component-demo" component={ExploreComponentDemo} />
       <Route path="/compare" component={CompareProperties} />
       
       {/* Login and authentication routes should be early in the route list */}
