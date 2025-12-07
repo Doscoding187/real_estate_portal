@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import { Link } from 'wouter';
 import useEmblaCarousel from 'embla-carousel-react';
 import { ChevronLeft, ChevronRight, Star, ArrowRight, MapPin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -207,6 +208,16 @@ export function TopLocalities() {
 
   const localities = localitiesData[selectedCity] || [];
 
+  const cityProvinceMap: Record<string, string> = {
+    Johannesburg: 'gauteng',
+    'Cape Town': 'western-cape',
+    Pretoria: 'gauteng',
+    Durban: 'kwazulu-natal',
+  };
+
+  const getCitySlug = (cityName: string) => cityName.toLowerCase().replace(/\s+/g, '-');
+  const getProvinceSlug = (cityName: string) => cityProvinceMap[cityName] || 'properties';
+
   return (
     <div className="py-16 bg-muted/30">
       <div className="container">
@@ -243,7 +254,14 @@ export function TopLocalities() {
         <div className="relative group/carousel">
           <div className="overflow-hidden rounded-xl" ref={emblaRef}>
             <div className="flex gap-6">
-              {localities.map((locality, idx) => (
+              {localities.map((locality, idx) => {
+                const provinceSlug = getProvinceSlug(locality.city);
+                const citySlug = getCitySlug(locality.city);
+                const suburbSlug = locality.name.toLowerCase().replace(/\s+/g, '-');
+                // Construct URL correctly
+                const localityUrl = `/${provinceSlug}/${citySlug}/${suburbSlug}`;
+                
+                return (
                 <div
                   key={idx}
                   className="flex-[0_0_100%] min-w-0 sm:flex-[0_0_50%] lg:flex-[0_0_33.333%]"
@@ -251,12 +269,13 @@ export function TopLocalities() {
                   <Card className="hover:shadow-xl transition-all duration-300 border-0 bg-white/50 backdrop-blur-sm group h-full">
                     <CardContent className="p-6">
                       {/* Header with map and locality name */}
-                      <div className="flex items-start gap-4 mb-6">
+                      <Link href={localityUrl}>
+                      <div className="flex items-start gap-4 mb-6 cursor-pointer">
                         <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-teal-500 to-emerald-500 flex items-center justify-center flex-shrink-0 shadow-lg shadow-teal-500/20 group-hover:scale-110 transition-transform duration-300">
                           <MapPin className="h-8 w-8 text-white" />
                         </div>
                         <div className="flex-1">
-                          <h3 className="font-bold text-xl mb-2 text-gray-900">
+                          <h3 className="font-bold text-xl mb-2 text-gray-900 group-hover:text-blue-600 transition-colors">
                             {locality.name}
                           </h3>
                           <div className="flex items-center gap-2 text-sm">
@@ -270,6 +289,7 @@ export function TopLocalities() {
                           </div>
                         </div>
                       </div>
+                      </Link>
 
                       {/* Pricing Info */}
                       <div className="grid grid-cols-2 gap-4 mb-6 p-4 bg-gray-50/80 rounded-xl border border-gray-100">
@@ -289,8 +309,8 @@ export function TopLocalities() {
 
                       {/* Property Links */}
                       <div className="space-y-3">
-                        <a
-                          href="#"
+                        <Link
+                          href={`${localityUrl}?listingType=sale`}
                           className="flex items-center justify-between p-3 rounded-xl bg-white border border-gray-100 hover:border-blue-200 hover:shadow-md transition-all group/link"
                         >
                           <div>
@@ -304,9 +324,9 @@ export function TopLocalities() {
                           <div className="h-8 w-8 rounded-full bg-gray-50 flex items-center justify-center group-hover/link:bg-blue-50 transition-colors">
                             <ArrowRight className="h-4 w-4 text-gray-400 group-hover/link:text-blue-600 group-hover/link:translate-x-0.5 transition-all" />
                           </div>
-                        </a>
-                        <a
-                          href="#"
+                        </Link>
+                        <Link
+                          href={`${localityUrl}?listingType=rent`}
                           className="flex items-center justify-between p-3 rounded-xl bg-white border border-gray-100 hover:border-blue-200 hover:shadow-md transition-all group/link"
                         >
                           <div>
@@ -320,12 +340,13 @@ export function TopLocalities() {
                           <div className="h-8 w-8 rounded-full bg-gray-50 flex items-center justify-center group-hover/link:bg-blue-50 transition-colors">
                             <ArrowRight className="h-4 w-4 text-gray-400 group-hover/link:text-blue-600 group-hover/link:translate-x-0.5 transition-all" />
                           </div>
-                        </a>
+                        </Link>
                       </div>
                     </CardContent>
                   </Card>
                 </div>
-              ))}
+                );
+              })}
             </div>
           </div>
 

@@ -21,6 +21,7 @@ interface City {
   province: string;
   icon: React.ElementType;
   slug: string;
+  provinceSlug: string;
   color: string;
 }
 
@@ -31,6 +32,7 @@ export function ExploreCities() {
       province: 'Gauteng',
       icon: Building2,
       slug: 'johannesburg',
+      provinceSlug: 'gauteng',
       color: 'from-blue-500 to-indigo-500',
     },
     {
@@ -38,6 +40,7 @@ export function ExploreCities() {
       province: 'Western Cape',
       icon: Mountain,
       slug: 'cape-town',
+      provinceSlug: 'western-cape',
       color: 'from-teal-500 to-emerald-500',
     },
     {
@@ -45,6 +48,7 @@ export function ExploreCities() {
       province: 'KwaZulu-Natal',
       icon: Palmtree,
       slug: 'durban',
+      provinceSlug: 'kwazulu-natal',
       color: 'from-orange-500 to-amber-500',
     },
     {
@@ -52,6 +56,7 @@ export function ExploreCities() {
       province: 'Gauteng',
       icon: Landmark,
       slug: 'pretoria',
+      provinceSlug: 'gauteng',
       color: 'from-purple-500 to-pink-500',
     },
     {
@@ -59,6 +64,7 @@ export function ExploreCities() {
       province: 'Eastern Cape',
       icon: Anchor,
       slug: 'port-elizabeth',
+      provinceSlug: 'eastern-cape',
       color: 'from-cyan-500 to-blue-500',
     },
     {
@@ -66,6 +72,7 @@ export function ExploreCities() {
       province: 'Free State',
       icon: Flower2,
       slug: 'bloemfontein',
+      provinceSlug: 'free-state',
       color: 'from-rose-500 to-red-500',
     },
     {
@@ -73,6 +80,7 @@ export function ExploreCities() {
       province: 'Eastern Cape',
       icon: Waves,
       slug: 'east-london',
+      provinceSlug: 'eastern-cape',
       color: 'from-sky-500 to-blue-500',
     },
     {
@@ -80,6 +88,7 @@ export function ExploreCities() {
       province: 'Mpumalanga',
       icon: Leaf,
       slug: 'nelspruit',
+      provinceSlug: 'mpumalanga',
       color: 'from-green-500 to-emerald-500',
     },
     {
@@ -87,6 +96,7 @@ export function ExploreCities() {
       province: 'Limpopo',
       icon: Sun,
       slug: 'polokwane',
+      provinceSlug: 'limpopo',
       color: 'from-yellow-500 to-orange-500',
     },
     {
@@ -94,6 +104,7 @@ export function ExploreCities() {
       province: 'Northern Cape',
       icon: Gem,
       slug: 'kimberley',
+      provinceSlug: 'northern-cape',
       color: 'from-indigo-500 to-violet-500',
     },
     {
@@ -101,6 +112,7 @@ export function ExploreCities() {
       province: 'North West',
       icon: Mountain,
       slug: 'rustenburg',
+      provinceSlug: 'north-west',
       color: 'from-stone-500 to-neutral-500',
     },
     {
@@ -108,6 +120,7 @@ export function ExploreCities() {
       province: 'Western Cape',
       icon: Wine,
       slug: 'stellenbosch',
+      provinceSlug: 'western-cape',
       color: 'from-red-500 to-rose-600',
     },
   ];
@@ -130,7 +143,7 @@ export function ExploreCities() {
         {/* Cities Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
           {cities.map(city => (
-            <Link key={city.slug} href={`/city/${city.slug}`}>
+            <Link key={city.slug} href={`/${city.provinceSlug}/${city.slug}`}>
               <Card className="hover:shadow-xl transition-all duration-300 cursor-pointer group border-0 bg-muted/30 hover:bg-white overflow-hidden">
                 <CardContent className="p-6">
                   <div className="flex items-center gap-4">

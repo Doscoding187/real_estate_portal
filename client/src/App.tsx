@@ -115,6 +115,7 @@ import RegistrationSuccess from './pages/RegistrationSuccess';
 // Import SearchResults page for SEO-friendly URLs
 import SearchResults from './pages/SearchResults';
 import SuburbPage from './pages/SuburbPage';
+import { LegacyCityRedirect, LegacySuburbRedirect } from './components/LegacyRouteHandler';
 
 function Router() {
   // Auto-migrate guest data on login
@@ -148,8 +149,11 @@ function Router() {
       <Route path="/agent/setup" component={AgentSetup} />
       <Route path="/agent/profile/:agentId" component={AgentPublicProfile} />
       <Route path="/agent/:id" component={AgentDetail} />
-      {/* <Route path="/city/:slug" component={CityPage} /> */}
-      {/* <Route path="/suburb/:city/:suburb" component={SuburbPage} /> */}
+      <Route path="/agent/:id" component={AgentDetail} />
+      
+      {/* Legacy Route Redirects */}
+      <Route path="/city/:slug" component={LegacyCityRedirect} />
+      <Route path="/suburb/:city/:suburb" component={LegacySuburbRedirect} />
       <Route path="/listings/create" component={ListingWizard} />
       <Route path="/listing-template" component={ListingTemplate} />
       <Route path="/developments/create" component={CreateDevelopment} />

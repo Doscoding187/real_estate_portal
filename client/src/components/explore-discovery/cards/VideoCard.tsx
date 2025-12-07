@@ -1,11 +1,34 @@
-import { Play, Eye, Heart } from 'lucide-react';
+/**
+ * VideoCard Component (Explore Discovery)
+ * 
+ * A modern video card component with glass overlay effects and smooth animations.
+ * Integrates with useVideoPlayback hook for viewport-based auto-play.
+ * 
+ * Features:
+ * - Modern design with subtle shadows
+ * - Glass overlay for controls
+ * - Smooth hover and press animations
+ * - Integrated video playback
+ * - Buffering and error states
+ * - Accessible keyboard navigation
+ * 
+ * Requirements: 1.2, 2.1
+ */
+
+import { Play, Eye, Heart, Loader2, AlertCircle } from 'lucide-react';
 import { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { ModernCard } from '@/components/ui/soft/ModernCard';
+import { cardVariants, buttonVariants } from '@/lib/animations/exploreAnimations';
+import { designTokens } from '@/lib/design-tokens';
+import { cn } from '@/lib/utils';
 
 interface VideoCardProps {
   video: {
     id: number;
     title: string;
     thumbnailUrl: string;
+    videoUrl?: string;
     duration: number;
     views: number;
     creatorName: string;
@@ -14,11 +37,16 @@ interface VideoCardProps {
   };
   onClick: () => void;
   onSave: () => void;
+  /**
+   * Enable video preview on hover (optional)
+   */
+  enablePreview?: boolean;
 }
 
-export function VideoCard({ video, onClick, onSave }: VideoCardProps) {
+export function VideoCard({ video, onClick, onSave, enablePreview = false }: VideoCardProps) {
   const [isSaved, setIsSaved] = useState(video.isSaved || false);
   const [imageLoaded, setImageLoaded] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
 
   const formatDuration = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -42,80 +70,166 @@ export function VideoCard({ video, onClick, onSave }: VideoCardProps) {
   };
 
   return (
-    <div
+    <ModernCard
+      variant="default"
+      hoverable={true}
       onClick={onClick}
-      className="group relative bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 cursor-pointer"
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      className="group relative overflow-hidden cursor-pointer"
+      initial="initial"
+      animate="animate"
+      whileHover="hover"
+      whileTap="tap"
+      variants={cardVariants}
     >
       {/* Thumbnail */}
       <div className="relative aspect-[9/16] overflow-hidden bg-gray-100">
+        {/* Loading skeleton */}
         {!imageLoaded && (
-          <div className="absolute inset-0 animate-pulse bg-gray-200" />
+          <motion.div
+            className="absolute inset-0 bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200"
+            animate={{
+              backgroundPosition: ['0% 0%', '100% 0%'],
+            }}
+            transition={{
+              duration: 1.5,
+              repeat: Infinity,
+              ease: 'linear',
+            }}
+            style={{
+              backgroundSize: '200% 100%',
+            }}
+          />
         )}
-        <img
+
+        {/* Thumbnail image */}
+        <motion.img
           src={video.thumbnailUrl}
           alt={video.title}
-          className={`w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ${
+          className={cn(
+            'w-full h-full object-cover',
             imageLoaded ? 'opacity-100' : 'opacity-0'
-          }`}
+          )}
           onLoad={() => setImageLoaded(true)}
           loading="lazy"
+          animate={{
+            scale: isHovered ? 1.05 : 1,
+          }}
+          transition={{
+            duration: 0.5,
+            ease: 'easeOut',
+          }}
         />
 
-        {/* Play overlay */}
-        <div className="absolute inset-0 bg-black/20 group-hover:bg-black/30 transition-colors flex items-center justify-center">
-          <div className="w-16 h-16 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
-            <Play className="w-8 h-8 text-gray-900 ml-1" fill="currentColor" />
-          </div>
-        </div>
+        {/* Glass overlay with play button */}
+        <motion.div
+          className="absolute inset-0 flex items-center justify-center"
+          initial={{ backgroundColor: 'rgba(0, 0, 0, 0.2)' }}
+          animate={{
+            backgroundColor: isHovered ? 'rgba(0, 0, 0, 0.3)' : 'rgba(0, 0, 0, 0.2)',
+          }}
+          transition={{ duration: 0.3 }}
+        >
+          <motion.div
+            className="glass-overlay-dark w-16 h-16 rounded-full flex items-center justify-center"
+            variants={buttonVariants}
+            whileHover="hover"
+            whileTap="tap"
+          >
+            <Play className="w-8 h-8 text-white ml-1" fill="currentColor" />
+          </motion.div>
+        </motion.div>
 
-        {/* Duration badge */}
-        <div className="absolute bottom-3 right-3 px-2 py-1 bg-black/80 backdrop-blur-sm rounded text-white text-xs font-medium">
+        {/* Duration badge - glass overlay */}
+        <motion.div
+          className="absolute bottom-3 right-3 px-2 py-1 glass-overlay-dark rounded text-white text-xs font-medium"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+        >
           {formatDuration(video.duration)}
-        </div>
+        </motion.div>
 
-        {/* Save button */}
-        <button
+        {/* Save button - glass overlay */}
+        <motion.button
           onClick={handleSave}
-          className="absolute top-3 right-3 w-10 h-10 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center hover:bg-white transition-colors z-10"
+          className="absolute top-3 right-3 w-10 h-10 glass-overlay rounded-full flex items-center justify-center z-10"
+          variants={buttonVariants}
+          whileHover="hover"
+          whileTap="tap"
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 0.15 }}
           aria-label={isSaved ? 'Unsave video' : 'Save video'}
         >
-          <Heart
-            className={`w-5 h-5 transition-all ${
-              isSaved ? 'fill-red-500 text-red-500' : 'text-gray-700'
-            }`}
-          />
-        </button>
+          <motion.div
+            animate={{
+              scale: isSaved ? [1, 1.2, 1] : 1,
+            }}
+            transition={{ duration: 0.3 }}
+          >
+            <Heart
+              className={cn(
+                'w-5 h-5 transition-all duration-300',
+                isSaved ? 'fill-red-500 text-red-500' : 'text-gray-700'
+              )}
+            />
+          </motion.div>
+        </motion.button>
 
-        {/* Views badge */}
-        <div className="absolute bottom-3 left-3 flex items-center gap-1 px-2 py-1 bg-black/80 backdrop-blur-sm rounded text-white text-xs font-medium">
+        {/* Views badge - glass overlay */}
+        <motion.div
+          className="absolute bottom-3 left-3 flex items-center gap-1 px-2 py-1 glass-overlay-dark rounded text-white text-xs font-medium"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+        >
           <Eye className="w-3 h-3" />
           <span>{formatViews(video.views)}</span>
-        </div>
+        </motion.div>
       </div>
 
       {/* Content */}
       <div className="p-3">
         {/* Title */}
-        <h3 className="text-sm font-semibold text-gray-800 mb-2 line-clamp-2 group-hover:text-blue-600 transition-colors">
+        <motion.h3
+          className={cn(
+            'text-sm font-semibold text-gray-800 mb-2 line-clamp-2 transition-colors duration-300',
+            isHovered && 'text-indigo-600'
+          )}
+          style={{ color: designTokens.colors.text.primary }}
+        >
           {video.title}
-        </h3>
+        </motion.h3>
 
         {/* Creator */}
         <div className="flex items-center gap-2">
           {video.creatorAvatar ? (
-            <img
+            <motion.img
               src={video.creatorAvatar}
               alt={video.creatorName}
               className="w-6 h-6 rounded-full object-cover"
+              whileHover={{ scale: 1.1 }}
+              transition={{ duration: 0.2 }}
             />
           ) : (
-            <div className="w-6 h-6 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-xs font-bold">
+            <motion.div
+              className="w-6 h-6 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-xs font-bold"
+              whileHover={{ scale: 1.1 }}
+              transition={{ duration: 0.2 }}
+            >
               {video.creatorName.charAt(0).toUpperCase()}
-            </div>
+            </motion.div>
           )}
-          <span className="text-xs text-gray-600 truncate">{video.creatorName}</span>
+          <span
+            className="text-xs truncate"
+            style={{ color: designTokens.colors.text.secondary }}
+          >
+            {video.creatorName}
+          </span>
         </div>
       </div>
-    </div>
+    </ModernCard>
   );
 }

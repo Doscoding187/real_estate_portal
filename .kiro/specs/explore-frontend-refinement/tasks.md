@@ -114,7 +114,9 @@ This implementation plan breaks down the Explore frontend refinement into discre
   - Ensure smooth 55+ FPS during swipe
   - _Requirements: 2.1, 2.5, 2.6, 2.7_
 
-- [-] 7.1 Write unit tests for video playback
+- [x] 7.1 Write unit tests for video playback
+
+
 
 
 
@@ -271,7 +273,12 @@ This implementation plan breaks down the Explore frontend refinement into discre
   - Integrate with existing ProgressiveImage component
   - _Requirements: 6.4_
 
-- [ ] 17. Optimize React Query configuration
+- [x] 17. Optimize React Query configuration
+
+
+
+
+
   - Update `client/src/lib/queryClient.ts`
   - Set staleTime to 5 minutes
   - Set cacheTime to 10 minutes
@@ -291,7 +298,12 @@ This implementation plan breaks down the Explore frontend refinement into discre
 
 ## Phase 6: Card Component Refactoring
 
-- [ ] 18. Refactor PropertyCard
+- [x] 18. Refactor PropertyCard
+
+
+
+
+
   - Update `client/src/components/explore-discovery/cards/PropertyCard.tsx`
   - Apply modern card design with subtle shadow
   - Add hover lift animation (2px translateY)
@@ -300,7 +312,11 @@ This implementation plan breaks down the Explore frontend refinement into discre
   - Ensure high contrast for readability
   - _Requirements: 1.2, 9.1, 9.2_
 
-- [ ] 19. Refactor VideoCard
+- [x] 19. Refactor VideoCard
+
+
+
+
   - Update `client/src/components/explore-discovery/cards/VideoCard.tsx`
   - Apply modern design with glass overlay
   - Add smooth transitions

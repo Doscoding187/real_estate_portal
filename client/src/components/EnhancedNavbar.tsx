@@ -31,15 +31,15 @@ function CityDropdownContent() {
   const [hoveredCity, setHoveredCity] = useState('Johannesburg');
 
   const topCities = [
-    { name: 'Johannesburg', slug: 'johannesburg' },
-    { name: 'Capetown', slug: 'cape-town' },
-    { name: 'Kimberley', slug: 'kimberley' },
-    { name: 'Durban', slug: 'durban' },
-    { name: 'Gqeberha', slug: 'gqeberha' },
-    { name: 'Bloemfontein', slug: 'bloemfontein' },
-    { name: 'Polokwane', slug: 'polokwane' },
-    { name: 'Mbombela', slug: 'mbombela' },
-    { name: 'Mahikeng', slug: 'mahikeng' },
+    { name: 'Johannesburg', slug: 'johannesburg', provinceSlug: 'gauteng' },
+    { name: 'Cape Town', slug: 'cape-town', provinceSlug: 'western-cape' },
+    { name: 'Kimberley', slug: 'kimberley', provinceSlug: 'northern-cape' },
+    { name: 'Durban', slug: 'durban', provinceSlug: 'kwazulu-natal' },
+    { name: 'Gqeberha', slug: 'gqeberha', provinceSlug: 'eastern-cape' },
+    { name: 'Bloemfontein', slug: 'bloemfontein', provinceSlug: 'free-state' },
+    { name: 'Polokwane', slug: 'polokwane', provinceSlug: 'limpopo' },
+    { name: 'Mbombela', slug: 'mbombela', provinceSlug: 'mpumalanga' },
+    { name: 'Mahikeng', slug: 'mahikeng', provinceSlug: 'north-west' },
   ];
 
   // Suburbs for each city
@@ -95,7 +95,7 @@ function CityDropdownContent() {
           {filteredCities.map(city => (
             <Link
               key={city.slug}
-              href={`/city/${city.slug}`}
+              href={`/${city.provinceSlug}/${city.slug}`}
               onMouseEnter={() => setHoveredCity(city.name)}
             >
               <div className="flex flex-col items-center gap-2 p-3 hover:bg-blue-50 rounded-lg transition-all group cursor-pointer">
@@ -114,13 +114,19 @@ function CityDropdownContent() {
         <div className="pt-4 border-t border-slate-200">
           <h4 className="font-bold text-sm text-slate-900 mb-3">Popular Suburbs</h4>
           <div className="grid grid-cols-4 gap-2">
-            {filteredSuburbs.map((suburb, index) => (
-              <Link key={index} href={`/city/${hoveredCity.toLowerCase()}/suburb/${suburb.toLowerCase().replace(/\s+/g, '-')}`}>
+            {filteredSuburbs.map((suburb, index) => {
+              const citySlug = hoveredCity.toLowerCase().replace(/\s+/g, '-');
+              // Helper to find province of hovered city
+              const provinceSlug = topCities.find(c => c.name === hoveredCity)?.provinceSlug || 'gauteng';
+              
+              return (
+              <Link key={index} href={`/${provinceSlug}/${citySlug}/${suburb.toLowerCase().replace(/\s+/g, '-')}`}>
                 <span className="text-sm text-slate-600 hover:text-blue-600 cursor-pointer block py-1">
                   {suburb}
                 </span>
               </Link>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}
@@ -395,9 +401,9 @@ export function EnhancedNavbar() {
                           <MapPin className="h-4 w-4 text-blue-600" /> Popular Cities
                         </h4>
                         <ul className="space-y-2 text-sm">
-                          <li><Link href="/city/johannesburg?listingType=rent"><span className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1">Rent in Johannesburg</span></Link></li>
-                          <li><Link href="/city/cape-town?listingType=rent"><span className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1">Rent in Cape Town</span></Link></li>
-                          <li><Link href="/city/durban?listingType=rent"><span className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1">Rent in Durban</span></Link></li>
+                          <li><Link href="/gauteng/johannesburg?listingType=rent"><span className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1">Rent in Johannesburg</span></Link></li>
+                          <li><Link href="/western-cape/cape-town?listingType=rent"><span className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1">Rent in Cape Town</span></Link></li>
+                          <li><Link href="/kwazulu-natal/durban?listingType=rent"><span className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1">Rent in Durban</span></Link></li>
                         </ul>
                       </div>
                     </div>

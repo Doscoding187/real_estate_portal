@@ -80,19 +80,19 @@ export function Footer() {
             <h3 className="text-white font-bold text-lg mb-6">Popular Locations</h3>
             <ul className="space-y-4">
               <li>
-                <Link href="/city/johannesburg" className="hover:text-white transition-colors">Johannesburg</Link>
+                <Link href="/gauteng/johannesburg" className="hover:text-white transition-colors">Johannesburg</Link>
               </li>
               <li>
-                <Link href="/city/cape-town" className="hover:text-white transition-colors">Cape Town</Link>
+                <Link href="/western-cape/cape-town" className="hover:text-white transition-colors">Cape Town</Link>
               </li>
               <li>
-                <Link href="/city/durban" className="hover:text-white transition-colors">Durban</Link>
+                <Link href="/kwazulu-natal/durban" className="hover:text-white transition-colors">Durban</Link>
               </li>
               <li>
-                <Link href="/city/pretoria" className="hover:text-white transition-colors">Pretoria</Link>
+                <Link href="/gauteng/pretoria" className="hover:text-white transition-colors">Pretoria</Link>
               </li>
               <li>
-                <Link href="/city/sandton" className="hover:text-white transition-colors">Sandton</Link>
+                <Link href="/gauteng/johannesburg/sandton" className="hover:text-white transition-colors">Sandton</Link>
               </li>
             </ul>
           </div>

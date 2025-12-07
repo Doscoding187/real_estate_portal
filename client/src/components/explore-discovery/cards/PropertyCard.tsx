@@ -1,6 +1,23 @@
+/**
+ * PropertyCard Component
+ * 
+ * Modern property card with subtle shadows and smooth animations.
+ * Uses ModernCard as base for consistent design system integration.
+ * 
+ * Features:
+ * - Hover lift animation (2px translateY) - Requirements 9.1
+ * - Press state animation (scale 0.98) - Requirements 9.2
+ * - High contrast for readability - Requirements 1.2
+ * - Subtle shadow design - Requirements 1.2
+ * - Progressive image loading
+ * - Save functionality integration
+ */
+
 import { MapPin, Bed, Bath, Square } from 'lucide-react';
 import { useState } from 'react';
 import { SaveButton } from '../SaveButton';
+import { ModernCard } from '@/components/ui/soft/ModernCard';
+import { designTokens } from '@/lib/design-tokens';
 
 interface PropertyCardProps {
   property: {
@@ -38,9 +55,13 @@ export function PropertyCard({ property, onClick, onSave }: PropertyCardProps) {
   };
 
   return (
-    <div
+    <ModernCard
       onClick={onClick}
-      className="group relative bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 cursor-pointer"
+      className="group relative overflow-hidden p-0"
+      hoverable={true}
+      variant="default"
+      as="article"
+      aria-label={`Property: ${property.title} at ${property.location}`}
     >
       {/* Image */}
       <div className="relative aspect-[4/3] overflow-hidden bg-gray-100">
@@ -50,7 +71,7 @@ export function PropertyCard({ property, onClick, onSave }: PropertyCardProps) {
         <img
           src={property.imageUrl}
           alt={property.title}
-          className={`w-full h-full object-cover group-hover:scale-110 transition-transform duration-500 ${
+          className={`w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ${
             imageLoaded ? 'opacity-100' : 'opacity-0'
           }`}
           onLoad={() => setImageLoaded(true)}
@@ -76,44 +97,56 @@ export function PropertyCard({ property, onClick, onSave }: PropertyCardProps) {
 
       {/* Content */}
       <div className="p-4">
-        {/* Price */}
-        <div className="text-xl font-bold text-gray-900 mb-2">
+        {/* Price - High contrast for readability */}
+        <div 
+          className="text-xl font-bold mb-2"
+          style={{ color: designTokens.colors.text.primary }}
+        >
           {formatPrice()}
         </div>
 
-        {/* Title */}
-        <h3 className="text-base font-semibold text-gray-800 mb-2 line-clamp-2 group-hover:text-blue-600 transition-colors">
+        {/* Title - High contrast with hover effect */}
+        <h3 
+          className="text-base font-semibold mb-2 line-clamp-2 group-hover:text-indigo-600 transition-colors duration-200"
+          style={{ color: designTokens.colors.text.primary }}
+        >
           {property.title}
         </h3>
 
-        {/* Location */}
-        <div className="flex items-center text-sm text-gray-600 mb-3">
+        {/* Location - Good contrast for secondary text */}
+        <div 
+          className="flex items-center text-sm mb-3"
+          style={{ color: designTokens.colors.text.secondary }}
+        >
           <MapPin className="w-4 h-4 mr-1 flex-shrink-0" />
           <span className="truncate">{property.location}</span>
         </div>
 
-        {/* Features */}
-        <div className="flex items-center gap-4 text-sm text-gray-700">
+        {/* Features - Clear, readable icons and text */}
+        <div 
+          className="flex items-center gap-4 text-sm"
+          style={{ color: designTokens.colors.text.primary }}
+        >
           {property.beds !== undefined && (
             <div className="flex items-center gap-1">
               <Bed className="w-4 h-4" />
-              <span>{property.beds}</span>
+              <span className="font-medium">{property.beds}</span>
             </div>
           )}
           {property.baths !== undefined && (
             <div className="flex items-center gap-1">
               <Bath className="w-4 h-4" />
-              <span>{property.baths}</span>
+              <span className="font-medium">{property.baths}</span>
             </div>
           )}
           {property.size && (
             <div className="flex items-center gap-1">
               <Square className="w-4 h-4" />
-              <span>{property.size}m²</span>
+              <span className="font-medium">{property.size}m²</span>
             </div>
           )}
         </div>
       </div>
-    </div>
+    </ModernCard>
   );
 }
