@@ -5,6 +5,7 @@
  */
 
 import { renderHook, act, waitFor } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { useVideoPreload } from '../useVideoPreload';
 
 // Mock Network Information API
@@ -13,8 +14,8 @@ const mockConnection = {
   downlink: 10,
   saveData: false,
   rtt: 50,
-  addEventListener: jest.fn(),
-  removeEventListener: jest.fn(),
+  addEventListener: vi.fn(),
+  removeEventListener: vi.fn(),
 };
 
 describe('useVideoPreload', () => {
@@ -30,7 +31,7 @@ describe('useVideoPreload', () => {
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe('Basic Functionality', () => {
@@ -159,7 +160,7 @@ describe('useVideoPreload', () => {
     });
 
     it('should call onNetworkChange callback', () => {
-      const onNetworkChange = jest.fn();
+      const onNetworkChange = vi.fn();
 
       renderHook(() =>
         useVideoPreload({
@@ -200,7 +201,7 @@ describe('useVideoPreload', () => {
       
       // Wait a bit to ensure no preloading happens
       act(() => {
-        jest.advanceTimersByTime(1000);
+        vi.advanceTimersByTime(1000);
       });
 
       expect(result.current.preloadedUrls.size).toBe(0);

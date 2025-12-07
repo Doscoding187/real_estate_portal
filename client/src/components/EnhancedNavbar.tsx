@@ -520,7 +520,7 @@ export function EnhancedNavbar() {
 
               {/* Explore Button - Enhanced */}
               <NavigationMenuItem>
-                <Link href="/explore">
+                <Link href="/explore/home">
                   <Button
                     variant="outline"
                     size="sm"

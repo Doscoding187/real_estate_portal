@@ -82,6 +82,9 @@ export function VideoCard({ video, onClick, onSave, enablePreview = false }: Vid
       whileHover="hover"
       whileTap="tap"
       variants={cardVariants}
+      as="article"
+      role="article"
+      aria-label={`Video: ${video.title} by ${video.creatorName}, ${formatViews(video.views)} views`}
     >
       {/* Thumbnail */}
       <div className="relative aspect-[9/16] overflow-hidden bg-gray-100">
@@ -147,6 +150,8 @@ export function VideoCard({ video, onClick, onSave, enablePreview = false }: Vid
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
+          role="status"
+          aria-label={`Video duration: ${formatDuration(video.duration)}`}
         >
           {formatDuration(video.duration)}
         </motion.div>
@@ -184,8 +189,10 @@ export function VideoCard({ video, onClick, onSave, enablePreview = false }: Vid
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
+          role="status"
+          aria-label={`${formatViews(video.views)} views`}
         >
-          <Eye className="w-3 h-3" />
+          <Eye className="w-3 h-3" aria-hidden="true" />
           <span>{formatViews(video.views)}</span>
         </motion.div>
       </div>

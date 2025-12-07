@@ -14,8 +14,10 @@ import {
   ModernSkeleton, 
   PropertyCardSkeleton, 
   VideoCardSkeleton, 
-  NeighbourhoodCardSkeleton 
+  NeighbourhoodCardSkeleton,
+  InsightCardSkeleton 
 } from '@/components/ui/soft/ModernSkeleton';
+import { InsightCard } from '@/components/explore-discovery/cards/InsightCard';
 import { useVideoPlayback } from '@/hooks/useVideoPlayback';
 import { 
   Heart, 
@@ -597,6 +599,141 @@ export default function ExploreComponentDemo() {
           </div>
         </section>
 
+        {/* InsightCard Demo */}
+        <section>
+          <h2 className="text-2xl font-semibold text-gray-900 mb-4">InsightCard (Refactored)</h2>
+          <p className="text-gray-600 mb-4">
+            Market insights with modern design, accent colors, and rich micro-interactions
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {/* Market Trend */}
+            <div>
+              <InsightCard
+                insight={{
+                  id: 1,
+                  title: 'Sandton Property Market Surging',
+                  description: 'Average property prices in Sandton have increased significantly over the past quarter, driven by high demand and limited supply.',
+                  insightType: 'market-trend',
+                  data: {
+                    value: 'R 2.5M',
+                    change: 12.5,
+                    label: 'Average price',
+                  },
+                  imageUrl: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=400',
+                }}
+                onClick={() => alert('Market trend clicked!')}
+              />
+            </div>
+
+            {/* Price Analysis */}
+            <div>
+              <InsightCard
+                insight={{
+                  id: 2,
+                  title: 'Cape Town Coastal Properties',
+                  description: 'Coastal property prices are showing signs of stabilization with slight decreases in some areas.',
+                  insightType: 'price-analysis',
+                  data: {
+                    value: 'R 4.2M',
+                    change: -3.2,
+                    label: 'Median price',
+                  },
+                  imageUrl: 'https://images.unsplash.com/photo-1580587771525-78b9dba3b914?w=400',
+                }}
+                onClick={() => alert('Price analysis clicked!')}
+              />
+            </div>
+
+            {/* Investment Tip */}
+            <div>
+              <InsightCard
+                insight={{
+                  id: 3,
+                  title: 'Best Time to Invest',
+                  description: 'Market analysis suggests Q2 2024 is optimal for Johannesburg investments with favorable interest rates.',
+                  insightType: 'investment-tip',
+                  data: {
+                    value: '8.5%',
+                    change: 2.1,
+                    label: 'Rental yield',
+                  },
+                }}
+                onClick={() => alert('Investment tip clicked!')}
+              />
+            </div>
+
+            {/* Area Spotlight */}
+            <div>
+              <InsightCard
+                insight={{
+                  id: 4,
+                  title: 'Rosebank: The New Business Hub',
+                  description: 'Rosebank is emerging as a prime business district with new developments and excellent transport links.',
+                  insightType: 'area-spotlight',
+                  imageUrl: 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=400',
+                }}
+                onClick={() => alert('Area spotlight clicked!')}
+              />
+            </div>
+
+            {/* Simple insight without data */}
+            <div>
+              <InsightCard
+                insight={{
+                  id: 5,
+                  title: 'Understanding Transfer Costs',
+                  description: 'Learn about the various costs involved in property transfers, including transfer duty and legal fees.',
+                  insightType: 'investment-tip',
+                }}
+                onClick={() => alert('Simple insight clicked!')}
+              />
+            </div>
+
+            {/* Large positive change */}
+            <div>
+              <InsightCard
+                insight={{
+                  id: 6,
+                  title: 'Pretoria East Boom',
+                  description: 'The Pretoria East property market is experiencing unprecedented growth with new developments.',
+                  insightType: 'market-trend',
+                  data: {
+                    value: 'R 1.8M',
+                    change: 18.7,
+                    label: 'Average price',
+                  },
+                  imageUrl: 'https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=400',
+                }}
+                onClick={() => alert('Boom insight clicked!')}
+              />
+            </div>
+          </div>
+
+          <div className="mt-6">
+            <ModernCard className="p-6 bg-purple-50">
+              <h3 className="font-semibold mb-3 text-purple-900">Micro-interactions</h3>
+              <ul className="space-y-2 text-sm text-purple-800">
+                <li>✨ Icon: Scale 1.1 + 5° rotation on hover</li>
+                <li>✨ Badge: Fade in from right with 0.1s delay</li>
+                <li>✨ Data: Fade in from bottom with 0.15s delay</li>
+                <li>✨ Change indicator: Slides right 2px on hover</li>
+                <li>✨ Image: Scales to 1.05 on hover (500ms smooth)</li>
+                <li>✨ Arrow: Continuous pulse animation (0 → 4px → 0)</li>
+                <li>✨ Title: Color transition to indigo on card hover</li>
+              </ul>
+            </ModernCard>
+          </div>
+
+          <div className="mt-6">
+            <p className="text-sm text-gray-600">
+              📖 For complete documentation, see{' '}
+              <code className="bg-gray-200 px-2 py-1 rounded text-xs">
+                client/src/components/explore-discovery/cards/InsightCard.README.md
+              </code>
+            </p>
+          </div>
+        </section>
+
         {/* Video Playback Hook Demo */}
         <section>
           <h2 className="text-2xl font-semibold text-gray-900 mb-4">Video Playback Hook</h2>
@@ -645,24 +782,232 @@ export default function ExploreComponentDemo() {
         {/* Skeleton States */}
         <section>
           <h2 className="text-2xl font-semibold text-gray-900 mb-4">Skeleton States</h2>
+          <p className="text-gray-600 mb-4">
+            Skeleton loaders with subtle pulse animation that match actual card layouts precisely.
+            Requirements: 7.4
+          </p>
+          
           <button
             onClick={() => setShowSkeletons(!showSkeletons)}
-            className="modern-btn px-4 py-2 mb-4"
+            className="accent-btn px-6 py-3 mb-6 text-white"
           >
-            {showSkeletons ? 'Hide' : 'Show'} Skeletons
+            {showSkeletons ? 'Hide' : 'Show'} Skeleton Loaders
           </button>
 
           {showSkeletons && (
-            <div className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <PropertyCardSkeleton />
-                <NeighbourhoodCardSkeleton />
-                <div className="h-64">
-                  <ModernSkeleton variant="card" />
+            <div className="space-y-8">
+              {/* PropertyCard Skeleton */}
+              <div>
+                <h3 className="font-semibold mb-3 text-lg">PropertyCard Skeleton</h3>
+                <p className="text-sm text-gray-600 mb-4">
+                  Matches PropertyCard layout: Image (aspect-[4/3]), price, title (2 lines), location, features
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <PropertyCardSkeleton />
+                  <PropertyCardSkeleton />
+                  <PropertyCardSkeleton />
                 </div>
               </div>
-              <div className="max-w-sm mx-auto">
-                <VideoCardSkeleton />
+
+              {/* VideoCard Skeleton */}
+              <div>
+                <h3 className="font-semibold mb-3 text-lg">VideoCard Skeleton</h3>
+                <p className="text-sm text-gray-600 mb-4">
+                  Matches VideoCard layout: Thumbnail (aspect-[9/16]), play button, badges, title, creator
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                  <VideoCardSkeleton />
+                  <VideoCardSkeleton />
+                  <VideoCardSkeleton />
+                  <VideoCardSkeleton />
+                </div>
+              </div>
+
+              {/* NeighbourhoodCard Skeleton */}
+              <div>
+                <h3 className="font-semibold mb-3 text-lg">NeighbourhoodCard Skeleton</h3>
+                <p className="text-sm text-gray-600 mb-4">
+                  Matches NeighbourhoodCard layout: Image (aspect-[16/10]), follow button, name overlay, stats, highlights
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <NeighbourhoodCardSkeleton />
+                  <NeighbourhoodCardSkeleton />
+                  <NeighbourhoodCardSkeleton />
+                </div>
+              </div>
+
+              {/* InsightCard Skeleton */}
+              <div>
+                <h3 className="font-semibold mb-3 text-lg">InsightCard Skeleton</h3>
+                <p className="text-sm text-gray-600 mb-4">
+                  Matches InsightCard layout: Gradient header, icon, badge, data value, title, description, image
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <InsightCardSkeleton />
+                  <InsightCardSkeleton />
+                  <InsightCardSkeleton />
+                </div>
+              </div>
+
+              {/* Base Skeleton Variants */}
+              <div>
+                <h3 className="font-semibold mb-3 text-lg">Base Skeleton Variants</h3>
+                <p className="text-sm text-gray-600 mb-4">
+                  Reusable skeleton primitives for custom layouts
+                </p>
+                <ModernCard className="p-6">
+                  <div className="space-y-6">
+                    <div>
+                      <p className="text-sm font-medium text-gray-700 mb-2">Text Variant</p>
+                      <ModernSkeleton variant="text" />
+                      <ModernSkeleton variant="text" width="80%" />
+                      <ModernSkeleton variant="text" width="60%" />
+                    </div>
+
+                    <div>
+                      <p className="text-sm font-medium text-gray-700 mb-2">Avatar Variant</p>
+                      <div className="flex gap-3">
+                        <ModernSkeleton variant="avatar" />
+                        <ModernSkeleton variant="avatar" />
+                        <ModernSkeleton variant="avatar" />
+                      </div>
+                    </div>
+
+                    <div>
+                      <p className="text-sm font-medium text-gray-700 mb-2">Card Variant</p>
+                      <ModernSkeleton variant="card" />
+                    </div>
+
+                    <div>
+                      <p className="text-sm font-medium text-gray-700 mb-2">Custom Dimensions</p>
+                      <div className="space-y-2">
+                        <ModernSkeleton variant="custom" width="200px" height="40px" className="rounded-lg" />
+                        <ModernSkeleton variant="custom" width="150px" height="30px" className="rounded-full" />
+                        <ModernSkeleton variant="custom" width="100%" height="120px" className="rounded-xl" />
+                      </div>
+                    </div>
+
+                    <div>
+                      <p className="text-sm font-medium text-gray-700 mb-2">Multiple Lines (count prop)</p>
+                      <ModernSkeleton variant="text" count={4} />
+                    </div>
+                  </div>
+                </ModernCard>
+              </div>
+
+              {/* Animation Details */}
+              <ModernCard className="p-6 bg-purple-50">
+                <h3 className="font-semibold mb-3 text-purple-900">Animation Details</h3>
+                <ul className="space-y-2 text-sm text-purple-800">
+                  <li>✨ Subtle pulse animation using gradient background position</li>
+                  <li>✨ 1.5s duration with linear easing for smooth continuous motion</li>
+                  <li>✨ Gradient: from-gray-200 via-gray-100 to-gray-200</li>
+                  <li>✨ Background size: 200% width for smooth sweep effect</li>
+                  <li>✨ Respects prefers-reduced-motion (Framer Motion handles this)</li>
+                  <li>✨ ARIA labels for accessibility (role="status", aria-label="Loading...")</li>
+                </ul>
+              </ModernCard>
+
+              {/* Usage Example */}
+              <ModernCard className="p-6">
+                <h3 className="font-semibold mb-3">Usage Example</h3>
+                <div className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto">
+                  <pre className="text-xs">
+{`import { 
+  PropertyCardSkeleton,
+  VideoCardSkeleton,
+  NeighbourhoodCardSkeleton,
+  InsightCardSkeleton,
+  ModernSkeleton 
+} from '@/components/ui/soft/ModernSkeleton';
+
+// Use card-specific skeletons
+function PropertyFeed() {
+  const { data, isLoading } = useQuery('properties');
+  
+  if (isLoading) {
+    return (
+      <div className="grid grid-cols-3 gap-6">
+        <PropertyCardSkeleton />
+        <PropertyCardSkeleton />
+        <PropertyCardSkeleton />
+      </div>
+    );
+  }
+  
+  return <PropertyGrid properties={data} />;
+}
+
+// Use base skeleton for custom layouts
+function CustomCard() {
+  return (
+    <div className="modern-card p-4">
+      <div className="flex items-center gap-3 mb-3">
+        <ModernSkeleton variant="avatar" />
+        <div className="flex-1">
+          <ModernSkeleton variant="text" width="60%" />
+          <ModernSkeleton variant="text" width="40%" />
+        </div>
+      </div>
+      <ModernSkeleton variant="text" count={3} />
+    </div>
+  );
+}`}
+                  </pre>
+                </div>
+              </ModernCard>
+
+              {/* Comparison with Actual Cards */}
+              <div>
+                <h3 className="font-semibold mb-3 text-lg">Side-by-Side Comparison</h3>
+                <p className="text-sm text-gray-600 mb-4">
+                  Skeleton layouts match actual card layouts precisely for seamless loading states
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <p className="text-sm font-medium text-gray-700 mb-2">Skeleton State</p>
+                    <PropertyCardSkeleton />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-700 mb-2">Loaded State</p>
+                    <ModernCard className="p-0 overflow-hidden">
+                      <div className="relative aspect-[4/3] overflow-hidden bg-gray-100">
+                        <img
+                          src="https://images.unsplash.com/photo-1613490493576-7fde63acd811?w=400&h=300&fit=crop"
+                          alt="Property"
+                          className="w-full h-full object-cover"
+                        />
+                        <div className="absolute top-3 left-3 px-3 py-1 bg-black/70 backdrop-blur-sm rounded-full text-white text-xs font-medium">
+                          Residential
+                        </div>
+                      </div>
+                      <div className="p-4 space-y-3">
+                        <div className="text-xl font-bold text-gray-900">R 2,500,000</div>
+                        <h3 className="text-base font-semibold text-gray-900">
+                          Modern Family Home in Sandton
+                        </h3>
+                        <div className="flex items-center text-sm text-gray-600">
+                          <MapPin className="w-4 h-4 mr-1" />
+                          <span>Sandton, Johannesburg</span>
+                        </div>
+                        <div className="flex items-center gap-4 text-sm text-gray-900">
+                          <div className="flex items-center gap-1">
+                            <Home className="w-4 h-4" />
+                            <span className="font-medium">4</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Home className="w-4 h-4" />
+                            <span className="font-medium">3</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Home className="w-4 h-4" />
+                            <span className="font-medium">350m²</span>
+                          </div>
+                        </div>
+                      </div>
+                    </ModernCard>
+                  </div>
+                </div>
               </div>
             </div>
           )}

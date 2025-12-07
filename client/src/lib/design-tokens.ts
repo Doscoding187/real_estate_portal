@@ -22,13 +22,13 @@ export const designTokens = {
       tertiary: '#f1f3f5',
       dark: '#1f2937',
     },
-    // Soft accent colors
+    // Soft accent colors (WCAG AA compliant)
     accent: {
-      primary: '#6366f1',
-      hover: '#4f46e5',
-      light: '#818cf8',
+      primary: '#4f46e5', // Darker for better contrast (was #6366f1)
+      hover: '#4338ca',   // Even darker for hover state
+      light: '#6366f1',   // Lighter shade for backgrounds
       subtle: '#e0e7ff',
-      gradient: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)',
+      gradient: 'linear-gradient(135deg, #4f46e5 0%, #4338ca 100%)',
     },
     // Glass/overlay effects
     glass: {
@@ -38,19 +38,20 @@ export const designTokens = {
       borderDark: 'rgba(255, 255, 255, 0.1)',
       backdrop: 'blur(12px)',
     },
-    // Text colors
+    // Text colors (WCAG AA compliant)
     text: {
       primary: '#1f2937',
       secondary: '#6b7280',
-      tertiary: '#9ca3af',
+      tertiary: '#6b7280', // Changed from #9ca3af for better contrast
       inverse: '#ffffff',
+      disabled: '#9ca3af', // Keep light gray for truly disabled states (non-text)
     },
-    // Status colors
+    // Status colors (WCAG AA compliant)
     status: {
-      success: '#10b981',
-      warning: '#f59e0b',
-      error: '#ef4444',
-      info: '#3b82f6',
+      success: '#047857', // Darker green for 4.5:1 contrast (was #10b981)
+      warning: '#b45309', // Darker orange for 4.5:1 contrast (was #f59e0b)
+      error: '#dc2626',   // Darker red for better contrast (was #ef4444)
+      info: '#2563eb',    // Darker blue for better contrast (was #3b82f6)
     },
   },
 

@@ -1,37 +1,45 @@
 import { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Play, Grid3x3, SlidersHorizontal, MapPin } from 'lucide-react';
 import { DiscoveryCardFeed } from '@/components/explore-discovery/DiscoveryCardFeed';
 import { ExploreVideoFeed } from '@/components/explore-discovery/ExploreVideoFeed';
 import { LifestyleCategorySelector } from '@/components/explore-discovery/LifestyleCategorySelector';
-import { FilterPanel } from '@/components/explore-discovery/FilterPanel';
+import { ResponsiveFilterPanel } from '@/components/explore-discovery/ResponsiveFilterPanel';
 import { PersonalizedContentBlock } from '@/components/explore-discovery/PersonalizedContentBlock';
-import { useCategoryFilter } from '@/hooks/useCategoryFilter';
-import { usePropertyFilters } from '@/hooks/usePropertyFilters';
+import { useExploreCommonState } from '@/hooks/useExploreCommonState';
 import { usePersonalizedContent } from '@/hooks/usePersonalizedContent';
+import { useExploreFiltersStore } from '@/store/exploreFiltersStore';
 import { DiscoveryItem } from '@/hooks/useDiscoveryFeed';
-
-type ViewMode = 'home' | 'cards' | 'videos';
+import { designTokens } from '@/lib/design-tokens';
+import { 
+  pageVariants, 
+  staggerContainerVariants, 
+  staggerItemVariants,
+  buttonVariants,
+  getVariants 
+} from '@/lib/animations/exploreAnimations';
 
 export default function ExploreHome() {
-  const [viewMode, setViewMode] = useState<ViewMode>('home');
-  const { selectedCategoryId, setSelectedCategoryId } = useCategoryFilter();
-  const [showFilters, setShowFilters] = useState(false);
-  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | undefined>();
-  
+  // Use common state hook for shared logic
   const {
+    viewMode,
+    setViewMode,
+    selectedCategoryId,
+    setSelectedCategoryId,
+    showFilters,
+    setShowFilters,
     filters,
-    setPropertyType,
-    updateCommonFilters,
-    updateResidentialFilters,
-    updateDevelopmentFilters,
-    updateLandFilters,
-    clearFilters,
-    getFilterCount,
-  } = usePropertyFilters();
+  } = useExploreCommonState({ initialViewMode: 'home' });
+
+  // Get filter count from Zustand store
+  const getFilterCount = useExploreFiltersStore((state) => state.getFilterCount);
+  
+  // User location state
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | undefined>();
 
   // Get personalized content sections
   const { sections, isLoading: sectionsLoading } = usePersonalizedContent({
-    categoryId: selectedCategoryId,
+    categoryId: selectedCategoryId ?? undefined,
     location: userLocation,
   });
 
@@ -72,158 +80,334 @@ export default function ExploreHome() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="sticky top-0 z-40 bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 py-4">
+    <motion.div 
+      className="min-h-screen"
+      style={{ backgroundColor: designTokens.colors.bg.secondary }}
+      initial="initial"
+      animate="animate"
+      exit="exit"
+      variants={getVariants(pageVariants)}
+    >
+      {/* Header - Modern sticky design */}
+      <motion.header 
+        className="sticky top-0 z-40 backdrop-blur-md"
+        style={{
+          backgroundColor: designTokens.colors.glass.bg,
+          borderBottom: `1px solid ${designTokens.colors.bg.tertiary}`,
+          boxShadow: designTokens.shadows.sm,
+        }}
+        initial={{ y: -20, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ duration: 0.3, ease: 'easeOut' }}
+        role="banner"
+        aria-label="Explore navigation"
+      >
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          {/* Title and View Mode Toggle */}
           <div className="flex items-center justify-between mb-4">
-            <h1 className="text-2xl font-bold text-gray-900">Explore</h1>
+            <motion.h1 
+              className="text-3xl font-bold"
+              style={{ 
+                color: designTokens.colors.text.primary,
+                fontWeight: designTokens.typography.fontWeight.bold,
+              }}
+              initial={{ x: -20, opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              transition={{ delay: 0.1, duration: 0.3 }}
+            >
+              Explore
+            </motion.h1>
             
-            {/* View mode toggle */}
-            <div className="flex items-center gap-2 bg-gray-100 rounded-full p-1">
-              <button
+            {/* View mode toggle - Modern pill design */}
+            <motion.div 
+              className="flex items-center gap-1 p-1 rounded-full"
+              style={{
+                backgroundColor: designTokens.colors.bg.tertiary,
+              }}
+              initial={{ x: 20, opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              transition={{ delay: 0.1, duration: 0.3 }}
+              role="tablist"
+              aria-label="View mode selection"
+            >
+              <motion.button
                 onClick={() => setViewMode('home')}
-                className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                  viewMode === 'home'
-                    ? 'bg-white text-gray-900 shadow-sm'
-                    : 'text-gray-600 hover:text-gray-900'
-                }`}
+                className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all"
+                style={{
+                  backgroundColor: viewMode === 'home' ? designTokens.colors.bg.primary : 'transparent',
+                  color: viewMode === 'home' ? designTokens.colors.text.primary : designTokens.colors.text.secondary,
+                  boxShadow: viewMode === 'home' ? designTokens.shadows.sm : 'none',
+                  fontWeight: designTokens.typography.fontWeight.medium,
+                }}
+                variants={buttonVariants}
+                whileHover="hover"
+                whileTap="tap"
+                role="tab"
+                aria-selected={viewMode === 'home'}
+                aria-controls="explore-content"
+                aria-label="Home view"
               >
-                <MapPin className="w-4 h-4" />
-                <span>Home</span>
-              </button>
-              <button
+                <MapPin className="w-4 h-4" aria-hidden="true" />
+                <span className="hidden sm:inline">Home</span>
+              </motion.button>
+              <motion.button
                 onClick={() => setViewMode('cards')}
-                className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                  viewMode === 'cards'
-                    ? 'bg-white text-gray-900 shadow-sm'
-                    : 'text-gray-600 hover:text-gray-900'
-                }`}
+                className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all"
+                style={{
+                  backgroundColor: viewMode === 'cards' ? designTokens.colors.bg.primary : 'transparent',
+                  color: viewMode === 'cards' ? designTokens.colors.text.primary : designTokens.colors.text.secondary,
+                  boxShadow: viewMode === 'cards' ? designTokens.shadows.sm : 'none',
+                  fontWeight: designTokens.typography.fontWeight.medium,
+                }}
+                variants={buttonVariants}
+                whileHover="hover"
+                whileTap="tap"
+                role="tab"
+                aria-selected={viewMode === 'cards'}
+                aria-controls="explore-content"
+                aria-label="Cards view"
               >
-                <Grid3x3 className="w-4 h-4" />
-                <span>Cards</span>
-              </button>
-              <button
+                <Grid3x3 className="w-4 h-4" aria-hidden="true" />
+                <span className="hidden sm:inline">Cards</span>
+              </motion.button>
+              <motion.button
                 onClick={() => setViewMode('videos')}
-                className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                  viewMode === 'videos'
-                    ? 'bg-white text-gray-900 shadow-sm'
-                    : 'text-gray-600 hover:text-gray-900'
-                }`}
+                className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all"
+                style={{
+                  backgroundColor: viewMode === 'videos' ? designTokens.colors.bg.primary : 'transparent',
+                  color: viewMode === 'videos' ? designTokens.colors.text.primary : designTokens.colors.text.secondary,
+                  boxShadow: viewMode === 'videos' ? designTokens.shadows.sm : 'none',
+                  fontWeight: designTokens.typography.fontWeight.medium,
+                }}
+                variants={buttonVariants}
+                whileHover="hover"
+                whileTap="tap"
+                role="tab"
+                aria-selected={viewMode === 'videos'}
+                aria-controls="explore-content"
+                aria-label="Videos view"
               >
-                <Play className="w-4 h-4" />
-                <span>Videos</span>
-              </button>
-            </div>
+                <Play className="w-4 h-4" aria-hidden="true" />
+                <span className="hidden sm:inline">Videos</span>
+              </motion.button>
+            </motion.div>
           </div>
 
-          {/* Category filter */}
-          <LifestyleCategorySelector
-            selectedCategoryId={selectedCategoryId}
-            onCategoryChange={setSelectedCategoryId}
-            variant="light"
-            className="pb-2"
-          />
-        </div>
-      </header>
-
-      {/* Content */}
-      <main className="max-w-7xl mx-auto">
-        {viewMode === 'home' ? (
-          <div className="py-6">
-            {/* Personalized Content Sections */}
-            {sectionsLoading ? (
-              <>
-                <PersonalizedContentBlock
-                  title="Loading..."
-                  items={[]}
-                  onItemClick={handleItemClick}
-                  isLoading={true}
-                />
-                <PersonalizedContentBlock
-                  title="Loading..."
-                  items={[]}
-                  onItemClick={handleItemClick}
-                  isLoading={true}
-                />
-              </>
-            ) : (
-              sections.map((section) => (
-                <PersonalizedContentBlock
-                  key={section.id}
-                  title={section.title}
-                  subtitle={section.subtitle}
-                  items={section.items}
-                  onItemClick={handleItemClick}
-                  onSeeAll={() => handleSeeAll(section.type)}
-                />
-              ))
-            )}
-
-            {/* Empty state */}
-            {!sectionsLoading && sections.length === 0 && (
-              <div className="text-center py-12">
-                <MapPin className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                  Start Exploring
-                </h3>
-                <p className="text-gray-600 mb-6">
-                  Discover properties tailored to your preferences
-                </p>
-                <button
-                  onClick={() => setViewMode('cards')}
-                  className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                >
-                  Browse All Properties
-                </button>
-              </div>
-            )}
-          </div>
-        ) : viewMode === 'cards' ? (
-          <div className="py-6">
-            <DiscoveryCardFeed
-              categoryId={selectedCategoryId}
-              filters={filters}
-              onItemClick={handleItemClick}
+          {/* Category filter - Modern chip design */}
+          <motion.div
+            initial={{ y: 10, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 0.2, duration: 0.3 }}
+          >
+            <LifestyleCategorySelector
+              selectedCategoryId={selectedCategoryId ?? undefined}
+              onCategoryChange={(id) => setSelectedCategoryId(id ?? null)}
+              variant="light"
+              className="pb-2"
             />
-          </div>
-        ) : (
-          <ExploreVideoFeed categoryId={selectedCategoryId} />
-        )}
+          </motion.div>
+        </div>
+      </motion.header>
+
+      {/* Content - Smooth transitions between view modes */}
+      <main 
+        className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"
+        id="explore-content"
+        role="main"
+        aria-label="Explore content"
+      >
+        <AnimatePresence mode="wait">
+          {viewMode === 'home' ? (
+            <motion.div 
+              key="home-view"
+              className="py-6 space-y-8"
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              variants={getVariants(pageVariants)}
+            >
+              {/* Personalized Content Sections with stagger animation */}
+              {sectionsLoading ? (
+                <motion.div
+                  variants={staggerContainerVariants}
+                  initial="initial"
+                  animate="animate"
+                >
+                  <motion.div variants={staggerItemVariants}>
+                    <PersonalizedContentBlock
+                      title="Loading..."
+                      items={[]}
+                      onItemClick={handleItemClick}
+                      isLoading={true}
+                    />
+                  </motion.div>
+                  <motion.div variants={staggerItemVariants}>
+                    <PersonalizedContentBlock
+                      title="Loading..."
+                      items={[]}
+                      onItemClick={handleItemClick}
+                      isLoading={true}
+                    />
+                  </motion.div>
+                </motion.div>
+              ) : (
+                <motion.div
+                  variants={staggerContainerVariants}
+                  initial="initial"
+                  animate="animate"
+                >
+                  {sections.map((section) => (
+                    <motion.div 
+                      key={section.id}
+                      variants={staggerItemVariants}
+                      style={{ marginBottom: designTokens.spacing.xl }}
+                    >
+                      <PersonalizedContentBlock
+                        title={section.title}
+                        subtitle={section.subtitle}
+                        items={section.items}
+                        onItemClick={handleItemClick}
+                        onSeeAll={() => handleSeeAll(section.type)}
+                      />
+                    </motion.div>
+                  ))}
+                </motion.div>
+              )}
+
+              {/* Empty state - Modern design */}
+              {!sectionsLoading && sections.length === 0 && (
+                <motion.div 
+                  className="text-center py-16 px-4"
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <motion.div
+                    initial={{ y: 20, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    transition={{ delay: 0.1 }}
+                  >
+                    <MapPin 
+                      className="w-20 h-20 mx-auto mb-6" 
+                      style={{ color: designTokens.colors.text.tertiary }}
+                    />
+                  </motion.div>
+                  <motion.h3 
+                    className="text-2xl font-semibold mb-3"
+                    style={{ 
+                      color: designTokens.colors.text.primary,
+                      fontWeight: designTokens.typography.fontWeight.semibold,
+                    }}
+                    initial={{ y: 20, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    transition={{ delay: 0.2 }}
+                  >
+                    Start Exploring
+                  </motion.h3>
+                  <motion.p 
+                    className="text-lg mb-8 max-w-md mx-auto"
+                    style={{ color: designTokens.colors.text.secondary }}
+                    initial={{ y: 20, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    transition={{ delay: 0.3 }}
+                  >
+                    Discover properties tailored to your preferences
+                  </motion.p>
+                  <motion.button
+                    onClick={() => setViewMode('cards')}
+                    className="px-8 py-3 rounded-xl text-white font-medium"
+                    style={{
+                      background: designTokens.colors.accent.gradient,
+                      boxShadow: designTokens.shadows.accent,
+                      fontWeight: designTokens.typography.fontWeight.medium,
+                    }}
+                    variants={buttonVariants}
+                    whileHover="hover"
+                    whileTap="tap"
+                    initial={{ y: 20, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    transition={{ delay: 0.4 }}
+                  >
+                    Browse All Properties
+                  </motion.button>
+                </motion.div>
+              )}
+            </motion.div>
+          ) : viewMode === 'cards' ? (
+            <motion.div 
+              key="cards-view"
+              className="py-6"
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              variants={getVariants(pageVariants)}
+            >
+              <DiscoveryCardFeed
+                categoryId={selectedCategoryId ?? undefined}
+                filters={filters}
+                onItemClick={handleItemClick}
+              />
+            </motion.div>
+          ) : (
+            <motion.div
+              key="videos-view"
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              variants={getVariants(pageVariants)}
+            >
+              <ExploreVideoFeed categoryId={selectedCategoryId ?? undefined} />
+            </motion.div>
+          )}
+        </AnimatePresence>
       </main>
 
-      {/* Filter button (floating) */}
-      <button
-        className="fixed bottom-6 right-6 w-14 h-14 bg-blue-600 text-white rounded-full shadow-lg hover:bg-blue-700 transition-all hover:scale-110 flex items-center justify-center z-30"
+      {/* Filter button (floating) - Modern design with accent gradient */}
+      <motion.button
+        className="fixed bottom-6 right-6 w-16 h-16 text-white rounded-full flex items-center justify-center z-30"
+        style={{
+          background: designTokens.colors.accent.gradient,
+          boxShadow: designTokens.shadows.accentHover,
+        }}
         onClick={() => setShowFilters(true)}
         aria-label="Open filters"
+        variants={buttonVariants}
+        whileHover="hover"
+        whileTap="tap"
+        initial={{ scale: 0, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ delay: 0.5, type: 'spring', stiffness: 300, damping: 20 }}
       >
         <SlidersHorizontal className="w-6 h-6" />
-        {getFilterCount() > 0 && (
-          <span className="absolute -top-1 -right-1 w-6 h-6 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
-            {getFilterCount()}
-          </span>
-        )}
-      </button>
+        <AnimatePresence>
+          {getFilterCount() > 0 && (
+            <motion.span 
+              className="absolute -top-1 -right-1 w-7 h-7 text-white text-xs font-bold rounded-full flex items-center justify-center"
+              style={{
+                backgroundColor: designTokens.colors.status.error,
+                boxShadow: designTokens.shadows.md,
+                fontWeight: designTokens.typography.fontWeight.bold,
+              }}
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              exit={{ scale: 0 }}
+              transition={{ type: 'spring', stiffness: 500, damping: 25 }}
+            >
+              {getFilterCount()}
+            </motion.span>
+          )}
+        </AnimatePresence>
+      </motion.button>
 
-      {/* Filter Panel */}
-      <FilterPanel
+      {/* Responsive Filter Panel - Integrates with Zustand store */}
+      <ResponsiveFilterPanel
         isOpen={showFilters}
         onClose={() => setShowFilters(false)}
-        propertyType={filters.propertyType}
-        onPropertyTypeChange={setPropertyType}
-        priceMin={filters.priceMin}
-        priceMax={filters.priceMax}
-        onPriceChange={(min, max) => updateCommonFilters({ priceMin: min, priceMax: max })}
-        residentialFilters={filters.residential}
-        onResidentialFiltersChange={updateResidentialFilters}
-        developmentFilters={filters.development}
-        onDevelopmentFiltersChange={updateDevelopmentFilters}
-        landFilters={filters.land}
-        onLandFiltersChange={updateLandFilters}
-        filterCount={getFilterCount()}
-        onClearAll={clearFilters}
+        onApply={() => {
+          setShowFilters(false);
+          // Filters are automatically applied via Zustand store
+        }}
       />
-    </div>
+    </motion.div>
   );
 }

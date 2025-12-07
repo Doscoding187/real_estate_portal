@@ -145,12 +145,11 @@ async function startServer() {
     console.log('[Server] Skipping frontend static file serving (backend-only mode)');
   }
 
-  const preferredPort = parseInt(process.env.PORT || '5000');
-  const port = process.env.PORT ? preferredPort : await findAvailablePort(preferredPort);
-
-  if (port !== preferredPort && !process.env.PORT) {
-    console.log(`Port ${preferredPort} is busy, using port ${port} instead`);
-  }
+  // Force port 5000 for debugging
+  const port = 5000;
+  console.log('----------------------------------------');
+  console.log(`[Server] FORCING START on port ${port}`);
+  console.log('----------------------------------------');
 
   server.listen(port, '0.0.0.0', () => {
     console.log(`Backend running on http://localhost:${port}`);

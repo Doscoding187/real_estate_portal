@@ -49,14 +49,14 @@ module.exports = {
             transform: 'scale(0.98)',
           },
         },
-        // Accent button
+        // Accent button (WCAG AA compliant colors)
         '.accent-btn': {
-          background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)',
+          background: 'linear-gradient(135deg, #4f46e5 0%, #4338ca 100%)',
           borderRadius: '0.75rem',
-          boxShadow: '0 4px 6px -1px rgba(99, 102, 241, 0.3)',
+          boxShadow: '0 4px 6px -1px rgba(79, 70, 229, 0.3)',
           transition: 'all 150ms cubic-bezier(0.4, 0, 0.2, 1)',
           '&:hover': {
-            boxShadow: '0 6px 12px -2px rgba(99, 102, 241, 0.4)',
+            boxShadow: '0 6px 12px -2px rgba(79, 70, 229, 0.4)',
             transform: 'translateY(-1px)',
           },
           '&:active': {

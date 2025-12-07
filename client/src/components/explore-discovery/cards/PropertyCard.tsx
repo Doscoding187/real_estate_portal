@@ -61,7 +61,8 @@ export function PropertyCard({ property, onClick, onSave }: PropertyCardProps) {
       hoverable={true}
       variant="default"
       as="article"
-      aria-label={`Property: ${property.title} at ${property.location}`}
+      aria-label={`Property: ${property.title} at ${property.location}, priced at ${formatPrice()}`}
+      role="article"
     >
       {/* Image */}
       <div className="relative aspect-[4/3] overflow-hidden bg-gray-100">
@@ -90,7 +91,11 @@ export function PropertyCard({ property, onClick, onSave }: PropertyCardProps) {
         </div>
 
         {/* Property type badge */}
-        <div className="absolute top-3 left-3 px-3 py-1 bg-black/70 backdrop-blur-sm rounded-full text-white text-xs font-medium">
+        <div 
+          className="absolute top-3 left-3 px-3 py-1 bg-black/70 backdrop-blur-sm rounded-full text-white text-xs font-medium"
+          role="status"
+          aria-label={`Property type: ${property.propertyType}`}
+        >
           {property.propertyType}
         </div>
       </div>
@@ -126,23 +131,34 @@ export function PropertyCard({ property, onClick, onSave }: PropertyCardProps) {
         <div 
           className="flex items-center gap-4 text-sm"
           style={{ color: designTokens.colors.text.primary }}
+          role="list"
+          aria-label="Property features"
         >
           {property.beds !== undefined && (
-            <div className="flex items-center gap-1">
-              <Bed className="w-4 h-4" />
-              <span className="font-medium">{property.beds}</span>
+            <div className="flex items-center gap-1" role="listitem">
+              <Bed className="w-4 h-4" aria-hidden="true" />
+              <span className="font-medium">
+                <span className="sr-only">Bedrooms: </span>
+                {property.beds}
+              </span>
             </div>
           )}
           {property.baths !== undefined && (
-            <div className="flex items-center gap-1">
-              <Bath className="w-4 h-4" />
-              <span className="font-medium">{property.baths}</span>
+            <div className="flex items-center gap-1" role="listitem">
+              <Bath className="w-4 h-4" aria-hidden="true" />
+              <span className="font-medium">
+                <span className="sr-only">Bathrooms: </span>
+                {property.baths}
+              </span>
             </div>
           )}
           {property.size && (
-            <div className="flex items-center gap-1">
-              <Square className="w-4 h-4" />
-              <span className="font-medium">{property.size}m²</span>
+            <div className="flex items-center gap-1" role="listitem">
+              <Square className="w-4 h-4" aria-hidden="true" />
+              <span className="font-medium">
+                <span className="sr-only">Size: </span>
+                {property.size}m²
+              </span>
             </div>
           )}
         </div>

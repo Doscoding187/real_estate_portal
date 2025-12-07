@@ -6,6 +6,7 @@ import {
   ChevronDown,
   ChevronRight as ChevronRightIcon,
 } from 'lucide-react';
+import { CITY_PROVINCE_MAP } from "../lib/locationUtils";
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 
@@ -167,34 +168,26 @@ export function DiscoverProperties() {
       // Use helper to construct hierarchical URL if possible
       const action = listingType === 'sale' ? 'sale' : 'rent';
       const citySlug = selectedCity.toLowerCase().replace(/\s+/g, '-');
-      // Simple lookup for demo purposes or import from locationUtils
-      // For now, assuming standard cities we know
-      const provinceMap: Record<string, string> = {
-        'johannesburg': 'gauteng',
-        'cape-town': 'western-cape',
-        'durban': 'kwazulu-natal',
-        'pretoria': 'gauteng',
-        'sandton': 'gauteng',
-        'bloemfontein': 'free-state',
-        'port-elizabeth': 'eastern-cape'
-      };
       
-      const province = provinceMap[citySlug] || 'gauteng';
-      const typeParam = propertyType === 'Houses' ? 'house' : 
-                       propertyType === 'Apartments' ? 'apartment' :
-                       propertyType === 'Townhouses' ? 'townhouse' :
-                       propertyType === 'Office Spaces' ? 'commercial' :
-                       propertyType === 'Shops' ? 'commercial' :
-                       propertyType === 'Penthouses' ? 'apartment' :
-                       propertyType === 'Studios' ? 'apartment' : '';
-
-      // Construct hierarchical URL: /province/city?listingType=...&propertyType=...
-      const queryParams = new URLSearchParams();
-      queryParams.set('listingType', action);
-      if (typeParam) queryParams.set('propertyType', typeParam);
+      // Use shared map to lookup province
+      const provinceSlug = CITY_PROVINCE_MAP[citySlug];
       
-      window.location.href = `/${province}/${citySlug}?${queryParams.toString()}`;
+      let url = '';
+      if (provinceSlug) {
+        url = `/${provinceSlug}/${citySlug}?listingType=${action}`;
+      } else {
+        url = `/properties?city=${selectedCity}&listingType=${action}`;
+      }
+      
+      if (propertyType && propertyType !== 'All') {
+        // Map display names to url values if needed, otherwise slugify
+        const typeSlug = propertyType.toLowerCase().replace(/\s+/g, '-');
+        url += `&propertyType=${typeSlug}`;
+      }
+      
+      window.location.href = url;
     }
+
   };
 
   return (

@@ -93,6 +93,8 @@ export function NeighbourhoodCard({ neighbourhood, onClick, onFollow }: Neighbou
           whileTap={{ scale: 0.95 }}
           transition={{ duration: 0.15 }}
           aria-label={isFollowing ? 'Unfollow neighbourhood' : 'Follow neighbourhood'}
+          aria-pressed={isFollowing}
+          type="button"
         >
           {isFollowing ? 'Following' : 'Follow'}
         </motion.button>
@@ -182,15 +184,23 @@ export function NeighbourhoodCard({ neighbourhood, onClick, onFollow }: Neighbou
         <div 
           className="flex items-center gap-4 text-xs"
           style={{ color: designTokens.colors.text.secondary }}
+          role="list"
+          aria-label="Neighbourhood statistics"
         >
-          <div className="flex items-center gap-1">
-            <Home className="w-4 h-4" />
-            <span>{neighbourhood.propertyCount} properties</span>
+          <div className="flex items-center gap-1" role="listitem">
+            <Home className="w-4 h-4" aria-hidden="true" />
+            <span>
+              <span className="sr-only">Property count: </span>
+              {neighbourhood.propertyCount} properties
+            </span>
           </div>
           {neighbourhood.followerCount !== undefined && (
-            <div className="flex items-center gap-1">
-              <Users className="w-4 h-4" />
-              <span>{neighbourhood.followerCount} followers</span>
+            <div className="flex items-center gap-1" role="listitem">
+              <Users className="w-4 h-4" aria-hidden="true" />
+              <span>
+                <span className="sr-only">Follower count: </span>
+                {neighbourhood.followerCount} followers
+              </span>
             </div>
           )}
         </div>

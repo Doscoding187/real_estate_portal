@@ -10,6 +10,9 @@ import { ComparisonBar } from './components/ComparisonBar';
 import { GuestActivityProvider } from './contexts/GuestActivityContext';
 import { GuestUserBanner } from './components/GuestUserBanner';
 import { useGuestDataMigration } from './hooks/useGuestDataMigration';
+import { useKeyboardMode } from './hooks/useKeyboardMode';
+import { SkipToContent } from './components/ui/SkipToContent';
+import '@/styles/keyboard-navigation.css';
 import Home from './pages/Home';
 import Properties from './pages/Properties';
 import PropertyDetail from './pages/PropertyDetail';
@@ -121,9 +124,14 @@ function Router() {
   // Auto-migrate guest data on login
   useGuestDataMigration();
   
+  // Enable keyboard navigation mode detection
+  useKeyboardMode();
+  
   // make sure to consider if you need authentication for certain routes
   return (
-    <Switch>
+    <>
+      <SkipToContent targetId="main-content" />
+      <Switch>
       <Route path={'/'} component={Home} />
       
       {/* SEO-friendly property search routes (more specific first) */}
@@ -383,6 +391,7 @@ function Router() {
       {/* Final fallback route */}
       <Route component={NotFound} />
     </Switch>
+    </>
   );
 }
 
