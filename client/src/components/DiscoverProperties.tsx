@@ -164,18 +164,36 @@ export function DiscoverProperties() {
       window.location.href = `/developments${filter ? `?type=${filter}` : ''}`;
     } else {
       // For sale/rent, navigate to properties page with filters
+      // Use helper to construct hierarchical URL if possible
       const action = listingType === 'sale' ? 'sale' : 'rent';
-      const typeMap: Record<string, string> = {
-        'Houses': 'house',
-        'Apartments': 'apartment',
-        'Townhouses': 'townhouse',
-        'Office Spaces': 'commercial',
-        'Shops': 'commercial',
-        'Penthouses': 'apartment',
-        'Studios': 'apartment'
+      const citySlug = selectedCity.toLowerCase().replace(/\s+/g, '-');
+      // Simple lookup for demo purposes or import from locationUtils
+      // For now, assuming standard cities we know
+      const provinceMap: Record<string, string> = {
+        'johannesburg': 'gauteng',
+        'cape-town': 'western-cape',
+        'durban': 'kwazulu-natal',
+        'pretoria': 'gauteng',
+        'sandton': 'gauteng',
+        'bloemfontein': 'free-state',
+        'port-elizabeth': 'eastern-cape'
       };
-      const propertyTypeParam = typeMap[propertyType] || '';
-      window.location.href = `/properties?action=${action}${propertyTypeParam ? `&propertyType=${propertyTypeParam}` : ''}`;
+      
+      const province = provinceMap[citySlug] || 'gauteng';
+      const typeParam = propertyType === 'Houses' ? 'house' : 
+                       propertyType === 'Apartments' ? 'apartment' :
+                       propertyType === 'Townhouses' ? 'townhouse' :
+                       propertyType === 'Office Spaces' ? 'commercial' :
+                       propertyType === 'Shops' ? 'commercial' :
+                       propertyType === 'Penthouses' ? 'apartment' :
+                       propertyType === 'Studios' ? 'apartment' : '';
+
+      // Construct hierarchical URL: /province/city?listingType=...&propertyType=...
+      const queryParams = new URLSearchParams();
+      queryParams.set('listingType', action);
+      if (typeParam) queryParams.set('propertyType', typeParam);
+      
+      window.location.href = `/${province}/${citySlug}?${queryParams.toString()}`;
     }
   };
 

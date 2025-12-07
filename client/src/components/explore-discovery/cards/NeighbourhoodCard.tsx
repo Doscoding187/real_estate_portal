@@ -1,5 +1,23 @@
+/**
+ * NeighbourhoodCard Component
+ * 
+ * Modern neighbourhood card with subtle shadows and smooth animations.
+ * Uses ModernCard as base for consistent design system integration.
+ * 
+ * Features:
+ * - Hover lift animation (2px translateY) - Requirements 9.1
+ * - Press state animation (scale 0.98) - Requirements 9.2
+ * - Modern card design with subtle shadows - Requirements 1.2
+ * - Consistent spacing tokens from design system
+ * - Progressive image loading
+ * - Follow functionality integration
+ */
+
 import { MapPin, TrendingUp, Home, Users } from 'lucide-react';
 import { useState } from 'react';
+import { ModernCard } from '@/components/ui/soft/ModernCard';
+import { designTokens } from '@/lib/design-tokens';
+import { motion } from 'framer-motion';
 
 interface NeighbourhoodCardProps {
   neighbourhood: {
@@ -37,9 +55,13 @@ export function NeighbourhoodCard({ neighbourhood, onClick, onFollow }: Neighbou
   };
 
   return (
-    <div
+    <ModernCard
       onClick={onClick}
-      className="group relative bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 cursor-pointer"
+      className="group relative overflow-hidden p-0"
+      hoverable={true}
+      variant="default"
+      as="article"
+      aria-label={`Neighbourhood: ${neighbourhood.name} in ${neighbourhood.city}`}
     >
       {/* Image */}
       <div className="relative aspect-[16/10] overflow-hidden bg-gray-100">
@@ -49,7 +71,7 @@ export function NeighbourhoodCard({ neighbourhood, onClick, onFollow }: Neighbou
         <img
           src={neighbourhood.imageUrl}
           alt={neighbourhood.name}
-          className={`w-full h-full object-cover group-hover:scale-110 transition-transform duration-500 ${
+          className={`w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ${
             imageLoaded ? 'opacity-100' : 'opacity-0'
           }`}
           onLoad={() => setImageLoaded(true)}
@@ -59,57 +81,96 @@ export function NeighbourhoodCard({ neighbourhood, onClick, onFollow }: Neighbou
         {/* Gradient overlay */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
 
-        {/* Follow button */}
-        <button
+        {/* Follow button with modern design */}
+        <motion.button
           onClick={handleFollow}
           className={`absolute top-3 right-3 px-4 py-2 rounded-full text-sm font-medium transition-all ${
             isFollowing
-              ? 'bg-white text-gray-900'
-              : 'bg-white/90 backdrop-blur-sm text-gray-900 hover:bg-white'
+              ? 'bg-white text-gray-900 shadow-md'
+              : 'glass-overlay text-gray-900 hover:bg-white'
           }`}
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          transition={{ duration: 0.15 }}
+          aria-label={isFollowing ? 'Unfollow neighbourhood' : 'Follow neighbourhood'}
         >
           {isFollowing ? 'Following' : 'Follow'}
-        </button>
+        </motion.button>
 
         {/* Content overlay */}
-        <div className="absolute bottom-0 left-0 right-0 p-4">
-          <h3 className="text-xl font-bold text-white mb-1 group-hover:text-blue-300 transition-colors">
+        <div 
+          className="absolute bottom-0 left-0 right-0"
+          style={{ padding: designTokens.spacing.md }}
+        >
+          <h3 
+            className="text-xl font-bold text-white mb-1 group-hover:text-indigo-300 transition-colors duration-200"
+            style={{ 
+              fontWeight: designTokens.typography.fontWeight.bold,
+              fontSize: designTokens.typography.fontSize.xl 
+            }}
+          >
             {neighbourhood.name}
           </h3>
           <div className="flex items-center text-white/90 text-sm">
-            <MapPin className="w-4 h-4 mr-1" />
+            <MapPin className="w-4 h-4 mr-1 flex-shrink-0" />
             <span>{neighbourhood.city}</span>
           </div>
         </div>
       </div>
 
-      {/* Stats */}
-      <div className="p-4">
-        {/* Price info */}
-        <div className="flex items-center justify-between mb-3">
+      {/* Stats - Using consistent spacing tokens */}
+      <div style={{ padding: designTokens.spacing.md }}>
+        {/* Price info - High contrast for readability */}
+        <div 
+          className="flex items-center justify-between"
+          style={{ marginBottom: designTokens.spacing.sm }}
+        >
           <div>
-            <div className="text-xs text-gray-600 mb-1">Avg. Price</div>
-            <div className="text-lg font-bold text-gray-900">
+            <div 
+              className="text-xs mb-1"
+              style={{ color: designTokens.colors.text.secondary }}
+            >
+              Avg. Price
+            </div>
+            <div 
+              className="text-lg font-bold"
+              style={{ 
+                color: designTokens.colors.text.primary,
+                fontWeight: designTokens.typography.fontWeight.bold 
+              }}
+            >
               {formatPrice(neighbourhood.avgPrice)}
             </div>
           </div>
           {neighbourhood.priceChange !== undefined && (
-            <div className={`flex items-center gap-1 text-sm font-medium ${
-              neighbourhood.priceChange >= 0 ? 'text-green-600' : 'text-red-600'
-            }`}>
+            <div 
+              className={`flex items-center gap-1 text-sm font-medium ${
+                neighbourhood.priceChange >= 0 ? 'text-green-600' : 'text-red-600'
+              }`}
+              style={{ fontWeight: designTokens.typography.fontWeight.medium }}
+            >
               <TrendingUp className={`w-4 h-4 ${neighbourhood.priceChange < 0 ? 'rotate-180' : ''}`} />
               <span>{Math.abs(neighbourhood.priceChange)}%</span>
             </div>
           )}
         </div>
 
-        {/* Highlights */}
+        {/* Highlights - Modern pill design */}
         {neighbourhood.highlights && neighbourhood.highlights.length > 0 && (
-          <div className="flex flex-wrap gap-2 mb-3">
+          <div 
+            className="flex flex-wrap gap-2"
+            style={{ marginBottom: designTokens.spacing.sm }}
+          >
             {neighbourhood.highlights.slice(0, 2).map((highlight, index) => (
               <span
                 key={index}
-                className="px-2 py-1 bg-blue-50 text-blue-700 text-xs rounded-full"
+                className="px-2 py-1 text-xs rounded-full"
+                style={{
+                  backgroundColor: designTokens.colors.accent.subtle,
+                  color: designTokens.colors.accent.primary,
+                  fontSize: designTokens.typography.fontSize.xs,
+                  borderRadius: designTokens.borderRadius.pill,
+                }}
               >
                 {highlight}
               </span>
@@ -117,8 +178,11 @@ export function NeighbourhoodCard({ neighbourhood, onClick, onFollow }: Neighbou
           </div>
         )}
 
-        {/* Meta info */}
-        <div className="flex items-center gap-4 text-xs text-gray-600">
+        {/* Meta info - Clear, readable text */}
+        <div 
+          className="flex items-center gap-4 text-xs"
+          style={{ color: designTokens.colors.text.secondary }}
+        >
           <div className="flex items-center gap-1">
             <Home className="w-4 h-4" />
             <span>{neighbourhood.propertyCount} properties</span>
@@ -131,6 +195,6 @@ export function NeighbourhoodCard({ neighbourhood, onClick, onFollow }: Neighbou
           )}
         </div>
       </div>
-    </div>
+    </ModernCard>
   );
 }

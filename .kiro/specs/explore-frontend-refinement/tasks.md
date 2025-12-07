@@ -317,13 +317,18 @@ This implementation plan breaks down the Explore frontend refinement into discre
 
 
 
+
   - Update `client/src/components/explore-discovery/cards/VideoCard.tsx`
   - Apply modern design with glass overlay
   - Add smooth transitions
   - Integrate with video playback hook
   - _Requirements: 1.2, 2.1_
 
-- [ ] 20. Refactor NeighbourhoodCard
+- [x] 20. Refactor NeighbourhoodCard
+
+
+
+
   - Update `client/src/components/explore-discovery/cards/NeighbourhoodCard.tsx`
   - Apply modern card design
   - Add hover animations

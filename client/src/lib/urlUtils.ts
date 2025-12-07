@@ -95,8 +95,59 @@ export interface SearchFilters {
   [key: string]: any;
 }
 
+// Import shared location utils
+import { CITY_PROVINCE_MAP } from './locationUtils';
+
 // Generate SEO-friendly URL from filters
 export function generatePropertyUrl(filters: SearchFilters): string {
+  // If we have a city, we should try to use the hierarchical structure
+  // /:province/:city or /:province/:city/:suburb
+  if (filters.city) {
+    const citySlug = slugify(filters.city);
+    // If province is explicitly provided, use it, otherwise lookup
+    const provinceSlug = filters.province 
+      ? slugify(filters.province) 
+      : (CITY_PROVINCE_MAP[citySlug] || 'properties'); // Fallback to 'properties' as "province" if unknown? No, that breaks hierarchy. 
+      // Actually if unknown, maybe we shouldn't use hierarchy? 
+      // But user wants "new urls". Let's assume most cities are mapped or fallback to a generic search.
+      // If province is unknown, /properties/city-slug might collide with other routes?
+      // Wouter routes: /:province/:city
+      // If 'properties' is the first segment, it goes to SearchResults.
+      // So falling back to '/properties?city=...' is safer for unknown cities.
+    
+    // Check if we found a province or have one
+    const province = CITY_PROVINCE_MAP[citySlug] || (filters.province ? slugify(filters.province) : null);
+
+    if (province) {
+       const parts: string[] = ['', province, citySlug];
+       
+       if (filters.suburb) {
+         parts.push(slugify(filters.suburb));
+       }
+
+       // Add query params for everything else
+       const queryParams = new URLSearchParams();
+
+       if (filters.listingType) queryParams.set('listingType', filters.listingType);
+       if (filters.propertyType) queryParams.set('propertyType', filters.propertyType);
+       
+       if (filters.minPrice) queryParams.set('minPrice', filters.minPrice.toString());
+       if (filters.maxPrice) queryParams.set('maxPrice', filters.maxPrice.toString());
+       if (filters.minBedrooms) queryParams.set('minBedrooms', filters.minBedrooms.toString());
+       if (filters.maxBedrooms) queryParams.set('maxBedrooms', filters.maxBedrooms.toString());
+       if (filters.minBathrooms) queryParams.set('minBathrooms', filters.minBathrooms.toString());
+       if (filters.maxBathrooms) queryParams.set('maxBathrooms', filters.maxBathrooms.toString());
+       if (filters.minArea) queryParams.set('minArea', filters.minArea.toString());
+       if (filters.maxArea) queryParams.set('maxArea', filters.maxArea.toString());
+       if (filters.furnished) queryParams.set('furnished', 'true');
+       if (filters.amenities?.length) queryParams.set('amenities', filters.amenities.join(','));
+
+        const queryString = queryParams.toString();
+        return parts.join('/') + (queryString ? `?${queryString}` : '');
+    }
+  }
+
+  // Fallback to legacy path building for non-location specific or unknown location searches
   const parts: string[] = ['/properties'];
 
   // Add listing type
@@ -111,14 +162,12 @@ export function generatePropertyUrl(filters: SearchFilters): string {
     if (slug) parts.push(slug);
   }
 
-  // Add city
+  // Add city (if we are here, it means we didn't find a province map, so use query param or legacy path if desired)
+  // But strictly new URLs should be /properties?city=... if not hierarchical
+  // Let's keep existing behavior for /properties/... pathing if no city found matches map
   if (filters.city) {
-    parts.push(slugify(filters.city));
-  }
-
-  // Add suburb (only if city is also present)
-  if (filters.suburb && filters.city) {
-    parts.push(slugify(filters.suburb));
+    // parts.push(slugify(filters.city)); // Legacy behavior
+    // If we want to be safe, stick to query params for unknown cities
   }
 
   // Build base URL
@@ -126,6 +175,12 @@ export function generatePropertyUrl(filters: SearchFilters): string {
 
   // Add remaining filters as query params
   const queryParams = new URLSearchParams();
+  
+  // Ensure city/suburb are passed if they weren't used in path
+  if (filters.city) queryParams.set('city', filters.city);
+  if (filters.suburb) queryParams.set('suburb', filters.suburb);
+  
+  if (filters.listingType && !parts.includes(listingTypeToSlug[filters.listingType] || '')) queryParams.set('listingType', filters.listingType); // Redundant if in path?
   
   if (filters.minPrice) queryParams.set('minPrice', filters.minPrice.toString());
   if (filters.maxPrice) queryParams.set('maxPrice', filters.maxPrice.toString());
