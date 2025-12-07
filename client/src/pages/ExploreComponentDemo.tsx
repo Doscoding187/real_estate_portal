@@ -16,6 +16,7 @@ import {
   VideoCardSkeleton, 
   NeighbourhoodCardSkeleton 
 } from '@/components/ui/soft/ModernSkeleton';
+import { useVideoPlayback } from '@/hooks/useVideoPlayback';
 import { 
   Heart, 
   Share2, 
@@ -25,7 +26,103 @@ import {
   Sparkles,
   Play,
   Grid3x3,
+  Loader2,
+  AlertCircle,
 } from 'lucide-react';
+
+/**
+ * Video Playback Demo Component
+ * Demonstrates the useVideoPlayback hook with viewport detection
+ */
+function VideoPlaybackDemo() {
+  const { 
+    videoRef, 
+    containerRef, 
+    isPlaying, 
+    isBuffering, 
+    error, 
+    inView,
+    retry 
+  } = useVideoPlayback({
+    preloadNext: true,
+    threshold: 0.5,
+  });
+
+  return (
+    <ModernCard>
+      <div ref={containerRef} className="relative">
+        <video
+          ref={videoRef}
+          src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
+          poster="https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=400&h=300&fit=crop"
+          className="w-full h-64 object-cover rounded-lg"
+          loop
+          muted
+          playsInline
+        />
+
+        {/* Status Overlay */}
+        <div className="absolute top-2 right-2 flex gap-2">
+          <div className={`px-2 py-1 rounded-full text-xs font-medium ${
+            inView ? 'bg-green-500 text-white' : 'bg-gray-500 text-white'
+          }`}>
+            {inView ? 'In View' : 'Out of View'}
+          </div>
+          <div className={`px-2 py-1 rounded-full text-xs font-medium ${
+            isPlaying ? 'bg-blue-500 text-white' : 'bg-gray-500 text-white'
+          }`}>
+            {isPlaying ? 'Playing' : 'Paused'}
+          </div>
+        </div>
+
+        {/* Buffering Indicator */}
+        {isBuffering && (
+          <div className="absolute inset-0 flex items-center justify-center bg-black/20 rounded-lg">
+            <div className="bg-white/90 backdrop-blur-sm rounded-full p-3">
+              <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
+            </div>
+          </div>
+        )}
+
+        {/* Error State */}
+        {error && (
+          <div className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-lg">
+            <div className="text-center p-4">
+              <AlertCircle className="w-12 h-12 text-red-400 mx-auto mb-2" />
+              <p className="text-white text-sm mb-3">{error.message}</p>
+              <button
+                onClick={retry}
+                className="accent-btn px-4 py-2 text-white text-sm"
+              >
+                Retry
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Status Info */}
+      <div className="mt-4 space-y-2 text-sm">
+        <div className="flex justify-between">
+          <span className="text-gray-600">In Viewport:</span>
+          <span className="font-medium">{inView ? 'Yes' : 'No'}</span>
+        </div>
+        <div className="flex justify-between">
+          <span className="text-gray-600">Playing:</span>
+          <span className="font-medium">{isPlaying ? 'Yes' : 'No'}</span>
+        </div>
+        <div className="flex justify-between">
+          <span className="text-gray-600">Buffering:</span>
+          <span className="font-medium">{isBuffering ? 'Yes' : 'No'}</span>
+        </div>
+        <div className="flex justify-between">
+          <span className="text-gray-600">Error:</span>
+          <span className="font-medium">{error ? 'Yes' : 'No'}</span>
+        </div>
+      </div>
+    </ModernCard>
+  );
+}
 
 export default function ExploreComponentDemo() {
   const [selectedChip, setSelectedChip] = useState<string>('all');
@@ -500,6 +597,51 @@ export default function ExploreComponentDemo() {
           </div>
         </section>
 
+        {/* Video Playback Hook Demo */}
+        <section>
+          <h2 className="text-2xl font-semibold text-gray-900 mb-4">Video Playback Hook</h2>
+          <p className="text-gray-600 mb-4">
+            Viewport-based auto-play/pause with IntersectionObserver. Scroll the video in/out of view to see it work!
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <VideoPlaybackDemo />
+            <ModernCard>
+              <h3 className="font-semibold mb-3">Features</h3>
+              <ul className="space-y-2 text-sm text-gray-600">
+                <li className="flex items-start gap-2">
+                  <span className="text-green-500 mt-0.5">✓</span>
+                  <span>Auto-play when 50% visible in viewport</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-green-500 mt-0.5">✓</span>
+                  <span>Auto-pause when exiting viewport</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-green-500 mt-0.5">✓</span>
+                  <span>Buffering state detection</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-green-500 mt-0.5">✓</span>
+                  <span>Error handling with retry logic</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-green-500 mt-0.5">✓</span>
+                  <span>Exponential backoff for retries (max 3)</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-green-500 mt-0.5">✓</span>
+                  <span>Low-bandwidth mode support</span>
+                </li>
+              </ul>
+              <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+                <p className="text-xs text-blue-800">
+                  <strong>Tip:</strong> Scroll the page to see the video auto-play/pause based on viewport visibility!
+                </p>
+              </div>
+            </ModernCard>
+          </div>
+        </section>
+
         {/* Skeleton States */}
         <section>
           <h2 className="text-2xl font-semibold text-gray-900 mb-4">Skeleton States</h2>
@@ -716,6 +858,278 @@ import { motion } from 'framer-motion';
               </div>
             </div>
           </ModernCard>
+        </section>
+
+        {/* Video Preload Demo */}
+        <section>
+          <h2 className="text-2xl font-semibold text-gray-900 mb-4">Video Preloading System</h2>
+          <p className="text-gray-600 mb-4">
+            Intelligent video preloading with network speed detection and adaptive loading.
+          </p>
+          
+          <ModernCard className="p-6 mb-6">
+            <h3 className="font-semibold mb-3">Features</h3>
+            <ul className="space-y-2 text-sm text-gray-600">
+              <li>✅ Preload next 2 videos in feed automatically</li>
+              <li>✅ Network speed detection using Network Information API</li>
+              <li>✅ Low-bandwidth mode with poster images</li>
+              <li>✅ Manual play button for slow connections</li>
+              <li>✅ Adaptive loading based on connection quality</li>
+              <li>✅ Automatic cleanup of out-of-range preloaded videos</li>
+            </ul>
+          </ModernCard>
+
+          <ModernCard className="p-6">
+            <h3 className="font-semibold mb-3">Usage Example</h3>
+            <div className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto">
+              <pre className="text-xs">
+{`import { useVideoPreload } from '@/hooks/useVideoPreload';
+
+const { isLowBandwidth, networkInfo, isPreloaded } = useVideoPreload({
+  currentIndex: 0,
+  videoUrls: videos.map(v => v.url),
+  preloadCount: 2,
+  onNetworkChange: (info) => {
+    console.log('Network changed:', info);
+  },
+});
+
+// Use in video component
+<video
+  src={video.url}
+  preload={isPreloaded(video.url) ? 'auto' : 'metadata'}
+  poster={video.thumbnailUrl}
+/>
+
+// Show manual play button in low-bandwidth mode
+{isLowBandwidth && !isPlaying && (
+  <button onClick={play}>
+    <Play /> Tap to play
+  </button>
+)}`}
+              </pre>
+            </div>
+          </ModernCard>
+
+          <div className="mt-6">
+            <ModernCard className="p-6 bg-blue-50">
+              <h3 className="font-semibold mb-3 text-blue-900">Network Detection</h3>
+              <p className="text-sm text-blue-800 mb-3">
+                The hook automatically detects low-bandwidth connections based on:
+              </p>
+              <ul className="space-y-2 text-sm text-blue-700">
+                <li>• Save Data Mode: User has enabled data saver in browser</li>
+                <li>• Connection Type: 2g or slow-2g connections</li>
+                <li>• Downlink Speed: &lt; 1.5 Mbps</li>
+                <li>• Round-Trip Time: &gt; 300ms</li>
+              </ul>
+            </ModernCard>
+          </div>
+
+          <div className="mt-6">
+            <p className="text-sm text-gray-600">
+              📖 For complete documentation, see{' '}
+              <code className="bg-gray-200 px-2 py-1 rounded text-xs">
+                client/src/hooks/useVideoPreload.README.md
+              </code>
+            </p>
+          </div>
+        </section>
+
+        {/* FilterPanel Demo */}
+        <section>
+          <h2 className="text-2xl font-semibold text-gray-900 mb-4">FilterPanel (Refactored)</h2>
+          <p className="text-gray-600 mb-4">
+            Modern filter panel with Zustand integration and Airbnb-inspired chip-style filters.
+          </p>
+          
+          <ModernCard className="p-6 mb-6">
+            <h3 className="font-semibold mb-3">Features</h3>
+            <ul className="space-y-2 text-sm text-gray-600">
+              <li>✅ Zustand store integration for global state management</li>
+              <li>✅ Modern chip-style filters using MicroPill component</li>
+              <li>✅ Subtle shadows instead of heavy neumorphism</li>
+              <li>✅ Clear Apply and Reset buttons with animations</li>
+              <li>✅ Smooth slide-in animation with spring physics</li>
+              <li>✅ Filter count indicator and active filter display</li>
+              <li>✅ Persists to localStorage automatically</li>
+              <li>✅ Keyboard accessible with proper ARIA labels</li>
+            </ul>
+          </ModernCard>
+
+          <ModernCard className="p-6">
+            <h3 className="font-semibold mb-3">Usage Example</h3>
+            <div className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto">
+              <pre className="text-xs">
+{`import { FilterPanel } from '@/components/explore-discovery/FilterPanel';
+import { useExploreFiltersStore } from '@/store/exploreFiltersStore';
+
+function MyComponent() {
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const { getFilterCount } = useExploreFiltersStore();
+
+  const handleApplyFilters = () => {
+    // Trigger data fetch with current filter state
+    console.log('Filters applied!');
+  };
+
+  return (
+    <>
+      <button onClick={() => setIsFilterOpen(true)}>
+        Filters ({getFilterCount()})
+      </button>
+
+      <FilterPanel
+        isOpen={isFilterOpen}
+        onClose={() => setIsFilterOpen(false)}
+        onApply={handleApplyFilters}
+      />
+    </>
+  );
+}`}
+              </pre>
+            </div>
+          </ModernCard>
+
+          <div className="mt-6">
+            <ModernCard className="p-6 bg-indigo-50">
+              <h3 className="font-semibold mb-3 text-indigo-900">Simplified API</h3>
+              <p className="text-sm text-indigo-800 mb-3">
+                The refactored FilterPanel has a much simpler API compared to the old version:
+              </p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                <div>
+                  <p className="font-medium text-indigo-900 mb-2">Old API (13 props):</p>
+                  <ul className="space-y-1 text-indigo-700 text-xs">
+                    <li>• isOpen, onClose</li>
+                    <li>• propertyType, onPropertyTypeChange</li>
+                    <li>• priceMin, priceMax, onPriceChange</li>
+                    <li>• residentialFilters, onResidentialFiltersChange</li>
+                    <li>• developmentFilters, onDevelopmentFiltersChange</li>
+                    <li>• landFilters, onLandFiltersChange</li>
+                    <li>• filterCount, onClearAll</li>
+                  </ul>
+                </div>
+                <div>
+                  <p className="font-medium text-indigo-900 mb-2">New API (3 props):</p>
+                  <ul className="space-y-1 text-indigo-700 text-xs">
+                    <li>• isOpen</li>
+                    <li>• onClose</li>
+                    <li>• onApply (optional)</li>
+                  </ul>
+                  <p className="text-indigo-600 mt-2 text-xs">
+                    All filter state is managed by Zustand! 🎉
+                  </p>
+                </div>
+              </div>
+            </ModernCard>
+          </div>
+
+          <div className="mt-6">
+            <p className="text-sm text-gray-600">
+              📖 For complete documentation, see{' '}
+              <code className="bg-gray-200 px-2 py-1 rounded text-xs">
+                client/src/components/explore-discovery/FilterPanel.README.md
+              </code>
+            </p>
+          </div>
+        </section>
+
+        {/* Mobile Bottom Sheet Demo */}
+        <section>
+          <h2 className="text-2xl font-semibold text-gray-900 mb-4">Mobile Filter Bottom Sheet</h2>
+          <p className="text-gray-600 mb-4">
+            Drag-to-close bottom sheet with snap points, keyboard navigation, and focus trap.
+          </p>
+          
+          <ModernCard className="p-6 mb-6">
+            <h3 className="font-semibold mb-3">Features</h3>
+            <ul className="space-y-2 text-sm text-gray-600">
+              <li>✅ Drag-to-close functionality with velocity detection</li>
+              <li>✅ Snap points: Half (50%) and Full (90%)</li>
+              <li>✅ Keyboard navigation with Tab/Shift+Tab</li>
+              <li>✅ Focus trap - focus stays within sheet</li>
+              <li>✅ Escape key to close</li>
+              <li>✅ Full feature parity with desktop side panel</li>
+              <li>✅ WCAG AA accessibility compliance</li>
+              <li>✅ Touch-optimized with 44x44px minimum targets</li>
+            </ul>
+          </ModernCard>
+
+          <ModernCard className="p-6 mb-6">
+            <h3 className="font-semibold mb-3">Responsive Wrapper</h3>
+            <div className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto">
+              <pre className="text-xs">
+{`import { ResponsiveFilterPanel } from '@/components/explore-discovery/ResponsiveFilterPanel';
+
+// Automatically uses mobile bottom sheet on mobile, desktop panel on desktop
+<ResponsiveFilterPanel
+  isOpen={isOpen}
+  onClose={() => setIsOpen(false)}
+  onApply={() => console.log('Filters applied')}
+/>`}
+              </pre>
+            </div>
+          </ModernCard>
+
+          <ModernCard className="p-6 bg-green-50">
+            <h3 className="font-semibold mb-3 text-green-900">Snap Point Behavior</h3>
+            <div className="space-y-3 text-sm text-green-800">
+              <div>
+                <p className="font-medium mb-1">Automatic Snapping:</p>
+                <ul className="space-y-1 text-green-700 text-xs ml-4">
+                  <li>• Drag down from full → Snaps to half</li>
+                  <li>• Drag down from half → Closes sheet</li>
+                  <li>• Drag up from half → Snaps to full</li>
+                  <li>• Fast swipe down → Closes immediately</li>
+                  <li>• Fast swipe up → Opens to full immediately</li>
+                </ul>
+              </div>
+              <div>
+                <p className="font-medium mb-1">Thresholds:</p>
+                <ul className="space-y-1 text-green-700 text-xs ml-4">
+                  <li>• Velocity: 500px/s</li>
+                  <li>• Offset: 20% down, 10% up</li>
+                </ul>
+              </div>
+            </div>
+          </ModernCard>
+
+          <div className="mt-6">
+            <ModernCard className="p-6 bg-blue-50">
+              <h3 className="font-semibold mb-3 text-blue-900">Keyboard Shortcuts</h3>
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div>
+                  <p className="font-medium text-blue-800 mb-1">Tab</p>
+                  <p className="text-blue-700 text-xs">Next element</p>
+                </div>
+                <div>
+                  <p className="font-medium text-blue-800 mb-1">Shift + Tab</p>
+                  <p className="text-blue-700 text-xs">Previous element</p>
+                </div>
+                <div>
+                  <p className="font-medium text-blue-800 mb-1">Escape</p>
+                  <p className="text-blue-700 text-xs">Close sheet</p>
+                </div>
+                <div>
+                  <p className="font-medium text-blue-800 mb-1">Enter/Space</p>
+                  <p className="text-blue-700 text-xs">Activate button</p>
+                </div>
+              </div>
+            </ModernCard>
+          </div>
+
+          <div className="mt-6">
+            <p className="text-sm text-gray-600">
+              📖 For complete documentation, see{' '}
+              <code className="bg-gray-200 px-2 py-1 rounded text-xs">
+                client/src/components/explore-discovery/MobileFilterBottomSheet.README.md
+              </code>
+            </p>
+            <p className="text-sm text-gray-600 mt-2">
+              💡 To test on desktop, resize your browser to mobile width (&lt;768px) or use device emulation
+            </p>
+          </div>
         </section>
 
         {/* Footer */}

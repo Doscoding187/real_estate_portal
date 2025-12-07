@@ -17,6 +17,7 @@ import Favorites from './pages/Favorites';
 import Agents from './pages/Agents';
 import AgentDetail from './pages/AgentDetail';
 import AgentPublicProfile from './pages/AgentPublicProfile';
+import ProvincePage from './pages/ProvincePage';
 import CityPage from './pages/CityPage';
 import Dashboard from './pages/Dashboard';
 import Login from './pages/Login';
@@ -147,8 +148,8 @@ function Router() {
       <Route path="/agent/setup" component={AgentSetup} />
       <Route path="/agent/profile/:agentId" component={AgentPublicProfile} />
       <Route path="/agent/:id" component={AgentDetail} />
-      <Route path="/city/:slug" component={CityPage} />
-      <Route path="/suburb/:city/:suburb" component={SuburbPage} />
+      {/* <Route path="/city/:slug" component={CityPage} /> */}
+      {/* <Route path="/suburb/:city/:suburb" component={SuburbPage} /> */}
       <Route path="/listings/create" component={ListingWizard} />
       <Route path="/listing-template" component={ListingTemplate} />
       <Route path="/developments/create" component={CreateDevelopment} />
@@ -369,6 +370,10 @@ function Router() {
           <AgentDashboard />
         </RequireRole>
       </Route>
+
+      <Route path="/:province/:city/:suburb" component={SuburbPage} />
+      <Route path="/:province/:city" component={CityPage} />
+      <Route path="/:province" component={ProvincePage} />
 
       <Route path={'/404'} component={NotFound} />
       {/* Final fallback route */}

@@ -32,6 +32,7 @@ import { exploreVideoUploadRouter } from './exploreVideoUploadRouter';
 import { exploreAnalyticsRouter } from './exploreAnalyticsRouter';
 import { similarPropertiesRouter } from './similarPropertiesRouter';
 import { cacheRouter } from './cacheRouter';
+import { locationPagesRouter } from './locationPagesRouter';
 
 export const appRouter = router({
   system: systemRouter,
@@ -63,6 +64,7 @@ export const appRouter = router({
   exploreAnalytics: exploreAnalyticsRouter,
   similarProperties: similarPropertiesRouter,
   cache: cacheRouter,
+  locationPages: locationPagesRouter,
 
   auth: router({
     me: publicProcedure.query(opts => opts.ctx.user),

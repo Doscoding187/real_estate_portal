@@ -250,17 +250,11 @@ export function EnhancedNavbar() {
     { label: 'Interior Design', href: '#' },
   ];
 
-  const ownersOptions = [
-    { label: 'Sell Your Property', href: '/advertise' },
-    { label: 'Rent Out Your Property', href: '/advertise' },
-    { label: 'Property Valuation', href: '#' },
-    { label: 'Manage Listings', href: '/dashboard' },
-  ];
-
-  const developersOptions = [
-    { label: 'List Development', href: '/developer' },
-    { label: 'Developer Dashboard', href: '/developer/dashboard' },
-    { label: 'Marketing Tools', href: '#' },
+  const sellersOptions = [
+    { label: 'Agents', href: '/agents' },
+    { label: 'Agencies', href: '/agencies' },
+    { label: 'Developers', href: '/developer' },
+    { label: 'Property Owner (For sale by owner)', href: '/advertise' },
   ];
 
   const insightsOptions = [
@@ -425,38 +419,77 @@ export function EnhancedNavbar() {
                 </NavigationMenuContent>
               </NavigationMenuItem>
 
-              {/* For Owners Dropdown */}
+              {/* For Sellers Mega Menu */}
               <NavigationMenuItem>
                 <NavigationMenuTrigger className="bg-transparent text-gray-700 hover:bg-blue-50 hover:text-blue-700 data-[state=open]:bg-blue-100 data-[state=open]:text-blue-700 font-semibold transition-all">
-                  For Owners
+                  For Sellers
                 </NavigationMenuTrigger>
                 <NavigationMenuContent>
-                  <div className="w-[250px] p-2">
-                    {ownersOptions.map(option => (
-                      <a key={option.href} href={option.href}>
-                        <NavigationMenuLink className="block p-3 hover:bg-blue-50 hover:text-blue-600 rounded-md transition-colors">
-                          {option.label}
-                        </NavigationMenuLink>
-                      </a>
-                    ))}
-                  </div>
-                </NavigationMenuContent>
-              </NavigationMenuItem>
+                  <div className="w-[850px] p-0 overflow-hidden flex">
+                    {/* Main Content */}
+                    <div className="flex-1 p-8 grid grid-cols-3 gap-12 bg-white">
+                      {/* Find Professionals */}
+                      <div className="space-y-5">
+                        <h4 className="font-bold text-slate-800 text-base flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center">
+                            <User className="h-4 w-4 text-blue-600" />
+                          </div>
+                          Find Professionals
+                        </h4>
+                        <ul className="space-y-3 text-sm pl-1">
+                          <li><Link href="/agents"><span className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1.5">Find Estate Agents</span></Link></li>
+                          <li><Link href="/agencies"><span className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1.5">Find Agencies</span></Link></li>
+                          <li><Link href="/developments"><span className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1.5">Property Developers</span></Link></li>
+                        </ul>
+                      </div>
 
-              {/* For Developers Dropdown */}
-              <NavigationMenuItem>
-                <NavigationMenuTrigger className="bg-transparent text-gray-700 hover:bg-blue-50 hover:text-blue-700 data-[state=open]:bg-blue-100 data-[state=open]:text-blue-700 font-semibold transition-all">
-                  For Developers
-                </NavigationMenuTrigger>
-                <NavigationMenuContent>
-                  <div className="w-[250px] p-2">
-                    {developersOptions.map(option => (
-                      <a key={option.href} href={option.href}>
-                        <NavigationMenuLink className="block p-3 hover:bg-blue-50 hover:text-blue-600 rounded-md transition-colors">
-                          {option.label}
-                        </NavigationMenuLink>
-                      </a>
-                    ))}
+                      {/* Sell Your Property */}
+                      <div className="space-y-5">
+                        <h4 className="font-bold text-slate-800 text-base flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center">
+                            <Key className="h-4 w-4 text-blue-600" />
+                          </div>
+                          Sell Your Property
+                        </h4>
+                        <ul className="space-y-3 text-sm pl-1">
+                          <li><Link href="/advertise"><span className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1.5">Post For Sale by Owner</span></Link></li>
+                          <li><Link href="/advertise"><span className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1.5">List Privately</span></Link></li>
+                          <li><Link href="/dashboard"><span className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1.5">My Dashboard</span></Link></li>
+                        </ul>
+                      </div>
+
+                      {/* Selling Tools */}
+                      <div className="space-y-5">
+                        <h4 className="font-bold text-slate-800 text-base flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center">
+                            <Lightbulb className="h-4 w-4 text-blue-600" />
+                          </div>
+                          Selling Tools
+                        </h4>
+                        <ul className="space-y-3 text-sm pl-1">
+                          <li><Link href="#"><span className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1.5">Property Valuation</span></Link></li>
+                          <li><Link href="#"><span className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1.5">Sold House Prices</span></Link></li>
+                          <li><Link href="#"><span className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1.5">Seller Guide</span></Link></li>
+                          <li><Link href="#"><span className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1.5">Market Trends</span></Link></li>
+                        </ul>
+                      </div>
+                    </div>
+
+                    {/* Featured Sidebar */}
+                    <div className="w-64 bg-slate-50 p-6 border-l border-slate-100 flex flex-col justify-center">
+                      <div className="bg-white rounded-xl p-5 shadow-sm border border-slate-100">
+                        <div className="w-12 h-12 rounded-lg bg-blue-100 flex items-center justify-center mb-4">
+                          <Building2 className="h-6 w-6 text-blue-600" />
+                        </div>
+                        <h5 className="font-bold text-slate-800 mb-2">For Developers</h5>
+                        <p className="text-sm text-slate-500 mb-4">List your development and reach thousands of buyers.</p>
+                        <Link href="/developer">
+                          <Button variant="outline" size="sm" className="w-full text-sm h-9 border-blue-200 text-blue-600 hover:bg-blue-50">
+                            Developer Portal
+                          </Button>
+                        </Link>
+                      </div>
+                    </div>
                   </div>
                 </NavigationMenuContent>
               </NavigationMenuItem>
