@@ -69,7 +69,17 @@ This implementation plan breaks down the Explore frontend refinement into discre
 
 ## Phase 2: Video Experience Enhancement
 
-- [ ] 5. Implement video playback hook
+- [x] 5. Implement video playback hook
+
+
+
+
+
+
+
+
+
+
   - Create `client/src/hooks/useVideoPlayback.ts` with IntersectionObserver
   - Implement viewport detection with 50% threshold
   - Add auto-play logic when video enters viewport
@@ -78,14 +88,24 @@ This implementation plan breaks down the Explore frontend refinement into discre
   - Add error handling with retry logic
   - _Requirements: 2.1, 2.3, 2.7_
 
-- [ ] 6. Add video preloading system
+- [x] 6. Add video preloading system
+
+
+
+
+
   - Implement preload logic for next 2 videos in feed
   - Add network speed detection for adaptive loading
   - Implement low-bandwidth mode with poster images
   - Add manual play button for slow connections
   - _Requirements: 2.2, 2.4_
 
-- [ ] 7. Refactor VideoCard component
+- [x] 7. Refactor VideoCard component
+
+
+
+
+
   - Update `client/src/components/explore/VideoCard.tsx` with new design
   - Integrate `useVideoPlayback` hook
   - Add modern glass overlay for controls (not heavy blur)
@@ -94,7 +114,11 @@ This implementation plan breaks down the Explore frontend refinement into discre
   - Ensure smooth 55+ FPS during swipe
   - _Requirements: 2.1, 2.5, 2.6, 2.7_
 
-- [ ]* 7.1 Write unit tests for video playback
+- [ ] 7.1 Write unit tests for video playback
+
+
+
+
   - Test auto-play on viewport entry
   - Test auto-pause on viewport exit
   - Test error handling and retry logic
@@ -105,13 +129,24 @@ This implementation plan breaks down the Explore frontend refinement into discre
 
 ## Phase 3: Map/Feed Synchronization
 
-- [ ] 8. Create throttle and debounce utilities
+- [x] 8. Create throttle and debounce utilities
+
+
+
+
+
+
   - Create `client/src/hooks/useThrottle.ts` with 250ms throttle
   - Create `client/src/hooks/useDebounce.ts` with 300ms debounce
   - Add TypeScript generics for type safety
   - _Requirements: 3.4_
 
-- [ ] 9. Implement map/feed sync hook
+- [x] 9. Implement map/feed sync hook
+
+
+
+
+
   - Create `client/src/hooks/useMapFeedSync.ts`
   - Implement throttled map pan updates (250ms)
   - Implement debounced feed updates (300ms)
