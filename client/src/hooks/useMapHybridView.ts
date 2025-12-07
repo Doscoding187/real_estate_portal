@@ -1,6 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { apiClient } from '@/lib/api-client';
+import { trpc } from '@/lib/trpc';
 
 export interface PropertyMapItem {
   id: number;
@@ -45,48 +44,39 @@ export function useMapHybridView(options: UseMapHybridViewOptions = {}) {
   const boundsChangeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Fetch properties within map bounds
-  const { data: propertiesData, isLoading, refetch } = useQuery({
-    queryKey: ['mapProperties', viewport.bounds, options.categoryId, options.filters],
-    queryFn: async () => {
-      if (!viewport.bounds) return [];
-
-      const ne = viewport.bounds.getNorthEast();
-      const sw = viewport.bounds.getSouthWest();
-
-      const response = await apiClient.exploreApi.getFeed.query({
-        categoryId: options.categoryId,
-        filters: {
-          ...options.filters,
-          bounds: {
-            north: ne.lat(),
-            south: sw.lat(),
-            east: ne.lng(),
-            west: sw.lng(),
-          },
-        },
-        limit: 100,
-      });
-
-      return response.content
-        .filter((item: any) => item.contentType === 'property' && item.locationLat && item.locationLng)
+  const propertiesQuery = trpc.explore.getFeed.useQuery(
+    {
+      feedType: 'recommended',
+      limit: 100,
+      offset: 0,
+    },
+    {
+      enabled: !!viewport.bounds,
+    }
+  );
+  
+  const propertiesData = propertiesQuery.data
+    ? propertiesQuery.data
+        .filter((item: any) => item.property?.location)
         .map((item: any) => ({
           id: item.id,
           title: item.title,
-          price: item.priceMin || item.price,
-          priceMax: item.priceMax,
-          latitude: item.locationLat,
-          longitude: item.locationLng,
-          imageUrl: item.thumbnailUrl || item.imageUrl,
-          propertyType: item.propertyType || 'Property',
-          beds: item.beds,
-          baths: item.baths,
-          size: item.size,
-          location: item.location || `${item.city}, ${item.province}`,
-          isSponsored: item.isSponsored,
-        }));
-    },
-    enabled: !!viewport.bounds,
-  });
+          price: item.property?.price || 0,
+          priceMax: item.property?.priceMax,
+          latitude: item.property?.location?.latitude || 0,
+          longitude: item.property?.location?.longitude || 0,
+          imageUrl: item.media?.[0]?.thumbnailUrl || item.media?.[0]?.url || '',
+          propertyType: item.property?.type || 'Property',
+          beds: item.property?.specs?.bedrooms,
+          baths: item.property?.specs?.bathrooms,
+          size: item.property?.specs?.size,
+          location: `${item.property?.location?.suburb || ''}, ${item.property?.location?.city || ''}`,
+          isSponsored: item.isFeatured,
+        }))
+    : [];
+  
+  const isLoading = propertiesQuery.isLoading;
+  const refetch = propertiesQuery.refetch;
 
   // Update properties when data changes
   useEffect(() => {

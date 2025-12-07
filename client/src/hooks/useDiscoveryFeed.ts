@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useQuery, useMutation } from '@tanstack/react-query';
-import { apiClient } from '@/lib/api-client';
+import { trpc } from '@/lib/trpc';
 
 export interface DiscoveryItem {
   id: number;
@@ -27,33 +26,19 @@ export function useDiscoveryFeed(options: UseDiscoveryFeedOptions = {}) {
   const observerRef = useRef<IntersectionObserver | null>(null);
 
   // Fetch personalized feed
-  const { data: feedData, isLoading, error, refetch } = useQuery({
-    queryKey: ['discoveryFeed', options.categoryId, options.filters, page],
-    queryFn: async () => {
-      const response = await apiClient.exploreApi.getFeed.query({
-        categoryId: options.categoryId,
-        filters: options.filters,
-        limit: 20,
-        offset: (page - 1) * 20,
-      });
-      return response;
-    },
+  const feedQuery = trpc.explore.getFeed.useQuery({
+    feedType: 'recommended',
+    limit: 20,
+    offset: (page - 1) * 20,
   });
+  
+  const feedData = feedQuery.data ? { content: feedQuery.data } : null;
+  const isLoading = feedQuery.isLoading;
+  const error = feedQuery.error;
+  const refetch = feedQuery.refetch;
 
   // Record engagement mutation
-  const recordEngagementMutation = useMutation({
-    mutationFn: async (params: {
-      contentId: number;
-      engagementType: 'view' | 'click' | 'save' | 'share';
-    }) => {
-      return apiClient.recommendationEngine.recordEngagement.mutate({
-        contentId: params.contentId,
-        engagementType: params.engagementType,
-        watchTime: 0,
-        completed: false,
-      });
-    },
-  });
+  const recordEngagementMutation = trpc.explore.recordInteraction.useMutation();
 
   // Process feed data into content blocks
   useEffect(() => {
@@ -126,8 +111,9 @@ export function useDiscoveryFeed(options: UseDiscoveryFeedOptions = {}) {
   ) => {
     try {
       await recordEngagementMutation.mutateAsync({
-        contentId,
-        engagementType,
+        shortId: contentId,
+        interactionType: engagementType === 'click' ? 'view' : engagementType,
+        feedType: 'recommended',
       });
     } catch (error) {
       console.error('Failed to record engagement:', error);

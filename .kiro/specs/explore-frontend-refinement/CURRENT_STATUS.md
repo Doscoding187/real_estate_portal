@@ -79,7 +79,7 @@
 
 ## 🔧 Recent Fixes (December 7, 2025)
 
-### Build Error Fix
+### Build Error Fix #1
 - **Issue:** SimpleDevelopmentCard import error during build
 - **Resolution:** Stale build cache (code was already correct)
 - **Status:** ✅ Resolved
@@ -88,6 +88,18 @@
 - **Issue:** `/explore/home` route missing, causing 404 error
 - **Resolution:** Added route to App.tsx
 - **Status:** ✅ Resolved
+
+### Route Matching Order Fix
+- **Issue:** Catch-all routes matching `/explore/home` causing CORS errors
+- **Resolution:** Reordered routes in App.tsx (specific before catch-all)
+- **Status:** ✅ Resolved
+
+### Build Error Fix #2
+- **Issue:** Missing `api-client` module causing build failure
+- **Resolution:** Fixed 3 hooks to use correct TRPC imports
+- **Status:** ✅ Resolved
+- **Build Time:** 1m 20s
+- **Files Fixed:** usePersonalizedContent.ts, useDiscoveryFeed.ts, useMapHybridView.ts
 
 ---
 
@@ -178,4 +190,5 @@ All core functionality is complete and tested. The optional tasks above can be c
 
 **Status:** Ready for Production Deployment 🚀  
 **Confidence Level:** High ✅  
-**Backend Changes:** None (all APIs preserved) ✅
+**Backend Changes:** None (all APIs preserved) ✅  
+**Build Status:** Passing (1m 20s) ✅

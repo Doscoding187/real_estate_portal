@@ -5,8 +5,7 @@
  */
 
 import { useState, useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { apiClient } from '@/lib/api-client';
+import { trpc } from '@/lib/trpc';
 import { DiscoveryItem } from './useDiscoveryFeed';
 
 export interface PersonalizedSection {
@@ -26,132 +25,120 @@ export function usePersonalizedContent(options: UsePersonalizedContentOptions = 
   const [sections, setSections] = useState<PersonalizedSection[]>([]);
 
   // Fetch "For You" personalized content
-  const { data: forYouData, isLoading: forYouLoading } = useQuery({
-    queryKey: ['personalizedContent', 'for-you', options.categoryId],
-    queryFn: async () => {
-      const response = await apiClient.exploreApi.getFeed.query({
-        categoryId: options.categoryId,
-        limit: 10,
-        offset: 0,
-      });
-      return response;
-    },
+  const forYouQuery = trpc.explore.getFeed.useQuery({
+    feedType: 'recommended',
+    limit: 10,
+    offset: 0,
   });
+  
+  const forYouData = forYouQuery.data;
+  const forYouLoading = forYouQuery.isLoading;
 
   // Fetch "Popular Near You" location-based content
-  const { data: popularNearYouData, isLoading: popularNearYouLoading } = useQuery({
-    queryKey: ['personalizedContent', 'popular-near-you', options.location],
-    queryFn: async () => {
-      if (!options.location) return null;
-      
-      const response = await apiClient.exploreApi.getFeed.query({
-        location: options.location,
-        limit: 10,
-        offset: 0,
-      });
-      return response;
+  const popularNearYouQuery = trpc.explore.getFeed.useQuery(
+    {
+      feedType: 'area',
+      location: options.location ? `${options.location.lat},${options.location.lng}` : '',
+      limit: 10,
+      offset: 0,
     },
-    enabled: !!options.location,
-  });
+    {
+      enabled: !!options.location,
+    }
+  );
+  
+  const popularNearYouData = popularNearYouQuery.data;
+  const popularNearYouLoading = popularNearYouQuery.isLoading;
 
   // Fetch "New Developments" content
-  const { data: newDevelopmentsData, isLoading: newDevelopmentsLoading } = useQuery({
-    queryKey: ['personalizedContent', 'new-developments', options.categoryId],
-    queryFn: async () => {
-      // Filter for development content type
-      const response = await apiClient.exploreApi.getFeed.query({
-        categoryId: options.categoryId,
-        limit: 10,
-        offset: 0,
-      });
-      
-      // Filter for developments (in production, this would be a backend filter)
-      const developments = response.data?.items.filter(
-        (item: any) => item.contentType === 'development' || item.developmentId
-      ) || [];
-      
-      return { ...response, data: { ...response.data, items: developments } };
-    },
+  const newDevelopmentsQuery = trpc.explore.getFeed.useQuery({
+    feedType: 'recommended',
+    limit: 10,
+    offset: 0,
   });
+  
+  const newDevelopmentsData = newDevelopmentsQuery.data;
+  const newDevelopmentsLoading = newDevelopmentsQuery.isLoading;
 
   // Fetch "Trending" content
-  const { data: trendingData, isLoading: trendingLoading } = useQuery({
-    queryKey: ['personalizedContent', 'trending', options.categoryId],
-    queryFn: async () => {
-      const response = await apiClient.exploreApi.getFeed.query({
-        categoryId: options.categoryId,
-        limit: 10,
-        offset: 0,
-      });
-      
-      // Sort by engagement score (in production, backend would handle this)
-      const sorted = [...(response.data?.items || [])].sort(
-        (a: any, b: any) => (b.engagementScore || 0) - (a.engagementScore || 0)
-      );
-      
-      return { ...response, data: { ...response.data, items: sorted } };
-    },
+  const trendingQuery = trpc.explore.getFeed.useQuery({
+    feedType: 'recommended',
+    limit: 10,
+    offset: 0,
   });
+  
+  const trendingData = trendingQuery.data;
+  const trendingLoading = trendingQuery.isLoading;
 
   // Organize data into sections
   useEffect(() => {
     const newSections: PersonalizedSection[] = [];
 
     // For You section
-    if (forYouData?.data?.items && forYouData.data.items.length > 0) {
+    if (forYouData && Array.isArray(forYouData) && forYouData.length > 0) {
       newSections.push({
         id: 'for-you',
         title: 'For You',
         subtitle: 'Personalized based on your preferences',
         type: 'for-you',
-        items: forYouData.data.items.map((item: any) => ({
+        items: forYouData.map((item: any) => ({
           id: item.id,
-          type: item.contentType,
+          type: 'property',
           data: item,
         })),
       });
     }
 
     // Popular Near You section
-    if (popularNearYouData?.data?.items && popularNearYouData.data.items.length > 0) {
+    if (popularNearYouData && Array.isArray(popularNearYouData) && popularNearYouData.length > 0) {
       newSections.push({
         id: 'popular-near-you',
         title: 'Popular Near You',
         subtitle: 'Trending properties in your area',
         type: 'popular-near-you',
-        items: popularNearYouData.data.items.map((item: any) => ({
+        items: popularNearYouData.map((item: any) => ({
           id: item.id,
-          type: item.contentType,
+          type: 'property',
           data: item,
         })),
       });
     }
 
     // New Developments section
-    if (newDevelopmentsData?.data?.items && newDevelopmentsData.data.items.length > 0) {
-      newSections.push({
-        id: 'new-developments',
-        title: 'New Developments',
-        subtitle: 'Latest property developments',
-        type: 'new-developments',
-        items: newDevelopmentsData.data.items.map((item: any) => ({
-          id: item.id,
-          type: item.contentType,
-          data: item,
-        })),
-      });
+    if (newDevelopmentsData && Array.isArray(newDevelopmentsData) && newDevelopmentsData.length > 0) {
+      const developments = newDevelopmentsData.filter(
+        (item: any) => item.developmentId
+      );
+      
+      if (developments.length > 0) {
+        newSections.push({
+          id: 'new-developments',
+          title: 'New Developments',
+          subtitle: 'Latest property developments',
+          type: 'new-developments',
+          items: developments.map((item: any) => ({
+            id: item.id,
+            type: 'property',
+            data: item,
+          })),
+        });
+      }
     }
 
     // Trending section
-    if (trendingData?.data?.items && trendingData.data.items.length > 0) {
+    if (trendingData && Array.isArray(trendingData) && trendingData.length > 0) {
+      const sorted = [...trendingData].sort(
+        (a: any, b: any) => (b.viewCount || 0) - (a.viewCount || 0)
+      );
+      
       newSections.push({
         id: 'trending',
         title: 'Trending',
         subtitle: 'Most popular properties right now',
         type: 'trending',
-        items: trendingData.data.items.map((item: any) => ({
+        items: sorted.map((item: any) => ({
           id: item.id,
-          type: item.contentType,
+          type: 'property',
           data: item,
         })),
       });
