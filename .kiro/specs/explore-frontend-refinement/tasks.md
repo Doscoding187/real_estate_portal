@@ -114,7 +114,10 @@ This implementation plan breaks down the Explore frontend refinement into discre
   - Ensure smooth 55+ FPS during swipe
   - _Requirements: 2.1, 2.5, 2.6, 2.7_
 
-- [ ] 7.1 Write unit tests for video playback
+- [-] 7.1 Write unit tests for video playback
+
+
+
 
 
 
@@ -257,7 +260,9 @@ This implementation plan breaks down the Explore frontend refinement into discre
   - Integrate with existing feed components
   - _Requirements: 6.1, 6.5_
 
-- [-] 16. Add image preloading
+- [x] 16. Add image preloading
+
+
 
 
   - Create `client/src/hooks/useImagePreload.ts`

@@ -8,7 +8,7 @@ import {
   priceAnalytics,
   suburbPriceAnalytics,
   amenities
-} from '../drizzle/schema';
+} from '../../drizzle/schema';
 import { eq, and, desc, sql, like, inArray } from 'drizzle-orm';
 
 /**

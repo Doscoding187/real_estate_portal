@@ -1,9 +1,7 @@
 import { Link } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { ArrowRight, Building2 } from 'lucide-react';
-import SimpleDevelopmentCard from '@/components/SimpleDevelopmentCard';
-import { Development } from '@/types/development'; // Assuming type exists or I need to infer
-
+import { SimpleDevelopmentCard } from '@/components/SimpleDevelopmentCard';
 // Temporary type definition if not imported
 interface DevelopmentItem {
   id: number;
@@ -46,13 +44,38 @@ export function DevelopmentsGrid({ developments, locationName }: DevelopmentsGri
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {developments.map((dev) => (
-            <Link key={dev.id} href={`/development/${dev.id}`}>
-              <div className="cursor-pointer group h-full">
-                <SimpleDevelopmentCard development={dev} />
-              </div>
-            </Link>
-          ))}
+          {developments.map((dev) => {
+             // Handle image parsing safely
+             let mainImage = '';
+             if (Array.isArray(dev.images) && dev.images.length > 0) {
+               mainImage = dev.images[0];
+             } else if (typeof dev.images === 'string') {
+                try {
+                   // Sometimes comes as JSON string
+                   const parsed = JSON.parse(dev.images);
+                   mainImage = Array.isArray(parsed) ? parsed[0] : parsed;
+                } catch {
+                   mainImage = dev.images;
+                }
+             }
+
+             return (
+              <Link key={dev.id} href={`/development/${dev.id}`}>
+                <div className="cursor-pointer group h-full">
+                  <SimpleDevelopmentCard 
+                    id={dev.id.toString()}
+                    title={dev.name}
+                    city={dev.city}
+                    priceRange={{
+                      min: dev.minPrice || 0,
+                      max: 0 // We might not have max price in this view
+                    }}
+                    image={mainImage || 'https://placehold.co/600x400/e2e8f0/64748b?text=No+Image'}
+                  />
+                </div>
+              </Link>
+            )
+          })}
         </div>
       </div>
     </div>
