@@ -9,9 +9,12 @@ import { SEOTextBlock } from '@/components/location/SEOTextBlock';
 import { FinalCTA } from '@/components/location/FinalCTA';
 import { FeaturedListings } from '@/components/location/FeaturedListings';
 import { AmenitiesSection } from '@/components/location/AmenitiesSection';
+import { InteractiveMap } from '@/components/location/InteractiveMap';
+import { SimilarLocations } from '@/components/location/SimilarLocations';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Helmet } from 'react-helmet';
 import { LocationSchema } from '@/components/location/LocationSchema';
+import { useSimilarLocations } from '@/hooks/useSimilarLocations';
 
 export default function CityPage({ params }: { params: { province: string; city: string } }) {
   const [, navigate] = useLocation();
@@ -78,9 +81,18 @@ export default function CityPage({ params }: { params: { province: string; city:
         ]}
         stats={stats}
         backgroundImage="https://images.unsplash.com/photo-1449824913935-59a10b8d2000?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80"
+        placeId={city.place_id}
+        coordinates={{
+          latitude: Number(city.latitude),
+          longitude: Number(city.longitude)
+        }}
       />
 
-      <SearchRefinementBar onSearch={handleSearch} defaultLocation={city.name} />
+      <SearchRefinementBar 
+        onSearch={handleSearch} 
+        defaultLocation={city.name}
+        placeId={city.place_id}
+      />
 
       <LocationGrid 
         title={`Popular Suburbs in ${city.name}`} 
@@ -107,12 +119,38 @@ export default function CityPage({ params }: { params: { province: string; city:
         type="city"
       />
 
+      {/* Interactive Map Section */}
+      {city.latitude && city.longitude && (
+        <div className="container py-12">
+          <h2 className="text-2xl font-bold mb-6">Explore {city.name} on the Map</h2>
+          <InteractiveMap
+            center={{
+              lat: Number(city.latitude),
+              lng: Number(city.longitude),
+            }}
+            viewport={city.viewport_ne_lat ? {
+              ne_lat: Number(city.viewport_ne_lat),
+              ne_lng: Number(city.viewport_ne_lng),
+              sw_lat: Number(city.viewport_sw_lat),
+              sw_lng: Number(city.viewport_sw_lng),
+            } : undefined}
+            properties={featuredProperties.map(listing => ({
+              id: listing.id,
+              latitude: Number(listing.latitude),
+              longitude: Number(listing.longitude),
+              title: listing.title,
+              price: listing.price,
+            }))}
+          />
+        </div>
+      )}
+
       <AmenitiesSection />
 
       <SEOTextBlock
         title={`Living in ${city.name}`}
         locationName={city.name}
-        content={`
+        content={city.description || `
           <p><strong>${city.name}</strong> offers a vibrant lifestyle with a mix of historic charm and modern convenience. Located in <strong>${city.provinceName}</strong>, it is a hub for business, culture, and residential living.</p>
           <p>With an average listing price of <strong>R ${stats.avgPrice.toLocaleString()}</strong>, ${city.name} presents opportunities for various budgets. Whether you are looking for a starter apartment, a family home, or a luxury estate, you'll find it here.</p>
           <h3>Highlights</h3>
@@ -124,12 +162,31 @@ export default function CityPage({ params }: { params: { province: string; city:
         `}
       />
 
+      {/* Similar Locations Section */}
+      {city.id && (
+        <div className="container py-12">
+          <SimilarLocationsSection locationId={city.id} currentLocationName={city.name} />
+        </div>
+      )}
+
       <FinalCTA 
         locationName={city.name}
         provinceSlug={provinceSlug}
         citySlug={citySlug}
       />
     </div>
+  );
+}
+
+function SimilarLocationsSection({ locationId, currentLocationName }: { locationId: number; currentLocationName: string }) {
+  const { data: similarLocations, isLoading } = useSimilarLocations({ locationId, limit: 5 });
+
+  return (
+    <SimilarLocations
+      locations={similarLocations || []}
+      currentLocationName={currentLocationName}
+      isLoading={isLoading}
+    />
   );
 }
 

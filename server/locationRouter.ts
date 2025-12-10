@@ -646,4 +646,49 @@ export const locationRouter = router({
         throw new Error('Failed to save location to database');
       }
     }),
+
+  /**
+   * Geocode a manual address entry
+   * Requirements 7.3, 7.4: Geocode manual entries and populate coordinates
+   * Requirements 7.5: Handle geocoding failures gracefully
+   */
+  geocodeAddress: publicProcedure
+    .input(
+      z.object({
+        address: z.string().min(1).max(500),
+      })
+    )
+    .query(async ({ input }) => {
+      const { googlePlacesService } = await import('./services/googlePlacesService');
+
+      try {
+        // Use the Google Places Service to geocode the address
+        const result = await googlePlacesService.geocodeAddress(input.address);
+
+        if (!result) {
+          return {
+            success: false,
+            error: 'Could not geocode address',
+            message: 'No results found for the provided address',
+          };
+        }
+
+        return {
+          success: true,
+          result: {
+            placeId: result.placeId,
+            formattedAddress: result.formattedAddress,
+            addressComponents: result.addressComponents,
+            geometry: result.geometry,
+          },
+        };
+      } catch (error) {
+        console.error('Geocoding error:', error);
+        return {
+          success: false,
+          error: 'Geocoding failed',
+          message: error instanceof Error ? error.message : 'Unknown error occurred',
+        };
+      }
+    }),
 });

@@ -10,6 +10,21 @@ interface HeroLocationProps {
   stats?: {
     totalListings?: number;
     avgPrice?: number;
+    forSaleCount?: number;
+    toRentCount?: number;
+    developmentCount?: number;
+  };
+  // Google Places data
+  placeId?: string;
+  coordinates?: {
+    latitude: number;
+    longitude: number;
+  };
+  viewport?: {
+    ne_lat: number;
+    ne_lng: number;
+    sw_lat: number;
+    sw_lng: number;
   };
 }
 
@@ -18,7 +33,10 @@ export function HeroLocation({
   subtitle, 
   breadcrumbs, 
   backgroundImage, 
-  stats 
+  stats,
+  placeId,
+  coordinates,
+  viewport
 }: HeroLocationProps) {
   return (
     <div className="relative bg-navy-900 text-white pt-24 pb-12 overflow-hidden">
@@ -58,15 +76,33 @@ export function HeroLocation({
           </div>
 
           {stats && (
-            <div className="flex bg-white/10 backdrop-blur-sm rounded-lg p-4 border border-white/10">
-              <div className="pr-6 mr-6 border-r border-white/20">
+            <div className="flex flex-wrap gap-4 bg-white/10 backdrop-blur-sm rounded-lg p-4 border border-white/10">
+              <div className="pr-6 border-r border-white/20">
                 <p className="text-sm text-white/60 mb-1">Total Listings</p>
                 <p className="text-2xl font-bold">{stats.totalListings?.toLocaleString() || 0}</p>
               </div>
-              <div>
+              <div className="pr-6 border-r border-white/20">
                 <p className="text-sm text-white/60 mb-1">Average Price</p>
                 <p className="text-2xl font-bold">R {stats.avgPrice?.toLocaleString() || 0}</p>
               </div>
+              {stats.forSaleCount !== undefined && (
+                <div className="pr-6 border-r border-white/20">
+                  <p className="text-sm text-white/60 mb-1">For Sale</p>
+                  <p className="text-2xl font-bold">{stats.forSaleCount.toLocaleString()}</p>
+                </div>
+              )}
+              {stats.toRentCount !== undefined && (
+                <div className="pr-6 border-r border-white/20">
+                  <p className="text-sm text-white/60 mb-1">To Rent</p>
+                  <p className="text-2xl font-bold">{stats.toRentCount.toLocaleString()}</p>
+                </div>
+              )}
+              {stats.developmentCount !== undefined && (
+                <div>
+                  <p className="text-sm text-white/60 mb-1">Developments</p>
+                  <p className="text-2xl font-bold">{stats.developmentCount.toLocaleString()}</p>
+                </div>
+              )}
             </div>
           )}
         </div>

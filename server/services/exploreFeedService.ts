@@ -27,6 +27,8 @@ export interface FeedOptions {
   category?: string;
   agentId?: number;
   developerId?: number;
+  agencyId?: number;
+  includeAgentContent?: boolean;
 }
 
 export interface FeedResult {
@@ -368,8 +370,108 @@ export class ExploreFeedService {
   }
 
   /**
+   * Get agency-specific feed
+   * Shows all content attributed to an agency
+   * Requirements: 2.1, 2.2, 2.3, 2.4, 2.5
+   */
+  async getAgencyFeed(options: FeedOptions): Promise<FeedResult> {
+    const { agencyId, limit = 20, offset = 0, includeAgentContent = true } = options;
+
+    if (!agencyId) {
+      throw new Error("Agency ID required for agency feed");
+    }
+
+    try {
+      // Check cache first (Requirement 2.5)
+      const cacheKey = CacheKeys.agencyFeed(agencyId, limit, offset, includeAgentContent);
+      const cached = await cache.get<FeedResult>(cacheKey);
+      if (cached) {
+        return cached;
+      }
+
+      // Build query for agency content
+      // Requirement 2.1: Return all published content attributed to agency
+      let query = db
+        .select()
+        .from(exploreShorts)
+        .where(eq(exploreShorts.isPublished, 1));
+
+      // Query agency content with optional agent content inclusion
+      // Requirement 2.1: Support includeAgentContent option
+      if (includeAgentContent) {
+        // Include both agency-attributed content and content from agency agents
+        const result = await db.execute(sql`
+          SELECT es.* 
+          FROM explore_shorts es
+          LEFT JOIN agents a ON es.agent_id = a.id
+          WHERE es.is_published = 1
+          AND (
+            es.agency_id = ${agencyId}
+            OR a.agency_id = ${agencyId}
+          )
+          ORDER BY es.is_featured DESC, es.published_at DESC
+          LIMIT ${limit} OFFSET ${offset}
+        `);
+
+        const feedResult: FeedResult = {
+          shorts: result.rows.map(transformShort),
+          feedType: 'agency',
+          hasMore: result.rows.length === limit,
+          offset: offset + result.rows.length,
+          metadata: {
+            agencyId,
+            includeAgentContent,
+          },
+        };
+
+        // Cache result (Requirement 2.5: 5 minute TTL)
+        await cache.set(cacheKey, feedResult, CacheTTL.FEED);
+
+        return feedResult;
+      } else {
+        // Only include directly agency-attributed content
+        const shorts = await db
+          .select()
+          .from(exploreShorts)
+          .where(
+            and(
+              eq(exploreShorts.agencyId, agencyId),
+              eq(exploreShorts.isPublished, 1)
+            )
+          )
+          .orderBy(
+            desc(exploreShorts.isFeatured),
+            desc(exploreShorts.publishedAt)
+          )
+          .limit(limit)
+          .offset(offset);
+
+        const feedResult: FeedResult = {
+          shorts: shorts.map(transformShort),
+          feedType: 'agency',
+          hasMore: shorts.length === limit,
+          offset: offset + shorts.length,
+          metadata: {
+            agencyId,
+            includeAgentContent,
+          },
+        };
+
+        // Cache result (Requirement 2.5)
+        await cache.set(cacheKey, feedResult, CacheTTL.FEED);
+
+        return feedResult;
+      }
+    } catch (error) {
+      console.error("Error generating agency feed:", error);
+      throw error;
+    }
+  }
+
+  /**
    * Get feed by type
    * Convenience method to route to appropriate feed generator
+   * Updated to support 'agency' feed type (Requirement 2.1, 8.1)
    */
   async getFeed(feedType: FeedType, options: FeedOptions): Promise<FeedResult> {
     switch (feedType) {
@@ -383,6 +485,13 @@ export class ExploreFeedService {
         return this.getAgentFeed(options);
       case 'developer':
         return this.getDeveloperFeed(options);
+      case 'agency':
+        // Requirement 2.3: Add 'agency' case to getFeed routing
+        // Requirement 8.1: Validate agencyId when feedType is 'agency'
+        if (!options.agencyId) {
+          throw new Error("Agency ID required for agency feed");
+        }
+        return this.getAgencyFeed(options);
       default:
         throw new Error(`Unknown feed type: ${feedType}`);
     }

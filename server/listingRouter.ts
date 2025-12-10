@@ -91,6 +91,20 @@ export const listingRouter = router({
         };
       });
 
+      // Resolve location and create location record if needed
+      // Requirements 16.1-16.5: Link listings to locations via location_id
+      // Requirements 25.1: Store Place ID with listing data
+      let locationId: number | undefined;
+      try {
+        const { locationPagesServiceEnhanced } = await import('./services/locationPagesServiceEnhanced');
+        const location = await locationPagesServiceEnhanced.resolveLocation(input.location);
+        locationId = location.id;
+        console.log('[ListingRouter] Resolved location:', location.name, `(ID: ${locationId})`);
+      } catch (error) {
+        console.warn('[ListingRouter] Failed to resolve location, proceeding without location_id:', error);
+        // Continue without location_id - backward compatibility
+      }
+
       // Create listing in database
       const listingId = await db.createListing({
         userId,
@@ -108,6 +122,7 @@ export const listingRouter = router({
         province: input.location.province,
         postalCode: input.location.postalCode,
         placeId: input.location.placeId,
+        locationId, // New: Link to locations table
         slug,
         media,
       });

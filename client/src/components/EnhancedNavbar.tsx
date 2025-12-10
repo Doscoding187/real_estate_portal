@@ -137,6 +137,9 @@ function CityDropdownContent() {
 export function EnhancedNavbar() {
   const { user, logout } = useAuth();
   const [location, setLocation] = useLocation();
+  
+  // Check if current route is advertise page
+  const isAdvertisePage = location === '/advertise';
   const [showLocationModal, setShowLocationModal] = useState(false);
   const [pendingNavigation, setPendingNavigation] = useState<{
     propertyType: string;
@@ -539,7 +542,14 @@ export function EnhancedNavbar() {
                 <Link href="/advertise">
                   <Button
                     size="sm"
-                    className="bg-gradient-to-r from-blue-700 to-blue-800 text-white hover:from-blue-800 hover:to-blue-900 shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-200 font-bold border border-blue-600"
+                    className={`
+                      ${isAdvertisePage 
+                        ? 'bg-gradient-to-r from-blue-800 to-blue-900 ring-2 ring-blue-400 ring-offset-2' 
+                        : 'bg-gradient-to-r from-blue-700 to-blue-800 hover:from-blue-800 hover:to-blue-900'
+                      }
+                      text-white shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-200 font-bold border border-blue-600
+                    `}
+                    aria-current={isAdvertisePage ? 'page' : undefined}
                   >
                     <Megaphone className="h-4 w-4 mr-2" />
                     Advertise with us

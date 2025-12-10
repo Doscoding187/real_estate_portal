@@ -159,8 +159,143 @@ export async function generateVideoUploadUrls(
 }
 
 /**
+ * Validate agency attribution
+ * Requirements 10.5, 4.4: Verify agency relationships and prevent invalid attribution
+ */
+async function validateAgencyAttribution(
+  agentId: number | null,
+  agencyId: number | null
+): Promise<{ valid: boolean; error?: string }> {
+  // If no agency attribution, validation passes
+  if (!agencyId) {
+    return { valid: true };
+  }
+
+  // If agency is specified, agent must also be specified
+  if (!agentId) {
+    return {
+      valid: false,
+      error: 'Agency attribution requires an agent',
+    };
+  }
+
+  const { agencies, agents } = await import('../../drizzle/schema');
+
+  // Verify agency exists and is active
+  const agencyRecord = await db
+    .select({
+      id: agencies.id,
+      name: agencies.name,
+    })
+    .from(agencies)
+    .where(eq(agencies.id, agencyId))
+    .limit(1);
+
+  if (!agencyRecord[0]) {
+    return {
+      valid: false,
+      error: `Agency with ID ${agencyId} does not exist`,
+    };
+  }
+
+  // Verify agent belongs to the specified agency
+  const agentRecord = await db
+    .select({
+      id: agents.id,
+      agencyId: agents.agencyId,
+    })
+    .from(agents)
+    .where(eq(agents.id, agentId))
+    .limit(1);
+
+  if (!agentRecord[0]) {
+    return {
+      valid: false,
+      error: `Agent with ID ${agentId} does not exist`,
+    };
+  }
+
+  if (agentRecord[0].agencyId !== agencyId) {
+    return {
+      valid: false,
+      error: `Agent ${agentId} does not belong to agency ${agencyId}`,
+    };
+  }
+
+  console.log(`[ExploreVideo] Agency attribution validated: agent ${agentId} belongs to agency ${agencyId}`);
+
+  return { valid: true };
+}
+
+/**
+ * Detect agent's agency affiliation
+ * Requirements 10.1, 10.2: Auto-detect and populate agency attribution
+ */
+async function detectAgencyAffiliation(creatorId: number): Promise<{
+  agencyId: number | null;
+  agentId: number | null;
+  creatorType: 'user' | 'agent' | 'developer' | 'agency';
+}> {
+  const { agents, users } = await import('../../drizzle/schema');
+  
+  // Check if creator is an agent
+  const agentRecord = await db
+    .select({
+      id: agents.id,
+      agencyId: agents.agencyId,
+      userId: agents.userId,
+    })
+    .from(agents)
+    .where(eq(agents.userId, creatorId))
+    .limit(1);
+
+  if (agentRecord[0]) {
+    const agencyId = agentRecord[0].agencyId;
+    const agentId = agentRecord[0].id;
+    
+    console.log(`[ExploreVideo] Detected agent ${agentId} with agency ${agencyId || 'none'} for user ${creatorId}`);
+    
+    return {
+      agencyId,
+      agentId,
+      creatorType: 'agent',
+    };
+  }
+
+  // Check if creator is a developer
+  const { developers } = await import('../../drizzle/schema');
+  const developerRecord = await db
+    .select({
+      id: developers.id,
+    })
+    .from(developers)
+    .where(eq(developers.userId, creatorId))
+    .limit(1);
+
+  if (developerRecord[0]) {
+    console.log(`[ExploreVideo] Detected developer ${developerRecord[0].id} for user ${creatorId}`);
+    
+    return {
+      agencyId: null,
+      agentId: null,
+      creatorType: 'developer',
+    };
+  }
+
+  // Default to regular user
+  console.log(`[ExploreVideo] User ${creatorId} is a regular user (not agent or developer)`);
+  
+  return {
+    agencyId: null,
+    agentId: null,
+    creatorType: 'user',
+  };
+}
+
+/**
  * Create explore content and video records after successful upload
  * Requirements 8.1, 8.2: Store video metadata and make available in feed
+ * Requirements 10.1, 10.2: Auto-populate agency attribution
  */
 export async function createExploreVideo(
   creatorId: number,
@@ -180,6 +315,27 @@ export async function createExploreVideo(
   if (!durationValidation.valid) {
     throw new Error(durationValidation.error);
   }
+
+  // Detect agency affiliation
+  const affiliation = await detectAgencyAffiliation(creatorId);
+  
+  // Validate agency attribution
+  // Requirements 10.5, 4.4: Prevent invalid agency attribution
+  const attributionValidation = await validateAgencyAttribution(
+    affiliation.agentId,
+    affiliation.agencyId
+  );
+  
+  if (!attributionValidation.valid) {
+    throw new Error(`Invalid agency attribution: ${attributionValidation.error}`);
+  }
+  
+  console.log(`[ExploreVideo] Agency attribution decision:`, {
+    creatorId,
+    agencyId: affiliation.agencyId,
+    agentId: affiliation.agentId,
+    creatorType: affiliation.creatorType,
+  });
 
   // Verify property or development exists
   let locationLat: number | null = null;
@@ -220,11 +376,13 @@ export async function createExploreVideo(
   }
 
   try {
-    // Create explore_content record
+    // Create explore_content record with agency attribution
     const contentResult = await db.insert(exploreContent).values({
       contentType: 'video',
       referenceId: metadata.propertyId || metadata.developmentId || 0,
       creatorId,
+      creatorType: affiliation.creatorType,
+      agencyId: affiliation.agencyId,
       title: metadata.title,
       description: metadata.description || null,
       thumbnailUrl,

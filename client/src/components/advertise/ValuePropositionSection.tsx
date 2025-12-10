@@ -59,6 +59,8 @@ export const ValuePropositionSection: React.FC<ValuePropositionSectionProps> = (
         background: softUITokens.colors.neutral.gray50,
       }}
       aria-labelledby="value-proposition-heading"
+      aria-describedby="value-proposition-description"
+      role="region"
     >
       <div
         style={{
@@ -91,6 +93,7 @@ export const ValuePropositionSection: React.FC<ValuePropositionSectionProps> = (
           </motion.h2>
           
           <motion.p
+            id="value-proposition-description"
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
@@ -119,15 +122,18 @@ export const ValuePropositionSection: React.FC<ValuePropositionSectionProps> = (
             gap: softUITokens.spacing['3xl'],
             alignItems: 'start',
           }}
+          role="list"
+          aria-label="Platform benefits"
         >
           {features.map((feature, index) => (
-            <FeatureBlock
-              key={feature.headline}
-              icon={feature.icon}
-              headline={feature.headline}
-              description={feature.description}
-              index={index}
-            />
+            <div key={feature.headline} role="listitem">
+              <FeatureBlock
+                icon={feature.icon}
+                headline={feature.headline}
+                description={feature.description}
+                index={index}
+              />
+            </div>
           ))}
         </motion.div>
       </div>

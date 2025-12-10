@@ -15,12 +15,20 @@
  * - Apple Human Interface Guidelines
  * - Nielsen Norman Group research on perceived performance
  * 
+ * Reduced Motion Support:
+ * All animations respect the prefers-reduced-motion media query.
+ * Use createAccessibleVariants() from motionUtils.ts for automatic support.
+ * 
  * References:
  * - https://material.io/design/motion/speed.html
  * - https://developer.apple.com/design/human-interface-guidelines/motion
+ * - https://www.w3.org/WAI/WCAG21/Understanding/animation-from-interactions.html
+ * 
+ * Requirements: 11.1, 11.2, 11.3, 11.4, 11.5
  */
 
 import { Variants } from 'framer-motion';
+import { createAccessibleVariants, getAccessibleDuration } from './motionUtils';
 
 /**
  * Fade-up animation variant
@@ -304,4 +312,103 @@ export const animationConfig = {
     normal: 0.1,
     slow: 0.15,
   },
+} as const;
+
+
+/**
+ * Create variants with reduced motion support
+ * Wrapper function that applies reduced motion logic to any variant
+ * 
+ * @param variants - Animation variants
+ * @returns Variants with reduced motion support
+ * 
+ * @example
+ * ```tsx
+ * const accessibleFadeUp = withReducedMotion(fadeUp);
+ * 
+ * <motion.div variants={accessibleFadeUp}>
+ *   Content
+ * </motion.div>
+ * ```
+ */
+export function withReducedMotion(variants: Variants): Variants {
+  return createAccessibleVariants(variants);
+}
+
+/**
+ * Get animation duration with reduced motion support
+ * 
+ * @param duration - Normal duration in seconds
+ * @returns Duration with reduced motion support
+ */
+export function getAnimationDuration(duration: number): number {
+  return getAccessibleDuration(duration);
+}
+
+/**
+ * Reduced motion-safe variants
+ * These variants only use opacity changes for accessibility
+ */
+export const reducedMotionSafe = {
+  fadeIn: {
+    initial: { opacity: 0 },
+    animate: { opacity: 1, transition: { duration: 0.01 } },
+    exit: { opacity: 0, transition: { duration: 0.01 } },
+  },
+  visible: {
+    initial: { opacity: 0 },
+    animate: { opacity: 1, transition: { duration: 0.01 } },
+  },
+} as const;
+
+/**
+ * Get motion props with automatic reduced motion support
+ * This is a convenience function that checks reduced motion and returns appropriate props
+ * 
+ * @param variants - Animation variants
+ * @param transition - Animation transition
+ * @returns Motion props with reduced motion support
+ * 
+ * @example
+ * ```tsx
+ * <motion.div {...getMotionProps(fadeUp, { duration: 0.4 })}>
+ *   Content
+ * </motion.div>
+ * ```
+ */
+export function getMotionProps(
+  variants: Variants,
+  transition?: Transition
+) {
+  const prefersReducedMotion = checkReducedMotion();
+  
+  if (prefersReducedMotion) {
+    return {
+      variants: reducedMotionSafe.fadeIn,
+      transition: { duration: 0.01 },
+    };
+  }
+  
+  return {
+    variants,
+    transition,
+  };
+}
+
+/**
+ * All animation variants exported with automatic reduced motion support
+ * These can be used directly in components and will respect user preferences
+ */
+export const accessibleAnimations = {
+  fadeUp: () => withReducedMotion(fadeUp),
+  softLift: () => withReducedMotion(softLift),
+  staggerContainer: () => withReducedMotion(staggerContainer),
+  staggerItem: () => withReducedMotion(staggerItem),
+  scaleIn: () => withReducedMotion(scaleIn),
+  slideInLeft: () => withReducedMotion(slideInLeft),
+  slideInRight: () => withReducedMotion(slideInRight),
+  fade: () => withReducedMotion(fade),
+  buttonPress: () => withReducedMotion(buttonPress),
+  pulse: () => withReducedMotion(pulse),
+  rotate: () => withReducedMotion(rotate),
 } as const;

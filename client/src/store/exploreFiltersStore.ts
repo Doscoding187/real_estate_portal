@@ -14,6 +14,7 @@ interface FilterState {
   bathrooms: number | null;
   categoryId: number | null;
   location: string | null;
+  agencyId: number | null;
   
   // Actions
   setPropertyType: (type: string | null) => void;
@@ -22,6 +23,7 @@ interface FilterState {
   setBathrooms: (count: number | null) => void;
   setCategoryId: (id: number | null) => void;
   setLocation: (location: string | null) => void;
+  setAgencyId: (id: number | null) => void;
   clearFilters: () => void;
   getFilterCount: () => number;
 }
@@ -48,6 +50,7 @@ export const useExploreFiltersStore = create<FilterState>()(
       bathrooms: null,
       categoryId: null,
       location: null,
+      agencyId: null,
 
       // Actions
       setPropertyType: (type) => set({ propertyType: type }),
@@ -62,6 +65,8 @@ export const useExploreFiltersStore = create<FilterState>()(
       
       setLocation: (location) => set({ location }),
       
+      setAgencyId: (id) => set({ agencyId: id }),
+      
       clearFilters: () =>
         set({
           propertyType: null,
@@ -71,6 +76,7 @@ export const useExploreFiltersStore = create<FilterState>()(
           bathrooms: null,
           categoryId: null,
           location: null,
+          agencyId: null,
         }),
       
       getFilterCount: () => {
@@ -83,6 +89,7 @@ export const useExploreFiltersStore = create<FilterState>()(
           state.bathrooms,
           state.categoryId,
           state.location,
+          state.agencyId,
         ].filter(Boolean).length;
       },
     }),

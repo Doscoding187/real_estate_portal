@@ -88,6 +88,7 @@ const defaultFAQs: FAQ[] = [
  */
 export function FAQSection({ faqs = defaultFAQs }: FAQSectionProps) {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
+  const [focusedIndex, setFocusedIndex] = useState<number>(0);
   const { ref, isVisible } = useScrollAnimation();
 
   const handleToggle = (index: number) => {
@@ -97,11 +98,38 @@ export function FAQSection({ faqs = defaultFAQs }: FAQSectionProps) {
   // Sort FAQs by order
   const sortedFAQs = [...faqs].sort((a, b) => a.order - b.order);
 
+  // Handle arrow key navigation between FAQ items
+  const handleKeyDown = (e: React.KeyboardEvent, index: number) => {
+    switch (e.key) {
+      case 'ArrowDown':
+        e.preventDefault();
+        const nextIndex = (index + 1) % sortedFAQs.length;
+        setFocusedIndex(nextIndex);
+        // Focus will be handled by the FAQAccordionItem
+        break;
+      case 'ArrowUp':
+        e.preventDefault();
+        const prevIndex = (index - 1 + sortedFAQs.length) % sortedFAQs.length;
+        setFocusedIndex(prevIndex);
+        break;
+      case 'Home':
+        e.preventDefault();
+        setFocusedIndex(0);
+        break;
+      case 'End':
+        e.preventDefault();
+        setFocusedIndex(sortedFAQs.length - 1);
+        break;
+    }
+  };
+
   return (
     <section
       ref={ref}
       className="py-20 px-4 bg-gradient-to-b from-white to-gray-50"
       aria-labelledby="faq-heading"
+      aria-describedby="faq-description"
+      role="region"
     >
       <div className="max-w-4xl mx-auto">
         <motion.div
@@ -116,7 +144,7 @@ export function FAQSection({ faqs = defaultFAQs }: FAQSectionProps) {
           >
             Frequently Asked Questions
           </h2>
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+          <p id="faq-description" className="text-lg text-gray-600 max-w-2xl mx-auto">
             Find answers to common questions about advertising on our platform
           </p>
         </motion.div>
@@ -126,15 +154,21 @@ export function FAQSection({ faqs = defaultFAQs }: FAQSectionProps) {
           animate={isVisible ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
           transition={{ duration: 0.6, delay: 0.2, ease: [0.4, 0, 0.2, 1] }}
           className="space-y-4"
+          role="list"
+          aria-label="Frequently asked questions"
         >
           {sortedFAQs.map((faq, index) => (
-            <FAQAccordionItem
-              key={faq.id}
-              question={faq.question}
-              answer={faq.answer}
-              isOpen={openIndex === index}
-              onToggle={() => handleToggle(index)}
-            />
+            <div key={faq.id} role="listitem">
+              <FAQAccordionItem
+                question={faq.question}
+                answer={faq.answer}
+                isOpen={openIndex === index}
+                onToggle={() => handleToggle(index)}
+                onKeyDown={(e) => handleKeyDown(e, index)}
+                isFocused={focusedIndex === index}
+                index={index}
+              />
+            </div>
           ))}
         </motion.div>
 
@@ -150,6 +184,7 @@ export function FAQSection({ faqs = defaultFAQs }: FAQSectionProps) {
           <a
             href="/contact"
             className="inline-flex items-center justify-center px-6 py-3 text-base font-semibold text-white bg-gradient-to-r from-primary to-purple-600 rounded-xl hover:shadow-lg transition-all duration-300"
+            aria-label="Contact our team for more information"
           >
             Contact Our Team
           </a>

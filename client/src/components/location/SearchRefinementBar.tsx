@@ -6,9 +6,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 interface SearchRefinementBarProps {
   onSearch: (filters: any) => void;
   defaultLocation?: string;
+  placeId?: string; // Google Places ID for precise filtering
 }
 
-export function SearchRefinementBar({ onSearch, defaultLocation }: SearchRefinementBarProps) {
+export function SearchRefinementBar({ onSearch, defaultLocation, placeId }: SearchRefinementBarProps) {
   return (
     <div className="bg-white border-b sticky top-16 z-40 shadow-sm">
       <div className="container py-4">

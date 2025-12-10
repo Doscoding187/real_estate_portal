@@ -102,6 +102,8 @@ export const PartnerSelectionSection: React.FC<PartnerSelectionSectionProps> = (
         background: softUITokens.colors.neutral.gray50,
       }}
       aria-labelledby="partner-selection-heading"
+      aria-describedby="partner-selection-description"
+      role="region"
     >
       <div
         style={{
@@ -129,6 +131,7 @@ export const PartnerSelectionSection: React.FC<PartnerSelectionSectionProps> = (
             {title}
           </h2>
           <p
+            id="partner-selection-description"
             style={{
               fontSize: softUITokens.typography.fontSize.xl,
               color: softUITokens.colors.neutral.gray600,
@@ -153,16 +156,19 @@ export const PartnerSelectionSection: React.FC<PartnerSelectionSectionProps> = (
             gap: softUITokens.spacing.xl,
           }}
           className="partner-cards-grid"
+          role="list"
+          aria-label="Partner type options"
         >
           {partnerTypes.map((partnerType, index) => (
-            <PartnerTypeCard
-              key={partnerType.id}
-              icon={partnerType.icon}
-              title={partnerType.title}
-              benefit={partnerType.benefit}
-              href={partnerType.href}
-              index={index}
-            />
+            <div key={partnerType.id} role="listitem">
+              <PartnerTypeCard
+                icon={partnerType.icon}
+                title={partnerType.title}
+                benefit={partnerType.benefit}
+                href={partnerType.href}
+                index={index}
+              />
+            </div>
           ))}
         </motion.div>
       </div>

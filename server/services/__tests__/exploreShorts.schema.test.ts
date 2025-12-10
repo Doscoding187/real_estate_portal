@@ -184,7 +184,7 @@ describe('Explore Shorts Database Schema', () => {
             'book_viewing'
           ),
           duration: fc.option(fc.integer({ min: 0, max: 300 }), { nil: null }),
-          feedType: fc.constantFrom('recommended', 'area', 'category', 'agent', 'developer'),
+          feedType: fc.constantFrom('recommended', 'area', 'category', 'agent', 'developer', 'agency'),
           deviceType: fc.constantFrom('mobile', 'tablet', 'desktop'),
         }),
         async (interactionData) => {

@@ -215,12 +215,21 @@ export const cities = mysqlTable("cities", {
 	id: int().autoincrement().notNull(),
 	provinceId: int().notNull().references(() => provinces.id, { onDelete: "cascade" } ),
 	name: varchar({ length: 150 }).notNull(),
+	slug: varchar({ length: 200 }),
+	placeId: varchar("place_id", { length: 255 }),
+	seoTitle: varchar("seo_title", { length: 255 }),
+	seoDescription: text("seo_description"),
 	latitude: varchar({ length: 20 }),
 	longitude: varchar({ length: 21 }),
 	isMetro: int().notNull(),
 	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
 	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
-});
+},
+(table) => [
+	index("idx_cities_slug").on(table.slug),
+	index("idx_cities_place_id").on(table.placeId),
+	index("idx_cities_slug_province").on(table.slug, table.provinceId),
+]);
 
 export const cityPriceAnalytics = mysqlTable("city_price_analytics", {
 	id: int().autoincrement().notNull(),
@@ -474,6 +483,7 @@ export const developments = mysqlTable("developments", {
 	city: varchar({ length: 100 }).notNull(),
 	province: varchar({ length: 100 }).notNull(),
 	suburb: varchar({ length: 100 }),
+	locationId: int("location_id").references(() => locations.id, { onDelete: "set null" } ),
 	postalCode: varchar("postal_code", { length: 20 }),
 	latitude: varchar({ length: 50 }),
 	longitude: varchar({ length: 50 }),
@@ -503,6 +513,7 @@ export const developments = mysqlTable("developments", {
 	index("idx_developments_status").on(table.status),
 	index("idx_developments_gps_accuracy").on(table.gpsAccuracy),
 	index("idx_developments_suburb").on(table.suburb),
+	index("idx_developments_location_id").on(table.locationId),
 	index("idx_developments_rating").on(table.rating),
 	index("idx_developments_published").on(table.isPublished, table.publishedAt),
 ]);
@@ -807,6 +818,7 @@ export const exploreShorts = mysqlTable("explore_shorts", {
 	developmentId: int("development_id"),
 	agentId: int("agent_id"),
 	developerId: int("developer_id"),
+	agencyId: int("agency_id"),
 	contentType: mysqlEnum("content_type", ['property_tour', 'development_promo', 'agent_intro', 'neighbourhood_tour', 'market_insight', 'lifestyle', 'education']).default('property_tour').notNull(),
 	topicId: int("topic_id").references(() => exploreTopics.id, { onDelete: 'set null' }),
 	categoryId: int("category_id").references(() => exploreCategories.id, { onDelete: 'set null' }),
@@ -837,9 +849,12 @@ export const exploreShorts = mysqlTable("explore_shorts", {
 	index("idx_explore_shorts_listing_id").on(table.listingId),
 	index("idx_explore_shorts_development_id").on(table.developmentId),
 	index("idx_explore_shorts_agent_id").on(table.agentId),
+	index("idx_explore_shorts_agency_id").on(table.agencyId),
 	index("idx_explore_shorts_performance_score").on(table.performanceScore),
 	index("idx_explore_shorts_boost_priority").on(table.boostPriority),
 	index("idx_explore_shorts_published").on(table.isPublished, table.publishedAt),
+	index("idx_explore_shorts_agency_published").on(table.agencyId, table.isPublished, table.publishedAt),
+	index("idx_explore_shorts_agency_performance").on(table.agencyId, table.performanceScore, table.viewCount),
 ]);
 
 export const exploreUserPreferences = mysqlTable("explore_user_preferences", {
@@ -1157,13 +1172,48 @@ export const locations = mysqlTable("locations", {
 	slug: varchar({ length: 200 }).notNull(),
 	type: mysqlEnum(['province','city','suburb','neighborhood']).notNull(),
 	parentId: int(),
+	placeId: varchar("place_id", { length: 255 }),
 	description: text(),
 	latitude: varchar({ length: 50 }),
 	longitude: varchar({ length: 50 }),
+	viewportNeLat: decimal("viewport_ne_lat", { precision: 10, scale: 8 }),
+	viewportNeLng: decimal("viewport_ne_lng", { precision: 11, scale: 8 }),
+	viewportSwLat: decimal("viewport_sw_lat", { precision: 10, scale: 8 }),
+	viewportSwLng: decimal("viewport_sw_lng", { precision: 11, scale: 8 }),
+	seoTitle: varchar("seo_title", { length: 255 }),
+	seoDescription: text("seo_description"),
+	heroImage: varchar("hero_image", { length: 500 }),
 	propertyCount: int(),
 	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
 	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
-});
+},
+(table) => [
+	index("idx_locations_place_id").on(table.placeId),
+	index("idx_locations_slug").on(table.slug),
+	index("idx_locations_parent_id").on(table.parentId),
+]);
+
+export const locationSearches = mysqlTable("location_searches", {
+	id: int().autoincrement().notNull(),
+	locationId: int("location_id").notNull().references(() => locations.id, { onDelete: "cascade" }),
+	userId: int("user_id").references(() => users.id, { onDelete: "set null" }),
+	searchedAt: timestamp("searched_at", { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+},
+(table) => [
+	index("idx_location_searched").on(table.locationId, table.searchedAt),
+	index("idx_user_id").on(table.userId),
+]);
+
+export const recentSearches = mysqlTable("recent_searches", {
+	id: int().autoincrement().notNull(),
+	userId: int("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+	locationId: int("location_id").notNull().references(() => locations.id, { onDelete: "cascade" }),
+	searchedAt: timestamp("searched_at", { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+},
+(table) => [
+	index("idx_user_recent").on(table.userId, table.searchedAt),
+	index("unique_user_location").on(table.userId, table.locationId),
+]);
 
 export const marketInsightsCache = mysqlTable("market_insights_cache", {
 	id: int().autoincrement().notNull(),
@@ -1338,6 +1388,7 @@ export const properties = mysqlTable("properties", {
 	provinceId: int().references(() => provinces.id, { onDelete: "set null" } ),
 	cityId: int().references(() => cities.id, { onDelete: "set null" } ),
 	suburbId: int().references(() => suburbs.id, { onDelete: "set null" } ),
+	locationId: int("location_id").references(() => locations.id, { onDelete: "set null" } ),
 	locationText: text(),
 	placeId: varchar({ length: 255 }),
 	amenities: text(),
@@ -1369,6 +1420,7 @@ export const properties = mysqlTable("properties", {
 	index("bathrooms_idx").on(table.bathrooms),
 	index("idx_properties_cityId").on(table.cityId),
 	index("idx_properties_suburbId").on(table.suburbId),
+	index("idx_properties_location_id").on(table.locationId),
 	index("idx_properties_cityId_status").on(table.cityId, table.status),
 	index("idx_properties_cityId_area").on(table.cityId, table.area),
 ]);
@@ -1437,12 +1489,20 @@ export const prospects = mysqlTable("prospects", {
 export const provinces = mysqlTable("provinces", {
 	id: int().autoincrement().notNull(),
 	name: varchar({ length: 100 }).notNull(),
+	slug: varchar({ length: 200 }),
+	placeId: varchar("place_id", { length: 255 }),
+	seoTitle: varchar("seo_title", { length: 255 }),
+	seoDescription: text("seo_description"),
 	code: varchar({ length: 10 }).notNull(),
 	latitude: varchar({ length: 20 }),
 	longitude: varchar({ length: 21 }),
 	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
 	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
-});
+},
+(table) => [
+	index("idx_provinces_slug").on(table.slug),
+	index("idx_provinces_place_id").on(table.placeId),
+]);
 
 export const recentlyViewed = mysqlTable("recently_viewed", {
 	id: int().autoincrement().notNull(),
@@ -1611,12 +1671,21 @@ export const suburbs = mysqlTable("suburbs", {
 	id: int().autoincrement().notNull(),
 	cityId: int().notNull().references(() => cities.id, { onDelete: "cascade" } ),
 	name: varchar({ length: 200 }).notNull(),
+	slug: varchar({ length: 200 }),
+	placeId: varchar("place_id", { length: 255 }),
+	seoTitle: varchar("seo_title", { length: 255 }),
+	seoDescription: text("seo_description"),
 	latitude: varchar({ length: 20 }),
 	longitude: varchar({ length: 21 }),
 	postalCode: varchar({ length: 10 }),
 	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
 	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
-});
+},
+(table) => [
+	index("idx_suburbs_slug").on(table.slug),
+	index("idx_suburbs_place_id").on(table.placeId),
+	index("idx_suburbs_slug_city").on(table.slug, table.cityId),
+]);
 
 export const userBehaviorEvents = mysqlTable("user_behavior_events", {
 	id: int().autoincrement().notNull(),
@@ -1783,6 +1852,8 @@ export const exploreContent = mysqlTable("explore_content", {
 	contentType: varchar("content_type", { length: 50 }).notNull(),
 	referenceId: int("reference_id").notNull(),
 	creatorId: int("creator_id"),
+	creatorType: mysqlEnum("creator_type", ['user', 'agent', 'developer', 'agency']).default('user').notNull(),
+	agencyId: int("agency_id"),
 	title: varchar({ length: 255 }),
 	description: text(),
 	thumbnailUrl: varchar("thumbnail_url", { length: 500 }),
@@ -1804,9 +1875,12 @@ export const exploreContent = mysqlTable("explore_content", {
 (table) => [
 	index("idx_explore_content_type").on(table.contentType),
 	index("idx_explore_content_creator").on(table.creatorId),
+	index("idx_explore_content_creator_type").on(table.creatorType),
+	index("idx_explore_content_agency_id").on(table.agencyId),
 	index("idx_explore_content_location").on(table.locationLat, table.locationLng),
 	index("idx_explore_content_engagement").on(table.engagementScore),
 	index("idx_explore_content_active").on(table.isActive, table.createdAt),
+	index("idx_explore_content_agency_active").on(table.agencyId, table.isActive, table.createdAt),
 ]);
 
 export const exploreDiscoveryVideos = mysqlTable("explore_discovery_videos", {

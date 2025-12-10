@@ -901,22 +901,22 @@ export function EnhancedHero() {
               <div className="flex flex-wrap items-center gap-2 text-sm">
                 <span className="text-foreground font-medium">Popular Searches:</span>
                 {[
-                  'Gauteng',
-                  'Western Cape',
-                  'KwaZulu-Natal',
-                  'Eastern Cape',
-                  'Free State',
-                  'Limpopo',
+                  { name: 'Gauteng', slug: 'gauteng' },
+                  { name: 'Western Cape', slug: 'western-cape' },
+                  { name: 'KwaZulu-Natal', slug: 'kwazulu-natal' },
+                  { name: 'Eastern Cape', slug: 'eastern-cape' },
+                  { name: 'Free State', slug: 'free-state' },
+                  { name: 'Limpopo', slug: 'limpopo' },
                 ].map((province) => (
                   <button
-                    key={province}
+                    key={province.slug}
                     onClick={() => {
-                      setSearchQuery(province);
-                      handleSearch();
+                      // Navigate to new location page
+                      setLocation(`/${province.slug}`);
                     }}
                     className="px-4 py-1.5 rounded-full bg-blue-100 hover:bg-gradient-to-r hover:from-blue-600 hover:to-indigo-600 text-blue-900 hover:text-white font-medium transition-all border border-blue-200 hover:border-transparent shadow-sm hover:shadow-md"
                   >
-                    {province}
+                    {province.name}
                   </button>
                 ))}
               </div>

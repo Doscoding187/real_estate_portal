@@ -84,6 +84,8 @@ export class DevelopmentService {
       province: input.province,
       latitude: input.latitude || null,
       longitude: input.longitude || null,
+      placeId: input.placeId || null,
+      locationId: input.locationId || null, // New: Link to locations table
       priceFrom: input.priceFrom || null,
       priceTo: input.priceTo || null,
       amenities: input.amenities ? JSON.stringify(input.amenities) : null,

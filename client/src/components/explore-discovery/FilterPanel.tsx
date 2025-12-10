@@ -9,6 +9,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useExploreFiltersStore } from '@/store/exploreFiltersStore';
 import { MicroPill } from '@/components/ui/soft/MicroPill';
 import { IconButton } from '@/components/ui/soft/IconButton';
+import { AgencySelector } from '@/components/explore-discovery/AgencySelector';
 import { designTokens } from '@/lib/design-tokens';
 
 interface FilterPanelProps {
@@ -31,12 +32,14 @@ export function FilterPanel({
     bathrooms,
     categoryId,
     location,
+    agencyId,
     setPropertyType,
     setPriceRange,
     setBedrooms,
     setBathrooms,
     setCategoryId,
     setLocation,
+    setAgencyId,
     clearFilters,
     getFilterCount,
   } = useExploreFiltersStore();
@@ -218,6 +221,17 @@ export function FilterPanel({
                   placeholder="Enter location..."
                   className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
                   style={{ boxShadow: designTokens.shadows.sm }}
+                />
+              </div>
+
+              {/* Agency Filter */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-900 mb-3">
+                  Agency
+                </label>
+                <AgencySelector
+                  selectedAgencyId={agencyId}
+                  onAgencyChange={setAgencyId}
                 />
               </div>
             </div>

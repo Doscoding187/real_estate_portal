@@ -95,6 +95,7 @@ import DevelopmentsList from './components/developer/DevelopmentsList';
 import AgencySetupWizard from './components/agency/AgencySetupWizard';
 import UnitTypesDemo from './pages/UnitTypesDemo';
 import ExploreComponentDemo from './pages/ExploreComponentDemo';
+import MapPreviewDemo from './pages/MapPreviewDemo';
 
 // Import Developer Dashboard Pages
 import DeveloperDevelopmentsPage from './pages/DeveloperDevelopmentsPage';
@@ -112,7 +113,7 @@ import MyDrafts from './pages/developer/MyDrafts';
 
 // Import Comparison Page
 import CompareProperties from './pages/CompareProperties';
-import AdvertisePage from './pages/AdvertisePage';
+import AdvertiseWithUs from './pages/AdvertiseWithUs';
 import RoleSelection from './pages/RoleSelection';
 import RegistrationSuccess from './pages/RegistrationSuccess';
 
@@ -179,6 +180,7 @@ function Router() {
       <Route path="/explore/shorts" component={ExploreShorts} />
       <Route path="/explore/upload" component={ExploreUpload} />
       <Route path="/explore/component-demo" component={ExploreComponentDemo} />
+      <Route path="/map-preview-demo" component={MapPreviewDemo} />
       <Route path="/explore" component={ExploreFeed} />
       
       <Route path="/compare" component={CompareProperties} />
@@ -189,7 +191,7 @@ function Router() {
       <Route path="/reset-password" component={ResetPassword} />
       <Route path="/accept-invitation" component={AcceptInvitation} />
       <Route path="/role-selection" component={RoleSelection} />
-      <Route path="/advertise" component={AdvertisePage} />
+      <Route path="/advertise" component={AdvertiseWithUs} />
 
 
       {/* Super Admin Dashboard Routes */}

@@ -425,9 +425,12 @@ export const developerRouter = router({
         description: z.string().optional(),
         address: z.string().optional(),
         city: z.string().min(1, 'City is required'),
+        suburb: z.string().optional(),
         province: z.string().min(1, 'Province is required'),
+        postalCode: z.string().optional(),
         latitude: z.string().optional(),
         longitude: z.string().optional(),
+        placeId: z.string().optional(),
         priceFrom: z.number().int().positive().optional(),
         priceTo: z.number().int().positive().optional(),
         amenities: z.array(z.string()).optional(),
@@ -446,7 +449,35 @@ export const developerRouter = router({
       }
 
       try {
-        const development = await developmentService.createDevelopment(developer.id, input);
+        // Resolve location and create location record if needed
+        // Requirements 16.1-16.5: Link developments to locations via location_id
+        // Requirements 25.1: Store Place ID with development data
+        let locationId: number | undefined;
+        if (input.latitude && input.longitude) {
+          try {
+            const { locationPagesServiceEnhanced } = await import('./services/locationPagesServiceEnhanced');
+            const location = await locationPagesServiceEnhanced.resolveLocation({
+              placeId: input.placeId,
+              address: input.address || '',
+              latitude: parseFloat(input.latitude),
+              longitude: parseFloat(input.longitude),
+              city: input.city,
+              suburb: input.suburb,
+              province: input.province,
+              postalCode: input.postalCode,
+            });
+            locationId = location.id;
+            console.log('[DeveloperRouter] Resolved location:', location.name, `(ID: ${locationId})`);
+          } catch (error) {
+            console.warn('[DeveloperRouter] Failed to resolve location, proceeding without location_id:', error);
+            // Continue without location_id - backward compatibility
+          }
+        }
+
+        const development = await developmentService.createDevelopment(developer.id, {
+          ...input,
+          locationId,
+        });
         return { development, message: 'Development created successfully' };
       } catch (error: any) {
         if (error.message.includes('limit reached')) {

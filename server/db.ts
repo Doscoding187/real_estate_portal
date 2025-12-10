@@ -1819,6 +1819,7 @@ export async function createListing(listingData: any) {
           province: listingData.province,
           postalCode: listingData.postalCode,
           placeId: listingData.placeId,
+          locationId: listingData.locationId || null, // New: Link to locations table
           slug: listingData.slug,
           status: 'draft',
           approvalStatus: 'pending',

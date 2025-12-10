@@ -115,6 +115,9 @@ export const CacheKeys = {
   developerFeed: (developerId: number, limit: number, offset: number) =>
     `feed:developer:${developerId}:${limit}:${offset}`,
   
+  agencyFeed: (agencyId: number, limit: number, offset: number, includeAgentContent: boolean = true) =>
+    `feed:agency:${agencyId}:${limit}:${offset}:${includeAgentContent}`,
+  
   performanceScore: (shortId: number) =>
     `score:${shortId}`,
   

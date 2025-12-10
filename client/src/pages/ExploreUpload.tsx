@@ -37,10 +37,15 @@ export default function ExploreUpload() {
   const [selectedListingId, setSelectedListingId] = useState<number | null>(null);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [returnPath, setReturnPath] = useState('/agent/dashboard');
+  const [attributeToAgency, setAttributeToAgency] = useState(true);
 
   // Upload mutations - using presigned URL for S3 upload
   const getPresignedUrl = trpc.video.getPresignedUrl.useMutation();
   const uploadMutation = trpc.explore.uploadShort.useMutation();
+
+  // Check if user is an agent (for agency attribution UI)
+  // Requirements 10.3: Show agency attribution status
+  const isAgent = user?.role === 'agent';
 
   // Redirect if not authenticated
   if (!isAuthenticated) {
@@ -185,6 +190,7 @@ export default function ExploreUpload() {
           ? highlights.filter(h => h.trim()) 
           : undefined,
         listingId: selectedListingId || undefined,
+        attributeToAgency, // NEW: Pass agency attribution preference
       });
 
       // Reset form
@@ -391,6 +397,75 @@ export default function ExploreUpload() {
                 )}
               </CardContent>
             </Card>
+
+            {/* Agency Attribution - Only shown for agents */}
+            {/* Requirements 10.3, 10.4: Show agency attribution status and opt-out option */}
+            {isAgent && (
+              <Card className="border-blue-200 bg-blue-50/50">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-blue-900">
+                    <svg
+                      className="h-5 w-5"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
+                      />
+                    </svg>
+                    Agency Attribution
+                  </CardTitle>
+                  <CardDescription className="text-blue-700">
+                    Your content will be attributed to your agency
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="flex items-start gap-3 p-4 bg-white rounded-lg border border-blue-200">
+                      <div className="flex-shrink-0 w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center text-white font-bold text-lg">
+                        {user?.username?.charAt(0).toUpperCase() || 'A'}
+                      </div>
+                      <div className="flex-1">
+                        <p className="font-medium text-gray-900">
+                          Your Agency
+                        </p>
+                        <p className="text-sm text-gray-600">
+                          This content will help build your agency's brand presence
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-3 p-3 bg-white rounded-lg border border-gray-200">
+                      <input
+                        type="checkbox"
+                        id="attributeToAgency"
+                        checked={attributeToAgency}
+                        onChange={(e) => setAttributeToAgency(e.target.checked)}
+                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                      />
+                      <label
+                        htmlFor="attributeToAgency"
+                        className="text-sm text-gray-700 cursor-pointer"
+                      >
+                        Attribute this content to my agency
+                      </label>
+                    </div>
+
+                    {!attributeToAgency && (
+                      <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                        <p className="text-sm text-yellow-800">
+                          <strong>Note:</strong> Content will be attributed to you individually, not your agency.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Submit Button */}
             <div className="flex gap-4">

@@ -1,8 +1,8 @@
 /**
- * Reduced Motion Styles
+ * Reduced Motion Styles for Advertise Landing Page
  * Respects user's prefers-reduced-motion setting
  * 
- * Requirements: 12.4
+ * Requirements: 11.4 - Respect user preferences for reduced motion
  */
 
 /* 
@@ -25,13 +25,19 @@
   }
 
   /* Specifically disable gradient animations */
-  .animate-gradient {
+  .animate-gradient,
+  .animate-gradient-x,
+  .animate-gradient-y {
     animation: none !important;
   }
 
   /* Disable transform animations but keep opacity for fade effects */
   .animate-in,
-  .animate-out {
+  .animate-out,
+  .animate-fade-up,
+  .animate-fade-down,
+  .animate-slide-in,
+  .animate-slide-out {
     animation-duration: 0.01ms !important;
   }
 
@@ -40,10 +46,52 @@
     transform: none !important;
   }
 
+  /* Disable hover lift effects on cards */
+  .feature-tile:hover,
+  .partner-type-card:hover,
+  .feature-block:hover,
+  .pricing-card:hover {
+    transform: none !important;
+    box-shadow: inherit !important;
+  }
+
   /* Keep focus indicators visible but remove transitions */
   *:focus,
   *:focus-visible {
     transition: none !important;
+  }
+
+  /* Disable parallax effects */
+  [data-parallax] {
+    transform: none !important;
+  }
+
+  /* Disable stagger animations */
+  [data-stagger] {
+    animation-delay: 0ms !important;
+  }
+
+  /* Disable pulse animations */
+  .animate-pulse,
+  .pulse {
+    animation: none !important;
+  }
+
+  /* Disable bounce animations */
+  .animate-bounce,
+  .bounce {
+    animation: none !important;
+  }
+
+  /* Disable spin animations */
+  .animate-spin {
+    animation: none !important;
+  }
+
+  /* Disable background orbs animations */
+  .background-orb {
+    animation: none !important;
+    opacity: 0.3 !important;
   }
 }
 
@@ -78,5 +126,81 @@
     /* Reduce but don't eliminate essential animations */
     animation-duration: 0.3s !important;
     transition-duration: 0.15s !important;
+  }
+}
+
+/* 
+ * Utility class to force animations even with reduced motion
+ * Use ONLY for critical UI feedback (loading states, etc.)
+ */
+.motion-force {
+  /* This class forces animations even with reduced motion */
+  /* Use VERY sparingly - only for essential feedback */
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .motion-force {
+    animation-duration: inherit !important;
+    transition-duration: inherit !important;
+  }
+}
+
+/* 
+ * Advertise-specific reduced motion overrides
+ */
+@media (prefers-reduced-motion: reduce) {
+  /* Hero section animations */
+  .hero-section [class*="motion"] {
+    animation: none !important;
+    transition: opacity 0.01ms !important;
+  }
+
+  /* Partner cards */
+  .partner-type-card {
+    transition: opacity 0.01ms !important;
+  }
+
+  /* Feature blocks */
+  .feature-block {
+    transition: opacity 0.01ms !important;
+  }
+
+  /* Feature tiles */
+  .feature-tile {
+    transition: opacity 0.01ms !important;
+  }
+
+  /* Process steps */
+  .process-step {
+    transition: opacity 0.01ms !important;
+  }
+
+  /* Metric cards */
+  .metric-card {
+    transition: opacity 0.01ms !important;
+  }
+
+  /* Pricing cards */
+  .pricing-card {
+    transition: opacity 0.01ms !important;
+  }
+
+  /* FAQ accordion */
+  .faq-accordion-item {
+    transition: opacity 0.01ms !important;
+  }
+
+  /* CTA buttons - keep minimal feedback */
+  .cta-button {
+    transition: background-color 0.15s, color 0.15s !important;
+  }
+
+  /* Billboard banner */
+  .billboard-banner {
+    transition: opacity 0.01ms !important;
+  }
+
+  .billboard-banner:hover {
+    transform: none !important;
   }
 }

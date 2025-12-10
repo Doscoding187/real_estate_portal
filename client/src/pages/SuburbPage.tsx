@@ -7,9 +7,12 @@ import { MarketInsights } from '@/components/location/MarketInsights';
 import { SEOTextBlock } from '@/components/location/SEOTextBlock';
 import { FinalCTA } from '@/components/location/FinalCTA';
 import { AmenitiesSection } from '@/components/location/AmenitiesSection';
+import { InteractiveMap } from '@/components/location/InteractiveMap';
+import { SimilarLocations } from '@/components/location/SimilarLocations';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Helmet } from 'react-helmet';
 import { LocationSchema } from '@/components/location/LocationSchema';
+import { useSimilarLocations } from '@/hooks/useSimilarLocations';
 
 export default function SuburbPage({ params }: { params: { province: string; city: string; suburb: string } }) {
   const [, navigate] = useLocation();
@@ -78,9 +81,18 @@ export default function SuburbPage({ params }: { params: { province: string; cit
         ]}
         stats={stats}
         backgroundImage="https://images.unsplash.com/photo-1574362848149-11496d93a7c7?ixlib=rb-4.0.3&auto=format&fit=crop&w=1984&q=80"
+        placeId={suburb.place_id}
+        coordinates={{
+          latitude: Number(suburb.latitude),
+          longitude: Number(suburb.longitude)
+        }}
       />
 
-      <SearchRefinementBar onSearch={handleSearch} defaultLocation={suburb.name} />
+      <SearchRefinementBar 
+        onSearch={handleSearch} 
+        defaultLocation={suburb.name}
+        placeId={suburb.place_id}
+      />
 
       <FeaturedListings 
         listings={listings} 
@@ -95,16 +107,49 @@ export default function SuburbPage({ params }: { params: { province: string; cit
         type="suburb"
       />
 
+      {/* Interactive Map Section */}
+      {suburb.latitude && suburb.longitude && (
+        <div className="container py-12">
+          <h2 className="text-2xl font-bold mb-6">Explore {suburb.name} on the Map</h2>
+          <InteractiveMap
+            center={{
+              lat: Number(suburb.latitude),
+              lng: Number(suburb.longitude),
+            }}
+            viewport={suburb.viewport_ne_lat ? {
+              ne_lat: Number(suburb.viewport_ne_lat),
+              ne_lng: Number(suburb.viewport_ne_lng),
+              sw_lat: Number(suburb.viewport_sw_lat),
+              sw_lng: Number(suburb.viewport_sw_lng),
+            } : undefined}
+            properties={listings.map(listing => ({
+              id: listing.id,
+              latitude: Number(listing.latitude),
+              longitude: Number(listing.longitude),
+              title: listing.title,
+              price: listing.price,
+            }))}
+          />
+        </div>
+      )}
+
       <AmenitiesSection />
 
       <SEOTextBlock
         title={`Life in ${suburb.name}`}
         locationName={suburb.name}
-        content={`
+        content={suburb.description || `
           <p><strong>${suburb.name}</strong> offers residents a unique blend of community living and convenience. Nestled in the heart of <strong>${suburb.cityName}</strong>, this suburb is known for its family-friendly atmosphere and proximity to key amenities.</p>
           <p>With <strong>${stats.totalListings} properties</strong> currently on the market, ranging from cozy apartments to spacious family homes, ${suburb.name} caters to a variety of lifestyles. The area boasts excellent schools, parks, and shopping centers, making it a top choice for homebuyers.</p>
         `}
       />
+
+      {/* Similar Locations Section */}
+      {suburb.id && (
+        <div className="container py-12">
+          <SimilarLocationsSection locationId={suburb.id} currentLocationName={suburb.name} />
+        </div>
+      )}
 
       <FinalCTA 
         locationName={suburb.name}
@@ -113,6 +158,18 @@ export default function SuburbPage({ params }: { params: { province: string; cit
         suburbSlug={suburbSlug}
       />
     </div>
+  );
+}
+
+function SimilarLocationsSection({ locationId, currentLocationName }: { locationId: number; currentLocationName: string }) {
+  const { data: similarLocations, isLoading } = useSimilarLocations({ locationId, limit: 5 });
+
+  return (
+    <SimilarLocations
+      locations={similarLocations || []}
+      currentLocationName={currentLocationName}
+      isLoading={isLoading}
+    />
   );
 }
 

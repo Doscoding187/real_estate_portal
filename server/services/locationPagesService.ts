@@ -12,8 +12,10 @@ import {
 import { eq, and, desc, sql, like, inArray } from 'drizzle-orm';
 
 /**
- * Service for handling location page data aggregation
+ * IMPROVED Service for handling location page data aggregation
  * Supporting 3 hierarchical levels: Province -> City -> Suburb
+ * 
+ * This version uses slug columns for better matching and performance
  */
 export const locationPagesService = {
   
@@ -21,23 +23,58 @@ export const locationPagesService = {
    * Get data for Province Page (Level 1)
    */
   async getProvinceData(provinceSlug: string) {
+    console.log(`[LocationPages] getProvinceData called with slug: "${provinceSlug}"`);
+    
     const db = await getDb();
     
-    // 1. Get Province Details
-    const [province] = await db
-      .select()
-      .from(provinces)
-      .where(eq(sql`LOWER(${provinces.name})`, provinceSlug.replace(/-/g, ' '))) // robust approximation for slug
-      .limit(1);
+    // Try slug column first (if it exists), fallback to name matching
+    let province;
+    
+    try {
+      // Method 1: Use slug column (preferred)
+      [province] = await db
+        .select()
+        .from(provinces)
+        .where(eq(provinces.slug, provinceSlug))
+        .limit(1);
+      
+      console.log(`[LocationPages] Slug match result:`, province ? province.name : 'NOT FOUND');
+    } catch (error) {
+      console.log(`[LocationPages] Slug column doesn't exist, using name matching`);
+    }
+    
+    // Method 2: Fallback to name matching
+    if (!province) {
+      const cleanName = provinceSlug.replace(/-/g, ' ');
+      console.log(`[LocationPages] Trying name match with: "${cleanName}"`);
+      
+      [province] = await db
+        .select()
+        .from(provinces)
+        .where(sql`LOWER(${provinces.name}) = LOWER(${cleanName})`)
+        .limit(1);
+      
+      console.log(`[LocationPages] Name match result:`, province ? province.name : 'NOT FOUND');
+    }
 
-    if (!province) return null;
+    if (!province) {
+      console.log(`[LocationPages] Province not found for slug: "${provinceSlug}"`);
+      
+      // Debug: Show available provinces
+      const allProvinces = await db.select({ name: provinces.name, slug: provinces.slug }).from(provinces);
+      console.log(`[LocationPages] Available provinces:`, allProvinces);
+      
+      return null;
+    }
+
+    console.log(`[LocationPages] Found province: ${province.name} (id: ${province.id})`);
 
     // 2. Get Child Cities (Top 12 by listing count or default)
-    // Note: Assuming we want cities in this province
     const cityList = await db
       .select({
         id: cities.id,
         name: cities.name,
+        slug: cities.slug,
         isMetro: cities.isMetro,
         listingCount: sql<number>`(SELECT COUNT(*) FROM ${properties} WHERE ${properties.cityId} = ${cities.id} AND ${properties.status} = 'published')`,
         avgPrice: sql<number>`(SELECT AVG(${properties.price}) FROM ${properties} WHERE ${properties.cityId} = ${cities.id} AND ${properties.status} = 'published')`
@@ -57,12 +94,14 @@ export const locationPagesService = {
       ))
       .limit(6);
 
-    // 4. Trending Suburbs (Top 10 by search volume or price growth - using listing count as proxy for now if analytics missing)
+    // 4. Trending Suburbs
     const trendingSuburbs = await db
       .select({
         id: suburbs.id,
         name: suburbs.name,
+        slug: suburbs.slug,
         cityName: cities.name,
+        citySlug: cities.slug,
         listingCount: sql<number>`(SELECT COUNT(*) FROM ${properties} WHERE ${properties.suburbId} = ${suburbs.id} AND ${properties.status} = 'published')`
       })
       .from(suburbs)
@@ -99,44 +138,83 @@ export const locationPagesService = {
    * Get data for City Page (Level 2)
    */
   async getCityData(provinceSlug: string, citySlug: string) {
+    console.log(`[LocationPages] getCityData called with: provinceSlug="${provinceSlug}", citySlug="${citySlug}"`);
+    
     try {
       const db = await getDb();
-      const cleanCityName = citySlug.replace(/-/g, ' ');
       
-      console.log(`[LocationService] getCityData called with: provinceSlug=${provinceSlug}, citySlug=${citySlug}, cleanCityName=${cleanCityName}`);
-
-      // 1. Get City Details
-      const [city] = await db
-        .select({
-          id: cities.id,
-          name: cities.name,
-          provinceId: cities.provinceId,
-          provinceName: provinces.name,
-          isMetro: cities.isMetro,
-          latitude: cities.latitude,
-          longitude: cities.longitude
-        })
-        .from(cities)
-        .leftJoin(provinces, eq(cities.provinceId, provinces.id))
-        .where(eq(sql`LOWER(${cities.name})`, cleanCityName))
-        .limit(1);
-
-      console.log(`[LocationService] City query result:`, city);
-
+      // Try slug column first, fallback to name matching
+      let city;
+      
+      try {
+        // Method 1: Use slug column (preferred)
+        [city] = await db
+          .select({
+            id: cities.id,
+            name: cities.name,
+            slug: cities.slug,
+            provinceId: cities.provinceId,
+            provinceName: provinces.name,
+            provinceSlug: provinces.slug,
+            isMetro: cities.isMetro,
+            latitude: cities.latitude,
+            longitude: cities.longitude
+          })
+          .from(cities)
+          .leftJoin(provinces, eq(cities.provinceId, provinces.id))
+          .where(eq(cities.slug, citySlug))
+          .limit(1);
+        
+        console.log(`[LocationPages] Slug match result:`, city ? city.name : 'NOT FOUND');
+      } catch (error) {
+        console.log(`[LocationPages] Slug column doesn't exist, using name matching`);
+      }
+      
+      // Method 2: Fallback to name matching
       if (!city) {
-          console.log(`[LocationService] City not found for ${cleanCityName}`);
-          return null;
+        const cleanCityName = citySlug.replace(/-/g, ' ');
+        console.log(`[LocationPages] Trying name match with: "${cleanCityName}"`);
+        
+        [city] = await db
+          .select({
+            id: cities.id,
+            name: cities.name,
+            slug: cities.slug,
+            provinceId: cities.provinceId,
+            provinceName: provinces.name,
+            provinceSlug: provinces.slug,
+            isMetro: cities.isMetro,
+            latitude: cities.latitude,
+            longitude: cities.longitude
+          })
+          .from(cities)
+          .leftJoin(provinces, eq(cities.provinceId, provinces.id))
+          .where(sql`LOWER(${cities.name}) = LOWER(${cleanCityName})`)
+          .limit(1);
+        
+        console.log(`[LocationPages] Name match result:`, city ? city.name : 'NOT FOUND');
       }
 
+      if (!city) {
+        console.log(`[LocationPages] City not found for slug: "${citySlug}"`);
+        
+        // Debug: Show available cities
+        const allCities = await db.select({ name: cities.name, slug: cities.slug }).from(cities).limit(10);
+        console.log(`[LocationPages] Sample cities:`, allCities);
+        
+        return null;
+      }
+
+      console.log(`[LocationPages] Found city: ${city.name} (id: ${city.id})`);
+
       // 2. Popular Suburbs in City
-      console.log(`[LocationService] Fetching suburbs for cityId: ${city.id}`);
-      
       const listingCountSql = sql<number>`(SELECT COUNT(*) FROM ${properties} WHERE ${properties.suburbId} = ${suburbs.id} AND ${properties.status} = 'published')`;
       
       const suburbList = await db
         .select({
           id: suburbs.id,
           name: suburbs.name,
+          slug: suburbs.slug,
           listingCount: listingCountSql,
           avgPrice: sql<number>`(SELECT AVG(${properties.price}) FROM ${properties} WHERE ${properties.suburbId} = ${suburbs.id} AND ${properties.status} = 'published')`
         })
@@ -145,7 +223,7 @@ export const locationPagesService = {
         .orderBy(desc(listingCountSql))
         .limit(12);
       
-      console.log(`[LocationService] Suburb list fetched: ${suburbList?.length} items`);
+      console.log(`[LocationPages] Found ${suburbList.length} suburbs`);
 
       // 3. Featured Properties in City
       const featuredProperties = await db
@@ -169,7 +247,6 @@ export const locationPagesService = {
         .limit(4);
 
       // 5. Aggregate Stats
-      // Use SQL helpers to avoid raw string issues
       const [stats] = await db
         .select({
           totalListings: sql<number>`count(*)`,
@@ -192,7 +269,7 @@ export const locationPagesService = {
         }
       };
     } catch (error) {
-      console.error('[LocationService] Error in getCityData:', error);
+      console.error('[LocationPages] Error in getCityData:', error);
       throw error;
     }
   },
@@ -201,27 +278,77 @@ export const locationPagesService = {
    * Get data for Suburb Page (Level 3)
    */
   async getSuburbData(provinceSlug: string, citySlug: string, suburbSlug: string) {
+    console.log(`[LocationPages] getSuburbData called with: provinceSlug="${provinceSlug}", citySlug="${citySlug}", suburbSlug="${suburbSlug}"`);
+    
     const db = await getDb();
-    const cleanSuburbName = suburbSlug.replace(/-/g, ' ');
+    
+    // Try slug column first, fallback to name matching
+    let suburb;
+    
+    try {
+      // Method 1: Use slug column (preferred)
+      [suburb] = await db
+        .select({
+          id: suburbs.id,
+          name: suburbs.name,
+          slug: suburbs.slug,
+          cityId: suburbs.cityId,
+          cityName: cities.name,
+          citySlug: cities.slug,
+          provinceName: provinces.name,
+          provinceSlug: provinces.slug,
+          latitude: suburbs.latitude,
+          longitude: suburbs.longitude
+        })
+        .from(suburbs)
+        .leftJoin(cities, eq(suburbs.cityId, cities.id))
+        .leftJoin(provinces, eq(cities.provinceId, provinces.id))
+        .where(eq(suburbs.slug, suburbSlug))
+        .limit(1);
+      
+      console.log(`[LocationPages] Slug match result:`, suburb ? suburb.name : 'NOT FOUND');
+    } catch (error) {
+      console.log(`[LocationPages] Slug column doesn't exist, using name matching`);
+    }
+    
+    // Method 2: Fallback to name matching
+    if (!suburb) {
+      const cleanSuburbName = suburbSlug.replace(/-/g, ' ');
+      console.log(`[LocationPages] Trying name match with: "${cleanSuburbName}"`);
+      
+      [suburb] = await db
+        .select({
+          id: suburbs.id,
+          name: suburbs.name,
+          slug: suburbs.slug,
+          cityId: suburbs.cityId,
+          cityName: cities.name,
+          citySlug: cities.slug,
+          provinceName: provinces.name,
+          provinceSlug: provinces.slug,
+          latitude: suburbs.latitude,
+          longitude: suburbs.longitude
+        })
+        .from(suburbs)
+        .leftJoin(cities, eq(suburbs.cityId, cities.id))
+        .leftJoin(provinces, eq(cities.provinceId, provinces.id))
+        .where(sql`LOWER(${suburbs.name}) = LOWER(${cleanSuburbName})`)
+        .limit(1);
+      
+      console.log(`[LocationPages] Name match result:`, suburb ? suburb.name : 'NOT FOUND');
+    }
 
-    // 1. Get Suburb Details joined with City and Province
-    const [suburb] = await db
-      .select({
-        id: suburbs.id,
-        name: suburbs.name,
-        cityId: suburbs.cityId,
-        cityName: cities.name,
-        provinceName: provinces.name,
-        latitude: suburbs.latitude,
-        longitude: suburbs.longitude
-      })
-      .from(suburbs)
-      .leftJoin(cities, eq(suburbs.cityId, cities.id))
-      .leftJoin(provinces, eq(cities.provinceId, provinces.id))
-      .where(eq(sql`LOWER(${suburbs.name})`, cleanSuburbName))
-      .limit(1);
+    if (!suburb) {
+      console.log(`[LocationPages] Suburb not found for slug: "${suburbSlug}"`);
+      
+      // Debug: Show available suburbs
+      const allSuburbs = await db.select({ name: suburbs.name, slug: suburbs.slug }).from(suburbs).limit(10);
+      console.log(`[LocationPages] Sample suburbs:`, allSuburbs);
+      
+      return null;
+    }
 
-    if (!suburb) return null;
+    console.log(`[LocationPages] Found suburb: ${suburb.name} (id: ${suburb.id})`);
 
     // 2. Listing Stats
     const [stats] = await db
@@ -249,15 +376,11 @@ export const locationPagesService = {
       .limit(12);
 
     // 4. Market Insights (Price Analytics)
-    // Try to get from cached table first
     const [analytics] = await db
       .select()
       .from(suburbPriceAnalytics)
       .where(eq(suburbPriceAnalytics.suburbId, suburb.id))
       .limit(1);
-
-    // 5. Nearby Schools/Amenities (if we have an amenities table linked to location or coords via geo-query)
-    // Placeholder for now as amenities table structure is simple
     
     return {
       suburb,

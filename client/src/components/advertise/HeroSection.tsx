@@ -59,6 +59,8 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
     <section
       className="relative overflow-hidden"
       aria-labelledby="hero-headline"
+      aria-describedby="hero-subheadline"
+      role="banner"
       style={{
         background: `linear-gradient(135deg, ${softUITokens.colors.primary.light} 0%, ${softUITokens.colors.neutral.white} 50%, ${softUITokens.colors.secondary.light} 100%)`,
         minHeight: 'max(90vh, 640px)',
@@ -95,6 +97,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
 
             {/* Subheadline */}
             <motion.p
+              id="hero-subheadline"
               className="text-lg sm:text-xl lg:text-2xl text-gray-600 leading-relaxed max-w-2xl mx-auto lg:mx-0"
               variants={fadeUp}
             >

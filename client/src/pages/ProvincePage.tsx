@@ -8,6 +8,7 @@ import { DevelopmentsGrid } from '@/components/location/DevelopmentsGrid';
 import { MarketInsights } from '@/components/location/MarketInsights';
 import { SEOTextBlock } from '@/components/location/SEOTextBlock';
 import { FinalCTA } from '@/components/location/FinalCTA';
+import { InteractiveMap } from '@/components/location/InteractiveMap';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Helmet } from 'react-helmet';
 import { LocationSchema } from '@/components/location/LocationSchema';
@@ -73,9 +74,18 @@ export default function ProvincePage({ params }: { params: { province: string } 
         ]}
         stats={stats}
         backgroundImage="https://images.unsplash.com/photo-1577931767667-0c58e744d081?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80" // Placeholder or dynamic if we had province images
+        placeId={province.place_id}
+        coordinates={province.latitude && province.longitude ? {
+          latitude: Number(province.latitude),
+          longitude: Number(province.longitude)
+        } : undefined}
       />
 
-      <SearchRefinementBar onSearch={handleSearch} defaultLocation={province.name} />
+      <SearchRefinementBar 
+        onSearch={handleSearch} 
+        defaultLocation={province.name}
+        placeId={province.place_id}
+      />
 
       <LocationGrid 
         title={`Popular Cities in ${province.name}`} 
@@ -102,10 +112,29 @@ export default function ProvincePage({ params }: { params: { province: string } 
         type="province"
       />
 
+      {/* Interactive Map Section */}
+      {province.latitude && province.longitude && (
+        <div className="container py-12">
+          <h2 className="text-2xl font-bold mb-6">Explore {province.name} on the Map</h2>
+          <InteractiveMap
+            center={{
+              lat: Number(province.latitude),
+              lng: Number(province.longitude),
+            }}
+            viewport={province.viewport_ne_lat ? {
+              ne_lat: Number(province.viewport_ne_lat),
+              ne_lng: Number(province.viewport_ne_lng),
+              sw_lat: Number(province.viewport_sw_lat),
+              sw_lng: Number(province.viewport_sw_lng),
+            } : undefined}
+          />
+        </div>
+      )}
+
       <SEOTextBlock
         title={`About Real Estate in ${province.name}`}
         locationName={province.name}
-        content={`
+        content={province.description || `
           <p><strong>${province.name}</strong> is a premier destination for property buyers and investors, offering a diverse range of real estate options. From the bustling metros to the serene countryside, the province provides a unique blend of lifestyle and opportunity.</p>
           <p>With over <strong>${stats.totalListings} active listings</strong>, the market is vibrant. The average property price currently sits at <strong>R ${stats.avgPrice.toLocaleString()}</strong>, making it an attractive region for both first-time buyers and seasoned investors.</p>
           <h3>Why Invest in ${province.name}?</h3>

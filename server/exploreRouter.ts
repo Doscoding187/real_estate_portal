@@ -14,13 +14,15 @@ export const exploreRouter = router({
   getFeed: publicProcedure
     .input(
       z.object({
-        feedType: z.enum(['recommended', 'area', 'category', 'agent', 'developer']),
+        feedType: z.enum(['recommended', 'area', 'category', 'agent', 'developer', 'agency']),
         limit: z.number().min(1).max(50).default(20),
         offset: z.number().min(0).default(0),
         location: z.string().optional(),
         category: z.string().optional(),
         agentId: z.number().optional(),
         developerId: z.number().optional(),
+        agencyId: z.number().optional(),
+        includeAgentContent: z.boolean().default(true),
         userId: z.number().optional(),
       })
     )
@@ -75,6 +77,17 @@ export const exploreRouter = router({
             offset: input.offset,
           });
         
+        case 'agency':
+          if (!input.agencyId) {
+            throw new Error('Agency ID is required for agency feed');
+          }
+          return exploreFeedService.getAgencyFeed({
+            agencyId: input.agencyId,
+            limit: input.limit,
+            offset: input.offset,
+            includeAgentContent: input.includeAgentContent,
+          });
+        
         default:
           throw new Error('Invalid feed type');
       }
@@ -96,8 +109,8 @@ export const exploreRouter = router({
           'book_viewing',
         ]),
         duration: z.number().optional(),
-        feedType: z.enum(['recommended', 'area', 'category', 'agent', 'developer']),
-        feedContext: z.record(z.any()).optional(),
+        feedType: z.enum(['recommended', 'area', 'category', 'agent', 'developer', 'agency']),
+        feedContext: z.record(z.string(), z.any()).optional(),
         deviceType: z.enum(['mobile', 'tablet', 'desktop']).default('mobile'),
       })
     )
@@ -159,13 +172,13 @@ export const exploreRouter = router({
   getHighlightTags: publicProcedure.query(async () => {
     const { db } = await import('./db');
     const { exploreHighlightTags } = await import('../drizzle/schema');
-    const { eq } = await import('drizzle-orm');
+    const { eq, asc } = await import('drizzle-orm');
 
     const tags = await db
       .select()
       .from(exploreHighlightTags)
       .where(eq(exploreHighlightTags.isActive, 1)) // MySQL uses 1 for true
-      .orderBy(exploreHighlightTags.displayOrder);
+      .orderBy(asc(exploreHighlightTags.displayOrder));
 
     return tags;
   }),
@@ -190,6 +203,7 @@ export const exploreRouter = router({
         highlights: z.array(z.string()).max(4).optional(),
         listingId: z.number().optional(),
         developmentId: z.number().optional(),
+        attributeToAgency: z.boolean().default(true), // NEW: Agency attribution opt-out
       })
     )
     .mutation(async ({ input, ctx }) => {
@@ -197,24 +211,85 @@ export const exploreRouter = router({
       const { exploreShorts, agents, developers } = await import('../drizzle/schema');
       const { eq } = await import('drizzle-orm');
 
-      // Get user's agent or developer ID
+      // Get user's agent or developer ID and detect agency affiliation
+      // Requirements 10.1, 10.2, 10.4: Auto-detect and populate agency attribution, respect opt-out
       let agentId: number | null = null;
       let developerId: number | null = null;
+      let agencyId: number | null = null;
 
       if (ctx.user.role === 'agent') {
-        const agent = await db.select().from(agents).where(eq(agents.userId, ctx.user.id)).limit(1);
-        agentId = agent[0]?.id || null;
+        const agent = await db
+          .select({
+            id: agents.id,
+            agencyId: agents.agencyId,
+          })
+          .from(agents)
+          .where(eq(agents.userId, ctx.user.id))
+          .limit(1);
+        
+        if (agent[0]) {
+          agentId = agent[0].id;
+          
+          // Only attribute to agency if agent opted in and has an agency
+          // Requirements 10.4: Allow agents to opt-out of agency attribution
+          if (input.attributeToAgency && agent[0].agencyId) {
+            agencyId = agent[0].agencyId;
+            console.log(`[ExploreUpload] Agent ${agentId} uploading with agency ${agencyId}`);
+          } else {
+            console.log(`[ExploreUpload] Agent ${agentId} uploading without agency attribution (opted out or no agency)`);
+          }
+        }
       } else if (ctx.user.role === 'property_developer') {
         const developer = await db.select().from(developers).where(eq(developers.userId, ctx.user.id)).limit(1);
         developerId = developer[0]?.id || null;
+        
+        console.log(`[ExploreUpload] Developer ${developerId} uploading`);
       }
 
-      // Create the explore short
+      // Validate agency attribution
+      // Requirements 10.5, 4.4: Prevent invalid agency attribution
+      if (agencyId) {
+        // Verify agency exists
+        const { agencies } = await import('../drizzle/schema');
+        const agencyRecord = await db
+          .select()
+          .from(agencies)
+          .where(eq(agencies.id, agencyId))
+          .limit(1);
+
+        if (!agencyRecord[0]) {
+          throw new Error(`Agency with ID ${agencyId} does not exist`);
+        }
+
+        // Verify agent belongs to agency
+        if (agentId) {
+          const agentRecord = await db
+            .select({ agencyId: agents.agencyId })
+            .from(agents)
+            .where(eq(agents.id, agentId))
+            .limit(1);
+
+          if (agentRecord[0]?.agencyId !== agencyId) {
+            throw new Error(`Agent ${agentId} does not belong to agency ${agencyId}`);
+          }
+        }
+      }
+
+      // Log attribution decision
+      console.log(`[ExploreUpload] Agency attribution decision:`, {
+        userId: ctx.user.id,
+        agentId,
+        developerId,
+        agencyId,
+      });
+
+      // Create the explore short with agency attribution
       const result = await db.insert(exploreShorts).values({
         listingId: input.listingId || null,
         developmentId: input.developmentId || null,
         agentId,
         developerId,
+        agencyId, // NEW: Agency attribution
         title: input.title,
         caption: input.caption || null,
         primaryMediaId: 1, // Placeholder - would be actual media ID in production

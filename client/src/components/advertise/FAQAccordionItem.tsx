@@ -1,12 +1,16 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronDown } from 'lucide-react';
 import { softUITokens } from './design-tokens';
+import { trackFAQExpand } from '@/lib/analytics/advertiseTracking';
 
 export interface FAQAccordionItemProps {
   question: string;
   answer: string;
   isOpen: boolean;
   onToggle: () => void;
+  onKeyDown?: (e: React.KeyboardEvent) => void;
+  isFocused?: boolean;
+  index?: number; // For analytics tracking
 }
 
 /**
@@ -37,14 +41,34 @@ export function FAQAccordionItem({
   answer,
   isOpen,
   onToggle,
+  onKeyDown: onKeyDownProp,
+  isFocused = false,
+  index = 0,
 }: FAQAccordionItemProps) {
   // Generate a safe ID by removing special characters and spaces
   const safeId = `faq-answer-${question.replace(/[^a-zA-Z0-9]/g, '-').slice(0, 20)}`;
 
+  const handleToggle = () => {
+    // Track FAQ expand event (only when opening, not closing)
+    if (!isOpen) {
+      trackFAQExpand({
+        question,
+        index,
+      });
+    }
+    onToggle();
+  };
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
+    // Handle toggle keys
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
-      onToggle();
+      handleToggle();
+    }
+    
+    // Pass through to parent for navigation
+    if (onKeyDownProp) {
+      onKeyDownProp(e);
     }
   };
 
@@ -61,7 +85,7 @@ export function FAQAccordionItem({
       transition={{ duration: 0.2 }}
     >
       <button
-        onClick={onToggle}
+        onClick={handleToggle}
         onKeyDown={handleKeyDown}
         className="w-full px-6 py-5 flex items-center justify-between text-left focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded-xl"
         aria-expanded={isOpen}

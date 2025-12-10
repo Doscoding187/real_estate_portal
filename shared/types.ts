@@ -376,9 +376,13 @@ export interface CreateDevelopmentInput {
   description?: string;
   address?: string;
   city: string;
+  suburb?: string;
   province: string;
+  postalCode?: string;
   latitude?: string;
   longitude?: string;
+  placeId?: string; // Google Places ID
+  locationId?: number; // Link to locations table
   priceFrom?: number;
   priceTo?: number;
   amenities?: string[];
@@ -486,7 +490,9 @@ export type InteractionType =
   | 'whatsapp'
   | 'book_viewing';
 
-export type FeedType = 'recommended' | 'area' | 'category' | 'agent' | 'developer';
+export type FeedType = 'recommended' | 'area' | 'category' | 'agent' | 'developer' | 'agency';
+
+export type CreatorType = 'user' | 'agent' | 'developer' | 'agency';
 
 export type DeviceType = 'mobile' | 'tablet' | 'desktop';
 
@@ -496,6 +502,7 @@ export interface ExploreShort {
   developmentId?: number;
   agentId?: number;
   developerId?: number;
+  agencyId?: number;
   title: string;
   caption?: string;
   primaryMediaId: number;
@@ -518,6 +525,55 @@ export interface ExploreShort {
   createdAt: Date;
   updatedAt: Date;
   publishedAt?: Date;
+}
+
+export interface ExploreContent {
+  id: number;
+  contentType: string;
+  referenceId: number;
+  creatorId?: number;
+  creatorType: CreatorType;
+  agencyId?: number;
+  title?: string;
+  description?: string;
+  thumbnailUrl?: string;
+  videoUrl?: string;
+  metadata?: Record<string, any>;
+  tags?: string[];
+  lifestyleCategories?: string[];
+  locationLat?: number;
+  locationLng?: number;
+  priceMin?: number;
+  priceMax?: number;
+  viewCount: number;
+  engagementScore: number;
+  isActive: boolean;
+  isFeatured: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface AgencyFeedMetadata {
+  agencyId: number;
+  agencyName: string;
+  agencyLogo?: string;
+  isVerified: boolean;
+  totalContent: number;
+  includeAgentContent: boolean;
+}
+
+export interface AgencyMetrics {
+  totalContent: number;
+  totalViews: number;
+  totalEngagements: number;
+  averageEngagementRate: number;
+  topPerformingContent: any[];
+  agentBreakdown: {
+    agentId: number;
+    agentName: string;
+    contentCount: number;
+    totalViews: number;
+  }[];
 }
 
 export interface ExploreInteraction {
@@ -642,4 +698,5 @@ export interface FeedQuery {
   category?: string;
   agentId?: number;
   developerId?: number;
+  agencyId?: number;
 }

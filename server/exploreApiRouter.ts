@@ -5,6 +5,7 @@
  */
 
 import { router, protectedProcedure, publicProcedure } from './_core/trpc';
+import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 import { db } from './db';
 import {
@@ -19,6 +20,77 @@ import {
 } from '../drizzle/schema';
 import { eq, and, desc, sql, gte, lte, inArray, like } from 'drizzle-orm';
 import { recommendationEngineService } from './services/recommendationEngineService';
+import { exploreFeedService } from './services/exploreFeedService';
+import { exploreAgencyService } from './services/exploreAgencyService';
+import { agents, agencies } from '../drizzle/schema';
+
+/**
+ * Helper function to verify agency access
+ * Requirements: 3.4, Security
+ * 
+ * Checks if user has permission to view agency analytics:
+ * - User is agency owner (agency_admin role with matching agency)
+ * - User is agent in the agency
+ * - User is super_admin
+ */
+async function verifyAgencyAccess(userId: number, agencyId: number): Promise<void> {
+  // Import users table
+  const { users } = await import('../drizzle/schema');
+
+  // Get user details
+  const userResult = await db
+    .select()
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1);
+
+  if (!userResult[0]) {
+    throw new TRPCError({
+      code: 'UNAUTHORIZED',
+      message: 'User not found',
+    });
+  }
+
+  const user = userResult[0];
+
+  // Super admins have access to all agencies
+  if (user.role === 'super_admin') {
+    return;
+  }
+
+  // Check if user is an agent in this agency
+  const agentResult = await db
+    .select()
+    .from(agents)
+    .where(
+      and(
+        eq(agents.userId, userId),
+        eq(agents.agencyId, agencyId)
+      )
+    )
+    .limit(1);
+
+  if (agentResult[0]) {
+    return;
+  }
+
+  // Check if user is agency admin/owner
+  const agencyResult = await db
+    .select()
+    .from(agencies)
+    .where(eq(agencies.id, agencyId))
+    .limit(1);
+
+  if (agencyResult[0] && agencyResult[0].ownerId === userId) {
+    return;
+  }
+
+  // No access
+  throw new TRPCError({
+    code: 'FORBIDDEN',
+    message: 'Access denied to agency analytics',
+  });
+}
 
 export const exploreApiRouter = router({
   /**
@@ -432,7 +504,8 @@ export const exploreApiRouter = router({
     .input(
       z.object({
         contentId: z.number(),
-        propertyId: z.number().optional(),
+        collectionName: z.string().optional(),
+        notes: z.string().optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -468,7 +541,8 @@ export const exploreApiRouter = router({
         await db.insert(exploreSavedProperties).values({
           userId: ctx.user.id,
           contentId: input.contentId,
-          propertyId: input.propertyId || null,
+          collectionName: input.collectionName || 'Default',
+          notes: input.notes || null,
         });
 
         return {
@@ -494,7 +568,8 @@ export const exploreApiRouter = router({
         .select({
           id: exploreSavedProperties.id,
           contentId: exploreSavedProperties.contentId,
-          propertyId: exploreSavedProperties.propertyId,
+          collectionName: exploreSavedProperties.collectionName,
+          notes: exploreSavedProperties.notes,
           savedAt: exploreSavedProperties.createdAt,
           content: exploreContent,
         })
@@ -586,5 +661,194 @@ export const exploreApiRouter = router({
         success: true,
         message: `Recorded ${input.engagements.length} engagements`,
       };
+    }),
+
+  /**
+   * Get agency feed
+   * Requirements 8.1, 8.2, 8.3: Agency feed endpoint
+   * 
+   * Returns all published content attributed to a specific agency.
+   * Supports pagination and optional inclusion of agent content.
+   */
+  getAgencyFeed: publicProcedure
+    .input(
+      z.object({
+        agencyId: z.number(),
+        includeAgentContent: z.boolean().default(true),
+        limit: z.number().min(1).max(50).default(20),
+        offset: z.number().min(0).default(0),
+      })
+    )
+    .query(async ({ input }) => {
+      try {
+        // Call exploreFeedService.getAgencyFeed
+        const feed = await exploreFeedService.getAgencyFeed({
+          agencyId: input.agencyId,
+          includeAgentContent: input.includeAgentContent,
+          limit: input.limit,
+          offset: input.offset,
+        });
+
+        return {
+          success: true,
+          data: feed,
+        };
+      } catch (error) {
+        // Handle errors with appropriate status codes
+        if (error instanceof Error) {
+          if (error.message.includes('not found')) {
+            throw new TRPCError({
+              code: 'NOT_FOUND',
+              message: 'Agency not found',
+            });
+          }
+          throw new TRPCError({
+            code: 'INTERNAL_SERVER_ERROR',
+            message: error.message,
+          });
+        }
+        throw error;
+      }
+    }),
+
+  /**
+   * Get agency analytics
+   * Requirements 3.1, 3.2, 3.3, 3.4, 8.1: Agency analytics endpoint
+   * 
+   * Returns comprehensive analytics for an agency including:
+   * - Total content count and views
+   * - Engagement metrics
+   * - Agent breakdown
+   * - Top performing content
+   * 
+   * Requires authentication and agency access permission.
+   */
+  getAgencyAnalytics: protectedProcedure
+    .input(
+      z.object({
+        agencyId: z.number(),
+        timeRange: z.enum(['7d', '30d', '90d', 'all']).default('30d'),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      try {
+        // Verify user has access to agency analytics
+        await verifyAgencyAccess(ctx.user.id, input.agencyId);
+
+        // Call exploreAgencyService.getAgencyMetrics
+        const metrics = await exploreAgencyService.getAgencyMetrics(input.agencyId);
+
+        return {
+          success: true,
+          data: metrics,
+        };
+      } catch (error) {
+        // Re-throw TRPCError as-is
+        if (error instanceof TRPCError) {
+          throw error;
+        }
+        // Handle other errors
+        if (error instanceof Error) {
+          throw new TRPCError({
+            code: 'INTERNAL_SERVER_ERROR',
+            message: error.message,
+          });
+        }
+        throw error;
+      }
+    }),
+
+  /**
+   * Get feed by type
+   * Requirements 2.1, 7.2, 7.3: Generic feed endpoint with type routing
+   * 
+   * Routes to appropriate feed generator based on feedType.
+   * Supports: recommended, area, category, agent, developer, agency
+   * Maintains backward compatibility with existing feed types.
+   */
+  getFeedByType: publicProcedure
+    .input(
+      z.object({
+        feedType: z.enum(['recommended', 'area', 'category', 'agent', 'developer', 'agency']),
+        userId: z.number().optional(),
+        location: z.string().optional(),
+        category: z.string().optional(),
+        agentId: z.number().optional(),
+        developerId: z.number().optional(),
+        agencyId: z.number().optional(),
+        includeAgentContent: z.boolean().default(true),
+        limit: z.number().min(1).max(50).default(20),
+        offset: z.number().min(0).default(0),
+      })
+    )
+    .query(async ({ input }) => {
+      try {
+        // Validate required parameters based on feed type
+        if (input.feedType === 'agency' && !input.agencyId) {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: 'Agency ID required for agency feed',
+          });
+        }
+
+        if (input.feedType === 'area' && !input.location) {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: 'Location required for area feed',
+          });
+        }
+
+        if (input.feedType === 'category' && !input.category) {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: 'Category required for category feed',
+          });
+        }
+
+        if (input.feedType === 'agent' && !input.agentId) {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: 'Agent ID required for agent feed',
+          });
+        }
+
+        if (input.feedType === 'developer' && !input.developerId) {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: 'Developer ID required for developer feed',
+          });
+        }
+
+        // Route to appropriate service method
+        const feed = await exploreFeedService.getFeed(input.feedType, {
+          userId: input.userId,
+          location: input.location,
+          category: input.category,
+          agentId: input.agentId,
+          developerId: input.developerId,
+          agencyId: input.agencyId,
+          includeAgentContent: input.includeAgentContent,
+          limit: input.limit,
+          offset: input.offset,
+        });
+
+        return {
+          success: true,
+          data: feed,
+        };
+      } catch (error) {
+        // Re-throw TRPCError as-is
+        if (error instanceof TRPCError) {
+          throw error;
+        }
+        // Handle other errors
+        if (error instanceof Error) {
+          throw new TRPCError({
+            code: 'INTERNAL_SERVER_ERROR',
+            message: error.message,
+          });
+        }
+        throw error;
+      }
     }),
 });
