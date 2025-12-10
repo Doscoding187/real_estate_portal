@@ -84,59 +84,34 @@ export const PricingCard: React.FC<PricingCardProps> = ({
     <motion.a
       href={href}
       onClick={handleClick}
-      className={`pricing-card ${className}`}
+      className={`pricing-card block no-underline bg-white rounded-2xl p-8 border-2 border-gray-200 cursor-pointer relative overflow-hidden transition-all duration-300 ${className}`}
       variants={staggerItem}
       initial="initial"
       whileInView="animate"
       viewport={{ once: true, margin: '-50px' }}
       whileHover="hover"
       whileTap="tap"
-      style={{
-        display: 'block',
-        textDecoration: 'none',
-        background: softUITokens.colors.neutral.white,
-        borderRadius: softUITokens.borderRadius.softLarge,
-        padding: softUITokens.spacing['2xl'],
-        border: `2px solid ${softUITokens.colors.neutral.gray200}`,
-        cursor: 'pointer',
-        transition: `all ${softUITokens.transitions.base}`,
-        position: 'relative',
-        overflow: 'hidden',
-      }}
       aria-label={`View ${category} pricing details`}
     >
       {/* Hover border glow effect */}
       <motion.div
+        className="absolute -top-0.5 -left-0.5 -right-0.5 -bottom-0.5 rounded-2xl pointer-events-none z-0"
         style={{
-          position: 'absolute',
-          top: -2,
-          left: -2,
-          right: -2,
-          bottom: -2,
-          borderRadius: softUITokens.borderRadius.softLarge,
+          // Visual token only - gradient
           background: softUITokens.colors.primary.gradient,
-          opacity: 0,
-          transition: `opacity ${softUITokens.transitions.base}`,
-          pointerEvents: 'none',
-          zIndex: 0,
         }}
         initial={{ opacity: 0 }}
         whileHover={{ opacity: 1 }}
       />
 
       {/* Content */}
-      <div style={{ position: 'relative', zIndex: 1 }}>
+      <div className="relative z-10">
         {/* Icon */}
         <motion.div
+          className="w-14 h-14 rounded-xl flex items-center justify-center mb-6"
           style={{
-            width: '56px',
-            height: '56px',
-            borderRadius: softUITokens.borderRadius.soft,
+            // Visual token only - background
             background: softUITokens.colors.primary.light,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            marginBottom: softUITokens.spacing.lg,
           }}
           whileHover={{
             scale: 1.05,
@@ -154,38 +129,19 @@ export const PricingCard: React.FC<PricingCardProps> = ({
         </motion.div>
 
         {/* Category */}
-        <h3
-          style={{
-            fontSize: softUITokens.typography.fontSize.xl,
-            fontWeight: softUITokens.typography.fontWeight.bold,
-            color: softUITokens.colors.neutral.gray900,
-            marginBottom: softUITokens.spacing.md,
-            lineHeight: softUITokens.typography.lineHeight.tight,
-          }}
-        >
+        <h3 className="text-xl font-bold text-gray-900 mb-3 leading-tight">
           {category}
         </h3>
 
         {/* Description */}
-        <p
-          style={{
-            fontSize: softUITokens.typography.fontSize.base,
-            color: softUITokens.colors.neutral.gray600,
-            lineHeight: softUITokens.typography.lineHeight.relaxed,
-            marginBottom: softUITokens.spacing.lg,
-          }}
-        >
+        <p className="text-base text-gray-600 leading-relaxed mb-6">
           {description}
         </p>
 
         {/* View Pricing Arrow */}
         <motion.div
+          className="inline-flex items-center gap-2 text-sm font-semibold"
           style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: softUITokens.spacing.sm,
-            fontSize: softUITokens.typography.fontSize.sm,
-            fontWeight: softUITokens.typography.fontWeight.semibold,
             color: softUITokens.colors.primary.base,
           }}
           whileHover={{ x: 4 }}

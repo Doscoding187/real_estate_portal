@@ -5,6 +5,8 @@
  * icon, title, and description. Includes hover lift animation.
  * 
  * Requirements: 5.2, 5.3, 11.2
+ * 
+ * REFACTORED: Layout via Tailwind, visual tokens via inline styles only
  */
 
 import React from 'react';
@@ -42,22 +44,13 @@ export const FeatureTile: React.FC<FeatureTileProps> = ({
 }) => {
   return (
     <motion.div
-      className={`feature-tile ${className}`}
+      className={`feature-tile flex flex-col items-start gap-6 p-8 rounded-2xl bg-white relative overflow-hidden cursor-default ${className}`}
       initial="rest"
       whileHover="hover"
       animate="rest"
       style={{
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'flex-start',
-        gap: softUITokens.spacing.lg,
-        padding: softUITokens.spacing.xl,
-        borderRadius: softUITokens.borderRadius.softLarge,
-        background: softUITokens.colors.neutral.white,
+        // Visual tokens only - shadows
         boxShadow: softUITokens.shadows.soft,
-        cursor: 'default',
-        position: 'relative',
-        overflow: 'hidden',
       }}
       variants={{
         rest: {
@@ -76,15 +69,10 @@ export const FeatureTile: React.FC<FeatureTileProps> = ({
     >
       {/* Icon Container with color transition on hover */}
       <motion.div
+        className="w-14 h-14 rounded-xl flex items-center justify-center flex-shrink-0"
         style={{
-          width: '56px',
-          height: '56px',
-          borderRadius: softUITokens.borderRadius.soft,
+          // Visual tokens only - background color
           background: softUITokens.colors.primary.light,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          flexShrink: 0,
         }}
         variants={{
           rest: {
@@ -100,6 +88,9 @@ export const FeatureTile: React.FC<FeatureTileProps> = ({
         }}
       >
         <motion.div
+          style={{
+            color: softUITokens.colors.primary.base,
+          }}
           variants={{
             rest: {
               color: softUITokens.colors.primary.base,
@@ -123,26 +114,12 @@ export const FeatureTile: React.FC<FeatureTileProps> = ({
       {/* Text Content */}
       <div>
         {/* Title */}
-        <h3
-          style={{
-            fontSize: softUITokens.typography.fontSize.xl,
-            fontWeight: softUITokens.typography.fontWeight.semibold,
-            color: softUITokens.colors.neutral.gray900,
-            marginBottom: softUITokens.spacing.sm,
-            lineHeight: softUITokens.typography.lineHeight.snug,
-          }}
-        >
+        <h3 className="text-xl font-semibold text-gray-900 mb-2 leading-snug">
           {title}
         </h3>
 
         {/* Description */}
-        <p
-          style={{
-            fontSize: softUITokens.typography.fontSize.base,
-            color: softUITokens.colors.neutral.gray600,
-            lineHeight: softUITokens.typography.lineHeight.relaxed,
-          }}
-        >
+        <p className="text-base text-gray-600 leading-relaxed">
           {description}
         </p>
       </div>

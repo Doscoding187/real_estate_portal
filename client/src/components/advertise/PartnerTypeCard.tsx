@@ -11,7 +11,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { LucideIcon } from 'lucide-react';
 import { softUITokens } from './design-tokens';
-import { softLift, staggerItem } from '@/lib/animations/advertiseAnimations';
+import { staggerItem } from '@/lib/animations/advertiseAnimations';
 
 export interface PartnerTypeCardProps {
   /**
@@ -90,7 +90,7 @@ export const PartnerTypeCard: React.FC<PartnerTypeCardProps> = ({
     <motion.a
       href={href}
       onClick={handleClick}
-      className={`partner-type-card ${className}`}
+      className={`partner-type-card block no-underline bg-white rounded-2xl p-8 cursor-pointer relative overflow-hidden transition-all duration-300 ${className}`}
       variants={staggerItem}
       initial="initial"
       whileInView="animate"
@@ -98,49 +98,30 @@ export const PartnerTypeCard: React.FC<PartnerTypeCardProps> = ({
       whileHover="hover"
       whileTap="tap"
       style={{
-        display: 'block',
-        textDecoration: 'none',
-        background: softUITokens.colors.neutral.white,
-        borderRadius: softUITokens.borderRadius.softLarge,
-        padding: softUITokens.spacing['2xl'],
+        // Visual token only - shadow
         boxShadow: softUITokens.shadows.soft,
-        cursor: 'pointer',
-        transition: `all ${softUITokens.transitions.base}`,
-        position: 'relative',
-        overflow: 'hidden',
       }}
       aria-label={`Learn more about ${title} advertising`}
     >
       {/* Gradient overlay on hover */}
       <motion.div
+        className="absolute inset-0 pointer-events-none"
         style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
+          // Visual token only - gradient
           background: softUITokens.colors.primary.gradient,
-          opacity: 0,
-          transition: `opacity ${softUITokens.transitions.base}`,
-          pointerEvents: 'none',
         }}
         initial={{ opacity: 0 }}
         whileHover={{ opacity: 0.03 }}
       />
 
       {/* Content */}
-      <div style={{ position: 'relative', zIndex: 1 }}>
+      <div className="relative z-10">
         {/* Icon */}
         <motion.div
+          className="w-16 h-16 rounded-xl flex items-center justify-center mb-6"
           style={{
-            width: '64px',
-            height: '64px',
-            borderRadius: softUITokens.borderRadius.soft,
+            // Visual token only - background
             background: softUITokens.colors.primary.light,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            marginBottom: softUITokens.spacing.lg,
           }}
           whileHover={{
             scale: 1.05,
@@ -158,38 +139,19 @@ export const PartnerTypeCard: React.FC<PartnerTypeCardProps> = ({
         </motion.div>
 
         {/* Title */}
-        <h3
-          style={{
-            fontSize: softUITokens.typography.fontSize['2xl'],
-            fontWeight: softUITokens.typography.fontWeight.bold,
-            color: softUITokens.colors.neutral.gray900,
-            marginBottom: softUITokens.spacing.md,
-            lineHeight: softUITokens.typography.lineHeight.tight,
-          }}
-        >
+        <h3 className="text-2xl font-bold text-gray-900 mb-3 leading-tight">
           {title}
         </h3>
 
         {/* Benefit */}
-        <p
-          style={{
-            fontSize: softUITokens.typography.fontSize.base,
-            color: softUITokens.colors.neutral.gray600,
-            lineHeight: softUITokens.typography.lineHeight.relaxed,
-            marginBottom: softUITokens.spacing.lg,
-          }}
-        >
+        <p className="text-base text-gray-600 leading-relaxed mb-6">
           {benefit}
         </p>
 
         {/* CTA */}
         <motion.div
+          className="inline-flex items-center gap-2 text-base font-semibold"
           style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: softUITokens.spacing.sm,
-            fontSize: softUITokens.typography.fontSize.base,
-            fontWeight: softUITokens.typography.fontWeight.semibold,
             color: softUITokens.colors.primary.base,
           }}
           whileHover={{ x: 4 }}

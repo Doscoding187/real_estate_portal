@@ -129,7 +129,7 @@ export const PricingPreviewSection: React.FC<PricingPreviewSectionProps> = ({
           whileInView="animate"
           viewport={{ once: true, margin: '-50px' }}
         >
-          {pricingCategories.map((category, index) => (
+          {pricingCategories.map((category) => (
             <PricingCard
               key={category.category}
               icon={category.icon}
