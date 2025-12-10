@@ -495,7 +495,8 @@ describe('Property 1: Hero section load performance', () => {
           expect(grid?.className).toContain('lg:grid-cols-2');
 
           // Should have responsive padding
-          const containerDiv = container.querySelector('.container');
+          const containerDiv = container.querySelector('.max-w-7xl');
+          expect(containerDiv).toBeTruthy();
           expect(containerDiv?.className).toContain('px-4');
           expect(containerDiv?.className).toContain('sm:px-6');
           expect(containerDiv?.className).toContain('lg:px-8');
