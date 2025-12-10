@@ -1046,6 +1046,12 @@
   - advertise-responsive.css: Removed 50+ !important declarations, scoped all styles
   - advertise-focus-indicators.css: Removed global focus override, scoped to components
   - Commit bbd8518 pushed to main, Vercel auto-deploying
+  - **ADDITIONAL FIX (commit 64c5f4e)**: Refactored components to use Tailwind for layout
+    - FeatureTile: Converted inline layout styles to Tailwind classes
+    - PricingCard: Converted inline layout styles to Tailwind classes
+    - PartnerTypeCard: Converted inline layout styles to Tailwind classes
+    - Kept inline styles ONLY for visual tokens (shadows, gradients, colors)
+    - This allows Tailwind responsive breakpoints to work correctly
   - Visual regression test on mobile (375px, 414px) - PENDING USER VERIFICATION
   - Visual regression test on tablet (768px, 1024px) - PENDING USER VERIFICATION
   - Visual regression test on desktop (1280px, 1920px) - PENDING USER VERIFICATION
