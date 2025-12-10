@@ -15,6 +15,11 @@
  */
 
 import React, { lazy, Suspense, useState } from 'react';
+
+// CRITICAL: Import responsive CSS for proper layout
+import '@/styles/advertise-responsive.css';
+import '@/styles/advertise-focus-indicators.css';
+
 import { EnhancedNavbar } from '@/components/EnhancedNavbar';
 import { Footer } from '@/components/Footer';
 import { HeroSection } from '@/components/advertise/HeroSection';
