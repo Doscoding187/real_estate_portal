@@ -1,39 +1,17 @@
 /**
  * Focus Indicators for Advertise With Us Landing Page
  * 
- * Provides visible, WCAG AA compliant focus indicators for all interactive elements.
+ * FIXED VERSION: Scoped to advertise page elements only
+ * 
+ * Provides visible, WCAG AA compliant focus indicators.
  * Focus indicators use a 3px outline with high contrast colors.
  * 
  * Requirements: 10.5
  */
 
 /* ============================================
-   Global Focus Styles
-   ============================================ */
-
-/* Remove default browser focus outline */
-*:focus {
-  outline: none;
-}
-
-/* Apply custom focus indicator to all focusable elements */
-*:focus-visible {
-  outline: 3px solid #667eea;
-  outline-offset: 2px;
-  border-radius: 4px;
-  transition: outline 0.15s ease-in-out;
-}
-
-/* High contrast mode support */
-@media (prefers-contrast: high) {
-  *:focus-visible {
-    outline-width: 4px;
-    outline-color: currentColor;
-  }
-}
-
-/* ============================================
-   Component-Specific Focus Styles
+   ADVERTISE PAGE FOCUS STYLES
+   Scoped to prevent global conflicts
    ============================================ */
 
 /* CTA Buttons */
@@ -58,7 +36,6 @@
   outline: 3px solid #667eea;
   outline-offset: 4px;
   box-shadow: 0 8px 24px rgba(102, 126, 234, 0.2);
-  transform: translateY(-2px);
 }
 
 /* Feature Tiles */
@@ -66,6 +43,12 @@
   outline: 3px solid #667eea;
   outline-offset: 4px;
   box-shadow: 0 8px 24px rgba(102, 126, 234, 0.2);
+}
+
+/* Feature Blocks */
+.feature-block:focus-visible {
+  outline: 3px solid #667eea;
+  outline-offset: 4px;
 }
 
 /* Pricing Cards */
@@ -82,15 +65,6 @@
   box-shadow: 0 0 0 6px rgba(102, 126, 234, 0.1);
 }
 
-/* Links */
-a:focus-visible {
-  outline: 3px solid #667eea;
-  outline-offset: 2px;
-  text-decoration: underline;
-  text-decoration-thickness: 2px;
-  text-decoration-color: #667eea;
-}
-
 /* Skip Links */
 .skip-link:focus {
   outline: 3px solid #ffffff;
@@ -98,63 +72,68 @@ a:focus-visible {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
-/* Form Inputs (if any) */
-input:focus-visible,
-textarea:focus-visible,
-select:focus-visible {
-  outline: 3px solid #667eea;
-  outline-offset: 0;
-  border-color: #667eea;
-  box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+/* Billboard Banner Link */
+.billboard-banner a:focus-visible {
+  outline: 3px solid #ffffff;
+  outline-offset: 4px;
 }
 
-/* ============================================
-   Focus Within Styles
-   ============================================ */
-
-/* Highlight parent containers when child is focused */
-.partner-cards-grid:focus-within {
-  /* Optional: Add subtle highlight to grid when navigating */
-}
-
-/* ============================================
-   Keyboard Navigation Indicators
-   ============================================ */
-
-/* Show visual indicator when using keyboard navigation */
-body.using-keyboard *:focus {
+/* Trust Signal Links */
+.trust-signal:focus-visible {
   outline: 3px solid #667eea;
   outline-offset: 2px;
 }
 
-/* Hide focus indicators when using mouse */
-body.using-mouse *:focus {
-  outline: none;
+/* Process Step Cards */
+.process-step:focus-visible {
+  outline: 3px solid #667eea;
+  outline-offset: 4px;
+}
+
+/* Metric Cards */
+.metric-card:focus-visible {
+  outline: 3px solid #667eea;
+  outline-offset: 4px;
 }
 
 /* ============================================
-   Reduced Motion Support
+   HIGH CONTRAST MODE SUPPORT
+   ============================================ */
+
+@media (prefers-contrast: high) {
+  .cta-button:focus-visible,
+  .partner-type-card:focus-visible,
+  .feature-tile:focus-visible,
+  .pricing-card:focus-visible,
+  .faq-accordion-button:focus-visible {
+    outline-width: 4px;
+    outline-color: currentColor;
+  }
+}
+
+/* ============================================
+   REDUCED MOTION SUPPORT
    ============================================ */
 
 @media (prefers-reduced-motion: reduce) {
-  *:focus-visible {
-    transition: none;
-  }
-  
   .cta-button:focus-visible,
   .partner-type-card:focus-visible,
   .feature-tile:focus-visible,
   .pricing-card:focus-visible {
-    transform: none;
+    transition: none;
   }
 }
 
 /* ============================================
-   Dark Mode Support (if applicable)
+   DARK MODE SUPPORT
    ============================================ */
 
 @media (prefers-color-scheme: dark) {
-  *:focus-visible {
+  .cta-button:focus-visible,
+  .partner-type-card:focus-visible,
+  .feature-tile:focus-visible,
+  .pricing-card:focus-visible,
+  .faq-accordion-button:focus-visible {
     outline-color: #a5b4fc;
   }
   
@@ -164,64 +143,39 @@ body.using-mouse *:focus {
 }
 
 /* ============================================
-   Print Styles
+   PRINT STYLES
    ============================================ */
 
 @media print {
-  *:focus-visible {
+  .cta-button:focus-visible,
+  .partner-type-card:focus-visible,
+  .feature-tile:focus-visible,
+  .pricing-card:focus-visible {
     outline: 2px solid #000000;
   }
 }
 
 /* ============================================
-   Utility Classes
+   UTILITY CLASSES FOR FOCUS
    ============================================ */
 
-/* Force focus indicator (for testing) */
-.force-focus-indicator {
-  outline: 3px solid #667eea !important;
-  outline-offset: 2px !important;
-}
-
-/* Hide focus indicator (use sparingly, only when alternative is provided) */
-.no-focus-indicator:focus-visible {
-  outline: none;
-}
-
-/* Custom focus color */
-.focus-primary:focus-visible {
+/* Custom focus colors - use on specific elements */
+.advertise-focus-primary:focus-visible {
   outline-color: #667eea;
 }
 
-.focus-secondary:focus-visible {
-  outline-color: #f093fb;
+.advertise-focus-white:focus-visible {
+  outline-color: #ffffff;
 }
 
-.focus-success:focus-visible {
+.advertise-focus-success:focus-visible {
   outline-color: #10b981;
 }
 
-.focus-warning:focus-visible {
-  outline-color: #f59e0b;
-}
-
-.focus-error:focus-visible {
-  outline-color: #ef4444;
-}
-
-/* ============================================
-   Contrast Ratios (WCAG AA Compliance)
-   ============================================ */
-
 /*
- * Focus indicator colors meet WCAG AA contrast requirements:
+ * WCAG AA Compliance Notes:
  * 
- * Primary focus (#667eea) on white background:
- * - Contrast ratio: 4.5:1 (AA compliant)
- * 
- * White focus on primary gradient:
- * - Contrast ratio: 7:1 (AAA compliant)
- * 
- * All focus indicators use 3px width, exceeding the
- * WCAG 2.2 minimum of 2px for focus indicators.
+ * Primary focus (#667eea) on white: 4.5:1 contrast ratio
+ * White focus on primary gradient: 7:1 contrast ratio
+ * All focus indicators use 3px width (exceeds WCAG 2.2 minimum of 2px)
  */

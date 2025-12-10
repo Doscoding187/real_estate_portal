@@ -1,730 +1,170 @@
 /**
  * Advertise With Us Landing Page - Responsive Layouts
  * 
- * Comprehensive responsive styles for mobile, tablet, and desktop viewports.
- * Follows the design requirements from tasks.md:
- * - Mobile (< 768px): Single column, stacked sections, optimized touch targets
- * - Tablet (768px - 1024px): Two-column grids, adjusted spacing
- * - Desktop (> 1024px): Full-width grids, max 1440px container, optimal spacing
+ * FIXED VERSION: Tailwind-compatible, no global overrides
+ * 
+ * This file provides SUPPLEMENTARY styles only.
+ * All layout is handled by Tailwind classes in components.
  * 
  * Requirements: 10.1, 10.2, 10.3, 10.4
  */
 
 /* ============================================
-   BASE CONTAINER STYLES
+   ADVERTISE PAGE SCOPED STYLES
+   All styles are scoped to .advertise-* classes
+   to prevent conflicts with Tailwind utilities
    ============================================ */
-
-.advertise-page-container {
-  width: 100%;
-  margin: 0 auto;
-}
-
-/* Desktop: Max width container */
-@media (min-width: 1024px) {
-  .advertise-section-container {
-    max-width: 1440px;
-    margin: 0 auto;
-    padding-left: 2rem;
-    padding-right: 2rem;
-  }
-}
 
 /* ============================================
-   MOBILE LAYOUTS (< 768px)
-   Requirements: 10.2
+   HERO SECTION ENHANCEMENTS
    ============================================ */
 
-@media (max-width: 767px) {
-  /* Hero Section - Mobile */
-  .hero-section {
-    min-height: auto !important;
-    padding: 5rem 1rem !important;
-  }
-
-  .hero-section .grid {
-    grid-template-columns: 1fr !important;
-    gap: 2rem !important;
-  }
-
-  .hero-section h1 {
-    font-size: 2rem !important; /* 32px */
-    line-height: 1.2 !important;
-  }
-
-  .hero-section p {
-    font-size: 1rem !important; /* 16px */
-  }
-
-  /* Partner Selection - Mobile */
-  .partner-selection-section {
-    padding: 5rem 1rem !important;
-  }
-
-  .partner-cards-grid {
-    grid-template-columns: 1fr !important;
-    gap: 2rem !important;
-  }
-
-  .partner-type-card {
-    min-height: auto !important;
-    padding: 1.5rem !important;
-  }
-
-  /* Value Proposition - Mobile */
-  .value-proposition-section {
-    padding: 5rem 1rem !important;
-  }
-
-  .value-proposition-section .grid,
-  .feature-blocks-grid {
-    grid-template-columns: 1fr !important;
-    gap: 1.5rem !important;
-  }
-
-  /* How It Works - Mobile */
-  .how-it-works-section {
-    padding: 5rem 1rem !important;
-  }
-
-  .process-steps-container {
-    flex-direction: column !important;
-    align-items: center !important;
-    gap: 2.5rem !important;
-  }
-
-  .process-step {
-    max-width: 100% !important;
-    text-align: center !important;
-  }
-
-  .connector-line {
-    display: none !important;
-  }
-
-  /* Features Grid - Mobile */
-  .features-grid-section {
-    padding: 5rem 1rem !important;
-  }
-
-  .features-grid-section .grid {
-    grid-template-columns: 1fr !important;
-    gap: 2.5rem !important;
-  }
-
-  .feature-tile {
-    padding: 1.5rem !important;
-  }
-
-  /* Social Proof - Mobile */
-  .social-proof-section {
-    padding: 5rem 1rem !important;
-  }
-
-  .social-proof-section .metrics-grid {
-    grid-template-columns: 1fr !important;
-    gap: 1rem !important;
-  }
-
-  .social-proof-section .partner-logos {
-    grid-template-columns: repeat(2, 1fr) !important;
-    gap: 1rem !important;
-  }
-
-  /* Pricing Preview - Mobile */
-  .pricing-preview-section {
-    padding: 5rem 1rem !important;
-  }
-
-  .pricing-cards-grid {
-    grid-template-columns: 1fr !important;
-    gap: 2rem !important;
-  }
-
-  .pricing-card {
-    padding: 1.5rem !important;
-  }
-
-  /* Final CTA - Mobile */
-  .final-cta-section {
-    padding: 5rem 1rem !important;
-  }
-
-  .final-cta-section h2 {
-    font-size: 2rem !important; /* 32px */
-  }
-
-  .final-cta-section p {
-    font-size: 1rem !important; /* 16px */
-  }
-
-  /* FAQ Section - Mobile */
-  .faq-section {
-    padding: 5rem 1rem !important;
-  }
-
-  .faq-accordion-item {
-    padding: 1rem !important;
-  }
-
-  /* Touch Targets - Mobile */
-  .mobile-touch-target {
-    min-height: 44px !important;
-    min-width: 44px !important;
-  }
-
-  /* CTA Buttons - Mobile */
-  .cta-button-group {
-    flex-direction: column !important;
-    gap: 0.75rem !important;
-    width: 100% !important;
-  }
-
-  .cta-button {
-    width: 100% !important;
-    padding: 1rem 1.5rem !important;
-    font-size: 1rem !important;
-  }
-
-  /* Typography - Mobile */
-  .section-heading {
-    font-size: 2rem !important; /* 32px */
-    margin-bottom: 1rem !important;
-  }
-
-  .section-subheading {
-    font-size: 1rem !important; /* 16px */
-    margin-bottom: 2rem !important;
-  }
-
-  /* Spacing - Mobile */
-  .section-spacing {
-    padding-top: 5rem !important;
-    padding-bottom: 5rem !important;
-  }
-
-  /* Billboard Banner - Mobile */
-  .billboard-banner {
-    height: 300px !important;
-  }
-
-  .billboard-banner-content {
-    padding: 1.5rem !important;
-  }
-
-  .billboard-banner h3 {
-    font-size: 1.5rem !important;
-  }
-
-  .billboard-banner p {
-    font-size: 0.875rem !important;
-  }
-}
-
-/* ============================================
-   TABLET LAYOUTS (768px - 1024px)
-   Requirements: 10.3
-   ============================================ */
-
-@media (min-width: 768px) and (max-width: 1023px) {
-  /* Hero Section - Tablet */
-  .hero-section {
-    padding: 5rem 2rem !important;
-  }
-
-  .hero-section .grid {
-    grid-template-columns: 1fr 1fr !important;
-    gap: 3rem !important;
-  }
-
-  .hero-section h1 {
-    font-size: 2.5rem !important; /* 40px */
-  }
-
-  .hero-section p {
-    font-size: 1.125rem !important; /* 18px */
-  }
-
-  /* Partner Selection - Tablet */
-  .partner-selection-section {
-    padding: 5rem 2rem !important;
-  }
-
-  .partner-cards-grid {
-    grid-template-columns: repeat(2, 1fr) !important;
-    gap: 2rem !important;
-  }
-
-  /* Value Proposition - Tablet */
-  .value-proposition-section {
-    padding: 5rem 2rem !important;
-  }
-
-  .value-proposition-section .grid,
-  .feature-blocks-grid {
-    grid-template-columns: repeat(2, 1fr) !important;
-    gap: 2rem !important;
-  }
-
-  /* How It Works - Tablet */
-  .how-it-works-section {
-    padding: 5rem 2rem !important;
-  }
-
-  .process-steps-container {
-    gap: 2.5rem !important;
-  }
-
-  .process-step {
-    flex: 1 !important;
-  }
-
-  /* Features Grid - Tablet */
-  .features-grid-section {
-    padding: 5rem 2rem !important;
-  }
-
-  .features-grid-section .grid {
-    grid-template-columns: repeat(2, 1fr) !important;
-    gap: 2.5rem !important;
-  }
-
-  /* Social Proof - Tablet */
-  .social-proof-section {
-    padding: 5rem 2rem !important;
-  }
-
-  .social-proof-section .metrics-grid {
-    grid-template-columns: repeat(2, 1fr) !important;
-    gap: 1.5rem !important;
-  }
-
-  .social-proof-section .partner-logos {
-    grid-template-columns: repeat(3, 1fr) !important;
-    gap: 1.5rem !important;
-  }
-
-  /* Pricing Preview - Tablet */
-  .pricing-preview-section {
-    padding: 5rem 2rem !important;
-  }
-
-  .pricing-cards-grid {
-    grid-template-columns: repeat(2, 1fr) !important;
-    gap: 2rem !important;
-  }
-
-  /* Final CTA - Tablet */
-  .final-cta-section {
-    padding: 5rem 2rem !important;
-  }
-
-  .final-cta-section h2 {
-    font-size: 2.5rem !important; /* 40px */
-  }
-
-  /* FAQ Section - Tablet */
-  .faq-section {
-    padding: 5rem 2rem !important;
-  }
-
-  /* CTA Buttons - Tablet */
-  .cta-button-group {
-    flex-direction: row !important;
-    gap: 1rem !important;
-  }
-
-  .cta-button {
-    padding: 0.875rem 2rem !important;
-  }
-
-  /* Typography - Tablet */
-  .section-heading {
-    font-size: 2.5rem !important; /* 40px */
-  }
-
-  .section-subheading {
-    font-size: 1.125rem !important; /* 18px */
-  }
-
-  /* Spacing - Tablet */
-  .section-spacing {
-    padding-top: 5rem !important;
-    padding-bottom: 5rem !important;
-  }
-
-  /* Billboard Banner - Tablet */
-  .billboard-banner {
-    height: 400px !important;
-  }
-}
-
-/* ============================================
-   DESKTOP LAYOUTS (> 1024px)
-   Requirements: 10.4
-   ============================================ */
-
-@media (min-width: 1024px) {
-  /* Hero Section - Desktop */
-  .hero-section {
-    padding: 7rem 2rem !important;
-  }
-
-  .hero-section .grid {
-    grid-template-columns: 1fr 1fr !important;
-    gap: 4rem !important;
-  }
-
-  .hero-section h1 {
-    font-size: 3.75rem !important; /* 60px */
-  }
-
-  .hero-section p {
-    font-size: 1.25rem !important; /* 20px */
-  }
-
-  /* Partner Selection - Desktop */
-  .partner-selection-section {
-    padding: 7rem 2rem !important;
-  }
-
-  .partner-cards-grid {
-    grid-template-columns: repeat(4, 1fr) !important;
-    gap: 2rem !important;
-  }
-
-  /* Value Proposition - Desktop */
-  .value-proposition-section {
-    padding: 7rem 2rem !important;
-  }
-
-  .value-proposition-section .grid,
-  .feature-blocks-grid {
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)) !important;
-    gap: 3rem !important;
-  }
-
-  /* How It Works - Desktop */
-  .how-it-works-section {
-    padding: 7rem 2rem !important;
-  }
-
-  .process-steps-container {
-    gap: 2.5rem !important;
-  }
-
-  /* Features Grid - Desktop */
-  .features-grid-section {
-    padding: 7rem 2rem !important;
-  }
-
-  .features-grid-section .grid {
-    grid-template-columns: repeat(3, 1fr) !important;
-    gap: 2.5rem !important;
-  }
-
-  /* Social Proof - Desktop */
-  .social-proof-section {
-    padding: 7rem 2rem !important;
-  }
-
-  .social-proof-section .metrics-grid {
-    grid-template-columns: repeat(4, 1fr) !important;
-    gap: 2rem !important;
-  }
-
-  .social-proof-section .partner-logos {
-    grid-template-columns: repeat(5, 1fr) !important;
-    gap: 2rem !important;
-  }
-
-  /* Pricing Preview - Desktop */
-  .pricing-preview-section {
-    padding: 7rem 2rem !important;
-  }
-
-  .pricing-cards-grid {
-    grid-template-columns: repeat(4, 1fr) !important;
-    gap: 2rem !important;
-  }
-
-  /* Final CTA - Desktop */
-  .final-cta-section {
-    padding: 7rem 2rem !important;
-  }
-
-  .final-cta-section h2 {
-    font-size: 3rem !important; /* 48px */
-  }
-
-  /* FAQ Section - Desktop */
-  .faq-section {
-    padding: 7rem 2rem !important;
-  }
-
-  /* Typography - Desktop */
-  .section-heading {
-    font-size: 2.25rem !important; /* 36px */
-  }
-
-  .section-subheading {
-    font-size: 1.25rem !important; /* 20px */
-  }
-
-  /* Spacing - Desktop */
-  .section-spacing {
-    padding-top: 7rem !important;
-    padding-bottom: 7rem !important;
-  }
-
-  /* Billboard Banner - Desktop */
-  .billboard-banner {
-    height: 500px !important;
-  }
-
-  /* Max Width Container */
-  .advertise-section-container {
-    max-width: 1440px !important;
-  }
-}
-
-/* ============================================
-   STANDARD SECTION WRAPPER CLASSES
-   Task 24.9: Standardized wrapper pattern
-   ============================================ */
-
-/* Base section wrapper - applies to all sections */
-.advertise-section {
-  width: 100%;
+.hero-section {
   position: relative;
+  overflow: hidden;
 }
 
-/* Standard inner container with max-width */
-.advertise-section-inner {
-  width: 100%;
-  max-width: 80rem; /* 1280px - matches max-w-7xl */
-  margin-left: auto;
-  margin-right: auto;
-  padding-left: 1rem;
-  padding-right: 1rem;
-}
-
-/* Narrow container for focused content (FAQ, Final CTA) */
-.advertise-section-narrow {
-  max-width: 56rem; /* 896px - matches max-w-4xl */
-}
-
-/* Wide container for full-width sections */
-.advertise-section-wide {
-  max-width: 90rem; /* 1440px */
+/* Ensure hero has proper min-height on larger screens */
+@media (min-width: 1024px) {
+  .hero-section {
+    min-height: max(90vh, 640px);
+  }
 }
 
 /* ============================================
-   STANDARD SECTION SPACING CLASSES
-   Task 24.9: Consistent vertical rhythm
+   BILLBOARD BANNER RESPONSIVE HEIGHTS
    ============================================ */
 
-/* Standard section padding */
-.advertise-section-spacing {
-  padding-top: 4rem;
-  padding-bottom: 4rem;
+.billboard-banner {
+  position: relative;
+  border-radius: 1rem;
+  overflow: hidden;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
 }
 
-/* Section header spacing */
-.advertise-section-header {
-  text-align: center;
-  margin-bottom: 3rem;
+@media (max-width: 767px) {
+  .billboard-banner {
+    height: 300px;
+  }
 }
 
-.advertise-section-header h2 {
-  margin-bottom: 1rem;
+@media (min-width: 768px) and (max-width: 1023px) {
+  .billboard-banner {
+    height: 400px;
+  }
 }
 
-.advertise-section-header p {
-  max-width: 42rem; /* max-w-2xl */
-  margin-left: auto;
-  margin-right: auto;
-}
-
-/* Content spacing after header */
-.advertise-content-spacing {
-  margin-top: 2.5rem;
-}
-
-/* CTA spacing at bottom of sections */
-.advertise-cta-spacing {
-  margin-top: 3rem;
-  display: flex;
-  justify-content: center;
+@media (min-width: 1024px) {
+  .billboard-banner {
+    height: 500px;
+  }
 }
 
 /* ============================================
-   STANDARD GRID LAYOUT CLASSES
-   Task 24.9: Reusable grid patterns
+   CTA BUTTON GROUP - MOBILE STACKING
    ============================================ */
 
-/* 4-column grid (Partner cards, Pricing cards, Metrics) */
-.advertise-grid-4 {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 1.5rem;
-}
-
-/* 3-column grid (Features) */
-.advertise-grid-3 {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 1.5rem;
-}
-
-/* 2-column grid (Hero, Value Proposition) */
-.advertise-grid-2 {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 1.5rem;
-}
-
-/* Flex row for process steps */
-.advertise-flex-row {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2rem;
+@media (max-width: 639px) {
+  .cta-button-group {
+    flex-direction: column;
+    width: 100%;
+    gap: 0.75rem;
+  }
+  
+  .cta-button-group > * {
+    width: 100%;
+  }
 }
 
 /* ============================================
-   RESPONSIVE BREAKPOINTS FOR STANDARD CLASSES
+   PROCESS STEPS CONNECTOR LINE
+   Hide on mobile, show on tablet+
    ============================================ */
 
-/* Tablet (768px+) */
+.connector-line {
+  display: none;
+}
+
 @media (min-width: 768px) {
-  .advertise-section-inner {
-    padding-left: 2rem;
-    padding-right: 2rem;
-  }
-
-  .advertise-section-spacing {
-    padding-top: 5rem;
-    padding-bottom: 5rem;
-  }
-
-  .advertise-section-header {
-    margin-bottom: 4rem;
-  }
-
-  .advertise-content-spacing {
-    margin-top: 3rem;
-  }
-
-  .advertise-cta-spacing {
-    margin-top: 4rem;
-  }
-
-  .advertise-grid-4 {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 2rem;
-  }
-
-  .advertise-grid-3 {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 2rem;
-  }
-
-  .advertise-grid-2 {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 2.5rem;
-  }
-
-  .advertise-flex-row {
-    flex-direction: row;
-    justify-content: center;
-    gap: 2.5rem;
-  }
-}
-
-/* Desktop (1024px+) */
-@media (min-width: 1024px) {
-  .advertise-section-spacing {
-    padding-top: 7rem;
-    padding-bottom: 7rem;
-  }
-
-  .advertise-grid-4 {
-    grid-template-columns: repeat(4, 1fr);
-  }
-
-  .advertise-grid-3 {
-    grid-template-columns: repeat(3, 1fr);
-    gap: 2.5rem;
-  }
-
-  .advertise-grid-2 {
-    gap: 4rem;
-  }
-}
-
-/* Large Desktop (1280px+) */
-@media (min-width: 1280px) {
-  .advertise-section-inner {
-    padding-left: 2.5rem;
-    padding-right: 2.5rem;
+  .connector-line {
+    display: block;
   }
 }
 
 /* ============================================
-   UTILITY CLASSES
+   FEATURE TILE HOVER EFFECTS
    ============================================ */
 
-/* Hide on mobile */
-@media (max-width: 767px) {
-  .hide-mobile {
-    display: none !important;
-  }
+.feature-tile {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
-/* Hide on tablet */
-@media (min-width: 768px) and (max-width: 1023px) {
-  .hide-tablet {
-    display: none !important;
-  }
+.feature-tile:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 20px 40px -12px rgba(0, 0, 0, 0.1);
 }
 
-/* Hide on desktop */
-@media (min-width: 1024px) {
-  .hide-desktop {
-    display: none !important;
-  }
+/* ============================================
+   PRICING CARD HOVER EFFECTS
+   ============================================ */
+
+.pricing-card {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
-/* Show only on mobile */
-.show-mobile {
-  display: none !important;
+.pricing-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 20px 40px -12px rgba(0, 0, 0, 0.1);
 }
 
-@media (max-width: 767px) {
-  .show-mobile {
-    display: block !important;
-  }
+/* ============================================
+   PARTNER TYPE CARD HOVER EFFECTS
+   ============================================ */
+
+.partner-type-card {
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
 }
 
-/* Show only on tablet */
-.show-tablet {
-  display: none !important;
+.partner-type-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 24px -8px rgba(0, 0, 0, 0.1);
 }
 
-@media (min-width: 768px) and (max-width: 1023px) {
-  .show-tablet {
-    display: block !important;
-  }
+/* ============================================
+   FAQ ACCORDION STYLES
+   ============================================ */
+
+.faq-accordion-item {
+  transition: background-color 0.2s ease;
 }
 
-/* Show only on desktop */
-.show-desktop {
-  display: none !important;
+.faq-accordion-item[data-state="open"] {
+  background-color: rgba(102, 126, 234, 0.04);
 }
 
-@media (min-width: 1024px) {
-  .show-desktop {
-    display: block !important;
+/* ============================================
+   MOBILE STICKY CTA
+   ============================================ */
+
+.mobile-sticky-cta {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 50;
+  padding: 1rem;
+  background: linear-gradient(to top, white 80%, transparent);
+  transform: translateY(100%);
+  transition: transform 0.3s ease;
+}
+
+.mobile-sticky-cta.visible {
+  transform: translateY(0);
+}
+
+@media (min-width: 768px) {
+  .mobile-sticky-cta {
+    display: none;
   }
 }
 
@@ -732,34 +172,156 @@
    ACCESSIBILITY & TOUCH OPTIMIZATION
    ============================================ */
 
-/* Touch targets for mobile */
+/* Touch targets for mobile - minimum 44px */
 @media (max-width: 767px) {
-  button,
-  a.button,
-  .interactive-element {
+  .advertise-touch-target {
     min-height: 44px;
     min-width: 44px;
   }
-
-  /* Increase tap area for small icons */
-  .icon-button {
-    padding: 12px;
-  }
 }
 
-/* Focus states for keyboard navigation */
-*:focus-visible {
+/* ============================================
+   FOCUS STATES
+   Scoped to advertise page elements
+   ============================================ */
+
+.advertise-focusable:focus-visible {
   outline: 3px solid #667eea;
   outline-offset: 2px;
+  border-radius: 4px;
 }
 
-/* Reduced motion support */
+/* ============================================
+   REDUCED MOTION SUPPORT
+   ============================================ */
+
 @media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
+  .hero-section,
+  .feature-tile,
+  .pricing-card,
+  .partner-type-card,
+  .mobile-sticky-cta,
+  .faq-accordion-item {
+    transition: none;
   }
+  
+  .feature-tile:hover,
+  .pricing-card:hover,
+  .partner-type-card:hover {
+    transform: none;
+  }
+}
+
+/* ============================================
+   BACKGROUND ORBS ANIMATION
+   ============================================ */
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    transform: translateY(-20px) scale(1.05);
+  }
+}
+
+.background-orb {
+  animation: float 8s ease-in-out infinite;
+}
+
+.background-orb:nth-child(2) {
+  animation-delay: -2s;
+}
+
+.background-orb:nth-child(3) {
+  animation-delay: -4s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .background-orb {
+    animation: none;
+  }
+}
+
+/* ============================================
+   UTILITY CLASSES FOR ADVERTISE PAGE
+   Use these sparingly - prefer Tailwind
+   ============================================ */
+
+/* Hide on specific breakpoints */
+@media (max-width: 767px) {
+  .advertise-hide-mobile {
+    display: none;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1023px) {
+  .advertise-hide-tablet {
+    display: none;
+  }
+}
+
+@media (min-width: 1024px) {
+  .advertise-hide-desktop {
+    display: none;
+  }
+}
+
+/* Show only on specific breakpoints */
+.advertise-show-mobile {
+  display: none;
+}
+
+@media (max-width: 767px) {
+  .advertise-show-mobile {
+    display: block;
+  }
+}
+
+.advertise-show-tablet {
+  display: none;
+}
+
+@media (min-width: 768px) and (max-width: 1023px) {
+  .advertise-show-tablet {
+    display: block;
+  }
+}
+
+.advertise-show-desktop {
+  display: none;
+}
+
+@media (min-width: 1024px) {
+  .advertise-show-desktop {
+    display: block;
+  }
+}
+
+/* ============================================
+   GRADIENT TEXT UTILITY
+   For headline gradient effect
+   ============================================ */
+
+.advertise-gradient-text {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ============================================
+   SECTION BACKGROUND PATTERNS
+   ============================================ */
+
+.advertise-section-light {
+  background-color: #f8fafc;
+}
+
+.advertise-section-white {
+  background-color: #ffffff;
+}
+
+.advertise-section-gradient {
+  background: linear-gradient(135deg, #f0f4ff 0%, #ffffff 50%, #fdf4ff 100%);
 }
