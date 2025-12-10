@@ -953,3 +953,95 @@
   - Document analytics setup
   - Create deployment checklist
   - _Requirements: 10.5_
+
+- [-] 24. Fix layout and alignment issues across all sections
+
+
+
+
+
+
+  - Apply standardized wrapper pattern to all sections
+  - Fix heading hierarchy and sizing
+  - Correct section spacing and vertical rhythm
+  - Fix responsive grid layouts
+  - Ensure consistent max-width containers
+  - _Requirements: 10.2, 10.3, 10.4, 11.1_
+
+- [x] 24.1 Fix Hero Section layout
+  - Added hero-section class for CSS targeting
+  - Standardized max-w-7xl wrapper with proper padding
+  - Added lg:py-32 for better desktop spacing
+  - Fixed grid gap with md:gap-10 for tablet breakpoint
+  - Background orbs already properly positioned with z-index
+  - _Requirements: 1.1, 10.2, 10.3, 10.4_
+
+- [x] 24.2 Fix Partner Selection Section layout
+  - Replaced inline styles with Tailwind classes (bg-gray-50)
+  - Fixed heading spacing with mb-12 md:mb-16
+  - Added mb-4 to heading for consistent spacing
+  - Removed softUITokens import (no longer needed)
+  - Grid layout already correct (grid-cols-1 sm:grid-cols-2 lg:grid-cols-4)
+  - _Requirements: 2.1, 10.2, 10.3, 10.4_
+
+- [x] 24.3 Fix Value Proposition Section layout
+  - Replaced inline styles with Tailwind classes (bg-gray-50)
+  - Fixed section header with text-center mb-12 md:mb-16
+  - Removed softUITokens import (no longer needed)
+  - Grid layout already correct (grid-cols-1 sm:grid-cols-2 lg:grid-cols-4)
+  - _Requirements: 3.1, 10.2, 10.3, 10.4_
+
+- [x] 24.4 Fix How It Works Section layout
+  - Replaced inline styles with Tailwind classes (bg-gray-50)
+  - Fixed section header with text-center mb-12 md:mb-16
+  - Added max-w-2xl mx-auto to subheading for better readability
+  - Fixed CTA spacing with mt-12 md:mt-16 flex justify-center
+  - Removed softUITokens import (no longer needed)
+  - _Requirements: 4.1, 10.2, 10.3, 10.4_
+
+- [x] 24.5 Fix Features Grid Section layout
+  - Replaced inline styles with Tailwind classes (bg-gray-50)
+  - Fixed section header with text-center mb-12 md:mb-16
+  - Removed softUITokens import (no longer needed)
+  - Grid layout already correct (grid-cols-1 sm:grid-cols-2 lg:grid-cols-3)
+  - _Requirements: 5.1, 10.2, 10.3, 10.4_
+
+- [x] 24.6 Fix Pricing Preview Section layout
+  - Replaced inline styles with Tailwind classes (bg-gray-50)
+  - Fixed section header with text-center mb-12 md:mb-16
+  - Fixed cards grid with mb-10 md:mb-12 for spacing
+  - Fixed CTA container with flex justify-center
+  - Removed softUITokens import (no longer needed)
+  - Grid layout already correct (grid-cols-1 sm:grid-cols-2 lg:grid-cols-4)
+  - _Requirements: 7.1, 10.2, 10.3, 10.4_
+
+- [x] 24.7 Fix FAQ Section layout
+  - Added faq-section class for CSS targeting
+  - Removed duplicate padding (was on both section and inner div)
+  - Changed to max-w-4xl (intentionally narrower for readability)
+  - Fixed heading spacing with mb-12 md:mb-16
+  - Fixed contact CTA spacing with mt-12 md:mt-16
+  - _Requirements: 9.1, 10.2, 10.3, 10.4_
+
+- [x] 24.8 Fix Final CTA Section layout
+  - Replaced inline styles with Tailwind classes (bg-gray-50, text-gray-900)
+  - Changed to max-w-4xl (intentionally narrower for focused CTA)
+  - Fixed subtext with max-w-xl mx-auto for better readability
+  - Removed softUITokens import (no longer needed)
+  - CTA buttons already stack properly via CTAButtonGroup component
+  - _Requirements: 8.1, 10.2, 10.3, 10.4_
+
+- [ ] 24.9 Update responsive CSS
+  - Add standard section wrapper classes
+  - Add standard section spacing classes
+  - Add standard grid layout classes
+  - Test all breakpoints
+  - _Requirements: 10.2, 10.3, 10.4_
+
+- [ ] 24.10 Verify layout fixes
+  - Visual regression test on mobile (375px, 414px)
+  - Visual regression test on tablet (768px, 1024px)
+  - Visual regression test on desktop (1280px, 1920px)
+  - Check heading hierarchy with accessibility tools
+  - Verify no horizontal overflow
+  - _Requirements: 10.2, 10.3, 10.4, 10.5_

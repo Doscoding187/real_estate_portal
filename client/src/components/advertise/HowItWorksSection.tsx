@@ -12,7 +12,6 @@ import { motion } from 'framer-motion';
 import { UserPlus, FileText, TrendingUp } from 'lucide-react';
 import { ProcessStep } from './ProcessStep';
 import { CTAButton } from './CTAButton';
-import { softUITokens } from './design-tokens';
 import { staggerContainer } from '@/lib/animations/advertiseAnimations';
 import { useScrollAnimation } from '@/hooks/useScrollAnimation';
 
@@ -80,30 +79,19 @@ export const HowItWorksSection: React.FC<HowItWorksSectionProps> = ({
   return (
     <section
       ref={ref}
-      className={`how-it-works-section py-20 md:py-28 ${className}`}
-      style={{
-        background: softUITokens.colors.neutral.gray50,
-      }}
+      className={`how-it-works-section py-20 md:py-28 bg-gray-50 ${className}`}
       aria-labelledby="how-it-works-heading"
     >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"
-      >
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
-        <div
-          style={{
-            textAlign: 'center',
-            marginBottom: softUITokens.spacing['4xl'],
-          }}
-        >
+        <div className="text-center mb-12 md:mb-16">
           <h2
             id="how-it-works-heading"
             className="text-3xl md:text-4xl font-semibold leading-tight mb-4"
           >
             {heading}
           </h2>
-          <p
-            className="text-lg md:text-xl text-gray-600 leading-relaxed"
-          >
+          <p className="text-lg md:text-xl text-gray-600 leading-relaxed max-w-2xl mx-auto">
             {subheading}
           </p>
         </div>
@@ -128,13 +116,7 @@ export const HowItWorksSection: React.FC<HowItWorksSectionProps> = ({
         </motion.div>
 
         {/* CTA Button */}
-        <div
-          className="mt-16 md:mt-24"
-          style={{
-            display: 'flex',
-            justifyContent: 'center',
-          }}
-        >
+        <div className="mt-12 md:mt-16 flex justify-center">
           <CTAButton
             label={ctaButton.label}
             href={ctaButton.href}

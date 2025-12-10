@@ -126,17 +126,17 @@ export function FAQSection({ faqs = defaultFAQs }: FAQSectionProps) {
   return (
     <section
       ref={ref}
-      className="py-20 md:py-28 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-white to-gray-50"
+      className="faq-section py-20 md:py-28 bg-gradient-to-b from-white to-gray-50"
       aria-labelledby="faq-heading"
       aria-describedby="faq-description"
       role="region"
     >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={isVisible ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
           transition={{ duration: 0.6, ease: [0.4, 0, 0.2, 1] }}
-          className="text-center mb-12"
+          className="text-center mb-12 md:mb-16"
         >
           <h2
             id="faq-heading"
@@ -176,7 +176,7 @@ export function FAQSection({ faqs = defaultFAQs }: FAQSectionProps) {
           initial={{ opacity: 0, y: 20 }}
           animate={isVisible ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
           transition={{ duration: 0.6, delay: 0.4, ease: [0.4, 0, 0.2, 1] }}
-          className="mt-16 md:mt-24 text-center"
+          className="mt-12 md:mt-16 text-center"
         >
           <p className="text-gray-600 mb-4">
             Still have questions?

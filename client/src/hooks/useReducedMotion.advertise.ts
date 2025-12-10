@@ -140,7 +140,7 @@ export function useConditionalAnimation<T extends Record<string, any>>(
       initial: { opacity: 0 },
       animate: { opacity: 1 },
       transition: { duration: 0.01 },
-    } as T;
+    } as unknown as T;
   }
   
   return animationProps;

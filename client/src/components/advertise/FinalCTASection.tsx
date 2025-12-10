@@ -9,7 +9,6 @@
 
 import React from 'react';
 import { motion } from 'framer-motion';
-import { softUITokens } from './design-tokens';
 import { fadeUp, staggerContainer } from '@/lib/animations/advertiseAnimations';
 import { CTAButtonGroup } from './CTAButton';
 import { trackCTAClick } from '@/lib/analytics/advertiseTracking';
@@ -58,13 +57,11 @@ export const FinalCTASection: React.FC<FinalCTASectionProps> = ({
 
   return (
     <section
-      className={`final-cta-section py-20 md:py-28 ${className}`}
-      style={{
-        background: softUITokens.colors.neutral.gray50,
-      }}
+      className={`final-cta-section py-20 md:py-28 bg-gray-50 ${className}`}
       aria-labelledby="final-cta-heading"
     >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      {/* Intentionally narrower max-w-4xl for focused CTA section */}
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         <motion.div
           variants={staggerContainer}
           initial="initial"
@@ -76,10 +73,7 @@ export const FinalCTASection: React.FC<FinalCTASectionProps> = ({
           <motion.h2
             id="final-cta-heading"
             variants={fadeUp}
-            className="text-3xl md:text-4xl font-semibold mb-6 leading-tight"
-            style={{
-              color: softUITokens.colors.neutral.gray900,
-            }}
+            className="text-3xl md:text-4xl font-semibold mb-6 leading-tight text-gray-900"
           >
             {headline}
           </motion.h2>
@@ -87,11 +81,7 @@ export const FinalCTASection: React.FC<FinalCTASectionProps> = ({
           {/* Subtext */}
           <motion.p
             variants={fadeUp}
-            className="text-lg md:text-xl mb-10 text-gray-600 leading-relaxed max-w-2xl mx-auto"
-            style={{
-              maxWidth: '600px',
-              margin: '0 auto 2.5rem',
-            }}
+            className="text-lg md:text-xl mb-10 text-gray-600 leading-relaxed max-w-xl mx-auto"
           >
             {subtext}
           </motion.p>

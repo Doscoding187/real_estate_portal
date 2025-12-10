@@ -142,7 +142,7 @@ export function shouldDisableAnimations(): boolean {
   
   // Check for low-end device (optional, for performance)
   // This is a heuristic based on hardware concurrency
-  const isLowEndDevice = navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 2;
+  const isLowEndDevice = navigator.hardwareConcurrency ? navigator.hardwareConcurrency <= 2 : false;
   
   return isLowEndDevice;
 }

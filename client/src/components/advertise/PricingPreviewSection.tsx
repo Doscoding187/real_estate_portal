@@ -10,7 +10,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Users, Building2, Landmark, Wrench } from 'lucide-react';
-import { softUITokens } from './design-tokens';
 import { staggerContainer } from '@/lib/animations/advertiseAnimations';
 import { PricingCard } from './PricingCard';
 import { CTAButton } from './CTAButton';
@@ -96,21 +95,14 @@ export const PricingPreviewSection: React.FC<PricingPreviewSectionProps> = ({
 }) => {
   return (
     <section
-      className="pricing-preview-section py-20 md:py-28"
+      className="pricing-preview-section py-20 md:py-28 bg-gray-50"
       aria-labelledby="pricing-preview-heading"
-      style={{
-        background: softUITokens.colors.neutral.gray50,
-      }}
     >
       {/* Container with max width */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"
-      >
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
         <motion.div
-          style={{
-            textAlign: 'center',
-            marginBottom: softUITokens.spacing['4xl'],
-          }}
+          className="text-center mb-12 md:mb-16"
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: '-100px' }}
@@ -131,14 +123,11 @@ export const PricingPreviewSection: React.FC<PricingPreviewSectionProps> = ({
 
         {/* Pricing Cards Grid */}
         <motion.div
-          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 pricing-cards-grid"
+          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 pricing-cards-grid mb-10 md:mb-12"
           variants={staggerContainer}
           initial="initial"
           whileInView="animate"
           viewport={{ once: true, margin: '-50px' }}
-          style={{
-            marginBottom: softUITokens.spacing['3xl'],
-          }}
         >
           {pricingCategories.map((category, index) => (
             <PricingCard
@@ -153,11 +142,7 @@ export const PricingPreviewSection: React.FC<PricingPreviewSectionProps> = ({
 
         {/* View Full Pricing CTA */}
         <motion.div
-          className="mt-10 md:mt-16"
-          style={{
-            display: 'flex',
-            justifyContent: 'center',
-          }}
+          className="flex justify-center"
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}

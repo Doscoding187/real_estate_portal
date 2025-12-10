@@ -26,7 +26,6 @@ import {
   Image 
 } from 'lucide-react';
 import { FeatureTile } from './FeatureTile';
-import { softUITokens } from './design-tokens';
 import { staggerContainer, staggerItem } from '@/lib/animations/advertiseAnimations';
 import { useScrollAnimation } from '@/hooks/useScrollAnimation';
 
@@ -94,21 +93,14 @@ export const FeaturesGridSection: React.FC<FeaturesGridSectionProps> = ({
   return (
     <section
       ref={ref}
-      className={`features-grid-section py-20 md:py-28 ${className}`}
-      style={{
-        background: softUITokens.colors.neutral.gray50,
-      }}
+      className={`features-grid-section py-20 md:py-28 bg-gray-50 ${className}`}
       aria-labelledby="features-grid-heading"
     >
       {/* Container with max width */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"
-      >
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
         <motion.div
-          style={{
-            textAlign: 'center',
-            marginBottom: softUITokens.spacing['4xl'],
-          }}
+          className="text-center mb-12 md:mb-16"
           initial={{ opacity: 0, y: 20 }}
           animate={isVisible ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
           transition={{

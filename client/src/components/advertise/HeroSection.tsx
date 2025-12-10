@@ -57,7 +57,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
 }) => {
   return (
     <section
-      className="relative overflow-hidden"
+      className="hero-section relative overflow-hidden"
       aria-labelledby="hero-headline"
       aria-describedby="hero-subheadline"
       role="banner"
@@ -66,10 +66,10 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
         minHeight: 'max(90vh, 640px)',
       }}
     >
-      {/* Container with max width */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 md:py-28">
+      {/* Container with max width - standard wrapper pattern */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 md:py-28 lg:py-32">
         <motion.div
-          className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-center"
+          className="grid grid-cols-1 lg:grid-cols-2 gap-8 md:gap-10 lg:gap-12 items-center"
           variants={staggerContainer}
           initial="initial"
           whileInView="animate"

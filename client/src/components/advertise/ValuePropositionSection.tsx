@@ -12,7 +12,6 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { Target, Sparkles, CheckCircle, BarChart3 } from 'lucide-react';
 import { FeatureBlock } from './FeatureBlock';
-import { softUITokens } from './design-tokens';
 import { staggerContainer } from '@/lib/animations/advertiseAnimations';
 
 export interface ValuePropositionSectionProps {
@@ -53,23 +52,14 @@ export const ValuePropositionSection: React.FC<ValuePropositionSectionProps> = (
 }) => {
   return (
     <section
-      className={`value-proposition-section py-20 md:py-28 ${className}`}
-      style={{
-        background: softUITokens.colors.neutral.gray50,
-      }}
+      className={`value-proposition-section py-20 md:py-28 bg-gray-50 ${className}`}
       aria-labelledby="value-proposition-heading"
       aria-describedby="value-proposition-description"
       role="region"
     >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"
-      >
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
-        <div
-          style={{
-            textAlign: 'center',
-            marginBottom: softUITokens.spacing['4xl'],
-          }}
-        >
+        <div className="text-center mb-12 md:mb-16">
           <motion.h2
             id="value-proposition-heading"
             initial={{ opacity: 0, y: 20 }}

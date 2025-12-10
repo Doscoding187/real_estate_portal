@@ -90,6 +90,45 @@ export const softUITokens = {
     '5xl': '6rem',    // 96px
   },
 
+  // Layout tokens for consistent section structure
+  layout: {
+    // Standard container wrapper
+    containerClass: 'max-w-7xl mx-auto px-4 sm:px-6 lg:px-8',
+    
+    // Section padding
+    sectionPadding: 'py-20 md:py-28',
+    sectionPaddingTop: 'pt-20 md:pt-28',
+    sectionPaddingBottom: 'pb-20 md:pb-28',
+    
+    // Block spacing
+    blockGap: 'mt-10 md:mt-16',
+    blockGapLarge: 'mt-16 md:mt-24',
+    
+    // Grid patterns
+    grid4Col: 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8',
+    grid3Col: 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-10',
+    grid2Col: 'grid grid-cols-1 lg:grid-cols-2 gap-12',
+    
+    // Flex patterns
+    flexRow: 'flex flex-col md:flex-row items-center justify-between gap-10',
+  },
+
+  // Typography tokens for consistent heading sizes
+  headings: {
+    h1: 'text-4xl md:text-5xl font-bold',
+    h2: 'text-3xl md:text-4xl font-semibold',
+    h3: 'text-2xl font-semibold',
+    h4: 'text-xl font-semibold',
+    
+    // Line heights
+    h1LineHeight: 'leading-tight',
+    h2LineHeight: 'leading-tight',
+    h3LineHeight: 'leading-snug',
+    
+    // Subheadings
+    subheading: 'text-lg md:text-xl text-gray-600',
+  },
+
   typography: {
     fontFamily: {
       sans: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',

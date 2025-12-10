@@ -27,8 +27,9 @@
  * Requirements: 11.1, 11.2, 11.3, 11.4, 11.5
  */
 
-import { Variants } from 'framer-motion';
+import { Variants, Transition } from 'framer-motion';
 import { createAccessibleVariants, getAccessibleDuration } from './motionUtils';
+import { checkReducedMotion } from '@/hooks/useReducedMotion.advertise';
 
 /**
  * Fade-up animation variant

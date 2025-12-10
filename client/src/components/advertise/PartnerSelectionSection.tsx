@@ -17,7 +17,6 @@ import {
   Wrench 
 } from 'lucide-react';
 import { PartnerTypeCard } from './PartnerTypeCard';
-import { softUITokens } from './design-tokens';
 import { staggerContainer } from '@/lib/animations/advertiseAnimations';
 
 export interface PartnerType {
@@ -96,26 +95,17 @@ export const PartnerSelectionSection: React.FC<PartnerSelectionSectionProps> = (
 }) => {
   return (
     <section
-      className={`partner-selection-section py-20 md:py-28 ${className}`}
-      style={{
-        background: softUITokens.colors.neutral.gray50,
-      }}
+      className={`partner-selection-section py-20 md:py-28 bg-gray-50 ${className}`}
       aria-labelledby="partner-selection-heading"
       aria-describedby="partner-selection-description"
       role="region"
     >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"
-      >
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
-        <div
-          style={{
-            textAlign: 'center',
-            marginBottom: softUITokens.spacing['4xl'],
-          }}
-        >
+        <div className="text-center mb-12 md:mb-16">
           <h2
             id="partner-selection-heading"
-            className="text-3xl md:text-4xl font-semibold leading-tight"
+            className="text-3xl md:text-4xl font-semibold leading-tight mb-4"
           >
             {title}
           </h2>
