@@ -71,7 +71,6 @@ export const PartnerTypeCard: React.FC<PartnerTypeCardProps> = ({
   title,
   benefit,
   href,
-  index,
   onClick,
   className = '',
 }) => {
