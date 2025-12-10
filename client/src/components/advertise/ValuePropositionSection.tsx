@@ -53,20 +53,15 @@ export const ValuePropositionSection: React.FC<ValuePropositionSectionProps> = (
 }) => {
   return (
     <section
-      className={`value-proposition-section ${className}`}
+      className={`value-proposition-section py-20 md:py-28 ${className}`}
       style={{
-        padding: `${softUITokens.spacing['5xl']} ${softUITokens.spacing.xl}`,
         background: softUITokens.colors.neutral.gray50,
       }}
       aria-labelledby="value-proposition-heading"
       aria-describedby="value-proposition-description"
       role="region"
     >
-      <div
-        style={{
-          maxWidth: '1440px',
-          margin: '0 auto',
-        }}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"
       >
         {/* Section Header */}
         <div
@@ -81,13 +76,7 @@ export const ValuePropositionSection: React.FC<ValuePropositionSectionProps> = (
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.4 }}
-            style={{
-              fontSize: softUITokens.typography.fontSize['4xl'],
-              fontWeight: softUITokens.typography.fontWeight.bold,
-              color: softUITokens.colors.neutral.gray900,
-              marginBottom: softUITokens.spacing.lg,
-              lineHeight: softUITokens.typography.lineHeight.tight,
-            }}
+            className="text-3xl md:text-4xl font-semibold leading-tight mb-4"
           >
             Why Advertise With Us?
           </motion.h2>
@@ -98,13 +87,7 @@ export const ValuePropositionSection: React.FC<ValuePropositionSectionProps> = (
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.4, delay: 0.1 }}
-            style={{
-              fontSize: softUITokens.typography.fontSize.xl,
-              color: softUITokens.colors.neutral.gray600,
-              maxWidth: '800px',
-              margin: '0 auto',
-              lineHeight: softUITokens.typography.lineHeight.relaxed,
-            }}
+            className="text-lg md:text-xl text-gray-600 leading-relaxed max-w-2xl mx-auto"
           >
             Join South Africa's fastest-growing property platform and reach thousands of verified home seekers
           </motion.p>
@@ -116,12 +99,7 @@ export const ValuePropositionSection: React.FC<ValuePropositionSectionProps> = (
           initial="initial"
           whileInView="animate"
           viewport={{ once: true, margin: '-100px' }}
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-            gap: softUITokens.spacing['3xl'],
-            alignItems: 'start',
-          }}
+          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8"
           role="list"
           aria-label="Platform benefits"
         >

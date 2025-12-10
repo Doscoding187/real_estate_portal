@@ -38,7 +38,7 @@
   /* Hero Section - Mobile */
   .hero-section {
     min-height: auto !important;
-    padding: 3rem 1rem !important;
+    padding: 5rem 1rem !important;
   }
 
   .hero-section .grid {
@@ -57,12 +57,12 @@
 
   /* Partner Selection - Mobile */
   .partner-selection-section {
-    padding: 3rem 1rem !important;
+    padding: 5rem 1rem !important;
   }
 
   .partner-cards-grid {
     grid-template-columns: 1fr !important;
-    gap: 1rem !important;
+    gap: 2rem !important;
   }
 
   .partner-type-card {
@@ -72,7 +72,7 @@
 
   /* Value Proposition - Mobile */
   .value-proposition-section {
-    padding: 3rem 1rem !important;
+    padding: 5rem 1rem !important;
   }
 
   .value-proposition-section .grid,
@@ -83,13 +83,13 @@
 
   /* How It Works - Mobile */
   .how-it-works-section {
-    padding: 3rem 1rem !important;
+    padding: 5rem 1rem !important;
   }
 
   .process-steps-container {
     flex-direction: column !important;
     align-items: center !important;
-    gap: 2rem !important;
+    gap: 2.5rem !important;
   }
 
   .process-step {
@@ -103,12 +103,12 @@
 
   /* Features Grid - Mobile */
   .features-grid-section {
-    padding: 3rem 1rem !important;
+    padding: 5rem 1rem !important;
   }
 
   .features-grid-section .grid {
     grid-template-columns: 1fr !important;
-    gap: 1rem !important;
+    gap: 2.5rem !important;
   }
 
   .feature-tile {
@@ -117,7 +117,7 @@
 
   /* Social Proof - Mobile */
   .social-proof-section {
-    padding: 3rem 1rem !important;
+    padding: 5rem 1rem !important;
   }
 
   .social-proof-section .metrics-grid {
@@ -132,12 +132,12 @@
 
   /* Pricing Preview - Mobile */
   .pricing-preview-section {
-    padding: 3rem 1rem !important;
+    padding: 5rem 1rem !important;
   }
 
   .pricing-cards-grid {
     grid-template-columns: 1fr !important;
-    gap: 1rem !important;
+    gap: 2rem !important;
   }
 
   .pricing-card {
@@ -146,7 +146,7 @@
 
   /* Final CTA - Mobile */
   .final-cta-section {
-    padding: 3rem 1rem !important;
+    padding: 5rem 1rem !important;
   }
 
   .final-cta-section h2 {
@@ -159,7 +159,7 @@
 
   /* FAQ Section - Mobile */
   .faq-section {
-    padding: 3rem 1rem !important;
+    padding: 5rem 1rem !important;
   }
 
   .faq-accordion-item {
@@ -198,8 +198,8 @@
 
   /* Spacing - Mobile */
   .section-spacing {
-    padding-top: 3rem !important;
-    padding-bottom: 3rem !important;
+    padding-top: 5rem !important;
+    padding-bottom: 5rem !important;
   }
 
   /* Billboard Banner - Mobile */
@@ -228,7 +228,7 @@
 @media (min-width: 768px) and (max-width: 1023px) {
   /* Hero Section - Tablet */
   .hero-section {
-    padding: 4rem 2rem !important;
+    padding: 5rem 2rem !important;
   }
 
   .hero-section .grid {
@@ -246,17 +246,17 @@
 
   /* Partner Selection - Tablet */
   .partner-selection-section {
-    padding: 4rem 2rem !important;
+    padding: 5rem 2rem !important;
   }
 
   .partner-cards-grid {
     grid-template-columns: repeat(2, 1fr) !important;
-    gap: 1.5rem !important;
+    gap: 2rem !important;
   }
 
   /* Value Proposition - Tablet */
   .value-proposition-section {
-    padding: 4rem 2rem !important;
+    padding: 5rem 2rem !important;
   }
 
   .value-proposition-section .grid,
@@ -267,11 +267,11 @@
 
   /* How It Works - Tablet */
   .how-it-works-section {
-    padding: 4rem 2rem !important;
+    padding: 5rem 2rem !important;
   }
 
   .process-steps-container {
-    gap: 1.5rem !important;
+    gap: 2.5rem !important;
   }
 
   .process-step {
@@ -280,17 +280,17 @@
 
   /* Features Grid - Tablet */
   .features-grid-section {
-    padding: 4rem 2rem !important;
+    padding: 5rem 2rem !important;
   }
 
   .features-grid-section .grid {
     grid-template-columns: repeat(2, 1fr) !important;
-    gap: 1.5rem !important;
+    gap: 2.5rem !important;
   }
 
   /* Social Proof - Tablet */
   .social-proof-section {
-    padding: 4rem 2rem !important;
+    padding: 5rem 2rem !important;
   }
 
   .social-proof-section .metrics-grid {
@@ -305,17 +305,17 @@
 
   /* Pricing Preview - Tablet */
   .pricing-preview-section {
-    padding: 4rem 2rem !important;
+    padding: 5rem 2rem !important;
   }
 
   .pricing-cards-grid {
     grid-template-columns: repeat(2, 1fr) !important;
-    gap: 1.5rem !important;
+    gap: 2rem !important;
   }
 
   /* Final CTA - Tablet */
   .final-cta-section {
-    padding: 4rem 2rem !important;
+    padding: 5rem 2rem !important;
   }
 
   .final-cta-section h2 {
@@ -324,7 +324,7 @@
 
   /* FAQ Section - Tablet */
   .faq-section {
-    padding: 4rem 2rem !important;
+    padding: 5rem 2rem !important;
   }
 
   /* CTA Buttons - Tablet */
@@ -348,8 +348,8 @@
 
   /* Spacing - Tablet */
   .section-spacing {
-    padding-top: 4rem !important;
-    padding-bottom: 4rem !important;
+    padding-top: 5rem !important;
+    padding-bottom: 5rem !important;
   }
 
   /* Billboard Banner - Tablet */
@@ -366,7 +366,7 @@
 @media (min-width: 1024px) {
   /* Hero Section - Desktop */
   .hero-section {
-    padding: 5rem 2rem !important;
+    padding: 7rem 2rem !important;
   }
 
   .hero-section .grid {
@@ -384,17 +384,17 @@
 
   /* Partner Selection - Desktop */
   .partner-selection-section {
-    padding: 6rem 2rem !important;
+    padding: 7rem 2rem !important;
   }
 
   .partner-cards-grid {
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)) !important;
+    grid-template-columns: repeat(4, 1fr) !important;
     gap: 2rem !important;
   }
 
   /* Value Proposition - Desktop */
   .value-proposition-section {
-    padding: 6rem 2rem !important;
+    padding: 7rem 2rem !important;
   }
 
   .value-proposition-section .grid,
@@ -405,26 +405,26 @@
 
   /* How It Works - Desktop */
   .how-it-works-section {
-    padding: 5rem 2rem !important;
+    padding: 7rem 2rem !important;
   }
 
   .process-steps-container {
-    gap: 2rem !important;
+    gap: 2.5rem !important;
   }
 
   /* Features Grid - Desktop */
   .features-grid-section {
-    padding: 6rem 2rem !important;
+    padding: 7rem 2rem !important;
   }
 
   .features-grid-section .grid {
     grid-template-columns: repeat(3, 1fr) !important;
-    gap: 2rem !important;
+    gap: 2.5rem !important;
   }
 
   /* Social Proof - Desktop */
   .social-proof-section {
-    padding: 6rem 2rem !important;
+    padding: 7rem 2rem !important;
   }
 
   .social-proof-section .metrics-grid {
@@ -439,17 +439,17 @@
 
   /* Pricing Preview - Desktop */
   .pricing-preview-section {
-    padding: 6rem 2rem !important;
+    padding: 7rem 2rem !important;
   }
 
   .pricing-cards-grid {
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)) !important;
+    grid-template-columns: repeat(4, 1fr) !important;
     gap: 2rem !important;
   }
 
   /* Final CTA - Desktop */
   .final-cta-section {
-    padding: 6rem 2rem !important;
+    padding: 7rem 2rem !important;
   }
 
   .final-cta-section h2 {
@@ -458,7 +458,7 @@
 
   /* FAQ Section - Desktop */
   .faq-section {
-    padding: 6rem 2rem !important;
+    padding: 7rem 2rem !important;
   }
 
   /* Typography - Desktop */
@@ -472,8 +472,8 @@
 
   /* Spacing - Desktop */
   .section-spacing {
-    padding-top: 6rem !important;
-    padding-bottom: 6rem !important;
+    padding-top: 7rem !important;
+    padding-bottom: 7rem !important;
   }
 
   /* Billboard Banner - Desktop */

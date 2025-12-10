@@ -58,13 +58,13 @@ export const FinalCTASection: React.FC<FinalCTASectionProps> = ({
 
   return (
     <section
-      className={`final-cta-section py-20 md:py-24 ${className}`}
+      className={`final-cta-section py-20 md:py-28 ${className}`}
       style={{
         background: softUITokens.colors.neutral.gray50,
       }}
       aria-labelledby="final-cta-heading"
     >
-      <div className="container mx-auto px-4 max-w-4xl">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <motion.div
           variants={staggerContainer}
           initial="initial"
@@ -76,10 +76,9 @@ export const FinalCTASection: React.FC<FinalCTASectionProps> = ({
           <motion.h2
             id="final-cta-heading"
             variants={fadeUp}
-            className="text-4xl md:text-5xl font-bold mb-6"
+            className="text-3xl md:text-4xl font-semibold mb-6 leading-tight"
             style={{
               color: softUITokens.colors.neutral.gray900,
-              lineHeight: softUITokens.typography.lineHeight.tight,
             }}
           >
             {headline}
@@ -88,10 +87,8 @@ export const FinalCTASection: React.FC<FinalCTASectionProps> = ({
           {/* Subtext */}
           <motion.p
             variants={fadeUp}
-            className="text-lg md:text-xl mb-10"
+            className="text-lg md:text-xl mb-10 text-gray-600 leading-relaxed max-w-2xl mx-auto"
             style={{
-              color: softUITokens.colors.neutral.gray600,
-              lineHeight: softUITokens.typography.lineHeight.relaxed,
               maxWidth: '600px',
               margin: '0 auto 2.5rem',
             }}

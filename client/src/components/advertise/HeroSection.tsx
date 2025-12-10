@@ -67,7 +67,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
       }}
     >
       {/* Container with max width */}
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-20">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 md:py-28">
         <motion.div
           className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-center"
           variants={staggerContainer}
@@ -83,7 +83,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
             {/* Headline with gradient text */}
             <motion.h1
               id="hero-headline"
-              className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-bold leading-tight tracking-tight"
+              className="text-4xl md:text-5xl font-bold leading-tight"
               variants={fadeUp}
               style={{
                 background: softUITokens.colors.primary.gradient,
@@ -98,7 +98,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
             {/* Subheadline */}
             <motion.p
               id="hero-subheadline"
-              className="text-lg sm:text-xl lg:text-2xl text-gray-600 leading-relaxed max-w-2xl mx-auto lg:mx-0"
+              className="text-lg md:text-xl text-gray-600 leading-relaxed max-w-2xl mx-auto lg:mx-0"
               variants={fadeUp}
             >
               {subheadline}

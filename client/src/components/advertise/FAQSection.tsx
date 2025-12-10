@@ -126,12 +126,12 @@ export function FAQSection({ faqs = defaultFAQs }: FAQSectionProps) {
   return (
     <section
       ref={ref}
-      className="py-20 px-4 bg-gradient-to-b from-white to-gray-50"
+      className="py-20 md:py-28 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-white to-gray-50"
       aria-labelledby="faq-heading"
       aria-describedby="faq-description"
       role="region"
     >
-      <div className="max-w-4xl mx-auto">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={isVisible ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
@@ -140,11 +140,11 @@ export function FAQSection({ faqs = defaultFAQs }: FAQSectionProps) {
         >
           <h2
             id="faq-heading"
-            className="text-4xl md:text-5xl font-bold text-gray-900 mb-4"
+            className="text-3xl md:text-4xl font-semibold text-gray-900 mb-4 leading-tight"
           >
             Frequently Asked Questions
           </h2>
-          <p id="faq-description" className="text-lg text-gray-600 max-w-2xl mx-auto">
+          <p id="faq-description" className="text-lg md:text-xl text-gray-600 leading-relaxed max-w-2xl mx-auto">
             Find answers to common questions about advertising on our platform
           </p>
         </motion.div>
@@ -176,7 +176,7 @@ export function FAQSection({ faqs = defaultFAQs }: FAQSectionProps) {
           initial={{ opacity: 0, y: 20 }}
           animate={isVisible ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
           transition={{ duration: 0.6, delay: 0.4, ease: [0.4, 0, 0.2, 1] }}
-          className="mt-12 text-center"
+          className="mt-16 md:mt-24 text-center"
         >
           <p className="text-gray-600 mb-4">
             Still have questions?

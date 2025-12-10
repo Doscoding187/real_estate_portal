@@ -96,20 +96,15 @@ export const PartnerSelectionSection: React.FC<PartnerSelectionSectionProps> = (
 }) => {
   return (
     <section
-      className={`partner-selection-section ${className}`}
+      className={`partner-selection-section py-20 md:py-28 ${className}`}
       style={{
-        padding: `${softUITokens.spacing['5xl']} ${softUITokens.spacing.xl}`,
         background: softUITokens.colors.neutral.gray50,
       }}
       aria-labelledby="partner-selection-heading"
       aria-describedby="partner-selection-description"
       role="region"
     >
-      <div
-        style={{
-          maxWidth: '1440px',
-          margin: '0 auto',
-        }}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"
       >
         {/* Section Header */}
         <div
@@ -120,25 +115,13 @@ export const PartnerSelectionSection: React.FC<PartnerSelectionSectionProps> = (
         >
           <h2
             id="partner-selection-heading"
-            style={{
-              fontSize: softUITokens.typography.fontSize['4xl'],
-              fontWeight: softUITokens.typography.fontWeight.bold,
-              color: softUITokens.colors.neutral.gray900,
-              marginBottom: softUITokens.spacing.md,
-              lineHeight: softUITokens.typography.lineHeight.tight,
-            }}
+            className="text-3xl md:text-4xl font-semibold leading-tight"
           >
             {title}
           </h2>
           <p
             id="partner-selection-description"
-            style={{
-              fontSize: softUITokens.typography.fontSize.xl,
-              color: softUITokens.colors.neutral.gray600,
-              lineHeight: softUITokens.typography.lineHeight.relaxed,
-              maxWidth: '600px',
-              margin: '0 auto',
-            }}
+            className="text-lg md:text-xl text-gray-600 leading-relaxed max-w-2xl mx-auto"
           >
             {subtitle}
           </p>
@@ -150,12 +133,7 @@ export const PartnerSelectionSection: React.FC<PartnerSelectionSectionProps> = (
           initial="initial"
           whileInView="animate"
           viewport={{ once: true, margin: '-100px' }}
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-            gap: softUITokens.spacing.xl,
-          }}
-          className="partner-cards-grid"
+          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 partner-cards-grid"
           role="list"
           aria-label="Partner type options"
         >
@@ -173,20 +151,7 @@ export const PartnerSelectionSection: React.FC<PartnerSelectionSectionProps> = (
         </motion.div>
       </div>
 
-      {/* Responsive styles */}
-      <style>{`
-        @media (max-width: ${softUITokens.breakpoints.mobile}) {
-          .partner-cards-grid {
-            grid-template-columns: 1fr !important;
-          }
-        }
-        
-        @media (min-width: ${softUITokens.breakpoints.mobile}) and (max-width: ${softUITokens.breakpoints.tablet}) {
-          .partner-cards-grid {
-            grid-template-columns: repeat(2, 1fr) !important;
-          }
-        }
-      `}</style>
+
     </section>
   );
 };

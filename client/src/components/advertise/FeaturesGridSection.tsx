@@ -94,19 +94,14 @@ export const FeaturesGridSection: React.FC<FeaturesGridSectionProps> = ({
   return (
     <section
       ref={ref}
-      className={`features-grid-section ${className}`}
+      className={`features-grid-section py-20 md:py-28 ${className}`}
       style={{
-        padding: `${softUITokens.spacing['5xl']} ${softUITokens.spacing.xl}`,
         background: softUITokens.colors.neutral.gray50,
       }}
       aria-labelledby="features-grid-heading"
     >
       {/* Container with max width */}
-      <div
-        style={{
-          maxWidth: '1440px',
-          margin: '0 auto',
-        }}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"
       >
         {/* Section Header */}
         <motion.div
@@ -123,24 +118,12 @@ export const FeaturesGridSection: React.FC<FeaturesGridSectionProps> = ({
         >
           <h2
             id="features-grid-heading"
-            style={{
-              fontSize: softUITokens.typography.fontSize['4xl'],
-              fontWeight: softUITokens.typography.fontWeight.bold,
-              color: softUITokens.colors.neutral.gray900,
-              marginBottom: softUITokens.spacing.md,
-              lineHeight: softUITokens.typography.lineHeight.tight,
-            }}
+            className="text-3xl md:text-4xl font-semibold leading-tight mb-4"
           >
             {title}
           </h2>
           <p
-            style={{
-              fontSize: softUITokens.typography.fontSize.xl,
-              color: softUITokens.colors.neutral.gray600,
-              lineHeight: softUITokens.typography.lineHeight.relaxed,
-              maxWidth: '700px',
-              margin: '0 auto',
-            }}
+            className="text-lg md:text-xl text-gray-600 leading-relaxed max-w-2xl mx-auto"
           >
             {subtitle}
           </p>
@@ -151,12 +134,7 @@ export const FeaturesGridSection: React.FC<FeaturesGridSectionProps> = ({
           variants={staggerContainer}
           initial="initial"
           animate={isVisible ? "animate" : "initial"}
-          style={{
-            display: 'grid',
-            gap: softUITokens.spacing.xl,
-            // Responsive grid layout
-            gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
-          }}
+          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-10"
         >
           {features.map((feature, index) => (
             <motion.div
@@ -173,35 +151,7 @@ export const FeaturesGridSection: React.FC<FeaturesGridSectionProps> = ({
         </motion.div>
       </div>
 
-      {/* Responsive styles using media queries */}
-      <style>{`
-        @media (min-width: 1024px) {
-          .features-grid-section > div > div:last-child {
-            grid-template-columns: repeat(3, 1fr);
-          }
-        }
-        
-        @media (min-width: 768px) and (max-width: 1023px) {
-          .features-grid-section > div > div:last-child {
-            grid-template-columns: repeat(2, 1fr);
-          }
-        }
-        
-        @media (max-width: 767px) {
-          .features-grid-section > div > div:last-child {
-            grid-template-columns: 1fr;
-          }
-          
-          .features-grid-section {
-            padding: ${softUITokens.spacing['3xl']} ${softUITokens.spacing.md} !important;
-          }
-          
-          /* Touch-optimized spacing on mobile */
-          .features-grid-section > div > div:last-child {
-            gap: ${softUITokens.spacing.lg} !important;
-          }
-        }
-      `}</style>
+
     </section>
   );
 };

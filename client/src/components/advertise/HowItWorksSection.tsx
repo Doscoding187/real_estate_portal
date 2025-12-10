@@ -80,18 +80,13 @@ export const HowItWorksSection: React.FC<HowItWorksSectionProps> = ({
   return (
     <section
       ref={ref}
-      className={`how-it-works-section ${className}`}
+      className={`how-it-works-section py-20 md:py-28 ${className}`}
       style={{
-        padding: `${softUITokens.spacing['4xl']} ${softUITokens.spacing.xl}`,
         background: softUITokens.colors.neutral.gray50,
       }}
       aria-labelledby="how-it-works-heading"
     >
-      <div
-        style={{
-          maxWidth: '1200px',
-          margin: '0 auto',
-        }}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"
       >
         {/* Section Header */}
         <div
@@ -102,22 +97,12 @@ export const HowItWorksSection: React.FC<HowItWorksSectionProps> = ({
         >
           <h2
             id="how-it-works-heading"
-            style={{
-              fontSize: softUITokens.typography.fontSize['4xl'],
-              fontWeight: softUITokens.typography.fontWeight.bold,
-              color: softUITokens.colors.neutral.gray900,
-              marginBottom: softUITokens.spacing.md,
-              lineHeight: softUITokens.typography.lineHeight.tight,
-            }}
+            className="text-3xl md:text-4xl font-semibold leading-tight mb-4"
           >
             {heading}
           </h2>
           <p
-            style={{
-              fontSize: softUITokens.typography.fontSize.xl,
-              color: softUITokens.colors.neutral.gray600,
-              lineHeight: softUITokens.typography.lineHeight.relaxed,
-            }}
+            className="text-lg md:text-xl text-gray-600 leading-relaxed"
           >
             {subheading}
           </p>
@@ -128,15 +113,7 @@ export const HowItWorksSection: React.FC<HowItWorksSectionProps> = ({
           variants={staggerContainer}
           initial="initial"
           animate={isVisible ? "animate" : "initial"}
-          style={{
-            display: 'flex',
-            flexDirection: 'row',
-            gap: softUITokens.spacing['2xl'],
-            marginBottom: softUITokens.spacing['4xl'],
-            alignItems: 'flex-start',
-            justifyContent: 'center',
-          }}
-          className="process-steps-container"
+          className="flex flex-col md:flex-row items-center justify-between gap-10 process-steps-container"
         >
           {defaultSteps.map((step, index) => (
             <ProcessStep
@@ -152,10 +129,10 @@ export const HowItWorksSection: React.FC<HowItWorksSectionProps> = ({
 
         {/* CTA Button */}
         <div
+          className="mt-16 md:mt-24"
           style={{
             display: 'flex',
             justifyContent: 'center',
-            marginTop: softUITokens.spacing['3xl'],
           }}
         >
           <CTAButton
@@ -167,25 +144,7 @@ export const HowItWorksSection: React.FC<HowItWorksSectionProps> = ({
         </div>
       </div>
 
-      {/* Responsive Styles */}
-      <style>{`
-        @media (max-width: 768px) {
-          .process-steps-container {
-            flex-direction: column !important;
-            align-items: center !important;
-          }
-          
-          .connector-line {
-            display: none !important;
-          }
-        }
-        
-        @media (min-width: 769px) and (max-width: 1024px) {
-          .process-steps-container {
-            gap: ${softUITokens.spacing.xl} !important;
-          }
-        }
-      `}</style>
+
     </section>
   );
 };

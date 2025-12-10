@@ -96,19 +96,14 @@ export const PricingPreviewSection: React.FC<PricingPreviewSectionProps> = ({
 }) => {
   return (
     <section
-      className="pricing-preview-section"
+      className="pricing-preview-section py-20 md:py-28"
       aria-labelledby="pricing-preview-heading"
       style={{
-        padding: `${softUITokens.spacing['5xl']} ${softUITokens.spacing.lg}`,
         background: softUITokens.colors.neutral.gray50,
       }}
     >
       {/* Container with max width */}
-      <div
-        style={{
-          maxWidth: softUITokens.breakpoints.desktop,
-          margin: '0 auto',
-        }}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"
       >
         {/* Section Header */}
         <motion.div
@@ -123,24 +118,12 @@ export const PricingPreviewSection: React.FC<PricingPreviewSectionProps> = ({
         >
           <h2
             id="pricing-preview-heading"
-            style={{
-              fontSize: softUITokens.typography.fontSize['4xl'],
-              fontWeight: softUITokens.typography.fontWeight.bold,
-              color: softUITokens.colors.neutral.gray900,
-              marginBottom: softUITokens.spacing.lg,
-              lineHeight: softUITokens.typography.lineHeight.tight,
-            }}
+            className="text-3xl md:text-4xl font-semibold leading-tight mb-4"
           >
             {title}
           </h2>
           <p
-            style={{
-              fontSize: softUITokens.typography.fontSize.xl,
-              color: softUITokens.colors.neutral.gray600,
-              lineHeight: softUITokens.typography.lineHeight.relaxed,
-              maxWidth: '800px',
-              margin: '0 auto',
-            }}
+            className="text-lg md:text-xl text-gray-600 leading-relaxed max-w-2xl mx-auto"
           >
             {subtitle}
           </p>
@@ -148,15 +131,12 @@ export const PricingPreviewSection: React.FC<PricingPreviewSectionProps> = ({
 
         {/* Pricing Cards Grid */}
         <motion.div
-          className="pricing-cards-grid"
+          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 pricing-cards-grid"
           variants={staggerContainer}
           initial="initial"
           whileInView="animate"
           viewport={{ once: true, margin: '-50px' }}
           style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-            gap: softUITokens.spacing.xl,
             marginBottom: softUITokens.spacing['3xl'],
           }}
         >
@@ -173,10 +153,10 @@ export const PricingPreviewSection: React.FC<PricingPreviewSectionProps> = ({
 
         {/* View Full Pricing CTA */}
         <motion.div
+          className="mt-10 md:mt-16"
           style={{
             display: 'flex',
             justifyContent: 'center',
-            marginTop: softUITokens.spacing['2xl'],
           }}
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
