@@ -52,7 +52,7 @@ export const ValuePropositionSection: React.FC<ValuePropositionSectionProps> = (
 }) => {
   return (
     <section
-      className={`value-proposition-section py-20 md:py-28 bg-gray-50 ${className}`}
+      className={`value-proposition-section py-20 md:py-28 bg-white ${className}`}
       aria-labelledby="value-proposition-heading"
       aria-describedby="value-proposition-description"
       role="region"
@@ -89,7 +89,7 @@ export const ValuePropositionSection: React.FC<ValuePropositionSectionProps> = (
           initial="initial"
           whileInView="animate"
           viewport={{ once: true, margin: '-100px' }}
-          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8"
+          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8"
           role="list"
           aria-label="Platform benefits"
         >

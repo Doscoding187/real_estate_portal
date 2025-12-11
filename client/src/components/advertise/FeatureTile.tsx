@@ -44,7 +44,7 @@ export const FeatureTile: React.FC<FeatureTileProps> = ({
 }) => {
   return (
     <motion.div
-      className={`feature-tile flex flex-col items-start gap-6 p-8 rounded-2xl bg-white relative overflow-hidden cursor-default ${className}`}
+      className={`feature-tile flex flex-col items-start gap-6 p-6 md:p-8 rounded-2xl bg-white relative overflow-hidden cursor-default ${className}`}
       initial="rest"
       whileHover="hover"
       animate="rest"

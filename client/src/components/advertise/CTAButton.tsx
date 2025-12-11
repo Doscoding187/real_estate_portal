@@ -48,33 +48,21 @@ export const CTAButton: React.FC<CTAButtonProps> = ({
 
   const isPrimary = variant === 'primary';
 
-  const baseStyles = {
-    display: 'inline-flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: '0.875rem 2rem',
-    fontSize: softUITokens.typography.fontSize.lg,
-    fontWeight: softUITokens.typography.fontWeight.semibold,
-    borderRadius: softUITokens.borderRadius.soft,
-    transition: `all ${softUITokens.transitions.base}`,
-    textDecoration: 'none',
-    cursor: 'pointer',
-    width: fullWidth ? '100%' : 'auto',
-  };
-
+  // Visual tokens only - keep gradients, shadows, colors
   const primaryStyles = {
-    ...baseStyles,
     background: softUITokens.colors.primary.gradient,
     color: softUITokens.colors.neutral.white,
     boxShadow: softUITokens.shadows.soft,
+    borderRadius: softUITokens.borderRadius.soft,
+    transition: `all ${softUITokens.transitions.base}`,
   };
 
   const secondaryStyles = {
-    ...baseStyles,
     background: 'transparent',
     color: softUITokens.colors.primary.base,
     border: `2px solid ${softUITokens.colors.primary.base}`,
-    boxShadow: 'none',
+    borderRadius: softUITokens.borderRadius.soft,
+    transition: `all ${softUITokens.transitions.base}`,
   };
 
   const hoverStyles = isPrimary
@@ -91,7 +79,7 @@ export const CTAButton: React.FC<CTAButtonProps> = ({
     <motion.a
       href={href}
       onClick={handleClick}
-      className={`cta-button cta-button--${variant} ${className}`}
+      className={`cta-button cta-button--${variant} inline-flex items-center justify-center px-8 py-3.5 text-base sm:text-lg font-semibold no-underline cursor-pointer ${fullWidth ? 'w-full' : ''} ${className}`}
       style={isPrimary ? primaryStyles : secondaryStyles}
       variants={buttonPress}
       initial="rest"

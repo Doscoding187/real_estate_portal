@@ -89,7 +89,7 @@ export const PartnerTypeCard: React.FC<PartnerTypeCardProps> = ({
     <motion.a
       href={href}
       onClick={handleClick}
-      className={`partner-type-card block no-underline bg-white rounded-2xl p-8 cursor-pointer relative overflow-hidden transition-all duration-300 ${className}`}
+      className={`partner-type-card block no-underline bg-white rounded-2xl p-6 md:p-8 cursor-pointer relative overflow-hidden transition-all duration-300 ${className}`}
       variants={staggerItem}
       initial="initial"
       whileInView="animate"

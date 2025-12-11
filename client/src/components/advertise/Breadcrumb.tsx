@@ -93,7 +93,7 @@ export function Breadcrumb({ items, className = '' }: BreadcrumbProps) {
  */
 export function AdvertiseBreadcrumb() {
   return (
-    <div className="container">
+    <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <Breadcrumb
         items={[
           { label: 'Advertise With Us', href: '/advertise' },

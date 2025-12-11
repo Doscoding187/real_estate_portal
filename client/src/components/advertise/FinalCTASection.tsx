@@ -36,6 +36,21 @@ export const FinalCTASection: React.FC<FinalCTASectionProps> = ({
   secondaryCTA,
   className = '',
 }) => {
+  // Defensive checks: ensure required props are defined
+  if (!headline || !subtext || !primaryCTA || !secondaryCTA) {
+    console.warn('FinalCTASection: missing required props', { headline, subtext, primaryCTA, secondaryCTA });
+    return (
+      <section
+        className={`final-cta-section py-20 md:py-28 bg-gray-50 ${className}`}
+        aria-labelledby="final-cta-heading"
+      >
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <p className="text-gray-600">Loading call to action...</p>
+        </div>
+      </section>
+    );
+  }
+
   // Wrap CTA handlers with tracking
   const handlePrimaryCTAClick = () => {
     trackCTAClick({

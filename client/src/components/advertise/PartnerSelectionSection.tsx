@@ -123,7 +123,7 @@ export const PartnerSelectionSection: React.FC<PartnerSelectionSectionProps> = (
           initial="initial"
           whileInView="animate"
           viewport={{ once: true, margin: '-100px' }}
-          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 partner-cards-grid"
+          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8 partner-cards-grid"
           role="list"
           aria-label="Partner type options"
         >

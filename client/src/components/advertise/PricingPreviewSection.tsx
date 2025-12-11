@@ -93,9 +93,24 @@ export const PricingPreviewSection: React.FC<PricingPreviewSectionProps> = ({
   title = 'Pricing That Fits Your Business',
   subtitle = 'Choose the plan that works for you. All plans include our core features with flexible options to scale as you grow.',
 }) => {
+  // Defensive check: ensure pricingCategories is defined and is an array
+  if (!pricingCategories || !Array.isArray(pricingCategories) || pricingCategories.length === 0) {
+    console.warn('PricingPreviewSection: pricingCategories prop is missing or empty');
+    return (
+      <section
+        className="pricing-preview-section py-20 md:py-28 bg-gray-50"
+        aria-labelledby="pricing-preview-heading"
+      >
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <p className="text-gray-600">Loading pricing information...</p>
+        </div>
+      </section>
+    );
+  }
+
   return (
     <section
-      className="pricing-preview-section py-20 md:py-28 bg-gray-50"
+      className="pricing-preview-section py-20 md:py-28 bg-white"
       aria-labelledby="pricing-preview-heading"
     >
       {/* Container with max width */}
@@ -123,7 +138,7 @@ export const PricingPreviewSection: React.FC<PricingPreviewSectionProps> = ({
 
         {/* Pricing Cards Grid */}
         <motion.div
-          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 pricing-cards-grid mb-10 md:mb-12"
+          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8 pricing-cards-grid mb-10 md:mb-12"
           variants={staggerContainer}
           initial="initial"
           whileInView="animate"

@@ -110,26 +110,12 @@ export const FeatureBlock: React.FC<FeatureBlockProps> = ({
       {/* Text Content */}
       <div>
         {/* Headline */}
-        <h3
-          style={{
-            fontSize: softUITokens.typography.fontSize['2xl'],
-            fontWeight: softUITokens.typography.fontWeight.bold,
-            color: softUITokens.colors.neutral.gray900,
-            marginBottom: softUITokens.spacing.md,
-            lineHeight: softUITokens.typography.lineHeight.tight,
-          }}
-        >
+        <h3 className="text-xl md:text-2xl font-bold text-gray-900 mb-3 leading-tight">
           {headline}
         </h3>
 
         {/* Description */}
-        <p
-          style={{
-            fontSize: softUITokens.typography.fontSize.base,
-            color: softUITokens.colors.neutral.gray600,
-            lineHeight: softUITokens.typography.lineHeight.relaxed,
-          }}
-        >
+        <p className="text-base text-gray-600 leading-relaxed">
           {description}
         </p>
       </div>

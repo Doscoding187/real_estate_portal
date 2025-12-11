@@ -90,10 +90,26 @@ export const FeaturesGridSection: React.FC<FeaturesGridSectionProps> = ({
     triggerOnce: true,
   });
 
+  // Defensive check: ensure features array is defined
+  if (!features || !Array.isArray(features) || features.length === 0) {
+    console.warn('FeaturesGridSection: features array is missing or empty');
+    return (
+      <section
+        ref={ref}
+        className={`features-grid-section py-20 md:py-28 bg-gray-50 ${className}`}
+        aria-labelledby="features-grid-heading"
+      >
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <p className="text-gray-600">Loading features...</p>
+        </div>
+      </section>
+    );
+  }
+
   return (
     <section
       ref={ref}
-      className={`features-grid-section py-20 md:py-28 bg-gray-50 ${className}`}
+      className={`features-grid-section py-20 md:py-28 bg-white ${className}`}
       aria-labelledby="features-grid-heading"
     >
       {/* Container with max width */}
@@ -126,7 +142,7 @@ export const FeaturesGridSection: React.FC<FeaturesGridSectionProps> = ({
           variants={staggerContainer}
           initial="initial"
           animate={isVisible ? "animate" : "initial"}
-          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-10"
+          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8"
         >
           {features.map((feature) => (
             <motion.div

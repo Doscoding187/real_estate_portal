@@ -84,7 +84,7 @@ export const PricingCard: React.FC<PricingCardProps> = ({
     <motion.a
       href={href}
       onClick={handleClick}
-      className={`pricing-card block no-underline bg-white rounded-2xl p-8 border-2 border-gray-200 cursor-pointer relative overflow-hidden transition-all duration-300 ${className}`}
+      className={`pricing-card block no-underline bg-white rounded-2xl p-6 md:p-8 border-2 border-gray-200 cursor-pointer relative overflow-hidden transition-all duration-300 ${className}`}
       variants={staggerItem}
       initial="initial"
       whileInView="animate"

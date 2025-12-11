@@ -91,6 +91,22 @@ export function FAQSection({ faqs = defaultFAQs }: FAQSectionProps) {
   const [focusedIndex, setFocusedIndex] = useState<number>(0);
   const { ref, isVisible } = useScrollAnimation();
 
+  // Defensive check: ensure faqs is defined and is an array
+  if (!faqs || !Array.isArray(faqs) || faqs.length === 0) {
+    console.warn('FAQSection: faqs prop is missing or empty');
+    return (
+      <section
+        ref={ref}
+        className="faq-section py-20 md:py-28 bg-gradient-to-b from-white to-gray-50"
+        aria-labelledby="faq-heading"
+      >
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <p className="text-gray-600">Loading frequently asked questions...</p>
+        </div>
+      </section>
+    );
+  }
+
   const handleToggle = (index: number) => {
     setOpenIndex(openIndex === index ? null : index);
   };
