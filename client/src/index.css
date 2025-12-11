@@ -1,4 +1,9 @@
 @import 'tailwindcss';
+
+/* CRITICAL: Load Tailwind v4 with our custom config */
+/* Without this, tailwind.config.js is IGNORED in Tailwind v4 */
+@config "../tailwind.config.js";
+
 @import 'tw-animate-css';
 /* Ikhaya Design System utilities & components */
 @import '../../design-system/components.css';
