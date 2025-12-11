@@ -14,11 +14,7 @@
  * - Mobile sticky CTA
  */
 
-import React, { lazy, Suspense, useState } from 'react';
-
-// CRITICAL: Import responsive CSS for proper layout
-import '@/styles/advertise-responsive.css';
-import '@/styles/advertise-focus-indicators.css';
+import React, { lazy, Suspense, useState, useEffect } from 'react';
 
 import { EnhancedNavbar } from '@/components/EnhancedNavbar';
 import { Footer } from '@/components/Footer';
@@ -108,6 +104,31 @@ export default function AdvertiseWithUs() {
   const [heroLoading, setHeroLoading] = useState(false);
   const [metricsError] = useState(false);
 
+  // Load and cleanup page-specific CSS
+  useEffect(() => {
+    // Dynamically load CSS files
+    const responsiveLink = document.createElement('link');
+    responsiveLink.rel = 'stylesheet';
+    responsiveLink.href = '/src/styles/advertise-responsive.css';
+    responsiveLink.id = 'advertise-responsive-css';
+    
+    const focusLink = document.createElement('link');
+    focusLink.rel = 'stylesheet';
+    focusLink.href = '/src/styles/advertise-focus-indicators.css';
+    focusLink.id = 'advertise-focus-css';
+    
+    document.head.appendChild(responsiveLink);
+    document.head.appendChild(focusLink);
+    
+    // Cleanup function to remove CSS when component unmounts
+    return () => {
+      const responsiveCss = document.getElementById('advertise-responsive-css');
+      const focusCss = document.getElementById('advertise-focus-css');
+      if (responsiveCss) responsiveCss.remove();
+      if (focusCss) focusCss.remove();
+    };
+  }, []);
+
   // Simulate loading completion (in real app, this would be based on data fetching)
   React.useEffect(() => {
     // Hero loads immediately
@@ -188,8 +209,8 @@ export default function AdvertiseWithUs() {
         <AdvertiseBreadcrumb />
       </div>
       
-      {/* Main content */}
-      <main id="main-content" className="bg-white">
+      {/* Main content - Scoped container for advertise page */}
+      <main id="main-content" className="advertise-page bg-white">
         {/* Hero Section */}
         <SectionErrorBoundary sectionName="Hero Section">
           <section id="hero-section" aria-labelledby="hero-heading">
