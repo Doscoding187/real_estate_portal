@@ -23,9 +23,6 @@ import '@/styles/advertise-focus-indicators.css';
 import { EnhancedNavbar } from '@/components/EnhancedNavbar';
 import { Footer } from '@/components/Footer';
 import { HeroSection } from '@/components/advertise/HeroSection';
-import { PartnerSelectionSection } from '@/components/advertise/PartnerSelectionSection';
-import { ValuePropositionSection } from '@/components/advertise/ValuePropositionSection';
-import { HowItWorksSection } from '@/components/advertise/HowItWorksSection';
 import { MobileStickyCTA, useMobileStickyCTA } from '@/components/advertise/MobileStickyCTA';
 import { PerformanceOptimizer } from '@/components/advertise/PerformanceOptimizer';
 import { SkipLinks } from '@/components/advertise/SkipLinks';
@@ -37,26 +34,69 @@ import { useAdvertiseAnalytics } from '@/hooks/useAdvertiseAnalytics';
 import { SectionErrorBoundary } from '@/components/advertise/AdvertiseErrorBoundary';
 import { 
   HeroSectionSkeleton,
-  PartnerSelectionSkeleton,
-  ValuePropositionSkeleton,
   FeaturesGridSkeleton,
   SocialProofSkeleton,
-  PricingPreviewSkeleton,
   FAQSectionSkeleton,
   SectionLoader,
 } from '@/components/advertise/SkeletonLoaders';
 import {
-  PartnerTypesError,
   MetricsPlaceholder,
-  PricingFallbackCTA,
 } from '@/components/advertise/ErrorStates';
 
-// Lazy load below-the-fold sections for better performance
-const FeaturesGridSection = lazy(() => import('@/components/advertise/FeaturesGridSection'));
-const SocialProofSection = lazy(() => import('@/components/advertise/SocialProofSection'));
-const PricingPreviewSection = lazy(() => import('@/components/advertise/PricingPreviewSection'));
-const FinalCTASection = lazy(() => import('@/components/advertise/FinalCTASection'));
-const FAQSection = lazy(() => import('@/components/advertise/FAQSection'));
+// Lazy load below-the-fold sections for better performance with error handling
+const FeaturesGridSection = lazy(() => 
+  import('@/components/advertise/FeaturesGridSection')
+    .then(module => {
+      console.log('✓ FeaturesGridSection loaded successfully');
+      return module;
+    })
+    .catch(error => {
+      console.error('✗ Failed to load FeaturesGridSection:', error);
+      throw error;
+    })
+);
+
+const SocialProofSection = lazy(() => 
+  import('@/components/advertise/SocialProofSection')
+    .then(module => {
+      console.log('✓ SocialProofSection loaded successfully');
+      return module;
+    })
+    .catch(error => {
+      console.error('✗ Failed to load SocialProofSection:', error);
+      throw error;
+    })
+);
+
+const FinalCTASection = lazy(() => 
+  import('@/components/advertise/FinalCTASection')
+    .then(module => {
+      console.log('✓ FinalCTASection loaded successfully');
+      return module;
+    })
+    .catch(error => {
+      console.error('✗ Failed to load FinalCTASection:', error);
+      throw error;
+    })
+);
+
+const FAQSection = lazy(() => 
+  import('@/components/advertise/FAQSection')
+    .then(module => {
+      console.log('✓ FAQSection loaded successfully');
+      return module;
+    })
+    .catch(error => {
+      console.error('✗ Failed to load FAQSection:', error);
+      throw error;
+    })
+);
+
+// Import the actual section components
+import { PartnerSelectionSection } from '@/components/advertise/PartnerSelectionSection';
+import { ValuePropositionSection } from '@/components/advertise/ValuePropositionSection';
+import { HowItWorksSection } from '@/components/advertise/HowItWorksSection';
+import { PricingPreviewSection } from '@/components/advertise/PricingPreviewSection';
 
 export default function AdvertiseWithUs() {
   // Set up analytics tracking (tracks page view and scroll depth automatically)
@@ -66,21 +106,12 @@ export default function AdvertiseWithUs() {
 
   // Loading and error states
   const [heroLoading, setHeroLoading] = useState(false);
-  const [partnerTypesError, setPartnerTypesError] = useState(false);
-  const [metricsError, setMetricsError] = useState(false);
-  const [pricingError, setPricingError] = useState(false);
-  const [faqError, setFaqError] = useState(false);
+  const [metricsError] = useState(false);
 
   // Simulate loading completion (in real app, this would be based on data fetching)
   React.useEffect(() => {
     // Hero loads immediately
     setHeroLoading(false);
-    
-    // Simulate potential errors (remove in production)
-    // setPartnerTypesError(Math.random() > 0.9);
-    // setMetricsError(Math.random() > 0.9);
-    // setPricingError(Math.random() > 0.9);
-    // setFaqError(Math.random() > 0.9);
   }, []);
 
   // Sample billboard banner
@@ -153,7 +184,7 @@ export default function AdvertiseWithUs() {
       <EnhancedNavbar />
       
       {/* Breadcrumb Navigation */}
-      <div className="bg-slate-50 border-b border-slate-200">
+      <div className="w-full bg-slate-50 border-b border-slate-200">
         <AdvertiseBreadcrumb />
       </div>
       
@@ -188,11 +219,7 @@ export default function AdvertiseWithUs() {
         {/* Partner Selection Section */}
         <SectionErrorBoundary sectionName="Partner Selection">
           <section id="partner-selection" aria-labelledby="partner-selection-heading">
-            {partnerTypesError ? (
-              <PartnerTypesError onRetry={() => setPartnerTypesError(false)} />
-            ) : (
-              <PartnerSelectionSection />
-            )}
+            <PartnerSelectionSection />
           </section>
         </SectionErrorBoundary>
 
@@ -232,17 +259,11 @@ export default function AdvertiseWithUs() {
           </Suspense>
         </SectionErrorBoundary>
 
-        {/* Pricing Preview Section - Lazy loaded */}
+        {/* Pricing Preview Section - Now inline */}
         <SectionErrorBoundary sectionName="Pricing Preview">
-          <Suspense fallback={<PricingPreviewSkeleton />}>
-            <section id="pricing-preview" aria-labelledby="pricing-preview-heading">
-              {pricingError ? (
-                <PricingFallbackCTA />
-              ) : (
-                <PricingPreviewSection />
-              )}
-            </section>
-          </Suspense>
+          <section id="pricing-preview" aria-labelledby="pricing-preview-heading">
+            <PricingPreviewSection />
+          </section>
         </SectionErrorBoundary>
 
         {/* Final CTA Section - Lazy loaded */}
@@ -265,16 +286,14 @@ export default function AdvertiseWithUs() {
           </Suspense>
         </SectionErrorBoundary>
 
-        {/* FAQ Section - Lazy loaded - Hidden if error */}
-        {!faqError && (
-          <SectionErrorBoundary sectionName="FAQ">
-            <Suspense fallback={<FAQSectionSkeleton />}>
-              <section id="faq" aria-labelledby="faq-heading">
-                <FAQSection />
-              </section>
-            </Suspense>
-          </SectionErrorBoundary>
-        )}
+        {/* FAQ Section - Lazy loaded */}
+        <SectionErrorBoundary sectionName="FAQ">
+          <Suspense fallback={<FAQSectionSkeleton />}>
+            <section id="faq" aria-labelledby="faq-heading">
+              <FAQSection />
+            </section>
+          </Suspense>
+        </SectionErrorBoundary>
       </main>
 
       {/* Mobile Sticky CTA */}
