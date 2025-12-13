@@ -362,10 +362,8 @@ export const locationPagesService = {
           priceFrom: developments.priceFrom,
           priceTo: developments.priceTo,
           city: developments.city,
-          province: developments.province,
-          isHotSelling: developments.isHotSelling,
-          isHighDemand: developments.isHighDemand,
-          demandScore: developments.demandScore
+          province: developments.province
+          // isHotSelling, isHighDemand, demandScore columns don't exist in production DB
         })
         .from(developments)
         .where(and(
