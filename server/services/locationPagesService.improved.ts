@@ -381,9 +381,16 @@ export const locationPagesService = {
               };
             } catch (e) {
               console.error('[LocationPages] Error parsing property images:', e);
+              console.error('[LocationPages] Problematic property:', p);
+              // Safeguard: ensure p is an object before spreading
+              if (!p || typeof p !== 'object') {
+                console.error('[LocationPages] Property is null or not an object, skipping');
+                return null;
+              }
               return { ...p, images: [] };
             }
-          }),
+          })
+          .filter((p): p is NonNullable<typeof p> => p != null), // Final filter to remove any nulls from catch block
         developments: (cityDevelopments || [])
           .filter(d => d != null)
           .map(d => ({
