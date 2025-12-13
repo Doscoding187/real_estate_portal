@@ -4,11 +4,12 @@ import { BreadcrumbItem } from '@/lib/urlUtils';
 
 interface BreadcrumbsProps {
   items: BreadcrumbItem[];
+  className?: string;
 }
 
-export function Breadcrumbs({ items }: BreadcrumbsProps) {
+export function Breadcrumbs({ items, className = "" }: BreadcrumbsProps) {
   return (
-    <nav aria-label="Breadcrumb" className="flex items-center text-sm text-muted-foreground">
+    <nav aria-label="Breadcrumb" className={`flex items-center text-sm text-muted-foreground ${className}`}>
       {items.map((item, index) => (
         <div key={item.href} className="flex items-center">
           {index > 0 && (

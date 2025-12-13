@@ -12,6 +12,8 @@ import {
 } from '../../drizzle/schema';
 import { eq, and, desc, sql, like, inArray } from 'drizzle-orm';
 
+import { getRedisCacheManager } from '../_core/cache/redis';
+
 /**
  * IMPROVED Service for handling location page data aggregation
  * Supporting 3 hierarchical levels: Province -> City -> Suburb
@@ -24,26 +26,57 @@ import { eq, and, desc, sql, like, inArray } from 'drizzle-orm';
  */
 
 // Cache configuration
-const STATIC_CONTENT_CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours
-const DYNAMIC_STATS_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+const STATIC_CONTENT_CACHE_TTL = 24 * 60 * 60; // 24 hours (in seconds for Redis)
+const DYNAMIC_STATS_CACHE_TTL = 5 * 60; // 5 minutes (in seconds for Redis)
 
-// Simple in-memory cache (in production, use Redis)
-const cache = new Map<string, { data: any; expires: number }>();
-
-function getCached<T>(key: string): T | null {
-  const cached = cache.get(key);
-  if (cached && cached.expires > Date.now()) {
-    return cached.data as T;
+// Helper to get from Redis with error handling
+async function getCached<T>(key: string): Promise<T | null> {
+  try {
+    const cache = getRedisCacheManager();
+    // Using direct get/set from manager to avoid complex fallback logic for now 
+    // or we could use manager.get(key, fetchFn) pattern if we refactored the service functions
+    // For minimal refactor, we just wrap .get() check
+    const exists = await cache.exists(key);
+    if (!exists) return null;
+    
+    // We can't easily use the generic .get() without a fetch function in the current structure
+    // So we access the underlying method or just use a dummy fetch that returns null if we want to stick to the API
+    // However, the manager.get requires a fetchFn. 
+    // Let's implement a simple get wrapper if the manager exposes one, or use a trick.
+    // Looking at RedisCacheManager, it has .get(key, fetchFn).
+    // It calls redis.get(key) internally.
+    // If we want just "get if exists", the manager might not expose a direct "getRaw" type method publicly easily without a fetchFn.
+    // BUT! We can just use the exposed `redis` instance if it was public, but it's private.
+    // Wait, the manager has `get<T>(key: string, fetchFn: () => Promise<T>, ...)`
+    // If we want to check cache MANUALLY (cache-aside pattern implemented here), we might need to adjust.
+    // Actually, let's just make `fetchFn` return slightly special value or handle it.
+    // Better yet: Let's assume we want to use the Manager's `get` with the actual data fetching logic.
+    // BUT checking the code below, `getCached` is used to check if data exists before computing.
+    // So we can pass a dummy fetchFn that returns null, but then `get` would return null? No, `get` returns result of fetchFn if cache miss.
+    
+    // Let's rely on the `exists` check and then we need a way to READ.
+    // The RedisCacheManager class shown previously doesn't have a simple `get(key)` method. It has `get(key, fetchFn)`.
+    // We should probably modify the service flow to use `manager.get(key, async () => { ... real fetch ... })`.
+    // BUT that requires refactoring the `getEnhanced...` methods deeper.
+    
+    // Alternative: We can define a `getFromCacheOnly` helper if we could.
+    // Since we can't change the Manager right now easily without context switch, let's see.
+    // We can use a trick: fetchFn = async () => null. 
+    // If cache hits, we get data. If cache misses, we get null.
+    return await cache.get<T>(key, async () => null as any) as T;
+  } catch (error) {
+    console.warn('[LocationPages] Redis get error:', error);
+    return null;
   }
-  cache.delete(key);
-  return null;
 }
 
-function setCache(key: string, data: any, ttl: number): void {
-  cache.set(key, {
-    data,
-    expires: Date.now() + ttl
-  });
+async function setCache(key: string, data: any, ttl: number): Promise<void> {
+  try {
+    const cache = getRedisCacheManager();
+    await cache.set(key, data, ttl);
+  } catch (error) {
+    console.warn('[LocationPages] Redis set error:', error);
+  }
 }
 
 export const locationPagesService = {
@@ -115,15 +148,32 @@ export const locationPagesService = {
 
     // 3. Featured Developments in Province
     const featuredDevelopments = await db
-      .select()
+      .select({
+        id: developments.id,
+        name: developments.name,
+        slug: developments.slug,
+        images: developments.images,
+        price: developments.price,
+        city: developments.city,
+        province: developments.province,
+        isHotSelling: developments.isHotSelling,
+        isHighDemand: developments.isHighDemand,
+        demandScore: developments.demandScore
+      })
       .from(developments)
       .where(and(
         eq(developments.province, province.name),
         eq(developments.status, 'now-selling')
       ))
+      .orderBy(desc(developments.isHotSelling), desc(developments.demandScore))
       .limit(6);
 
     // 4. Trending Suburbs
+    // 4. Trending Suburbs (Ranked by new listings in last 30 days)
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    const thirtyDaysAgoStr = thirtyDaysAgo.toISOString().slice(0, 19).replace('T', ' ');
+
     const trendingSuburbs = await db
       .select({
         id: suburbs.id,
@@ -131,19 +181,30 @@ export const locationPagesService = {
         slug: suburbs.slug,
         cityName: cities.name,
         citySlug: cities.slug,
-        listingCount: sql<number>`(SELECT COUNT(*) FROM ${properties} WHERE ${properties.suburbId} = ${suburbs.id} AND ${properties.status} = 'published')`
+        listingCount: sql<number>`(SELECT COUNT(*) FROM ${properties} WHERE ${properties.suburbId} = ${suburbs.id} AND ${properties.status} = 'published')`,
+        growth: sql<number>`(
+          SELECT COUNT(*) * 10 
+          FROM ${properties} 
+          WHERE ${properties.suburbId} = ${suburbs.id} 
+          AND ${properties.status} = 'published'
+          AND ${properties.createdAt} >= ${thirtyDaysAgoStr}
+        )` // Simplified "growth" score based on recent activity * weight
       })
       .from(suburbs)
       .leftJoin(cities, eq(suburbs.cityId, cities.id))
       .where(eq(cities.provinceId, province.id))
-      .orderBy(desc(sql`listingCount`))
+      .orderBy(desc(sql`growth`))
       .limit(10);
 
     // 5. Aggregate Stats
     const [stats] = await db
       .select({
         totalListings: sql<number>`count(*)`,
-        avgPrice: sql<number>`avg(${properties.price})`
+        avgPrice: sql<number>`avg(${properties.price})`,
+        minPrice: sql<number>`min(${properties.price})`,
+        maxPrice: sql<number>`max(${properties.price})`,
+        rentalCount: sql<number>`sum(case when ${properties.listingType} = 'rent' then 1 else 0 end)`,
+        saleCount: sql<number>`sum(case when ${properties.listingType} = 'sale' then 1 else 0 end)`
       })
       .from(properties)
       .where(and(
@@ -158,7 +219,11 @@ export const locationPagesService = {
       trendingSuburbs,
       stats: {
         totalListings: Number(stats?.totalListings || 0),
-        avgPrice: Math.round(Number(stats?.avgPrice || 0))
+        avgPrice: Math.round(Number(stats?.avgPrice || 0)),
+        minPrice: Number(stats?.minPrice || 0),
+        maxPrice: Number(stats?.maxPrice || 0),
+        rentalCount: Number(stats?.rentalCount || 0),
+        saleCount: Number(stats?.saleCount || 0)
       }
     };
   },
@@ -267,19 +332,35 @@ export const locationPagesService = {
 
       // 4. Developments in City
       const cityDevelopments = await db
-        .select()
+        .select({
+          id: developments.id,
+          name: developments.name,
+          slug: developments.slug,
+          images: developments.images,
+          price: developments.price,
+          city: developments.city,
+          province: developments.province,
+          isHotSelling: developments.isHotSelling,
+          isHighDemand: developments.isHighDemand,
+          demandScore: developments.demandScore
+        })
         .from(developments)
         .where(and(
           eq(developments.city, city.name),
           eq(developments.isPublished, 1)
         ))
-        .limit(4);
+        .orderBy(desc(developments.isHotSelling), desc(developments.demandScore))
+        .limit(6);
 
       // 5. Aggregate Stats
       const [stats] = await db
         .select({
           totalListings: sql<number>`count(*)`,
-          avgPrice: sql<number>`avg(${properties.price})`
+          avgPrice: sql<number>`avg(${properties.price})`,
+          minPrice: sql<number>`min(${properties.price})`,
+          maxPrice: sql<number>`max(${properties.price})`,
+          rentalCount: sql<number>`sum(case when ${properties.listingType} = 'rent' then 1 else 0 end)`,
+          saleCount: sql<number>`sum(case when ${properties.listingType} = 'sale' then 1 else 0 end)`
         })
         .from(properties)
         .where(and(
@@ -294,7 +375,11 @@ export const locationPagesService = {
         developments: cityDevelopments,
         stats: {
           totalListings: Number(stats?.totalListings || 0),
-          avgPrice: Number(stats?.avgPrice || 0)
+          avgPrice: Number(stats?.avgPrice || 0),
+          minPrice: Number(stats?.minPrice || 0),
+          maxPrice: Number(stats?.maxPrice || 0),
+          rentalCount: Number(stats?.rentalCount || 0),
+          saleCount: Number(stats?.saleCount || 0)
         }
       };
     } catch (error) {
@@ -444,7 +529,7 @@ export const locationPagesService = {
     const cacheKey = `location:${province}:${city || ''}:${suburb || ''}`;
     
     // Check cache (24 hour TTL for static content)
-    const cached = getCached(cacheKey);
+    const cached = await getCached<Location>(cacheKey);
     if (cached) {
       console.log(`[LocationPages] Cache hit for: ${cacheKey}`);
       return cached;
@@ -479,7 +564,7 @@ export const locationPagesService = {
     
     if (location) {
       console.log(`[LocationPages] Found location in locations table: ${location.name}`);
-      setCache(cacheKey, location, STATIC_CONTENT_CACHE_TTL);
+      await setCache(cacheKey, location, STATIC_CONTENT_CACHE_TTL);
       return location;
     }
     
@@ -503,23 +588,23 @@ export const locationPagesService = {
     
     // Get static content from locations table (cached 24 hours)
     const staticCacheKey = `static:province:${provinceSlug}`;
-    let staticContent = getCached(staticCacheKey);
+    let staticContent = await getCached<any>(staticCacheKey);
     
     if (!staticContent) {
       staticContent = await this.getLocationByPath(provinceSlug);
       if (staticContent) {
-        setCache(staticCacheKey, staticContent, STATIC_CONTENT_CACHE_TTL);
+        await setCache(staticCacheKey, staticContent, STATIC_CONTENT_CACHE_TTL);
       }
     }
     
     // Get dynamic statistics (cached 5 minutes)
     const dynamicCacheKey = `dynamic:province:${provinceSlug}`;
-    let dynamicData = getCached(dynamicCacheKey);
+    let dynamicData = await getCached<any>(dynamicCacheKey);
     
     if (!dynamicData) {
       dynamicData = await this.getProvinceData(provinceSlug);
       if (dynamicData) {
-        setCache(dynamicCacheKey, dynamicData, DYNAMIC_STATS_CACHE_TTL);
+        await setCache(dynamicCacheKey, dynamicData, DYNAMIC_STATS_CACHE_TTL);
       }
     }
     
@@ -567,23 +652,23 @@ export const locationPagesService = {
     
     // Get static content from locations table (cached 24 hours)
     const staticCacheKey = `static:city:${provinceSlug}:${citySlug}`;
-    let staticContent = getCached(staticCacheKey);
+    let staticContent = await getCached<any>(staticCacheKey);
     
     if (!staticContent) {
       staticContent = await this.getLocationByPath(provinceSlug, citySlug);
       if (staticContent) {
-        setCache(staticCacheKey, staticContent, STATIC_CONTENT_CACHE_TTL);
+        await setCache(staticCacheKey, staticContent, STATIC_CONTENT_CACHE_TTL);
       }
     }
     
     // Get dynamic statistics (cached 5 minutes)
     const dynamicCacheKey = `dynamic:city:${provinceSlug}:${citySlug}`;
-    let dynamicData = getCached(dynamicCacheKey);
+    let dynamicData = await getCached<any>(dynamicCacheKey);
     
     if (!dynamicData) {
       dynamicData = await this.getCityData(provinceSlug, citySlug);
       if (dynamicData) {
-        setCache(dynamicCacheKey, dynamicData, DYNAMIC_STATS_CACHE_TTL);
+        await setCache(dynamicCacheKey, dynamicData, DYNAMIC_STATS_CACHE_TTL);
       }
     }
     
@@ -632,23 +717,23 @@ export const locationPagesService = {
     
     // Get static content from locations table (cached 24 hours)
     const staticCacheKey = `static:suburb:${provinceSlug}:${citySlug}:${suburbSlug}`;
-    let staticContent = getCached(staticCacheKey);
+    let staticContent = await getCached<any>(staticCacheKey);
     
     if (!staticContent) {
       staticContent = await this.getLocationByPath(provinceSlug, citySlug, suburbSlug);
       if (staticContent) {
-        setCache(staticCacheKey, staticContent, STATIC_CONTENT_CACHE_TTL);
+        await setCache(staticCacheKey, staticContent, STATIC_CONTENT_CACHE_TTL);
       }
     }
     
     // Get dynamic statistics (cached 5 minutes)
     const dynamicCacheKey = `dynamic:suburb:${provinceSlug}:${citySlug}:${suburbSlug}`;
-    let dynamicData = getCached(dynamicCacheKey);
+    let dynamicData = await getCached<any>(dynamicCacheKey);
     
     if (!dynamicData) {
       dynamicData = await this.getSuburbData(provinceSlug, citySlug, suburbSlug);
       if (dynamicData) {
-        setCache(dynamicCacheKey, dynamicData, DYNAMIC_STATS_CACHE_TTL);
+        await setCache(dynamicCacheKey, dynamicData, DYNAMIC_STATS_CACHE_TTL);
       }
     }
     
@@ -751,9 +836,14 @@ export const locationPagesService = {
     }
     
     // Invalidate all relevant cache keys
-    keysToInvalidate.forEach(key => {
-      cache.delete(key);
-      console.log(`[LocationPages] Invalidated cache: ${key}`);
-    });
+  if (keysToInvalidate.length > 0) {
+    try {
+      const cache = getRedisCacheManager();
+      await cache.del(keysToInvalidate);
+      console.log(`[LocationPages] Invalidated cache keys: ${keysToInvalidate.join(', ')}`);
+    } catch (error) {
+      console.error('[LocationPages] Failed to invalidate cache:', error);
+    }
   }
+}
 };

@@ -37,14 +37,7 @@ export const advertisePageResourceHints: ResourceHint[] = [
     rel: 'dns-prefetch',
     href: 'https://images.unsplash.com',
   },
-  // Preload critical fonts
-  {
-    rel: 'preload',
-    href: '/fonts/inter-var.woff2',
-    as: 'font',
-    type: 'font/woff2',
-    crossorigin: 'anonymous',
-  },
+
 ];
 
 /**
@@ -79,8 +72,8 @@ export function preloadCriticalCSS(href: string): void {
   
   // Convert to stylesheet after load
   link.onload = function() {
-    this.onload = null;
-    this.rel = 'stylesheet';
+    link.onload = null;
+    link.rel = 'stylesheet';
   };
 
   document.head.appendChild(link);
@@ -99,7 +92,7 @@ export function deferNonCriticalCSS(href: string): void {
   
   // Switch to all media after load
   link.onload = function() {
-    this.media = 'all';
+    link.media = 'all';
   };
 
   document.head.appendChild(link);
@@ -111,11 +104,8 @@ export function deferNonCriticalCSS(href: string): void {
  */
 export const criticalCSS = `
   /* Critical CSS for above-the-fold content */
-  * {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-  }
+  /* NOTE: Removed universal selector reset (* { margin: 0; padding: 0; }) as it was
+     overriding Tailwind utilities. Tailwind's Preflight reset is sufficient. */
 
   body {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;

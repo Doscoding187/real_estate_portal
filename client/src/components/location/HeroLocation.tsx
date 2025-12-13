@@ -28,6 +28,9 @@ interface HeroLocationProps {
   };
 }
 
+import { useEffect } from 'react';
+import { trackEvent } from '@/lib/analytics';
+
 export function HeroLocation({ 
   title, 
   subtitle, 
@@ -38,6 +41,14 @@ export function HeroLocation({
   coordinates,
   viewport
 }: HeroLocationProps) {
+  useEffect(() => {
+    trackEvent('location_view', {
+      locationName: title,
+      placeId: placeId,
+      source: 'hero_location'
+    });
+  }, [title, placeId]);
+
   return (
     <div className="relative bg-navy-900 text-white pt-24 pb-12 overflow-hidden">
       {/* Background Image / Overlay */}

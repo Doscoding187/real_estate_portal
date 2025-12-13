@@ -8,7 +8,7 @@ import { Slider } from '@/components/ui/slider';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { School, Hospital, ShoppingCart, Car, MapPin, Navigation, Star, Info } from 'lucide-react';
-import { trpc } from '@/utils/trpc';
+import { trpc } from '@/lib/trpc';
 import 'leaflet/dist/leaflet.css';
 
 interface Amenity {

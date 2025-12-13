@@ -66,6 +66,7 @@ import DevelopersPage from './pages/admin/DevelopersPage';
 import PropertiesPage from './pages/admin/PropertiesPage';
 import AdminPropertyReview from './pages/admin/AdminPropertyReview';
 import RevenueCenterPage from './pages/admin/RevenueCenterPage';
+import LocationMonetizationPage from './pages/admin/LocationMonetizationPage';
 import SubscriptionManagementPage from './pages/admin/SubscriptionManagementPage';
 import PlanEditor from './pages/admin/PlanEditor';
 import AnalyticsPage from './pages/admin/AnalyticsPage';
@@ -192,6 +193,9 @@ function Router() {
       <Route path="/accept-invitation" component={AcceptInvitation} />
       <Route path="/role-selection" component={RoleSelection} />
       <Route path="/advertise" component={AdvertiseWithUs} />
+      {/* Redirect common variations to /advertise */}
+      <Route path="/advertise-with-us" component={() => { window.location.href = '/advertise'; return null; }} />
+      <Route path="/advertise with us" component={() => { window.location.href = '/advertise'; return null; }} />
 
 
       {/* Super Admin Dashboard Routes */}
@@ -248,6 +252,14 @@ function Router() {
         component={() => (
           <SuperAdminDashboard>
             <RevenueCenterPage />
+          </SuperAdminDashboard>
+        )}
+      />
+      <Route
+        path="/admin/monetization"
+        component={() => (
+          <SuperAdminDashboard>
+            <LocationMonetizationPage />
           </SuperAdminDashboard>
         )}
       />

@@ -4,7 +4,8 @@ import { HeroLocation } from '@/components/location/HeroLocation';
 import { SearchRefinementBar } from '@/components/location/SearchRefinementBar';
 import { LocationGrid } from '@/components/location/LocationGrid';
 import { TrendingSlider } from '@/components/location/TrendingSlider';
-import { DevelopmentsGrid } from '@/components/location/DevelopmentsGrid';
+import { DevelopmentsSlider } from '@/components/location/DevelopmentsSlider';
+import { AmenitiesSection } from '@/components/location/AmenitiesSection';
 import { MarketInsights } from '@/components/location/MarketInsights';
 import { SEOTextBlock } from '@/components/location/SEOTextBlock';
 import { FinalCTA } from '@/components/location/FinalCTA';
@@ -63,6 +64,12 @@ export default function ProvincePage({ params }: { params: { province: string } 
           { name: 'Home', url: '/' },
           { name: province.name, url: `/${provinceSlug}` }
         ]}
+        stats={stats}
+        image="https://images.unsplash.com/photo-1577931767667-0c58e744d081?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80"
+        geo={province.latitude && province.longitude ? {
+          latitude: Number(province.latitude),
+          longitude: Number(province.longitude)
+        } : undefined}
       />
 
       <HeroLocation
@@ -101,7 +108,7 @@ export default function ProvincePage({ params }: { params: { province: string } 
         />
       </div>
 
-      <DevelopmentsGrid 
+      <DevelopmentsSlider 
         developments={featuredDevelopments as any[]} 
         locationName={province.name} 
       />
@@ -110,6 +117,13 @@ export default function ProvincePage({ params }: { params: { province: string } 
         stats={stats} 
         locationName={province.name} 
         type="province"
+      />
+
+      <AmenitiesSection 
+        location={{
+          latitude: Number(province.latitude),
+          longitude: Number(province.longitude)
+        }} 
       />
 
       {/* Interactive Map Section */}
@@ -134,16 +148,9 @@ export default function ProvincePage({ params }: { params: { province: string } 
       <SEOTextBlock
         title={`About Real Estate in ${province.name}`}
         locationName={province.name}
-        content={province.description || `
-          <p><strong>${province.name}</strong> is a premier destination for property buyers and investors, offering a diverse range of real estate options. From the bustling metros to the serene countryside, the province provides a unique blend of lifestyle and opportunity.</p>
-          <p>With over <strong>${stats.totalListings} active listings</strong>, the market is vibrant. The average property price currently sits at <strong>R ${stats.avgPrice.toLocaleString()}</strong>, making it an attractive region for both first-time buyers and seasoned investors.</p>
-          <h3>Why Invest in ${province.name}?</h3>
-          <ul>
-            <li>Strong rental demand in key cities.</li>
-            <li>Growing infrastructure and development projects.</li>
-            <li>Diverse property types ranging from modern apartments to sprawling estates.</li>
-          </ul>
-        `}
+        locationType="province"
+        stats={stats}
+        content={province.description || undefined}
       />
 
       <FinalCTA 

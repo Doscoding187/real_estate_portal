@@ -1,9 +1,9 @@
 import { useLocation } from 'wouter';
 import { trpc } from '@/lib/trpc';
-import { HeroLocation } from '@/components/location/HeroLocation';
+import { HeroBillboard } from '@/components/location/HeroBillboard';
 import { SearchRefinementBar } from '@/components/location/SearchRefinementBar';
 import { LocationGrid } from '@/components/location/LocationGrid';
-import { DevelopmentsGrid } from '@/components/location/DevelopmentsGrid';
+import { DevelopmentsSlider } from '@/components/location/DevelopmentsSlider';
 import { MarketInsights } from '@/components/location/MarketInsights';
 import { SEOTextBlock } from '@/components/location/SEOTextBlock';
 import { FinalCTA } from '@/components/location/FinalCTA';
@@ -15,6 +15,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Helmet } from 'react-helmet';
 import { LocationSchema } from '@/components/location/LocationSchema';
 import { useSimilarLocations } from '@/hooks/useSimilarLocations';
+import { FeaturedDevelopers } from '@/components/location/FeaturedDevelopers';
+import { RecommendedAgents } from '@/components/location/RecommendedAgents';
 
 export default function CityPage({ params }: { params: { province: string; city: string } }) {
   const [, navigate] = useLocation();
@@ -69,23 +71,23 @@ export default function CityPage({ params }: { params: { province: string; city:
           latitude: Number(city.latitude),
           longitude: Number(city.longitude)
         }}
+        stats={stats}
+        image="https://images.unsplash.com/photo-1449824913935-59a10b8d2000?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80"
       />
 
-      <HeroLocation
-        title={city.name}
-        subtitle={`Explore ${city.name}'s best real estate investment opportunities.`}
+      <HeroBillboard
+        locationType="city"
+        locationId={city.id}
+        defaultTitle={city.name}
+        defaultSubtitle={`Explore ${city.name}'s best real estate investment opportunities.`}
         breadcrumbs={[
           { label: 'Home', href: '/' },
           { label: city.provinceName || provinceSlug, href: `/${provinceSlug}` },
           { label: city.name, href: `/${provinceSlug}/${citySlug}` }
         ]}
         stats={stats}
-        backgroundImage="https://images.unsplash.com/photo-1449824913935-59a10b8d2000?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80"
+        defaultImage="https://images.unsplash.com/photo-1449824913935-59a10b8d2000?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80"
         placeId={city.place_id}
-        coordinates={{
-          latitude: Number(city.latitude),
-          longitude: Number(city.longitude)
-        }}
       />
 
       <SearchRefinementBar 
@@ -94,30 +96,86 @@ export default function CityPage({ params }: { params: { province: string; city:
         placeId={city.place_id}
       />
 
-      <LocationGrid 
-        title={`Popular Suburbs in ${city.name}`} 
-        items={suburbs} 
-        parentSlug={`${provinceSlug}/${citySlug}`}
-        type="suburb"
-      />
+      {/* Empty State - Show when city exists but has no properties */}
+      {stats.totalListings === 0 ? (
+        <div className="container py-20">
+          <div className="max-w-2xl mx-auto text-center">
+            <div className="mb-6">
+              <svg
+                className="mx-auto h-24 w-24 text-gray-400"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={1.5}
+                  d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
+                />
+              </svg>
+            </div>
+            <h2 className="text-3xl font-bold text-gray-900 mb-4">
+              No Properties Yet in {city.name}
+            </h2>
+            <p className="text-lg text-gray-600 mb-8">
+              Be the first to list a property in this vibrant city! Properties added here will automatically appear on this page.
+            </p>
+            <div className="flex gap-4 justify-center">
+              <button
+                onClick={() => navigate('/list-property')}
+                className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
+              >
+                List Your Property
+              </button>
+              <button
+                onClick={() => navigate('/properties')}
+                className="px-6 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 font-medium"
+              >
+                Browse All Properties
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <>
+          <LocationGrid 
+            title={`Popular Suburbs in ${city.name}`} 
+            items={suburbs} 
+            parentSlug={`${provinceSlug}/${citySlug}`}
+            type="suburb"
+          />
 
-      <FeaturedListings 
-        listings={featuredProperties} 
-        title={`Featured Properties in ${city.name}`}
-        subtitle="Handpicked properties just for you"
-        viewAllLink={`/properties?city=${city.name}`}
-      />
+          <FeaturedListings 
+            listings={featuredProperties} 
+            title={`Featured Properties in ${city.name}`}
+            subtitle="Handpicked properties just for you"
+            viewAllLink={`/properties?city=${city.name}`}
+          />
 
-      <DevelopmentsGrid 
-        developments={developments as any[]} 
-        locationName={city.name} 
-      />
+          <DevelopmentsSlider 
+            developments={developments as any[]} 
+            locationName={city.name} 
+          />
 
-      <MarketInsights 
-        stats={stats} 
-        locationName={city.name} 
-        type="city"
-      />
+          <FeaturedDevelopers 
+            locationType="city" 
+            locationId={city.id} 
+            locationName={city.name} 
+          />
+
+          <RecommendedAgents 
+            locationType="city" 
+            locationId={city.id} 
+          />
+
+          <MarketInsights 
+            stats={stats} 
+            locationName={city.name} 
+            type="city"
+          />
+        </>
+      )}
 
       {/* Interactive Map Section */}
       {city.latitude && city.longitude && (
@@ -134,7 +192,7 @@ export default function CityPage({ params }: { params: { province: string; city:
               sw_lat: Number(city.viewport_sw_lat),
               sw_lng: Number(city.viewport_sw_lng),
             } : undefined}
-            properties={featuredProperties.map(listing => ({
+            properties={featuredProperties.map((listing: any) => ({
               id: listing.id,
               latitude: Number(listing.latitude),
               longitude: Number(listing.longitude),
@@ -145,21 +203,20 @@ export default function CityPage({ params }: { params: { province: string; city:
         </div>
       )}
 
-      <AmenitiesSection />
+      <AmenitiesSection 
+        location={{
+          latitude: Number(city.latitude),
+          longitude: Number(city.longitude)
+        }} 
+      />
 
       <SEOTextBlock
         title={`Living in ${city.name}`}
         locationName={city.name}
-        content={city.description || `
-          <p><strong>${city.name}</strong> offers a vibrant lifestyle with a mix of historic charm and modern convenience. Located in <strong>${city.provinceName}</strong>, it is a hub for business, culture, and residential living.</p>
-          <p>With an average listing price of <strong>R ${stats.avgPrice.toLocaleString()}</strong>, ${city.name} presents opportunities for various budgets. Whether you are looking for a starter apartment, a family home, or a luxury estate, you'll find it here.</p>
-          <h3>Highlights</h3>
-          <ul>
-            <li>Top-rated schools and universities nearby.</li>
-            <li>Access to major shopping centers and medical facilities.</li>
-            <li>Thriving rental market with good yields for investors.</li>
-          </ul>
-        `}
+        locationType="city"
+        parentName={city.provinceName || provinceSlug}
+        stats={stats}
+        content={city.description || undefined}
       />
 
       {/* Similar Locations Section */}

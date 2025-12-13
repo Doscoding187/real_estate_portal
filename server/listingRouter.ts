@@ -8,6 +8,7 @@ import { z } from 'zod';
 import { router, publicProcedure, protectedProcedure } from './_core/trpc';
 import { TRPCError } from '@trpc/server';
 import * as db from './db';
+import { autoCreateLocationHierarchy, extractPlaceComponents } from './services/locationAutoPopulation';
 
 // Validation schemas
 const listingActionSchema = z.enum(['sell', 'rent', 'auction']);
@@ -52,6 +53,12 @@ const createListingSchema = z.object({
     province: z.string(),
     postalCode: z.string().optional(),
     placeId: z.string().optional(),
+    // Google Places address components for auto-population
+    addressComponents: z.array(z.object({
+      long_name: z.string(),
+      short_name: z.string(),
+      types: z.array(z.string()),
+    })).optional(),
   }),
   // Use string IDs only
   mediaIds: z.array(z.string()),
@@ -91,21 +98,56 @@ export const listingRouter = router({
         };
       });
 
-      // Resolve location and create location record if needed
-      // Requirements 16.1-16.5: Link listings to locations via location_id
-      // Requirements 25.1: Store Place ID with listing data
+      // Auto-create location hierarchy from Google Places data
+      // This auto-populates cities and suburbs as agents add properties!
+      let provinceId: number | null = null;
+      let cityId: number | null = null;
+      let suburbId: number | null = null;
       let locationId: number | undefined;
-      try {
-        const { locationPagesServiceEnhanced } = await import('./services/locationPagesServiceEnhanced');
-        const location = await locationPagesServiceEnhanced.resolveLocation(input.location);
-        locationId = location.id;
-        console.log('[ListingRouter] Resolved location:', location.name, `(ID: ${locationId})`);
-      } catch (error) {
-        console.warn('[ListingRouter] Failed to resolve location, proceeding without location_id:', error);
-        // Continue without location_id - backward compatibility
+
+      if (input.location.placeId && input.location.addressComponents) {
+        try {
+          console.log('[ListingRouter] Auto-populating location from Google Places...');
+          
+          // Extract components from Google Places data
+          const components = extractPlaceComponents(input.location.addressComponents);
+          
+          // Auto-create city/suburb if they don't exist
+          const locationIds = await autoCreateLocationHierarchy({
+            placeId: input.location.placeId,
+            formattedAddress: input.location.address,
+            latitude: input.location.latitude,
+            longitude: input.location.longitude,
+            components,
+          });
+
+          provinceId = locationIds.provinceId;
+          cityId = locationIds.cityId;
+          suburbId = locationIds.suburbId;
+
+          console.log('[ListingRouter] ✅ Auto-populated:', {
+            provinceId,
+            cityId,
+            suburbId,
+          });
+        } catch (error) {
+          console.error('[ListingRouter] Auto-population failed:', error);
+        }
       }
 
-      // Create listing in database
+      // Fallback: Try legacy location resolution
+      if (!cityId) {
+        try {
+          const { locationPagesServiceEnhanced } = await import('./services/locationPagesServiceEnhanced');
+          const location = await locationPagesServiceEnhanced.resolveLocation(input.location);
+          locationId = location.id;
+          console.log('[ListingRouter] Fallback: Resolved location:', location.name, `(ID: ${locationId})`);
+        } catch (error) {
+          console.warn('[ListingRouter] Location resolution failed, proceeding without location_id:', error);
+        }
+      }
+
+      // Create listing in database with auto-populated location IDs
       const listingId = await db.createListing({
         userId,
         action: input.action,
@@ -122,7 +164,10 @@ export const listingRouter = router({
         province: input.location.province,
         postalCode: input.location.postalCode,
         placeId: input.location.placeId,
-        locationId, // New: Link to locations table
+        locationId, // Legacy: Link to locations table (if resolved)
+        provinceId, // New: Auto-populated province ID
+        cityId, // New: Auto-populated city ID  
+        suburbId, // New: Auto-populated suburb ID
         slug,
         media,
       });

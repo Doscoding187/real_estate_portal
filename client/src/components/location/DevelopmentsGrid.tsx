@@ -11,6 +11,8 @@ interface DevelopmentItem {
   minPrice?: number;
   city: string;
   suburb?: string | null;
+  isHotSelling?: number | boolean;
+  isHighDemand?: number | boolean;
 }
 
 interface DevelopmentsGridProps {
@@ -71,6 +73,8 @@ export function DevelopmentsGrid({ developments, locationName }: DevelopmentsGri
                       max: 0 // We might not have max price in this view
                     }}
                     image={mainImage || 'https://placehold.co/600x400/e2e8f0/64748b?text=No+Image'}
+                    isHotSelling={!!dev.isHotSelling}
+                    isHighDemand={!!dev.isHighDemand}
                   />
                 </div>
               </Link>

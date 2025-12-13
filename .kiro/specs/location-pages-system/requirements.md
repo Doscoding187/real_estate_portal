@@ -2,7 +2,9 @@
 
 ## Introduction
 
-The Location Pages System provides a hierarchical, SEO-optimized landing page structure for Property Listify that guides users from broad geographic areas (provinces) through cities/metros to specific suburbs, ultimately leading them to refined property search results. The system creates high-converting landing pages at three levels with dynamic data, strong SEO content, and clear conversion paths.
+The Location Pages System provides a hierarchical, SEO-optimized landing page structure for Property Listify SA that guides users from broad geographic areas (provinces) through cities/metros to specific suburbs, ultimately leading them to refined property search results. These are core evergreen landing pages (intergenerational pages) that do not depend on developers manually adding content, except when their developments qualify for "Top 10", "Featured", or "High Demand" sections.
+
+The system creates high-converting landing pages at three levels with dynamic data, strong SEO content, clear conversion paths, and integrated monetization opportunities. All pages use the main navbar component from the homepage, follow the soft-UI design direction, and are fully responsive across mobile, tablet, and widescreen devices.
 
 ## Glossary
 
@@ -24,6 +26,19 @@ The Location Pages System provides a hierarchical, SEO-optimized landing page st
 - **Time on Market**: Average number of days properties remain listed before sale
 - **Development**: New construction project or property development in progress
 - **Amenity**: Nearby facility or service (schools, shopping centers, transport)
+- **Hero Billboard Banner**: Large full-width advertising space at the top of location pages for paid monthly/weekly campaigns
+- **Top 10 Developments**: Curated list of premium developments controlled by internal CMS and paid placement
+- **Featured Developer**: Developer with premium placement in developer sliders, determined by subscription and editorial curation
+- **High-Demand Projects**: Developments ordered by demand score algorithm for investment-focused sections
+- **Urban Development Insights**: Editorial content sections (ProvinceScope, CityScope, Suburb Insights) providing planning and investment intelligence
+- **Demand Score**: Backend algorithm calculating development traction based on views, inquiries, and engagement
+- **CMS-Editable Content**: Sections controlled by Property Listify editorial team through content management system
+- **Soft-UI Design**: Design direction using clean cards, rounded corners, subtle shadows, and consistent spacing
+- **Monetization Placement**: Paid advertising positions including hero banners, featured slots, and boosted listings
+- **Context-Aware Search**: Search bar that adapts popular searches based on current location level
+- **Developer Profile**: Backend entity representing property developers with logo, name, region, and subscription status
+- **Agent Activity Metrics**: Performance data tracking agent listings, sales, and engagement in specific locations
+- **Suburb Insights**: Micro-level urban planning data including zoning, price trends, and local infrastructure
 
 ## Requirements
 
@@ -206,3 +221,303 @@ The Location Pages System provides a hierarchical, SEO-optimized landing page st
 3. WHEN a user clicks a trending suburb card, THE Location Pages System SHALL navigate to that suburb's landing page
 4. WHEN trending data is calculated, THE Location Pages System SHALL update rankings based on recent activity (last 30-90 days)
 5. WHEN insufficient data exists for trends, THE Location Pages System SHALL display popular suburbs by listing count instead
+
+### Requirement 16
+
+**User Story:** As a property seeker, I want to see a hero billboard banner on location pages, so that I can discover featured developments and promotions.
+
+#### Acceptance Criteria
+
+1. WHEN a location page loads, THE Location Pages System SHALL display a full-width hero billboard banner with location-specific imagery
+2. WHEN an active paid advertisement exists, THE Location Pages System SHALL display the advertisement graphic in the hero banner
+3. WHEN no active advertisement exists, THE Location Pages System SHALL display a fallback hero image for that location
+4. WHEN a hero banner includes a CTA overlay, THE Location Pages System SHALL display the call-to-action button based on the advertisement package
+5. WHEN a user views the hero banner, THE Location Pages System SHALL track impressions for monetization reporting
+
+### Requirement 17
+
+**User Story:** As a property seeker, I want context-aware popular searches on location pages, so that I can quickly access relevant searches for that area.
+
+#### Acceptance Criteria
+
+1. WHEN a province page loads, THE Location Pages System SHALL display popular searches showing best cities and high-demand suburbs within that province
+2. WHEN a city page loads, THE Location Pages System SHALL display popular searches showing top suburbs within that city
+3. WHEN a suburb page loads, THE Location Pages System SHALL display popular searches showing property types and development types in that suburb
+4. WHEN a user clicks a popular search, THE Location Pages System SHALL navigate to search results with appropriate location and type filters applied
+5. WHEN popular searches are displayed, THE Location Pages System SHALL limit to 4-6 most relevant options
+
+### Requirement 18
+
+**User Story:** As a property seeker, I want to see top cities on province pages, so that I can explore major metropolitan areas within the province.
+
+#### Acceptance Criteria
+
+1. WHEN a province page loads, THE Location Pages System SHALL display a grid or slider showing top cities in that province
+2. WHEN city cards render, THE Location Pages System SHALL display city name, brief description, number of developments, and number of properties
+3. WHEN city cards include ratings, THE Location Pages System SHALL display demand indicators or rating scores
+4. WHEN a user clicks a city card, THE Location Pages System SHALL navigate to that city's landing page
+5. WHEN city data is displayed, THE Location Pages System SHALL include thumbnail images for each city
+
+### Requirement 19
+
+**User Story:** As a property seeker, I want to see top 10 new developments on province pages, so that I can discover premium projects across the province.
+
+#### Acceptance Criteria
+
+1. WHEN a province page loads, THE Location Pages System SHALL display top 10 new developments filtered by location equals province
+2. WHEN top 10 developments render, THE Location Pages System SHALL filter by status equals active and flag equals top_10
+3. WHEN development cards display, THE Location Pages System SHALL show development name, location, price range, and featured badge if applicable
+4. WHEN a user clicks a development card, THE Location Pages System SHALL navigate to the development detail page
+5. WHERE no top 10 developments exist for a province, THE Location Pages System SHALL hide the section or display alternative developments
+
+### Requirement 20
+
+**User Story:** As a property seeker, I want to see featured developers on province pages, so that I can discover reputable developers operating in the province.
+
+#### Acceptance Criteria
+
+1. WHEN a province page loads, THE Location Pages System SHALL display a horizontal slider showing up to 10 featured developers
+2. WHEN developer cards render, THE Location Pages System SHALL display developer logo, name, main region, and featured badge if paid placement
+3. WHEN a user clicks a developer card, THE Location Pages System SHALL navigate to the developer profile page
+4. WHEN developers are displayed, THE Location Pages System SHALL prioritize by subscription level and editorial curation
+5. WHEN insufficient featured developers exist, THE Location Pages System SHALL display active developers in that province
+
+### Requirement 21
+
+**User Story:** As a property seeker, I want to see high-demand projects on province pages, so that I can identify investment opportunities across the province.
+
+#### Acceptance Criteria
+
+1. WHEN a province page loads, THE Location Pages System SHALL display 6-12 high-demand development cards
+2. WHEN high-demand projects render, THE Location Pages System SHALL order developments by demand score calculated from backend logic
+3. WHEN development cards display, THE Location Pages System SHALL show development name, location, price range, and demand indicator
+4. WHEN a user clicks a high-demand project card, THE Location Pages System SHALL navigate to the development detail page
+5. WHEN demand scores are calculated, THE Location Pages System SHALL use views, inquiries, and engagement metrics
+
+### Requirement 22
+
+**User Story:** As a property seeker, I want to see urban development insights on province pages, so that I can understand provincial growth trends and investment opportunities.
+
+#### Acceptance Criteria
+
+1. WHEN a province page loads, THE Location Pages System SHALL display an Urban Development Insights section with editorial content
+2. WHEN insights render, THE Location Pages System SHALL display provincial growth trends, infrastructure pipelines, and zoning policy summaries
+3. WHEN insights include migration patterns, THE Location Pages System SHALL display data on population movement and future investment nodes
+4. WHEN a user views insights, THE Location Pages System SHALL present content controlled by Property Listify editorial team through CMS
+5. WHEN insights are unavailable, THE Location Pages System SHALL hide the section gracefully
+
+### Requirement 23
+
+**User Story:** As a property seeker, I want to see hot-selling developments on city pages, so that I can discover high-traction projects in the city.
+
+#### Acceptance Criteria
+
+1. WHEN a city page loads, THE Location Pages System SHALL display a slider of hot-selling developments in that city
+2. WHEN hot-selling developments render, THE Location Pages System SHALL pull developments automatically using demand algorithms
+3. WHEN development cards display, THE Location Pages System SHALL show development name, location, price range, and traction indicators
+4. WHEN a user clicks a hot-selling development card, THE Location Pages System SHALL navigate to the development detail page
+5. WHEN demand algorithms calculate, THE Location Pages System SHALL prioritize developments with high views, inquiries, and sales velocity
+
+### Requirement 24
+
+**User Story:** As a property seeker, I want to see top suburbs on city pages, so that I can explore popular neighborhoods within the city.
+
+#### Acceptance Criteria
+
+1. WHEN a city page loads, THE Location Pages System SHALL display a grid or slider showing top suburbs in that city
+2. WHEN suburb cards render, THE Location Pages System SHALL display suburb name, rating score, number of developments, and number of properties
+3. WHEN suburb cards include images, THE Location Pages System SHALL display thumbnail images for each suburb
+4. WHEN a user clicks a suburb card, THE Location Pages System SHALL navigate to that suburb's landing page
+5. WHEN suburb data is displayed, THE Location Pages System SHALL order suburbs by rating score or listing count
+
+### Requirement 25
+
+**User Story:** As a property seeker, I want to see top developers on city pages, so that I can discover reputable developers operating in the city.
+
+#### Acceptance Criteria
+
+1. WHEN a city page loads, THE Location Pages System SHALL display a horizontal slider showing up to 10 top developers in that city
+2. WHEN developer cards render, THE Location Pages System SHALL determine ranking by subscription level, performance metrics, and editorial curation
+3. WHEN developer profiles display, THE Location Pages System SHALL integrate with backend developer profiles showing logo, name, and featured status
+4. WHEN a user clicks a developer card, THE Location Pages System SHALL navigate to the developer profile page
+5. WHEN developers are displayed, THE Location Pages System SHALL prioritize paid premium developers over organic listings
+
+### Requirement 26
+
+**User Story:** As a property seeker, I want to see CityScope urban planning insights on city pages, so that I can understand city-level infrastructure and investment opportunities.
+
+#### Acceptance Criteria
+
+1. WHEN a city page loads, THE Location Pages System SHALL display a CityScope section with comprehensive urban planning insights
+2. WHEN CityScope renders, THE Location Pages System SHALL display city-level infrastructure projects, upcoming precinct developments, and transport corridors
+3. WHEN CityScope includes urban renewal projects, THE Location Pages System SHALL display density zones, policy risks, and future hot-spot indicators
+4. WHEN a user views CityScope, THE Location Pages System SHALL present content that feels like proper research giving Property Listify authority
+5. WHEN CityScope content is managed, THE Location Pages System SHALL allow editing through CMS by editorial team
+
+### Requirement 27
+
+**User Story:** As a property seeker, I want to see recommended agents on city pages, so that I can connect with verified agents active in the city.
+
+#### Acceptance Criteria
+
+1. WHEN a city page loads, THE Location Pages System SHALL display a slider of recommended agents and sellers
+2. WHEN agent cards render, THE Location Pages System SHALL display verified agents and agents with most activity in that city
+3. WHEN paid premium agents exist, THE Location Pages System SHALL prioritize paid premium agents in the slider
+4. WHEN a user clicks an agent card, THE Location Pages System SHALL navigate to the agent profile page or contact form
+5. WHEN agent recommendations are calculated, THE Location Pages System SHALL use agent activity metrics and subscription status
+
+### Requirement 28
+
+**User Story:** As a property seeker, I want to see newly added developments on city pages, so that I can discover the latest projects in the city.
+
+#### Acceptance Criteria
+
+1. WHEN a city page loads, THE Location Pages System SHALL display newly added developments section showing only new developments not properties
+2. WHEN newly added developments render, THE Location Pages System SHALL filter by location equals city and order by created date descending
+3. WHEN development cards display, THE Location Pages System SHALL show development name, location, price range, and date added
+4. WHEN a user clicks a newly added development card, THE Location Pages System SHALL navigate to the development detail page
+5. WHEN newly added developments are displayed, THE Location Pages System SHALL limit to most recent 6-12 developments
+
+### Requirement 29
+
+**User Story:** As a property seeker, I want to see an about section on suburb pages, so that I can understand the lifestyle and characteristics of the suburb.
+
+#### Acceptance Criteria
+
+1. WHEN a suburb page loads, THE Location Pages System SHALL display an About the Suburb section with editorial summary
+2. WHEN about content renders, THE Location Pages System SHALL display lifestyle information, safety ratings, schools, and retail nodes
+3. WHEN about content includes transport access, THE Location Pages System SHALL display information about who lives there and community characteristics
+4. WHEN median property prices are available, THE Location Pages System SHALL display median prices and market trends
+5. WHEN about content is managed, THE Location Pages System SHALL allow editing through CMS by editorial team
+
+### Requirement 30
+
+**User Story:** As a property seeker, I want to see property type cards on suburb pages, so that I can filter listings by specific property types in the suburb.
+
+#### Acceptance Criteria
+
+1. WHEN a suburb page loads, THE Location Pages System SHALL display property type cards for houses, apartments, townhouses, plots and land, and commercial
+2. WHEN a user clicks a property type card, THE Location Pages System SHALL navigate to listings filtered only for that suburb and property type
+3. WHEN property type cards render, THE Location Pages System SHALL display listing count for each type in that suburb
+4. WHEN property type cards include pricing, THE Location Pages System SHALL display average price for each type
+5. WHERE a property type has zero listings in the suburb, THE Location Pages System SHALL hide that card or display it as disabled
+
+### Requirement 31
+
+**User Story:** As a property seeker, I want to see newly added properties on suburb pages, so that I can discover the latest listings in the suburb.
+
+#### Acceptance Criteria
+
+1. WHEN a suburb page loads, THE Location Pages System SHALL display newly added properties section showing only properties not developments
+2. WHEN newly added properties render, THE Location Pages System SHALL filter by location equals suburb and order by created date descending
+3. WHEN property cards display, THE Location Pages System SHALL show property image, price, bedrooms, bathrooms, and square meters
+4. WHEN a user clicks a newly added property card, THE Location Pages System SHALL navigate to the property detail page
+5. WHEN newly added properties are displayed, THE Location Pages System SHALL limit to most recent 6-12 properties
+
+### Requirement 32
+
+**User Story:** As a property seeker, I want to see suburb insights on suburb pages, so that I can understand micro-level investment and planning data.
+
+#### Acceptance Criteria
+
+1. WHEN a suburb page loads, THE Location Pages System SHALL display a Suburb Insights section with micro-level urban planning data
+2. WHEN suburb insights render, THE Location Pages System SHALL display micro-zoning information, price trends, and investment appeal
+3. WHEN suburb insights include infrastructure, THE Location Pages System SHALL display local infrastructure projects and developments
+4. WHEN a user views suburb insights, THE Location Pages System SHALL present content controlled by Property Listify editorial team through CMS
+5. WHEN suburb insights are unavailable, THE Location Pages System SHALL hide the section gracefully
+
+### Requirement 33
+
+**User Story:** As a property seeker, I want to see top developments on suburb pages, so that I can discover premium projects in the specific suburb.
+
+#### Acceptance Criteria
+
+1. WHEN a suburb page loads, THE Location Pages System SHALL display 3-10 top developments depending on available data
+2. WHEN top developments render, THE Location Pages System SHALL filter by location equals suburb and order by demand score or editorial curation
+3. WHEN development cards display, THE Location Pages System SHALL show development name, price range, and featured indicators
+4. WHEN a user clicks a top development card, THE Location Pages System SHALL navigate to the development detail page
+5. WHERE no developments exist in the suburb, THE Location Pages System SHALL hide the section
+
+### Requirement 34
+
+**User Story:** As a property seeker, I want to see recommended agents on suburb pages, so that I can connect with agents specializing in that suburb.
+
+#### Acceptance Criteria
+
+1. WHEN a suburb page loads, THE Location Pages System SHALL display recommended agents based on suburb-level performance
+2. WHEN agent cards render, THE Location Pages System SHALL display agents with most listings, sales, or activity in that specific suburb
+3. WHEN paid premium agents exist for the suburb, THE Location Pages System SHALL prioritize paid agents in recommendations
+4. WHEN a user clicks an agent card, THE Location Pages System SHALL navigate to the agent profile page or contact form
+5. WHEN agent recommendations are calculated, THE Location Pages System SHALL use suburb-specific activity metrics
+
+### Requirement 35
+
+**User Story:** As a content manager, I want to manage hero billboard banners through CMS, so that I can schedule and rotate paid advertisements on location pages.
+
+#### Acceptance Criteria
+
+1. WHEN managing hero banners, THE Location Pages System SHALL support 1 primary ad slot per location page
+2. WHEN scheduling campaigns, THE Location Pages System SHALL support weekly and monthly rotation schedules
+3. WHEN campaigns are scheduled, THE Location Pages System SHALL allow ability to schedule future campaigns with start and end dates
+4. WHEN no active campaign exists, THE Location Pages System SHALL automatically display fallback hero images for that location
+5. WHEN campaigns are active, THE Location Pages System SHALL track impressions and clicks for monetization reporting
+
+### Requirement 36
+
+**User Story:** As a content manager, I want to manage featured developer slots through CMS, so that I can control paid ranking in developer sliders.
+
+#### Acceptance Criteria
+
+1. WHEN managing featured developers, THE Location Pages System SHALL support paid ranking in developer sliders on province and city pages
+2. WHEN assigning featured status, THE Location Pages System SHALL allow tagging developers as featured with subscription level indicators
+3. WHEN featured developers are displayed, THE Location Pages System SHALL prioritize paid featured developers over organic listings
+4. WHEN featured slots are full, THE Location Pages System SHALL limit featured developers to maximum 10 per location
+5. WHEN featured status expires, THE Location Pages System SHALL automatically remove featured badge and revert to organic ranking
+
+### Requirement 37
+
+**User Story:** As a content manager, I want to manage top 10 developments through CMS, so that I can control premium inclusion in curated development lists.
+
+#### Acceptance Criteria
+
+1. WHEN managing top 10 developments, THE Location Pages System SHALL support internal tagging system for top_10 flag
+2. WHEN developers pay for inclusion, THE Location Pages System SHALL allow manual assignment of top_10 status through CMS
+3. WHEN top 10 developments are displayed, THE Location Pages System SHALL filter by top_10 flag and status equals active
+4. WHEN top 10 slots are full, THE Location Pages System SHALL limit to exactly 10 developments per province
+5. WHEN top 10 status expires, THE Location Pages System SHALL automatically remove from top 10 lists
+
+### Requirement 38
+
+**User Story:** As a content manager, I want to manage boosted listings through CMS, so that I can increase visibility of paid properties on suburb pages.
+
+#### Acceptance Criteria
+
+1. WHEN managing boosted listings, THE Location Pages System SHALL support paid increase in visibility for newly added properties on suburb pages
+2. WHEN properties are boosted, THE Location Pages System SHALL prioritize boosted properties in newly added properties section
+3. WHEN boosted status is active, THE Location Pages System SHALL display boosted indicator or badge on property cards
+4. WHEN boosted status expires, THE Location Pages System SHALL revert to organic ordering by date
+5. WHEN multiple properties are boosted, THE Location Pages System SHALL order by boost payment amount then by date
+
+### Requirement 39
+
+**User Story:** As a content manager, I want to manage recommended agents through CMS, so that I can control paid and performance-based agent recommendations.
+
+#### Acceptance Criteria
+
+1. WHEN managing recommended agents, THE Location Pages System SHALL support paid plus performance-based hybrid model
+2. WHEN calculating recommendations, THE Location Pages System SHALL weight paid premium agents higher than organic agents
+3. WHEN performance metrics are available, THE Location Pages System SHALL use listings count, sales count, and engagement metrics
+4. WHEN paid and organic agents are mixed, THE Location Pages System SHALL clearly indicate paid placements with sponsored badge
+5. WHEN agent subscriptions expire, THE Location Pages System SHALL automatically revert to organic performance-based ranking
+
+### Requirement 40
+
+**User Story:** As a property seeker, I want all location pages to use soft-UI design, so that I have a consistent and modern visual experience.
+
+#### Acceptance Criteria
+
+1. WHEN location pages render, THE Location Pages System SHALL use clean cards with rounded corners and subtle shadows
+2. WHEN interactive elements are displayed, THE Location Pages System SHALL include animations on hover and smooth transitions between sections
+3. WHEN spacing is applied, THE Location Pages System SHALL use consistent spacing following the soft-UI design system
+4. WHEN sliders are displayed, THE Location Pages System SHALL ensure sliders are fast and mobile friendly
+5. WHEN colors are applied, THE Location Pages System SHALL follow the established soft-UI color palette and design tokens

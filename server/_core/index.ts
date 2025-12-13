@@ -12,6 +12,7 @@ import { createContext } from './context';
 import { serveStatic, setupVite } from './vite';
 import { handleStripeWebhook } from './stripeWebhooks';
 import { domainRoutingMiddleware, customDomainMiddleware } from './domainRouter';
+import { initializeCache, shutdownCache } from './cache/redis';
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -40,6 +41,9 @@ async function startServer() {
     console.error('   Please set JWT_SECRET in your .env file or deployment configuration.\n');
   }
 
+  // Initialize Cache Services (Redis)
+  await initializeCache();
+
   const app = express();
   const server = createServer(app);
 
@@ -60,8 +64,10 @@ async function startServer() {
   const allowedOrigins = [
     'http://localhost:5173', // Vite dev
     'http://localhost:3000', // Local dev
+    'http://localhost:5000', // Local dev (port 5000)
     'https://real-estate-portal-xi.vercel.app', // Vercel production
-    'https://realestateportal-production-8e32.up.railway.app', // Railway backend (for webhook testing)
+    'https://realestateportal-production-8e32.up.railway.app', // Railway backend (old)
+    'https://realestateportal-production-9bb8.up.railway.app', // Railway backend (current)
   ];
 
   app.use(
@@ -131,6 +137,10 @@ async function startServer() {
       createContext,
     }),
   );
+
+  // Analytics endpoint (for advertise page tracking)
+  const analyticsRouter = await import('../routes/analytics');
+  app.use('/api/analytics', analyticsRouter.default);
   // development mode uses Vite, production mode serves static files
   // Skip static file serving if SKIP_FRONTEND env var is set (for Railway backend-only deployment)
   console.log('[Server] NODE_ENV:', process.env.NODE_ENV);
@@ -145,10 +155,10 @@ async function startServer() {
     console.log('[Server] Skipping frontend static file serving (backend-only mode)');
   }
 
-  // Force port 5000 for debugging
-  const port = 5000;
+  // Use configured port or default to 5000
+  const port = parseInt(process.env.PORT || '5000', 10);
   console.log('----------------------------------------');
-  console.log(`[Server] FORCING START on port ${port}`);
+  console.log(`[Server] Starting on port ${port}`);
   console.log('----------------------------------------');
 
   server.listen(port, '0.0.0.0', () => {
@@ -159,3 +169,16 @@ async function startServer() {
 }
 
 startServer().catch(console.error);
+
+// Handle graceful shutdown
+process.on('SIGTERM', async () => {
+  console.log('SIGTERM received, shutting down...');
+  await shutdownCache();
+  process.exit(0);
+});
+
+process.on('SIGINT', async () => {
+  console.log('SIGINT received, shutting down...');
+  await shutdownCache();
+  process.exit(0);
+});

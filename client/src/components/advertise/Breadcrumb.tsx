@@ -48,13 +48,12 @@ export function Breadcrumb({ items, className = '' }: BreadcrumbProps) {
         <ol className="flex items-center space-x-2 text-sm">
           {/* Home link */}
           <li>
-            <Link href="/">
-              <a
-                className="flex items-center text-slate-600 hover:text-blue-600 transition-colors"
-                aria-label="Home"
-              >
-                <Home className="h-4 w-4" />
-              </a>
+            <Link 
+              href="/"
+              className="flex items-center text-slate-600 hover:text-blue-600 transition-colors"
+              aria-label="Home"
+            >
+              <Home className="h-4 w-4" />
             </Link>
           </li>
 
@@ -73,10 +72,11 @@ export function Breadcrumb({ items, className = '' }: BreadcrumbProps) {
                     {item.label}
                   </span>
                 ) : (
-                  <Link href={item.href}>
-                    <a className="text-slate-600 hover:text-blue-600 transition-colors">
-                      {item.label}
-                    </a>
+                  <Link 
+                    href={item.href}
+                    className="text-slate-600 hover:text-blue-600 transition-colors"
+                  >
+                    {item.label}
                   </Link>
                 )}
               </li>

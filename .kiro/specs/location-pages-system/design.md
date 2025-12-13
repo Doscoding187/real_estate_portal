@@ -106,17 +106,29 @@ interface ProvincePageProps {
   statistics: ProvinceStatistics;
   developments: Development[];
   propertyTypes: PropertyTypeStats[];
+  heroBanner?: HeroBillboardAd;
+  popularSearches: PopularSearch[];
+  topCities: TopCity[];
+  top10Developments: Development[];
+  featuredDevelopers: Developer[];
+  highDemandProjects: Development[];
+  urbanInsights?: UrbanDevelopmentInsights;
 }
 ```
 
 **Layout Structure:**
+- HeroBillboardBanner (full-width paid ad or fallback image)
 - HeroLocation (province name, stats, search bar)
+- PopularSearches (context-aware quick searches)
 - StatsBar (avg price, avg rent, total listings)
 - SearchRefinementBar (filters)
 - PropertyTypeExplorer (grid of property type cards)
-- LocationGrid (popular cities)
+- TopCitiesGrid (top cities with ratings and stats)
 - TrendingSlider (trending suburbs)
-- DevelopmentsGrid (new developments)
+- Top10DevelopmentsGrid (curated premium developments)
+- FeaturedDevelopersSlider (up to 10 featured developers)
+- HighDemandProjectsGrid (6-12 high-demand developments)
+- UrbanDevelopmentInsights (ProvinceScope editorial content)
 - MarketInsights (charts and trends)
 - SEOTextBlock (200-300 words)
 - FinalCTA (3 CTA buttons)
@@ -134,17 +146,31 @@ interface CityPageProps {
   propertyTypes: PropertyTypeStats[];
   amenities: Amenity[];
   featuredListings: Listing[];
+  heroBanner?: HeroBillboardAd;
+  popularSearches: PopularSearch[];
+  hotSellingDevelopments: Development[];
+  topSuburbs: TopSuburb[];
+  topDevelopers: Developer[];
+  cityScopeInsights?: CityScopeInsights;
+  recommendedAgents: Agent[];
+  newlyAddedDevelopments: Development[];
 }
 ```
 
 **Layout Structure:**
+- HeroBillboardBanner (full-width paid ad or fallback image)
 - HeroLocation (city name, province, stats)
 - Breadcrumbs (Province → City)
+- PopularSearches (context-aware quick searches)
 - StatsBar
 - SearchRefinementBar
 - PropertyTypeExplorer
-- LocationGrid (popular suburbs)
-- DevelopmentsSlider
+- HotSellingDevelopmentsSlider (demand algorithm-driven)
+- TopSuburbsGrid (top suburbs with ratings)
+- TopDevelopersSlider (up to 10 top developers)
+- CityScopeInsights (urban planning editorial content)
+- RecommendedAgentsSlider (verified agents)
+- NewlyAddedDevelopmentsGrid (latest developments)
 - MarketInsights (city-specific)
 - AmenitiesSection (schools, transport, shopping)
 - FeaturedListings (6-12 properties)
@@ -164,15 +190,29 @@ interface SuburbPageProps {
   featuredListings: Listing[];
   amenities: Amenity[];
   nearbySuburbs: Suburb[];
+  heroBanner?: HeroBillboardAd;
+  popularSearches: PopularSearch[];
+  aboutSuburb?: AboutSuburbContent;
+  newlyAddedProperties: Listing[];
+  suburbInsights?: SuburbInsights;
+  topDevelopments: Development[];
+  recommendedAgents: Agent[];
 }
 ```
 
 **Layout Structure:**
+- HeroBillboardBanner (full-width paid ad or fallback image)
 - HeroLocation (suburb name, city, province, stats)
 - Breadcrumbs (Province → City → Suburb)
+- PopularSearches (context-aware quick searches)
 - StatsBar
 - SearchRefinementBar
-- PropertyTypeExplorer
+- AboutSuburbSection (editorial lifestyle summary)
+- PropertyTypeCards (houses, apartments, townhouses, plots, commercial)
+- NewlyAddedPropertiesGrid (6-12 latest properties)
+- SuburbInsightsSection (micro-level urban planning data)
+- TopDevelopmentsGrid (3-10 top developments)
+- RecommendedAgentsSlider (suburb-specific agents)
 - FeaturedListings (6-12 properties)
 - MarketInsights (suburb-specific)
 - AmenitiesSection (local schools, shopping)
@@ -383,6 +423,301 @@ interface BreadcrumbsProps {
 
 Navigation breadcrumb trail with schema markup.
 
+#### HeroBillboardBanner Component
+
+```typescript
+interface HeroBillboardBannerProps {
+  advertisement?: {
+    id: number;
+    imageUrl: string;
+    ctaText?: string;
+    ctaLink?: string;
+    campaignId: number;
+  };
+  fallbackImage: string;
+  location: string;
+  onImpression: () => void;
+  onClick?: () => void;
+}
+```
+
+Full-width hero banner displaying paid advertisements or fallback location imagery.
+
+#### PopularSearches Component
+
+```typescript
+interface PopularSearchesProps {
+  searches: Array<{
+    label: string;
+    link: string;
+    icon?: string;
+  }>;
+  locationLevel: 'province' | 'city' | 'suburb';
+  maxItems: number; // 4-6
+}
+```
+
+Context-aware popular search suggestions based on current location level.
+
+#### TopCitiesGrid Component
+
+```typescript
+interface TopCitiesGridProps {
+  cities: Array<{
+    id: number;
+    name: string;
+    slug: string;
+    description: string;
+    developmentCount: number;
+    propertyCount: number;
+    rating?: number;
+    thumbnailImage: string;
+  }>;
+  provinceSlug: string;
+}
+```
+
+Grid displaying top cities within a province with stats and ratings.
+
+#### Top10DevelopmentsGrid Component
+
+```typescript
+interface Top10DevelopmentsGridProps {
+  developments: Development[];
+  provinceSlug: string;
+}
+```
+
+Curated grid of top 10 premium developments filtered by CMS top_10 flag.
+
+#### FeaturedDevelopersSlider Component
+
+```typescript
+interface FeaturedDevelopersSliderProps {
+  developers: Array<{
+    id: number;
+    name: string;
+    logo: string;
+    mainRegion: string;
+    isFeatured: boolean;
+    isPaidPlacement: boolean;
+  }>;
+  maxItems: number; // up to 10
+}
+```
+
+Horizontal slider showing featured developers with paid placement priority.
+
+#### HighDemandProjectsGrid Component
+
+```typescript
+interface HighDemandProjectsGridProps {
+  projects: Development[];
+  demandScores: Map<number, number>;
+  maxItems: number; // 6-12
+}
+```
+
+Grid of high-demand developments ordered by backend demand score algorithm.
+
+#### UrbanDevelopmentInsights Component
+
+```typescript
+interface UrbanDevelopmentInsightsProps {
+  content: {
+    title: string;
+    growthTrends: string;
+    infrastructurePipeline: string;
+    zoningPolicies: string;
+    migrationPatterns: string;
+    investmentNodes: string;
+  };
+  isCMSEditable: boolean;
+}
+```
+
+Editorial content section (ProvinceScope) providing urban planning intelligence.
+
+#### HotSellingDevelopmentsSlider Component
+
+```typescript
+interface HotSellingDevelopmentsSliderProps {
+  developments: Development[];
+  demandMetrics: Map<number, DemandMetrics>;
+}
+```
+
+Slider of hot-selling developments automatically pulled by demand algorithms.
+
+#### TopSuburbsGrid Component
+
+```typescript
+interface TopSuburbsGridProps {
+  suburbs: Array<{
+    id: number;
+    name: string;
+    slug: string;
+    ratingScore: number;
+    developmentCount: number;
+    propertyCount: number;
+    thumbnailImage: string;
+  }>;
+  citySlug: string;
+  provinceSlug: string;
+}
+```
+
+Grid displaying top suburbs within a city ordered by rating score.
+
+#### TopDevelopersSlider Component
+
+```typescript
+interface TopDevelopersSliderProps {
+  developers: Developer[];
+  rankingCriteria: {
+    subscriptionLevel: number;
+    performanceMetrics: number;
+    editorialCuration: number;
+  };
+  maxItems: number; // up to 10
+}
+```
+
+Slider showing top developers ranked by subscription, performance, and curation.
+
+#### CityScopeInsights Component
+
+```typescript
+interface CityScopeInsightsProps {
+  content: {
+    title: string;
+    infrastructureProjects: string;
+    precinctDevelopments: string;
+    transportCorridors: string;
+    urbanRenewal: string;
+    densityZones: string;
+    policyRisks: string;
+    futureHotspots: string;
+  };
+  isCMSEditable: boolean;
+}
+```
+
+Editorial content section (CityScope) providing comprehensive urban planning insights.
+
+#### RecommendedAgentsSlider Component
+
+```typescript
+interface RecommendedAgentsSliderProps {
+  agents: Array<{
+    id: number;
+    name: string;
+    photo: string;
+    isVerified: boolean;
+    isPremium: boolean;
+    activityScore: number;
+    listingsCount: number;
+    salesCount: number;
+  }>;
+  location: string;
+  locationType: 'city' | 'suburb';
+}
+```
+
+Slider of recommended agents with paid premium priority and performance-based ranking.
+
+#### NewlyAddedDevelopmentsGrid Component
+
+```typescript
+interface NewlyAddedDevelopmentsGridProps {
+  developments: Development[];
+  maxItems: number; // 6-12
+  sortBy: 'created_date';
+}
+```
+
+Grid showing newly added developments (not properties) ordered by creation date.
+
+#### AboutSuburbSection Component
+
+```typescript
+interface AboutSuburbSectionProps {
+  content: {
+    summary: string;
+    lifestyle: string;
+    safetyRating?: number;
+    schools: string;
+    retailNodes: string;
+    transportAccess: string;
+    demographics: string;
+    medianPrice?: number;
+    marketTrends: string;
+  };
+  isCMSEditable: boolean;
+}
+```
+
+Editorial section providing lifestyle and characteristics overview of the suburb.
+
+#### PropertyTypeCards Component
+
+```typescript
+interface PropertyTypeCardsProps {
+  types: Array<{
+    type: 'house' | 'apartment' | 'townhouse' | 'plot' | 'commercial';
+    count: number;
+    avgPrice: number;
+    link: string;
+  }>;
+  location: string;
+}
+```
+
+Cards for filtering by property type with listing counts and average prices.
+
+#### NewlyAddedPropertiesGrid Component
+
+```typescript
+interface NewlyAddedPropertiesGridProps {
+  properties: Listing[];
+  boostedProperties: number[]; // IDs of boosted listings
+  maxItems: number; // 6-12
+  sortBy: 'created_date' | 'boost_priority';
+}
+```
+
+Grid showing newly added properties with boosted listings prioritized.
+
+#### SuburbInsightsSection Component
+
+```typescript
+interface SuburbInsightsSectionProps {
+  content: {
+    title: string;
+    microZoning: string;
+    priceTrends: string;
+    investmentAppeal: string;
+    localInfrastructure: string;
+    developmentPipeline: string;
+  };
+  isCMSEditable: boolean;
+}
+```
+
+Editorial section providing micro-level urban planning data for the suburb.
+
+#### TopDevelopmentsGrid Component
+
+```typescript
+interface TopDevelopmentsGridProps {
+  developments: Development[];
+  maxItems: number; // 3-10
+  sortBy: 'demand_score' | 'editorial_curation';
+}
+```
+
+Grid showing top developments in a suburb ordered by demand or curation.
+
 
 
 ## Data Models
@@ -542,6 +877,203 @@ interface TrendingLocation {
   listingGrowth: number; // percentage
   viewGrowth: number; // percentage
   priceChange: number; // percentage
+}
+```
+
+### Monetization and Editorial Models
+
+#### HeroBillboardAd
+
+```typescript
+interface HeroBillboardAd {
+  id: number;
+  campaignId: number;
+  imageUrl: string;
+  ctaText?: string;
+  ctaLink?: string;
+  locationId: number;
+  locationType: 'province' | 'city' | 'suburb';
+  startDate: Date;
+  endDate: Date;
+  rotationSchedule: 'weekly' | 'monthly';
+  impressions: number;
+  clicks: number;
+}
+```
+
+#### PopularSearch
+
+```typescript
+interface PopularSearch {
+  label: string;
+  link: string;
+  icon?: string;
+  locationLevel: 'province' | 'city' | 'suburb';
+  priority: number;
+}
+```
+
+#### TopCity
+
+```typescript
+interface TopCity {
+  id: number;
+  name: string;
+  slug: string;
+  description: string;
+  developmentCount: number;
+  propertyCount: number;
+  rating?: number;
+  thumbnailImage: string;
+  provinceId: number;
+}
+```
+
+#### Developer
+
+```typescript
+interface Developer {
+  id: number;
+  name: string;
+  logo: string;
+  mainRegion: string;
+  subscriptionLevel: 'free' | 'basic' | 'premium' | 'enterprise';
+  isFeatured: boolean;
+  isPaidPlacement: boolean;
+  performanceScore: number;
+  editorialCuration: number;
+  activeProjects: number;
+}
+```
+
+#### DemandMetrics
+
+```typescript
+interface DemandMetrics {
+  developmentId: number;
+  demandScore: number; // 0-100
+  views: number;
+  inquiries: number;
+  engagement: number;
+  salesVelocity: number;
+  calculatedAt: Date;
+}
+```
+
+#### UrbanDevelopmentInsights
+
+```typescript
+interface UrbanDevelopmentInsights {
+  provinceId: number;
+  title: string;
+  growthTrends: string;
+  infrastructurePipeline: string;
+  zoningPolicies: string;
+  migrationPatterns: string;
+  investmentNodes: string;
+  lastUpdated: Date;
+  author?: string;
+}
+```
+
+#### TopSuburb
+
+```typescript
+interface TopSuburb {
+  id: number;
+  name: string;
+  slug: string;
+  ratingScore: number;
+  developmentCount: number;
+  propertyCount: number;
+  thumbnailImage: string;
+  cityId: number;
+}
+```
+
+#### CityScopeInsights
+
+```typescript
+interface CityScopeInsights {
+  cityId: number;
+  title: string;
+  infrastructureProjects: string;
+  precinctDevelopments: string;
+  transportCorridors: string;
+  urbanRenewal: string;
+  densityZones: string;
+  policyRisks: string;
+  futureHotspots: string;
+  lastUpdated: Date;
+  author?: string;
+}
+```
+
+#### Agent
+
+```typescript
+interface Agent {
+  id: number;
+  name: string;
+  photo: string;
+  email: string;
+  phone: string;
+  isVerified: boolean;
+  isPremium: boolean;
+  subscriptionLevel: 'free' | 'basic' | 'premium';
+  activityScore: number;
+  listingsCount: number;
+  salesCount: number;
+  engagementMetrics: number;
+  specializations: string[];
+}
+```
+
+#### AboutSuburbContent
+
+```typescript
+interface AboutSuburbContent {
+  suburbId: number;
+  summary: string;
+  lifestyle: string;
+  safetyRating?: number;
+  schools: string;
+  retailNodes: string;
+  transportAccess: string;
+  demographics: string;
+  medianPrice?: number;
+  marketTrends: string;
+  lastUpdated: Date;
+  author?: string;
+}
+```
+
+#### SuburbInsights
+
+```typescript
+interface SuburbInsights {
+  suburbId: number;
+  title: string;
+  microZoning: string;
+  priceTrends: string;
+  investmentAppeal: string;
+  localInfrastructure: string;
+  developmentPipeline: string;
+  lastUpdated: Date;
+  author?: string;
+}
+```
+
+#### BoostedListing
+
+```typescript
+interface BoostedListing {
+  listingId: number;
+  boostLevel: 'standard' | 'premium' | 'featured';
+  boostAmount: number;
+  startDate: Date;
+  endDate: Date;
+  priority: number;
 }
 ```
 

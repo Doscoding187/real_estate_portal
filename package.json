@@ -98,6 +98,7 @@
     "react-helmet": "^6.1.0",
     "react-hook-form": "^7.64.0",
     "react-intersection-observer": "^10.0.0",
+    "react-leaflet": "^5.0.0",
     "react-resizable-panels": "^3.0.6",
     "react-window": "^2.2.3",
     "recharts": "^2.15.4",

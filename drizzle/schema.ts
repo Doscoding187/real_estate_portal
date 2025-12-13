@@ -362,6 +362,7 @@ export const developerSubscriptions = mysqlTable("developer_subscriptions", {
 export const developers = mysqlTable("developers", {
 	id: int().autoincrement().notNull(),
 	name: varchar({ length: 255 }).notNull(),
+	slug: varchar({ length: 255 }),
 	description: text(),
 	logo: text(),
 	website: varchar({ length: 255 }),
@@ -505,6 +506,10 @@ export const developments = mysqlTable("developments", {
 	publishedAt: timestamp({ mode: 'string' }),
 	showHouseAddress: int().default(1).notNull(),
 	views: int().notNull(),
+	inquiriesCount: int("inquiries_count").default(0),
+	demandScore: int("demand_score").default(0),
+	isHotSelling: int("is_hot_selling").default(0),
+	isHighDemand: int("is_high_demand").default(0),
 	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
 	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
 },
@@ -1191,6 +1196,41 @@ export const locations = mysqlTable("locations", {
 	index("idx_locations_place_id").on(table.placeId),
 	index("idx_locations_slug").on(table.slug),
 	index("idx_locations_parent_id").on(table.parentId),
+]);
+
+export const locationAnalyticsEvents = mysqlTable("location_analytics_events", {
+	id: int().autoincrement().notNull(),
+	eventType: varchar("event_type", { length: 50 }).notNull(),
+	locationId: int("location_id"),
+	developmentId: int("development_id"),
+	listingId: int("listing_id"),
+	targetId: int("target_id"),
+	metadata: json(),
+	sessionId: varchar("session_id", { length: 100 }),
+	userId: int("user_id").references(() => users.id, { onDelete: "set null" }),
+	createdAt: timestamp("created_at", { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+}, (table) => [
+	index("idx_loc_analytics_event").on(table.eventType),
+	index("idx_loc_analytics_created").on(table.createdAt),
+	index("idx_loc_analytics_location").on(table.locationId),
+	index("idx_loc_analytics_development").on(table.developmentId),
+]);
+
+export const locationTargeting = mysqlTable("location_targeting", {
+	id: int().autoincrement().notNull(),
+	targetType: mysqlEnum("target_type", ['hero_ad', 'featured_developer', 'recommended_agent']).notNull(),
+	targetId: int("target_id").notNull(),
+	locationType: mysqlEnum("location_type", ['province', 'city', 'suburb']).notNull(),
+	locationId: int("location_id").notNull(),
+	ranking: int().default(0),
+	startDate: timestamp("start_date", { mode: 'string' }),
+	endDate: timestamp("end_date", { mode: 'string' }),
+	status: mysqlEnum(['active', 'scheduled', 'expired', 'paused']).default('scheduled').notNull(),
+	metadata: json(),
+	createdAt: timestamp("created_at", { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+},
+(table) => [
+	index("idx_location_targeting").on(table.locationType, table.locationId, table.status),
 ]);
 
 export const locationSearches = mysqlTable("location_searches", {

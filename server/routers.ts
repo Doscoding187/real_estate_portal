@@ -30,12 +30,18 @@ import { exploreVideoUploadRouter } from './exploreVideoUploadRouter';
 // import { exploreApiRouter } from './exploreApiRouter'; // TODO: Fix syntax errors in this file
 // import { boostCampaignRouter } from './boostCampaignRouter'; // TODO: Fix syntax errors in this file
 import { exploreAnalyticsRouter } from './exploreAnalyticsRouter';
+import { analyticsRouter } from './analyticsRouter';
 import { similarPropertiesRouter } from './similarPropertiesRouter';
 import { cacheRouter } from './cacheRouter';
 import { locationPagesRouter } from './locationPagesRouter';
 
+import { monetizationRouter } from './monetizationRouter';
+
 export const appRouter = router({
   system: systemRouter,
+  // ... other routers
+  analytics: analyticsRouter,
+  monetization: monetizationRouter,
   admin: adminRouter,
   agency: agencyRouter,
   user: userRouter,
@@ -65,6 +71,7 @@ export const appRouter = router({
   similarProperties: similarPropertiesRouter,
   cache: cacheRouter,
   locationPages: locationPagesRouter,
+  analytics: analyticsRouter,
 
   auth: router({
     me: publicProcedure.query(opts => opts.ctx.user),

@@ -17,25 +17,27 @@
 
 /* ============================================
    HERO SECTION ENHANCEMENTS
+   Scoped to advertise page only
    ============================================ */
 
-.hero-section {
+.advertise-page .hero-section {
   position: relative;
   overflow: hidden;
 }
 
 /* Ensure hero has proper min-height on larger screens */
 @media (min-width: 1024px) {
-  .hero-section {
+  .advertise-page .hero-section {
     min-height: max(90vh, 640px);
   }
 }
 
 /* ============================================
    BILLBOARD BANNER RESPONSIVE HEIGHTS
+   Scoped to advertise page only
    ============================================ */
 
-.billboard-banner {
+.advertise-page .billboard-banner {
   position: relative;
   border-radius: 1rem;
   overflow: hidden;
@@ -43,35 +45,36 @@
 }
 
 @media (max-width: 767px) {
-  .billboard-banner {
+  .advertise-page .billboard-banner {
     height: 300px;
   }
 }
 
 @media (min-width: 768px) and (max-width: 1023px) {
-  .billboard-banner {
+  .advertise-page .billboard-banner {
     height: 400px;
   }
 }
 
 @media (min-width: 1024px) {
-  .billboard-banner {
+  .advertise-page .billboard-banner {
     height: 500px;
   }
 }
 
 /* ============================================
    CTA BUTTON GROUP - MOBILE STACKING
+   Scoped to advertise page only
    ============================================ */
 
 @media (max-width: 639px) {
-  .cta-button-group {
+  .advertise-page .cta-button-group {
     flex-direction: column;
     width: 100%;
     gap: 0.75rem;
   }
   
-  .cta-button-group > * {
+  .advertise-page .cta-button-group > * {
     width: 100%;
   }
 }
@@ -79,66 +82,71 @@
 /* ============================================
    PROCESS STEPS CONNECTOR LINE
    Hide on mobile, show on tablet+
+   Scoped to advertise page only
    ============================================ */
 
-.connector-line {
+.advertise-page .connector-line {
   display: none;
 }
 
 @media (min-width: 768px) {
-  .connector-line {
+  .advertise-page .connector-line {
     display: block;
   }
 }
 
 /* ============================================
    FEATURE TILE HOVER EFFECTS
+   Scoped to advertise page only
    ============================================ */
 
-.feature-tile {
+.advertise-page .feature-tile {
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
-.feature-tile:hover {
+.advertise-page .feature-tile:hover {
   transform: translateY(-4px);
   box-shadow: 0 20px 40px -12px rgba(0, 0, 0, 0.1);
 }
 
 /* ============================================
    PRICING CARD HOVER EFFECTS
+   Scoped to advertise page only
    ============================================ */
 
-.pricing-card {
+.advertise-page .pricing-card {
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
-.pricing-card:hover {
+.advertise-page .pricing-card:hover {
   transform: translateY(-4px);
   box-shadow: 0 20px 40px -12px rgba(0, 0, 0, 0.1);
 }
 
 /* ============================================
    PARTNER TYPE CARD HOVER EFFECTS
+   Scoped to advertise page only
    ============================================ */
 
-.partner-type-card {
+.advertise-page .partner-type-card {
   transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
 }
 
-.partner-type-card:hover {
+.advertise-page .partner-type-card:hover {
   transform: translateY(-2px);
   box-shadow: 0 12px 24px -8px rgba(0, 0, 0, 0.1);
 }
 
 /* ============================================
    FAQ ACCORDION STYLES
+   Scoped to advertise page only
    ============================================ */
 
-.faq-accordion-item {
+.advertise-page .faq-accordion-item {
   transition: background-color 0.2s ease;
 }
 
-.faq-accordion-item[data-state="open"] {
+.advertise-page .faq-accordion-item[data-state="open"] {
   background-color: rgba(102, 126, 234, 0.04);
 }
 
@@ -146,6 +154,7 @@
    MOBILE STICKY CTA
    ============================================ */
 
+.advertise-page ~ .mobile-sticky-cta,
 .mobile-sticky-cta {
   position: fixed;
   bottom: 0;
@@ -158,11 +167,13 @@
   transition: transform 0.3s ease;
 }
 
+.advertise-page ~ .mobile-sticky-cta.visible,
 .mobile-sticky-cta.visible {
   transform: translateY(0);
 }
 
 @media (min-width: 768px) {
+  .advertise-page ~ .mobile-sticky-cta,
   .mobile-sticky-cta {
     display: none;
   }
@@ -174,7 +185,7 @@
 
 /* Touch targets for mobile - minimum 44px */
 @media (max-width: 767px) {
-  .advertise-touch-target {
+  .advertise-page .advertise-touch-target {
     min-height: 44px;
     min-width: 44px;
   }
@@ -185,7 +196,7 @@
    Scoped to advertise page elements
    ============================================ */
 
-.advertise-focusable:focus-visible {
+.advertise-page .advertise-focusable:focus-visible {
   outline: 3px solid #667eea;
   outline-offset: 2px;
   border-radius: 4px;
@@ -193,21 +204,22 @@
 
 /* ============================================
    REDUCED MOTION SUPPORT
+   Scoped to advertise page only
    ============================================ */
 
 @media (prefers-reduced-motion: reduce) {
-  .hero-section,
-  .feature-tile,
-  .pricing-card,
-  .partner-type-card,
-  .mobile-sticky-cta,
-  .faq-accordion-item {
+  .advertise-page .hero-section,
+  .advertise-page .feature-tile,
+  .advertise-page .pricing-card,
+  .advertise-page .partner-type-card,
+  .advertise-page .mobile-sticky-cta,
+  .advertise-page .faq-accordion-item {
     transition: none;
   }
   
-  .feature-tile:hover,
-  .pricing-card:hover,
-  .partner-type-card:hover {
+  .advertise-page .feature-tile:hover,
+  .advertise-page .pricing-card:hover,
+  .advertise-page .partner-type-card:hover {
     transform: none;
   }
 }
@@ -216,7 +228,7 @@
    BACKGROUND ORBS ANIMATION
    ============================================ */
 
-@keyframes float {
+@keyframes advertise-float {
   0%, 100% {
     transform: translateY(0) scale(1);
   }
@@ -225,20 +237,20 @@
   }
 }
 
-.background-orb {
-  animation: float 8s ease-in-out infinite;
+.advertise-page .background-orb {
+  animation: advertise-float 8s ease-in-out infinite;
 }
 
-.background-orb:nth-child(2) {
+.advertise-page .background-orb:nth-child(2) {
   animation-delay: -2s;
 }
 
-.background-orb:nth-child(3) {
+.advertise-page .background-orb:nth-child(3) {
   animation-delay: -4s;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .background-orb {
+  .advertise-page .background-orb {
     animation: none;
   }
 }
@@ -250,50 +262,50 @@
 
 /* Hide on specific breakpoints */
 @media (max-width: 767px) {
-  .advertise-hide-mobile {
+  .advertise-page .advertise-hide-mobile {
     display: none;
   }
 }
 
 @media (min-width: 768px) and (max-width: 1023px) {
-  .advertise-hide-tablet {
+  .advertise-page .advertise-hide-tablet {
     display: none;
   }
 }
 
 @media (min-width: 1024px) {
-  .advertise-hide-desktop {
+  .advertise-page .advertise-hide-desktop {
     display: none;
   }
 }
 
 /* Show only on specific breakpoints */
-.advertise-show-mobile {
+.advertise-page .advertise-show-mobile {
   display: none;
 }
 
 @media (max-width: 767px) {
-  .advertise-show-mobile {
+  .advertise-page .advertise-show-mobile {
     display: block;
   }
 }
 
-.advertise-show-tablet {
+.advertise-page .advertise-show-tablet {
   display: none;
 }
 
 @media (min-width: 768px) and (max-width: 1023px) {
-  .advertise-show-tablet {
+  .advertise-page .advertise-show-tablet {
     display: block;
   }
 }
 
-.advertise-show-desktop {
+.advertise-page .advertise-show-desktop {
   display: none;
 }
 
 @media (min-width: 1024px) {
-  .advertise-show-desktop {
+  .advertise-page .advertise-show-desktop {
     display: block;
   }
 }
@@ -303,7 +315,7 @@
    For headline gradient effect
    ============================================ */
 
-.advertise-gradient-text {
+.advertise-page .advertise-gradient-text {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -314,14 +326,14 @@
    SECTION BACKGROUND PATTERNS
    ============================================ */
 
-.advertise-section-light {
+.advertise-page .advertise-section-light {
   background-color: #f8fafc;
 }
 
-.advertise-section-white {
+.advertise-page .advertise-section-white {
   background-color: #ffffff;
 }
 
-.advertise-section-gradient {
+.advertise-page .advertise-section-gradient {
   background: linear-gradient(135deg, #f0f4ff 0%, #ffffff 50%, #fdf4ff 100%);
 }

@@ -10,6 +10,8 @@ export interface SimpleDevelopmentCardProps {
     max: number;
   };
   image: string;
+  isHotSelling?: boolean;
+  isHighDemand?: boolean;
 }
 
 export function SimpleDevelopmentCard({
@@ -18,6 +20,8 @@ export function SimpleDevelopmentCard({
   city,
   priceRange,
   image,
+  isHotSelling,
+  isHighDemand,
 }: SimpleDevelopmentCardProps) {
   const [, setLocation] = useLocation();
 
@@ -31,6 +35,7 @@ export function SimpleDevelopmentCard({
         <img
           src={image}
           alt={title}
+          loading="lazy"
           className="object-cover w-full h-full transition-transform duration-500 group-hover:scale-110"
           onError={(e) => {
             const target = e.target as HTMLImageElement;
@@ -39,6 +44,20 @@ export function SimpleDevelopmentCard({
           }}
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/0 to-black/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+        
+        {/* Badges */}
+        <div className="absolute top-3 right-3 flex flex-col gap-2 items-end">
+          {isHotSelling && (
+            <span className="bg-red-500 text-white text-xs font-bold px-2 py-1 rounded shadow-sm flex items-center gap-1">
+              🔥 Hot Selling
+            </span>
+          )}
+          {!isHotSelling && isHighDemand && (
+            <span className="bg-blue-600 text-white text-xs font-bold px-2 py-1 rounded shadow-sm flex items-center gap-1">
+              📈 High Demand
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Content */}

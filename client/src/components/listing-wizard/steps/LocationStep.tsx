@@ -212,7 +212,7 @@ const LocationStep: React.FC = () => {
 
           const fullAddress = streetNumber ? `${streetNumber} ${route}` : route;
 
-          // Update location in store
+          // Update location in store with address components for auto-population
           setLocation({
             address: fullAddress || formattedAddress,
             latitude: latLng.lat(),
@@ -222,6 +222,7 @@ const LocationStep: React.FC = () => {
             province: province || location?.province || '',
             postalCode: postalCode || location?.postalCode || '',
             placeId: placeId,
+            addressComponents: addressComponents, // 🔥 Store for auto-population
           });
         } else {
           console.error('Geocoder failed due to: ' + status);
@@ -312,7 +313,7 @@ const LocationStep: React.FC = () => {
       });
     }
 
-    // Update location in store
+    // Update location in store with address components for auto-population
     setLocation({
       address: place.formatted_address,
       latitude: place.latitude,
@@ -322,6 +323,7 @@ const LocationStep: React.FC = () => {
       province: province || location?.province || '',
       postalCode: postalCode || location?.postalCode || '',
       placeId: place.place_id,
+      addressComponents: place.address_components, // 🔥 Store for auto-population
     });
 
     // Place marker on map if map is loaded

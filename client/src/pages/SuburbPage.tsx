@@ -2,6 +2,7 @@ import { useLocation } from 'wouter';
 import { trpc } from '@/lib/trpc';
 import { HeroLocation } from '@/components/location/HeroLocation';
 import { SearchRefinementBar } from '@/components/location/SearchRefinementBar';
+import { PropertyTypeExplorer } from '@/components/location/PropertyTypeExplorer';
 import { FeaturedListings } from '@/components/location/FeaturedListings';
 import { MarketInsights } from '@/components/location/MarketInsights';
 import { SEOTextBlock } from '@/components/location/SEOTextBlock';
@@ -68,6 +69,8 @@ export default function SuburbPage({ params }: { params: { province: string; cit
           latitude: Number(suburb.latitude),
           longitude: Number(suburb.longitude)
         }}
+        stats={stats}
+        image="https://images.unsplash.com/photo-1574362848149-11496d93a7c7?ixlib=rb-4.0.3&auto=format&fit=crop&w=1984&q=80"
       />
 
       <HeroLocation
@@ -91,6 +94,20 @@ export default function SuburbPage({ params }: { params: { province: string; cit
       <SearchRefinementBar 
         onSearch={handleSearch} 
         defaultLocation={suburb.name}
+        placeId={suburb.place_id}
+      />
+
+      {/* Property Type Explorer */}
+      {/* TODO: Add propertyTypeBreakdown to backend stats */}
+      <PropertyTypeExplorer
+        propertyTypes={[
+          { type: 'house', count: Math.floor(stats.totalListings * 0.4), avgPrice: stats.avgPrice * 1.2 },
+          { type: 'apartment', count: Math.floor(stats.totalListings * 0.35), avgPrice: stats.avgPrice * 0.8 },
+          { type: 'townhouse', count: Math.floor(stats.totalListings * 0.15), avgPrice: stats.avgPrice * 0.9 },
+          { type: 'villa', count: Math.floor(stats.totalListings * 0.1), avgPrice: stats.avgPrice * 1.5 },
+        ]}
+        locationName={suburb.name}
+        locationSlug={suburbSlug}
         placeId={suburb.place_id}
       />
 
@@ -122,7 +139,7 @@ export default function SuburbPage({ params }: { params: { province: string; cit
               sw_lat: Number(suburb.viewport_sw_lat),
               sw_lng: Number(suburb.viewport_sw_lng),
             } : undefined}
-            properties={listings.map(listing => ({
+            properties={listings.map((listing: any) => ({
               id: listing.id,
               latitude: Number(listing.latitude),
               longitude: Number(listing.longitude),
@@ -138,10 +155,10 @@ export default function SuburbPage({ params }: { params: { province: string; cit
       <SEOTextBlock
         title={`Life in ${suburb.name}`}
         locationName={suburb.name}
-        content={suburb.description || `
-          <p><strong>${suburb.name}</strong> offers residents a unique blend of community living and convenience. Nestled in the heart of <strong>${suburb.cityName}</strong>, this suburb is known for its family-friendly atmosphere and proximity to key amenities.</p>
-          <p>With <strong>${stats.totalListings} properties</strong> currently on the market, ranging from cozy apartments to spacious family homes, ${suburb.name} caters to a variety of lifestyles. The area boasts excellent schools, parks, and shopping centers, making it a top choice for homebuyers.</p>
-        `}
+        locationType="suburb"
+        parentName={suburb.cityName || citySlug}
+        stats={stats}
+        content={suburb.description || undefined} 
       />
 
       {/* Similar Locations Section */}

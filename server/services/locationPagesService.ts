@@ -246,7 +246,7 @@ export const locationPagesService = {
         ))
         .limit(4);
 
-      // 5. Aggregate Stats
+      // 5. Aggregate Stats (handle empty case gracefully)
       const [stats] = await db
         .select({
           totalListings: sql<number>`count(*)`,
@@ -258,11 +258,17 @@ export const locationPagesService = {
           eq(properties.status, 'published' as any)
         ));
 
+      // Always return city data, even if no listings exist (show empty state)
+      console.log(`[LocationPages] Returning city data with ${featuredProperties.length} properties`);
+      
       return {
         city,
-        suburbs: suburbList,
-        featuredProperties: featuredProperties.map(p => ({...p, images: typeof p.images === 'string' ? JSON.parse(p.images) : p.images})),
-        developments: cityDevelopments,
+        suburbs: suburbList || [], // Empty array if no suburbs
+        featuredProperties: (featuredProperties || []).map(p => ({
+          ...p, 
+          images: typeof p.images === 'string' ? JSON.parse(p.images) : p.images
+        })),
+        developments: cityDevelopments || [], // Empty array if no developments
         stats: {
           totalListings: Number(stats?.totalListings || 0),
           avgPrice: Number(stats?.avgPrice || 0)

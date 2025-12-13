@@ -334,77 +334,63 @@ export const enhancedLocationRouter = router({
     .query(async ({ input }) => {
       const db = await getDb();
 
-      // For now, return mock data - in real implementation would query nearby_amenities table
-      // This would use MySQL spatial functions like ST_Distance_Sphere for accurate calculations
-      const mockAmenities = [
-        {
-          id: 1,
-          name: 'Sandton City',
-          type: 'shopping',
-          address: 'Rivonia Rd, Sandhurst, Sandton',
-          latitude: -26.1076,
-          longitude: 28.0567,
-          distance: 2.1,
-        },
-        {
-          id: 2,
-          name: 'Rosebank Mall',
-          type: 'shopping',
-          address: 'Oxford Rd, Rosebank, Johannesburg',
-          latitude: -26.1534,
-          longitude: 28.0433,
-          distance: 3.5,
-        },
-        {
-          id: 3,
-          name: 'St. Johns College',
-          type: 'school',
-          address: 'St. Andrews Rd, Bedfordview',
-          latitude: -26.1698,
-          longitude: 28.1237,
-          distance: 4.2,
-        },
-        {
-          id: 4,
-          name: 'Johannesburg General Hospital',
-          type: 'hospital',
-          address: 'Jubilee Rd, Parktown, Johannesburg',
-          latitude: -26.1823,
-          longitude: 28.0433,
-          distance: 5.1,
-        },
-        {
-          id: 5,
-          name: 'Sandton Gautrain Station',
-          type: 'transport',
-          address: 'Rivonia Rd, Sandhurst, Sandton',
-          latitude: -26.1076,
-          longitude: 28.0567,
-          distance: 2.1,
-        },
-      ];
+      // Use Google Places Service to fetch real data
+      const { googlePlacesService } = await import('./services/googlePlacesService');
+      
+      const allPromises = (input.types || []).map(async (type) => {
+        // Map our internal types to Google Place types
+        let googleType = type as string;
+        if (type === 'transport') googleType = 'train_station|bus_station|subway_station|transit_station';
+        if (type === 'shopping') googleType = 'shopping_mall|supermarket';
+        if (type === 'education') googleType = 'school|university'; // Fallback if 'education' used
+        // 'school', 'hospital', 'restaurant', 'bank', 'park' map directly
 
-      // Filter by requested types
-      let filteredAmenities = mockAmenities;
-      if (input.types?.length) {
-        filteredAmenities = mockAmenities.filter(amenity =>
-          input.types!.includes(amenity.type as any),
+        // Google API expects one type for text search or type param.
+        // We will assume 'type' parameter supports the primary one.
+        // "nearbysearch" supports 'type' (singular) or 'keyword'.
+        
+        // For composite types like "transport", we might need multiple calls or use 'keyword'
+        // For simplicity, we pass the mapped type. If pipe separated, we might need to handle differently or pick primary.
+        // Let's stick to simple 1-to-1 mapping where possible or parallel calls.
+        const searchType = googleType.split('|')[0]; 
+
+        return googlePlacesService.getNearbyPlaces(
+          input.latitude, 
+          input.longitude, 
+          input.radius * 1000, // convert km to meters
+          searchType
         );
-      }
+      });
 
-      // Calculate distances and filter by radius
-      const amenitiesWithDistance = filteredAmenities
-        .map(amenity => {
+      const resultsNested = await Promise.all(allPromises);
+      const allResults = resultsNested.flat();
+
+      // De-duplicate by place_id
+      const uniqueResults = Array.from(new Map(allResults.map(item => [item.place_id, item])).values());
+
+      // Calculate accurate distances and sort
+      const amenitiesWithDistance = uniqueResults
+        .map((amenity: any) => {
           const distance = calculateHaversineDistance(
             input.latitude,
             input.longitude,
             amenity.latitude,
             amenity.longitude,
           );
-          return { ...amenity, distance: Math.round(distance * 10) / 10 };
+          
+          return {
+            id: amenity.id || Math.random(), // Ensure ID
+            name: amenity.name,
+            type: amenity.type, // This might need mapping back to enum if strict
+            address: amenity.address,
+            latitude: amenity.latitude,
+            longitude: amenity.longitude,
+            distance: Math.round(distance * 10) / 10,
+            rating: amenity.rating,
+          };
         })
-        .filter(amenity => amenity.distance <= input.radius)
-        .sort((a, b) => a.distance - b.distance)
+        .filter((amenity: any) => amenity.distance <= input.radius)
+        .sort((a: any, b: any) => a.distance - b.distance)
         .slice(0, input.limit);
 
       return amenitiesWithDistance;

@@ -24,17 +24,17 @@ export function FinalCTA({ locationName, provinceSlug, citySlug, suburbSlug }: F
         </p>
 
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
-          <Link href={baseSearchUrl}>
+          <Link href={`/properties/sale?property_type=house&location=${suburbSlug || citySlug || provinceSlug}`}>
             <Button size="lg" className="bg-white text-primary-900 hover:bg-slate-100 text-lg px-8 h-14">
               Search Houses
             </Button>
           </Link>
-          <Link href={baseSearchUrl}>
+          <Link href={`/properties/sale?property_type=apartment&location=${suburbSlug || citySlug || provinceSlug}`}>
             <Button size="lg" variant="outline" className="border-white text-white hover:bg-white/10 text-lg px-8 h-14 bg-transparent">
               Search Apartments
             </Button>
           </Link>
-          <Link href={`/properties/rent`}>
+          <Link href={`/properties/rent?location=${suburbSlug || citySlug || provinceSlug}`}>
             <Button size="lg" variant="ghost" className="text-white hover:bg-white/10 text-lg h-14">
               Browse Rentals
             </Button>

@@ -16,6 +16,10 @@
 
 import React, { lazy, Suspense, useState, useEffect } from 'react';
 
+// Import advertise page CSS
+import '@/styles/advertise-responsive.css';
+import '@/styles/advertise-focus-indicators.css';
+
 import { EnhancedNavbar } from '@/components/EnhancedNavbar';
 import { Footer } from '@/components/Footer';
 import { HeroSection } from '@/components/advertise/HeroSection';
@@ -103,37 +107,6 @@ export default function AdvertiseWithUs() {
   // Loading and error states
   const [heroLoading, setHeroLoading] = useState(false);
   const [metricsError] = useState(false);
-
-  // Load and cleanup page-specific CSS
-  useEffect(() => {
-    // Dynamically load CSS files
-    const responsiveLink = document.createElement('link');
-    responsiveLink.rel = 'stylesheet';
-    responsiveLink.href = '/src/styles/advertise-responsive.css';
-    responsiveLink.id = 'advertise-responsive-css';
-    
-    const focusLink = document.createElement('link');
-    focusLink.rel = 'stylesheet';
-    focusLink.href = '/src/styles/advertise-focus-indicators.css';
-    focusLink.id = 'advertise-focus-css';
-    
-    document.head.appendChild(responsiveLink);
-    document.head.appendChild(focusLink);
-    
-    // Cleanup function to remove CSS when component unmounts
-    return () => {
-      const responsiveCss = document.getElementById('advertise-responsive-css');
-      const focusCss = document.getElementById('advertise-focus-css');
-      if (responsiveCss) responsiveCss.remove();
-      if (focusCss) focusCss.remove();
-    };
-  }, []);
-
-  // Simulate loading completion (in real app, this would be based on data fetching)
-  React.useEffect(() => {
-    // Hero loads immediately
-    setHeroLoading(false);
-  }, []);
 
   // Sample billboard banner
   const billboard = {

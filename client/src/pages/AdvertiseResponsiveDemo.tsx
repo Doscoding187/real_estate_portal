@@ -218,7 +218,7 @@ export default function AdvertiseResponsiveDemo() {
           
           <div style={{ background: 'white', padding: '2rem', borderRadius: '12px', marginBottom: '2rem' }}>
             <h3 style={{ fontSize: '1.25rem', fontWeight: '600', marginBottom: '1rem' }}>
-              Mobile (< 768px)
+              Mobile (&lt; 768px)
             </h3>
             <ul style={{ listStyle: 'disc', paddingLeft: '1.5rem', color: '#6b7280' }}>
               <li>All sections stack vertically</li>
@@ -243,7 +243,7 @@ export default function AdvertiseResponsiveDemo() {
 
           <div style={{ background: 'white', padding: '2rem', borderRadius: '12px' }}>
             <h3 style={{ fontSize: '1.25rem', fontWeight: '600', marginBottom: '1rem' }}>
-              Desktop (> 1024px)
+              Desktop (&gt; 1024px)
             </h3>
             <ul style={{ listStyle: 'disc', paddingLeft: '1.5rem', color: '#6b7280' }}>
               <li>Full-width grids (3-5 columns)</li>

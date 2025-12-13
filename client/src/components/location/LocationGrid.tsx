@@ -34,7 +34,7 @@ export function LocationGrid({ title, items, parentSlug, type }: LocationGridPro
     <div className="py-12 bg-slate-50/50">
       <div className="container">
         <h2 className="text-2xl font-bold mb-8 text-slate-900">{title}</h2>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
           {items.map((item) => (
             <Link key={item.id} href={getUrl(item.name)}>
               <Card className="hover:shadow-md transition-shadow cursor-pointer border-slate-200 group h-full">
