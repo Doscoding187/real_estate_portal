@@ -319,6 +319,8 @@ export const locationPagesService = {
       
       console.log(`[LocationPages] Found ${suburbList.length} suburbs`);
 
+      console.log(`[LocationPages] Querying featured properties for city ${city.id}...`);
+
       // 3. Featured Properties in City
       const featuredProperties = await db
         .select({
