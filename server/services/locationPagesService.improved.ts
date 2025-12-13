@@ -372,7 +372,7 @@ export const locationPagesService = {
           eq(developments.city, city.name),
           eq(developments.isPublished, 1)
         ))
-        .orderBy(desc(developments.isHotSelling), desc(developments.demandScore))
+        // .orderBy(desc(developments.isHotSelling), desc(developments.demandScore)) // Commented out - columns may not exist in production DB
         .limit(6);
 
       // 5. Aggregate Stats
