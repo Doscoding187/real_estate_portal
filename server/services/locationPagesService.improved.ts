@@ -368,9 +368,16 @@ export const locationPagesService = {
           eq(properties.status, 'published' as any)
         ));
 
+      // Debug logging before return
+      console.log(`[LocationPages] Preparing return data for city: ${city.name}`);
+      console.log(`[LocationPages] - Suburbs count: ${suburbList?.length || 0}`);
+      console.log(`[LocationPages] - Featured properties count: ${featuredProperties?.length || 0}`);
+      console.log(`[LocationPages] - Developments count: ${cityDevelopments?.length || 0}`);
+      console.log(`[LocationPages] - Stats:`, stats);
+
       return {
         city,
-        suburbs: suburbList,
+        suburbs: suburbList ?? [],
         featuredProperties: (featuredProperties ?? [])
           .filter((p): p is NonNullable<typeof p> => p != null)
           .map(p => {
@@ -400,12 +407,25 @@ export const locationPagesService = {
               images,
             };
           }),
-        developments: (cityDevelopments || [])
-          .filter(d => d != null)
-          .map(d => ({
-            ...d,
-            images: typeof d.images === 'string' ? d.images : JSON.stringify(d.images || [])
-          })),
+        developments: (cityDevelopments ?? [])
+          .filter((d): d is NonNullable<typeof d> => d != null)
+          .map(d => {
+            // Safe handling for development images
+            let devImages = d.images;
+            if (typeof devImages !== 'string') {
+              try {
+                devImages = JSON.stringify(devImages || []);
+              } catch (e) {
+                console.error('[LocationPages] Error stringifying development images:', d.id);
+                devImages = '[]';
+              }
+            }
+            
+            return {
+              ...d,
+              images: devImages
+            };
+          }),
         stats: {
           totalListings: Number(stats?.totalListings || 0),
           avgPrice: Number(stats?.avgPrice || 0),
