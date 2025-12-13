@@ -68,6 +68,8 @@ async function startServer() {
     'https://real-estate-portal-xi.vercel.app', // Vercel production
     'https://realestateportal-production-8e32.up.railway.app', // Railway backend (old)
     'https://realestateportal-production-9bb8.up.railway.app', // Railway backend (current)
+    'https://www.propertylistifysa.co.za', // Production Domain
+    'https://propertylistifysa.co.za', // Production Domain (non-www)
   ];
 
   app.use(
