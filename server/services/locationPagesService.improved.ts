@@ -371,26 +371,35 @@ export const locationPagesService = {
       return {
         city,
         suburbs: suburbList,
-        featuredProperties: (featuredProperties || [])
-          .filter(p => p != null)
+        featuredProperties: (featuredProperties ?? [])
+          .filter((p): p is NonNullable<typeof p> => p != null)
           .map(p => {
-            try {
-              return {
-                ...p, 
-                images: typeof p.images === 'string' ? JSON.parse(p.images) : (p.images || [])
-              };
-            } catch (e) {
-              console.error('[LocationPages] Error parsing property images:', e);
-              console.error('[LocationPages] Problematic property:', p);
-              // Safeguard: ensure p is an object before spreading
-              if (!p || typeof p !== 'object') {
-                console.error('[LocationPages] Property is null or not an object, skipping');
-                return null;
+            let images: any[] = [];
+
+            if (typeof p.images === 'string') {
+              try {
+                images = JSON.parse(p.images);
+              } catch (e) {
+                console.error(
+                  '[LocationPages] Invalid images JSON for property',
+                  p.id,
+                  p.images
+                );
               }
-              return { ...p, images: [] };
+            } else if (Array.isArray(p.images)) {
+              images = p.images;
             }
-          })
-          .filter((p): p is NonNullable<typeof p> => p != null), // Final filter to remove any nulls from catch block
+
+            // Final guard
+            if (!Array.isArray(images)) {
+              images = [];
+            }
+
+            return {
+              ...p,
+              images,
+            };
+          }),
         developments: (cityDevelopments || [])
           .filter(d => d != null)
           .map(d => ({
