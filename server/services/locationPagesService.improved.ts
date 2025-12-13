@@ -371,8 +371,25 @@ export const locationPagesService = {
       return {
         city,
         suburbs: suburbList,
-        featuredProperties: featuredProperties.map(p => ({...p, images: typeof p.images === 'string' ? JSON.parse(p.images) : p.images})),
-        developments: cityDevelopments,
+        featuredProperties: (featuredProperties || [])
+          .filter(p => p != null)
+          .map(p => {
+            try {
+              return {
+                ...p, 
+                images: typeof p.images === 'string' ? JSON.parse(p.images) : (p.images || [])
+              };
+            } catch (e) {
+              console.error('[LocationPages] Error parsing property images:', e);
+              return { ...p, images: [] };
+            }
+          }),
+        developments: (cityDevelopments || [])
+          .filter(d => d != null)
+          .map(d => ({
+            ...d,
+            images: typeof d.images === 'string' ? d.images : JSON.stringify(d.images || [])
+          })),
         stats: {
           totalListings: Number(stats?.totalListings || 0),
           avgPrice: Number(stats?.avgPrice || 0),
