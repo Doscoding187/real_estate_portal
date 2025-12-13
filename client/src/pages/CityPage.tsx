@@ -49,8 +49,27 @@ export default function CityPage({ params }: { params: { province: string; city:
     );
   }
 
-  // Type assertion to handle potential type mismatches from API vs Component props
-  const { city, suburbs, featuredProperties, developments, stats } = data;
+  // Defensively destructure with fallbacks
+  const { 
+    city, 
+    suburbs = [], 
+    featuredProperties = [], 
+    developments = [], 
+    stats = { totalListings: 0, avgPrice: 0, minPrice: 0, maxPrice: 0, rentalCount: 0, saleCount: 0 }
+  } = data || {};
+
+  // Additional validation - city must exist
+  if (!city || !city.name) {
+    console.error("[CityPage] City data is incomplete:", data);
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold mb-2">City Data Unavailable</h1>
+          <p className="text-slate-500">The city data is temporarily unavailable. Please try again later.</p>
+        </div>
+      </div>
+    );
+  }
 
   const handleSearch = (filters: any) => {
     navigate(`/properties?province=${provinceSlug}&city=${city.name}`);
@@ -199,13 +218,15 @@ export default function CityPage({ params }: { params: { province: string; city:
               sw_lat: Number(city.viewport_sw_lat),
               sw_lng: Number(city.viewport_sw_lng),
             } : undefined}
-            properties={featuredProperties.map((listing: any) => ({
-              id: listing.id,
-              latitude: Number(listing.latitude),
-              longitude: Number(listing.longitude),
-              title: listing.title,
-              price: listing.price,
-            }))}
+            properties={featuredProperties
+              .filter((listing: any) => listing && listing.latitude && listing.longitude)
+              .map((listing: any) => ({
+                id: listing.id,
+                latitude: Number(listing.latitude),
+                longitude: Number(listing.longitude),
+                title: listing.title,
+                price: listing.price,
+              }))}
           />
         </div>
       )}
