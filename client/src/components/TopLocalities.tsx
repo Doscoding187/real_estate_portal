@@ -371,13 +371,13 @@ export function TopLocalities() {
 
         {/* View All Link */}
         <div className="mt-8 text-center md:text-left">
-          <a
-            href="#"
+          <Link
+            href={`/${getProvinceSlug(selectedCity)}/${getCitySlug(selectedCity)}`}
             className="inline-flex items-center gap-2 text-blue-600 font-semibold hover:text-blue-700 hover:underline transition-colors"
           >
             View all localities in {selectedCity}
             <ArrowRight className="h-4 w-4" />
-          </a>
+          </Link>
         </div>
       </div>
     </div>

@@ -5,7 +5,7 @@ import { EnhancedHero } from '@/components/EnhancedHero';
 import { SimpleDevelopmentCard } from '@/components/SimpleDevelopmentCard';
 import { ProspectTrigger } from '@/components/ProspectTrigger';
 import { Button } from '@/components/ui/button';
-import { Building2, Home as HomeIcon, Building, Warehouse, MapPin, Tractor } from 'lucide-react';
+import { Building2, Home as HomeIcon, Building, Warehouse, MapPin, Tractor, ArrowRight } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { PropertyInsights } from '@/components/PropertyInsights';
 import { DiscoverProperties } from '@/components/DiscoverProperties';
@@ -163,8 +163,17 @@ export default function Home() {
           </Tabs>
 
           <div className="text-center mt-8">
-            <Button variant="outline" size="lg" onClick={() => setLocation('/properties')}>
-              View All Developments
+            <Button 
+              variant="outline" 
+              size="lg" 
+              onClick={() => {
+                const provinceSlug = selectedProvince.toLowerCase().replace(/\s+/g, '-');
+                setLocation(`/${provinceSlug}`);
+              }}
+              className="gap-2"
+            >
+              Explore {selectedProvince}
+              <ArrowRight className="h-4 w-4" />
             </Button>
           </div>
         </div>
