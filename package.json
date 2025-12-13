@@ -86,6 +86,7 @@
     "express-rate-limit": "^8.2.1",
     "framer-motion": "^12.23.22",
     "input-otp": "^1.4.2",
+    "ioredis": "^5.8.2",
     "jose": "6.1.0",
     "leaflet": "^1.9.4",
     "lucide-react": "^0.453.0",
