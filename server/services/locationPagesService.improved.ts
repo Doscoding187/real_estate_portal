@@ -321,7 +321,25 @@ export const locationPagesService = {
 
       // 3. Featured Properties in City
       const featuredProperties = await db
-        .select()
+        .select({
+          id: properties.id,
+          title: properties.title,
+          description: properties.description,
+          propertyType: properties.propertyType,
+          listingType: properties.listingType,
+          price: properties.price,
+          bedrooms: properties.bedrooms,
+          bathrooms: properties.bathrooms,
+          area: properties.area,
+          address: properties.address,
+          city: properties.city,
+          province: properties.province,
+          latitude: properties.latitude,
+          longitude: properties.longitude,
+          images: properties.mainImage, // Using mainImage instead of images array for safety
+          featured: properties.featured,
+          createdAt: properties.createdAt,
+        })
         .from(properties)
         .where(and(
           eq(properties.cityId, city.id),
