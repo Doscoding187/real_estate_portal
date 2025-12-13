@@ -338,7 +338,7 @@ export const locationPagesService = {
           province: properties.province,
           latitude: properties.latitude,
           longitude: properties.longitude,
-          images: properties.mainImage, // Using mainImage instead of images array for safety
+          mainImage: properties.mainImage, // Using mainImage instead of images array for safety
           featured: properties.featured,
           createdAt: properties.createdAt,
         })
@@ -349,6 +349,8 @@ export const locationPagesService = {
           eq(properties.featured, 1)
         ))
         .limit(6);
+      
+      console.log(`[LocationPages] Featured properties query completed, found ${featuredProperties?.length || 0} properties`);
 
       // 4. Developments in City
       const cityDevelopments = await db
