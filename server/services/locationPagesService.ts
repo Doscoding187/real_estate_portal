@@ -70,18 +70,20 @@ export const locationPagesService = {
     console.log(`[LocationPages] Found province: ${province.name} (id: ${province.id})`);
 
     // 2. Get Child Cities (Top 12 by listing count or default)
+    const cityListingCount = sql<number>`(SELECT COUNT(*) FROM ${properties} WHERE ${properties.cityId} = ${cities.id} AND ${properties.status} = 'published')`;
+    
     const cityList = await db
       .select({
         id: cities.id,
         name: cities.name,
         slug: cities.slug,
         isMetro: cities.isMetro,
-        listingCount: sql<number>`(SELECT COUNT(*) FROM ${properties} WHERE ${properties.cityId} = ${cities.id} AND ${properties.status} = 'published')`,
+        listingCount: cityListingCount,
         avgPrice: sql<number>`(SELECT AVG(${properties.price}) FROM ${properties} WHERE ${properties.cityId} = ${cities.id} AND ${properties.status} = 'published')`
       })
       .from(cities)
       .where(eq(cities.provinceId, province.id))
-      .orderBy(desc(sql`listingCount`))
+      .orderBy(desc(cityListingCount))
       .limit(12);
 
     // 3. Featured Developments in Province
@@ -95,6 +97,8 @@ export const locationPagesService = {
       .limit(6);
 
     // 4. Trending Suburbs
+    const suburbListingCount = sql<number>`(SELECT COUNT(*) FROM ${properties} WHERE ${properties.suburbId} = ${suburbs.id} AND ${properties.status} = 'published')`;
+
     const trendingSuburbs = await db
       .select({
         id: suburbs.id,
@@ -102,12 +106,12 @@ export const locationPagesService = {
         slug: suburbs.slug,
         cityName: cities.name,
         citySlug: cities.slug,
-        listingCount: sql<number>`(SELECT COUNT(*) FROM ${properties} WHERE ${properties.suburbId} = ${suburbs.id} AND ${properties.status} = 'published')`
+        listingCount: suburbListingCount
       })
       .from(suburbs)
       .leftJoin(cities, eq(suburbs.cityId, cities.id))
       .where(eq(cities.provinceId, province.id))
-      .orderBy(desc(sql`listingCount`))
+      .orderBy(desc(suburbListingCount))
       .limit(10);
 
     // 5. Aggregate Stats

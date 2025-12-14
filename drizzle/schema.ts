@@ -20,6 +20,23 @@ export const activities = mysqlTable("activities", {
 	index("idx_activities_related_entity").on(table.relatedEntityType, table.relatedEntityId),
 ]);
 
+
+export const amenities = mysqlTable("amenities", {
+	id: int().autoincrement().notNull(),
+	locationId: int("location_id").notNull().references(() => locations.id, { onDelete: "cascade" }),
+	name: varchar({ length: 255 }).notNull(),
+	type: varchar({ length: 100 }).notNull(),
+	rating: decimal({ precision: 3, scale: 1 }),
+	latitude: varchar({ length: 50 }),
+	longitude: varchar({ length: 50 }),
+	distance: decimal({ precision: 10, scale: 2 }),
+	metadata: json(),
+	createdAt: timestamp("created_at", { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+}, (table) => [
+	index("idx_amenities_location_id").on(table.locationId),
+	index("idx_amenities_type").on(table.type),
+]);
+
 export const agencies = mysqlTable("agencies", {
 	id: int().autoincrement().notNull(),
 	name: varchar({ length: 255 }).notNull(),
