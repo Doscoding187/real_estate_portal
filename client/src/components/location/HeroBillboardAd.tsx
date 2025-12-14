@@ -1,17 +1,16 @@
-import { trpc } from '@/lib/trpc';
 import './HeroBillboardAd.css';
 
-interface Props {
-  locationSlug: string;
-  fallbacks?: string[];
+interface HeroCampaign {
+  imageUrl: string;
+  landingPageUrl?: string | null;
+  altText?: string | null;
 }
 
-export function HeroBillboardAd({ locationSlug, fallbacks = [] }: Props) {
-  const { data: campaign } = trpc.locationPages.getHeroCampaign.useQuery({ 
-    locationSlug,
-    fallbacks 
-  });
+interface Props {
+  campaign: HeroCampaign | null | undefined;
+}
 
+export function HeroBillboardAd({ campaign }: Props) {
   if (!campaign) return null;
 
   return (

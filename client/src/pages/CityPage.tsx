@@ -28,6 +28,11 @@ export default function CityPage({ params }: { params: { province: string; city:
     citySlug
   });
 
+  const { data: heroCampaign } = trpc.locationPages.getHeroCampaign.useQuery({ 
+    locationSlug: `${provinceSlug}/${citySlug}`,
+    fallbacks: [provinceSlug] 
+  });
+
   if (isLoading) {
     return <CityPageSkeleton />;
   }
@@ -102,26 +107,25 @@ export default function CityPage({ params }: { params: { province: string; city:
         image="https://images.unsplash.com/photo-1449824913935-59a10b8d2000?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80"
       />
 
-      {/* CMS-Driven Hero Campaign Banner */}
-      <HeroBillboardAd 
-        locationSlug={`${provinceSlug}/${citySlug}`} 
-        fallbacks={[provinceSlug]} 
-      />
-
-      <HeroBillboard
-        locationType="city"
-        locationId={city.id}
-        defaultTitle={city.name}
-        defaultSubtitle={`Explore ${city.name}'s best real estate investment opportunities.`}
-        breadcrumbs={[
-          { label: 'Home', href: '/' },
-          { label: city.provinceName || provinceSlug, href: `/${provinceSlug}` },
-          { label: city.name, href: `/${provinceSlug}/${citySlug}` }
-        ]}
-        stats={stats}
-        defaultImage="https://images.unsplash.com/photo-1449824913935-59a10b8d2000?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80"
-        placeId={city.place_id}
-      />
+      {/* CMS-Driven Hero Campaign Banner or Default Hero */}
+      {heroCampaign ? (
+        <HeroBillboardAd campaign={heroCampaign} />
+      ) : (
+        <HeroBillboard
+          locationType="city"
+          locationId={city.id}
+          defaultTitle={city.name}
+          defaultSubtitle={`Explore ${city.name}'s best real estate investment opportunities.`}
+          breadcrumbs={[
+            { label: 'Home', href: '/' },
+            { label: city.provinceName || provinceSlug, href: `/${provinceSlug}` },
+            { label: city.name, href: `/${provinceSlug}/${citySlug}` }
+          ]}
+          stats={stats}
+          defaultImage="https://images.unsplash.com/photo-1449824913935-59a10b8d2000?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80"
+          placeId={city.place_id}
+        />
+      )}
 
       <SearchRefinementBar 
         onSearch={handleSearch} 
