@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useLocation } from 'wouter';
+import { useLocation, Link } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -908,18 +908,15 @@ export function EnhancedHero() {
                   { name: 'Free State', slug: 'free-state' },
                   { name: 'Limpopo', slug: 'limpopo' },
                 ].map((province) => (
-                  <button
+                  <Link
                     key={province.slug}
-                    onClick={() => {
-                      // Navigate to new location page
-                      setLocation(`/${province.slug}`);
-                    }}
-                    className="px-4 py-1.5 rounded-full bg-blue-100 hover:bg-gradient-to-r hover:from-blue-600 hover:to-indigo-600 text-blue-900 hover:text-white font-medium transition-all border border-blue-200 hover:border-transparent shadow-sm hover:shadow-md"
+                    href={`/${province.slug}`}
+                    className="px-4 py-1.5 rounded-full bg-blue-100 hover:bg-gradient-to-r hover:from-blue-600 hover:to-indigo-600 text-blue-900 hover:text-white font-medium transition-all border border-blue-200 hover:border-transparent shadow-sm hover:shadow-md cursor-pointer"
                   >
                     {province.name}
-                  </button>
+                  </Link>
                 ))}
-              </div>
+            </div>
             </div>
           </CardContent>
         </Card>
