@@ -103,7 +103,10 @@ export default function CityPage({ params }: { params: { province: string; city:
       />
 
       {/* CMS-Driven Hero Campaign Banner */}
-      <HeroBillboardAd locationSlug={`${provinceSlug}/${citySlug}`} />
+      <HeroBillboardAd 
+        locationSlug={`${provinceSlug}/${citySlug}`} 
+        fallbacks={[provinceSlug]} 
+      />
 
       <HeroBillboard
         locationType="city"

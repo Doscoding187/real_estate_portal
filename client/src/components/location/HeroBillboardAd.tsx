@@ -3,10 +3,14 @@ import './HeroBillboardAd.css';
 
 interface Props {
   locationSlug: string;
+  fallbacks?: string[];
 }
 
-export function HeroBillboardAd({ locationSlug }: Props) {
-  const { data: campaign } = trpc.locationPages.getHeroCampaign.useQuery({ locationSlug });
+export function HeroBillboardAd({ locationSlug, fallbacks = [] }: Props) {
+  const { data: campaign } = trpc.locationPages.getHeroCampaign.useQuery({ 
+    locationSlug,
+    fallbacks 
+  });
 
   if (!campaign) return null;
 

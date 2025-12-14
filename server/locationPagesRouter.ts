@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { locationPagesService } from './services/locationPagesService.improved';
 import { getDb } from './db';
 import { heroCampaigns } from '../drizzle/schema';
-import { and, eq, lte, gte, or, isNull } from 'drizzle-orm';
+import { and, eq, lte, gte, or, isNull, inArray } from 'drizzle-orm';
 
 /**
  * Location Pages Router
@@ -164,18 +164,24 @@ export const locationPagesRouter = router({
    */
   getHeroCampaign: publicProcedure
     .input(z.object({
-      locationSlug: z.string()
+      locationSlug: z.string(),
+      fallbacks: z.array(z.string()).optional().default([])
     }))
     .query(async ({ input }) => {
       const db = await getDb();
       const today = new Date();
+      
+      // Combine primary slug with fallbacks to create priority list
+      // Priority: Primary -> Fallback 1 -> Fallback 2 -> ...
+      const targetSlugs = [input.locationSlug, ...input.fallbacks];
 
-      const [campaign] = await db
+      // Fetch ALL active campaigns matching ANY of these slugs
+      const campaigns = await db
         .select()
         .from(heroCampaigns)
         .where(
           and(
-            eq(heroCampaigns.targetSlug, input.locationSlug),
+            inArray(heroCampaigns.targetSlug, targetSlugs),
             eq(heroCampaigns.isActive, 1),
             or(
               isNull(heroCampaigns.startDate),
@@ -186,9 +192,17 @@ export const locationPagesRouter = router({
               gte(heroCampaigns.endDate, today.toISOString())
             )
           )
-        )
-        .limit(1);
+        );
 
-      return campaign ?? null;
+      if (campaigns.length === 0) return null;
+
+      // Sort by priority (index in targetSlugs array)
+      // Find the first slug in targetSlugs that has a corresponding campaign
+      for (const slug of targetSlugs) {
+        const match = campaigns.find(c => c.targetSlug === slug);
+        if (match) return match;
+      }
+
+      return null;
     })
 });
