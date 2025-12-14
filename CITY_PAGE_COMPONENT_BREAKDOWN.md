@@ -1,334 +1,426 @@
-# 🎨 City Page Component Breakdown (Based on Design)
+# City Page Specification - Locked Direction
 
-## Visual Structure Analysis
-
-Based on the uploaded design image, here's the exact component breakdown for a **City Page**:
+## ✅ Confirmed Direction (Locked)
+**Page stacking order (top → bottom)**
+1. **Global Navigation** (Existing)
+2. **Monetized Location Banner** (NEW, taller)
+3. **Search Stage** (Slightly lowered, overlapping)
+4. **Recent Searches / Recent Locations** (Optional)
+5. **Continue Browsing** (Low priority)
+6. **Location Content Sections** (Later)
 
 ---
 
-## 📐 SECTION-BY-SECTION BREAKDOWN
+## 1️⃣ Global Navigation
+**Status:** Unchanged
+- Uses the same nav as the homepage.
+- Sits **ABOVE** the banner.
+- No transparency tricks; maintains brand consistency and trust.
 
-### 1. **Hero Banner** (Top Section)
-```
-Component: HeroBillboard
-├── Background: Large hero image (city skyline/landmark)
-├── Overlay gradient for text readability
-├── Title: "City of [Name]" (large, bold, white text)
-├── Breadcrumb: Home > Province > City
-└── Revenue Slot: Paid advertisement graphic overlay
+## 2️⃣ Monetized Banner Image (KEY REVENUE ZONE)
+**Purpose:**
+- Primary advertising real estate.
+- Location-specific campaigns.
+- Developer / bank / mortgage ads.
+- Seasonal promotions.
+
+**Behavior:**
+- Full-width.
+- Taller and visually dominant (Taller than 99acres).
+- Zero clutter inside.
+- **Recommended Height:**
+    - Desktop: 420–480px
+    - Tablet: ~360px
+    - Mobile: ~260–300px
+
+**Rules:**
+- Image OR video (future).
+- One clickable destination.
+- Impression + click tracking ready.
+- CMS / ad-server driven.
+- **NO search inputs inside the banner.**
+
+```text
+┌────────────────────────────────────┐
+│  MONETIZED LOCATION BANNER         │
+│  (Developer / Campaign Image)      │
+└────────────────────────────────────┘
 ```
 
-**Implementation:**
+## 3️⃣ Search Stage (Lowered + Overlapping)
+**Placement:**
+- Comes after the banner in DOM.
+- Visually overlaps upward into the banner.
+- Creates depth and hierarchy.
+
+**Design Concept:**
+```text
+┌──────────── Banner ────────────────┐
+│                                    │
+│        (image pops)                │
+│                                    │
+└───────────────▲────────────────────┘
+                │ overlap
+        ┌───────┴────────────────┐
+        │   SEARCH STAGE CARD     │
+        │                         │
+        └─────────────────────────┘
+```
+
+**Content (Approved):**
+- Buy / Rent / Commercial / Land tabs
+- Property type
+- Location (pre-filled & locked)
+- CTA
+- Listings count text
+
+## 4️⃣ Recent Searches / Recent Locations (Nice-to-have)
+**Rules:**
+- Show only if data exists.
+- User-specific (localStorage / account-based).
+- Horizontally scrollable pills.
+- **Example:** "Buy in Sandton · Rent in Rosebank · Buy in Fourways"
+- *Build it after core functionality.*
+
+## 5️⃣ Featured Top Projects (Dynamic Carousel)
+**Internal Name:** `FeaturedPropertiesCarousel`
+**Public Title:** "Top Selling Projects in {Location}" (e.g., Sandton)
+
+**Placement:**
+- Below Market Overview / Prices.
+- Above Developers section.
+
+**Purpose:**
+- Demand signaling ("Hot selling").
+- Curated discovery (Not just raw feed).
+- Monetization (Tier 1 Paid Slots).
+
+**Behavior:**
+- **Context-Aware:** Reuses homepage component, scoped to current location.
+- **Tabs:** Dynamic sub-locations (e.g., Morningside, Bryanston) derived from data.
+    - *Fallback:* "All | City of Johannesburg" if no sub-locations.
+- **Slots:** Fixed **10 slots** per tab.
+- **Rotation:** 4-week time-based cycle.
+
+**Monetization Logic (Priority Order):**
+1.  🥇 **Tier 1 (Paid):** Location-specific featuring (Guaranteed).
+2.  🥈 **Tier 2 (Subscribed):** Active subscriptions (Fallback).
+3.  🥉 **Tier 3 (Merit):** Most liked / High performance (Filler).
+
+**Guardrails:**
+- Max 2-3 developments per developer per tab.
+- No "ad" styling distinction (Visual consistency).
+
+**Reference Spec (React):**
 ```tsx
-<HeroBillboard
-  imageUrl="/images/cities/johannesburg-hero.jpg"
-  title="City of Johannesburg"
-  breadcrumbs={['Home', 'Gauteng', 'Johannesburg']}
-  adSlot={activeCampaign}
-/>
+<section className="bg-white py-12">
+  <div className="mx-auto max-w-7xl px-6">
+    <div className="mb-8">
+      <h2 className="text-2xl font-semibold">Top Selling Projects in Sandton</h2>
+      <p className="mt-2 max-w-3xl text-gray-600">Discover high-demand residential developments...</p>
+    </div>
+    {/* Dynamic Tabs */}
+    <div className="mb-6 flex gap-3 overflow-x-auto">
+       {/* ["All", "Morningside", "Bryanston"...] */}
+    </div>
+    {/* Carousel */}
+    <div className="flex gap-6 overflow-x-auto pb-4">
+       {/* Featured Cards (Paid > Subscribed > Merit) */}
+    </div>
+  </div>
+</section>
 ```
 
 ---
 
-### 2. **Search Bar + Filters**
-```
-Component: LocationSearchRefinement
-├── Search input (property search)
-├── Property type filter dropdown
-├── Price range slider
-├── Popular searches chips:
-│   └── "Sandton" | "Rosebank" | "Marshalltown" | etc.
-└── "Search" button
-```
+## 6️⃣ Property Type Explorer (Navigation)
+**Internal Name:** `LocationPropertyTypeExplorer`
+**Public Title:** "Browse property types in {Location}" (e.g., Sandton)
 
-**Current Status:** ✅ Exists as `SearchRefinementBar`
+**Placement:**
+- Below Featured Properties (Section 5).
+- Above High-Demand Developments (Section 7).
 
----
+**Purpose:**
+- Buyer navigation accelerator ("What can I find here?").
+- Discovery & Intent Segmentation.
+- Trust signal (Inventory counts).
 
-### 3. **Hot-Selling Development Properties in 2024**
-```
-Component: HotSellingSlider
-├── Section Title: "Hot-Selling Development Properties in 2024"
-├── Subtitle: "Developments with high demand"
-├── Horizontal scrollable cards (4-5 visible):
-│   ├── Card:
-│   │   ├── Image (development photo)
-│   │   ├── Badge: "HOT" or "HIGH DEMAND"
-│   │   ├── Title: Development name
-│   │   ├── Location: City, Suburb
-│   │   ├── Price: "From R2.5M"
-│   │   ├── Stats: Beds, Baths, Size
-│   │   └── Demand indicator: "🔥 85% sold"
-│   └── Arrow navigation (< >)
-└── "View All" link
-```
+**Behavior:**
+- **Visual:** Grid/Scrollable Cards.
+- **Content:** Property Type Name, Inventory Count ("9,400+ Properties").
+- **Interaction:** Explicit clickable affordance (Arrow/Chevron).
+- **No Monetization:** Pure UX/Navigation block.
 
-**Status:** ❌ Need to create
+**Card Variants (Context-Aware):**
+- **Count:** "9,400+ Properties" (shows liquidity).
+- **Status:** Grey out low inventory types.
 
----
-
-### 4. **Featured Development Creators**
-```
-Component: FeaturedDevelopersSlider
-├── Section Title: "Featured Development Creators"
-├── Subtitle: "Top-rated developers in Johannesburg"
-├── Horizontal cards:
-│   ├── Developer Card:
-│   │   ├── Logo (circular)
-│   │   ├── Company name
-│   │   ├── Rating: ⭐ 4.8 (142 reviews)
-│   │   ├── Active projects: 12
-│   │   ├── Badge: "VERIFIED" or "PREMIUM"
-│   │   └── "View Profile" button
-│   └── Arrow navigation
-└── "See All Developers" link
-```
-
-**Status:** ❌ Need to create
-
----
-
-### 5. **Related Cities**
-```
-Component: RelatedCitiesGrid
-├── Section Title: "Related Cities"
-├── Grid layout (3-4 columns):
-│   ├── City Card:
-│   │   ├── Background image
-│   │   ├── City name overlay
-│   │   ├── Property count: "1,234 properties"
-│   │   └── Link to city page
-└── Subtle hover effect
-```
-
-**Status:** ⚠️ Similar to existing `LocationGrid`, needs styling update
-
----
-
-### 6. **High-Demand Projects to Invest In Now**
-```
-Component: HighDemandProjectsGrid
-├── Section Title: "High-demand projects to invest in now"
-├── Grid layout (3 columns):
-│   ├── Project Card:
-│   │   ├── Large image
-│   │   ├── Badge: "NEW" or "LAUNCHING SOON"
-│   │   ├── Title: Project name
-│   │   ├── Location
-│   │   ├── Price range: "R1.8M - R3.2M"
-│   │   ├── Developer logo (small)
-│   │   ├── ROI indicator: "Expected ROI: 12%"
-│   │   └── Stats bar: Completion %, Units available
-└── "Load More" button
-```
-
-**Status:** ❌ Need to create
-
----
-
-### 7. **Pre-owned resale sellers**
-```
-Component: PreOwnedSellersGrid  
-├── Section Title: "Pre-owned resale sellers"
-├── Subtitle: "Individual home owners & investors"
-├── Grid (3-4 columns):
-│   ├── Seller Card:
-│   │   ├── Profile photo
-│   │   ├── Name
-│   │   ├── Location: Johannesburg
-│   │   ├── Active listings: 3
-│   │   ├── Rating: ⭐ 4.5
-│   │   ├── Response time: "< 1 hour"
-│   │   └── "Contact Seller" button
-└── Pagination
-```
-
-**Status:** ❌ Need to create (similar to agents)
-
----
-
-### 8. **Newly-added properties**
-```
-Component: NewlyAddedPropertiesGrid
-├── Section Title: "Newly-added properties"
-├── Grid (4 columns):
-│   ├── Property Card:
-│   │   ├── Image carousel
-│   │   ├── Badge: "NEW LISTING" + days ago
-│   │   ├── Price: Large, bold
-│   │   ├── Title/Address
-│   │   ├── Stats: 🛏️ 3 | 🛁 2 | 📐 150m²
-│   │   ├── Suburb name
-│   │   └── Favorite heart icon
-└── "View All Properties" link
-```
-
-**Status:** ✅ Similar to `FeaturedListings`, filter by recent
-
----
-
-### 9. **Have a property to sell?** (CTA Section)
-```
-Component: CTASection
-├── Background: Gradient or soft color
-├── Illustration: Property/house graphic (left)
-├── Text:
-│   ├── Headline: "Have a property to sell?"
-│   ├── Subtext: "List it with Property Listify - reach thousands"
-├── Two CTA buttons:
-│   ├── Primary: "List Your Property" (blue)
-│   └── Secondary: "Learn More" (outline)
-└── Trust badges: "Free listing" | "No commission" | "Verified buyers"
-```
-
-**Status:** ❌ Need to create
-
----
-
-### 10. **High-demand suburbs**
-```
-Component: HighDemandSuburbsSlider
-├── Section Title: "High-demand suburbs"
-├── Horizontal cards:
-│   ├── Suburb Card:
-│   │   ├── Background image
-│   │   ├── Suburb name (large)
-│   │   ├── Demand badge: "🔥 HOT"
-│   │   ├── Stats:
-│   │   │   ├── Avg price: R2.5M
-│   │   │   ├── Properties: 234
-│   │   │   └── Growth: +15% YoY
-│   │   └── "Explore Suburb" button
-└── Arrow navigation
-```
-
-**Status:** ⚠️ Exists but needs demand scoring
-
----
-
-### 11. **Footer**
-```
-Component: Footer (Global)
-├── Logo + tagline
-├── Links columns:
-│   ├── About
-│   ├── Properties
-│   ├── Developers
-│   ├── Resources
-│   └── Contact
-├── Newsletter signup
-└── Social icons + copyright
-```
-
-**Status:** ✅ Global component exists
-
----
-
-## 🎯 NEW COMPONENTS NEEDED (Priority Order)
-
-### High Priority (Week 1-2)
-1. **HeroBillboard** - Revenue slot, most visible
-2. **HotSellingSlider** - Engagement driver
-3. **HighDemandProjectsGrid** - Investment focus
-4. **CTASection** - Conversion driver
-
-### Medium Priority (Week 3-4)
-5. **FeaturedDevelopersSlider** - Monetization
-6. **PreOwnedSellersGrid** - Marketplace depth
-7. **HighDemandSuburbsSlider** - Enhanced with scoring
-
-### Lower Priority (Week 5+)
-8. **CityScope Editorial Section** (not shown in image but in spec)
-9. **Recommended Agents Slider** (B2B focus)
-10. **Property Type Filter Cards** (for suburbs)
-
----
-
-## 📊 COMPONENT REUSABILITY MAP
-
-```
-HeroBillboard
-├── Used on: Province, City, Suburb pages
-└── Props: imageUrl, title, adSlot, breadcrumbs
-
-HotSellingSlider / HighDemandProjectsGrid
-├── Province: All developments in province
-├── City: City-filtered
-└── Suburb: Suburb-filtered
-
-FeaturedDevelopersSlider
-├── Province: Top provincial developers
-└── City: City-specific developers
-
-CTASection
-├── Used on: All location pages
-└── Props: contextual copy based on page type
-
-PopularSearches
-├── Province: Top cities & suburbs
-├── City: Top suburbs
-└── Suburb: Property types
+**Engineering Contract:**
+```javascript
+LocationPropertyTypeExplorer({
+  locationScope,
+  types: ["Apartments", "Houses", "Villas", "Commercial"],
+  counts: { apartments: 9400, houses: 230 }
+})
 ```
 
 ---
 
-## 🎨 DESIGN TOKENS TO USE
+## 7️⃣ Top Localities (Market Intelligence)
+**Internal Name:** `LocationTopLocalities`
+**Public Title:** "Top Localities in {Location}"
+**Subtitle:** "Discover {Location}'s most in-demand localities based on buyer activity, price trends, and livability."
 
-Based on the uploaded image, the design uses:
+**Placement:**
+- Below Property Type Explorer (Section 6).
+- Above High-Demand Developments (Section 8).
 
-### Colors
-```css
---primary-blue: #2563eb   /* CTA buttons */
---text-dark: #1e293b      /* Headings */
---text-gray: #64748b      /* Body text */
---bg-light: #f8fafc       /* Section backgrounds */  
---card-bg: #ffffff        /* Cards */
---border: #e2e8f0         /* Borders */
---accent-hot: #dc2626     /* "HOT" badges */
---accent-verified: #10b981 /* "VERIFIED" badges */
-```
+**Purpose:**
+- Data Authority ("Where are people looking?").
+- Buyer Decision Support (Shortlisting).
+- Future Monetization (Sponsored Localities).
 
-### Typography
-```css
---font-heading: 'Inter', sans-serif
---font-body: 'Inter', sans-serif
+**Behavior:**
+- **Format:** Horizontal Slider (Carousel).
+- **Slots:** Max **10 Cards**.
+- **Interaction:** Entire card Clickable -> Navigate to Locality Page.
+- **CTA:** "Explore all {Location} localities →".
 
---text-3xl: 1.875rem (30px)   /* Section titles */
---text-xl: 1.25rem (20px)      /* Card titles */
---text-base: 1rem (16px)       /* Body */
---text-sm: 0.875rem (14px)     /* Metadata */
-```
+**Card Content (Single Locality):**
+1.  **Visual:** Representative Image (Context).
+2.  **Identity:** Locality Name (e.g., "Morningside").
+3.  **Data:** Avg Price (e.g., "R 12,500/sqm"), Inventory Count.
+4.  **Social Proof:** Rating (optional), "Trending" badge.
+5.  **Fallback:** Handle missing data gracefully (e.g., "Price on request").
 
-### Spacing
-```css
---section-gap: 4rem (64px)     /* Between sections */
---card-gap: 1rem (16px)        /* Between cards */
---container-padding: 2rem (32px) /* Page sides */
-```
-
-### Cards
-```css
-border-radius: 12px
-box-shadow: 0 1px 3px rgba(0,0,0,0.1)
-hover: scale(1.02) + shadow increase
-transition: all 0.2s ease
+**Engineering Contract:**
+```javascript
+LocationTopLocalities({
+  locationScope,
+  limit: 10,
+  sortBy: ["demand", "search_volume"],
+  dataPoints: ["price", "inventory", "rating"]
+})
 ```
 
 ---
 
-## 🚀 IMMEDIATE ACTION ITEMS
+## 8️⃣ High-Demand Developments (Dynamic Carousel)
+**Internal Name:** `LocationFeaturedDevelopmentsCarousel`
+**Public Title:** "High-Demand Developments in {Location}"
+**Subtitle:** "Projects buyers are actively viewing in this area"
 
-To match the design in the image:
+**Placement:**
+- Below Top Localities.
+- Above Recommended Agents.
 
-1. **Create `HeroBillboard.tsx`** with ad slot support
-2. **Create `HotSellingSlider.tsx`** with demand badges
-3. **Update `DevelopmentsGrid`** to support "High-Demand Projects" variant
-4. **Create `FeaturedDevelopersSlider.tsx`** with ratings
-5. **Create `CTASection.tsx`** with illustration
-6. **Add demand scoring** to backend for developments
-7. **Create admin interface** for billboard ad management
+**Purpose:**
+- Monetization (Paid featured).
+- SEO Reinforcement (Location + Development relevance).
+- Engagement (Trending/Most viewed).
+
+**Behavior:**
+- **Slots:** Fixed **10 slots**.
+- **Content:** Projects/Developments (Not individual units).
+- **Ordering:**
+    1. Paid Featured (Location-specific)
+    2. Subscribed (Fallback)
+    3. Engagement-based (Views/Saves)
+- **Difference from Section 5:** Focus on *trending/viewed* vs *top selling/sales*.
+
+**Card Content (Single Project):**
+1.  **Visual:** Development Hero Image.
+2.  **Info:** Development Name, Developer Name (clickable).
+3.  **Details:** Unit types (e.g., "1, 2, 3 Bed"), Sub-location.
+4.  **Price:** Starting price / Range.
+5.  **Traffic:** No "Buy Now" CTA (Click card to view).
+
+**Engineering Contract:**
+```javascript
+LocationFeaturedDevelopmentsCarousel({
+  locationScope,        // e.g., 'sandton'
+  limit: 10,
+  priority: ["paid", "subscribed", "engagement"],
+  title: `High-Demand Developments in ${locationName}`,
+  subtitle: "Projects buyers are actively viewing in this area"
+})
+```
 
 ---
 
-*Component specs extracted from uploaded design image*
-*Date: 2025-12-12*
+## 9️⃣ Recommended Agents (Dynamic Carousel)
+**Internal Name:** `LocationRecommendedAgentsCarousel`
+**Public Title:** "Recommended Agents in {Location}"
+**Subtitle:** "Trusted property professionals active in this area"
+
+**Placement:**
+- Below High-Demand Developments.
+- Above Developer Showcase.
+
+**Purpose:**
+- Supply-side monetization.
+- Trust building (Professionals vs just listings).
+- Lead conversion.
+
+**Behavior:**
+- **Slots:** Fixed **10 slots** per carousel.
+- **Rotation:** 4-week time-based cycle.
+- **Context:** Relevant to current location (Active listings or location package).
+
+**Card Content (Single Agent):**
+1.  **Identity:** Profile Photo/Avatar, Name, Role (Estate Agent/Developer Sales).
+2.  **Badge:** Featured / Verified / Pro (Optional).
+3.  **Relevance:** "Specialises in: {Area1}, {Area2}".
+4.  **Stats:** Years Active, Active Listings.
+5.  **Action:** Click to Profile.
+
+**Monetization Logic (Priority Order):**
+1.  🥇 **Tier 1 (Paid):** Location-specific featured agent package.
+2.  🥈 **Tier 2 (Subscribed):** Active subscribers with >X listings in location.
+3.  🥉 **Tier 3 (Performance):** High response rate / listing quality (Fallback).
+
+**Engineering Contract:**
+```javascript
+LocationRecommendedAgentsCarousel({
+  locationScope,
+  limit: 10,
+  priority: ["paid_featured", "subscription", "performance"],
+  relevance: "listings_in_location",
+  cycle: "4-weeks"
+})
+```
+
+---
+
+## 🔟 Developer Showcase (Dynamic Slider)
+**Internal Name:** `DeveloperShowcaseCarousel`
+**Public Title:** "Featured Developers in {Location}"
+
+**Placement:**
+- Below Recommended Agents.
+- Above Buyer CTA.
+
+**Purpose:**
+- Developer-level monetization.
+- Trust & Credibility ("Who builds here?").
+- Brand building vs. Product selling.
+
+**Behavior:**
+- **Slots:** Fixed **10 slots** per carousel.
+- **Rotation:** 4-week time-based cycle.
+- **Context:** Shows developers relevant to *current location* (Active projects or Location-specific package).
+
+**Slide Content (Single Developer):**
+1.  **Identity:** Logo, Name, Years Established, Project Count.
+2.  **Highlights:** 1-3 Featured Developments (Image + Name + Price).
+3.  **CTA:** "View all projects by this developer".
+
+**Monetization Logic (Priority Order):**
+1.  🥇 **Tier 1 (Paid):** Location-specific showcase package.
+2.  🥈 **Tier 2 (Subscribed):** Active subscribers with projects in location.
+3.  🥉 **Tier 3 (Merit):** Editorial picks / High engagement.
+
+**Engineering Contract:**
+```javascript
+DeveloperShowcaseCarousel({
+  locationScope,        // e.g., 'sandton'
+  limit: 10,            // Fixed slot count
+  developmentsPerDeveloper: 3, // Max preview items
+  cycle: "4-weeks",     // billing/rotation cycle
+  priority: ["paid", "subscribed", "merit"]
+})
+```
+
+---
+
+## 1️⃣1️⃣ Buyer CTA (Primary - Alerts & Browse)
+**Internal Name:** `LocationBuyerCTA`
+**Placement:**
+- Below Developer Showcase.
+- Above Listings Feed.
+
+**Purpose:**
+- Capture high-intent buyers (Alerts).
+- Keep users in the "discovery" loop (Browse more).
+- Reduce friction (No payment/sales push).
+
+**Variants (Context-Aware):**
+1.  **Alerts (High Conversion):** "Get alerts for new properties in {Location}".
+2.  **Browse (Discovery):** "Browse all 1,240 verified listings in {Location}".
+3.  **Compare (Research):** "Compare prices & trends in {Location}".
+
+**Behavior:**
+- **Visual:** Clean, distinct block. No "ad" blindness.
+- **Action:** Open Modal (Lead Capture) or Navigate to Feed.
+
+**Engineering Contract:**
+```javascript
+LocationBuyerCTA({
+  locationScope,
+  type: "alerts", // or 'browse'
+  title: "Get alerts for new properties in Sandton",
+  subtitle: "Be the first to see new listings matching your criteria."
+})
+```
+
+---
+
+## 1️⃣2️⃣ Listings Feed / Market Stats (Content)
+**Internal Name:** `LocationListingsFeed`
+**Content:**
+- Standard listings grid (filtered by location).
+- SEO content block (Area guide).
+- Market stats (Avg price, trends).
+
+---
+
+## 1️⃣3️⃣ Seller CTA (Secondary - Supply Capture)
+**Internal Name:** `LocationSellerCTA`
+**Placement:**
+- Bottom 20-30% of page (After listings/stats).
+- Before Footer.
+
+**Purpose:**
+- Capture private sellers & agents.
+- Segment users (Owner vs Agent vs Developer).
+- Reinforce demand ("Buyers are looking here").
+
+**Copy Strategy (Buyer-Safe):**
+- **Title:** "Have a property in {Location}?"
+- **Subtitle:** "1,243 buyers viewed properties in {Location} this week."
+- **Button:** "List your property" (Avoid "Sell Now").
+
+**Visual:**
+- Subdued but distinct.
+- Gradient background or Location Watermark.
+- **NOT** a main focus block (Secondary).
+
+**Engineering Contract:**
+```javascript
+LocationSellerCTA({
+  locationScope,
+  stats: { viewsThisWeek: 1243 },
+  segmentation: true // Show Owner/Agent choice on click
+})
+```
+
+---
+
+## 1️⃣4️⃣ Technical Implications
+
+**Ads Architecture:**
+We’ll design the banner as:
+```typescript
+interface LocationAdSlot {
+  locationSlug: string;
+  device: 'mobile' | 'tablet' | 'desktop';
+  campaignId: string;
+  imageUrl: string;
+  clickUrl: string;
+  impressionTracking: boolean;
+}
+```
+- Keeps ads separate from content.
+- Search stage reusable.
+- Page fast and cacheable.

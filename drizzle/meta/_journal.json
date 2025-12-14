@@ -92,6 +92,13 @@
       "when": 1765649845251,
       "tag": "0012_light_captain_cross",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "5",
+      "when": 1765671789734,
+      "tag": "0013_cultured_naoko",
+      "breakpoints": true
     }
   ]
 }
