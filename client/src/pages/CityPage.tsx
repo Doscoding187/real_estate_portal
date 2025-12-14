@@ -1,6 +1,7 @@
 import { useLocation } from 'wouter';
 import { trpc } from '@/lib/trpc';
 import { HeroBillboard } from '@/components/location/HeroBillboard';
+import { HeroBillboardAd } from '@/components/location/HeroBillboardAd';
 import { SearchRefinementBar } from '@/components/location/SearchRefinementBar';
 import { LocationGrid } from '@/components/location/LocationGrid';
 import { DevelopmentsSlider } from '@/components/location/DevelopmentsSlider';
@@ -100,6 +101,9 @@ export default function CityPage({ params }: { params: { province: string; city:
         stats={stats}
         image="https://images.unsplash.com/photo-1449824913935-59a10b8d2000?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80"
       />
+
+      {/* CMS-Driven Hero Campaign Banner */}
+      <HeroBillboardAd locationSlug={`${provinceSlug}/${citySlug}`} />
 
       <HeroBillboard
         locationType="city"

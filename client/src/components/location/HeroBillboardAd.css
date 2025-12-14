@@ -1,0 +1,45 @@
+.hero-billboard {
+  display: block;
+  width: 100%;
+  height: 320px;
+  overflow: hidden;
+  position: relative;
+  cursor: pointer;
+  background: var(--surface-dark);
+}
+
+.hero-billboard__image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform-origin: center;
+  animation: heroZoom 18s ease-in-out infinite alternate;
+}
+
+@keyframes heroZoom {
+  from {
+    transform: scale(1);
+  }
+  to {
+    transform: scale(1.08);
+  }
+}
+
+/* Hover effect */
+.hero-billboard:hover .hero-billboard__image {
+  animation-play-state: paused;
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+  .hero-billboard {
+    height: 220px;
+  }
+}
+
+/* Tablet */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .hero-billboard {
+    height: 280px;
+  }
+}

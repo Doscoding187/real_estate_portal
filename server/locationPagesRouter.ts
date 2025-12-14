@@ -1,6 +1,9 @@
 import { router, publicProcedure } from './_core/trpc';
 import { z } from 'zod';
 import { locationPagesService } from './services/locationPagesService.improved';
+import { getDb } from './db';
+import { heroCampaigns } from '../drizzle/schema';
+import { and, eq, lte, gte, or, isNull } from 'drizzle-orm';
 
 /**
  * Location Pages Router
@@ -153,5 +156,39 @@ export const locationPagesRouter = router({
     .query(async ({ input }) => {
       const { locationAnalyticsService } = await import('./services/locationAnalyticsService');
       return await locationAnalyticsService.getSimilarLocations(input.locationId, input.limit);
+    }),
+
+  /**
+   * Get active hero campaign for a location
+   * Filters by target slug and date range
+   */
+  getHeroCampaign: publicProcedure
+    .input(z.object({
+      locationSlug: z.string()
+    }))
+    .query(async ({ input }) => {
+      const db = await getDb();
+      const today = new Date();
+
+      const [campaign] = await db
+        .select()
+        .from(heroCampaigns)
+        .where(
+          and(
+            eq(heroCampaigns.targetSlug, input.locationSlug),
+            eq(heroCampaigns.isActive, 1),
+            or(
+              isNull(heroCampaigns.startDate),
+              lte(heroCampaigns.startDate, today.toISOString())
+            ),
+            or(
+              isNull(heroCampaigns.endDate),
+              gte(heroCampaigns.endDate, today.toISOString())
+            )
+          )
+        )
+        .limit(1);
+
+      return campaign ?? null;
     })
 });

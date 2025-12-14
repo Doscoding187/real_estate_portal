@@ -538,6 +538,27 @@ export const developmentDrafts = mysqlTable("development_drafts", {
 	index("idx_dev_drafts_last_modified").on(table.lastModified),
 ]);
 
+// Hero Campaigns Table (Location-based advertising)
+export const heroCampaigns = mysqlTable("hero_campaigns", {
+	id:int().autoincrement().primaryKey(),
+	locationType: mysqlEnum("location_type", ["province", "city", "suburb"]).notNull(),
+	targetSlug: varchar("target_slug", { length: 255 }).notNull(),
+	imageUrl: varchar("image_url", { length: 1024 }).notNull(),
+	landingPageUrl: varchar("landing_page_url", { length: 1024 }),
+	altText: varchar("alt_text", { length: 255 }),
+	startDate: timestamp("start_date", { mode: "string" }),
+	endDate: timestamp("end_date", { mode: "string" }),
+	isActive: tinyint("is_active").default(1).notNull(),
+	createdAt: timestamp("created_at", { mode: "string" }).defaultNow().notNull(),
+},
+(table) => [
+	index("idx_hero_campaigns_slug").on(table.targetSlug),
+	index("idx_hero_campaigns_active").on(table.isActive),
+	index("idx_hero_campaigns_dates").on(table.startDate, table.endDate),
+]);
+
+
+
 // Unit Types Table (Base Configuration)
 export const unitTypes = mysqlTable("unit_types", {
 	id: varchar({ length: 36 }).primaryKey(),
