@@ -23,13 +23,13 @@ export function DevelopmentsSlider({ developments, locationName }: DevelopmentsS
       <div className="container">
         <div className="flex flex-col md:flex-row justify-between items-end mb-8 gap-4">
           <div>
-            <div className="flex items-center gap-2 mb-2 text-primary">
+            <div className="flex items-center gap-2 mb-2 text-orange-600">
               <Building2 className="h-5 w-5" />
-              <span className="font-semibold uppercase tracking-wider text-sm">New Launches</span>
+              <span className="font-semibold uppercase tracking-wider text-sm">Trending Projects</span>
             </div>
-            <h2 className="text-3xl font-bold text-slate-900">New Developments in {locationName}</h2>
+            <h2 className="text-3xl font-bold text-slate-900">High-Demand Developments in {locationName}</h2>
             <p className="text-slate-500 mt-2 max-w-2xl">
-              Explore the latest residential projects and investment opportunities.
+              Projects buyers are actively viewing in this area
             </p>
           </div>
           <Link href="/developments">

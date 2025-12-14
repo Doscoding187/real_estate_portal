@@ -24,8 +24,14 @@ export function RecommendedAgents({ locationType, locationId }: RecommendedAgent
       <div className="container">
         <div className="flex flex-col md:flex-row justify-between items-end mb-8 gap-4">
           <div>
-            <h2 className="text-2xl font-bold text-slate-900">Recommended Agents</h2>
-            <p className="text-slate-500 mt-1">Top rated local experts ready to help you.</p>
+            <div className="flex items-center gap-2 mb-2 text-green-600">
+              <User className="h-5 w-5" />
+              <span className="font-semibold uppercase tracking-wider text-sm">Local Experts</span>
+            </div>
+            <h2 className="text-3xl font-bold text-slate-900">Recommended Agents</h2>
+            <p className="text-slate-500 mt-2 max-w-2xl">
+              Trusted property professionals active in this area
+            </p>
           </div>
           <Link href="/agents">
             <Button variant="outline" size="sm">View All Agents</Button>

@@ -35,7 +35,7 @@ const PROPERTY_TYPE_LABELS: Record<string, string> = {
   plot: 'Plots & Land',
 };
 
-export function PropertyTypeExplorer({ 
+export function LocationPropertyTypeExplorer({ 
   propertyTypes, 
   locationName, 
   locationSlug,

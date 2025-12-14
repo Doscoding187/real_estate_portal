@@ -5,6 +5,9 @@ import { MonetizedBanner } from '@/components/location/MonetizedBanner';
 import { SearchStage } from '@/components/location/SearchStage';
 import { FeaturedPropertiesCarousel } from '@/components/location/FeaturedPropertiesCarousel';
 
+import { LocationPropertyTypeExplorer } from '@/components/location/LocationPropertyTypeExplorer';
+import { LocationTopLocalities } from '@/components/location/LocationTopLocalities';
+
 // Legacy components to be adapted or routed
 import { LocationGrid } from '@/components/location/LocationGrid';
 import { DevelopmentsSlider } from '@/components/location/DevelopmentsSlider';
@@ -63,7 +66,9 @@ export default function CityPage({ params }: { params: { province: string; city:
     suburbs = [], 
     featuredProperties = [], 
     developments = [], 
-    stats = { totalListings: 0, avgPrice: 0, minPrice: 0, maxPrice: 0, rentalCount: 0, saleCount: 0 }
+    stats = { totalListings: 0, avgPrice: 0, minPrice: 0, maxPrice: 0, rentalCount: 0, saleCount: 0 },
+    propertyTypes = [],
+    topLocalities = []
   } = data || {};
 
   // Additional validation - city must exist
@@ -129,16 +134,23 @@ export default function CityPage({ params }: { params: { province: string; city:
           />
         }
 
+        // Section 6: Property Type Explorer
+        propertyTypeExplorer={
+            <LocationPropertyTypeExplorer 
+                propertyTypes={propertyTypes}
+                locationName={city.name}
+                locationSlug={`${provinceSlug}/${citySlug}`}
+                placeId={city.place_id}
+            />
+        }
+
         // Section 7: Top Localities / Market Insights
         topLocalities={
-            <div className="space-y-8">
-                 {/* Re-using MarketInsights here for now until Phase 2 TopLocalities is built */}
-                 <MarketInsights 
-                    stats={stats} 
-                    locationName={city.name} 
-                    type="city"
-                />
-            </div>
+             <LocationTopLocalities 
+                locationName={city.name} 
+                localities={(topLocalities as any[]).map(l => ({...l, imageUrl: null}))}
+                parentSlug={`${provinceSlug}/${citySlug}`}
+             />
         }
 
         highDemandDevelopments={

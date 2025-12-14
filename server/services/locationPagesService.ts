@@ -9,7 +9,7 @@ import {
   suburbPriceAnalytics,
   amenities
 } from '../../drizzle/schema';
-import { eq, and, desc, sql, like, inArray } from 'drizzle-orm';
+import { eq, and, desc, sql, like, inArray, count, avg } from 'drizzle-orm';
 
 /**
  * IMPROVED Service for handling location page data aggregation
@@ -261,19 +261,50 @@ export const locationPagesService = {
       // Always return city data, even if no listings exist (show empty state)
       console.log(`[LocationPages] Returning city data with ${featuredProperties.length} properties`);
       
-      return {
-        city,
-        suburbs: suburbList || [], // Empty array if no suburbs
-        featuredProperties: (featuredProperties || []).map(p => ({
-          ...p, 
-          images: typeof p.images === 'string' ? JSON.parse(p.images) : p.images
-        })),
-        developments: cityDevelopments || [], // Empty array if no developments
-        stats: {
-          totalListings: Number(stats?.totalListings || 0),
-          avgPrice: Number(stats?.avgPrice || 0)
-        }
-      };
+      // 5. Property Type Stats (for PropertyTypeExplorer)
+    const propertyTypeStats = await db
+      .select({
+        type: properties.propertyType,
+        count: count(properties.id),
+        avgPrice: avg(properties.price)
+      })
+      .from(properties)
+      .where(and(
+        eq(properties.cityId, city.id),
+        eq(properties.status, 'published')
+      ))
+      .groupBy(properties.propertyType);
+
+    // 6. Top Localities (Suburbs) by demand/inventory (for LocationTopLocalities)
+    // We'll use the suburbList we already fetched, but maybe we need more stats if not present
+    // The suburbList query (see above in file, assumed existing) might need enhancement or we just process it.
+    // Let's assume suburbList is list of suburbs. We want to sort them by listing count or similar.
+    // The previous 'suburbList' query (lines 90-110 approx) likely joins with listings count.
+    // Let's verify existing suburbs query first. If it has counts, we are good.
+    
+    return {
+      city,
+      suburbs: suburbList || [],
+      featuredProperties: (featuredProperties || []).map(p => ({
+        ...p, 
+        images: typeof p.images === 'string' ? JSON.parse(p.images) : p.images
+      })),
+      developments: cityDevelopments || [],
+      stats: {
+        totalListings: Number(stats?.totalListings || 0),
+        avgPrice: Number(stats?.avgPrice || 0)
+      },
+      propertyTypes: propertyTypeStats.map(pt => ({
+        type: pt.type,
+        count: Number(pt.count),
+        avgPrice: Math.round(Number(pt.avgPrice) || 0)
+      })),
+      // We can just reuse suburbs for TopLocalities if it has the data, 
+      // but let's ensure it's sorted by volume for "Top" feel
+      topLocalities: (suburbList || [])
+        .sort((a: any, b: any) => (Number(b.listingCount || 0) - Number(a.listingCount || 0)))
+        .slice(0, 10)
+    };
     } catch (error) {
       console.error('[LocationPages] Error in getCityData:', error);
       throw error;

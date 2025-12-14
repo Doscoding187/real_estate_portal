@@ -22,9 +22,15 @@ export function FeaturedDevelopers({ locationType, locationId, locationName }: F
   return (
     <div className="py-12 bg-slate-50">
       <div className="container">
-        <div className="text-center mb-8">
-          <Badge variant="outline" className="mb-2 bg-white">Trusted Partners</Badge>
-          <h2 className="text-2xl font-bold text-slate-900">Featured Developers in {locationName}</h2>
+        <div className="mb-8">
+          <div className="flex items-center gap-2 mb-2 text-blue-600 justify-center">
+            <Building2 className="h-5 w-5" />
+            <span className="font-semibold uppercase tracking-wider text-sm">Trusted Partners</span>
+          </div>
+          <h2 className="text-3xl font-bold text-slate-900 text-center">Developer Showcase</h2>
+          <p className="text-slate-500 mt-2 max-w-2xl mx-auto text-center">
+            Leading developers building quality homes in {locationName}
+          </p>
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
