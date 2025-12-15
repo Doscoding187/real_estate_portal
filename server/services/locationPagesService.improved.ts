@@ -155,6 +155,9 @@ export const locationPagesService = {
     console.log(`[LocationPages] Fetched ${cityList.length} cities`);
 
     // 3. Featured Developments in Province
+    console.log(`[LocationPages] Querying featured developments for province: "${province.name}"`);
+    console.log(`[LocationPages] Status filter: ['now-selling', 'launching-soon', 'ready-to-move', 'under-construction']`);
+
     const featuredDevelopments = await db
       .select({
         id: developments.id,
@@ -168,6 +171,7 @@ export const locationPagesService = {
         cityName: cities.name,
         citySlug: cities.slug,
         province: developments.province,
+        status: developments.status, // Add status to selection for debug
         isHotSelling: developments.isHotSelling,
         isHighDemand: developments.isHighDemand,
         demandScore: developments.demandScore
@@ -176,11 +180,22 @@ export const locationPagesService = {
       .leftJoin(cities, eq(developments.city, cities.name)) // Join on name as cityId doesn't exist
       .where(and(
         eq(developments.province, province.name),
-        // Use valid status enum values
-        inArray(developments.status, ['now-selling', 'launching-soon', 'ready-to-move', 'under-construction'])
+        // Use valid status enum values (or relax completely for debug if needed)
+        // inArray(developments.status, ['now-selling', 'launching-soon', 'ready-to-move', 'under-construction'])
       ))
       .orderBy(desc(developments.isHotSelling), desc(developments.demandScore))
       .limit(12);
+
+      console.log(`[LocationPages] Found ${featuredDevelopments.length} featured developments`);
+      if (featuredDevelopments.length > 0) {
+        console.log(`[LocationPages] Sample dev:`, featuredDevelopments[0]);
+        console.log(`[LocationPages] Sample dev status:`, featuredDevelopments[0].status);
+        console.log(`[LocationPages] Sample dev citySlug:`, featuredDevelopments[0].citySlug);
+      } else {
+         // Debug: Check if ANY developments exist for this province ignoring status
+         const checkDevs = await db.select({ id: developments.id, status: developments.status }).from(developments).where(eq(developments.province, province.name)).limit(5);
+         console.log(`[LocationPages] DEBUG CHECK: Any devs in ${province.name}?`, checkDevs);
+      }
 
     // 4. Trending Suburbs
     // 4. Trending Suburbs (Ranked by listing count - simplified for TiDB compatibility)
