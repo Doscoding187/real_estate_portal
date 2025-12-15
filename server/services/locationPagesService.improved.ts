@@ -642,11 +642,54 @@ export const locationPagesService = {
       if (!city) {
         console.log(`[LocationPages] City not found for slug: "${citySlug}"`);
         
-        // Debug: Show available cities
-        const allCities = await db.select({ name: cities.name, slug: cities.slug }).from(cities).limit(10);
-        console.log(`[LocationPages] Sample cities:`, allCities);
-        
-        return null;
+        // FALLBACK: Create a mock city object for known regions that might not be in DB
+        // This handles cases like Sandton, Midrand which Google treats as cities
+        const knownRegionCities: Record<string, { name: string; provinceName: string; lat: number; lng: number }> = {
+          // Gauteng regions treated as cities
+          'sandton': { name: 'Sandton', provinceName: 'Gauteng', lat: -26.1076, lng: 28.0567 },
+          'midrand': { name: 'Midrand', provinceName: 'Gauteng', lat: -25.9891, lng: 28.1279 },
+          'fourways': { name: 'Fourways', provinceName: 'Gauteng', lat: -26.0166, lng: 28.0124 },
+          'centurion': { name: 'Centurion', provinceName: 'Gauteng', lat: -25.8603, lng: 28.1894 },
+          'randburg': { name: 'Randburg', provinceName: 'Gauteng', lat: -26.0936, lng: 28.0061 },
+          'roodepoort': { name: 'Roodepoort', provinceName: 'Gauteng', lat: -26.1625, lng: 27.8725 },
+          'bedfordview': { name: 'Bedfordview', provinceName: 'Gauteng', lat: -26.1822, lng: 28.1289 },
+          'alberton': { name: 'Alberton', provinceName: 'Gauteng', lat: -26.2667, lng: 28.1167 },
+          'kempton-park': { name: 'Kempton Park', provinceName: 'Gauteng', lat: -26.1000, lng: 28.2333 },
+          'boksburg': { name: 'Boksburg', provinceName: 'Gauteng', lat: -26.2167, lng: 28.2500 },
+          
+          // Western Cape regions
+          'stellenbosch': { name: 'Stellenbosch', provinceName: 'Western Cape', lat: -33.9321, lng: 18.8602 },
+          'paarl': { name: 'Paarl', provinceName: 'Western Cape', lat: -33.7346, lng: 18.9701 },
+          'franschhoek': { name: 'Franschhoek', provinceName: 'Western Cape', lat: -33.9137, lng: 19.1178 },
+          'somerset-west': { name: 'Somerset West', provinceName: 'Western Cape', lat: -34.0833, lng: 18.8500 },
+          
+          // KwaZulu-Natal regions
+          'hillcrest': { name: 'Hillcrest', provinceName: 'KwaZulu-Natal', lat: -29.7833, lng: 30.7667 },
+          'pinetown': { name: 'Pinetown', provinceName: 'KwaZulu-Natal', lat: -29.8167, lng: 30.8500 },
+          'amanzimtoti': { name: 'Amanzimtoti', provinceName: 'KwaZulu-Natal', lat: -30.0500, lng: 30.8833 },
+        };
+
+        const mockCityData = knownRegionCities[citySlug];
+        if (mockCityData) {
+          console.log(`[LocationPages] Using mock fallback for known region-city: ${mockCityData.name}`);
+          city = {
+            id: 88800 + Object.keys(knownRegionCities).indexOf(citySlug),
+            name: mockCityData.name,
+            slug: citySlug,
+            provinceId: 1,
+            provinceName: mockCityData.provinceName,
+            provinceSlug: mockCityData.provinceName.toLowerCase().replace(/\s+/g, '-'),
+            isMetro: false,
+            latitude: mockCityData.lat,
+            longitude: mockCityData.lng
+          };
+        } else {
+          // Debug: Show available cities
+          const allCities = await db.select({ name: cities.name, slug: cities.slug }).from(cities).limit(10);
+          console.log(`[LocationPages] Sample cities:`, allCities);
+          
+          return null;
+        }
       }
 
       console.log(`[LocationPages] Found city: ${city.name} (id: ${city.id})`);
@@ -1165,21 +1208,76 @@ export const locationPagesService = {
       
       // FALLBACK: Create a mock suburb object for known suburbs that might not be in DB
       const knownSuburbs: Record<string, { name: string; cityName: string; lat: number; lng: number }> = {
+        // Sandton region and its neighborhoods
         'sandton': { name: 'Sandton', cityName: 'Johannesburg', lat: -26.1076, lng: 28.0567 },
+        'morningside': { name: 'Morningside', cityName: 'Johannesburg', lat: -26.0900, lng: 28.0700 },
+        'bryanston': { name: 'Bryanston', cityName: 'Johannesburg', lat: -26.0600, lng: 28.0200 },
+        'sandown': { name: 'Sandown', cityName: 'Johannesburg', lat: -26.1000, lng: 28.0500 },
+        'rivonia': { name: 'Rivonia', cityName: 'Johannesburg', lat: -26.0500, lng: 28.0600 },
+        'sunninghill': { name: 'Sunninghill', cityName: 'Johannesburg', lat: -26.0300, lng: 28.0700 },
+        'lonehill': { name: 'Lonehill', cityName: 'Johannesburg', lat: -26.0200, lng: 28.0400 },
+        'benmore': { name: 'Benmore', cityName: 'Johannesburg', lat: -26.0800, lng: 28.0300 },
+        'atholl': { name: 'Atholl', cityName: 'Johannesburg', lat: -26.1100, lng: 28.0600 },
+        'illovo': { name: 'Illovo', cityName: 'Johannesburg', lat: -26.1300, lng: 28.0500 },
+        
+        // Johannesburg suburbs
         'rosebank': { name: 'Rosebank', cityName: 'Johannesburg', lat: -26.1461, lng: 28.0439 },
-        'morningside': { name: 'Morningside', cityName: 'Sandton', lat: -26.0900, lng: 28.0700 },
-        'bryanston': { name: 'Bryanston', cityName: 'Sandton', lat: -26.0600, lng: 28.0200 },
         'fourways': { name: 'Fourways', cityName: 'Johannesburg', lat: -26.0166, lng: 28.0124 },
         'melrose': { name: 'Melrose', cityName: 'Johannesburg', lat: -26.1400, lng: 28.0700 },
         'hyde-park': { name: 'Hyde Park', cityName: 'Johannesburg', lat: -26.1200, lng: 28.0400 },
         'parktown': { name: 'Parktown', cityName: 'Johannesburg', lat: -26.1700, lng: 28.0400 },
         'houghton': { name: 'Houghton', cityName: 'Johannesburg', lat: -26.1600, lng: 28.0600 },
+        'parkhurst': { name: 'Parkhurst', cityName: 'Johannesburg', lat: -26.1400, lng: 28.0200 },
+        'greenside': { name: 'Greenside', cityName: 'Johannesburg', lat: -26.1500, lng: 28.0200 },
+        'craighall': { name: 'Craighall', cityName: 'Johannesburg', lat: -26.1200, lng: 28.0300 },
+        'dunkeld': { name: 'Dunkeld', cityName: 'Johannesburg', lat: -26.1300, lng: 28.0400 },
+        'saxonwold': { name: 'Saxonwold', cityName: 'Johannesburg', lat: -26.1600, lng: 28.0500 },
+        'norwood': { name: 'Norwood', cityName: 'Johannesburg', lat: -26.1700, lng: 28.0800 },
+        'maboneng': { name: 'Maboneng', cityName: 'Johannesburg', lat: -26.2000, lng: 28.0600 },
+        'melville': { name: 'Melville', cityName: 'Johannesburg', lat: -26.1800, lng: 28.0000 },
+        'linden': { name: 'Linden', cityName: 'Johannesburg', lat: -26.1300, lng: 28.0100 },
+        
+        // Fourways area
+        'dainfern': { name: 'Dainfern', cityName: 'Johannesburg', lat: -25.9900, lng: 28.0100 },
+        'cedar-lakes': { name: 'Cedar Lakes', cityName: 'Johannesburg', lat: -26.0100, lng: 28.0000 },
+        
+        // Midrand
         'waterfall': { name: 'Waterfall', cityName: 'Midrand', lat: -25.9833, lng: 28.0833 },
+        'kyalami': { name: 'Kyalami', cityName: 'Midrand', lat: -25.9700, lng: 28.0700 },
+        'halfway-house': { name: 'Halfway House', cityName: 'Midrand', lat: -25.9800, lng: 28.1200 },
+        
+        // Cape Town suburbs
         'camps-bay': { name: 'Camps Bay', cityName: 'Cape Town', lat: -33.9500, lng: 18.3800 },
         'sea-point': { name: 'Sea Point', cityName: 'Cape Town', lat: -33.9167, lng: 18.3833 },
         'clifton': { name: 'Clifton', cityName: 'Cape Town', lat: -33.9333, lng: 18.3750 },
+        'bantry-bay': { name: 'Bantry Bay', cityName: 'Cape Town', lat: -33.9200, lng: 18.3700 },
+        'fresnaye': { name: 'Fresnaye', cityName: 'Cape Town', lat: -33.9250, lng: 18.3750 },
+        'green-point': { name: 'Green Point', cityName: 'Cape Town', lat: -33.9000, lng: 18.4000 },
+        'waterfront': { name: 'Waterfront', cityName: 'Cape Town', lat: -33.9050, lng: 18.4200 },
+        'de-waterkant': { name: 'De Waterkant', cityName: 'Cape Town', lat: -33.9150, lng: 18.4100 },
+        'gardens': { name: 'Gardens', cityName: 'Cape Town', lat: -33.9350, lng: 18.4150 },
+        'tamboerskloof': { name: 'Tamboerskloof', cityName: 'Cape Town', lat: -33.9300, lng: 18.4050 },
+        'oranjezicht': { name: 'Oranjezicht', cityName: 'Cape Town', lat: -33.9400, lng: 18.4100 },
+        'bakoven': { name: 'Bakoven', cityName: 'Cape Town', lat: -33.9600, lng: 18.3700 },
+        'glen-beach': { name: 'Glen Beach', cityName: 'Cape Town', lat: -33.9550, lng: 18.3750 },
+        'constantia': { name: 'Constantia', cityName: 'Cape Town', lat: -34.0200, lng: 18.4300 },
+        'newlands': { name: 'Newlands', cityName: 'Cape Town', lat: -33.9800, lng: 18.4600 },
+        'claremont': { name: 'Claremont', cityName: 'Cape Town', lat: -33.9850, lng: 18.4700 },
+        
+        // Durban suburbs
         'umhlanga': { name: 'Umhlanga', cityName: 'Durban', lat: -29.7333, lng: 31.0833 },
         'ballito': { name: 'Ballito', cityName: 'Durban', lat: -29.5333, lng: 31.2167 },
+        'la-lucia': { name: 'La Lucia', cityName: 'Durban', lat: -29.7500, lng: 31.0500 },
+        'durban-north': { name: 'Durban North', cityName: 'Durban', lat: -29.8000, lng: 31.0300 },
+        'morningside-durban': { name: 'Morningside', cityName: 'Durban', lat: -29.8200, lng: 31.0100 },
+        'berea': { name: 'Berea', cityName: 'Durban', lat: -29.8500, lng: 31.0000 },
+        
+        // Pretoria suburbs
+        'waterkloof': { name: 'Waterkloof', cityName: 'Pretoria', lat: -25.7900, lng: 28.2500 },
+        'brooklyn': { name: 'Brooklyn', cityName: 'Pretoria', lat: -25.7700, lng: 28.2400 },
+        'hatfield': { name: 'Hatfield', cityName: 'Pretoria', lat: -25.7500, lng: 28.2300 },
+        'menlyn': { name: 'Menlyn', cityName: 'Pretoria', lat: -25.7800, lng: 28.2800 },
+        'lynnwood': { name: 'Lynnwood', cityName: 'Pretoria', lat: -25.7600, lng: 28.2700 },
       };
 
       const mockSuburbData = knownSuburbs[suburbSlug];
