@@ -265,9 +265,129 @@ export const locationPagesService = {
         eq(properties.status, 'published')
       ));
 
+    // 6. Top Developers (Mock query for verification)
+    const topDevelopers = [
+        { 
+            id: 101, 
+            name: "Balwin Properties", 
+            logo: "", 
+            establishedYear: 1996, 
+            projectCount: 42, 
+            description: "South Africa's largest sectional title apartment developer.",
+            featuredProject: { 
+                title: "Munyaka Lifestyle Estate", 
+                image: "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?q=80&w=1000&auto=format&fit=crop", 
+                price: 1100000, 
+                location: `Waterfall, ${province.name}` 
+            }
+        },
+        { 
+            id: 102, 
+            name: "Growthpoint Properties", 
+            logo: "", 
+            establishedYear: 1987, 
+            projectCount: 58, 
+            description: "Largest South African primary JSE-listed REIT.",
+            featuredProject: { 
+                title: "Excom Tower", 
+                image: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=1000&auto=format&fit=crop", 
+                price: "POA", 
+                location: `Sandton, ${province.name}` 
+            }
+        },
+        { 
+            id: 103, 
+            name: "Redefine Properties", 
+            logo: "", 
+            establishedYear: 1999, 
+            projectCount: 35, 
+            description: "Real estate investment trust (REIT) managing a diversified property portfolio.",
+            featuredProject: { 
+                title: "Alice Lane", 
+                image: "https://images.unsplash.com/photo-1448630360428-65456885c650?q=80&w=1000&auto=format&fit=crop", 
+                price: 2500000, 
+                location: `Sandton, ${province.name}` 
+            }
+        },
+        { 
+            id: 104, 
+            name: "Atterbury", 
+            logo: "", 
+            establishedYear: 1994, 
+            projectCount: 22, 
+            description: "Leading developer of prime mixed-use precincts.",
+            featuredProject: { 
+                title: "Castle Gate", 
+                image: "https://images.unsplash.com/photo-1496568817574-5c94c5401c7c?q=80&w=1000&auto=format&fit=crop", 
+                price: 1800000, 
+                location: `Pretoria, ${province.name}` 
+            }
+        },
+        { 
+            id: 105, 
+            name: "Century Property", 
+            logo: "", 
+            establishedYear: 1975, 
+            projectCount: 15, 
+            description: "Developing exclusive lifestyle estates and commercial precincts.",
+            featuredProject: { 
+                title: "Waterfall Country Estate", 
+                image: "https://images.unsplash.com/photo-1600596542815-2a4d9fddace7?q=80&w=1000&auto=format&fit=crop", 
+                price: 4500000, 
+                location: `Midrand, ${province.name}` 
+            }
+        },
+        { 
+            id: 106, 
+            name: "Rabie Property Group", 
+            logo: "", 
+            establishedYear: 1978, 
+            projectCount: 30, 
+            description: "Leading independent property developer in the Western Cape.",
+            featuredProject: { 
+                title: "Century City", 
+                image: "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?q=80&w=1000&auto=format&fit=crop", 
+                price: 1900000, 
+                location: `Cape Town, ${province.name}` 
+            }
+        },
+        { 
+            id: 107, 
+            name: "Fortress REIT", 
+            logo: "", 
+            establishedYear: 2009, 
+            projectCount: 40, 
+            description: "Logistics and retail property powerhouse.",
+            featuredProject: { 
+                title: "Logistics Park", 
+                image: "https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?q=80&w=1000&auto=format&fit=crop", 
+                price: "POA", 
+                location: `Johannesburg, ${province.name}` 
+            }
+        },
+        { 
+            id: 108, 
+            name: "Abland", 
+            logo: "", 
+            establishedYear: 1989, 
+            projectCount: 25, 
+            description: "Innovative space solutions property developer.",
+            featuredProject: { 
+                title: "Sandton Gate", 
+                image: "https://images.unsplash.com/photo-1577717903315-1691ae25ab3f?q=80&w=1000&auto=format&fit=crop", 
+                price: 3200000, 
+                location: `Sandton, ${province.name}` 
+            }
+        }
+    ];
+
     return {
       province,
       cities: cityList,
+      featuredDevelopments,
+      trendingSuburbs,
+      topDevelopers,
+
       featuredDevelopments,
       trendingSuburbs,
       stats: {
@@ -462,13 +582,126 @@ export const locationPagesService = {
         ));
 
       // Debug logging before return
-      console.log(`[LocationPages] Preparing return data for city: ${city.name}`);
-      console.log(`[LocationPages] - Suburbs count: ${suburbList?.length || 0}`);
-      console.log(`[LocationPages] - Featured properties count: ${featuredProperties?.length || 0}`);
-      console.log(`[LocationPages] - Developments count: ${cityDevelopments?.length || 0}`);
       console.log(`[LocationPages] - Stats:`, stats);
 
+    // 6. Top Developers (Mock query for verification)
+    const topDevelopers = [
+        { 
+            id: 201, 
+            name: "Balwin Properties", 
+            logo: "", 
+            establishedYear: 1996, 
+            projectCount: 42, 
+            description: "South Africa's largest sectional title apartment developer.",
+            featuredProject: { 
+                title: "Munyaka Lifestyle Estate", 
+                image: "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?q=80&w=1000&auto=format&fit=crop", 
+                price: 1100000, 
+                location: `Waterfall, ${city.name}` 
+            }
+        },
+        { 
+            id: 202, 
+            name: "Growthpoint Properties", 
+            logo: "", 
+            establishedYear: 1987, 
+            projectCount: 58, 
+            description: "Largest South African primary JSE-listed REIT.",
+            featuredProject: { 
+                title: "Excom Tower", 
+                image: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=1000&auto=format&fit=crop", 
+                price: "POA", 
+                location: `Sandton, ${city.name}` 
+            }
+        },
+        { 
+            id: 203, 
+            name: "Redefine Properties", 
+            logo: "", 
+            establishedYear: 1999, 
+            projectCount: 35, 
+            description: "Real estate investment trust (REIT) managing a diversified property portfolio.",
+            featuredProject: { 
+                title: "Alice Lane", 
+                image: "https://images.unsplash.com/photo-1448630360428-65456885c650?q=80&w=1000&auto=format&fit=crop", 
+                price: 2500000, 
+                location: `Sandton, ${city.name}` 
+            }
+        },
+        { 
+            id: 204, 
+            name: "Atterbury", 
+            logo: "", 
+            establishedYear: 1994, 
+            projectCount: 22, 
+            description: "Leading developer of prime mixed-use precincts.",
+            featuredProject: { 
+                title: "Castle Gate", 
+                image: "https://images.unsplash.com/photo-1496568817574-5c94c5401c7c?q=80&w=1000&auto=format&fit=crop", 
+                price: 1800000, 
+                location: `Pretoria, ${city.name}` 
+            }
+        },
+        { 
+            id: 205, 
+            name: "Century Property", 
+            logo: "", 
+            establishedYear: 1975, 
+            projectCount: 15, 
+            description: "Developing exclusive lifestyle estates and commercial precincts.",
+            featuredProject: { 
+                title: "Waterfall Country Estate", 
+                image: "https://images.unsplash.com/photo-1600596542815-2a4d9fddace7?q=80&w=1000&auto=format&fit=crop", 
+                price: 4500000, 
+                location: `Midrand, ${city.name}` 
+            }
+        },
+        { 
+            id: 206, 
+            name: "Rabie Property Group", 
+            logo: "", 
+            establishedYear: 1978, 
+            projectCount: 30, 
+            description: "Leading independent property developer in the Western Cape.",
+            featuredProject: { 
+                title: "Century City", 
+                image: "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?q=80&w=1000&auto=format&fit=crop", 
+                price: 1900000, 
+                location: `Cape Town, ${city.name}` 
+            }
+        },
+        { 
+            id: 207, 
+            name: "Fortress REIT", 
+            logo: "", 
+            establishedYear: 2009, 
+            projectCount: 40, 
+            description: "Logistics and retail property powerhouse.",
+            featuredProject: { 
+                title: "Logistics Park", 
+                image: "https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?q=80&w=1000&auto=format&fit=crop", 
+                price: "POA", 
+                location: `Johannesburg, ${city.name}` 
+            }
+        },
+        { 
+            id: 208, 
+            name: "Abland", 
+            logo: "", 
+            establishedYear: 1989, 
+            projectCount: 25, 
+            description: "Innovative space solutions property developer.",
+            featuredProject: { 
+                title: "Sandton Gate", 
+                image: "https://images.unsplash.com/photo-1577717903315-1691ae25ab3f?q=80&w=1000&auto=format&fit=crop", 
+                price: 3200000, 
+                location: `Sandton, ${city.name}` 
+            }
+        }
+    ];
+
       return {
+        topDevelopers,
         city,
         suburbs: suburbList ?? [],
         featuredProperties: (featuredProperties ?? [])

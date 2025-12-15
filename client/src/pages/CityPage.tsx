@@ -24,6 +24,7 @@ import { LocationSchema } from '@/components/location/LocationSchema';
 import { useSimilarLocations } from '@/hooks/useSimilarLocations';
 import { FeaturedDevelopers } from '@/components/location/FeaturedDevelopers';
 import { RecommendedAgents } from '@/components/location/RecommendedAgents';
+import { TopDevelopersCarousel } from '@/components/location/TopDevelopersCarousel';
 
 export default function CityPage({ params }: { params: { province: string; city: string } }) {
   const [, navigate] = useLocation();
@@ -70,7 +71,8 @@ export default function CityPage({ params }: { params: { province: string; city:
     developments = [], 
     stats = { totalListings: 0, avgPrice: 0, minPrice: 0, maxPrice: 0, rentalCount: 0, saleCount: 0 },
     propertyTypes = [],
-    topLocalities = []
+    topLocalities = [],
+    topDevelopers = []
   } = data || {};
 
   // Additional validation - city must exist
@@ -191,11 +193,18 @@ export default function CityPage({ params }: { params: { province: string; city:
         }
 
         developerShowcase={
+          topDevelopers && topDevelopers.length > 0 ? (
+            <TopDevelopersCarousel 
+              developers={topDevelopers} 
+              locationName={city.name} 
+            />
+          ) : (
             <FeaturedDevelopers 
                 locationType="city" 
                 locationId={city.id} 
                 locationName={city.name} 
             />
+          )
         }
 
         buyerCTA={

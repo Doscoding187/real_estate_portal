@@ -16,6 +16,7 @@ import { InteractiveMap } from '@/components/location/InteractiveMap';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Helmet } from 'react-helmet';
 import { LocationSchema } from '@/components/location/LocationSchema';
+import { TopDevelopersCarousel } from '@/components/location/TopDevelopersCarousel';
 
 export default function ProvincePage({ params }: { params: { province: string } }) {
   const [, navigate] = useLocation();
@@ -46,7 +47,7 @@ export default function ProvincePage({ params }: { params: { province: string } 
     );
   }
 
-  const { province, cities, featuredDevelopments, trendingSuburbs, stats } = data;
+  const { province, cities, featuredDevelopments, trendingSuburbs, stats, topDevelopers } = data;
 
   return (
     <div className="min-h-screen bg-white">
@@ -128,6 +129,15 @@ export default function ProvincePage({ params }: { params: { province: string } 
               viewAllLink={(citySlug) => `/${provinceSlug}/${citySlug}`}
               viewAllText="Explore Developments in"
               emptyMessage="No featured developments in this city right now."
+            />
+          ) : undefined
+        }
+
+        developerShowcase={
+          topDevelopers && topDevelopers.length > 0 ? (
+            <TopDevelopersCarousel 
+              developers={topDevelopers} 
+              locationName={province.name} 
             />
           ) : undefined
         }
