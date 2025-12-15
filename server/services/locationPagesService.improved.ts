@@ -365,7 +365,8 @@ export const locationPagesService = {
           priceFrom: developments.priceFrom,
           priceTo: developments.priceTo,
           city: developments.city,
-          province: developments.province
+          province: developments.province,
+          suburb: developments.suburb,
           // isHotSelling, isHighDemand, demandScore columns don't exist in production DB
         })
         .from(developments)

@@ -4,7 +4,10 @@ import { LocationPageLayout } from '@/components/location/LocationPageLayout';
 import { MonetizedBanner } from '@/components/location/MonetizedBanner';
 import { SearchStage } from '@/components/location/SearchStage';
 import { LocationPropertyTypeExplorer as PropertyTypeExplorer } from '@/components/location/LocationPropertyTypeExplorer';
-import { FeaturedListings } from '@/components/location/FeaturedListings';
+// import { FeaturedListings } from '@/components/location/FeaturedListings'; // Removed
+import { TabbedListingSection } from '@/components/location/TabbedListingSection';
+import PropertyCard from '@/components/PropertyCard';
+import { normalizePropertyForUI } from '@/lib/normalizers';
 import { MarketInsights } from '@/components/location/MarketInsights';
 import { SEOTextBlock } from '@/components/location/SEOTextBlock';
 import { FinalCTA } from '@/components/location/FinalCTA';
@@ -126,12 +129,30 @@ export default function SuburbPage({ params }: { params: { province: string; cit
         // The core content for Suburb page is LISTINGS
         listingsFeed={
           <div className="space-y-12">
-            <FeaturedListings 
-              listings={listings} 
-              title={`Homes in ${suburb.name}`}
-              subtitle="Recently listed properties"
-              viewAllLink={`/properties?suburb=${suburb.name}`}
-            />
+            <TabbedListingSection
+        title={`Homes in ${suburb.name}`}
+        description={`Explore a variety of properties for sale in ${suburb.name}, from houses to apartments.`}
+        tabs={[
+          { label: 'All', value: 'all' },
+          { label: 'Houses', value: 'house' },
+          { label: 'Apartments', value: 'apartment' },
+          { label: 'Townhouses', value: 'townhouse' },
+          { label: 'Vacant Land', value: 'vacant_land' }, 
+        ]}
+        items={listings}
+        renderItem={(item: any) => {
+            const property = normalizePropertyForUI(item);
+            if (!property) return null;
+            return <PropertyCard {...property} />;
+        }}
+        filterItem={(item: any, tabValue: string) => {
+            if (tabValue === 'all') return true;
+            return item.propertyType === tabValue;
+        }}
+        viewAllLink={(tabValue) => `/properties?suburb=${suburb.name}${tabValue !== 'all' ? `&type=${tabValue}` : ''}`}
+        viewAllText="View All"
+        emptyMessage="No properties of this type currently listed."
+      />
 
             <MarketInsights 
               stats={stats} 

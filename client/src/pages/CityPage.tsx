@@ -10,7 +10,9 @@ import { LocationTopLocalities } from '@/components/location/LocationTopLocaliti
 
 // Legacy components to be adapted or routed
 import { LocationGrid } from '@/components/location/LocationGrid';
-import { DevelopmentsSlider } from '@/components/location/DevelopmentsSlider';
+// import { DevelopmentsSlider } from '@/components/location/DevelopmentsSlider'; // Removed
+import { TabbedListingSection } from '@/components/location/TabbedListingSection';
+import { SimpleDevelopmentCard } from '@/components/SimpleDevelopmentCard';
 import { MarketInsights } from '@/components/location/MarketInsights';
 import { SEOTextBlock } from '@/components/location/SEOTextBlock';
 import { FinalCTA } from '@/components/location/FinalCTA';
@@ -154,12 +156,31 @@ export default function CityPage({ params }: { params: { province: string; city:
         }
 
         highDemandDevelopments={
-            developments && developments.length > 0 ? (
-                <DevelopmentsSlider 
-                    developments={developments as any[]} 
-                    locationName={city.name} 
+          developments && developments.length > 0 && suburbs && suburbs.length > 0 ? (
+            <TabbedListingSection
+              title={`Hot Selling Developments in ${city.name}`}
+              description={`Discover popular residential developments across top suburbs in ${city.name}.`}
+              tabs={suburbs.map((suburb: any) => ({ label: suburb.name, value: suburb.name }))}
+              items={developments}
+              renderItem={(dev: any) => (
+                <SimpleDevelopmentCard
+                  id={dev.id.toString()}
+                  title={dev.title || dev.name}
+                  city={dev.suburb || city.name}
+                  priceRange={{ 
+                    min: Number(dev.priceFrom), 
+                    max: Number(dev.priceTo) || Number(dev.priceFrom) 
+                  }}
+                  image={dev.image || dev.images?.[0] || dev.mainImage || "https://placehold.co/600x400/e2e8f0/64748b?text=Development"}
+                  isHotSelling={true}
                 />
-            ) : undefined
+              )}
+              filterItem={(dev: any, suburbName: string) => dev.suburb === suburbName}
+              viewAllLink={(suburbName) => `/${provinceSlug}/${citySlug}/${suburbs.find((s:any) => s.name === suburbName)?.slug || ''}`}
+              viewAllText="Explore Developments in"
+              emptyMessage="No featured developments in this suburb right now."
+            />
+          ) : undefined
         }
 
         recommendedAgents={

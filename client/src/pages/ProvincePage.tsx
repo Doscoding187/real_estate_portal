@@ -5,7 +5,9 @@ import { MonetizedBanner } from '@/components/location/MonetizedBanner';
 import { SearchStage } from '@/components/location/SearchStage';
 import { FeaturedPropertiesCarousel } from '@/components/location/FeaturedPropertiesCarousel';
 import { LocationGrid } from '@/components/location/LocationGrid';
-import { DevelopmentsSlider } from '@/components/location/DevelopmentsSlider';
+// import { DevelopmentsSlider } from '@/components/location/DevelopmentsSlider'; // Removed
+import { TabbedListingSection } from '@/components/location/TabbedListingSection';
+import { SimpleDevelopmentCard } from '@/components/SimpleDevelopmentCard';
 import { MarketInsights } from '@/components/location/MarketInsights';
 import { SEOTextBlock } from '@/components/location/SEOTextBlock';
 import { FinalCTA } from '@/components/location/FinalCTA';
@@ -101,11 +103,31 @@ export default function ProvincePage({ params }: { params: { province: string } 
           />
         }
 
+        // Section 6: Hot Selling Developments (Tabbed by City)
         highDemandDevelopments={
           featuredDevelopments && featuredDevelopments.length > 0 ? (
-            <DevelopmentsSlider 
-              developments={featuredDevelopments as any[]} 
-              locationName={province.name} 
+            <TabbedListingSection
+              title={`Hot Selling Developments in ${province.name}`}
+              description={`Discover popular residential developments across top cities in ${province.name}.`}
+              tabs={cities.map((city: any) => ({ label: city.name, value: city.slug }))}
+              items={featuredDevelopments}
+              renderItem={(dev: any) => (
+                <SimpleDevelopmentCard
+                  id={dev.id.toString()}
+                  title={dev.title}
+                  city={dev.cityName || province.name}
+                  priceRange={{ 
+                    min: Number(dev.priceFrom), 
+                    max: Number(dev.priceTo) || Number(dev.priceFrom) 
+                  }}
+                  image={dev.image || dev.images?.[0] || "https://placehold.co/600x400/e2e8f0/64748b?text=Development"}
+                  isHotSelling={true}
+                />
+              )}
+              filterItem={(dev: any, citySlug: string) => dev.citySlug === citySlug}
+              viewAllLink={(citySlug) => `/${provinceSlug}/${citySlug}`}
+              viewAllText="Explore Developments in"
+              emptyMessage="No featured developments in this city right now."
             />
           ) : undefined
         }
