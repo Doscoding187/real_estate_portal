@@ -158,23 +158,29 @@ export const locationPagesService = {
     const featuredDevelopments = await db
       .select({
         id: developments.id,
+        title: developments.name,
         name: developments.name,
         slug: developments.slug,
         images: developments.images,
-        price: developments.priceFrom,
+        priceFrom: developments.priceFrom,
+        priceTo: developments.priceTo,
         city: developments.city,
+        cityName: cities.name,
+        citySlug: cities.slug,
         province: developments.province,
         isHotSelling: developments.isHotSelling,
         isHighDemand: developments.isHighDemand,
         demandScore: developments.demandScore
       })
       .from(developments)
+      .leftJoin(cities, eq(developments.city, cities.name)) // Join on name as cityId doesn't exist
       .where(and(
         eq(developments.province, province.name),
-        eq(developments.status, 'now-selling')
+        // Use valid status enum values
+        inArray(developments.status, ['now-selling', 'launching-soon', 'ready-to-move', 'under-construction'])
       ))
       .orderBy(desc(developments.isHotSelling), desc(developments.demandScore))
-      .limit(6);
+      .limit(12);
 
     // 4. Trending Suburbs
     // 4. Trending Suburbs (Ranked by listing count - simplified for TiDB compatibility)
@@ -356,9 +362,11 @@ export const locationPagesService = {
       console.log(`[LocationPages] Featured properties query completed, found ${featuredProperties?.length || 0} properties`);
 
       // 4. Developments in City
+      // 4. Developments in City
       const cityDevelopments = await db
         .select({
           id: developments.id,
+          title: developments.name, // Aliased to title for UI consistency
           name: developments.name,
           slug: developments.slug,
           images: developments.images,
@@ -374,8 +382,8 @@ export const locationPagesService = {
           eq(developments.city, city.name),
           eq(developments.isPublished, 1)
         ))
-        // .orderBy(desc(developments.isHotSelling), desc(developments.demandScore)) // Commented out - columns may not exist in production DB
-        .limit(6);
+        // .orderBy(desc(developments.isHotSelling), desc(developments.demandScore))
+        .limit(12); // Increased limit for tabs
 
       // 5. Aggregate Stats
       const [stats] = await db
