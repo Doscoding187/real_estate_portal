@@ -166,6 +166,17 @@ export const locationPagesService = {
        cityList.sort((a, b) => b.listingCount - a.listingCount);
     }
 
+    // DATA CLEANUP: Explicitly remove known non-Gauteng cities that might be incorrectly linked in DB
+    if (province.name === 'Gauteng') {
+        const invalidCities = ['Port Elizabeth', 'East London', 'Cape Town', 'Durban', 'Bloemfontein'];
+        for (let i = cityList.length - 1; i >= 0; i--) {
+            if (invalidCities.includes(cityList[i].name)) {
+                console.log(`[LocationPages] Removing incorrect city for Gauteng: ${cityList[i].name}`);
+                cityList.splice(i, 1);
+            }
+        }
+    }
+
     console.log(`[LocationPages] Fetched ${cityList.length} cities`);
 
     // 3. Featured Developments in Province
@@ -248,6 +259,16 @@ export const locationPagesService = {
       .groupBy(suburbs.id, cities.name, cities.slug)
       .orderBy(desc(sql`count(${properties.id})`))
       .limit(10);
+
+    // DATA CLEANUP: Remove trending suburbs from incorrect cities for Gauteng
+    if (province.name === 'Gauteng') {
+        const invalidCities = ['Port Elizabeth', 'East London', 'Cape Town', 'Durban', 'Bloemfontein'];
+        for (let i = trendingSuburbs.length - 1; i >= 0; i--) {
+            if (trendingSuburbs[i].cityName && invalidCities.includes(trendingSuburbs[i].cityName)) {
+                trendingSuburbs.splice(i, 1);
+            }
+        }
+    }
 
     // 5. Aggregate Stats
     const [stats] = await db
