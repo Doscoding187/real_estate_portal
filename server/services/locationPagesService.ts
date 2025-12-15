@@ -70,6 +70,7 @@ export const locationPagesService = {
     console.log(`[LocationPages] Found province: ${province.name} (id: ${province.id})`);
 
     // 2. Get Child Cities (Top 12 by listing count or default)
+    console.log('[LocationPages] Fetching cities...');
     const cityListingCount = sql<number>`(SELECT COUNT(*) FROM ${properties} WHERE ${properties.cityId} = ${cities.id} AND ${properties.status} = 'published')`;
     
     const cityList = await db
@@ -86,7 +87,10 @@ export const locationPagesService = {
       .orderBy(desc(cityListingCount)) // Use explicit DESC helper which we confirmed works
       .limit(12);
 
+    console.log(`[LocationPages] Fetched ${cityList.length} cities`);
+
     // 3. Featured Developments in Province
+    console.log('[LocationPages] Fetching featured developments...');
     const featuredDevelopments = await db
       .select()
       .from(developments)
@@ -95,8 +99,11 @@ export const locationPagesService = {
         eq(developments.status, 'now-selling')
       ))
       .limit(6);
+      
+    console.log(`[LocationPages] Fetched ${featuredDevelopments.length} featured developments`);
 
     // 4. Trending Suburbs
+    console.log('[LocationPages] Fetching trending suburbs...');
     const suburbListingCount = sql<number>`(SELECT COUNT(*) FROM ${properties} WHERE ${properties.suburbId} = ${suburbs.id} AND ${properties.status} = 'published')`;
 
     const trendingSuburbs = await db
@@ -113,8 +120,11 @@ export const locationPagesService = {
       .where(eq(cities.provinceId, province.id))
       .orderBy(desc(suburbListingCount))
       .limit(10);
+      
+    console.log(`[LocationPages] Fetched ${trendingSuburbs.length} trending suburbs`);
 
     // 5. Aggregate Stats
+    console.log('[LocationPages] Fetching stats...');
     const [stats] = await db
       .select({
         totalListings: sql<number>`count(*)`,
@@ -125,6 +135,8 @@ export const locationPagesService = {
         eq(properties.provinceId, province.id),
         eq(properties.status, 'published')
       ));
+      
+    console.log('[LocationPages] Stats fetched. Returning data.');
 
     return {
       province,
