@@ -70,19 +70,23 @@ export const locationPagesService = {
     console.log(`[LocationPages] Found province: ${province.name} (id: ${province.id})`);
 
     // 2. Get Child Cities (Top 12 by listing count or default)
-    console.log('[LocationPages] Fetching cities...');
     const cityList = await db
       .select({
         id: cities.id,
         name: cities.name,
         slug: cities.slug,
         isMetro: cities.isMetro,
-        listingCount: sql<number>`(SELECT COUNT(*) FROM ${properties} WHERE ${properties.cityId} = ${cities.id} AND ${properties.status} = 'published') AS listingCount`,
-        avgPrice: sql<number>`(SELECT AVG(${properties.price}) FROM ${properties} WHERE ${properties.cityId} = ${cities.id} AND ${properties.status} = 'published')`
+        listingCount: sql<number>`count(${properties.id})`,
+        avgPrice: sql<number>`avg(cast(${properties.price} as decimal(12,2)))`
       })
       .from(cities)
+      .leftJoin(properties, and(
+        eq(properties.cityId, cities.id),
+        eq(properties.status, 'published')
+      ))
       .where(eq(cities.provinceId, province.id))
-      .orderBy(sql`listingCount DESC`)
+      .groupBy(cities.id)
+      .orderBy(desc(sql`count(${properties.id})`))
       .limit(12);
 
     console.log(`[LocationPages] Fetched ${cityList.length} cities`);
@@ -102,8 +106,6 @@ export const locationPagesService = {
 
     // 4. Trending Suburbs
     console.log('[LocationPages] Fetching trending suburbs...');
-    const suburbListingCount = sql<number>`(SELECT COUNT(*) FROM ${properties} WHERE ${properties.suburbId} = ${suburbs.id} AND ${properties.status} = 'published')`;
-
     const trendingSuburbs = await db
       .select({
         id: suburbs.id,
@@ -111,12 +113,17 @@ export const locationPagesService = {
         slug: suburbs.slug,
         cityName: cities.name,
         citySlug: cities.slug,
-        listingCount: sql<number>`(SELECT COUNT(*) FROM ${properties} WHERE ${properties.suburbId} = ${suburbs.id} AND ${properties.status} = 'published') AS listingCount`
+        listingCount: sql<number>`count(${properties.id})`
       })
       .from(suburbs)
       .leftJoin(cities, eq(suburbs.cityId, cities.id))
+      .leftJoin(properties, and(
+        eq(properties.suburbId, suburbs.id),
+        eq(properties.status, 'published')
+      ))
       .where(eq(cities.provinceId, province.id))
-      .orderBy(sql`listingCount DESC`)
+      .groupBy(suburbs.id, cities.name, cities.slug)
+      .orderBy(desc(sql`count(${properties.id})`))
       .limit(10);
       
     console.log(`[LocationPages] Fetched ${trendingSuburbs.length} trending suburbs`);
