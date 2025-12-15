@@ -78,7 +78,7 @@ export default function CityPage({ params }: { params: { province: string; city:
     topDevelopers = [],
     investmentProjects = [],
     recommendedAgencies = [],
-    topLocalities = []
+
   } = data || {};
 
   // Additional validation - city must exist
