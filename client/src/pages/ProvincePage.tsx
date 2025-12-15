@@ -196,7 +196,7 @@ export default function ProvincePage({ params }: { params: { province: string } 
           <div className="space-y-12">
             {/* Trending Suburbs */}
             {trendingSuburbs && trendingSuburbs.length > 0 && (
-              <div className="bg-slate-50/50 -mx-4 md:-mx-8 px-4 md:px-8 py-12 backdrop-blur-sm">
+              <div className="py-12">
                 <div className="flex items-center justify-between mb-8">
                    <h2 className="text-2xl font-bold text-slate-900">Trending Suburbs in {province.name}</h2>
                 </div>
