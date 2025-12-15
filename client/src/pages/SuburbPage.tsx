@@ -2,7 +2,7 @@ import { useLocation } from 'wouter';
 import { trpc } from '@/lib/trpc';
 import { HeroLocation } from '@/components/location/HeroLocation';
 import { SearchRefinementBar } from '@/components/location/SearchRefinementBar';
-import { PropertyTypeExplorer } from '@/components/location/PropertyTypeExplorer';
+import { LocationPropertyTypeExplorer as PropertyTypeExplorer } from '@/components/location/LocationPropertyTypeExplorer';
 import { FeaturedListings } from '@/components/location/FeaturedListings';
 import { MarketInsights } from '@/components/location/MarketInsights';
 import { SEOTextBlock } from '@/components/location/SEOTextBlock';
