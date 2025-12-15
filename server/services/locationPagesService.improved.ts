@@ -494,6 +494,46 @@ export const locationPagesService = {
         }
     ];
 
+    // 9. Top Localities (Mock)
+    const topLocalitiesDetailed = [
+        {
+            name: "Sandton",
+            rating: 4.6,
+            reviews: 22,
+            avgSalePrice: 46100,
+            avgRental: 285,
+            propertiesForSale: 3276,
+            propertiesForRent: 4130
+        },
+        {
+            name: "Camps Bay",
+            rating: 4.8,
+            reviews: 35,
+            avgSalePrice: 65200,
+            avgRental: 420,
+            propertiesForSale: 1540,
+            propertiesForRent: 2890
+        },
+        {
+            name: "Umhlanga",
+            rating: 4.6,
+            reviews: 21,
+            avgSalePrice: 35600,
+            avgRental: 260,
+            propertiesForSale: 2340,
+            propertiesForRent: 3120
+        },
+        {
+            name: "Waterkloof",
+            rating: 4.7,
+            reviews: 19,
+            avgSalePrice: 38500,
+            avgRental: 270,
+            propertiesForSale: 1450,
+            propertiesForRent: 1890
+        }
+    ];
+
     return {
       province,
       cities: cityList,
@@ -502,6 +542,7 @@ export const locationPagesService = {
       topDevelopers,
       investmentProjects,
       recommendedAgencies,
+      topLocalities: topLocalitiesDetailed,
 
       featuredDevelopments,
       trendingSuburbs,
@@ -928,10 +969,47 @@ export const locationPagesService = {
         }
     ];
 
+    // 9. Top Localities (Mock - Contextual)
+    const getMockLocalities = (cityName: string) => {
+        const jhb = [
+            { name: 'Sandton', rating: 4.6, reviews: 22, avgSalePrice: 46100, avgRental: 285, propertiesForSale: 3276, propertiesForRent: 4130 },
+            { name: 'Rosebank', rating: 4.5, reviews: 18, avgSalePrice: 34650, avgRental: 245, propertiesForSale: 2208, propertiesForRent: 3845 },
+            { name: 'Fourways', rating: 4.4, reviews: 15, avgSalePrice: 33100, avgRental: 220, propertiesForSale: 2165, propertiesForRent: 4311 },
+             { name: 'Midrand', rating: 4.3, reviews: 12, avgSalePrice: 30100, avgRental: 195, propertiesForSale: 1890, propertiesForRent: 3200 }
+        ];
+        const cpt = [
+            { name: 'Camps Bay', rating: 4.8, reviews: 35, avgSalePrice: 65200, avgRental: 420, propertiesForSale: 1540, propertiesForRent: 2890 },
+            { name: 'Sea Point', rating: 4.6, reviews: 28, avgSalePrice: 42300, avgRental: 310, propertiesForSale: 2650, propertiesForRent: 4120 },
+            { name: 'Constantia', rating: 4.7, reviews: 24, avgSalePrice: 38900, avgRental: 290, propertiesForSale: 1980, propertiesForRent: 2340 }
+        ];
+        const pta = [
+             { name: 'Waterkloof', rating: 4.7, reviews: 19, avgSalePrice: 38500, avgRental: 270, propertiesForSale: 1450, propertiesForRent: 1890 },
+             { name: 'Menlyn', rating: 4.4, reviews: 16, avgSalePrice: 28900, avgRental: 215, propertiesForSale: 2890, propertiesForRent: 3450 }
+        ];
+        const dbn = [
+            { name: 'Umhlanga', rating: 4.6, reviews: 21, avgSalePrice: 35600, avgRental: 260, propertiesForSale: 2340, propertiesForRent: 3120 },
+            { name: 'Ballito', rating: 4.5, reviews: 18, avgSalePrice: 28200, avgRental: 220, propertiesForSale: 1890, propertiesForRent: 2450 }
+        ];
+
+        if (cityName.includes('Johannesburg')) return jhb;
+        if (cityName.includes('Cape Town')) return cpt;
+        if (cityName.includes('Pretoria')) return pta;
+        if (cityName.includes('Durban')) return dbn;
+
+        // Default/Generic
+        return [
+            { name: `${cityName} Central`, rating: 4.5, reviews: 10, avgSalePrice: 25000, avgRental: 200, propertiesForSale: 100, propertiesForRent: 200 },
+             { name: `${cityName} North`, rating: 4.4, reviews: 8, avgSalePrice: 28000, avgRental: 220, propertiesForSale: 150, propertiesForRent: 250 }
+        ];
+    };
+
+    const topLocalitiesDetailed = getMockLocalities(city.name);
+
       return {
         topDevelopers,
         investmentProjects,
         recommendedAgencies,
+        topLocalities: topLocalitiesDetailed,
         city,
         suburbs: suburbList ?? [],
         featuredProperties: (featuredProperties ?? [])

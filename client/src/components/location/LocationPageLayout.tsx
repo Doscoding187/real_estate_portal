@@ -9,14 +9,13 @@ interface LocationPageLayoutProps {
   searchStage: React.ReactNode;
   featuredProperties?: React.ReactNode;
   propertyTypeExplorer?: React.ReactNode;
-  topLocalities?: React.ReactNode;
+  topLocalities?: any[]; // Keep existing for data passing if needed
+  topLocalitiesShowcase?: React.ReactNode;
   highDemandDevelopments?: React.ReactNode;
-  recommendedAgents?: React.ReactNode;
   recommendedAgents?: React.ReactNode;
   agencyShowcase?: React.ReactNode;
   developerShowcase?: React.ReactNode;
   investmentShowcase?: React.ReactNode;
-  buyerCTA?: React.ReactNode;
   buyerCTA?: React.ReactNode;
   listingsFeed?: React.ReactNode;
   sellerCTA?: React.ReactNode;
@@ -31,6 +30,7 @@ export const LocationPageLayout: React.FC<LocationPageLayoutProps> = ({
   featuredProperties,
   propertyTypeExplorer,
   topLocalities,
+  topLocalitiesShowcase,
   highDemandDevelopments,
   recommendedAgents,
   agencyShowcase,
@@ -90,9 +90,16 @@ export const LocationPageLayout: React.FC<LocationPageLayoutProps> = ({
           </section>
         )}
 
-        {/* 8️⃣ High-Demand Developments */}
+        {/* 6️⃣ Top Localities - NEW SECTION */}
+        {topLocalitiesShowcase && (
+            <section id="top-localities" className="scroll-mt-24">
+                {topLocalitiesShowcase}
+            </section>
+        )}
+
+        {/* 7️⃣ High Demand Developments (Projects) */}
         {highDemandDevelopments && (
-          <section id="high-demand" className="scroll-mt-24">
+          <section id="high-demand-developments" className="scroll-mt-24">
             {highDemandDevelopments}
           </section>
         )}

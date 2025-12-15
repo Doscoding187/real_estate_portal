@@ -19,6 +19,7 @@ import { LocationSchema } from '@/components/location/LocationSchema';
 import { TopDevelopersCarousel } from '@/components/location/TopDevelopersCarousel';
 import { HighDemandProjectsCarousel } from '@/components/location/HighDemandProjectsCarousel';
 import { RecommendedAgenciesCarousel } from '@/components/location/RecommendedAgenciesCarousel';
+import { LocationTopLocalities } from '@/components/location/LocationTopLocalities';
 
 export default function ProvincePage({ params }: { params: { province: string } }) {
   const [, navigate] = useLocation();
@@ -49,7 +50,7 @@ export default function ProvincePage({ params }: { params: { province: string } 
     );
   }
 
-  const { province, cities, featuredDevelopments, trendingSuburbs, stats, topDevelopers, investmentProjects, recommendedAgencies } = data;
+  const { province, cities, featuredDevelopments, trendingSuburbs, stats, topDevelopers, investmentProjects, recommendedAgencies, topLocalities } = data;
 
   return (
     <div className="min-h-screen bg-white">
@@ -133,6 +134,15 @@ export default function ProvincePage({ params }: { params: { province: string } 
               emptyMessage="No featured developments in this city right now."
             />
           ) : undefined
+        }
+
+        topLocalitiesShowcase={
+           topLocalities && topLocalities.length > 0 ? (
+             <LocationTopLocalities 
+               localities={topLocalities} 
+               locationName={province.name} 
+             />
+           ) : undefined
         }
 
         developerShowcase={

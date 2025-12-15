@@ -27,6 +27,7 @@ import { RecommendedAgents } from '@/components/location/RecommendedAgents';
 import { TopDevelopersCarousel } from '@/components/location/TopDevelopersCarousel';
 import { HighDemandProjectsCarousel } from '@/components/location/HighDemandProjectsCarousel';
 import { RecommendedAgenciesCarousel } from '@/components/location/RecommendedAgenciesCarousel';
+import { LocationTopLocalities } from '@/components/location/LocationTopLocalities';
 
 export default function CityPage({ params }: { params: { province: string; city: string } }) {
   const [, navigate] = useLocation();
@@ -76,7 +77,8 @@ export default function CityPage({ params }: { params: { province: string; city:
     topLocalities = [],
     topDevelopers = [],
     investmentProjects = [],
-    recommendedAgencies = []
+    recommendedAgencies = [],
+    topLocalities = []
   } = data || {};
 
   // Additional validation - city must exist
@@ -159,6 +161,15 @@ export default function CityPage({ params }: { params: { province: string; city:
                 localities={(topLocalities as any[]).map(l => ({...l, imageUrl: null}))}
                 parentSlug={`${provinceSlug}/${citySlug}`}
              />
+        }
+
+        topLocalitiesShowcase={
+           topLocalities && topLocalities.length > 0 ? (
+             <LocationTopLocalities 
+               localities={topLocalities} 
+               locationName={city.name} 
+             />
+           ) : undefined
         }
 
         highDemandDevelopments={
