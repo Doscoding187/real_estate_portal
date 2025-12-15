@@ -132,6 +132,7 @@ export const locationPagesService = {
     console.log(`[LocationPages] Found province: ${province.name} (id: ${province.id})`);
 
     // 2. Get Child Cities (Top 12 by listing count or default)
+    console.log('[LocationPages] Fetching cities with LEFT JOIN...');
     const cityList = await db
       .select({
         id: cities.id,
@@ -150,6 +151,8 @@ export const locationPagesService = {
       .groupBy(cities.id)
       .orderBy(desc(sql`count(${properties.id})`))
       .limit(12);
+
+    console.log(`[LocationPages] Fetched ${cityList.length} cities`);
 
     // 3. Featured Developments in Province
     const featuredDevelopments = await db
