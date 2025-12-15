@@ -186,16 +186,30 @@ export const locationPagesService = {
       .orderBy(desc(developments.isHotSelling), desc(developments.demandScore))
       .limit(12);
 
-      console.log(`[LocationPages] Found ${featuredDevelopments.length} featured developments`);
-      if (featuredDevelopments.length > 0) {
-        console.log(`[LocationPages] Sample dev:`, featuredDevelopments[0]);
-        console.log(`[LocationPages] Sample dev status:`, featuredDevelopments[0].status);
-        console.log(`[LocationPages] Sample dev citySlug:`, featuredDevelopments[0].citySlug);
-      } else {
-         // Debug: Check if ANY developments exist for this province ignoring status
-         const checkDevs = await db.select({ id: developments.id, status: developments.status }).from(developments).where(eq(developments.province, province.name)).limit(5);
-         console.log(`[LocationPages] DEBUG CHECK: Any devs in ${province.name}?`, checkDevs);
+      // Placeholder injection for debugging/visual verification
+      if (featuredDevelopments.length === 0) {
+        console.log(`[LocationPages] No developments found. Injecting PLACEHOLDER data.`);
+        featuredDevelopments.push({
+          id: 99999,
+          title: "The Oysters of Umhlanga (Placeholder)",
+          name: "The Oysters of Umhlanga (Placeholder)",
+          slug: "the-oysters-placeholder",
+          images: ["https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?q=80&w=1000&auto=format&fit=crop"],
+          priceFrom: 2500000,
+          priceTo: 8500000,
+          city: cityList[0]?.name || "Durban",
+          cityName: cityList[0]?.name || "Durban",
+          citySlug: cityList[0]?.slug || "durban",
+          province: province.name,
+          status: "now-selling" as any, 
+          isHotSelling: 1,
+          isHighDemand: 1,
+          demandScore: 99
+        });
       }
+
+      console.log(`[LocationPages] Found ${featuredDevelopments.length} featured developments (including placeholder)`);
+
 
     // 4. Trending Suburbs
     // 4. Trending Suburbs (Ranked by listing count - simplified for TiDB compatibility)
@@ -399,6 +413,22 @@ export const locationPagesService = {
         ))
         // .orderBy(desc(developments.isHotSelling), desc(developments.demandScore))
         .limit(12); // Increased limit for tabs
+
+      if (cityDevelopments.length === 0) {
+        console.log(`[LocationPages] No city devs found. Injecting PLACEHOLDER.`);
+        cityDevelopments.push({
+           id: 99998,
+           title: "Future City Living (Placeholder)",
+           name: "Future City Living (Placeholder)",
+           slug: "future-city-placeholder",
+           images: ["https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?q=80&w=1000&auto=format&fit=crop"],
+           priceFrom: 1200000,
+           priceTo: 4500000,
+           city: city.name,
+           province: "Unknown",
+           suburb: suburbList[0]?.name || "Central",
+        } as any);
+      }
 
       // 5. Aggregate Stats
       const [stats] = await db
