@@ -1,21 +1,21 @@
 import { useRoute, useLocation } from 'wouter';
 import { trpc } from '@/lib/trpc';
-import { HeroLocation } from '@/components/location/HeroLocation';
-import { SearchRefinementBar } from '@/components/location/SearchRefinementBar';
+import { LocationPageLayout } from '@/components/location/LocationPageLayout';
+import { MonetizedBanner } from '@/components/location/MonetizedBanner';
+import { SearchStage } from '@/components/location/SearchStage';
+import { FeaturedPropertiesCarousel } from '@/components/location/FeaturedPropertiesCarousel';
 import { LocationGrid } from '@/components/location/LocationGrid';
-import { TrendingSlider } from '@/components/location/TrendingSlider';
 import { DevelopmentsSlider } from '@/components/location/DevelopmentsSlider';
-import { AmenitiesSection } from '@/components/location/AmenitiesSection';
 import { MarketInsights } from '@/components/location/MarketInsights';
 import { SEOTextBlock } from '@/components/location/SEOTextBlock';
 import { FinalCTA } from '@/components/location/FinalCTA';
+import { AmenitiesSection } from '@/components/location/AmenitiesSection';
 import { InteractiveMap } from '@/components/location/InteractiveMap';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Helmet } from 'react-helmet';
 import { LocationSchema } from '@/components/location/LocationSchema';
 
 export default function ProvincePage({ params }: { params: { province: string } }) {
-  // Wouter hook backup if params not passed directly (though App.tsx should pass them)
   const [, navigate] = useLocation();
   const provinceSlug = params.province;
 
@@ -23,7 +23,11 @@ export default function ProvincePage({ params }: { params: { province: string } 
     provinceSlug
   });
 
-  // ... (previous error handling code)
+  // Fetch campaign for banner
+  const { data: heroCampaign } = trpc.locationPages.getHeroCampaign.useQuery({ 
+    locationSlug: provinceSlug,
+    fallbacks: [] 
+  });
 
   if (isLoading) {
     return <ProvincePageSkeleton />;
@@ -42,11 +46,6 @@ export default function ProvincePage({ params }: { params: { province: string } 
 
   const { province, cities, featuredDevelopments, trendingSuburbs, stats } = data;
 
-  const handleSearch = (filters: any) => {
-    // Navigate to search page with location filter
-    navigate(`/properties?province=${provinceSlug}`);
-  };
-
   return (
     <div className="min-h-screen bg-white">
       <Helmet>
@@ -56,7 +55,7 @@ export default function ProvincePage({ params }: { params: { province: string } 
       </Helmet>
 
       <LocationSchema 
-        type="Province" // Will map to AdministrativeArea or Place in component
+        type="Province"
         name={province.name}
         description={`Real estate in ${province.name}`}
         url={`/${provinceSlug}`}
@@ -72,90 +71,135 @@ export default function ProvincePage({ params }: { params: { province: string } 
         } : undefined}
       />
 
-      <HeroLocation
-        title={province.name}
-        subtitle="Discover the best cities and suburbs to live in."
-        breadcrumbs={[
-          { label: 'Home', href: '/' },
-          { label: province.name, href: `/${provinceSlug}` }
-        ]}
-        stats={stats}
-        backgroundImage="https://images.unsplash.com/photo-1577931767667-0c58e744d081?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80" // Placeholder or dynamic if we had province images
-        placeId={province.place_id}
-        coordinates={province.latitude && province.longitude ? {
-          latitude: Number(province.latitude),
-          longitude: Number(province.longitude)
-        } : undefined}
-      />
-
-      <SearchRefinementBar 
-        onSearch={handleSearch} 
-        defaultLocation={province.name}
-        placeId={province.place_id}
-      />
-
-      <LocationGrid 
-        title={`Popular Cities in ${province.name}`} 
-        items={cities} 
-        parentSlug={provinceSlug}
-        type="city"
-      />
-
-      <div className="bg-slate-50">
-        <TrendingSlider 
-          locations={trendingSuburbs} 
-          provinceSlug={provinceSlug}
-        />
-      </div>
-
-      <DevelopmentsSlider 
-        developments={featuredDevelopments as any[]} 
-        locationName={province.name} 
-      />
-
-      <MarketInsights 
-        stats={stats} 
-        locationName={province.name} 
-        type="province"
-      />
-
-      <AmenitiesSection 
-        location={{
-          latitude: Number(province.latitude),
-          longitude: Number(province.longitude)
-        }} 
-      />
-
-      {/* Interactive Map Section */}
-      {province.latitude && province.longitude && (
-        <div className="container py-12">
-          <h2 className="text-2xl font-bold mb-6">Explore {province.name} on the Map</h2>
-          <InteractiveMap
-            center={{
-              lat: Number(province.latitude),
-              lng: Number(province.longitude),
-            }}
-            viewport={province.viewport_ne_lat ? {
-              ne_lat: Number(province.viewport_ne_lat),
-              ne_lng: Number(province.viewport_ne_lng),
-              sw_lat: Number(province.viewport_sw_lat),
-              sw_lng: Number(province.viewport_sw_lng),
-            } : undefined}
+      <LocationPageLayout
+        locationName={province.name}
+        locationSlug={provinceSlug}
+        
+        banner={
+          <MonetizedBanner
+            locationType="province"
+            locationId={province.id}
+            locationName={province.name}
+            defaultImage="https://images.unsplash.com/photo-1577931767667-0c58e744d081?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80"
+            campaign={heroCampaign}
           />
-        </div>
-      )}
+        }
 
-      <SEOTextBlock
-        title={`About Real Estate in ${province.name}`}
-        locationName={province.name}
-        locationType="province"
-        stats={stats}
-        content={province.description || undefined}
-      />
+        searchStage={
+          <SearchStage 
+            locationName={province.name} 
+            locationSlug={provinceSlug} 
+            totalListings={stats.totalListings} 
+          />
+        }
 
-      <FinalCTA 
-        locationName={province.name}
-        provinceSlug={provinceSlug}
+        featuredProperties={
+          <FeaturedPropertiesCarousel 
+            locationId={province.id} 
+            locationName={province.name} 
+            locationScope="province" 
+          />
+        }
+
+        highDemandDevelopments={
+          featuredDevelopments && featuredDevelopments.length > 0 ? (
+            <DevelopmentsSlider 
+              developments={featuredDevelopments as any[]} 
+              locationName={province.name} 
+            />
+          ) : undefined
+        }
+
+        buyerCTA={
+          <div className="py-8 text-center bg-blue-50 rounded-lg mx-4 md:mx-0">
+            <h3 className="text-xl font-bold mb-2">Looking for property in {province.name}?</h3>
+            <p className="mb-4 text-slate-600">Get alerts for new properties matching your criteria.</p>
+            <button className="px-6 py-2 bg-blue-600 text-white rounded font-medium hover:bg-blue-700">
+              Set Property Alert
+            </button>
+          </div>
+        }
+
+        listingsFeed={
+          <div className="space-y-12">
+            {/* Cities Grid */}
+            <LocationGrid 
+              title={`Popular Cities in ${province.name}`} 
+              items={cities} 
+              parentSlug={provinceSlug}
+              type="city"
+            />
+
+            {/* Trending Suburbs */}
+            {trendingSuburbs && trendingSuburbs.length > 0 && (
+              <div className="bg-slate-50 -mx-4 md:-mx-8 px-4 md:px-8 py-12">
+                <h2 className="text-2xl font-bold mb-8">Trending Suburbs in {province.name}</h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                  {trendingSuburbs.map((suburb: any) => (
+                    <a 
+                      key={suburb.id} 
+                      href={`/${provinceSlug}/${suburb.citySlug}/${suburb.slug}`}
+                      className="rounded-lg border bg-card text-card-foreground shadow-sm hover:shadow-md transition-shadow cursor-pointer border-slate-200 group p-4"
+                    >
+                      <h3 className="font-semibold text-slate-800 mb-1 group-hover:text-primary transition-colors">
+                        {suburb.name}
+                      </h3>
+                      <p className="text-xs text-slate-500 mb-2">{suburb.cityName}</p>
+                      <div className="flex justify-between items-center text-sm">
+                        <span className="text-slate-500">Listings</span>
+                        <span className="font-medium text-slate-700">{suburb.listingCount || 0}</span>
+                      </div>
+                    </a>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Interactive Map */}
+            {province.latitude && province.longitude && (
+              <div className="py-4">
+                <h2 className="text-2xl font-bold mb-6">Explore {province.name} on the Map</h2>
+                <InteractiveMap
+                  center={{
+                    lat: Number(province.latitude),
+                    lng: Number(province.longitude),
+                  }}
+                  viewport={province.viewport_ne_lat ? {
+                    ne_lat: Number(province.viewport_ne_lat),
+                    ne_lng: Number(province.viewport_ne_lng),
+                    sw_lat: Number(province.viewport_sw_lat),
+                    sw_lng: Number(province.viewport_sw_lng),
+                  } : undefined}
+                />
+              </div>
+            )}
+
+            {/* Amenities Section */}
+            <AmenitiesSection 
+              location={{
+                latitude: Number(province.latitude),
+                longitude: Number(province.longitude)
+              }} 
+            />
+          </div>
+        }
+
+        sidebarContent={
+          <SEOTextBlock
+            title={`About Real Estate in ${province.name}`}
+            locationName={province.name}
+            locationType="province"
+            stats={stats}
+            content={province.description || undefined}
+          />
+        }
+
+        finalCTA={
+          <FinalCTA 
+            locationName={province.name}
+            provinceSlug={provinceSlug}
+          />
+        }
       />
     </div>
   );
