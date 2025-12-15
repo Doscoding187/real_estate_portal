@@ -381,12 +381,62 @@ export const locationPagesService = {
         }
     ];
 
+    // 7. High Demand Investment Projects (Mock)
+    const investmentProjects = [
+        {
+            id: 301,
+            title: "The Leonardo",
+            developer: "Legacy Group",
+            image: "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?q=80&w=1000&auto=format&fit=crop",
+            priceRange: "R 3.5M - R 250M",
+            location: `Sandton, ${province.name}`,
+            config: "1, 2, 3 Beds & Penthouse"
+        },
+        {
+            id: 302,
+            title: "Steyn City",
+            developer: "Steyn City Properties",
+            image: "https://images.unsplash.com/photo-1600596542815-2a4d9fddace7?q=80&w=1000&auto=format&fit=crop",
+            priceRange: "R 2.2M - R 18M",
+            location: `Midrand, ${province.name}`,
+            config: "Land, Apartments, Houses"
+        },
+        {
+            id: 303,
+            title: "Ellipse Waterfall",
+            developer: "Attacq & Tricolt",
+            image: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=1000&auto=format&fit=crop",
+            priceRange: "R 1.6M - R 8M",
+            location: `Waterfall, ${province.name}`,
+            config: "Executive Apartments"
+        },
+        {
+            id: 304,
+            title: "Harbour Arch",
+            developer: "Amdec Group",
+            image: "https://images.unsplash.com/photo-1448630360428-65456885c650?q=80&w=1000&auto=format&fit=crop",
+            priceRange: "R 2.5M - R 12M",
+            location: `Cape Town, ${province.name}`,
+            config: "Studio, 1, 2, 3 Beds"
+        },
+        {
+            id: 305,
+            title: "Umhlanga Arch",
+            developer: "Multiple",
+            image: "https://images.unsplash.com/photo-1496568817574-5c94c5401c7c?q=80&w=1000&auto=format&fit=crop",
+            priceRange: "R 3M - R 15M",
+            location: `Umhlanga, ${province.name}`,
+            config: "Luxury Apartments"
+        }
+    ];
+
     return {
       province,
       cities: cityList,
       featuredDevelopments,
       trendingSuburbs,
       topDevelopers,
+      investmentProjects,
 
       featuredDevelopments,
       trendingSuburbs,
@@ -700,8 +750,58 @@ export const locationPagesService = {
         }
     ];
 
+    // 7. High Demand Investment Projects (Mock)
+    const investmentProjects = [
+        {
+            id: 401,
+            title: "The Leonardo",
+            developer: "Legacy Group",
+            image: "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?q=80&w=1000&auto=format&fit=crop",
+            priceRange: "R 3.5M - R 250M",
+            location: `Sandton, ${city.name}`,
+            config: "1, 2, 3 Beds & Penthouse"
+        },
+        {
+            id: 402,
+            title: "Steyn City",
+            developer: "Steyn City Properties",
+            image: "https://images.unsplash.com/photo-1600596542815-2a4d9fddace7?q=80&w=1000&auto=format&fit=crop",
+            priceRange: "R 2.2M - R 18M",
+            location: `Midrand, ${city.name}`,
+            config: "Land, Apartments, Houses"
+        },
+        {
+            id: 403,
+            title: "Ellipse Waterfall",
+            developer: "Attacq & Tricolt",
+            image: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=1000&auto=format&fit=crop",
+            priceRange: "R 1.6M - R 8M",
+            location: `Waterfall, ${city.name}`,
+            config: "Executive Apartments"
+        },
+        {
+            id: 404,
+            title: "Harbour Arch",
+            developer: "Amdec Group",
+            image: "https://images.unsplash.com/photo-1448630360428-65456885c650?q=80&w=1000&auto=format&fit=crop",
+            priceRange: "R 2.5M - R 12M",
+            location: `Cape Town, ${city.name}`,
+            config: "Studio, 1, 2, 3 Beds"
+        },
+        {
+            id: 405,
+            title: "Umhlanga Arch",
+            developer: "Multiple",
+            image: "https://images.unsplash.com/photo-1496568817574-5c94c5401c7c?q=80&w=1000&auto=format&fit=crop",
+            priceRange: "R 3M - R 15M",
+            location: `Umhlanga, ${city.name}`,
+            config: "Luxury Apartments"
+        }
+    ];
+
       return {
         topDevelopers,
+        investmentProjects, // Added
         city,
         suburbs: suburbList ?? [],
         featuredProperties: (featuredProperties ?? [])

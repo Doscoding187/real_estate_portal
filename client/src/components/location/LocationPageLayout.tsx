@@ -12,7 +12,10 @@ interface LocationPageLayoutProps {
   topLocalities?: React.ReactNode;
   highDemandDevelopments?: React.ReactNode;
   recommendedAgents?: React.ReactNode;
+  recommendedAgents?: React.ReactNode;
   developerShowcase?: React.ReactNode;
+  investmentShowcase?: React.ReactNode;
+  buyerCTA?: React.ReactNode;
   buyerCTA?: React.ReactNode;
   listingsFeed?: React.ReactNode;
   sellerCTA?: React.ReactNode;
@@ -30,6 +33,7 @@ export const LocationPageLayout: React.FC<LocationPageLayoutProps> = ({
   highDemandDevelopments,
   recommendedAgents,
   developerShowcase,
+  investmentShowcase,
   buyerCTA,
   listingsFeed,
   sellerCTA,
@@ -105,7 +109,14 @@ export const LocationPageLayout: React.FC<LocationPageLayoutProps> = ({
           </section>
         )}
 
-         {/* 1️⃣1️⃣ Buyer CTA */}
+        {/* 1️⃣1️⃣ High Demand Projects (Investment) */}
+        {investmentShowcase && (
+          <section id="investment-projects" className="scroll-mt-24">
+            {investmentShowcase}
+          </section>
+        )}
+
+         {/* 1️⃣2️⃣ Buyer CTA */}
          {buyerCTA && (
           <section className="my-16">
             {buyerCTA}
