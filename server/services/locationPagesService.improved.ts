@@ -161,7 +161,7 @@ export const locationPagesService = {
         name: developments.name,
         slug: developments.slug,
         images: developments.images,
-        price: developments.price,
+        price: developments.priceFrom,
         city: developments.city,
         province: developments.province,
         isHotSelling: developments.isHotSelling,
