@@ -71,20 +71,18 @@ export const locationPagesService = {
 
     // 2. Get Child Cities (Top 12 by listing count or default)
     console.log('[LocationPages] Fetching cities...');
-    const cityListingCount = sql<number>`(SELECT COUNT(*) FROM ${properties} WHERE ${properties.cityId} = ${cities.id} AND ${properties.status} = 'published')`;
-    
     const cityList = await db
       .select({
         id: cities.id,
         name: cities.name,
         slug: cities.slug,
         isMetro: cities.isMetro,
-        listingCount: cityListingCount,
+        listingCount: sql<number>`(SELECT COUNT(*) FROM ${properties} WHERE ${properties.cityId} = ${cities.id} AND ${properties.status} = 'published') AS listingCount`,
         avgPrice: sql<number>`(SELECT AVG(${properties.price}) FROM ${properties} WHERE ${properties.cityId} = ${cities.id} AND ${properties.status} = 'published')`
       })
       .from(cities)
       .where(eq(cities.provinceId, province.id))
-      .orderBy(desc(cityListingCount)) // Use explicit DESC helper which we confirmed works
+      .orderBy(sql`listingCount DESC`)
       .limit(12);
 
     console.log(`[LocationPages] Fetched ${cityList.length} cities`);
@@ -113,12 +111,12 @@ export const locationPagesService = {
         slug: suburbs.slug,
         cityName: cities.name,
         citySlug: cities.slug,
-        listingCount: suburbListingCount
+        listingCount: sql<number>`(SELECT COUNT(*) FROM ${properties} WHERE ${properties.suburbId} = ${suburbs.id} AND ${properties.status} = 'published') AS listingCount`
       })
       .from(suburbs)
       .leftJoin(cities, eq(suburbs.cityId, cities.id))
       .where(eq(cities.provinceId, province.id))
-      .orderBy(desc(suburbListingCount))
+      .orderBy(sql`listingCount DESC`)
       .limit(10);
       
     console.log(`[LocationPages] Fetched ${trendingSuburbs.length} trending suburbs`);
