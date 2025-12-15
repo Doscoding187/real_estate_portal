@@ -1239,6 +1239,27 @@ export const locationPagesService = {
       .from(suburbPriceAnalytics)
       .where(eq(suburbPriceAnalytics.suburbId, suburb.id))
       .limit(1);
+
+    // 5. Sub-localities for region-type suburbs (e.g., Sandton contains Morningside, Bryanston)
+    const subLocalitiesMap: Record<string, Array<{ name: string; slug: string; listingCount: number }>> = {
+      'sandton': [
+        { name: 'Morningside', slug: 'morningside', listingCount: 45 },
+        { name: 'Bryanston', slug: 'bryanston', listingCount: 62 },
+        { name: 'Sandown', slug: 'sandown', listingCount: 38 },
+        { name: 'Rivonia', slug: 'rivonia', listingCount: 51 },
+        { name: 'Sunninghill', slug: 'sunninghill', listingCount: 29 },
+        { name: 'Lonehill', slug: 'lonehill', listingCount: 22 },
+      ],
+      'fourways': [
+        { name: 'Lonehill', slug: 'lonehill', listingCount: 22 },
+        { name: 'Dainfern', slug: 'dainfern', listingCount: 35 },
+        { name: 'Cedar Lakes', slug: 'cedar-lakes', listingCount: 18 },
+      ],
+      'camps-bay': [
+        { name: 'Bakoven', slug: 'bakoven', listingCount: 12 },
+        { name: 'Glen Beach', slug: 'glen-beach', listingCount: 8 },
+      ],
+    };
     
     return {
       suburb,
@@ -1249,7 +1270,8 @@ export const locationPagesService = {
         saleCount: Number(stats?.saleCount || 0)
       },
       listings: localProperties.map(p => ({...p, images: typeof p.images === 'string' ? JSON.parse(p.images) : p.images})),
-      analytics: analytics || null
+      analytics: analytics || null,
+      subLocalities: subLocalitiesMap[suburbSlug] || []
     };
   },
 

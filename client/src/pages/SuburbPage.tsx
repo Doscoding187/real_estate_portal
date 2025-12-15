@@ -50,7 +50,7 @@ export default function SuburbPage({ params }: { params: { province: string; cit
     );
   }
 
-  const { suburb, listings, stats } = data;
+  const { suburb, listings, stats, subLocalities = [] } = data;
 
   return (
     <div className="min-h-screen bg-white">
@@ -129,6 +129,34 @@ export default function SuburbPage({ params }: { params: { province: string; cit
         // The core content for Suburb page is LISTINGS
         listingsFeed={
           <div className="space-y-12">
+            {/* Sub-Localities Grid for region-type suburbs */}
+            {subLocalities && subLocalities.length > 0 && (
+              <div className="py-8">
+                <div className="flex items-center justify-between mb-8">
+                  <h2 className="text-2xl font-bold text-slate-900">Neighborhoods in {suburb.name}</h2>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                  {subLocalities.map((loc: any) => (
+                    <a
+                      key={loc.slug}
+                      href={`/${provinceSlug}/${citySlug}/${loc.slug}`}
+                      className="rounded-2xl border border-slate-100 bg-white shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer group p-4"
+                    >
+                      <h3 className="font-semibold text-slate-900 mb-2 group-hover:text-blue-600 transition-colors">
+                        {loc.name}
+                      </h3>
+                      <div className="flex justify-between items-center text-sm">
+                        <span className="text-slate-500 text-xs uppercase tracking-wide font-medium">Listings</span>
+                        <span className="font-bold text-slate-700 bg-slate-50 px-2 py-0.5 rounded-md group-hover:bg-blue-50 group-hover:text-blue-700 transition-colors">
+                          {loc.listingCount}
+                        </span>
+                      </div>
+                    </a>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <TabbedListingSection
         title={`Homes in ${suburb.name}`}
         description={`Explore a variety of properties for sale in ${suburb.name}, from houses to apartments.`}
