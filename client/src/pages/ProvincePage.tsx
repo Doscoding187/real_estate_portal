@@ -182,16 +182,17 @@ export default function ProvincePage({ params }: { params: { province: string } 
           </div>
         }
 
+        popularLocations={
+          <LocationGrid 
+            title={`Popular Cities in ${province.name}`} 
+            items={cities} 
+            parentSlug={provinceSlug}
+            type="city"
+          />
+        }
+
         listingsFeed={
           <div className="space-y-12">
-            {/* Cities Grid */}
-            <LocationGrid 
-              title={`Popular Cities in ${province.name}`} 
-              items={cities} 
-              parentSlug={provinceSlug}
-              type="city"
-            />
-
             {/* Trending Suburbs */}
             {trendingSuburbs && trendingSuburbs.length > 0 && (
               <div className="bg-slate-50 -mx-4 md:-mx-8 px-4 md:px-8 py-12">
@@ -231,6 +232,7 @@ export default function ProvincePage({ params }: { params: { province: string } 
                     ne_lng: Number(province.viewport_ne_lng),
                     sw_lat: Number(province.viewport_sw_lat),
                     sw_lng: Number(province.viewport_sw_lng),
+                    header: undefined
                   } : undefined}
                 />
               </div>

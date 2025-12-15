@@ -12,6 +12,7 @@ interface LocationPageLayoutProps {
   topLocalities?: any[]; // Keep existing for data passing if needed
   topLocalitiesShowcase?: React.ReactNode;
   highDemandDevelopments?: React.ReactNode;
+  popularLocations?: React.ReactNode;
   recommendedAgents?: React.ReactNode;
   agencyShowcase?: React.ReactNode;
   developerShowcase?: React.ReactNode;
@@ -32,6 +33,7 @@ export const LocationPageLayout: React.FC<LocationPageLayoutProps> = ({
   topLocalities,
   topLocalitiesShowcase,
   highDemandDevelopments,
+  popularLocations,
   recommendedAgents,
   agencyShowcase,
   developerShowcase,
@@ -97,6 +99,13 @@ export const LocationPageLayout: React.FC<LocationPageLayoutProps> = ({
         {highDemandDevelopments && (
           <section id="high-demand-developments" className="scroll-mt-24">
             {highDemandDevelopments}
+          </section>
+        )}
+
+        {/* 8️⃣ Popular Locations (moved up) */}
+        {popularLocations && (
+          <section id="popular-locations" className="scroll-mt-24">
+            {popularLocations}
           </section>
         )}
 

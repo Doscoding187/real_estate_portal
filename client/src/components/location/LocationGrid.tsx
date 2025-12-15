@@ -31,39 +31,44 @@ export function LocationGrid({ title, items, parentSlug, type }: LocationGridPro
   };
 
   return (
-    <div className="py-12 bg-slate-50/50">
+    <div className="py-12 bg-white/50 backdrop-blur-sm">
       <div className="container">
-        <h2 className="text-2xl font-bold mb-8 text-slate-900">{title}</h2>
+        <div className="flex items-center justify-between mb-8">
+            <h2 className="text-2xl font-bold text-slate-900">{title}</h2>
+        </div>
+        
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
           {items.map((item) => (
             <Link key={item.id} href={getUrl(item.name)}>
-              <Card className="hover:shadow-md transition-shadow cursor-pointer border-slate-200 group h-full">
-                <CardContent className="p-4 flex flex-col h-full justify-between">
+              <div className="rounded-2xl border border-slate-100 bg-white shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer group h-full">
+                <div className="p-5 flex flex-col h-full justify-between">
                   <div>
-                    <h3 className="font-semibold text-slate-800 mb-1 group-hover:text-primary transition-colors flex items-center justify-between">
+                    <h3 className="font-semibold text-slate-900 mb-1 group-hover:text-blue-600 transition-colors flex items-center justify-between">
                       {item.name}
-                      <ArrowRight className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity -ml-4 group-hover:ml-0" />
+                      <ArrowRight className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity transform translate-x-[-10px] group-hover:translate-x-0 text-blue-600" />
                     </h3>
-                    <div className="flex items-center gap-1 text-xs text-slate-500 mb-3">
-                      <MapPin className="h-3 w-3" />
+                    <div className="flex items-center gap-1.5 text-xs font-medium text-slate-500 mb-4">
+                      <div className="p-1 rounded-full bg-slate-100 group-hover:bg-blue-50 transition-colors">
+                        <MapPin className="h-3 w-3 text-slate-400 group-hover:text-blue-500" />
+                      </div>
                       <span>{type === 'city' ? 'City' : 'Suburb'}</span>
                     </div>
                   </div>
                   
-                  <div className="mt-auto space-y-2">
+                  <div className="mt-auto pt-4 border-t border-slate-50 space-y-2">
                     <div className="flex justify-between items-center text-sm">
-                      <span className="text-slate-500">Listings</span>
-                      <span className="font-medium text-slate-700">{item.listingCount}</span>
+                      <span className="text-slate-500 text-xs uppercase tracking-wide font-medium">Listings</span>
+                      <span className="font-bold text-slate-700 bg-slate-50 px-2 py-0.5 rounded-md group-hover:bg-blue-50 group-hover:text-blue-700 transition-colors">{item.listingCount}</span>
                     </div>
                     {item.avgPrice && (
                       <div className="flex justify-between items-center text-sm">
-                        <span className="text-slate-500">Avg Price</span>
-                        <span className="font-medium text-slate-700">{formatPrice(item.avgPrice)}</span>
+                        <span className="text-slate-500 text-xs uppercase tracking-wide font-medium">Avg</span>
+                        <span className="font-bold text-slate-900">{formatPrice(item.avgPrice)}</span>
                       </div>
                     )}
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
             </Link>
           ))}
         </div>
