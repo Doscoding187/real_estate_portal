@@ -430,6 +430,70 @@ export const locationPagesService = {
         }
     ];
 
+    // 8. Recommended Agencies (Mock)
+    const recommendedAgencies = [
+        {
+            id: 501,
+            name: "Cape Town Luxury Estates",
+            logo: "https://placehold.co/60x60/003366/ffffff?text=CTL",
+            type: "Agency",
+            badges: ["TRUSTING", "EXPERT", "PRO"],
+            areas: ["Clifton", "Bantry Bay", "Sea Point"],
+            experience: "15 years",
+            properties: 120
+        },
+        {
+            id: 502,
+            name: "Sandton Property Group",
+            logo: "https://placehold.co/60x60/D4AF37/ffffff?text=SPG",
+            type: "Agency",
+            badges: ["TRUSTING", "EXPERT"],
+            areas: ["Sandton", "Bryanston", "Hyde Park"],
+            experience: "8 years",
+            properties: 95
+        },
+        {
+            id: 503,
+            name: "Sarah Jenkins",
+            logo: "https://randomuser.me/api/portraits/women/44.jpg",
+            type: "Agent",
+            badges: ["PRO", "EXPERT"],
+            areas: ["Midrand", "Waterfall"],
+            experience: "12 years",
+            properties: 42
+        },
+        {
+            id: 504,
+            name: "Durban Coastal Living",
+            logo: "https://placehold.co/60x60/008080/ffffff?text=DCL",
+            type: "Agency",
+            badges: ["TRUSTING"],
+            areas: ["Umhlanga", "Ballito"],
+            experience: "20 years",
+            properties: 156
+        },
+        {
+            id: 505,
+            name: "Pretoria East Estates",
+            logo: "https://placehold.co/60x60/800000/ffffff?text=PEE",
+            type: "Agency",
+            badges: ["EXPERT"],
+            areas: ["Menlyn", "Faerie Glen"],
+            experience: "10 years",
+            properties: 68
+        },
+         {
+            id: 506,
+            name: "Michael Nkosi",
+            logo: "https://randomuser.me/api/portraits/men/32.jpg",
+            type: "Agent",
+            badges: ["PRO"],
+            areas: ["Soweto", "Johannesburg South"],
+            experience: "5 years",
+            properties: 24
+        }
+    ];
+
     return {
       province,
       cities: cityList,
@@ -437,6 +501,7 @@ export const locationPagesService = {
       trendingSuburbs,
       topDevelopers,
       investmentProjects,
+      recommendedAgencies,
 
       featuredDevelopments,
       trendingSuburbs,
@@ -799,9 +864,74 @@ export const locationPagesService = {
         }
     ];
 
+    // 8. Recommended Agencies (Mock - Contextual)
+    const recommendedAgencies = [
+        {
+            id: 601,
+            name: `${city.name} Premier Properties`,
+            logo: "https://placehold.co/60x60/003366/ffffff?text=CPP",
+            type: "Agency",
+            badges: ["TRUSTING", "EXPERT", "PRO"],
+            areas: [city.name, "Surrounds", "CBD"],
+            experience: "15 years",
+            properties: 120
+        },
+        {
+            id: 602,
+            name: "Golden Key Estates",
+            logo: "https://placehold.co/60x60/D4AF37/ffffff?text=GKE",
+            type: "Agency",
+            badges: ["TRUSTING", "EXPERT"],
+            areas: ["Suburbs", "North"],
+            experience: "8 years",
+            properties: 95
+        },
+        {
+            id: 603,
+            name: "Sarah Jenkins",
+            logo: "https://randomuser.me/api/portraits/women/44.jpg",
+            type: "Agent",
+            badges: ["PRO", "EXPERT"],
+            areas: [city.name, "West"],
+            experience: "12 years",
+            properties: 42
+        },
+        {
+            id: 604,
+            name: "Urban Living",
+            logo: "https://placehold.co/60x60/008080/ffffff?text=URL",
+            type: "Agency",
+            badges: ["TRUSTING"],
+            areas: ["City Centre", "East"],
+            experience: "20 years",
+            properties: 156
+        },
+        {
+            id: 605,
+            name: "Elite Homes",
+            logo: "https://placehold.co/60x60/800000/ffffff?text=ETH",
+            type: "Agency",
+            badges: ["EXPERT"],
+            areas: ["South", "Gardens"],
+            experience: "10 years",
+            properties: 68
+        },
+         {
+            id: 606,
+            name: "Michael Nkosi",
+            logo: "https://randomuser.me/api/portraits/men/32.jpg",
+            type: "Agent",
+            badges: ["PRO"],
+            areas: ["Township", "Metro"],
+            experience: "5 years",
+            properties: 24
+        }
+    ];
+
       return {
         topDevelopers,
-        investmentProjects, // Added
+        investmentProjects,
+        recommendedAgencies,
         city,
         suburbs: suburbList ?? [],
         featuredProperties: (featuredProperties ?? [])

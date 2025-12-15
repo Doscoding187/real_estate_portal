@@ -26,6 +26,7 @@ import { FeaturedDevelopers } from '@/components/location/FeaturedDevelopers';
 import { RecommendedAgents } from '@/components/location/RecommendedAgents';
 import { TopDevelopersCarousel } from '@/components/location/TopDevelopersCarousel';
 import { HighDemandProjectsCarousel } from '@/components/location/HighDemandProjectsCarousel';
+import { RecommendedAgenciesCarousel } from '@/components/location/RecommendedAgenciesCarousel';
 
 export default function CityPage({ params }: { params: { province: string; city: string } }) {
   const [, navigate] = useLocation();
@@ -74,7 +75,8 @@ export default function CityPage({ params }: { params: { province: string; city:
     propertyTypes = [],
     topLocalities = [],
     topDevelopers = [],
-    investmentProjects = []
+    investmentProjects = [],
+    recommendedAgencies = []
   } = data || {};
 
   // Additional validation - city must exist
@@ -213,6 +215,15 @@ export default function CityPage({ params }: { params: { province: string; city:
           investmentProjects && investmentProjects.length > 0 ? (
             <HighDemandProjectsCarousel 
               projects={investmentProjects} 
+              locationName={city.name} 
+            />
+          ) : undefined
+        }
+
+        agencyShowcase={
+          recommendedAgencies && recommendedAgencies.length > 0 ? (
+            <RecommendedAgenciesCarousel 
+              agencies={recommendedAgencies} 
               locationName={city.name} 
             />
           ) : undefined

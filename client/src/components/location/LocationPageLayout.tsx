@@ -13,6 +13,7 @@ interface LocationPageLayoutProps {
   highDemandDevelopments?: React.ReactNode;
   recommendedAgents?: React.ReactNode;
   recommendedAgents?: React.ReactNode;
+  agencyShowcase?: React.ReactNode;
   developerShowcase?: React.ReactNode;
   investmentShowcase?: React.ReactNode;
   buyerCTA?: React.ReactNode;
@@ -32,6 +33,7 @@ export const LocationPageLayout: React.FC<LocationPageLayoutProps> = ({
   topLocalities,
   highDemandDevelopments,
   recommendedAgents,
+  agencyShowcase,
   developerShowcase,
   investmentShowcase,
   buyerCTA,
@@ -99,6 +101,13 @@ export const LocationPageLayout: React.FC<LocationPageLayoutProps> = ({
         {recommendedAgents && (
           <section id="agents" className="scroll-mt-24">
              {recommendedAgents}
+          </section>
+        )}
+
+        {/* 9️⃣b Recommended Agencies */}
+        {agencyShowcase && (
+          <section id="agencies" className="scroll-mt-24">
+             {agencyShowcase}
           </section>
         )}
 

@@ -18,6 +18,7 @@ import { Helmet } from 'react-helmet';
 import { LocationSchema } from '@/components/location/LocationSchema';
 import { TopDevelopersCarousel } from '@/components/location/TopDevelopersCarousel';
 import { HighDemandProjectsCarousel } from '@/components/location/HighDemandProjectsCarousel';
+import { RecommendedAgenciesCarousel } from '@/components/location/RecommendedAgenciesCarousel';
 
 export default function ProvincePage({ params }: { params: { province: string } }) {
   const [, navigate] = useLocation();
@@ -48,7 +49,7 @@ export default function ProvincePage({ params }: { params: { province: string } 
     );
   }
 
-  const { province, cities, featuredDevelopments, trendingSuburbs, stats, topDevelopers, investmentProjects } = data;
+  const { province, cities, featuredDevelopments, trendingSuburbs, stats, topDevelopers, investmentProjects, recommendedAgencies } = data;
 
   return (
     <div className="min-h-screen bg-white">
@@ -147,6 +148,15 @@ export default function ProvincePage({ params }: { params: { province: string } 
           investmentProjects && investmentProjects.length > 0 ? (
             <HighDemandProjectsCarousel 
               projects={investmentProjects} 
+              locationName={province.name} 
+            />
+          ) : undefined
+        }
+
+        agencyShowcase={
+          recommendedAgencies && recommendedAgencies.length > 0 ? (
+            <RecommendedAgenciesCarousel 
+              agencies={recommendedAgencies} 
               locationName={province.name} 
             />
           ) : undefined
