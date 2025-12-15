@@ -20,6 +20,7 @@ import { TopDevelopersCarousel } from '@/components/location/TopDevelopersCarous
 import { HighDemandProjectsCarousel } from '@/components/location/HighDemandProjectsCarousel';
 import { RecommendedAgenciesCarousel } from '@/components/location/RecommendedAgenciesCarousel';
 import { LocationTopLocalities } from '@/components/location/LocationTopLocalities';
+import { TrendingSuburbsCarousel } from '@/components/location/TrendingSuburbsCarousel';
 import { MapPin, ArrowRight } from 'lucide-react';
 
 export default function ProvincePage({ params }: { params: { province: string } }) {
@@ -194,41 +195,13 @@ export default function ProvincePage({ params }: { params: { province: string } 
 
         listingsFeed={
           <div className="space-y-12">
-            {/* Trending Suburbs */}
+            {/* Trending Suburbs Carousel */}
             {trendingSuburbs && trendingSuburbs.length > 0 && (
-              <div className="py-12">
-                <div className="flex items-center justify-between mb-8">
-                   <h2 className="text-2xl font-bold text-slate-900">Trending Suburbs in {province.name}</h2>
-                </div>
-                
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-                  {trendingSuburbs.map((suburb: any) => (
-                    <a 
-                      key={suburb.id} 
-                      href={`/${provinceSlug}/${suburb.citySlug}/${suburb.slug}`}
-                      className="rounded-2xl border border-slate-100 bg-white shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer group p-5 flex flex-col h-full justify-between"
-                    >
-                      <div>
-                        <h3 className="font-semibold text-slate-900 mb-1 group-hover:text-blue-600 transition-colors flex items-center justify-between">
-                          {suburb.name}
-                          <ArrowRight className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity transform translate-x-[-10px] group-hover:translate-x-0 text-blue-600" />
-                        </h3>
-                         <div className="flex items-center gap-1.5 text-xs font-medium text-slate-500 mb-4">
-                            <div className="p-1 rounded-full bg-slate-100 group-hover:bg-blue-50 transition-colors">
-                              <MapPin className="h-3 w-3 text-slate-400 group-hover:text-blue-500" />
-                            </div>
-                            <span>{suburb.cityName}</span>
-                          </div>
-                      </div>
-                      
-                      <div className="mt-auto pt-4 border-t border-slate-50 flex justify-between items-center text-sm">
-                        <span className="text-slate-500 text-xs uppercase tracking-wide font-medium">Listings</span>
-                        <span className="font-bold text-slate-700 bg-slate-50 px-2 py-0.5 rounded-md group-hover:bg-blue-50 group-hover:text-blue-700 transition-colors">{suburb.listingCount || 0}</span>
-                      </div>
-                    </a>
-                  ))}
-                </div>
-              </div>
+              <TrendingSuburbsCarousel
+                suburbs={trendingSuburbs}
+                provinceName={province.name}
+                provinceSlug={provinceSlug}
+              />
             )}
           </div>
         }
