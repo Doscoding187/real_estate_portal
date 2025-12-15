@@ -84,11 +84,7 @@ export const LocationPageLayout: React.FC<LocationPageLayoutProps> = ({
         )}
 
         {/* 7️⃣ Top Localities (Market Intelligence) */}
-        {topLocalities && (
-          <section id="market-intelligence" className="scroll-mt-24">
-            {topLocalities}
-          </section>
-        )}
+
 
         {/* 6️⃣ Top Localities - NEW SECTION */}
         {topLocalitiesShowcase && (

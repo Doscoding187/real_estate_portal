@@ -6,7 +6,7 @@ import { SearchStage } from '@/components/location/SearchStage';
 import { FeaturedPropertiesCarousel } from '@/components/location/FeaturedPropertiesCarousel';
 
 import { LocationPropertyTypeExplorer } from '@/components/location/LocationPropertyTypeExplorer';
-import { LocationTopLocalities } from '@/components/location/LocationTopLocalities';
+
 
 // Legacy components to be adapted or routed
 import { LocationGrid } from '@/components/location/LocationGrid';
