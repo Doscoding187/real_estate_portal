@@ -83,7 +83,7 @@ export const locationPagesService = {
       })
       .from(cities)
       .where(eq(cities.provinceId, province.id))
-      .orderBy(desc(cityListingCount))
+      .orderBy(desc(cityListingCount)) // Use explicit DESC helper which we confirmed works
       .limit(12);
 
     // 3. Featured Developments in Province
@@ -289,7 +289,7 @@ export const locationPagesService = {
     return {
       city,
       suburbs: suburbList || [],
-      featuredProperties: (featuredProperties || []).map(p => ({
+      featuredProperties: (featuredProperties || []).map((p: any) => ({
         ...p, 
         images: typeof p.images === 'string' ? JSON.parse(p.images) : p.images
       })),
@@ -298,7 +298,7 @@ export const locationPagesService = {
         totalListings: Number(stats?.totalListings || 0),
         avgPrice: Number(stats?.avgPrice || 0)
       },
-      propertyTypes: propertyTypeStats.map(pt => ({
+      propertyTypes: propertyTypeStats.map((pt: any) => ({
         type: pt.type,
         count: Number(pt.count),
         avgPrice: Math.round(Number(pt.avgPrice) || 0)
@@ -431,7 +431,7 @@ export const locationPagesService = {
         rentalCount: Number(stats?.rentalCount || 0),
         saleCount: Number(stats?.saleCount || 0)
       },
-      listings: localProperties.map(p => ({...p, images: typeof p.images === 'string' ? JSON.parse(p.images) : p.images})),
+      listings: localProperties.map((p: any) => ({...p, images: typeof p.images === 'string' ? JSON.parse(p.images) : p.images})),
       analytics: analytics || null
     };
   }
