@@ -1163,11 +1163,47 @@ export const locationPagesService = {
     if (!suburb) {
       console.log(`[LocationPages] Suburb not found for slug: "${suburbSlug}"`);
       
-      // Debug: Show available suburbs
-      const allSuburbs = await db.select({ name: suburbs.name, slug: suburbs.slug }).from(suburbs).limit(10);
-      console.log(`[LocationPages] Sample suburbs:`, allSuburbs);
-      
-      return null;
+      // FALLBACK: Create a mock suburb object for known suburbs that might not be in DB
+      const knownSuburbs: Record<string, { name: string; cityName: string; lat: number; lng: number }> = {
+        'sandton': { name: 'Sandton', cityName: 'Johannesburg', lat: -26.1076, lng: 28.0567 },
+        'rosebank': { name: 'Rosebank', cityName: 'Johannesburg', lat: -26.1461, lng: 28.0439 },
+        'morningside': { name: 'Morningside', cityName: 'Sandton', lat: -26.0900, lng: 28.0700 },
+        'bryanston': { name: 'Bryanston', cityName: 'Sandton', lat: -26.0600, lng: 28.0200 },
+        'fourways': { name: 'Fourways', cityName: 'Johannesburg', lat: -26.0166, lng: 28.0124 },
+        'melrose': { name: 'Melrose', cityName: 'Johannesburg', lat: -26.1400, lng: 28.0700 },
+        'hyde-park': { name: 'Hyde Park', cityName: 'Johannesburg', lat: -26.1200, lng: 28.0400 },
+        'parktown': { name: 'Parktown', cityName: 'Johannesburg', lat: -26.1700, lng: 28.0400 },
+        'houghton': { name: 'Houghton', cityName: 'Johannesburg', lat: -26.1600, lng: 28.0600 },
+        'waterfall': { name: 'Waterfall', cityName: 'Midrand', lat: -25.9833, lng: 28.0833 },
+        'camps-bay': { name: 'Camps Bay', cityName: 'Cape Town', lat: -33.9500, lng: 18.3800 },
+        'sea-point': { name: 'Sea Point', cityName: 'Cape Town', lat: -33.9167, lng: 18.3833 },
+        'clifton': { name: 'Clifton', cityName: 'Cape Town', lat: -33.9333, lng: 18.3750 },
+        'umhlanga': { name: 'Umhlanga', cityName: 'Durban', lat: -29.7333, lng: 31.0833 },
+        'ballito': { name: 'Ballito', cityName: 'Durban', lat: -29.5333, lng: 31.2167 },
+      };
+
+      const mockSuburbData = knownSuburbs[suburbSlug];
+      if (mockSuburbData) {
+        console.log(`[LocationPages] Using mock fallback for known suburb: ${mockSuburbData.name}`);
+        suburb = {
+          id: 99900 + Object.keys(knownSuburbs).indexOf(suburbSlug),
+          name: mockSuburbData.name,
+          slug: suburbSlug,
+          cityId: 1,
+          cityName: mockSuburbData.cityName,
+          citySlug: mockSuburbData.cityName.toLowerCase().replace(/\s+/g, '-'),
+          provinceName: provinceSlug.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+          provinceSlug: provinceSlug,
+          latitude: mockSuburbData.lat,
+          longitude: mockSuburbData.lng
+        };
+      } else {
+        // Debug: Show available suburbs
+        const allSuburbs = await db.select({ name: suburbs.name, slug: suburbs.slug }).from(suburbs).limit(10);
+        console.log(`[LocationPages] Sample suburbs:`, allSuburbs);
+        
+        return null;
+      }
     }
 
     console.log(`[LocationPages] Found suburb: ${suburb.name} (id: ${suburb.id})`);

@@ -22,8 +22,8 @@ export function AmenitiesSection({ location }: AmenitiesSectionProps) {
   ];
 
   return (
-    <div className="bg-white border-y border-slate-100 py-12">
-      <div className="container space-y-12">
+    <div className="bg-white border-y border-slate-100 py-12 w-full">
+      <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
         {/* Dynamic Map Section */}
         {location && location.latitude && location.longitude && (
           <div>
