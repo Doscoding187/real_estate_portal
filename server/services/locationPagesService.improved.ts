@@ -138,12 +138,17 @@ export const locationPagesService = {
         name: cities.name,
         slug: cities.slug,
         isMetro: cities.isMetro,
-        listingCount: sql<number>`(SELECT COUNT(*) FROM ${properties} WHERE ${properties.cityId} = ${cities.id} AND ${properties.status} = 'published')`,
-        avgPrice: sql<number>`(SELECT AVG(${properties.price}) FROM ${properties} WHERE ${properties.cityId} = ${cities.id} AND ${properties.status} = 'published')`
+        listingCount: sql<number>`count(${properties.id})`,
+        avgPrice: sql<number>`avg(cast(${properties.price} as decimal(12,2)))`
       })
       .from(cities)
+      .leftJoin(properties, and(
+        eq(properties.cityId, cities.id),
+        eq(properties.status, 'published')
+      ))
       .where(eq(cities.provinceId, province.id))
-      .orderBy(desc(sql`listingCount`))
+      .groupBy(cities.id)
+      .orderBy(desc(sql`count(${properties.id})`))
       .limit(12);
 
     // 3. Featured Developments in Province
@@ -169,11 +174,7 @@ export const locationPagesService = {
       .limit(6);
 
     // 4. Trending Suburbs
-    // 4. Trending Suburbs (Ranked by new listings in last 30 days)
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-    const thirtyDaysAgoStr = thirtyDaysAgo.toISOString().slice(0, 19).replace('T', ' ');
-
+    // 4. Trending Suburbs (Ranked by listing count - simplified for TiDB compatibility)
     const trendingSuburbs = await db
       .select({
         id: suburbs.id,
@@ -181,19 +182,18 @@ export const locationPagesService = {
         slug: suburbs.slug,
         cityName: cities.name,
         citySlug: cities.slug,
-        listingCount: sql<number>`(SELECT COUNT(*) FROM ${properties} WHERE ${properties.suburbId} = ${suburbs.id} AND ${properties.status} = 'published')`,
-        growth: sql<number>`(
-          SELECT COUNT(*) * 10 
-          FROM ${properties} 
-          WHERE ${properties.suburbId} = ${suburbs.id} 
-          AND ${properties.status} = 'published'
-          AND ${properties.createdAt} >= ${thirtyDaysAgoStr}
-        )` // Simplified "growth" score based on recent activity * weight
+        listingCount: sql<number>`count(${properties.id})`,
+        growth: sql<number>`count(${properties.id})` // Simplified growth = listing count
       })
       .from(suburbs)
       .leftJoin(cities, eq(suburbs.cityId, cities.id))
+      .leftJoin(properties, and(
+        eq(properties.suburbId, suburbs.id),
+        eq(properties.status, 'published')
+      ))
       .where(eq(cities.provinceId, province.id))
-      .orderBy(desc(sql`growth`))
+      .groupBy(suburbs.id, cities.name, cities.slug)
+      .orderBy(desc(sql`count(${properties.id})`))
       .limit(10);
 
     // 5. Aggregate Stats
