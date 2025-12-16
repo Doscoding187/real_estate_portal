@@ -21,6 +21,8 @@ import { HighDemandProjectsCarousel } from '@/components/location/HighDemandProj
 import { RecommendedAgenciesCarousel } from '@/components/location/RecommendedAgenciesCarousel';
 import { LocationTopLocalities } from '@/components/location/LocationTopLocalities';
 import { TrendingSuburbsCarousel } from '@/components/location/TrendingSuburbsCarousel';
+import { LocationPropertyTypeExplorer } from '@/components/location/LocationPropertyTypeExplorer';
+import { DiscoverProperties } from '@/components/DiscoverProperties';
 import { MapPin, ArrowRight } from 'lucide-react';
 
 export default function ProvincePage({ params }: { params: { province: string } }) {
@@ -138,6 +140,19 @@ export default function ProvincePage({ params }: { params: { province: string } 
           ) : undefined
         }
 
+        propertyTypeExplorer={
+            <LocationPropertyTypeExplorer 
+                propertyTypes={[
+                    { type: 'house', count: Math.floor(stats.totalListings * 0.45), avgPrice: stats.avgPrice * 1.1 },
+                    { type: 'apartment', count: Math.floor(stats.totalListings * 0.35), avgPrice: stats.avgPrice * 0.8 },
+                    { type: 'townhouse', count: Math.floor(stats.totalListings * 0.15), avgPrice: stats.avgPrice * 0.9 },
+                    { type: 'vacant_land', count: Math.floor(stats.totalListings * 0.05), avgPrice: stats.avgPrice * 0.4 },
+                ]}
+                locationName={province.name}
+                locationSlug={provinceSlug}
+            />
+        }
+
         topLocalitiesShowcase={
            topLocalities && topLocalities.length > 0 ? (
              <LocationTopLocalities 
@@ -145,6 +160,10 @@ export default function ProvincePage({ params }: { params: { province: string } 
                locationName={province.name} 
              />
            ) : undefined
+        }
+
+        exploreMore={
+            <DiscoverProperties initialCity={cities?.[0]?.name} availableCities={cities?.map((c: any) => c.name)} />
         }
 
         developerShowcase={

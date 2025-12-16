@@ -7,6 +7,7 @@ import { FeaturedPropertiesCarousel } from '@/components/location/FeaturedProper
 
 import { LocationPropertyTypeExplorer } from '@/components/location/LocationPropertyTypeExplorer';
 import { DiscoverProperties } from '@/components/DiscoverProperties';
+import { ExploreCities } from '@/components/ExploreCities';
 
 
 // Legacy components to be adapted or routed
