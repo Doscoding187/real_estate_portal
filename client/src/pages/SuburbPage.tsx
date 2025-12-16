@@ -4,6 +4,7 @@ import { LocationPageLayout } from '@/components/location/LocationPageLayout';
 import { MonetizedBanner } from '@/components/location/MonetizedBanner';
 import { SearchStage } from '@/components/location/SearchStage';
 import { LocationPropertyTypeExplorer as PropertyTypeExplorer } from '@/components/location/LocationPropertyTypeExplorer';
+import { DiscoverProperties } from '@/components/DiscoverProperties';
 // import { FeaturedListings } from '@/components/location/FeaturedListings'; // Removed
 import { TabbedListingSection } from '@/components/location/TabbedListingSection';
 import PropertyCard from '@/components/PropertyCard';
@@ -228,15 +229,10 @@ export default function SuburbPage({ params }: { params: { province: string; cit
           </div>
         }
 
-        sidebarContent={
-          <SEOTextBlock
-            title={`Life in ${suburb.name}`}
-            locationName={suburb.name}
-            locationType="suburb"
-            parentName={suburb.cityName || citySlug}
-            stats={stats}
-            content={suburb.description || undefined} 
-          />
+
+
+        exploreMore={
+            <DiscoverProperties initialCity={suburb.cityName} />
         }
 
         finalCTA={

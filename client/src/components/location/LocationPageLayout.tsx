@@ -24,6 +24,7 @@ interface LocationPageLayoutProps {
   fullWidthSection?: React.ReactNode;
   sellerCTA?: React.ReactNode;
   seoContent?: React.ReactNode;
+  exploreMore?: React.ReactNode;
 }
 
 export const LocationPageLayout: React.FC<LocationPageLayoutProps> = ({
@@ -46,6 +47,7 @@ export const LocationPageLayout: React.FC<LocationPageLayoutProps> = ({
   fullWidthSection,
   sellerCTA,
   seoContent,
+  exploreMore,
 }) => {
   return (
     <div className="min-h-screen bg-slate-50 w-full pt-16">
@@ -175,7 +177,14 @@ export const LocationPageLayout: React.FC<LocationPageLayoutProps> = ({
              {seoContent}
         </div>
 
-        {/* 1️⃣3️⃣ Seller CTA */}
+        {/* 1️⃣3️⃣ Explore More Section */}
+        {exploreMore && (
+          <section className="my-16">
+            {exploreMore}
+          </section>
+        )}
+
+        {/* 1️⃣4️⃣ Seller CTA */}
         {sellerCTA && (
           <section className="mt-20 mb-12">
             {sellerCTA}

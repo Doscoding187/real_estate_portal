@@ -101,8 +101,16 @@ const cities = [
   'Bloemfontein',
 ];
 
-export function DiscoverProperties() {
-  const [selectedCity, setSelectedCity] = useState('Johannesburg');
+interface DiscoverPropertiesProps {
+  initialCity?: string;
+  availableCities?: string[];
+}
+
+export function DiscoverProperties({ initialCity, availableCities }: DiscoverPropertiesProps = {}) {
+  const [selectedCity, setSelectedCity] = useState(initialCity || 'Johannesburg');
+  
+  const displayCities = availableCities || cities;
+
   const [listingType, setListingType] = useState<'sale' | 'rent' | 'developments'>('sale');
   const [saleExpanded, setSaleExpanded] = useState(true);
   const [rentExpanded, setRentExpanded] = useState(false);
@@ -191,24 +199,29 @@ export function DiscoverProperties() {
   };
 
   return (
-    <div className="py-16 bg-muted/30">
+    <div className="py-24 bg-gradient-to-b from-white to-muted/20">
       <div className="container">
-        <h2 className="text-2xl md:text-3xl font-bold mb-8">
-          Discover More Real Estate Properties in South Africa
-        </h2>
+        <div className="mb-12">
+            <h2 className="text-3xl md:text-4xl font-bold mb-6 bg-clip-text text-transparent bg-gradient-to-r from-slate-900 to-slate-700">
+            Discover Real Estate in Popular Cities
+            </h2>
+            <p className="text-muted-foreground text-lg max-w-2xl">
+            Explore property sales, rentals, and new developments across South Africa's most vibrant locations.
+            </p>
+        </div>
 
         {/* City Tabs */}
-        <div className="flex flex-wrap gap-2 mb-8">
-          {cities.map(city => (
+        <div className="flex flex-wrap gap-3 mb-10">
+          {displayCities.map(city => (
             <button
               key={city}
               onClick={() => setSelectedCity(city)}
               className={`
-                px-6 py-2.5 rounded-full text-sm font-medium transition-all duration-300 border
+                px-8 py-3 rounded-full text-sm font-semibold transition-all duration-300 border
                 ${
                   selectedCity === city
-                    ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white border-transparent shadow-md scale-105'
-                    : 'bg-white text-muted-foreground border-gray-200 hover:border-blue-200 hover:bg-blue-50 hover:text-blue-600'
+                    ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white border-transparent shadow-lg scale-105 ring-2 ring-blue-200 ring-offset-2'
+                    : 'bg-white text-slate-600 border-slate-200 hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700 hover:shadow-md'
                 }
               `}
             >
@@ -217,177 +230,181 @@ export function DiscoverProperties() {
           ))}
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           {/* Left Sidebar - Listing Type Toggle */}
           <div className="lg:col-span-3">
-            <Card className="p-0 overflow-hidden border-gray-100 shadow-sm bg-white/50 backdrop-blur-sm h-[400px] flex flex-col">
+            <div className="rounded-2xl border border-slate-200 shadow-xl bg-white overflow-hidden h-full flex flex-col">
               {/* Properties for Sale */}
-              <div className="border-b border-gray-100">
+              <div className="border-b border-slate-100">
                 <button
                   onClick={handleSaleClick}
-                  className={`w-full p-4 flex items-center justify-between transition-all duration-300 ${
+                  className={`w-full p-5 flex items-center justify-between transition-all duration-300 ${
                     saleExpanded 
-                      ? 'bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700' 
-                      : 'hover:bg-gray-50 text-foreground'
+                      ? 'bg-blue-50/80 text-blue-700' 
+                      : 'hover:bg-slate-50 text-slate-700'
                   }`}
                 >
-                  <span className="font-semibold">Properties for Sale</span>
-                  <ChevronRightIcon
-                    className={`h-5 w-5 transition-transform duration-300 ${saleExpanded ? 'rotate-90 text-blue-600' : 'text-muted-foreground'}`}
-                  />
+                  <span className="font-bold text-base">Properties for Sale</span>
+                  <div className={`rounded-full p-1 transition-colors ${saleExpanded ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-400 group-hover:bg-slate-200'}`}>
+                      <ChevronRightIcon
+                        className={`h-4 w-4 transition-transform duration-300 ${saleExpanded ? 'rotate-90' : ''}`}
+                      />
+                  </div>
                 </button>
                 <div 
                   className={`overflow-hidden transition-all duration-300 ease-in-out ${
                     saleExpanded ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
                   }`}
                 >
-                  <div className="px-4 pb-4 pt-2 bg-gradient-to-r from-blue-50/50 to-indigo-50/50">
-                    <p className="text-sm text-muted-foreground leading-relaxed mb-4">
-                      Properties for sale in {selectedCity} offer a versatile mix of affordable
-                      apartments, premium homes, and commercial units. Customise your search by
-                      property type, budget, number of bedrooms, and property size to find options that match your
-                      requirements.
+                  <div className="px-6 pb-6 pt-2 bg-blue-50/30">
+                    <p className="text-sm text-slate-600 leading-relaxed mb-5">
+                      Find your dream home in {selectedCity}. From affordable apartments to premium family houses, explore properties that match your budget and lifestyle.
                     </p>
                     <a 
                       href="/properties?action=sale" 
-                      className="text-sm font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1 transition-colors"
+                      className="text-sm font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1 transition-colors group"
                     >
-                      View All Properties for Sale
-                      <ChevronRightIcon className="h-4 w-4" />
+                      View Sale Listings
+                      <ChevronRightIcon className="h-4 w-4 transition-transform group-hover:translate-x-1" />
                     </a>
                   </div>
                 </div>
               </div>
 
               {/* Properties for Rent */}
-              <div>
+              <div className="border-b border-slate-100">
                 <button
                   onClick={handleRentClick}
-                  className={`w-full p-4 flex items-center justify-between transition-all duration-300 ${
+                  className={`w-full p-5 flex items-center justify-between transition-all duration-300 ${
                     rentExpanded 
-                      ? 'bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700' 
-                      : 'hover:bg-gray-50 text-foreground'
+                      ? 'bg-blue-50/80 text-blue-700' 
+                      : 'hover:bg-slate-50 text-slate-700'
                   }`}
                 >
-                  <span className="font-semibold">Properties for Rent</span>
-                  <ChevronDown
-                    className={`h-5 w-5 transition-transform duration-300 ${rentExpanded ? 'rotate-180 text-blue-600' : 'text-muted-foreground'}`}
-                  />
+                  <span className="font-bold text-base">Properties for Rent</span>
+                   <div className={`rounded-full p-1 transition-colors ${rentExpanded ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-400 group-hover:bg-slate-200'}`}>
+                      <ChevronRightIcon
+                        className={`h-4 w-4 transition-transform duration-300 ${rentExpanded ? 'rotate-90' : ''}`}
+                      />
+                  </div>
                 </button>
                 <div 
                   className={`overflow-hidden transition-all duration-300 ease-in-out ${
                     rentExpanded ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
                   }`}
                 >
-                  <div className="px-4 pb-4 pt-2 bg-gradient-to-r from-blue-50/50 to-indigo-50/50">
-                    <p className="text-sm text-muted-foreground leading-relaxed mb-4">
-                      Properties for rent in {selectedCity} include a wide range of apartments,
-                      houses, and studios. Filter by budget, location, number of bedrooms, and amenities to find the
-                      perfect rental that suits your lifestyle.
+                  <div className="px-6 pb-6 pt-2 bg-blue-50/30">
+                    <p className="text-sm text-slate-600 leading-relaxed mb-5">
+                      Searching for a rental in {selectedCity}? Browse our selection of apartments, garden cottages, and corporate rentals available now.
                     </p>
                     <a 
                       href="/properties?action=rent" 
-                      className="text-sm font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1 transition-colors"
+                      className="text-sm font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1 transition-colors group"
                     >
-                      View All Properties for Rent
-                      <ChevronRightIcon className="h-4 w-4" />
+                      View Rental Listings
+                      <ChevronRightIcon className="h-4 w-4 transition-transform group-hover:translate-x-1" />
                     </a>
                   </div>
                 </div>
               </div>
 
               {/* New Developments */}
-              <div className="border-t border-gray-100">
+              <div>
                 <button
                   onClick={handleDevelopmentsClick}
-                  className={`w-full p-4 flex items-center justify-between transition-all duration-300 ${
+                  className={`w-full p-5 flex items-center justify-between transition-all duration-300 ${
                     developmentsExpanded 
-                      ? 'bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700' 
-                      : 'hover:bg-gray-50 text-foreground'
+                      ? 'bg-blue-50/80 text-blue-700' 
+                      : 'hover:bg-slate-50 text-slate-700'
                   }`}
                 >
-                  <span className="font-semibold">New Developments</span>
-                  <ChevronDown
-                    className={`h-5 w-5 transition-transform duration-300 ${developmentsExpanded ? 'rotate-180 text-blue-600' : 'text-muted-foreground'}`}
-                  />
+                  <span className="font-bold text-base">New Developments</span>
+                   <div className={`rounded-full p-1 transition-colors ${developmentsExpanded ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-400 group-hover:bg-slate-200'}`}>
+                      <ChevronRightIcon
+                        className={`h-4 w-4 transition-transform duration-300 ${developmentsExpanded ? 'rotate-90' : ''}`}
+                      />
+                  </div>
                 </button>
                 <div 
                   className={`overflow-hidden transition-all duration-300 ease-in-out ${
                     developmentsExpanded ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
                   }`}
                 >
-                  <div className="px-4 pb-4 pt-2 bg-gradient-to-r from-blue-50/50 to-indigo-50/50">
-                    <p className="text-sm text-muted-foreground leading-relaxed mb-4">
-                      New developments in {selectedCity} offer modern homes with innovative layouts,
-                      trusted developers, and competitive pricing. Explore ready-to-move, new launch,
-                      and affordable housing projects that deliver exceptional value.
+                  <div className="px-6 pb-6 pt-2 bg-blue-50/30">
+                    <p className="text-sm text-slate-600 leading-relaxed mb-5">
+                      Invest in the future with new developments in {selectedCity}. Explore off-plan opportunities and brand new estates.
                     </p>
                     <a 
                       href="/developments" 
-                      className="text-sm font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1 transition-colors"
+                      className="text-sm font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1 transition-colors group"
                     >
-                      View All New Developments
-                      <ChevronRightIcon className="h-4 w-4" />
+                      View Developments
+                      <ChevronRightIcon className="h-4 w-4 transition-transform group-hover:translate-x-1" />
                     </a>
                   </div>
                 </div>
               </div>
-            </Card>
+            </div>
           </div>
 
           {/* Right Side - Property Carousel */}
           <div className="lg:col-span-9 relative group/carousel">
-            <div className="overflow-hidden rounded-xl" ref={emblaRef}>
-              <div className="flex gap-4">
+            <div className="overflow-hidden rounded-2xl shadow-xl ring-1 ring-black/5" ref={emblaRef}>
+              <div className="flex gap-6 pl-4 py-1">
                 {filteredProperties.map((property, idx) => (
                   <div
                     key={idx}
-                    className="flex-[0_0_100%] min-w-0 sm:flex-[0_0_50%] lg:flex-[0_0_33.333%]"
+                    className="flex-[0_0_90%] min-w-0 sm:flex-[0_0_48%] lg:flex-[0_0_32%]"
                     onClick={() => handleCardClick(property.type, property.listingType)}
                   >
-                    <Card className="overflow-hidden group cursor-pointer hover:shadow-xl transition-all duration-500 border-0 h-full">
-                      <div className="relative h-[400px] overflow-hidden">
-                        <img
-                          src={property.image}
-                          alt={property.type}
-                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-80 group-hover:opacity-90 transition-opacity duration-300" />
+                    <div className="relative h-[420px] rounded-xl overflow-hidden group cursor-pointer shadow-md hover:shadow-2xl transition-all duration-500 bg-slate-900 border border-slate-800">
+                      <img
+                        src={property.image}
+                        alt={property.type}
+                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 opacity-90 group-hover:opacity-100"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/40 to-transparent opacity-80 group-hover:opacity-70 transition-opacity duration-300" />
+                      
+                      {/* Content Overlay */}
+                      <div className="absolute bottom-0 left-0 right-0 p-6 text-white transform translate-y-2 group-hover:translate-y-0 transition-transform duration-300">
+                        <div className="w-12 h-1 bg-blue-500 mb-4 rounded-full transform origin-left scale-x-0 group-hover:scale-x-100 transition-transform duration-500 delay-100" />
                         
-                        {/* Content Overlay */}
-                        <div className="absolute bottom-0 left-0 right-0 p-6 text-white transform translate-y-2 group-hover:translate-y-0 transition-transform duration-300">
-                          <div className="w-12 h-1 bg-blue-500 mb-4 rounded-full transform origin-left scale-x-0 group-hover:scale-x-100 transition-transform duration-500 delay-100" />
-                          <h3 className="text-2xl font-bold mb-2">{property.type}</h3>
-                          <p className="text-sm text-white/90 font-medium flex items-center gap-2">
-                            <span className="bg-white/20 backdrop-blur-md px-2 py-1 rounded text-xs uppercase tracking-wider">
-                              {listingType === 'sale' ? 'For Sale' : listingType === 'rent' ? 'For Rent' : 'New Development'}
-                            </span>
-                            <span>in {selectedCity}</span>
-                          </p>
+                        <div className="flex items-center gap-2 mb-2 opacity-0 group-hover:opacity-100 transition-opacity duration-500 delay-75 transform -translate-y-2 group-hover:translate-y-0">
+                             <span className="bg-blue-600 text-white text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider">
+                                Explore
+                             </span>
                         </div>
+
+                        <h3 className="text-2xl font-bold mb-2 text-white group-hover:text-blue-50 transition-colors">{property.type}</h3>
+                        <p className="text-sm text-slate-300 font-medium flex items-center gap-2">
+                          <span className="bg-white/10 backdrop-blur-md px-2 py-1 rounded text-xs uppercase tracking-wider border border-white/10">
+                            {listingType === 'sale' ? 'For Sale' : listingType === 'rent' ? 'For Rent' : 'New Development'}
+                          </span>
+                          <span className="text-slate-300 opacity-80 group-hover:opacity-100 transition-opacity">in {selectedCity}</span>
+                        </p>
                       </div>
-                    </Card>
+                    </div>
                   </div>
                 ))}
               </div>
             </div>
 
-            {/* Navigation Buttons */}
+            {/* Navigation Buttons - Visible on large screens or hover */}
             <Button
               variant="secondary"
               size="icon"
-              className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 rounded-full shadow-lg z-10 opacity-0 group-hover/carousel:opacity-100 transition-all duration-300 hover:scale-110 bg-white/90 hover:bg-white text-blue-900"
+              className="absolute left-4 top-1/2 -translate-y-1/2 rounded-full h-12 w-12 shadow-xl z-20 opacity-0 group-hover/carousel:opacity-100 transition-all duration-300 hover:scale-110 bg-white/90 hover:bg-white text-slate-900 hover:text-blue-600 border border-slate-200 hidden md:flex"
               onClick={scrollPrev}
             >
-              <ChevronLeft className="h-5 w-5" />
+              <ChevronLeft className="h-6 w-6" />
             </Button>
             <Button
               variant="secondary"
               size="icon"
-              className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 rounded-full shadow-lg z-10 opacity-0 group-hover/carousel:opacity-100 transition-all duration-300 hover:scale-110 bg-white/90 hover:bg-white text-blue-900"
+              className="absolute right-4 top-1/2 -translate-y-1/2 rounded-full h-12 w-12 shadow-xl z-20 opacity-0 group-hover/carousel:opacity-100 transition-all duration-300 hover:scale-110 bg-white/90 hover:bg-white text-slate-900 hover:text-blue-600 border border-slate-200 hidden md:flex"
               onClick={scrollNext}
             >
-              <ChevronRight className="h-5 w-5" />
+              <ChevronRight className="h-6 w-6" />
             </Button>
           </div>
         </div>

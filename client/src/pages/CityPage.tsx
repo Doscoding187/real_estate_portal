@@ -6,6 +6,7 @@ import { SearchStage } from '@/components/location/SearchStage';
 import { FeaturedPropertiesCarousel } from '@/components/location/FeaturedPropertiesCarousel';
 
 import { LocationPropertyTypeExplorer } from '@/components/location/LocationPropertyTypeExplorer';
+import { DiscoverProperties } from '@/components/DiscoverProperties';
 
 
 // Legacy components to be adapted or routed
@@ -240,6 +241,13 @@ export default function CityPage({ params }: { params: { province: string; city:
           ) : undefined
         }
 
+        exploreMore={
+            <div className="space-y-16">
+                <DiscoverProperties initialCity={city.name} />
+                <ExploreCities />
+            </div>
+        }
+
         buyerCTA={
             // Temporary simple CTA until Phase 3 specific component
             <div className="py-8 text-center bg-blue-50 rounded-lg mx-4 md:mx-0">
@@ -301,16 +309,7 @@ export default function CityPage({ params }: { params: { province: string; city:
           </div>
         }
 
-        seoContent={
-          <SEOTextBlock
-            title={`Living in ${city.name}`}
-            locationName={city.name}
-            locationType="city"
-            parentName={city.provinceName || provinceSlug}
-            stats={stats}
-            content={city.description || undefined}
-          />
-        }
+
 
         sellerCTA={
           <FinalCTA 
