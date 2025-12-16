@@ -23,6 +23,7 @@ import { LocationTopLocalities } from '@/components/location/LocationTopLocaliti
 import { TrendingSuburbsCarousel } from '@/components/location/TrendingSuburbsCarousel';
 import { LocationPropertyTypeExplorer } from '@/components/location/LocationPropertyTypeExplorer';
 import { DiscoverProperties } from '@/components/DiscoverProperties';
+import { ExploreCities } from '@/components/ExploreCities';
 import { MapPin, ArrowRight } from 'lucide-react';
 
 export default function ProvincePage({ params }: { params: { province: string } }) {
@@ -163,7 +164,12 @@ export default function ProvincePage({ params }: { params: { province: string } 
         }
 
         exploreMore={
-            <DiscoverProperties initialCity={cities?.[0]?.name} availableCities={cities?.map((c: any) => c.name)} />
+            <DiscoverProperties 
+                initialCity={cities?.[0]?.name} 
+                availableCities={cities?.map((c: any) => c.name)}
+                title={`Discover Real Estate in ${province.name}`}
+                subtitle={`Explore property sales, rentals, and new developments across ${province.name}'s most vibrant locations.`}
+            />
         }
 
         developerShowcase={
@@ -203,7 +209,13 @@ export default function ProvincePage({ params }: { params: { province: string } 
           </div>
         }
 
-        // popularLocations prop removed
+        popularLocations={
+          <ExploreCities 
+            provinceSlug={provinceSlug}
+            title={`Explore Popular Cities in ${province.name}`}
+            description={`Find high-end residences and investment opportunities in top cities across ${province.name}.`}
+          />
+        }
 
         fullWidthSection={
           trendingSuburbs && trendingSuburbs.length > 0 ? (
