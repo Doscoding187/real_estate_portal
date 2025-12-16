@@ -3,6 +3,7 @@ import React from 'react';
 import { Helmet } from 'react-helmet';
 
 import { ListingNavbar } from '@/components/ListingNavbar';
+import { Footer } from '@/components/Footer';
 
 interface LocationPageLayoutProps {
   locationName: string;
@@ -192,6 +193,7 @@ export const LocationPageLayout: React.FC<LocationPageLayoutProps> = ({
         )}
 
       </main>
+      <Footer />
     </div>
   );
 };
