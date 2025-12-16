@@ -2,6 +2,8 @@
 import React from 'react';
 import { Helmet } from 'react-helmet';
 
+import { ListingNavbar } from '@/components/ListingNavbar';
+
 interface LocationPageLayoutProps {
   locationName: string;
   locationSlug: string;
@@ -19,6 +21,7 @@ interface LocationPageLayoutProps {
   investmentShowcase?: React.ReactNode;
   buyerCTA?: React.ReactNode;
   listingsFeed?: React.ReactNode;
+  fullWidthSection?: React.ReactNode;
   sellerCTA?: React.ReactNode;
   seoContent?: React.ReactNode;
 }
@@ -40,11 +43,12 @@ export const LocationPageLayout: React.FC<LocationPageLayoutProps> = ({
   investmentShowcase,
   buyerCTA,
   listingsFeed,
+  fullWidthSection,
   sellerCTA,
   seoContent,
 }) => {
   return (
-    <div className="min-h-screen bg-slate-50 w-full">
+    <div className="min-h-screen bg-slate-50 w-full pt-16">
       <Helmet>
         <title>{`Property for Sale in ${locationName} | Real Estate Portal`}</title>
         <meta 
@@ -52,6 +56,8 @@ export const LocationPageLayout: React.FC<LocationPageLayoutProps> = ({
           content={`Find the best properties for sale in ${locationName}. Search apartments, houses, and new developments.`} 
         />
       </Helmet>
+
+      <ListingNavbar />
 
       {/* 2️⃣ Monetized Location Banner (Taller, Full Width) */}
       <section className="relative w-full z-10">
@@ -141,6 +147,13 @@ export const LocationPageLayout: React.FC<LocationPageLayoutProps> = ({
          {buyerCTA && (
           <section className="my-16">
             {buyerCTA}
+          </section>
+        )}
+
+        {/* Full Width Section (for carousels that span container) */}
+        {fullWidthSection && (
+          <section className="w-full">
+            {fullWidthSection}
           </section>
         )}
 

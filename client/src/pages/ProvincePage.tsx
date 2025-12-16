@@ -193,17 +193,14 @@ export default function ProvincePage({ params }: { params: { province: string } 
           />
         }
 
-        listingsFeed={
-          <div className="space-y-12">
-            {/* Trending Suburbs Carousel */}
-            {trendingSuburbs && trendingSuburbs.length > 0 && (
-              <TrendingSuburbsCarousel
-                suburbs={trendingSuburbs}
-                provinceName={province.name}
-                provinceSlug={provinceSlug}
-              />
-            )}
-          </div>
+        fullWidthSection={
+          trendingSuburbs && trendingSuburbs.length > 0 ? (
+            <TrendingSuburbsCarousel
+              suburbs={trendingSuburbs}
+              provinceName={province.name}
+              provinceSlug={provinceSlug}
+            />
+          ) : null
         }
 
         sidebarContent={
