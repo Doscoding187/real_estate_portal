@@ -232,7 +232,10 @@ export default function SuburbPage({ params }: { params: { province: string; cit
 
 
         exploreMore={
-            <DiscoverProperties initialCity={suburb.cityName} />
+            <DiscoverProperties 
+                initialCity={suburb.cityName} 
+                locationName={suburb.name}
+            />
         }
 
         finalCTA={

@@ -247,8 +247,7 @@ export default function CityPage({ params }: { params: { province: string; city:
             <DiscoverProperties 
                 initialCity={city.name} 
                 availableCities={[city.name, ...suburbs.map((s: any) => s.name)]}
-                title={`Discover Real Estate in ${city.name}`}
-                subtitle={`Browse trending properties, new developments, and rentals in ${city.name}.`}
+                locationName={city.name}
             />
         }
 

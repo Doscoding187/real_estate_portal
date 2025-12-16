@@ -1,0 +1,35 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Tighter Spacing System */
+    --spacing-xs: 0.25rem;  /* 4px */
+    --spacing-sm: 0.5rem;   /* 8px */
+    --spacing-md: 1rem;     /* 16px - Standard card padding */
+    --spacing-lg: 1.5rem;   /* 24px */
+    --spacing-xl: 2rem;     /* 32px */
+    --spacing-2xl: 3rem;    /* 48px - Standard section padding */
+    --spacing-3xl: 4rem;    /* 64px */
+
+    /* Tighter Typography Scale */
+    --font-xs: 0.75rem;     /* 12px */
+    --font-sm: 0.875rem;    /* 14px */
+    --font-base: 1rem;      /* 16px */
+    --font-lg: 1.125rem;    /* 18px */
+    --font-xl: 1.25rem;     /* 20px */
+    --font-2xl: 1.5rem;     /* 24px - Section headers */
+    --font-3xl: 1.875rem;   /* 30px */
+    --font-4xl: 2.25rem;    /* 36px - Hero headers */
+
+    /* Component Dimensions */
+    --card-image-height: 14rem; /* 224px (h-56) */
+    --icon-box-size: 3rem;      /* 48px (w-12 h-12) */
+    --input-height: 2.75rem;    /* 44px */
+    --button-height: 2.5rem;    /* 40px */
+
+    /* Border Radius */
+    --radius-card: 0.75rem;     /* rounded-xl */
+  }
+}

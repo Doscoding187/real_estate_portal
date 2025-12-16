@@ -106,7 +106,7 @@ const PropertyCardList: React.FC<PropertyCardListProps> = ({
   return (
     <div className="group relative bg-white rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-all overflow-hidden flex flex-col md:flex-row h-auto max-w-[840px]">
       {/* Image Section (Left) -40% width */}
-      <div className="relative w-full md:w-[40%] h-64 md:h-auto md:aspect-square shrink-0 overflow-hidden cursor-pointer" onClick={() => setLocation(`/property/${id}`)}>
+      <div className="relative w-full md:w-[40%] h-56 md:h-auto md:aspect-square shrink-0 overflow-hidden cursor-pointer" onClick={() => setLocation(`/property/${id}`)}>
         {isMultiSizeImage ? (
           <OptimizedImageCard
             images={image as ImageUrls}
@@ -201,12 +201,12 @@ const PropertyCardList: React.FC<PropertyCardListProps> = ({
       </div>
 
       {/* Content Section (Right) - 60% width */}
-      <div className="flex-1 p-6 flex flex-col justify-between">
+      <div className="flex-1 p-4 flex flex-col justify-between">
         <div>
           {/* Header: Title → Location → Price */}
-          <div className="mb-5">
+          <div className="mb-3">
             <h3 
-              className="text-xl font-bold text-slate-900 hover:text-blue-600 transition-colors cursor-pointer mb-2 line-clamp-2"
+              className="text-lg font-bold text-slate-900 hover:text-blue-600 transition-colors cursor-pointer mb-2 line-clamp-2"
               onClick={() => setLocation(`/property/${id}`)}
             >
               {title}
@@ -217,7 +217,7 @@ const PropertyCardList: React.FC<PropertyCardListProps> = ({
               <span>{location}</span>
             </div>
             
-            <div className="text-2xl font-bold text-[#1e1b4b]">
+            <div className="text-xl font-bold text-[#1e1b4b]">
               {formatCurrency(price)}
             </div>
           </div>
@@ -258,21 +258,21 @@ const PropertyCardList: React.FC<PropertyCardListProps> = ({
 
           {/* Description Preview */}
           {description && (
-            <p className="text-slate-500 text-sm leading-relaxed line-clamp-1 mb-5">
+            <p className="text-slate-500 text-sm leading-relaxed line-clamp-1 mb-3">
               {description}
             </p>
           )}
 
           {/* Highlights */}
           {highlights && highlights.length > 0 && (
-            <div className="mb-5">
+            <div className="mb-3">
               <ResponsiveHighlights items={highlights} />
             </div>
           )}
         </div>
 
         {/* Footer Actions */}
-        <div className="flex items-center justify-between pt-5 border-t border-slate-100 mt-auto">
+        <div className="flex items-center justify-between pt-4 border-t border-slate-100 mt-auto">
           <div className="flex items-center gap-3">
             {agent ? (
                <>

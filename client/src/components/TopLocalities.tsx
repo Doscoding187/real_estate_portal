@@ -189,8 +189,31 @@ const localitiesData: Record<string, Locality[]> = {
 
 const cities = ['Johannesburg', 'Cape Town', 'Pretoria', 'Durban'];
 
-export function TopLocalities() {
+interface TopLocalitiesProps {
+  title?: string;
+  subtitle?: string;
+  locationName?: string;
+}
+
+export function TopLocalities({ 
+  title, 
+  subtitle, 
+  locationName = "South Africa" 
+}: TopLocalitiesProps = {}) {
   const [selectedCity, setSelectedCity] = useState('Johannesburg');
+  // Note: 'initialCity' needs to be defined or we just keep default. The original code didn't accept props.
+  // Let's assume we stick to the original state logic but update the title.
+  // Actually, I need to check where 'initialCity' would come from if I added it. 
+  // For now, let's just keep 'Johannesburg' as default state if logic hasn't changed, 
+  // but if I want to support filtering by location prop I might need more changes.
+  // Given the request is about TITLES, I will focus on titles.
+  
+  const defaultTitle = `Top Localities in ${locationName}`;
+  const defaultSubtitle = `Discover ${locationName}${locationName.endsWith('s') ? "'" : "'s"} best localities known for liveability, infrastructure, and connectivity. Explore top neighbourhoods offering insights on new construction, rental trends, and average prices.`;
+
+  const displayTitle = title || defaultTitle;
+  const displaySubtitle = subtitle || defaultSubtitle;
+
 
   const [emblaRef, emblaApi] = useEmblaCarousel({
     align: 'start',
@@ -222,11 +245,9 @@ export function TopLocalities() {
     <div className="py-16 bg-muted/30">
       <div className="container">
         <div className="mb-8">
-          <h2 className="text-2xl md:text-3xl font-bold mb-3">Top Localities in South Africa</h2>
+          <h2 className="text-2xl md:text-3xl font-bold mb-3">{displayTitle}</h2>
           <p className="text-muted-foreground text-lg max-w-2xl">
-            Discover South Africa's best localities known for liveability, infrastructure, and
-            connectivity. Explore top neighbourhoods in major cities, offering insights on new
-            construction, rental trends, and average prices.
+            {displaySubtitle}
           </p>
         </div>
 

@@ -5,7 +5,6 @@ import { MonetizedBanner } from '@/components/location/MonetizedBanner';
 import { SearchStage } from '@/components/location/SearchStage';
 import { FeaturedPropertiesCarousel } from '@/components/location/FeaturedPropertiesCarousel';
 import { LocationGrid } from '@/components/location/LocationGrid';
-// import { DevelopmentsSlider } from '@/components/location/DevelopmentsSlider'; // Removed
 import { TabbedListingSection } from '@/components/location/TabbedListingSection';
 import { SimpleDevelopmentCard } from '@/components/SimpleDevelopmentCard';
 import { MarketInsights } from '@/components/location/MarketInsights';
@@ -24,7 +23,6 @@ import { TrendingSuburbsCarousel } from '@/components/location/TrendingSuburbsCa
 import { LocationPropertyTypeExplorer } from '@/components/location/LocationPropertyTypeExplorer';
 import { DiscoverProperties } from '@/components/DiscoverProperties';
 import { ExploreCities } from '@/components/ExploreCities';
-import { MapPin, ArrowRight } from 'lucide-react';
 
 export default function ProvincePage({ params }: { params: { province: string } }) {
   const [, navigate] = useLocation();
@@ -167,8 +165,7 @@ export default function ProvincePage({ params }: { params: { province: string } 
             <DiscoverProperties 
                 initialCity={cities?.[0]?.name} 
                 availableCities={cities?.map((c: any) => c.name)}
-                title={`Discover Real Estate in ${province.name}`}
-                subtitle={`Explore property sales, rentals, and new developments across ${province.name}'s most vibrant locations.`}
+                locationName={province.name}
             />
         }
 

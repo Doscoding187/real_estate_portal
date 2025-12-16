@@ -117,10 +117,10 @@ export default function Home() {
       <EnhancedHero />
 
       {/* Hot Selling Developments Section */}
-      <div className="py-16 bg-white">
+      <div className="py-12 bg-white">
         <div className="container">
-          <div className="mb-10">
-            <h2 className="text-2xl md:text-3xl font-bold mb-3">
+          <div className="mb-8">
+            <h2 className="text-xl md:text-2xl font-bold mb-3">
               Hot Selling Real Estate Developments in South Africa
             </h2>
             <p className="text-muted-foreground text-base max-w-3xl">
@@ -181,10 +181,10 @@ export default function Home() {
 
 
       {/* Categories Section - Simplified for SA Market */}
-      <div className="py-16 bg-gradient-to-b from-white to-muted/20">
+      <div className="py-12 bg-gradient-to-b from-white to-muted/20">
         <div className="container">
-          <div className="mb-12">
-            <h2 className="text-2xl md:text-3xl font-bold mb-3 text-center">
+          <div className="mb-8">
+            <h2 className="text-xl md:text-2xl font-bold mb-3 text-center">
               Explore Property Categories
             </h2>
             <p className="text-muted-foreground text-base text-center max-w-2xl mx-auto">
@@ -247,10 +247,10 @@ export default function Home() {
       <ExploreCities />
 
       {/* Testimonials Section */}
-      <div className="py-16 bg-white">
+      <div className="py-12 bg-white">
         <div className="container">
-          <div className="mb-12">
-            <h2 className="text-2xl md:text-3xl font-bold mb-3 text-center">
+          <div className="mb-8">
+            <h2 className="text-xl md:text-2xl font-bold mb-3 text-center">
               What Our Clients Say
             </h2>
             <p className="text-muted-foreground text-base text-center max-w-2xl mx-auto">
@@ -306,15 +306,15 @@ export default function Home() {
       </div>
 
       {/* CTA Section */}
-      <div className="py-20 bg-white">
+      <div className="py-16 bg-white">
         <div className="container">
-          <div className="relative rounded-3xl overflow-hidden bg-gradient-to-r from-blue-600 to-indigo-700 px-6 py-16 md:px-16 md:py-20 text-center shadow-2xl">
+          <div className="relative rounded-3xl overflow-hidden bg-gradient-to-r from-blue-600 to-indigo-700 px-6 py-12 md:px-12 md:py-16 text-center shadow-2xl">
             {/* Decorative Elements */}
             <div className="absolute top-0 left-0 w-64 h-64 bg-white/10 rounded-full -translate-x-1/2 -translate-y-1/2 blur-3xl"></div>
             <div className="absolute bottom-0 right-0 w-64 h-64 bg-white/10 rounded-full translate-x-1/2 translate-y-1/2 blur-3xl"></div>
 
             <div className="relative z-10 max-w-3xl mx-auto">
-              <h2 className="text-3xl md:text-5xl font-bold mb-6 text-white tracking-tight">
+              <h2 className="text-2xl md:text-4xl font-bold mb-6 text-white tracking-tight">
                 Ready to Find Your Dream Property?
               </h2>
               <p className="text-xl mb-10 text-blue-100 leading-relaxed">

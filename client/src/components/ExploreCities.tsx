@@ -141,14 +141,14 @@ export function ExploreCities({ provinceSlug, title, description, customLocation
   const displayDescription = description || "Find high-end residences, reasonably priced apartments, and high-growth investments by exploring real estate in well-known South African cities. Use professional advice and insights to navigate opportunities across metro hubs.";
 
   return (
-    <section className="py-16 bg-white">
+    <section className="py-12 bg-white">
       <div className="container">
         {/* Section Header */}
-        <div className="mb-10 text-center md:text-left">
-          <h2 className="text-2xl md:text-3xl font-bold mb-3">
+        <div className="mb-8 text-center md:text-left">
+          <h2 className="text-xl md:text-2xl font-bold mb-3">
             {displayTitle}
           </h2>
-          <p className="text-muted-foreground text-lg max-w-4xl mx-auto md:mx-0">
+          <p className="text-muted-foreground text-base max-w-4xl mx-auto md:mx-0">
             {displayDescription}
           </p>
         </div>
@@ -158,18 +158,18 @@ export function ExploreCities({ provinceSlug, title, description, customLocation
           {filteredCities.map(city => (
             <Link key={city.slug} href={`/${city.provinceSlug}/${city.slug}`}>
               <Card className="hover:shadow-xl transition-all duration-300 cursor-pointer group border-0 bg-muted/30 hover:bg-white overflow-hidden">
-                <CardContent className="p-6">
+                <CardContent className="p-4">
                   <div className="flex items-center gap-4">
                     {/* City Icon */}
                     <div
-                      className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${city.color} flex items-center justify-center text-white shadow-lg group-hover:scale-110 transition-transform duration-300`}
+                      className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${city.color} flex items-center justify-center text-white shadow-lg group-hover:scale-110 transition-transform duration-300`}
                     >
-                      <city.icon className="h-7 w-7" />
+                      <city.icon className="h-6 w-6" />
                     </div>
 
                     {/* City Info */}
                     <div className="flex-1 min-w-0">
-                      <h3 className="font-bold text-lg mb-1 group-hover:text-blue-600 transition-colors">
+                      <h3 className="font-bold text-base mb-1 group-hover:text-blue-600 transition-colors">
                         {city.name}
                       </h3>
                       <div className="flex items-center gap-1 text-sm text-muted-foreground">

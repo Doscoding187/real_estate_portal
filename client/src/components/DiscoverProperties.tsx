@@ -3,12 +3,10 @@ import useEmblaCarousel from 'embla-carousel-react';
 import {
   ChevronLeft,
   ChevronRight,
-  ChevronDown,
   ChevronRight as ChevronRightIcon,
 } from 'lucide-react';
 import { CITY_PROVINCE_MAP } from "../lib/locationUtils";
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
 
 interface PropertyType {
   type: string;
@@ -104,9 +102,24 @@ const cities = [
 interface DiscoverPropertiesProps {
   initialCity?: string;
   availableCities?: string[];
+  title?: string;
+  subtitle?: string;
+  locationName?: string;
 }
 
-export function DiscoverProperties({ initialCity, availableCities }: DiscoverPropertiesProps = {}) {
+export function DiscoverProperties({ 
+  initialCity, 
+  availableCities,
+  title,
+  subtitle,
+  locationName = "South Africa"
+}: DiscoverPropertiesProps = {}) {
+  const defaultTitle = `Discover Properties in ${locationName}`;
+  const defaultSubtitle = `Explore property sales, rentals, and new developments across ${locationName}${locationName.endsWith('s') ? "'" : "'s"} most vibrant locations.`;
+
+  const displayTitle = title || defaultTitle;
+  const displaySubtitle = subtitle || defaultSubtitle;
+
   const [selectedCity, setSelectedCity] = useState(initialCity || 'Johannesburg');
   
   const displayCities = availableCities || cities;
@@ -199,19 +212,19 @@ export function DiscoverProperties({ initialCity, availableCities }: DiscoverPro
   };
 
   return (
-    <div className="py-24 bg-gradient-to-b from-white to-muted/20">
+    <div className="py-16 bg-gradient-to-b from-white to-muted/20">
       <div className="container">
-        <div className="mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold mb-6 bg-clip-text text-transparent bg-gradient-to-r from-slate-900 to-slate-700">
-            Discover Real Estate in Popular Cities
+        <div className="mb-8">
+            <h2 className="text-2xl md:text-3xl font-bold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-slate-900 to-slate-700">
+            {displayTitle}
             </h2>
-            <p className="text-muted-foreground text-lg max-w-2xl">
-            Explore property sales, rentals, and new developments across South Africa's most vibrant locations.
+            <p className="text-muted-foreground text-base max-w-2xl">
+            {displaySubtitle}
             </p>
         </div>
 
         {/* City Tabs */}
-        <div className="flex flex-wrap gap-3 mb-10">
+        <div className="flex flex-wrap gap-3 mb-8">
           {displayCities.map(city => (
             <button
               key={city}
@@ -230,7 +243,7 @@ export function DiscoverProperties({ initialCity, availableCities }: DiscoverPro
           ))}
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           {/* Left Sidebar - Listing Type Toggle */}
           <div className="lg:col-span-3">
             <div className="rounded-2xl border border-slate-200 shadow-xl bg-white overflow-hidden h-full flex flex-col">
@@ -238,7 +251,7 @@ export function DiscoverProperties({ initialCity, availableCities }: DiscoverPro
               <div className="border-b border-slate-100">
                 <button
                   onClick={handleSaleClick}
-                  className={`w-full p-5 flex items-center justify-between transition-all duration-300 ${
+                  className={`w-full p-4 flex items-center justify-between transition-all duration-300 ${
                     saleExpanded 
                       ? 'bg-blue-50/80 text-blue-700' 
                       : 'hover:bg-slate-50 text-slate-700'
@@ -256,7 +269,7 @@ export function DiscoverProperties({ initialCity, availableCities }: DiscoverPro
                     saleExpanded ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
                   }`}
                 >
-                  <div className="px-6 pb-6 pt-2 bg-blue-50/30">
+                  <div className="px-5 pb-5 pt-2 bg-blue-50/30">
                     <p className="text-sm text-slate-600 leading-relaxed mb-5">
                       Find your dream home in {selectedCity}. From affordable apartments to premium family houses, explore properties that match your budget and lifestyle.
                     </p>
@@ -275,7 +288,7 @@ export function DiscoverProperties({ initialCity, availableCities }: DiscoverPro
               <div className="border-b border-slate-100">
                 <button
                   onClick={handleRentClick}
-                  className={`w-full p-5 flex items-center justify-between transition-all duration-300 ${
+                  className={`w-full p-4 flex items-center justify-between transition-all duration-300 ${
                     rentExpanded 
                       ? 'bg-blue-50/80 text-blue-700' 
                       : 'hover:bg-slate-50 text-slate-700'
@@ -293,7 +306,7 @@ export function DiscoverProperties({ initialCity, availableCities }: DiscoverPro
                     rentExpanded ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
                   }`}
                 >
-                  <div className="px-6 pb-6 pt-2 bg-blue-50/30">
+                  <div className="px-5 pb-5 pt-2 bg-blue-50/30">
                     <p className="text-sm text-slate-600 leading-relaxed mb-5">
                       Searching for a rental in {selectedCity}? Browse our selection of apartments, garden cottages, and corporate rentals available now.
                     </p>
@@ -312,7 +325,7 @@ export function DiscoverProperties({ initialCity, availableCities }: DiscoverPro
               <div>
                 <button
                   onClick={handleDevelopmentsClick}
-                  className={`w-full p-5 flex items-center justify-between transition-all duration-300 ${
+                  className={`w-full p-4 flex items-center justify-between transition-all duration-300 ${
                     developmentsExpanded 
                       ? 'bg-blue-50/80 text-blue-700' 
                       : 'hover:bg-slate-50 text-slate-700'
@@ -330,7 +343,7 @@ export function DiscoverProperties({ initialCity, availableCities }: DiscoverPro
                     developmentsExpanded ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
                   }`}
                 >
-                  <div className="px-6 pb-6 pt-2 bg-blue-50/30">
+                  <div className="px-5 pb-5 pt-2 bg-blue-50/30">
                     <p className="text-sm text-slate-600 leading-relaxed mb-5">
                       Invest in the future with new developments in {selectedCity}. Explore off-plan opportunities and brand new estates.
                     </p>
@@ -357,7 +370,7 @@ export function DiscoverProperties({ initialCity, availableCities }: DiscoverPro
                     className="flex-[0_0_90%] min-w-0 sm:flex-[0_0_48%] lg:flex-[0_0_32%]"
                     onClick={() => handleCardClick(property.type, property.listingType)}
                   >
-                    <div className="relative h-[420px] rounded-xl overflow-hidden group cursor-pointer shadow-md hover:shadow-2xl transition-all duration-500 bg-slate-900 border border-slate-800">
+                    <div className="relative h-[360px] rounded-xl overflow-hidden group cursor-pointer shadow-md hover:shadow-2xl transition-all duration-500 bg-slate-900 border border-slate-800">
                       <img
                         src={property.image}
                         alt={property.type}
