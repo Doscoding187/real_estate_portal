@@ -203,6 +203,21 @@ export default function CityPage({ params }: { params: { province: string; city:
           ) : undefined
         }
 
+        popularLocations={
+            <ExploreCities 
+                customLocations={suburbs.map((suburb: any) => ({
+                    name: suburb.name,
+                    province: city.name,
+                    icon: MapPin,
+                    slug: suburb.slug,
+                    provinceSlug: `${provinceSlug}/${citySlug}`,
+                    color: 'from-blue-500 to-indigo-500'
+                }))}
+                title={`Popular Suburbs in ${city.name}`}
+                description={`Explore top-rated suburbs in ${city.name}, offering a mix of investment opportunities and dream homes.`}
+            />
+        }
+
         recommendedAgents={
             <RecommendedAgents 
                 locationType="city" 
@@ -264,19 +279,7 @@ export default function CityPage({ params }: { params: { province: string; city:
 
         listingsFeed={
           <div className="space-y-12">
-            {/* Popular Suburbs Grid */}
-            <ExploreCities 
-                customLocations={suburbs.map((suburb: any) => ({
-                    name: suburb.name,
-                    province: city.name, // Using City name as "province"/context for the card
-                    icon: MapPin,
-                    slug: suburb.slug,
-                    provinceSlug: `${provinceSlug}/${citySlug}`, // Correct slug structure for suburbs
-                    color: 'from-blue-500 to-indigo-500' // Default color for suburbs
-                }))}
-                title={`Popular Suburbs in ${city.name}`}
-                description={`Explore top-rated suburbs in ${city.name}, offering a mix of investment opportunities and dream homes.`}
-            />
+            {/* Popular Suburbs Grid - Moved to popularLocations for full width */}
 
             {/* Similar Locations */}
             <SimilarLocationsSection locationId={city.id} currentLocationName={city.name} />
