@@ -1,4 +1,7 @@
+import React, { useCallback } from 'react';
 import { Link } from 'wouter';
+import useEmblaCarousel from 'embla-carousel-react';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import {
   MapPin,
@@ -18,6 +21,8 @@ import {
   Factory,
   Briefcase,
   TreeDeciduous,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 
 interface City {
@@ -235,54 +240,107 @@ export function ExploreCities({ provinceSlug, title, description, customLocation
   const displayTitle = title || "Explore Real Estate in Popular South African Cities";
   const displayDescription = description || "Find high-end residences, reasonably priced apartments, and high-growth investments by exploring real estate in well-known South African cities. Use professional advice and insights to navigate opportunities across metro hubs.";
 
+  const [emblaRef, emblaApi] = useEmblaCarousel({
+    align: 'start',
+    slidesToScroll: 1,
+    containScroll: 'trimSnaps',
+    loop: false,
+  });
+
+  const scrollPrev = useCallback(() => {
+    if (emblaApi) emblaApi.scrollPrev();
+  }, [emblaApi]);
+
+  const scrollNext = useCallback(() => {
+    if (emblaApi) emblaApi.scrollNext();
+  }, [emblaApi]);
+
+
   return (
     <section className="py-12 bg-white">
       <div className="container">
         {/* Section Header */}
-        <div className="mb-8 text-center md:text-left">
-          <h2 className="text-xl md:text-2xl font-bold mb-3">
-            {displayTitle}
-          </h2>
-          <p className="text-muted-foreground text-base max-w-4xl mx-auto md:mx-0">
-            {displayDescription}
-          </p>
+        <div className="mb-8 text-center md:text-left flex justify-between items-end">
+          <div>
+              <h2 className="text-xl md:text-2xl font-bold mb-3">
+                {displayTitle}
+              </h2>
+              <p className="text-muted-foreground text-base max-w-4xl mx-auto md:mx-0">
+                {displayDescription}
+              </p>
+          </div>
+          
+          {/* Desktop Navigation Buttons */}
+          <div className="hidden md:flex gap-2">
+            <Button
+              variant="outline"
+              size="icon"
+              className="rounded-full h-10 w-10 border-slate-200 hover:bg-slate-100 hover:text-blue-600"
+              onClick={scrollPrev}
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              className="rounded-full h-10 w-10 border-slate-200 hover:bg-slate-100 hover:text-blue-600"
+              onClick={scrollNext}
+            >
+              <ChevronRight className="h-5 w-5" />
+            </Button>
+          </div>
         </div>
 
-        {/* Cities Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-          {filteredCities.map(city => (
-            <Link key={city.slug} href={`/${city.provinceSlug}/${city.slug}`}>
-              <Card className="hover:shadow-xl transition-all duration-300 cursor-pointer group border-0 bg-muted/30 hover:bg-white overflow-hidden">
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-4">
-                    {/* City Icon */}
-                    <div
-                      className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${city.color} flex items-center justify-center text-white shadow-lg group-hover:scale-110 transition-transform duration-300`}
-                    >
-                      <city.icon className="h-6 w-6" />
-                    </div>
+        {/* Carousel Viewport */}
+        <div className="relative group/carousel">
+          <div className="overflow-hidden -mx-4 px-4 py-4" ref={emblaRef}>
+            <div className="flex gap-6">
+              {filteredCities.map(city => (
+                <div 
+                  key={city.slug} 
+                  className="flex-[0_0_85%] sm:flex-[0_0_50%] md:flex-[0_0_33.333%] lg:flex-[0_0_25%] min-w-0"
+                >
+                  <Link href={`/${city.provinceSlug}/${city.slug}`}>
+                    <Card className="h-full hover:shadow-xl transition-all duration-300 cursor-pointer group border-0 bg-muted/30 hover:bg-white overflow-hidden">
+                      <CardContent className="p-4 h-full">
+                        <div className="flex items-center gap-4">
+                          {/* City Icon */}
+                          <div
+                            className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${city.color} flex items-center justify-center text-white shadow-lg group-hover:scale-110 transition-transform duration-300 flex-shrink-0`}
+                          >
+                            <city.icon className="h-6 w-6" />
+                          </div>
 
-                    {/* City Info */}
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-bold text-base mb-1 group-hover:text-blue-600 transition-colors">
-                        {city.name}
-                      </h3>
-                      <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                        <MapPin className="h-3.5 w-3.5 flex-shrink-0" />
-                        <span className="truncate font-medium">{city.province}</span>
-                      </div>
-                    </div>
+                          {/* City Info */}
+                          <div className="flex-1 min-w-0">
+                            <h3 className="font-bold text-base mb-1 group-hover:text-blue-600 transition-colors truncate">
+                              {city.name}
+                            </h3>
+                            <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                              <MapPin className="h-3.5 w-3.5 flex-shrink-0" />
+                              <span className="truncate font-medium">{city.province}</span>
+                            </div>
+                          </div>
 
-                    {/* Arrow Icon */}
-                    <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 -translate-x-2 group-hover:translate-x-0">
-                      <ArrowRight className="h-5 w-5 text-blue-600" />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </Link>
-          ))}
+                          {/* Arrow Icon */}
+                          <div className="hidden sm:block opacity-0 group-hover:opacity-100 transition-opacity duration-300 -translate-x-2 group-hover:translate-x-0">
+                            <ArrowRight className="h-5 w-5 text-blue-600" />
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </Link>
+                </div>
+              ))}
+            </div>
+          </div>
+          
+           {/* Mobile Navigation Overlay Buttons (optional, but good for UX) */}
+           <div className="md:hidden flex justify-between pointer-events-none absolute inset-0 items-center px-0">
+               {/* Left/Right buttons can be added here if needed, but swipe is primary on mobile */}
+           </div>
         </div>
+
       </div>
     </section>
   );
