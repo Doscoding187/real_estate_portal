@@ -8,6 +8,7 @@ import { FeaturedPropertiesCarousel } from '@/components/location/FeaturedProper
 import { LocationPropertyTypeExplorer } from '@/components/location/LocationPropertyTypeExplorer';
 import { DiscoverProperties } from '@/components/DiscoverProperties';
 import { ExploreCities } from '@/components/ExploreCities';
+import { MapPin } from 'lucide-react';
 
 
 // Legacy components to be adapted or routed
@@ -243,10 +244,12 @@ export default function CityPage({ params }: { params: { province: string; city:
         }
 
         exploreMore={
-            <div className="space-y-16">
-                <DiscoverProperties initialCity={city.name} />
-                <ExploreCities />
-            </div>
+            <DiscoverProperties 
+                initialCity={city.name} 
+                availableCities={[city.name, ...suburbs.map((s: any) => s.name)]}
+                title={`Discover Real Estate in ${city.name}`}
+                subtitle={`Browse trending properties, new developments, and rentals in ${city.name}.`}
+            />
         }
 
         buyerCTA={
@@ -262,6 +265,20 @@ export default function CityPage({ params }: { params: { province: string; city:
 
         listingsFeed={
           <div className="space-y-12">
+            {/* Popular Suburbs Grid */}
+            <ExploreCities 
+                customLocations={suburbs.map((suburb: any) => ({
+                    name: suburb.name,
+                    province: city.name, // Using City name as "province"/context for the card
+                    icon: MapPin,
+                    slug: suburb.slug,
+                    provinceSlug: `${provinceSlug}/${citySlug}`, // Correct slug structure for suburbs
+                    color: 'from-blue-500 to-indigo-500' // Default color for suburbs
+                }))}
+                title={`Popular Suburbs in ${city.name}`}
+                description={`Explore top-rated suburbs in ${city.name}, offering a mix of investment opportunities and dream homes.`}
+            />
+
             {/* Similar Locations */}
             <SimilarLocationsSection locationId={city.id} currentLocationName={city.name} />
           </div>

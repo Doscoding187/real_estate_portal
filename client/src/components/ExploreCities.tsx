@@ -25,8 +25,16 @@ interface City {
   color: string;
 }
 
-export function ExploreCities() {
+interface ExploreCitiesProps {
+  provinceSlug?: string;
+  title?: string;
+  description?: string;
+  customLocations?: City[]; // Allow passing custom locations (e.g. suburbs)
+}
+
+export function ExploreCities({ provinceSlug, title, description, customLocations }: ExploreCitiesProps = {}) {
   const cities: City[] = [
+    // ... (keep existing hardcoded cities)
     {
       name: 'Johannesburg',
       province: 'Gauteng',
@@ -125,24 +133,29 @@ export function ExploreCities() {
     },
   ];
 
+  const filteredCities = customLocations || (provinceSlug 
+    ? cities.filter(city => city.provinceSlug.toLowerCase() === provinceSlug.toLowerCase())
+    : cities);
+
+  const displayTitle = title || "Explore Real Estate in Popular South African Cities";
+  const displayDescription = description || "Find high-end residences, reasonably priced apartments, and high-growth investments by exploring real estate in well-known South African cities. Use professional advice and insights to navigate opportunities across metro hubs.";
+
   return (
     <section className="py-16 bg-white">
       <div className="container">
         {/* Section Header */}
         <div className="mb-10 text-center md:text-left">
           <h2 className="text-2xl md:text-3xl font-bold mb-3">
-            Explore Real Estate in Popular South African Cities
+            {displayTitle}
           </h2>
           <p className="text-muted-foreground text-lg max-w-4xl mx-auto md:mx-0">
-            Find high-end residences, reasonably priced apartments, and high-growth investments by
-            exploring real estate in well-known South African cities. Use professional advice and
-            insights to navigate opportunities across metro hubs.
+            {displayDescription}
           </p>
         </div>
 
         {/* Cities Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-          {cities.map(city => (
+          {filteredCities.map(city => (
             <Link key={city.slug} href={`/${city.provinceSlug}/${city.slug}`}>
               <Card className="hover:shadow-xl transition-all duration-300 cursor-pointer group border-0 bg-muted/30 hover:bg-white overflow-hidden">
                 <CardContent className="p-6">
