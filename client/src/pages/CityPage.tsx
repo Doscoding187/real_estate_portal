@@ -262,49 +262,6 @@ export default function CityPage({ params }: { params: { province: string; city:
 
         listingsFeed={
           <div className="space-y-12">
-             {/* Suburbs Grid (Legacy) - Keeping it here as "Explore More" */}
-             <LocationGrid 
-                title={`Popular Suburbs in ${city.name}`} 
-                items={suburbs} 
-                parentSlug={`${provinceSlug}/${citySlug}`}
-                type="suburb"
-            />
-
-            {/* Interactive Map */}
-            {city.latitude && city.longitude && (
-                <div className="py-4">
-                    <h2 className="text-2xl font-bold mb-6">Explore {city.name} on the Map</h2>
-                    <InteractiveMap
-                        center={{
-                            lat: Number(city.latitude),
-                            lng: Number(city.longitude),
-                        }}
-                        viewport={city.viewport_ne_lat ? {
-                            ne_lat: Number(city.viewport_ne_lat),
-                            ne_lng: Number(city.viewport_ne_lng),
-                            sw_lat: Number(city.viewport_sw_lat),
-                            sw_lng: Number(city.viewport_sw_lng),
-                        } : undefined}
-                        properties={featuredProperties
-                            .filter((listing: any) => listing && listing.latitude && listing.longitude)
-                            .map((listing: any) => ({
-                                id: listing.id,
-                                latitude: Number(listing.latitude),
-                                longitude: Number(listing.longitude),
-                                title: listing.title,
-                                price: listing.price,
-                            }))}
-                    />
-                </div>
-            )}
-
-            <AmenitiesSection 
-                location={{
-                    latitude: Number(city.latitude),
-                    longitude: Number(city.longitude)
-                }} 
-            />
-
             {/* Similar Locations */}
             <SimilarLocationsSection locationId={city.id} currentLocationName={city.name} />
           </div>

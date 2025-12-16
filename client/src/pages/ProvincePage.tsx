@@ -203,14 +203,7 @@ export default function ProvincePage({ params }: { params: { province: string } 
           </div>
         }
 
-        popularLocations={
-          <LocationGrid 
-            title={`Popular Cities in ${province.name}`} 
-            items={cities} 
-            parentSlug={provinceSlug}
-            type="city"
-          />
-        }
+        // popularLocations prop removed
 
         fullWidthSection={
           trendingSuburbs && trendingSuburbs.length > 0 ? (
