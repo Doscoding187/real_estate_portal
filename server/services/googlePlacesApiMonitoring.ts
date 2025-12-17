@@ -9,7 +9,7 @@
  * - 26.5: Alert administrators when usage exceeds 80% of limit
  */
 
-import { db } from '../db';
+import { db, getDb } from '../db';
 import { sql } from 'drizzle-orm';
 
 // ============================================================================
@@ -99,6 +99,9 @@ export class GooglePlacesApiMonitoringService {
    */
   async logAPIRequest(log: APIUsageLog): Promise<void> {
     try {
+      const db = await getDb();
+      if (!db) return;
+      
       await db.execute(sql`
         INSERT INTO google_places_api_logs (
           timestamp,
@@ -139,6 +142,9 @@ export class GooglePlacesApiMonitoringService {
     const today = new Date().toISOString().split('T')[0];
 
     try {
+      const db = await getDb();
+      if (!db) return;
+
       // Get current summary or create new one
       const result = await db.execute(sql`
         SELECT * FROM google_places_api_daily_summary
@@ -241,6 +247,8 @@ export class GooglePlacesApiMonitoringService {
     try {
       const config = await this.getConfig();
       const today = new Date().toISOString().split('T')[0];
+      const db = await getDb();
+      if (!db) return;
 
       // Get today's summary
       const result = await db.execute(sql`
@@ -313,6 +321,8 @@ export class GooglePlacesApiMonitoringService {
   }): Promise<void> {
     try {
       const today = new Date().toISOString().split('T')[0];
+      const db = await getDb();
+      if (!db) return;
 
       // Check if alert already exists for today
       const existing = await db.execute(sql`
@@ -358,6 +368,9 @@ export class GooglePlacesApiMonitoringService {
       const today = new Date().toISOString().split('T')[0];
       const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
       const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
+      const db = await getDb();
+      if (!db) throw new Error('Database not available');
 
       // Get today's summary
       const todayResult = await db.execute(sql`
@@ -503,6 +516,9 @@ export class GooglePlacesApiMonitoringService {
    */
   async getActiveAlerts(): Promise<Alert[]> {
     try {
+      const db = await getDb();
+      if (!db) return [];
+
       const result = await db.execute(sql`
         SELECT * FROM google_places_api_alerts
         WHERE resolved_at IS NULL
@@ -532,6 +548,9 @@ export class GooglePlacesApiMonitoringService {
    */
   async resolveAlert(alertId: number): Promise<void> {
     try {
+      const db = await getDb();
+      if (!db) return;
+
       await db.execute(sql`
         UPDATE google_places_api_alerts
         SET resolved_at = NOW()
@@ -557,6 +576,9 @@ export class GooglePlacesApiMonitoringService {
     }
 
     try {
+      const db = await getDb();
+      if (!db) throw new Error('Database not available');
+
       const result = await db.execute(sql`
         SELECT config_key, config_value
         FROM google_places_api_config
@@ -613,6 +635,9 @@ export class GooglePlacesApiMonitoringService {
         geocodeCostPer1000: updates.geocodeCostPer1000!,
       };
 
+      const db = await getDb();
+      if (!db) throw new Error('Database not available');
+
       for (const [key, value] of Object.entries(configMap)) {
         if (value !== undefined) {
           const dbKey = key.replace(/([A-Z])/g, '_$1').toLowerCase();
@@ -639,6 +664,8 @@ export class GooglePlacesApiMonitoringService {
   async getHistoricalData(days: number = 30): Promise<DailySummary[]> {
     try {
       const startDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+      const db = await getDb();
+      if (!db) return [];
 
       const result = await db.execute(sql`
         SELECT * FROM google_places_api_daily_summary

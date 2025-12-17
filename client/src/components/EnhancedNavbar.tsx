@@ -511,11 +511,14 @@ export function EnhancedNavbar() {
                 <NavigationMenuContent>
                   <div className="w-[250px] p-2">
                     {insightsOptions.map(option => (
-                      <a key={option.href} href={option.href}>
-                        <NavigationMenuLink className="block p-3 hover:bg-blue-50 hover:text-blue-600 rounded-md transition-colors">
+                      <NavigationMenuLink key={option.label} asChild>
+                        <a 
+                          href={option.href}
+                          className="block p-3 hover:bg-blue-50 hover:text-blue-600 rounded-md transition-colors"
+                        >
                           {option.label}
-                        </NavigationMenuLink>
-                      </a>
+                        </a>
+                      </NavigationMenuLink>
                     ))}
                   </div>
                 </NavigationMenuContent>

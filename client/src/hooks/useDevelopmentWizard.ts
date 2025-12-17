@@ -224,6 +224,7 @@ export interface DevelopmentWizardState {
   setIdentity: (data: Partial<DevelopmentWizardState['developmentData']>) => void;
   setClassification: (data: Partial<DevelopmentWizardState['classification']>) => void;
   setOverview: (data: Partial<DevelopmentWizardState['overview']>) => void;
+  setFinalisation: (data: Partial<DevelopmentWizardState['finalisation']>) => void;
   
   // Unit Actions
   addUnitType: (unitType: Omit<UnitType, 'id'>) => void;
@@ -339,17 +340,18 @@ const createActions = (
     developmentData: {
       ...state.developmentData,
       ...data,
-      location: { ...state.developmentData.location, ...(data.location || {}) },
-      media: { ...state.developmentData.media, ...(data.media || {}) },
+      location: { ...(state.developmentData?.location || {}), ...(data.location || {}) },
+      media: { ...(state.developmentData?.media || { photos: [], videos: [] }), ...(data.media || {}) },
     }
   })),
 
   // THE BRAIN: Logic Engine
   setClassification: (data: Partial<DevelopmentWizardState['classification']>) => set((state) => {
-    const newClassification = { ...state.classification, ...data };
+    const currentClass = state.classification || {};
+    const newClassification = { ...currentClass, ...data };
     
     // Logic Rule: Reset sub-type if type changes
-    if (data.type && data.type !== state.classification.type) {
+    if (data.type && data.type !== currentClass.type) {
       newClassification.subType = ''; 
       
       // Logic Rule: If switching to Land, clear unit types strictly
@@ -363,7 +365,11 @@ const createActions = (
   }),
   
   setOverview: (data: Partial<DevelopmentWizardState['overview']>) => set((state) => ({
-    overview: { ...state.overview, ...data }
+    overview: { ...(state.overview || {}), ...data }
+  })),
+
+  setFinalisation: (data: Partial<DevelopmentWizardState['finalisation']>) => set((state) => ({
+    finalisation: { ...(state.finalisation || {}), ...data }
   })),
 
   // Unit Actions
@@ -397,14 +403,18 @@ const createActions = (
     
     switch (phase) {
       case 1:
-        if (!state.developmentData.name) errors.push('Name is required');
-        if (!state.developmentData.location.address) errors.push('Location is required');
+        if (!state.developmentData?.name) errors.push('Name is required');
+        if (!state.developmentData?.location?.address) errors.push('Location is required');
         break;
       case 2:
-        if (!state.classification.type) errors.push('Type is required');
+        if (!state.classification?.type) errors.push('Type is required');
+        break;
+      case 3:
+        if ((state.overview?.highlights?.length || 0) < 3) errors.push('Add at least 3 highlights');
+        if ((state.overview?.description?.length || 0) < 50) errors.push('Description must be at least 50 characters');
         break;
       case 4:
-        if (state.classification.type !== 'land' && state.unitTypes.length === 0) {
+        if (state.classification?.type !== 'land' && (state.unitTypes?.length || 0) === 0) {
           errors.push('Add at least one unit type');
         }
         break;
@@ -417,25 +427,26 @@ const createActions = (
     const errors: string[] = [];
 
     // Phase 1: Identity
-    if (!state.developmentData.name) errors.push('Development Name is required');
-    if (!state.developmentData.location.address) errors.push('Location Address is required');
+    if (!state.developmentData?.name) errors.push('Development Name is required');
+    if (!state.developmentData?.location?.address) errors.push('Location Address is required');
     
     // Media Check (Hero + Photos)
-    const mediaCount = (state.developmentData.media.heroImage ? 1 : 0) + state.developmentData.media.photos.length;
+    const media = state.developmentData?.media;
+    const mediaCount = (media?.heroImage ? 1 : 0) + (media?.photos?.length || 0);
     if (mediaCount === 0) errors.push('At least 1 image is required');
 
     // Phase 2: Classification
-    if (!state.classification.type) errors.push('Classification Type is required');
+    if (!state.classification?.type) errors.push('Classification Type is required');
 
     // Phase 3: Overview
-    if ((state.overview.highlights?.length || 0) < 3) errors.push('Add at least 3 highlights');
-    if ((state.overview.description?.length || 0) < 50) errors.push('Description must be at least 50 characters');
+    if ((state.overview?.highlights?.length || 0) < 3) errors.push('Add at least 3 highlights');
+    if ((state.overview?.description?.length || 0) < 50) errors.push('Description must be at least 50 characters');
 
     // Phase 4: Unit Types (Skip for Land)
-    if (state.classification.type !== 'land') {
-       if (state.unitTypes.length === 0) {
+    if (state.classification?.type !== 'land') {
+       if ((state.unitTypes?.length || 0) === 0) {
          errors.push('Add at least one unit type');
-       } else {
+       } else if (state.unitTypes) {
          // Check if any unit has 0 price
          const validPrices = state.unitTypes.every(u => u.basePriceFrom > 0);
          if (!validPrices) errors.push('All unit types must have a base price');
@@ -445,7 +456,7 @@ const createActions = (
     return { isValid: errors.length === 0, errors };
   },
 
-  saveDraft: async (saveCallback) => { 
+  saveDraft: async (saveCallback?: (data: any) => Promise<void>) => { 
     const state = get();
     const draftData = {
       developmentData: state.developmentData,
@@ -549,7 +560,18 @@ const createActions = (
               amenities,
               features
           },
-          unitTypes: [], // Unit types would need separate fetching/mapping if not in main payload
+          // Hydrate unit types if present in the payload
+          unitTypes: Array.isArray(data.unitTypes) ? data.unitTypes.map((u: any) => ({
+            ...u,
+            amenities: u.amenities || { standard: [], additional: [] },
+            specifications: u.specifications || {
+              builtInFeatures: { builtInWardrobes: false, tiledFlooring: false, graniteCounters: false },
+              finishes: {},
+              electrical: { prepaidElectricity: false }
+            },
+            baseMedia: u.baseMedia || { gallery: [], floorPlans: [], renders: [] },
+            specs: Array.isArray(u.specs) ? u.specs : []
+          })) : [],
           finalisation: {
               salesTeamIds: [],
               isPublished: !!data.isPublished
@@ -566,7 +588,10 @@ const createActions = (
   })),
   
   setLocation: (loc: any) => set((state) => ({
-    developmentData: { ...state.developmentData, location: { ...state.developmentData.location, ...loc } }
+    developmentData: { 
+        ...state.developmentData, 
+        location: { ...(state.developmentData?.location || {}), ...loc } 
+    }
   })),
   
   addAmenity: (a: string) => set((state) => ({
@@ -587,6 +612,8 @@ const createActions = (
   
   // Robust Media Implementation
   addMedia: (item: any) => set((state) => {
+    if (!state.developmentData?.media) return state;
+
     const newItem: MediaItem = { 
        ...item, 
        id: `media-${Date.now()}-${Math.random()}`, 
@@ -603,7 +630,7 @@ const createActions = (
     }
     
     if (newItem.type === 'video' || newItem.category === 'videos') {
-       mediaState.videos = [...mediaState.videos, newItem];
+       mediaState.videos = [...(mediaState.videos || []), newItem];
     } else {
        // It's a photo/image
        // Only add to photos if it's NOT the hero image (or if we want duplicates? usually not)
@@ -611,7 +638,7 @@ const createActions = (
        // Let's store in photos array regardless for safety, but typically Hero is separate.
        // Actually, let's keep Hero separate.
        if (mediaState.heroImage?.id !== newItem.id) {
-          mediaState.photos = [...mediaState.photos, newItem];
+          mediaState.photos = [...(mediaState.photos || []), newItem];
        }
     }
     
@@ -619,7 +646,9 @@ const createActions = (
   }),
   
   removeMedia: (id: string) => set((state) => {
-    const media = state.developmentData.media;
+    const media = state.developmentData?.media;
+    if (!media) return state;
+
     const isHero = media.heroImage?.id === id;
     
     return {
@@ -627,30 +656,42 @@ const createActions = (
         ...state.developmentData,
         media: {
            heroImage: isHero ? undefined : media.heroImage,
-           photos: media.photos.filter(p => p.id !== id),
-           videos: media.videos.filter(v => v.id !== id)
+           photos: media.photos?.filter(p => p.id !== id) || [],
+           videos: media.videos?.filter(v => v.id !== id) || []
         }
       }
     };
   }),
   
   setPrimaryImage: (id: string) => set((state) => {
-    // Find the media item in photos or videos
-    const media = state.developmentData.media;
-    let target = media.photos.find(p => p.id === id);
-    if (!target && media.heroImage?.id === id) target = media.heroImage;
-    
-    if (!target) return state; // Not found
-    
-    // Set as Hero
+    const media = state.developmentData?.media;
+    if (!media) return state;
+
+    // 1. Check if already hero
+    if (media.heroImage?.id === id) return state;
+
+    // 2. Find in photos
+    const photoIndex = media.photos?.findIndex(p => p.id === id);
+    if (photoIndex === undefined || photoIndex === -1) return state;
+
+    const newHero = { ...media.photos![photoIndex], isPrimary: true, category: 'featured' as const };
+    const oldHero = media.heroImage;
+
+    // 3. Swap: Remove new hero from photos, add old hero to photos
+    const newPhotos = [...(media.photos || [])];
+    newPhotos.splice(photoIndex, 1);
+
+    if (oldHero) {
+      newPhotos.unshift({ ...oldHero, isPrimary: false, category: 'general' });
+    }
+
     return {
        developmentData: {
           ...state.developmentData,
           media: {
              ...media,
-             heroImage: { ...target, isPrimary: true, category: 'featured' },
-             // Theoretically we might want to remove it from Photos array if we move it to Hero
-             // But for now, let's just update the Hero slot.
+             heroImage: newHero,
+             photos: newPhotos
           }
        }
     };
@@ -661,12 +702,15 @@ const createActions = (
       // This is complex because 'items' is a flat list.
       // We'll update the displayOrders.
       
-      const newPhotos = state.developmentData.media.photos.map(p => {
+      const media = state.developmentData?.media;
+      if (!media) return state;
+
+      const newPhotos = (media.photos || []).map(p => {
          const match = items.find(i => i.id === p.id);
          return match ? { ...p, displayOrder: match.displayOrder } : p;
       });
       
-      const newVideos = state.developmentData.media.videos.map(v => {
+      const newVideos = (media.videos || []).map(v => {
          const match = items.find(i => i.id === v.id);
          return match ? { ...v, displayOrder: match.displayOrder } : v;
       });
@@ -675,7 +719,7 @@ const createActions = (
          developmentData: {
             ...state.developmentData,
             media: {
-               ...state.developmentData.media,
+               ...media,
                photos: newPhotos.sort((a,b) => a.displayOrder - b.displayOrder),
                videos: newVideos.sort((a,b) => a.displayOrder - b.displayOrder)
             }
@@ -694,13 +738,16 @@ const createActions = (
   
   // IMPORTANT: Media Getter that aggregates everything for the UI
   get media() { 
-      const s = get().developmentData.media;
+      const state = get();
+      if (!state?.developmentData?.media) return [];
+      
+      const s = state.developmentData.media;
       const list: MediaItem[] = [];
       if (s.heroImage) list.push({ ...s.heroImage, category: 'featured' });
       
       // Map photos to 'general' category unless specified
-      s.photos.forEach(p => list.push({ ...p, category: (p.category as any) || 'general' }));
-      s.videos.forEach(v => list.push({ ...v, category: (v.category as any) || 'videos' }));
+      s.photos?.forEach(p => list.push({ ...p, category: (p.category as any) || 'general' }));
+      s.videos?.forEach(v => list.push({ ...v, category: (v.category as any) || 'videos' }));
       
       return list;
   },
@@ -719,24 +766,28 @@ export const useDevelopmentWizard = create<DevelopmentWizardState>()(
     }),
     {
       name: 'development-wizard-storage',
-      partialize: (state) => ({
-        currentPhase: state.currentPhase,
-        developmentData: {
-          ...state.developmentData,
-          media: {
-             // Don't persist Files
-             heroImage: state.developmentData.media.heroImage ? { ...state.developmentData.media.heroImage, file: undefined } : undefined,
-             photos: state.developmentData.media.photos.map(p => ({ ...p, file: undefined })),
-             videos: state.developmentData.media.videos.map(v => ({ ...v, file: undefined })),
-          }
-        },
-        classification: state.classification,
-        overview: state.overview,
-        unitTypes: state.unitTypes,
-        finalisation: state.finalisation,
-        // Persist legacy fields if needed, or drop them
-        documents: state.documents,
-      }),
+      partialize: (state) => {
+        if (!state?.developmentData?.media) return {};
+        
+        return {
+          currentPhase: state.currentPhase,
+          developmentData: {
+            ...state.developmentData,
+            media: {
+               // Don't persist Files
+               heroImage: state.developmentData.media.heroImage ? { ...state.developmentData.media.heroImage, file: undefined } : undefined,
+               photos: (state.developmentData.media.photos || []).map(p => ({ ...p, file: undefined })),
+               videos: (state.developmentData.media.videos || []).map(v => ({ ...v, file: undefined })),
+            }
+          },
+          classification: state.classification,
+          overview: state.overview,
+          unitTypes: state.unitTypes,
+          finalisation: state.finalisation,
+          // Persist legacy fields if needed, or drop them
+          documents: state.documents,
+        };
+      },
     }
   )
 );
