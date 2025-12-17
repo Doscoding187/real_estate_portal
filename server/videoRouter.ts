@@ -107,7 +107,7 @@ export const videoRouter = router({
         throw new Error('Listing videos must be linked to a property or development');
       }
 
-      const newVideo = await ctx.db
+      const [newVideo] = await ctx.db
         .insert(videos)
         .values({
           agentId: agent[0].id,
@@ -117,10 +117,9 @@ export const videoRouter = router({
           caption: input.caption,
           type: input.type,
           duration: input.duration,
-        })
-        .returning();
+        });
 
-      return newVideo[0];
+      return { ...input, id: newVideo.insertId as number, agentId: agent[0].id, views: 0, likes: 0, shares: 0, createdAt: new Date() };
     }),
 
   // Get all videos for the explore feed
@@ -318,7 +317,7 @@ export const videoRouter = router({
         propertyId: input.propertyId,
       };
 
-      const newLead = await ctx.db.insert(leads).values(leadData).returning();
+      const [newLead] = await ctx.db.insert(leads).values(leadData);
 
       // TODO: Send email notification to agent
       // This would integrate with the existing email service

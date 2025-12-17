@@ -87,7 +87,7 @@ export class BoostCampaignService {
     endDate.setDate(endDate.getDate() + config.duration);
 
     // Create campaign
-    const [campaign] = await db.insert(exploreBoostCampaigns).values({
+    const [result] = await db.insert(exploreBoostCampaigns).values({
       creatorId,
       contentId,
       campaignName,
@@ -102,7 +102,13 @@ export class BoostCampaignService {
       clicks: 0,
       conversions: 0,
       costPerClick: 0,
-    }).returning();
+    });
+
+    const campaign = await db.query.exploreBoostCampaigns.findFirst({
+      where: eq(exploreBoostCampaigns.id, result.insertId),
+    });
+
+    if (!campaign) throw new Error('Failed to create campaign');
 
     return campaign as BoostCampaign;
   }

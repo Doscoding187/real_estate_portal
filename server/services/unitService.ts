@@ -54,9 +54,12 @@ export class UnitService {
       facing: input.facing || null,
       features: input.features ? JSON.stringify(input.features) : null,
       status: 'available',
-    }).returning();
+    });
 
-    return unit;
+    const newUnit = await this.getUnit(unit.insertId);
+    if (!newUnit) throw new Error('Failed to create unit');
+    
+    return newUnit;
   }
 
   /**
@@ -94,9 +97,17 @@ export class UnitService {
     }));
 
     // Bulk insert
-    const createdUnits = await db.insert(developmentUnits).values(unitsData).returning();
+    const [result] = await db.insert(developmentUnits).values(unitsData);
+    
+    // Fetch newly created units (MySQL bulk insert guarantees sequential IDs starting from insertId)
+    const newUnits = await db.query.developmentUnits.findMany({
+      where: and(
+        eq(developmentUnits.developmentId, input.developmentId),
+        sql`${developmentUnits.id} >= ${result.insertId}`
+      ),
+    });
 
-    return createdUnits;
+    return newUnits;
   }
 
   /**
@@ -185,10 +196,12 @@ export class UnitService {
     }
 
     // Update unit
-    const [updated] = await db.update(developmentUnits)
+    await db.update(developmentUnits)
       .set(updateData)
-      .where(eq(developmentUnits.id, unitId))
-      .returning();
+      .where(eq(developmentUnits.id, unitId));
+
+    const updated = await this.getUnit(unitId);
+    if (!updated) throw new Error('Failed to update unit');
 
     return updated;
   }
@@ -232,7 +245,7 @@ export class UnitService {
       }
 
       // Update with WHERE clause to ensure status hasn't changed
-      const result = await db.update(developmentUnits)
+      const [result] = await db.update(developmentUnits)
         .set({
           status: 'reserved',
           reservedAt: new Date().toISOString(),
@@ -242,14 +255,16 @@ export class UnitService {
         .where(and(
           eq(developmentUnits.id, unitId),
           eq(developmentUnits.status, 'available') // Optimistic lock
-        ))
-        .returning();
+        ));
 
-      if (result.length === 0) {
+      if (result.affectedRows === 0) {
         throw new Error('Unit was reserved by another user. Please try a different unit.');
       }
 
-      return result[0];
+      const updated = await this.getUnit(unitId);
+      if (!updated) throw new Error('Failed to retrieve reserved unit');
+      
+      return updated;
     }
 
     // Handle other status transitions
@@ -267,10 +282,12 @@ export class UnitService {
       updateData.soldAt = null;
     }
 
-    const [updated] = await db.update(developmentUnits)
+    await db.update(developmentUnits)
       .set(updateData)
-      .where(eq(developmentUnits.id, unitId))
-      .returning();
+      .where(eq(developmentUnits.id, unitId));
+
+    const updated = await this.getUnit(unitId);
+    if (!updated) throw new Error('Failed to update unit stats');
 
     return updated;
   }

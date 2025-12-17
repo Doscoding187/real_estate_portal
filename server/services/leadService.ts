@@ -169,7 +169,7 @@ export async function createLead(
   );
 
   // Create lead record
-  const [lead] = await db.insert(leads).values({
+  const [result] = await db.insert(leads).values({
     developmentId: input.developmentId,
     unitId: input.unitId,
     name: input.name,
@@ -195,7 +195,9 @@ export async function createLead(
     // Status
     status: 'new',
     leadType: 'inquiry',
-  }).returning();
+  });
+
+  const lead = await getLeadById(result.insertId);
 
   return {
     lead,
@@ -301,11 +303,11 @@ export async function updateLeadStatus(
     }
   }
 
-  const [updatedLead] = await db
-    .update(leads)
+    await db.update(leads)
     .set(updateData)
-    .where(eq(leads.id, leadId))
-    .returning();
+    .where(eq(leads.id, leadId));
+
+  const updatedLead = await getLeadById(leadId);
 
   return updatedLead;
 }
@@ -315,15 +317,15 @@ export async function updateLeadStatus(
  * Validates: Requirements 5.5, 6.3
  */
 export async function assignLead(leadId: number, userId: number) {
-  const [updatedLead] = await db
-    .update(leads)
+  await db.update(leads)
     .set({
       assignedTo: userId,
       assignedAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     })
-    .where(eq(leads.id, leadId))
-    .returning();
+    .where(eq(leads.id, leadId));
+
+  const updatedLead = await getLeadById(leadId);
 
   return updatedLead;
 }
@@ -336,14 +338,14 @@ export async function updateLeadFunnelStage(
   leadId: number,
   funnelStage: 'interest' | 'affordability' | 'qualification' | 'viewing' | 'offer' | 'bond' | 'sale'
 ) {
-  const [updatedLead] = await db
-    .update(leads)
+  await db.update(leads)
     .set({
       funnelStage,
       updatedAt: new Date().toISOString(),
     })
-    .where(eq(leads.id, leadId))
-    .returning();
+    .where(eq(leads.id, leadId));
+
+  const updatedLead = await getLeadById(leadId);
 
   return updatedLead;
 }
