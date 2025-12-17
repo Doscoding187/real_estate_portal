@@ -1711,9 +1711,9 @@ export const developerRouter = router({
           draftData: input.draftData,
           progress,
           currentStep: input.currentStep || 0,
-        }).returning();
+        });
 
-        return { id: result.id, message: 'Draft saved successfully' };
+        return { id: result.insertId as number, message: 'Draft saved successfully' };
       }
     }),
 
