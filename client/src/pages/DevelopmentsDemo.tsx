@@ -1,19 +1,34 @@
 import { useState } from 'react';
+import { trpc } from '@/lib/trpc';
 import { DevelopmentCard } from '@/components/DevelopmentCard';
-import { mockDevelopments } from '@/data/mockDevelopments';
 import { ListingNavbar } from '@/components/ListingNavbar';
 import { SidebarFilters } from '@/components/SidebarFilters';
 import { SearchFilters } from '@/components/SearchBar';
 import { Button } from '@/components/ui/button';
-import { List, Building2 } from 'lucide-react';
+import { List, Building2, Loader2 } from 'lucide-react';
 
 export default function DevelopmentsDemo() {
   const [filters, setFilters] = useState<SearchFilters>({});
+  
+  // Fetch real developments
+  const { data: developments, isLoading } = trpc.developer.listPublicDevelopments.useQuery({ limit: 20 });
 
   const handleFilterChange = (newFilters: SearchFilters) => {
     setFilters(newFilters);
     // In a real app, this would trigger a refetch or filter the list
     console.log('Filters updated:', newFilters);
+  };
+
+  // Safe JSON parse helper
+  const parseImages = (imagesVal: any): string[] => {
+      if (!imagesVal) return [];
+      if (Array.isArray(imagesVal)) return imagesVal;
+      try {
+          const parsed = JSON.parse(imagesVal);
+          return Array.isArray(parsed) ? parsed : [];
+      } catch (e) {
+          return [];
+      }
   };
 
   return (
@@ -34,7 +49,7 @@ export default function DevelopmentsDemo() {
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
               <div>
                 <h2 className="text-xl font-bold text-slate-800">
-                  {mockDevelopments.length} New Developments Found
+                  {developments ? developments.length : 0} New Developments Found
                 </h2>
                 <p className="text-sm text-slate-500 mt-1">
                   Discover the latest residential developments and off-plan properties
@@ -57,11 +72,35 @@ export default function DevelopmentsDemo() {
             </div>
 
             {/* Developments Grid */}
-            {mockDevelopments.length > 0 ? (
+            {isLoading ? (
+                <div className="flex justify-center items-center py-20">
+                    <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                </div>
+            ) : developments && developments.length > 0 ? (
               <div className="flex flex-col gap-6">
-                {mockDevelopments.map((dev) => (
-                  <DevelopmentCard key={dev.id} {...dev} />
-                ))}
+                {developments.map((dev) => {
+                    const images = parseImages(dev.images);
+                    return (
+                      <DevelopmentCard 
+                        key={dev.id} 
+                        id={String(dev.id)}
+                        title={dev.name}
+                        rating={Number(dev.rating) || 0}
+                        location={`${dev.suburb ? dev.suburb + ', ' : ''}${dev.city}`}
+                        description={dev.description || ''}
+                        image={images[0] || ''}
+                        unitTypes={dev.unitTypes}
+                        highlights={(dev.highlights as string[]) || []}
+                        developer={{
+                            name: dev.developerName || 'Unknown Developer',
+                            isFeatured: !!dev.developerIsFeatured
+                        }}
+                        imageCount={images.length}
+                        isFeatured={!!dev.isFeatured}
+                        isNewBooking={false} // Default for now
+                      />
+                    );
+                })}
               </div>
             ) : (
               <div className="flex flex-col items-center justify-center py-20 text-center">

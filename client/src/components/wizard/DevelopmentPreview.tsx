@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { MapPin, Bed, Bath, Car, Maximize, Smartphone, Monitor, Share2, ArrowLeft } from 'lucide-react';
+import { MapPin, Bed, Bath, Car, Maximize, Smartphone, Monitor, Share2, ArrowLeft, Moon, Sun, Check } from 'lucide-react';
+import { toast } from 'sonner';
 
 export const DevelopmentPreview: React.FC = () => {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
+  const [isDarkMode, setIsDarkMode] = useState(false);
 
   useEffect(() => {
     const storedData = localStorage.getItem('development_preview_data');
@@ -24,9 +26,15 @@ export const DevelopmentPreview: React.FC = () => {
   const { developmentData, overview, unitTypes, classification } = data;
   const heroImage = developmentData?.media?.heroImage;
 
+  const handleShare = () => {
+    // In a real app, this would generate a public ID/link
+    navigator.clipboard.writeText(window.location.href);
+    toast.success('Preview link copied to clipboard');
+  };
+
   // Content Component to reuse
   const PreviewContent = () => (
-    <div className={`bg-gray-50 min-h-full ${isMobile ? 'text-sm' : ''}`}>
+    <div className={`min-h-full transition-colors duration-300 ${isDarkMode ? 'bg-gray-950 text-gray-100' : 'bg-gray-50 text-gray-900'} ${isMobile ? 'text-sm' : ''}`}>
       {/* Hero Section */}
       <div className={`relative w-full bg-gray-200 ${isMobile ? 'h-[250px]' : 'h-[500px]'}`}>
         {heroImage?.url ? (
@@ -43,7 +51,7 @@ export const DevelopmentPreview: React.FC = () => {
             No Hero Image Selected
           </div>
         )}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent" />
         
         <div className={`absolute bottom-0 left-0 right-0 ${isMobile ? 'p-4' : 'p-8'} max-w-7xl mx-auto`}>
           <div className="flex items-end justify-between">
@@ -81,18 +89,18 @@ export const DevelopmentPreview: React.FC = () => {
           
           {/* Mobile Price Card */}
           {isMobile && (
-            <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
-              <div className="text-xs text-gray-500 uppercase font-semibold">Starting From</div>
-              <div className="text-2xl font-bold text-blue-600">
+            <div className={`p-4 rounded-xl shadow-sm border ${isDarkMode ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-100'}`}>
+              <div className={`text-xs uppercase font-semibold ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Starting From</div>
+              <div className="text-2xl font-bold text-blue-500">
                 R {unitTypes?.[0]?.basePriceFrom?.toLocaleString() || 'TBD'}
               </div>
             </div>
           )}
 
           {/* Overview */}
-          <section className={`bg-white rounded-2xl shadow-sm border border-gray-100 ${isMobile ? 'p-5' : 'p-8'}`}>
-            <h2 className={`${isMobile ? 'text-lg' : 'text-2xl'} font-bold text-gray-900 mb-4`}>About the Development</h2>
-            <div className="prose max-w-none text-gray-600 whitespace-pre-line text-sm md:text-base">
+          <section className={`rounded-2xl shadow-sm border ${isDarkMode ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-100'} ${isMobile ? 'p-5' : 'p-8'}`}>
+            <h2 className={`font-bold mb-4 ${isMobile ? 'text-lg' : 'text-2xl'} ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>About the Development</h2>
+            <div className={`prose max-w-none whitespace-pre-line text-sm md:text-base ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
               {overview?.description || 'No description provided.'}
             </div>
             
@@ -100,7 +108,7 @@ export const DevelopmentPreview: React.FC = () => {
             {overview?.highlights?.length > 0 && (
               <div className={`mt-6 grid ${isMobile ? 'grid-cols-1 gap-2' : 'grid-cols-1 md:grid-cols-2 gap-4'}`}>
                 {overview.highlights.map((highlight: string, idx: number) => (
-                  <div key={idx} className="flex items-center gap-3 p-3 bg-blue-50 rounded-lg text-blue-900 font-medium text-sm">
+                  <div key={idx} className={`flex items-center gap-3 p-3 rounded-lg font-medium text-sm ${isDarkMode ? 'bg-blue-900/20 text-blue-300' : 'bg-blue-50 text-blue-900'}`}>
                     <div className="w-2 h-2 rounded-full bg-blue-500 flex-shrink-0" />
                     {highlight}
                   </div>
@@ -111,19 +119,19 @@ export const DevelopmentPreview: React.FC = () => {
 
           {/* Unit Types */}
           <section>
-            <h2 className={`${isMobile ? 'text-lg' : 'text-2xl'} font-bold text-gray-900 mb-4 md:mb-6`}>Available Units</h2>
+            <h2 className={`font-bold mb-4 md:mb-6 ${isMobile ? 'text-lg' : 'text-2xl'} ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Available Units</h2>
             <div className="space-y-4">
               {unitTypes?.map((unit: any) => (
-                <div key={unit.id} className={`bg-white rounded-xl shadow-sm border border-gray-100 hover:border-blue-200 transition-colors ${isMobile ? 'p-4' : 'p-6 flex flex-col md:flex-row gap-6 items-center'}`}>
+                <div key={unit.id} className={`rounded-xl shadow-sm border transition-colors ${isDarkMode ? 'bg-gray-900 border-gray-800 hover:border-blue-800' : 'bg-white border-gray-100 hover:border-blue-200'} ${isMobile ? 'p-4' : 'p-6 flex flex-col md:flex-row gap-6 items-center'}`}>
                   <div className="flex-1">
                     <div className="flex justify-between items-start mb-2">
-                      <h3 className={`${isMobile ? 'text-base' : 'text-xl'} font-bold text-gray-900`}>{unit.name}</h3>
-                      <span className={`${isMobile ? 'text-base' : 'text-lg'} font-bold text-blue-600`}>
+                      <h3 className={`font-bold ${isMobile ? 'text-base' : 'text-xl'} ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{unit.name}</h3>
+                      <span className={`font-bold text-blue-500 ${isMobile ? 'text-base' : 'text-lg'}`}>
                         R {unit.basePriceFrom?.toLocaleString()}
                       </span>
                     </div>
                     
-                    <div className={`flex flex-wrap gap-4 text-gray-500 text-sm my-3 ${isMobile ? 'gap-y-2' : ''}`}>
+                    <div className={`flex flex-wrap gap-4 text-sm my-3 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'} ${isMobile ? 'gap-y-2' : ''}`}>
                       <div className="flex items-center gap-1.5">
                         <Bed className="w-4 h-4" /> {unit.bedrooms}
                       </div>
@@ -142,7 +150,7 @@ export const DevelopmentPreview: React.FC = () => {
                       {Object.entries(unit.specifications?.builtInFeatures || {})
                         .filter(([_, v]) => v)
                         .map(([k]) => (
-                          <span key={k} className="px-2 py-1 bg-gray-100 text-gray-600 text-[10px] md:text-xs rounded capitalize">
+                          <span key={k} className={`px-2 py-1 text-[10px] md:text-xs rounded capitalize ${isDarkMode ? 'bg-gray-800 text-gray-300' : 'bg-gray-100 text-gray-600'}`}>
                             {k.replace(/([A-Z])/g, ' $1').trim()}
                           </span>
                         ))}
@@ -161,7 +169,7 @@ export const DevelopmentPreview: React.FC = () => {
                 </div>
               ))}
               {(!unitTypes || unitTypes.length === 0) && (
-                <div className="text-center py-8 text-gray-500 bg-white rounded-xl border border-dashed border-gray-200">
+                <div className={`text-center py-8 rounded-xl border border-dashed ${isDarkMode ? 'bg-gray-900 border-gray-800 text-gray-400' : 'bg-white border-gray-200 text-gray-500'}`}>
                   No unit types configured yet.
                 </div>
               )}
@@ -171,19 +179,19 @@ export const DevelopmentPreview: React.FC = () => {
 
         {/* Sidebar (Desktop) / Bottom Actions (Mobile) */}
         <div className={`${isMobile ? 'pb-8' : 'space-y-6'}`}>
-          <div className={`bg-white rounded-2xl shadow-sm border border-gray-100 ${isMobile ? 'p-5' : 'p-6 sticky top-24'}`}>
-            <h3 className="font-bold text-gray-900 mb-4">Development Status</h3>
+          <div className={`rounded-2xl shadow-sm border ${isDarkMode ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-100'} ${isMobile ? 'p-5' : 'p-6 sticky top-24'}`}>
+            <h3 className={`font-bold mb-4 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Development Status</h3>
             <div className="flex items-center gap-3 mb-6">
               <div className="w-3 h-3 rounded-full bg-green-500 animate-pulse" />
-              <span className="capitalize font-medium text-gray-700">
+              <span className={`capitalize font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                 {overview?.status?.replace('-', ' ') || 'Planning'}
               </span>
             </div>
             
-            <button className="w-full py-4 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-all shadow-lg shadow-blue-200 mb-3">
+            <button className="w-full py-4 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/20 mb-3">
               Enquire Now
             </button>
-            <button className="w-full py-4 bg-white border-2 border-gray-200 text-gray-700 font-bold rounded-xl hover:bg-gray-50 transition-all">
+            <button className={`w-full py-4 border-2 font-bold rounded-xl transition-all ${isDarkMode ? 'bg-transparent border-gray-700 text-white hover:bg-gray-800' : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'}`}>
               Download Brochure
             </button>
           </div>
@@ -193,9 +201,9 @@ export const DevelopmentPreview: React.FC = () => {
   );
 
   return (
-    <div className="min-h-screen bg-gray-100 font-sans flex flex-col">
+    <div className={`min-h-screen font-sans flex flex-col ${isDarkMode ? 'bg-gray-950' : 'bg-gray-100'}`}>
       {/* Preview Toolbar */}
-      <div className="bg-gray-900 text-white px-4 py-3 sticky top-0 z-50 shadow-md">
+      <div className="bg-gray-900 text-white px-4 py-3 sticky top-0 z-50 shadow-md border-b border-gray-800">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
            <div className="flex items-center gap-4">
              <button onClick={() => window.close()} className="text-gray-400 hover:text-white transition-colors">
@@ -207,6 +215,14 @@ export const DevelopmentPreview: React.FC = () => {
            </div>
            
            <div className="flex items-center gap-4">
+             {/* Dark Mode Toggle */}
+             <button 
+               onClick={() => setIsDarkMode(!isDarkMode)}
+               className="p-2 text-gray-400 hover:text-white transition-colors rounded-full hover:bg-gray-800"
+             >
+               {isDarkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+             </button>
+
              {/* View Toggle */}
              <div className="flex items-center gap-1 bg-gray-800 rounded-lg p-1">
                <button
@@ -225,7 +241,11 @@ export const DevelopmentPreview: React.FC = () => {
                </button>
              </div>
 
-             <button className="p-2 text-gray-400 hover:text-white transition-colors" title="Share Preview">
+             <button 
+               onClick={handleShare}
+               className="p-2 text-gray-400 hover:text-white transition-colors rounded-full hover:bg-gray-800" 
+               title="Share Preview"
+             >
                <Share2 className="w-5 h-5" />
              </button>
            </div>
@@ -233,9 +253,9 @@ export const DevelopmentPreview: React.FC = () => {
       </div>
 
       {/* Content Container */}
-      <div className={`flex-1 w-full transition-all duration-500 ease-in-out ${isMobile ? 'bg-gray-200 py-8' : 'bg-white'}`}>
+      <div className={`flex-1 w-full transition-all duration-500 ease-in-out ${isMobile ? (isDarkMode ? 'bg-gray-900 py-8' : 'bg-gray-200 py-8') : (isDarkMode ? 'bg-gray-950' : 'bg-white')}`}>
          <div className={`
-           mx-auto bg-white transition-all duration-500 ease-in-out
+           mx-auto transition-all duration-500 ease-in-out ${isDarkMode ? 'bg-gray-950' : 'bg-white'}
            ${isMobile 
              ? 'w-[375px] h-[812px] rounded-[3rem] border-[12px] border-gray-800 shadow-2xl overflow-hidden relative' 
              : 'w-full min-h-screen'

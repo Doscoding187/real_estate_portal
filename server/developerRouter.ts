@@ -750,6 +750,33 @@ export const developerRouter = router({
     }),
 
   /**
+   * Public list of developments for demo page
+   * Auth: Public
+   */
+  listPublicDevelopments: publicProcedure
+    .input(z.object({ limit: z.number().default(20).optional() }))
+    .query(async ({ input }) => {
+      return await db.listPublicDevelopments(input?.limit || 20);
+    }),
+
+  /**
+   * Get single public development
+   * Auth: Public
+   */
+  getPublicDevelopment: publicProcedure
+    .input(z.object({ id: z.number() }))
+    .query(async ({ input }) => {
+      const dev = await db.getPublicDevelopment(input.id);
+      if (!dev) {
+         throw new TRPCError({
+             code: 'NOT_FOUND',
+             message: 'Development not found'
+         });
+      }
+      return dev;
+    }),
+
+  /**
    * Update phase
    * Auth: Protected, must own development
    * Validates: Requirements 15.4

@@ -470,7 +470,13 @@ const createActions = (
       await saveCallback(draftData);
     }
   },
-  publish: async () => { console.log('Publishing...', get()); },
+  publish: async () => { 
+    // Simulate API call latency
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    set((state) => ({
+      finalisation: { ...state.finalisation, isPublished: true }
+    }));
+  },
   
   reset: () => set(initialState),
   

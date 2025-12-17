@@ -1,5 +1,6 @@
 import { useParams } from 'wouter';
 import { useState } from 'react';
+import { trpc } from '@/lib/trpc';
 import { ListingNavbar } from '@/components/ListingNavbar';
 import { MediaLightbox } from '@/components/MediaLightbox';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -23,6 +24,7 @@ import {
   Award,
   Globe,
   Briefcase,
+  Loader2,
 } from 'lucide-react';
 
 type MediaCategory = 'all' | 'amenities' | 'outdoors' | 'videos';
@@ -33,157 +35,92 @@ export default function DevelopmentDetail() {
   const [lightboxCategory, setLightboxCategory] = useState<MediaCategory>('all');
   const [lightboxTitle, setLightboxTitle] = useState('');
 
-  // Mock development data - replace with actual API call
+  // Fetch real development
+  const devId = parseInt(id || '0');
+  const { data: dev, isLoading } = trpc.developer.getPublicDevelopment.useQuery(
+      { id: devId },
+      { enabled: !!devId }
+  );
+
+  if (isLoading) {
+      return (
+          <div className="min-h-screen flex items-center justify-center">
+              <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          </div>
+      );
+  }
+
+  if (!dev) {
+      return (
+          <div className="min-h-screen bg-slate-50">
+             <ListingNavbar /> 
+             <div className="container mx-auto px-4 pt-24 pb-12 flex items-center justify-center">
+                 <div className="text-center">
+                    <h2 className="text-2xl font-bold text-gray-900">Development Not Found</h2>
+                    <p className="text-gray-600 mt-2">The development you are looking for does not exist or has been removed.</p>
+                    <Button className="mt-4" onClick={() => window.history.back()}>Go Back</Button>
+                 </div>
+             </div>
+          </div>
+      );
+  }
+
+  // Parse helpers
+  const parseJSON = (val: any) => {
+      if (!val) return [];
+      if (Array.isArray(val)) return val;
+      try { return JSON.parse(val); } catch (e) { return []; }
+  };
+
+  const images = parseJSON(dev.images);
+  const amenities = parseJSON(dev.amenities);
+  const outdoorsPhotos: any[] = []; 
+  const amenitiesPhotos: any[] = [];
+  
+  // Create unified media array for lightbox
+  const allPhotos = images.map((url: string) => ({ url, type: 'image' as const }));
+
+  // Map units
+  const units = (dev.unitTypes || []).map((u: any) => ({
+      id: u.id,
+      type: u.name,
+      ownershipType: 'Sectional Title', 
+      structuralType: 'Apartment',
+      bedrooms: u.bedrooms,
+      bathrooms: Number(u.bathrooms),
+      size: u.unitSize || 0,
+      price: Number(u.basePriceFrom),
+      priceTo: u.basePriceTo ? Number(u.basePriceTo) : undefined,
+      available: 1, 
+      image: parseJSON(u.baseMedia)?.gallery?.[0]?.url || images[0] || '', 
+      floors: '',
+      virtualTour: '',
+      yardSize: u.yardSize
+  }));
+
   const development = {
-    id: parseInt(id || '1'),
-    name: 'Sandton Heights Luxury Residences',
-    developer: 'Premium Properties Development',
-    location: 'Sandton, Johannesburg',
-    address: '45 Rivonia Road, Sandton, Johannesburg',
-    description:
-      "Experience luxury living at its finest with Sandton Heights, an exclusive development featuring world-class amenities, premium finishes, and breathtaking views. Located in the heart of Sandton's business district, this development offers unparalleled convenience and sophistication.",
-    completionDate: 'Q4 2025',
-    totalUnits: 156,
-    availableUnits: 42,
-    startingPrice: 3500000,
+    id: dev.id,
+    name: dev.name,
+    developer: dev.developerName || 'Unknown Developer',
+    location: `${dev.suburb ? dev.suburb + ', ' : ''}${dev.city}`,
+    address: dev.address || '',
+    description: dev.description || '',
+    completionDate: dev.completionDate ? new Date(dev.completionDate).toLocaleDateString() : 'TBA',
+    totalUnits: dev.totalUnits || 0,
+    availableUnits: dev.availableUnits || 0,
+    startingPrice: Number(dev.priceFrom) || 0,
     featuredMedia: {
-      type: 'image', // 'image' or 'video'
-      url: 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=1200',
+      type: 'image',
+      url: images[0] || '',
     },
-    totalPhotos: 24,
-    images: [
-      'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=1200',
-      'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=1200',
-      'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=1200',
-      'https://images.unsplash.com/photo-1613490493576-7fde63acd811?w=1200',
-    ],
-    amenities: [
-      '24/7 Security',
-      'Infinity Pool',
-      'Gym & Spa',
-      'Concierge Service',
-      'Underground Parking',
-      'Rooftop Terrace',
-      "Children's Play Area",
-      'Business Center',
-    ],
-    units: [
-      {
-        id: 1,
-        type: 'Studio',
-        ownershipType: 'Sectional Title',
-        structuralType: 'Studio',
-        bedrooms: 0,
-        bathrooms: 1,
-        size: 45,
-        price: 1800000,
-        priceTo: 1950000,
-        available: 5,
-        image: 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=400',
-        floors: 'Single Storey',
-        virtualTour: '',
-      },
-      {
-        id: 2,
-        type: '1 Bedroom',
-        ownershipType: 'Sectional Title',
-        structuralType: 'Apartment',
-        bedrooms: 1,
-        bathrooms: 1,
-        size: 55,
-        price: 2200000,
-        priceTo: 2400000,
-        available: 12,
-        image: 'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=400',
-        floors: 'Single Storey',
-        virtualTour: '',
-      },
-      {
-        id: 3,
-        type: '2 Bedroom',
-        ownershipType: 'Sectional Title',
-        structuralType: 'Apartment',
-        bedrooms: 2,
-        bathrooms: 2,
-        size: 85,
-        price: 3500000,
-        priceTo: 3800000,
-        available: 18,
-        image: 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=400',
-        floors: 'Double Storey',
-        virtualTour: 'https://my.matterport.com/show/?m=example',
-      },
-      {
-        id: 4,
-        type: '3 Bedroom',
-        ownershipType: 'Full Title',
-        structuralType: 'Townhouse',
-        bedrooms: 3,
-        bathrooms: 2,
-        size: 120,
-        yardSize: 50,
-        price: 5200000,
-        priceTo: 5500000,
-        available: 7,
-        image: 'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=400',
-        floors: 'Double Storey',
-        virtualTour: '',
-      },
-    ],
-    // Categorized media
-    allPhotos: [
-      {
-        url: 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=1200',
-        type: 'image' as const,
-      },
-      {
-        url: 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=1200',
-        type: 'image' as const,
-      },
-      {
-        url: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=1200',
-        type: 'image' as const,
-      },
-      {
-        url: 'https://images.unsplash.com/photo-1613490493576-7fde63acd811?w=1200',
-        type: 'image' as const,
-      },
-    ],
-    amenitiesPhotos: [
-      {
-        url: 'https://images.unsplash.com/photo-1540518614846-7eded433c457?w=1200',
-        type: 'image' as const,
-      },
-      {
-        url: 'https://images.unsplash.com/photo-1576013551627-0cc20b96c2a7?w=1200',
-        type: 'image' as const,
-      },
-      {
-        url: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=1200',
-        type: 'image' as const,
-      },
-    ],
-    outdoorsPhotos: [
-      {
-        url: 'https://images.unsplash.com/photo-1560448204-603b3fc33ddc?w=1200',
-        type: 'image' as const,
-      },
-      {
-        url: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=1200',
-        type: 'image' as const,
-      },
-      {
-        url: 'https://images.unsplash.com/photo-1600607687644-c7171b42498b?w=1200',
-        type: 'image' as const,
-      },
-    ],
-    videos: [
-      // Mock video - replace with actual development video URLs
-      {
-        url: 'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=1200',
-        type: 'image' as const,
-      }, // Placeholder
-    ],
+    totalPhotos: images.length,
+    images: images,
+    amenities: amenities,
+    units: units,
+    allPhotos: allPhotos,
+    amenitiesPhotos: amenitiesPhotos.length > 0 ? amenitiesPhotos : allPhotos,
+    outdoorsPhotos: outdoorsPhotos.length > 0 ? outdoorsPhotos : allPhotos,
+    videos: [],
   };
 
   const openLightbox = (category: MediaCategory, title: string) => {
@@ -538,7 +475,7 @@ export default function DevelopmentDetail() {
                 </CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                    {development.amenities.map((amenity, index) => (
+                    {development.amenities.map((amenity: any, index: number) => (
                       <div
                         key={index}
                         className="flex items-center gap-2 p-2 bg-slate-50 rounded-lg"

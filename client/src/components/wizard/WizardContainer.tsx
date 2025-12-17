@@ -11,6 +11,7 @@ import { ClassificationPhase } from './phases/ClassificationPhase';
 import { OverviewPhase } from './phases/OverviewPhase';
 import { UnitTypesPhase } from './phases/UnitTypesPhase';
 import { FinalisationPhase } from './phases/FinalisationPhase';
+import { PublishSuccess } from './PublishSuccess';
 
 export const WizardContainer: React.FC = () => {
   const wizardState = useDevelopmentWizard();
@@ -36,6 +37,24 @@ export const WizardContainer: React.FC = () => {
     localStorage.setItem('development_preview_data', JSON.stringify(dataToSave));
     window.open('/development/preview', '_blank');
   };
+
+  // Render Success Page if published
+  if (wizardState.finalisation.isPublished) {
+    return (
+      <div className="min-h-screen bg-gray-50 pb-20">
+        <div className="bg-white border-b border-gray-200 sticky top-0 z-50">
+          <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
+            <h1 className="text-xl font-bold text-gray-900">Development Published</h1>
+          </div>
+        </div>
+        <main className="max-w-7xl mx-auto px-4 mt-8">
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 min-h-[600px]">
+            <PublishSuccess />
+          </div>
+        </main>
+      </div>
+    );
+  }
 
   const renderPhase = () => {
     switch (currentPhase) {
