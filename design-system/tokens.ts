@@ -3,9 +3,11 @@
 
 export const colors = {
   primary: {
+    900: '#1e3a8a',
     600: '#2563EB',
     500: '#3B82F6',
     400: '#60A5FA',
+    100: '#dbeafe',
     50: '#EFF6FF',
   },
   success: {

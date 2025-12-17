@@ -1,0 +1,1 @@
+ALTER TABLE `activities` MODIFY COLUMN `created_at` timestamp NOT NULL;

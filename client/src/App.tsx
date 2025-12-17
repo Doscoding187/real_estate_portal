@@ -75,6 +75,7 @@ import CreateCampaignWizard from './pages/admin/CreateCampaignWizard';
 import AgentApprovals from './pages/admin/AgentApprovals';
 import CampaignDetailsPage from './pages/admin/CampaignDetailsPage';
 import CampaignInsights from './pages/admin/CampaignInsights';
+import DevelopmentOversight from './pages/admin/DevelopmentOversight';
 
 // Import new role-based dashboards
 import UserDashboard from './pages/UserDashboard';
@@ -339,6 +340,16 @@ function Router() {
         component={() => (
           <SuperAdminDashboard>
             <AgentApprovals />
+          </SuperAdminDashboard>
+        )}
+      />
+
+       {/* Development Approval Queue Route */}
+       <Route
+        path="/admin/development-approvals"
+        component={() => (
+          <SuperAdminDashboard>
+            <DevelopmentOversight />
           </SuperAdminDashboard>
         )}
       />

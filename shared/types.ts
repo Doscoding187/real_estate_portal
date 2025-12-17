@@ -342,6 +342,7 @@ export interface Development {
   completionDate: Date | null;
   isFeatured: boolean;
   isPublished: boolean;
+  approvalStatus: 'draft' | 'pending' | 'approved' | 'rejected';
   views: number;
   createdAt: Date;
   updatedAt: Date;

@@ -1,0 +1,231 @@
+import React, { useRef } from 'react';
+import { useDevelopmentWizard, type MediaItem } from '@/hooks/useDevelopmentWizard';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Card, CardContent } from '@/components/ui/card';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { toast } from 'sonner';
+import { Upload, X, Image as ImageIcon, Star, MapPin, Building2 } from 'lucide-react';
+
+export function IdentityPhase() {
+  const { 
+    developmentData, 
+    setIdentity, 
+    addMedia, 
+    removeMedia, 
+    setPrimaryImage,
+    setPhase, 
+    validatePhase 
+  } = useDevelopmentWizard();
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Combine media for display
+  const allMedia = [
+    ...(developmentData.media.heroImage ? [{ ...developmentData.media.heroImage, isPrimary: true }] : []),
+    ...developmentData.media.photos.map(p => ({ ...p, isPrimary: false })),
+    ...developmentData.media.videos.map(v => ({ ...v, isPrimary: false }))
+  ];
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files) return;
+
+    Array.from(files).forEach(file => {
+      // In a real app, you would upload to S3/Cloudinary here.
+      // For this wizard, we create a local object URL for preview.
+      const url = URL.createObjectURL(file);
+      const isVideo = file.type.startsWith('video');
+
+      addMedia({
+        file,
+        url,
+        type: isVideo ? 'video' : 'image',
+        category: isVideo ? 'videos' : 'general',
+        isPrimary: false
+      });
+    });
+
+    // Reset input
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const handleNext = () => {
+    const { isValid, errors } = validatePhase(1);
+    if (isValid) {
+      setPhase(2);
+    } else {
+      errors.forEach(e => toast.error(e));
+    }
+  };
+
+  return (
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Left Column: Basic Info & Location */}
+        <div className="lg:col-span-2 space-y-6">
+          
+          {/* Basic Information Card */}
+          <Card>
+            <CardContent className="pt-6 space-y-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Building2 className="w-5 h-5 text-blue-600" />
+                <h3 className="font-semibold text-lg">Development Details</h3>
+              </div>
+              
+              <div className="grid gap-2">
+                <Label htmlFor="name">Development Name <span className="text-red-500">*</span></Label>
+                <Input 
+                  id="name" 
+                  placeholder="e.g. Sunset Heights" 
+                  value={developmentData.name}
+                  onChange={(e) => setIdentity({ name: e.target.value })}
+                />
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="nature">Nature of Development</Label>
+                <Select 
+                  value={developmentData.nature} 
+                  onValueChange={(val: any) => setIdentity({ nature: val })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="new">New Development</SelectItem>
+                    <SelectItem value="phase">New Phase of Existing</SelectItem>
+                    <SelectItem value="extension">Extension / Redevelopment</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="description">Description</Label>
+                <Textarea 
+                  id="description" 
+                  placeholder="Describe the vision and lifestyle..." 
+                  className="min-h-[120px]"
+                  value={developmentData.description}
+                  onChange={(e) => setIdentity({ description: e.target.value })}
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Location Card */}
+          <Card>
+            <CardContent className="pt-6 space-y-4">
+              <div className="flex items-center gap-2 mb-2">
+                <MapPin className="w-5 h-5 text-blue-600" />
+                <h3 className="font-semibold text-lg">Location</h3>
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="address">Street Address <span className="text-red-500">*</span></Label>
+                <Input 
+                  id="address" 
+                  placeholder="123 Main Road" 
+                  value={developmentData.location.address}
+                  onChange={(e) => setIdentity({ location: { address: e.target.value } })}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="city">City <span className="text-red-500">*</span></Label>
+                  <Input 
+                    id="city" 
+                    placeholder="Cape Town" 
+                    value={developmentData.location.city}
+                    onChange={(e) => setIdentity({ location: { city: e.target.value } })}
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="province">Province</Label>
+                  <Select 
+                    value={developmentData.location.province} 
+                    onValueChange={(val) => setIdentity({ location: { province: val } })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select Province" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Western Cape">Western Cape</SelectItem>
+                      <SelectItem value="Gauteng">Gauteng</SelectItem>
+                      <SelectItem value="KwaZulu-Natal">KwaZulu-Natal</SelectItem>
+                      <SelectItem value="Eastern Cape">Eastern Cape</SelectItem>
+                      {/* Add others as needed */}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Right Column: Media */}
+        <div className="space-y-6">
+          <Card className="h-full">
+            <CardContent className="pt-6 space-y-4">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <ImageIcon className="w-5 h-5 text-blue-600" />
+                  <h3 className="font-semibold text-lg">Media Gallery</h3>
+                </div>
+                <span className="text-xs text-slate-500">{allMedia.length} items</span>
+              </div>
+
+              <div 
+                className="border-2 border-dashed border-slate-200 rounded-lg p-8 flex flex-col items-center justify-center text-center hover:bg-slate-50 transition-colors cursor-pointer"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <Upload className="w-8 h-8 text-slate-400 mb-2" />
+                <p className="text-sm font-medium text-slate-700">Click to upload images</p>
+                <p className="text-xs text-slate-500 mt-1">JPG, PNG or MP4</p>
+                <input 
+                  type="file" 
+                  ref={fileInputRef} 
+                  className="hidden" 
+                  multiple 
+                  accept="image/*,video/*"
+                  onChange={handleFileUpload}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 mt-4 max-h-[500px] overflow-y-auto pr-1">
+                {allMedia.map((item) => (
+                  <div key={item.id} className="relative group aspect-square rounded-md overflow-hidden bg-slate-100 border border-slate-200">
+                    {item.type === 'video' ? (
+                      <video src={item.url} className="w-full h-full object-cover" />
+                    ) : (
+                      <img src={item.url} alt="Development media" className="w-full h-full object-cover" />
+                    )}
+                    
+                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                      <Button variant="secondary" size="icon" className="h-8 w-8" onClick={() => setPrimaryImage(item.id)} title="Set as Hero">
+                        <Star className={`w-4 h-4 ${item.isPrimary ? 'fill-yellow-400 text-yellow-400' : 'text-white'}`} />
+                      </Button>
+                      <Button variant="destructive" size="icon" className="h-8 w-8" onClick={() => removeMedia(item.id)}>
+                        <X className="w-4 h-4" />
+                      </Button>
+                    </div>
+                    {item.isPrimary && (
+                      <div className="absolute top-1 left-1 bg-yellow-400 text-yellow-900 text-[10px] font-bold px-1.5 py-0.5 rounded">HERO</div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
+      <div className="flex justify-end pt-4 border-t">
+        <Button onClick={handleNext} size="lg" className="px-8">Continue</Button>
+      </div>
+    </div>
+  );
+}

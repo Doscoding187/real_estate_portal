@@ -28,9 +28,13 @@ import {
   listings,
   listingMedia,
   agents,
+  developments, 
+  developers,
+  developmentApprovalQueue, 
 } from '../drizzle/schema';
 import { eq, desc, and, or, like, sql } from 'drizzle-orm';
 import { logAudit, AuditActions } from './_core/auditLog';
+import { developmentService } from './services/developmentService';
 
 /**
  * Admin router - Super admin and agency admin endpoints
@@ -534,6 +538,56 @@ export const adminRouter = router({
       totalInventoryValue: Number(stats?.totalInventoryValue || 0),
       newListingsToday: Number(stats?.newListingsToday || 0),
       pendingApprovals: Number(pendingResult?.count || 0),
+    };
+  }),
+
+  /**
+   * Super Admin: Get Development Approval Analytics (Fast-Track Monitoring)
+   */
+  getDevelopmentAnalytics: superAdminProcedure.query(async ({ ctx }) => {
+    const db = await getDb();
+    if (!db) throw new Error('Database not available');
+
+    // 1. Pending Developments
+    const [pendingRes] = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(developments)
+        .where(eq(developments.approvalStatus, 'pending'));
+
+    // 2. Queue Analytics (Approvals & Rejections)
+    // Using raw SQL for efficient aggregation of time differences and conditional counts
+    const [queueStats] = await db.execute(sql`
+        SELECT
+            COUNT(*) as total_processed,
+            SUM(CASE WHEN status = 'approved' AND review_notes LIKE 'Auto-approved%' THEN 1 ELSE 0 END) as auto_approved,
+            SUM(CASE WHEN status = 'approved' AND (review_notes IS NULL OR review_notes NOT LIKE 'Auto-approved%') THEN 1 ELSE 0 END) as manual_approved,
+            SUM(CASE WHEN status = 'rejected' THEN 1 ELSE 0 END) as rejected,
+            AVG(CASE 
+                WHEN status = 'approved' AND (review_notes IS NULL OR review_notes NOT LIKE 'Auto-approved%') 
+                THEN TIMESTAMPDIFF(SECOND, submitted_at, reviewed_at) 
+                ELSE NULL 
+            END) as avg_manual_seconds
+        FROM development_approval_queue
+        WHERE status IN ('approved', 'rejected')
+    `);
+
+    const stats = (queueStats as any)[0] || {};
+    const totalProcessed = Number(stats.total_processed || 0);
+    const autoApproved = Number(stats.auto_approved || 0);
+    const manualApproved = Number(stats.manual_approved || 0);
+    
+    // Ratios
+    const approvalRate = totalProcessed > 0 ? ((autoApproved + manualApproved) / totalProcessed) : 0;
+    const autoApprovalRate = (autoApproved + manualApproved) > 0 ? (autoApproved / (autoApproved + manualApproved)) : 0;
+
+    return {
+        pendingCount: Number(pendingRes?.count || 0),
+        totalProcessed,
+        autoApprovedCount: autoApproved,
+        manualApprovedCount: manualApproved,
+        rejectedCount: Number(stats.rejected || 0),
+        avgManualApprovalSeconds: Number(stats.avg_manual_seconds || 0),
+        autoApprovalRate,
     };
   }),
 
@@ -1284,5 +1338,138 @@ export const adminRouter = router({
       });
 
       return { success: true };
+    }),
+
+  /**
+   * Admin: List pending developments
+   */
+  adminListPendingDevelopments: superAdminProcedure
+    .query(async ({ ctx }) => {
+      const db = await getDb();
+      if (!db) throw new Error('Database not available');
+
+      // Sort by submittedAt desc
+      const pendingDevs = await db.select({
+        development: developments,
+        developer: developers,
+        queueEntry: developmentApprovalQueue,
+      })
+      .from(developmentApprovalQueue)
+      .innerJoin(developments, eq(developmentApprovalQueue.developmentId, developments.id))
+      .innerJoin(developers, eq(developments.developerId, developers.id))
+      .where(eq(developmentApprovalQueue.status, 'pending'))
+      .orderBy(desc(developmentApprovalQueue.submittedAt));
+
+      return pendingDevs.map(item => ({
+        ...item.development,
+        developerName: item.developer.name,
+        submittedAt: item.queueEntry.submittedAt,
+        queueId: item.queueEntry.id,
+      }));
+    }),
+
+  /**
+   * Admin: Approve development
+   */
+  adminApproveDevelopment: superAdminProcedure
+    .input(z.object({
+      developmentId: z.number(),
+      complianceChecks: z.record(z.boolean()).optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      await developmentService.approveDevelopment(
+        input.developmentId, 
+        ctx.user.id,
+        input.complianceChecks
+      );
+      
+      await logAudit({
+        userId: ctx.user.id,
+        action: AuditActions.UPDATE_DEVELOPMENT, 
+        targetType: 'development',
+        targetId: input.developmentId,
+        metadata: { action: 'approve', compliance: input.complianceChecks },
+        req: ctx.req,
+      });
+
+      return { success: true };
+    }),
+
+  /**
+   * Admin: Reject development
+   */
+  adminRejectDevelopment: superAdminProcedure
+    .input(z.object({
+      developmentId: z.number(),
+      reason: z.string(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      await developmentService.rejectDevelopment(input.developmentId, ctx.user.id, input.reason);
+
+       await logAudit({
+        userId: ctx.user.id,
+        action: AuditActions.UPDATE_DEVELOPMENT, 
+        targetType: 'development',
+        targetId: input.developmentId,
+        metadata: { action: 'reject', reason: input.reason },
+        req: ctx.req,
+      });
+
+      return { success: true };
+    }),
+
+  /**
+   * Admin: Request changes (Soft Rejection)
+   */
+  adminRequestChanges: superAdminProcedure
+    .input(z.object({
+      developmentId: z.number(),
+      feedback: z.string(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      await developmentService.requestChanges(
+        input.developmentId, 
+        ctx.user.id,
+        input.feedback
+      );
+      
+      await logAudit({
+        userId: ctx.user.id,
+        action: AuditActions.UPDATE_DEVELOPMENT, 
+        targetType: 'development',
+        targetId: input.developmentId,
+        metadata: { action: 'request_changes', feedback: input.feedback },
+        req: ctx.req,
+      });
+
+      return { success: true };
+    }),
+
+  /**
+   * Admin: Get Audit Logs for a Development
+   */
+  getDevelopmentAuditLogs: superAdminProcedure
+    .input(z.object({ developmentId: z.number() }))
+    .query(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new Error('Database not available');
+
+        return await db.select({
+            id: auditLogs.id,
+            action: auditLogs.action,
+            createdAt: auditLogs.createdAt,
+            user: {
+                name: users.name,
+                role: users.role,
+            },
+            metadata: auditLogs.metadata,
+        })
+        .from(auditLogs)
+        .leftJoin(users, eq(auditLogs.userId, users.id))
+        .where(and(
+            eq(auditLogs.targetType, 'development'),
+            eq(auditLogs.targetId, input.developmentId)
+        ))
+        .orderBy(desc(auditLogs.createdAt));
     }),
 });

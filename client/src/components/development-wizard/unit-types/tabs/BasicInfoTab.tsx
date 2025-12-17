@@ -8,20 +8,46 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Card } from '@/components/ui/card';
+import { Building, Home } from 'lucide-react';
 import type { UnitType } from '@/hooks/useDevelopmentWizard';
 
 interface BasicInfoTabProps {
   formData: Partial<UnitType>;
   updateFormData: (updates: Partial<UnitType>) => void;
+  classification?: { type: string };
 }
 
-export function BasicInfoTab({ formData, updateFormData }: BasicInfoTabProps) {
+export function BasicInfoTab({ formData, updateFormData, classification }: BasicInfoTabProps) {
+  const isMixedUse = classification?.type === 'mixed';
+
   return (
     <div className="space-y-6">
       {/* Unit Type Name */}
       <Card className="p-6 bg-gradient-to-br from-blue-50 to-white border-blue-200">
-        <h3 className="text-lg font-semibold text-slate-900 mb-4">Unit Identification</h3>
+        <div className="flex justify-between items-start mb-4">
+           <h3 className="text-lg font-semibold text-slate-900">Unit Identification</h3>
+           {isMixedUse && (
+             <div className="flex flex-col items-end gap-2">
+                <Label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Usage Type</Label>
+                <ToggleGroup 
+                  type="single" 
+                  value={formData.usageType || 'residential'}
+                  onValueChange={(val) => val && updateFormData({ usageType: val as any })}
+                  className="bg-white border rounded-lg p-1"
+                >
+                   <ToggleGroupItem value="residential" aria-label="Residential" className="data-[state=on]:bg-blue-100 data-[state=on]:text-blue-700">
+                      <Home className="w-4 h-4 mr-2" /> Residential
+                   </ToggleGroupItem>
+                   <ToggleGroupItem value="commercial" aria-label="Commercial" className="data-[state=on]:bg-amber-100 data-[state=on]:text-amber-700">
+                      <Building className="w-4 h-4 mr-2" /> Commercial
+                   </ToggleGroupItem>
+                </ToggleGroup>
+             </div>
+           )}
+        </div>
+
         <div className="space-y-4">
           <div>
             <Label htmlFor="label" className="text-sm font-medium">

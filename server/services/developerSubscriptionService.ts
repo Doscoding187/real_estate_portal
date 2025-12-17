@@ -1,10 +1,10 @@
-import { db } from '../db';
+import { db } from '../db.ts';
 import { 
   developerSubscriptions, 
   developerSubscriptionLimits, 
   developerSubscriptionUsage,
   developers 
-} from '../../drizzle/schema';
+} from '../../drizzle/schema.ts';
 import { eq, and } from 'drizzle-orm';
 import { 
   DeveloperSubscription, 
@@ -13,7 +13,7 @@ import {
   DeveloperSubscriptionWithDetails,
   SubscriptionTier,
   SUBSCRIPTION_TIER_LIMITS 
-} from '../../shared/types';
+} from '../../shared/types.ts';
 
 export class DeveloperSubscriptionService {
   /**
@@ -85,15 +85,30 @@ export class DeveloperSubscriptionService {
    * Get subscription details for a developer
    */
   async getSubscription(developerId: number): Promise<DeveloperSubscriptionWithDetails | null> {
-    const subscription = await db.query.developerSubscriptions.findFirst({
-      where: eq(developerSubscriptions.developerId, developerId),
-      with: {
-        limits: true,
-        usage: true,
-      },
-    });
+    const rows = await db.select({
+      subscription: developerSubscriptions,
+      limits: developerSubscriptionLimits,
+      usage: developerSubscriptionUsage,
+    })
+    .from(developerSubscriptions)
+    .leftJoin(developerSubscriptionLimits, eq(developerSubscriptionLimits.subscriptionId, developerSubscriptions.id))
+    .leftJoin(developerSubscriptionUsage, eq(developerSubscriptionUsage.subscriptionId, developerSubscriptions.id))
+    .where(eq(developerSubscriptions.developerId, developerId))
+    .limit(1);
 
-    return subscription || null;
+    if (rows.length === 0) return null;
+
+    const row = rows[0];
+    if (!row.limits || !row.usage) {
+        // Should not happen for active subscriptions, but handle gracefully
+        return null;
+    }
+
+    return {
+      ...row.subscription,
+      limits: row.limits,
+      usage: row.usage,
+    };
   }
 
   /**

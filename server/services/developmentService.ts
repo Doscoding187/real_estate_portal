@@ -1,6 +1,6 @@
-import { getDb } from '../db';
-import { developments, developmentPhases } from '../../drizzle/schema';
-import { eq, and, desc, ne } from 'drizzle-orm';
+import { getDb } from '../db.ts';
+import { developments, developmentPhases, developmentApprovalQueue, developers, developmentDrafts } from '../../drizzle/schema.ts';
+import { eq, and, desc, ne, sql } from 'drizzle-orm';
 import { 
   Development, 
   DevelopmentPhase, 
@@ -8,8 +8,8 @@ import {
   CreateDevelopmentInput,
   UpdateDevelopmentInput,
   PhaseStatus 
-} from '../../shared/types';
-import { developerSubscriptionService } from './developerSubscriptionService';
+} from '../../shared/types.ts';
+import { developerSubscriptionService } from './developerSubscriptionService.ts';
 
 export class DevelopmentService {
   /**
@@ -72,7 +72,7 @@ export class DevelopmentService {
     const slug = await this.ensureUniqueSlug(baseSlug);
 
     // Create development
-    const [development] = await db.insert(developments).values({
+    const [result] = await db.insert(developments).values({
       developerId,
       name: input.name,
       slug,
@@ -94,7 +94,10 @@ export class DevelopmentService {
       isPublished: 0,
       showHouseAddress: input.showHouseAddress === false ? 0 : 1,
       views: 0,
-    }).returning();
+    });
+    
+    const development = await this.getDevelopment(result.insertId as number);
+    if (!development) throw new Error('Failed to create development');
 
     // Increment usage counter
     await developerSubscriptionService.incrementUsage(developerId, 'developments');
@@ -142,14 +145,36 @@ export class DevelopmentService {
   /**
    * Get all developments for a developer
    */
-  async getDeveloperDevelopments(developerId: number): Promise<Development[]> {
+  async getDeveloperDevelopments(developerId: number): Promise<any[]> {
     const db = await getDb();
     if (!db) return [];
     
-    const devs = await db.query.developments.findMany({
-      where: eq(developments.developerId, developerId),
-      orderBy: [desc(developments.createdAt)],
-    });
+    // Use raw select to include subquery for rejection reason
+    // This avoids joining the whole table and getting duplicates
+    const devs = await db.select({
+      id: developments.id,
+      name: developments.name,
+      slug: developments.slug,
+      approvalStatus: developments.approvalStatus,
+      developmentType: developments.developmentType,
+      city: developments.city,
+      province: developments.province,
+      totalUnits: developments.totalUnits,
+      createdAt: developments.createdAt,
+      updatedAt: developments.updatedAt,
+      // Subquery for latest rejection reason
+      rejectionReason: sql<string>`(
+        SELECT rejection_reason 
+        FROM development_approval_queue 
+        WHERE development_id = ${developments.id} 
+        AND status = 'rejected'
+        ORDER BY submitted_at DESC 
+        LIMIT 1
+      )`
+    })
+    .from(developments)
+    .where(eq(developments.developerId, developerId))
+    .orderBy(desc(developments.createdAt));
 
     return devs;
   }
@@ -207,14 +232,21 @@ export class DevelopmentService {
       updateData.brochures = JSON.stringify(input.brochures);
     }
 
+    // If development was rejected, reset approval status to draft on edit so it doesn't look like "Rejected" while working
+    if (existing.approvalStatus === 'rejected') {
+        updateData.approvalStatus = 'draft';
+    }
+
     // Update development
     const db = await getDb();
     if (!db) throw new Error('Database not available');
     
-    const [updated] = await db.update(developments)
+    await db.update(developments)
       .set(updateData)
-      .where(eq(developments.id, developmentId))
-      .returning();
+      .where(eq(developments.id, developmentId));
+
+    const updated = await this.getDevelopment(developmentId);
+    if (!updated) throw new Error('Failed to update development');
 
     return updated;
   }
@@ -243,24 +275,184 @@ export class DevelopmentService {
   }
 
   /**
-   * Publish development
+   * Publish development (Submit for Review)
    * Validates: Requirements 9.1
    */
-  async publishDevelopment(developmentId: number, developerId: number): Promise<Development> {
-    const development = await this.updateDevelopment(developmentId, developerId, {
-      isPublished: true,
-      publishedAt: new Date().toISOString(),
+  async publishDevelopment(developmentId: number, developerId: number, isTrusted: boolean): Promise<Development> {
+    const db = await getDb();
+    if (!db) throw new Error('Database not available');
+
+    // Verify ownership
+    const existing = await this.getDevelopment(developmentId);
+    if (!existing || existing.developerId !== developerId) {
+       throw new Error('Unauthorized');
+    }
+
+    // Guard: Prevent re-publishing if already approved
+    if (existing.approvalStatus === 'approved') {
+       throw new Error('Development is already published');
+    }
+
+    // Guard: Prevent duplicate pending submissions for non-trusted devs
+    if (!isTrusted && existing.approvalStatus === 'pending') {
+        throw new Error('Development is already pending review');
+    }
+
+    // System Reviewer Constant (null implies system/auto when status is approved)
+    const SYSTEM_REVIEWER_ID = null;
+
+    // Determine Status
+    const newStatus = isTrusted ? 'approved' : 'pending';
+    const isPublished = isTrusted ? 1 : 0;
+    const publishedAt = isTrusted ? new Date().toISOString() : null;
+    const notes = isTrusted ? 'Auto-approved (trusted developer)' : null;
+
+    // 1. Update Development Status
+    await db.update(developments)
+      .set({
+        isPublished: isPublished,
+        approvalStatus: newStatus,
+        publishedAt: publishedAt,
+        updatedAt: new Date().toISOString(),
+      })
+      .where(eq(developments.id, developmentId));
+
+    const development = await this.getDevelopment(developmentId);
+    if (!development) throw new Error('Failed to update development status');
+
+    // Determine submission type based on history
+    const priorHistory = await db.select({ id: developmentApprovalQueue.id })
+        .from(developmentApprovalQueue)
+        .where(eq(developmentApprovalQueue.developmentId, developmentId))
+        .limit(1);
+    
+    const submissionType = priorHistory.length > 0 ? 'update' : 'initial';
+
+    // 2. Create Queue Entry (Audit Trail)
+    await db.insert(developmentApprovalQueue).values({
+      developmentId,
+      submittedBy: developerId,
+      status: newStatus,
+      submissionType: submissionType,
+      submittedAt: new Date().toISOString(),
+      reviewNotes: notes,
+      reviewedBy: isTrusted ? SYSTEM_REVIEWER_ID : undefined, 
+      reviewedAt: publishedAt,
     });
 
     return development;
   }
 
   /**
-   * Unpublish development
+   * Approve development (Admin only)
+   */
+  async approveDevelopment(
+    developmentId: number, 
+    adminId: number, 
+    complianceChecks?: Record<string, boolean>
+  ): Promise<Development> {
+    const db = await getDb();
+    if (!db) throw new Error('Database not available');
+
+    // 1. Update Queue Entry
+    // Find the latest pending/reviewing entry
+    const [queueEntry] = await db.select()
+      .from(developmentApprovalQueue)
+      .where(and(
+        eq(developmentApprovalQueue.developmentId, developmentId),
+        eq(developmentApprovalQueue.status, 'pending')
+      ))
+      .orderBy(desc(developmentApprovalQueue.submittedAt))
+      .limit(1);
+
+    if (queueEntry) {
+        await db.update(developmentApprovalQueue)
+          .set({
+            status: 'approved',
+            reviewedBy: adminId,
+            reviewedAt: new Date().toISOString(),
+            complianceChecks: complianceChecks || null,
+          })
+          .where(eq(developmentApprovalQueue.id, queueEntry.id));
+    }
+
+    // 2. Update Development (Go Live)
+    await db.update(developments)
+      .set({
+        isPublished: 1,
+        approvalStatus: 'approved',
+        publishedAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      })
+      .where(eq(developments.id, developmentId));
+
+    const development = await this.getDevelopment(developmentId);
+    if (!development) throw new Error('Failed to update development status');
+
+    return development;
+  }
+
+  /**
+   * Reject development (Admin only)
+   */
+  async rejectDevelopment(developmentId: number, adminId: number, reason: string): Promise<Development> {
+    const db = await getDb();
+    if (!db) throw new Error('Database not available');
+
+    // 1. Update Queue Entry
+    const [queueEntry] = await db.select()
+        .from(developmentApprovalQueue)
+        .where(and(
+            eq(developmentApprovalQueue.developmentId, developmentId),
+            eq(developmentApprovalQueue.status, 'pending')
+        ))
+        .orderBy(desc(developmentApprovalQueue.submittedAt))
+        .limit(1);
+
+    if (queueEntry) {
+        await db.update(developmentApprovalQueue)
+            .set({
+                status: 'rejected',
+                rejectionReason: reason,
+                reviewedBy: adminId,
+                reviewedAt: new Date().toISOString(),
+            })
+            .where(eq(developmentApprovalQueue.id, queueEntry.id));
+    }
+
+    // 2. Update Development (Stay Hidden, Marked Rejected)
+    await db.update(developments)
+      .set({
+        isPublished: 0,
+        approvalStatus: 'rejected',
+        updatedAt: new Date().toISOString(),
+      })
+      .where(eq(developments.id, developmentId));
+
+    const development = await this.getDevelopment(developmentId);
+    if (!development) throw new Error('Failed to update development status');
+
+    return development;
+  }
+
+  /**
+   * Request changes (Soft Rejection)
+   */
+  async requestChanges(developmentId: number, adminId: number, feedback: string): Promise<Development> {
+    // We reuse the rejection flow but precise the intent in the reason text
+    // This avoids schema changes while allowing the UI to distinguish
+    return this.rejectDevelopment(developmentId, adminId, `[CHANGES_REQUESTED] ${feedback}`);
+  }
+
+  /**
+   * Unpublish development (Developer action)
    */
   async unpublishDevelopment(developmentId: number, developerId: number): Promise<Development> {
     const development = await this.updateDevelopment(developmentId, developerId, {
       isPublished: false,
+      // We don't reset approvalStatus to draft here to preserve history, 
+      // but maybe we should if they want to 'withdraw' it? 
+      // For now, simple unpublish.
     });
 
     return development;
@@ -298,7 +490,7 @@ export class DevelopmentService {
     const db = await getDb();
     if (!db) throw new Error('Database not available');
     
-    const [phase] = await db.insert(developmentPhases).values({
+    const [result] = await db.insert(developmentPhases).values({
       developmentId,
       name: phaseData.name,
       phaseNumber: phaseData.phaseNumber,
@@ -310,7 +502,12 @@ export class DevelopmentService {
       priceTo: phaseData.priceTo || null,
       launchDate: phaseData.launchDate || null,
       completionDate: phaseData.completionDate || null,
-    }).returning();
+    });
+    
+    const phase = await db.query.developmentPhases.findFirst({
+         where: eq(developmentPhases.id, result.insertId as number)
+    });
+    if (!phase) throw new Error('Failed to create phase');
 
     return phase;
   }
@@ -342,13 +539,17 @@ export class DevelopmentService {
     }
 
     // Update phase
-    const [updated] = await db.update(developmentPhases)
+    await db.update(developmentPhases)
       .set({
         ...phaseData,
         updatedAt: new Date().toISOString(),
       })
-      .where(eq(developmentPhases.id, phaseId))
-      .returning();
+      .where(eq(developmentPhases.id, phaseId));
+
+    const updated = await db.query.developmentPhases.findFirst({
+        where: eq(developmentPhases.id, phaseId)
+    });
+    if (!updated) throw new Error('Failed to update phase');
 
     return updated;
   }
@@ -391,6 +592,73 @@ export class DevelopmentService {
     });
 
     return phases;
+  }
+
+  /**
+   * Save development draft
+   */
+  async saveDraft(
+    developerId: number,
+    draftData: any,
+    draftId?: number
+  ): Promise<{ id: number }> {
+    const db = await getDb();
+    if (!db) throw new Error('Database not available');
+
+    const currentStep = draftData.currentPhase || 1;
+    const draftName = draftData.developmentData?.name || 'Untitled Draft';
+
+    if (draftId) {
+      // Verify ownership and update
+      const existing = await db.query.developmentDrafts.findFirst({
+        where: and(
+          eq(developmentDrafts.id, draftId),
+          eq(developmentDrafts.developerId, developerId)
+        ),
+      });
+
+      if (existing) {
+        await db.update(developmentDrafts)
+          .set({
+            draftData,
+            draftName,
+            currentStep,
+            lastModified: new Date().toISOString(),
+            progress: Math.round((currentStep / 5) * 100),
+          })
+          .where(eq(developmentDrafts.id, draftId));
+        
+        return { id: draftId };
+      }
+    }
+
+    // Create new draft
+    const [result] = await db.insert(developmentDrafts).values({
+      developerId,
+      draftData,
+      draftName,
+      currentStep,
+      progress: Math.round((currentStep / 5) * 100),
+    });
+
+    return { id: result.insertId as number };
+  }
+
+  /**
+   * Get development draft
+   */
+  async getDraft(draftId: number, developerId: number): Promise<any | null> {
+    const db = await getDb();
+    if (!db) return null;
+
+    const draft = await db.query.developmentDrafts.findFirst({
+      where: and(
+        eq(developmentDrafts.id, draftId),
+        eq(developmentDrafts.developerId, developerId)
+      ),
+    });
+
+    return draft || null;
   }
 }
 

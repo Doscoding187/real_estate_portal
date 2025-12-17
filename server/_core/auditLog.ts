@@ -79,4 +79,5 @@ export const AuditActions = {
   // Sensitive actions
   UPDATE_SUBSCRIPTION: 'update_subscription',
   EXPORT_DATA: 'export_data',
+  UPDATE_DEVELOPMENT: 'update_development',
 } as const;

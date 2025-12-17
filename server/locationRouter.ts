@@ -242,6 +242,24 @@ export const locationRouter = router({
     }),
 
   /**
+   * Get nearby amenities
+   */
+  getNearbyAmenities: publicProcedure
+    .input(
+      z.object({
+        latitude: z.number(),
+        longitude: z.number(),
+        radius: z.number(),
+        types: z.array(z.string()),
+        limit: z.number().optional(),
+      })
+    )
+    .query(async ({ input }) => {
+      // Return empty array for now to prevent crash
+      return [];
+    }),
+
+  /**
    * Get properties on map within bounds
    */
   getPropertiesOnMap: publicProcedure

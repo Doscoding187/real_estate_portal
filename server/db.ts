@@ -44,8 +44,10 @@ import {
   recentlyViewed,
   developers,
   developments,
-} from '../drizzle/schema';
-import { ENV } from './_core/env';
+} from '../drizzle/schema.ts';
+import * as schema from '../drizzle/schema.ts';
+
+import { ENV } from './_core/env.ts';
 import { type InferSelectModel, type InferInsertModel } from 'drizzle-orm';
 
 export type User = InferSelectModel<typeof users>;
@@ -79,7 +81,7 @@ export async function getDb() {
           rejectUnauthorized: isProduction, // Use true for production with valid certificates
         },
       });
-      _db = drizzle(poolConnection);
+      _db = drizzle(poolConnection, { schema, mode: 'default' });
       console.log(
         '[Database] Connected to MySQL with SSL:',
         process.env.DATABASE_URL.replace(/:([^:@]+)@/, ':****@'),
@@ -795,15 +797,14 @@ export async function getAllServices() {
   return await db.select().from(require('../drizzle/schema').services);
 }
 
+
 export async function getServicesByCategory(category: string) {
   const db = await getDb();
   if (!db) return [];
-
-  return await db
-    .select()
-    .from(require('../drizzle/schema').services)
-    .where(eq(require('../drizzle/schema').services.category, category as any));
+  
+  return await db.select().from(require('../drizzle/schema').services).where(eq(require('../drizzle/schema').services.category, category));
 }
+
 
 // ==================== REVIEWS ====================
 
@@ -2894,6 +2895,24 @@ export async function rejectDeveloper(
       rejectionReason: reason,
       rejectedBy,
       rejectedAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
+      updatedAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
+    })
+    .where(eq(developers.id, id));
+
+  return true;
+}
+
+/**
+ * Admin: Set developer trust
+ */
+export async function setDeveloperTrust(id: number, isTrusted: boolean) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+
+  await db
+    .update(developers)
+    .set({
+      isTrusted,
       updatedAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
     })
     .where(eq(developers.id, id));

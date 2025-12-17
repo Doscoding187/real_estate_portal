@@ -1,5 +1,5 @@
-import { mysqlTable, mysqlSchema, AnyMySqlColumn, index, foreignKey, int, varchar, text, json, mysqlEnum, timestamp, decimal, tinyint } from "drizzle-orm/mysql-core"
-import { sql } from "drizzle-orm"
+import { mysqlTable, index, foreignKey, int, varchar, text, json, mysqlEnum, timestamp, decimal, tinyint, boolean } from "drizzle-orm/mysql-core"
+import { sql, relations } from "drizzle-orm"
 
 export const activities = mysqlTable("activities", {
 	id: int().autoincrement().notNull(),
@@ -11,7 +11,7 @@ export const activities = mysqlTable("activities", {
 	relatedEntityType: mysqlEnum("related_entity_type", ['development','unit','lead','campaign','team_member']),
 	relatedEntityId: int("related_entity_id"),
 	userId: int("user_id").references(() => users.id, { onDelete: "set null" } ),
-	createdAt: timestamp("created_at", { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	createdAt: timestamp("created_at", { mode: 'string' }).notNull(),
 },
 (table) => [
 	index("idx_activities_developer_id").on(table.developerId),
@@ -31,7 +31,7 @@ export const amenities = mysqlTable("amenities", {
 	longitude: varchar({ length: 50 }),
 	distance: decimal({ precision: 10, scale: 2 }),
 	metadata: json(),
-	createdAt: timestamp("created_at", { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	createdAt: timestamp("created_at", { mode: 'string' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 }, (table) => [
 	index("idx_amenities_location_id").on(table.locationId),
 	index("idx_amenities_type").on(table.type),
@@ -53,7 +53,7 @@ export const agencies = mysqlTable("agencies", {
 	subscriptionStatus: varchar({ length: 30 }).default('trial').notNull(),
 	subscriptionExpiry: timestamp({ mode: 'string' }),
 	isVerified: int().notNull(),
-	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	createdAt: timestamp({ mode: 'string' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
 });
 
@@ -76,7 +76,7 @@ export const agencyBranding = mysqlTable("agency_branding", {
 	supportPhone: varchar({ length: 50 }),
 	socialLinks: text(),
 	isEnabled: int().notNull(),
-	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	createdAt: timestamp({ mode: 'string' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
 });
 
@@ -86,7 +86,7 @@ export const agencyJoinRequests = mysqlTable("agency_join_requests", {
 	userId: int().notNull().references(() => users.id, { onDelete: "cascade" } ),
 	status: mysqlEnum(['pending','approved','rejected']).default('pending').notNull(),
 	message: text(),
-	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	createdAt: timestamp({ mode: 'string' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
 	reviewedBy: int().references(() => users.id, { onDelete: "set null" } ),
 	reviewedAt: timestamp({ mode: 'string' }),
@@ -107,7 +107,7 @@ export const agencySubscriptions = mysqlTable("agency_subscriptions", {
 	canceledAt: timestamp({ mode: 'string' }),
 	endedAt: timestamp({ mode: 'string' }),
 	metadata: text(),
-	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	createdAt: timestamp({ mode: 'string' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
 });
 
@@ -118,7 +118,7 @@ export const agentCoverageAreas = mysqlTable("agent_coverage_areas", {
 	areaType: mysqlEnum(['province','city','suburb','custom_polygon']).notNull(),
 	areaData: text().notNull(),
 	isActive: int().default(1).notNull(),
-	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	createdAt: timestamp({ mode: 'string' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
 });
 
@@ -149,7 +149,7 @@ export const agents = mysqlTable("agents", {
 	rejectionReason: text(),
 	approvedBy: int().references(() => users.id, { onDelete: "set null" } ),
 	approvedAt: timestamp({ mode: 'string' }),
-	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	createdAt: timestamp({ mode: 'string' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
 });
 
@@ -177,7 +177,7 @@ export const analyticsAggregations = mysqlTable("analytics_aggregations", {
 	soldProperties: int(),
 	rentedProperties: int(),
 	avgDaysOnMarket: int(),
-	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	createdAt: timestamp({ mode: 'string' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 });
 
 export const auditLogs = mysqlTable("audit_logs", {
@@ -189,7 +189,7 @@ export const auditLogs = mysqlTable("audit_logs", {
 	metadata: text(),
 	ipAddress: varchar({ length: 45 }),
 	userAgent: text(),
-	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	createdAt: timestamp({ mode: 'string' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 });
 
 // export const billing_transactions = mysqlTable("billing_transactions", {
@@ -205,7 +205,7 @@ export const auditLogs = mysqlTable("audit_logs", {
 // 	gatewayInvoiceId: varchar("gateway_invoice_id", { length: 255 }),
 // 	description: text(),
 // 	metadata: json(),
-// 	createdAt: timestamp("created_at", { mode: 'string' }).default('CURRENT_TIMESTAMP'),
+// 	createdAt: timestamp("created_at", { mode: 'string' }).default(sql`CURRENT_TIMESTAMP`),
 // 	updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow().onUpdateNow(),
 // },
 // (table) => [
@@ -220,7 +220,7 @@ export const boostCredits = mysqlTable("boost_credits", {
 	usedCredits: int("used_credits").default(0),
 	resetAt: timestamp("reset_at", { mode: 'string' }),
 	expiresAt: timestamp("expires_at", { mode: 'string' }),
-	createdAt: timestamp("created_at", { mode: 'string' }).default('CURRENT_TIMESTAMP'),
+	createdAt: timestamp("created_at", { mode: 'string' }).default(sql`CURRENT_TIMESTAMP`),
 	updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow().onUpdateNow(),
 },
 (table) => [
@@ -239,7 +239,7 @@ export const cities = mysqlTable("cities", {
 	latitude: varchar({ length: 20 }),
 	longitude: varchar({ length: 21 }),
 	isMetro: int().notNull(),
-	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	createdAt: timestamp({ mode: 'string' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
 },
 (table) => [
@@ -281,7 +281,7 @@ export const commissions = mysqlTable("commissions", {
 	description: text(),
 	payoutDate: timestamp({ mode: 'string' }),
 	paymentReference: varchar({ length: 100 }),
-	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	createdAt: timestamp({ mode: 'string' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
 });
 
@@ -299,7 +299,7 @@ export const coupons = mysqlTable("coupons", {
 	validUntil: timestamp({ mode: 'string' }),
 	isActive: int().default(1).notNull(),
 	appliesToPlans: text(),
-	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	createdAt: timestamp({ mode: 'string' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
 });
 
@@ -314,7 +314,7 @@ export const developerNotifications = mysqlTable("developer_notifications", {
 	read: tinyint().default(0).notNull(),
 	actionUrl: varchar("action_url", { length: 500 }),
 	metadata: json(),
-	createdAt: timestamp("created_at", { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	createdAt: timestamp("created_at", { mode: 'string' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 },
 (table) => [
 	index("idx_developer_notifications_developer_id").on(table.developerId),
@@ -335,7 +335,7 @@ export const developerSubscriptionLimits = mysqlTable("developer_subscription_li
 	crmIntegrationEnabled: tinyint("crm_integration_enabled").default(0).notNull(),
 	advancedAnalyticsEnabled: tinyint("advanced_analytics_enabled").default(0).notNull(),
 	bondIntegrationEnabled: tinyint("bond_integration_enabled").default(0).notNull(),
-	createdAt: timestamp("created_at", { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	createdAt: timestamp("created_at", { mode: 'string' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 	updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
 },
 (table) => [
@@ -348,8 +348,8 @@ export const developerSubscriptionUsage = mysqlTable("developer_subscription_usa
 	developmentsCount: int("developments_count").default(0).notNull(),
 	leadsThisMonth: int("leads_this_month").default(0).notNull(),
 	teamMembersCount: int("team_members_count").default(0).notNull(),
-	lastResetAt: timestamp("last_reset_at", { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
-	createdAt: timestamp("created_at", { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	lastResetAt: timestamp("last_reset_at", { mode: 'string' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
+	createdAt: timestamp("created_at", { mode: 'string' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 	updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
 },
 (table) => [
@@ -367,7 +367,7 @@ export const developerSubscriptions = mysqlTable("developer_subscriptions", {
 	currentPeriodEnd: timestamp("current_period_end", { mode: 'string' }),
 	stripeSubscriptionId: varchar("stripe_subscription_id", { length: 100 }),
 	stripeCustomerId: varchar("stripe_customer_id", { length: 100 }),
-	createdAt: timestamp("created_at", { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	createdAt: timestamp("created_at", { mode: 'string' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 	updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
 },
 (table) => [
@@ -394,7 +394,7 @@ export const developers = mysqlTable("developers", {
 	rating: int(),
 	reviewCount: int(),
 	isVerified: int().notNull(),
-	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	createdAt: timestamp({ mode: 'string' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
 	userId: int().notNull().references(() => users.id, { onDelete: "cascade" } ),
 	status: mysqlEnum(['pending','approved','rejected']).default('pending').notNull(),
@@ -411,6 +411,7 @@ export const developers = mysqlTable("developers", {
 	trackRecord: text(),
 	pastProjects: int(),
 	specializations: json(),
+	isTrusted: boolean("is_trusted").default(false).notNull(),
 },
 (table) => [
 	index("idx_developers_userId").on(table.userId),
@@ -438,7 +439,7 @@ export const developmentPhases = mysqlTable("development_phases", {
 	phaseHighlights: json("phase_highlights"),
 	latitude: varchar({ length: 50 }),
 	longitude: varchar({ length: 50 }),
-	createdAt: timestamp("created_at", { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	createdAt: timestamp("created_at", { mode: 'string' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 	updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
 },
 (table) => [
@@ -465,7 +466,7 @@ export const developmentUnits = mysqlTable("development_units", {
 	reservedAt: timestamp("reserved_at", { mode: 'string' }),
 	reservedBy: int("reserved_by"),
 	soldAt: timestamp("sold_at", { mode: 'string' }),
-	createdAt: timestamp("created_at", { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	createdAt: timestamp("created_at", { mode: 'string' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 	updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
 },
 (table) => [
@@ -521,13 +522,17 @@ export const developments = mysqlTable("developments", {
 	isFeatured: int().notNull(),
 	isPublished: int().default(0).notNull(),
 	publishedAt: timestamp({ mode: 'string' }),
+	
+	// Approval Workflow
+	approvalStatus: mysqlEnum("approval_status", ['draft', 'pending', 'approved', 'rejected']).default('draft'),
+	
 	showHouseAddress: int().default(1).notNull(),
 	views: int().notNull(),
 	inquiriesCount: int("inquiries_count").default(0),
 	demandScore: int("demand_score").default(0),
 	isHotSelling: int("is_hot_selling").default(0),
 	isHighDemand: int("is_high_demand").default(0),
-	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	createdAt: timestamp({ mode: 'string' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
 },
 (table) => [
@@ -540,6 +545,28 @@ export const developments = mysqlTable("developments", {
 	index("idx_developments_published").on(table.isPublished, table.publishedAt),
 ]);
 
+// Development Approval Queue
+export const developmentApprovalQueue = mysqlTable("development_approval_queue", {
+	id: int().autoincrement().notNull(),
+	developmentId: int("development_id").notNull().references(() => developments.id, { onDelete: "cascade" }),
+	submittedBy: int("submitted_by").notNull().references(() => users.id, { onDelete: "restrict" }),
+	
+	status: mysqlEnum(['pending', 'reviewing', 'approved', 'rejected']).default('pending').notNull(),
+	submissionType: mysqlEnum("submission_type", ['initial', 'update']).default('initial').notNull(),
+	
+	reviewNotes: text("review_notes"),
+	rejectionReason: text("rejection_reason"),
+	complianceChecks: json("compliance_checks"),
+	
+	submittedAt: timestamp("submitted_at", { mode: 'string' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
+	reviewedAt: timestamp("reviewed_at", { mode: 'string' }),
+	reviewedBy: int("reviewed_by").references(() => users.id, { onDelete: "set null" }),
+}, 
+(table) => [
+	index("idx_dev_approval_status").on(table.status),
+	index("idx_dev_approval_dev_id").on(table.developmentId),
+]);
+
 export const developmentDrafts = mysqlTable("development_drafts", {
 	id: int().autoincrement().notNull(),
 	developerId: int().notNull().references(() => developers.id, { onDelete: "cascade" }),
@@ -548,7 +575,7 @@ export const developmentDrafts = mysqlTable("development_drafts", {
 	progress: int().default(0).notNull(),
 	currentStep: int().default(0).notNull(),
 	lastModified: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
-	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	createdAt: timestamp({ mode: 'string' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 },
 (table) => [
 	index("idx_dev_drafts_developer_id").on(table.developerId),
@@ -619,7 +646,7 @@ export const unitTypes = mysqlTable("unit_types", {
 	// Metadata
 	displayOrder: int("display_order").default(0),
 	isActive: tinyint("is_active").default(1),
-	createdAt: timestamp("created_at", { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	createdAt: timestamp("created_at", { mode: 'string' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 	updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
 },
 (table) => [
@@ -664,7 +691,7 @@ export const specVariations = mysqlTable("spec_variations", {
 	// Metadata
 	displayOrder: int("display_order").default(0),
 	isActive: tinyint("is_active").default(1),
-	createdAt: timestamp("created_at", { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	createdAt: timestamp("created_at", { mode: 'string' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 	updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
 },
 (table) => [
@@ -685,7 +712,7 @@ export const developmentDocuments = mysqlTable("development_documents", {
 	fileSize: int("file_size"),
 	mimeType: varchar("mime_type", { length: 100 }),
 	
-	uploadedAt: timestamp("uploaded_at", { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	uploadedAt: timestamp("uploaded_at", { mode: 'string' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 },
 (table) => [
 	index("idx_dev_docs_development_id").on(table.developmentId),
@@ -702,7 +729,7 @@ export const exploreCategories = mysqlTable("explore_categories", {
 	type: mysqlEnum(['lifestyle', 'property', 'investment', 'demographic']).default('lifestyle').notNull(),
 	displayOrder: int().default(0),
 	isActive: int().default(1),
-	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	createdAt: timestamp({ mode: 'string' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 });
 
 export const exploreTopics = mysqlTable("explore_topics", {
@@ -713,7 +740,7 @@ export const exploreTopics = mysqlTable("explore_topics", {
 	coverImage: text(),
 	type: mysqlEnum(['curated', 'algorithmic', 'seasonal', 'sponsored']).default('curated').notNull(),
 	isActive: int().default(1),
-	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	createdAt: timestamp({ mode: 'string' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 });
 
 export const exploreNeighbourhoodStories = mysqlTable("explore_neighbourhood_stories", {
@@ -725,7 +752,7 @@ export const exploreNeighbourhoodStories = mysqlTable("explore_neighbourhood_sto
 	storyData: json("story_data"),
 	category: varchar({ length: 100 }),
 	isPublished: int("is_published").default(1),
-	createdAt: timestamp("created_at", { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	createdAt: timestamp("created_at", { mode: 'string' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 },
 (table) => [
 	index("idx_ens_suburb_id").on(table.suburbId),
@@ -742,7 +769,7 @@ export const exploreSponsorships = mysqlTable("explore_sponsorships", {
 	impressionsDelivered: int("impressions_delivered").default(0),
 	clicksDelivered: int("clicks_delivered").default(0),
 	status: mysqlEnum(['active', 'scheduled', 'completed', 'paused']).default('scheduled').notNull(),
-	createdAt: timestamp("created_at", { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	createdAt: timestamp("created_at", { mode: 'string' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 },
 (table) => [
 	index("idx_es_target").on(table.targetType, table.targetId),
@@ -757,7 +784,7 @@ export const emailTemplates = mysqlTable("email_templates", {
 	textContent: text(),
 	agencyId: int().references(() => agencies.id, { onDelete: "cascade" } ),
 	isActive: int().default(1).notNull(),
-	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	createdAt: timestamp({ mode: 'string' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
 });
 
@@ -766,14 +793,14 @@ export const exploreComments = mysqlTable("exploreComments", {
 	videoId: varchar({ length: 191 }).notNull(),
 	userId: int().notNull(),
 	comment: text().notNull(),
-	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP'),
+	createdAt: timestamp({ mode: 'string' }).default(sql`CURRENT_TIMESTAMP`),
 });
 
 export const exploreFollows = mysqlTable("exploreFollows", {
 	id: varchar({ length: 191 }).notNull(),
 	followerId: int().notNull(),
 	followingId: int().notNull(),
-	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP'),
+	createdAt: timestamp({ mode: 'string' }).default(sql`CURRENT_TIMESTAMP`),
 },
 (table) => [
 	index("unique_follow").on(table.followerId, table.followingId),
@@ -783,7 +810,7 @@ export const exploreLikes = mysqlTable("exploreLikes", {
 	id: varchar({ length: 191 }).notNull(),
 	videoId: varchar({ length: 191 }).notNull(),
 	userId: int().notNull(),
-	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP'),
+	createdAt: timestamp({ mode: 'string' }).default(sql`CURRENT_TIMESTAMP`),
 },
 (table) => [
 	index("unique_like").on(table.videoId, table.userId),
@@ -793,7 +820,7 @@ export const exploreVideoViews = mysqlTable("exploreVideoViews", {
 	id: varchar({ length: 191 }).notNull(),
 	videoId: varchar({ length: 191 }).notNull(),
 	userId: int().notNull(),
-	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP'),
+	createdAt: timestamp({ mode: 'string' }).default(sql`CURRENT_TIMESTAMP`),
 });
 
 export const exploreVideos = mysqlTable("exploreVideos", {
@@ -811,7 +838,7 @@ export const exploreVideos = mysqlTable("exploreVideos", {
 	shares: int().notNull(),
 	isPublished: int().default(1).notNull(),
 	isFeatured: int().notNull(),
-	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	createdAt: timestamp({ mode: 'string' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
 });
 
@@ -824,7 +851,7 @@ export const exploreHighlightTags = mysqlTable("explore_highlight_tags", {
 	category: varchar({ length: 50 }),
 	displayOrder: int("display_order").default(0).notNull(),
 	isActive: tinyint("is_active").default(1).notNull(),
-	createdAt: timestamp("created_at", { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	createdAt: timestamp("created_at", { mode: 'string' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 },
 (table) => [
 	index("idx_explore_highlight_tags_category").on(table.category),
@@ -839,7 +866,7 @@ export const exploreInteractions = mysqlTable("explore_interactions", {
 	sessionId: varchar("session_id", { length: 255 }).notNull(),
 	interactionType: mysqlEnum("interaction_type", ['impression','view','skip','save','share','contact','whatsapp','book_viewing']).notNull(),
 	duration: int(),
-	timestamp: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	timestamp: timestamp({ mode: 'string' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 	feedType: mysqlEnum("feed_type", ['recommended','area','category','agent','developer']).notNull(),
 	feedContext: json("feed_context"),
 	deviceType: mysqlEnum("device_type", ['mobile','tablet','desktop']).notNull(),
@@ -884,7 +911,7 @@ export const exploreShorts = mysqlTable("explore_shorts", {
 	skipRate: decimal("skip_rate", { precision: 5, scale: 2 }).default('0').notNull(),
 	isPublished: tinyint("is_published").default(1).notNull(),
 	isFeatured: tinyint("is_featured").default(0).notNull(),
-	createdAt: timestamp("created_at", { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	createdAt: timestamp("created_at", { mode: 'string' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 	updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
 	publishedAt: timestamp("published_at", { mode: 'string' }),
 },
@@ -910,7 +937,7 @@ export const exploreUserPreferences = mysqlTable("explore_user_preferences", {
 	interactionHistory: json("interaction_history"),
 	savedProperties: json("saved_properties"),
 	inferredPreferences: json("inferred_preferences"),
-	createdAt: timestamp("created_at", { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	createdAt: timestamp("created_at", { mode: 'string' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 	updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
 },
 (table) => [
@@ -921,7 +948,7 @@ export const favorites = mysqlTable("favorites", {
 	id: int().autoincrement().notNull(),
 	userId: int().notNull().references(() => users.id, { onDelete: "cascade" } ),
 	propertyId: int().notNull().references(() => properties.id, { onDelete: "cascade" } ),
-	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	createdAt: timestamp({ mode: 'string' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 });
 
 export const invitations = mysqlTable("invitations", {
@@ -935,7 +962,7 @@ export const invitations = mysqlTable("invitations", {
 	expiresAt: timestamp({ mode: 'string' }).notNull(),
 	acceptedAt: timestamp({ mode: 'string' }),
 	acceptedBy: int().references(() => users.id, { onDelete: "set null" } ),
-	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	createdAt: timestamp({ mode: 'string' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
 });
 
@@ -946,7 +973,7 @@ export const invites = mysqlTable("invites", {
 	token: varchar({ length: 255 }).notNull(),
 	role: varchar({ length: 30 }).default('agent'),
 	expiresAt: timestamp({ mode: 'string' }),
-	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	createdAt: timestamp({ mode: 'string' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 	used: int().notNull(),
 	usedAt: timestamp({ mode: 'string' }),
 	usedBy: int().references(() => users.id, { onDelete: "set null" } ),
@@ -971,7 +998,7 @@ export const invoices = mysqlTable("invoices", {
 	paidAt: timestamp({ mode: 'string' }),
 	dueDate: timestamp({ mode: 'string' }),
 	metadata: text(),
-	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	createdAt: timestamp({ mode: 'string' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
 });
 
@@ -982,7 +1009,7 @@ export const leadActivities = mysqlTable("lead_activities", {
 	activityType: mysqlEnum(['call','email','meeting','note','status_change','viewing_scheduled','offer_sent']).notNull(),
 	description: text(),
 	metadata: text(),
-	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	createdAt: timestamp({ mode: 'string' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 });
 
 export const leads = mysqlTable("leads", {
@@ -998,7 +1025,7 @@ export const leads = mysqlTable("leads", {
 	leadType: mysqlEnum(['inquiry','viewing_request','offer','callback']).default('inquiry').notNull(),
 	status: mysqlEnum(['new','contacted','qualified','converted','closed','viewing_scheduled','offer_sent','lost']).default('new').notNull(),
 	source: varchar({ length: 100 }),
-	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	createdAt: timestamp({ mode: 'string' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
 	nextFollowUp: timestamp({ mode: 'string' }),
 	lastContactedAt: timestamp({ mode: 'string' }),
@@ -1042,14 +1069,14 @@ export const listingAnalytics = mysqlTable("listing_analytics", {
 	conversionRate: decimal({ precision: 5, scale: 2 }),
 	leadConversionRate: decimal({ precision: 5, scale: 2 }),
 	lastUpdated: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
-	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	createdAt: timestamp({ mode: 'string' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 });
 
 export const listingApprovalQueue = mysqlTable("listing_approval_queue", {
 	id: int().autoincrement().notNull(),
 	listingId: int().notNull().references(() => listings.id, { onDelete: "cascade" } ),
 	submittedBy: int().notNull(),
-	submittedAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	submittedAt: timestamp({ mode: 'string' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 	status: mysqlEnum(['pending','reviewing','approved','rejected']).default('pending').notNull(),
 	priority: mysqlEnum(['low','normal','high','urgent']).default('normal').notNull(),
 	reviewedBy: int(),
@@ -1057,7 +1084,7 @@ export const listingApprovalQueue = mysqlTable("listing_approval_queue", {
 	reviewNotes: text(),
 	rejectionReason: text(),
 	complianceChecks: json(),
-	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	createdAt: timestamp({ mode: 'string' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
 });
 
@@ -1080,7 +1107,7 @@ export const listingLeads = mysqlTable("listing_leads", {
 	crmSynced: int().default(0),
 	crmSyncedAt: timestamp({ mode: 'string' }),
 	crmId: varchar({ length: 255 }),
-	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	createdAt: timestamp({ mode: 'string' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
 });
 
@@ -1104,8 +1131,8 @@ export const listingMedia = mysqlTable("listing_media", {
 	isPrimary: int().default(0).notNull(),
 	processingStatus: mysqlEnum(['pending','processing','completed','failed']).default('pending'),
 	processingError: text(),
-	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
-	uploadedAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	createdAt: timestamp({ mode: 'string' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
+	uploadedAt: timestamp({ mode: 'string' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 	processedAt: timestamp({ mode: 'string' }),
 });
 
@@ -1146,7 +1173,7 @@ export const listingViewings = mysqlTable("listing_viewings", {
 	visitorRating: int(),
 	reminderSent: int().default(0),
 	confirmationSent: int().default(0),
-	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	createdAt: timestamp({ mode: 'string' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
 });
 
@@ -1194,7 +1221,7 @@ export const listings = mysqlTable("listings", {
 	canonicalUrl: text(),
 	searchTags: text(),
 	featured: int().default(0).notNull(),
-	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	createdAt: timestamp({ mode: 'string' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
 	publishedAt: timestamp({ mode: 'string' }),
 	archivedAt: timestamp({ mode: 'string' }),
@@ -1205,7 +1232,7 @@ export const locationSearchCache = mysqlTable("location_search_cache", {
 	searchQuery: varchar({ length: 255 }).notNull(),
 	searchType: mysqlEnum(['province','city','suburb','address','all']).notNull(),
 	resultsJson: text().notNull(),
-	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	createdAt: timestamp({ mode: 'string' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 	expiresAt: timestamp({ mode: 'string' }).notNull(),
 });
 
@@ -1227,7 +1254,7 @@ export const locations = mysqlTable("locations", {
 	seoDescription: text("seo_description"),
 	heroImage: varchar("hero_image", { length: 500 }),
 	propertyCount: int(),
-	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	createdAt: timestamp({ mode: 'string' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
 },
 (table) => [
@@ -1246,7 +1273,7 @@ export const locationAnalyticsEvents = mysqlTable("location_analytics_events", {
 	metadata: json(),
 	sessionId: varchar("session_id", { length: 100 }),
 	userId: int("user_id").references(() => users.id, { onDelete: "set null" }),
-	createdAt: timestamp("created_at", { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	createdAt: timestamp("created_at", { mode: 'string' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 }, (table) => [
 	index("idx_loc_analytics_event").on(table.eventType),
 	index("idx_loc_analytics_created").on(table.createdAt),
@@ -1265,7 +1292,7 @@ export const locationTargeting = mysqlTable("location_targeting", {
 	endDate: timestamp("end_date", { mode: 'string' }),
 	status: mysqlEnum(['active', 'scheduled', 'expired', 'paused']).default('scheduled').notNull(),
 	metadata: json(),
-	createdAt: timestamp("created_at", { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	createdAt: timestamp("created_at", { mode: 'string' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 },
 (table) => [
 	index("idx_location_targeting").on(table.locationType, table.locationId, table.status),
@@ -1275,7 +1302,7 @@ export const locationSearches = mysqlTable("location_searches", {
 	id: int().autoincrement().notNull(),
 	locationId: int("location_id").notNull().references(() => locations.id, { onDelete: "cascade" }),
 	userId: int("user_id").references(() => users.id, { onDelete: "set null" }),
-	searchedAt: timestamp("searched_at", { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	searchedAt: timestamp("searched_at", { mode: 'string' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 },
 (table) => [
 	index("idx_location_searched").on(table.locationId, table.searchedAt),
@@ -1286,7 +1313,7 @@ export const recentSearches = mysqlTable("recent_searches", {
 	id: int().autoincrement().notNull(),
 	userId: int("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
 	locationId: int("location_id").notNull().references(() => locations.id, { onDelete: "cascade" }),
-	searchedAt: timestamp("searched_at", { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	searchedAt: timestamp("searched_at", { mode: 'string' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 },
 (table) => [
 	index("idx_user_recent").on(table.userId, table.searchedAt),
@@ -1299,7 +1326,7 @@ export const marketInsightsCache = mysqlTable("market_insights_cache", {
 	cacheData: text().notNull(),
 	cacheType: mysqlEnum(['suburb_heatmap','city_trends','popular_areas','price_predictions','user_recommendations']).notNull(),
 	expiresAt: timestamp({ mode: 'string' }).notNull(),
-	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	createdAt: timestamp({ mode: 'string' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
 });
 
@@ -1312,7 +1339,7 @@ export const notifications = mysqlTable("notifications", {
 	data: text(),
 	isRead: int().notNull(),
 	readAt: timestamp({ mode: 'string' }),
-	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	createdAt: timestamp({ mode: 'string' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 });
 
 export const offers = mysqlTable("offers", {
@@ -1328,7 +1355,7 @@ export const offers = mysqlTable("offers", {
 	conditions: text(),
 	expiresAt: timestamp({ mode: 'string' }),
 	respondedAt: timestamp({ mode: 'string' }),
-	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	createdAt: timestamp({ mode: 'string' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
 });
 
@@ -1346,7 +1373,7 @@ export const paymentMethods = mysqlTable("payment_methods", {
 	isDefault: int().notNull(),
 	isActive: int().default(1).notNull(),
 	metadata: text(),
-	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	createdAt: timestamp({ mode: 'string' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
 });
 
@@ -1364,7 +1391,7 @@ export const plans = mysqlTable("plans", {
 	isActive: int().default(1).notNull(),
 	isPopular: int().notNull(),
 	sortOrder: int().notNull(),
-	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	createdAt: timestamp({ mode: 'string' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
 });
 
@@ -1376,7 +1403,7 @@ export const platformSettings = mysqlTable("platform_settings", {
 	category: mysqlEnum(['pricing','features','notifications','limits','other']).default('other').notNull(),
 	isPublic: int().notNull(),
 	updatedBy: int().references(() => users.id, { onDelete: "set null" } ),
-	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	createdAt: timestamp({ mode: 'string' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
 });
 
@@ -1420,9 +1447,9 @@ export const priceHistory = mysqlTable("price_history", {
 	pricePerSqm: int(),
 	propertyType: mysqlEnum(['apartment','house','villa','plot','commercial','townhouse','cluster_home','farm','shared_living']).notNull(),
 	listingType: mysqlEnum(['sale','rent','rent_to_buy','auction','shared_living']).notNull(),
-	recordedAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	recordedAt: timestamp({ mode: 'string' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 	source: mysqlEnum(['new_listing','price_change','sold','rented','market_update']).default('market_update').notNull(),
-	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	createdAt: timestamp({ mode: 'string' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
 });
 
@@ -1442,7 +1469,7 @@ export const pricePredictions = mysqlTable("price_predictions", {
 	actualPrice: int(),
 	predictionError: int(),
 	predictionAccuracy: int(),
-	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	createdAt: timestamp({ mode: 'string' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 	validatedAt: timestamp({ mode: 'string' }),
 });
 
@@ -1484,7 +1511,7 @@ export const properties = mysqlTable("properties", {
 	levies: int(),
 	ratesAndTaxes: int(),
 	mainImage: varchar({ length: 1024 }),
-	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	createdAt: timestamp({ mode: 'string' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
 },
 (table) => [
@@ -1509,7 +1536,7 @@ export const propertyImages = mysqlTable("propertyImages", {
 	imageUrl: text().notNull(),
 	isPrimary: int().notNull(),
 	displayOrder: int().notNull(),
-	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	createdAt: timestamp({ mode: 'string' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 });
 
 export const propertySimilarityIndex = mysqlTable("property_similarity_index", {
@@ -1522,14 +1549,14 @@ export const propertySimilarityIndex = mysqlTable("property_similarity_index", {
 	featureSimilarity: int(),
 	overallSimilarity: int(),
 	similarityReason: text(),
-	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	createdAt: timestamp({ mode: 'string' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 });
 
 export const prospectFavorites = mysqlTable("prospect_favorites", {
 	id: int().autoincrement().notNull(),
 	prospectId: int().notNull().references(() => prospects.id, { onDelete: "cascade" } ),
 	propertyId: int().notNull().references(() => properties.id, { onDelete: "cascade" } ),
-	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	createdAt: timestamp({ mode: 'string' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 });
 
 export const prospects = mysqlTable("prospects", {
@@ -1560,7 +1587,7 @@ export const prospects = mysqlTable("prospects", {
 	ipAddress: varchar({ length: 45 }),
 	userAgent: text(),
 	referrer: text(),
-	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	createdAt: timestamp({ mode: 'string' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
 });
 
@@ -1574,7 +1601,7 @@ export const provinces = mysqlTable("provinces", {
 	code: varchar({ length: 10 }).notNull(),
 	latitude: varchar({ length: 20 }),
 	longitude: varchar({ length: 21 }),
-	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	createdAt: timestamp({ mode: 'string' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
 },
 (table) => [
@@ -1586,7 +1613,7 @@ export const recentlyViewed = mysqlTable("recently_viewed", {
 	id: int().autoincrement().notNull(),
 	prospectId: int().notNull().references(() => prospects.id, { onDelete: "cascade" } ),
 	propertyId: int().notNull().references(() => properties.id, { onDelete: "cascade" } ),
-	viewedAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	viewedAt: timestamp({ mode: 'string' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 });
 
 export const reviews = mysqlTable("reviews", {
@@ -1599,7 +1626,7 @@ export const reviews = mysqlTable("reviews", {
 	comment: text(),
 	isVerified: int().notNull(),
 	isPublished: int().default(1).notNull(),
-	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	createdAt: timestamp({ mode: 'string' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
 });
 
@@ -1610,7 +1637,7 @@ export const savedSearches = mysqlTable("saved_searches", {
 	criteria: json().notNull(),
 	notificationFrequency: mysqlEnum(['never','daily','weekly']).default('never'),
 	lastNotifiedAt: timestamp({ mode: 'string' }),
-	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP'),
+	createdAt: timestamp({ mode: 'string' }).default(sql`CURRENT_TIMESTAMP`),
 	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow(),
 });
 
@@ -1626,7 +1653,7 @@ export const scheduledViewings = mysqlTable("scheduled_viewings", {
 	prospectEmail: varchar({ length: 320 }),
 	prospectPhone: varchar({ length: 50 }),
 	notificationSent: int(),
-	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	createdAt: timestamp({ mode: 'string' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
 });
 
@@ -1642,7 +1669,7 @@ export const services = mysqlTable("services", {
 	commissionRate: int(),
 	isActive: int().default(1).notNull(),
 	isFeatured: int().notNull(),
-	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	createdAt: timestamp({ mode: 'string' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
 });
 
@@ -1654,7 +1681,7 @@ export const showings = mysqlTable("showings", {
 	scheduledAt: timestamp({ mode: 'string' }).notNull(),
 	status: mysqlEnum(['requested','confirmed','completed','cancelled']).default('requested').notNull(),
 	notes: text(),
-	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	createdAt: timestamp({ mode: 'string' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
 });
 
@@ -1665,7 +1692,7 @@ export const subscriptionEvents = mysqlTable("subscription_events", {
 	eventType: mysqlEnum("event_type", ['trial_started','trial_expiring_soon','trial_expired','subscription_created','subscription_renewed','subscription_upgraded','subscription_downgraded','subscription_cancelled','payment_succeeded','payment_failed','feature_locked','limit_reached']).notNull(),
 	eventData: json("event_data"),
 	metadata: json(),
-	createdAt: timestamp("created_at", { mode: 'string' }).default('CURRENT_TIMESTAMP'),
+	createdAt: timestamp("created_at", { mode: 'string' }).default(sql`CURRENT_TIMESTAMP`),
 },
 (table) => [
 	index("idx_user").on(table.userId),
@@ -1694,7 +1721,7 @@ export const subscriptionPlans = mysqlTable("subscription_plans", {
 	downgradeToPlanId: varchar("downgrade_to_plan_id", { length: 100 }),
 	stripePriceId: varchar("stripe_price_id", { length: 255 }),
 	paystackPlanCode: varchar("paystack_plan_code", { length: 255 }),
-	createdAt: timestamp("created_at", { mode: 'string' }).default('CURRENT_TIMESTAMP'),
+	createdAt: timestamp("created_at", { mode: 'string' }).default(sql`CURRENT_TIMESTAMP`),
 	updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow().onUpdateNow(),
 },
 (table) => [
@@ -1717,7 +1744,7 @@ export const subscriptionUsage = mysqlTable("subscription_usage", {
 	storageMb: int("storage_mb").default(0),
 	crmContacts: int("crm_contacts").default(0),
 	emailsSent: int("emails_sent").default(0),
-	createdAt: timestamp("created_at", { mode: 'string' }).default('CURRENT_TIMESTAMP'),
+	createdAt: timestamp("created_at", { mode: 'string' }).default(sql`CURRENT_TIMESTAMP`),
 	updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow().onUpdateNow(),
 },
 (table) => [
@@ -1756,7 +1783,7 @@ export const suburbs = mysqlTable("suburbs", {
 	latitude: varchar({ length: 20 }),
 	longitude: varchar({ length: 21 }),
 	postalCode: varchar({ length: 10 }),
-	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	createdAt: timestamp({ mode: 'string' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
 },
 (table) => [
@@ -1783,7 +1810,7 @@ export const userBehaviorEvents = mysqlTable("user_behavior_events", {
 	referrer: varchar({ length: 500 }),
 	userAgent: text(),
 	ipAddress: varchar({ length: 45 }),
-	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	createdAt: timestamp({ mode: 'string' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 });
 
 export const userPreferences = mysqlTable("user_preferences", {
@@ -1814,7 +1841,7 @@ export const userPreferences = mysqlTable("user_preferences", {
 	priceWeight: int().default(25),
 	featuresWeight: int().default(25),
 	sizeWeight: int().default(20),
-	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	createdAt: timestamp({ mode: 'string' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
 	lastUsed: timestamp({ mode: 'string' }),
 });
@@ -1833,7 +1860,7 @@ export const userRecommendations = mysqlTable("user_recommendations", {
 	recommendationClickCount: int(),
 	recommendationConversionCount: int(),
 	lastRecommendationUpdate: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
-	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	createdAt: timestamp({ mode: 'string' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 });
 
 export const userSubscriptions = mysqlTable("user_subscriptions", {
@@ -1861,7 +1888,7 @@ export const userSubscriptions = mysqlTable("user_subscriptions", {
 	downgradeScheduled: tinyint("downgrade_scheduled").default(0),
 	downgradeToPlanId: varchar("downgrade_to_plan_id", { length: 100 }),
 	downgradeEffectiveDate: timestamp("downgrade_effective_date", { mode: 'string' }),
-	createdAt: timestamp("created_at", { mode: 'string' }).default('CURRENT_TIMESTAMP'),
+	createdAt: timestamp("created_at", { mode: 'string' }).default(sql`CURRENT_TIMESTAMP`),
 	updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow().onUpdateNow(),
 },
 (table) => [
@@ -1884,9 +1911,9 @@ export const users = mysqlTable("users", {
 	role: mysqlEnum(['visitor','agent','agency_admin','property_developer','super_admin']).default('visitor').notNull(),
 	agencyId: int().references(() => agencies.id, { onDelete: "set null" } ),
 	isSubaccount: int().notNull(),
-	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	createdAt: timestamp({ mode: 'string' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
-	lastSignedIn: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	lastSignedIn: timestamp({ mode: 'string' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 	passwordResetToken: varchar({ length: 255 }),
 	passwordResetTokenExpiresAt: timestamp({ mode: 'string' }),
 	emailVerificationToken: varchar({ length: 255 }),
@@ -1900,7 +1927,7 @@ export const videoLikes = mysqlTable("videoLikes", {
 	id: int().autoincrement().notNull(),
 	videoId: int().notNull().references(() => videos.id, { onDelete: "cascade" } ),
 	userId: int().notNull().references(() => users.id, { onDelete: "cascade" } ),
-	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	createdAt: timestamp({ mode: 'string' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 });
 
 export const videos = mysqlTable("videos", {
@@ -1917,7 +1944,7 @@ export const videos = mysqlTable("videos", {
 	shares: int().notNull(),
 	isPublished: int().default(1).notNull(),
 	isFeatured: int().notNull(),
-	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	createdAt: timestamp({ mode: 'string' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
 });
 
@@ -1947,7 +1974,7 @@ export const exploreContent = mysqlTable("explore_content", {
 	engagementScore: decimal("engagement_score", { precision: 5, scale: 2 }).default('0'),
 	isActive: tinyint("is_active").default(1),
 	isFeatured: tinyint("is_featured").default(0),
-	createdAt: timestamp("created_at", { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	createdAt: timestamp("created_at", { mode: 'string' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 	updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
 },
 (table) => [
@@ -1979,7 +2006,7 @@ export const exploreDiscoveryVideos = mysqlTable("explore_discovery_videos", {
 	saveCount: int("save_count").default(0),
 	shareCount: int("share_count").default(0),
 	clickThroughCount: int("click_through_count").default(0),
-	createdAt: timestamp("created_at", { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	createdAt: timestamp("created_at", { mode: 'string' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 },
 (table) => [
 	index("idx_explore_discovery_videos_content").on(table.exploreContentId),
@@ -2008,7 +2035,7 @@ export const exploreNeighbourhoods = mysqlTable("explore_neighbourhoods", {
 	followerCount: int("follower_count").default(0),
 	propertyCount: int("property_count").default(0),
 	videoCount: int("video_count").default(0),
-	createdAt: timestamp("created_at", { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	createdAt: timestamp("created_at", { mode: 'string' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 	updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
 },
 (table) => [
@@ -2028,8 +2055,8 @@ export const exploreUserPreferencesNew = mysqlTable("explore_user_preferences_ne
 	followedNeighbourhoods: json("followed_neighbourhoods"),
 	followedCreators: json("followed_creators"),
 	engagementHistory: json("engagement_history"),
-	lastActive: timestamp("last_active", { mode: 'string' }).default('CURRENT_TIMESTAMP'),
-	createdAt: timestamp("created_at", { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	lastActive: timestamp("last_active", { mode: 'string' }).default(sql`CURRENT_TIMESTAMP`),
+	createdAt: timestamp("created_at", { mode: 'string' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 	updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
 },
 (table) => [
@@ -2040,7 +2067,7 @@ export const exploreUserPreferencesNew = mysqlTable("explore_user_preferences_ne
 export const exploreFeedSessions = mysqlTable("explore_feed_sessions", {
 	id: int().autoincrement().notNull(),
 	userId: int("user_id").references(() => users.id, { onDelete: "set null" }),
-	sessionStart: timestamp("session_start", { mode: 'string' }).default('CURRENT_TIMESTAMP'),
+	sessionStart: timestamp("session_start", { mode: 'string' }).default(sql`CURRENT_TIMESTAMP`),
 	sessionEnd: timestamp("session_end", { mode: 'string' }),
 	totalDuration: int("total_duration"),
 	videosViewed: int("videos_viewed").default(0),
@@ -2063,7 +2090,7 @@ export const exploreEngagements = mysqlTable("explore_engagements", {
 	watchTime: int("watch_time"),
 	completed: tinyint().default(0),
 	sessionId: int("session_id").references(() => exploreFeedSessions.id, { onDelete: "set null" }),
-	createdAt: timestamp("created_at", { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	createdAt: timestamp("created_at", { mode: 'string' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 },
 (table) => [
 	index("idx_explore_engagement_user").on(table.userId),
@@ -2080,7 +2107,7 @@ export const exploreBoostCampaigns = mysqlTable("explore_boost_campaigns", {
 	budget: decimal({ precision: 10, scale: 2 }),
 	spent: decimal({ precision: 10, scale: 2 }).default('0'),
 	durationDays: int("duration_days"),
-	startDate: timestamp("start_date", { mode: 'string' }).default('CURRENT_TIMESTAMP'),
+	startDate: timestamp("start_date", { mode: 'string' }).default(sql`CURRENT_TIMESTAMP`),
 	endDate: timestamp("end_date", { mode: 'string' }),
 	targetAudience: json("target_audience"),
 	status: varchar({ length: 50 }).default('active'),
@@ -2088,7 +2115,7 @@ export const exploreBoostCampaigns = mysqlTable("explore_boost_campaigns", {
 	clicks: int().default(0),
 	conversions: int().default(0),
 	costPerClick: decimal("cost_per_click", { precision: 10, scale: 2 }),
-	createdAt: timestamp("created_at", { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	createdAt: timestamp("created_at", { mode: 'string' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 	updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
 },
 (table) => [
@@ -2104,7 +2131,7 @@ export const exploreSavedProperties = mysqlTable("explore_saved_properties", {
 	contentId: int("content_id").notNull().references(() => exploreContent.id, { onDelete: "cascade" }),
 	collectionName: varchar("collection_name", { length: 255 }).default('Default'),
 	notes: text(),
-	createdAt: timestamp("created_at", { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	createdAt: timestamp("created_at", { mode: 'string' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 },
 (table) => [
 	index("unique_user_content").on(table.userId, table.contentId),
@@ -2116,7 +2143,7 @@ export const exploreNeighbourhoodFollows = mysqlTable("explore_neighbourhood_fol
 	id: int().autoincrement().notNull(),
 	userId: int("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
 	neighbourhoodId: int("neighbourhood_id").notNull().references(() => exploreNeighbourhoods.id, { onDelete: "cascade" }),
-	createdAt: timestamp("created_at", { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	createdAt: timestamp("created_at", { mode: 'string' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 },
 (table) => [
 	index("unique_user_neighbourhood").on(table.userId, table.neighbourhoodId),
@@ -2127,10 +2154,103 @@ export const exploreCreatorFollows = mysqlTable("explore_creator_follows", {
 	id: int().autoincrement().notNull(),
 	userId: int("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
 	creatorId: int("creator_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-	createdAt: timestamp("created_at", { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	createdAt: timestamp("created_at", { mode: 'string' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 },
 (table) => [
 	index("unique_user_creator").on(table.userId, table.creatorId),
 	index("idx_explore_creator_follows_user").on(table.userId),
 	index("idx_explore_creator_follows_creator").on(table.creatorId),
 ]);
+// Developer Subscription Relations
+export const developerSubscriptionsRelations = relations(developerSubscriptions, ({ one }) => ({
+	limits: one(developerSubscriptionLimits, {
+		fields: [developerSubscriptions.id],
+		references: [developerSubscriptionLimits.subscriptionId],
+	}),
+	usage: one(developerSubscriptionUsage, {
+		fields: [developerSubscriptions.id],
+		references: [developerSubscriptionUsage.subscriptionId],
+	}),
+}));
+
+export const developerSubscriptionLimitsRelations = relations(developerSubscriptionLimits, ({ one }) => ({
+	subscription: one(developerSubscriptions, {
+		fields: [developerSubscriptionLimits.subscriptionId],
+		references: [developerSubscriptions.id],
+	}),
+}));
+
+export const developerSubscriptionUsageRelations = relations(developerSubscriptionUsage, ({ one }) => ({
+	subscription: one(developerSubscriptions, {
+		fields: [developerSubscriptionUsage.subscriptionId],
+		references: [developerSubscriptions.id],
+	}),
+}));
+
+// ============================================================================
+// CORE ENTITY RELATIONS (Users, Developers, Developments)
+// ============================================================================
+
+export const usersRelations = relations(users, ({ one, many }) => ({
+	developerProfiles: many(developers),
+    auditLogs: many(auditLogs),
+}));
+
+export const developersRelations = relations(developers, ({ one, many }) => ({
+	user: one(users, {
+		fields: [developers.userId],
+		references: [users.id],
+	}),
+	developments: many(developments),
+    subscriptions: many(developerSubscriptions),
+    activities: many(activities),
+    drafts: many(developmentDrafts),
+}));
+
+export const developmentsRelations = relations(developments, ({ one, many }) => ({
+	developer: one(developers, {
+		fields: [developments.developerId],
+		references: [developers.id],
+	}),
+	phases: many(developmentPhases),
+	units: many(developmentUnits),
+    approvalRecords: many(developmentApprovalQueue),
+    documents: many(developmentDocuments),
+}));
+
+export const developmentPhasesRelations = relations(developmentPhases, ({ one, many }) => ({
+	development: one(developments, {
+		fields: [developmentPhases.developmentId],
+		references: [developments.id],
+	}),
+	units: many(developmentUnits),
+}));
+
+export const developmentUnitsRelations = relations(developmentUnits, ({ one }) => ({
+	development: one(developments, {
+		fields: [developmentUnits.developmentId],
+		references: [developments.id],
+	}),
+	phase: one(developmentPhases, {
+		fields: [developmentUnits.phaseId],
+		references: [developmentPhases.id],
+	}),
+}));
+
+export const developmentApprovalQueueRelations = relations(developmentApprovalQueue, ({ one }) => ({
+	development: one(developments, {
+		fields: [developmentApprovalQueue.developmentId],
+		references: [developments.id],
+	}),
+    reviewedByUser: one(users, {
+        fields: [developmentApprovalQueue.reviewedBy],
+        references: [users.id],
+    })
+}));
+
+export const auditLogsRelations = relations(auditLogs, ({ one }) => ({
+    user: one(users, {
+        fields: [auditLogs.userId],
+        references: [users.id],
+    }),
+}));

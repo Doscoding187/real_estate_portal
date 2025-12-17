@@ -6,9 +6,11 @@ export const themeExtend: Config['theme'] = {
   extend: {
     colors: {
       primary: {
+        900: colors.primary[900],
         600: colors.primary[600],
         500: colors.primary[500],
         400: colors.primary[400],
+        100: colors.primary[100],
         50: colors.primary[50],
       },
       success: {

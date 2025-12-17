@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useDevelopmentWizard } from '@/hooks/useDevelopmentWizard';
 import { useAutoSave } from '@/hooks/useAutoSave';
 import { SaveStatusIndicator } from '@/components/ui/SaveStatusIndicator';
@@ -9,6 +9,9 @@ import { parseError, type AppError } from '@/lib/errors/ErrorRecoveryStrategy';
 import { handleSessionExpiry, wasSessionExpired, clearSessionExpiryFlags } from '@/lib/auth/SessionExpiryHandler';
 import { Button } from '@/components/ui/button';
 import { useLocation, useRoute } from 'wouter';
+import { toast } from 'sonner';
+import { trpc } from '@/lib/trpc';
+import { cn } from '@/lib/utils';
 import { 
   AlertDialog, 
   AlertDialogAction, 
@@ -19,47 +22,28 @@ import {
   AlertDialogHeader, 
   AlertDialogTitle 
 } from '@/components/ui/alert-dialog';
-import { ArrowLeft, ArrowRight } from 'lucide-react';
-import { toast } from 'sonner';
-import React from 'react';
-import { trpc } from '@/lib/trpc';
 
-// Import steps
-import { DevelopmentTypeSelector } from './DevelopmentTypeSelector';
-import { BasicDetailsStep } from './steps/BasicDetailsStep';
-import { PhaseDetailsStep } from './steps/PhaseDetailsStep';
-import { UnitTypesStepEnhanced } from './steps/UnitTypesStepEnhanced';
-import { HighlightsStep } from './steps/HighlightsStep';
-import { MediaUploadStep } from './steps/MediaUploadStep';
-import { UnitMediaStep } from './steps/UnitMediaStep';
-import { DeveloperInfoStep } from './steps/DeveloperInfoStep';
-import { PreviewStep } from './steps/PreviewStep';
+// Import Phases
+import { IdentityPhase } from './phases/IdentityPhase';
+import { ClassificationPhase } from './phases/ClassificationPhase';
+import { OverviewPhase } from './phases/OverviewPhase';
+import { UnitTypesPhase } from './phases/UnitTypesPhase';
+import { FinalisationPhase } from './phases/FinalisationPhase';
 
-// Step titles for master development
-const masterStepTitles = [
-  'Choose Type',
-  'Basic Details',
+// Phase Definitions
+const PHASES = [
+  'Identity',
+  'Classification',
+  'Overview',
   'Unit Types',
-  'Features',
-  'Development Media',
-  'Unit Media',
-  'Contact Info',
-  'Preview',
+  'Finalisation'
 ];
 
-// Step titles for phase
-const phaseStepTitles = [
-  'Choose Type',
-  'Phase Details',
-  'Unit Types',
-  'Features',
-  'Development Media',
-  'Unit Media',
-  'Contact Info',
-  'Preview',
-];
+interface DevelopmentWizardProps {
+  developmentId?: number;
+}
 
-export function DevelopmentWizard() {
+export function DevelopmentWizard({ developmentId }: DevelopmentWizardProps) {
   const [, setLocation] = useLocation();
   const [, params] = useRoute('/developer/create-development');
   const urlParams = new URLSearchParams(window.location.search);
@@ -67,417 +51,188 @@ export function DevelopmentWizard() {
   const [currentDraftId, setCurrentDraftId] = useState<number | undefined>(draftIdFromUrl ? parseInt(draftIdFromUrl) : undefined);
   const [showExitDialog, setShowExitDialog] = useState(false);
   const [showResumeDraftDialog, setShowResumeDraftDialog] = useState(false);
-  const [wizardKey, setWizardKey] = useState(0); // Force re-render on reset
   const [apiError, setApiError] = useState<AppError | null>(null);
   const store = useDevelopmentWizard();
-  const { currentStep, goToStep, nextStep, previousStep, reset } = store;
+  
+  // Destructure from store
+  const { 
+    currentPhase, setPhase, developmentData, classification, overview, unitTypes, finalisation, 
+    reset, saveDraft, hydrateDevelopment
+  } = store;
+
+  // Mutation for saving drafts
+  const saveDraftMutation = trpc.developer.saveDraft.useMutation();
+
+  // Auto-Save Configuration
+  const stateToWatch = { currentPhase, developmentData, classification, overview, unitTypes, finalisation };
+  const { lastSaved, isSaving, error: autoSaveError } = useAutoSave(stateToWatch, {
+    debounceMs: 2000,
+    onSave: async () => {
+      // Trigger backend draft save
+      await saveDraft(async (data) => {
+        const result = await saveDraftMutation.mutateAsync({
+          id: currentDraftId,
+          draftData: data
+        });
+        // If it was a new draft, update the ID
+        if (result?.id && !currentDraftId) setCurrentDraftId(result.id);
+      });
+    }
+  });
 
   // tRPC hooks for draft operations
-  const { data: loadedDraft, isLoading: isDraftLoading } = trpc.developer.getDraft.useQuery(
+  const { data: loadedDraft, isLoading: isDraftLoading, error: draftError } = trpc.developer.getDraft.useQuery(
     { id: currentDraftId! },
-    { enabled: !!currentDraftId, retry: false }
+    { enabled: !!currentDraftId && !developmentId, retry: false }
   );
-  const saveDraftMutation = trpc.developer.saveDraft.useMutation({
-    onSuccess: (data) => {
-      if (!currentDraftId) {
-        setCurrentDraftId(data.id);
-      }
-    },
-    onError: (error) => {
-      console.error('Failed to save draft to database:', error);
-    },
-  });
 
-  // Fetch developer profile to auto-populate developer info
-  const { data: developerProfile } = trpc.developer.getProfile.useQuery(undefined, {
-    retry: false,
-    refetchOnWindowFocus: false,
-  });
-  const { data: user } = trpc.auth.me.useQuery();
+  // tRPC hooks for Development Edit Mode
+  const { data: editData, isLoading: isEditLoading, error: loadError } = trpc.developer.getDevelopment.useQuery(
+    { id: developmentId! },
+    { enabled: !!developmentId, retry: false }
+  );
 
-  // Load draft from database if draftId is provided
+  // Handle API Errors
+  useEffect(() => {
+    const error = loadError || draftError || autoSaveError;
+    if (error) {
+      setApiError(parseError(error));
+    }
+  }, [loadError, draftError, autoSaveError]);
+
+  // Hydrate from existing development (Edit Mode)
+  useEffect(() => {
+    if (editData) {
+        // Hydrate the store atomically
+        hydrateDevelopment(editData);
+        toast.success('Development loaded for editing');
+    }
+  }, [editData]);
+
+  // Auto-load draft logic (Simplified for Phase 2)
   useEffect(() => {
     if (loadedDraft && loadedDraft.draftData) {
-      const data = loadedDraft.draftData as any;
-      console.log('[DevelopmentWizard] Loading draft from database:', data);
-      
-      // Populate store from loaded draft using new API
-      if (data.developmentName || data.name) {
-        store.setDevelopmentData({ name: data.developmentName || data.name });
-      }
-      if (data.description) {
-        store.setDevelopmentData({ description: data.description });
-      }
-      if (data.status) {
-        store.setDevelopmentData({ status: data.status });
-      }
-      if (data.completionDate) {
-        store.setDevelopmentData({ completionDate: data.completionDate });
-      }
-      if (data.developerName) {
-        store.setDevelopmentData({ developerName: data.developerName });
-      }
-      
-      // Load location data
-      if (data.address || data.city || data.province || data.latitude || data.longitude) {
-        store.setLocation({
-          address: data.address || '',
-          city: data.city || '',
-          province: data.province || '',
-          suburb: data.suburb || '',
-          postalCode: data.postalCode || '',
-          latitude: data.latitude?.toString() || '',
-          longitude: data.longitude?.toString() || '',
-        });
-      }
-      
-      // Load amenities
-      if (data.amenities && Array.isArray(data.amenities)) {
-        store.setDevelopmentData({ amenities: data.amenities });
-      }
-      
-      // Load highlights
-      if (data.highlights && Array.isArray(data.highlights)) {
-        store.setDevelopmentData({ highlights: data.highlights });
-      }
-      
-      // TODO: Implement proper unit types and media loading
-      // if (loadedDraft.currentStep !== undefined) store.setCurrentStep(loadedDraft.currentStep);
-
-      toast.success('Draft loaded successfully', {
-        description: 'Continue from where you left off',
-      });
+       hydrateDevelopment(loadedDraft.draftData);
+       toast.success('Draft loaded successfully');
     }
   }, [loadedDraft]);
 
-  // Auto-populate developer info from profile when component loads
-  useEffect(() => {
-    // Only populate if fields are empty (don't override existing draft data)
-    if (developerProfile && !store.developmentData?.developerName && !loadedDraft) {
-      store.setDevelopmentData({ 
-        developerName: developerProfile.name || '' 
-      });
-      
-      // Note: Contact details are now handled differently in the new structure
-      // The developer info step will use the profile data directly
-    }
-  }, [developerProfile, user, loadedDraft]);
-
-  // Auto-save to database (in addition to localStorage via Zustand persist)
-  // TEMPORARILY DISABLED - waiting for backend deployment
-  // useEffect(() => {
-  //   const saveToDatabaseTimer = setTimeout(() => {
-  //     if (currentStep > 0 && !isDraftLoading) {
-  //       const draftData = {
-  //         developmentName: store.developmentName,
-  //         address: store.address,
-  //         city: store.city,
-  //         province: store.province,
-  //         suburb: store.suburb,
-  //         postalCode: store.postalCode,
-  //         latitude: store.latitude,
-  //         longitude: store.longitude,
-  //         status: store.status,
-  //         unitTypes: store.unitTypes,
-  //         description: store.description,
-  //         amenities: store.amenities,
-  //         highlights: store.highlights,
-  //         completionDate: store.completionDate,
-  //         totalUnits: store.totalUnits,
-  //         media: store.media,
-  //         developerName: store.developerName,
-  //         contactDetails: store.contactDetails,
-  //       };
-
-  //       const progress = Math.round((currentStep / 6) * 100);
-
-  //       saveDraftMutation.mutate({
-  //         id: currentDraftId,
-  //         draftData,
-  //         progress,
-  //         currentStep,
-  //       });
-  //     }
-  //   }, 3000); // Auto-save every 3 seconds after changes
-
-  //   return () => clearTimeout(saveToDatabaseTimer);
-  // }, [
-  //   currentStep,
-  //   store.developmentName,
-  //   store.address,
-  //   store.city,
-  //   store.unitTypes,
-  //   store.description,
-  //   store.media,
-  // ]);
-
-  // Check for session restoration after login
+  // Session recovery
   useEffect(() => {
     if (wasSessionExpired()) {
-      console.log('Session was expired, draft should be restored automatically');
       clearSessionExpiryFlags();
-      
-      // Show a toast to inform user their session was restored
-      toast.success('Welcome back! Your draft has been restored.', {
-        description: 'You can continue where you left off.',
-      });
+      toast.success('Session restored');
     }
   }, []);
 
-  const [isInitialized, setIsInitialized] = useState(false);
-
-  // Check for draft on mount and show resume dialog (only if not loading from URL)
-  useEffect(() => {
-    // Don't show resume dialog if we're loading a draft from URL
-    if (draftIdFromUrl) {
-      setIsInitialized(true);
-      return;
-    }
-
-    // Check if there's a draft with meaningful progress
-    const hasDraft = 
-      currentStep > 0 || 
-      store.developmentData?.name || 
-      store.developmentData?.location?.address ||
-      (store.unitTypes?.length || 0) > 0 ||
-      store.developmentData?.description ||
-      (store.developmentData?.media?.photos?.length || 0) > 0;
-
-    console.log('[DevelopmentWizard] Draft check:', {
-      currentStep,
-      developmentName: store.developmentData?.name,
-      address: store.developmentData?.location?.address,
-      unitTypes: store.unitTypes?.length || 0,
-      description: store.developmentData?.description,
-      media: store.developmentData?.media?.photos?.length || 0,
-      hasDraft
-    });
-
-    if (hasDraft) {
-      setShowResumeDraftDialog(true);
-    }
-    
-    setIsInitialized(true);
-  }, []); // Run only on mount
-
-  // Handle resume draft decision
-  const handleResumeDraft = () => {
-    setShowResumeDraftDialog(false);
-    // Keep existing state - user continues where they left off
-  };
-
-  const handleStartFresh = () => {
-    setShowResumeDraftDialog(false);
-    reset();
-    setWizardKey(prev => prev + 1); // Force re-render
-  };
-
-  const handleExit = () => {
-    setShowExitDialog(true);
-  };
-
+  const handleExit = () => setShowExitDialog(true);
   const confirmExit = () => {
     reset();
     setLocation('/');
   };
 
-  // Handle API errors
-  const handleApiError = (error: any, operation: string) => {
-    const appError = parseError(error, {
-      type: 'network',
-      context: { operation }
-    });
-    setApiError(appError);
-
-    // Show appropriate toast
-    if (appError.type === 'network') {
-      toast.error('Connection lost. Your draft has been saved.', {
-        description: 'You can retry when your connection is restored.',
-      });
-    } else if (appError.type === 'session') {
-      // Handle session expiry with draft restoration
-      handleSessionExpiry({
-        onSessionExpired: () => {
-          toast.error('Your session has expired. Please log in again.', {
-            description: 'Your draft has been saved and will be restored after login.',
-          });
-        },
-        onDraftSaved: () => {
-          console.log('Draft saved before session expiry redirect');
-        },
-      });
-    } else {
-      toast.error(appError.message);
-    }
-  };
-
-  // Clear API error
-  const handleDismissError = () => {
-    setApiError(null);
-  };
-
-  // Generate steps for progress indicator (convert 0-indexed to 1-indexed)
-  // Use appropriate step titles based on development type
-  const stepTitles = store.developmentType === 'master' ? masterStepTitles : phaseStepTitles;
+  // Generate Progress Steps
+  // Note: progressSteps expects 1-based index but arrays are 0-based
   const progressSteps = generateSteps(
-    stepTitles,
-    currentStep + 1, // Convert to 1-indexed
-    [] // Development wizard doesn't track completed steps separately
+    PHASES,
+    currentPhase,
+    [], // TODO: Track completed phases
+    []
   );
 
-  const handleTypeSelection = (type: 'master' | 'phase') => {
-    store.setDevelopmentType(type);
-    nextStep(); // Move to next step after selection
-  };
-
-  const renderStep = () => {
-    // Step 0 is always the type selector
-    if (currentStep === 0) {
-      return (
-        <DevelopmentTypeSelector
-          onSelect={handleTypeSelection}
-          initialSelection={store.developmentType}
-        />
-      );
+  // Render Current Phase
+  const renderPhase = () => {
+    // Show loading state if hydrating
+    if (developmentId && isEditLoading) {
+        return (
+            <div className="flex flex-col items-center justify-center h-64 text-gray-500">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
+                <p>Loading development data...</p>
+            </div>
+        );
     }
 
-    // Conditional rendering based on development type
-    const isMaster = store.developmentType === 'master';
-    
-    switch (currentStep) {
-      case 1:
-        // Show BasicDetailsStep for master, PhaseDetailsStep for phase
-        return isMaster ? <BasicDetailsStep /> : <PhaseDetailsStep />;
-      case 2:
-        return <UnitTypesStepEnhanced />;
-      case 3:
-        return <HighlightsStep />;
-      case 4:
-        return <MediaUploadStep />;
-      case 5:
-        return <UnitMediaStep />;
-      case 6:
-        return <DeveloperInfoStep />;
-      case 7:
-        return <PreviewStep />;
-      default:
-        return null;
+    switch (currentPhase) {
+      case 1: return <IdentityPhase />;
+      case 2: return <ClassificationPhase />;
+      case 3: return <OverviewPhase />;
+      case 4: return <UnitTypesPhase />;
+      case 5: return <FinalisationPhase />;
+      default: return <IdentityPhase />;
     }
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50 py-8">
-      {/* Resume Draft Dialog */}
       <DraftManager
         open={showResumeDraftDialog}
         onOpenChange={setShowResumeDraftDialog}
-        onResume={handleResumeDraft}
-        onStartFresh={handleStartFresh}
+        onResume={() => setShowResumeDraftDialog(false)}
+        onStartFresh={() => { setShowResumeDraftDialog(false); reset(); }}
         wizardType="development"
         draftData={{
-          currentStep: currentStep + 1, // Display as 1-indexed
-          totalSteps: 6,
-          developmentName: store.developmentData?.name || '',
-          address: store.developmentData?.location?.address || '',
+          currentStep: currentPhase,
+          totalSteps: 5,
+          developmentName: developmentData.name || '',
+          address: developmentData.location?.address || '',
           lastModified: loadedDraft?.lastModified || undefined,
         }}
       />
 
       <div className="container mx-auto px-4 max-w-5xl">
-        {!isInitialized ? (
-          <div className="flex items-center justify-center min-h-[60vh]">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-          </div>
-        ) : showResumeDraftDialog ? (
-          <div className="flex items-center justify-center min-h-[60vh]">
-            {/* Content hidden while dialog is open */}
-          </div>
-        ) : (
-          <>
-            {/* Header */}
+        {/* Header */}
         <div className="mb-8 text-center relative">
-          <Button 
-            variant="ghost" 
-            onClick={handleExit}
-            className="absolute top-0 right-0 text-slate-500 hover:text-slate-700"
-          >
-            Exit
-          </Button>
-          {/* Auto-save status indicator */}
-          {currentStep > 0 && (
-            <div className="absolute top-0 left-0">
-              <SaveStatusIndicator
-                lastSaved={loadedDraft?.lastModified ? new Date(loadedDraft.lastModified) : null}
-                isSaving={saveDraftMutation.isPending}
-                error={saveDraftMutation.error ? new Error(saveDraftMutation.error.message) : null}
-                variant="compact"
-              />
-            </div>
-          )}
+          <div className="absolute top-0 right-0 flex items-center gap-2">
+            <SaveStatusIndicator 
+              lastSaved={lastSaved} 
+              isSaving={isSaving} 
+              error={error} 
+              variant="compact"
+              className="bg-white/50 backdrop-blur-sm border-white/20"
+            />
+            <Button 
+              variant="ghost" 
+              onClick={handleExit}
+              className="text-slate-500 hover:text-slate-700 hover:bg-white/50"
+            >
+              Exit
+            </Button>
+          </div>
+          
           <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-3">
-            List a Development
+             {PHASES[currentPhase - 1]}
           </h1>
-          <p className="text-gray-600 text-lg">Create a listing for your residential development</p>
+          <p className="text-gray-600 text-lg">Phase {currentPhase} of 5</p>
         </div>
 
-        {/* Step Indicator */}
+        {/* Phase Indicator */}
         <div className="mb-8">
           <ProgressIndicator
             steps={progressSteps}
-            onStepClick={(stepNumber) => goToStep(stepNumber - 1)} // Convert back to 0-indexed
+            onStepClick={(stepNumber) => {
+               // Allow navigation back to completed phases
+               if (stepNumber < currentPhase) setPhase(stepNumber);
+            }} 
           />
         </div>
 
-        {/* Step Content */}
-        <div
-          key={wizardKey}
-          className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-8 mb-8"
-        >
-          {renderStep()}
+        {/* Phase Content */}
+        <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-8 mb-8 min-h-[400px]">
+          {renderPhase()}
         </div>
 
-        {/* Navigation Buttons - Hidden on step 0 (type selection) */}
-        {currentStep > 0 && (
-          <div className="flex justify-between items-center">
-            <Button
-              variant="outline"
-              onClick={previousStep}
-              disabled={currentStep === 0}
-              className="gap-2"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              Previous
-            </Button>
-
-            {currentStep < stepTitles.length - 1 ? (
-              <Button 
-                onClick={nextStep} 
-                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 shadow-lg gap-2"
-              >
-                Next Step
-                <ArrowRight className="h-4 w-4" />
-              </Button>
-            ) : (
-               // Submit button is inside PreviewStep
-               null
-            )}
-          </div>
-        )}
-
-        {/* Error Alert with Recovery */}
+        {/* Error Alert */}
         {apiError && (
           <div className="mt-4">
             <ErrorAlert
               type={apiError.type}
               message={apiError.message}
               retryable={apiError.isRecoverable}
-              onDismiss={handleDismissError}
+              onDismiss={() => setApiError(null)}
               show={true}
             />
           </div>
         )}
-        </>
-      )}
       </div>
 
       {/* Exit Confirmation Dialog */}
@@ -486,7 +241,7 @@ export function DevelopmentWizard() {
           <AlertDialogHeader>
             <AlertDialogTitle>Exit Development Wizard?</AlertDialogTitle>
             <AlertDialogDescription>
-              Your progress will be saved as a draft. You can continue later from where you left off.
+              Your progress will be saved as a draft.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

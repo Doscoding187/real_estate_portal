@@ -1,6 +1,13 @@
 import React, { useState } from 'react';
-import DevelopmentWizard from './DevelopmentWizard';
-import { Plus, Search, Filter, MoreVertical } from 'lucide-react';
+import { DevelopmentWizard } from '../development-wizard/DevelopmentWizard';
+import { trpc } from '@/lib/trpc';
+import { Plus, Search, Filter, MoreVertical, AlertCircle, Eye } from 'lucide-react';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
@@ -22,77 +29,48 @@ import {
 
 const DevelopmentsList: React.FC = () => {
   const [showWizard, setShowWizard] = useState(false);
+  const [selectedReviewId, setSelectedReviewId] = useState<number | undefined>();
   const [searchTerm, setSearchTerm] = useState('');
 
-  // Sample developments data
-  const developments = [
-    {
-      id: 1,
-      name: 'Sunset Heights Estate',
-      location: 'Cape Town, Western Cape',
-      type: 'Luxury Apartments',
-      units: 48,
-      status: 'active',
-      leads: 127,
-      views: 1927,
-      image: 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=400',
-    },
-    {
-      id: 2,
-      name: 'Riverside Gardens',
-      location: 'Johannesburg, Gauteng',
-      type: 'Family Residences',
-      units: 24,
-      status: 'active',
-      leads: 89,
-      views: 3081,
-      image: 'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=400',
-    },
-    {
-      id: 3,
-      name: 'Ocean View Villas',
-      location: 'Durban, KwaZulu-Natal',
-      type: 'Coastal Villas',
-      units: 12,
-      status: 'active',
-      leads: 156,
-      views: 2456,
-      image: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=400',
-    },
-    {
-      id: 4,
-      name: 'Mountain Peak Estates',
-      location: 'Stellenbosch, Western Cape',
-      type: 'Wine Estate Homes',
-      units: 18,
-      status: 'paused',
-      leads: 64,
-      views: 1234,
-      image: 'https://images.unsplash.com/photo-1600607687644-c7171b42498b?w=400',
-    },
-    {
-      id: 5,
-      name: 'City Center Lofts',
-      location: 'Pretoria, Gauteng',
-      type: 'Urban Apartments',
-      units: 36,
-      status: 'draft',
-      leads: 12,
-      views: 456,
-      image: 'https://images.unsplash.com/photo-1600607687920-4e2a09cf159d?w=400',
-    },
-  ];
+  /* replaced by tRPC query */
+  const { data: developments, isLoading } = trpc.developer.getDevelopments.useQuery();
+  
+  const safeDevelopments = developments || [];
 
-  const filteredDevelopments = developments.filter(
-    dev =>
+  const filteredDevelopments = safeDevelopments.filter(
+    (dev: any) =>
       dev.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      dev.location.toLowerCase().includes(searchTerm.toLowerCase()),
+      (dev.city && dev.city.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
-  const statusColors = {
-    active: 'bg-green-100 text-green-800 border-green-200',
-    paused: 'bg-yellow-100 text-yellow-800 border-yellow-200',
-    draft: 'bg-gray-100 text-gray-800 border-gray-200',
+  // Status Badge Logic
+  const getStatusBadge = (dev: any) => {
+    switch (dev.approvalStatus) {
+      case 'rejected':
+        return (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger>
+                <Badge variant="destructive" className="cursor-help flex items-center gap-1">
+                   <AlertCircle className="w-3 h-3" /> Rejected
+                </Badge>
+              </TooltipTrigger>
+              <TooltipContent className="max-w-xs bg-red-900 text-white border-red-800">
+                <p className="font-semibold mb-1">Reason for Rejection:</p>
+                <p>{dev.rejectionReason || "Please contact support for details."}</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        );
+      case 'pending':
+        return <Badge className="bg-orange-100 text-orange-700 hover:bg-orange-200 border-orange-200">Pending Review</Badge>;
+      case 'approved':
+        // If approved, check if published
+        // Note: Backend might need to return isPublished 
+        return <Badge className="bg-green-100 text-green-700 hover:bg-green-200 border-green-200">Live</Badge>;
+      default:
+        return <Badge variant="secondary">Draft</Badge>;
+    }
   };
 
   return (
@@ -105,7 +83,7 @@ const DevelopmentsList: React.FC = () => {
             Manage all your property developments in one place
           </p>
         </div>
-        <Button className="bg-accent hover:bg-accent/90" onClick={() => setShowWizard(true)}>
+        <Button className="bg-accent hover:bg-accent/90" onClick={() => { setSelectedReviewId(undefined); setShowWizard(true); }}>
           <Plus className="h-4 w-4 mr-2" />
           Add New Development
         </Button>
@@ -153,24 +131,22 @@ const DevelopmentsList: React.FC = () => {
                 <TableRow key={dev.id} className="hover:bg-muted/50 cursor-pointer">
                   <TableCell>
                     <div className="flex items-center gap-3">
-                      <img
-                        src={dev.image}
-                        alt={dev.name}
-                        className="h-12 w-12 rounded-lg object-cover"
-                      />
+                         {/* Placeholder or real image if available */}
+                        <div className="h-12 w-12 rounded-lg bg-slate-100 flex items-center justify-center text-slate-400 overflow-hidden">
+                            {dev.image ? (
+                                <img src={dev.image} alt={dev.name} className="h-full w-full object-cover" />
+                            ) : (
+                                <span className="text-xs">IMG</span>
+                            )}
+                        </div>
                       <span className="font-semibold text-foreground">{dev.name}</span>
                     </div>
                   </TableCell>
-                  <TableCell className="text-muted-foreground">{dev.location}</TableCell>
-                  <TableCell className="text-muted-foreground">{dev.type}</TableCell>
-                  <TableCell className="font-medium">{dev.units}</TableCell>
+                  <TableCell className="text-muted-foreground">{dev.city}, {dev.province}</TableCell>
+                  <TableCell className="text-muted-foreground capitalize">{dev.developmentType?.replace('_', ' ') || '-'}</TableCell>
+                  <TableCell className="font-medium">{dev.totalUnits || 0}</TableCell>
                   <TableCell>
-                    <Badge
-                      variant="outline"
-                      className={statusColors[dev.status as keyof typeof statusColors]}
-                    >
-                      {dev.status}
-                    </Badge>
+                    {getStatusBadge(dev)}
                   </TableCell>
                   <TableCell className="font-medium">{dev.leads}</TableCell>
                   <TableCell className="text-muted-foreground">
@@ -184,8 +160,13 @@ const DevelopmentsList: React.FC = () => {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
+                        {dev.approvalStatus === 'rejected' && (
+                            <DropdownMenuItem className="text-red-600 font-medium" onClick={() => { setSelectedReviewId(dev.id); setShowWizard(true); }}>
+                                <AlertCircle className="w-4 h-4 mr-2" /> Fix Issues
+                            </DropdownMenuItem>
+                        )}
                         <DropdownMenuItem>View Details</DropdownMenuItem>
-                        <DropdownMenuItem>Edit</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => { setSelectedReviewId(dev.id); setShowWizard(true); }}>Edit</DropdownMenuItem>
                         <DropdownMenuItem>Analytics</DropdownMenuItem>
                         <DropdownMenuItem className="text-destructive">Delete</DropdownMenuItem>
                       </DropdownMenuContent>
@@ -203,7 +184,7 @@ const DevelopmentsList: React.FC = () => {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg w-full max-w-4xl max-h-[90vh] overflow-y-auto">
             <div className="p-4 border-b border-gray-200 flex justify-between items-center">
-              <h3 className="text-lg font-semibold">Add New Development</h3>
+              <h3 className="text-lg font-semibold">{selectedReviewId ? 'Edit Development' : 'Add New Development'}</h3>
               <button
                 onClick={() => setShowWizard(false)}
                 className="text-gray-500 hover:text-gray-700"
@@ -218,8 +199,8 @@ const DevelopmentsList: React.FC = () => {
                 </svg>
               </button>
             </div>
-            <div className="p-6">
-              <DevelopmentWizard />
+            <div className="p-0">
+              <DevelopmentWizard developmentId={selectedReviewId} />
             </div>
           </div>
         </div>

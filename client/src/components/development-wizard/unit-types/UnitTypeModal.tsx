@@ -20,6 +20,7 @@ interface UnitTypeModalProps {
   unitType: Partial<UnitType> | null;
   onSave: (unitType: Partial<UnitType>) => void;
   masterSpecs?: Record<string, any>; // Master development specifications
+  classification?: { type: string };
 }
 
 export function UnitTypeModal({
@@ -28,6 +29,7 @@ export function UnitTypeModal({
   unitType,
   onSave,
   masterSpecs = {},
+  classification,
 }: UnitTypeModalProps) {
   const [activeTab, setActiveTab] = useState('basic');
   const [formData, setFormData] = useState<Partial<UnitType>>(
@@ -88,7 +90,11 @@ export function UnitTypeModal({
 
           <div className="flex-1 overflow-y-auto pr-2">
             <TabsContent value="basic" className="mt-0">
-              <BasicInfoTab formData={formData} updateFormData={updateFormData} />
+              <BasicInfoTab 
+                formData={formData} 
+                updateFormData={updateFormData} 
+                classification={classification}
+              />
             </TabsContent>
 
             <TabsContent value="specs" className="mt-0">

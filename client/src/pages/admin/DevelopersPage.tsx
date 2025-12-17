@@ -10,6 +10,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Loader2, CheckCircle2, XCircle, Search, Building2, MapPin, Calendar } from "lucide-react";
 import { toast } from "sonner";
+import { Switch } from "@/components/ui/switch";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 export default function DevelopersPage() {
   const [activeTab, setActiveTab] = useState("pending");
@@ -44,6 +46,17 @@ export default function DevelopersPage() {
     },
     onError: (error) => {
       toast.error(error.message || "Failed to reject developer");
+    }
+  });
+
+  const setTrustedMutation = trpc.developer.adminSetTrusted.useMutation({
+    onSuccess: (data) => {
+      toast.success(data.message);
+      utils.developer.adminListPendingDevelopers.invalidate();
+      utils.developer.adminListAllDevelopers.invalidate();
+    },
+    onError: (error) => {
+      toast.error(error.message || "Failed to update trust status");
     }
   });
 
@@ -127,6 +140,30 @@ export default function DevelopersPage() {
                 </Button>
               </div>
             )}
+            
+            <div className="flex items-center gap-2 mt-3">
+                <TooltipProvider>
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <div className="flex items-center gap-2">
+                                <Label htmlFor={`trust-${developer.id}`} className="text-xs text-slate-500 font-medium whitespace-nowrap">
+                                    Trusted Developer
+                                </Label>
+                                <Switch
+                                    id={`trust-${developer.id}`}
+                                    checked={!!developer.isTrusted}
+                                    onCheckedChange={(checked) => setTrustedMutation.mutate({ id: developer.id, isTrusted: checked })}
+                                    disabled={setTrustedMutation.isLoading}
+                                    className="scale-75 origin-right"
+                                />
+                            </div>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                            <p className="w-[200px] text-xs">Bypasses manual review and publishes immediately</p>
+                        </TooltipContent>
+                    </Tooltip>
+                </TooltipProvider>
+            </div>
           </div>
         </div>
       </CardContent>

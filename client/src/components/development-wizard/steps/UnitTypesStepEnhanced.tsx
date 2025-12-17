@@ -188,6 +188,7 @@ export function UnitTypesStepEnhanced() {
         unitType={editingUnit}
         onSave={handleSave}
         masterSpecs={masterSpecs}
+        classification={useDevelopmentWizard.getState().classification}
       />
     </div>
   );

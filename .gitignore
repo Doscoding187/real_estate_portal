@@ -106,4 +106,7 @@ temp/
 *.sqlite
 *.sqlite3
 .vercel
-.env*.local
+
+# Temporary output files
+*_output.txt
+verification_*.txt

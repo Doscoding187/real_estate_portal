@@ -2,12 +2,13 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
 // Media Item Interface
+// Media Item Interface
 export interface MediaItem {
   id: string;
   file?: File;
   url: string;
-  type: 'image' | 'pdf' | 'video';
-  category: 'photo' | 'floorplan' | 'render' | 'document';
+  type: 'image' | 'pdf' | 'video' | 'floorplan';
+  category: 'featured' | 'general' | 'amenities' | 'outdoors' | 'videos' | 'photo' | 'floorplan' | 'render' | 'document';
   isPrimary: boolean;
   displayOrder: number;
   uploadedAt?: Date;
@@ -88,6 +89,7 @@ export interface UnitType {
   
   // Base Configuration
   name: string; // "2 Bedroom Apartment", "60m² Simplex"
+  usageType?: 'residential' | 'commercial'; // For Mixed-Use
   bedrooms: number;
   bathrooms: number;
   parking: 'none' | '1' | '2' | 'carport' | 'garage';
@@ -137,27 +139,18 @@ export interface UnitType {
   updatedAt: Date;
 }
 
-export interface ContactDetails {
-  name: string;
-  email: string;
-  phone: string;
-  preferredContact?: 'email' | 'phone';
-}
-
 // Development Wizard State Interface
 export interface DevelopmentWizardState {
   // Wizard Flow
-  currentStep: number; // 1-4
+  currentPhase: number; // 1-5
+  currentStep: number; // Internal step within a phase
   
-  // Step 1: Development Details
+  // Phase 1: Identity
   developmentData: {
-    // Basic Information
+    nature: 'new' | 'phase' | 'extension';
+    parentDevelopmentId?: string; // For phases/extensions
     name: string;
-    status: 'now-selling' | 'launching-soon' | 'under-construction' | 'ready-to-move' | 'sold-out' | 'phase-completed' | 'new-phase-launching';
-    completionDate?: string;
     description: string;
-    developerName: string; // read-only
-    rating?: number; // read-only
     
     // Location
     location: {
@@ -168,160 +161,166 @@ export interface DevelopmentWizardState {
       province: string;
       suburb?: string;
       postalCode?: string;
+      // Legacy props to prevent breaks
       gpsAccuracy?: 'accurate' | 'approximate';
-      noOfficialStreet: boolean;
+      noOfficialStreet?: boolean;
     };
     
-    // Development Amenities (inherited by all unit types as "standard amenities")
-    amenities: string[];
-    
-    // Development Highlights (max 5)
-    highlights: string[];
-    
-    // Development Media
+    // Media
     media: {
       heroImage?: MediaItem;
       photos: MediaItem[];
       videos: MediaItem[];
     };
+    
+    // Legacy props to prevent breaks
+    status?: string; 
+    amenities: string[];
+    highlights: string[];
   };
   
-  // Step 2: Unit Types
+  // Phase 2: Classification (The "Brain")
+  classification: {
+    type: 'residential' | 'commercial' | 'mixed' | 'land';
+    subType: string;
+    ownership: 'full-title' | 'sectional-title' | 'leasehold' | '';
+  };
+  
+  // Phase 3: Overview
+  overview: {
+    status: 'planning' | 'construction' | 'near-completion' | 'completed';
+    highlights: string[];
+    description: string;
+    amenities: string[]; // Shared amenities (or Services for Land)
+    features: string[]; // Additional features
+  };
+  
+  // Phase 4: Unit Types (Skipped for Land)
   unitTypes: UnitType[];
+  unitGroups: { id: string; name: string; type: 'residential' | 'commercial' }[]; // Multi-use grouping
   
-  // Step 3: Phase Details & Infrastructure
-  phaseDetails: {
-    phaseName?: string;
-    phaseNumber?: number;
-    expectedCompletion?: Date;
-    phaseStatus?: string;
+  // Phase 5: Finalisation
+  finalisation: {
+    salesTeamIds: string[];
+    marketingCompany?: string;
+    isPublished: boolean;
   };
-  infrastructure: string[]; // Estate-level only
   
-  // Step 4: Documents
-  documents: Document[];
-  
-  // Metadata
+  // Legacy / Compatibility Fields
+  phaseDetails?: any;
+  infrastructure?: any[];
+  documents?: any[];
   developerId?: number;
-  isComplete: boolean;
   draftId?: number;
+  editingId?: number; // ID of development being edited
   
-  // Actions
+  // ACTIONS ==================================================================
   
-  // Task 2.2: Development data actions
-  setDevelopmentData: (data: Partial<DevelopmentWizardState['developmentData']>) => void;
-  setLocation: (location: Partial<DevelopmentWizardState['developmentData']['location']>) => void;
+  // Navigation
+  setPhase: (phase: number) => void;
+  setCurrentStep: (step: number) => void;
+  
+  // Data Setters
+  setIdentity: (data: Partial<DevelopmentWizardState['developmentData']>) => void;
+  setClassification: (data: Partial<DevelopmentWizardState['classification']>) => void;
+  setOverview: (data: Partial<DevelopmentWizardState['overview']>) => void;
+  
+  // Unit Actions
+  addUnitType: (unitType: Omit<UnitType, 'id'>) => void;
+  updateUnitType: (id: string, updates: Partial<UnitType>) => void;
+  removeUnitType: (id: string) => void;
+  addGroup: (group: { name: string; type: 'residential' | 'commercial' }) => void;
+  
+  // Validation
+  validatePhase: (phase: number) => { isValid: boolean; errors: string[] };
+  validateForPublish: () => { isValid: boolean; errors: string[] };
+  
+  // Persistence
+  saveDraft: (saveCallback?: (data: any) => Promise<void>) => Promise<void>;
+  publish: () => Promise<void>;
+  reset: () => void;
+  
+  // Hydration (For Edit Mode)
+  hydrateDevelopment: (data: any) => void;
+  
+  // Legacy Actions (Stubs/Aliases)
+  setDevelopmentData: (data: any) => void;
+  setLocation: (data: any) => void;
   addAmenity: (amenity: string) => void;
   removeAmenity: (amenity: string) => void;
-  addHighlight: (highlight: string) => void;
-  removeHighlight: (index: number) => void;
+  addHighlight: (hl: string) => void;
+  removeHighlight: (idx: number) => void;
+  addMedia: (item: any) => void;
+  removeMedia: (id: string) => void;
+  setPrimaryImage: (id: string) => void;
+  reorderMedia: (items: MediaItem[]) => void;
   
-  // Task 2.3: Unit type actions
-  addUnitType: (unitType: Omit<UnitType, 'id' | 'createdAt' | 'updatedAt'>) => void;
-  updateUnitType: (id: string, updates: Partial<UnitType>) => void;
+  // Legacy Unit Actions
   deleteUnitType: (id: string) => void;
   duplicateUnitType: (id: string) => void;
-  setBaseFeatures: (unitTypeId: string, features: UnitType['specifications']['builtInFeatures']) => void;
-  setBaseFinishes: (unitTypeId: string, finishes: UnitType['specifications']['finishes']) => void;
   
-  // Task 2.4: Spec variation actions
-  addSpec: (unitTypeId: string, spec: Omit<SpecVariation, 'id' | 'unitTypeId' | 'createdAt' | 'updatedAt'>) => void;
-  updateSpec: (unitTypeId: string, specId: string, updates: Partial<SpecVariation>) => void;
-  deleteSpec: (unitTypeId: string, specId: string) => void;
-  setSpecOverrides: (unitTypeId: string, specId: string, overrides: SpecVariation['overrides']) => void;
-  computeFinalFeatures: (unitTypeId: string, specId: string) => {
-    amenities: string[];
-    specifications: UnitType['specifications'];
-  };
+  // Legacy Misc
+  setDevelopmentType: (type: 'master' | 'phase') => void;
+  developmentType: 'master' | 'phase';
+  media: MediaItem[];
   
-  // Task 2.5: Document and feature actions
-  setDevelopmentFeatures: (features: string[]) => void;
-  addDocument: (document: Omit<Document, 'id' | 'uploadedAt'>) => void;
-  removeDocument: (id: string) => void;
-  
-  // Task 2.6: Wizard navigation actions
-  setCurrentStep: (step: number) => void;
+  // Validation Stubs
   validateStep: (step: number) => { isValid: boolean; errors: string[] };
   canProceed: () => boolean;
   nextStep: () => void;
   previousStep: () => void;
-  
-  // Task 2.7: Save and publish actions
-  saveDraft: () => Promise<void>;
-  publish: () => Promise<void>;
-  
-  // Utility actions
-  setDeveloperId: (id: number) => void;
-  setIsComplete: (isComplete: boolean) => void;
-  setDraftId: (id: number) => void;
-  reset: () => void;
-  
-  // Backward compatibility methods
-  goToStep: (step: number) => void;
-  removeUnitType: (id: string) => void;
-  media: MediaItem[];
-  addMedia: (item: Omit<MediaItem, 'id' | 'displayOrder'> & { category?: string }) => void;
-  removeMedia: (id: string) => void;
-  setPrimaryImage: (id: string) => void;
-  reorderMedia: (reorderedMedia: MediaItem[]) => void;
-  developmentType: 'master' | 'phase';
-  setDevelopmentType: (type: 'master' | 'phase') => void;
 }
 
 const initialState: Omit<DevelopmentWizardState, keyof ReturnType<typeof createActions>> = {
-  // Wizard Flow
-  currentStep: 1, // Start at step 1
+  currentPhase: 1,
+  currentStep: 1,
   
-  // Step 1: Development Details
   developmentData: {
+    nature: 'new',
     name: '',
-    status: 'now-selling',
-    completionDate: undefined,
     description: '',
-    developerName: '', // Will be auto-filled from authenticated user
-    rating: undefined,
-    
     location: {
       latitude: '',
       longitude: '',
       address: '',
       city: '',
       province: '',
-      suburb: '',
-      postalCode: '',
-      gpsAccuracy: undefined,
-      noOfficialStreet: false,
     },
-    
-    amenities: [],
-    highlights: [],
-    
     media: {
-      heroImage: undefined,
       photos: [],
       videos: [],
     },
+    // Legacy inits
+    amenities: [],
+    highlights: [],
   },
   
-  // Step 2: Unit Types
+  classification: {
+    type: 'residential',
+    subType: '',
+    ownership: '',
+  },
+  
+  overview: {
+    status: 'planning',
+    highlights: [],
+    description: '',
+    amenities: [],
+    features: [],
+  },
+  
   unitTypes: [],
+  unitGroups: [],
   
-  // Step 3: Phase Details & Infrastructure
-  phaseDetails: {
-    phaseName: undefined,
-    phaseNumber: undefined,
-    expectedCompletion: undefined,
-    phaseStatus: undefined,
+  finalisation: {
+    salesTeamIds: [],
+    isPublished: false,
   },
-  infrastructure: [],
   
-  // Step 4: Documents
+  // Legacy
   documents: [],
-  
-  // Metadata
-  developerId: undefined,
-  isComplete: false,
-  draftId: undefined,
+  infrastructure: [],
+  phaseDetails: {},
 };
 
 // Helper function to create actions
@@ -330,556 +329,386 @@ const createActions = (
   get: () => DevelopmentWizardState
 ) => ({
 
-  // Task 2.2: Development data actions
-  setDevelopmentData: (data: Partial<DevelopmentWizardState['developmentData']>) => set((state: DevelopmentWizardState) => ({
+  // NEW ACTIONS
+  
+  setPhase: (phase: number) => set({ currentPhase: phase }),
+  
+  setCurrentStep: (step: number) => set({ currentStep: step }),
+
+  setIdentity: (data: Partial<DevelopmentWizardState['developmentData']>) => set((state) => ({
+    developmentData: {
+      ...state.developmentData,
+      ...data,
+      location: { ...state.developmentData.location, ...(data.location || {}) },
+      media: { ...state.developmentData.media, ...(data.media || {}) },
+    }
+  })),
+
+  // THE BRAIN: Logic Engine
+  setClassification: (data: Partial<DevelopmentWizardState['classification']>) => set((state) => {
+    const newClassification = { ...state.classification, ...data };
+    
+    // Logic Rule: Reset sub-type if type changes
+    if (data.type && data.type !== state.classification.type) {
+      newClassification.subType = ''; 
+      
+      // Logic Rule: If switching to Land, clear unit types strictly
+      if (data.type === 'land') {
+         // modifying state via the return object
+         return { classification: newClassification, unitTypes: [] };
+      }
+    }
+    
+    return { classification: newClassification };
+  }),
+  
+  setOverview: (data: Partial<DevelopmentWizardState['overview']>) => set((state) => ({
+    overview: { ...state.overview, ...data }
+  })),
+
+  // Unit Actions
+  addUnitType: (unitType: Omit<UnitType, 'id'>) => set((state) => ({
+    unitTypes: [...state.unitTypes, { 
+      ...unitType, 
+      id: `unit-${Date.now()}`,
+      specs: [],
+      displayOrder: state.unitTypes.length,
+      isActive: true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    } as UnitType]
+  })),
+  
+  updateUnitType: (id: string, updates: Partial<UnitType>) => set((state) => ({
+    unitTypes: state.unitTypes.map(u => u.id === id ? { ...u, ...updates } : u)
+  })),
+  
+  removeUnitType: (id: string) => set((state) => ({
+    unitTypes: state.unitTypes.filter(u => u.id !== id)
+  })),
+  
+  addGroup: (group: { name: string; type: 'residential' | 'commercial' }) => set((state) => ({
+    unitGroups: [...state.unitGroups, { ...group, id: `group-${Date.now()}` }]
+  })),
+
+  validatePhase: (phase: number) => {
+    const state = get();
+    const errors: string[] = [];
+    
+    switch (phase) {
+      case 1:
+        if (!state.developmentData.name) errors.push('Name is required');
+        if (!state.developmentData.location.address) errors.push('Location is required');
+        break;
+      case 2:
+        if (!state.classification.type) errors.push('Type is required');
+        break;
+      case 4:
+        if (state.classification.type !== 'land' && state.unitTypes.length === 0) {
+          errors.push('Add at least one unit type');
+        }
+        break;
+    }
+    return { isValid: errors.length === 0, errors };
+  },
+
+  validateForPublish: () => {
+    const state = get();
+    const errors: string[] = [];
+
+    // Phase 1: Identity
+    if (!state.developmentData.name) errors.push('Development Name is required');
+    if (!state.developmentData.location.address) errors.push('Location Address is required');
+    
+    // Media Check (Hero + Photos)
+    const mediaCount = (state.developmentData.media.heroImage ? 1 : 0) + state.developmentData.media.photos.length;
+    if (mediaCount === 0) errors.push('At least 1 image is required');
+
+    // Phase 2: Classification
+    if (!state.classification.type) errors.push('Classification Type is required');
+
+    // Phase 3: Overview
+    if ((state.overview.highlights?.length || 0) < 3) errors.push('Add at least 3 highlights');
+    if ((state.overview.description?.length || 0) < 50) errors.push('Description must be at least 50 characters');
+
+    // Phase 4: Unit Types (Skip for Land)
+    if (state.classification.type !== 'land') {
+       if (state.unitTypes.length === 0) {
+         errors.push('Add at least one unit type');
+       } else {
+         // Check if any unit has 0 price
+         const validPrices = state.unitTypes.every(u => u.basePriceFrom > 0);
+         if (!validPrices) errors.push('All unit types must have a base price');
+       }
+    }
+
+    return { isValid: errors.length === 0, errors };
+  },
+
+  saveDraft: async (saveCallback) => { 
+    const state = get();
+    const draftData = {
+      developmentData: state.developmentData,
+      classification: state.classification,
+      overview: state.overview,
+      unitTypes: state.unitTypes,
+      finalisation: state.finalisation,
+      currentPhase: state.currentPhase,
+    };
+    if (saveCallback) {
+      await saveCallback(draftData);
+    }
+  },
+  publish: async () => { console.log('Publishing...', get()); },
+  
+  reset: () => set(initialState),
+  
+  hydrateDevelopment: (data: any) => set((state) => {
+      // 1. Handle Draft Data (matches store structure)
+      // We check for key properties that distinguish a draft from a DB entity
+      if (data.developmentData || data.classification) {
+        return {
+          ...state,
+          currentPhase: data.currentPhase ?? state.currentPhase,
+          currentStep: data.currentStep ?? state.currentStep,
+          developmentData: { ...state.developmentData, ...data.developmentData },
+          classification: { ...state.classification, ...data.classification },
+          overview: { ...state.overview, ...data.overview },
+          unitTypes: data.unitTypes || state.unitTypes,
+          finalisation: { ...state.finalisation, ...data.finalisation },
+        };
+      }
+
+      // 2. Handle DB Entity (Edit Mode)
+      // Helper to parse JSON fields safely
+      const parse = (val: any, def: any) => {
+        if (typeof val === 'string') {
+          try { return JSON.parse(val); } catch { return def; }
+        }
+        return val || def;
+      };
+
+      const amenities = parse(data.amenities, []);
+      const highlights = parse(data.highlights, []);
+      const features = parse(data.features, []);
+      
+      // Map Media
+      const dbImages = parse(data.images, []); 
+      const dbVideos = parse(data.videos, []);
+      
+      const photos: MediaItem[] = Array.isArray(dbImages) ? dbImages.map((url: string, i: number) => ({
+        id: `img-${i}-${Date.now()}`,
+        url,
+        type: 'image',
+        category: i === 0 ? 'featured' : 'general',
+        isPrimary: i === 0,
+        displayOrder: i
+      })) : [];
+
+      const videos: MediaItem[] = Array.isArray(dbVideos) ? dbVideos.map((url: string, i: number) => ({
+        id: `vid-${i}-${Date.now()}`,
+        url,
+        type: 'video',
+        category: 'videos',
+        isPrimary: false,
+        displayOrder: i
+      })) : [];
+
+      return {
+          ...state,
+          currentPhase: 1, // Reset to start for editing
+          developmentData: {
+              nature: 'new',
+              name: data.name || '',
+              description: data.description || '',
+              location: {
+                  address: data.address || '',
+                  city: data.city || '',
+                  province: data.province || '',
+                  latitude: data.latitude || '',
+                  longitude: data.longitude || '',
+                  postalCode: data.postalCode || '',
+              },
+              media: {
+                  heroImage: photos.find(p => p.isPrimary),
+                  photos: photos.filter(p => !p.isPrimary),
+                  videos: videos
+              },
+              amenities,
+              highlights
+          },
+          classification: {
+              type: data.developmentType || 'residential',
+              subType: '',
+              ownership: ''
+          },
+          overview: {
+              status: data.status || 'planning',
+              highlights,
+              description: data.description || '',
+              amenities,
+              features
+          },
+          unitTypes: [], // Unit types would need separate fetching/mapping if not in main payload
+          finalisation: {
+              salesTeamIds: [],
+              isPublished: !!data.isPublished
+          },
+          editingId: data.id,
+          developerId: data.developerId
+      };
+  }),
+  
+  // LEGACY ACTIONS (Compatibility Layer)
+  
+  setDevelopmentData: (data: any) => set((state) => ({
     developmentData: { ...state.developmentData, ...data }
   })),
   
-  setLocation: (location: Partial<DevelopmentWizardState['developmentData']['location']>) => set((state: DevelopmentWizardState) => ({
-    developmentData: {
-      ...state.developmentData,
-      location: { ...state.developmentData.location, ...location }
-    }
+  setLocation: (loc: any) => set((state) => ({
+    developmentData: { ...state.developmentData, location: { ...state.developmentData.location, ...loc } }
   })),
   
-  addAmenity: (amenity: string) => set((state: DevelopmentWizardState) => ({
-    developmentData: {
-      ...state.developmentData,
-      amenities: [...state.developmentData.amenities, amenity]
-    }
+  addAmenity: (a: string) => set((state) => ({
+    developmentData: { ...state.developmentData, amenities: [...state.developmentData.amenities, a] }
   })),
   
-  removeAmenity: (amenity: string) => set((state: DevelopmentWizardState) => ({
-    developmentData: {
-      ...state.developmentData,
-      amenities: state.developmentData.amenities.filter((a: string) => a !== amenity)
-    }
+  removeAmenity: (a: string) => set((state) => ({
+    developmentData: { ...state.developmentData, amenities: state.developmentData.amenities.filter(x => x !== a) }
   })),
   
-  addHighlight: (highlight: string) => set((state: DevelopmentWizardState) => {
-    // Enforce max 5 highlights
-    if (state.developmentData.highlights.length >= 5) {
-      return state;
+  addHighlight: (h: string) => set((state) => ({
+    developmentData: { ...state.developmentData, highlights: [...state.developmentData.highlights, h] }
+  })),
+  
+  removeHighlight: (i: number) => set((state) => ({
+    developmentData: { ...state.developmentData, highlights: state.developmentData.highlights.filter((_, idx) => idx !== i) }
+  })),
+  
+  // Robust Media Implementation
+  addMedia: (item: any) => set((state) => {
+    const newItem: MediaItem = { 
+       ...item, 
+       id: `media-${Date.now()}-${Math.random()}`, 
+       displayOrder: 0, 
+       isPrimary: item.category === 'featured' || item.isPrimary
+    };
+    
+    const mediaState = { ...state.developmentData.media };
+    
+    // If it's the first image or marked as featured/primary, set as hero
+    if (newItem.isPrimary || (!mediaState.heroImage && (newItem.type === 'image' || newItem.category === 'featured'))) {
+       mediaState.heroImage = { ...newItem, isPrimary: true, category: 'featured' };
+       // Ensure no duplicates if it was added to photos too
     }
+    
+    if (newItem.type === 'video' || newItem.category === 'videos') {
+       mediaState.videos = [...mediaState.videos, newItem];
+    } else {
+       // It's a photo/image
+       // Only add to photos if it's NOT the hero image (or if we want duplicates? usually not)
+       // But legacy 'media' getter aggregates them.
+       // Let's store in photos array regardless for safety, but typically Hero is separate.
+       // Actually, let's keep Hero separate.
+       if (mediaState.heroImage?.id !== newItem.id) {
+          mediaState.photos = [...mediaState.photos, newItem];
+       }
+    }
+    
+    return { developmentData: { ...state.developmentData, media: mediaState } };
+  }),
+  
+  removeMedia: (id: string) => set((state) => {
+    const media = state.developmentData.media;
+    const isHero = media.heroImage?.id === id;
+    
     return {
       developmentData: {
         ...state.developmentData,
-        highlights: [...state.developmentData.highlights, highlight]
+        media: {
+           heroImage: isHero ? undefined : media.heroImage,
+           photos: media.photos.filter(p => p.id !== id),
+           videos: media.videos.filter(v => v.id !== id)
+        }
       }
     };
   }),
   
-  removeHighlight: (index: number) => set((state: DevelopmentWizardState) => ({
-    developmentData: {
-      ...state.developmentData,
-      highlights: state.developmentData.highlights.filter((_: string, i: number) => i !== index)
-    }
+  setPrimaryImage: (id: string) => set((state) => {
+    // Find the media item in photos or videos
+    const media = state.developmentData.media;
+    let target = media.photos.find(p => p.id === id);
+    if (!target && media.heroImage?.id === id) target = media.heroImage;
+    
+    if (!target) return state; // Not found
+    
+    // Set as Hero
+    return {
+       developmentData: {
+          ...state.developmentData,
+          media: {
+             ...media,
+             heroImage: { ...target, isPrimary: true, category: 'featured' },
+             // Theoretically we might want to remove it from Photos array if we move it to Hero
+             // But for now, let's just update the Hero slot.
+          }
+       }
+    };
+  }),
+  
+  reorderMedia: (items: MediaItem[]) => set((state) => {
+      // Split items back into photos/videos/hero based on their types or existing state
+      // This is complex because 'items' is a flat list.
+      // We'll update the displayOrders.
+      
+      const newPhotos = state.developmentData.media.photos.map(p => {
+         const match = items.find(i => i.id === p.id);
+         return match ? { ...p, displayOrder: match.displayOrder } : p;
+      });
+      
+      const newVideos = state.developmentData.media.videos.map(v => {
+         const match = items.find(i => i.id === v.id);
+         return match ? { ...v, displayOrder: match.displayOrder } : v;
+      });
+      
+      return {
+         developmentData: {
+            ...state.developmentData,
+            media: {
+               ...state.developmentData.media,
+               photos: newPhotos.sort((a,b) => a.displayOrder - b.displayOrder),
+               videos: newVideos.sort((a,b) => a.displayOrder - b.displayOrder)
+            }
+         }
+      };
+  }),
+  
+  deleteUnitType: (id: string) => set((state) => ({
+     unitTypes: state.unitTypes.filter(u => u.id !== id)
   })),
   
-  // Task 2.3: Unit type actions
-  addUnitType: (unitType: Omit<UnitType, 'id' | 'createdAt' | 'updatedAt'>) => {
-    const state = get();
-    const newUnit: UnitType = {
-      ...unitType,
-      id: `unit-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      amenities: {
-        standard: state.developmentData.amenities, // Inherit from development
-        additional: unitType.amenities?.additional || []
-      },
-      displayOrder: state.unitTypes.length,
-      isActive: true,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-    set((state: DevelopmentWizardState) => ({
-      unitTypes: [...state.unitTypes, newUnit]
-    }));
+  duplicateUnitType: (id: string) => { /* No-op for now */ },
+  
+  setDevelopmentType: (t: 'master' | 'phase') => {}, // No-op
+  get developmentType() { return 'master' as const; },
+  
+  // IMPORTANT: Media Getter that aggregates everything for the UI
+  get media() { 
+      const s = get().developmentData.media;
+      const list: MediaItem[] = [];
+      if (s.heroImage) list.push({ ...s.heroImage, category: 'featured' });
+      
+      // Map photos to 'general' category unless specified
+      s.photos.forEach(p => list.push({ ...p, category: (p.category as any) || 'general' }));
+      s.videos.forEach(v => list.push({ ...v, category: (v.category as any) || 'videos' }));
+      
+      return list;
   },
   
-  updateUnitType: (id: string, updates: Partial<UnitType>) => {
-    set((state: DevelopmentWizardState) => ({
-      unitTypes: state.unitTypes.map((unit: UnitType) =>
-        unit.id === id 
-          ? { ...unit, ...updates, updatedAt: new Date() } 
-          : unit
-      )
-    }));
-  },
-  
-  deleteUnitType: (id: string) => {
-    set((state: DevelopmentWizardState) => ({
-      unitTypes: state.unitTypes.filter((unit: UnitType) => unit.id !== id)
-    }));
-  },
-  
-  duplicateUnitType: (id: string) => {
-    const state = get();
-    const unitToDuplicate = state.unitTypes.find((u: UnitType) => u.id === id);
-    if (!unitToDuplicate) return;
-    
-    const duplicatedUnit: UnitType = {
-      ...unitToDuplicate,
-      id: `unit-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      name: `${unitToDuplicate.name} (Copy)`,
-      specs: unitToDuplicate.specs.map((spec: SpecVariation) => ({
-        ...spec,
-        id: `spec-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      })),
-      displayOrder: state.unitTypes.length,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-    
-    set((state: DevelopmentWizardState) => ({
-      unitTypes: [...state.unitTypes, duplicatedUnit]
-    }));
-  },
-  
-  setBaseFeatures: (unitTypeId: string, features: UnitType['specifications']['builtInFeatures']) => {
-    set((state: DevelopmentWizardState) => ({
-      unitTypes: state.unitTypes.map((unit: UnitType) =>
-        unit.id === unitTypeId
-          ? {
-              ...unit,
-              specifications: {
-                ...unit.specifications,
-                builtInFeatures: features
-              },
-              updatedAt: new Date()
-            }
-          : unit
-      )
-    }));
-  },
-  
-  setBaseFinishes: (unitTypeId: string, finishes: UnitType['specifications']['finishes']) => {
-    set((state: DevelopmentWizardState) => ({
-      unitTypes: state.unitTypes.map((unit: UnitType) =>
-        unit.id === unitTypeId
-          ? {
-              ...unit,
-              specifications: {
-                ...unit.specifications,
-                finishes: finishes
-              },
-              updatedAt: new Date()
-            }
-          : unit
-      )
-    }));
-  },
-  
-  // Task 2.4: Spec variation actions
-  addSpec: (unitTypeId: string, spec: Omit<SpecVariation, 'id' | 'unitTypeId' | 'createdAt' | 'updatedAt'>) => {
-    const state = get();
-    const unitType = state.unitTypes.find((u: UnitType) => u.id === unitTypeId);
-    if (!unitType) return;
-    
-    const newSpec: SpecVariation = {
-      ...spec,
-      id: `spec-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      unitTypeId,
-      displayOrder: unitType.specs.length,
-      isActive: true,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-    
-    set((state: DevelopmentWizardState) => ({
-      unitTypes: state.unitTypes.map((unit: UnitType) =>
-        unit.id === unitTypeId
-          ? {
-              ...unit,
-              specs: [...unit.specs, newSpec],
-              updatedAt: new Date()
-            }
-          : unit
-      )
-    }));
-  },
-  
-  updateSpec: (unitTypeId: string, specId: string, updates: Partial<SpecVariation>) => {
-    set((state: DevelopmentWizardState) => ({
-      unitTypes: state.unitTypes.map((unit: UnitType) =>
-        unit.id === unitTypeId
-          ? {
-              ...unit,
-              specs: unit.specs.map((spec: SpecVariation) =>
-                spec.id === specId
-                  ? { ...spec, ...updates, updatedAt: new Date() }
-                  : spec
-              ),
-              updatedAt: new Date()
-            }
-          : unit
-      )
-    }));
-  },
-  
-  deleteSpec: (unitTypeId: string, specId: string) => {
-    set((state: DevelopmentWizardState) => ({
-      unitTypes: state.unitTypes.map((unit: UnitType) =>
-        unit.id === unitTypeId
-          ? {
-              ...unit,
-              specs: unit.specs.filter((spec: SpecVariation) => spec.id !== specId),
-              updatedAt: new Date()
-            }
-          : unit
-      )
-    }));
-  },
-  
-  setSpecOverrides: (unitTypeId: string, specId: string, overrides: SpecVariation['overrides']) => {
-    set((state: DevelopmentWizardState) => ({
-      unitTypes: state.unitTypes.map((unit: UnitType) =>
-        unit.id === unitTypeId
-          ? {
-              ...unit,
-              specs: unit.specs.map((spec: SpecVariation) =>
-                spec.id === specId
-                  ? { ...spec, overrides, updatedAt: new Date() }
-                  : spec
-              ),
-              updatedAt: new Date()
-            }
-          : unit
-      )
-    }));
-  },
-  
-  computeFinalFeatures: (unitTypeId: string, specId: string) => {
-    const state = get();
-    const unitType = state.unitTypes.find((u: UnitType) => u.id === unitTypeId);
-    if (!unitType) {
-      return { amenities: [], specifications: {} as UnitType['specifications'] };
-    }
-    
-    const spec = unitType.specs.find((s: SpecVariation) => s.id === specId);
-    if (!spec) {
-      return {
-        amenities: [...unitType.amenities.standard, ...unitType.amenities.additional],
-        specifications: unitType.specifications
-      };
-    }
-    
-    // Compute final amenities: Development + Unit Type + Spec Overrides
-    let finalAmenities: string[] = [
-      ...unitType.amenities.standard,
-      ...unitType.amenities.additional
-    ];
-    
-    if (spec.overrides?.amenities) {
-      // Remove amenities
-      if (spec.overrides.amenities.remove) {
-        finalAmenities = finalAmenities.filter(
-          (a: string) => !spec.overrides!.amenities!.remove!.includes(a)
-        );
-      }
-      // Add amenities
-      if (spec.overrides.amenities.add) {
-        finalAmenities = [...finalAmenities, ...spec.overrides.amenities.add];
-      }
-    }
-    
-    // Compute final specifications: Unit Type + Spec Overrides
-    const finalSpecifications: UnitType['specifications'] = {
-      builtInFeatures: {
-        ...unitType.specifications.builtInFeatures,
-        ...spec.overrides?.specifications?.builtInFeatures
-      },
-      finishes: {
-        ...unitType.specifications.finishes,
-        ...spec.overrides?.specifications?.finishes
-      },
-      electrical: {
-        ...unitType.specifications.electrical,
-        ...spec.overrides?.specifications?.electrical
-      }
-    };
-    
-    return {
-      amenities: finalAmenities,
-      specifications: finalSpecifications
-    };
-  },
-  
-  // Task 2.5: Document and feature actions
-  setDevelopmentFeatures: (features: string[]) => {
-    set({ infrastructure: features });
-  },
-  
-  addDocument: (document: Omit<Document, 'id' | 'uploadedAt'>) => {
-    const newDocument: Document = {
-      ...document,
-      id: `doc-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      uploadedAt: new Date(),
-    };
-    set((state: DevelopmentWizardState) => ({
-      documents: [...state.documents, newDocument]
-    }));
-  },
-  
-  removeDocument: (id: string) => {
-    set((state: DevelopmentWizardState) => ({
-      documents: state.documents.filter((doc: Document) => doc.id !== id)
-    }));
-  },
-  
-  // Task 2.6: Wizard navigation actions
-  setCurrentStep: (step: number) => {
-    if (step >= 1 && step <= 4) {
-      set({ currentStep: step });
-    }
-  },
-  
-  validateStep: (step: number) => {
-    const state = get();
-    const errors: string[] = [];
-    
-    switch (step) {
-      case 1: // Development Details
-        if (!state.developmentData.name || state.developmentData.name.length < 5) {
-          errors.push('Development name must be at least 5 characters');
-        }
-        if (!state.developmentData.location.latitude || !state.developmentData.location.longitude) {
-          errors.push('Location is required');
-        }
-        if (state.developmentData.highlights.length > 5) {
-          errors.push('Maximum 5 highlights allowed');
-        }
-        break;
-        
-      case 2: // Unit Types
-        if (state.unitTypes.length === 0) {
-          errors.push('At least one unit type is required');
-        }
-        state.unitTypes.forEach((unit: UnitType, index: number) => {
-          if (!unit.name) {
-            errors.push(`Unit type ${index + 1}: Name is required`);
-          }
-          if (!unit.bedrooms || unit.bedrooms < 0) {
-            errors.push(`Unit type ${index + 1}: Valid bedrooms count is required`);
-          }
-          if (!unit.bathrooms || unit.bathrooms < 0) {
-            errors.push(`Unit type ${index + 1}: Valid bathrooms count is required`);
-          }
-          if (!unit.basePriceFrom || unit.basePriceFrom <= 0) {
-            errors.push(`Unit type ${index + 1}: Valid base price is required`);
-          }
-        });
-        break;
-        
-      case 3: // Phase Details
-        // Optional fields, no strict validation
-        break;
-        
-      case 4: // Review & Publish
-        // All previous validations must pass
-        const step1Validation = get().validateStep(1);
-        const step2Validation = get().validateStep(2);
-        errors.push(...step1Validation.errors, ...step2Validation.errors);
-        break;
-    }
-    
-    return {
-      isValid: errors.length === 0,
-      errors
-    };
-  },
-  
-  canProceed: () => {
-    const state = get();
-    const validation = state.validateStep(state.currentStep);
-    return validation.isValid;
-  },
-  
-  nextStep: () => {
-    const state = get();
-    if (state.currentStep < 4 && state.canProceed()) {
-      set({ currentStep: state.currentStep + 1 });
-    }
-  },
-  
-  previousStep: () => {
-    const state = get();
-    if (state.currentStep > 1) {
-      set({ currentStep: state.currentStep - 1 });
-    }
-  },
-  
-  // Task 2.7: Save and publish actions
-  saveDraft: async () => {
-    const state = get();
-    // TODO: Implement API call to save draft
-    console.log('Saving draft...', state);
-    // This will be implemented when backend endpoints are ready
-    // For now, the persist middleware handles local storage
-  },
-  
-  publish: async () => {
-    const state = get();
-    
-    // Validate all steps before publishing
-    const allStepsValid = [1, 2, 3, 4].every(step => {
-      const validation = state.validateStep(step);
-      return validation.isValid;
-    });
-    
-    if (!allStepsValid) {
-      throw new Error('Please complete all required fields before publishing');
-    }
-    
-    // TODO: Implement API call to publish
-    console.log('Publishing development...', state);
-    set({ isComplete: true });
-    // This will be implemented when backend endpoints are ready
-  },
-  
-  // Utility actions
-  setDeveloperId: (id: number) => set({ developerId: id }),
-  setIsComplete: (isComplete: boolean) => set({ isComplete }),
-  setDraftId: (id: number) => set({ draftId: id }),
-  reset: () => set(initialState),
-  
-  // ============================================
-  // BACKWARD COMPATIBILITY LAYER
-  // These methods provide compatibility with older components
-  // ============================================
-  
-  // Legacy navigation (0-indexed)
-  goToStep: (step: number) => {
-    set({ currentStep: step });
-  },
-  
-  // Legacy unit type methods
-  removeUnitType: (id: string) => {
-    set((state: DevelopmentWizardState) => ({
-      unitTypes: state.unitTypes.filter((unit: UnitType) => unit.id !== id)
-    }));
-  },
-  
-  // Legacy media methods (flat array interface)
-  get media() {
-    const state = get();
-    const allMedia: MediaItem[] = [];
-    
-    // Guard against undefined state during initialization
-    if (!state || !state.developmentData || !state.developmentData.media) {
-      return allMedia;
-    }
-    
-    // Collect from developmentData.media
-    if (state.developmentData.media.heroImage) {
-      allMedia.push({ ...state.developmentData.media.heroImage, category: 'featured' as any });
-    }
-    state.developmentData.media.photos?.forEach(p => allMedia.push({ ...p, category: 'photo' }));
-    state.developmentData.media.videos?.forEach(v => allMedia.push({ ...v, category: 'video' as any }));
-    
-    return allMedia;
-  },
-  
-  addMedia: (item: Omit<MediaItem, 'id' | 'displayOrder'> & { category?: string }) => {
-    const state = get();
-    const newItem: MediaItem = {
-      ...item,
-      id: `media-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      displayOrder: state.developmentData.media.photos.length,
-    };
-    
-    const categoryStr = (item as any).category as string;
-    if (categoryStr === 'featured' || item.isPrimary) {
-      set((state: DevelopmentWizardState) => ({
-        developmentData: {
-          ...state.developmentData,
-          media: {
-            ...state.developmentData.media,
-            heroImage: newItem
-          }
-        }
-      }));
-    } else if (item.type === 'video') {
-      set((state: DevelopmentWizardState) => ({
-        developmentData: {
-          ...state.developmentData,
-          media: {
-            ...state.developmentData.media,
-            videos: [...state.developmentData.media.videos, newItem]
-          }
-        }
-      }));
-    } else {
-      set((state: DevelopmentWizardState) => ({
-        developmentData: {
-          ...state.developmentData,
-          media: {
-            ...state.developmentData.media,
-            photos: [...state.developmentData.media.photos, newItem]
-          }
-        }
-      }));
-    }
-  },
-  
-  removeMedia: (id: string) => {
-    set((state: DevelopmentWizardState) => ({
-      developmentData: {
-        ...state.developmentData,
-        media: {
-          heroImage: state.developmentData.media.heroImage?.id === id ? undefined : state.developmentData.media.heroImage,
-          photos: state.developmentData.media.photos.filter(p => p.id !== id),
-          videos: state.developmentData.media.videos.filter(v => v.id !== id),
-        }
-      }
-    }));
-  },
-  
-  setPrimaryImage: (id: string) => {
-    const state = get();
-    const allPhotos = state.developmentData.media.photos;
-    const photo = allPhotos.find(p => p.id === id);
-    if (photo) {
-      set((state: DevelopmentWizardState) => ({
-        developmentData: {
-          ...state.developmentData,
-          media: {
-            ...state.developmentData.media,
-            heroImage: { ...photo, isPrimary: true },
-            photos: state.developmentData.media.photos.map(p => ({ ...p, isPrimary: p.id === id }))
-          }
-        }
-      }));
-    }
-  },
-  
-  reorderMedia: (reorderedMedia: MediaItem[]) => {
-    set((state: DevelopmentWizardState) => ({
-      developmentData: {
-        ...state.developmentData,
-        media: {
-          ...state.developmentData.media,
-          photos: reorderedMedia.filter(m => m.type === 'image').map((m, i) => ({ ...m, displayOrder: i })),
-          videos: reorderedMedia.filter(m => m.type === 'video').map((m, i) => ({ ...m, displayOrder: i })),
-        }
-      }
-    }));
-  },
-  
-  // Legacy development type
-  get developmentType() {
-    return 'master' as const;
-  },
-  
-  setDevelopmentType: (type: 'master' | 'phase') => {
-    // Store in phaseDetails if it's a phase
-    if (type === 'phase') {
-      set((state: DevelopmentWizardState) => ({
-        phaseDetails: { ...state.phaseDetails, phaseStatus: 'phase' }
-      }));
-    }
-  },
+  validateStep: (s: number) => ({ isValid: true, errors: [] }),
+  canProceed: () => true,
+  nextStep: () => {},
+  previousStep: () => {},
 });
 
 export const useDevelopmentWizard = create<DevelopmentWizardState>()(
@@ -891,32 +720,22 @@ export const useDevelopmentWizard = create<DevelopmentWizardState>()(
     {
       name: 'development-wizard-storage',
       partialize: (state) => ({
-        currentStep: state.currentStep,
+        currentPhase: state.currentPhase,
         developmentData: {
           ...state.developmentData,
-          // Don't persist File objects in media
           media: {
-            heroImage: state.developmentData.media.heroImage ? {
-              ...state.developmentData.media.heroImage,
-              file: undefined
-            } : undefined,
-            photos: state.developmentData.media.photos.map(p => ({ ...p, file: undefined })),
-            videos: state.developmentData.media.videos.map(v => ({ ...v, file: undefined })),
+             // Don't persist Files
+             heroImage: state.developmentData.media.heroImage ? { ...state.developmentData.media.heroImage, file: undefined } : undefined,
+             photos: state.developmentData.media.photos.map(p => ({ ...p, file: undefined })),
+             videos: state.developmentData.media.videos.map(v => ({ ...v, file: undefined })),
           }
         },
-        unitTypes: state.unitTypes.map(unit => ({
-          ...unit,
-          baseMedia: {
-            gallery: unit.baseMedia.gallery.map(m => ({ ...m, file: undefined })),
-            floorPlans: unit.baseMedia.floorPlans.map(m => ({ ...m, file: undefined })),
-            renders: unit.baseMedia.renders.map(m => ({ ...m, file: undefined })),
-          }
-        })),
-        phaseDetails: state.phaseDetails,
-        infrastructure: state.infrastructure,
+        classification: state.classification,
+        overview: state.overview,
+        unitTypes: state.unitTypes,
+        finalisation: state.finalisation,
+        // Persist legacy fields if needed, or drop them
         documents: state.documents,
-        developerId: state.developerId,
-        draftId: state.draftId,
       }),
     }
   )

@@ -1,110 +1,33 @@
 {
-  "version": "5",
-  "dialect": "sqlite",
+  "version": "7",
+  "dialect": "mysql",
   "entries": [
     {
       "idx": 0,
       "version": "5",
-      "when": 1762857908337,
-      "tag": "0000_bumpy_starfox",
+      "when": 1765981334730,
+      "tag": "0000_new_marvel_zombies",
       "breakpoints": true
     },
     {
       "idx": 1,
       "version": "5",
-      "when": 1762868197427,
-      "tag": "0001_broad_dark_beast",
+      "when": 1765981384064,
+      "tag": "0001_petite_tattoo",
       "breakpoints": true
     },
     {
       "idx": 2,
       "version": "5",
-      "when": 1762870000000,
-      "tag": "0002_add_property_developer_role",
+      "when": 1765984304502,
+      "tag": "0002_stormy_kate_bishop",
       "breakpoints": true
     },
     {
       "idx": 3,
       "version": "5",
-      "when": 1763554610895,
-      "tag": "0003_messy_payback",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "5",
-      "when": 1763937884138,
-      "tag": "0004_material_logan",
-      "breakpoints": true
-    },
-    {
-      "idx": 5,
-      "version": "5",
-      "when": 1764181870560,
-      "tag": "0005_dry_maria_hill",
-      "breakpoints": true
-    },
-    {
-      "idx": 6,
-      "version": "5",
-      "when": 1764262016515,
-      "tag": "0006_naive_marvex",
-      "breakpoints": true
-    },
-    {
-      "idx": 7,
-      "version": "5",
-      "when": 1764340906482,
-      "tag": "0007_jittery_cloak",
-      "breakpoints": true
-    },
-    {
-      "idx": 8,
-      "version": "5",
-      "when": 1764412234121,
-      "tag": "0008_tired_scream",
-      "breakpoints": true
-    },
-    {
-      "idx": 9,
-      "version": "5",
-      "when": 1764646450591,
-      "tag": "0009_curly_frog_thor",
-      "breakpoints": true
-    },
-    {
-      "idx": 10,
-      "version": "5",
-      "when": 1764751691661,
-      "tag": "0010_wide_thunderbolts",
-      "breakpoints": true
-    },
-    {
-      "idx": 11,
-      "version": "5",
-      "when": 1765000000000,
-      "tag": "0011_add_explore_tables",
-      "breakpoints": true
-    },
-    {
-      "idx": 12,
-      "version": "5",
-      "when": 1765649845251,
-      "tag": "0012_light_captain_cross",
-      "breakpoints": true
-    },
-    {
-      "idx": 13,
-      "version": "5",
-      "when": 1765671789734,
-      "tag": "0013_cultured_naoko",
-      "breakpoints": true
-    },
-    {
-      "idx": 14,
-      "version": "5",
-      "when": 1765753531715,
-      "tag": "0014_cheerful_amazoness",
+      "when": 1765984662335,
+      "tag": "0003_slippery_marvel_zombies",
       "breakpoints": true
     }
   ]
