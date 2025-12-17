@@ -186,7 +186,7 @@ export function DevelopmentWizard({ developmentId }: DevelopmentWizardProps) {
             <SaveStatusIndicator 
               lastSaved={lastSaved} 
               isSaving={isSaving} 
-              error={error} 
+              error={autoSaveError} 
               variant="compact"
               className="bg-white/50 backdrop-blur-sm border-white/20"
             />
