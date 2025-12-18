@@ -97,29 +97,17 @@ export function MediaPhase() {
     const processFiles = async (files: File[], targetCategory: MediaItem['category']) => {
         const uploads = files.map(async (file) => {
             const loadingToast = toast.loading(`Uploading ${file.name}...`);
-            const optimisticUrl = URL.createObjectURL(file); // Immediate preview
+            const optimisticUrl = URL.createObjectURL(file); // For preview during upload (not stored)
             const isVideo = file.type.startsWith('video');
-            const tempId = `temp-${Date.now()}-${Math.random()}`;
-
-            // 1. Optimistic Add (Local Preview)
-            // We use the tempId to later update with the real URL
-            addMedia({
-                id: tempId,
-                file, // Keep file ref if needed for some reason, but we usually strip it for storage
-                url: optimisticUrl, 
-                type: isVideo ? 'video' : 'image',
-                category: isVideo ? 'videos' : targetCategory,
-                isPrimary: targetCategory === 'featured'
-            });
 
             try {
-                // 2. Get Presigned URL
+                // 1. Get Presigned URL
                 const { url: uploadUrl, publicUrl } = await presignMutation.mutateAsync({
                     filename: file.name,
                     contentType: file.type,
                 });
 
-                // 3. Upload to S3
+                // 2. Upload to S3
                 const uploadRes = await fetch(uploadUrl, {
                     method: 'PUT',
                     body: file,
@@ -128,51 +116,13 @@ export function MediaPhase() {
 
                 if (!uploadRes.ok) throw new Error('Upload to storage failed');
 
-                // 4. Update with Persistent URL
-                // We need to find the item we just added. 
-                // Since addMedia generates a NEW ID internally (ignoring our tempId usually if logic ignores it? 
-                // Actually, checking useDevelopmentWizard logic: `id: media-${Date.now()}...` -> It OVERWRITES our ID.
-                // This makes updating tricky unless addMedia returns the ID or we change addMedia.
-                // But wait, I can pass an ID to addMedia? 
-                // Looking at useDevelopmentWizard code: 
-                // `const newItem: MediaItem = { ...item, id: media-${Date.now()}... }`
-                // It FORCE overwrites the ID.
-                // ERROR: I cannot easily update the item if I don't know its ID.
-                
-                // WORKAROUND:
-                // Since `addMedia` doesn't return the ID (it's a void action in Zustand typically, though we could change that),
-                // I have to rely on identifying the item another way, or change `addMedia` to accept an ID if provided.
-                
-                // CRITICAL HOTFIX:
-                // I will modify `useDevelopmentWizard` slightly to accept an ID if provided, OR
-                // I will filter the media list to find the item with the `optimisticUrl` and update it.
-                // Finding by optimisticUrl is safe enough for this session context.
-                
-                // Actually, let's fix `addMedia` to NOT overwrite ID if one is provided?
-                // No, I can't edit `addMedia` easily now without another risky edit.
-                
-                // Better strategy:
-                // Find item by `url` (optimisticUrl).
-                // But `developmentData` in `MediaPhase` comes from hook.
-                // I can't look it up immediately inside this async function easily without `get()` access to store.
-                // BUT, `updateMedia` implementation I just added takes an ID.
-                
-                // Let's rely on finding the item in the store by URL *before* calling update.
-                // But `developmentData` is closed over from the render scope. It might be stale?
-                // Yes, `developmentData` inside `processFiles` (if defined outside) will be stale.
-                // But `processFiles` is defined inside component.
-                
-                // ALTERNATIVE:
-                // Don't add optimistically.
-                // Upload first, THEN add with real URL.
-                // User sees loading toast.
-                // This is safer and robust.
-                // "Optimistic" is nice but complex here.
+                // 3. Cleanup optimistic URL
+                URL.revokeObjectURL(optimisticUrl);
                 
                 toast.dismiss(loadingToast);
                 toast.success('Upload complete');
                 
-                // ADD MEDIA AFTER UPLOAD
+                // 4. Add media with real URL (only once, after successful upload)
                 addMedia({
                     url: publicUrl,
                     type: isVideo ? 'video' : 'image',
