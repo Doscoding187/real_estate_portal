@@ -1,16 +1,14 @@
 import React from 'react';
-import Overview from '../components/developer/Overview';
 import { DeveloperLayout } from '../components/developer/DeveloperLayout';
-import { trpc } from '@/lib/trpc';
 
+/**
+ * Property Developer Dashboard
+ * Uses tab-based navigation within DeveloperLayout
+ * No children needed - DeveloperLayout manages content rendering
+ */
 const PropertyDeveloperDashboard: React.FC = () => {
-  // Fetch developer profile for name
-  const { data: developerProfile } = trpc.developer.getProfile.useQuery();
-
   return (
-    <DeveloperLayout>
-      <Overview />
-    </DeveloperLayout>
+    <DeveloperLayout defaultTab="overview" />
   );
 };
 

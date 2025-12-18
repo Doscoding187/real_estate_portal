@@ -1,11 +1,10 @@
 /**
  * Enhanced Sidebar Component for Mission Control Dashboard
  * Features: Collapsible sections, notification badges, active state highlighting
- * Requirements: 1.1, 1.2, 1.3
+ * Tab-based navigation (no page routing)
  */
 
 import { useState } from 'react';
-import { Link, useLocation } from 'wouter';
 import {
   LayoutDashboard,
   Building2,
@@ -32,7 +31,6 @@ interface MenuItem {
   id: string;
   label: string;
   icon: React.ComponentType<{ className?: string }>;
-  path: string;
   badge?: number;
   badgeColor?: 'blue' | 'green' | 'red' | 'yellow';
 }
@@ -53,25 +51,21 @@ const MENU_SECTIONS: MenuSection[] = [
         id: 'overview',
         label: 'Overview',
         icon: LayoutDashboard,
-        path: '/developer',
       },
       {
         id: 'developments',
         label: 'Developments',
         icon: Building2,
-        path: '/developer/developments',
       },
       {
         id: 'drafts',
         label: 'My Drafts',
         icon: FileEdit,
-        path: '/developer/drafts',
       },
       {
         id: 'leads',
         label: 'Leads',
         icon: Users,
-        path: '/developer/leads',
       },
     ],
   },
@@ -84,19 +78,16 @@ const MENU_SECTIONS: MenuSection[] = [
         id: 'messages',
         label: 'Messages',
         icon: MessageSquare,
-        path: '/developer/messages',
       },
       {
         id: 'tasks',
         label: 'Tasks',
         icon: CheckSquare,
-        path: '/developer/tasks',
       },
       {
         id: 'reports',
         label: 'Reports',
         icon: FileText,
-        path: '/developer/reports',
       },
     ],
   },
@@ -109,25 +100,21 @@ const MENU_SECTIONS: MenuSection[] = [
         id: 'analytics',
         label: 'Analytics',
         icon: TrendingUp,
-        path: '/developer/analytics',
       },
       {
         id: 'explore',
         label: 'Explore Analytics',
         icon: Video,
-        path: '/developer/explore',
       },
       {
         id: 'campaigns',
         label: 'Campaigns',
         icon: Megaphone,
-        path: '/developer/campaigns',
       },
       {
         id: 'performance',
         label: 'Performance',
         icon: Target,
-        path: '/developer/performance',
       },
     ],
   },
@@ -139,19 +126,16 @@ const MENU_SECTIONS: MenuSection[] = [
         id: 'team',
         label: 'Team',
         icon: UserPlus,
-        path: '/developer/settings/team',
       },
       {
         id: 'subscription',
         label: 'Subscription',
         icon: BarChart3,
-        path: '/developer/settings/subscription',
       },
       {
         id: 'settings',
         label: 'Settings',
         icon: Settings,
-        path: '/developer/settings',
       },
     ],
   },
@@ -159,10 +143,11 @@ const MENU_SECTIONS: MenuSection[] = [
 
 interface EnhancedSidebarProps {
   className?: string;
+  activeTab: string;
+  onTabChange: (tabId: string) => void;
 }
 
-export function EnhancedSidebar({ className }: EnhancedSidebarProps) {
-  const [location] = useLocation();
+export function EnhancedSidebar({ className, activeTab, onTabChange }: EnhancedSidebarProps) {
   const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set());
 
   // Fetch developer profile
@@ -172,10 +157,9 @@ export function EnhancedSidebar({ className }: EnhancedSidebarProps) {
   const { data: notificationsData } = trpc.developer.getUnreadNotificationsCount.useQuery(
     undefined,
     {
-      refetchInterval: 30000, // Refetch every 30 seconds
-      retry: false, // Don't retry on error to avoid console spam
-      onError: (error) => {
-        // Silently handle error until backend is deployed
+      refetchInterval: 30000,
+      retry: false,
+      onError: () => {
         console.log('Notification count temporarily unavailable');
       },
     }
@@ -195,13 +179,6 @@ export function EnhancedSidebar({ className }: EnhancedSidebarProps) {
       }
       return next;
     });
-  };
-
-  const isActive = (path: string) => {
-    if (path === '/developer') {
-      return location === path;
-    }
-    return location.startsWith(path);
   };
 
   const getBadgeColor = (color?: string) => {
@@ -281,47 +258,47 @@ export function EnhancedSidebar({ className }: EnhancedSidebarProps) {
               {!isCollapsed && (
                 <div className="space-y-1 px-3">
                   {section.items.map((item) => {
-                    const active = isActive(item.path);
+                    const isActive = activeTab === item.id;
                     const Icon = item.icon;
 
                     return (
-                      <Link key={item.id} href={item.path}>
-                        <a
+                      <button
+                        key={item.id}
+                        onClick={() => onTabChange(item.id)}
+                        className={cn(
+                          'flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 w-full text-left',
+                          'group relative',
+                          isActive
+                            ? 'bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-600 font-medium shadow-soft'
+                            : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
+                        )}
+                      >
+                        {/* Active Indicator */}
+                        {isActive && (
+                          <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-gradient-to-b from-blue-500 to-indigo-600 rounded-r-full shadow-soft" />
+                        )}
+
+                        <Icon
                           className={cn(
-                            'flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200',
-                            'group relative',
-                            active
-                              ? 'bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-600 font-medium shadow-soft'
-                              : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
+                            'w-5 h-5 transition-colors',
+                            isActive ? 'text-blue-600' : 'text-gray-400 group-hover:text-gray-600'
                           )}
-                        >
-                          {/* Active Indicator */}
-                          {active && (
-                            <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-gradient-to-b from-blue-500 to-indigo-600 rounded-r-full shadow-soft" />
-                          )}
+                        />
+                        <span className="flex-1">{item.label}</span>
 
-                          <Icon
+                        {/* Badge */}
+                        {item.badge && item.badge > 0 && (
+                          <span
                             className={cn(
-                              'w-5 h-5 transition-colors',
-                              active ? 'text-blue-600' : 'text-gray-400 group-hover:text-gray-600'
+                              'flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-xs font-semibold text-white',
+                              getBadgeColor(item.badgeColor),
+                              'animate-pulse'
                             )}
-                          />
-                          <span className="flex-1">{item.label}</span>
-
-                          {/* Badge */}
-                          {item.badge && item.badge > 0 && (
-                            <span
-                              className={cn(
-                                'flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-xs font-semibold text-white',
-                                getBadgeColor(item.badgeColor),
-                                'animate-pulse'
-                              )}
-                            >
-                              {item.badge > 99 ? '99+' : item.badge}
-                            </span>
-                          )}
-                        </a>
-                      </Link>
+                          >
+                            {item.badge > 99 ? '99+' : item.badge}
+                          </span>
+                        )}
+                      </button>
                     );
                   })}
                 </div>
@@ -333,23 +310,22 @@ export function EnhancedSidebar({ className }: EnhancedSidebarProps) {
 
       {/* Notifications Bell (Fixed at bottom) */}
       <div className="border-t border-gray-100 p-4">
-        <Link href="/developer/notifications">
-          <a
-            className={cn(
-              'flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200',
-              'hover:bg-gray-50 relative',
-              isActive('/developer/notifications')
-                ? 'bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-600 font-medium shadow-soft'
-                : 'text-gray-700'
-            )}
-          >
-            <Bell className="w-5 h-5" />
-            <span>Notifications</span>
-            {unreadCount > 0 && (
-              <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full animate-pulse shadow-soft" />
-            )}
-          </a>
-        </Link>
+        <button
+          onClick={() => onTabChange('notifications')}
+          className={cn(
+            'flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 w-full text-left',
+            'hover:bg-gray-50 relative',
+            activeTab === 'notifications'
+              ? 'bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-600 font-medium shadow-soft'
+              : 'text-gray-700'
+          )}
+        >
+          <Bell className="w-5 h-5" />
+          <span>Notifications</span>
+          {unreadCount > 0 && (
+            <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full animate-pulse shadow-soft" />
+          )}
+        </button>
       </div>
     </aside>
   );
