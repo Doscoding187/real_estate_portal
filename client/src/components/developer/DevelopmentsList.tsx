@@ -201,8 +201,8 @@ const DevelopmentsList: React.FC = () => {
 
       {/* Development Wizard Modal */}
       {showWizard && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black/60 flex items-start justify-center z-[100] pt-16 pb-4 px-4 overflow-y-auto">
+          <div className="bg-white rounded-lg w-full max-w-5xl my-4 shadow-2xl">
             <div className="p-4 border-b border-gray-200 flex justify-between items-center">
               <h3 className="text-lg font-semibold">{selectedReviewId ? 'Edit Development' : 'Add New Development'}</h3>
               <button
