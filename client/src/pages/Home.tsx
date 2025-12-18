@@ -17,13 +17,12 @@ import {
   TrendingUp,
   Award,
   Search,
-  Handshake,
-  CheckCircle,
   Sparkles,
   Clock,
   BadgeCheck,
   Star
 } from 'lucide-react';
+
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { PropertyInsights } from '@/components/PropertyInsights';
 import { DiscoverProperties } from '@/components/DiscoverProperties';
@@ -35,56 +34,13 @@ import { Footer } from '@/components/Footer';
 export default function Home() {
   const [, setLocation] = useLocation();
   const [selectedProvince, setSelectedProvince] = useState('Gauteng');
-  const [statsVisible, setStatsVisible] = useState(false);
+
 
   // Animated counter hook
-  const useCounter = (end: number, duration: number = 2000) => {
-    const [count, setCount] = useState(0);
 
-    useEffect(() => {
-      if (!statsVisible) return;
-      
-      let startTime: number;
-      let animationFrame: number;
-
-      const animate = (currentTime: number) => {
-        if (!startTime) startTime = currentTime;
-        const progress = Math.min((currentTime - startTime) / duration, 1);
-        
-        setCount(Math.floor(progress * end));
-
-        if (progress < 1) {
-          animationFrame = requestAnimationFrame(animate);
-        }
-      };
-
-      animationFrame = requestAnimationFrame(animate);
-      return () => cancelAnimationFrame(animationFrame);
-    }, [end, duration, statsVisible]);
-
-    return count;
-  };
 
   // Intersection observer for stats animation
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            setStatsVisible(true);
-          }
-        });
-      },
-      { threshold: 0.3 }
-    );
 
-    const statsElement = document.getElementById('stats-section');
-    if (statsElement) {
-      observer.observe(statsElement);
-    }
-
-    return () => observer.disconnect();
-  }, []);
 
   const provinces = [
     'Gauteng',
@@ -181,10 +137,7 @@ export default function Home() {
     ],
   };
 
-  const propertiesCount = useCounter(45000);
-  const usersCount = useCounter(120000);
-  const dealsCount = useCounter(8500);
-  const citiesCount = useCounter(250);
+
 
   return (
     <div className="min-h-screen bg-background">
@@ -193,173 +146,7 @@ export default function Home() {
       {/* Enhanced Hero Section */}
       <EnhancedHero />
 
-      {/* Trust Indicators & Stats Section */}
-      <div id="stats-section" className="py-12 md:py-16 bg-gradient-to-b from-white via-blue-50/30 to-white relative overflow-hidden">
-        {/* Decorative background elements */}
-        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSAxMCAwIEwgMCAwIDAgMTAiIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzJENjhDNCIgc3Ryb2tlLW9wYWNpdHk9IjAuMDMiIHN0cm9rZS13aWR0aD0iMSIvPjwvcGF0dGVybj48L2RlZnM+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0idXJsKCNncmlkKSIvPjwvc3ZnPg==')] opacity-40"></div>
-        
-        <div className="container relative">
-          {/* Trust Badges */}
-          <div className="flex flex-wrap justify-center items-center gap-6 md:gap-12 mb-16">
-            <div className="flex items-center gap-3 px-6 py-3 bg-white rounded-2xl shadow-md border border-blue-100 hover:shadow-lg transition-all">
-              <ShieldCheck className="h-8 w-8 text-[#2774AE]" />
-              <div>
-                <p className="text-sm font-bold text-slate-900">Verified Listings</p>
-                <p className="text-xs text-slate-600">100% Authenticated</p>
-              </div>
-            </div>
-            
-            <div className="flex items-center gap-3 px-6 py-3 bg-white rounded-2xl shadow-md border border-blue-100 hover:shadow-lg transition-all">
-              <Award className="h-8 w-8 text-[#2774AE]" />
-              <div>
-                <p className="text-sm font-bold text-slate-900">Award Winning</p>
-                <p className="text-xs text-slate-600">Best Portal 2024</p>
-              </div>
-            </div>
 
-            <div className="flex items-center gap-3 px-6 py-3 bg-white rounded-2xl shadow-md border border-blue-100 hover:shadow-lg transition-all">
-              <BadgeCheck className="h-8 w-8 text-[#2774AE]" />
-              <div>
-                <p className="text-sm font-bold text-slate-900">Trusted Platform</p>
-                <p className="text-xs text-slate-600">Since 2020</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Animated Statistics */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8">
-            <div className="text-center p-8 bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 border border-slate-100 hover:border-[#2774AE]/30 group">
-              <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-[#2774AE] to-[#2D68C4] mb-4 group-hover:scale-110 transition-transform duration-500 shadow-lg">
-                <HomeIcon className="h-8 w-8 text-white" />
-              </div>
-              <p className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-[#2774AE] to-[#2D68C4] bg-clip-text text-transparent mb-2">
-                {propertiesCount.toLocaleString()}+
-              </p>
-              <p className="text-sm md:text-base font-semibold text-slate-600">Active Properties</p>
-            </div>
-
-            <div className="text-center p-8 bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 border border-slate-100 hover:border-[#2774AE]/30 group">
-              <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-[#2774AE] to-[#2D68C4] mb-4 group-hover:scale-110 transition-transform duration-500 shadow-lg">
-                <Users className="h-8 w-8 text-white" />
-              </div>
-              <p className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-[#2774AE] to-[#2D68C4] bg-clip-text text-transparent mb-2">
-                {usersCount.toLocaleString()}+
-              </p>
-              <p className="text-sm md:text-base font-semibold text-slate-600">Happy Users</p>
-            </div>
-
-            <div className="text-center p-8 bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 border border-slate-100 hover:border-[#2774AE]/30 group">
-              <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-[#2774AE] to-[#2D68C4] mb-4 group-hover:scale-110 transition-transform duration-500 shadow-lg">
-                <Handshake className="h-8 w-8 text-white" />
-              </div>
-              <p className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-[#2774AE] to-[#2D68C4] bg-clip-text text-transparent mb-2">
-                {dealsCount.toLocaleString()}+
-              </p>
-              <p className="text-sm md:text-base font-semibold text-slate-600">Successful Deals</p>
-            </div>
-
-            <div className="text-center p-8 bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 border border-slate-100 hover:border-[#2774AE]/30 group">
-              <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-[#2774AE] to-[#2D68C4] mb-4 group-hover:scale-110 transition-transform duration-500 shadow-lg">
-                <MapPin className="h-8 w-8 text-white" />
-              </div>
-              <p className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-[#2774AE] to-[#2D68C4] bg-clip-text text-transparent mb-2">
-                {citiesCount}+
-              </p>
-              <p className="text-sm md:text-base font-semibold text-slate-600">Cities Covered</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* How It Works Section */}
-      <div className="py-16 md:py-24 bg-gradient-to-b from-white to-slate-50/50 relative overflow-hidden">
-        {/* Background decoration */}
-        <div className="absolute top-0 right-0 w-96 h-96 bg-[#2774AE]/5 rounded-full blur-3xl"></div>
-        <div className="absolute bottom-0 left-0 w-96 h-96 bg-[#2D68C4]/5 rounded-full blur-3xl"></div>
-        
-        <div className="container relative">
-          <div className="text-center mb-16">
-            <div className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-50 to-indigo-50 border border-[#2774AE]/20 rounded-full px-5 py-2.5 mb-6">
-              <Sparkles className="h-5 w-5 text-[#2774AE]" />
-              <span className="text-sm font-bold text-[#2774AE]">Simple & Fast</span>
-            </div>
-            <h2 className="text-3xl md:text-5xl font-bold mb-6 bg-gradient-to-r from-slate-900 via-[#2774AE] to-slate-900 bg-clip-text text-transparent">
-              How It Works
-            </h2>
-            <p className="text-slate-600 text-lg md:text-xl max-w-3xl mx-auto leading-relaxed">
-              Find your dream property in just 3 simple steps
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-12 max-w-6xl mx-auto">
-            {/* Step 1 */}
-            <div className="relative group">
-              <div className="absolute -inset-1 bg-gradient-to-r from-[#2774AE] to-[#2D68C4] rounded-3xl blur opacity-25 group-hover:opacity-75 transition duration-500"></div>
-              <div className="relative bg-white p-8 md:p-10 rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-500 border border-slate-100">
-                {/* Step number */}
-                <div className="absolute -top-6 -left-6 w-16 h-16 bg-gradient-to-br from-[#2774AE] to-[#2D68C4] rounded-2xl flex items-center justify-center shadow-xl">
-                  <span className="text-2xl font-bold text-white">1</span>
-                </div>
-                
-                <div className="mb-6 mt-4">
-                  <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-blue-50 to-indigo-50 group-hover:scale-110 transition-transform duration-500">
-                    <Search className="h-10 w-10 text-[#2774AE]" />
-                  </div>
-                </div>
-                
-                <h3 className="text-2xl font-bold mb-4 text-slate-900">Search Properties</h3>
-                <p className="text-slate-600 leading-relaxed">
-                  Browse through thousands of verified listings across South Africa. Use advanced filters to find exactly what you're looking for.
-                </p>
-              </div>
-            </div>
-
-            {/* Step 2 */}
-            <div className="relative group md:mt-12">
-              <div className="absolute -inset-1 bg-gradient-to-r from-[#2774AE] to-[#2D68C4] rounded-3xl blur opacity-25 group-hover:opacity-75 transition duration-500"></div>
-              <div className="relative bg-white p-8 md:p-10 rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-500 border border-slate-100">
-                {/* Step number */}
-                <div className="absolute -top-6 -left-6 w-16 h-16 bg-gradient-to-br from-[#2774AE] to-[#2D68C4] rounded-2xl flex items-center justify-center shadow-xl">
-                  <span className="text-2xl font-bold text-white">2</span>
-                </div>
-                
-                <div className="mb-6 mt-4">
-                  <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-blue-50 to-indigo-50 group-hover:scale-110 transition-transform duration-500">
-                    <Users className="h-10 w-10 text-[#2774AE]" />
-                  </div>
-                </div>
-                
-                <h3 className="text-2xl font-bold mb-4 text-slate-900">Connect with Agents</h3>
-                <p className="text-slate-600 leading-relaxed">
-                  Get in touch with verified real estate professionals. Schedule viewings and get expert advice on your property journey.
-                </p>
-              </div>
-            </div>
-
-            {/* Step 3 */}
-            <div className="relative group">
-              <div className="absolute -inset-1 bg-gradient-to-r from-[#2774AE] to-[#2D68C4] rounded-3xl blur opacity-25 group-hover:opacity-75 transition duration-500"></div>
-              <div className="relative bg-white p-8 md:p-10 rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-500 border border-slate-100">
-                {/* Step number */}
-                <div className="absolute -top-6 -left-6 w-16 h-16 bg-gradient-to-br from-[#2774AE] to-[#2D68C4] rounded-2xl flex items-center justify-center shadow-xl">
-                  <span className="text-2xl font-bold text-white">3</span>
-                </div>
-                
-                <div className="mb-6 mt-4">
-                  <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-blue-50 to-indigo-50 group-hover:scale-110 transition-transform duration-500">
-                    <CheckCircle className="h-10 w-10 text-[#2774AE]" />
-                  </div>
-                </div>
-                
-                <h3 className="text-2xl font-bold mb-4 text-slate-900">Close the Deal</h3>
-                <p className="text-slate-600 leading-relaxed">
-                  Complete your transaction with confidence. Our platform ensures a smooth, secure, and transparent process from start to finish.
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
 
       {/* Hot Selling Developments Section */}
       <div className="py-16 md:py-20 bg-gradient-to-b from-slate-50/50 to-white">
