@@ -196,7 +196,7 @@ export default function Home() {
       {/* Trust Indicators & Stats Section */}
       <div id="stats-section" className="py-12 md:py-16 bg-gradient-to-b from-white via-blue-50/30 to-white relative overflow-hidden">
         {/* Decorative background elements */}
-
+        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSAxMCAwIEwgMCAwIDAgMTAiIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzJENjhDNCIgc3Ryb2tlLW9wYWNpdHk9IjAuMDMiIHN0cm9rZS13aWR0aD0iMSIvPjwvcGF0dGVybj48L2RlZnM+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0idXJsKCNncmlkKSIvPjwvc3ZnPg==')] opacity-40"></div>
         
         <div className="container relative">
           {/* Trust Badges */}
@@ -291,7 +291,73 @@ export default function Home() {
             </p>
           </div>
 
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-12 max-w-6xl mx-auto">
+            {/* Step 1 */}
+            <div className="relative group">
+              <div className="absolute -inset-1 bg-gradient-to-r from-[#2774AE] to-[#2D68C4] rounded-3xl blur opacity-25 group-hover:opacity-75 transition duration-500"></div>
+              <div className="relative bg-white p-8 md:p-10 rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-500 border border-slate-100">
+                {/* Step number */}
+                <div className="absolute -top-6 -left-6 w-16 h-16 bg-gradient-to-br from-[#2774AE] to-[#2D68C4] rounded-2xl flex items-center justify-center shadow-xl">
+                  <span className="text-2xl font-bold text-white">1</span>
+                </div>
+                
+                <div className="mb-6 mt-4">
+                  <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-blue-50 to-indigo-50 group-hover:scale-110 transition-transform duration-500">
+                    <Search className="h-10 w-10 text-[#2774AE]" />
+                  </div>
+                </div>
+                
+                <h3 className="text-2xl font-bold mb-4 text-slate-900">Search Properties</h3>
+                <p className="text-slate-600 leading-relaxed">
+                  Browse through thousands of verified listings across South Africa. Use advanced filters to find exactly what you're looking for.
+                </p>
+              </div>
+            </div>
 
+            {/* Step 2 */}
+            <div className="relative group md:mt-12">
+              <div className="absolute -inset-1 bg-gradient-to-r from-[#2774AE] to-[#2D68C4] rounded-3xl blur opacity-25 group-hover:opacity-75 transition duration-500"></div>
+              <div className="relative bg-white p-8 md:p-10 rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-500 border border-slate-100">
+                {/* Step number */}
+                <div className="absolute -top-6 -left-6 w-16 h-16 bg-gradient-to-br from-[#2774AE] to-[#2D68C4] rounded-2xl flex items-center justify-center shadow-xl">
+                  <span className="text-2xl font-bold text-white">2</span>
+                </div>
+                
+                <div className="mb-6 mt-4">
+                  <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-blue-50 to-indigo-50 group-hover:scale-110 transition-transform duration-500">
+                    <Users className="h-10 w-10 text-[#2774AE]" />
+                  </div>
+                </div>
+                
+                <h3 className="text-2xl font-bold mb-4 text-slate-900">Connect with Agents</h3>
+                <p className="text-slate-600 leading-relaxed">
+                  Get in touch with verified real estate professionals. Schedule viewings and get expert advice on your property journey.
+                </p>
+              </div>
+            </div>
+
+            {/* Step 3 */}
+            <div className="relative group">
+              <div className="absolute -inset-1 bg-gradient-to-r from-[#2774AE] to-[#2D68C4] rounded-3xl blur opacity-25 group-hover:opacity-75 transition duration-500"></div>
+              <div className="relative bg-white p-8 md:p-10 rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-500 border border-slate-100">
+                {/* Step number */}
+                <div className="absolute -top-6 -left-6 w-16 h-16 bg-gradient-to-br from-[#2774AE] to-[#2D68C4] rounded-2xl flex items-center justify-center shadow-xl">
+                  <span className="text-2xl font-bold text-white">3</span>
+                </div>
+                
+                <div className="mb-6 mt-4">
+                  <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-blue-50 to-indigo-50 group-hover:scale-110 transition-transform duration-500">
+                    <CheckCircle className="h-10 w-10 text-[#2774AE]" />
+                  </div>
+                </div>
+                
+                <h3 className="text-2xl font-bold mb-4 text-slate-900">Close the Deal</h3>
+                <p className="text-slate-600 leading-relaxed">
+                  Complete your transaction with confidence. Our platform ensures a smooth, secure, and transparent process from start to finish.
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -436,7 +502,7 @@ export default function Home() {
 
       {/* Why Choose Us Section */}
       <div className="py-16 md:py-24 bg-gradient-to-b from-white to-slate-50/50 relative overflow-hidden">
-
+        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSAxMCAwIEwgMCAwIDAgMTAiIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzI3NzRBRSIgc3Ryb2tlLW9wYWNpdHk9IjAuMDMiIHN0cm9rZS13aWR0aD0iMSIvPjwvcGF0dGVybj48L2RlZnM+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0idXJsKCNncmlkKSIvPjwvc3ZnPg==')] opacity-40"></div>
         
         <div className="container relative">
           <div className="text-center mb-16">
