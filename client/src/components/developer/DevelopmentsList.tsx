@@ -201,25 +201,22 @@ const DevelopmentsList: React.FC = () => {
 
       {/* Development Wizard Modal */}
       {showWizard && (
-        <div className="fixed inset-0 bg-black/60 flex items-start justify-center z-[100] pt-16 pb-4 px-4 overflow-y-auto">
-          <div className="bg-white rounded-lg w-full max-w-5xl my-4 shadow-2xl">
-            <div className="p-4 border-b border-gray-200 flex justify-between items-center">
-              <h3 className="text-lg font-semibold">{selectedReviewId ? 'Edit Development' : 'Add New Development'}</h3>
+        <div 
+          className="fixed inset-0 bg-black/60 z-[100] overflow-y-auto"
+          onClick={(e) => e.target === e.currentTarget && setShowWizard(false)}
+        >
+          <div className="min-h-full flex items-center justify-center py-8 px-4">
+            <div className="bg-white rounded-xl w-full max-w-5xl shadow-2xl relative">
+              {/* Close button */}
               <button
                 onClick={() => setShowWizard(false)}
-                className="text-gray-500 hover:text-gray-700"
+                className="absolute top-4 right-4 z-10 p-2 rounded-lg hover:bg-gray-100 transition-colors"
               >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M6 18L18 6M6 6l12 12"
-                  />
+                <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
-            </div>
-            <div className="p-0">
+              {/* Wizard Content */}
               <DevelopmentWizard developmentId={selectedReviewId} isModal={true} />
             </div>
           </div>
