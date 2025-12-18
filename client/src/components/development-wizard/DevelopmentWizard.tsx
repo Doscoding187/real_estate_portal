@@ -66,9 +66,12 @@ export function DevelopmentWizard({ developmentId }: DevelopmentWizardProps) {
   const saveDraftMutation = trpc.developer.saveDraft.useMutation();
 
   // Auto-Save Configuration
-  const stateToWatch = { currentPhase, developmentData, classification, overview, unitTypes, finalisation };
+  const stateToWatch = React.useMemo(() => ({
+    currentPhase, developmentData, classification, overview, unitTypes, finalisation 
+  }), [currentPhase, developmentData, classification, overview, unitTypes, finalisation]);
+
   const { lastSaved, isSaving, error: autoSaveError } = useAutoSave(stateToWatch, {
-    debounceMs: 2000,
+    debounceMs: 5000, 
     onSave: async () => {
       // Trigger backend draft save
       await saveDraft(async (data) => {
