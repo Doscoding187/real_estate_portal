@@ -220,7 +220,7 @@ const DevelopmentsList: React.FC = () => {
               </button>
             </div>
             <div className="p-0">
-              <DevelopmentWizard developmentId={selectedReviewId} />
+              <DevelopmentWizard developmentId={selectedReviewId} isModal={true} />
             </div>
           </div>
         </div>

@@ -53,9 +53,10 @@ const PHASES = [
 
 interface DevelopmentWizardProps {
   developmentId?: number;
+  isModal?: boolean;
 }
 
-export function DevelopmentWizard({ developmentId }: DevelopmentWizardProps) {
+export function DevelopmentWizard({ developmentId, isModal = false }: DevelopmentWizardProps) {
   const [, setLocation] = useLocation();
   const [, params] = useRoute('/developer/create-development');
   const urlParams = new URLSearchParams(window.location.search);
@@ -217,7 +218,7 @@ export function DevelopmentWizard({ developmentId }: DevelopmentWizardProps) {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/40 py-6 md:py-10">
+    <div className={`${isModal ? '' : 'min-h-screen'} bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/40 py-6 md:py-10`}>
       <DraftManager
         open={showResumeDraftDialog}
         onOpenChange={setShowResumeDraftDialog}
