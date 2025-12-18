@@ -8,7 +8,6 @@
 /* Ikhaya Design System utilities & components */
 @import '../../design-system/components.css';
 
-@custom-variant dark (&:is(.dark *));
 
 
 @theme inline {
@@ -188,12 +187,12 @@
 @layer utilities {
   /* Hide scrollbar */
   .scrollbar-hide {
-    -ms-overflow-style: none; /* IE and Edge */
-    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none;
+    scrollbar-width: none;
   }
 
   .scrollbar-hide::-webkit-scrollbar {
-    display: none; /* Chrome, Safari and Opera */
+    display: none;
   }
 
   /* Animated gradient text */
@@ -213,7 +212,7 @@
     animation: gradient 3s ease infinite;
   }
 
-  /* Fade in animation */
+  /* Enhanced fade in animation */
   @keyframes fade-in {
     from {
       opacity: 0;
@@ -244,5 +243,48 @@
 
   .animate-shake {
     animation: shake 0.4s ease-in-out;
+  }
+
+  /* Slide up animation */
+  @keyframes slide-up {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .animate-slide-up {
+    animation: slide-up 0.5s ease-out;
+  }
+
+  /* Pulse glow effect */
+  @keyframes pulse-glow {
+    0%, 100% {
+      box-shadow: 0 0 0 0 oklch(0.2 0.08 240 / 0.4);
+    }
+    50% {
+      box-shadow: 0 0 0 8px oklch(0.2 0.08 240 / 0);
+    }
+  }
+
+  .animate-pulse-glow {
+    animation: pulse-glow 2s ease-in-out infinite;
+  }
+
+  /* Glassmorphism effect */
+  .glass {
+    background: oklch(1 0 0 / 0.7);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+
+  .glass-dark {
+    background: oklch(0.21 0.006 285.885 / 0.7);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
   }
 }

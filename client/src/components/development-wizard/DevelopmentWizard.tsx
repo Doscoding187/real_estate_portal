@@ -25,6 +25,7 @@ import {
 
 // Import Phases
 import { IdentityPhase } from './phases/IdentityPhase';
+import { MediaPhase } from './phases/MediaPhase';
 import { ClassificationPhase } from './phases/ClassificationPhase';
 import { OverviewPhase } from './phases/OverviewPhase';
 import { UnitTypesPhase } from './phases/UnitTypesPhase';
@@ -33,6 +34,7 @@ import { FinalisationPhase } from './phases/FinalisationPhase';
 // Phase Definitions
 const PHASES = [
   'Identity',
+  'Media',
   'Classification',
   'Overview',
   'Unit Types',
@@ -154,16 +156,17 @@ export function DevelopmentWizard({ developmentId }: DevelopmentWizardProps) {
 
     switch (currentPhase) {
       case 1: return <IdentityPhase />;
-      case 2: return <ClassificationPhase />;
-      case 3: return <OverviewPhase />;
-      case 4: return <UnitTypesPhase />;
-      case 5: return <FinalisationPhase />;
+      case 2: return <MediaPhase />;
+      case 3: return <ClassificationPhase />;
+      case 4: return <OverviewPhase />;
+      case 5: return <UnitTypesPhase />;
+      case 6: return <FinalisationPhase />;
       default: return <IdentityPhase />;
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50 py-8">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/40 py-6 md:py-10">
       <DraftManager
         open={showResumeDraftDialog}
         onOpenChange={setShowResumeDraftDialog}
@@ -179,45 +182,53 @@ export function DevelopmentWizard({ developmentId }: DevelopmentWizardProps) {
         }}
       />
 
-      <div className="container mx-auto px-4 max-w-5xl">
-        {/* Header */}
-        <div className="mb-8 text-center relative">
-          <div className="absolute top-0 right-0 flex items-center gap-2">
-            <SaveStatusIndicator 
-              lastSaved={lastSaved} 
-              isSaving={isSaving} 
-              error={autoSaveError} 
-              variant="compact"
-              className="bg-white/50 backdrop-blur-sm border-white/20"
-            />
-            <Button 
-              variant="ghost" 
-              onClick={handleExit}
-              className="text-slate-500 hover:text-slate-700 hover:bg-white/50"
-            >
-              Exit
-            </Button>
+      <div className="container mx-auto px-4 max-w-6xl">
+        {/* Enhanced Header */}
+        <div className="mb-6 md:mb-10">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-4">
+              <div className="h-12 w-1 bg-gradient-to-b from-blue-600 to-purple-600 rounded-full" />
+              <div>
+                <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-blue-600 bg-clip-text text-transparent bg-[length:200%_auto] animate-gradient">
+                  {PHASES[currentPhase - 1]}
+                </h1>
+                <p className="text-slate-600 text-sm md:text-base mt-1">
+                  Step {currentPhase} of {PHASES.length}
+                </p>
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-2 md:gap-3">
+              <SaveStatusIndicator 
+                lastSaved={lastSaved} 
+                isSaving={isSaving} 
+                error={autoSaveError} 
+                variant="compact"
+                className="glass border border-white/40 shadow-sm"
+              />
+              <Button 
+                variant="ghost" 
+                onClick={handleExit}
+                className="text-slate-600 hover:text-slate-900 hover:bg-white/60 transition-all"
+              >
+                Exit
+              </Button>
+            </div>
           </div>
-          
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-3">
-             {PHASES[currentPhase - 1]}
-          </h1>
-          <p className="text-gray-600 text-lg">Phase {currentPhase} of 5</p>
+
+          {/* Enhanced Progress Indicator */}
+          <div className="glass border border-white/40 rounded-2xl p-4 md:p-6 shadow-sm">
+            <ProgressIndicator
+              steps={progressSteps}
+              onStepClick={(stepNumber) => {
+                if (stepNumber < currentPhase) setPhase(stepNumber);
+              }} 
+            />
+          </div>
         </div>
 
-        {/* Phase Indicator */}
-        <div className="mb-8">
-          <ProgressIndicator
-            steps={progressSteps}
-            onStepClick={(stepNumber) => {
-               // Allow navigation back to completed phases
-               if (stepNumber < currentPhase) setPhase(stepNumber);
-            }} 
-          />
-        </div>
-
-        {/* Phase Content */}
-        <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-8 mb-8 min-h-[400px]">
+        {/* Enhanced Phase Content */}
+        <div className="glass border border-white/40 rounded-2xl shadow-lg p-6 md:p-8 lg:p-10 mb-8 min-h-[500px] animate-slide-up">
           {renderPhase()}
         </div>
 

@@ -407,13 +407,20 @@ const createActions = (
         if (!state.developmentData?.location?.address) errors.push('Location is required');
         break;
       case 2:
-        if (!state.classification?.type) errors.push('Type is required');
+        // Media Phase - usually we enforce at least one hero image for a draft that "Looks good"? 
+        // Or we keep it optional for Draft, mandatory for Publish.
+        // Let's enforce at least 1 image to encourage good quality.
+        const hasMedia = state.developmentData?.media?.heroImage || (state.developmentData?.media?.photos?.length || 0) > 0;
+        if (!hasMedia) errors.push('Upload at least one image');
         break;
       case 3:
+        if (!state.classification?.type) errors.push('Type is required');
+        break;
+      case 4:
         if ((state.overview?.highlights?.length || 0) < 3) errors.push('Add at least 3 highlights');
         if ((state.overview?.description?.length || 0) < 50) errors.push('Description must be at least 50 characters');
         break;
-      case 4:
+      case 5:
         if (state.classification?.type !== 'land' && (state.unitTypes?.length || 0) === 0) {
           errors.push('Add at least one unit type');
         }
