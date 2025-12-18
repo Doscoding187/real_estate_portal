@@ -117,33 +117,39 @@ export default function Home() {
       <EnhancedHero />
 
       {/* Hot Selling Developments Section */}
-      <div className="py-12 bg-white">
+      <div className="py-16 md:py-20 bg-gradient-to-b from-white to-slate-50/50">
         <div className="container">
-          <div className="mb-8">
-            <h2 className="text-xl md:text-2xl font-bold mb-3">
-              Hot Selling Real Estate Developments in South Africa
+          <div className="text-center mb-12">
+            <div className="inline-flex items-center gap-2 bg-gradient-to-r from-red-50 to-orange-50 border border-red-200 rounded-full px-4 py-2 mb-4">
+              <span className="text-2xl">🔥</span>
+              <span className="text-sm font-semibold text-red-700">Trending Now</span>
+            </div>
+            <h2 className="text-3xl md:text-4xl font-bold mb-4 bg-gradient-to-r from-slate-900 via-blue-900 to-slate-900 bg-clip-text text-transparent">
+              Hot Selling Real Estate Developments
             </h2>
-            <p className="text-muted-foreground text-base max-w-3xl">
+            <p className="text-slate-600 text-lg max-w-3xl mx-auto leading-relaxed">
               A handpicked collection of the country's most in-demand residential developments.
               These properties offer unmatched value in top cities with ideal locations, smart amenities, and trusted builders.
             </p>
           </div>
 
           <Tabs value={selectedProvince} onValueChange={setSelectedProvince} className="w-full">
-            <TabsList className="flex flex-wrap justify-start gap-2 mb-8 bg-transparent p-0 h-auto">
-              {provinces.map(province => (
-                <TabsTrigger
-                  key={province}
-                  value={province}
-                  className="px-6 py-2.5 rounded-full text-sm font-medium transition-all duration-300 border bg-white text-muted-foreground border-gray-200 hover:border-blue-200 hover:bg-blue-50 hover:text-blue-600 data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-indigo-600 data-[state=active]:text-white data-[state=active]:border-transparent data-[state=active]:shadow-md data-[state=active]:scale-105"
-                >
-                  {province}
-                </TabsTrigger>
-              ))}
-            </TabsList>
+            <div className="flex justify-center mb-10">
+              <TabsList className="inline-flex flex-wrap justify-center gap-2 bg-white/80 backdrop-blur-sm p-2 rounded-2xl shadow-lg border border-slate-200/60 h-auto">
+                {provinces.map(province => (
+                  <TabsTrigger
+                    key={province}
+                    value={province}
+                    className="px-5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-300 data-[state=inactive]:text-slate-600 data-[state=inactive]:hover:text-blue-600 data-[state=inactive]:hover:bg-blue-50/50 data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-purple-600 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:scale-105"
+                  >
+                    {province}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+            </div>
 
             {provinces.map(province => (
-              <TabsContent key={province} value={province} className="mt-6">
+              <TabsContent key={province} value={province} className="mt-0 animate-slide-up">
                 {developmentsByProvince[province] && developmentsByProvince[province].length > 0 ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                     {developmentsByProvince[province].map(development => (
@@ -151,10 +157,15 @@ export default function Home() {
                     ))}
                   </div>
                 ) : (
-                  <div className="text-center py-12 bg-muted/30 rounded-lg">
-                    <Building2 className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
-                    <p className="text-lg text-muted-foreground">
-                      No developments available in {province} at the moment
+                  <div className="text-center py-16 bg-gradient-to-br from-slate-50 to-blue-50/30 rounded-2xl border-2 border-dashed border-slate-300">
+                    <div className="p-4 bg-slate-100 rounded-full w-20 h-20 mx-auto mb-4 flex items-center justify-center">
+                      <Building2 className="h-10 w-10 text-slate-400" />
+                    </div>
+                    <p className="text-lg font-medium text-slate-700 mb-2">
+                      No developments available
+                    </p>
+                    <p className="text-sm text-slate-500">
+                      Check back soon for new listings in {province}
                     </p>
                   </div>
                 )}
@@ -162,18 +173,17 @@ export default function Home() {
             ))}
           </Tabs>
 
-          <div className="text-center mt-8">
+          <div className="text-center mt-10">
             <Button 
-              variant="outline" 
               size="lg" 
               onClick={() => {
                 const provinceSlug = selectedProvince.toLowerCase().replace(/\s+/g, '-');
                 setLocation(`/${provinceSlug}`);
               }}
-              className="gap-2"
+              className="gap-2 h-12 px-8 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 shadow-lg hover:shadow-xl transition-all duration-300 group"
             >
-              Explore {selectedProvince}
-              <ArrowRight className="h-4 w-4" />
+              Explore All in {selectedProvince}
+              <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
             </Button>
           </div>
         </div>
@@ -181,18 +191,18 @@ export default function Home() {
 
 
       {/* Categories Section - Simplified for SA Market */}
-      <div className="py-12 bg-gradient-to-b from-white to-muted/20">
+      <div className="py-16 md:py-20 bg-gradient-to-b from-slate-50/50 via-white to-slate-50/50">
         <div className="container">
-          <div className="mb-8">
-            <h2 className="text-xl md:text-2xl font-bold mb-3 text-center">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl md:text-4xl font-bold mb-4 bg-gradient-to-r from-slate-900 via-blue-900 to-slate-900 bg-clip-text text-transparent">
               Explore Property Categories
             </h2>
-            <p className="text-muted-foreground text-base text-center max-w-2xl mx-auto">
+            <p className="text-slate-600 text-lg max-w-2xl mx-auto leading-relaxed">
               Find the perfect property type that suits your needs across South Africa
             </p>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 md:gap-6">
             {[
               { Icon: Building2, title: 'Apartments', count: '2,500+', url: '/properties?type=apartment', gradient: 'from-blue-500 to-indigo-500' },
               { Icon: HomeIcon, title: 'Houses', count: '3,200+', url: '/properties?type=house', gradient: 'from-indigo-500 to-purple-500' },
@@ -208,21 +218,21 @@ export default function Home() {
                   e.preventDefault();
                   setLocation(category.url);
                 }}
-                className="group relative flex flex-col items-center text-center p-6 rounded-2xl bg-white hover:bg-gradient-to-br hover:from-white hover:to-primary/5 shadow-sm hover:shadow-xl transition-all duration-300 border border-gray-100 hover:border-primary/20 overflow-hidden"
+                className="group relative flex flex-col items-center text-center p-6 md:p-8 rounded-2xl bg-white hover:bg-gradient-to-br hover:from-white hover:to-blue-50/30 shadow-sm hover:shadow-2xl transition-all duration-500 border border-slate-200/60 hover:border-blue-300 overflow-hidden hover:-translate-y-1"
               >
                 {/* Gradient background on hover */}
-                <div className={`absolute inset-0 bg-gradient-to-br ${category.gradient} opacity-0 group-hover:opacity-5 transition-opacity duration-300`} />
+                <div className={`absolute inset-0 bg-gradient-to-br ${category.gradient} opacity-0 group-hover:opacity-[0.03] transition-opacity duration-500`} />
                 
                 {/* Icon with gradient background */}
-                <div className={`relative mb-4 p-4 rounded-xl bg-gradient-to-br ${category.gradient} shadow-md group-hover:shadow-lg group-hover:scale-110 transition-all duration-300`}>
-                  <category.Icon className="h-7 w-7 text-white" />
+                <div className={`relative mb-4 p-4 md:p-5 rounded-2xl bg-gradient-to-br ${category.gradient} shadow-lg group-hover:shadow-2xl group-hover:scale-110 transition-all duration-500`}>
+                  <category.Icon className="h-7 w-7 md:h-8 md:w-8 text-white" />
                 </div>
                 
                 {/* Text content */}
-                <h3 className="relative text-sm font-semibold text-foreground mb-1 group-hover:text-primary transition-colors">
+                <h3 className="relative text-sm md:text-base font-bold text-slate-900 mb-1.5 group-hover:text-blue-600 transition-colors">
                   {category.title}
                 </h3>
-                <p className="relative text-xs text-muted-foreground font-medium">
+                <p className="relative text-xs md:text-sm text-slate-600 font-semibold bg-slate-100 px-3 py-1 rounded-full">
                   {category.count}
                 </p>
               </a>
@@ -247,18 +257,22 @@ export default function Home() {
       <ExploreCities />
 
       {/* Testimonials Section */}
-      <div className="py-12 bg-white">
+      <div className="py-16 md:py-20 bg-gradient-to-b from-white to-slate-50/50">
         <div className="container">
-          <div className="mb-8">
-            <h2 className="text-xl md:text-2xl font-bold mb-3 text-center">
+          <div className="text-center mb-12">
+            <div className="inline-flex items-center gap-2 bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 rounded-full px-4 py-2 mb-4">
+              <span className="text-2xl">⭐</span>
+              <span className="text-sm font-semibold text-yellow-700">Trusted by Thousands</span>
+            </div>
+            <h2 className="text-3xl md:text-4xl font-bold mb-4 bg-gradient-to-r from-slate-900 via-blue-900 to-slate-900 bg-clip-text text-transparent">
               What Our Clients Say
             </h2>
-            <p className="text-muted-foreground text-base text-center max-w-2xl mx-auto">
+            <p className="text-slate-600 text-lg max-w-2xl mx-auto leading-relaxed">
               Real experiences from people who found their dream homes with us
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">
             {[
               {
                 name: 'Thabo Mkhize',
@@ -284,19 +298,29 @@ export default function Home() {
             ].map((testimonial, idx) => (
               <div
                 key={idx}
-                className="bg-muted/30 p-6 rounded-xl border border-border hover:shadow-lg transition-shadow"
+                className="relative bg-white p-8 rounded-2xl border border-slate-200/60 hover:shadow-2xl transition-all duration-500 hover:-translate-y-1 group"
               >
-                <div className="flex items-center gap-2 mb-4">
-                  {[...Array(testimonial.rating)].map((_, i) => (
-                    <span key={i} className="text-yellow-500 text-xl">★</span>
-                  ))}
-                </div>
-                <p className="text-foreground mb-6 leading-relaxed">"{testimonial.text}"</p>
-                <div className="flex items-center gap-3">
-                  <div className="text-4xl">{testimonial.avatar}</div>
-                  <div>
-                    <p className="font-semibold text-foreground">{testimonial.name}</p>
-                    <p className="text-sm text-muted-foreground">{testimonial.location}</p>
+                {/* Quote mark decoration */}
+                <div className="absolute top-6 right-6 text-6xl text-blue-100 group-hover:text-blue-200 transition-colors font-serif leading-none">"</div>
+                
+                <div className="relative">
+                  <div className="flex items-center gap-1 mb-4">
+                    {[...Array(testimonial.rating)].map((_, i) => (
+                      <span key={i} className="text-yellow-400 text-xl">★</span>
+                    ))}
+                  </div>
+                  <p className="text-slate-700 mb-6 leading-relaxed text-base italic">
+                    "{testimonial.text}"
+                  </p>
+                  <div className="flex items-center gap-4 pt-4 border-t border-slate-100">
+                    <div className="text-5xl">{testimonial.avatar}</div>
+                    <div>
+                      <p className="font-bold text-slate-900 text-base">{testimonial.name}</p>
+                      <p className="text-sm text-slate-500 flex items-center gap-1">
+                        <MapPin className="w-3 h-3" />
+                        {testimonial.location}
+                      </p>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -306,18 +330,19 @@ export default function Home() {
       </div>
 
       {/* CTA Section */}
-      <div className="py-16 bg-white">
+      <div className="py-16 md:py-20 bg-white">
         <div className="container">
-          <div className="relative rounded-3xl overflow-hidden bg-gradient-to-r from-blue-600 to-indigo-700 px-6 py-12 md:px-12 md:py-16 text-center shadow-2xl">
+          <div className="relative rounded-3xl md:rounded-[2rem] overflow-hidden bg-gradient-to-br from-blue-600 via-purple-600 to-indigo-700 px-6 py-16 md:px-12 md:py-20 text-center shadow-2xl">
             {/* Decorative Elements */}
-            <div className="absolute top-0 left-0 w-64 h-64 bg-white/10 rounded-full -translate-x-1/2 -translate-y-1/2 blur-3xl"></div>
-            <div className="absolute bottom-0 right-0 w-64 h-64 bg-white/10 rounded-full translate-x-1/2 translate-y-1/2 blur-3xl"></div>
+            <div className="absolute top-0 left-0 w-96 h-96 bg-white/10 rounded-full -translate-x-1/2 -translate-y-1/2 blur-3xl animate-pulse"></div>
+            <div className="absolute bottom-0 right-0 w-96 h-96 bg-white/10 rounded-full translate-x-1/2 translate-y-1/2 blur-3xl animate-pulse delay-1000"></div>
+            <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSAxMCAwIEwgMCAwIDAgMTAiIGZpbGw9Im5vbmUiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS1vcGFjaXR5PSIwLjA1IiBzdHJva2Utd2lkdGg9IjEiLz48L3BhdHRlcm4+PC9kZWZzPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9InVybCgjZ3JpZCkiLz48L3N2Zz4=')] opacity-30"></div>
 
-            <div className="relative z-10 max-w-3xl mx-auto">
-              <h2 className="text-2xl md:text-4xl font-bold mb-6 text-white tracking-tight">
+            <div className="relative z-10 max-w-4xl mx-auto">
+              <h2 className="text-3xl md:text-5xl font-bold mb-6 text-white tracking-tight leading-tight">
                 Ready to Find Your Dream Property?
               </h2>
-              <p className="text-xl mb-10 text-blue-100 leading-relaxed">
+              <p className="text-lg md:text-xl mb-10 text-blue-50 leading-relaxed max-w-2xl mx-auto">
                 Join thousands of satisfied users. Whether you're buying, renting, or selling, we
                 provide the best tools and insights to make your journey smooth.
               </p>
@@ -325,14 +350,14 @@ export default function Home() {
                 <Button
                   size="lg"
                   onClick={() => setLocation('/properties')}
-                  className="bg-white text-blue-600 hover:bg-blue-50 font-bold text-lg px-8 py-6 h-auto shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-1"
+                  className="bg-white text-blue-600 hover:bg-blue-50 font-bold text-base md:text-lg px-8 py-6 h-auto shadow-2xl hover:shadow-3xl transition-all transform hover:-translate-y-1 hover:scale-105"
                 >
                   Browse All Properties
                 </Button>
                 <Button
                   size="lg"
                   variant="outline"
-                  className="bg-transparent border-2 border-white text-white hover:bg-white/10 font-bold text-lg px-8 py-6 h-auto transition-all"
+                  className="bg-transparent border-2 border-white text-white hover:bg-white hover:text-blue-600 font-bold text-base md:text-lg px-8 py-6 h-auto transition-all hover:scale-105"
                 >
                   List Your Property
                 </Button>
