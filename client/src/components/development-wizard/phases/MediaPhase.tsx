@@ -5,6 +5,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 import { Upload, X, Star, Image as ImageIcon, Video, TreePine, Dumbbell, FileText } from 'lucide-react';
+import { trpc } from '@/lib/trpc';
 
 export function MediaPhase() {
   const { 
@@ -38,25 +39,49 @@ export function MediaPhase() {
     return all.filter(item => !item.isPrimary && item.type !== 'video' && (item.category === category || (category === 'general' && !['amenities', 'outdoors'].includes(item.category))));
   };
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>, category: MediaItem['category']) => {
+  const presignMutation = trpc.upload.presign.useMutation();
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, category: MediaItem['category']) => {
     const files = e.target.files;
     if (!files) return;
 
-    Array.from(files).forEach(file => {
-      const url = URL.createObjectURL(file);
-      const isVideo = file.type.startsWith('video');
+    if (fileInputRef.current) fileInputRef.current.value = '';
 
-      addMedia({
-        file,
-        url,
-        type: isVideo ? 'video' : 'image',
-        category:  isVideo ? 'videos' : category,
-        isPrimary: category === 'featured'
-      });
+    const uploads = Array.from(files).map(async (file) => {
+        const loadingToast = toast.loading(`Uploading ${file.name}...`);
+        
+        try {
+            // 1. Get Presigned URL
+            const { url: uploadUrl, publicUrl } = await presignMutation.mutateAsync({
+                filename: file.name,
+                contentType: file.type,
+            });
+
+            // 2. Upload to S3
+            await fetch(uploadUrl, {
+                method: 'PUT',
+                body: file,
+                headers: { 'Content-Type': file.type }
+            });
+
+            // 3. Add to State
+            const isVideo = file.type.startsWith('video');
+            addMedia({
+                file, // Keep file for reference if needed, but URL is now remote
+                url: publicUrl,
+                type: isVideo ? 'video' : 'image',
+                category: isVideo ? 'videos' : category,
+                isPrimary: category === 'featured'
+            });
+
+            toast.success(`${file.name} uploaded`, { id: loadingToast });
+        } catch (error) {
+            console.error('Upload failed:', error);
+            toast.error(`Failed to upload ${file.name}`, { id: loadingToast });
+        }
     });
 
-    if (fileInputRef.current) fileInputRef.current.value = '';
-    toast.success('Media added successfully');
+    await Promise.all(uploads);
   };
 
   const handleNext = () => {
