@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { DevelopmentWizard } from '../development-wizard/DevelopmentWizard';
 import { trpc } from '@/lib/trpc';
-import { Plus, Search, Filter, MoreVertical, AlertCircle, Eye } from 'lucide-react';
+import { Plus, Search, Filter, MoreVertical, AlertCircle, Eye, Trash2 } from 'lucide-react';
+import { toast } from 'sonner';
 import {
   Tooltip,
   TooltipContent,
@@ -33,7 +34,24 @@ const DevelopmentsList: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
 
   /* replaced by tRPC query */
-  const { data: developments, isLoading } = trpc.developer.getDevelopments.useQuery();
+  const { data: developments, isLoading, refetch } = trpc.developer.getDevelopments.useQuery();
+
+  // Delete mutation
+  const deleteMutation = trpc.developer.deleteDevelopment.useMutation({
+    onSuccess: () => {
+      toast.success('Development deleted successfully');
+      refetch();
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Failed to delete development');
+    },
+  });
+
+  const handleDelete = (devId: number, devName: string) => {
+    if (window.confirm(`Are you sure you want to delete "${devName}"? This action cannot be undone.`)) {
+      deleteMutation.mutate({ id: devId });
+    }
+  };
   
   const safeDevelopments = developments || [];
 
@@ -168,7 +186,9 @@ const DevelopmentsList: React.FC = () => {
                         <DropdownMenuItem>View Details</DropdownMenuItem>
                         <DropdownMenuItem onClick={() => { setSelectedReviewId(dev.id); setShowWizard(true); }}>Edit</DropdownMenuItem>
                         <DropdownMenuItem>Analytics</DropdownMenuItem>
-                        <DropdownMenuItem className="text-destructive">Delete</DropdownMenuItem>
+                        <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(dev.id, dev.name)}>
+                          <Trash2 className="w-4 h-4 mr-2" /> Delete
+                        </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>
