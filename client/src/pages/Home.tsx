@@ -1,28 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useLocation } from 'wouter';
 import { EnhancedNavbar } from '@/components/EnhancedNavbar';
 import { EnhancedHero } from '@/components/EnhancedHero';
 import { SimpleDevelopmentCard } from '@/components/SimpleDevelopmentCard';
 import { Button } from '@/components/ui/button';
-import { 
-  Building2, 
-  Home as HomeIcon, 
-  Building, 
-  Warehouse, 
-  MapPin, 
-  Tractor, 
-  ArrowRight,
-  ShieldCheck,
-  Users,
-  TrendingUp,
-  Award,
-  Search,
-  Sparkles,
-  Clock,
-  BadgeCheck,
-  Star
-} from 'lucide-react';
-
+import { Building2, Home as HomeIcon, Building, Warehouse, MapPin, Tractor, ArrowRight } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { PropertyInsights } from '@/components/PropertyInsights';
 import { DiscoverProperties } from '@/components/DiscoverProperties';
@@ -34,13 +16,6 @@ import { Footer } from '@/components/Footer';
 export default function Home() {
   const [, setLocation] = useLocation();
   const [selectedProvince, setSelectedProvince] = useState('Gauteng');
-
-
-  // Animated counter hook
-
-
-  // Intersection observer for stats animation
-
 
   const provinces = [
     'Gauteng',
@@ -287,80 +262,12 @@ export default function Home() {
       {/* Explore Cities Section */}
       <ExploreCities />
 
-      {/* Why Choose Us Section */}
-      <div className="py-16 md:py-24 bg-gradient-to-b from-white to-slate-50/50 relative overflow-hidden">
-        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSAxMCAwIEwgMCAwIDAgMTAiIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzI3NzRBRSIgc3Ryb2tlLW9wYWNpdHk9IjAuMDMiIHN0cm9rZS13aWR0aD0iMSIvPjwvcGF0dGVybj48L2RlZnM+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0idXJsKCNncmlkKSIvPjwvc3ZnPg==')] opacity-40"></div>
-        
-        <div className="container relative">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-5xl font-bold mb-6 bg-gradient-to-r from-slate-900 via-[#2774AE] to-slate-900 bg-clip-text text-transparent">
-              Why Choose HomeFind.za?
-            </h2>
-            <p className="text-slate-600 text-lg md:text-xl max-w-3xl mx-auto leading-relaxed">
-              We're committed to making your property journey seamless and successful
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-7xl mx-auto">
-            {[
-              {
-                icon: ShieldCheck,
-                title: 'Verified Listings',
-                description: 'Every property is thoroughly verified and authenticated before listing to ensure quality and legitimacy.',
-                color: 'from-[#2774AE] to-[#2D68C4]'
-              },
-              {
-                icon: Clock,
-                title: 'Quick Response',
-                description: 'Get instant notifications and quick responses from agents. Your time is valuable, and we respect that.',
-                color: 'from-[#2D68C4] to-[#0F52BA]'
-              },
-              {
-                icon: TrendingUp,
-                title: 'Market Insights',
-                description: 'Access real-time market data, price trends, and analytics to make informed investment decisions.',
-                color: 'from-[#0F52BA] to-[#1560BD]'
-              },
-              {
-                icon: Users,
-                title: 'Expert Guidance',
-                description: 'Connect with experienced real estate professionals who understand the South African property market.',
-                color: 'from-[#1560BD] to-[#2774AE]'
-              },
-              {
-                icon: BadgeCheck,
-                title: 'Transparent Process',
-                description: 'No hidden fees, no surprises. We believe in complete transparency throughout your property journey.',
-                color: 'from-[#2774AE] to-[#2D68C4]'
-              },
-              {
-                icon: Award,
-                title: 'Award Winning',
-                description: 'Recognized as South Africa\'s leading property portal with multiple industry awards and accolades.',
-                color: 'from-[#2D68C4] to-[#0F52BA]'
-              },
-            ].map((feature, idx) => (
-              <div key={idx} className="group relative">
-                <div className={`absolute -inset-0.5 bg-gradient-to-r ${feature.color} rounded-2xl blur opacity-25 group-hover:opacity-75 transition duration-500`}></div>
-                <div className="relative bg-white p-8 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 border border-slate-100">
-                  <div className={`inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br ${feature.color} mb-6 group-hover:scale-110 transition-transform duration-500 shadow-lg`}>
-                    <feature.icon className="h-8 w-8 text-white" />
-                  </div>
-                  <h3 className="text-xl font-bold mb-3 text-slate-900">{feature.title}</h3>
-                  <p className="text-slate-600 leading-relaxed">{feature.description}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Enhanced Testimonials Section */}
+      {/* Testimonials Section */}
       <div className="py-16 md:py-20 bg-gradient-to-b from-slate-50/50 to-white">
         <div className="container">
           <div className="text-center mb-12">
             <div className="inline-flex items-center gap-2 bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 rounded-full px-4 py-2 mb-4">
-              <Star className="h-5 w-5 text-yellow-600 fill-yellow-600" />
+              <span className="text-2xl">⭐</span>
               <span className="text-sm font-semibold text-yellow-700">Trusted by Thousands</span>
             </div>
             <h2 className="text-3xl md:text-4xl font-bold mb-4 bg-gradient-to-r from-slate-900 via-[#2774AE] to-slate-900 bg-clip-text text-transparent">
@@ -377,25 +284,22 @@ export default function Home() {
                 name: 'Thabo Mkhize',
                 location: 'Johannesburg',
                 rating: 5,
-                text: 'Found my perfect apartment in Sandton within 2 weeks. The team was professional and responsive throughout the process. Highly recommend!',
+                text: 'Found my perfect apartment in Sandton within 2 weeks. The team was professional and responsive throughout the process.',
                 avatar: '👨🏿',
-                role: 'First-time Buyer'
               },
               {
                 name: 'Sarah van der Merwe',
                 location: 'Cape Town',
                 rating: 5,
-                text: 'Excellent service! They helped me find a beautiful family home in Constantia. The market insights were invaluable for making the right decision.',
+                text: 'Excellent service! They helped me find a beautiful family home in Constantia. Highly recommend for anyone looking in the Western Cape.',
                 avatar: '👩🏼',
-                role: 'Property Investor'
               },
               {
                 name: 'Priya Naidoo',
                 location: 'Durban',
                 rating: 5,
-                text: 'The property insights and market data helped me make an informed decision. Great platform for first-time buyers! Very user-friendly.',
+                text: 'The property insights and market data helped me make an informed decision. Great platform for first-time buyers!',
                 avatar: '👩🏾',
-                role: 'Young Professional'
               },
             ].map((testimonial, idx) => (
               <div
@@ -408,17 +312,16 @@ export default function Home() {
                 <div className="relative">
                   <div className="flex items-center gap-1 mb-4">
                     {[...Array(testimonial.rating)].map((_, i) => (
-                      <Star key={i} className="h-5 w-5 text-yellow-400 fill-yellow-400" />
+                      <span key={i} className="text-yellow-400 text-xl">★</span>
                     ))}
                   </div>
-                  <p className="text-slate-700 mb-6 leading-relaxed text-base">
+                  <p className="text-slate-700 mb-6 leading-relaxed text-base italic">
                     "{testimonial.text}"
                   </p>
                   <div className="flex items-center gap-4 pt-4 border-t border-slate-100">
                     <div className="text-5xl">{testimonial.avatar}</div>
                     <div>
                       <p className="font-bold text-slate-900 text-base">{testimonial.name}</p>
-                      <p className="text-sm text-[#2774AE] font-semibold">{testimonial.role}</p>
                       <p className="text-sm text-slate-500 flex items-center gap-1">
                         <MapPin className="w-3 h-3" />
                         {testimonial.location}
@@ -432,7 +335,7 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Enhanced CTA Section */}
+      {/* CTA Section */}
       <div className="py-16 md:py-20 bg-white">
         <div className="container">
           <div className="relative rounded-3xl md:rounded-[2rem] overflow-hidden bg-gradient-to-br from-[#2774AE] via-[#2D68C4] to-[#0F52BA] px-6 py-16 md:px-12 md:py-20 text-center shadow-2xl">
@@ -442,11 +345,6 @@ export default function Home() {
             <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSAxMCAwIEwgMCAwIDAgMTAiIGZpbGw9Im5vbmUiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS1vcGFjaXR5PSIwLjA1IiBzdHJva2Utd2lkdGg9IjEiLz48L3BhdHRlcm4+PC9kZWZzPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9InVybCgjZ3JpZCkiLz48L3N2Zz4=')] opacity-30"></div>
 
             <div className="relative z-10 max-w-4xl mx-auto">
-              <div className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm border border-white/30 rounded-full px-5 py-2.5 mb-6">
-                <Sparkles className="h-5 w-5 text-white" />
-                <span className="text-sm font-bold text-white">Start Your Journey Today</span>
-              </div>
-              
               <h2 className="text-3xl md:text-5xl font-bold mb-6 text-white tracking-tight leading-tight">
                 Ready to Find Your Dream Property?
               </h2>
@@ -460,7 +358,6 @@ export default function Home() {
                   onClick={() => setLocation('/properties')}
                   className="bg-white text-[#2774AE] hover:bg-blue-50 font-bold text-base md:text-lg px-8 py-6 h-auto shadow-2xl hover:shadow-3xl transition-all transform hover:-translate-y-1 hover:scale-105"
                 >
-                  <Search className="h-5 w-5 mr-2" />
                   Browse All Properties
                 </Button>
                 <Button
@@ -468,7 +365,6 @@ export default function Home() {
                   variant="outline"
                   className="bg-transparent border-2 border-white text-white hover:bg-white hover:text-[#2774AE] font-bold text-base md:text-lg px-8 py-6 h-auto transition-all hover:scale-105"
                 >
-                  <Building2 className="h-5 w-5 mr-2" />
                   List Your Property
                 </Button>
               </div>
