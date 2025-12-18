@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useDevelopmentWizard } from '@/hooks/useDevelopmentWizard';
+import { useWizardNavigation } from '@/hooks/useWizardNavigation';
 import { useAutoSave } from '@/hooks/useAutoSave';
 import { SaveStatusIndicator } from '@/components/ui/SaveStatusIndicator';
 import { DraftManager } from '@/components/wizard/DraftManager';
@@ -24,21 +25,30 @@ import {
 } from '@/components/ui/alert-dialog';
 
 // Import Phases
+import { DevelopmentTypePhase } from './phases/DevelopmentTypePhase';
+import { ResidentialConfigPhase } from './phases/ResidentialConfigPhase';
+import { LandConfigPhase } from './phases/LandConfigPhase';
+import { CommercialConfigPhase } from './phases/CommercialConfigPhase';
+import { MixedUseConfigPhase } from './phases/MixedUseConfigPhase';
 import { IdentityPhase } from './phases/IdentityPhase';
+import { EstateProfilePhase } from './phases/EstateProfilePhase';
+import { AmenitiesPhase } from './phases/AmenitiesPhase';
 import { MediaPhase } from './phases/MediaPhase';
 import { ClassificationPhase } from './phases/ClassificationPhase';
 import { OverviewPhase } from './phases/OverviewPhase';
 import { UnitTypesPhase } from './phases/UnitTypesPhase';
 import { FinalisationPhase } from './phases/FinalisationPhase';
 
-// Phase Definitions
+// Phase Definitions (matches renderPhase cases)
 const PHASES = [
-  'Identity',
-  'Media',
-  'Classification',
-  'Overview',
-  'Unit Types',
-  'Finalisation'
+  'Development Type',   // 1
+  'Configuration',      // 2
+  'Identity',           // 3 (includes Location)
+  'Estate Profile',     // 4 (conditional)
+  'Amenities',          // 5
+  'Media',              // 6
+  'Unit Types',         // 7
+  'Publish'             // 8
 ];
 
 interface DevelopmentWizardProps {
@@ -55,10 +65,11 @@ export function DevelopmentWizard({ developmentId }: DevelopmentWizardProps) {
   const [showResumeDraftDialog, setShowResumeDraftDialog] = useState(false);
   const [apiError, setApiError] = useState<AppError | null>(null);
   const store = useDevelopmentWizard();
+  const navigation = useWizardNavigation();
   
   // Destructure from store
   const { 
-    currentPhase, setPhase, developmentData, classification, overview, unitTypes, finalisation, 
+    currentPhase, setPhase, developmentType, developmentData, classification, overview, unitTypes, finalisation, 
     reset, saveDraft, hydrateDevelopment
   } = store;
 
@@ -174,13 +185,34 @@ export function DevelopmentWizard({ developmentId }: DevelopmentWizardProps) {
     }
 
     switch (currentPhase) {
-      case 1: return <IdentityPhase />;
-      case 2: return <MediaPhase />;
-      case 3: return <ClassificationPhase />;
-      case 4: return <OverviewPhase />;
-      case 5: return <UnitTypesPhase />;
-      case 6: return <FinalisationPhase />;
-      default: return <IdentityPhase />;
+      case 1: return <DevelopmentTypePhase />;
+      case 2: 
+        // Route to appropriate config phase based on development type
+        if (developmentType === 'land') {
+          return <LandConfigPhase />;
+        } else if (developmentType === 'commercial') {
+          return <CommercialConfigPhase />;
+        } else if (developmentType === 'mixed_use') {
+          return <MixedUseConfigPhase />;
+        }
+        // Default: Residential
+        return <ResidentialConfigPhase />;
+      case 3: return <IdentityPhase />;
+      case 4: 
+        // Conditional: Skip estate profile for Land/Commercial
+        if (developmentType === 'land' || developmentType === 'commercial') {
+          return <AmenitiesPhase />;
+        }
+        if (!navigation.shouldShowEstateProfile) {
+          // Auto-advance to amenities (this will be called once, then navigation handles it)
+          return <AmenitiesPhase />;
+        }
+        return <EstateProfilePhase />;
+      case 5: return <AmenitiesPhase />;
+      case 6: return <MediaPhase />;
+      case 7: return <UnitTypesPhase />;
+      case 8: return <FinalisationPhase />;
+      default: return <DevelopmentTypePhase />;
     }
   };
 

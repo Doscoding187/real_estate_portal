@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { X, Plus, Sparkles, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
 
 export function OverviewPhase() {
   const { 
@@ -54,9 +55,10 @@ export function OverviewPhase() {
   };
 
   const handleNext = () => {
-    const { isValid, errors } = validatePhase(3);
+    // Current phase is 4 (Overview)
+    const { isValid, errors } = validatePhase(4);
     if (isValid) {
-      setPhase(4);
+      setPhase(5);
     } else {
       errors.forEach(e => toast.error(e));
     }
@@ -227,7 +229,7 @@ export function OverviewPhase() {
       <div className="flex justify-between pt-8 mt-8 border-t border-slate-200">
         <Button 
           variant="outline" 
-          onClick={() => setPhase(2)}
+          onClick={() => setPhase(3)}
           className="px-6 h-11 border-slate-300"
         >
           Back

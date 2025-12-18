@@ -126,7 +126,7 @@ export default function Home() {
       {/* Hot Selling Developments Section */}
       <div className="py-16 md:py-20 bg-gradient-to-b from-slate-50/50 to-white">
         <div className="container">
-          <div className="text-center mb-12">
+          <div className="text-left mb-12">
             <div className="inline-flex items-center gap-2 bg-gradient-to-r from-red-50 to-orange-50 border border-red-200 rounded-full px-4 py-2 mb-4">
               <span className="text-2xl">🔥</span>
               <span className="text-sm font-semibold text-red-700">Trending Now</span>
@@ -134,15 +134,15 @@ export default function Home() {
             <h2 className="text-3xl md:text-4xl font-bold mb-4 bg-gradient-to-r from-slate-900 via-[#2774AE] to-slate-900 bg-clip-text text-transparent">
               Hot Selling Real Estate Developments
             </h2>
-            <p className="text-slate-600 text-lg max-w-3xl mx-auto leading-relaxed">
+            <p className="text-slate-600 text-lg max-w-3xl leading-relaxed">
               A handpicked collection of the country's most in-demand residential developments.
               These properties offer unmatched value in top cities with ideal locations, smart amenities, and trusted builders.
             </p>
           </div>
 
           <Tabs value={selectedProvince} onValueChange={setSelectedProvince} className="w-full">
-            <div className="flex justify-center mb-10">
-              <TabsList className="inline-flex flex-wrap justify-center gap-2 bg-white/80 backdrop-blur-sm p-2 rounded-2xl shadow-lg border border-slate-200/60 h-auto">
+            <div className="flex justify-start mb-10">
+              <TabsList className="inline-flex flex-wrap justify-start gap-2 bg-white/80 backdrop-blur-sm p-2 rounded-2xl shadow-lg border border-slate-200/60 h-auto">
                 {provinces.map(province => (
                   <TabsTrigger
                     key={province}
@@ -164,8 +164,8 @@ export default function Home() {
                     ))}
                   </div>
                 ) : (
-                  <div className="text-center py-16 bg-gradient-to-br from-slate-50 to-blue-50/30 rounded-2xl border-2 border-dashed border-slate-300">
-                    <div className="p-4 bg-slate-100 rounded-full w-20 h-20 mx-auto mb-4 flex items-center justify-center">
+                  <div className="text-left py-16 bg-gradient-to-br from-slate-50 to-blue-50/30 rounded-2xl border-2 border-dashed border-slate-300">
+                    <div className="p-4 bg-slate-100 rounded-full w-20 h-20 mb-4 flex items-center justify-center">
                       <Building2 className="h-10 w-10 text-slate-400" />
                     </div>
                     <p className="text-lg font-medium text-slate-700 mb-2">
@@ -180,7 +180,7 @@ export default function Home() {
             ))}
           </Tabs>
 
-          <div className="text-center mt-10">
+          <div className="text-left mt-10">
             <Button 
               size="lg" 
               onClick={() => {
@@ -265,7 +265,7 @@ export default function Home() {
       {/* Testimonials Section */}
       <div className="py-16 md:py-20 bg-gradient-to-b from-slate-50/50 to-white">
         <div className="container">
-          <div className="text-center mb-12">
+          <div className="text-left mb-12">
             <div className="inline-flex items-center gap-2 bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 rounded-full px-4 py-2 mb-4">
               <span className="text-2xl">⭐</span>
               <span className="text-sm font-semibold text-yellow-700">Trusted by Thousands</span>
@@ -273,7 +273,7 @@ export default function Home() {
             <h2 className="text-3xl md:text-4xl font-bold mb-4 bg-gradient-to-r from-slate-900 via-[#2774AE] to-slate-900 bg-clip-text text-transparent">
               What Our Clients Say
             </h2>
-            <p className="text-slate-600 text-lg max-w-2xl mx-auto leading-relaxed">
+            <p className="text-slate-600 text-lg max-w-2xl leading-relaxed">
               Real experiences from people who found their dream homes with us
             </p>
           </div>

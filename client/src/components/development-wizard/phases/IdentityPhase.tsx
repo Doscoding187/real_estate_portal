@@ -1,5 +1,6 @@
 import React, { useRef } from 'react';
 import { useDevelopmentWizard, type MediaItem } from '@/hooks/useDevelopmentWizard';
+import { useWizardNavigation } from '@/hooks/useWizardNavigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -7,7 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { Upload, X, Image as ImageIcon, MapPin, Building2 } from 'lucide-react';
+import { Upload, X, Image as ImageIcon, MapPin, Building2, ArrowLeft, ArrowRight } from 'lucide-react';
 import { LocationMapPicker, type LocationData } from '@/components/location/LocationMapPicker';
 
 export function IdentityPhase() {
@@ -20,6 +21,8 @@ export function IdentityPhase() {
     setPhase, 
     validatePhase 
   } = useDevelopmentWizard();
+  
+  const navigation = useWizardNavigation();
 
 
 
@@ -39,12 +42,21 @@ export function IdentityPhase() {
   };
 
   const handleNext = () => {
-    const { isValid, errors } = validatePhase(1);
+    const { isValid, errors } = validatePhase(3); // Phase 3: Identity
     if (isValid) {
-      setPhase(2);
+      // Skip to Estate Profile (4) or Amenities (5) based on config
+      if (navigation.shouldShowEstateProfile) {
+        setPhase(4);
+      } else {
+        setPhase(5); // Skip to Amenities
+      }
     } else {
       errors.forEach(e => toast.error(e));
     }
+  };
+  
+  const handleBack = () => {
+    setPhase(2); // Back to Residential Config
   };
 
   return (
@@ -104,6 +116,73 @@ export function IdentityPhase() {
                   value={developmentData.description}
                   onChange={(e) => setIdentity({ description: e.target.value })}
                 />
+              </div>
+
+              {/* Project Status Section */}
+              <div className="pt-4 border-t border-slate-100">
+                <h4 className="font-medium text-slate-700 mb-4">Project Overview</h4>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="projectStatus" className="text-sm font-medium text-slate-700">
+                      Project Status
+                    </Label>
+                    <Select 
+                      value={developmentData.projectStatus} 
+                      onValueChange={(val: any) => setIdentity({ projectStatus: val })}
+                    >
+                      <SelectTrigger className="h-11 border-slate-200">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="pre_launch">Pre-Launch</SelectItem>
+                        <SelectItem value="under_construction">Under Construction</SelectItem>
+                        <SelectItem value="nearing_completion">Nearing Completion</SelectItem>
+                        <SelectItem value="ready_to_move">Ready to Move</SelectItem>
+                        <SelectItem value="completed">Completed</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="possessionDate" className="text-sm font-medium text-slate-700">
+                      Expected Possession
+                    </Label>
+                    <Input 
+                      id="possessionDate"
+                      type="month"
+                      value={developmentData.possessionDate || ''}
+                      onChange={(e) => setIdentity({ possessionDate: e.target.value })}
+                      className="h-11 border-slate-200"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4 mt-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="totalUnits" className="text-sm font-medium text-slate-700">
+                      Total Units
+                    </Label>
+                    <Input 
+                      id="totalUnits"
+                      type="number"
+                      placeholder="e.g. 120"
+                      value={developmentData.totalUnits || ''}
+                      onChange={(e) => setIdentity({ totalUnits: parseInt(e.target.value) || undefined })}
+                      className="h-11 border-slate-200"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="totalArea" className="text-sm font-medium text-slate-700">
+                      Development Area (m²)
+                    </Label>
+                    <Input 
+                      id="totalArea"
+                      type="number"
+                      placeholder="e.g. 25000"
+                      value={developmentData.totalDevelopmentArea || ''}
+                      onChange={(e) => setIdentity({ totalDevelopmentArea: parseInt(e.target.value) || undefined })}
+                      className="h-11 border-slate-200"
+                    />
+                  </div>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -172,13 +251,22 @@ export function IdentityPhase() {
         </div>
       </div>
 
-      <div className="flex justify-end pt-8 mt-8 border-t border-slate-200">
+      <div className="flex justify-between pt-8 mt-8 border-t border-slate-200">
+        <Button 
+          variant="outline"
+          onClick={handleBack}
+          className="px-6 h-11 border-slate-300"
+        >
+          <ArrowLeft className="w-4 h-4 mr-2" />
+          Back
+        </Button>
         <Button 
           onClick={handleNext} 
           size="lg" 
           className="px-8 h-11 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 shadow-md hover:shadow-lg transition-all duration-300"
         >
-          Continue to Media
+          {navigation.shouldShowEstateProfile ? 'Continue to Estate Profile' : 'Continue to Amenities'}
+          <ArrowRight className="w-4 h-4 ml-2" />
         </Button>
       </div>
     </div>

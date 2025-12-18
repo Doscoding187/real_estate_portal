@@ -27,7 +27,7 @@ export function AmenitiesSection({ location }: AmenitiesSectionProps) {
         {/* Dynamic Map Section */}
         {location && location.latitude && location.longitude && (
           <div>
-             <h2 className="text-2xl font-bold mb-6 text-center">Lifestyle & Amenities</h2>
+             <h2 className="text-2xl font-bold mb-6 text-left">Lifestyle & Amenities</h2>
              <NearbyAmenitiesMap 
                center={[Number(location.latitude), Number(location.longitude)]}
                radius={2}
@@ -38,12 +38,12 @@ export function AmenitiesSection({ location }: AmenitiesSectionProps) {
 
         {/* Static Services Section */}
         <div>
-          <h2 className="text-2xl font-bold mb-8 text-center">Property Services</h2>
+          <h2 className="text-2xl font-bold mb-8 text-left">Property Services</h2>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
             {services.map((service, idx) => (
               <div
                 key={idx}
-                className="flex flex-col items-center text-center p-6 rounded-xl bg-slate-50 hover:bg-white hover:shadow-lg transition-all cursor-pointer group border border-slate-100"
+                className="flex flex-col items-start text-left p-6 rounded-xl bg-slate-50 hover:bg-white hover:shadow-lg transition-all cursor-pointer group border border-slate-100"
               >
                 <div className="text-4xl mb-3 group-hover:scale-110 transition-transform">
                   {service.icon}

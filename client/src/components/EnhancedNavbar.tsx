@@ -276,12 +276,12 @@ export function EnhancedNavbar() {
 
   return (
     <nav className="bg-white/95 backdrop-blur-md shadow-sm sticky top-0 z-50 border-b border-gray-200/50">
-      <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="w-full" style={{ padding: '0 80px' }}>
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link href="/">
             <div className="flex items-center gap-2 cursor-pointer group">
-              <span className="text-2xl font-bold tracking-tight text-blue-600 group-hover:text-blue-700 transition-colors">
+              <span className="text-xl md:text-2xl font-bold tracking-tight text-blue-600 group-hover:text-blue-700 transition-colors">
                 Property Listify
               </span>
             </div>
@@ -539,53 +539,29 @@ export function EnhancedNavbar() {
                   </Button>
                 </Link>
               </NavigationMenuItem>
-
-              {/* Advertise Button - Enhanced CTA */}
-              <NavigationMenuItem>
-                <Link href="/advertise">
-                  <Button
-                    size="sm"
-                    className={`
-                      ${isAdvertisePage 
-                        ? 'bg-gradient-to-r from-blue-800 to-blue-900 ring-2 ring-blue-400 ring-offset-2' 
-                        : 'bg-gradient-to-r from-blue-700 to-blue-800 hover:from-blue-800 hover:to-blue-900'
-                      }
-                      text-white shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-200 font-bold border border-blue-600
-                    `}
-                    aria-current={isAdvertisePage ? 'page' : undefined}
-                  >
-                    <Megaphone className="h-4 w-4 mr-2" />
-                    Advertise with us
-                  </Button>
-                </Link>
-              </NavigationMenuItem>
-
-              {/* Data Badge - Removed */}
-              {/* <NavigationMenuItem>
-                <Link href="/explore">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="bg-emerald-600 text-white border-emerald-600 hover:bg-emerald-700 hover:text-white ml-2"
-                  >
-                    Data
-                  </Button>
-                </Link>
-              </NavigationMenuItem> */}
-
-              {/* Intelligence Link - Removed */}
-              {/* <NavigationMenuItem>
-                <Link href="/explore">
-                  <NavigationMenuLink className="px-4 py-2 text-white hover:text-white/80 transition-colors">
-                    Intelligence
-                  </NavigationMenuLink>
-                </Link>
-              </NavigationMenuItem> */}
             </NavigationMenuList>
           </NavigationMenu>
 
           {/* Right Side Actions */}
           <div className="flex items-center gap-3">
+            {/* Advertise Button - Enhanced CTA */}
+            <Link href="/advertise">
+              <Button
+                size="sm"
+                className={`
+                  ${isAdvertisePage 
+                    ? 'bg-gradient-to-r from-blue-800 to-blue-900 ring-2 ring-blue-400 ring-offset-2' 
+                    : 'bg-gradient-to-r from-blue-700 to-blue-800 hover:from-blue-800 hover:to-blue-900'
+                  }
+                  text-white shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-200 font-bold border border-blue-600
+                `}
+                aria-current={isAdvertisePage ? 'page' : undefined}
+              >
+                <Megaphone className="h-4 w-4 mr-2" />
+                Advertise with us
+              </Button>
+            </Link>
+
             {/* Favorites */}
             {!!user && (
               <Link href="/favorites">

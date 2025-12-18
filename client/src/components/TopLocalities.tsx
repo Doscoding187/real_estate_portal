@@ -252,8 +252,8 @@ export function TopLocalities({
         </div>
 
         {/* City Tabs */}
-        <div className="flex justify-center mb-10">
-          <div className="inline-flex flex-wrap justify-center gap-2 bg-white/80 backdrop-blur-sm p-2 rounded-2xl shadow-lg border border-slate-200/60 h-auto">
+        <div className="flex justify-start mb-10">
+          <div className="inline-flex flex-wrap justify-start gap-2 bg-white/80 backdrop-blur-sm p-2 rounded-2xl shadow-lg border border-slate-200/60 h-auto">
             {cities.map(city => (
               <button
                 key={city}

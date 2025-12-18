@@ -185,7 +185,7 @@ export function FinalisationPhase() {
 
         {/* Actions */}
         <div className="flex justify-between pt-4 border-t">
-          <Button variant="outline" onClick={() => setPhase(4)} disabled={isSubmitting}>
+          <Button variant="outline" onClick={() => setPhase(7)} disabled={isSubmitting}>
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back
           </Button>

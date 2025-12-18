@@ -66,10 +66,10 @@ export function LocationPropertyTypeExplorer({
     <section className="py-16 bg-gradient-to-b from-white to-muted/20">
       <div className="container">
         <div className="mb-12">
-          <h2 className="text-2xl md:text-3xl font-bold mb-3 text-center">
+          <h2 className="text-2xl md:text-3xl font-bold mb-3 text-left">
             Explore Property Categories in {locationName}
           </h2>
-          <p className="text-muted-foreground text-base text-center max-w-2xl mx-auto">
+          <p className="text-muted-foreground text-base text-left max-w-2xl">
             Find the perfect property type that suits your needs in this location
           </p>
         </div>
@@ -83,7 +83,7 @@ export function LocationPropertyTypeExplorer({
               <div
                 key={item.type}
                 onClick={() => handleTypeClick(item.type)}
-                className="group relative flex flex-col items-center text-center p-6 rounded-2xl bg-white hover:bg-gradient-to-br hover:from-white hover:to-primary/5 shadow-sm hover:shadow-xl transition-all duration-300 border border-gray-100 hover:border-primary/20 overflow-hidden cursor-pointer"
+                className="group relative flex flex-col items-start text-left p-6 rounded-2xl bg-white hover:bg-gradient-to-br hover:from-white hover:to-primary/5 shadow-sm hover:shadow-xl transition-all duration-300 border border-gray-100 hover:border-primary/20 overflow-hidden cursor-pointer"
               >
                 {/* Gradient background on hover */}
                 <div className={`absolute inset-0 bg-gradient-to-br ${config.gradient} opacity-0 group-hover:opacity-5 transition-opacity duration-300`} />

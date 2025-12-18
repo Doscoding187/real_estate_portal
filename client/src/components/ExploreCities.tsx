@@ -298,7 +298,7 @@ export function ExploreCities({ provinceSlug, title, description, customLocation
               {filteredCities.map(city => (
                 <div 
                   key={city.slug} 
-                  className="flex-[0_0_85%] sm:flex-[0_0_50%] md:flex-[0_0_33.333%] lg:flex-[0_0_25%] min-w-0"
+                  className="flex-[0_0_85%] sm:flex-[0_0_50%] md:flex-[0_0_33.333%] lg:flex-[0_0_16.666%] min-w-0"
                 >
                   <Link href={`/${city.provinceSlug}/${city.slug}`}>
                     <Card className="h-full hover:shadow-xl transition-all duration-300 cursor-pointer group border-0 bg-muted/30 hover:bg-white overflow-hidden">

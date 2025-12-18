@@ -1,5 +1,11 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import type {
+  DevelopmentType,
+  ResidentialType,
+  CommunityType,
+  SecurityFeature,
+} from '@/types/wizardTypes';
 
 // Media Item Interface
 // Media Item Interface
@@ -89,14 +95,35 @@ export interface UnitType {
   
   // Base Configuration
   name: string; // "2 Bedroom Apartment", "60m² Simplex"
+  description?: string; // Marketing description for this unit type
   usageType?: 'residential' | 'commercial'; // For Mixed-Use
   bedrooms: number;
   bathrooms: number;
-  parking: 'none' | '1' | '2' | 'carport' | 'garage';
-  unitSize?: number; // m²
-  yardSize?: number; // m²
-  basePriceFrom: number;
+  
+  // Enhanced Parking
+  parkingType: 'none' | 'open_bay' | 'covered_bay' | 'carport' | 'single_garage' | 'double_garage' | 'tandem_garage';
+  parkingBays: number; // 0-4
+  
+  // Size Range (for variations within unit type)
+  sizeFrom: number; // Min m²
+  sizeTo: number; // Max m² (can equal sizeFrom if fixed size)
+  yardSize?: number; // m² (for townhouses/freeholds)
+  
+  // Price Range
+  priceFrom: number;
+  priceTo: number; // Can equal priceFrom if fixed price
+  
+  // Availability Tracking
+  totalUnits: number; // Total units of this type
+  availableUnits: number; // Currently available
+  reservedUnits: number; // Under offer / held
+  // soldUnits = totalUnits - availableUnits - reservedUnits (calculated)
+  
+  // Legacy compatibility (deprecated, use priceFrom/priceTo)
+  basePriceFrom?: number;
   basePriceTo?: number;
+  unitSize?: number;
+  parking?: 'none' | '1' | '2' | 'carport' | 'garage';
   
   // Amenities (Two-Level System)
   amenities: {
@@ -142,8 +169,42 @@ export interface UnitType {
 // Development Wizard State Interface
 export interface DevelopmentWizardState {
   // Wizard Flow
-  currentPhase: number; // 1-5
+  currentPhase: number; // Legacy numeric (to be migrated to keyed)
   currentStep: number; // Internal step within a phase
+  
+  // NEW: Development Type (Step 0)
+  developmentType: DevelopmentType;
+  
+  // NEW: Residential Configuration (Step 1)
+  residentialConfig: {
+    residentialType: ResidentialType | null;
+    communityTypes: CommunityType[];
+    securityFeatures: SecurityFeature[];
+  };
+  
+  // NEW: Land Configuration (Step 1 for Land)
+  landConfig: {
+    landType: string | null;
+    infrastructure: string[];
+  };
+  
+  // NEW: Commercial Configuration (Step 1 for Commercial)
+  commercialConfig: {
+    commercialType: string | null;
+    features: string[];
+  };
+  
+  // NEW: Estate Profile (Conditional, Step 4)
+  estateProfile: {
+    classification: string;
+    hasHOA: boolean;
+    levyRange: { min: number; max: number };
+    architecturalGuidelines: boolean;
+    estateAmenities: string[];
+  };
+  
+  // NEW: Selected Amenities (keys from registry)
+  selectedAmenities: string[];
   
   // Phase 1: Identity
   developmentData: {
@@ -151,6 +212,12 @@ export interface DevelopmentWizardState {
     parentDevelopmentId?: string; // For phases/extensions
     name: string;
     description: string;
+    
+    // Project Overview (from research: SquareYards, Property24)
+    projectStatus: 'pre_launch' | 'under_construction' | 'ready_to_move' | 'nearing_completion' | 'completed';
+    possessionDate?: string; // Expected or actual possession date (ISO string)
+    totalUnits?: number; // Total units across all types
+    totalDevelopmentArea?: number; // Total area in m²
     
     // Location
     location: {
@@ -226,6 +293,15 @@ export interface DevelopmentWizardState {
   setOverview: (data: Partial<DevelopmentWizardState['overview']>) => void;
   setFinalisation: (data: Partial<DevelopmentWizardState['finalisation']>) => void;
   
+  // NEW: Configuration Actions
+  setDevelopmentType: (type: DevelopmentType) => void;
+  setResidentialConfig: (data: Partial<DevelopmentWizardState['residentialConfig']>) => void;
+  setLandConfig: (data: Partial<DevelopmentWizardState['landConfig']>) => void;
+  setCommercialConfig: (data: Partial<DevelopmentWizardState['commercialConfig']>) => void;
+  setEstateProfile: (data: Partial<DevelopmentWizardState['estateProfile']>) => void;
+  setSelectedAmenities: (amenities: string[]) => void;
+  toggleAmenity: (key: string) => void;
+  
   // Unit Actions
   addUnitType: (unitType: Omit<UnitType, 'id'>) => void;
   updateUnitType: (id: string, updates: Partial<UnitType>) => void;
@@ -259,10 +335,9 @@ export interface DevelopmentWizardState {
   // Legacy Unit Actions
   deleteUnitType: (id: string) => void;
   duplicateUnitType: (id: string) => void;
+  updateMedia: (id: string, updates: Partial<MediaItem>) => void;
   
-  // Legacy Misc
-  setDevelopmentType: (type: 'master' | 'phase') => void;
-  developmentType: 'master' | 'phase';
+  // Legacy Misc (removed legacy developmentType - now uses DevelopmentType enum)
   media: MediaItem[];
   
   // Validation Stubs
@@ -276,10 +351,48 @@ const initialState: Omit<DevelopmentWizardState, keyof ReturnType<typeof createA
   currentPhase: 1,
   currentStep: 1,
   
+  // NEW: Development Type
+  developmentType: 'residential',
+  
+  // NEW: Residential Configuration
+  residentialConfig: {
+    residentialType: null,
+    communityTypes: [],
+    securityFeatures: [],
+  },
+  
+  // NEW: Land Configuration
+  landConfig: {
+    landType: null,
+    infrastructure: [],
+  },
+  
+  // NEW: Commercial Configuration
+  commercialConfig: {
+    commercialType: null,
+    features: [],
+  },
+  
+  // NEW: Estate Profile
+  estateProfile: {
+    classification: '',
+    hasHOA: false,
+    levyRange: { min: 0, max: 0 },
+    architecturalGuidelines: false,
+    estateAmenities: [],
+  },
+  
+  // NEW: Selected Amenities
+  selectedAmenities: [],
+  
   developmentData: {
     nature: 'new',
     name: '',
     description: '',
+    projectStatus: 'pre_launch',
+    possessionDate: undefined,
+    totalUnits: undefined,
+    totalDevelopmentArea: undefined,
     location: {
       latitude: '',
       longitude: '',
@@ -372,6 +485,33 @@ const createActions = (
     finalisation: { ...(state.finalisation || {}), ...data }
   })),
 
+  // Configuration Actions
+  setDevelopmentType: (type: DevelopmentType) => set({ developmentType: type }),
+  
+  setResidentialConfig: (data: Partial<DevelopmentWizardState['residentialConfig']>) => set((state) => ({
+    residentialConfig: { ...state.residentialConfig, ...data }
+  })),
+  
+  setLandConfig: (data: Partial<DevelopmentWizardState['landConfig']>) => set((state) => ({
+    landConfig: { ...state.landConfig, ...data }
+  })),
+  
+  setCommercialConfig: (data: Partial<DevelopmentWizardState['commercialConfig']>) => set((state) => ({
+    commercialConfig: { ...state.commercialConfig, ...data }
+  })),
+  
+  setEstateProfile: (data: Partial<DevelopmentWizardState['estateProfile']>) => set((state) => ({
+    estateProfile: { ...state.estateProfile, ...data }
+  })),
+  
+  setSelectedAmenities: (amenities: string[]) => set({ selectedAmenities: amenities }),
+  
+  toggleAmenity: (key: string) => set((state) => ({
+    selectedAmenities: state.selectedAmenities.includes(key)
+      ? state.selectedAmenities.filter(a => a !== key)
+      : [...state.selectedAmenities, key]
+  })),
+
   // Unit Actions
   addUnitType: (unitType: Omit<UnitType, 'id'>) => set((state) => ({
     unitTypes: [...state.unitTypes, { 
@@ -454,8 +594,8 @@ const createActions = (
        if ((state.unitTypes?.length || 0) === 0) {
          errors.push('Add at least one unit type');
        } else if (state.unitTypes) {
-         // Check if any unit has 0 price
-         const validPrices = state.unitTypes.every(u => u.basePriceFrom > 0);
+         // Check if any unit has 0 price (support both new and legacy fields)
+         const validPrices = state.unitTypes.every(u => (u.priceFrom || u.basePriceFrom || 0) > 0);
          if (!validPrices) errors.push('All unit types must have a base price');
        }
     }
@@ -545,6 +685,10 @@ const createActions = (
               nature: 'new',
               name: data.name || '',
               description: data.description || '',
+              projectStatus: data.projectStatus || 'pre_launch',
+              possessionDate: data.possessionDate,
+              totalUnits: data.totalUnits,
+              totalDevelopmentArea: data.totalDevelopmentArea,
               location: {
                   address: data.address || '',
                   city: data.city || '',
@@ -746,8 +890,50 @@ const createActions = (
   
   duplicateUnitType: (id: string) => { /* No-op for now */ },
   
-  setDevelopmentType: (t: 'master' | 'phase') => {}, // No-op
-  get developmentType() { return 'master' as const; },
+  updateMedia: (id: string, updates: Partial<MediaItem>) => set((state) => {
+    const media = state.developmentData?.media;
+    if (!media) return state;
+
+    const updateItem = (item: MediaItem) => item.id === id ? { ...item, ...updates } : item;
+
+    // Check if hero image matches
+    let heroImage = media.heroImage;
+    if (heroImage && heroImage.id === id) {
+        heroImage = { ...heroImage, ...updates };
+    }
+
+    return {
+      developmentData: {
+        ...state.developmentData,
+        media: {
+            heroImage,
+            photos: (media.photos || []).map(updateItem),
+            videos: (media.videos || []).map(updateItem),
+        }
+      }
+    };
+  }),
+  
+  // NEW: Configuration Actions
+  setDevelopmentType: (type: DevelopmentType) => set({ developmentType: type }),
+  
+  setResidentialConfig: (data: Partial<DevelopmentWizardState['residentialConfig']>) => set((state) => ({
+    residentialConfig: { ...state.residentialConfig, ...data }
+  })),
+  
+  setEstateProfile: (data: Partial<DevelopmentWizardState['estateProfile']>) => set((state) => ({
+    estateProfile: { ...state.estateProfile, ...data }
+  })),
+  
+  setSelectedAmenities: (amenities: string[]) => set({ selectedAmenities: amenities }),
+  
+  toggleAmenity: (key: string) => set((state) => {
+    const current = state.selectedAmenities || [];
+    if (current.includes(key)) {
+      return { selectedAmenities: current.filter(a => a !== key) };
+    }
+    return { selectedAmenities: [...current, key] };
+  }),
   
   // IMPORTANT: Media Getter that aggregates everything for the UI
   get media() { 

@@ -17,18 +17,19 @@ export function ClassificationPhase() {
   } = useDevelopmentWizard();
 
   const handleNext = () => {
-    const { isValid, errors } = validatePhase(2);
+    // Current phase is 3 (Classification)
+    const { isValid, errors } = validatePhase(3);
     if (isValid) {
-      setPhase(3);
+      setPhase(4);
     } else {
       errors.forEach(e => toast.error(e));
     }
   };
 
   const types = [
-    { id: 'residential', label: 'Residential', icon: Home, desc: 'Apartments, houses, or complexes' },
-    { id: 'commercial', label: 'Commercial', icon: Building2, desc: 'Office parks, retail, or industrial' },
-    { id: 'mixed', label: 'Mixed Use', icon: Layers, desc: 'Combination of residential and commercial' },
+    { id: 'residential', label: 'Residential', icon: Home, desc: 'Apartments, houses, or estates' },
+    { id: 'commercial', label: 'Commercial', icon: Building2, desc: 'Office, retail, or industrial' },
+    { id: 'mixed', label: 'Mixed Use', icon: Layers, desc: 'Combination of residential & commercial' },
     { id: 'land', label: 'Vacant Land', icon: Trees, desc: 'Plots, erven, or farm land' },
   ];
 
@@ -158,7 +159,7 @@ export function ClassificationPhase() {
       <div className="flex justify-between pt-8 mt-8 border-t border-slate-200">
         <Button 
           variant="outline" 
-          onClick={() => setPhase(1)}
+          onClick={() => setPhase(2)}
           className="px-6 h-11 border-slate-300"
         >
           Back

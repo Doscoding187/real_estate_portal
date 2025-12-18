@@ -23,12 +23,12 @@ export function FeaturedDevelopers({ locationType, locationId, locationName }: F
     <div className="py-12 bg-slate-50">
       <div className="container">
         <div className="mb-8">
-          <div className="flex items-center gap-2 mb-2 text-blue-600 justify-center">
+          <div className="flex items-center gap-2 mb-2 text-blue-600 justify-start">
             <Building2 className="h-5 w-5" />
             <span className="font-semibold uppercase tracking-wider text-sm">Trusted Partners</span>
           </div>
-          <h2 className="text-3xl font-bold text-slate-900 text-center">Developer Showcase</h2>
-          <p className="text-slate-500 mt-2 max-w-2xl mx-auto text-center">
+          <h2 className="text-3xl font-bold text-slate-900 text-left">Developer Showcase</h2>
+          <p className="text-slate-500 mt-2 max-w-2xl text-left">
             Leading developers building quality homes in {locationName}
           </p>
         </div>
@@ -37,7 +37,7 @@ export function FeaturedDevelopers({ locationType, locationId, locationName }: F
           {developers.map((dev) => (
             <Link key={dev.id} href={`/developer/${dev.slug}`}>
               <Card className="hover:shadow-lg transition-all cursor-pointer group h-full border-transparent hover:border-primary/20">
-                <CardContent className="p-6 flex flex-col items-center text-center h-full justify-center">
+                <CardContent className="p-6 flex flex-col items-start text-left h-full justify-start">
                   <div className="w-24 h-24 mb-4 rounded-full bg-slate-100 flex items-center justify-center overflow-hidden border border-slate-100 group-hover:border-primary/20 transition-colors">
                     {dev.logo ? (
                       <img src={dev.logo} alt={dev.name} className="w-full h-full object-contain p-2" />

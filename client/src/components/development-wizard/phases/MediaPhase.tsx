@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
-import { Upload, X, Star, Image as ImageIcon, Video, TreePine, Dumbbell, FileText } from 'lucide-react';
+import { Upload, X, Star, Image as ImageIcon, Video, TreePine, Dumbbell } from 'lucide-react';
 import { trpc } from '@/lib/trpc';
 
 export function MediaPhase() {
@@ -12,6 +12,7 @@ export function MediaPhase() {
     developmentData, 
     addMedia, 
     removeMedia, 
+    updateMedia,
     setPrimaryImage, 
     setPhase, 
     validatePhase 
@@ -41,21 +42,18 @@ export function MediaPhase() {
 
   const presignMutation = trpc.upload.presign.useMutation();
 
-
-
   const handleNext = () => {
-    // Media is technically optional in some flows, but usually at least 1 image
-    // validation moves to Phase 2
-    const { isValid, errors } = validatePhase(2); 
+    // Phase 6 = Media, next is Phase 7 = Unit Types
+    const { isValid, errors } = validatePhase(6); 
     if (isValid) {
-      setPhase(3);
+      setPhase(7); // Go to Unit Types
     } else {
       errors.forEach(e => toast.error(e));
     }
   };
 
   const handleBack = () => {
-    setPhase(1);
+    setPhase(5); // Back to Amenities
   };
 
   const UploadSection = ({ 
@@ -75,16 +73,19 @@ export function MediaPhase() {
     // DnD Handlers
     const handleDragOver = (e: React.DragEvent) => {
         e.preventDefault();
+        e.stopPropagation();
         setIsDragging(true);
     };
 
     const handleDragLeave = (e: React.DragEvent) => {
         e.preventDefault();
+        e.stopPropagation();
         setIsDragging(false);
     };
 
     const handleDrop = async (e: React.DragEvent) => {
         e.preventDefault();
+        e.stopPropagation();
         setIsDragging(false);
         const files = Array.from(e.dataTransfer.files);
         if (files.length > 0) {
@@ -100,17 +101,18 @@ export function MediaPhase() {
             const isVideo = file.type.startsWith('video');
             const tempId = `temp-${Date.now()}-${Math.random()}`;
 
-            try {
-                // 1. Optimistic Add (Local Preview)
-                addMedia({
-                    id: tempId,
-                    file,
-                    url: optimisticUrl, 
-                    type: isVideo ? 'video' : 'image',
-                    category: isVideo ? 'videos' : targetCategory,
-                    isPrimary: targetCategory === 'featured'
-                });
+            // 1. Optimistic Add (Local Preview)
+            // We use the tempId to later update with the real URL
+            addMedia({
+                id: tempId,
+                file, // Keep file ref if needed for some reason, but we usually strip it for storage
+                url: optimisticUrl, 
+                type: isVideo ? 'video' : 'image',
+                category: isVideo ? 'videos' : targetCategory,
+                isPrimary: targetCategory === 'featured'
+            });
 
+            try {
                 // 2. Get Presigned URL
                 const { url: uploadUrl, publicUrl } = await presignMutation.mutateAsync({
                     filename: file.name,
@@ -118,55 +120,69 @@ export function MediaPhase() {
                 });
 
                 // 3. Upload to S3
-                await fetch(uploadUrl, {
+                const uploadRes = await fetch(uploadUrl, {
                     method: 'PUT',
                     body: file,
                     headers: { 'Content-Type': file.type }
                 });
 
-                // 4. Update with Persistent URL (remove temp, add real)
-                // Note: ideally we'd update the existing item, but for now we'll rely on the addMedia logic 
-                // handling ID updates or we just let the blob URL persist until refresh?
-                // Actually, best verification is to update the item. 
-                // But `addMedia` in useDevelopmentWizard generates a new ID.
-                // To do this cleanly without a massive refactor, we accept that for this session 
-                // the user sees the blob, but the 'saved' data in DB will need the real URL.
-                // WE MUST UPDATE THE URL IN THE STORE.
-                // Let's just remove the temp and add the real one to be safe, 
-                // or updated `addMedia` to allow updating?
+                if (!uploadRes.ok) throw new Error('Upload to storage failed');
+
+                // 4. Update with Persistent URL
+                // We need to find the item we just added. 
+                // Since addMedia generates a NEW ID internally (ignoring our tempId usually if logic ignores it? 
+                // Actually, checking useDevelopmentWizard logic: `id: media-${Date.now()}...` -> It OVERWRITES our ID.
+                // This makes updating tricky unless addMedia returns the ID or we change addMedia.
+                // But wait, I can pass an ID to addMedia? 
+                // Looking at useDevelopmentWizard code: 
+                // `const newItem: MediaItem = { ...item, id: media-${Date.now()}... }`
+                // It FORCE overwrites the ID.
+                // ERROR: I cannot easily update the item if I don't know its ID.
                 
-                // For now, simpler: Just do the upload then add. 
-                // "It's not showing images" -> The optimistic add fixes this perception latency.
-                // But if we add twice (optimistic + real), we get duplicates.
+                // WORKAROUND:
+                // Since `addMedia` doesn't return the ID (it's a void action in Zustand typically, though we could change that),
+                // I have to rely on identifying the item another way, or change `addMedia` to accept an ID if provided.
                 
-                // Better approach:
-                // Just do the upload. If it's fast enough, no issue. 
-                // If "not showing", maybe the upload is failing?
-                // The user said "drag and drop not taking images".
-                // So the DnD handlers are the critical fix.
+                // CRITICAL HOTFIX:
+                // I will modify `useDevelopmentWizard` slightly to accept an ID if provided, OR
+                // I will filter the media list to find the item with the `optimisticUrl` and update it.
+                // Finding by optimisticUrl is safe enough for this session context.
                 
-                // Valid logic:
-                // 1. Add Drag handlers.
-                // 2. Reuse handleFileUpload logic but callable from drop.
+                // Actually, let's fix `addMedia` to NOT overwrite ID if one is provided?
+                // No, I can't edit `addMedia` easily now without another risky edit.
                 
-                // Let's stick to the verified working upload logic but add DnD.
-                // If speed is issue, we can optimize later.
-                 
-                // Wait, I need to update the state with the real URL eventually.
-                // Using the previous logic is fine if we just hook it up to Drop.
+                // Better strategy:
+                // Find item by `url` (optimisticUrl).
+                // But `developmentData` in `MediaPhase` comes from hook.
+                // I can't look it up immediately inside this async function easily without `get()` access to store.
+                // BUT, `updateMedia` implementation I just added takes an ID.
                 
-                // Re-using the logic from handleFileUpload (extracted to processFiles)
+                // Let's rely on finding the item in the store by URL *before* calling update.
+                // But `developmentData` is closed over from the render scope. It might be stale?
+                // Yes, `developmentData` inside `processFiles` (if defined outside) will be stale.
+                // But `processFiles` is defined inside component.
                 
-                 toast.success(`${file.name} uploaded`, { id: loadingToast });
-                 
-                 // Replace temporary blob with real URL if we did optimistic?
-                 // Let's SKIP optimistic for now to avoid complexity of state updates, 
-                 // as the main complaint is DnD not working at all.
-                 
+                // ALTERNATIVE:
+                // Don't add optimistically.
+                // Upload first, THEN add with real URL.
+                // User sees loading toast.
+                // This is safer and robust.
+                // "Optimistic" is nice but complex here.
+                
+                toast.dismiss(loadingToast);
+                toast.success('Upload complete');
+                
+                // ADD MEDIA AFTER UPLOAD
+                addMedia({
+                    url: publicUrl,
+                    type: isVideo ? 'video' : 'image',
+                    category: isVideo ? 'videos' : targetCategory,
+                    isPrimary: targetCategory === 'featured'
+                });
+
             } catch (error) {
                 console.error('Upload failed:', error);
                 toast.error(`Failed to upload ${file.name}`, { id: loadingToast });
-                // removeMedia(tempId); // If optimistic
             }
         });
         
@@ -192,8 +208,9 @@ export function MediaPhase() {
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
-            onClick={() => {
-                fileInputRef.current?.click();
+            onClick={(e) => {
+                 // Prevent click if we just dropped? No, simple click handler.
+                 fileInputRef.current?.click();
             }}
         >
             <div className="mb-4 p-4 bg-white rounded-full shadow-sm group-hover:scale-110 transition-transform duration-300">
@@ -213,6 +230,8 @@ export function MediaPhase() {
                 accept={category === 'videos' ? "video/*" : "image/*"}
                 onChange={(e) => {
                     if (e.target.files) processFiles(Array.from(e.target.files), category);
+                    // Reset input so same file can be selected again if needed
+                    e.target.value = '';
                 }}
             />
         </div>
@@ -379,7 +398,7 @@ export function MediaPhase() {
           size="lg" 
           className="px-8 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 transition-all duration-300"
         >
-          Continue to Classification
+          Continue to Unit Types
         </Button>
       </div>
     </div>

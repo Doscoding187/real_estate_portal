@@ -60,7 +60,7 @@ export default function CityPage({ params }: { params: { province: string; city:
     
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
+        <div className="text-left">
           <h1 className="text-2xl font-bold mb-2">Location Not Found</h1>
           <p className="text-slate-500">We couldn't find the city you're looking for.</p>
           {error && <p className="text-red-500 text-sm mt-2">{error.message}</p>}
@@ -89,7 +89,7 @@ export default function CityPage({ params }: { params: { province: string; city:
     console.error("[CityPage] City data is incomplete:", data);
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
+        <div className="text-left">
           <h1 className="text-2xl font-bold mb-2">City Data Unavailable</h1>
           <p className="text-slate-500">The city data is temporarily unavailable. Please try again later.</p>
         </div>
@@ -268,7 +268,7 @@ export default function CityPage({ params }: { params: { province: string; city:
 
         buyerCTA={
             // Temporary simple CTA until Phase 3 specific component
-            <div className="py-8 text-center bg-blue-50 rounded-lg mx-4 md:mx-0">
+            <div className="py-8 text-left bg-blue-50 rounded-lg mx-4 md:mx-0">
                 <h3 className="text-xl font-bold mb-2">Looking for a new home in {city.name}?</h3>
                 <p className="mb-4 text-slate-600">Get alerts for new properties matching your criteria.</p>
                 <button className="px-6 py-2 bg-blue-600 text-white rounded font-medium hover:bg-blue-700">
