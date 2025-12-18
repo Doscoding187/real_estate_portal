@@ -131,10 +131,17 @@ export class DevelopmentService {
       return null;
     }
 
-    const phases = await db.query.developmentPhases.findMany({
-      where: eq(developmentPhases.developmentId, developmentId),
-      orderBy: [developmentPhases.phaseNumber],
-    });
+    // Try to get phases, but handle gracefully if table doesn't exist
+    let phases: any[] = [];
+    try {
+      phases = await db.query.developmentPhases.findMany({
+        where: eq(developmentPhases.developmentId, developmentId),
+        orderBy: [developmentPhases.phaseNumber],
+      });
+    } catch (error) {
+      console.warn('Could not fetch development phases (table may not exist):', error);
+      // Continue without phases - they're optional
+    }
 
     return {
       ...development,
@@ -586,12 +593,16 @@ export class DevelopmentService {
     const db = await getDb();
     if (!db) return [];
     
-    const phases = await db.query.developmentPhases.findMany({
-      where: eq(developmentPhases.developmentId, developmentId),
-      orderBy: [developmentPhases.phaseNumber],
-    });
-
-    return phases;
+    try {
+      const phases = await db.query.developmentPhases.findMany({
+        where: eq(developmentPhases.developmentId, developmentId),
+        orderBy: [developmentPhases.phaseNumber],
+      });
+      return phases;
+    } catch (error) {
+      console.warn('Could not fetch development phases:', error);
+      return []; // Return empty array if table doesn't exist
+    }
   }
 
   /**
