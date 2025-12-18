@@ -148,9 +148,9 @@ const DevelopmentsList: React.FC = () => {
                   <TableCell>
                     {getStatusBadge(dev)}
                   </TableCell>
-                  <TableCell className="font-medium">{dev.leads}</TableCell>
+                  <TableCell className="font-medium">{dev.leads ?? 0}</TableCell>
                   <TableCell className="text-muted-foreground">
-                    {dev.views.toLocaleString()}
+                    {(dev.views ?? 0).toLocaleString()}
                   </TableCell>
                   <TableCell>
                     <DropdownMenu>
