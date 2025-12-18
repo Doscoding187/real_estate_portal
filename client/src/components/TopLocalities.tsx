@@ -252,23 +252,25 @@ export function TopLocalities({
         </div>
 
         {/* City Tabs */}
-        <div className="flex flex-wrap gap-2 mb-8">
-          {cities.map(city => (
-            <button
-              key={city}
-              onClick={() => setSelectedCity(city)}
-              className={`
-                px-6 py-2.5 rounded-full text-sm font-medium transition-all duration-300 border
-                ${
-                  selectedCity === city
-                    ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white border-transparent shadow-md scale-105'
-                    : 'bg-white text-muted-foreground border-gray-200 hover:border-blue-200 hover:bg-blue-50 hover:text-blue-600'
-                }
-              `}
-            >
-              {city}
-            </button>
-          ))}
+        <div className="flex justify-center mb-10">
+          <div className="inline-flex flex-wrap justify-center gap-2 bg-white/80 backdrop-blur-sm p-2 rounded-2xl shadow-lg border border-slate-200/60 h-auto">
+            {cities.map(city => (
+              <button
+                key={city}
+                onClick={() => setSelectedCity(city)}
+                className={`
+                  px-5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-300
+                  ${
+                    selectedCity === city
+                      ? 'bg-gradient-to-r from-[#2774AE] to-[#2D68C4] text-white shadow-lg scale-105'
+                      : 'text-slate-600 hover:text-[#2774AE] hover:bg-blue-50/50'
+                  }
+                `}
+              >
+                {city}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Localities Carousel */}

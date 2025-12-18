@@ -224,23 +224,25 @@ export function DiscoverProperties({
         </div>
 
         {/* City Tabs */}
-        <div className="flex flex-wrap gap-3 mb-8">
-          {displayCities.map(city => (
-            <button
-              key={city}
-              onClick={() => setSelectedCity(city)}
-              className={`
-                px-8 py-3 rounded-full text-sm font-semibold transition-all duration-300 border
-                ${
-                  selectedCity === city
-                    ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white border-transparent shadow-lg scale-105 ring-2 ring-blue-200 ring-offset-2'
-                    : 'bg-white text-slate-600 border-slate-200 hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700 hover:shadow-md'
-                }
-              `}
-            >
-              {city}
-            </button>
-          ))}
+        <div className="flex justify-center mb-10">
+          <div className="inline-flex flex-wrap justify-center gap-2 bg-white/80 backdrop-blur-sm p-2 rounded-2xl shadow-lg border border-slate-200/60 h-auto">
+            {displayCities.map(city => (
+              <button
+                key={city}
+                onClick={() => setSelectedCity(city)}
+                className={`
+                  px-5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-300
+                  ${
+                    selectedCity === city
+                      ? 'bg-gradient-to-r from-[#2774AE] to-[#2D68C4] text-white shadow-lg scale-105'
+                      : 'text-slate-600 hover:text-[#2774AE] hover:bg-blue-50/50'
+                  }
+                `}
+              >
+                {city}
+              </button>
+            ))}
+          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">

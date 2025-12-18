@@ -1,11 +1,29 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useLocation } from 'wouter';
 import { EnhancedNavbar } from '@/components/EnhancedNavbar';
 import { EnhancedHero } from '@/components/EnhancedHero';
 import { SimpleDevelopmentCard } from '@/components/SimpleDevelopmentCard';
-import { ProspectTrigger } from '@/components/ProspectTrigger';
 import { Button } from '@/components/ui/button';
-import { Building2, Home as HomeIcon, Building, Warehouse, MapPin, Tractor, ArrowRight } from 'lucide-react';
+import { 
+  Building2, 
+  Home as HomeIcon, 
+  Building, 
+  Warehouse, 
+  MapPin, 
+  Tractor, 
+  ArrowRight,
+  ShieldCheck,
+  Users,
+  TrendingUp,
+  Award,
+  Search,
+  Handshake,
+  CheckCircle,
+  Sparkles,
+  Clock,
+  BadgeCheck,
+  Star
+} from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { PropertyInsights } from '@/components/PropertyInsights';
 import { DiscoverProperties } from '@/components/DiscoverProperties';
@@ -17,6 +35,56 @@ import { Footer } from '@/components/Footer';
 export default function Home() {
   const [, setLocation] = useLocation();
   const [selectedProvince, setSelectedProvince] = useState('Gauteng');
+  const [statsVisible, setStatsVisible] = useState(false);
+
+  // Animated counter hook
+  const useCounter = (end: number, duration: number = 2000) => {
+    const [count, setCount] = useState(0);
+
+    useEffect(() => {
+      if (!statsVisible) return;
+      
+      let startTime: number;
+      let animationFrame: number;
+
+      const animate = (currentTime: number) => {
+        if (!startTime) startTime = currentTime;
+        const progress = Math.min((currentTime - startTime) / duration, 1);
+        
+        setCount(Math.floor(progress * end));
+
+        if (progress < 1) {
+          animationFrame = requestAnimationFrame(animate);
+        }
+      };
+
+      animationFrame = requestAnimationFrame(animate);
+      return () => cancelAnimationFrame(animationFrame);
+    }, [end, duration, statsVisible]);
+
+    return count;
+  };
+
+  // Intersection observer for stats animation
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            setStatsVisible(true);
+          }
+        });
+      },
+      { threshold: 0.3 }
+    );
+
+    const statsElement = document.getElementById('stats-section');
+    if (statsElement) {
+      observer.observe(statsElement);
+    }
+
+    return () => observer.disconnect();
+  }, []);
 
   const provinces = [
     'Gauteng',
@@ -38,6 +106,7 @@ export default function Home() {
         city: 'Sandton, Johannesburg',
         priceRange: { min: 2500000, max: 5500000 },
         image: '/placeholders/development_placeholder_1_1763712033438.png',
+        isHotSelling: true,
       },
       {
         id: '2',
@@ -45,6 +114,7 @@ export default function Home() {
         city: 'Rosebank, Johannesburg',
         priceRange: { min: 1800000, max: 3200000 },
         image: '/placeholders/development_placeholder_3_1763712078958.png',
+        isHighDemand: true,
       },
       {
         id: '3',
@@ -68,6 +138,7 @@ export default function Home() {
         city: 'Camps Bay, Cape Town',
         priceRange: { min: 4500000, max: 8500000 },
         image: '/placeholders/development_placeholder_4_1763712099609.png',
+        isHotSelling: true,
       },
       {
         id: '6',
@@ -82,6 +153,7 @@ export default function Home() {
         city: 'Stellenbosch',
         priceRange: { min: 3500000, max: 6500000 },
         image: '/placeholders/development_placeholder_1_1763712033438.png',
+        isHighDemand: true,
       },
       {
         id: '8',
@@ -109,6 +181,11 @@ export default function Home() {
     ],
   };
 
+  const propertiesCount = useCounter(45000);
+  const usersCount = useCounter(120000);
+  const dealsCount = useCounter(8500);
+  const citiesCount = useCounter(250);
+
   return (
     <div className="min-h-screen bg-background">
       <EnhancedNavbar />
@@ -116,15 +193,183 @@ export default function Home() {
       {/* Enhanced Hero Section */}
       <EnhancedHero />
 
+      {/* Trust Indicators & Stats Section */}
+      <div id="stats-section" className="py-12 md:py-16 bg-gradient-to-b from-white via-blue-50/30 to-white relative overflow-hidden">
+        {/* Decorative background elements */}
+        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSAxMCAwIEwgMCAwIDAgMTAiIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzJENjhDNCIgc3Ryb2tlLW9wYWNpdHk9IjAuMDMiIHN0cm9rZS13aWR0aD0iMSIvPjwvcGF0dGVybj48L2RlZnM+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0idXJsKCNncmlkKSIvPjwvc3ZnPg==')] opacity-40"></div>
+        
+        <div className="container relative">
+          {/* Trust Badges */}
+          <div className="flex flex-wrap justify-center items-center gap-6 md:gap-12 mb-16">
+            <div className="flex items-center gap-3 px-6 py-3 bg-white rounded-2xl shadow-md border border-blue-100 hover:shadow-lg transition-all">
+              <ShieldCheck className="h-8 w-8 text-[#2774AE]" />
+              <div>
+                <p className="text-sm font-bold text-slate-900">Verified Listings</p>
+                <p className="text-xs text-slate-600">100% Authenticated</p>
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-3 px-6 py-3 bg-white rounded-2xl shadow-md border border-blue-100 hover:shadow-lg transition-all">
+              <Award className="h-8 w-8 text-[#2774AE]" />
+              <div>
+                <p className="text-sm font-bold text-slate-900">Award Winning</p>
+                <p className="text-xs text-slate-600">Best Portal 2024</p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3 px-6 py-3 bg-white rounded-2xl shadow-md border border-blue-100 hover:shadow-lg transition-all">
+              <BadgeCheck className="h-8 w-8 text-[#2774AE]" />
+              <div>
+                <p className="text-sm font-bold text-slate-900">Trusted Platform</p>
+                <p className="text-xs text-slate-600">Since 2020</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Animated Statistics */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8">
+            <div className="text-center p-8 bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 border border-slate-100 hover:border-[#2774AE]/30 group">
+              <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-[#2774AE] to-[#2D68C4] mb-4 group-hover:scale-110 transition-transform duration-500 shadow-lg">
+                <HomeIcon className="h-8 w-8 text-white" />
+              </div>
+              <p className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-[#2774AE] to-[#2D68C4] bg-clip-text text-transparent mb-2">
+                {propertiesCount.toLocaleString()}+
+              </p>
+              <p className="text-sm md:text-base font-semibold text-slate-600">Active Properties</p>
+            </div>
+
+            <div className="text-center p-8 bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 border border-slate-100 hover:border-[#2774AE]/30 group">
+              <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-[#2774AE] to-[#2D68C4] mb-4 group-hover:scale-110 transition-transform duration-500 shadow-lg">
+                <Users className="h-8 w-8 text-white" />
+              </div>
+              <p className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-[#2774AE] to-[#2D68C4] bg-clip-text text-transparent mb-2">
+                {usersCount.toLocaleString()}+
+              </p>
+              <p className="text-sm md:text-base font-semibold text-slate-600">Happy Users</p>
+            </div>
+
+            <div className="text-center p-8 bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 border border-slate-100 hover:border-[#2774AE]/30 group">
+              <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-[#2774AE] to-[#2D68C4] mb-4 group-hover:scale-110 transition-transform duration-500 shadow-lg">
+                <Handshake className="h-8 w-8 text-white" />
+              </div>
+              <p className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-[#2774AE] to-[#2D68C4] bg-clip-text text-transparent mb-2">
+                {dealsCount.toLocaleString()}+
+              </p>
+              <p className="text-sm md:text-base font-semibold text-slate-600">Successful Deals</p>
+            </div>
+
+            <div className="text-center p-8 bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 border border-slate-100 hover:border-[#2774AE]/30 group">
+              <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-[#2774AE] to-[#2D68C4] mb-4 group-hover:scale-110 transition-transform duration-500 shadow-lg">
+                <MapPin className="h-8 w-8 text-white" />
+              </div>
+              <p className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-[#2774AE] to-[#2D68C4] bg-clip-text text-transparent mb-2">
+                {citiesCount}+
+              </p>
+              <p className="text-sm md:text-base font-semibold text-slate-600">Cities Covered</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* How It Works Section */}
+      <div className="py-16 md:py-24 bg-gradient-to-b from-white to-slate-50/50 relative overflow-hidden">
+        {/* Background decoration */}
+        <div className="absolute top-0 right-0 w-96 h-96 bg-[#2774AE]/5 rounded-full blur-3xl"></div>
+        <div className="absolute bottom-0 left-0 w-96 h-96 bg-[#2D68C4]/5 rounded-full blur-3xl"></div>
+        
+        <div className="container relative">
+          <div className="text-center mb-16">
+            <div className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-50 to-indigo-50 border border-[#2774AE]/20 rounded-full px-5 py-2.5 mb-6">
+              <Sparkles className="h-5 w-5 text-[#2774AE]" />
+              <span className="text-sm font-bold text-[#2774AE]">Simple & Fast</span>
+            </div>
+            <h2 className="text-3xl md:text-5xl font-bold mb-6 bg-gradient-to-r from-slate-900 via-[#2774AE] to-slate-900 bg-clip-text text-transparent">
+              How It Works
+            </h2>
+            <p className="text-slate-600 text-lg md:text-xl max-w-3xl mx-auto leading-relaxed">
+              Find your dream property in just 3 simple steps
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-12 max-w-6xl mx-auto">
+            {/* Step 1 */}
+            <div className="relative group">
+              <div className="absolute -inset-1 bg-gradient-to-r from-[#2774AE] to-[#2D68C4] rounded-3xl blur opacity-25 group-hover:opacity-75 transition duration-500"></div>
+              <div className="relative bg-white p-8 md:p-10 rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-500 border border-slate-100">
+                {/* Step number */}
+                <div className="absolute -top-6 -left-6 w-16 h-16 bg-gradient-to-br from-[#2774AE] to-[#2D68C4] rounded-2xl flex items-center justify-center shadow-xl">
+                  <span className="text-2xl font-bold text-white">1</span>
+                </div>
+                
+                <div className="mb-6 mt-4">
+                  <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-blue-50 to-indigo-50 group-hover:scale-110 transition-transform duration-500">
+                    <Search className="h-10 w-10 text-[#2774AE]" />
+                  </div>
+                </div>
+                
+                <h3 className="text-2xl font-bold mb-4 text-slate-900">Search Properties</h3>
+                <p className="text-slate-600 leading-relaxed">
+                  Browse through thousands of verified listings across South Africa. Use advanced filters to find exactly what you're looking for.
+                </p>
+              </div>
+            </div>
+
+            {/* Step 2 */}
+            <div className="relative group md:mt-12">
+              <div className="absolute -inset-1 bg-gradient-to-r from-[#2774AE] to-[#2D68C4] rounded-3xl blur opacity-25 group-hover:opacity-75 transition duration-500"></div>
+              <div className="relative bg-white p-8 md:p-10 rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-500 border border-slate-100">
+                {/* Step number */}
+                <div className="absolute -top-6 -left-6 w-16 h-16 bg-gradient-to-br from-[#2774AE] to-[#2D68C4] rounded-2xl flex items-center justify-center shadow-xl">
+                  <span className="text-2xl font-bold text-white">2</span>
+                </div>
+                
+                <div className="mb-6 mt-4">
+                  <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-blue-50 to-indigo-50 group-hover:scale-110 transition-transform duration-500">
+                    <Users className="h-10 w-10 text-[#2774AE]" />
+                  </div>
+                </div>
+                
+                <h3 className="text-2xl font-bold mb-4 text-slate-900">Connect with Agents</h3>
+                <p className="text-slate-600 leading-relaxed">
+                  Get in touch with verified real estate professionals. Schedule viewings and get expert advice on your property journey.
+                </p>
+              </div>
+            </div>
+
+            {/* Step 3 */}
+            <div className="relative group">
+              <div className="absolute -inset-1 bg-gradient-to-r from-[#2774AE] to-[#2D68C4] rounded-3xl blur opacity-25 group-hover:opacity-75 transition duration-500"></div>
+              <div className="relative bg-white p-8 md:p-10 rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-500 border border-slate-100">
+                {/* Step number */}
+                <div className="absolute -top-6 -left-6 w-16 h-16 bg-gradient-to-br from-[#2774AE] to-[#2D68C4] rounded-2xl flex items-center justify-center shadow-xl">
+                  <span className="text-2xl font-bold text-white">3</span>
+                </div>
+                
+                <div className="mb-6 mt-4">
+                  <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-blue-50 to-indigo-50 group-hover:scale-110 transition-transform duration-500">
+                    <CheckCircle className="h-10 w-10 text-[#2774AE]" />
+                  </div>
+                </div>
+                
+                <h3 className="text-2xl font-bold mb-4 text-slate-900">Close the Deal</h3>
+                <p className="text-slate-600 leading-relaxed">
+                  Complete your transaction with confidence. Our platform ensures a smooth, secure, and transparent process from start to finish.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Hot Selling Developments Section */}
-      <div className="py-16 md:py-20 bg-gradient-to-b from-white to-slate-50/50">
+      <div className="py-16 md:py-20 bg-gradient-to-b from-slate-50/50 to-white">
         <div className="container">
           <div className="text-center mb-12">
             <div className="inline-flex items-center gap-2 bg-gradient-to-r from-red-50 to-orange-50 border border-red-200 rounded-full px-4 py-2 mb-4">
               <span className="text-2xl">🔥</span>
               <span className="text-sm font-semibold text-red-700">Trending Now</span>
             </div>
-            <h2 className="text-3xl md:text-4xl font-bold mb-4 bg-gradient-to-r from-slate-900 via-blue-900 to-slate-900 bg-clip-text text-transparent">
+            <h2 className="text-3xl md:text-4xl font-bold mb-4 bg-gradient-to-r from-slate-900 via-[#2774AE] to-slate-900 bg-clip-text text-transparent">
               Hot Selling Real Estate Developments
             </h2>
             <p className="text-slate-600 text-lg max-w-3xl mx-auto leading-relaxed">
@@ -140,7 +385,7 @@ export default function Home() {
                   <TabsTrigger
                     key={province}
                     value={province}
-                    className="px-5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-300 data-[state=inactive]:text-slate-600 data-[state=inactive]:hover:text-blue-600 data-[state=inactive]:hover:bg-blue-50/50 data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-purple-600 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:scale-105"
+                    className="px-5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-300 data-[state=inactive]:text-slate-600 data-[state=inactive]:hover:text-[#2774AE] data-[state=inactive]:hover:bg-blue-50/50 data-[state=active]:bg-gradient-to-r data-[state=active]:from-[#2774AE] data-[state=active]:to-[#2D68C4] data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:scale-105"
                   >
                     {province}
                   </TabsTrigger>
@@ -180,7 +425,7 @@ export default function Home() {
                 const provinceSlug = selectedProvince.toLowerCase().replace(/\s+/g, '-');
                 setLocation(`/${provinceSlug}`);
               }}
-              className="gap-2 h-12 px-8 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 shadow-lg hover:shadow-xl transition-all duration-300 group"
+              className="gap-2 h-12 px-8 bg-gradient-to-r from-[#2774AE] to-[#2D68C4] hover:from-[#2D68C4] hover:to-[#2774AE] shadow-lg hover:shadow-xl transition-all duration-300 group"
             >
               Explore All in {selectedProvince}
               <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
@@ -189,12 +434,11 @@ export default function Home() {
         </div>
       </div>
 
-
       {/* Categories Section - Simplified for SA Market */}
-      <div className="py-16 md:py-20 bg-gradient-to-b from-slate-50/50 via-white to-slate-50/50">
+      <div className="py-16 md:py-20 bg-gradient-to-b from-white via-slate-50/30 to-white">
         <div className="container">
           <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4 bg-gradient-to-r from-slate-900 via-blue-900 to-slate-900 bg-clip-text text-transparent">
+            <h2 className="text-3xl md:text-4xl font-bold mb-4 bg-gradient-to-r from-slate-900 via-[#2774AE] to-slate-900 bg-clip-text text-transparent">
               Explore Property Categories
             </h2>
             <p className="text-slate-600 text-lg max-w-2xl mx-auto leading-relaxed">
@@ -204,12 +448,12 @@ export default function Home() {
 
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 md:gap-6">
             {[
-              { Icon: Building2, title: 'Apartments', count: '2,500+', url: '/properties?type=apartment', gradient: 'from-blue-500 to-indigo-500' },
-              { Icon: HomeIcon, title: 'Houses', count: '3,200+', url: '/properties?type=house', gradient: 'from-indigo-500 to-purple-500' },
-              { Icon: Building, title: 'Townhouses', count: '1,800+', url: '/properties?type=townhouse', gradient: 'from-purple-500 to-pink-500' },
-              { Icon: Warehouse, title: 'Commercial', count: '950+', url: '/properties?type=commercial', gradient: 'from-pink-500 to-rose-500' },
-              { Icon: MapPin, title: 'Land & Plots', count: '1,200+', url: '/properties?type=land', gradient: 'from-rose-500 to-orange-500' },
-              { Icon: Tractor, title: 'Farms', count: '450+', url: '/properties?type=farm', gradient: 'from-orange-500 to-amber-500' },
+              { Icon: Building2, title: 'Apartments', count: '2,500+', url: '/properties?type=apartment', gradient: 'from-[#2774AE] to-[#2D68C4]' },
+              { Icon: HomeIcon, title: 'Houses', count: '3,200+', url: '/properties?type=house', gradient: 'from-[#2D68C4] to-[#0F52BA]' },
+              { Icon: Building, title: 'Townhouses', count: '1,800+', url: '/properties?type=townhouse', gradient: 'from-[#0F52BA] to-[#1560BD]' },
+              { Icon: Warehouse, title: 'Commercial', count: '950+', url: '/properties?type=commercial', gradient: 'from-[#1560BD] to-[#2774AE]' },
+              { Icon: MapPin, title: 'Land & Plots', count: '1,200+', url: '/properties?type=land', gradient: 'from-[#2774AE] to-[#2D68C4]' },
+              { Icon: Tractor, title: 'Farms', count: '450+', url: '/properties?type=farm', gradient: 'from-[#2D68C4] to-[#0F52BA]' },
             ].map((category, idx) => (
               <a
                 key={idx}
@@ -218,7 +462,7 @@ export default function Home() {
                   e.preventDefault();
                   setLocation(category.url);
                 }}
-                className="group relative flex flex-col items-center text-center p-6 md:p-8 rounded-2xl bg-white hover:bg-gradient-to-br hover:from-white hover:to-blue-50/30 shadow-sm hover:shadow-2xl transition-all duration-500 border border-slate-200/60 hover:border-blue-300 overflow-hidden hover:-translate-y-1"
+                className="group relative flex flex-col items-center text-center p-6 md:p-8 rounded-2xl bg-white hover:bg-gradient-to-br hover:from-white hover:to-blue-50/30 shadow-sm hover:shadow-2xl transition-all duration-500 border border-slate-200/60 hover:border-[#2774AE]/30 overflow-hidden hover:-translate-y-1"
               >
                 {/* Gradient background on hover */}
                 <div className={`absolute inset-0 bg-gradient-to-br ${category.gradient} opacity-0 group-hover:opacity-[0.03] transition-opacity duration-500`} />
@@ -229,7 +473,7 @@ export default function Home() {
                 </div>
                 
                 {/* Text content */}
-                <h3 className="relative text-sm md:text-base font-bold text-slate-900 mb-1.5 group-hover:text-blue-600 transition-colors">
+                <h3 className="relative text-sm md:text-base font-bold text-slate-900 mb-1.5 group-hover:text-[#2774AE] transition-colors">
                   {category.title}
                 </h3>
                 <p className="relative text-xs md:text-sm text-slate-600 font-semibold bg-slate-100 px-3 py-1 rounded-full">
@@ -256,15 +500,83 @@ export default function Home() {
       {/* Explore Cities Section */}
       <ExploreCities />
 
-      {/* Testimonials Section */}
-      <div className="py-16 md:py-20 bg-gradient-to-b from-white to-slate-50/50">
+      {/* Why Choose Us Section */}
+      <div className="py-16 md:py-24 bg-gradient-to-b from-white to-slate-50/50 relative overflow-hidden">
+        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSAxMCAwIEwgMCAwIDAgMTAiIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzI3NzRBRSIgc3Ryb2tlLW9wYWNpdHk9IjAuMDMiIHN0cm9rZS13aWR0aD0iMSIvPjwvcGF0dGVybj48L2RlZnM+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0idXJsKCNncmlkKSIvPjwvc3ZnPg==')] opacity-40"></div>
+        
+        <div className="container relative">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl md:text-5xl font-bold mb-6 bg-gradient-to-r from-slate-900 via-[#2774AE] to-slate-900 bg-clip-text text-transparent">
+              Why Choose HomeFind.za?
+            </h2>
+            <p className="text-slate-600 text-lg md:text-xl max-w-3xl mx-auto leading-relaxed">
+              We're committed to making your property journey seamless and successful
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-7xl mx-auto">
+            {[
+              {
+                icon: ShieldCheck,
+                title: 'Verified Listings',
+                description: 'Every property is thoroughly verified and authenticated before listing to ensure quality and legitimacy.',
+                color: 'from-[#2774AE] to-[#2D68C4]'
+              },
+              {
+                icon: Clock,
+                title: 'Quick Response',
+                description: 'Get instant notifications and quick responses from agents. Your time is valuable, and we respect that.',
+                color: 'from-[#2D68C4] to-[#0F52BA]'
+              },
+              {
+                icon: TrendingUp,
+                title: 'Market Insights',
+                description: 'Access real-time market data, price trends, and analytics to make informed investment decisions.',
+                color: 'from-[#0F52BA] to-[#1560BD]'
+              },
+              {
+                icon: Users,
+                title: 'Expert Guidance',
+                description: 'Connect with experienced real estate professionals who understand the South African property market.',
+                color: 'from-[#1560BD] to-[#2774AE]'
+              },
+              {
+                icon: BadgeCheck,
+                title: 'Transparent Process',
+                description: 'No hidden fees, no surprises. We believe in complete transparency throughout your property journey.',
+                color: 'from-[#2774AE] to-[#2D68C4]'
+              },
+              {
+                icon: Award,
+                title: 'Award Winning',
+                description: 'Recognized as South Africa\'s leading property portal with multiple industry awards and accolades.',
+                color: 'from-[#2D68C4] to-[#0F52BA]'
+              },
+            ].map((feature, idx) => (
+              <div key={idx} className="group relative">
+                <div className={`absolute -inset-0.5 bg-gradient-to-r ${feature.color} rounded-2xl blur opacity-25 group-hover:opacity-75 transition duration-500`}></div>
+                <div className="relative bg-white p-8 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 border border-slate-100">
+                  <div className={`inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br ${feature.color} mb-6 group-hover:scale-110 transition-transform duration-500 shadow-lg`}>
+                    <feature.icon className="h-8 w-8 text-white" />
+                  </div>
+                  <h3 className="text-xl font-bold mb-3 text-slate-900">{feature.title}</h3>
+                  <p className="text-slate-600 leading-relaxed">{feature.description}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Enhanced Testimonials Section */}
+      <div className="py-16 md:py-20 bg-gradient-to-b from-slate-50/50 to-white">
         <div className="container">
           <div className="text-center mb-12">
             <div className="inline-flex items-center gap-2 bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 rounded-full px-4 py-2 mb-4">
-              <span className="text-2xl">⭐</span>
+              <Star className="h-5 w-5 text-yellow-600 fill-yellow-600" />
               <span className="text-sm font-semibold text-yellow-700">Trusted by Thousands</span>
             </div>
-            <h2 className="text-3xl md:text-4xl font-bold mb-4 bg-gradient-to-r from-slate-900 via-blue-900 to-slate-900 bg-clip-text text-transparent">
+            <h2 className="text-3xl md:text-4xl font-bold mb-4 bg-gradient-to-r from-slate-900 via-[#2774AE] to-slate-900 bg-clip-text text-transparent">
               What Our Clients Say
             </h2>
             <p className="text-slate-600 text-lg max-w-2xl mx-auto leading-relaxed">
@@ -278,22 +590,25 @@ export default function Home() {
                 name: 'Thabo Mkhize',
                 location: 'Johannesburg',
                 rating: 5,
-                text: 'Found my perfect apartment in Sandton within 2 weeks. The team was professional and responsive throughout the process.',
+                text: 'Found my perfect apartment in Sandton within 2 weeks. The team was professional and responsive throughout the process. Highly recommend!',
                 avatar: '👨🏿',
+                role: 'First-time Buyer'
               },
               {
                 name: 'Sarah van der Merwe',
                 location: 'Cape Town',
                 rating: 5,
-                text: 'Excellent service! They helped me find a beautiful family home in Constantia. Highly recommend for anyone looking in the Western Cape.',
+                text: 'Excellent service! They helped me find a beautiful family home in Constantia. The market insights were invaluable for making the right decision.',
                 avatar: '👩🏼',
+                role: 'Property Investor'
               },
               {
                 name: 'Priya Naidoo',
                 location: 'Durban',
                 rating: 5,
-                text: 'The property insights and market data helped me make an informed decision. Great platform for first-time buyers!',
+                text: 'The property insights and market data helped me make an informed decision. Great platform for first-time buyers! Very user-friendly.',
                 avatar: '👩🏾',
+                role: 'Young Professional'
               },
             ].map((testimonial, idx) => (
               <div
@@ -301,21 +616,22 @@ export default function Home() {
                 className="relative bg-white p-8 rounded-2xl border border-slate-200/60 hover:shadow-2xl transition-all duration-500 hover:-translate-y-1 group"
               >
                 {/* Quote mark decoration */}
-                <div className="absolute top-6 right-6 text-6xl text-blue-100 group-hover:text-blue-200 transition-colors font-serif leading-none">"</div>
+                <div className="absolute top-6 right-6 text-6xl text-[#2774AE]/10 group-hover:text-[#2774AE]/20 transition-colors font-serif leading-none">"</div>
                 
                 <div className="relative">
                   <div className="flex items-center gap-1 mb-4">
                     {[...Array(testimonial.rating)].map((_, i) => (
-                      <span key={i} className="text-yellow-400 text-xl">★</span>
+                      <Star key={i} className="h-5 w-5 text-yellow-400 fill-yellow-400" />
                     ))}
                   </div>
-                  <p className="text-slate-700 mb-6 leading-relaxed text-base italic">
+                  <p className="text-slate-700 mb-6 leading-relaxed text-base">
                     "{testimonial.text}"
                   </p>
                   <div className="flex items-center gap-4 pt-4 border-t border-slate-100">
                     <div className="text-5xl">{testimonial.avatar}</div>
                     <div>
                       <p className="font-bold text-slate-900 text-base">{testimonial.name}</p>
+                      <p className="text-sm text-[#2774AE] font-semibold">{testimonial.role}</p>
                       <p className="text-sm text-slate-500 flex items-center gap-1">
                         <MapPin className="w-3 h-3" />
                         {testimonial.location}
@@ -329,16 +645,21 @@ export default function Home() {
         </div>
       </div>
 
-      {/* CTA Section */}
+      {/* Enhanced CTA Section */}
       <div className="py-16 md:py-20 bg-white">
         <div className="container">
-          <div className="relative rounded-3xl md:rounded-[2rem] overflow-hidden bg-gradient-to-br from-blue-600 via-purple-600 to-indigo-700 px-6 py-16 md:px-12 md:py-20 text-center shadow-2xl">
+          <div className="relative rounded-3xl md:rounded-[2rem] overflow-hidden bg-gradient-to-br from-[#2774AE] via-[#2D68C4] to-[#0F52BA] px-6 py-16 md:px-12 md:py-20 text-center shadow-2xl">
             {/* Decorative Elements */}
             <div className="absolute top-0 left-0 w-96 h-96 bg-white/10 rounded-full -translate-x-1/2 -translate-y-1/2 blur-3xl animate-pulse"></div>
             <div className="absolute bottom-0 right-0 w-96 h-96 bg-white/10 rounded-full translate-x-1/2 translate-y-1/2 blur-3xl animate-pulse delay-1000"></div>
             <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSAxMCAwIEwgMCAwIDAgMTAiIGZpbGw9Im5vbmUiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS1vcGFjaXR5PSIwLjA1IiBzdHJva2Utd2lkdGg9IjEiLz48L3BhdHRlcm4+PC9kZWZzPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9InVybCgjZ3JpZCkiLz48L3N2Zz4=')] opacity-30"></div>
 
             <div className="relative z-10 max-w-4xl mx-auto">
+              <div className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm border border-white/30 rounded-full px-5 py-2.5 mb-6">
+                <Sparkles className="h-5 w-5 text-white" />
+                <span className="text-sm font-bold text-white">Start Your Journey Today</span>
+              </div>
+              
               <h2 className="text-3xl md:text-5xl font-bold mb-6 text-white tracking-tight leading-tight">
                 Ready to Find Your Dream Property?
               </h2>
@@ -350,15 +671,17 @@ export default function Home() {
                 <Button
                   size="lg"
                   onClick={() => setLocation('/properties')}
-                  className="bg-white text-blue-600 hover:bg-blue-50 font-bold text-base md:text-lg px-8 py-6 h-auto shadow-2xl hover:shadow-3xl transition-all transform hover:-translate-y-1 hover:scale-105"
+                  className="bg-white text-[#2774AE] hover:bg-blue-50 font-bold text-base md:text-lg px-8 py-6 h-auto shadow-2xl hover:shadow-3xl transition-all transform hover:-translate-y-1 hover:scale-105"
                 >
+                  <Search className="h-5 w-5 mr-2" />
                   Browse All Properties
                 </Button>
                 <Button
                   size="lg"
                   variant="outline"
-                  className="bg-transparent border-2 border-white text-white hover:bg-white hover:text-blue-600 font-bold text-base md:text-lg px-8 py-6 h-auto transition-all hover:scale-105"
+                  className="bg-transparent border-2 border-white text-white hover:bg-white hover:text-[#2774AE] font-bold text-base md:text-lg px-8 py-6 h-auto transition-all hover:scale-105"
                 >
+                  <Building2 className="h-5 w-5 mr-2" />
                   List Your Property
                 </Button>
               </div>

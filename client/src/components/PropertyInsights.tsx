@@ -215,17 +215,19 @@ export function PropertyInsights() {
         </div>
 
         <Tabs value={selectedCity} onValueChange={setSelectedCity} className="w-full">
-        <TabsList className="flex flex-wrap justify-start gap-2 mb-8 bg-transparent p-0 h-auto">
-            {Object.keys(cityData).map(city => (
-              <TabsTrigger
-                key={city}
-                value={city}
-                className="px-6 py-2.5 rounded-full text-sm font-medium transition-all duration-300 border bg-white text-muted-foreground border-gray-200 hover:border-blue-200 hover:bg-blue-50 hover:text-blue-600 data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-indigo-600 data-[state=active]:text-white data-[state=active]:border-transparent data-[state=active]:shadow-md data-[state=active]:scale-105"
-              >
-                {city}
-              </TabsTrigger>
-            ))}
-          </TabsList>
+          <div className="flex justify-center mb-10">
+            <TabsList className="inline-flex flex-wrap justify-center gap-2 bg-white/80 backdrop-blur-sm p-2 rounded-2xl shadow-lg border border-slate-200/60 h-auto">
+              {Object.keys(cityData).map(city => (
+                <TabsTrigger
+                  key={city}
+                  value={city}
+                  className="px-5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-300 data-[state=inactive]:text-slate-600 data-[state=inactive]:hover:text-[#2774AE] data-[state=inactive]:hover:bg-blue-50/50 data-[state=active]:bg-gradient-to-r data-[state=active]:from-[#2774AE] data-[state=active]:to-[#2D68C4] data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:scale-105"
+                >
+                  {city}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </div>
 
           {Object.keys(cityData).map(city => (
             <TabsContent key={city} value={city} className="mt-6">
