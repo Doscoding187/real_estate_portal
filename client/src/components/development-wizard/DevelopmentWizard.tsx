@@ -65,13 +65,16 @@ export function DevelopmentWizard({ developmentId }: DevelopmentWizardProps) {
   // Mutation for saving drafts
   const saveDraftMutation = trpc.developer.saveDraft.useMutation();
 
+  // State to track if we've already hydrated to prevent overwriting user work
+  const [isHydrated, setIsHydrated] = useState(false);
+
   // Auto-Save Configuration
   const stateToWatch = React.useMemo(() => ({
     currentPhase, developmentData, classification, overview, unitTypes, finalisation 
   }), [currentPhase, developmentData, classification, overview, unitTypes, finalisation]);
 
   const { lastSaved, isSaving, error: autoSaveError } = useAutoSave(stateToWatch, {
-    debounceMs: 5000, 
+    debounceMs: 60000, // 1 Minute as requested
     onSave: async () => {
       // Trigger backend draft save
       await saveDraft(async (data) => {
@@ -88,13 +91,24 @@ export function DevelopmentWizard({ developmentId }: DevelopmentWizardProps) {
   // tRPC hooks for draft operations
   const { data: loadedDraft, isLoading: isDraftLoading, error: draftError } = trpc.developer.getDraft.useQuery(
     { id: currentDraftId! },
-    { enabled: !!currentDraftId && !developmentId, retry: false }
+    { 
+      enabled: !!currentDraftId && !developmentId, 
+      retry: false,
+      // Critical: Prevent background refetches from overwriting local state
+      refetchOnWindowFocus: false,
+      refetchOnMount: false,
+      refetchOnReconnect: false
+    }
   );
 
   // tRPC hooks for Development Edit Mode
   const { data: editData, isLoading: isEditLoading, error: loadError } = trpc.developer.getDevelopment.useQuery(
     { id: developmentId! },
-    { enabled: !!developmentId, retry: false }
+    { 
+      enabled: !!developmentId, 
+      retry: false,
+      refetchOnWindowFocus: false 
+    }
   );
 
   // Handle API Errors
@@ -107,20 +121,22 @@ export function DevelopmentWizard({ developmentId }: DevelopmentWizardProps) {
 
   // Hydrate from existing development (Edit Mode)
   useEffect(() => {
-    if (editData) {
+    if (editData && !isHydrated) {
         // Hydrate the store atomically
         hydrateDevelopment(editData);
+        setIsHydrated(true);
         toast.success('Development loaded for editing');
     }
-  }, [editData]);
+  }, [editData, isHydrated]);
 
   // Auto-load draft logic (Simplified for Phase 2)
   useEffect(() => {
-    if (loadedDraft && loadedDraft.draftData) {
+    if (loadedDraft && loadedDraft.draftData && !isHydrated) {
        hydrateDevelopment(loadedDraft.draftData);
+       setIsHydrated(true);
        toast.success('Draft loaded successfully');
     }
-  }, [loadedDraft]);
+  }, [loadedDraft, isHydrated]);
 
   // Session recovery
   useEffect(() => {
