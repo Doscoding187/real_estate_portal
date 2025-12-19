@@ -55,10 +55,10 @@ export function OverviewPhase() {
   };
 
   const handleNext = () => {
-    // Current phase is 4 (Overview)
-    const { isValid, errors } = validatePhase(4);
+    // Current phase is 6 (Overview)
+    const { isValid, errors } = validatePhase(6);
     if (isValid) {
-      setPhase(5);
+      setPhase(7);
     } else {
       errors.forEach(e => toast.error(e));
     }

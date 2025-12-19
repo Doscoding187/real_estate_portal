@@ -46,9 +46,10 @@ const PHASES = [
   'Identity',           // 3 (includes Location)
   'Estate Profile',     // 4 (conditional)
   'Amenities',          // 5
-  'Media',              // 6
-  'Unit Types',         // 7
-  'Publish'             // 8
+  'Overview',           // 6
+  'Media',              // 7
+  'Unit Types',         // 8
+  'Publish'             // 9
 ];
 
 interface DevelopmentWizardProps {
@@ -210,9 +211,10 @@ export function DevelopmentWizard({ developmentId, isModal = false }: Developmen
         }
         return <EstateProfilePhase />;
       case 5: return <AmenitiesPhase />;
-      case 6: return <MediaPhase />;
-      case 7: return <UnitTypesPhase />;
-      case 8: return <FinalisationPhase />;
+      case 6: return <OverviewPhase />;
+      case 7: return <MediaPhase />;
+      case 8: return <UnitTypesPhase />;
+      case 9: return <FinalisationPhase />;
       default: return <DevelopmentTypePhase />;
     }
   };
