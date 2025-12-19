@@ -1824,22 +1824,22 @@ export const developerRouter = router({
            developmentId: input.developmentId,
            name: input.name,
            bedrooms: input.bedrooms,
-           bathrooms: input.bathrooms.toString(), // Schema uses decimal
-           parking: input.parking,
-           unitSize: input.unitSize,
-           basePriceFrom: input.basePriceFrom.toString(),
-           basePriceTo: input.basePriceTo?.toString(),
+           bathrooms: String(input.bathrooms), // Schema uses decimal
+           parking: input.parking || 'none',
+           unitSize: input.unitSize || null,
+           basePriceFrom: String(input.basePriceFrom),
+           basePriceTo: input.basePriceTo ? String(input.basePriceTo) : null,
            
-           // Default JSONs
-           baseFeatures: {
+           // JSON columns - stringify for MySQL TEXT/JSON storage
+           baseFeatures: JSON.stringify({
              builtInWardrobes: true,
              tiledFlooring: true,
              graniteCounters: true,
              prepaidElectricity: true,
              balcony: false,
              petFriendly: false
-           },
-           baseMedia: { gallery: [], floorPlans: [], renders: [] }
+           }),
+           baseMedia: JSON.stringify({ gallery: [], floorPlans: [], renders: [] })
          });
          
          return { success: true, id: newId };
