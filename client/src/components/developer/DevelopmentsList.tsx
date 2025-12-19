@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { DevelopmentWizard } from '../development-wizard/DevelopmentWizard';
 import { trpc } from '@/lib/trpc';
 import { Plus, Search, Filter, MoreVertical, AlertCircle, Eye, Trash2 } from 'lucide-react';
@@ -199,10 +200,10 @@ const DevelopmentsList: React.FC = () => {
         </CardContent>
       </Card>
 
-      {/* Development Wizard Modal */}
-      {showWizard && (
+      {/* Development Wizard Modal - Portal renders outside DOM tree */}
+      {showWizard && createPortal(
         <div 
-          className="fixed inset-0 bg-black/60 z-[100] overflow-y-auto"
+          className="fixed inset-0 bg-black/60 z-[9999] overflow-y-auto"
           onClick={(e) => e.target === e.currentTarget && setShowWizard(false)}
         >
           <div className="min-h-full flex items-center justify-center py-8 px-4">
@@ -220,7 +221,8 @@ const DevelopmentsList: React.FC = () => {
               <DevelopmentWizard developmentId={selectedReviewId} isModal={true} />
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
