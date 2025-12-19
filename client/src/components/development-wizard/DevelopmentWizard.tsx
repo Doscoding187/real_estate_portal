@@ -161,7 +161,7 @@ export function DevelopmentWizard({ developmentId, isModal = false }: Developmen
   const handleExit = () => setShowExitDialog(true);
   const confirmExit = () => {
     reset();
-    setLocation('/');
+    setLocation('/developer');
   };
 
   // Generate Progress Steps
