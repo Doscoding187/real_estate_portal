@@ -108,7 +108,7 @@ export function DeveloperLayout({ children, defaultTab = 'overview' }: Developer
   };
 
   return (
-    <div className="flex h-screen w-screen bg-[#F4F7FA] overflow-hidden">
+    <div className="flex h-screen w-screen bg-[#F4F7FA]">
       <EnhancedSidebar 
         activeTab={activeTab} 
         onTabChange={(tabId) => setActiveTab(tabId as TabId)} 
