@@ -3,9 +3,10 @@ import {
   developerSubscriptions, 
   developerSubscriptionLimits, 
   developerSubscriptionUsage,
-  developers 
+  developers,
+  developments 
 } from '../../drizzle/schema.ts';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, sql } from 'drizzle-orm';
 import { 
   DeveloperSubscription, 
   DeveloperSubscriptionLimits, 
@@ -296,6 +297,33 @@ export class DeveloperSubscriptionService {
     }
 
     return { expired: false, daysRemaining };
+  }
+
+  /**
+   * Reset development count to actual count in database (for fixing discrepancies)
+   */
+  async resetDevelopmentCount(developerId: number): Promise<{ newCount: number }> {
+    const subscription = await this.getSubscription(developerId);
+    if (!subscription) {
+      throw new Error('Subscription not found');
+    }
+
+    // Count actual developments in database
+    const [result] = await db.select({ count: sql<number>`count(*)` })
+      .from(developments)
+      .where(eq(developments.developerId, developerId));
+    
+    const actualCount = result?.count || 0;
+
+    // Update the usage counter to match actual count
+    await db.update(developerSubscriptionUsage)
+      .set({
+        developmentsCount: actualCount,
+        updatedAt: new Date().toISOString(),
+      })
+      .where(eq(developerSubscriptionUsage.subscriptionId, subscription.id));
+
+    return { newCount: actualCount };
   }
 }
 

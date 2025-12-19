@@ -671,6 +671,24 @@ export const developerRouter = router({
     }),
 
   /**
+   * Reset development count to actual count (fix discrepancies)
+   * Auth: Protected
+   */
+  resetDevelopmentCount: protectedProcedure
+    .mutation(async ({ ctx }) => {
+      const developer = await db.getDeveloperByUserId(ctx.user.id);
+      if (!developer) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Developer not found',
+        });
+      }
+      
+      const result = await developerSubscriptionService.resetDevelopmentCount(developer.id);
+      return { success: true, newCount: result.newCount, message: `Usage counter reset to ${result.newCount}` };
+    }),
+
+  /**
    * Publish development
    * Auth: Protected, must own development
    * Validates: Requirements 9.1
