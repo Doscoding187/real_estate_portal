@@ -1,6 +1,40 @@
 import React, { useState } from 'react';
+import { trpc } from '@/lib/trpc';
+import { toast } from 'sonner';
+import { RefreshCw, Building2 } from 'lucide-react';
 
 const SettingsPanel: React.FC = () => {
+  const [isSyncing, setIsSyncing] = useState(false);
+  
+  // Get subscription data
+  const { data: subscription, refetch: refetchSubscription } = trpc.developer.getSubscription.useQuery(
+    undefined,
+    { 
+      staleTime: 0, // Always refetch on access
+      refetchOnMount: true 
+    }
+  );
+  
+  // Reset development count mutation
+  const resetCountMutation = trpc.developer.resetDevelopmentCount.useMutation({
+    onSuccess: (data) => {
+      toast.success(data.message);
+      refetchSubscription();
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Failed to sync usage');
+    },
+  });
+
+  const handleSyncUsage = async () => {
+    setIsSyncing(true);
+    try {
+      await resetCountMutation.mutateAsync();
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
   const [companyDetails, setCompanyDetails] = useState({
     companyName: 'Skyline Developments',
     registrationNumber: '2021/123456/07',
@@ -234,8 +268,54 @@ const SettingsPanel: React.FC = () => {
           </div>
         </div>
 
-        {/* Billing Summary */}
+        {/* Right Sidebar - Subscription & Billing */}
         <div className="space-y-6">
+          {/* Subscription Usage */}
+          <div className="card">
+            <h3 className="typ-h3 mb-4 flex items-center gap-2">
+              <Building2 className="w-5 h-5 text-blue-600" />
+              Subscription Usage
+            </h3>
+            <div className="space-y-4">
+              <div className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-16">
+                <div className="text-sm text-gray-500">Current Tier</div>
+                <div className="font-medium text-lg capitalize">{subscription?.tier?.replace('_', ' ') || 'Loading...'}</div>
+              </div>
+
+              <div className="flex items-center justify-between p-3 border border-gray-200 rounded-12">
+                <div>
+                  <div className="text-sm text-gray-500">Developments</div>
+                  <div className="font-medium">
+                    {subscription?.usage?.developmentsCount ?? 0} / {subscription?.limits?.maxDevelopments ?? 1}
+                  </div>
+                </div>
+                <button
+                  onClick={handleSyncUsage}
+                  disabled={isSyncing}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-blue-100 text-blue-700 hover:bg-blue-200 rounded-lg transition-colors disabled:opacity-50"
+                >
+                  <RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin' : ''}`} />
+                  {isSyncing ? 'Syncing...' : 'Sync'}
+                </button>
+              </div>
+
+              <div className="p-3 border border-gray-200 rounded-12">
+                <div className="text-sm text-gray-500">Leads This Month</div>
+                <div className="font-medium">
+                  {subscription?.usage?.leadsThisMonth ?? 0} / {subscription?.limits?.maxLeadsPerMonth ?? 50}
+                </div>
+              </div>
+
+              <div className="p-3 border border-gray-200 rounded-12">
+                <div className="text-sm text-gray-500">Team Members</div>
+                <div className="font-medium">
+                  {subscription?.usage?.teamMembersCount ?? 0} / {subscription?.limits?.maxTeamMembers ?? 1}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Billing Summary */}
           <div className="card">
             <h3 className="typ-h3 mb-4">Billing Summary</h3>
             <div className="space-y-4">
