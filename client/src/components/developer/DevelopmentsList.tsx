@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
-import { createPortal } from 'react-dom';
-import { DevelopmentWizard } from '../development-wizard/DevelopmentWizard';
+import { useLocation } from 'wouter';
 import { trpc } from '@/lib/trpc';
-import { Plus, Search, Filter, MoreVertical, AlertCircle, Eye, Trash2 } from 'lucide-react';
+import { Plus, Search, Filter, MoreVertical, AlertCircle, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   Tooltip,
@@ -30,8 +29,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 
 const DevelopmentsList: React.FC = () => {
-  const [showWizard, setShowWizard] = useState(false);
-  const [selectedReviewId, setSelectedReviewId] = useState<number | undefined>();
+  const [, setLocation] = useLocation();
   const [searchTerm, setSearchTerm] = useState('');
 
   /* replaced by tRPC query */
@@ -102,7 +100,7 @@ const DevelopmentsList: React.FC = () => {
             Manage all your property developments in one place
           </p>
         </div>
-        <Button className="bg-accent hover:bg-accent/90" onClick={() => { setSelectedReviewId(undefined); setShowWizard(true); }}>
+        <Button className="bg-accent hover:bg-accent/90" onClick={() => setLocation('/developer/create-development')}>
           <Plus className="h-4 w-4 mr-2" />
           Add New Development
         </Button>
@@ -180,12 +178,12 @@ const DevelopmentsList: React.FC = () => {
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         {dev.approvalStatus === 'rejected' && (
-                            <DropdownMenuItem className="text-red-600 font-medium" onClick={() => { setSelectedReviewId(dev.id); setShowWizard(true); }}>
+                            <DropdownMenuItem className="text-red-600 font-medium" onClick={() => setLocation(`/developer/create-development?id=${dev.id}`)}>
                                 <AlertCircle className="w-4 h-4 mr-2" /> Fix Issues
                             </DropdownMenuItem>
                         )}
                         <DropdownMenuItem>View Details</DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => { setSelectedReviewId(dev.id); setShowWizard(true); }}>Edit</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => setLocation(`/developer/create-development?id=${dev.id}`)}>Edit</DropdownMenuItem>
                         <DropdownMenuItem>Analytics</DropdownMenuItem>
                         <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(dev.id, dev.name)}>
                           <Trash2 className="w-4 h-4 mr-2" /> Delete
@@ -199,31 +197,6 @@ const DevelopmentsList: React.FC = () => {
           </Table>
         </CardContent>
       </Card>
-
-      {/* Development Wizard Modal - Portal renders outside DOM tree */}
-      {showWizard && createPortal(
-        <div 
-          className="fixed inset-0 bg-black/60 z-[9999] overflow-y-auto"
-          onClick={(e) => e.target === e.currentTarget && setShowWizard(false)}
-        >
-          <div className="min-h-full flex items-center justify-center py-8 px-4">
-            <div className="bg-white rounded-xl w-full max-w-5xl shadow-2xl relative">
-              {/* Close button */}
-              <button
-                onClick={() => setShowWizard(false)}
-                className="absolute top-4 right-4 z-10 p-2 rounded-lg hover:bg-gray-100 transition-colors"
-              >
-                <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-              {/* Wizard Content */}
-              <DevelopmentWizard developmentId={selectedReviewId} isModal={true} />
-            </div>
-          </div>
-        </div>,
-        document.body
-      )}
     </div>
   );
 };
