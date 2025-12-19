@@ -321,16 +321,16 @@ export function UnitTypesPhase() {
   };
 
   const handleNext = () => {
-    const { isValid, errors } = validatePhase(7);
+    const { isValid, errors } = validatePhase(8);
     if (isValid) {
-      setPhase(8);
+      setPhase(9);
     } else {
       errors.forEach(e => toast.error(e));
     }
   };
 
   const handleBack = () => {
-    setPhase(6); // Back to Media
+    setPhase(7); // Back to Media
   };
 
   return (
