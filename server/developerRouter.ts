@@ -1837,17 +1837,16 @@ export const developerRouter = router({
          
          const newId = crypto.randomUUID();
          
-         await dbConn.insert(unitTypes).values({
+         // Build insert values, conditionally including basePriceTo only when valid
+         const insertValues: any = {
            id: newId,
            developmentId: input.developmentId,
            name: input.name,
            bedrooms: input.bedrooms,
-           bathrooms: String(input.bathrooms), // Schema uses decimal
+           bathrooms: String(input.bathrooms),
            parking: input.parking || 'none',
            unitSize: input.unitSize || null,
            basePriceFrom: String(input.basePriceFrom),
-           basePriceTo: input.basePriceTo && input.basePriceTo > 0 ? String(input.basePriceTo) : null,
-           
            // JSON columns - stringify for MySQL TEXT/JSON storage
            baseFeatures: JSON.stringify({
              builtInWardrobes: true,
@@ -1864,7 +1863,14 @@ export const developerRouter = router({
              bathroomFeatures: ''
            }),
            baseMedia: JSON.stringify({ gallery: [], floorPlans: [], renders: [] })
-         });
+         };
+         
+         // Only add basePriceTo if it's a valid positive number
+         if (input.basePriceTo && input.basePriceTo > 0) {
+           insertValues.basePriceTo = String(input.basePriceTo);
+         }
+         
+         await dbConn.insert(unitTypes).values(insertValues);
          
          return { success: true, id: newId };
       } catch (error: any) {
