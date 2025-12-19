@@ -1846,7 +1846,7 @@ export const developerRouter = router({
            parking: input.parking || 'none',
            unitSize: input.unitSize || null,
            basePriceFrom: String(input.basePriceFrom),
-           basePriceTo: input.basePriceTo ? String(input.basePriceTo) : null,
+           basePriceTo: input.basePriceTo && input.basePriceTo > 0 ? String(input.basePriceTo) : null,
            
            // JSON columns - stringify for MySQL TEXT/JSON storage
            baseFeatures: JSON.stringify({
@@ -1856,6 +1856,12 @@ export const developerRouter = router({
              prepaidElectricity: true,
              balcony: false,
              petFriendly: false
+           }),
+           baseFinishes: JSON.stringify({
+             paintAndWalls: '',
+             flooringTypes: '',
+             kitchenFeatures: '',
+             bathroomFeatures: ''
            }),
            baseMedia: JSON.stringify({ gallery: [], floorPlans: [], renders: [] })
          });
