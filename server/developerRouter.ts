@@ -1874,7 +1874,20 @@ export const developerRouter = router({
          
          return { success: true, id: newId };
       } catch (error: any) {
-         throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
+         // Detailed TiDB error logging for debugging
+         console.error('=== UNIT_TYPES INSERT FAILED ===');
+         console.error('Error code:', error.code);
+         console.error('Error errno:', error.errno);
+         console.error('Error sqlMessage:', error.sqlMessage);
+         console.error('Error sql:', error.sql);
+         console.error('Full error:', JSON.stringify(error, null, 2));
+         console.error('Insert values attempted:', JSON.stringify(insertValues, null, 2));
+         console.error('================================');
+         
+         throw new TRPCError({ 
+           code: 'INTERNAL_SERVER_ERROR', 
+           message: `Insert failed: [${error.code || 'UNKNOWN'}] ${error.sqlMessage || error.message}` 
+         });
       }
     }),
 

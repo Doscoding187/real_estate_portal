@@ -85,6 +85,11 @@ export function FinalisationPhase() {
       // Note: In a real edit scenario, we should avoid duplicating existing units.
       // For now, we assume unitTypes in store that have string IDs (e.g. "unit-123") are new.
       if (unitTypes.length > 0) {
+        // DEBUG: Log first unit type for senior developer analysis
+        console.log('=== UNIT TYPES DEBUG (unitTypes[0]) ===');
+        console.log(JSON.stringify(unitTypes[0], null, 2));
+        console.log('=======================================');
+        
         for (const unit of unitTypes) {
            await createUnitTypeMutation.mutateAsync({
              developmentId: devId!,
