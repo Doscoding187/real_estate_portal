@@ -44,6 +44,8 @@ import {
   recentlyViewed,
   developers,
   developments,
+  commissions,
+  platformSettings,
 } from '../drizzle/schema.ts';
 import * as schema from '../drizzle/schema.ts';
 
@@ -1293,6 +1295,7 @@ export async function getAgencyPerformanceData(agencyId: number, months: number 
   const { properties, leads } = require('../drizzle/schema');
 
   const currentDate = new Date();
+  const performanceData: any[] = [];
 
   for (let i = months - 1; i >= 0; i--) {
     const monthStart = new Date(currentDate.getFullYear(), currentDate.getMonth() - i, 1);
@@ -1678,7 +1681,7 @@ export async function getPlatformAnalytics() {
       (SELECT COUNT(*) FROM ${users}) as userCount,
       (SELECT COUNT(*) FROM ${agencies}) as agencyCount,
       (SELECT COUNT(*) FROM ${listings}) as propertyCount,
-      (SELECT COUNT(*) FROM ${listings} WHERE ${listings.status} = 'published') as activePropertyCount,
+      (SELECT COUNT(*) FROM ${listings} WHERE ${listings.status} IN ('pending_review', 'approved', 'published')) as activePropertyCount,
       (SELECT COUNT(*) FROM ${agents}) as agentCount,
       (SELECT COUNT(*) FROM ${agencies} WHERE ${agencies.subscriptionPlan} != 'free') as paidSubsCount,
       (SELECT COUNT(*) FROM ${developers}) as developerCount
@@ -1693,7 +1696,7 @@ export async function getPlatformAnalytics() {
     SELECT
       (SELECT SUM(${commissions.amount}) FROM ${commissions} WHERE ${commissions.createdAt} >= ${thirtyDaysAgo}) as monthlyRevenue,
       (SELECT COUNT(*) FROM ${users} WHERE ${users.createdAt} >= ${thirtyDaysAgo}) as userGrowth,
-      (SELECT COUNT(*) FROM ${properties} WHERE ${properties.createdAt} >= ${thirtyDaysAgo}) as propertyGrowth
+      (SELECT COUNT(*) FROM ${listings} WHERE ${listings.createdAt} >= ${thirtyDaysAgo}) as propertyGrowth
   `);
 
   const countsRow = (counts as any)[0];
