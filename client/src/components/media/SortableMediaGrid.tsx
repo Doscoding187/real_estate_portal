@@ -3,9 +3,11 @@
  * 
  * Premium drag-and-drop media grid with Facebook/Instagram-like reordering
  * Features: Live placeholder animations, smooth transitions, centered ghost
+ * 
+ * Uses pure @dnd-kit transforms for maximum smoothness (no Framer Motion layout conflicts)
  */
 
-import React from 'react';
+import React, { useCallback, useRef } from 'react';
 import {
   DndContext,
   closestCenter,
@@ -27,7 +29,6 @@ import {
   useSortable,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { motion, AnimatePresence } from 'framer-motion';
 import {
   GripVertical,
   X,
@@ -67,6 +68,7 @@ interface SortableMediaItemProps {
 
 /**
  * Individual sortable media item with full-card drag handle
+ * Uses pure @dnd-kit transforms for smoother animations
  */
 const SortableMediaItem: React.FC<SortableMediaItemProps> = ({
   item,
@@ -83,10 +85,12 @@ const SortableMediaItem: React.FC<SortableMediaItemProps> = ({
     isDragging,
   } = useSortable({ id: item.id });
 
-  // Faster transition for smoother feel
-  const style = {
+  // Pure @dnd-kit transform for smoothest animations
+  const style: React.CSSProperties = {
     transform: CSS.Transform.toString(transform),
-    transition: transition || 'transform 150ms ease',
+    transition: transition || 'transform 120ms ease-out',
+    opacity: isDragging ? 0 : 1, // Hide original when dragging
+    zIndex: isDragging ? 0 : 1,
   };
 
   const getMediaTypeIcon = () => {
@@ -102,17 +106,14 @@ const SortableMediaItem: React.FC<SortableMediaItemProps> = ({
   };
 
   return (
-    <motion.div
+    <div
       ref={setNodeRef}
       style={style}
-      layout
-      layoutId={item.id}
-      transition={{ duration: 0.2, ease: 'easeOut' }}
       {...attributes}
       {...listeners}
       className={cn(
         'relative group aspect-square rounded-lg overflow-hidden bg-gray-100 border-2 cursor-grab active:cursor-grabbing',
-        isDragging ? 'opacity-0 scale-95 border-blue-500' : 'border-transparent hover:border-gray-200',
+        isDragging ? 'border-blue-500' : 'border-transparent hover:border-gray-200',
         item.isPrimary && 'ring-2 ring-blue-500 ring-offset-2'
       )}
     >
@@ -139,9 +140,9 @@ const SortableMediaItem: React.FC<SortableMediaItemProps> = ({
       {/* Overlay with actions */}
       <div className={cn(
         'absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent',
-        'opacity-0 group-hover:opacity-100 transition-opacity duration-200'
+        'opacity-0 group-hover:opacity-100 transition-opacity duration-150'
       )}>
-        {/* Drag Handle Visual (no listeners - whole card is draggable) */}
+        {/* Drag Handle Visual */}
         <div className="absolute top-2 left-2 p-1.5 bg-white/90 rounded-md">
           <GripVertical className="w-4 h-4 text-gray-700" />
         </div>
@@ -201,9 +202,23 @@ const SortableMediaItem: React.FC<SortableMediaItemProps> = ({
           Primary
         </div>
       )}
-    </motion.div>
+    </div>
   );
 };
+
+/**
+ * Simple throttle function
+ */
+function throttle<T extends (...args: any[]) => void>(fn: T, delay: number): T {
+  let lastCall = 0;
+  return ((...args: any[]) => {
+    const now = Date.now();
+    if (now - lastCall >= delay) {
+      lastCall = now;
+      fn(...args);
+    }
+  }) as T;
+}
 
 /**
  * Premium Sortable Media Grid with live reordering
@@ -240,19 +255,26 @@ export const SortableMediaGrid: React.FC<SortableMediaGridProps> = ({
     setActiveId(event.active.id as string);
   };
 
-  // Live preview: items shift in real-time as you hover
+  // Throttled live preview: items shift in real-time (throttled for smooth performance)
+  const handleDragOverThrottled = useCallback(
+    throttle((event: DragOverEvent) => {
+      const { active, over } = event;
+      if (over && active.id !== over.id) {
+        setItems((currentItems) => {
+          const oldIndex = currentItems.findIndex((i) => i.id === active.id);
+          const newIndex = currentItems.findIndex((i) => i.id === over.id);
+          if (oldIndex !== -1 && newIndex !== -1 && oldIndex !== newIndex) {
+            return arrayMove(currentItems, oldIndex, newIndex);
+          }
+          return currentItems;
+        });
+      }
+    }, 50), // 50ms throttle for smooth performance
+    []
+  );
+
   const handleDragOver = (event: DragOverEvent) => {
-    const { active, over } = event;
-    if (over && active.id !== over.id) {
-      setItems((currentItems) => {
-        const oldIndex = currentItems.findIndex((i) => i.id === active.id);
-        const newIndex = currentItems.findIndex((i) => i.id === over.id);
-        if (oldIndex !== -1 && newIndex !== -1) {
-          return arrayMove(currentItems, oldIndex, newIndex);
-        }
-        return currentItems;
-      });
-    }
+    handleDragOverThrottled(event);
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
@@ -301,34 +323,29 @@ export const SortableMediaGrid: React.FC<SortableMediaGridProps> = ({
     >
       <SortableContext items={items.map(item => item.id)} strategy={rectSortingStrategy}>
         <div className={cn('grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4', className)}>
-          <AnimatePresence mode="popLayout">
-            {items.map(item => (
-              <SortableMediaItem
-                key={item.id}
-                item={item}
-                onRemove={onRemove}
-                onSetPrimary={onSetPrimary}
-                onPreview={onPreview}
-              />
-            ))}
-          </AnimatePresence>
+          {items.map(item => (
+            <SortableMediaItem
+              key={item.id}
+              item={item}
+              onRemove={onRemove}
+              onSetPrimary={onSetPrimary}
+              onPreview={onPreview}
+            />
+          ))}
         </div>
       </SortableContext>
 
       {/* Drag Overlay - smooth ghost that follows cursor */}
       <DragOverlay 
+        adjustScale={true}
         modifiers={[snapCenterToCursor, restrictToWindowEdges]}
         dropAnimation={{
-          duration: 200,
-          easing: 'cubic-bezier(0.18, 0.67, 0.6, 1.22)',
+          duration: 180,
+          easing: 'ease-out',
         }}
       >
         {activeItem && (
-          <motion.div 
-            initial={{ scale: 0.9, opacity: 0.8 }}
-            animate={{ scale: 1, opacity: 1 }}
-            className="aspect-square w-36 rounded-lg overflow-hidden shadow-2xl border-2 border-blue-500 bg-white cursor-grabbing"
-          >
+          <div className="aspect-square w-36 rounded-lg overflow-hidden shadow-2xl border-2 border-blue-500 bg-white cursor-grabbing scale-105">
             {activeItem.type === 'image' || activeItem.type === 'floorplan' ? (
               <img
                 src={activeItem.url}
@@ -347,7 +364,7 @@ export const SortableMediaGrid: React.FC<SortableMediaGridProps> = ({
                 <FileText className="w-12 h-12 text-gray-400" />
               </div>
             )}
-          </motion.div>
+          </div>
         )}
       </DragOverlay>
     </DndContext>
