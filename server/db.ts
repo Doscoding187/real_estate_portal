@@ -1678,9 +1678,9 @@ export async function getPlatformAnalytics() {
       (SELECT COUNT(*) FROM ${users}) as userCount,
       (SELECT COUNT(*) FROM ${agencies}) as agencyCount,
       (SELECT COUNT(*) FROM ${listings}) as propertyCount,
-      (SELECT COUNT(*) FROM ${listings} WHERE status = 'published') as activePropertyCount,
+      (SELECT COUNT(*) FROM ${listings} WHERE ${listings.status} = 'published') as activePropertyCount,
       (SELECT COUNT(*) FROM ${agents}) as agentCount,
-      (SELECT COUNT(*) FROM ${agencies} WHERE subscription_plan != 'free') as paidSubsCount,
+      (SELECT COUNT(*) FROM ${agencies} WHERE ${agencies.subscriptionPlan} != 'free') as paidSubsCount,
       (SELECT COUNT(*) FROM ${developers}) as developerCount
   `);
 
