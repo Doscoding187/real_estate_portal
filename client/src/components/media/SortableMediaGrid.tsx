@@ -16,6 +16,7 @@ import {
   DragStartEvent,
   DragOverlay,
 } from '@dnd-kit/core';
+import { restrictToWindowEdges } from '@dnd-kit/modifiers';
 import {
   arrayMove,
   SortableContext,
@@ -313,10 +314,16 @@ export const SortableMediaGrid: React.FC<SortableMediaGridProps> = ({
         </div>
       </SortableContext>
 
-      {/* Drag Overlay */}
-      <DragOverlay>
+      {/* Drag Overlay - follows cursor */}
+      <DragOverlay 
+        modifiers={[restrictToWindowEdges]}
+        dropAnimation={{
+          duration: 250,
+          easing: 'cubic-bezier(0.18, 0.67, 0.6, 1.22)',
+        }}
+      >
         {activeItem && (
-          <div className="aspect-square rounded-lg overflow-hidden shadow-2xl border-2 border-blue-500 opacity-90">
+          <div className="aspect-square w-32 rounded-lg overflow-hidden shadow-2xl border-2 border-blue-500 bg-white cursor-grabbing">
             {activeItem.type === 'image' || activeItem.type === 'floorplan' ? (
               <img
                 src={activeItem.url}
