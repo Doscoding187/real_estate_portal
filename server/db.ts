@@ -1686,6 +1686,8 @@ export async function getPlatformAnalytics() {
       (SELECT COUNT(*) FROM ${agencies} WHERE ${agencies.subscriptionPlan} != 'free') as paidSubsCount,
       (SELECT COUNT(*) FROM ${developers}) as developerCount
   `);
+  
+  console.log('getPlatformAnalytics counts:', counts);
 
   // Monthly revenue (from commissions) - assume last 30 days
   const thirtyDaysAgo = new Date();
