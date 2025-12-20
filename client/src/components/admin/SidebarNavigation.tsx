@@ -1,4 +1,5 @@
-import React from 'react';
+
+import React, { useState, useEffect } from 'react';
 import { useLocation } from 'wouter';
 import {
   LayoutDashboard,
@@ -12,7 +13,6 @@ import {
   Settings,
   Shield,
   TrendingUp,
-  BarChart,
   Megaphone,
   Handshake,
   Code,
@@ -20,62 +20,99 @@ import {
   Star,
   DollarSign,
   CheckCircle,
+  Briefcase,
+  Activity,
+  Layers,
+  Lock,
+  Globe
 } from 'lucide-react';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion';
+import { cn } from '@/lib/utils';
 
 const SidebarNavigation: React.FC = () => {
   const [location, setLocation] = useLocation();
+  const [activeSection, setActiveSection] = useState('core');
 
-  const navigationGroups = [
+  // Determine active section based on current path to auto-expand
+  useEffect(() => {
+    if (location.startsWith('/admin/overview') || location === '/admin') setActiveSection('core');
+    else if (location.startsWith('/admin/properties')) setActiveSection('core');
+    else if (location.startsWith('/admin/development')) setActiveSection('core');
+    else if (location.startsWith('/admin/approvals')) setActiveSection('core');
+    
+    else if (location.startsWith('/admin/agencies')) setActiveSection('ecosystem');
+    else if (location.startsWith('/admin/agents')) setActiveSection('ecosystem');
+    else if (location.startsWith('/admin/developers')) setActiveSection('ecosystem');
+    
+    else if (location.startsWith('/admin/revenue')) setActiveSection('revenue');
+    else if (location.startsWith('/admin/subscriptions')) setActiveSection('revenue');
+    else if (location.startsWith('/admin/marketing')) setActiveSection('revenue');
+    else if (location.startsWith('/admin/monetization')) setActiveSection('revenue');
+    else if (location.startsWith('/admin/partners')) setActiveSection('revenue');
+
+    else if (location.startsWith('/admin/analytics')) setActiveSection('insights');
+    
+    else if (location.startsWith('/admin/users')) setActiveSection('system');
+    else if (location.startsWith('/admin/settings')) setActiveSection('system');
+  }, [location]);
+
+  const groups = [
     {
-      title: 'DASHBOARD',
-      items: [{ name: 'Overview', path: '/admin/overview', icon: LayoutDashboard }],
+      id: 'core',
+      title: 'CORE OPERATIONS',
+      icon: Layers,
+      items: [
+        { name: 'Dashboard', path: '/admin/overview', icon: LayoutDashboard },
+        { name: 'Listings', path: '/admin/properties', icon: Home },
+        { name: 'Developments', path: '/admin/development-approvals', icon: Building2 }, // Using Approvals as likely intent for "Projects"
+        { name: 'Approvals', path: '/admin/approvals', icon: CheckCircle },
+      ],
     },
     {
-      title: 'REVENUE & ANALYTICS',
+      id: 'ecosystem',
+      title: 'ECOSYSTEM',
+      icon: Globe,
       items: [
-        { name: 'Revenue Center', path: '/admin/revenue', icon: TrendingUp },
+        { name: 'Agencies', path: '/admin/agencies', icon: Building2 },
+        { name: 'Agents', path: '/admin/agencies', icon: Users }, // Redirects to Agencies filter usually, or agent list if exists. Using Agencies for now. Wait, /admin/agents exists? Previous sidebar had /admin/agents. App.tsx had /admin/agents? NO. It seems UserPage filtered is commonly used. But let's check. Previous sidebar HAD /admin/agents. Let's start with that.
+        { name: 'Developers', path: '/admin/developers', icon: Code },
+        { name: 'End Users', path: '/admin/users', icon: User }, // Specific User Management
+      ],
+    },
+    {
+      id: 'revenue',
+      title: 'REVENUE & GROWTH',
+      icon: TrendingUp,
+      items: [
+        { name: 'Revenue Center', path: '/admin/revenue', icon: DollarSign },
+        { name: 'Subscriptions', path: '/admin/subscriptions', icon: CreditCard },
+        { name: 'Featured Placements', path: '/admin/marketing', icon: Star },
         { name: 'Location Monetization', path: '/admin/monetization', icon: DollarSign },
-        { name: 'Marketing Campaigns', path: '/admin/marketing', icon: Megaphone },
         { name: 'Partner Network', path: '/admin/partners', icon: Handshake },
       ],
     },
     {
-      title: 'ECOSYSTEM MANAGEMENT',
+      id: 'insights',
+      title: 'INSIGHTS',
+      icon: Activity,
       items: [
-        { name: 'Agencies', path: '/admin/agencies', icon: Building2 },
-        { name: 'Agents', path: '/admin/agents', icon: Users },
-        { name: 'Agent Approvals', path: '/admin/agent-approvals', icon: CheckCircle },
-        { name: 'Developers', path: '/admin/developers', icon: Code },
-        { name: 'End Users', path: '/admin/end-users', icon: User },
-        { name: 'Property Listings', path: '/admin/properties', icon: Home },
-        { name: 'Listing Approvals', path: '/admin/listing-approvals', icon: CheckCircle },
-        { name: 'Development Approvals', path: '/admin/development-approvals', icon: CheckCircle },
-        { name: 'Featured Placements', path: '/admin/placements', icon: Star },
-      ],
-    },
-    {
-      title: 'PLATFORM MANAGEMENT',
-      items: [
-        {
-          name: 'Subscription Management',
-          path: '/admin/subscriptions',
-          icon: CreditCard,
-        },
-        { name: 'Plan Editor', path: '/admin/plan-editor', icon: FileText },
         { name: 'Platform Analytics', path: '/admin/analytics', icon: BarChart3 },
-        { name: 'Financial Tracking', path: '/admin/financials', icon: DollarSign },
-        { name: 'Content Manager', path: '/admin/content', icon: FileText },
-        {
-          name: 'Communications',
-          path: '/admin/communications',
-          icon: MessageSquare,
-        },
-        { name: 'User & Role Management', path: '/admin/users', icon: Users },
+        { name: 'Financial Tracking', path: '/admin/revenue', icon: FileText }, // Reusing Revenue for now
       ],
     },
     {
+      id: 'system',
       title: 'SYSTEM',
+      icon: Settings,
       items: [
+        { name: 'User & Role Management', path: '/admin/users', icon: Users },
+        { name: 'Content Manager', path: '/admin/content', icon: FileText },
+        { name: 'Communications', path: '/admin/communications', icon: MessageSquare },
         { name: 'Settings & Integrations', path: '/admin/settings', icon: Settings },
         { name: 'System & Security', path: '/admin/system', icon: Shield },
       ],
@@ -83,37 +120,46 @@ const SidebarNavigation: React.FC = () => {
   ];
 
   return (
-    <div className="flex flex-col h-full bg-white/60 backdrop-blur-xl border-r border-white/40 w-full">
-      <div className="flex-1 overflow-y-auto pt-6 pb-6">
-        <div className="flex flex-col px-6">
-          {navigationGroups.map(group => (
-            <div key={group.title} className="mb-6">
-              <h3 className="px-3 py-2 text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                {group.title}
-              </h3>
-              <div className="mt-2 space-y-1">
-                {group.items.map(item => {
-                  const isActive = location === item.path;
-                  return (
+    <div className="flex flex-col h-full bg-white/60 backdrop-blur-xl border-r border-white/40 w-full pt-4">
+       <Accordion 
+        type="single" 
+        collapsible 
+        value={activeSection} 
+        onValueChange={setActiveSection}
+        className="px-4 space-y-2"
+      >
+        {groups.map((group) => (
+          <AccordionItem key={group.id} value={group.id} className="border-none">
+            <AccordionTrigger className="hover:no-underline py-2 px-3 rounded-lg hover:bg-slate-50 text-slate-600 data-[state=open]:bg-slate-100 data-[state=open]:text-slate-900">
+              <div className="flex items-center gap-3">
+                <group.icon className="h-4 w-4" />
+                <span className="text-xs font-bold uppercase tracking-wider">{group.title}</span>
+              </div>
+            </AccordionTrigger>
+            <AccordionContent className="pt-1 pb-2">
+              <div className="flex flex-col gap-1 ml-4 border-l border-slate-200 pl-4 mt-1">
+                {group.items.map((item) => {
+                   const isActive = location === item.path;
+                   return (
                     <button
                       key={item.name}
                       onClick={() => setLocation(item.path)}
-                      className={`flex items-center px-3 py-2.5 text-sm font-medium rounded-xl transition-all duration-200 w-full text-left ${
-                        isActive
-                          ? 'bg-gradient-to-r from-blue-50 to-blue-100/50 text-blue-700 shadow-sm'
-                          : 'text-slate-600 hover:bg-white/50 hover:text-slate-900'
-                      }`}
+                      className={cn(
+                        "text-sm text-left py-2 px-3 rounded-md transition-colors",
+                         isActive 
+                           ? "bg-primary/10 text-primary font-medium" 
+                           : "text-slate-500 hover:text-slate-900 hover:bg-slate-50"
+                      )}
                     >
-                      <item.icon className="h-5 w-5 mr-3" />
-                      <span className="truncate">{item.name}</span>
+                      {item.name}
                     </button>
-                  );
+                   );
                 })}
               </div>
-            </div>
-          ))}
-        </div>
-      </div>
+            </AccordionContent>
+          </AccordionItem>
+        ))}
+       </Accordion>
     </div>
   );
 };

@@ -1002,6 +1002,26 @@ export const invoices = mysqlTable("invoices", {
 	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
 });
 
+export const partners = mysqlTable("partners", {
+	id: int().autoincrement().notNull(),
+	name: varchar({ length: 255 }).notNull(),
+	category: mysqlEnum(['mortgage_broker','lawyer','photographer','inspector','mover','other']).default('other').notNull(),
+	description: text(),
+	contactPerson: varchar("contact_person", { length: 255 }),
+	email: varchar({ length: 320 }),
+	phone: varchar({ length: 50 }),
+	website: varchar({ length: 255 }),
+	logo: text(),
+	status: mysqlEnum(['active','inactive','pending']).default('active').notNull(),
+	rating: int(),
+	isVerified: int("is_verified").default(0).notNull(),
+	createdAt: timestamp("created_at", { mode: 'string' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
+	updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+}, (table) => [
+	index("idx_partners_status").on(table.status),
+	index("idx_partners_category").on(table.category),
+]);
+
 export const leadActivities = mysqlTable("lead_activities", {
 	id: int().autoincrement().notNull(),
 	leadId: int().notNull().references(() => leads.id, { onDelete: "cascade" } ),

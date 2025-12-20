@@ -8,6 +8,9 @@ import {
   getPlatformSetting,
   setPlatformSetting,
   getAllPlatformSettings,
+  countPendingAgents,
+  countPendingListings,
+  countPendingDevelopments,
 } from './db';
 import {
   users,
@@ -40,6 +43,25 @@ import { developmentService } from './services/developmentService';
  * Admin router - Super admin and agency admin endpoints
  */
 export const adminRouter = router({
+   /**
+   * Super Admin: Get action items (pending counts)
+   * Designed for fast polling on the dashboard
+   */
+  getAdminActionItems: superAdminProcedure.query(async () => {
+    const [agents, listings, developments] = await Promise.all([
+      countPendingAgents(),
+      countPendingListings(),
+      countPendingDevelopments(),
+    ]);
+
+    return {
+      pendingAgentApprovals: agents,
+      pendingListingApprovals: listings,
+      pendingDevelopmentApprovals: developments,
+      flaggedItems: 0, // Placeholder
+    };
+  }),
+
   /**
    * Super Admin: List all users with pagination and filters
    */

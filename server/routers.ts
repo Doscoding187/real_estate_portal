@@ -36,12 +36,14 @@ import { cacheRouter } from './cacheRouter';
 import { locationPagesRouter } from './locationPagesRouter';
 
 import { monetizationRouter } from './monetizationRouter';
+import { partnerRouter } from './partnerRouter';
 
 export const appRouter = router({
   system: systemRouter,
   // ... other routers
   analytics: analyticsRouter,
   monetization: monetizationRouter,
+  partners: partnerRouter,
   admin: adminRouter,
   agency: agencyRouter,
   user: userRouter,

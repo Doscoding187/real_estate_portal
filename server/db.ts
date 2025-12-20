@@ -2925,3 +2925,120 @@ export async function setDeveloperTrust(id: number, isTrusted: boolean) {
 
   return true;
 }
+
+// ==================== PARTNER NETWORK ====================
+
+export async function listPartners({
+  page = 1,
+  limit = 50,
+  category,
+  search,
+}: {
+  page?: number;
+  limit?: number;
+  category?: 'mortgage_broker' | 'lawyer' | 'photographer' | 'inspector' | 'mover' | 'other';
+  search?: string;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+
+  const conditions: SQL[] = [];
+
+  if (category) {
+    conditions.push(eq(partners.category, category));
+  }
+
+  if (search) {
+    conditions.push(or(like(partners.name, `%${search}%`), like(partners.email, `%${search}%`)));
+  }
+
+  const offset = (page - 1) * limit;
+
+  const [partnersList, countResult] = await Promise.all([
+    db
+      .select()
+      .from(partners)
+      .where(and(...conditions))
+      .limit(limit)
+      .offset(offset)
+      .orderBy(desc(partners.createdAt)),
+    db
+      .select({ count: count() })
+      .from(partners)
+      .where(and(...conditions)),
+  ]);
+
+  const total = countResult[0]?.count ?? 0;
+  const totalPages = Math.ceil(total / limit);
+
+  return {
+    partners: partnersList,
+    pagination: {
+      page,
+      limit,
+      total,
+      totalPages,
+    },
+  };
+}
+
+export async function createPartner(data: typeof partners.$inferInsert) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+
+  const result = await db.insert(partners).values(data);
+  return result[0].insertId;
+}
+
+export async function updatePartner(id: number, data: Partial<typeof partners.$inferInsert>) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+
+  await db.update(partners).set(data).where(eq(partners.id, id));
+  return { success: true };
+}
+
+export async function deletePartner(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+
+  await db.delete(partners).where(eq(partners.id, id));
+  return { success: true };
+}
+
+// ==================== DASHBOARD HELPERS ====================
+
+export async function countPendingAgents() {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+  const result = await db
+    .select({ count: count() })
+    .from(agents)
+    .where(eq(agents.status, 'pending'));
+  return result[0]?.count ?? 0;
+}
+
+export async function countPendingListings() {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+  const result = await db
+    .select({ count: count() })
+    .from(listings)
+    .where(eq(listings.status, 'pending_review'));
+  return result[0]?.count ?? 0;
+}
+
+export async function countPendingDevelopments() {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+  
+  // Use developmentApprovalQueue or direct status check depending on architecture
+  // Based on adminRouter imports, developmentApprovalQueue exists
+  // For now, let's count simple 'pending' status on developments table directly for speed
+  const result = await db
+    .select({ count: count() })
+    .from(developments)
+    .where(eq(developments.status, 'pending'));
+    
+  return result[0]?.count ?? 0;
+}

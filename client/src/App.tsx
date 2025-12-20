@@ -76,6 +76,8 @@ import AgentApprovals from './pages/admin/AgentApprovals';
 import CampaignDetailsPage from './pages/admin/CampaignDetailsPage';
 import CampaignInsights from './pages/admin/CampaignInsights';
 import DevelopmentOversight from './pages/admin/DevelopmentOversight';
+import UnifiedApprovalsPage from './pages/admin/UnifiedApprovalsPage';
+import PartnerNetworkPage from './pages/admin/PartnerNetworkPage';
 
 // Import new role-based dashboards
 import UserDashboard from './pages/UserDashboard';
@@ -324,6 +326,16 @@ function Router() {
           </SuperAdminDashboard>
         )}
       />
+      {/* Unified Approvals Route */}
+      <Route
+        path="/admin/approvals"
+        component={() => (
+          <SuperAdminDashboard>
+            <UnifiedApprovalsPage />
+          </SuperAdminDashboard>
+        )}
+      />
+
       {/* Listing Approval Queue Route */}
       <Route
         path="/admin/listing-approvals"
@@ -354,6 +366,16 @@ function Router() {
         )}
       />
       
+      {/* Partner Network Route */}
+      <Route
+        path="/admin/partners"
+        component={() => (
+          <SuperAdminDashboard>
+            <PartnerNetworkPage />
+          </SuperAdminDashboard>
+        )}
+      />
+
       {/* Admin Property Review Route */}
       <Route
         path="/admin/review/:id"

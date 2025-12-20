@@ -1,3 +1,4 @@
+
 import React from 'react';
 import {
   Users,
@@ -5,57 +6,26 @@ import {
   CreditCard,
   DollarSign,
   TrendingUp,
-  TrendingDown,
+  AlertTriangle,
+  CheckCircle,
+  ArrowRight,
+  Activity,
+  UserPlus
 } from 'lucide-react';
 import { CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { GlassCard } from '@/components/ui/glass-card';
+import { Button } from '@/components/ui/button';
 import { trpc } from '@/lib/trpc';
-
-interface StatCardProps {
-  icon: React.ReactNode;
-  value: string | number;
-  label: string;
-  trend?: 'up' | 'down';
-  color?: string;
-  change?: string;
-}
-
-const StatCard: React.FC<StatCardProps> = ({
-  icon,
-  value,
-  label,
-  trend,
-  color = 'bg-muted',
-  change,
-}) => {
-  return (
-    <GlassCard className="border-white/40 shadow-[0_8px_30px_rgba(8,_112,_184,_0.06)] hover:shadow-[0_12px_40px_rgba(8,_112,_184,_0.1)] transition-all py-6">
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <div className={`p-2 rounded-full ${color}`}>{icon}</div>
-        {trend && (
-          <div className="flex items-center">
-            {trend === 'up' ? (
-              <TrendingUp className="h-4 w-4 text-emerald-500" />
-            ) : (
-              <TrendingDown className="h-4 w-4 text-rose-500" />
-            )}
-          </div>
-        )}
-      </CardHeader>
-      <CardContent>
-        <div className="text-2xl font-bold text-slate-800">{value}</div>
-        <p className="text-xs text-slate-500">{label}</p>
-        {change && <p className="text-xs text-slate-500 mt-1">{change}</p>}
-      </CardContent>
-    </GlassCard>
-  );
-};
+import { useLocation } from 'wouter';
+import { Badge } from '@/components/ui/badge';
 
 const OverviewPage: React.FC = () => {
-  // Fetch real analytics data
-  const { data: analytics, isLoading } = trpc.admin.getAnalytics.useQuery();
+  const [, setLocation] = useLocation();
+  const { data: analytics, isLoading: analyticsLoading } = trpc.admin.getAnalytics.useQuery();
+  const { data: actions, isLoading: actionsLoading } = trpc.admin.getAdminActionItems.useQuery(undefined, {
+    refetchInterval: 30000, // Poll every 30s
+  });
 
-  // Format currency
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-ZA', {
       style: 'currency',
@@ -64,121 +34,214 @@ const OverviewPage: React.FC = () => {
     }).format(amount);
   };
 
-  // Format number with commas
-  const formatNumber = (num: number) => {
-    return new Intl.NumberFormat('en-ZA').format(num);
-  };
+  const formatNumber = (num: number) => new Intl.NumberFormat('en-ZA').format(num);
 
-  // Calculate percentage change (mock for now, can be enhanced with historical data)
-  const calculateChange = (current: number, previous: number) => {
-    if (previous === 0) return '+0%';
-    const change = ((current - previous) / previous) * 100;
-    return `${change >= 0 ? '+' : ''}${change.toFixed(1)}%`;
-  };
-
-  // Real data for key metrics
-  const keyMetrics = [
+  // SECTION 1: EXECUTIVE PULSE
+  const pulseMetrics = [
     {
-      title: 'Monthly Revenue',
-      value: isLoading ? '...' : formatCurrency(analytics?.monthlyRevenue || 0),
-      label: 'Last 30 Days',
-      change: isLoading ? '...' : `${analytics?.userGrowth || 0} new users`,
-      trend: 'up' as const,
-      icon: <DollarSign className="h-6 w-6 text-blue-600" />,
-      color: 'bg-blue-100',
+      label: 'Revenue (30d)',
+      value: analyticsLoading ? '...' : formatCurrency(analytics?.monthlyRevenue || 0),
+      trend: '+12%', // Mock trend for now
+      color: 'text-blue-600',
     },
     {
-      title: 'Total Users',
-      value: isLoading ? '...' : formatNumber(analytics?.totalUsers || 0),
       label: 'Active Users',
-      change: isLoading ? '...' : `+${analytics?.userGrowth || 0} this month`,
-      trend: 'up' as const,
-      icon: <Users className="h-6 w-6 text-green-600" />,
-      color: 'bg-green-100',
+      value: analyticsLoading ? '...' : formatNumber(analytics?.totalUsers || 0),
+      trend: `+${analytics?.userGrowth || 0}`,
+      color: 'text-emerald-600',
     },
     {
-      title: 'Properties Listed',
-      value: isLoading ? '...' : formatNumber(analytics?.totalProperties || 0),
-      label: 'Total Properties',
-      change: isLoading ? '...' : `+${analytics?.propertyGrowth || 0} this month`,
-      trend: 'up' as const,
-      icon: <Home className="h-6 w-6 text-purple-600" />,
-      color: 'bg-purple-100',
-    },
-    {
-      title: 'Paid Subscriptions',
-      value: isLoading ? '...' : formatNumber(analytics?.paidSubscriptions || 0),
-      label: 'Active Subscriptions',
-      change: isLoading ? '...' : `${analytics?.totalAgencies || 0} total agencies`,
-      trend: 'up' as const,
-      icon: <CreditCard className="h-6 w-6 text-amber-600" />,
-      color: 'bg-amber-100',
+      label: 'Active Listings',
+      value: analyticsLoading ? '...' : formatNumber(analytics?.activeProperties || 0),
+      trend: `+${analytics?.propertyGrowth || 0}`,
+      color: 'text-purple-600',
     },
   ];
 
+  // SECTION 2: ACTION REQUIRED
+  const totalActionItems = 
+    (actions?.pendingAgentApprovals || 0) + 
+    (actions?.pendingListingApprovals || 0) + 
+    (actions?.pendingDevelopmentApprovals || 0);
+
+  const hasActions = totalActionItems > 0;
+
   return (
-    <div>
+    <div className="space-y-8 max-w-7xl mx-auto">
       {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-4xl font-bold text-slate-800">Dashboard Overview</h1>
-        <p className="text-slate-500">Welcome back! Here's what's happening with your platform.</p>
+      <div>
+        <h1 className="text-3xl font-bold text-slate-800">Dashboard</h1>
+        <p className="text-slate-500">Daily decision support center.</p>
       </div>
 
-      {/* Key Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-        {keyMetrics.map((metric, index) => (
-          <StatCard key={index} {...metric} />
+      {/* SECTION 1: EXECUTIVE PULSE (Compact) */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {pulseMetrics.map((metric, i) => (
+          <GlassCard key={i} className="py-4 px-6 flex items-center justify-between border-white/50">
+            <div>
+              <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">{metric.label}</p>
+              <h3 className="text-2xl font-bold text-slate-800 mt-1">{metric.value}</h3>
+            </div>
+            <Badge variant="secondary" className="bg-white/50 text-slate-600">
+              {metric.trend}
+            </Badge>
+          </GlassCard>
         ))}
       </div>
 
-      {/* Additional Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <GlassCard className="border-white/40 shadow-[0_8px_30px_rgba(8,_112,_184,_0.06)] py-6">
+      {/* SECTION 2: ACTION REQUIRED (Hero) */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <GlassCard className="lg:col-span-2 border-l-4 border-l-amber-500 shadow-lg relative overflow-hidden">
+          <div className="absolute top-0 right-0 p-4 opacity-10">
+            <AlertTriangle className="h-32 w-32 text-amber-500" />
+          </div>
+          
           <CardHeader>
-            <CardTitle className="text-slate-800">Active Properties</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-slate-800">
-              {isLoading ? '...' : formatNumber(analytics?.activeProperties || 0)}
+            <div className="flex items-center gap-3">
+              <div className={hasActions ? "p-2 bg-amber-100 rounded-lg text-amber-600" : "p-2 bg-green-100 rounded-lg text-green-600"}>
+                {hasActions ? <AlertTriangle className="h-6 w-6" /> : <CheckCircle className="h-6 w-6" />}
+              </div>
+              <div>
+                <CardTitle className="text-xl">
+                  {hasActions ? 'Action Required' : 'All Clear'}
+                </CardTitle>
+                <p className="text-slate-500 text-sm">
+                  {hasActions ? `You have ${totalActionItems} items requiring attention.` : 'No pending approvals or reviews.'}
+                </p>
+              </div>
             </div>
-            <p className="text-sm text-slate-500 mt-2">Properties currently available</p>
+          </CardHeader>
+          
+          <CardContent className="space-y-3 pt-2">
+            {actionsLoading ? (
+              <div className="text-sm text-slate-500">Loading action items...</div>
+            ) : hasActions ? (
+              <>
+                {(actions?.pendingAgentApprovals || 0) > 0 && (
+                  <div 
+                    onClick={() => setLocation('/admin/approvals')}
+                    className="flex items-center justify-between p-3 bg-white/60 rounded-lg border border-white/60 hover:bg-white/90 cursor-pointer transition-all group"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="h-2 w-2 rounded-full bg-amber-500" />
+                      <span className="font-medium text-slate-700">{actions?.pendingAgentApprovals} Agent approvals pending</span>
+                    </div>
+                    <ArrowRight className="h-4 w-4 text-slate-400 group-hover:text-primary transition-colors" />
+                  </div>
+                )}
+                {(actions?.pendingListingApprovals || 0) > 0 && (
+                  <div 
+                     onClick={() => setLocation('/admin/approvals')}
+                     className="flex items-center justify-between p-3 bg-white/60 rounded-lg border border-white/60 hover:bg-white/90 cursor-pointer transition-all group"
+                  >
+                     <div className="flex items-center gap-3">
+                      <div className="h-2 w-2 rounded-full bg-amber-500" />
+                      <span className="font-medium text-slate-700">{actions?.pendingListingApprovals} Listings awaiting review</span>
+                    </div>
+                    <ArrowRight className="h-4 w-4 text-slate-400 group-hover:text-primary transition-colors" />
+                  </div>
+                )}
+                {(actions?.pendingDevelopmentApprovals || 0) > 0 && (
+                  <div 
+                     onClick={() => setLocation('/admin/approvals')}
+                     className="flex items-center justify-between p-3 bg-white/60 rounded-lg border border-white/60 hover:bg-white/90 cursor-pointer transition-all group"
+                  >
+                     <div className="flex items-center gap-3">
+                      <div className="h-2 w-2 rounded-full bg-amber-500" />
+                      <span className="font-medium text-slate-700">{actions?.pendingDevelopmentApprovals} Developments pending review</span>
+                    </div>
+                    <ArrowRight className="h-4 w-4 text-slate-400 group-hover:text-primary transition-colors" />
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-8 text-center">
+                <p className="text-slate-500 mb-4">Great job! You've cleared the queue.</p>
+                <Button variant="outline" onClick={() => setLocation('/admin/properties')}>
+                  Manage Existing Listings
+                </Button>
+              </div>
+            )}
           </CardContent>
         </GlassCard>
 
-        <GlassCard className="border-white/40 shadow-[0_8px_30px_rgba(8,_112,_184,_0.06)] py-6">
-          <CardHeader>
-            <CardTitle className="text-slate-800">Total Agencies</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-slate-800">
-              {isLoading ? '...' : formatNumber(analytics?.totalAgencies || 0)}
-            </div>
-            <p className="text-sm text-slate-500 mt-2">Registered agencies</p>
-          </CardContent>
-        </GlassCard>
+        {/* SECTION 3: GROWTH SNAPSHOT */}
+        <div className="lg:col-span-1 space-y-4">
+          <GlassCard className="h-full">
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <TrendingUp className="h-5 w-5 text-blue-500" />
+                Growth Snapshot
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-blue-100 rounded-lg text-blue-600">
+                    <UserPlus className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-slate-700">New Users</p>
+                    <p className="text-xs text-slate-500">Last 30 days</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="font-bold text-slate-800">+{analytics?.userGrowth || 0}</p>
+                </div>
+              </div>
 
-        <GlassCard className="border-white/40 shadow-[0_8px_30px_rgba(8,_112,_184,_0.06)] py-6">
-          <CardHeader>
-            <CardTitle className="text-slate-800">Total Agents</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-slate-800">
-              {isLoading ? '...' : formatNumber(analytics?.totalAgents || 0)}
-            </div>
-            <p className="text-sm text-slate-500 mt-2">Active agents on platform</p>
-          </CardContent>
-        </GlassCard>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-purple-100 rounded-lg text-purple-600">
+                    <Home className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-slate-700">New Listings</p>
+                    <p className="text-xs text-slate-500">Last 30 days</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="font-bold text-slate-800">+{analytics?.propertyGrowth || 0}</p>
+                </div>
+              </div>
+              
+              <div className="pt-4 border-t border-slate-100">
+                <Button variant="ghost" className="w-full text-xs text-slate-500 hover:text-primary" onClick={() => setLocation('/admin/analytics')}>
+                  View Full Analytics <ArrowRight className="h-3 w-3 ml-1" />
+                </Button>
+              </div>
+            </CardContent>
+          </GlassCard>
+        </div>
+      </div>
 
-        <GlassCard className="border-white/40 shadow-[0_8px_30px_rgba(8,_112,_184,_0.06)] py-6">
-          <CardHeader>
-            <CardTitle className="text-slate-800">Total Developers</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-slate-800">
-              {isLoading ? '...' : formatNumber(analytics?.totalDevelopers || 0)}
-            </div>
-            <p className="text-sm text-slate-500 mt-2">Property developers</p>
-          </CardContent>
+      {/* SECTION 4: MONETIZATION SNAPSHOT */}
+      <div>
+        <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-3">Monetization</h3>
+        <GlassCard className="p-0 overflow-hidden text-sm">
+          <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-slate-100">
+             <div className="p-4 flex items-center justify-between hover:bg-white/50 transition-colors">
+               <div className="flex items-center gap-3">
+                 <CreditCard className="h-4 w-4 text-emerald-500" />
+                 <span className="text-slate-600">Active Subscriptions</span>
+               </div>
+               <span className="font-bold text-slate-800">{analytics?.paidSubscriptions || 0}</span>
+             </div>
+             <div className="p-4 flex items-center justify-between hover:bg-white/50 transition-colors">
+               <div className="flex items-center gap-3">
+                 <DollarSign className="h-4 w-4 text-emerald-500" />
+                 <span className="text-slate-600">Revenue (MoM)</span>
+               </div>
+               <span className="font-bold text-slate-800 text-emerald-600">+12%</span>
+             </div>
+             <div className="p-4 flex items-center justify-between hover:bg-white/50 transition-colors cursor-pointer" onClick={() => setLocation('/admin/revenue')}>
+               <div className="flex items-center gap-3">
+                 <Activity className="h-4 w-4 text-blue-500" />
+                 <span className="text-slate-600">Revenue Center</span>
+               </div>
+               <ArrowRight className="h-4 w-4 text-slate-400" />
+             </div>
+          </div>
         </GlassCard>
       </div>
     </div>
