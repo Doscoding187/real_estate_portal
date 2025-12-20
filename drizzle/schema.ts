@@ -525,6 +525,9 @@ export const developments = mysqlTable("developments", {
 	
 	// Approval Workflow
 	approvalStatus: mysqlEnum("approval_status", ['draft', 'pending', 'approved', 'rejected']).default('draft'),
+	readinessScore: int("readiness_score").default(0).notNull(),
+	rejectionReasons: json("rejection_reasons"),
+	rejectionNote: text("rejection_note"),
 	
 	showHouseAddress: int().default(1).notNull(),
 	views: int().notNull(),
@@ -1236,6 +1239,11 @@ export const listings = mysqlTable("listings", {
 	rejectionReason: text(),
 	autoPublished: int().default(0),
 	slug: varchar({ length: 255 }).notNull(),
+	readinessScore: int("readiness_score").default(0).notNull(),
+	qualityScore: int("quality_score").default(0).notNull(),
+	qualityBreakdown: json("quality_breakdown"),
+	rejectionReasons: json("rejection_reasons"),
+	rejectionNote: text("rejection_note"),
 	metaTitle: varchar({ length: 255 }),
 	metaDescription: text(),
 	canonicalUrl: text(),
@@ -1655,11 +1663,46 @@ export const savedSearches = mysqlTable("saved_searches", {
 	userId: int().notNull().references(() => users.id, { onDelete: "cascade" } ),
 	name: varchar({ length: 255 }).notNull(),
 	criteria: json().notNull(),
-	notificationFrequency: mysqlEnum(['never','daily','weekly']).default('never'),
+	filters: json(),
+	notificationMethod: varchar({ length: 20 }).default('email'),
+	notificationFrequency: mysqlEnum(['never','daily','weekly','instant']).default('never'),
 	lastNotifiedAt: timestamp({ mode: 'string' }),
+	lastNotified: timestamp({ mode: 'string' }),
+	isActive: tinyint().default(1),
 	createdAt: timestamp({ mode: 'string' }).default(sql`CURRENT_TIMESTAMP`),
 	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow(),
 });
+
+export const searchAnalytics = mysqlTable("search_analytics", {
+	id: int().autoincrement().notNull(),
+	userId: int().references(() => users.id, { onDelete: "set null" } ),
+	sessionId: varchar({ length: 255 }),
+	filters: json().notNull(),
+	resultCount: int(),
+	sortOrder: varchar({ length: 50 }),
+	viewMode: varchar({ length: 20 }),
+	createdAt: timestamp({ mode: 'string' }).default(sql`CURRENT_TIMESTAMP`),
+},
+(table) => [
+	index("idx_search_analytics_created").on(table.createdAt),
+	index("idx_search_analytics_user").on(table.userId),
+	index("idx_search_analytics_session").on(table.sessionId),
+]);
+
+export const propertyClicks = mysqlTable("property_clicks", {
+	id: int().autoincrement().notNull(),
+	propertyId: int().notNull().references(() => properties.id, { onDelete: "cascade" } ),
+	userId: int().references(() => users.id, { onDelete: "set null" } ),
+	sessionId: varchar({ length: 255 }),
+	position: int(),
+	searchFilters: json(),
+	createdAt: timestamp({ mode: 'string' }).default(sql`CURRENT_TIMESTAMP`),
+},
+(table) => [
+	index("idx_property_clicks_property").on(table.propertyId),
+	index("idx_property_clicks_created").on(table.createdAt),
+	index("idx_property_clicks_session").on(table.sessionId),
+]);
 
 export const scheduledViewings = mysqlTable("scheduled_viewings", {
 	id: int().autoincrement().notNull(),

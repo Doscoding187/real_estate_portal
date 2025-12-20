@@ -1,0 +1,125 @@
+
+export type ReadinessResult = {
+  score: number;
+  missing: Record<string, string[]>;
+};
+
+export const calculateListingReadiness = (listing: any): ReadinessResult => {
+  const missing: Record<string, string[]> = {
+    location: [],
+    pricing: [],
+    media: [],
+    description: [],
+    specs: [],
+  };
+
+  let score = 0;
+
+  // 1. Location (20%)
+  if (listing.address && listing.latitude && listing.longitude) {
+    score += 20;
+  } else {
+    if (!listing.address) missing.location.push('Address');
+    if (!listing.latitude || !listing.longitude) missing.location.push('Map Location');
+  }
+
+  // 2. Pricing (20%)
+  if ((listing.askingPrice && Number(listing.askingPrice) > 0) || (listing.monthlyRent && Number(listing.monthlyRent) > 0)) {
+    score += 20;
+  } else {
+    missing.pricing.push('Price');
+  }
+
+  // 3. Media (25%)
+  let imageCount = 0;
+  if (Array.isArray(listing.images)) {
+      imageCount = listing.images.length;
+  } else if (Array.isArray(listing.media)) {
+      // Handle the shape returned by getById (media array of objects)
+      imageCount = listing.media.length;
+  }
+
+  if (imageCount >= 5) {
+    score += 25;
+  } else {
+    missing.media.push(`Upload at least 5 images (Current: ${imageCount})`);
+  }
+
+  // 4. Description (15%)
+  if (listing.description && listing.description.length >= 100) {
+    score += 15;
+  } else {
+     if (!listing.description) missing.description.push('Description');
+     else if (listing.description.length < 100) missing.description.push('Description too short (<100 chars)');
+  }
+
+  // 5. Specs (20%)
+  if (listing.propertyType) {
+      let details: any = listing.propertyDetails || {};
+      if (typeof details === 'string') {
+           try { details = JSON.parse(details); } catch(e) {}
+      }
+      
+      if (details.bedrooms || listing.propertyType === 'land' || listing.propertyType === 'commercial') {
+           score += 20;
+      } else {
+          missing.specs.push('Bedrooms');
+      }
+  } else {
+      missing.specs.push('Property Type');
+  }
+
+  return { score, missing };
+};
+
+export const calculateDevelopmentReadiness = (dev: any): ReadinessResult => {
+   const missing: Record<string, string[]> = {
+    basic: [],
+    location: [],
+    media: [],
+    specs: [],
+  };
+  let score = 0;
+
+  // 1. Basic Info (25%)
+  if (dev.name && dev.description && dev.description.length > 50) {
+      score += 25;
+  } else {
+      if (!dev.name) missing.basic.push('Name');
+      if (!dev.description || dev.description.length <= 50) missing.basic.push('Description (min 50 chars)');
+  }
+
+  // 2. Location (25%)
+   if (dev.address && dev.latitude && dev.longitude) {
+    score += 25;
+  } else {
+    if (!dev.address) missing.location.push('Address');
+    if (!dev.latitude || !dev.longitude) missing.location.push('Map Location');
+  }
+
+  // 3. Media (25%)
+  let imageCount = 0;
+   if (Array.isArray(dev.images)) {
+      imageCount = dev.images.length;
+  } else if (typeof dev.images === 'string') {
+      try {
+          const parsed = JSON.parse(dev.images);
+          if (Array.isArray(parsed)) imageCount = parsed.length;
+      } catch (e) {}
+  }
+
+  if (imageCount >= 1) {
+       score += 25;
+  } else {
+      missing.media.push('Main Image');
+  }
+
+  // 4. Units/Specs (25%)
+  if (dev.priceFrom && Number(dev.priceFrom) > 0) {
+      score += 25;
+  } else {
+      missing.specs.push('Price From (Units)');
+  }
+
+  return { score, missing };
+};

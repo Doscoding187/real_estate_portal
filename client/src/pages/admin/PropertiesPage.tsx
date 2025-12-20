@@ -41,6 +41,7 @@ interface Property {
   createdAt: string;
   propertyType?: string | null;
   userId?: number | null;
+  qualityScore?: number;
 }
 
 export default function PropertiesPage() {
@@ -181,7 +182,7 @@ export default function PropertiesPage() {
                 <Table>
                   <TableHeader>
                     <TableRow className="hover:bg-transparent border-slate-200">
-                      <TableHead className="text-slate-500">Title</TableHead>
+                      <TableHead className="text-slate-500">Title & Quality</TableHead>
                       <TableHead className="text-slate-500">Type</TableHead>
                       <TableHead className="text-slate-500">Location</TableHead>
                       <TableHead className="text-slate-500">Price</TableHead>
@@ -196,6 +197,19 @@ export default function PropertiesPage() {
                       <TableRow key={property.id} className="hover:bg-white/40 border-slate-100 transition-colors">
                         <TableCell className="font-medium text-slate-700">
                           {property.title || 'Untitled'}
+                          {/* Quality Score Badge - Phase 6 */}
+                          {(property as any).qualityScore > 0 && (
+                            <div className="flex items-center gap-1 mt-1">
+                                <Badge variant="outline" className={`h-5 text-[10px] px-1 border-0 ${
+                                    (property as any).qualityScore >= 90 ? 'bg-purple-100 text-purple-700' :
+                                    (property as any).qualityScore >= 75 ? 'bg-blue-100 text-blue-700' :
+                                    (property as any).qualityScore >= 50 ? 'bg-slate-100 text-slate-700' :
+                                    'bg-red-50 text-red-600'
+                                }`}>
+                                    Quality: {(property as any).qualityScore}
+                                </Badge>
+                            </div>
+                          )}
                         </TableCell>
                         <TableCell>
                           <Badge variant="outline">

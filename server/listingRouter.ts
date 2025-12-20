@@ -9,6 +9,8 @@ import { router, publicProcedure, protectedProcedure } from './_core/trpc';
 import { TRPCError } from '@trpc/server';
 import * as db from './db';
 import { autoCreateLocationHierarchy, extractPlaceComponents } from './services/locationAutoPopulation';
+import { calculateListingReadiness } from './lib/readiness';
+import { calculateListingQualityScore } from './lib/quality';
 
 // Validation schemas
 const listingActionSchema = z.enum(['sell', 'rent', 'auction']);
@@ -172,6 +174,11 @@ export const listingRouter = router({
         media,
       });
 
+      // Calculate initial readiness
+      const listingData = { ...input, media }; 
+      const readiness = calculateListingReadiness(listingData);
+      await db.updateListing(listingId, { readinessScore: readiness.score });
+
       // Set approval status based on account verification
       // For now, we'll put it in draft status
       const canonicalUrl = `/listings/${slug}`;
@@ -219,6 +226,21 @@ export const listingRouter = router({
         await db.updateListing(input.id, {
           ...input,
           updatedAt: new Date(),
+        });
+
+        // Recalculate readiness and quality
+        // Fetch full listing with media to ensure accuracy (or construct from input + existing)
+        const fullListing = await db.getListingById(input.id);
+        const media = await db.getListingMedia(input.id);
+        const listingData = { ...fullListing, ...input, media }; // Merge input into full listing
+
+        const readiness = calculateListingReadiness(listingData);
+        const quality = calculateListingQualityScore(listingData);
+
+        await db.updateListing(input.id, { 
+            readinessScore: readiness.score,
+            qualityScore: quality.score,
+            qualityBreakdown: quality.breakdown
         });
 
         return { success: true };
@@ -509,22 +531,94 @@ export const listingRouter = router({
           });
         }
 
-        // Update status to pending_review and add to approval queue
+        // Check readiness before allowing submission
+        const fullListing = await db.getListingById(input.listingId);
+        const media = await db.getListingMedia(input.listingId);
+        const readiness = calculateListingReadiness({ ...fullListing, media });
+
+        if (readiness.score < 90) { // Threshold 90%
+             throw new TRPCError({
+                code: 'PRECONDITION_FAILED',
+                message: `Listing is not ready for submission (${readiness.score}%). Please complete missing fields.`,
+            });
+        }
+
+        // --- Fast-Track Approval Logic (Phase 5) ---
+        // Criteria: Readiness 100%, Quality >= 85, Trusted/Verified Agent
+        const quality = calculateListingQualityScore({ ...fullListing, media });
+        const agent = await db.getAgentByUserId(ctx.user.id);
+        
+        // Check if agent is verified (assuming isVerified is 1 or true)
+        const isTrusted = agent?.isVerified === 1;
+
+        if (readiness.score === 100 && quality.score >= 85 && isTrusted) {
+            // Auto-Approve
+            await db.approveListing(input.listingId, ctx.user.id, "Fast-Track Auto Approval (High Quality & Trusted)");
+            return { success: true, status: 'approved', fastTracked: true };
+        }
+
+        // Otherwise, add to manual review queue
         await db.submitListingForReview(input.listingId);
 
-        return { success: true };
+        return { success: true, status: 'pending_review' };
       } catch (error) {
         console.error('Error submitting for review:', error);
+        if (error instanceof TRPCError) throw error;
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
           message: 'Failed to submit for review',
         });
       }
     }),
+ 
+   /**
+    * Promote/Feature a listing (Soft Monetization Hook)
+    * Requires Quality Score >= 85
+    */
+   promote: protectedProcedure
+     .input(z.object({ 
+         listingId: z.number(),
+         featured: z.boolean() 
+     }))
+     .mutation(async ({ ctx, input }) => {
+       try {
+         // Verify ownership or admin
+         const listing = await db.getListingById(input.listingId);
+         if (!listing) throw new TRPCError({ code: 'NOT_FOUND', message: 'Listing not found' });
+         
+         const isOwner = listing.userId === ctx.user?.id;
+         const isSuperAdmin = ctx.user?.role === 'super_admin';
+         
+         if (!isOwner && !isSuperAdmin) {
+            throw new TRPCError({ code: 'FORBIDDEN', message: 'Not authorized' });
+         }
+
+         // Gate: Quality Score >= 85 for featuring
+         if (input.featured) {
+             const qualityScore = listing.qualityScore || 0; // Assuming it's already calculated on save
+             if (qualityScore < 85 && !isSuperAdmin) { // Admins can override
+                 throw new TRPCError({
+                     code: 'PRECONDITION_FAILED',
+                     message: `Listing Quality Score must be at least 85 to be Featured. Current score: ${qualityScore}.`
+                 });
+             }
+         }
+
+         // Update listing
+         // Since db.updateListing takes partial, we can use it.
+         await db.updateListing(input.listingId, { featured: input.featured ? 1 : 0 });
+
+         return { success: true };
+       } catch (error) {
+         console.error('Error promoting listing:', error);
+         if (error instanceof TRPCError) throw error;
+         throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to update promotion status' });
+       }
+     }),
 
   /**
    * Approve listing (Super Admin only)
-   */
+   *
   approve: protectedProcedure
     .input(
       z.object({
@@ -558,7 +652,9 @@ export const listingRouter = router({
     .input(
       z.object({
         listingId: z.number(),
-        reason: z.string(),
+        reason: z.string().optional(), // Now optional as we use reasons array primarily
+        reasons: z.array(z.string()).optional(),
+        note: z.string().optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -567,7 +663,9 @@ export const listingRouter = router({
       }
 
       try {
-        await db.rejectListing(input.listingId, ctx.user.id, input.reason);
+        // Construct composite reason if legacy reason provided
+        // Store structured data
+        await db.rejectListing(input.listingId, ctx.user.id, input.reason || 'See rejection reasons', input.reasons, input.note);
 
         return { success: true };
       } catch (error) {

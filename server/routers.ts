@@ -34,6 +34,7 @@ import { analyticsRouter } from './analyticsRouter';
 import { similarPropertiesRouter } from './similarPropertiesRouter';
 import { cacheRouter } from './cacheRouter';
 import { locationPagesRouter } from './locationPagesRouter';
+import { propertyResultsRouter } from './propertyResultsRouter';
 
 import { monetizationRouter } from './monetizationRouter';
 import { partnerRouter } from './partnerRouter';
@@ -74,6 +75,7 @@ export const appRouter = router({
   cache: cacheRouter,
   locationPages: locationPagesRouter,
   analytics: analyticsRouter,
+  propertyResults: propertyResultsRouter,
 
   auth: router({
     me: publicProcedure.query(opts => opts.ctx.user),

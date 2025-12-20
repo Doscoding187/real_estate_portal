@@ -6,6 +6,7 @@ import { CheckCircle2, AlertCircle, Loader2, Send, ArrowLeft } from 'lucide-reac
 import { toast } from 'sonner';
 import { trpc } from '@/lib/trpc';
 import { useLocation } from 'wouter';
+import { calculateDevelopmentReadiness } from '@/lib/readiness';
 
 export function FinalisationPhase() {
   const { 
@@ -30,13 +31,38 @@ export function FinalisationPhase() {
   const publishDevMutation = trpc.developer.publishDevelopment.useMutation();
 
   useEffect(() => {
-    setValidationResult(validateForPublish());
+    // Calculate readiness
+    const devCandidate = {
+       name: developmentData.name,
+       description: overview.description,
+       address: developmentData.location?.address,
+       latitude: developmentData.location?.latitude,
+       longitude: developmentData.location?.longitude,
+       images: developmentData.media?.photos?.map((p: any) => p.url) || [], 
+       priceFrom: unitTypes.length > 0 ? Math.min(...unitTypes.map(u => u.basePriceFrom)) : undefined,
+    };
+    const readiness = calculateDevelopmentReadiness(devCandidate);
+
+    const basicValidation = validateForPublish();
+    const newErrors = [...basicValidation.errors];
+    
+    if (readiness.score < 90) {
+        newErrors.push(`Readiness Score is ${readiness.score}% (Minimum 90% required).`);
+        Object.entries(readiness.missing).forEach(([section, items]) => {
+            if (items.length > 0) {
+                newErrors.push(`${section.charAt(0).toUpperCase() + section.slice(1)}: ${items.join(', ')}`);
+            }
+        });
+    }
+
+    setValidationResult({
+        isValid: basicValidation.isValid && readiness.score >= 90,
+        errors: newErrors
+    });
   }, [developmentData, classification, overview, unitTypes, validateForPublish]);
 
   const handlePublish = async () => {
-    const validation = validateForPublish();
-    if (!validation.isValid) {
-      setValidationResult(validation);
+    if (!validationResult.isValid) {
       toast.error('Please fix validation errors before publishing');
       return;
     }

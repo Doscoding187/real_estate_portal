@@ -98,10 +98,14 @@ export class ExploreFeedService {
         }
       }
 
-      // Build query with boost priority and performance score
+      // Build query with JOIN to get quality score
       let query = db
-        .select()
+        .select({
+            short: exploreShorts,
+            qualityScore: listings.qualityScore
+        })
         .from(exploreShorts)
+        .leftJoin(listings, eq(exploreShorts.listingId, listings.id))
         .where(eq(exploreShorts.isPublished, 1));
 
       // Apply user location preference if available
@@ -109,15 +113,18 @@ export class ExploreFeedService {
         // TODO: Filter by preferred locations in Phase 9
       }
 
-      // Order by boost priority, then performance score, then recency
-      const shorts = await query
+      // Order by boost priority, then Quality-Weighted Performance Score, then recency
+      // Formula: Performance * (1 + Quality/100)
+      const rows = await query
         .orderBy(
           desc(exploreShorts.boostPriority),
-          desc(exploreShorts.performanceScore),
+          sql`(${exploreShorts.performanceScore} * (1 + COALESCE(${listings.qualityScore}, 30) / 100)) DESC`, // Use 30 as baseline for non-listings (e.g. developments) or nulls
           desc(exploreShorts.publishedAt)
         )
         .limit(limit)
         .offset(offset);
+
+      const shorts = rows.map(r => r.short);
 
       const result: FeedResult = {
         shorts: shorts.map(transformShort),
@@ -172,7 +179,7 @@ export class ExploreFeedService {
           OR d.city LIKE ${`%${location}%`}
           OR d.province LIKE ${`%${location}%`}
         )
-        ORDER BY es.boost_priority DESC, es.performance_score DESC, es.published_at DESC
+        ORDER BY es.boost_priority DESC, (es.performance_score * (1 + COALESCE(l.quality_score, 30) / 100)) DESC, es.published_at DESC
         LIMIT ${limit} OFFSET ${offset}
       `);
 
@@ -242,7 +249,7 @@ export class ExploreFeedService {
               sql` OR `
             )}
           )
-          ORDER BY boost_priority DESC, performance_score DESC, published_at DESC
+          ORDER BY boost_priority DESC, (performance_score * (1 + COALESCE((SELECT quality_score FROM listings WHERE id = listing_id), 30) / 100)) DESC, published_at DESC
           LIMIT ${limit} OFFSET ${offset}
         `);
 
@@ -259,14 +266,17 @@ export class ExploreFeedService {
       }
 
       // Fallback to all shorts if no tags
-      const shorts = await query
+      const rows = await query
+        .leftJoin(listings, eq(exploreShorts.listingId, listings.id))
         .orderBy(
           desc(exploreShorts.boostPriority),
-          desc(exploreShorts.performanceScore),
+          sql`(${exploreShorts.performanceScore} * (1 + COALESCE(${listings.qualityScore}, 30) / 100)) DESC`,
           desc(exploreShorts.publishedAt)
         )
         .limit(limit)
         .offset(offset);
+        
+      const shorts = rows.map(r => r.explore_shorts); // Drizzle returns joined object { explore_shorts: ..., listings: ... }
 
       return {
         shorts: shorts.map(transformShort),

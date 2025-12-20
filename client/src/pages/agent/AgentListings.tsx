@@ -33,6 +33,9 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Skeleton } from '@/components/ui/skeleton';
+import { EntityStatusCard } from '@/components/dashboard/EntityStatusCard';
+import { calculateListingReadiness } from '@/lib/readiness';
+import { calculateListingQualityScore } from '@/lib/quality';
 
 export default function AgentListings() {
   const [, setLocation] = useLocation();
@@ -159,10 +162,22 @@ export default function AgentListings() {
         houseAreaM2: l.propertyDetails?.houseAreaM2 || l.propertyDetails?.unitSizeM2 || l.propertyDetails?.floorAreaM2 || 0,
         primaryImage: l.primaryImage,
         status: l.status === 'pending_review' ? 'pending' : l.status,
+        status: l.status === 'pending_review' ? 'pending' : l.status,
+        approvalStatus: l.approvalStatus,
+        readinessScore: l.readinessScore,
+        rejectionReasons: l.rejectionReasons,
+        rejectionNote: l.rejectionNote,
+        // Calculate full readiness object for display
+        readiness: calculateListingReadiness(l),
         views: 0, // Drafts don't have views
         enquiries: 0, // Drafts don't have enquiries
       }))
-    : agentListings;
+    : agentListings?.map((l: any) => ({
+        ...l,
+        price: l.pricing?.askingPrice || l.pricing?.monthlyRent || l.pricing?.startingBid || 0,
+        primaryImage: l.primaryImage,
+        readiness: calculateListingReadiness(l),
+    }));
 
   // Redirect if not authenticated
   if (!loading && !isAuthenticated) {
@@ -289,107 +304,15 @@ export default function AgentListings() {
               ) : (
                 <div className="flex flex-col gap-4">
                   {filteredListings?.map((listing: any) => (
-                    <div 
+                    <EntityStatusCard
                       key={listing.id}
-                      className="group bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden flex flex-col sm:flex-row"
-                    >
-                      {/* Image */}
-                      <div className="relative w-full sm:w-64 h-48 sm:h-auto shrink-0 bg-slate-100">
-                        <img 
-                          src={listing.primaryImage || '/assets/placeholder.jpg'} 
-                          alt={listing.title}
-                          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                        />
-                        <div className="absolute top-3 left-3">
-                          <Badge className={
-                            listing.status === 'available' ? 'bg-emerald-500/90 text-white' :
-                            listing.status === 'pending' ? 'bg-amber-500/90 text-white' :
-                            listing.status === 'draft' ? 'bg-slate-500/90 text-white' :
-                            listing.status === 'sold' ? 'bg-blue-500/90 text-white' :
-                            'bg-slate-500/90 text-white'
-                          }>
-                            {listing.status === 'available' ? 'Active' : 
-                             listing.status.charAt(0).toUpperCase() + listing.status.slice(1)}
-                          </Badge>
-                        </div>
-                      </div>
-
-                      {/* Content */}
-                      <div className="p-5 flex-1 flex flex-col">
-                        <div className="flex justify-between items-start mb-2">
-                          <div>
-                            <h3 className="font-bold text-slate-800 text-lg line-clamp-1 group-hover:text-emerald-600 transition-colors">
-                              {listing.title}
-                            </h3>
-                            <p className="text-slate-500 text-sm flex items-center gap-1 mt-1">
-                              <MapPin className="h-3.5 w-3.5" />
-                              <span className="line-clamp-1">{listing.address}, {listing.city}</span>
-                            </p>
-                          </div>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-slate-600">
-                                <MoreVertical className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-48 rounded-xl">
-                              <DropdownMenuItem onClick={() => setLocation(`/listings/create?id=${listing.id}&edit=true`)}>
-                                <Edit className="h-4 w-4 mr-2" /> Edit Listing
-                              </DropdownMenuItem>
-                              {listing.status === 'available' && (
-                                <DropdownMenuItem onClick={() => setLocation(`/property/${listing.id}`)}>
-                                  <Eye className="h-4 w-4 mr-2" /> View Public Page
-                                </DropdownMenuItem>
-                              )}
-                              <DropdownMenuItem 
-                                className="text-amber-600 focus:text-amber-600"
-                                onClick={() => handleArchive(listing.id)}
-                              >
-                                <AlertCircle className="h-4 w-4 mr-2" /> Archive Listing
-                              </DropdownMenuItem>
-                              <DropdownMenuItem 
-                                className="text-red-600 focus:text-red-600"
-                                onClick={() => handleDelete(listing.id)}
-                              >
-                                <Trash2 className="h-4 w-4 mr-2" /> Delete Property
-
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </div>
-
-                        <div className="flex items-center gap-6 text-sm text-slate-600 mb-4 mt-2">
-                          <div className="flex items-center gap-2">
-                            <Bed className="h-4 w-4 text-slate-400" />
-                            <span className="font-medium">{listing.bedrooms} Beds</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Bath className="h-4 w-4 text-slate-400" />
-                            <span className="font-medium">{listing.bathrooms} Baths</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Home className="h-4 w-4 text-slate-400" />
-                            <span className="font-medium">{listing.houseAreaM2 || listing.floorAreaM2 || listing.unitSizeM2 || '-'} m²</span>
-                          </div>
-                        </div>
-
-                        <div className="pt-4 border-t border-slate-100 flex items-center justify-between mt-auto">
-                          <div className="text-xl font-bold text-slate-900">
-                            {formatCurrency(listing.price)}
-                          </div>
-                          <div className="flex items-center gap-4 text-xs font-medium text-slate-500">
-                            <div className="flex items-center gap-1.5" title="Views">
-                              <Eye className="h-4 w-4" />
-                              <span>{listing.views || 0} Views</span>
-                            </div>
-                            <div className="flex items-center gap-1.5" title="Enquiries">
-                              <AlertCircle className="h-4 w-4" />
-                              <span>{listing.enquiries || 0} Enquiries</span>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
+                      type="listing"
+                      data={listing}
+                      readiness={listing.readiness}
+                      onEdit={(id) => setLocation(`/listings/create?id=${id}&edit=true`)}
+                      onDelete={(id) => handleDelete(id)}
+                      onView={(id) => setLocation(`/property/${id}`)}
+                    />
                   ))}
                 </div>
               )}

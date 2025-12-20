@@ -2287,7 +2287,7 @@ export async function approveListing(listingId: number, reviewedBy: number, note
 /**
  * Reject listing
  */
-export async function rejectListing(listingId: number, reviewedBy: number, reason: string) {
+export async function rejectListing(listingId: number, reviewedBy: number, reason: string, reasons?: string[], note?: string) {
   const db = await getDb();
   if (!db) throw new Error('Database not available');
 
@@ -2295,9 +2295,13 @@ export async function rejectListing(listingId: number, reviewedBy: number, reaso
   await db
     .update(listings)
     .set({
-      status: 'rejected' as any,
-      approvalStatus: 'rejected' as any,
-      updatedAt: new Date(),
+      status: 'rejected',
+      approvalStatus: 'rejected',
+      reviewedBy,
+      reviewedAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
+      rejectionReason: reason, // Legacy support
+      rejectionReasons: reasons ? JSON.stringify(reasons) : null,
+      rejectionNote: note,
     })
     .where(eq(listings.id, listingId));
 
@@ -2305,12 +2309,13 @@ export async function rejectListing(listingId: number, reviewedBy: number, reaso
   await db
     .update(listingApprovalQueue)
     .set({
-      status: 'rejected' as any,
+      status: 'rejected',
       reviewedBy,
-      reviewedAt: new Date(),
+      reviewedAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
+      reviewNotes: note || reason,
       rejectionReason: reason,
     })
-    .where(eq(listingApprovalQueue.listingId, listingId));
+    .where(and(eq(listingApprovalQueue.listingId, listingId), eq(listingApprovalQueue.status, 'pending')));
 }
 
 

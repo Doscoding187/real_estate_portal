@@ -13,6 +13,8 @@ import { useLocation, useRoute } from 'wouter';
 import { toast } from 'sonner';
 import { trpc } from '@/lib/trpc';
 import { cn } from '@/lib/utils';
+import { ReadinessIndicator } from '@/components/common/ReadinessIndicator';
+import { calculateDevelopmentReadiness } from '@/lib/readiness';
 import { 
   AlertDialog, 
   AlertDialogAction, 
@@ -85,6 +87,21 @@ export function DevelopmentWizard({ developmentId, isModal = false }: Developmen
   const stateToWatch = React.useMemo(() => ({
     currentPhase, developmentData, classification, overview, unitTypes, finalisation 
   }), [currentPhase, developmentData, classification, overview, unitTypes, finalisation]);
+
+  // Calculate readiness
+  const readiness = React.useMemo(() => {
+    // Map store to listing object expected by readiness calculator
+    const devCandidate = {
+       name: developmentData.name,
+       description: overview.description,
+       address: developmentData.location?.address,
+       latitude: developmentData.location?.latitude,
+       longitude: developmentData.location?.longitude,
+       images: developmentData.images || [], 
+       priceFrom: unitTypes.priceFrom // Ensure this field exists in store or derived
+    };
+    return calculateDevelopmentReadiness(devCandidate);
+  }, [developmentData, overview, unitTypes]);
 
   const { lastSaved, isSaving, error: autoSaveError } = useAutoSave(stateToWatch, {
     debounceMs: 60000, // 1 Minute as requested
@@ -269,6 +286,13 @@ export function DevelopmentWizard({ developmentId, isModal = false }: Developmen
               </Button>
             </div>
           </div>
+          
+           {/* Readiness Indicator (Global) */}
+            <div className="absolute top-8 right-8 flex items-center gap-4">
+                 <div className="bg-white/80 backdrop-blur-md p-1.5 rounded-full shadow-sm">
+                    <ReadinessIndicator score={readiness.score} missing={readiness.missing} size="md" />
+                 </div>
+            </div>
 
           {/* Enhanced Progress Indicator */}
           <div className="glass border border-white/40 rounded-2xl p-4 md:p-6 shadow-sm">

@@ -10,7 +10,8 @@ import {
   CheckCircle,
   ArrowRight,
   Activity,
-  UserPlus
+  UserPlus,
+  Sparkles
 } from 'lucide-react';
 import { CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { GlassCard } from '@/components/ui/glass-card';
@@ -25,6 +26,8 @@ const OverviewPage: React.FC = () => {
   const { data: actions, isLoading: actionsLoading } = trpc.admin.getAdminActionItems.useQuery(undefined, {
     refetchInterval: 30000, // Poll every 30s
   });
+  // Fetch Quality Stats
+  const { data: propStats } = trpc.admin.getPropertiesStats.useQuery();
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-ZA', {
@@ -202,6 +205,22 @@ const OverviewPage: React.FC = () => {
                 </div>
                 <div className="text-right">
                   <p className="font-bold text-slate-800">+{analytics?.propertyGrowth || 0}</p>
+                </div>
+              </div>
+
+               {/* Quality Score (Phase 6) */}
+               <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-yellow-100 rounded-lg text-yellow-600">
+                    <Sparkles className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-slate-700">Avg Quality</p>
+                    <p className="text-xs text-slate-500">{(propStats as any)?.qualityMetrics?.featuredCount || 0} Featured</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="font-bold text-slate-800">{Math.round((propStats as any)?.qualityMetrics?.averageScore || 0)}</p>
                 </div>
               </div>
               

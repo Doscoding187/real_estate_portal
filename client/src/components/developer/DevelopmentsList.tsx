@@ -21,6 +21,8 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { EntityStatusCard } from '@/components/dashboard/EntityStatusCard';
+import { calculateDevelopmentReadiness } from '@/lib/readiness';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -127,76 +129,38 @@ const DevelopmentsList: React.FC = () => {
         </CardContent>
       </Card>
 
-      {/* Developments Table */}
-      <Card>
-        <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Development</TableHead>
-                <TableHead>Location</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Units</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Leads</TableHead>
-                <TableHead>Views</TableHead>
-                <TableHead></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredDevelopments.map(dev => (
-                <TableRow key={dev.id} className="hover:bg-muted/50 cursor-pointer">
-                  <TableCell>
-                    <div className="flex items-center gap-3">
-                         {/* Placeholder or real image if available */}
-                        <div className="h-12 w-12 rounded-lg bg-slate-100 flex items-center justify-center text-slate-400 overflow-hidden">
-                            {dev.image ? (
-                                <img src={dev.image} alt={dev.name} className="h-full w-full object-cover" />
-                            ) : (
-                                <span className="text-xs">IMG</span>
-                            )}
-                        </div>
-                      <span className="font-semibold text-foreground">{dev.name}</span>
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">{dev.city}, {dev.province}</TableCell>
-                  <TableCell className="text-muted-foreground capitalize">{dev.developmentType?.replace('_', ' ') || '-'}</TableCell>
-                  <TableCell className="font-medium">{dev.totalUnits || 0}</TableCell>
-                  <TableCell>
-                    {getStatusBadge(dev)}
-                  </TableCell>
-                  <TableCell className="font-medium">{dev.leads ?? 0}</TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {(dev.views ?? 0).toLocaleString()}
-                  </TableCell>
-                  <TableCell>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon">
-                          <MoreVertical className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        {dev.approvalStatus === 'rejected' && (
-                            <DropdownMenuItem className="text-red-600 font-medium" onClick={() => setLocation(`/developer/create-development?id=${dev.id}`)}>
-                                <AlertCircle className="w-4 h-4 mr-2" /> Fix Issues
-                            </DropdownMenuItem>
-                        )}
-                        <DropdownMenuItem>View Details</DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => setLocation(`/developer/create-development?id=${dev.id}`)}>Edit</DropdownMenuItem>
-                        <DropdownMenuItem>Analytics</DropdownMenuItem>
-                        <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(dev.id, dev.name)}>
-                          <Trash2 className="w-4 h-4 mr-2" /> Delete
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+      {/* Developments Grid */}
+      <div className="grid grid-cols-1 gap-4">
+        {filteredDevelopments.map(dev => (
+           <EntityStatusCard
+              key={dev.id}
+              type="development"
+              data={{
+                  ...dev,
+                  images: dev.image ? [dev.image] : [], // Normalize image for card
+                  priceFrom: dev.priceFrom, 
+              }}
+              readiness={calculateDevelopmentReadiness({
+                  name: dev.name,
+                  description: dev.description, // Ensure description is fetched
+                  address: dev.address || dev.city,
+                  latitude: dev.latitude,
+                  longitude: dev.longitude,
+                  images: dev.image ? [dev.image] : [],
+                  priceFrom: dev.priceFrom // Ensure priceFrom is fetched
+              })}
+              onEdit={(id) => setLocation(`/developer/create-development?id=${id}`)}
+              onDelete={(id) => handleDelete(id, dev.name)}
+              onView={(id) => setLocation(`/development/${id}`)}
+           />
+        ))}
+        
+        {filteredDevelopments.length === 0 && (
+             <div className="text-center py-12 bg-white rounded-lg border border-dashed text-slate-500">
+                No developments found matching your search.
+             </div>
+        )}
+      </div>
     </div>
   );
 };

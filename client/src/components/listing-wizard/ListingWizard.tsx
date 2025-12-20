@@ -28,6 +28,14 @@ import PreviewStep from './steps/PreviewStep';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, ArrowRight, Home, Save, Check } from 'lucide-react';
 import { toast } from 'sonner';
+import { ReadinessIndicator } from '@/components/common/ReadinessIndicator';
+import { calculateListingReadiness } from '@/lib/readiness';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 const ListingWizard: React.FC = () => {
   const store = useListingWizardStore();
@@ -492,7 +500,25 @@ const ListingWizard: React.FC = () => {
     }
     
     return steps;
+    return steps;
   }, [stepTitles, store.currentStep, store.completedSteps, validationErrors]);
+
+  // Calculate readiness
+  const readiness = useMemo(() => {
+    // Map store to listing object expected by readiness calculator
+    const listingCandidate = {
+       address: store.location?.address,
+       latitude: store.location?.latitude,
+       longitude: store.location?.longitude,
+       askingPrice: store.pricing?.askingPrice,
+       monthlyRent: store.pricing?.monthlyRent,
+       media: store.media,
+       description: store.description,
+       propertyType: store.propertyType,
+       propertyDetails: store.propertyDetails,
+    };
+    return calculateListingReadiness(listingCandidate);
+  }, [store.location, store.pricing, store.media, store.description, store.propertyType, store.propertyDetails]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50 py-8">
@@ -535,7 +561,10 @@ const ListingWizard: React.FC = () => {
             </div>
             {/* Auto-save status indicator */}
             {store.currentStep > 1 && (
-              <div className="absolute top-8 right-8">
+              <div className="absolute top-8 right-8 flex items-center gap-4">
+                 <div className="bg-white/80 backdrop-blur-md p-1.5 rounded-full shadow-sm">
+                    <ReadinessIndicator score={readiness.score} missing={readiness.missing} size="md" />
+                 </div>
                 <SaveStatusIndicator
                   lastSaved={lastSaved}
                   isSaving={isAutoSaving}
@@ -606,14 +635,24 @@ const ListingWizard: React.FC = () => {
               <ArrowRight className="h-4 w-4 ml-2" />
             </Button>
           ) : (
-            <Button
-              onClick={handleSubmit}
-              disabled={isSubmitting}
-              className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 shadow-lg"
-            >
-              {isSubmitting ? 'Submitting...' : 'Submit Listing'}
-              <Home className="h-4 w-4 ml-2" />
-            </Button>
+            <div className="flex flex-col items-end gap-2">
+               {readiness.score < 90 && (
+                   <span className="text-xs text-amber-600 font-medium">
+                       Readiness Score must be 90% to submit
+                   </span>
+               )}
+               <Button
+                onClick={handleSubmit}
+                disabled={isSubmitting || readiness.score < 90}
+                className={isSubmitting || readiness.score < 90 
+                    ? "bg-slate-300 text-slate-500 cursor-not-allowed"
+                    : "bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 shadow-lg"
+                }
+              >
+                {isSubmitting ? 'Submitting...' : 'Submit Listing'}
+                <Home className="h-4 w-4 ml-2" />
+              </Button>
+            </div>
           )}
         </div>
 

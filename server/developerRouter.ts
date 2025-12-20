@@ -9,6 +9,7 @@ import { unitService } from './services/unitService';
 import { calculateAffordabilityCompanion, matchUnitsToAffordability } from './services/affordabilityCompanion';
 import { developmentDrafts } from '../drizzle/schema';
 import { eq, desc, and } from 'drizzle-orm';
+import { calculateDevelopmentReadiness } from './lib/readiness';
 
 export const developerRouter = router({
   /**
@@ -514,6 +515,11 @@ export const developerRouter = router({
           ...input,
           locationId,
         });
+        
+        // Calculate initial readiness
+        const readiness = calculateDevelopmentReadiness({ ...development, ...input }); // input has transient fields
+        await db.updateDevelopment(development.id, { readinessScore: readiness.score });
+
         return { development, message: 'Development created successfully' };
       } catch (error: any) {
         if (error.message.includes('limit reached')) {
@@ -632,6 +638,12 @@ export const developerRouter = router({
           developer.id,
           input.data
         );
+
+        // Recalculate readiness
+        const fullDev = await developmentService.getDevelopmentWithPhases(input.id);
+        const readiness = calculateDevelopmentReadiness(fullDev);
+        await db.updateDevelopment(input.id, { readinessScore: readiness.score });
+
         return { development, message: 'Development updated successfully' };
       } catch (error: any) {
         if (error.message.includes('Unauthorized')) {
@@ -710,6 +722,17 @@ export const developerRouter = router({
       }
 
       try {
+        // Readiness Gate
+        const fullDev = await developmentService.getDevelopmentWithPhases(input.id);
+        const readiness = calculateDevelopmentReadiness(fullDev);
+        
+        if (readiness.score < 90) {
+             throw new TRPCError({
+                code: 'PRECONDITION_FAILED',
+                message: `Development is not ready for publishing (${readiness.score}%). Please complete missing sections.`,
+            });
+        }
+
         const development = await developmentService.publishDevelopment(input.id, developer.id, !!developer.isTrusted);
         return { development, message: 'Development published successfully' };
       } catch (error: any) {

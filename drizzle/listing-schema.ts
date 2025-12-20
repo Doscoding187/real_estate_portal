@@ -167,6 +167,11 @@ export const listings = mysqlTable('listings', {
   // Auto-publish settings
   autoPublished: int().default(0),
 
+  // Readiness & Quality
+  readinessScore: int("readiness_score").default(0).notNull(),
+  qualityScore: int("quality_score").default(0).notNull(),
+  qualityBreakdown: json("quality_breakdown"),
+
   // SEO & Metadata
   slug: varchar({ length: 255 }).notNull(),
   metaTitle: varchar({ length: 255 }),

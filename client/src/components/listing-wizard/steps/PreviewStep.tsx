@@ -23,6 +23,8 @@ import {
 } from 'lucide-react';
 import { useLocation } from 'wouter';
 import { trpc } from '@/lib/trpc';
+import { calculateListingQualityScore } from '@/lib/quality';
+import { QualityScoreCard } from '@/components/dashboard/QualityScoreCard';
 
 const PreviewStep: React.FC = () => {
   const state = useListingWizardStore();
@@ -96,6 +98,23 @@ const PreviewStep: React.FC = () => {
     return Number((state.pricing as any).startingBid) || 0;
   };
 
+  // Calculate Quality Score
+  const quality = calculateListingQualityScore({
+     ...state,
+     images: state.media.filter((m: any) => m.type === 'image'),
+     videos: state.media.filter((m: any) => m.type === 'video'),
+     features: amenitiesList,
+     // Map specific fields for simple readiness/quality object if needed, 
+     // usually the state is close enough or we spread it.
+     // Let's ensure top level fields match what calculateListingQualityScore expects
+     price: getPrice(),
+     askingPrice: getPrice(), // fallback
+     monthlyRent: getPrice(), // fallback
+     latitude: state.location?.latitude,
+     longitude: state.location?.longitude,
+     floorSize: getPropertyArea(),
+  });
+
   return (
     <div className="space-y-8">
       {/* Preview Header */}
@@ -154,6 +173,15 @@ const PreviewStep: React.FC = () => {
             </div>
           </div>
         </div>
+      </div>
+
+       {/* Quality Score Feedback */}
+      <div className="max-w-4xl mx-auto mt-8">
+          <QualityScoreCard 
+            qualityScore={quality.score} 
+            qualityBreakdown={quality.breakdown} 
+            tips={quality.tips} 
+          />
       </div>
     </div>
   );

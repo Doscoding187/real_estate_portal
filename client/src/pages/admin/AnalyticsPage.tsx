@@ -74,6 +74,14 @@ const AnalyticsPage: React.FC = () => {
     { name: 'Inactive', value: analytics.counts.listings - analytics.counts.activeListings },
   ] : [];
 
+  const { data: propStats } = trpc.admin.getPropertiesStats.useQuery();
+  
+  const qualityData = propStats ? [
+    { name: 'Featured', value: (propStats as any).qualityMetrics?.featuredCount || 0, color: '#8b5cf6' }, // Purple
+    { name: 'Optimized', value: (propStats as any).qualityMetrics?.optimizedCount || 0, color: '#3b82f6' }, // Blue
+    { name: 'Standard', value: Math.max(0, (analytics?.counts?.listings || 0) - ((propStats as any).qualityMetrics?.featuredCount || 0) - ((propStats as any).qualityMetrics?.optimizedCount || 0)), color: '#94a3b8' } // Slate
+  ] : [];
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-screen">
@@ -175,6 +183,39 @@ const AnalyticsPage: React.FC = () => {
                   ))}
                 </Bar>
               </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </GlassCard>
+      </div>
+
+      <div className="grid grid-cols-1 gap-6">
+        {/* Quality Tiers Chart - Phase 6 */}
+        <GlassCard className="p-6">
+          <CardHeader>
+            <CardTitle className="text-slate-800">Quality Tier Distribution</CardTitle>
+          </CardHeader>
+          <CardContent className="h-[300px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={qualityData}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={60}
+                  outerRadius={100}
+                  fill="#8884d8"
+                  paddingAngle={5}
+                  dataKey="value"
+                  isAnimationActive={false}
+                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                >
+                  {qualityData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                </Pie>
+                <Tooltip />
+                <Legend />
+              </PieChart>
             </ResponsiveContainer>
           </CardContent>
         </GlassCard>

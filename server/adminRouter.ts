@@ -36,7 +36,7 @@ import {
   developers,
   developmentApprovalQueue, 
 } from '../drizzle/schema';
-import { eq, desc, and, or, like, sql } from 'drizzle-orm';
+import { eq, desc, asc, and, or, like, sql } from 'drizzle-orm';
 import { logAudit, AuditActions } from './_core/auditLog';
 import { developmentService } from './services/developmentService';
 
@@ -473,6 +473,24 @@ export const adminRouter = router({
 
       const where = conditions.length > 0 ? and(...conditions) : undefined;
 
+      // Determine sort order
+      let orderByClause = [desc(listings.createdAt)];
+      
+      // Phase 5: Smart Admin Queues
+      // If viewing pending items, sort by Lowest Readiness (Edge cases) and High Value
+      if (input.status === 'pending_review' || input.status === 'approved') { // Applying smart sort to approved too? Maybe just pending.
+          // Wait, listing status enum usage in where clause:
+          // 'pending_review' is the status for submitted listings.
+      }
+      
+      if (input.status === 'pending_review') {
+         orderByClause = [
+            asc(listings.readinessScore), // Lowest readiness first (Review edge cases)
+            desc(listings.askingPrice),   // High value items
+            desc(listings.createdAt)      // Oldest first if tie
+         ];
+      }
+
       const [listingsList, totalResult] = await Promise.all([
         db
           .select({
@@ -507,6 +525,10 @@ export const adminRouter = router({
             // Media
             thumbnail: listingMedia.thumbnailUrl,
             mediaType: listingMedia.mediaType,
+            
+            // Scores (Phase 2/3)
+            readinessScore: listings.readinessScore,
+            qualityScore: listings.qualityScore,
           })
           .from(listings)
           .leftJoin(agents, eq(listings.agentId, agents.id))
@@ -515,7 +537,7 @@ export const adminRouter = router({
           .where(where)
           .limit(input.limit)
           .offset(offset)
-          .orderBy(desc(listings.createdAt)),
+          .orderBy(...orderByClause),
         db
           .select({ count: sql<number>`count(*)` })
           .from(listings)
@@ -553,6 +575,10 @@ export const adminRouter = router({
         totalInventoryValue: sql<string>`sum(${listings.askingPrice})`,
         newListingsToday: sql<number>`count(case when ${listings.createdAt} >= DATE_SUB(NOW(), INTERVAL 24 HOUR) then 1 end)`,
         pendingApprovals: sql<number>`count(case when ${listings.approvalStatus} = 'pending' then 1 end)`,
+        // Quality Metrics
+        averageQuality: sql<number>`avg(${listings.qualityScore})`,
+        featuredCount: sql<number>`count(case when ${listings.qualityScore} >= 90 then 1 end)`,
+        optimizedCount: sql<number>`count(case when ${listings.qualityScore} >= 75 AND ${listings.qualityScore} < 90 then 1 end)`,
       })
       .from(listings)
       .where(eq(listings.status, 'published')); // Only count published for inventory value? Or all?
@@ -568,6 +594,12 @@ export const adminRouter = router({
       totalInventoryValue: Number(stats?.totalInventoryValue || 0),
       newListingsToday: Number(stats?.newListingsToday || 0),
       pendingApprovals: Number(pendingResult?.count || 0),
+      // Quality Stats (Phase 6) - Using raw SQL to be safe if Drizzle types lag
+      qualityMetrics: {
+        averageScore: Number(stats?.averageQuality || 0),
+        featuredCount: Number(stats?.featuredCount || 0),
+        optimizedCount: Number(stats?.optimizedCount || 0),
+      }
     };
   }),
 

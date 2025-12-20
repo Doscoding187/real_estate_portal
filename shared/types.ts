@@ -701,3 +701,279 @@ export interface FeedQuery {
   developerId?: number;
   agencyId?: number;
 }
+
+
+// ============================================================================
+// Property Results Page Optimization Types
+// ============================================================================
+
+// Property data structure with SA-specific fields
+export interface Property {
+  id: string;
+  title: string;
+  price: number;
+  suburb: string;
+  city: string;
+  province: string;
+  propertyType: 'house' | 'apartment' | 'townhouse' | 'plot' | 'commercial';
+  listingType: 'sale' | 'rent';
+  bedrooms?: number;
+  bathrooms?: number;
+  erfSize?: number; // in m²
+  floorSize?: number; // in m²
+  
+  // SA-specific fields
+  titleType: 'freehold' | 'sectional';
+  levy?: number; // monthly levy for sectional title
+  rates?: number; // monthly rates estimate
+  securityEstate: boolean;
+  petFriendly: boolean;
+  fibreReady: boolean;
+  
+  // Load-shedding solutions
+  loadSheddingSolutions: Array<'solar' | 'generator' | 'inverter' | 'none'>;
+  
+  // Media
+  images: ImageUrls[];
+  videoCount: number;
+  
+  // Status
+  status: 'available' | 'under_offer' | 'sold' | 'let';
+  listedDate: Date;
+  
+  // Agent info
+  agent: {
+    id: string;
+    name: string;
+    agency: string;
+    phone: string;
+    whatsapp: string;
+    email: string;
+    image?: string;
+  };
+  
+  // Location
+  latitude: number;
+  longitude: number;
+  
+  // Highlights
+  highlights: string[];
+}
+
+export interface ImageUrls {
+  url: string;
+  thumbnailUrl?: string;
+  alt?: string;
+}
+
+// Filter state
+export interface PropertyFilters {
+  // Location
+  province?: string;
+  city?: string;
+  suburb?: string[];
+  
+  // Basic filters
+  propertyType?: Property['propertyType'][];
+  listingType?: Property['listingType'];
+  minPrice?: number;
+  maxPrice?: number;
+  minBedrooms?: number;
+  maxBedrooms?: number;
+  minBathrooms?: number;
+  
+  // Size filters
+  minErfSize?: number;
+  maxErfSize?: number;
+  minFloorSize?: number;
+  maxFloorSize?: number;
+  
+  // SA-specific filters
+  titleType?: Property['titleType'][];
+  maxLevy?: number;
+  securityEstate?: boolean;
+  petFriendly?: boolean;
+  fibreReady?: boolean;
+  loadSheddingSolutions?: Property['loadSheddingSolutions'];
+  
+  // Status
+  status?: Property['status'][];
+  
+  // Map bounds
+  bounds?: {
+    north: number;
+    south: number;
+    east: number;
+    west: number;
+  };
+}
+
+// Sort options
+export type SortOption = 
+  | 'price_asc'
+  | 'price_desc'
+  | 'date_desc'
+  | 'date_asc'
+  | 'suburb_asc'
+  | 'suburb_desc';
+
+// View mode
+export type ViewMode = 'list' | 'grid' | 'map';
+
+// Search results
+export interface SearchResults {
+  properties: Property[];
+  total: number;
+  page: number;
+  pageSize: number;
+  hasMore: boolean;
+}
+
+// Saved search
+export interface SavedSearch {
+  id: string;
+  userId: string;
+  name: string;
+  filters: PropertyFilters;
+  notificationMethod: 'email' | 'whatsapp' | 'both' | 'none';
+  notificationFrequency: 'instant' | 'daily' | 'weekly';
+  createdAt: Date;
+  lastNotified?: Date;
+}
+
+// Quick filter presets for SA market
+export interface QuickFilterPreset {
+  id: string;
+  label: string;
+  filters: Partial<PropertyFilters>;
+  icon?: string;
+}
+
+// Property comparison
+export interface PropertyComparison {
+  properties: Property[];
+  selectedIds: string[];
+  maxSelections: number;
+}
+
+// Analytics tracking
+export interface SearchAnalytics {
+  id: string;
+  userId?: string;
+  sessionId: string;
+  filters: PropertyFilters;
+  resultCount: number;
+  sortOrder: SortOption;
+  viewMode: ViewMode;
+  timestamp: Date;
+}
+
+export interface PropertyClickAnalytics {
+  id: string;
+  propertyId: string;
+  userId?: string;
+  sessionId: string;
+  position: number; // position in search results
+  searchFilters: PropertyFilters;
+  timestamp: Date;
+}
+
+// Filter counts for preview
+export interface FilterCounts {
+  propertyType: Record<Property['propertyType'], number>;
+  titleType: Record<Property['titleType'], number>;
+  priceRanges: {
+    range: string;
+    count: number;
+  }[];
+  bedrooms: Record<number, number>;
+  securityEstate: number;
+  petFriendly: number;
+  fibreReady: number;
+}
+
+// SEO metadata
+export interface PropertySEOMetadata {
+  title: string;
+  description: string;
+  canonicalUrl: string;
+  openGraph: {
+    title: string;
+    description: string;
+    image: string;
+    url: string;
+  };
+  structuredData: Record<string, any>;
+}
+
+// Similar properties
+export interface SimilarPropertiesQuery {
+  propertyId: string;
+  maxResults?: number;
+  priceVariance?: number; // percentage (default 20%)
+}
+
+export interface SimilarPropertiesResult {
+  properties: Property[];
+  matchingAttributes: {
+    propertyId: string;
+    matches: string[]; // e.g., ['propertyType', 'bedrooms', 'location']
+  }[];
+}
+
+// Contact agent
+export interface ContactAgentRequest {
+  propertyId: string;
+  agentId: string;
+  name: string;
+  email: string;
+  phone: string;
+  message?: string;
+  preferredContactMethod: 'email' | 'phone' | 'whatsapp';
+}
+
+// Map marker
+export interface PropertyMapMarker {
+  id: string;
+  position: {
+    lat: number;
+    lng: number;
+  };
+  price: number;
+  propertyType: Property['propertyType'];
+  status: Property['status'];
+}
+
+// Pagination
+export interface PaginationInfo {
+  currentPage: number;
+  totalPages: number;
+  pageSize: number;
+  totalResults: number;
+  hasNextPage: boolean;
+  hasPreviousPage: boolean;
+}
+
+// Error states
+export interface PropertySearchError {
+  code: string;
+  message: string;
+  retryable: boolean;
+  suggestions?: string[];
+}
+
+// Loading states
+export type PropertyLoadingState = 
+  | 'idle'
+  | 'loading'
+  | 'filtering'
+  | 'paginating'
+  | 'error'
+  | 'success';
+
+// Cache keys
+export interface PropertyCacheKey {
+  filters: string; // serialized filters
+  page: number;
+  sortOrder: SortOption;
+}
