@@ -15,8 +15,10 @@ import { GoogleLocationAutocomplete } from '@/components/maps/GoogleLocationAuto
 
 const LocationStep: React.FC = () => {
   const { location, setLocation } = useListingWizardStore();
-  const { isLoaded: isMapLoaded, error: mapError } = useGoogleMaps();
+  const { isLoaded: isMapLoaded, error: mapsError } = useGoogleMaps();
   const [isGeocoding, setIsGeocoding] = useState(false);
+  const [localError, setLocalError] = useState<string | null>(null);
+  const mapError = localError || mapsError;
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<google.maps.Map | null>(null);
   const markerRef = useRef<google.maps.Marker | null>(null);
@@ -73,7 +75,7 @@ const LocationStep: React.FC = () => {
       }
     } catch (error) {
       console.error('Map initialization error:', error);
-      setMapError('Failed to initialize map. Please try again.');
+      setLocalError('Failed to initialize map. Please try again.');
     }
   }, [isMapLoaded, location]);
 
@@ -122,7 +124,7 @@ const LocationStep: React.FC = () => {
     if (!geocoderRef.current) return;
 
     setIsGeocoding(true);
-    setMapError(null);
+    setLocalError(null);
 
     geocoderRef.current.geocode(
       { location: latLng },
@@ -175,7 +177,7 @@ const LocationStep: React.FC = () => {
           });
         } else {
           console.error('Geocoder failed due to: ' + status);
-          setMapError(
+          setLocalError(
             'Could not determine address for this location. Please enter address details manually.',
           );
         }
@@ -186,11 +188,11 @@ const LocationStep: React.FC = () => {
   // Get current location
   const getCurrentLocation = () => {
     if (!navigator.geolocation) {
-      setMapError('Geolocation is not supported by your browser.');
+      setLocalError('Geolocation is not supported by your browser.');
       return;
     }
 
-    setMapError(null);
+    setLocalError(null);
     navigator.geolocation.getCurrentPosition(
       position => {
         const latLng = new window.google.maps.LatLng(
@@ -204,7 +206,7 @@ const LocationStep: React.FC = () => {
       },
       error => {
         console.error('Geolocation error:', error);
-        setMapError(
+        setLocalError(
           'Unable to get your current location. Please enable location services or enter address manually.',
         );
       },
