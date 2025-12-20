@@ -1672,15 +1672,16 @@ export async function getPlatformAnalytics() {
 
   // Schema tables are already imported at top level
 
-  // Get counts in a single query
+  // Get counts in a single query - use listings table (new) instead of properties (old)
   const [counts] = await db.execute(sql`
     SELECT
       (SELECT COUNT(*) FROM ${users}) as userCount,
       (SELECT COUNT(*) FROM ${agencies}) as agencyCount,
-      (SELECT COUNT(*) FROM ${properties}) as propertyCount,
-      (SELECT COUNT(*) FROM ${properties} WHERE ${properties.status} = 'available') as activePropertyCount,
+      (SELECT COUNT(*) FROM ${listings}) as propertyCount,
+      (SELECT COUNT(*) FROM ${listings} WHERE status = 'published') as activePropertyCount,
       (SELECT COUNT(*) FROM ${agents}) as agentCount,
-      (SELECT COUNT(*) FROM ${agencies} WHERE ${agencies.subscriptionPlan} != 'free') as paidSubsCount
+      (SELECT COUNT(*) FROM ${agencies} WHERE subscription_plan != 'free') as paidSubsCount,
+      (SELECT COUNT(*) FROM ${developers}) as developerCount
   `);
 
   // Monthly revenue (from commissions) - assume last 30 days
@@ -1704,6 +1705,7 @@ export async function getPlatformAnalytics() {
     totalProperties: Number(countsRow.propertyCount || 0),
     activeProperties: Number(countsRow.activePropertyCount || 0),
     totalAgents: Number(countsRow.agentCount || 0),
+    totalDevelopers: Number(countsRow.developerCount || 0),
     paidSubscriptions: Number(countsRow.paidSubsCount || 0),
     monthlyRevenue: Number(growthRow.monthlyRevenue || 0) / 100, // Convert cents to currency units
     userGrowth: Number(growthRow.userGrowth || 0),

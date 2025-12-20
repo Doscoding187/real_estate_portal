@@ -132,7 +132,7 @@ const OverviewPage: React.FC = () => {
       </div>
 
       {/* Additional Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <GlassCard className="border-white/40 shadow-[0_8px_30px_rgba(8,_112,_184,_0.06)] py-6">
           <CardHeader>
             <CardTitle className="text-slate-800">Active Properties</CardTitle>
@@ -166,6 +166,18 @@ const OverviewPage: React.FC = () => {
               {isLoading ? '...' : formatNumber(analytics?.totalAgents || 0)}
             </div>
             <p className="text-sm text-slate-500 mt-2">Active agents on platform</p>
+          </CardContent>
+        </GlassCard>
+
+        <GlassCard className="border-white/40 shadow-[0_8px_30px_rgba(8,_112,_184,_0.06)] py-6">
+          <CardHeader>
+            <CardTitle className="text-slate-800">Total Developers</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold text-slate-800">
+              {isLoading ? '...' : formatNumber(analytics?.totalDevelopers || 0)}
+            </div>
+            <p className="text-sm text-slate-500 mt-2">Property developers</p>
           </CardContent>
         </GlassCard>
       </div>

@@ -149,7 +149,15 @@ export const appRouter = router({
         // Try listings table first (new)
         const listing = await db.getListingById(input.id);
         if (listing) {
-          const images = await db.getListingMedia(input.id);
+          const rawImages = await db.getListingMedia(input.id);
+          
+          // Transform images to include imageUrl for PropertyImageGallery compatibility
+          const images = rawImages.map(img => ({
+            id: img.id,
+            imageUrl: img.originalUrl, // PropertyImageGallery expects imageUrl
+            isPrimary: img.isPrimary,
+            displayOrder: img.displayOrder,
+          }));
           
           // Transform listing to match property structure for backward compatibility
           const propertyDetails = listing.propertyDetails as any || {};
