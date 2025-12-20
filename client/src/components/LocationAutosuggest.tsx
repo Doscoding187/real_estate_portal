@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { MapPin, Loader2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
-import { useLoadScript } from '@react-google-maps/api';
+import { useGoogleMaps } from '@/hooks/useGoogleMaps';
 
 interface PlacePrediction {
   place_id: string;
@@ -20,8 +20,6 @@ interface LocationAutosuggestProps {
   defaultValue?: string;
 }
 
-const libraries: ('places')[] = ['places'];
-
 export function LocationAutosuggest({ 
   onSelect, 
   placeholder = 'Search city or suburb...', 
@@ -36,10 +34,7 @@ export function LocationAutosuggest({
   const wrapperRef = useRef<HTMLDivElement>(null);
   const autocompleteService = useRef<google.maps.places.AutocompleteService | null>(null);
 
-  const { isLoaded } = useLoadScript({
-    googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '',
-    libraries,
-  });
+  const { isLoaded } = useGoogleMaps();
 
   // Initialize autocomplete service
   useEffect(() => {
@@ -47,6 +42,7 @@ export function LocationAutosuggest({
       autocompleteService.current = new google.maps.places.AutocompleteService();
     }
   }, [isLoaded]);
+
 
   // Close suggestions when clicking outside
   useEffect(() => {

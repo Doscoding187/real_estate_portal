@@ -5,6 +5,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useListingWizardStore } from '@/hooks/useListingWizard';
+import { useGoogleMaps } from '@/hooks/useGoogleMaps';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
@@ -12,73 +13,15 @@ import { Button } from '@/components/ui/button';
 import { MapPin, Navigation, Loader2 } from 'lucide-react';
 import { GoogleLocationAutocomplete } from '@/components/maps/GoogleLocationAutocomplete';
 
-declare global {
-  interface Window {
-    google: any;
-    initMap: () => void;
-  }
-}
-
 const LocationStep: React.FC = () => {
   const { location, setLocation } = useListingWizardStore();
-  const [isMapLoaded, setIsMapLoaded] = useState(false);
+  const { isLoaded: isMapLoaded, error: mapError } = useGoogleMaps();
   const [isGeocoding, setIsGeocoding] = useState(false);
-  const [mapError, setMapError] = useState<string | null>(null);
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<google.maps.Map | null>(null);
   const markerRef = useRef<google.maps.Marker | null>(null);
   const geocoderRef = useRef<google.maps.Geocoder | null>(null);
 
-  // Load Google Maps API
-  useEffect(() => {
-    const loadGoogleMapsAPI = () => {
-      return new Promise<void>((resolve, reject) => {
-        if (window.google && window.google.maps) {
-          resolve();
-          return;
-        }
-
-        // Check if API key is available
-        const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
-        if (!apiKey) {
-          setMapError(
-            'Google Maps API key is missing. Please configure VITE_GOOGLE_MAPS_API_KEY in your environment.',
-          );
-          reject(new Error('Missing API key'));
-          return;
-        }
-
-        const script = document.createElement('script');
-        script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&loading=async&callback=initMap`;
-        script.async = true;
-        script.defer = true;
-
-        window.initMap = () => {
-          setIsMapLoaded(true);
-          resolve();
-        };
-
-        script.onerror = () => {
-          setMapError(
-            'Failed to load Google Maps. Please check your API key and internet connection.',
-          );
-          reject(new Error('Failed to load Google Maps'));
-        };
-
-        document.head.appendChild(script);
-      });
-    };
-
-    loadGoogleMapsAPI()
-      .then(() => {
-        if (window.google && window.google.maps) {
-          setIsMapLoaded(true);
-        }
-      })
-      .catch(error => {
-        console.error('Google Maps loading error:', error);
-      });
-  }, []);
 
   // Initialize map when API is loaded
   useEffect(() => {

@@ -3,13 +3,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { MapPin, Search, Navigation, Loader2, AlertCircle } from 'lucide-react';
-
-declare global {
-  interface Window {
-    google: any;
-    initGooglePlaces: () => void;
-  }
-}
+import { useGoogleMaps } from '@/hooks/useGoogleMaps';
 
 interface PlacePrediction {
   place_id: string;
@@ -62,57 +56,20 @@ export function GoogleLocationAutocomplete({
   const [predictions, setPredictions] = useState<PlacePrediction[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [localError, setLocalError] = useState<string | null>(null);
   const [selectedIndex, setSelectedIndex] = useState(-1);
 
   const inputRef = useRef<HTMLInputElement>(null);
   const autocompleteServiceRef = useRef<any>(null);
   const placesServiceRef = useRef<any>(null);
 
-  // Load Google Maps Places API
+  // Use shared Google Maps loader
+  const { isLoaded, error: mapsError } = useGoogleMaps();
+  const error = localError || mapsError;
+
+  // Initialize autocomplete service when API is loaded
   useEffect(() => {
-    const loadGoogleMapsAPI = () => {
-      return new Promise<void>((resolve, reject) => {
-        if (window.google && window.google.maps && window.google.maps.places) {
-          resolve();
-          return;
-        }
-
-        // Check if API key is available
-        const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
-        if (!apiKey) {
-          setError('Google Maps API key is missing. Please configure VITE_GOOGLE_MAPS_API_KEY in your environment.');
-          reject(new Error('Missing API key'));
-          return;
-        }
-
-        const script = document.createElement('script');
-        script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places,geometry&loading=async&callback=initGooglePlaces`;
-        script.async = true;
-        script.defer = true;
-
-        // Set up callback
-        window.initGooglePlaces = () => {
-          resolve();
-        };
-
-        script.onerror = () => {
-          reject(new Error('Failed to load Google Maps API'));
-        };
-
-        document.head.appendChild(script);
-      });
-    };
-
-    loadGoogleMapsAPI().catch(error => {
-      console.error('Failed to load Google Maps API:', error);
-      setError('Failed to load Google Maps. Please check your API key.');
-    });
-  }, []);
-
-  // Initialize autocomplete service
-  useEffect(() => {
-    if (!window.google) return;
+    if (!isLoaded || !window.google) return;
 
     try {
       // Initialize Places service (requires a map, but we can use a dummy div)
@@ -124,9 +81,9 @@ export function GoogleLocationAutocomplete({
       autocompleteServiceRef.current = new window.google.maps.places.AutocompleteService();
     } catch (err) {
       console.error('Error initializing Google Places:', err);
-      setError('Failed to initialize Google Places. Please try again.');
+      setLocalError('Failed to initialize Google Places. Please try again.');
     }
-  }, []);
+  }, [isLoaded]);
 
   // Handle input change with autocomplete predictions
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {

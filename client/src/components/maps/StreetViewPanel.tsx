@@ -14,13 +14,7 @@ import {
   ArrowRight,
   Home,
 } from 'lucide-react';
-
-declare global {
-  interface Window {
-    google: any;
-    initGooglePlaces: () => void;
-  }
-}
+import { useGoogleMaps } from '@/hooks/useGoogleMaps';
 
 interface StreetViewLocation {
   lat: number;
@@ -56,46 +50,15 @@ export function StreetViewPanel({
 }: StreetViewPanelProps) {
   const panoramaRef = useRef<HTMLDivElement>(null);
   const panoramaInstanceRef = useRef<google.maps.StreetViewPanorama | null>(null);
-  const [isLoaded, setIsLoaded] = useState(false);
+  const { isLoaded, error: mapsError } = useGoogleMaps();
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [currentLocation, setCurrentLocation] = useState<StreetViewLocation>(location);
   const [availableLinks, setAvailableLinks] = useState<google.maps.StreetViewLink[]>([]);
-  const [error, setError] = useState<string | null>(null);
+  const [localError, setLocalError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Load Google Maps API
-  useEffect(() => {
-    const loadGoogleMapsAPI = () => {
-      return new Promise<void>((resolve, reject) => {
-        if (window.google && window.google.maps && window.google.maps.StreetViewPanorama) {
-          resolve();
-          return;
-        }
+  const error = localError || mapsError;
 
-        const script = document.createElement('script');
-        script.src = `https://maps.googleapis.com/maps/api/js?key=${import.meta.env.VITE_GOOGLE_MAPS_API_KEY || ''}&libraries=places&callback=initGooglePlaces`;
-        script.async = true;
-        script.defer = true;
-
-        window.initGooglePlaces = () => {
-          resolve();
-        };
-
-        script.onerror = () => {
-          reject(new Error('Failed to load Google Maps API'));
-        };
-
-        document.head.appendChild(script);
-      });
-    };
-
-    loadGoogleMapsAPI()
-      .then(() => setIsLoaded(true))
-      .catch(error => {
-        console.error('Failed to load Google Maps API:', error);
-        setError('Failed to load Google Maps. Please check your API key.');
-      });
-  }, []);
 
   // Initialize Street View panorama
   useEffect(() => {

@@ -14,13 +14,7 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import { trpc } from '@/lib/trpc';
-
-declare global {
-  interface Window {
-    google: any;
-    initGooglePlaces: () => void;
-  }
-}
+import { useGoogleMaps } from '@/hooks/useGoogleMaps';
 
 interface AmenityPlace {
   place_id: string;
@@ -80,47 +74,16 @@ export function GoogleAmenitiesMap({
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<google.maps.Map | null>(null);
   const markersRef = useRef<google.maps.Marker[]>([]);
-  const [isLoaded, setIsLoaded] = useState(false);
+  const { isLoaded, error: mapsError } = useGoogleMaps();
   const [amenities, setAmenities] = useState<AmenityPlace[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [localError, setLocalError] = useState<string | null>(null);
   const [selectedAmenity, setSelectedAmenity] = useState<AmenityPlace | null>(null);
   const [currentEnabledTypes, setCurrentEnabledTypes] = useState<string[]>(enabledTypes);
   const [infoWindow, setInfoWindow] = useState<google.maps.InfoWindow | null>(null);
 
-  // Load Google Maps API
-  useEffect(() => {
-    const loadGoogleMapsAPI = () => {
-      return new Promise<void>((resolve, reject) => {
-        if (window.google && window.google.maps && window.google.maps.places) {
-          resolve();
-          return;
-        }
+  const error = localError || mapsError;
 
-        const script = document.createElement('script');
-        script.src = `https://maps.googleapis.com/maps/api/js?key=${import.meta.env.VITE_GOOGLE_MAPS_API_KEY || ''}&libraries=places,geometry&callback=initGooglePlaces`;
-        script.async = true;
-        script.defer = true;
-
-        window.initGooglePlaces = () => {
-          resolve();
-        };
-
-        script.onerror = () => {
-          reject(new Error('Failed to load Google Maps API'));
-        };
-
-        document.head.appendChild(script);
-      });
-    };
-
-    loadGoogleMapsAPI()
-      .then(() => setIsLoaded(true))
-      .catch(error => {
-        console.error('Failed to load Google Maps API:', error);
-        setError('Failed to load Google Maps. Please check your API key.');
-      });
-  }, []);
 
   // Initialize map
   useEffect(() => {
