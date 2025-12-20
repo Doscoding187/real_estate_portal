@@ -1,220 +1,56 @@
 /**
  * Step 5: Location Picker with Map
  * Implements Google Maps integration with pin drop and reverse geocoding
+ * Uses the same LocationMapPicker as the development wizard
  */
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useListingWizardStore } from '@/hooks/useListingWizard';
-import { useGoogleMaps } from '@/hooks/useGoogleMaps';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { MapPin, Navigation, Loader2 } from 'lucide-react';
-import { GoogleLocationAutocomplete } from '@/components/maps/GoogleLocationAutocomplete';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { MapPin, AlertTriangle, Info } from 'lucide-react';
+import { LocationMapPicker, LocationData } from '@/components/location/LocationMapPicker';
+import { toast } from 'sonner';
 
 const LocationStep: React.FC = () => {
   const { location, setLocation } = useListingWizardStore();
-  const { isLoaded: isMapLoaded, error: mapsError } = useGoogleMaps();
-  const [isGeocoding, setIsGeocoding] = useState(false);
-  const [localError, setLocalError] = useState<string | null>(null);
-  const mapError = localError || mapsError;
-  const mapRef = useRef<HTMLDivElement>(null);
-  const mapInstanceRef = useRef<google.maps.Map | null>(null);
-  const markerRef = useRef<google.maps.Marker | null>(null);
-  const geocoderRef = useRef<google.maps.Geocoder | null>(null);
+  const [manualOverride, setManualOverride] = useState(false);
+  const [geocodingError, setGeocodingError] = useState<string | null>(null);
 
+  const handleLocationSelect = useCallback(
+    (locationData: LocationData) => {
+      if (!manualOverride) {
+        setLocation({
+          address: locationData.address || locationData.formattedAddress || '',
+          latitude: locationData.latitude,
+          longitude: locationData.longitude,
+          city: locationData.city || location?.city || '',
+          suburb: locationData.suburb || location?.suburb || '',
+          province: locationData.province || location?.province || '',
+          postalCode: locationData.postalCode || location?.postalCode || '',
+        });
 
-  // Initialize map when API is loaded
-  useEffect(() => {
-    if (!isMapLoaded || !mapRef.current) return;
-
-    try {
-      // Default center (Johannesburg, South Africa)
-      const defaultCenter = { lat: -26.2041, lng: 28.0473 };
-      const initialCenter =
-        location?.latitude && location?.longitude
-          ? { lat: location.latitude, lng: location.longitude }
-          : defaultCenter;
-
-      // Initialize map
-      const map = new window.google.maps.Map(mapRef.current, {
-        center: initialCenter,
-        zoom: location?.latitude && location?.longitude ? 15 : 10,
-        mapTypeId: 'roadmap',
-        styles: [
-          {
-            featureType: 'poi',
-            elementType: 'labels',
-            stylers: [{ visibility: 'off' }],
-          },
-        ],
-        mapTypeControl: true,
-        streetViewControl: true,
-        fullscreenControl: true,
-        zoomControl: true,
-      });
-
-      mapInstanceRef.current = map;
-
-      // Initialize geocoder
-      geocoderRef.current = new window.google.maps.Geocoder();
-
-      // Add click listener to place marker
-      map.addListener('click', (event: google.maps.MapMouseEvent) => {
-        if (event.latLng) {
-          placeMarker(event.latLng);
-          reverseGeocode(event.latLng);
-        }
-      });
-
-      // If we have existing location data, place marker
-      if (location?.latitude && location?.longitude) {
-        const latLng = new window.google.maps.LatLng(location.latitude, location.longitude);
-        placeMarker(latLng);
+        setGeocodingError(null);
+        toast.success('Address populated from map location');
       }
-    } catch (error) {
-      console.error('Map initialization error:', error);
-      setLocalError('Failed to initialize map. Please try again.');
-    }
-  }, [isMapLoaded, location]);
+    },
+    [manualOverride, setLocation, location]
+  );
 
-  // Place marker on map
-  const placeMarker = (latLng: google.maps.LatLng) => {
-    // Remove existing marker
-    if (markerRef.current) {
-      markerRef.current.setMap(null);
-    }
+  const handleGeocodingError = useCallback((error: string) => {
+    setGeocodingError(error);
+  }, []);
 
-    // Create new marker
-    const marker = new window.google.maps.Marker({
-      position: latLng,
-      map: mapInstanceRef.current,
-      draggable: true,
-      icon: {
-        url:
-          'data:image/svg+xml;charset=UTF-8,' +
-          encodeURIComponent(`
-          <svg width="32" height="40" viewBox="0 0 32 40" xmlns="http://www.w3.org/2000/svg">
-            <path d="M16 0C7.2 0 0 7.2 0 16c0 8.8 16 24 16 24s16-15.2 16-24C32 7.2 24.8 0 16 0z" fill="#3b82f6"/>
-            <circle cx="16" cy="16" r="8" fill="white"/>
-            <circle cx="16" cy="16" r="4" fill="#3b82f6"/>
-          </svg>
-        `),
-        scaledSize: new window.google.maps.Size(32, 40),
-        anchor: new window.google.maps.Point(16, 40),
-      },
-    });
-
-    markerRef.current = marker;
-
-    // Add drag end listener
-    marker.addListener('dragend', (event: google.maps.MapMouseEvent) => {
-      if (event.latLng) {
-        reverseGeocode(event.latLng);
-      }
-    });
-
-    // Center map on marker
-    mapInstanceRef.current?.panTo(latLng);
-  };
-
-  // Reverse geocode to get address details
-  const reverseGeocode = (latLng: google.maps.LatLng) => {
-    if (!geocoderRef.current) return;
-
-    setIsGeocoding(true);
-    setLocalError(null);
-
-    geocoderRef.current.geocode(
-      { location: latLng },
-      (results: google.maps.GeocoderResult[] | null, status: google.maps.GeocoderStatus) => {
-        setIsGeocoding(false);
-
-        if (status === 'OK' && results && results[0]) {
-          const addressComponents = results[0].address_components;
-          const formattedAddress = results[0].formatted_address;
-          const placeId = results[0].place_id;
-
-          // Extract address components
-          let streetNumber = '';
-          let route = '';
-          let city = '';
-          let suburb = '';
-          let province = '';
-          let postalCode = '';
-
-          addressComponents.forEach(component => {
-            const types = component.types;
-            if (types.includes('street_number')) {
-              streetNumber = component.long_name;
-            } else if (types.includes('route')) {
-              route = component.long_name;
-            } else if (types.includes('locality')) {
-              city = component.long_name;
-            } else if (types.includes('sublocality')) {
-              suburb = component.long_name;
-            } else if (types.includes('administrative_area_level_1')) {
-              province = component.long_name;
-            } else if (types.includes('postal_code')) {
-              postalCode = component.long_name;
-            }
-          });
-
-          const fullAddress = streetNumber ? `${streetNumber} ${route}` : route;
-
-          // Update location in store with address components for auto-population
-          setLocation({
-            address: fullAddress || formattedAddress,
-            latitude: latLng.lat(),
-            longitude: latLng.lng(),
-            city: city || location?.city || '',
-            suburb: suburb || location?.suburb || '',
-            province: province || location?.province || '',
-            postalCode: postalCode || location?.postalCode || '',
-            placeId: placeId,
-            addressComponents: addressComponents, // 🔥 Store for auto-population
-          });
-        } else {
-          console.error('Geocoder failed due to: ' + status);
-          setLocalError(
-            'Could not determine address for this location. Please enter address details manually.',
-          );
-        }
-      },
-    );
-  };
-
-  // Get current location
-  const getCurrentLocation = () => {
-    if (!navigator.geolocation) {
-      setLocalError('Geolocation is not supported by your browser.');
-      return;
-    }
-
-    setLocalError(null);
-    navigator.geolocation.getCurrentPosition(
-      position => {
-        const latLng = new window.google.maps.LatLng(
-          position.coords.latitude,
-          position.coords.longitude,
-        );
-        mapInstanceRef.current?.setCenter(latLng);
-        mapInstanceRef.current?.setZoom(15);
-        placeMarker(latLng);
-        reverseGeocode(latLng);
-      },
-      error => {
-        console.error('Geolocation error:', error);
-        setLocalError(
-          'Unable to get your current location. Please enable location services or enter address manually.',
-        );
-      },
-    );
-  };
+  const handleManualEdit = useCallback(() => {
+    setManualOverride(true);
+    toast.info('Manual mode enabled. Move the pin to update address again.');
+  }, []);
 
   // Handle manual address input changes
   const handleAddressChange = (field: string, value: string) => {
+    handleManualEdit();
     if (location) {
       const newLocation = { ...location, [field]: value };
       setLocation(newLocation);
@@ -232,168 +68,92 @@ const LocationStep: React.FC = () => {
     }
   };
 
-  // Handle place selection from autocomplete
-  const handlePlaceSelect = (place: {
-    place_id: string;
-    name: string;
-    address: string;
-    latitude: number;
-    longitude: number;
-    formatted_address: string;
-    types: string[];
-    address_components?: google.maps.GeocoderAddressComponent[];
-  }) => {
-    // Extract address components if available
-    let city = '';
-    let suburb = '';
-    let province = '';
-    let postalCode = '';
-
-    if (place.address_components) {
-      place.address_components.forEach(component => {
-        const types = component.types;
-        if (types.includes('locality')) {
-          city = component.long_name;
-        } else if (types.includes('sublocality')) {
-          suburb = component.long_name;
-        } else if (types.includes('administrative_area_level_1')) {
-          province = component.long_name;
-        } else if (types.includes('postal_code')) {
-          postalCode = component.long_name;
-        }
-      });
-    }
-
-    // Update location in store with address components for auto-population
-    setLocation({
-      address: place.formatted_address,
-      latitude: place.latitude,
-      longitude: place.longitude,
-      city: city || location?.city || '',
-      suburb: suburb || location?.suburb || '',
-      province: province || location?.province || '',
-      postalCode: postalCode || location?.postalCode || '',
-      placeId: place.place_id,
-      addressComponents: place.address_components, // 🔥 Store for auto-population
-    });
-
-    // Place marker on map if map is loaded
-    if (mapInstanceRef.current && window.google) {
-      const latLng = new window.google.maps.LatLng(place.latitude, place.longitude);
-      mapInstanceRef.current.setCenter(latLng);
-      mapInstanceRef.current.setZoom(15);
-      placeMarker(latLng);
-      
-      // Only reverse geocode if we didn't get components (fallback)
-      if (!place.address_components) {
-        reverseGeocode(latLng);
-      }
-    }
-  };
-
   return (
-    <Card className="p-6 space-y-4">
-      <h3 className="text-lg font-semibold">Property Location</h3>
+    <Card className="p-6 space-y-6">
+      <div className="flex items-center gap-2">
+        <MapPin className="w-5 h-5 text-blue-600" />
+        <h3 className="text-lg font-semibold">Property Location</h3>
+      </div>
 
-      {/* Map Container */}
+      {/* Interactive Map with Search Box */}
       <div className="space-y-4">
-        <div className="flex justify-between items-center">
-          <p className="text-sm text-muted-foreground">
-            Click on the map to place a marker or drag the existing marker to set the property
-            location
-          </p>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={getCurrentLocation}
-            disabled={!isMapLoaded || isGeocoding}
-          >
-            <Navigation className="h-4 w-4 mr-2" />
-            Use Current Location
-          </Button>
-        </div>
-
-        {/* Map */}
-        <div className="relative h-96 bg-gray-100 rounded-lg overflow-hidden">
-          {!isMapLoaded && !mapError && (
-            <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
-              <div className="text-center">
-                <Loader2 className="h-8 w-8 animate-spin mx-auto text-muted-foreground" />
-                <p className="mt-2 text-muted-foreground">Loading map...</p>
-              </div>
-            </div>
-          )}
-
-          {mapError && (
-            <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
-              <div className="text-center p-4">
-                <p className="text-red-500 font-medium">{mapError}</p>
-                <p className="text-sm text-muted-foreground mt-2">
-                  Please ensure you have configured your Google Maps API key in the environment
-                  variables.
-                </p>
-              </div>
-            </div>
-          )}
-
-          <div
-            ref={mapRef}
-            className="w-full h-full"
-            style={{ display: isMapLoaded && !mapError ? 'block' : 'none' }}
-          />
-        </div>
-
-        {isGeocoding && (
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Loader2 className="h-4 w-4 animate-spin" />
-            Determining address...
-          </div>
+        <LocationMapPicker
+          initialLat={location?.latitude || -26.2041}
+          initialLng={location?.longitude || 28.0473}
+          onLocationSelect={handleLocationSelect}
+          onGeocodingError={handleGeocodingError}
+        />
+        
+        {geocodingError && (
+          <Alert variant="destructive">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertDescription>{geocodingError}</AlertDescription>
+          </Alert>
         )}
       </div>
 
-      {/* Manual address input */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="col-span-2">
-          <Label>Full Address *</Label>
-          <GoogleLocationAutocomplete
-            onSelect={handlePlaceSelect}
-            placeholder="Search for an address..."
-            showCurrentLocation={false}
-            locationBias={
-              location?.latitude && location?.longitude
-                ? { latitude: location.latitude, longitude: location.longitude }
-                : { latitude: -26.2041, longitude: 28.0473 }
-            }
-          />
+      {/* Manual address input fields */}
+      <div className="space-y-4">
+        <div className="flex items-start gap-2 text-sm text-slate-600 bg-blue-50 p-3 rounded-lg">
+          <Info className="w-4 h-4 mt-0.5 flex-shrink-0" />
+          <p>
+            Address fields are auto-populated when you select a location. You can edit them manually if needed.
+          </p>
         </div>
-        <div>
-          <Label>City *</Label>
-          <Input
-            value={location?.city || ''}
-            onChange={e => handleAddressChange('city', e.target.value)}
-          />
-        </div>
-        <div>
-          <Label>Suburb</Label>
-          <Input
-            value={location?.suburb || ''}
-            onChange={e => handleAddressChange('suburb', e.target.value)}
-          />
-        </div>
-        <div>
-          <Label>Province *</Label>
-          <Input
-            value={location?.province || ''}
-            onChange={e => handleAddressChange('province', e.target.value)}
-          />
-        </div>
-        <div>
-          <Label>Postal Code</Label>
-          <Input
-            value={location?.postalCode || ''}
-            onChange={e => handleAddressChange('postalCode', e.target.value)}
-          />
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="col-span-2">
+            <Label htmlFor="address">
+              Street Address {!manualOverride && <span className="text-xs text-slate-500">(Auto-filled from map)</span>}
+            </Label>
+            <Input
+              id="address"
+              placeholder="Enter street address or use map"
+              value={location?.address || ''}
+              onChange={e => handleAddressChange('address', e.target.value)}
+              className="mt-1"
+            />
+          </div>
+          <div>
+            <Label htmlFor="suburb">Suburb</Label>
+            <Input
+              id="suburb"
+              placeholder="e.g., Sandton"
+              value={location?.suburb || ''}
+              onChange={e => handleAddressChange('suburb', e.target.value)}
+              className="mt-1"
+            />
+          </div>
+          <div>
+            <Label htmlFor="city">City *</Label>
+            <Input
+              id="city"
+              placeholder="e.g., Johannesburg"
+              value={location?.city || ''}
+              onChange={e => handleAddressChange('city', e.target.value)}
+              className="mt-1"
+            />
+          </div>
+          <div>
+            <Label htmlFor="province">Province *</Label>
+            <Input
+              id="province"
+              placeholder="e.g., Gauteng"
+              value={location?.province || ''}
+              onChange={e => handleAddressChange('province', e.target.value)}
+              className="mt-1"
+            />
+          </div>
+          <div>
+            <Label htmlFor="postalCode">Postal Code</Label>
+            <Input
+              id="postalCode"
+              placeholder="e.g., 2196"
+              value={location?.postalCode || ''}
+              onChange={e => handleAddressChange('postalCode', e.target.value)}
+              className="mt-1"
+            />
+          </div>
         </div>
       </div>
     </Card>
