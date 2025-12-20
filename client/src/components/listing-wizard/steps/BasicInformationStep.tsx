@@ -74,7 +74,10 @@ const BasicInformationStep: React.FC = () => {
       query: debouncedDevelopmentQuery,
       developerId: basicInfo.selectedDeveloperId 
     },
-    { enabled: debouncedDevelopmentQuery.length >= 2 }
+    { 
+      // Enable query when: user typed 2+ chars OR a developer is selected (for auto-population)
+      enabled: debouncedDevelopmentQuery.length >= 2 || !!basicInfo.selectedDeveloperId 
+    }
   );
 
   // Validation context
@@ -802,6 +805,14 @@ const BasicInformationStep: React.FC = () => {
                             updateBasicInfo('developerName', e.target.value);
                             setDeveloperSearchQuery(e.target.value);
                             setShowDeveloperDropdown(true);
+                            // If user manually changes the developer name, clear the selected IDs
+                            // since they're no longer selecting from the autocomplete
+                            if (basicInfo.selectedDeveloperId) {
+                              updateBasicInfo('selectedDeveloperId', undefined);
+                              updateBasicInfo('developmentName', '');
+                              updateBasicInfo('selectedDevelopmentId', undefined);
+                              setDevelopmentSearchQuery('');
+                            }
                           }}
                           onFocus={() => setShowDeveloperDropdown(true)}
                           placeholder="Search for developer..."
@@ -823,10 +834,19 @@ const BasicInformationStep: React.FC = () => {
                                   value={dev.name}
                                   onSelect={() => {
                                     console.log('Selected developer:', dev.name);
-                                    updateBasicInfo('developerName', dev.name);
-                                    updateBasicInfo('selectedDeveloperId', dev.id);
+                                    // Combine all updates into a single state update to avoid race conditions with stale basicInfo closure
+                                    store.setBasicInfo({
+                                      ...basicInfo,
+                                      developerName: dev.name,
+                                      selectedDeveloperId: dev.id,
+                                      developmentName: '',
+                                      selectedDevelopmentId: undefined
+                                    });
                                     setDeveloperSearchQuery(dev.name);
+                                    setDevelopmentSearchQuery(''); // Reset development search
                                     setShowDeveloperDropdown(false);
+                                    // Auto-open development dropdown after selecting developer
+                                    setTimeout(() => setShowDevelopmentDropdown(true), 100);
                                   }}
                                   className="cursor-pointer"
                                 >
@@ -886,15 +906,18 @@ const BasicInformationStep: React.FC = () => {
                       <Command shouldFilter={false}>
                         <CommandList>
                           {developments && developments.length > 0 ? (
-                            <CommandGroup heading="Published Developments">
+                            <CommandGroup heading={basicInfo.selectedDeveloperId ? "Developer's Developments" : "Published Developments"}>
                               {developments.map((dev: any) => (
                                 <CommandItem
                                   key={dev.id}
                                   value={dev.name}
                                   onSelect={() => {
                                     console.log('Selected development:', dev.name);
-                                    updateBasicInfo('developmentName', dev.name);
-                                    updateBasicInfo('selectedDevelopmentId', dev.id);
+                                    store.setBasicInfo({
+                                      ...basicInfo,
+                                      developmentName: dev.name,
+                                      selectedDevelopmentId: dev.id
+                                    });
                                     setDevelopmentSearchQuery(dev.name);
                                     setShowDevelopmentDropdown(false);
                                   }}
@@ -915,8 +938,14 @@ const BasicInformationStep: React.FC = () => {
                                 </CommandItem>
                               ))}
                             </CommandGroup>
-                          ) : debouncedDevelopmentQuery.length >= 2 && !loadingDevelopments ? (
-                            <CommandEmpty>No developments found. You can still enter a custom name.</CommandEmpty>
+                          ) : (debouncedDevelopmentQuery.length >= 2 || basicInfo.selectedDeveloperId) && !loadingDevelopments ? (
+                            <CommandEmpty>
+                              {basicInfo.selectedDeveloperId 
+                                ? 'No developments found for this developer. You can still enter a custom name.'
+                                : 'No developments found. You can still enter a custom name.'}
+                            </CommandEmpty>
+                          ) : basicInfo.selectedDeveloperId ? (
+                            <CommandEmpty>Loading developments for selected developer...</CommandEmpty>
                           ) : (
                             <CommandEmpty>Type at least 2 characters to search...</CommandEmpty>
                           )}

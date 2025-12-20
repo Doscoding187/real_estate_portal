@@ -279,14 +279,18 @@ export const developerRouter = router({
   /**
    * Search developments by name (for autocomplete)
    * Auth: Public
+   * Note: Query can be empty if developerId is provided (to list all developments for a developer)
    */
   searchDevelopments: publicProcedure
     .input(
       z.object({
-        query: z.string().min(2, 'Search query must be at least 2 characters'),
+        query: z.string().optional().default(''),
         developerId: z.number().int().optional(),
         limit: z.number().int().positive().max(20).default(10),
-      })
+      }).refine(
+        (data) => data.query.length >= 2 || data.developerId !== undefined,
+        { message: 'Either query (min 2 chars) or developerId must be provided' }
+      )
     )
     .query(async ({ input }) => {
       return await db.searchDevelopments(input.query, input.developerId, input.limit);
