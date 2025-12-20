@@ -69,9 +69,15 @@ const LocationStep: React.FC = () => {
       });
     };
 
-    loadGoogleMapsAPI().catch(error => {
-      console.error('Google Maps loading error:', error);
-    });
+    loadGoogleMapsAPI()
+      .then(() => {
+        if (window.google && window.google.maps) {
+          setIsMapLoaded(true);
+        }
+      })
+      .catch(error => {
+        console.error('Google Maps loading error:', error);
+      });
   }, []);
 
   // Initialize map when API is loaded
