@@ -246,7 +246,7 @@ export const SortableMediaGrid: React.FC<SortableMediaGridProps> = ({
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
-        distance: 8, // 8px of movement required before drag starts
+        distance: 3, // Reduced from 8px to minimize cursor offset during drag
       },
     }),
     useSensor(KeyboardSensor, {
