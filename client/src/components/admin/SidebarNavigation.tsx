@@ -45,6 +45,7 @@ const SidebarNavigation: React.FC = () => {
     else if (location.startsWith('/admin/development')) setActiveSection('core');
     else if (location.startsWith('/admin/approvals')) setActiveSection('core');
     
+    else if (location.startsWith('/admin/ecosystem')) setActiveSection('ecosystem');
     else if (location.startsWith('/admin/agencies')) setActiveSection('ecosystem');
     else if (location.startsWith('/admin/agents')) setActiveSection('ecosystem');
     else if (location.startsWith('/admin/developers')) setActiveSection('ecosystem');
@@ -78,7 +79,9 @@ const SidebarNavigation: React.FC = () => {
       title: 'ECOSYSTEM',
       icon: Globe,
       items: [
+        { name: 'Overview', path: '/admin/ecosystem', icon: LayoutDashboard },
         { name: 'Agencies', path: '/admin/agencies', icon: Building2 },
+        { name: 'Agents', path: '/admin/agents', icon: Users },
         { name: 'Agents', path: '/admin/agencies', icon: Users }, // Redirects to Agencies filter usually, or agent list if exists. Using Agencies for now. Wait, /admin/agents exists? Previous sidebar had /admin/agents. App.tsx had /admin/agents? NO. It seems UserPage filtered is commonly used. But let's check. Previous sidebar HAD /admin/agents. Let's start with that.
         { name: 'Developers', path: '/admin/developers', icon: Code },
         { name: 'End Users', path: '/admin/users', icon: User }, // Specific User Management

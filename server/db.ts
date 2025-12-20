@@ -44,6 +44,7 @@ import {
   recentlyViewed,
   developers,
   developments,
+  partners,
   commissions,
   platformSettings,
 } from '../drizzle/schema.ts';
@@ -3038,7 +3039,77 @@ export async function countPendingDevelopments() {
   const result = await db
     .select({ count: count() })
     .from(developments)
-    .where(eq(developments.status, 'pending'));
+    .where(eq(developments.approvalStatus, 'pending'));
     
   return result[0]?.count ?? 0;
+}
+
+export async function getEcosystemStats() {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+
+  const thirtyDaysAgo = new Date();
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+  const dateStr = thirtyDaysAgo.toISOString(); // Assuming string storage for dates based on other code
+
+  const [
+    totalAgencies,
+    activeAgencies,
+    newAgencies
+  ] = await Promise.all([
+    db.select({ count: count() }).from(agencies),
+    db.select({ count: count() }).from(agencies).where(eq(agencies.isVerified, 1)),
+    db.select({ count: count() }).from(agencies).where(sql`${agencies.createdAt} > ${dateStr}`)
+  ]);
+
+  const [
+    totalAgents,
+    activeAgents,
+    newAgents
+  ] = await Promise.all([
+    db.select({ count: count() }).from(agents),
+    db.select({ count: count() }).from(agents).where(eq(agents.status, 'approved')),
+    db.select({ count: count() }).from(agents).where(sql`${agents.createdAt} > ${dateStr}`)
+  ]);
+
+  const [
+    totalDevelopers,
+    activeDevelopers,
+    newDevelopers
+  ] = await Promise.all([
+    db.select({ count: count() }).from(developers),
+    db.select({ count: count() }).from(developers).where(eq(developers.status, 'approved')),
+    db.select({ count: count() }).from(developers).where(sql`${developers.createdAt} > ${dateStr}`)
+  ]);
+
+  const [
+    totalUsers,
+    newUsers
+  ] = await Promise.all([
+    db.select({ count: count() }).from(users).where(eq(users.role, 'visitor')), // Assuming 'visitor' is end user
+    db.select({ count: count() }).from(users).where(and(eq(users.role, 'visitor'), sql`${users.createdAt} > ${dateStr}`))
+  ]);
+
+  return {
+    agencies: {
+      total: totalAgencies[0]?.count ?? 0,
+      active: activeAgencies[0]?.count ?? 0,
+      growth: newAgencies[0]?.count ?? 0
+    },
+    agents: {
+      total: totalAgents[0]?.count ?? 0,
+      active: activeAgents[0]?.count ?? 0,
+      growth: newAgents[0]?.count ?? 0
+    },
+    developers: {
+      total: totalDevelopers[0]?.count ?? 0,
+      active: activeDevelopers[0]?.count ?? 0,
+      growth: newDevelopers[0]?.count ?? 0
+    },
+    users: {
+      total: totalUsers[0]?.count ?? 0,
+      active: totalUsers[0]?.count ?? 0, // Users generally considered active if they exist for now
+      growth: newUsers[0]?.count ?? 0
+    }
+  };
 }

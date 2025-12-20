@@ -77,6 +77,7 @@ import CampaignDetailsPage from './pages/admin/CampaignDetailsPage';
 import CampaignInsights from './pages/admin/CampaignInsights';
 import DevelopmentOversight from './pages/admin/DevelopmentOversight';
 import UnifiedApprovalsPage from './pages/admin/UnifiedApprovalsPage';
+import EcosystemOverviewPage from './pages/admin/EcosystemOverviewPage';
 import PartnerNetworkPage from './pages/admin/PartnerNetworkPage';
 
 // Import new role-based dashboards
@@ -210,6 +211,15 @@ function Router() {
           </SuperAdminDashboard>
         )}
       />
+      <Route
+        path="/admin/ecosystem"
+        component={() => (
+          <SuperAdminDashboard>
+            <EcosystemOverviewPage />
+          </SuperAdminDashboard>
+        )}
+      />
+
       <Route
         path="/admin/overview"
         component={() => (

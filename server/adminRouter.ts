@@ -11,6 +11,7 @@ import {
   countPendingAgents,
   countPendingListings,
   countPendingDevelopments,
+  getEcosystemStats,
 } from './db';
 import {
   users,
@@ -60,6 +61,13 @@ export const adminRouter = router({
       pendingDevelopmentApprovals: developments,
       flaggedItems: 0, // Placeholder
     };
+  }),
+
+  /**
+   * Super Admin: Get Ecosystem Overview Stats
+   */
+  getEcosystemStats: superAdminProcedure.query(async () => {
+    return getEcosystemStats();
   }),
 
   /**
