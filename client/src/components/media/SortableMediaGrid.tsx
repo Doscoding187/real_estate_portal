@@ -16,7 +16,7 @@ import {
   DragStartEvent,
   DragOverlay,
 } from '@dnd-kit/core';
-import { restrictToWindowEdges } from '@dnd-kit/modifiers';
+import { restrictToWindowEdges, snapCenterToCursor } from '@dnd-kit/modifiers';
 import {
   arrayMove,
   SortableContext,
@@ -316,7 +316,7 @@ export const SortableMediaGrid: React.FC<SortableMediaGridProps> = ({
 
       {/* Drag Overlay - follows cursor */}
       <DragOverlay 
-        modifiers={[restrictToWindowEdges]}
+        modifiers={[snapCenterToCursor, restrictToWindowEdges]}
         dropAnimation={{
           duration: 250,
           easing: 'cubic-bezier(0.18, 0.67, 0.6, 1.22)',
