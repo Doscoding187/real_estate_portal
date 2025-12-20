@@ -62,6 +62,7 @@ interface ListingWizardStore extends ListingWizardState {
   removeMedia: (index: number) => void;
   updateMedia: (index: number, updates: Partial<MediaFile>) => void;
   reorderMedia: (fromIndex: number, toIndex: number) => void;
+  setMedia: (media: MediaFile[]) => void;
   setMainMedia: (mediaId: number) => void;
   setDisplayMediaType: (type: 'image' | 'video') => void;
 
@@ -227,6 +228,10 @@ export const useListingWizardStore = create<ListingWizardStore>()(
         }));
 
         set({ media: reorderedMedia });
+      },
+
+      setMedia: (media) => {
+        set({ media });
       },
 
       setMainMedia: mediaId => {

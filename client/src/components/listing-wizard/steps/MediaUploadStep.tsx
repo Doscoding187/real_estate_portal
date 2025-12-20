@@ -144,15 +144,18 @@ const MediaUploadStep: React.FC = () => {
     displayOrder: media.displayOrder,
   }));
 
-  // Handle media reorder
+  // Handle media reorder - bulk replace all media with new order
   const handleReorder = useCallback((reorderedMedia: MediaItem[]) => {
-    // Update store with new order
-    reorderedMedia.forEach((item, index) => {
-      const storeIndex = store.media.findIndex(m => m.id?.toString() === item.id);
-      if (storeIndex !== -1 && storeIndex !== index) {
-        store.reorderMedia(storeIndex, index);
-      }
-    });
+    // Convert MediaItem[] back to MediaFile[] format and update store
+    const updatedMedia = reorderedMedia.map((item, index) => {
+      const original = store.media.find(m => m.id?.toString() === item.id);
+      return {
+        ...original,
+        displayOrder: index,
+      };
+    }).filter(Boolean) as typeof store.media;
+    
+    store.setMedia(updatedMedia);
   }, [store]);
 
   // Handle media remove
