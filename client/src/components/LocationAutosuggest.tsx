@@ -18,13 +18,17 @@ interface LocationAutosuggestProps {
   placeholder?: string;
   className?: string;
   defaultValue?: string;
+  inputClassName?: string;
+  showIcon?: boolean;
 }
 
 export function LocationAutosuggest({ 
   onSelect, 
   placeholder = 'Search city or suburb...', 
   className = '',
-  defaultValue = ''
+  defaultValue = '',
+  inputClassName = '',
+  showIcon = true
 }: LocationAutosuggestProps) {
   const [query, setQuery] = useState(defaultValue);
   const [predictions, setPredictions] = useState<PlacePrediction[]>([]);
@@ -139,8 +143,8 @@ export function LocationAutosuggest({
 
   return (
     <div ref={wrapperRef} className={`relative ${className}`}>
-      <div className="relative">
-        <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+      <div className="relative h-full">
+        {showIcon && <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />}
         <Input
           type="text"
           placeholder={placeholder}
@@ -152,7 +156,7 @@ export function LocationAutosuggest({
           }}
           onFocus={() => query.length >= 2 && setShowSuggestions(true)}
           onKeyDown={handleKeyDown}
-          className="pl-10 bg-gray-100 border-0 rounded-lg h-11"
+          className={`${showIcon ? 'pl-10' : 'pl-3'} ${inputClassName || 'bg-gray-100 border-0 rounded-lg h-11'}`}
         />
         {isLoading && (
           <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 animate-spin" />

@@ -27,6 +27,7 @@ import {
   Loader2,
 } from 'lucide-react';
 import { MetaControl } from '@/components/seo/MetaControl';
+import { Breadcrumbs } from '@/components/search/Breadcrumbs';
 
 type MediaCategory = 'all' | 'amenities' | 'outdoors' | 'videos';
 
@@ -149,6 +150,16 @@ export default function DevelopmentDetail() {
       <MetaControl />
       <ListingNavbar />
       <div className="min-h-screen bg-slate-50">
+        {/* Breadcrumbs */}
+        <div className="bg-white border-b border-slate-200">
+            <div className="container mx-auto px-4 py-3">
+                <Breadcrumbs items={[
+                    { label: 'Home', href: '/' },
+                    { label: 'New Developments', href: '/new-developments' },
+                    { label: dev.name, href: '#' }
+                ]} />
+            </div>
+        </div>
         {/* Property Gallery - Hero + Category Cards */}
         <div className="max-w-7xl mx-auto px-4 pt-24 pb-6">
           {/* Header */}

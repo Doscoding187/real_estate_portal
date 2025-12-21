@@ -2,8 +2,11 @@
 import React from 'react';
 import { Helmet } from 'react-helmet';
 
+import { useLocation } from 'wouter';
 import { ListingNavbar } from '@/components/ListingNavbar';
 import { Footer } from '@/components/Footer';
+import { Breadcrumbs } from '@/components/search/Breadcrumbs';
+import { unslugify } from '@/lib/urlUtils';
 
 interface LocationPageLayoutProps {
   locationName: string;
@@ -61,6 +64,37 @@ export const LocationPageLayout: React.FC<LocationPageLayoutProps> = ({
       </Helmet>
 
       <ListingNavbar />
+      
+      {/* Breadcrumbs Bar */}
+      <div className="bg-white border-b border-slate-200">
+        <div className="container mx-auto px-4 py-3">
+            {(() => {
+                const [location] = useLocation();
+                const isRent = location.startsWith('/property-to-rent');
+                const rootLabel = isRent ? 'For Rent' : 'For Sale';
+                const rootPath = isRent ? '/property-to-rent' : '/property-for-sale';
+                
+                // Parse slugs from locationSlug prop (expected format: province/city/suburb or province/city or province)
+                const parts = locationSlug.split('/').filter(Boolean);
+                const items = [
+                    { label: 'Home', href: '/' },
+                    { label: rootLabel, href: rootPath }
+                ];
+                
+                let currentPath = rootPath;
+                parts.forEach((part, index) => {
+                    currentPath += `/${part}`;
+                    // Last item is current page, so href '#' or actual path
+                    items.push({
+                        label: unslugify(part),
+                        href: currentPath
+                    });
+                });
+
+                return <Breadcrumbs items={items} />;
+            })()}
+        </div>
+      </div>
 
       {/* 2️⃣ Monetized Location Banner (Taller, Full Width) */}
       <section className="relative w-full z-10">
