@@ -1,6 +1,6 @@
 import { useRoute, useLocation } from 'wouter';
 import { trpc } from '@/lib/trpc';
-import { LocationPageLayout } from '@/components/layout/LocationPageLayout';
+import { LocationPageLayout } from '@/components/location/LocationPageLayout';
 import { MetaControl } from '@/components/seo/MetaControl';
 import { generateCanonicalUrl } from '@/lib/urlUtils';
 import { MonetizedBanner } from '@/components/location/MonetizedBanner';
