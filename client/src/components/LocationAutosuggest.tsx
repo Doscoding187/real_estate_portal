@@ -63,7 +63,7 @@ export function LocationAutosuggest({
 
   // Fetch predictions from Google Places API
   useEffect(() => {
-    if (!query || query.length < 2 || !autocompleteService.current) {
+    if (!query || query.length < 1 || !autocompleteService.current) {
       setPredictions([]);
       return;
     }
@@ -177,6 +177,11 @@ export function LocationAutosuggest({
         {showIcon && <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />}
         <Input
           type="text"
+          autoComplete="off"
+          autoCorrect="off"
+          autoCapitalize="off"
+          spellCheck="false"
+          data-lpignore="true"
           placeholder={placeholder}
           value={query}
           onChange={(e) => {
@@ -184,7 +189,7 @@ export function LocationAutosuggest({
             setShowSuggestions(true);
             setSelectedIndex(-1);
           }}
-          onFocus={() => query.length >= 2 && setShowSuggestions(true)}
+          onFocus={() => query.length >= 1 && setShowSuggestions(true)}
           onKeyDown={handleKeyDown}
           className={`${showIcon ? 'pl-10' : 'pl-3'} ${inputClassName || 'bg-gray-100 border-0 rounded-lg h-11'}`}
         />
