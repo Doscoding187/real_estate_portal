@@ -73,7 +73,7 @@ export function LocationAutosuggest({
     const request = {
       input: query,
       componentRestrictions: { country: 'za' }, // Restrict to South Africa
-      types: ['(cities)', 'sublocality', 'neighborhood'], // Cities and suburbs
+      types: ['geocode'], // Use 'geocode' to get all geographic results (cities, suburbs, etc.) without businesses
     };
 
     autocompleteService.current.getPlacePredictions(request, (results, status) => {
