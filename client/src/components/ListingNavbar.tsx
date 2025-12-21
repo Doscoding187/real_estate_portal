@@ -121,24 +121,25 @@ export function ListingNavbar({ defaultLocations = [] }: ListingNavbarProps) {
           </div>
 
           {/* Chips & Input Container */}
-          <div className="flex-1 flex items-center px-2 min-w-0 overflow-x-auto no-scrollbar gap-2">
-              {selectedLocations.map(loc => (
-                <div key={loc.slug} className="flex-shrink-0 flex items-center bg-blue-50 text-blue-700 text-xs px-2 py-1 rounded-full border border-blue-100 whitespace-nowrap">
-                    <span>{loc.name}</span>
-                    <X 
-                        className="h-3 w-3 ml-1 cursor-pointer hover:text-blue-900" 
-                        onClick={() => removeLocation(loc.slug)}
-                    />
-                </div>
-              ))}
+          <div className="flex-1 flex items-center px-2 min-w-0 gap-2">
+              <div className="flex items-center gap-2 overflow-x-auto no-scrollbar max-w-[50%] flex-shrink-0">
+                  {selectedLocations.map(loc => (
+                    <div key={loc.slug} className="flex-shrink-0 flex items-center bg-blue-50 text-blue-700 text-xs px-2 py-1 rounded-full border border-blue-100 whitespace-nowrap">
+                        <span>{loc.name}</span>
+                        <X 
+                            className="h-3 w-3 ml-1 cursor-pointer hover:text-blue-900" 
+                            onClick={() => removeLocation(loc.slug)}
+                        />
+                    </div>
+                  ))}
+              </div>
               
-              <div className="flex-1 min-w-[120px]">
+              <div className="flex-1 min-w-[120px] relative">
                  <LocationAutosuggest 
                     placeholder={selectedLocations.length > 0 ? "Add more..." : "City, Suburb, or Area"}
                     inputClassName="w-full py-2 text-sm outline-none text-gray-700 placeholder:text-gray-400 bg-transparent border-none h-full focus-visible:ring-0 shadow-none px-1"
                     className="w-full h-full"
                     showIcon={false}
-                    clearOnSelect={true}
                     onSelect={handleLocationSelect}
                  />
               </div>
