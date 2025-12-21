@@ -26,6 +26,7 @@ import {
   Briefcase,
   Loader2,
 } from 'lucide-react';
+import { MetaControl } from '@/components/seo/MetaControl';
 
 type MediaCategory = 'all' | 'amenities' | 'outdoors' | 'videos';
 
@@ -145,6 +146,7 @@ export default function DevelopmentDetail() {
 
   return (
     <>
+      <MetaControl />
       <ListingNavbar />
       <div className="min-h-screen bg-slate-50">
         {/* Property Gallery - Hero + Category Cards */}

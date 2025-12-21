@@ -6,6 +6,8 @@ import { SidebarFilters } from '@/components/SidebarFilters';
 import { SearchFilters } from '@/components/SearchBar';
 import { Button } from '@/components/ui/button';
 import { List, Building2, Loader2 } from 'lucide-react';
+import { MetaControl } from '@/components/seo/MetaControl';
+import { generateCanonicalUrl } from '@/lib/urlUtils';
 
 export default function DevelopmentsDemo() {
   const [filters, setFilters] = useState<SearchFilters>({});
@@ -33,6 +35,7 @@ export default function DevelopmentsDemo() {
 
   return (
     <div className="min-h-screen bg-slate-50">
+      <MetaControl />
       <ListingNavbar />
 
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-12">

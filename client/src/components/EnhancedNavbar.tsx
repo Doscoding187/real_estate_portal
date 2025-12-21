@@ -24,6 +24,7 @@ import { useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { LocationAutosuggest } from '@/components/LocationAutosuggest';
 import { LocationSelectionModal } from '@/components/LocationSelectionModal';
+import { generatePropertyUrl } from '@/lib/urlUtils';
 
 // City dropdown content component
 function CityDropdownContent() {
@@ -95,7 +96,7 @@ function CityDropdownContent() {
           {filteredCities.map(city => (
             <Link
               key={city.slug}
-              href={`/${city.provinceSlug}/${city.slug}`}
+              href={`/property-for-sale/${city.provinceSlug}/${city.slug}`}
               onMouseEnter={() => setHoveredCity(city.name)}
             >
               <div className="flex flex-col items-center gap-2 p-3 hover:bg-blue-50 rounded-lg transition-all group cursor-pointer">
@@ -120,7 +121,7 @@ function CityDropdownContent() {
               const provinceSlug = topCities.find(c => c.name === hoveredCity)?.provinceSlug || 'gauteng';
               
               return (
-              <Link key={index} href={`/${provinceSlug}/${citySlug}/${suburb.toLowerCase().replace(/\s+/g, '-')}`}>
+              <Link key={index} href={`/property-for-sale/${provinceSlug}/${citySlug}/${suburb.toLowerCase().replace(/\s+/g, '-')}`}>
                 <span className="text-sm text-slate-600 hover:text-blue-600 cursor-pointer block py-1">
                   {suburb}
                 </span>
@@ -164,22 +165,26 @@ export function EnhancedNavbar() {
     return null;
   };
 
+import { generatePropertyUrl } from '@/lib/urlUtils';
+
+// ... (existing imports)
+
+// ... inside component
+
   // Handle property link clicks
   const handlePropertyClick = (e: React.MouseEvent, propertyType: string, listingType: 'sale' | 'rent') => {
     e.preventDefault();
     const lastLocation = getLastSearchLocation();
     
     if (lastLocation) {
-      // Navigate with saved location
-      const params = new URLSearchParams({
-        type: propertyType,
+      // Navigate with saved location using new URL structure
+      const url = generatePropertyUrl({
         listingType,
-        city: lastLocation.city.toLowerCase(),
+        propertyType,
+        city: lastLocation.city,
+        suburb: lastLocation.suburb
       });
-      if (lastLocation.suburb) {
-        params.append('suburb', lastLocation.suburb.toLowerCase());
-      }
-      setLocation(`/properties?${params.toString()}`);
+      setLocation(url);
     } else {
       // Show location selection modal
       setPendingNavigation({ propertyType, listingType });
@@ -190,64 +195,49 @@ export function EnhancedNavbar() {
   // Handle location selection from modal
   const handleLocationSelected = (city: string, suburb?: string) => {
     if (pendingNavigation) {
-      const params = new URLSearchParams({
-        type: pendingNavigation.propertyType,
+      const url = generatePropertyUrl({
         listingType: pendingNavigation.listingType,
-        city: city.toLowerCase(),
+        propertyType: pendingNavigation.propertyType,
+        city,
+        suburb
       });
-      if (suburb) {
-        params.append('suburb', suburb.toLowerCase());
-      }
-      setLocation(`/properties?${params.toString()}`);
+      setLocation(url);
       setPendingNavigation(null);
     }
   };
-  const logoutMutation = trpc.auth.logout.useMutation();
 
-  const handleLogout = async () => {
-    await logoutMutation.mutateAsync();
-    logout();
-  };
-
-  const cities = [
-    { name: 'Johannesburg', slug: 'johannesburg' },
-    { name: 'Cape Town', slug: 'cape-town' },
-    { name: 'Durban', slug: 'durban' },
-    { name: 'Pretoria', slug: 'pretoria' },
-    { name: 'Port Elizabeth', slug: 'port-elizabeth' },
-    { name: 'Bloemfontein', slug: 'bloemfontein' },
-  ];
+  // ... 
 
   const buyOptions = [
-    { label: 'Buy Properties', href: '/properties?listingType=sale' },
-    { label: 'New Developments', href: '/developments' },
+    { label: 'Buy Properties', href: '/property-for-sale' },
+    { label: 'New Developments', href: '/new-developments' },
     {
       label: 'Luxury Homes',
-      href: '/properties?listingType=sale&propertyType=villa',
+      href: '/property-for-sale?propertyType=villa',
     },
     {
       label: 'Apartments',
-      href: '/properties?listingType=sale&propertyType=apartment',
+      href: '/property-for-sale?propertyType=apartment',
     },
     {
       label: 'Houses',
-      href: '/properties?listingType=sale&propertyType=house',
+      href: '/property-for-sale?propertyType=house',
     },
   ];
 
   const rentOptions = [
-    { label: 'Rent Properties', href: '/properties?listingType=rent' },
+    { label: 'Rent Properties', href: '/property-to-rent' },
     {
       label: 'Apartments for Rent',
-      href: '/properties?listingType=rent&propertyType=apartment',
+      href: '/property-to-rent?propertyType=apartment',
     },
     {
       label: 'Houses for Rent',
-      href: '/properties?listingType=rent&propertyType=house',
+      href: '/property-to-rent?propertyType=house',
     },
     {
       label: 'Commercial Spaces',
-      href: '/properties?listingType=rent&propertyType=commercial',
+      href: '/property-to-rent?propertyType=commercial',
     },
   ];
 
@@ -318,7 +308,7 @@ export function EnhancedNavbar() {
                           <li><span onClick={(e) => handlePropertyClick(e, 'house', 'sale')} className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1">Houses for Sale</span></li>
                           <li><span onClick={(e) => handlePropertyClick(e, 'apartment', 'sale')} className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1">Apartments / Flats</span></li>
                           <li><span onClick={(e) => handlePropertyClick(e, 'townhouse', 'sale')} className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1">Townhouses</span></li>
-                          <li><Link href="/developments"><span className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1">New Developments</span></Link></li>
+                          <li><Link href="/new-developments"><span className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1">New Developments</span></Link></li>
                         </ul>
                       </div>
 
@@ -404,9 +394,9 @@ export function EnhancedNavbar() {
                           <MapPin className="h-4 w-4 text-blue-600" /> Popular Cities
                         </h4>
                         <ul className="space-y-2 text-sm">
-                          <li><Link href="/gauteng/johannesburg?listingType=rent"><span className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1">Rent in Johannesburg</span></Link></li>
-                          <li><Link href="/western-cape/cape-town?listingType=rent"><span className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1">Rent in Cape Town</span></Link></li>
-                          <li><Link href="/kwazulu-natal/durban?listingType=rent"><span className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1">Rent in Durban</span></Link></li>
+                          <li><Link href="/property-to-rent/gauteng/johannesburg"><span className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1">Rent in Johannesburg</span></Link></li>
+                          <li><Link href="/property-to-rent/western-cape/cape-town"><span className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1">Rent in Cape Town</span></Link></li>
+                          <li><Link href="/property-to-rent/kwazulu-natal/durban"><span className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1">Rent in Durban</span></Link></li>
                         </ul>
                       </div>
                     </div>

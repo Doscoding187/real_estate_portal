@@ -125,7 +125,13 @@ import RegistrationSuccess from './pages/RegistrationSuccess';
 // Import SearchResults page for SEO-friendly URLs
 import SearchResults from './pages/SearchResults';
 import SuburbPage from './pages/SuburbPage';
-import { LegacyCityRedirect, LegacySuburbRedirect } from './components/LegacyRouteHandler';
+import { 
+  LegacyCityRedirect, 
+  LegacySuburbRedirect, 
+  LegacyProvinceRedirect, 
+  CityShortcutRedirect,
+  OldLegacyCityRedirect
+} from './components/LegacyRouteHandler';
 
 function Router() {
   // Auto-migrate guest data on login
@@ -142,13 +148,28 @@ function Router() {
       <Route path={'/'} component={Home} />
       
       {/* SEO-friendly property search routes (more specific first) */}
-      <Route path="/properties/:listingType/:propertyType/:location/:suburb" component={SearchResults} />
-      <Route path="/properties/:listingType/:propertyType/:location" component={SearchResults} />
-      <Route path="/properties/:listingType/:propertyType" component={SearchResults} />
-      <Route path="/properties/:listingType" component={SearchResults} />
+      {/* SEO-friendly Transaction Roots */}
+      <Route path="/property-for-sale" component={SearchResults} />
+      <Route path="/property-to-rent" component={SearchResults} />
       
+      {/* City Shortcuts (UX-only, Redirects to Canonical) */}
+      <Route path="/property-for-sale/:city" component={CityShortcutRedirect} />
+      <Route path="/property-to-rent/:city" component={CityShortcutRedirect} />
+
+      {/* Canonical Suburb Pages */}
+      <Route path="/property-for-sale/:province/:city/:suburb" component={SuburbPage} />
+      <Route path="/property-to-rent/:province/:city/:suburb" component={SuburbPage} />
+
+      {/* Canonical City Pages */}
+      <Route path="/property-for-sale/:province/:city" component={CityPage} />
+      <Route path="/property-to-rent/:province/:city" component={CityPage} />
+
+      {/* Canonical Province Pages */}
+      <Route path="/property-for-sale/:province" component={ProvincePage} />
+      <Route path="/property-to-rent/:province" component={ProvincePage} />
+
       {/* Legacy properties route (query params) */}
-      <Route path="/properties" component={Properties} />
+      <Route path="/properties" component={SearchResults} />
       <Route path="/property/:id" component={PropertyDetail} />
       <Route path="/favorites" component={Favorites} />
       <Route path="/agents" component={Agents} />
@@ -166,13 +187,21 @@ function Router() {
       <Route path="/agent/:id" component={AgentDetail} />
       <Route path="/agent/:id" component={AgentDetail} />
       
-      {/* Legacy Route Redirects */}
-      <Route path="/city/:slug" component={LegacyCityRedirect} />
-      <Route path="/suburb/:city/:suburb" component={LegacySuburbRedirect} />
+      {/* Redirects for Old Route Structures */}
+      {/* Very Old Format: /city/johannesburg */}
+      <Route path="/city/:slug" component={OldLegacyCityRedirect} /> 
+      {/* Very Old Format: /suburb/johannesburg/sandton */}
+      <Route path="/suburb/:city/:suburb" component={(props) => <LegacySuburbRedirect params={{...props.params, province: 'gauteng'}} />} /> 
+      
+      {/* Route Handlers / Wizards */}
       <Route path="/listings/create" component={ListingWizard} />
       <Route path="/listing-template" component={ListingTemplate} />
       <Route path="/developments/create" component={CreateDevelopment} />
-      <Route path="/developments" component={DevelopmentsDemo} />
+      
+      {/* Canonical Developments Root */}
+      <Route path="/new-developments" component={DevelopmentsDemo} />
+      {/* Redirect Legacy /developments to /new-developments */}
+      <Route path="/developments" component={() => { window.location.replace('/new-developments'); return null; }} />
       <Route path="/development/:id" component={DevelopmentDetail} />
       <Route path="/developer/setup" component={DeveloperSetupWizard} />
       <Route path="/developer/success" component={() => <RegistrationSuccess role="developer" />} />
@@ -180,7 +209,7 @@ function Router() {
       <Route path="/agency/success" component={() => <RegistrationSuccess role="agency" />} />
       <Route path="/agent/success" component={() => <RegistrationSuccess role="agent" />} />
       
-      {/* Explore routes - MUST come before location catch-all routes */}
+      {/* Explore routes */}
       <Route path="/explore/home" component={ExploreHome} />
       <Route path="/explore/shorts" component={ExploreShorts} />
       <Route path="/explore/upload" component={ExploreUpload} />
@@ -190,14 +219,13 @@ function Router() {
       
       <Route path="/compare" component={CompareProperties} />
       
-      {/* Login and authentication routes should be early in the route list */}
+      {/* Auth */}
       <Route path="/login" component={Login} />
       <Route path="/forgot-password" component={ForgotPassword} />
       <Route path="/reset-password" component={ResetPassword} />
       <Route path="/accept-invitation" component={AcceptInvitation} />
       <Route path="/role-selection" component={RoleSelection} />
       <Route path="/advertise" component={AdvertiseWithUs} />
-      {/* Redirect common variations to /advertise */}
       <Route path="/advertise-with-us" component={() => { window.location.href = '/advertise'; return null; }} />
       <Route path="/advertise with us" component={() => { window.location.href = '/advertise'; return null; }} />
 
@@ -445,9 +473,13 @@ function Router() {
         </RequireRole>
       </Route>
 
-      <Route path="/:province/:city/:suburb" component={SuburbPage} />
-      <Route path="/:province/:city" component={CityPage} />
-      <Route path="/:province" component={ProvincePage} />
+      {/* CATCH-ALL ROUTES & LEGACY REDIRECTS - MUST BE LAST */}
+      {/* Redirect /:province/:city/:suburb -> /property-for-sale/:province/:city/:suburb */}
+      <Route path="/:province/:city/:suburb" component={LegacySuburbRedirect} />
+      {/* Redirect /:province/:city -> /property-for-sale/:province/:city */}
+      <Route path="/:province/:city" component={LegacyCityRedirect} />
+      {/* Redirect /:province -> /property-for-sale/:province */}
+      <Route path="/:province" component={LegacyProvinceRedirect} />
 
       <Route path={'/404'} component={NotFound} />
       {/* Final fallback route */}

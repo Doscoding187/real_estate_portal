@@ -232,18 +232,18 @@ export default function AgentListings() {
 
         <main className="p-6 max-w-[1600px] mx-auto space-y-6">
           {/* Controls */}
-          <div className="flex flex-col sm:flex-row gap-4 items-center justify-between bg-white/60 backdrop-blur-xl p-4 rounded-2xl border border-white/20 shadow-sm">
+          <div className="flex flex-col sm:flex-row gap-4 items-center justify-between bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
             <div className="relative w-full sm:w-96">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
               <Input 
                 placeholder="Search listings..." 
-                className="pl-10 bg-white border-slate-200 focus:ring-emerald-500 rounded-xl"
+                className="pl-10 bg-white border-slate-200 focus:ring-slate-500 rounded-lg"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
             <div className="flex items-center gap-2 w-full sm:w-auto">
-              <Button variant="outline" className="bg-white border-slate-200 text-slate-600 hover:text-emerald-600 rounded-xl">
+              <Button variant="outline" className="bg-white border-slate-200 text-slate-600 hover:text-slate-900 rounded-lg">
                 <Filter className="h-4 w-4 mr-2" />
                 Filter
               </Button>
@@ -252,20 +252,20 @@ export default function AgentListings() {
 
           {/* Tabs */}
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full max-w-3xl grid-cols-5 p-1 bg-slate-100/50 backdrop-blur-sm rounded-2xl mb-6">
-              <TabsTrigger value="active" className="rounded-xl data-[state=active]:bg-white data-[state=active]:text-emerald-600 data-[state=active]:shadow-sm transition-all duration-300">
+            <TabsList className="grid w-full max-w-3xl grid-cols-5 p-1 bg-slate-100 rounded-xl mb-6">
+              <TabsTrigger value="active" className="rounded-lg data-[state=active]:bg-white data-[state=active]:text-emerald-600 data-[state=active]:shadow-sm transition-all duration-200">
                 Active
               </TabsTrigger>
-              <TabsTrigger value="pending" className="rounded-xl data-[state=active]:bg-white data-[state=active]:text-amber-600 data-[state=active]:shadow-sm transition-all duration-300">
+              <TabsTrigger value="pending" className="rounded-lg data-[state=active]:bg-white data-[state=active]:text-amber-600 data-[state=active]:shadow-sm transition-all duration-200">
                 Pending
               </TabsTrigger>
-              <TabsTrigger value="draft" className="rounded-xl data-[state=active]:bg-white data-[state=active]:text-slate-600 data-[state=active]:shadow-sm transition-all duration-300">
+              <TabsTrigger value="draft" className="rounded-lg data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-sm transition-all duration-200">
                 Drafts
               </TabsTrigger>
-              <TabsTrigger value="sold" className="rounded-xl data-[state=active]:bg-white data-[state=active]:text-blue-600 data-[state=active]:shadow-sm transition-all duration-300">
+              <TabsTrigger value="sold" className="rounded-lg data-[state=active]:bg-white data-[state=active]:text-blue-600 data-[state=active]:shadow-sm transition-all duration-200">
                 Sold
               </TabsTrigger>
-              <TabsTrigger value="archived" className="rounded-xl data-[state=active]:bg-white data-[state=active]:text-slate-400 data-[state=active]:shadow-sm transition-all duration-300">
+              <TabsTrigger value="archived" className="rounded-lg data-[state=active]:bg-white data-[state=active]:text-slate-500 data-[state=active]:shadow-sm transition-all duration-200">
                 Archived
               </TabsTrigger>
             </TabsList>
@@ -284,9 +284,9 @@ export default function AgentListings() {
                   ))}
                 </div>
               ) : filteredListings?.length === 0 ? (
-                <div className="text-center py-20 bg-white/40 rounded-3xl border border-dashed border-slate-300">
-                  <div className="bg-slate-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Home className="h-8 w-8 text-slate-400" />
+                <div className="text-center py-20 bg-white rounded-xl border border-slate-200 border-dashed">
+                  <div className="bg-slate-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 border border-slate-100">
+                    <Home className="h-8 w-8 text-slate-300" />
                   </div>
                   <h3 className="text-lg font-medium text-slate-900">No listings found</h3>
                   <p className="text-slate-500 mt-1">

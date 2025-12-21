@@ -3,8 +3,7 @@ import { useLocation } from 'wouter';
 import { trpc } from '@/lib/trpc';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { Button } from '@/components/ui/button';
-import { CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { GlassCard } from '@/components/ui/glass-card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -134,11 +133,11 @@ export default function PropertiesPage() {
         </div>
 
         {/* Filters */}
-        <GlassCard className="mb-6 border-white/40 shadow-[0_8px_30px_rgba(8,_112,_184,_0.06)]">
-          <CardContent className="pt-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Card className="mb-6 border-slate-200 shadow-sm bg-white">
+          <CardContent className="p-6">
+            <div className="flex flex-col md:flex-row gap-4 justify-between items-center">
+              <div className="relative w-full md:w-96">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 h-4 w-4" />
                 <Input
                   placeholder="Search by title, city..."
                   value={searchTerm}
@@ -165,10 +164,10 @@ export default function PropertiesPage() {
               </Button>
             </div>
           </CardContent>
-        </GlassCard>
+        </Card>
 
         {/* Properties Table */}
-        <GlassCard className="border-white/40 shadow-[0_8px_30px_rgba(8,_112,_184,_0.06)]">
+        <Card className="border-slate-200 shadow-sm bg-white overflow-hidden">
           <CardHeader>
             <CardTitle className="text-slate-800">All Properties</CardTitle>
           </CardHeader>
@@ -288,7 +287,7 @@ export default function PropertiesPage() {
               </>
             )}
           </CardContent>
-        </GlassCard>
+        </Card>
 
         {/* Delete Confirmation Dialog */}
         <Dialog 

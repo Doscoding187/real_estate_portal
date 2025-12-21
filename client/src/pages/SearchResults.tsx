@@ -28,11 +28,13 @@ import {
   ActiveFilterChips,
   ResultsHeader,
   MobileFilterDrawer,
+  MobileStickyControls,
   ViewMode,
   SortOption,
 } from '@/components/search';
 
 // URL utilities
+import { MetaControl } from '@/components/seo/MetaControl';
 import {
   parsePropertyUrl,
   parseLegacyQueryParams,
@@ -40,12 +42,13 @@ import {
   generatePageTitle,
   generateMetaDescription,
   generatePropertyUrl,
+  generateCanonicalUrl,
   SearchFilters,
 } from '@/lib/urlUtils';
 
 export default function SearchResults() {
   const { isAuthenticated } = useAuth();
-  const [, setLocation] = useLocation();
+  const [location, setLocation] = useLocation();
   
   // Get URL params from wouter
   const params = useParams<{
@@ -70,9 +73,21 @@ export default function SearchResults() {
   useEffect(() => {
     const searchParams = new URLSearchParams(window.location.search);
     
+    // Check for Transaction Roots first
+    if (location.startsWith('/property-for-sale')) {
+        const parsedQuery = parseLegacyQueryParams(searchParams);
+        setFilters({ ...parsedQuery, listingType: 'sale' });
+        return;
+    }
+    if (location.startsWith('/property-to-rent')) {
+        const parsedQuery = parseLegacyQueryParams(searchParams);
+        setFilters({ ...parsedQuery, listingType: 'rent' });
+        return;
+    }
+
     // Check if using new SEO-friendly URLs or legacy query params
     if (params.listingType) {
-      // New URL structure: /properties/for-sale/houses/johannesburg
+      // Legacy Route /properties/sale/...
       const parsedFilters = parsePropertyUrl(params, searchParams);
       setFilters(parsedFilters);
     } else {
@@ -80,7 +95,7 @@ export default function SearchResults() {
       const legacyFilters = parseLegacyQueryParams(searchParams);
       setFilters(legacyFilters);
     }
-  }, [params, window.location.search]);
+  }, [params, location, window.location.search]);
 
   // Update document title for SEO
   useEffect(() => {
@@ -223,8 +238,11 @@ export default function SearchResults() {
 
   const resultCount = properties?.length || 0;
 
+  const canonicalUrl = useMemo(() => generateCanonicalUrl(filters), [filters]);
+
   return (
     <div className="min-h-screen bg-slate-50">
+      <MetaControl canonicalUrl={canonicalUrl} />
       <ListingNavbar />
 
       <div className="container pt-24 pb-8">
@@ -378,6 +396,16 @@ export default function SearchResults() {
           </div>
         </div>
       </div>
+
+      {/* Mobile Sticky Controls (Persistent Bottom Bar) */}
+      <MobileStickyControls 
+        onOpenFilters={() => setIsMobileFilterOpen(true)}
+        currentView={viewMode}
+        onViewChange={setViewMode}
+        onSortChange={setSortBy}
+        currentSort={sortBy}
+        resultCount={resultCount}
+      />
 
       {/* Mobile Filter Drawer */}
       <MobileFilterDrawer

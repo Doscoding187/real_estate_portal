@@ -73,50 +73,52 @@ export const EntityStatusCard: React.FC<EntityStatusCardProps> = ({
     : (data.priceFrom);
 
   return (
-    <Card className={cn("overflow-hidden hover:shadow-md transition-shadow", className)}>
+    <Card className={cn("overflow-hidden bg-white border-slate-200 shadow-sm hover:shadow-md transition-all duration-200", className)}>
       <CardContent className="p-0">
-        <div className="flex flex-col sm:flex-row gap-4">
+        <div className="flex flex-col sm:flex-row gap-0 sm:gap-6">
             {/* Image Section */}
-            <div className="w-full sm:w-48 h-32 sm:h-auto bg-gray-100 shrink-0 relative">
+            <div className="w-full sm:w-48 h-48 sm:h-auto bg-slate-100 shrink-0 relative border-r border-slate-100">
                 {image ? (
                     <img src={image} alt={title} className="w-full h-full object-cover" />
                 ) : (
-                    <div className="flex items-center justify-center h-full text-gray-400 text-xs">
+                    <div className="flex items-center justify-center h-full text-slate-400 text-xs font-medium">
                         No Image
                     </div>
                 )}
-                 <div className="absolute top-2 left-2 sm:hidden">
+                 <div className="absolute top-3 left-3 sm:hidden">
                     {getStatusBadge()}
                  </div>
             </div>
 
             {/* Content Section */}
-            <div className="flex-1 p-4 flex flex-col justify-between">
+            <div className="flex-1 p-5 flex flex-col justify-between">
                 <div>
-                   <div className="flex justify-between items-start mb-2">
+                   <div className="flex justify-between items-start mb-3">
                        <div className="hidden sm:block">
                             {getStatusBadge()}
                        </div>
-                       <div className="flex items-center gap-2">
+                       <div className="flex items-center gap-3">
                            {/* Readiness Indicator */}
                            {status === 'draft' && (
-                               <ReadinessIndicator 
-                                   score={readiness.score} 
-                                   missing={readiness.missing} 
-                                   variant="compact"
-                                   size="sm"
-                               />
+                               <div className="scale-90 origin-right">
+                                   <ReadinessIndicator 
+                                       score={readiness.score} 
+                                       missing={readiness.missing} 
+                                       variant="compact"
+                                       size="sm"
+                                   />
+                               </div>
                            )}
                            
                            {/* Quality Indicator (Only for drafts/active) */}
                            {quality && (status === 'draft' || status === 'active' || status === 'published') && (
-                               <div className="flex items-center gap-1.5 px-2 py-1 bg-slate-50 rounded-md border border-slate-100">
-                                   <span className="text-[10px] uppercase font-bold text-slate-400">Quality</span>
+                               <div className="flex items-center gap-1.5 px-2.5 py-1 bg-slate-50 rounded-md border border-slate-200">
+                                   <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Quality</span>
                                    <div className={cn(
                                        "text-xs font-bold",
-                                       getQualityTier(quality.score).color === 'green' ? "text-green-600" :
+                                       getQualityTier(quality.score).color === 'green' ? "text-emerald-600" :
                                        getQualityTier(quality.score).color === 'blue' ? "text-blue-600" :
-                                       getQualityTier(quality.score).color === 'yellow' ? "text-amber-600" : "text-red-500"
+                                       getQualityTier(quality.score).color === 'yellow' ? "text-amber-600" : "text-rose-600"
                                    )}>
                                        {quality.score}
                                    </div>
@@ -124,36 +126,42 @@ export const EntityStatusCard: React.FC<EntityStatusCardProps> = ({
                            )}
 
                            {/* Quick Actions */}
-                            <Button variant="ghost" size="icon" onClick={() => onEdit(data.id)} title="Edit">
-                                <Edit className="w-4 h-4 text-gray-500" />
-                            </Button>
-                             <Button variant="ghost" size="icon" onClick={() => onDelete(data.id)} title="Delete">
-                                <Trash2 className="w-4 h-4 text-gray-500 hover:text-red-500" />
-                            </Button>
+                           <div className="flex items-center gap-1 border-l border-slate-100 pl-2 ml-1">
+                                <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-slate-900" onClick={() => onEdit(data.id)} title="Edit">
+                                    <Edit className="w-4 h-4" />
+                                </Button>
+                                 <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-rose-600 hover:bg-rose-50" onClick={() => onDelete(data.id)} title="Delete">
+                                    <Trash2 className="w-4 h-4" />
+                                </Button>
+                           </div>
                        </div>
                    </div>
 
-                   <h3 className="font-semibold text-lg line-clamp-1">{title || 'Untitled Property'}</h3>
-                   <p className="text-sm text-gray-500 mb-1">{data.address || data.city || 'No location set'}</p>
-                   {price && <p className="font-medium text-primary">{formatCurrency(price)}</p>}
+                   <h3 className="font-semibold text-xl text-slate-900 line-clamp-1 mb-1">{title || 'Untitled Property'}</h3>
+                   <div className="flex items-center gap-2 text-slate-500 text-sm mb-3">
+                       <span>{data.address || data.city || 'No location set'}</span>
+                   </div>
+                   
+                   {price && <p className="font-semibold text-lg text-slate-900">{formatCurrency(price)}</p>}
                 
                     {/* Rejection Feedback */}
                     {isRejected && (
-                        <div className="mt-3 bg-red-50 border border-red-100 rounded-md p-3">
-                             <div className="flex items-start gap-2">
-                                <AlertTriangle className="w-4 h-4 text-red-600 mt-0.5" />
+                        <div className="mt-4 bg-red-50/50 border border-red-100 rounded-lg p-4">
+                             <div className="flex items-start gap-3">
+                                <AlertTriangle className="w-5 h-5 text-red-600 mt-0.5 shrink-0" />
                                 <div>
-                                    <p className="text-sm font-semibold text-red-800">Changes Required</p>
-                                    <ul className="text-xs text-red-700 list-disc pl-4 mt-1">
+                                    <p className="text-sm font-semibold text-red-900">Changes Required</p>
+                                    <ul className="text-sm text-red-700 list-disc pl-4 mt-2 mb-2 space-y-1">
                                         {rejectionReasons.slice(0, 3).map((r, i) => (
                                             <li key={i}>{r}</li>
                                         ))}
                                         {rejectionReasons.length > 3 && <li>+ {rejectionReasons.length - 3} more</li>}
                                     </ul>
-                                    {rejectionNote && <p className="text-xs text-red-600 mt-1 italic">Note: "{rejectionNote}"</p>}
+                                    {rejectionNote && <p className="text-sm text-red-600 mt-2 bg-white/50 p-2 rounded border border-red-100 italic">Note from Admin: "{rejectionNote}"</p>}
                                     <Button 
-                                        variant="link" 
-                                        className="h-auto p-0 text-xs text-red-800 underline mt-2"
+                                        size="sm"
+                                        variant="outline" 
+                                        className="mt-3 border-red-200 text-red-700 hover:bg-red-50 hover:text-red-900 hover:border-red-300"
                                         onClick={() => onEdit(data.id)}
                                     >
                                         Fix & Resubmit
@@ -166,13 +174,13 @@ export const EntityStatusCard: React.FC<EntityStatusCardProps> = ({
                 
                  {/* Footer Actions if needed */}
                  {!isRejected && status !== 'published' && status !== 'active' && (
-                     <div className="mt-4 flex justify-end">
+                     <div className="mt-5 flex justify-end border-t border-slate-50 pt-4">
                          {status === 'draft' ? (
-                              <Button size="sm" onClick={() => onEdit(data.id)}>
+                              <Button size="sm" onClick={() => onEdit(data.id)} className="font-medium">
                                  {readiness.score >= 90 ? 'Review & Submit' : 'Continue Setup'}
                               </Button>
                          ) : (
-                             <Button size="sm" variant="outline" disabled>
+                             <Button size="sm" variant="outline" className="text-slate-500 bg-slate-50 border-slate-200" disabled>
                                  In Review
                              </Button>
                          )}

@@ -1,6 +1,8 @@
 import { useRoute, useLocation } from 'wouter';
 import { trpc } from '@/lib/trpc';
-import { LocationPageLayout } from '@/components/location/LocationPageLayout';
+import { LocationPageLayout } from '@/components/layout/LocationPageLayout';
+import { MetaControl } from '@/components/seo/MetaControl';
+import { generateCanonicalUrl } from '@/lib/urlUtils';
 import { MonetizedBanner } from '@/components/location/MonetizedBanner';
 import { SearchStage } from '@/components/location/SearchStage';
 import { FeaturedPropertiesCarousel } from '@/components/location/FeaturedPropertiesCarousel';
@@ -57,10 +59,10 @@ export default function ProvincePage({ params }: { params: { province: string } 
 
   return (
     <div className="min-h-screen bg-white">
+      <MetaControl />
       <Helmet>
         <title>Property for Sale in {province.name} | Real Estate Portal</title>
         <meta name="description" content={`Find the best properties for sale in ${province.name}. Browse ${stats.totalListings} listings, including houses, apartments, and developments.`} />
-        <link rel="canonical" href={`https://propertylistify.com/${provinceSlug}`} />
       </Helmet>
 
       <LocationSchema 
@@ -81,8 +83,12 @@ export default function ProvincePage({ params }: { params: { province: string } 
       />
 
       <LocationPageLayout
+        title={`${province.name} Property Market`}
+        description={`Find properties for ${isRent ? 'rent' : 'sale'} in ${province.name}. Market insights, trends, and top locations.`}
         locationName={province.name}
         locationSlug={provinceSlug}
+        locationType="province"
+        heroImage="/images/province-hero.jpg"
         
         banner={
           <MonetizedBanner

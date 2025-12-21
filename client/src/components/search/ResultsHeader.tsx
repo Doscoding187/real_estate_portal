@@ -74,27 +74,31 @@ export function ResultsHeader({
   const title = generateResultsTitle(filters, resultCount, isLoading);
 
   return (
-    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-gray-200">
-      {/* Title */}
+    <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 pb-6 border-b border-gray-100">
+      {/* Title & Market Pulse */}
       <div>
-        <h1 className="text-xl sm:text-2xl font-bold text-slate-800">
+        <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
           {title}
         </h1>
-        {filters.city && !filters.suburb && (
-          <p className="text-sm text-muted-foreground mt-0.5">
-            Browse available properties in {filters.city}
-          </p>
+        {resultCount > 0 && (
+            <div className="flex items-center gap-2 mt-2 text-sm text-slate-500">
+                <span className="flex h-2 w-2 relative">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                </span>
+                Live Market Updates
+            </div>
         )}
       </div>
 
       {/* Controls */}
       <div className="flex items-center gap-3">
-        {/* Mobile Filter Button */}
+        {/* Mobile Filter Button - Kept for legacy/tablet, but hidden if Sticky Controls are used on mobile */}
         {showMobileFilterButton && onOpenFilters && (
           <Button
             variant="outline"
             size="sm"
-            className="lg:hidden border-gray-200"
+            className="lg:hidden border-gray-200 hidden sm:flex" // Hide on tiny screens where sticky bar takes over
             onClick={onOpenFilters}
           >
             <SlidersHorizontal className="h-4 w-4 mr-2" />
@@ -102,45 +106,54 @@ export function ResultsHeader({
           </Button>
         )}
 
-        {/* View Mode Toggle */}
-        <div className="hidden sm:flex items-center bg-gray-100 rounded-lg p-1">
-          <Button
-            variant="ghost"
-            size="sm"
-            className={`h-8 px-2.5 ${viewMode === 'list' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500 hover:text-slate-900'}`}
+        {/* View Mode Toggle - Segmented Control Style */}
+        <div className="hidden sm:flex items-center bg-slate-100 p-1 rounded-lg border border-slate-200">
+          <button
             onClick={() => onViewModeChange('list')}
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
+              viewMode === 'list' 
+                ? 'bg-white text-slate-900 shadow-sm' 
+                : 'text-slate-500 hover:text-slate-700'
+            }`}
           >
             <List className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            className={`h-8 px-2.5 ${viewMode === 'grid' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500 hover:text-slate-900'}`}
+            <span className="hidden md:inline">List</span>
+          </button>
+          <button
             onClick={() => onViewModeChange('grid')}
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
+              viewMode === 'grid' 
+                ? 'bg-white text-slate-900 shadow-sm' 
+                : 'text-slate-500 hover:text-slate-700'
+            }`}
           >
             <LayoutGrid className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            className={`h-8 px-2.5 ${viewMode === 'map' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500 hover:text-slate-900'}`}
+            <span className="hidden md:inline">Grid</span>
+          </button>
+          <button
             onClick={() => onViewModeChange('map')}
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
+              viewMode === 'map' 
+                ? 'bg-white text-slate-900 shadow-sm' 
+                : 'text-slate-500 hover:text-slate-700'
+            }`}
           >
             <MapIcon className="h-4 w-4" />
-          </Button>
+            <span className="hidden md:inline">Map</span>
+          </button>
         </div>
 
         {/* Sort Dropdown */}
         <Select value={sortBy} onValueChange={(val) => onSortChange(val as SortOption)}>
-          <SelectTrigger className="w-[160px] h-9 bg-white border-gray-200">
+          <SelectTrigger className="w-[140px] sm:w-[160px] h-10 bg-white border-gray-200 font-medium text-slate-700">
             <SelectValue placeholder="Sort by" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="relevance">Relevance</SelectItem>
-            <SelectItem value="price_asc">Price: Low to High</SelectItem>
-            <SelectItem value="price_desc">Price: High to Low</SelectItem>
-            <SelectItem value="date_desc">Newest First</SelectItem>
-            <SelectItem value="date_asc">Oldest First</SelectItem>
+            <SelectItem value="price_asc">Price: Lo-Hi</SelectItem>
+            <SelectItem value="price_desc">Price: Hi-Lo</SelectItem>
+            <SelectItem value="date_desc">Newest</SelectItem>
+            <SelectItem value="date_asc">Oldest</SelectItem>
           </SelectContent>
         </Select>
       </div>

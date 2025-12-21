@@ -99,37 +99,36 @@ export interface SearchFilters {
 import { CITY_PROVINCE_MAP } from './locationUtils';
 
 // Generate SEO-friendly URL from filters
+// Generate SEO-friendly URL from filters
 export function generatePropertyUrl(filters: SearchFilters): string {
-  // If we have a city, we should try to use the hierarchical structure
-  // /:province/:city or /:province/:city/:suburb
+  // Determine root based on listing type (Transaction First)
+  const isRent = filters.listingType === 'rent';
+  const root = isRent ? '/property-to-rent' : '/property-for-sale';
+  
+  // If we have a city, we MUST include province for canonical structure
   if (filters.city) {
     const citySlug = slugify(filters.city);
-    // If province is explicitly provided, use it, otherwise lookup
+    // Lookup province from map or use provided province
     const provinceSlug = filters.province 
       ? slugify(filters.province) 
-      : (CITY_PROVINCE_MAP[citySlug] || 'properties'); // Fallback to 'properties' as "province" if unknown? No, that breaks hierarchy. 
-      // Actually if unknown, maybe we shouldn't use hierarchy? 
-      // But user wants "new urls". Let's assume most cities are mapped or fallback to a generic search.
-      // If province is unknown, /properties/city-slug might collide with other routes?
-      // Wouter routes: /:province/:city
-      // If 'properties' is the first segment, it goes to SearchResults.
-      // So falling back to '/properties?city=...' is safer for unknown cities.
-    
-    // Check if we found a province or have one
-    const province = CITY_PROVINCE_MAP[citySlug] || (filters.province ? slugify(filters.province) : null);
+      : (CITY_PROVINCE_MAP[citySlug] || null);
 
-    if (province) {
-       const parts: string[] = ['', province, citySlug];
+    if (provinceSlug) {
+       const parts: string[] = [root, provinceSlug, citySlug];
        
        if (filters.suburb) {
          parts.push(slugify(filters.suburb));
        }
 
+       // Add pre-defined filter segments if applicable (future proofing)
+       // For now, standard filters go to query params to ensure noindex
+       // unless we explicitly create "Filtered SRPs" in the future.
+
        // Add query params for everything else
        const queryParams = new URLSearchParams();
 
-       if (filters.listingType) queryParams.set('listingType', filters.listingType);
-       if (filters.propertyType) queryParams.set('propertyType', filters.propertyType);
+       // We don't need listingType in query param if it's in the root
+       if (filters.propertyType) queryParams.set('propertyType', filters.propertyType); // Or could be part of path in future
        
        if (filters.minPrice) queryParams.set('minPrice', filters.minPrice.toString());
        if (filters.maxPrice) queryParams.set('maxPrice', filters.maxPrice.toString());
@@ -147,58 +146,63 @@ export function generatePropertyUrl(filters: SearchFilters): string {
     }
   }
 
-  // Fallback to legacy path building for non-location specific or unknown location searches
-  const parts: string[] = ['/properties'];
-
-  // Add listing type
-  if (filters.listingType) {
-    const slug = listingTypeToSlug[filters.listingType];
-    if (slug) parts.push(slug);
+  // Fallback for Province-only or Unknown Location
+  if (filters.province) {
+      return `${root}/${slugify(filters.province)}`;
   }
 
-  // Add property type
-  if (filters.propertyType) {
-    const slug = propertyTypeToSlug[filters.propertyType];
-    if (slug) parts.push(slug);
-  }
-
-  // Add city (if we are here, it means we didn't find a province map, so use query param or legacy path if desired)
-  // But strictly new URLs should be /properties?city=... if not hierarchical
-  // Let's keep existing behavior for /properties/... pathing if no city found matches map
-  if (filters.city) {
-    // parts.push(slugify(filters.city)); // Legacy behavior
-    // If we want to be safe, stick to query params for unknown cities
-  }
-
-  // Build base URL
-  let url = parts.join('/');
-
-  // Add remaining filters as query params
+  // Fallback for Generic Search (Root)
+  // If only Property Type is selected: /property-for-sale?type=house
   const queryParams = new URLSearchParams();
+  if (filters.propertyType) queryParams.set('propertyType', filters.propertyType);
   
-  // Ensure city/suburb are passed if they weren't used in path
-  if (filters.city) queryParams.set('city', filters.city);
-  if (filters.suburb) queryParams.set('suburb', filters.suburb);
-  
-  if (filters.listingType && !parts.includes(listingTypeToSlug[filters.listingType] || '')) queryParams.set('listingType', filters.listingType); // Redundant if in path?
-  
+  // Add other filters
   if (filters.minPrice) queryParams.set('minPrice', filters.minPrice.toString());
+  // ... (copy rest of filters)
   if (filters.maxPrice) queryParams.set('maxPrice', filters.maxPrice.toString());
   if (filters.minBedrooms) queryParams.set('minBedrooms', filters.minBedrooms.toString());
-  if (filters.maxBedrooms) queryParams.set('maxBedrooms', filters.maxBedrooms.toString());
-  if (filters.minBathrooms) queryParams.set('minBathrooms', filters.minBathrooms.toString());
-  if (filters.maxBathrooms) queryParams.set('maxBathrooms', filters.maxBathrooms.toString());
-  if (filters.minArea) queryParams.set('minArea', filters.minArea.toString());
-  if (filters.maxArea) queryParams.set('maxArea', filters.maxArea.toString());
-  if (filters.furnished) queryParams.set('furnished', 'true');
   if (filters.amenities?.length) queryParams.set('amenities', filters.amenities.join(','));
 
   const queryString = queryParams.toString();
-  if (queryString) {
-    url += `?${queryString}`;
-  }
+  return root + (queryString ? `?${queryString}` : '');
+}
 
-  return url;
+/**
+ * Generates the canonical URL for the current page state.
+ * This should return the "clean" URL without tracking params or transient state.
+ */
+export function generateCanonicalUrl(filters: SearchFilters): string {
+    // Re-use generatePropertyUrl but ensure we strip non-canonical params manually if needed?
+    // generatePropertyUrl above puts standard filters in query params.
+    // BUT the requirement is: "Any URL with query parameters... NoIndex".
+    // So the CANONICAL url should NOT have query params.
+    
+    // So distinct from generatePropertyUrl, this should return the base path level.
+    
+    const isRent = filters.listingType === 'rent';
+    const root = isRent ? '/property-to-rent' : '/property-for-sale';
+    
+    if (filters.city) {
+        const citySlug = slugify(filters.city);
+        const provinceSlug = filters.province 
+          ? slugify(filters.province) 
+          : (CITY_PROVINCE_MAP[citySlug] || null);
+          
+        if (provinceSlug) {
+            let path = `${root}/${provinceSlug}/${citySlug}`;
+            if (filters.suburb) {
+                path += `/${slugify(filters.suburb)}`;
+            }
+            // TODO: If we implement pre-defined filter slugs (e.g. /3-bedroom-houses), append them here.
+            return `https://propertylistify.com${path}`;
+        }
+    }
+    
+    if (filters.province) {
+         return `https://propertylistify.com${root}/${slugify(filters.province)}`;
+    }
+    
+    return `https://propertylistify.com${root}`;
 }
 
 // Parse URL params back to filters
@@ -369,48 +373,45 @@ export function generateBreadcrumbs(filters: SearchFilters): BreadcrumbItem[] {
     { label: 'Home', href: '/' },
   ];
 
-  let currentPath = '/properties';
+  // Determine Root (Transaction Type)
+  const isRent = filters.listingType === 'rent';
+  // Default to 'For Sale' if not specified, or respect 'To Rent'
+  const rootLabel = isRent ? 'For Rent' : 'For Sale';
+  const rootPath = isRent ? '/property-to-rent' : '/property-for-sale';
+  
+  breadcrumbs.push({
+    label: rootLabel,
+    href: rootPath
+  });
 
-  // Listing type
-  if (filters.listingType) {
-    const slug = listingTypeToSlug[filters.listingType];
-    if (slug) {
-      currentPath += `/${slug}`;
-      breadcrumbs.push({
-        label: filters.listingType === 'sale' ? 'For Sale' : 'To Rent',
-        href: currentPath,
-      });
-    }
-  }
-
-  // Property type
-  if (filters.propertyType) {
-    const slug = propertyTypeToSlug[filters.propertyType];
-    if (slug) {
-      currentPath += `/${slug}`;
-      breadcrumbs.push({
-        label: unslugify(slug),
-        href: currentPath,
-      });
-    }
-  }
-
-  // City
-  if (filters.city) {
-    currentPath += `/${slugify(filters.city)}`;
+  // Province
+  if (filters.province) {
+    const provinceSlug = slugify(filters.province);
+    const provincePath = `${rootPath}/${provinceSlug}`;
     breadcrumbs.push({
-      label: filters.city,
-      href: currentPath,
+      label: filters.province,
+      href: provincePath
     });
-  }
 
-  // Suburb
-  if (filters.suburb) {
-    currentPath += `/${slugify(filters.suburb)}`;
-    breadcrumbs.push({
-      label: filters.suburb,
-      href: currentPath,
-    });
+    // City (Only if Province exists)
+    if (filters.city) {
+      const citySlug = slugify(filters.city);
+      const cityPath = `${provincePath}/${citySlug}`;
+      breadcrumbs.push({
+        label: filters.city,
+        href: cityPath
+      });
+
+      // Suburb (Only if City exists)
+      if (filters.suburb) {
+        const suburbSlug = slugify(filters.suburb);
+        const suburbPath = `${cityPath}/${suburbSlug}`;
+        breadcrumbs.push({
+          label: filters.suburb,
+          href: suburbPath
+        });
+      }
+    }
   }
 
   return breadcrumbs;

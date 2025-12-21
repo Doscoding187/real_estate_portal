@@ -1,4 +1,5 @@
 import { useLocation } from 'wouter';
+import { MetaControl } from '@/components/seo/MetaControl';
 import { trpc } from '@/lib/trpc';
 import { LocationPageLayout } from '@/components/location/LocationPageLayout';
 import { MonetizedBanner } from '@/components/location/MonetizedBanner';
@@ -99,6 +100,7 @@ export default function CityPage({ params }: { params: { province: string; city:
 
   return (
     <>
+      <MetaControl />
       <LocationSchema 
         type="City"
         name={city.name}

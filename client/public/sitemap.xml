@@ -1,85 +1,117 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
-        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
-  
-  <!-- Homepage -->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
     <loc>https://propertylistifysa.co.za/</loc>
-    <changefreq>daily</changefreq>
-    <priority>1.0</priority>
-    <lastmod>2025-12-11</lastmod>
-  </url>
-  
-  <!-- Main Pages -->
-  <url>
-    <loc>https://propertylistifysa.co.za/properties</loc>
-    <changefreq>daily</changefreq>
-    <priority>0.9</priority>
-  </url>
-  
-  <url>
-    <loc>https://propertylistifysa.co.za/developments</loc>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  
-  <url>
-    <loc>https://propertylistifysa.co.za/explore</loc>
+    <lastmod>2025-12-21</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
-  
+  <url>
+    <loc>https://propertylistifysa.co.za/property-for-sale</loc>
+    <lastmod>2025-12-21</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://propertylistifysa.co.za/property-to-rent</loc>
+    <lastmod>2025-12-21</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://propertylistifysa.co.za/new-developments</loc>
+    <lastmod>2025-12-21</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
   <url>
     <loc>https://propertylistifysa.co.za/advertise</loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
+    <lastmod>2025-12-21</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
   </url>
-  
   <url>
     <loc>https://propertylistifysa.co.za/login</loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.5</priority>
+    <lastmod>2025-12-21</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
   </url>
-  
-  <!-- Location Pages - Major Cities -->
   <url>
-    <loc>https://propertylistifysa.co.za/location/johannesburg</loc>
+    <loc>https://propertylistifysa.co.za/property-for-sale/gauteng/johannesburg</loc>
+    <lastmod>2025-12-21</lastmod>
     <changefreq>weekly</changefreq>
-    <priority>0.7</priority>
+    <priority>0.9</priority>
   </url>
-  
   <url>
-    <loc>https://propertylistifysa.co.za/location/cape-town</loc>
+    <loc>https://propertylistifysa.co.za/property-for-sale/gauteng/pretoria</loc>
+    <lastmod>2025-12-21</lastmod>
     <changefreq>weekly</changefreq>
-    <priority>0.7</priority>
+    <priority>0.9</priority>
   </url>
-  
   <url>
-    <loc>https://propertylistifysa.co.za/location/durban</loc>
+    <loc>https://propertylistifysa.co.za/property-for-sale/gauteng/sandton</loc>
+    <lastmod>2025-12-21</lastmod>
     <changefreq>weekly</changefreq>
-    <priority>0.7</priority>
+    <priority>0.9</priority>
   </url>
-  
   <url>
-    <loc>https://propertylistifysa.co.za/location/pretoria</loc>
+    <loc>https://propertylistifysa.co.za/property-for-sale/gauteng/midrand</loc>
+    <lastmod>2025-12-21</lastmod>
     <changefreq>weekly</changefreq>
-    <priority>0.7</priority>
+    <priority>0.9</priority>
   </url>
-  
   <url>
-    <loc>https://propertylistifysa.co.za/location/port-elizabeth</loc>
+    <loc>https://propertylistifysa.co.za/property-for-sale/gauteng/centurion</loc>
+    <lastmod>2025-12-21</lastmod>
     <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
+    <priority>0.9</priority>
   </url>
-  
   <url>
-    <loc>https://propertylistifysa.co.za/location/bloemfontein</loc>
+    <loc>https://propertylistifysa.co.za/property-for-sale/western-cape/cape-town</loc>
+    <lastmod>2025-12-21</lastmod>
     <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
+    <priority>0.9</priority>
   </url>
-  
-  <!-- Note: This is a basic sitemap. For dynamic property listings, 
-       consider implementing a dynamic sitemap generator that pulls 
-       from your database to include all active property listings -->
-       
+  <url>
+    <loc>https://propertylistifysa.co.za/property-for-sale/western-cape/stellenbosch</loc>
+    <lastmod>2025-12-21</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://propertylistifysa.co.za/property-for-sale/western-cape/somerset-west</loc>
+    <lastmod>2025-12-21</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://propertylistifysa.co.za/property-for-sale/kwazulu-natal/durban</loc>
+    <lastmod>2025-12-21</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://propertylistifysa.co.za/property-for-sale/kwazulu-natal/umhlanga</loc>
+    <lastmod>2025-12-21</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://propertylistifysa.co.za/property-for-sale/kwazulu-natal/ballito</loc>
+    <lastmod>2025-12-21</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://propertylistifysa.co.za/property-to-rent/gauteng/johannesburg</loc>
+    <lastmod>2025-12-21</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://propertylistifysa.co.za/property-to-rent/western-cape/cape-town</loc>
+    <lastmod>2025-12-21</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
 </urlset>

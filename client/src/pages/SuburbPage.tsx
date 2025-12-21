@@ -23,10 +23,13 @@ import { Helmet } from 'react-helmet';
 import { LocationSchema } from '@/components/location/LocationSchema';
 import { useSimilarLocations } from '@/hooks/useSimilarLocations';
 
+import { MetaControl } from '@/components/seo/MetaControl';
+
 export default function SuburbPage({ params }: { params: { province: string; city: string; suburb: string } }) {
   const [, navigate] = useLocation();
   const { province: provinceSlug, city: citySlug, suburb: suburbSlug } = params;
 
+  // Restore data fetching
   const { data, isLoading, error } = trpc.locationPages.getSuburbData.useQuery({
     provinceSlug,
     citySlug,
@@ -58,10 +61,11 @@ export default function SuburbPage({ params }: { params: { province: string; cit
 
   return (
     <div className="min-h-screen bg-white">
+      <MetaControl />
       <Helmet>
         <title>Properties for Sale in {suburb.name}, {suburb.cityName} | Real Estate Portal</title>
         <meta name="description" content={`Find the best homes in ${suburb.name}, ${suburb.cityName}. Search ${stats.totalListings} properties for sale and rent.`} />
-        <link rel="canonical" href={`https://propertylistify.com/${provinceSlug}/${citySlug}/${suburbSlug}`} />
+        {/* Canonical handled by MetaControl */}
       </Helmet>
 
       <LocationSchema 

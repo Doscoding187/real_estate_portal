@@ -9,8 +9,7 @@ import {
   UserPlus,
   FileText,
 } from 'lucide-react';
-import { CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { GlassCard } from '@/components/ui/glass-card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -43,7 +42,7 @@ const StatCard: React.FC<StatCardProps> = ({
   color = 'bg-muted',
 }) => {
   return (
-    <GlassCard className="border-white/40 shadow-[0_8px_30px_rgba(8,_112,_184,_0.06)] hover:shadow-[0_12px_40px_rgba(8,_112,_184,_0.1)] transition-all py-6">
+    <Card className="border-slate-200 shadow-sm hover:shadow-md transition-all py-6 bg-white">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <div className={`p-2 rounded-full ${color}`}>{icon}</div>
       </CardHeader>
@@ -51,7 +50,7 @@ const StatCard: React.FC<StatCardProps> = ({
         <div className="text-2xl font-bold text-slate-800">{value}</div>
         <p className="text-xs text-slate-500">{label}</p>
       </CardContent>
-    </GlassCard>
+    </Card>
   );
 };
 
@@ -85,13 +84,13 @@ const AnalyticsPage: React.FC = () => {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-slate-900"></div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6 pb-20">
+    <div className="space-y-6 pb-20 max-w-7xl mx-auto py-8">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -135,7 +134,7 @@ const AnalyticsPage: React.FC = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* User Distribution Chart */}
-        <GlassCard className="p-6">
+        <Card className="bg-white border-slate-200 shadow-sm">
           <CardHeader>
             <CardTitle className="text-slate-800">User Distribution</CardTitle>
           </CardHeader>
@@ -163,10 +162,10 @@ const AnalyticsPage: React.FC = () => {
               </PieChart>
             </ResponsiveContainer>
           </CardContent>
-        </GlassCard>
+        </Card>
 
         {/* Listing Status Chart */}
-        <GlassCard className="p-6">
+        <Card className="bg-white border-slate-200 shadow-sm">
           <CardHeader>
             <CardTitle className="text-slate-800">Listing Status</CardTitle>
           </CardHeader>
@@ -185,12 +184,12 @@ const AnalyticsPage: React.FC = () => {
               </BarChart>
             </ResponsiveContainer>
           </CardContent>
-        </GlassCard>
+        </Card>
       </div>
 
       <div className="grid grid-cols-1 gap-6">
         {/* Quality Tiers Chart - Phase 6 */}
-        <GlassCard className="p-6">
+        <Card className="bg-white border-slate-200 shadow-sm">
           <CardHeader>
             <CardTitle className="text-slate-800">Quality Tier Distribution</CardTitle>
           </CardHeader>
@@ -218,12 +217,12 @@ const AnalyticsPage: React.FC = () => {
               </PieChart>
             </ResponsiveContainer>
           </CardContent>
-        </GlassCard>
+        </Card>
       </div>
 
       {/* Recent Activity */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <GlassCard className="p-6">
+        <Card className="bg-white border-slate-200 shadow-sm">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-slate-800">
               <UserPlus className="h-5 w-5 text-blue-500" />
@@ -233,9 +232,9 @@ const AnalyticsPage: React.FC = () => {
           <CardContent>
             <div className="space-y-4">
               {analytics?.recentActivity.users.map((user: any) => (
-                <div key={user.id} className="flex items-center justify-between p-3 bg-white/50 rounded-lg border border-slate-100">
+                <div key={user.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-100">
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center text-slate-600 font-medium">
+                    <div className="w-8 h-8 rounded-full bg-white border border-slate-200 flex items-center justify-center text-slate-600 font-medium">
                       {user.firstName?.[0] || 'U'}
                     </div>
                     <div>
@@ -248,9 +247,9 @@ const AnalyticsPage: React.FC = () => {
               ))}
             </div>
           </CardContent>
-        </GlassCard>
+        </Card>
 
-        <GlassCard className="p-6">
+        <Card className="bg-white border-slate-200 shadow-sm">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-slate-800">
               <FileText className="h-5 w-5 text-emerald-500" />
@@ -260,10 +259,10 @@ const AnalyticsPage: React.FC = () => {
           <CardContent>
             <div className="space-y-4">
               {analytics?.recentActivity.listings.map((listing: any) => (
-                <div key={listing.id} className="flex items-center justify-between p-3 bg-white/50 rounded-lg border border-slate-100">
+                <div key={listing.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-100">
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-slate-200 flex items-center justify-center">
-                      <Home className="h-4 w-4 text-slate-500" />
+                    <div className="w-8 h-8 rounded-lg bg-white border border-slate-200 flex items-center justify-center">
+                      <Home className="h-4 w-4 text-slate-400" />
                     </div>
                     <div>
                       <p className="text-sm font-medium text-slate-900 truncate max-w-[200px]">{listing.title}</p>
@@ -277,7 +276,7 @@ const AnalyticsPage: React.FC = () => {
               ))}
             </div>
           </CardContent>
-        </GlassCard>
+        </Card>
       </div>
     </div>
   );

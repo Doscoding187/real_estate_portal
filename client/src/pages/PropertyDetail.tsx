@@ -40,6 +40,8 @@ import {
 } from 'lucide-react';
 import { Loader2 } from 'lucide-react';
 import { PropertyImageGallery } from '@/components/property/PropertyImageGallery';
+import { Breadcrumbs } from '@/components/search/Breadcrumbs';
+import { generateBreadcrumbs } from '@/lib/urlUtils';
 import { PropertyContactModal } from '@/components/property/PropertyContactModal';
 import { PropertyShareModal } from '@/components/property/PropertyShareModal';
 import { GooglePropertyMap } from '@/components/maps/GooglePropertyMap';
@@ -198,6 +200,16 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
       {/* Hero / Header Section */}
       <div className="bg-white border-b border-slate-200 pt-16">
         <div className="container py-6">
+          {/* Breadcrumbs */}
+          <div className="mb-4">
+            <Breadcrumbs items={generateBreadcrumbs({
+              listingType: property.listingType as any,
+              province: property.province,
+              city: property.city,
+              suburb: property.suburb
+            })} />
+          </div>
+
           {/* Top Row: Badges */}
           <div className="flex items-center gap-2 mb-4">
             <Badge className="bg-blue-500 hover:bg-blue-600 text-white border-0 rounded-md px-3 py-1 font-normal">
