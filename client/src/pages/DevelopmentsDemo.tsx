@@ -86,7 +86,7 @@ export default function DevelopmentsDemo() {
                     return (
                       <DevelopmentCard 
                         key={dev.id} 
-                        id={String(dev.id)}
+                        id={dev.slug || String(dev.id)}
                         title={dev.name}
                         rating={Number(dev.rating) || 0}
                         location={`${dev.suburb ? dev.suburb + ', ' : ''}${dev.city}`}

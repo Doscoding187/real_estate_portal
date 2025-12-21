@@ -32,16 +32,15 @@ import { Breadcrumbs } from '@/components/search/Breadcrumbs';
 type MediaCategory = 'all' | 'amenities' | 'outdoors' | 'videos';
 
 export default function DevelopmentDetail() {
-  const { id } = useParams();
+  const { slug } = useParams();
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxCategory, setLightboxCategory] = useState<MediaCategory>('all');
   const [lightboxTitle, setLightboxTitle] = useState('');
 
-  // Fetch real development
-  const devId = parseInt(id || '0');
-  const { data: dev, isLoading } = trpc.developer.getPublicDevelopment.useQuery(
-      { id: devId },
-      { enabled: !!devId }
+  // Fetch real development by slug
+  const { data: dev, isLoading } = trpc.developer.getPublicDevelopmentBySlug.useQuery(
+      { slug: slug || '' },
+      { enabled: !!slug }
   );
 
   if (isLoading) {

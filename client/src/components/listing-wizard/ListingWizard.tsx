@@ -313,7 +313,6 @@ const ListingWizard: React.FC = () => {
         mainMediaId:
           store.mainMediaId?.toString() ||
           (store.media.length > 0 ? store.media[0].id?.toString() : undefined),
-        status: 'draft' as const, // Start as draft
       };
 
       console.log('Submitting listing data:', listingData);

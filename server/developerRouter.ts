@@ -822,6 +822,23 @@ export const developerRouter = router({
     }),
 
   /**
+   * Get single public development by slug
+   * Auth: Public
+   */
+  getPublicDevelopmentBySlug: publicProcedure
+    .input(z.object({ slug: z.string() }))
+    .query(async ({ input }) => {
+      const dev = await db.getPublicDevelopmentBySlug(input.slug);
+      if (!dev) {
+         throw new TRPCError({
+             code: 'NOT_FOUND',
+             message: 'Development not found'
+         });
+      }
+      return dev;
+    }),
+
+  /**
    * Update phase
    * Auth: Protected, must own development
    * Validates: Requirements 15.4

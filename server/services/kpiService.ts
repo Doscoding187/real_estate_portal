@@ -5,8 +5,8 @@
  */
 
 import { db } from '../db';
-import { developers, developmentUnits, developments } from '../../drizzle/schema';
-import { eq, and, gte, sql, count, avg } from 'drizzle-orm';
+import { developers, developmentUnits, developments, leads } from '../../drizzle/schema';
+import { eq, and, gte, lte, sql, count, avg } from 'drizzle-orm';
 import type { DeveloperKPIs, DeveloperKPICache } from '../../shared/types';
 
 const CACHE_TTL_MINUTES = 5;
@@ -65,26 +65,30 @@ function isCacheValid(lastCalculation: Date | null): boolean {
  * Calculate total leads for a developer in a time range
  */
 async function calculateTotalLeads(developerId: number, timeRange: TimeRange): Promise<{ current: number; previous: number }> {
-  // Query leads table (from developer-lead-management feature)
-  const currentLeads = await db.execute(sql`
-    SELECT COUNT(*) as count
-    FROM developer_leads
-    WHERE developer_id = ${developerId}
-    AND created_at >= ${timeRange.start}
-    AND created_at <= ${timeRange.end}
-  `);
+  // Query leads joined with developments
+  const currentLeads = await db
+    .select({ count: count() })
+    .from(leads)
+    .innerJoin(developments, eq(leads.developmentId, developments.id))
+    .where(and(
+      eq(developments.developerId, developerId),
+      gte(leads.createdAt, timeRange.start.toISOString()),
+      lte(leads.createdAt, timeRange.end.toISOString())
+    ));
   
-  const previousLeads = await db.execute(sql`
-    SELECT COUNT(*) as count
-    FROM developer_leads
-    WHERE developer_id = ${developerId}
-    AND created_at >= ${timeRange.previousStart}
-    AND created_at < ${timeRange.previousEnd}
-  `);
+  const previousLeads = await db
+    .select({ count: count() })
+    .from(leads)
+    .innerJoin(developments, eq(leads.developmentId, developments.id))
+    .where(and(
+      eq(developments.developerId, developerId),
+      gte(leads.createdAt, timeRange.previousStart.toISOString()),
+      lte(leads.createdAt, timeRange.previousEnd.toISOString())
+    ));
   
   return {
-    current: Number((currentLeads.rows[0] as any)?.count || 0),
-    previous: Number((previousLeads.rows[0] as any)?.count || 0),
+    current: currentLeads[0]?.count || 0,
+    previous: previousLeads[0]?.count || 0,
   };
 }
 
@@ -92,27 +96,31 @@ async function calculateTotalLeads(developerId: number, timeRange: TimeRange): P
  * Calculate qualified leads percentage
  */
 async function calculateQualifiedLeads(developerId: number, timeRange: TimeRange): Promise<{ current: number; previous: number }> {
-  const currentQualified = await db.execute(sql`
-    SELECT COUNT(*) as count
-    FROM developer_leads
-    WHERE developer_id = ${developerId}
-    AND status IN ('qualified', 'viewing_scheduled', 'offer_made', 'converted')
-    AND created_at >= ${timeRange.start}
-    AND created_at <= ${timeRange.end}
-  `);
+  const currentQualified = await db
+    .select({ count: count() })
+    .from(leads)
+    .innerJoin(developments, eq(leads.developmentId, developments.id))
+    .where(and(
+      eq(developments.developerId, developerId),
+      sql`${leads.status} IN ('qualified', 'viewing_scheduled', 'offer_made', 'converted')`,
+      gte(leads.createdAt, timeRange.start.toISOString()),
+      lte(leads.createdAt, timeRange.end.toISOString())
+    ));
   
-  const previousQualified = await db.execute(sql`
-    SELECT COUNT(*) as count
-    FROM developer_leads
-    WHERE developer_id = ${developerId}
-    AND status IN ('qualified', 'viewing_scheduled', 'offer_made', 'converted')
-    AND created_at >= ${timeRange.previousStart}
-    AND created_at < ${timeRange.previousEnd}
-  `);
+  const previousQualified = await db
+    .select({ count: count() })
+    .from(leads)
+    .innerJoin(developments, eq(leads.developmentId, developments.id))
+    .where(and(
+      eq(developments.developerId, developerId),
+      sql`${leads.status} IN ('qualified', 'viewing_scheduled', 'offer_made', 'converted')`,
+      gte(leads.createdAt, timeRange.previousStart.toISOString()),
+      lte(leads.createdAt, timeRange.previousEnd.toISOString())
+    ));
   
   return {
-    current: Number((currentQualified.rows[0] as any)?.count || 0),
-    previous: Number((previousQualified.rows[0] as any)?.count || 0),
+    current: currentQualified[0]?.count || 0,
+    previous: previousQualified[0]?.count || 0,
   };
 }
 
@@ -120,46 +128,54 @@ async function calculateQualifiedLeads(developerId: number, timeRange: TimeRange
  * Calculate conversion rate (leads to sales)
  */
 async function calculateConversionRate(developerId: number, timeRange: TimeRange): Promise<{ current: number; previous: number }> {
-  const currentConverted = await db.execute(sql`
-    SELECT COUNT(*) as count
-    FROM developer_leads
-    WHERE developer_id = ${developerId}
-    AND status = 'converted'
-    AND created_at >= ${timeRange.start}
-    AND created_at <= ${timeRange.end}
-  `);
+  const currentConverted = await db
+    .select({ count: count() })
+    .from(leads)
+    .innerJoin(developments, eq(leads.developmentId, developments.id))
+    .where(and(
+      eq(developments.developerId, developerId),
+      eq(leads.status, 'converted'),
+      gte(leads.createdAt, timeRange.start.toISOString()),
+      lte(leads.createdAt, timeRange.end.toISOString())
+    ));
   
-  const currentTotal = await db.execute(sql`
-    SELECT COUNT(*) as count
-    FROM developer_leads
-    WHERE developer_id = ${developerId}
-    AND created_at >= ${timeRange.start}
-    AND created_at <= ${timeRange.end}
-  `);
+  const currentTotal = await db
+    .select({ count: count() })
+    .from(leads)
+    .innerJoin(developments, eq(leads.developmentId, developments.id))
+    .where(and(
+      eq(developments.developerId, developerId),
+      gte(leads.createdAt, timeRange.start.toISOString()),
+      lte(leads.createdAt, timeRange.end.toISOString())
+    ));
   
-  const previousConverted = await db.execute(sql`
-    SELECT COUNT(*) as count
-    FROM developer_leads
-    WHERE developer_id = ${developerId}
-    AND status = 'converted'
-    AND created_at >= ${timeRange.previousStart}
-    AND created_at < ${timeRange.previousEnd}
-  `);
+  const previousConverted = await db
+    .select({ count: count() })
+    .from(leads)
+    .innerJoin(developments, eq(leads.developmentId, developments.id))
+    .where(and(
+      eq(developments.developerId, developerId),
+      eq(leads.status, 'converted'),
+      gte(leads.createdAt, timeRange.previousStart.toISOString()),
+      lte(leads.createdAt, timeRange.previousEnd.toISOString())
+    ));
   
-  const previousTotal = await db.execute(sql`
-    SELECT COUNT(*) as count
-    FROM developer_leads
-    WHERE developer_id = ${developerId}
-    AND created_at >= ${timeRange.previousStart}
-    AND created_at < ${timeRange.previousEnd}
-  `);
+  const previousTotal = await db
+    .select({ count: count() })
+    .from(leads)
+    .innerJoin(developments, eq(leads.developmentId, developments.id))
+    .where(and(
+      eq(developments.developerId, developerId),
+      gte(leads.createdAt, timeRange.previousStart.toISOString()),
+      lte(leads.createdAt, timeRange.previousEnd.toISOString())
+    ));
   
-  const currentRate = Number((currentTotal.rows[0] as any)?.count || 0) > 0
-    ? (Number((currentConverted.rows[0] as any)?.count || 0) / Number((currentTotal.rows[0] as any)?.count || 1)) * 100
+  const currentRate = (currentTotal[0]?.count || 0) > 0
+    ? ((currentConverted[0]?.count || 0) / (currentTotal[0]?.count || 1)) * 100
     : 0;
     
-  const previousRate = Number((previousTotal.rows[0] as any)?.count || 0) > 0
-    ? (Number((previousConverted.rows[0] as any)?.count || 0) / Number((previousTotal.rows[0] as any)?.count || 1)) * 100
+  const previousRate = (previousTotal[0]?.count || 0) > 0
+    ? ((previousConverted[0]?.count || 0) / (previousTotal[0]?.count || 1)) * 100
     : 0;
   
   return {
@@ -192,48 +208,56 @@ async function calculateUnitsMetrics(developerId: number): Promise<{ sold: numbe
  */
 async function calculateAffordabilityMatch(developerId: number, timeRange: TimeRange): Promise<{ current: number; previous: number }> {
   // Calculate percentage of leads that have affordability match
-  const currentMatched = await db.execute(sql`
-    SELECT COUNT(*) as count
-    FROM developer_leads
-    WHERE developer_id = ${developerId}
-    AND affordability_match_percentage >= 80
-    AND created_at >= ${timeRange.start}
-    AND created_at <= ${timeRange.end}
-  `);
+  const currentMatched = await db
+    .select({ count: count() })
+    .from(leads)
+    .innerJoin(developments, eq(leads.developmentId, developments.id))
+    .where(and(
+      eq(developments.developerId, developerId),
+      gte(leads.qualificationScore, 80),
+      gte(leads.createdAt, timeRange.start.toISOString()),
+      lte(leads.createdAt, timeRange.end.toISOString())
+    ));
   
-  const currentTotal = await db.execute(sql`
-    SELECT COUNT(*) as count
-    FROM developer_leads
-    WHERE developer_id = ${developerId}
-    AND affordability_match_percentage IS NOT NULL
-    AND created_at >= ${timeRange.start}
-    AND created_at <= ${timeRange.end}
-  `);
+  const currentTotal = await db
+    .select({ count: count() })
+    .from(leads)
+    .innerJoin(developments, eq(leads.developmentId, developments.id))
+    .where(and(
+      eq(developments.developerId, developerId),
+      sql`${leads.qualificationScore} IS NOT NULL`,
+      gte(leads.createdAt, timeRange.start.toISOString()),
+      lte(leads.createdAt, timeRange.end.toISOString())
+    ));
   
-  const previousMatched = await db.execute(sql`
-    SELECT COUNT(*) as count
-    FROM developer_leads
-    WHERE developer_id = ${developerId}
-    AND affordability_match_percentage >= 80
-    AND created_at >= ${timeRange.previousStart}
-    AND created_at < ${timeRange.previousEnd}
-  `);
+  const previousMatched = await db
+    .select({ count: count() })
+    .from(leads)
+    .innerJoin(developments, eq(leads.developmentId, developments.id))
+    .where(and(
+      eq(developments.developerId, developerId),
+      gte(leads.qualificationScore, 80),
+      gte(leads.createdAt, timeRange.previousStart.toISOString()),
+      lte(leads.createdAt, timeRange.previousEnd.toISOString())
+    ));
   
-  const previousTotal = await db.execute(sql`
-    SELECT COUNT(*) as count
-    FROM developer_leads
-    WHERE developer_id = ${developerId}
-    AND affordability_match_percentage IS NOT NULL
-    AND created_at >= ${timeRange.previousStart}
-    AND created_at < ${timeRange.previousEnd}
-  `);
+  const previousTotal = await db
+    .select({ count: count() })
+    .from(leads)
+    .innerJoin(developments, eq(leads.developmentId, developments.id))
+    .where(and(
+      eq(developments.developerId, developerId),
+      sql`${leads.qualificationScore} IS NOT NULL`,
+      gte(leads.createdAt, timeRange.previousStart.toISOString()),
+      lte(leads.createdAt, timeRange.previousEnd.toISOString())
+    ));
   
-  const currentRate = Number((currentTotal.rows[0] as any)?.count || 0) > 0
-    ? (Number((currentMatched.rows[0] as any)?.count || 0) / Number((currentTotal.rows[0] as any)?.count || 1)) * 100
+  const currentRate = (currentTotal[0]?.count || 0) > 0
+    ? ((currentMatched[0]?.count || 0) / (currentTotal[0]?.count || 1)) * 100
     : 0;
     
-  const previousRate = Number((previousTotal.rows[0] as any)?.count || 0) > 0
-    ? (Number((previousMatched.rows[0] as any)?.count || 0) / Number((previousTotal.rows[0] as any)?.count || 1)) * 100
+  const previousRate = (previousTotal[0]?.count || 0) > 0
+    ? ((previousMatched[0]?.count || 0) / (previousTotal[0]?.count || 1)) * 100
     : 0;
   
   return {

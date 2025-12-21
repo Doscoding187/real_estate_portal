@@ -202,7 +202,7 @@ function Router() {
       <Route path="/new-developments" component={DevelopmentsDemo} />
       {/* Redirect Legacy /developments to /new-developments */}
       <Route path="/developments" component={() => { window.location.replace('/new-developments'); return null; }} />
-      <Route path="/development/:id" component={DevelopmentDetail} />
+      <Route path="/development/:slug" component={DevelopmentDetail} />
       <Route path="/developer/setup" component={DeveloperSetupWizard} />
       <Route path="/developer/success" component={() => <RegistrationSuccess role="developer" />} />
       <Route path="/agency/setup" component={AgencySetupWizard} />

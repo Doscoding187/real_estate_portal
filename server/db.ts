@@ -47,6 +47,8 @@ import {
   partners,
   commissions,
   platformSettings,
+  unitTypes,
+  developmentPhases,
 } from '../drizzle/schema.ts';
 import * as schema from '../drizzle/schema.ts';
 
@@ -2930,6 +2932,152 @@ export async function setDeveloperTrust(id: number, isTrusted: boolean) {
     .where(eq(developers.id, id));
 
   return true;
+}
+
+/**
+ * Get public development by Slug
+ * Auth: Public
+ */
+export async function getPublicDevelopmentBySlug(slugOrId: string) {
+  const db = await getDb();
+  if (!db) return null;
+
+  const isNumeric = /^\d+$/.test(slugOrId);
+  const idValue = isNumeric ? parseInt(slugOrId) : -1;
+
+  const results = await db
+    .select({
+      id: developments.id,
+      name: developments.name,
+      slug: developments.slug,
+      description: developments.description,
+      rating: developments.rating,
+      developmentType: developments.developmentType,
+      status: developments.status,
+      address: developments.address,
+      city: developments.city,
+      province: developments.province,
+      suburb: developments.suburb,
+      latitude: developments.latitude,
+      longitude: developments.longitude,
+      totalUnits: developments.totalUnits,
+      availableUnits: developments.availableUnits,
+      priceFrom: developments.priceFrom,
+      priceTo: developments.priceTo,
+      amenities: developments.amenities,
+      highlights: developments.highlights,
+      features: developments.features,
+      images: developments.images,
+      videos: developments.videos,
+      floorPlans: developments.floorPlans,
+      brochures: developments.brochures,
+      completionDate: developments.completionDate,
+      isFeatured: developments.isFeatured,
+      showHouseAddress: developments.showHouseAddress,
+      developerId: developments.developerId,
+      developerName: developers.name,
+      developerLogo: developers.logo,
+      developerIsFeatured: developers.isFeatured,
+      developerIsVerified: developers.isVerified,
+    })
+    .from(developments)
+    .leftJoin(developers, eq(developments.developerId, developers.id))
+    .where(and(
+      or(
+        eq(developments.slug, slugOrId),
+        isNumeric ? eq(developments.id, idValue) : undefined
+      ),
+      eq(developments.isPublished, 1)
+    ))
+    .limit(1);
+
+  if (results.length === 0) return null;
+
+  const dev = results[0];
+
+  // Fetch unit types
+  const unitTypesList = await db
+    .select()
+    .from(unitTypes)
+    .where(eq(unitTypes.developmentId, dev.id))
+    .orderBy(unitTypes.displayOrder);
+
+  // Fetch phases
+  const phasesList = await db
+    .select()
+    .from(developmentPhases)
+    .where(eq(developmentPhases.developmentId, dev.id))
+    .orderBy(developmentPhases.phaseNumber);
+  
+  return {
+    ...dev,
+    unitTypes: unitTypesList.map(ut => ({
+      ...ut,
+      label: ut.name, // compatibility
+      priceFrom: Number(ut.basePriceFrom), // compatibility
+      priceTo: ut.basePriceTo ? Number(ut.basePriceTo) : null,
+    })),
+    phases: phasesList,
+  };
+}
+
+/**
+ * List public developments for demo page
+ */
+export async function listPublicDevelopments(limit: number = 20) {
+  const db = await getDb();
+  if (!db) return [];
+
+  const results = await db
+    .select({
+      id: developments.id,
+      name: developments.name,
+      slug: developments.slug,
+      description: developments.description,
+      rating: developments.rating,
+      developmentType: developments.developmentType,
+      status: developments.status,
+      address: developments.address,
+      city: developments.city,
+      province: developments.province,
+      suburb: developments.suburb,
+      images: developments.images,
+      highlights: developments.highlights,
+      completionDate: developments.completionDate,
+      isFeatured: developments.isFeatured,
+      developerId: developments.developerId,
+      developerName: developers.name,
+      developerIsFeatured: developers.isFeatured,
+    })
+    .from(developments)
+    .leftJoin(developers, eq(developments.developerId, developers.id))
+    .where(eq(developments.isPublished, 1))
+    .limit(limit)
+    .orderBy(desc(developments.isFeatured), desc(developments.createdAt));
+
+  // Populate unit types for each
+  const populated = await Promise.all(results.map(async (dev) => {
+      const unitTypesList = await db
+        .select({
+             label: unitTypes.name,
+             bedrooms: unitTypes.bedrooms,
+             priceFrom: unitTypes.basePriceFrom,
+        })
+        .from(unitTypes)
+        .where(eq(unitTypes.developmentId, dev.id))
+        .orderBy(unitTypes.basePriceFrom)
+        .limit(3); 
+      
+      return {
+          ...dev,
+          unitTypes: unitTypesList.map(ut => ({
+              ...ut,
+              priceFrom: Number(ut.priceFrom)
+          }))
+      };
+  }));
+
+  return populated;
 }
 
 // ==================== PARTNER NETWORK ====================
