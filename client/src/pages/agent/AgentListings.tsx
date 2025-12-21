@@ -162,7 +162,6 @@ export default function AgentListings() {
         houseAreaM2: l.propertyDetails?.houseAreaM2 || l.propertyDetails?.unitSizeM2 || l.propertyDetails?.floorAreaM2 || 0,
         primaryImage: l.primaryImage,
         status: l.status === 'pending_review' ? 'pending' : l.status,
-        status: l.status === 'pending_review' ? 'pending' : l.status,
         approvalStatus: l.approvalStatus,
         readinessScore: l.readinessScore,
         rejectionReasons: l.rejectionReasons,

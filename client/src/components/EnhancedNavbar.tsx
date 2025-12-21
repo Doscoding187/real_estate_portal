@@ -20,11 +20,11 @@ import {
   NavigationMenuTrigger,
 } from '@/components/ui/navigation-menu';
 import { trpc } from '@/lib/trpc';
+import { generatePropertyUrl } from '@/lib/urlUtils';
 import { useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { LocationAutosuggest } from '@/components/LocationAutosuggest';
 import { LocationSelectionModal } from '@/components/LocationSelectionModal';
-import { generatePropertyUrl } from '@/lib/urlUtils';
 
 // City dropdown content component
 function CityDropdownContent() {
@@ -165,11 +165,6 @@ export function EnhancedNavbar() {
     return null;
   };
 
-import { generatePropertyUrl } from '@/lib/urlUtils';
-
-// ... (existing imports)
-
-// ... inside component
 
   // Handle property link clicks
   const handlePropertyClick = (e: React.MouseEvent, propertyType: string, listingType: 'sale' | 'rent') => {
