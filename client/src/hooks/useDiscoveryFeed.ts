@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { trpc } from '@/lib/trpc';
+import { getPlaceholderContentBlocks } from '@/data/explorePlaceholderData';
 
 export interface DiscoveryItem {
   id: number;
@@ -17,12 +18,14 @@ export interface ContentBlock {
 interface UseDiscoveryFeedOptions {
   categoryId?: number;
   filters?: Record<string, any>;
+  usePlaceholder?: boolean; // Enable placeholder data for visualization
 }
 
 export function useDiscoveryFeed(options: UseDiscoveryFeedOptions = {}) {
   const [contentBlocks, setContentBlocks] = useState<ContentBlock[]>([]);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
+  const [usePlaceholderData] = useState(options.usePlaceholder ?? true);
   const observerRef = useRef<IntersectionObserver | null>(null);
 
   // Fetch personalized feed
@@ -42,8 +45,12 @@ export function useDiscoveryFeed(options: UseDiscoveryFeedOptions = {}) {
 
   // Process feed data into content blocks
   useEffect(() => {
-    if (feedData?.content) {
-      const newBlocks = organizeIntoBlocks(feedData.content);
+    // Check if we have valid array data
+    const contentArray = feedData?.content;
+    const hasValidContent = Array.isArray(contentArray) && contentArray.length > 0;
+    
+    if (hasValidContent) {
+      const newBlocks = organizeIntoBlocks(contentArray);
       
       if (page === 1) {
         setContentBlocks(newBlocks);
@@ -51,9 +58,13 @@ export function useDiscoveryFeed(options: UseDiscoveryFeedOptions = {}) {
         setContentBlocks(prev => [...prev, ...newBlocks]);
       }
 
-      setHasMore(feedData.content.length === 20);
+      setHasMore(contentArray.length === 20);
+    } else if (!isLoading && usePlaceholderData && contentBlocks.length === 0) {
+      // Use placeholder data when no real data is available
+      setContentBlocks(getPlaceholderContentBlocks());
+      setHasMore(false);
     }
-  }, [feedData, page]);
+  }, [feedData, page, isLoading, usePlaceholderData]);
 
   // Organize content into themed blocks
   const organizeIntoBlocks = (items: any[]): ContentBlock[] => {

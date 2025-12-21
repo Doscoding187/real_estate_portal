@@ -243,7 +243,7 @@ export default function SearchResults() {
   return (
     <div className="min-h-screen bg-slate-50">
       <MetaControl canonicalUrl={canonicalUrl} />
-      <ListingNavbar />
+      <ListingNavbar defaultLocations={filters.locations || []} />
 
       <div className="container pt-24 pb-8">
         {/* Breadcrumbs */}

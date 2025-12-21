@@ -91,6 +91,12 @@ export interface SearchFilters {
   maxArea?: number;
   amenities?: string[];
   furnished?: boolean;
+  locations?: {
+    slug: string;
+    type: 'province' | 'city' | 'suburb';
+    citySlug?: string;
+    provinceSlug?: string;
+  }[];
   // Additional filters stored in query params
   [key: string]: any;
 }
@@ -105,6 +111,54 @@ export function generatePropertyUrl(filters: SearchFilters): string {
   const isRent = filters.listingType === 'rent';
   const root = isRent ? '/property-to-rent' : '/property-for-sale';
   
+  // Handle multiple locations (Search Results Page)
+  if (filters.locations && filters.locations.length > 0) {
+      if (filters.locations.length === 1) {
+          // Single location -> Canonical URL
+          const loc = filters.locations[0];
+          const citySlug = loc.citySlug || (loc.type === 'city' ? loc.slug : undefined);
+          const provinceSlug = loc.provinceSlug || (loc.type === 'province' ? loc.slug : (citySlug ? CITY_PROVINCE_MAP[citySlug] : null));
+
+          if (provinceSlug && citySlug) {
+              let path = `${root}/${provinceSlug}/${citySlug}`;
+              if (loc.type === 'suburb') {
+                  path += `/${loc.slug}`;
+              }
+              const queryParams = new URLSearchParams();
+              // Add other filters
+              if (filters.propertyType) queryParams.set('propertyType', filters.propertyType);
+              if (filters.minPrice) queryParams.set('minPrice', filters.minPrice.toString());
+              if (filters.maxPrice) queryParams.set('maxPrice', filters.maxPrice.toString());
+              if (filters.minBedrooms) queryParams.set('minBedrooms', filters.minBedrooms.toString());
+              if (filters.maxBedrooms) queryParams.set('maxBedrooms', filters.maxBedrooms.toString());
+              if (filters.minBathrooms) queryParams.set('minBathrooms', filters.minBathrooms.toString());
+              if (filters.maxBathrooms) queryParams.set('maxBathrooms', filters.maxBathrooms.toString());
+              if (filters.minArea) queryParams.set('minArea', filters.minArea.toString());
+              if (filters.maxArea) queryParams.set('maxArea', filters.maxArea.toString());
+              if (filters.furnished) queryParams.set('furnished', 'true');
+              if (filters.amenities?.length) queryParams.set('amenities', filters.amenities.join(','));
+
+              const queryString = queryParams.toString();
+              return path + (queryString ? `?${queryString}` : '');
+          }
+      } else {
+          // Multiple locations -> Filtered Search URL (NoIndex)
+          const queryParams = new URLSearchParams();
+          const slugs = filters.locations.map(l => l.slug).join(',');
+          queryParams.set('locations', slugs);
+          
+          if (filters.propertyType) queryParams.set('propertyType', filters.propertyType);
+          if (filters.minPrice) queryParams.set('minPrice', filters.minPrice.toString());
+          if (filters.maxPrice) queryParams.set('maxPrice', filters.maxPrice.toString());
+          if (filters.minBedrooms) queryParams.set('minBedrooms', filters.minBedrooms.toString());
+          if (filters.maxBedrooms) queryParams.set('maxBedrooms', filters.maxBedrooms.toString());
+          // ... other params
+          
+          return `${root}/search?${queryParams.toString()}`;
+      }
+  }
+
+  // Legacy single location support (keep existing logic below as fallback or refactor)
   // If we have a city, we MUST include province for canonical structure
   if (filters.city) {
     const citySlug = slugify(filters.city);
@@ -264,7 +318,19 @@ export function parsePropertyUrl(params: ParsedUrlParams, searchParams?: URLSear
     if (minArea) filters.minArea = parseInt(minArea);
     if (maxArea) filters.maxArea = parseInt(maxArea);
     if (furnished === 'true') filters.furnished = true;
+    if (furnished === 'true') filters.furnished = true;
     if (amenities) filters.amenities = amenities.split(',');
+    
+    // Parse multi-location slugs
+    const locationsParam = searchParams.get('locations');
+    if (locationsParam) {
+        filters.locations = locationsParam.split(',').map(slug => ({
+            slug: slug.trim(),
+            name: unslugify(slug.trim()), // Fallback name
+            type: 'suburb', // Default/Unknown type, will need resolution if critical
+            fullAddress: unslugify(slug.trim()) // Fallback address
+        }));
+    }
   }
 
   return filters;

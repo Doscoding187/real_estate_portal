@@ -11,117 +11,34 @@ import { useExploreCommonState } from '@/hooks/useExploreCommonState';
 import { ResponsiveFilterPanel } from '@/components/explore-discovery/ResponsiveFilterPanel';
 import { ModernCard } from '@/components/ui/soft/ModernCard';
 import { designTokens } from '@/lib/design-tokens';
+import { PLACEHOLDER_VIDEOS as CENTRALIZED_PLACEHOLDER_VIDEOS } from '@/data/explorePlaceholderData';
 import { 
   pageVariants, 
   buttonVariants,
   getVariants 
 } from '@/lib/animations/exploreAnimations';
 
-// Placeholder videos for design purposes
-const PLACEHOLDER_VIDEOS = [
-  {
-    id: 'placeholder-1',
-    title: 'Luxury Villa in Sandton',
-    caption: '5 Bed | 4 Bath | Pool | Garden',
-    primaryMediaUrl:
-      'https://images.unsplash.com/photo-1613490493576-7fde63acd811?w=1080&h=1920&fit=crop',
-    viewCount: 1234,
-    likeCount: 89,
-    agentId: 1,
-    publishedAt: new Date(),
-    type: 'listing',
-    propertyTitle: 'Luxury Villa in Sandton',
-    propertyLocation: 'Sandton, Johannesburg',
-    propertyPrice: 8500000,
-    bedrooms: 5,
-    bathrooms: 4,
-    area: 450,
-    yardSize: 800,
-    propertyType: 'house',
-    highlights: ['Swimming Pool', 'Garden', 'Garage', 'Security'],
-  },
-  {
-    id: 'placeholder-2',
-    title: 'Modern Apartment in Cape Town',
-    caption: '2 Bed | 2 Bath | Sea View | Gym',
-    primaryMediaUrl:
-      'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=1080&h=1920&fit=crop',
-    viewCount: 2456,
-    likeCount: 156,
-    agentId: 2,
-    publishedAt: new Date(),
-    type: 'listing',
-    propertyTitle: 'Modern Apartment',
-    propertyLocation: 'V&A Waterfront, Cape Town',
-    propertyPrice: 4200000,
-    bedrooms: 2,
-    bathrooms: 2,
-    area: 120,
-    propertyType: 'apartment',
-    highlights: ['Sea View', 'Gym', 'Concierge', 'Parking'],
-  },
-  {
-    id: 'placeholder-3',
-    title: 'Penthouse with Panoramic Views',
-    caption: '3 Bed | 3 Bath | Rooftop Terrace',
-    primaryMediaUrl:
-      'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=1080&h=1920&fit=crop',
-    viewCount: 3421,
-    likeCount: 234,
-    agentId: 3,
-    publishedAt: new Date(),
-    type: 'listing',
-    propertyTitle: 'Penthouse with Views',
-    propertyLocation: 'Umhlanga, Durban',
-    propertyPrice: 6750000,
-    bedrooms: 3,
-    bathrooms: 3,
-    area: 280,
-    propertyType: 'apartment',
-    highlights: ['Panoramic Views', 'Rooftop Terrace', 'Concierge', 'Gym'],
-  },
-  {
-    id: 'placeholder-4',
-    title: 'Family Home in Pretoria',
-    caption: '4 Bed | 3 Bath | Large Yard | Double Garage',
-    primaryMediaUrl:
-      'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=1080&h=1920&fit=crop',
-    viewCount: 987,
-    likeCount: 67,
-    agentId: 4,
-    publishedAt: new Date(),
-    type: 'listing',
-    propertyTitle: 'Family Home',
-    propertyLocation: 'Waterkloof, Pretoria',
-    propertyPrice: 5200000,
-    bedrooms: 4,
-    bathrooms: 3,
-    area: 320,
-    yardSize: 650,
-    propertyType: 'house',
-    highlights: ['Large Yard', 'Double Garage', 'Security', 'Pool'],
-  },
-  {
-    id: 'placeholder-5',
-    title: 'Beachfront Apartment',
-    caption: '1 Bed | 1 Bath | Ocean View | Pool',
-    primaryMediaUrl:
-      'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=1080&h=1920&fit=crop',
-    viewCount: 5632,
-    likeCount: 412,
-    agentId: 5,
-    publishedAt: new Date(),
-    type: 'listing',
-    propertyTitle: 'Beachfront Apartment',
-    propertyLocation: 'Camps Bay, Cape Town',
-    propertyPrice: 3850000,
-    bedrooms: 1,
-    bathrooms: 1,
-    area: 85,
-    propertyType: 'apartment',
-    highlights: ['Ocean View', 'Pool', 'Gym', 'Concierge'],
-  },
-];
+// Placeholder videos for design purposes - using centralized data with additional fields
+const PLACEHOLDER_VIDEOS = CENTRALIZED_PLACEHOLDER_VIDEOS.map(v => ({
+  id: `placeholder-${v.id}`,
+  title: v.title,
+  caption: `${v.bedrooms} Bed | ${v.bathrooms} Bath | ${v.highlights?.slice(0, 2).join(' | ')}`,
+  primaryMediaUrl: v.thumbnailUrl,
+  viewCount: v.viewCount || v.views,
+  likeCount: Math.floor((v.viewCount || v.views) * 0.08),
+  agentId: 1,
+  publishedAt: new Date(),
+  type: 'listing',
+  propertyTitle: v.propertyTitle,
+  propertyLocation: v.propertyLocation,
+  propertyPrice: v.propertyPrice,
+  bedrooms: v.bedrooms,
+  bathrooms: v.bathrooms,
+  area: v.area,
+  yardSize: v.area ? Math.floor(v.area * 1.5) : undefined,
+  propertyType: v.propertyType,
+  highlights: v.highlights,
+}));
 
 export default function ExploreFeed() {
   const [, setLocation] = useLocation();

@@ -4,57 +4,81 @@ import { LocationAutosuggest } from './LocationAutosuggest';
 import { Badge } from './ui/badge';
 import { useLocation } from 'wouter';
 import { useState } from 'react';
+import { generatePropertyUrl } from '@/lib/urlUtils';
 
-export function ListingNavbar() {
-  const [, setLocation] = useLocation();
-  const [listingType, setListingType] = useState<'sale' | 'rent'>('sale');
-  const [selectedLocation, setSelectedLocation] = useState<{
+interface ListingNavbarProps {
+  defaultLocations?: {
     name: string;
     slug: string;
-    provinceSlug: string;
-  } | null>(null);
+    type: 'province' | 'city' | 'suburb';
+    provinceSlug?: string;
+    citySlug?: string;
+    fullAddress: string;
+  }[];
+}
+
+export function ListingNavbar({ defaultLocations = [] }: ListingNavbarProps) {
+  const [, setLocation] = useLocation();
+  const [listingType, setListingType] = useState<'sale' | 'rent'>('sale');
+  
+  // Multi-location state
+  const [selectedLocations, setSelectedLocations] = useState<{
+    name: string;
+    slug: string;
+    type: 'province' | 'city' | 'suburb';
+    provinceSlug?: string;
+    citySlug?: string;
+    fullAddress: string;
+  }[]>(defaultLocations);
 
   // Buy/Rent Dropdown State
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
+  // Hierarchy order for sorting
+  const typeOrder: Record<string, number> = { province: 1, city: 2, suburb: 3 };
+
   const handleSearch = () => {
-    if (selectedLocation) {
-        // Navigate to canonical location page
-        const root = listingType === 'rent' ? '/property-to-rent' : '/property-for-sale';
-        // Construct URL: /property-for-sale/[province]/[city] or /[province]/[city]/[suburb] via helper if possible
-        // Ideally we use generatePropertyUrl, but explicit path construction is safer with the known slugs
-        const url = `${root}/${selectedLocation.provinceSlug}/${selectedLocation.slug}`;
-        setLocation(url);
-    } else {
-        // Generic search
-        // If no location, maybe just go to root? or search page?
-        // For now, go to root listing page
-        const root = listingType === 'rent' ? '/property-to-rent' : '/property-for-sale';
-        setLocation(root);
-    }
+    // Strict Mode: allow search if we have locations OR if it's a blank "Browse All"
+    // But usually blank browse all is fine.
+    
+    // Generate URL using shared utility (handles 0, 1, or N locations)
+    const url = generatePropertyUrl({
+        listingType,
+        locations: selectedLocations
+    });
+    setLocation(url);
   };
 
   const handleLocationSelect = (loc: any) => {
-     console.log("Selected:", loc);
-     // We need to map Google Place to our URL structure (slugs)
-     // For now, we'll try to use the raw name slugified, 
-     // BUT in a real app we'd resolve this via backend. 
-     // Since this is a UI task, let's assume simple slugification or redirection.
+     // 1. Avoid duplicates
+     if (selectedLocations.some(l => l.slug === loc.slug)) return;
+
+     let newLocations = [...selectedLocations];
+
+     // 2. Normalization: "Parent + Child -> Child"
+     // If adding a specific location (Child), remove its broader containers (Parent)
+     // because specificity overrides breadth in this UX model.
+     if (loc.type === 'suburb') {
+         newLocations = newLocations.filter(l => 
+             !(l.type === 'city' && l.slug === loc.citySlug) &&
+             !(l.type === 'province' && l.slug === loc.provinceSlug)
+         );
+     } else if (loc.type === 'city') {
+         newLocations = newLocations.filter(l => 
+             !(l.type === 'province' && l.slug === loc.provinceSlug)
+         );
+     }
+
+     newLocations.push(loc);
      
-     // HACK: Simulating slug generation for immediate navigation testing
-     const slug = loc.name.toLowerCase().replace(/\s+/g, '-');
-     // Defaulting province to 'gauteng' if unknown, or extracting from address
-     const addressParts = loc.fullAddress.split(',').map((p: string) => p.trim());
-     // Very rough heuristic for province - mostly for demo
-     let province = 'gauteng'; 
-     if (loc.fullAddress.toLowerCase().includes('cape town')) province = 'western-cape';
-     if (loc.fullAddress.toLowerCase().includes('durban')) province = 'kwazulu-natal';
-     
-     setSelectedLocation({
-         name: loc.name,
-         slug: slug,
-         provinceSlug: province
-     });
+     // 3. Sort by Hierarchy (Province -> City -> Suburb)
+     newLocations.sort((a, b) => (typeOrder[a.type] || 99) - (typeOrder[b.type] || 99));
+
+     setSelectedLocations(newLocations);
+  };
+
+  const removeLocation = (slug: string) => {
+      setSelectedLocations(prev => prev.filter(l => l.slug !== slug));
   };
 
   return (
@@ -96,39 +120,32 @@ export function ListingNavbar() {
             )}
           </div>
 
-          {/* Selected Location Chip */}
-          {selectedLocation && (
-            <div className="flex items-center pl-2">
-                <div className="flex items-center bg-blue-50 text-blue-700 text-xs px-2 py-1 rounded-full border border-blue-100">
-                <span>{selectedLocation.name}</span>
-                <X 
-                    className="h-3 w-3 ml-1 cursor-pointer hover:text-blue-900" 
-                    onClick={() => setSelectedLocation(null)}
-                />
+          {/* Chips & Input Container */}
+          <div className="flex-1 flex items-center px-2 min-w-0 overflow-x-auto no-scrollbar gap-2">
+              {selectedLocations.map(loc => (
+                <div key={loc.slug} className="flex-shrink-0 flex items-center bg-blue-50 text-blue-700 text-xs px-2 py-1 rounded-full border border-blue-100 whitespace-nowrap">
+                    <span>{loc.name}</span>
+                    <X 
+                        className="h-3 w-3 ml-1 cursor-pointer hover:text-blue-900" 
+                        onClick={() => removeLocation(loc.slug)}
+                    />
                 </div>
-            </div>
-          )}
-
-          {/* Input (Autosuggest) */}
-          <div className="flex-1 min-w-0">
-             {!selectedLocation && (
+              ))}
+              
+              <div className="flex-1 min-w-[120px]">
                  <LocationAutosuggest 
-                    placeholder="City, Suburb, or Area"
-                    inputClassName="w-full px-3 py-2 text-sm outline-none text-gray-700 placeholder:text-gray-400 bg-transparent border-none h-full focus-visible:ring-0 shadow-none"
+                    placeholder={selectedLocations.length > 0 ? "Add more..." : "City, Suburb, or Area"}
+                    inputClassName="w-full py-2 text-sm outline-none text-gray-700 placeholder:text-gray-400 bg-transparent border-none h-full focus-visible:ring-0 shadow-none px-1"
                     className="w-full h-full"
                     showIcon={false}
+                    clearOnSelect={true}
                     onSelect={handleLocationSelect}
                  />
-             )}
-             {selectedLocation && (
-                 <div className="w-full px-3 py-2 text-sm text-gray-400 italic cursor-not-allowed">
-                     Location selected
-                 </div>
-             )}
+              </div>
           </div>
 
           {/* Icons */}
-          <div className="flex items-center px-2 gap-2">
+          <div className="flex items-center px-2 gap-2 flex-shrink-0">
             <div className="h-6 w-px bg-gray-200 mx-1"></div>
             <Search 
                 className="h-5 w-5 text-gray-600 cursor-pointer hover:text-gray-800" 

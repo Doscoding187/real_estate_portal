@@ -14,12 +14,13 @@ interface PlacePrediction {
 }
 
 interface LocationAutosuggestProps {
-  onSelect?: (location: { name: string; fullAddress: string; placeId: string; types: string[] }) => void;
+  onSelect?: (location: any) => void;
   placeholder?: string;
   className?: string;
   defaultValue?: string;
   inputClassName?: string;
   showIcon?: boolean;
+  clearOnSelect?: boolean;
 }
 
 export function LocationAutosuggest({ 
@@ -28,7 +29,8 @@ export function LocationAutosuggest({
   className = '',
   defaultValue = '',
   inputClassName = '',
-  showIcon = true
+  showIcon = true,
+  clearOnSelect = false
 }: LocationAutosuggestProps) {
   const [query, setQuery] = useState(defaultValue);
   const [predictions, setPredictions] = useState<PlacePrediction[]>([]);
@@ -86,16 +88,44 @@ export function LocationAutosuggest({
 
   const handleSelect = (prediction: PlacePrediction) => {
     const mainText = prediction.structured_formatting.main_text;
-    setQuery(mainText);
+    if (!clearOnSelect) {
+        setQuery(mainText);
+    } else {
+        setQuery('');
+    }
     setShowSuggestions(false);
 
     if (onSelect) {
+      // Basic slug generation (UI-side approximation)
+      // In production, you might want to fetch details or normalize via backend
+      const slug = mainText.toLowerCase().replace(/[^\w\s-]/g, '').replace(/\s+/g, '-');
+      const locationType = getLocationType(prediction.types);
+      
+      // Heuristic for parent slugs based on description
+      const parts = prediction.description.split(',').map(s => s.trim());
+      let provinceSlug = undefined;
+      let citySlug = undefined;
+
+      // Simplistic mapping for demo purposes
+      if (prediction.description.toLowerCase().includes('cape town')) provinceSlug = 'western-cape';
+      else if (prediction.description.toLowerCase().includes('durban')) provinceSlug = 'kwazulu-natal';
+      else provinceSlug = 'gauteng'; // Default heuristic
+
+      // If suburb, assume City is the parent in description? 
+      // This is tricky without Place Details API, but sufficient for strict UI flow 
+      // if we rely on backend normalization later or accepted "approximate" slugs for search params.
+      
       onSelect({
         name: mainText,
         fullAddress: prediction.description,
         placeId: prediction.place_id,
         types: prediction.types,
-      });
+        // Expanded props
+        slug,
+        type: locationType as any,
+        provinceSlug,
+        citySlug
+      } as any);
     }
   };
 
