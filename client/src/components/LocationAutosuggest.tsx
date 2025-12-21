@@ -200,7 +200,7 @@ export function LocationAutosuggest({
 
       {/* Suggestions Dropdown */}
       {showSuggestions && predictions.length > 0 && (
-        <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-80 overflow-y-auto">
+        <div className="absolute z-[9999] w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-80 overflow-y-auto">
           {predictions.map((prediction, index) => {
             const locationType = getLocationType(prediction.types);
             return (
@@ -236,7 +236,7 @@ export function LocationAutosuggest({
 
       {/* No results */}
       {showSuggestions && query.length >= 2 && !isLoading && predictions.length === 0 && (
-        <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg p-4">
+        <div className="absolute z-[9999] w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg p-4">
           <p className="text-sm text-gray-500 text-center">No locations found</p>
         </div>
       )}

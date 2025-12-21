@@ -93,7 +93,7 @@ export function ListingNavbar({ defaultLocations = [] }: ListingNavbarProps) {
 
       {/* Central Search Bar */}
       <div className="hidden md:flex flex-1 max-w-3xl mx-auto">
-        <div className="flex w-full bg-white rounded-md overflow-hidden h-10 items-center">
+        <div className="flex w-full bg-white rounded-md h-10 items-center relative">
           {/* Buy/Rent Dropdown */}
           <div 
              className="relative flex items-center px-3 border-r border-gray-200 cursor-pointer hover:bg-gray-50 h-full min-w-[80px]"
@@ -168,12 +168,22 @@ export function ListingNavbar({ defaultLocations = [] }: ListingNavbarProps) {
           </Badge>
         </Button>
 
-        <div className="relative cursor-pointer">
+        <div 
+          className="relative cursor-pointer hover:opacity-80 transition-opacity"
+          onClick={() => setLocation('/login')}
+          title="Sign In"
+        >
           <User className="h-6 w-6 text-white" />
           <span className="absolute -top-1 -right-1 h-2.5 w-2.5 bg-red-500 rounded-full border-2 border-[#005ca8]"></span>
         </div>
 
-        <Menu className="h-6 w-6 text-white cursor-pointer" />
+        <div
+          className="cursor-pointer hover:opacity-80 transition-opacity"
+          onClick={() => setLocation('/dashboard')}
+          title="Menu"
+        >
+          <Menu className="h-6 w-6 text-white" />
+        </div>
       </div>
     </div>
   );
