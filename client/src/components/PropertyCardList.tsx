@@ -204,15 +204,16 @@ const PropertyCardList: React.FC<PropertyCardListProps> = ({
       <div className="flex-1 p-4 flex flex-col justify-between">
         <div>
           {/* Header: Title → Location → Price */}
+          {/* Header: Title → Location → Price */}
           <div className="mb-3">
             <h3 
-              className="text-lg font-bold text-slate-900 hover:text-blue-600 transition-colors cursor-pointer mb-2 line-clamp-2"
+              className="text-lg font-bold text-slate-900 hover:text-blue-600 transition-colors cursor-pointer mb-1 line-clamp-2"
               onClick={() => setLocation(`/property/${id}`)}
             >
               {title}
             </h3>
 
-            <div className="flex items-center gap-1.5 text-slate-600 text-sm mb-3">
+            <div className="flex items-center gap-1.5 text-slate-600 text-sm mb-4">
               <MapPin className="h-4 w-4 text-slate-400" />
               <span>{location}</span>
             </div>
@@ -258,7 +259,7 @@ const PropertyCardList: React.FC<PropertyCardListProps> = ({
 
           {/* Description Preview */}
           {description && (
-            <p className="text-slate-500 text-sm leading-relaxed line-clamp-1 mb-3">
+            <p className="text-slate-500 text-sm leading-relaxed line-clamp-2 mb-3">
               {description}
             </p>
           )}
