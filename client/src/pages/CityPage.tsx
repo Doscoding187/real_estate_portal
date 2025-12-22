@@ -9,6 +9,7 @@ import { FeaturedPropertiesCarousel } from '@/components/location/FeaturedProper
 import { LocationPropertyTypeExplorer } from '@/components/location/LocationPropertyTypeExplorer';
 import { DiscoverProperties } from '@/components/DiscoverProperties';
 import { ExploreCities } from '@/components/ExploreCities';
+import { PropertyCategories } from '@/components/PropertyCategories';
 import { MapPin } from 'lucide-react';
 
 
@@ -167,8 +168,8 @@ export default function CityPage({ params }: { params: { province: string; city:
         }
 
         // Section 6: Property Type Explorer
-        // Section 6: Removed Property Type Explorer (Discovery Page)
-        propertyTypeExplorer={undefined}
+        // Section 6: Property Type Explorer
+        propertyTypeExplorer={<PropertyCategories />}
 
         // Section 7: Top Localities / Market Insights
         topLocalities={

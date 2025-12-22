@@ -11,6 +11,7 @@ import { DiscoverProperties } from '@/components/DiscoverProperties';
 import { TopLocalities } from '@/components/TopLocalities';
 import { TopDevelopers } from '@/components/TopDevelopers';
 import { ExploreCities } from '@/components/ExploreCities';
+import { PropertyCategories } from '@/components/PropertyCategories';
 import { Footer } from '@/components/Footer';
 
 export default function Home() {
@@ -196,57 +197,12 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Categories Section - Simplified for SA Market */}
-      <div className="py-16 md:py-20 bg-gradient-to-b from-white via-slate-50/30 to-white">
-        <div className="container">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4 bg-gradient-to-r from-slate-900 via-[#2774AE] to-slate-900 bg-clip-text text-transparent">
-              Explore Property Categories
-            </h2>
-            <p className="text-slate-600 text-lg max-w-2xl mx-auto leading-relaxed">
-              Find the perfect property type that suits your needs across South Africa
-            </p>
-          </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 md:gap-6">
-            {[
-              { Icon: Building2, title: 'Apartments', count: '2,500+', url: '/properties?type=apartment', gradient: 'from-[#2774AE] to-[#2D68C4]' },
-              { Icon: HomeIcon, title: 'Houses', count: '3,200+', url: '/properties?type=house', gradient: 'from-[#2D68C4] to-[#0F52BA]' },
-              { Icon: Building, title: 'Townhouses', count: '1,800+', url: '/properties?type=townhouse', gradient: 'from-[#0F52BA] to-[#1560BD]' },
-              { Icon: Warehouse, title: 'Commercial', count: '950+', url: '/properties?type=commercial', gradient: 'from-[#1560BD] to-[#2774AE]' },
-              { Icon: MapPin, title: 'Land & Plots', count: '1,200+', url: '/properties?type=land', gradient: 'from-[#2774AE] to-[#2D68C4]' },
-              { Icon: Tractor, title: 'Farms', count: '450+', url: '/properties?type=farm', gradient: 'from-[#2D68C4] to-[#0F52BA]' },
-            ].map((category, idx) => (
-              <a
-                key={idx}
-                href={category.url}
-                onClick={(e) => {
-                  e.preventDefault();
-                  setLocation(category.url);
-                }}
-                className="group relative flex flex-col items-center text-center p-6 md:p-8 rounded-2xl bg-white hover:bg-gradient-to-br hover:from-white hover:to-blue-50/30 shadow-sm hover:shadow-2xl transition-all duration-500 border border-slate-200/60 hover:border-[#2774AE]/30 overflow-hidden hover:-translate-y-1"
-              >
-                {/* Gradient background on hover */}
-                <div className={`absolute inset-0 bg-gradient-to-br ${category.gradient} opacity-0 group-hover:opacity-[0.03] transition-opacity duration-500`} />
-                
-                {/* Icon with gradient background */}
-                <div className={`relative mb-4 p-4 md:p-5 rounded-2xl bg-gradient-to-br ${category.gradient} shadow-lg group-hover:shadow-2xl group-hover:scale-110 transition-all duration-500`}>
-                  <category.Icon className="h-7 w-7 md:h-8 md:w-8 text-white" />
-                </div>
-                
-                {/* Text content */}
-                <h3 className="relative text-sm md:text-base font-bold text-slate-900 mb-1.5 group-hover:text-[#2774AE] transition-colors">
-                  {category.title}
-                </h3>
-                <p className="relative text-xs md:text-sm text-slate-600 font-semibold bg-slate-100 px-3 py-1 rounded-full">
-                  {category.count}
-                </p>
-              </a>
-            ))}
-          </div>
-        </div>
-      </div>
 
+
+      {/* Property Categories Section (Restored with Location Picker) */}
+      <PropertyCategories />
+      
       {/* Property Price Insights Section */}
       <PropertyInsights />
 

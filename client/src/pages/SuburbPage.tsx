@@ -7,6 +7,7 @@ import { LocationPropertyTypeExplorer as PropertyTypeExplorer } from '@/componen
 
 import { DiscoverProperties } from '@/components/DiscoverProperties';
 import { ExploreCities } from '@/components/ExploreCities';
+import { PropertyCategories } from '@/components/PropertyCategories';
 import { Building2 } from 'lucide-react';
 // import { FeaturedListings } from '@/components/location/FeaturedListings'; // Removed
 import { TabbedListingSection } from '@/components/location/TabbedListingSection';
@@ -129,21 +130,8 @@ export default function SuburbPage({ params }: { params: { province: string; cit
           />
         }
 
-        // Suburb Page Specific: Property Type Explorer is key for discovery
-        propertyTypeExplorer={
-          <PropertyTypeExplorer
-            propertyTypes={[
-              { type: 'house', count: Math.floor(stats.totalListings * 0.4), avgPrice: stats.avgPrice * 1.2 },
-              { type: 'apartment', count: Math.floor(stats.totalListings * 0.35), avgPrice: stats.avgPrice * 0.8 },
-              { type: 'townhouse', count: Math.floor(stats.totalListings * 0.15), avgPrice: stats.avgPrice * 0.9 },
-              { type: 'villa', count: Math.floor(stats.totalListings * 0.1), avgPrice: stats.avgPrice * 1.5 },
-            ]}
-            locationName={suburb.name}
-            locationSlug={suburbSlug}
-            placeId={suburb.place_id}
-          />
-
-        }
+        // Suburb Page Specific: Property Type Explorer
+        propertyTypeExplorer={<PropertyCategories />}
 
         popularLocations={
             subLocalities && subLocalities.length > 0 ? (
