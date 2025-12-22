@@ -257,6 +257,13 @@ const PropertyCardList: React.FC<PropertyCardListProps> = ({
             )}
           </div>
 
+          {/* Highlights */}
+          {highlights && highlights.length > 0 && (
+            <div className="mb-3">
+              <ResponsiveHighlights items={highlights} />
+            </div>
+          )}
+
           {/* Description Preview */}
           {description && (
             <p className="text-slate-500 text-sm leading-relaxed line-clamp-2 mb-3">
@@ -264,12 +271,7 @@ const PropertyCardList: React.FC<PropertyCardListProps> = ({
             </p>
           )}
 
-          {/* Highlights */}
-          {highlights && highlights.length > 0 && (
-            <div className="mb-3">
-              <ResponsiveHighlights items={highlights} />
-            </div>
-          )}
+
         </div>
 
         {/* Footer Actions */}
