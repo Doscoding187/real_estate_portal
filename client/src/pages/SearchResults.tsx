@@ -212,11 +212,18 @@ export default function SearchResults() {
     }));
   };
 
+  // Determine properties to display (Real vs Mock)
+  // If fetching is done and no real properties found, show mock data for visualization
+  const displayProperties = (properties && properties.length > 0) ? properties : (!isLoading ? MOCK_LISTINGS : []);
+  const isUsingMockData = !isLoading && (!properties || properties.length === 0);
+  
   // Sort properties (client-side for now)
   const sortedProperties = useMemo(() => {
-    if (!properties) return [];
+    // Cast to any to handle mixed types (Real vs Mock) - temporary for visualization
+    const propsToUse = displayProperties as any[];
+    if (!propsToUse.length) return [];
     
-    const sorted = [...properties];
+    const sorted = [...propsToUse];
     switch (sortBy) {
       case 'price_asc':
         sorted.sort((a, b) => (a.price || 0) - (b.price || 0));
@@ -224,20 +231,14 @@ export default function SearchResults() {
       case 'price_desc':
         sorted.sort((a, b) => (b.price || 0) - (a.price || 0));
         break;
-      case 'date_desc':
-        sorted.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
-        break;
-      case 'date_asc':
-        sorted.sort((a, b) => new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime());
-        break;
       default:
-        // Keep original order (relevance)
+        // Keep original order 
         break;
     }
     return sorted;
-  }, [properties, sortBy]);
+  }, [displayProperties, sortBy]);
 
-  const resultCount = properties?.length || 0;
+  const resultCount = displayProperties.length;
 
   const canonicalUrl = useMemo(() => generateCanonicalUrl(filters), [filters]);
 
@@ -286,6 +287,15 @@ export default function SearchResults() {
                 onClearAll={handleClearAllFilters}
               />
             </div>
+
+            {isUsingMockData && (
+              <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg text-blue-800 text-sm flex flex-col gap-1">
+                 <span className="font-bold flex items-center gap-2">
+                    ✨ Visualization Mode
+                 </span>
+                 <span>Showing example properties to demonstrate the layout. No exact matches found for your criteria.</span>
+              </div>
+            )}
 
             {/* Results */}
             <div className="mt-6">
