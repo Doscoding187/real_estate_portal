@@ -31,7 +31,7 @@ import { LocationAutosuggest } from './LocationAutosuggest';
 
 export function EnhancedHero() {
   const [, setLocation] = useLocation();
-  const [activeTab, setActiveTab] = useState('buy');
+  const [activeTab, setActiveTab] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedLocation, setSelectedLocation] = useState<any>(null);
 
