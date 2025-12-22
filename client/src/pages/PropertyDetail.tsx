@@ -164,7 +164,7 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
     images: mockListing.images.map((url, i) => ({
       id: i,
       propertyId: 0, // Mock doesn't really matter
-      url,
+      imageUrl: url,
       isMain: i === 0,
       createdAt: new Date().toISOString()
     })),
