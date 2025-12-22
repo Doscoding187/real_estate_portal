@@ -132,6 +132,7 @@ import {
   CityShortcutRedirect,
   OldLegacyCityRedirect
 } from './components/LegacyRouteHandler';
+import { PROVINCE_SLUGS } from '@/lib/locationUtils';
 
 function Router() {
   // Auto-migrate guest data on login
@@ -139,6 +140,20 @@ function Router() {
   
   // Enable keyboard navigation mode detection
   useKeyboardMode();
+  
+  // Custom Dispatcher to handle collision between /property-for-sale/:province and /property-for-sale/:city (shortcut)
+  const LocationDispatcher = ({ params }: { params: { slug: string } }) => {
+    // Check if the slug matches a known province
+    const isProvince = PROVINCE_SLUGS.includes(params.slug.toLowerCase());
+    
+    if (isProvince) {
+      // It's a province -> Render Province Page
+      return <ProvincePage params={{ province: params.slug }} />;
+    } else {
+      // It's likely a city shortcut -> Redirect
+      return <CityShortcutRedirect params={{ city: params.slug }} />;
+    }
+  };
   
   // make sure to consider if you need authentication for certain routes
   return (
@@ -152,9 +167,10 @@ function Router() {
       <Route path="/property-for-sale" component={SearchResults} />
       <Route path="/property-to-rent" component={SearchResults} />
       
-      {/* City Shortcuts (UX-only, Redirects to Canonical) */}
-      <Route path="/property-for-sale/:city" component={CityShortcutRedirect} />
-      <Route path="/property-to-rent/:city" component={CityShortcutRedirect} />
+      {/* City Shortcuts (UX-only, Redirects to Canonical) AND Province Pages */}
+      {/* Both share the same URL structure: /root/:slug */}
+      <Route path="/property-for-sale/:slug" component={LocationDispatcher} />
+      <Route path="/property-to-rent/:slug" component={LocationDispatcher} />
 
       {/* Canonical Suburb Pages */}
       <Route path="/property-for-sale/:province/:city/:suburb" component={SuburbPage} />
@@ -163,10 +179,6 @@ function Router() {
       {/* Canonical City Pages */}
       <Route path="/property-for-sale/:province/:city" component={CityPage} />
       <Route path="/property-to-rent/:province/:city" component={CityPage} />
-
-      {/* Canonical Province Pages */}
-      <Route path="/property-for-sale/:province" component={ProvincePage} />
-      <Route path="/property-to-rent/:province" component={ProvincePage} />
 
       {/* Legacy properties route (query params) */}
       <Route path="/properties" component={SearchResults} />
