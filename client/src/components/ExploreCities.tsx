@@ -1,37 +1,20 @@
-import React, { useCallback } from 'react';
+import React from 'react';
 import { Link } from 'wouter';
-import useEmblaCarousel from 'embla-carousel-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import {
   MapPin,
-  Building2,
-  Mountain,
-  Palmtree,
-  Landmark,
-  Anchor,
-  Flower2,
-  Waves,
-  Leaf,
-  Sun,
-  Gem,
-  Wine,
   ArrowRight,
-  Plane,
-  Factory,
-  Briefcase,
-  TreeDeciduous,
-  ChevronLeft,
   ChevronRight,
 } from 'lucide-react';
 
 interface City {
   name: string;
   province: string;
-  icon: React.ElementType;
   slug: string;
   provinceSlug: string;
-  color: string;
+  image: string;
+  propertyCount: string;
   featured?: boolean;
 }
 
@@ -39,308 +22,176 @@ interface ExploreCitiesProps {
   provinceSlug?: string;
   title?: string;
   description?: string;
-  customLocations?: City[]; // Allow passing custom locations (e.g. suburbs)
-  basePath?: string; // New: Allow overriding the base path (e.g. /property-for-sale)
-  queryParams?: string; // New: Allow appending query params (e.g. ?view=list)
+  customLocations?: City[];
+  basePath?: string;
+  queryParams?: string;
 }
 
-export function ExploreCities({ provinceSlug, title, description, customLocations, basePath = '', queryParams = '' }: ExploreCitiesProps = {}) {
+export function ExploreCities({ provinceSlug, title, description, customLocations, basePath = '/property-for-sale', queryParams = '' }: ExploreCitiesProps = {}) {
   const cities: City[] = [
-    // ... (keep existing hardcoded cities)
     {
       name: 'Johannesburg',
       province: 'Gauteng',
-      icon: Building2,
       slug: 'johannesburg',
       provinceSlug: 'gauteng',
-      color: 'from-blue-500 to-indigo-500',
+      image: 'https://images.unsplash.com/photo-1577948000111-9c9707350061?w=800&q=80',
+      propertyCount: '24,500+ Properties'
     },
     {
       name: 'Cape Town',
       province: 'Western Cape',
-      icon: Mountain,
       slug: 'cape-town',
       provinceSlug: 'western-cape',
-      color: 'from-teal-500 to-emerald-500',
+      image: 'https://images.unsplash.com/photo-1580060839134-75a5edca2e99?w=800&q=80',
+      propertyCount: '18,200+ Properties'
     },
     {
       name: 'Durban',
       province: 'KwaZulu-Natal',
-      icon: Palmtree,
       slug: 'durban',
       provinceSlug: 'kwazulu-natal',
-      color: 'from-orange-500 to-amber-500',
+      image: 'https://images.unsplash.com/photo-1549297136-1c4b7b25055b?w=800&q=80',
+      propertyCount: '12,400+ Properties'
     },
     {
       name: 'Pretoria',
       province: 'Gauteng',
-      icon: Landmark,
       slug: 'pretoria',
       provinceSlug: 'gauteng',
-      color: 'from-purple-500 to-pink-500',
-    },
-    {
-      name: 'Port Elizabeth',
-      province: 'Eastern Cape',
-      icon: Anchor,
-      slug: 'port-elizabeth',
-      provinceSlug: 'eastern-cape',
-      color: 'from-cyan-500 to-blue-500',
-    },
-    {
-      name: 'Bloemfontein',
-      province: 'Free State',
-      icon: Flower2,
-      slug: 'bloemfontein',
-      provinceSlug: 'free-state',
-      color: 'from-rose-500 to-red-500',
-    },
-    {
-      name: 'East London',
-      province: 'Eastern Cape',
-      icon: Waves,
-      slug: 'east-london',
-      provinceSlug: 'eastern-cape',
-      color: 'from-sky-500 to-blue-500',
-    },
-    {
-      name: 'Nelspruit',
-      province: 'Mpumalanga',
-      icon: Leaf,
-      slug: 'nelspruit',
-      provinceSlug: 'mpumalanga',
-      color: 'from-green-500 to-emerald-500',
-    },
-    {
-      name: 'Polokwane',
-      province: 'Limpopo',
-      icon: Sun,
-      slug: 'polokwane',
-      provinceSlug: 'limpopo',
-      color: 'from-yellow-500 to-orange-500',
-    },
-    {
-      name: 'Kimberley',
-      province: 'Northern Cape',
-      icon: Gem,
-      slug: 'kimberley',
-      provinceSlug: 'northern-cape',
-      color: 'from-indigo-500 to-violet-500',
-    },
-    {
-      name: 'Rustenburg',
-      province: 'North West',
-      icon: Mountain,
-      slug: 'rustenburg',
-      provinceSlug: 'north-west',
-      color: 'from-stone-500 to-neutral-500',
-    },
-    {
-      name: 'Stellenbosch',
-      province: 'Western Cape',
-      icon: Wine,
-      slug: 'stellenbosch',
-      provinceSlug: 'western-cape',
-      color: 'from-red-500 to-rose-600',
+      image: 'https://images.unsplash.com/photo-1624638760980-cb05d15a5198?w=800&q=80',
+      propertyCount: '9,800+ Properties'
     },
     {
       name: 'Sandton',
       province: 'Gauteng',
-      icon: Gem,
       slug: 'sandton',
       provinceSlug: 'gauteng',
-      color: 'from-amber-500 to-yellow-500',
-      featured: false,
+      image: 'https://images.unsplash.com/photo-1576485290814-1c72aa4bbb8e?w=800&q=80',
+      propertyCount: '6,300+ Properties'
     },
     {
       name: 'Midrand',
       province: 'Gauteng',
-      icon: Building2,
       slug: 'midrand',
       provinceSlug: 'gauteng',
-      color: 'from-blue-400 to-cyan-500',
-      featured: false,
+      image: 'https://images.unsplash.com/photo-1575517111478-7f60e971579f?w=800&q=80',
+      propertyCount: '4,100+ Properties'
     },
     {
-      name: 'Centurion',
-      province: 'Gauteng',
-      icon: Landmark,
-      slug: 'centurion',
-      provinceSlug: 'gauteng',
-      color: 'from-emerald-500 to-teal-500',
-      featured: false,
+      name: 'Umhlanga',
+      province: 'KwaZulu-Natal',
+      slug: 'umhlanga',
+      provinceSlug: 'kwazulu-natal',
+      image: 'https://images.unsplash.com/photo-1516029272338-782f9c5220c8?w=800&q=80',
+      propertyCount: '3,200+ Properties'
+    },
+    {
+      name: 'Stellenbosch',
+      province: 'Western Cape',
+      slug: 'stellenbosch',
+      provinceSlug: 'western-cape',
+      image: 'https://images.unsplash.com/photo-1518182170546-0766cac6cf66?w=800&q=80',
+      propertyCount: '2,800+ Properties'
     },
     {
       name: 'Randburg',
       province: 'Gauteng',
-      icon: TreeDeciduous,
       slug: 'randburg',
       provinceSlug: 'gauteng',
-      color: 'from-green-500 to-lime-500',
-      featured: false,
+      image: 'https://images.unsplash.com/photo-1628191011993-4350f555e09f?w=800&q=80',
+      propertyCount: '2,950+ Properties'
     },
     {
-      name: 'Roodepoort',
+      name: 'Centurion',
       province: 'Gauteng',
-      icon: Mountain,
-      slug: 'roodepoort',
+      slug: 'centurion',
       provinceSlug: 'gauteng',
-      color: 'from-orange-400 to-red-400',
-      featured: false,
+      image: 'https://images.unsplash.com/photo-1605276374104-dee2a0ed3cd6?w=800&q=80',
+      propertyCount: '3,500+ Properties'
+    },
+     {
+      name: 'Port Elizabeth',
+      province: 'Eastern Cape',
+      slug: 'port-elizabeth',
+      provinceSlug: 'eastern-cape',
+      image: 'https://images.unsplash.com/photo-1577909384666-382559639556?w=800&q=80',
+      propertyCount: '2,100+ Properties'
     },
     {
-      name: 'Kempton Park',
-      province: 'Gauteng',
-      icon: Plane,
-      slug: 'kempton-park',
-      provinceSlug: 'gauteng',
-      color: 'from-sky-500 to-indigo-500',
-      featured: false,
-    },
-    {
-      name: 'Bedfordview',
-      province: 'Gauteng',
-      icon: Gem,
-      slug: 'bedfordview',
-      provinceSlug: 'gauteng',
-      color: 'from-purple-400 to-fuchsia-500',
-      featured: false,
-    },
-    {
-      name: 'Benoni',
-      province: 'Gauteng',
-      icon: Waves,
-      slug: 'benoni',
-      provinceSlug: 'gauteng',
-      color: 'from-blue-500 to-cyan-400',
-      featured: false,
-    },
-    {
-      name: 'Alberton',
-      province: 'Gauteng',
-      icon: Briefcase,
-      slug: 'alberton',
-      provinceSlug: 'gauteng',
-      color: 'from-yellow-500 to-amber-600',
-      featured: false,
-    },
-    {
-      name: 'Vereeniging',
-      province: 'Gauteng',
-      icon: Factory,
-      slug: 'vereeniging',
-      provinceSlug: 'gauteng',
-      color: 'from-slate-500 to-gray-600',
-      featured: false,
-    },
+      name: 'Bloemfontein',
+      province: 'Free State',
+      slug: 'bloemfontein',
+      provinceSlug: 'free-state',
+      image: 'https://images.unsplash.com/photo-1549487950-8b0933580434?w=800&q=80',
+      propertyCount: '1,800+ Properties'
+    }
   ];
 
-  const filteredCities = customLocations || (provinceSlug 
+  // If custom locations are provided, use them. Otherwise, filter by province or show defaults.
+  // We limit to 12 items for the 3-row layout (4 cols x 3 rows).
+  const filteredCities = (customLocations || (provinceSlug 
     ? cities.filter(city => city.provinceSlug.toLowerCase() === provinceSlug.toLowerCase())
-    : cities.filter(city => city.featured !== false));
+    : cities)).slice(0, 12);
 
-  const displayTitle = title || "Explore Real Estate in Popular South African Cities";
-  const displayDescription = description || "Find high-end residences, reasonably priced apartments, and high-growth investments by exploring real estate in well-known South African cities. Use professional advice and insights to navigate opportunities across metro hubs.";
-
-  const [emblaRef, emblaApi] = useEmblaCarousel({
-    align: 'start',
-    slidesToScroll: 1,
-    containScroll: 'trimSnaps',
-    loop: false,
-  });
-
-  const scrollPrev = useCallback(() => {
-    if (emblaApi) emblaApi.scrollPrev();
-  }, [emblaApi]);
-
-  const scrollNext = useCallback(() => {
-    if (emblaApi) emblaApi.scrollNext();
-  }, [emblaApi]);
-
+  const displayTitle = title || "Explore Real Estate in Popular Cities";
+  const displayDescription = description || "Browse properties in South Africa's most sought-after locations.";
 
   return (
     <section className="py-12 bg-white">
       <div className="container">
         {/* Section Header */}
-        <div className="mb-8 text-center md:text-left flex justify-between items-end">
+        <div className="mb-10 text-center md:text-left flex flex-col md:flex-row justify-between items-end gap-4">
           <div>
-              <h2 className="text-xl md:text-2xl font-bold mb-3">
+              <h2 className="text-2xl md:text-3xl font-bold mb-3 text-slate-900">
                 {displayTitle}
               </h2>
-              <p className="text-muted-foreground text-base max-w-4xl mx-auto md:mx-0">
+              <p className="text-slate-500 text-lg max-w-3xl">
                 {displayDescription}
               </p>
           </div>
           
-          {/* Desktop Navigation Buttons */}
-          <div className="hidden md:flex gap-2">
-            <Button
-              variant="outline"
-              size="icon"
-              className="rounded-full h-10 w-10 border-slate-200 hover:bg-slate-100 hover:text-blue-600"
-              onClick={scrollPrev}
-            >
-              <ChevronLeft className="h-5 w-5" />
+           <Link href="/property-for-sale">
+            <Button variant="ghost" className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 font-medium group">
+              View All Locations <ChevronRight className="h-4 w-4 ml-1 group-hover:translate-x-1 transition-transform" />
             </Button>
-            <Button
-              variant="outline"
-              size="icon"
-              className="rounded-full h-10 w-10 border-slate-200 hover:bg-slate-100 hover:text-blue-600"
-              onClick={scrollNext}
-            >
-              <ChevronRight className="h-5 w-5" />
-            </Button>
-          </div>
+          </Link>
         </div>
 
-        {/* Carousel Viewport */}
-        <div className="relative group/carousel">
-          <div className="overflow-hidden -mx-4 px-4 py-4" ref={emblaRef}>
-            <div className="flex gap-6">
-              {filteredCities.map(city => (
-                <div 
-                  key={city.slug} 
-                  className="flex-[0_0_85%] sm:flex-[0_0_50%] md:flex-[0_0_33.333%] lg:flex-[0_0_16.666%] min-w-0"
-                >
-                  <Link href={`${basePath}/${city.provinceSlug}/${city.slug}${queryParams}`.replace(/\/\//g, '/')}>
-                    <Card className="h-full hover:shadow-xl transition-all duration-300 cursor-pointer group border-0 bg-muted/30 hover:bg-white overflow-hidden">
-                      <CardContent className="p-4 h-full">
-                        <div className="flex items-center gap-4">
-                          {/* City Icon */}
-                          <div
-                            className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${city.color} flex items-center justify-center text-white shadow-lg group-hover:scale-110 transition-transform duration-300 flex-shrink-0`}
-                          >
-                            <city.icon className="h-6 w-6" />
-                          </div>
+        {/* Grid Layout (4 Cols x 3 Rows max) */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          {filteredCities.map(city => (
+             <Link key={city.slug} href={`${basePath}/${city.provinceSlug}/${city.slug}${queryParams}`.replace(/\/\//g, '/')}>
+              <div className="group cursor-pointer">
+                <div className="flex items-start gap-4 p-3 rounded-xl hover:bg-slate-50 transition-colors border border-transparent hover:border-slate-100">
+                  {/* Image */}
+                  <div className="w-20 h-20 rounded-lg overflow-hidden flex-shrink-0 shadow-sm relative">
+                    <img 
+                      src={city.image} 
+                      alt={city.name} 
+                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                    />
+                     <div className="absolute inset-0 bg-black/10 group-hover:bg-transparent transition-colors" />
+                  </div>
 
-                          {/* City Info */}
-                          <div className="flex-1 min-w-0">
-                            <h3 className="font-bold text-base mb-1 group-hover:text-blue-600 transition-colors truncate">
-                              {city.name}
-                            </h3>
-                            <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                              <MapPin className="h-3.5 w-3.5 flex-shrink-0" />
-                              <span className="truncate font-medium">{city.province}</span>
-                            </div>
-                          </div>
-
-                          {/* Arrow Icon */}
-                          <div className="hidden sm:block opacity-0 group-hover:opacity-100 transition-opacity duration-300 -translate-x-2 group-hover:translate-x-0">
-                            <ArrowRight className="h-5 w-5 text-blue-600" />
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </Link>
+                  {/* Content */}
+                  <div className="flex-1 min-w-0 py-1">
+                    <h3 className="font-bold text-lg text-slate-900 group-hover:text-blue-600 transition-colors truncate">
+                      {city.name}
+                    </h3>
+                    
+                    <p className="text-slate-500 text-sm mb-1 truncate">
+                        {city.propertyCount}
+                    </p>
+                    
+                    <div className="flex items-center gap-1 text-xs text-slate-400">
+                      <MapPin className="h-3 w-3" />
+                      <span className="truncate">{city.province}</span>
+                    </div>
+                  </div>
                 </div>
-              ))}
-            </div>
-          </div>
-          
-           {/* Mobile Navigation Overlay Buttons (optional, but good for UX) */}
-           <div className="md:hidden flex justify-between pointer-events-none absolute inset-0 items-center px-0">
-               {/* Left/Right buttons can be added here if needed, but swipe is primary on mobile */}
-           </div>
+              </div>
+            </Link>
+          ))}
         </div>
 
       </div>
