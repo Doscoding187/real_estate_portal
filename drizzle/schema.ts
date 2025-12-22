@@ -480,7 +480,7 @@ export const developmentUnits = mysqlTable("development_units", {
 
 export const developments = mysqlTable("developments", {
 	id: int().autoincrement().notNull(),
-	developerId: int().references(() => developers.id, { onDelete: "cascade" } ),
+	developerId: int("developer_id").references(() => developers.id, { onDelete: "cascade" } ),
 	name: varchar({ length: 255 }).notNull(),
 	slug: varchar({ length: 255 }),
 	description: text(),

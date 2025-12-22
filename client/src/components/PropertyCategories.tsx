@@ -3,15 +3,28 @@ import { Building2, Home as HomeIcon, Building, Warehouse, MapPin, Tractor } fro
 
 import { useState } from 'react';
 import { useLocation } from 'wouter';
-import { Building2, Home as HomeIcon, Building, Warehouse, MapPin, Tractor, Search, X } from 'lucide-react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Building2, Home as HomeIcon, Building, Warehouse, MapPin, Tractor, Search, Filter, BedDouble, Wallet, Star } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { LocationAutosuggest } from '@/components/LocationAutosuggest';
 import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
+import { Slider } from '@/components/ui/slider'; // Assuming we have Slider, if not using Select for price
+import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
 
 export function PropertyCategories() {
   const [, setLocation] = useLocation();
   const [selectedCategory, setSelectedCategory] = useState<{ title: string; type: string } | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [step, setStep] = useState<1 | 2>(1);
+  const [selectedLocation, setSelectedLocation] = useState<any>(null);
+
+  // Filter State
+  const [minPrice, setMinPrice] = useState<string>('');
+  const [maxPrice, setMaxPrice] = useState<string>('');
+  const [bedrooms, setBedrooms] = useState<string>('');
+  const [features, setFeatures] = useState<string[]>([]);
 
   const categories = [
     { Icon: Building2, title: 'Apartments', count: '2,500+', type: 'apartment', gradient: 'from-[#2774AE] to-[#2D68C4]' },
@@ -24,28 +37,77 @@ export function PropertyCategories() {
 
   const handleCategoryClick = (category: typeof categories[0]) => {
     setSelectedCategory(category);
+    setStep(1);
+    setSelectedLocation(null);
+    setFeatures([]);
+    setMinPrice('');
+    setMaxPrice('');
+    setBedrooms('');
     setIsDialogOpen(true);
   };
 
   const handleLocationSelect = (loc: any) => {
-    if (selectedCategory) {
-      setIsDialogOpen(false);
-      // Construct URL: /property-for-sale/slug?propertyType=type
-      // If it has a slug, use it. If not, fallback to search.
-      if (loc.slug && loc.provinceSlug) { // It's a city or suburb with full hierarchy
-         setLocation(`/property-for-sale/${loc.provinceSlug}/${loc.slug}?propertyType=${selectedCategory.type}&view=list`);
-      } else if (loc.slug) { // Province or high level
-         setLocation(`/property-for-sale/${loc.slug}?propertyType=${selectedCategory.type}&view=list`);
-      } else {
-         setLocation(`/properties?type=${selectedCategory.type}&location=${encodeURIComponent(loc.name)}&view=list`);
-      }
-    }
+    setSelectedLocation(loc);
+    setStep(2);
   };
 
-  const popularProvinces = [
-    { name: 'Gauteng', slug: 'gauteng' },
-    { name: 'Western Cape', slug: 'western-cape' },
-    { name: 'KwaZulu-Natal', slug: 'kwazulu-natal' },
+  const toggleFeature = (feature: string) => {
+    setFeatures(prev => 
+      prev.includes(feature) 
+        ? prev.filter(f => f !== feature) 
+        : [...prev, feature]
+    );
+  };
+
+  const handleSearch = () => {
+    if (!selectedCategory || !selectedLocation) return;
+    
+    setIsDialogOpen(false);
+
+    let url = '';
+    
+    // Base Route
+    if (selectedLocation.slug && selectedLocation.provinceSlug) {
+       url = `/property-for-sale/${selectedLocation.provinceSlug}/${selectedLocation.slug}`;
+    } else if (selectedLocation.slug) {
+       url = `/property-for-sale/${selectedLocation.slug}`;
+    } else {
+       url = `/properties`; // Fallback
+    }
+
+    const params = new URLSearchParams();
+    
+    // Core Params
+    params.set('propertyType', selectedCategory.type);
+    params.set('view', 'list');
+    
+    // Filters
+    if (minPrice) params.set('minPrice', minPrice);
+    if (maxPrice) params.set('maxPrice', maxPrice);
+    if (bedrooms) params.set('minBedrooms', bedrooms);
+    
+    // Location Name fallback if no slug
+    if (!selectedLocation.slug) params.set('location', selectedLocation.name);
+
+    // Features / Amenities
+    if (features.length > 0) {
+      params.set('amenities', features.join(','));
+      // Special handling for "Luxury" if we want to enforce price
+      if (features.includes('luxury') && !minPrice) {
+          params.set('minPrice', '5000000');
+      }
+    }
+
+    setLocation(`${url}?${params.toString()}`);
+  };
+
+  const priceOptions = [
+    { value: '500000', label: 'R 500k' },
+    { value: '1000000', label: 'R 1m' },
+    { value: '2000000', label: 'R 2m' },
+    { value: '3000000', label: 'R 3m' },
+    { value: '5000000', label: 'R 5m' },
+    { value: '10000000', label: 'R 10m' },
   ];
 
   return (
@@ -67,15 +129,12 @@ export function PropertyCategories() {
               onClick={() => handleCategoryClick(category)}
               className="group relative flex flex-col items-center text-center p-6 md:p-8 rounded-2xl bg-white hover:bg-gradient-to-br hover:from-white hover:to-blue-50/30 shadow-sm hover:shadow-2xl transition-all duration-500 border border-slate-200/60 hover:border-[#2774AE]/30 overflow-hidden hover:-translate-y-1 w-full"
             >
-              {/* Gradient background on hover */}
               <div className={`absolute inset-0 bg-gradient-to-br ${category.gradient} opacity-0 group-hover:opacity-[0.03] transition-opacity duration-500`} />
               
-              {/* Icon with gradient background */}
               <div className={`relative mb-4 p-4 md:p-5 rounded-2xl bg-gradient-to-br ${category.gradient} shadow-lg group-hover:shadow-2xl group-hover:scale-110 transition-all duration-500`}>
                 <category.Icon className="h-7 w-7 md:h-8 md:w-8 text-white" />
               </div>
               
-              {/* Text content */}
               <h3 className="relative text-sm md:text-base font-bold text-slate-900 mb-1.5 group-hover:text-[#2774AE] transition-colors">
                 {category.title}
               </h3>
@@ -87,69 +146,132 @@ export function PropertyCategories() {
         </div>
 
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogContent className="sm:max-w-md">
+          <DialogContent className="sm:max-w-[425px]">
             <DialogHeader>
-              <DialogTitle className="text-center flex flex-col items-center gap-2">
-                <span className="text-xl">Find {selectedCategory?.title} in...</span>
-                <span className="text-sm font-normal text-muted-foreground">Select a location to narrow your search</span>
+              <DialogTitle className="text-center">
+                 {step === 1 ? (
+                    <span className="flex flex-col gap-2">
+                       <span className="text-xl">Find {selectedCategory?.title}</span>
+                       <span className="text-sm font-normal text-muted-foreground">Select a city or suburb</span>
+                    </span>
+                 ) : (
+                    <span className="flex flex-col gap-2">
+                       <span className="text-xl">Refine your Search</span>
+                       <span className="text-sm font-normal text-muted-foreground">
+                         Looking for {selectedCategory?.title} in <span className="text-[#2774AE] font-medium">{selectedLocation?.name}</span>
+                       </span>
+                    </span>
+                 )}
               </DialogTitle>
             </DialogHeader>
             
-            <div className="py-6 space-y-6">
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-700 ml-1">Search City or Suburb</label>
-                <LocationAutosuggest 
-                  onSelect={handleLocationSelect}
-                  placeholder="e.g. Sandton, Cape Town..."
-                  className="w-full"
-                  inputClassName="h-12 text-base shadow-sm border-slate-200 focus:border-[#2774AE] focus:ring-[#2774AE]"
-                />
-              </div>
+            <div className="py-4">
+               {step === 1 ? (
+                  <div className="space-y-4">
+                     <LocationAutosuggest 
+                        onSelect={handleLocationSelect}
+                        placeholder="e.g. Sandton, Cape Town..."
+                        className="w-full"
+                        inputClassName="h-12 text-base shadow-sm border-slate-200 focus:border-[#2774AE] focus:ring-[#2774AE]"
+                     />
+                     <div className="text-center text-xs text-muted-foreground pt-4">
+                        Please select a specific location to continue.
+                     </div>
+                  </div>
+               ) : (
+                  <div className="space-y-6">
+                     
+                     {/* Bedrooms */}
+                     <div className="space-y-3">
+                        <Label>Bedrooms</Label>
+                        <div className="flex gap-2">
+                           {['Any', '1+', '2+', '3+', '4+'].map((opt) => (
+                              <button
+                                 key={opt}
+                                 onClick={() => setBedrooms(opt === 'Any' ? '' : opt.replace('+', ''))}
+                                 className={cn(
+                                    "flex-1 py-2 text-sm rounded-md border transition-all",
+                                    (opt === 'Any' && !bedrooms) || (bedrooms === opt.replace('+', '')) 
+                                       ? "bg-[#2774AE] text-white border-[#2774AE]" 
+                                       : "bg-white text-slate-600 border-slate-200 hover:border-[#2774AE]"
+                                 )}
+                              >
+                                 {opt}
+                              </button>
+                           ))}
+                        </div>
+                     </div>
 
-              <div className="relative">
-                <div className="absolute inset-0 flex items-center">
-                  <span className="w-full border-t border-slate-100" />
-                </div>
-                <div className="relative flex justify-center text-xs uppercase">
-                  <span className="bg-white px-2 text-slate-400">Or browse by province</span>
-                </div>
-              </div>
+                     {/* Price Range */}
+                     <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                           <Label>Min Price</Label>
+                           <Select value={minPrice} onValueChange={setMinPrice}>
+                              <SelectTrigger>
+                                 <SelectValue placeholder="No Min" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                 <SelectItem value="0">No Min</SelectItem>
+                                 {priceOptions.map(opt => (
+                                    <SelectItem key={`min-${opt.value}`} value={opt.value}>{opt.label}</SelectItem>
+                                 ))}
+                              </SelectContent>
+                           </Select>
+                        </div>
+                        <div className="space-y-2">
+                           <Label>Max Price</Label>
+                           <Select value={maxPrice} onValueChange={setMaxPrice}>
+                              <SelectTrigger>
+                                 <SelectValue placeholder="No Max" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                 {priceOptions.map(opt => (
+                                    <SelectItem key={`max-${opt.value}`} value={opt.value}>{opt.label}</SelectItem>
+                                 ))}
+                                 <SelectItem value="20000000">R 20m+</SelectItem>
+                              </SelectContent>
+                           </Select>
+                        </div>
+                     </div>
 
-              <div className="grid grid-cols-1 gap-2">
-                 {popularProvinces.map(prov => (
-                   <Button 
-                      key={prov.slug} 
-                      variant="outline" 
-                      className="justify-between h-12 hover:border-[#2774AE] hover:text-[#2774AE] hover:bg-blue-50/50 group"
-                      onClick={() => {
-                        if (selectedCategory) {
-                             setIsDialogOpen(false);
-                             setLocation(`/property-for-sale/${prov.slug}?propertyType=${selectedCategory.type}&view=list`);
-                        }
-                      }}
-                   >
-                      <span className="flex items-center gap-2">
-                        <MapPin className="h-4 w-4 text-slate-400 group-hover:text-[#2774AE]" />
-                        {prov.name}
-                      </span>
-                      <Search className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity" />
-                   </Button>
-                 ))}
-              </div>
+                     {/* Features */}
+                     <div className="space-y-3">
+                        <Label>Lifestyle & Features</Label>
+                        <div className="grid grid-cols-2 gap-2">
+                           {[
+                              { id: 'pool', label: 'Pool', icon: '🏊' },
+                              { id: 'garden', label: 'Garden', icon: '🌳' },
+                              { id: 'pet_friendly', label: 'Pet Friendly', icon: '🐾' },
+                              { id: 'luxury', label: 'Luxury Collection', icon: '💎' },
+                           ].map((feat) => (
+                              <button
+                                 key={feat.id}
+                                 onClick={() => toggleFeature(feat.id)}
+                                 className={cn(
+                                    "flex items-center gap-2 px-3 py-2 text-sm rounded-md border transition-all text-left",
+                                    features.includes(feat.id)
+                                       ? "bg-blue-50 border-[#2774AE] text-[#2774AE] ring-1 ring-[#2774AE]" 
+                                       : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
+                                 )}
+                              >
+                                 <span>{feat.icon}</span>
+                                 {feat.label}
+                              </button>
+                           ))}
+                        </div>
+                     </div>
 
-              <div className="text-center pt-2">
-                <button 
-                  onClick={() => {
-                     if (selectedCategory) {
-                        setIsDialogOpen(false);
-                        setLocation(`/properties?type=${selectedCategory.type}&view=list`);
-                     }
-                  }}
-                  className="text-sm text-slate-500 hover:text-[#2774AE] underline decoration-slate-300 hover:decoration-[#2774AE]"
-                >
-                  Search entire South Africa instead
-                </button>
-              </div>
+                     <Button onClick={handleSearch} className="w-full h-12 text-base font-semibold bg-[#2774AE] hover:bg-[#206498] mt-4">
+                        View Properties
+                     </Button>
+                     
+                     <div className="text-center">
+                        <button onClick={() => setStep(1)} className="text-sm text-slate-400 hover:text-slate-600">
+                           Back to Location
+                        </button>
+                     </div>
+                  </div>
+               )}
             </div>
           </DialogContent>
         </Dialog>
