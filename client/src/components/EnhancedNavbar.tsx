@@ -586,7 +586,7 @@ export function EnhancedNavbar() {
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={handleLogout} className="text-destructive">
+                  <DropdownMenuItem onClick={() => logout()} className="text-destructive">
                     Logout
                   </DropdownMenuItem>
                 </DropdownMenuContent>
