@@ -254,16 +254,7 @@ export default function SearchResults() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          {/* Sidebar Filters - Desktop */}
-          <div className="hidden lg:block lg:col-span-3">
-            <div className="sticky top-24">
-              <SidebarFilters
-                filters={filters}
-                onFilterChange={handleFilterChange}
-                onSaveSearch={handleSaveSearch}
-              />
-            </div>
-          </div>
+
 
           {/* Main Content */}
           <div className="col-span-1 lg:col-span-9">
@@ -403,6 +394,17 @@ export default function SearchResults() {
                   </Button>
                 </div>
               )}
+            </div>
+          </div>
+
+          {/* Sidebar Filters - Desktop */}
+          <div className="hidden lg:block lg:col-span-3">
+            <div className="sticky top-24">
+              <SidebarFilters
+                filters={filters}
+                onFilterChange={handleFilterChange}
+                onSaveSearch={handleSaveSearch}
+              />
             </div>
           </div>
         </div>
