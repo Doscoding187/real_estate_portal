@@ -73,7 +73,9 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
   const { addViewedProperty, addGuestFavorite, removeGuestFavorite, isGuestFavorite } = useGuestActivity();
   
   // Use prop if provided, otherwise try to get from route
-  const propertyId = propPropertyId || (params?.id ? parseInt(params.id) : 0);
+  const rawId = propPropertyId?.toString() || params?.id || '0';
+  const numericId = parseInt(rawId);
+  const propertyId = isNaN(numericId) ? 0 : numericId; // For TRPC
 
   const [isContactModalOpen, setIsContactModalOpen] = useState(false);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
@@ -132,12 +134,12 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
   };
 
   // Mock Data Integration
-  const mockListing = MOCK_LISTINGS.find(m => m.id === propertyId.toString());
+  const mockListing = MOCK_LISTINGS.find(m => m.id === rawId);
   
   // Normalize Mock Data Structure if found
   const mockData = mockListing ? {
     property: {
-      id: parseInt(mockListing.id),
+      id: rawId, // Keep as string for mock
       title: mockListing.title,
       description: mockListing.description,
       price: mockListing.price,
@@ -161,7 +163,7 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
     },
     images: mockListing.images.map((url, i) => ({
       id: i,
-      propertyId: parseInt(mockListing.id),
+      propertyId: 0, // Mock doesn't really matter
       url,
       isMain: i === 0,
       createdAt: new Date().toISOString()
