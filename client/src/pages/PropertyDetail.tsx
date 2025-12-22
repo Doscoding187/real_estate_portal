@@ -38,6 +38,7 @@ import {
   User,
   Calculator,
 } from 'lucide-react';
+import { MOCK_LISTINGS } from '@/lib/mockListings';
 import { Loader2 } from 'lucide-react';
 import { PropertyImageGallery } from '@/components/property/PropertyImageGallery';
 import { Breadcrumbs } from '@/components/search/Breadcrumbs';
@@ -130,7 +131,55 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
     setIsShareModalOpen(true);
   };
 
-  if (isLoading) {
+  // Mock Data Integration
+  const mockListing = MOCK_LISTINGS.find(m => m.id === propertyId.toString());
+  
+  // Normalize Mock Data Structure if found
+  const mockData = mockListing ? {
+    property: {
+      id: parseInt(mockListing.id),
+      title: mockListing.title,
+      description: mockListing.description,
+      price: mockListing.price,
+      address: mockListing.location || `${mockListing.suburb}, ${mockListing.city}`,
+      city: mockListing.city,
+      suburb: mockListing.suburb,
+      province: 'Gauteng', // Mock default
+      propertyType: mockListing.propertyType,
+      listingType: mockListing.listingType,
+      bedrooms: mockListing.bedrooms,
+      bathrooms: mockListing.bathrooms,
+      area: mockListing.area,
+      features: JSON.stringify(mockListing.features),
+      amenities: JSON.stringify(mockListing.features), // Fallback
+      latitude: '-26.2041',
+      longitude: '28.0473',
+      images: mockListing.images,
+      mainImage: mockListing.images[0],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    },
+    images: mockListing.images.map((url, i) => ({
+      id: i,
+      propertyId: parseInt(mockListing.id),
+      url,
+      isMain: i === 0,
+      createdAt: new Date().toISOString()
+    })),
+    agent: {
+      id: 1,
+      name: mockListing.agent.name,
+      image: mockListing.agent.image,
+      email: 'agent@example.com',
+      phone: '0123456789',
+      totalListings: 12,
+      experience: 5
+    }
+  } : null;
+
+  const usedData = mockData || data;
+
+  if (isLoading && !usedData) {
     return (
       <div className="min-h-screen bg-background">
         <ListingNavbar />
@@ -141,7 +190,7 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
     );
   }
 
-  if (!data?.property) {
+  if (!usedData?.property) {
     return (
       <div className="min-h-screen bg-background">
         <ListingNavbar />
@@ -153,7 +202,7 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
     );
   }
 
-  const { property, images, agent } = data;
+  const { property, images, agent } = usedData;
   
   // Safely parse amenities with error handling
   let amenitiesList:string[] = [];

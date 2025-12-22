@@ -205,7 +205,7 @@ const PropertyCardList: React.FC<PropertyCardListProps> = ({
         <div>
           {/* Header: Title → Location → Price */}
           {/* Header: Title → Location → Price */}
-          <div className="mb-3">
+          <div className="mb-4">
             <h3 
               className="text-lg font-bold text-slate-900 hover:text-blue-600 transition-colors cursor-pointer mb-1 line-clamp-2"
               onClick={() => setLocation(`/property/${id}`)}
