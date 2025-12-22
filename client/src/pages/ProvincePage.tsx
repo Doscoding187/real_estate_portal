@@ -145,18 +145,8 @@ export default function ProvincePage({ params }: { params: { province: string } 
           ) : undefined
         }
 
-        propertyTypeExplorer={
-            <LocationPropertyTypeExplorer 
-                propertyTypes={[
-                    { type: 'house', count: Math.floor(stats.totalListings * 0.45), avgPrice: stats.avgPrice * 1.1 },
-                    { type: 'apartment', count: Math.floor(stats.totalListings * 0.35), avgPrice: stats.avgPrice * 0.8 },
-                    { type: 'townhouse', count: Math.floor(stats.totalListings * 0.15), avgPrice: stats.avgPrice * 0.9 },
-                    { type: 'vacant_land', count: Math.floor(stats.totalListings * 0.05), avgPrice: stats.avgPrice * 0.4 },
-                ]}
-                locationName={province.name}
-                locationSlug={provinceSlug}
-            />
-        }
+        // Section 6: Removed Property Type Explorer (Discovery Page)
+        propertyTypeExplorer={undefined}
 
         topLocalitiesShowcase={
            topLocalities && topLocalities.length > 0 ? (
@@ -215,6 +205,7 @@ export default function ProvincePage({ params }: { params: { province: string } 
         popularLocations={
           <ExploreCities 
             provinceSlug={provinceSlug}
+            basePath="/property-for-sale"
             title={`Explore Popular Cities in ${province.name}`}
             description={`Find high-end residences and investment opportunities in top cities across ${province.name}.`}
           />

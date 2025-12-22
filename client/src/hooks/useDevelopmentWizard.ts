@@ -914,26 +914,7 @@ const createActions = (
     };
   }),
   
-  // NEW: Configuration Actions
-  setDevelopmentType: (type: DevelopmentType) => set({ developmentType: type }),
-  
-  setResidentialConfig: (data: Partial<DevelopmentWizardState['residentialConfig']>) => set((state) => ({
-    residentialConfig: { ...state.residentialConfig, ...data }
-  })),
-  
-  setEstateProfile: (data: Partial<DevelopmentWizardState['estateProfile']>) => set((state) => ({
-    estateProfile: { ...state.estateProfile, ...data }
-  })),
-  
-  setSelectedAmenities: (amenities: string[]) => set({ selectedAmenities: amenities }),
-  
-  toggleAmenity: (key: string) => set((state) => {
-    const current = state.selectedAmenities || [];
-    if (current.includes(key)) {
-      return { selectedAmenities: current.filter(a => a !== key) };
-    }
-    return { selectedAmenities: [...current, key] };
-  }),
+
   
   // IMPORTANT: Media Getter that aggregates everything for the UI
   get media() { 

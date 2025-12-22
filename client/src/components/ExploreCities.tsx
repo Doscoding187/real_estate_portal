@@ -40,9 +40,11 @@ interface ExploreCitiesProps {
   title?: string;
   description?: string;
   customLocations?: City[]; // Allow passing custom locations (e.g. suburbs)
+  basePath?: string; // New: Allow overriding the base path (e.g. /property-for-sale)
+  queryParams?: string; // New: Allow appending query params (e.g. ?view=list)
 }
 
-export function ExploreCities({ provinceSlug, title, description, customLocations }: ExploreCitiesProps = {}) {
+export function ExploreCities({ provinceSlug, title, description, customLocations, basePath = '', queryParams = '' }: ExploreCitiesProps = {}) {
   const cities: City[] = [
     // ... (keep existing hardcoded cities)
     {
@@ -300,7 +302,7 @@ export function ExploreCities({ provinceSlug, title, description, customLocation
                   key={city.slug} 
                   className="flex-[0_0_85%] sm:flex-[0_0_50%] md:flex-[0_0_33.333%] lg:flex-[0_0_16.666%] min-w-0"
                 >
-                  <Link href={`/${city.provinceSlug}/${city.slug}`}>
+                  <Link href={`${basePath}/${city.provinceSlug}/${city.slug}${queryParams}`.replace(/\/\//g, '/')}>
                     <Card className="h-full hover:shadow-xl transition-all duration-300 cursor-pointer group border-0 bg-muted/30 hover:bg-white overflow-hidden">
                       <CardContent className="p-4 h-full">
                         <div className="flex items-center gap-4">

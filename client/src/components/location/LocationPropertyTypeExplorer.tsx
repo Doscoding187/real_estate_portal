@@ -41,13 +41,19 @@ export function LocationPropertyTypeExplorer({
 }: PropertyTypeExplorerProps) {
   const [, navigate] = useLocation();
 
+  /* Updated Routing Logic for 2025 Architecture */
   const handleTypeClick = (type: string) => {
-    const params = new URLSearchParams();
-    params.append('propertyType', type);
-    if (locationSlug) params.append('location', locationSlug);
-    if (placeId) params.append('placeId', placeId);
+    // Determine base path via prop or default to '/property-for-sale'
+    // If locationSlug exists, use it. Otherwise fall back to generic search?
+    // Assumption: locationSlug is passed as 'province/city/suburb' or similar canonical path
     
-    navigate(`/properties?${params.toString()}`);
+    // Construct new URL: /property-for-sale/{locationSlug}?propertyType={type}
+    if (locationSlug) {
+       navigate(`/property-for-sale/${locationSlug}?propertyType=${type}`);
+    } else {
+       // Fallback for location-less usage (rare in this component)
+       navigate(`/property-for-sale/search?propertyType=${type}`);
+    }
   };
 
   // Filter out types with zero listings and map to config

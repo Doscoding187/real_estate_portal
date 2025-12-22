@@ -3022,6 +3022,87 @@ export async function getPublicDevelopmentBySlug(slugOrId: string) {
 }
 
 /**
+ * Get single public development
+ */
+export async function getPublicDevelopment(id: number) {
+  const db = await getDb();
+  if (!db) return null;
+
+  const results = await db
+    .select({
+      id: developments.id,
+      name: developments.name,
+      slug: developments.slug,
+      description: developments.description,
+      rating: developments.rating,
+      developmentType: developments.developmentType,
+      status: developments.status,
+      address: developments.address,
+      city: developments.city,
+      province: developments.province,
+      suburb: developments.suburb,
+      latitude: developments.latitude,
+      longitude: developments.longitude,
+      images: developments.images,
+      video: developments.video,
+      virtualTour: developments.virtualTour,
+      highlights: developments.highlights,
+      features: developments.features,
+      marketingHeading: developments.marketingHeading,
+      marketingDescription: developments.marketingDescription,
+      completionDate: developments.completionDate,
+      isFeatured: developments.isFeatured,
+      developerId: developments.developerId,
+      developerName: developers.name,
+      developerLogo: developers.logo,
+      developerIsFeatured: developers.isFeatured,
+    })
+    .from(developments)
+    .leftJoin(developers, eq(developments.developerId, developers.id))
+    .where(and(eq(developments.id, id), eq(developments.isPublished, 1)))
+    .limit(1);
+
+  const dev = results[0];
+  if (!dev) return null;
+
+  // Fetch all unit types
+  const unitTypesList = await db
+    .select({
+        id: unitTypes.id,
+        name: unitTypes.name,
+        bedrooms: unitTypes.bedrooms,
+        bathrooms: unitTypes.bathrooms,
+        parking: unitTypes.parking,
+        size: unitTypes.unitSize,
+        priceFrom: unitTypes.basePriceFrom,
+        priceTo: unitTypes.basePriceTo,
+        features: unitTypes.baseFeatures,
+        images: unitTypes.baseMedia,
+    })
+    .from(unitTypes)
+    .where(eq(unitTypes.developmentId, dev.id))
+    .orderBy(unitTypes.basePriceFrom);
+
+  // Fetch phases
+  const phasesList = await db
+    .select()
+    .from(developmentPhases)
+    .where(eq(developmentPhases.developmentId, dev.id))
+    .orderBy(developmentPhases.phaseNumber);
+
+  return {
+    ...dev,
+    unitTypes: unitTypesList.map(ut => ({
+        ...ut,
+        label: ut.name, 
+        priceFrom: Number(ut.priceFrom),
+        priceTo: ut.priceTo ? Number(ut.priceTo) : null,
+    })),
+    phases: phasesList,
+  };
+}
+
+/**
  * List public developments for demo page
  */
 export async function listPublicDevelopments(limit: number = 20) {

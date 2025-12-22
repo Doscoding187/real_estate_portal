@@ -30,16 +30,35 @@ export function SearchStage({ locationName, locationSlug, totalListings }: Searc
   const [_, setLocation] = useLocation();
 
   const handleSearch = () => {
-    // Construct search URL
-    // e.g., /search?location=sandton&type=buy&propertyType=apartment
-    const searchParams = new URLSearchParams();
-    searchParams.set('location', locationSlug);
-    searchParams.set('type', activeTab);
+    // 2025 Architecture: Search Input => Transaction Intent (SRP)
+    // Route to Canonical SRP: /property-for-sale/{locationSlug}
+    
+    // Base Path
+    let targetPath = `/property-for-sale/${locationSlug}`;
+    const params = new URLSearchParams();
+
+    // Map Tabs/Type to Query Params
+    if (activeTab === 'rent') {
+        targetPath = `/property-to-rent/${locationSlug}`;
+    }
+    // 'buy' is default /property-for-sale
+
     if (propertyType !== 'all') {
-      searchParams.set('propertyType', propertyType);
+      params.append('propertyType', propertyType);
     }
     
-    setLocation(`/search?${searchParams.toString()}`);
+    // Future: Handle 'new_development' tab -> /new-developments
+     if (activeTab === 'new_development') {
+        targetPath = `/new-developments`;
+        // We might need a city/province filter for devs?
+        // for now just route root
+    }
+
+    // Force Transaction Mode
+    params.append('view', 'list');
+
+    const queryString = params.toString();
+    setLocation(`${targetPath}${queryString ? `?${queryString}` : ''}`);
   };
 
   return (

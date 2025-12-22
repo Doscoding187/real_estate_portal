@@ -33,10 +33,27 @@ import { HighDemandProjectsCarousel } from '@/components/location/HighDemandProj
 import { RecommendedAgenciesCarousel } from '@/components/location/RecommendedAgenciesCarousel';
 import { LocationTopLocalities } from '@/components/location/LocationTopLocalities';
 
+import SearchResults from './SearchResults';
+
 export default function CityPage({ params }: { params: { province: string; city: string } }) {
   const [, navigate] = useLocation();
   const { province: provinceSlug, city: citySlug } = params;
 
+  // 2025 Architecture: Controller Logic (Transaction Mode)
+  const searchParams = new URLSearchParams(window.location.search);
+  const hasSearchFilters = 
+    searchParams.has('propertyType') || 
+    searchParams.has('minPrice') || 
+    searchParams.has('maxPrice') || 
+    searchParams.has('bedrooms');
+
+  const isTransactionMode = searchParams.get('view') === 'list' || hasSearchFilters;
+
+  if (isTransactionMode) {
+      return <SearchResults />;
+  }
+
+  // Restore data fetching
   const { data, isLoading, error } = trpc.locationPages.getCityData.useQuery({
     provinceSlug,
     citySlug
@@ -150,14 +167,8 @@ export default function CityPage({ params }: { params: { province: string; city:
         }
 
         // Section 6: Property Type Explorer
-        propertyTypeExplorer={
-            <LocationPropertyTypeExplorer 
-                propertyTypes={propertyTypes}
-                locationName={city.name}
-                locationSlug={`${provinceSlug}/${citySlug}`}
-                placeId={city.place_id}
-            />
-        }
+        // Section 6: Removed Property Type Explorer (Discovery Page)
+        propertyTypeExplorer={undefined}
 
         // Section 7: Top Localities / Market Insights
         topLocalities={
@@ -182,6 +193,9 @@ export default function CityPage({ params }: { params: { province: string; city:
             <TabbedListingSection
               title={`Hot Selling Developments in ${city.name}`}
               description={`Discover popular residential developments across top suburbs in ${city.name}.`}
+              // Section 6: Removed filtering tabs to prevent discovery-layer filtering
+              // Showing all developments or using a simpler carousel would be better, 
+              // but for now keeping layout but strictly linking to SRPs
               tabs={suburbs.map((suburb: any) => ({ label: suburb.name, value: suburb.name }))}
               items={developments}
               renderItem={(dev: any) => (
@@ -198,8 +212,9 @@ export default function CityPage({ params }: { params: { province: string; city:
                 />
               )}
               filterItem={(dev: any, suburbName: string) => dev.suburb === suburbName}
-              viewAllLink={(suburbName) => `/${provinceSlug}/${citySlug}/${suburbs.find((s:any) => s.name === suburbName)?.slug || ''}`}
-              viewAllText="Explore Developments in"
+              // CRITICAL: Suburb Link -> SRP (Transaction Mode)
+              viewAllLink={(suburbName) => `/property-for-sale/${provinceSlug}/${citySlug}/${suburbs.find((s:any) => s.name === suburbName)?.slug || ''}?view=list`}
+              viewAllText="View properties in"
               emptyMessage="No featured developments in this suburb right now."
             />
           ) : undefined
@@ -207,12 +222,16 @@ export default function CityPage({ params }: { params: { province: string; city:
 
         popularLocations={
             <ExploreCities 
+                // CRITICAL: Suburb Link -> SRP
+                // Override Base Path to point to Transaction Root
+                basePath="/property-for-sale"
+                queryParams="?view=list"
                 customLocations={suburbs.map((suburb: any) => ({
                     name: suburb.name,
                     province: city.name,
                     icon: MapPin,
                     slug: suburb.slug,
-                    provinceSlug: `${provinceSlug}/${citySlug}`,
+                    provinceSlug: `${provinceSlug}/${citySlug}`, 
                     color: 'from-blue-500 to-indigo-500'
                 }))}
                 title={`Popular Suburbs in ${city.name}`}

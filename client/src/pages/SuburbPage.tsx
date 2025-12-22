@@ -25,9 +25,29 @@ import { useSimilarLocations } from '@/hooks/useSimilarLocations';
 
 import { MetaControl } from '@/components/seo/MetaControl';
 
+import SearchResults from './SearchResults';
+import { Link } from 'wouter';
+import { Button } from '@/components/ui/button';
+import { ArrowRight } from 'lucide-react';
+
 export default function SuburbPage({ params }: { params: { province: string; city: string; suburb: string } }) {
   const [, navigate] = useLocation();
   const { province: provinceSlug, city: citySlug, suburb: suburbSlug } = params;
+
+  // 2025 Architecture: Controller Logic
+  // Render Transaction Page (SearchResults) if 'view=list' OR any search filters are present
+  const searchParams = new URLSearchParams(window.location.search);
+  const hasSearchFilters = 
+    searchParams.has('propertyType') || 
+    searchParams.has('minPrice') || 
+    searchParams.has('maxPrice') || 
+    searchParams.has('bedrooms');
+    
+  const isTransactionMode = searchParams.get('view') === 'list' || hasSearchFilters;
+
+  if (isTransactionMode) {
+      return <SearchResults />;
+  }
 
   // Restore data fetching
   const { data, isLoading, error } = trpc.locationPages.getSuburbData.useQuery({
@@ -158,30 +178,40 @@ export default function SuburbPage({ params }: { params: { province: string; cit
           <div className="space-y-12">
             {/* Sub-Localities Grid - moved to popularLocations for full width */}
 
-            <TabbedListingSection
-        title={`Homes in ${suburb.name}`}
-        description={`Explore a variety of properties for sale in ${suburb.name}, from houses to apartments.`}
-        tabs={[
-          { label: 'All', value: 'all' },
-          { label: 'Houses', value: 'house' },
-          { label: 'Apartments', value: 'apartment' },
-          { label: 'Townhouses', value: 'townhouse' },
-          { label: 'Vacant Land', value: 'vacant_land' }, 
-        ]}
-        items={listings}
-        renderItem={(item: any) => {
-            const property = normalizePropertyForUI(item);
-            if (!property) return null;
-            return <PropertyCard {...property} />;
-        }}
-        filterItem={(item: any, tabValue: string) => {
-            if (tabValue === 'all') return true;
-            return item.propertyType === tabValue;
-        }}
-        viewAllLink={(tabValue) => `/properties?suburb=${suburb.name}${tabValue !== 'all' ? `&type=${tabValue}` : ''}`}
-        viewAllText="View All"
-        emptyMessage="No properties of this type currently listed."
-      />
+            {/* Properties Preview Section (Transaction Intent Launcher) */}
+            <div className="py-16 bg-white">
+              <div className="container">
+                <div className="flex justify-between items-end mb-8">
+                  <div>
+                    <h2 className="text-2xl md:text-3xl font-bold mb-3">Homes in {suburb.name}</h2>
+                    <p className="text-muted-foreground text-base max-w-2xl">
+                      Browse a selection of properties for sale in {suburb.name}. 
+                    </p>
+                  </div>
+                  <Link href={`/property-for-sale/${provinceSlug}/${citySlug}/${suburbSlug}?view=list`}>
+                    <Button variant="outline" className="hidden md:flex gap-2">
+                      View all properties <ArrowRight className="h-4 w-4" />
+                    </Button>
+                  </Link>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                  {listings.slice(0, 8).map((item: any, index: number) => {
+                      const property = normalizePropertyForUI(item);
+                      if (!property) return null;
+                      return <PropertyCard key={index} {...property} />;
+                  })}
+                </div>
+
+                <div className="mt-8 text-center md:hidden">
+                   <Link href={`/property-for-sale/${provinceSlug}/${citySlug}/${suburbSlug}?view=list`}>
+                    <Button variant="outline" className="w-full gap-2">
+                      View all properties <ArrowRight className="h-4 w-4" />
+                    </Button>
+                  </Link>
+                </div>
+              </div>
+            </div>
 
             <MarketInsights 
               stats={stats} 
