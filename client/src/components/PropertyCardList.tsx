@@ -104,9 +104,12 @@ const PropertyCardList: React.FC<PropertyCardListProps> = ({
   };
 
   return (
-    <div className="group relative bg-white rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-all overflow-hidden flex flex-col md:flex-row h-auto max-w-[840px]">
+    <div 
+      className="group relative bg-white rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-all overflow-hidden flex flex-col md:flex-row h-auto max-w-[840px] cursor-pointer"
+      onClick={() => setLocation(`/property/${id}`)}
+    >
       {/* Image Section (Left) -40% width */}
-      <div className="relative w-full md:w-[40%] h-56 md:h-auto md:aspect-square shrink-0 overflow-hidden cursor-pointer" onClick={() => setLocation(`/property/${id}`)}>
+      <div className="relative w-full md:w-[40%] h-56 md:h-auto md:aspect-square shrink-0 overflow-hidden">
         {isMultiSizeImage ? (
           <OptimizedImageCard
             images={image as ImageUrls}
@@ -207,8 +210,7 @@ const PropertyCardList: React.FC<PropertyCardListProps> = ({
           {/* Header: Title → Location → Price */}
           <div className="mb-4">
             <h3 
-              className="text-lg font-bold text-slate-900 hover:text-blue-600 transition-colors cursor-pointer mb-1 line-clamp-2"
-              onClick={() => setLocation(`/property/${id}`)}
+              className="text-lg font-bold text-slate-900 group-hover:text-blue-600 transition-colors mb-1 line-clamp-2"
             >
               {title}
             </h3>
