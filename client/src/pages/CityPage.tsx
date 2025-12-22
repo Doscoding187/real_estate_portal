@@ -169,7 +169,12 @@ export default function CityPage({ params }: { params: { province: string; city:
 
         // Section 6: Property Type Explorer
         // Section 6: Property Type Explorer
-        propertyTypeExplorer={<PropertyCategories />}
+        propertyTypeExplorer={<PropertyCategories preselectedLocation={{
+            name: city.name,
+            slug: citySlug,
+            provinceSlug: provinceSlug,
+            type: 'city'
+        }} />}
 
         // Section 7: Top Localities / Market Insights
         topLocalities={

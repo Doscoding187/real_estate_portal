@@ -1,19 +1,23 @@
-import { useLocation } from 'wouter';
-import { Building2, Home as HomeIcon, Building, Warehouse, MapPin, Tractor } from 'lucide-react';
-
 import { useState } from 'react';
 import { useLocation } from 'wouter';
 import { Building2, Home as HomeIcon, Building, Warehouse, MapPin, Tractor, Search, Filter, BedDouble, Wallet, Star } from 'lucide-react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { LocationAutosuggest } from '@/components/LocationAutosuggest';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { Slider } from '@/components/ui/slider'; // Assuming we have Slider, if not using Select for price
-import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 
-export function PropertyCategories() {
+export interface PropertyCategoriesProps {
+  preselectedLocation?: {
+    name: string;
+    slug: string;
+    provinceSlug: string; // Required for canonical URLs
+    type: 'city' | 'suburb' | 'province';
+  };
+}
+
+export function PropertyCategories({ preselectedLocation }: PropertyCategoriesProps) {
   const [, setLocation] = useLocation();
   const [selectedCategory, setSelectedCategory] = useState<{ title: string; type: string } | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -36,6 +40,15 @@ export function PropertyCategories() {
   ];
 
   const handleCategoryClick = (category: typeof categories[0]) => {
+    // If we have a preselected location (e.g. from City/Suburb page), 
+    // navigate directly to the Transaction Page for that category + location.
+    if (preselectedLocation) {
+       const url = `/property-for-sale/${preselectedLocation.provinceSlug}/${preselectedLocation.slug}?propertyType=${category.type}&view=list`;
+       setLocation(url);
+       return;
+    }
+
+    // Default flow (Location Picker -> Filters)
     setSelectedCategory(category);
     setStep(1);
     setSelectedLocation(null);

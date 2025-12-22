@@ -131,7 +131,12 @@ export default function SuburbPage({ params }: { params: { province: string; cit
         }
 
         // Suburb Page Specific: Property Type Explorer
-        propertyTypeExplorer={<PropertyCategories />}
+        propertyTypeExplorer={<PropertyCategories preselectedLocation={{
+            name: suburb.name,
+            slug: suburbSlug,
+            provinceSlug: `${provinceSlug}/${citySlug}`,
+            type: 'suburb'
+        }} />}
 
         popularLocations={
             subLocalities && subLocalities.length > 0 ? (

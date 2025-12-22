@@ -45,6 +45,7 @@ import {
   generateCanonicalUrl,
   SearchFilters,
 } from '@/lib/urlUtils';
+import { MOCK_LISTINGS } from '@/lib/mockListings';
 
 export default function SearchResults() {
   const { isAuthenticated } = useAuth();
