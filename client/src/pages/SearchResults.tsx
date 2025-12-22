@@ -253,22 +253,24 @@ export default function SearchResults() {
           <Breadcrumbs items={breadcrumbs} />
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        {/* Results Header - Full Width */}
+        <div className="mb-6 border-b border-gray-200 pb-4">
+          <ResultsHeader
+            filters={filters}
+            resultCount={resultCount}
+            isLoading={isLoading}
+            viewMode={viewMode}
+            sortBy={sortBy}
+            onViewModeChange={setViewMode}
+            onSortChange={setSortBy}
+            onOpenFilters={() => setIsMobileFilterOpen(true)}
+          />
+        </div>
 
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
 
           {/* Main Content */}
           <div className="col-span-1 lg:col-span-9">
-            {/* Results Header */}
-            <ResultsHeader
-              filters={filters}
-              resultCount={resultCount}
-              isLoading={isLoading}
-              viewMode={viewMode}
-              sortBy={sortBy}
-              onViewModeChange={setViewMode}
-              onSortChange={setSortBy}
-              onOpenFilters={() => setIsMobileFilterOpen(true)}
-            />
 
             {/* Active Filter Chips */}
             <div className="mt-4">
