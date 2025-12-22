@@ -144,18 +144,21 @@ export function ResultsHeader({
         </div>
 
         {/* Sort Dropdown */}
-        <Select value={sortBy} onValueChange={(val) => onSortChange(val as SortOption)}>
-          <SelectTrigger className="w-[140px] sm:w-[160px] h-10 bg-white border-gray-200 font-medium text-slate-700">
-            <SelectValue placeholder="Sort by" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="relevance">Relevance</SelectItem>
-            <SelectItem value="price_asc">Price: Lo-Hi</SelectItem>
-            <SelectItem value="price_desc">Price: Hi-Lo</SelectItem>
-            <SelectItem value="date_desc">Newest</SelectItem>
-            <SelectItem value="date_asc">Oldest</SelectItem>
-          </SelectContent>
-        </Select>
+        <div className="flex items-center gap-2">
+            <span className="text-sm text-slate-500 font-medium hidden sm:inline">Sort by:</span>
+            <Select value={sortBy} onValueChange={(val) => onSortChange(val as SortOption)}>
+              <SelectTrigger className="w-[140px] sm:w-[180px] h-10 bg-white border-gray-200 font-medium text-slate-700">
+                <SelectValue placeholder="Sort by" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="relevance">Relevance</SelectItem>
+                <SelectItem value="price_asc">Lowest Price</SelectItem>
+                <SelectItem value="price_desc">Highest Price</SelectItem>
+                <SelectItem value="date_desc">Newest Listed</SelectItem>
+                <SelectItem value="date_asc">Oldest Listed</SelectItem>
+              </SelectContent>
+            </Select>
+        </div>
       </div>
     </div>
   );
