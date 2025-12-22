@@ -57,6 +57,9 @@ export default function SearchResults() {
     propertyType?: string;
     location?: string;
     suburb?: string;
+    // Add explicit support for canonical route params
+    province?: string;
+    city?: string;
   }>();
 
   // State
@@ -77,12 +80,31 @@ export default function SearchResults() {
     // Check for Transaction Roots first
     if (location.startsWith('/property-for-sale')) {
         const parsedQuery = parseLegacyQueryParams(searchParams);
-        setFilters({ ...parsedQuery, listingType: 'sale' });
+        
+        // Extract location path params if they exist (from canonical routes)
+        const pathFilters: Partial<SearchFilters> = {};
+        if (params.province) pathFilters.province = params.province;
+        if (params.city) pathFilters.city = params.city;
+        if (params.suburb) pathFilters.suburb = params.suburb;
+        
+        // Also handle the generic /property-for-sale/:slug case (LocationDispatcher)
+        // If "listingType" is caught as the first param but it's actually a slug... wait.
+        // LocationDispatcher routes to SearchResults? No, LocationDispatcher routes to Province/CityPage.
+        // But if SearchResults is mounted directly via /property-for-sale, params might be empty.
+        
+        setFilters({ ...parsedQuery, ...pathFilters, listingType: 'sale' });
         return;
     }
     if (location.startsWith('/property-to-rent')) {
         const parsedQuery = parseLegacyQueryParams(searchParams);
-        setFilters({ ...parsedQuery, listingType: 'rent' });
+        
+        // Extract location path params
+        const pathFilters: Partial<SearchFilters> = {};
+        if (params.province) pathFilters.province = params.province;
+        if (params.city) pathFilters.city = params.city;
+        if (params.suburb) pathFilters.suburb = params.suburb;
+
+        setFilters({ ...parsedQuery, ...pathFilters, listingType: 'rent' });
         return;
     }
 
