@@ -117,7 +117,233 @@ export function EnhancedHero() {
     },
   };
 
-  // ... (lines 120-350 remain unchanged)
+  // Comprehensive South African location data with context
+
+  const categories = [
+    { id: 'buy', label: 'Buy', icon: Home },
+    { id: 'rental', label: 'Rental', icon: Heart },
+    { id: 'projects', label: 'Developments', icon: Building2 },
+    { id: 'pg', label: 'Shared Living', icon: Users },
+    { id: 'plot', label: 'Plot & Land', icon: MapPin },
+    { id: 'commercial', label: 'Commercial', icon: Briefcase },
+    { id: 'agents', label: 'Agents', icon: Users },
+  ];
+
+
+  const handleCategoryClick = (categoryId: string) => {
+    setActiveTab(categoryId);
+    // Show filters for all categories except agents (which navigates directly)
+    if (categoryId === 'agents') {
+      setLocation('/agents');
+      setShowFilters(false);
+    } else {
+      setShowFilters(true);
+    }
+  };
+
+  const handleFilterChange = (key: string, value: any) => {
+    setFilters(prev => ({ ...prev, [key]: value }));
+  };
+
+  const handleSearch = () => {
+    // Build SEO-friendly URLs using the utility
+    const locations = selectedLocation ? [selectedLocation] : undefined;
+
+    switch (activeTab) {
+      case 'buy': {
+        const url = generatePropertyUrl({
+          listingType: 'sale',
+          propertyType: filters.propertyTypes[0]?.toLowerCase(),
+          locations,
+          minPrice: filters.priceMin ? parseInt(filters.priceMin) : undefined,
+          maxPrice: filters.priceMax ? parseInt(filters.priceMax) : undefined,
+        });
+        setLocation(url);
+        break;
+      }
+
+      case 'rental': {
+        const url = generatePropertyUrl({
+          listingType: 'rent',
+          propertyType: filters.propertyTypes[0]?.toLowerCase(),
+          locations,
+          minPrice: filters.budgetMin ? parseInt(filters.budgetMin) : undefined,
+          maxPrice: filters.budgetMax ? parseInt(filters.budgetMax) : undefined,
+          furnished: filters.furnished,
+        });
+        setLocation(url);
+        break;
+      }
+
+      case 'projects': {
+        const params = new URLSearchParams();
+        if (searchQuery) params.set('search', searchQuery);
+        if (filters.developmentType) params.set('type', filters.developmentType);
+        if (filters.developmentStatus) params.set('status', filters.developmentStatus);
+        if (filters.priceMin) params.set('minPrice', filters.priceMin);
+        if (filters.priceMax) params.set('maxPrice', filters.priceMax);
+        setLocation(`/developments?${params.toString()}`);
+        break;
+      }
+
+      case 'plot': {
+        const url = generatePropertyUrl({
+          listingType: 'sale',
+          propertyType: 'land',
+          city: searchQuery || undefined,
+          minPrice: filters.priceMin ? parseInt(filters.priceMin) : undefined,
+          maxPrice: filters.priceMax ? parseInt(filters.priceMax) : undefined,
+        });
+        setLocation(url);
+        break;
+      }
+
+      case 'commercial': {
+        const url = generatePropertyUrl({
+          listingType: filters.saleOrRent as 'sale' | 'rent',
+          propertyType: 'commercial',
+          city: searchQuery || undefined,
+        });
+        setLocation(url);
+        break;
+      }
+
+      case 'pg': {
+        const url = generatePropertyUrl({
+          listingType: 'rent',
+          propertyType: 'shared_living',
+          city: searchQuery || undefined,
+          minPrice: filters.budgetMin ? parseInt(filters.budgetMin) : undefined,
+          maxPrice: filters.budgetMax ? parseInt(filters.budgetMax) : undefined,
+        });
+        setLocation(url);
+        break;
+      }
+
+      case 'agents':
+        setLocation('/agents');
+        break;
+
+      default: {
+        const url = generatePropertyUrl({
+          city: searchQuery || undefined,
+        });
+        setLocation(url);
+      }
+    }
+  };
+
+  return (
+    <div className="relative bg-gradient-to-br from-blue-900 via-blue-800 to-indigo-900 text-white overflow-hidden">
+      {/* Animated Background Shapes */}
+      <div className="absolute inset-0 overflow-hidden">
+        <div className="absolute -top-40 -right-40 w-80 h-80 bg-blue-500/20 rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-indigo-500/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-purple-500/10 rounded-full blur-3xl"></div>
+      </div>
+
+      {/* Grid Pattern Overlay */}
+      <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSAxMCAwIEwgMCAwIDAgMTAiIGZpbGw9Im5vbmUiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS1vcGFjaXR5PSIwLjA1IiBzdHJva2Utd2lkdGg9IjEiLz48L3BhdHRlcm4+PC9kZWZzPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9InVybCgjZ3JpZCkiLz48L3N2Zz4=')] opacity-40"></div>
+
+      <div className="container relative py-12 md:py-20">
+        {/* Hero Title */}
+        <div className="text-center mb-6">
+          <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold mb-4 leading-tight">
+            South Africa's{' '}
+            <span className="bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent animate-gradient bg-[length:200%_auto]">
+              Fastest Growing
+            </span>{' '}
+            Real Estate Platform
+          </h1>
+          <p className="text-base md:text-lg text-white/90 animate-fade-in">
+            From browsing properties to closing deals - your complete real estate journey starts here
+          </p>
+        </div>
+
+        {/* Category Tabs */}
+        <div className="flex justify-center mb-8">
+          <div className="inline-flex bg-white/10 backdrop-blur-md rounded-xl p-1.5 gap-1 flex-wrap shadow-lg border border-white/20">
+            {categories.map(category => {
+              const Icon = category.icon;
+              return (
+                <button
+                  key={category.id}
+                  onClick={() => handleCategoryClick(category.id)}
+                  className={`
+                    flex items-center gap-2 px-5 py-3 rounded-lg transition-all font-medium text-sm
+                    ${
+                      activeTab === category.id
+                        ? 'bg-white text-blue-900 shadow-lg scale-105'
+                        : 'text-white hover:bg-white/15 hover:scale-102'
+                    }
+                  `}
+                >
+                  <Icon className="h-4 w-4" />
+                  {category.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Search Card */}
+        <Card className="max-w-5xl mx-auto shadow-2xl border-0 bg-white/95 backdrop-blur-sm">
+          <CardContent className="p-6 md:p-8">
+            {/* Main Search Row */}
+            <div className="flex flex-col md:flex-row gap-4">
+              {/* Unified Search Input */}
+              <div className="flex-1 relative group">
+                {/* Search Icon */}
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground z-10 pointer-events-none" />
+                
+                <LocationAutosuggest
+                  placeholder="Search by city, suburb, or area..."
+                  className="w-full"
+                  inputClassName="pl-12 pr-24 h-14 text-base border-2 hover:border-primary/50 focus:border-primary transition-colors w-full bg-transparent"
+                  showIcon={false}
+                  onSelect={(loc) => {
+                    setSearchQuery(loc.name);
+                    setSelectedLocation(loc);
+                  }}
+                  defaultValue={searchQuery}
+                />
+                
+                {/* Action Buttons (Voice/Location) */}
+                <div className="absolute right-2 top-1/2 -translate-y-1/2 flex gap-2 z-10">
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="h-10 w-10 hover:bg-primary/10"
+                    title="Use current location"
+                  >
+                    <MapPinned className="h-5 w-5" />
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="h-10 w-10 hover:bg-primary/10"
+                    title="Voice search"
+                  >
+                    <Mic className="h-5 w-5" />
+                  </Button>
+                </div>
+              </div>
+
+              {/* Search Button */}
+              <Button
+                onClick={handleSearch}
+                className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white h-14 px-8 shadow-lg hover:shadow-xl transition-all font-semibold text-base"
+                size="lg"
+              >
+                <Search className="h-5 w-5 mr-2" />
+                Search
+              </Button>
+            </div>
+
+            {/* Dynamic Filter Panel */}
+            {showFilters && activeTab !== 'agents' && (
+              <div className="mt-6 pt-6 border-t animate-in slide-in-from-top-2 duration-200">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
 
                   {/* BUY FILTERS */}
                   {activeTab === 'buy' && (
