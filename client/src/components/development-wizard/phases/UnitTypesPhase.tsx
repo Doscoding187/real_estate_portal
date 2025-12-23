@@ -622,6 +622,41 @@ export function UnitTypesPhase() {
                       />
                     </div>
                   </div>
+
+                  {/* Size Fields */}
+                  <div className="pt-4 border-t border-slate-200">
+                    <h4 className="font-medium text-slate-900 mb-3 flex items-center gap-2">
+                      <Ruler className="w-4 h-4 text-blue-600" />
+                      Size Information (m²)
+                    </h4>
+                    <div className="grid grid-cols-3 gap-4">
+                      <div className="grid gap-2">
+                        <Label htmlFor="sizeFrom">Unit Size From</Label>
+                        <Input 
+                          id="sizeFrom" type="number" min="0" placeholder="e.g. 65"
+                          value={formData.sizeFrom || ''}
+                          onChange={(e) => setFormData({...formData, sizeFrom: parseInt(e.target.value) || 0})}
+                        />
+                      </div>
+                      <div className="grid gap-2">
+                        <Label htmlFor="sizeTo">Unit Size To</Label>
+                        <Input 
+                          id="sizeTo" type="number" min="0" placeholder="Same if fixed"
+                          value={formData.sizeTo || ''}
+                          onChange={(e) => setFormData({...formData, sizeTo: parseInt(e.target.value) || 0})}
+                        />
+                      </div>
+                      <div className="grid gap-2">
+                        <Label htmlFor="yardSize">Yard/Garden Size</Label>
+                        <Input 
+                          id="yardSize" type="number" min="0" placeholder="Optional"
+                          value={formData.yardSize || ''}
+                          onChange={(e) => setFormData({...formData, yardSize: parseInt(e.target.value) || 0})}
+                        />
+                      </div>
+                    </div>
+                    <p className="text-xs text-slate-500 mt-2">Enter internal floor area. Yard size is for townhouses/freehold properties.</p>
+                  </div>
                 </div>
               </TabsContent>
 
