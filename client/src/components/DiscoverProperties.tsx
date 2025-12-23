@@ -91,12 +91,16 @@ const propertyTypes: PropertyType[] = [
 ];
 
 const cities = [
-  'Johannesburg',
-  'Cape Town',
-  'Pretoria',
-  'Durban',
-  'Port Elizabeth',
-  'Bloemfontein',
+  'Cape Town',        // Western Cape
+  'Johannesburg',     // Gauteng
+  'Durban',           // KwaZulu-Natal
+  'Pretoria',         // Gauteng (admin capital)
+  'Bloemfontein',     // Free State
+  'Gqeberha',         // Eastern Cape (Port Elizabeth)
+  'Polokwane',        // Limpopo
+  'Kimberley',        // Northern Cape
+  'Mbombela',         // Mpumalanga
+  'Mahikeng',         // North West
 ];
 
 interface DiscoverPropertiesProps {
@@ -120,7 +124,7 @@ export function DiscoverProperties({
   const displayTitle = title || defaultTitle;
   const displaySubtitle = subtitle || defaultSubtitle;
 
-  const [selectedCity, setSelectedCity] = useState(initialCity || 'Johannesburg');
+  const [selectedCity, setSelectedCity] = useState(initialCity || 'Cape Town');
   
   const displayCities = availableCities || cities;
 

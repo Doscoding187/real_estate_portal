@@ -17,177 +17,81 @@ interface Locality {
 }
 
 const localitiesData: Record<string, Locality[]> = {
-  Johannesburg: [
-    {
-      name: 'Sandton',
-      city: 'Johannesburg',
-      rating: 4.6,
-      reviews: 22,
-      avgSalePrice: 46100,
-      avgRental: 285,
-      propertiesForSale: 3276,
-      propertiesForRent: 4130,
-    },
-    {
-      name: 'Rosebank',
-      city: 'Johannesburg',
-      rating: 4.5,
-      reviews: 18,
-      avgSalePrice: 34650,
-      avgRental: 245,
-      propertiesForSale: 2208,
-      propertiesForRent: 3845,
-    },
-    {
-      name: 'Fourways',
-      city: 'Johannesburg',
-      rating: 4.4,
-      reviews: 15,
-      avgSalePrice: 33100,
-      avgRental: 220,
-      propertiesForSale: 2165,
-      propertiesForRent: 4311,
-    },
-    {
-      name: 'Midrand',
-      city: 'Johannesburg',
-      rating: 4.3,
-      reviews: 12,
-      avgSalePrice: 30100,
-      avgRental: 195,
-      propertiesForSale: 1890,
-      propertiesForRent: 3200,
-    },
-  ],
   'Cape Town': [
-    {
-      name: 'Camps Bay',
-      city: 'Cape Town',
-      rating: 4.8,
-      reviews: 35,
-      avgSalePrice: 65200,
-      avgRental: 420,
-      propertiesForSale: 1540,
-      propertiesForRent: 2890,
-    },
-    {
-      name: 'Sea Point',
-      city: 'Cape Town',
-      rating: 4.6,
-      reviews: 28,
-      avgSalePrice: 42300,
-      avgRental: 310,
-      propertiesForSale: 2650,
-      propertiesForRent: 4120,
-    },
-    {
-      name: 'Constantia',
-      city: 'Cape Town',
-      rating: 4.7,
-      reviews: 24,
-      avgSalePrice: 38900,
-      avgRental: 290,
-      propertiesForSale: 1980,
-      propertiesForRent: 2340,
-    },
-    {
-      name: 'Claremont',
-      city: 'Cape Town',
-      rating: 4.5,
-      reviews: 20,
-      avgSalePrice: 35400,
-      avgRental: 265,
-      propertiesForSale: 2340,
-      propertiesForRent: 3560,
-    },
+    { name: 'Camps Bay', city: 'Cape Town', rating: 4.8, reviews: 35, avgSalePrice: 65200, avgRental: 420, propertiesForSale: 1540, propertiesForRent: 2890 },
+    { name: 'Sea Point', city: 'Cape Town', rating: 4.6, reviews: 28, avgSalePrice: 42300, avgRental: 310, propertiesForSale: 2650, propertiesForRent: 4120 },
+    { name: 'Constantia', city: 'Cape Town', rating: 4.7, reviews: 24, avgSalePrice: 38900, avgRental: 290, propertiesForSale: 1980, propertiesForRent: 2340 },
+    { name: 'Claremont', city: 'Cape Town', rating: 4.5, reviews: 20, avgSalePrice: 35400, avgRental: 265, propertiesForSale: 2340, propertiesForRent: 3560 },
   ],
-  Pretoria: [
-    {
-      name: 'Waterkloof',
-      city: 'Pretoria',
-      rating: 4.7,
-      reviews: 19,
-      avgSalePrice: 38500,
-      avgRental: 270,
-      propertiesForSale: 1450,
-      propertiesForRent: 1890,
-    },
-    {
-      name: 'Menlyn',
-      city: 'Pretoria',
-      rating: 4.4,
-      reviews: 16,
-      avgSalePrice: 28900,
-      avgRental: 215,
-      propertiesForSale: 2890,
-      propertiesForRent: 3450,
-    },
-    {
-      name: 'Centurion',
-      city: 'Pretoria',
-      rating: 4.3,
-      reviews: 14,
-      avgSalePrice: 26400,
-      avgRental: 190,
-      propertiesForSale: 3120,
-      propertiesForRent: 4230,
-    },
-    {
-      name: 'Brooklyn',
-      city: 'Pretoria',
-      rating: 4.5,
-      reviews: 17,
-      avgSalePrice: 32100,
-      avgRental: 240,
-      propertiesForSale: 1780,
-      propertiesForRent: 2560,
-    },
+  Johannesburg: [
+    { name: 'Sandton', city: 'Johannesburg', rating: 4.6, reviews: 22, avgSalePrice: 46100, avgRental: 285, propertiesForSale: 3276, propertiesForRent: 4130 },
+    { name: 'Rosebank', city: 'Johannesburg', rating: 4.5, reviews: 18, avgSalePrice: 34650, avgRental: 245, propertiesForSale: 2208, propertiesForRent: 3845 },
+    { name: 'Fourways', city: 'Johannesburg', rating: 4.4, reviews: 15, avgSalePrice: 33100, avgRental: 220, propertiesForSale: 2165, propertiesForRent: 4311 },
+    { name: 'Midrand', city: 'Johannesburg', rating: 4.3, reviews: 12, avgSalePrice: 30100, avgRental: 195, propertiesForSale: 1890, propertiesForRent: 3200 },
   ],
   Durban: [
-    {
-      name: 'Umhlanga',
-      city: 'Durban',
-      rating: 4.6,
-      reviews: 21,
-      avgSalePrice: 35600,
-      avgRental: 260,
-      propertiesForSale: 2340,
-      propertiesForRent: 3120,
-    },
-    {
-      name: 'Ballito',
-      city: 'Durban',
-      rating: 4.5,
-      reviews: 18,
-      avgSalePrice: 28200,
-      avgRental: 220,
-      propertiesForSale: 1890,
-      propertiesForRent: 2450,
-    },
-    {
-      name: 'La Lucia',
-      city: 'Durban',
-      rating: 4.4,
-      reviews: 15,
-      avgSalePrice: 32400,
-      avgRental: 245,
-      propertiesForSale: 1560,
-      propertiesForRent: 2120,
-    },
-    {
-      name: 'Durban North',
-      city: 'Durban',
-      rating: 4.2,
-      reviews: 12,
-      avgSalePrice: 24800,
-      avgRental: 185,
-      propertiesForSale: 2670,
-      propertiesForRent: 3890,
-    },
+    { name: 'Umhlanga', city: 'Durban', rating: 4.6, reviews: 21, avgSalePrice: 35600, avgRental: 260, propertiesForSale: 2340, propertiesForRent: 3120 },
+    { name: 'Ballito', city: 'Durban', rating: 4.5, reviews: 18, avgSalePrice: 28200, avgRental: 220, propertiesForSale: 1890, propertiesForRent: 2450 },
+    { name: 'La Lucia', city: 'Durban', rating: 4.4, reviews: 15, avgSalePrice: 32400, avgRental: 245, propertiesForSale: 1560, propertiesForRent: 2120 },
+    { name: 'Durban North', city: 'Durban', rating: 4.2, reviews: 12, avgSalePrice: 24800, avgRental: 185, propertiesForSale: 2670, propertiesForRent: 3890 },
+  ],
+  Pretoria: [
+    { name: 'Waterkloof', city: 'Pretoria', rating: 4.7, reviews: 19, avgSalePrice: 38500, avgRental: 270, propertiesForSale: 1450, propertiesForRent: 1890 },
+    { name: 'Menlyn', city: 'Pretoria', rating: 4.4, reviews: 16, avgSalePrice: 28900, avgRental: 215, propertiesForSale: 2890, propertiesForRent: 3450 },
+    { name: 'Centurion', city: 'Pretoria', rating: 4.3, reviews: 14, avgSalePrice: 26400, avgRental: 190, propertiesForSale: 3120, propertiesForRent: 4230 },
+    { name: 'Brooklyn', city: 'Pretoria', rating: 4.5, reviews: 17, avgSalePrice: 32100, avgRental: 240, propertiesForSale: 1780, propertiesForRent: 2560 },
+  ],
+  Bloemfontein: [
+    { name: 'Westdene', city: 'Bloemfontein', rating: 4.3, reviews: 11, avgSalePrice: 18500, avgRental: 120, propertiesForSale: 890, propertiesForRent: 1120 },
+    { name: 'Langenhovenpark', city: 'Bloemfontein', rating: 4.4, reviews: 9, avgSalePrice: 22300, avgRental: 145, propertiesForSale: 720, propertiesForRent: 980 },
+    { name: 'Bayswater', city: 'Bloemfontein', rating: 4.2, reviews: 8, avgSalePrice: 16800, avgRental: 110, propertiesForSale: 560, propertiesForRent: 780 },
+    { name: 'Pellissier', city: 'Bloemfontein', rating: 4.1, reviews: 7, avgSalePrice: 15200, avgRental: 95, propertiesForSale: 480, propertiesForRent: 650 },
+  ],
+  Gqeberha: [
+    { name: 'Summerstrand', city: 'Gqeberha', rating: 4.5, reviews: 14, avgSalePrice: 24500, avgRental: 165, propertiesForSale: 1120, propertiesForRent: 1450 },
+    { name: 'Walmer', city: 'Gqeberha', rating: 4.3, reviews: 12, avgSalePrice: 21800, avgRental: 145, propertiesForSale: 980, propertiesForRent: 1280 },
+    { name: 'Mill Park', city: 'Gqeberha', rating: 4.4, reviews: 10, avgSalePrice: 26200, avgRental: 175, propertiesForSale: 720, propertiesForRent: 890 },
+    { name: 'Newton Park', city: 'Gqeberha', rating: 4.2, reviews: 9, avgSalePrice: 18900, avgRental: 125, propertiesForSale: 1340, propertiesForRent: 1780 },
+  ],
+  Polokwane: [
+    { name: 'Bendor', city: 'Polokwane', rating: 4.3, reviews: 8, avgSalePrice: 16200, avgRental: 95, propertiesForSale: 560, propertiesForRent: 720 },
+    { name: 'Flora Park', city: 'Polokwane', rating: 4.2, reviews: 7, avgSalePrice: 14800, avgRental: 85, propertiesForSale: 480, propertiesForRent: 620 },
+    { name: 'Ivydale', city: 'Polokwane', rating: 4.1, reviews: 6, avgSalePrice: 12500, avgRental: 75, propertiesForSale: 340, propertiesForRent: 450 },
+    { name: 'Sterpark', city: 'Polokwane', rating: 4.0, reviews: 5, avgSalePrice: 11200, avgRental: 70, propertiesForSale: 290, propertiesForRent: 380 },
+  ],
+  Kimberley: [
+    { name: 'Hadison Park', city: 'Kimberley', rating: 4.2, reviews: 6, avgSalePrice: 12800, avgRental: 75, propertiesForSale: 320, propertiesForRent: 420 },
+    { name: 'Diamond Park', city: 'Kimberley', rating: 4.1, reviews: 5, avgSalePrice: 11500, avgRental: 68, propertiesForSale: 280, propertiesForRent: 360 },
+    { name: 'Royldene', city: 'Kimberley', rating: 4.0, reviews: 4, avgSalePrice: 10200, avgRental: 62, propertiesForSale: 240, propertiesForRent: 310 },
+    { name: 'Monument Heights', city: 'Kimberley', rating: 4.3, reviews: 7, avgSalePrice: 14500, avgRental: 85, propertiesForSale: 180, propertiesForRent: 220 },
+  ],
+  Mbombela: [
+    { name: 'West Acres', city: 'Mbombela', rating: 4.3, reviews: 9, avgSalePrice: 18500, avgRental: 110, propertiesForSale: 620, propertiesForRent: 780 },
+    { name: 'Sonheuwel', city: 'Mbombela', rating: 4.2, reviews: 8, avgSalePrice: 16800, avgRental: 98, propertiesForSale: 540, propertiesForRent: 680 },
+    { name: 'White River', city: 'Mbombela', rating: 4.4, reviews: 10, avgSalePrice: 22400, avgRental: 135, propertiesForSale: 480, propertiesForRent: 590 },
+    { name: 'Riverside Park', city: 'Mbombela', rating: 4.1, reviews: 7, avgSalePrice: 15200, avgRental: 88, propertiesForSale: 380, propertiesForRent: 460 },
+  ],
+  Mahikeng: [
+    { name: 'Riviera Park', city: 'Mahikeng', rating: 4.1, reviews: 5, avgSalePrice: 11800, avgRental: 68, propertiesForSale: 280, propertiesForRent: 350 },
+    { name: 'Imperial Reserve', city: 'Mahikeng', rating: 4.2, reviews: 6, avgSalePrice: 13500, avgRental: 78, propertiesForSale: 240, propertiesForRent: 310 },
+    { name: 'Golf View', city: 'Mahikeng', rating: 4.0, reviews: 4, avgSalePrice: 10200, avgRental: 60, propertiesForSale: 180, propertiesForRent: 230 },
+    { name: 'Signal Hill', city: 'Mahikeng', rating: 4.1, reviews: 5, avgSalePrice: 12200, avgRental: 72, propertiesForSale: 220, propertiesForRent: 280 },
   ],
 };
 
-const cities = ['Johannesburg', 'Cape Town', 'Pretoria', 'Durban'];
+// 10 Major SA Cities (one per province)
+const cities = [
+  'Cape Town',        // Western Cape
+  'Johannesburg',     // Gauteng
+  'Durban',           // KwaZulu-Natal
+  'Pretoria',         // Gauteng (admin capital)
+  'Bloemfontein',     // Free State
+  'Gqeberha',         // Eastern Cape
+  'Polokwane',        // Limpopo
+  'Kimberley',        // Northern Cape
+  'Mbombela',         // Mpumalanga
+  'Mahikeng',         // North West
+];
 
 interface TopLocalitiesProps {
   title?: string;
@@ -200,7 +104,7 @@ export function TopLocalities({
   subtitle, 
   locationName = "South Africa" 
 }: TopLocalitiesProps = {}) {
-  const [selectedCity, setSelectedCity] = useState('Johannesburg');
+  const [selectedCity, setSelectedCity] = useState('Cape Town');
   // Note: 'initialCity' needs to be defined or we just keep default. The original code didn't accept props.
   // Let's assume we stick to the original state logic but update the title.
   // Actually, I need to check where 'initialCity' would come from if I added it. 
@@ -232,10 +136,16 @@ export function TopLocalities({
   const localities = localitiesData[selectedCity] || [];
 
   const cityProvinceMap: Record<string, string> = {
-    Johannesburg: 'gauteng',
     'Cape Town': 'western-cape',
-    Pretoria: 'gauteng',
+    Johannesburg: 'gauteng',
     Durban: 'kwazulu-natal',
+    Pretoria: 'gauteng',
+    Bloemfontein: 'free-state',
+    Gqeberha: 'eastern-cape',
+    Polokwane: 'limpopo',
+    Kimberley: 'northern-cape',
+    Mbombela: 'mpumalanga',
+    Mahikeng: 'north-west',
   };
 
   const getCitySlug = (cityName: string) => cityName.toLowerCase().replace(/\s+/g, '-');
