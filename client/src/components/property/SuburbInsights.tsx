@@ -146,7 +146,7 @@ export function SuburbInsights({ suburbName, rating = 4.4, isDevelopment = false
 
       {/* Pros & Cons */}
       {/* Pros & Cons */}
-      <div className="space-y-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         {/* Good Things */}
         <div className="flex flex-col items-center text-center">
           <div className="flex items-center justify-center gap-2 mb-4">
