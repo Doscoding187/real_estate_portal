@@ -74,7 +74,7 @@ export const appRouter = router({
   similarProperties: similarPropertiesRouter,
   cache: cacheRouter,
   locationPages: locationPagesRouter,
-  analytics: analyticsRouter,
+
   propertyResults: propertyResultsRouter,
 
   auth: router({
