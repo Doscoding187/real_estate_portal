@@ -14,7 +14,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
-import { CalendarIcon } from 'lucide-react';
+import { CalendarIcon, Coins } from 'lucide-react';
 import { format } from 'date-fns';
 import { BondCalculator } from '@/components/BondCalculator';
 import { calculateTransferCosts, calculateMonthlyRepayment } from '@/lib/bond-calculator';
@@ -161,6 +161,39 @@ const SellPricingForm: React.FC<{
         </div>
       </div>
 
+      {/* Monthly Costs */}
+      <div>
+        <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+          <Coins className="w-5 h-5 text-amber-600" />
+          Monthly Costs
+        </h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <Label htmlFor="ratesAndTaxes">Rates & Taxes (R/month)</Label>
+            <Input
+              id="ratesAndTaxes"
+              type="number"
+              value={(pricing as any).ratesAndTaxes || ''}
+              onChange={e => handleChange('ratesAndTaxes' as any, parseFloat(e.target.value))}
+              placeholder="e.g., 2500"
+              min="0"
+            />
+          </div>
+          <div>
+            <Label htmlFor="levies">Levies (R/month)</Label>
+            <Input
+              id="levies"
+              type="number"
+              value={(pricing as any).levies || ''}
+              onChange={e => handleChange('levies' as any, parseFloat(e.target.value))}
+              placeholder="e.g., 1500"
+              min="0"
+            />
+            <p className="text-xs text-gray-500 mt-1">If in complex, estate, or sectional title</p>
+          </div>
+        </div>
+      </div>
+
       {/* Bond Calculator */}
       {showBondCalculator && pricing.askingPrice && (
         <BondCalculator propertyPrice={pricing.askingPrice} showTransferCosts={true} />
@@ -294,6 +327,39 @@ const RentPricingForm: React.FC<{
         </div>
       </div>
 
+      {/* Monthly Costs */}
+      <div>
+        <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+          <Coins className="w-5 h-5 text-amber-600" />
+          Monthly Costs
+        </h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <Label htmlFor="rent-ratesAndTaxes">Rates & Taxes (R/month)</Label>
+            <Input
+              id="rent-ratesAndTaxes"
+              type="number"
+              value={(pricing as any).ratesAndTaxes || ''}
+              onChange={e => handleChange('ratesAndTaxes' as any, parseFloat(e.target.value))}
+              placeholder="e.g., 2500"
+              min="0"
+            />
+          </div>
+          <div>
+            <Label htmlFor="rent-levies">Levies (R/month)</Label>
+            <Input
+              id="rent-levies"
+              type="number"
+              value={(pricing as any).levies || ''}
+              onChange={e => handleChange('levies' as any, parseFloat(e.target.value))}
+              placeholder="e.g., 1500"
+              min="0"
+            />
+            <p className="text-xs text-gray-500 mt-1">If in complex, estate, or sectional title</p>
+          </div>
+        </div>
+      </div>
+
       {/* Rental Tips */}
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
         <h4 className="font-semibold text-blue-900 mb-2">💡 Rental Tips</h4>
@@ -423,6 +489,39 @@ const AuctionPricingForm: React.FC<{
             <p className="text-xs text-gray-500 mt-1">
               Upload PDF with auction terms and conditions
             </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Monthly Costs */}
+      <div>
+        <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+          <Coins className="w-5 h-5 text-amber-600" />
+          Monthly Costs
+        </h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <Label htmlFor="auction-ratesAndTaxes">Rates & Taxes (R/month)</Label>
+            <Input
+              id="auction-ratesAndTaxes"
+              type="number"
+              value={(pricing as any).ratesAndTaxes || ''}
+              onChange={e => handleChange('ratesAndTaxes' as any, parseFloat(e.target.value))}
+              placeholder="e.g., 2500"
+              min="0"
+            />
+          </div>
+          <div>
+            <Label htmlFor="auction-levies">Levies (R/month)</Label>
+            <Input
+              id="auction-levies"
+              type="number"
+              value={(pricing as any).levies || ''}
+              onChange={e => handleChange('levies' as any, parseFloat(e.target.value))}
+              placeholder="e.g., 1500"
+              min="0"
+            />
+            <p className="text-xs text-gray-500 mt-1">If in complex, estate, or sectional title</p>
           </div>
         </div>
       </div>

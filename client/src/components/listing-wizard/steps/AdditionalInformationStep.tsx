@@ -398,24 +398,6 @@ export function AdditionalInformationStep() {
         </div>
       </Card>
 
-      {/* 4. Costs */}
-      <Card className="p-6 bg-white/60 backdrop-blur-xl border-slate-200/60 shadow-sm rounded-2xl space-y-6">
-        <div className="flex items-center gap-3 border-b border-slate-100 pb-4 mb-4">
-          <div className="p-2 bg-amber-100 rounded-lg text-amber-600">
-            <Coins className="w-5 h-5" />
-          </div>
-          <h3 className="text-lg font-semibold text-slate-800">Monthly Costs</h3>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {renderNumberInput('ratesAndTaxes', 'Rates & Taxes', '0.00', 'R', Coins)}
-          
-          {(propertyType === 'apartment' || additionalInfo.propertySetting === 'estate' || additionalInfo.propertySetting === 'complex') && (
-            renderNumberInput('levies', 'Levies', '0.00', 'R', Coins)
-          )}
-        </div>
-      </Card>
-
       {/* 5. Interior & Exterior Features */}
       <Card className="p-6 bg-white/60 backdrop-blur-xl border-slate-200/60 shadow-sm rounded-2xl space-y-6">
         <div className="flex items-center gap-3 border-b border-slate-100 pb-4 mb-4">
