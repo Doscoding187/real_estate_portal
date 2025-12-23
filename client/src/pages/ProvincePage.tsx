@@ -84,7 +84,7 @@ export default function ProvincePage({ params }: { params: { province: string } 
 
       <LocationPageLayout
         title={`${province.name} Property Market`}
-        description={`Find properties for ${isRent ? 'rent' : 'sale'} in ${province.name}. Market insights, trends, and top locations.`}
+        description={`Find properties for sale and rent in ${province.name}. Market insights, trends, and top locations.`}
         locationName={province.name}
         locationSlug={provinceSlug}
         locationType="province"
