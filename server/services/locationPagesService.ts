@@ -439,6 +439,11 @@ export const locationPagesService = {
       .from(suburbPriceAnalytics)
       .where(eq(suburbPriceAnalytics.suburbId, suburb.id))
       .limit(1);
+
+    // 5. AI Insights & Reviews
+    const { locationInsightsService } = await import('./locationInsightsService');
+    const insights = await locationInsightsService.getInsights(suburb.id, suburb.name, suburb.cityName);
+    const reviews = await locationInsightsService.getReviews(suburb.id);
     
     return {
       suburb,
@@ -449,7 +454,9 @@ export const locationPagesService = {
         saleCount: Number(stats?.saleCount || 0)
       },
       listings: localProperties.map((p: any) => ({...p, images: typeof p.images === 'string' ? JSON.parse(p.images) : p.images})),
-      analytics: analytics || null
+      analytics: analytics || null,
+      insights,
+      reviews
     };
   }
 };

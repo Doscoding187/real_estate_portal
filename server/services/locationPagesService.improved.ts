@@ -1338,7 +1338,7 @@ export const locationPagesService = {
       .where(eq(suburbPriceAnalytics.suburbId, suburb.id))
       .limit(1);
 
-    // 5. Sub-localities for region-type suburbs (e.g., Sandton contains Morningside, Bryanston)
+    // 5. Sub-localities for region-type suburbs
     const subLocalitiesMap: Record<string, Array<{ name: string; slug: string; listingCount: number }>> = {
       'sandton': [
         { name: 'Morningside', slug: 'morningside', listingCount: 45 },
@@ -1358,6 +1358,11 @@ export const locationPagesService = {
         { name: 'Glen Beach', slug: 'glen-beach', listingCount: 8 },
       ],
     };
+
+    // 6. AI Insights & Reviews
+    const { locationInsightsService } = await import('./locationInsightsService');
+    const insights = await locationInsightsService.getInsights(suburb.id, suburb.name, suburb.cityName);
+    const reviews = await locationInsightsService.getReviews(suburb.id);
     
     return {
       suburb,
@@ -1369,7 +1374,9 @@ export const locationPagesService = {
       },
       listings: localProperties.map(p => ({...p, images: typeof p.images === 'string' ? JSON.parse(p.images) : p.images})),
       analytics: analytics || null,
-      subLocalities: subLocalitiesMap[suburbSlug] || []
+      subLocalities: subLocalitiesMap[suburbSlug] || [],
+      insights,
+      reviews
     };
   },
 

@@ -204,5 +204,30 @@ export const locationPagesRouter = router({
       }
 
       return null;
+    }),
+
+  /**
+   * Submit a resident review for a suburb
+   */
+  submitReview: publicProcedure
+    .input(z.object({
+      suburbId: z.number(),
+      rating: z.number().min(1).max(5),
+      userType: z.enum(['resident', 'tenant', 'landlord', 'visitor']),
+      pros: z.string(),
+      cons: z.string(),
+      comment: z.string()
+    }))
+    .mutation(async ({ input }) => {
+      const { locationInsightsService } = await import('./services/locationInsightsService');
+      return await locationInsightsService.submitReview({
+        suburbId: input.suburbId,
+        userId: 1, // TODO: Get actual user ID from context/session
+        rating: input.rating,
+        userType: input.userType as any,
+        pros: input.pros,
+        cons: input.cons,
+        comment: input.comment
+      });
     })
 });

@@ -1846,6 +1846,11 @@ export const suburbs = mysqlTable("suburbs", {
 	latitude: varchar({ length: 20 }),
 	longitude: varchar({ length: 21 }),
 	postalCode: varchar({ length: 10 }),
+	// AI Insights
+	pros: json("pros"),
+	cons: json("cons"),
+	aiGenerationDate: timestamp("ai_generation_date", { mode: 'string' }),
+	
 	createdAt: timestamp({ mode: 'string' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
 },
@@ -1854,6 +1859,50 @@ export const suburbs = mysqlTable("suburbs", {
 	index("idx_suburbs_place_id").on(table.placeId),
 	index("idx_suburbs_slug_city").on(table.slug, table.cityId),
 ]);
+
+export const suburbReviews = mysqlTable("suburb_reviews", {
+	id: int().autoincrement().notNull(),
+	suburbId: int("suburb_id").notNull().references(() => suburbs.id, { onDelete: "cascade" }),
+	userId: int("user_id").references(() => users.id, { onDelete: "set null" }),
+	
+	rating: int().notNull(), // 1-5
+	userType: mysqlEnum("user_type", ['resident', 'tenant', 'landlord', 'visitor']).default('resident').notNull(),
+	
+	pros: text(),
+	cons: text(),
+	comment: text(),
+	
+	isVerified: tinyint("is_verified").default(0),
+	isPublished: tinyint("is_published").default(0), // Default to unpublished for moderation, or 1 for auto-approve
+	
+	createdAt: timestamp("created_at", { mode: 'string' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
+	updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+},
+(table) => [
+	index("idx_suburb_reviews_suburb").on(table.suburbId),
+	index("idx_suburb_reviews_user").on(table.userId),
+	index("idx_suburb_reviews_rating").on(table.rating),
+	index("idx_suburb_reviews_published").on(table.isPublished),
+]);
+
+export const suburbsRelations = relations(suburbs, ({ one, many }) => ({
+	city: one(cities, {
+		fields: [suburbs.cityId],
+		references: [cities.id],
+	}),
+	reviews: many(suburbReviews),
+}));
+
+export const suburbReviewsRelations = relations(suburbReviews, ({ one }) => ({
+	suburb: one(suburbs, {
+		fields: [suburbReviews.suburbId],
+		references: [suburbs.id],
+	}),
+	user: one(users, {
+		fields: [suburbReviews.userId],
+		references: [users.id],
+	}),
+}));
 
 export const userBehaviorEvents = mysqlTable("user_behavior_events", {
 	id: int().autoincrement().notNull(),
