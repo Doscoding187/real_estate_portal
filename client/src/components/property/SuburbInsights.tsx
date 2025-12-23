@@ -145,14 +145,15 @@ export function SuburbInsights({ suburbName, rating = 4.4, isDevelopment = false
       </div>
 
       {/* Pros & Cons */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+      {/* Pros & Cons */}
+      <div className="space-y-8">
         {/* Good Things */}
-        <div>
-          <div className="flex items-center gap-2 mb-4">
+        <div className="flex flex-col items-center text-center">
+          <div className="flex items-center justify-center gap-2 mb-4">
             <ThumbsUp className="h-5 w-5 text-green-600" />
             <h3 className="text-lg font-semibold text-slate-900">Good things about this suburb</h3>
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap justify-center gap-2">
             {PROS.map((pro, index) => (
               <span key={index} className="inline-flex items-center px-3 py-1.5 rounded-full bg-slate-100 text-slate-700 text-sm font-medium border border-slate-200">
                 {pro}
@@ -162,12 +163,12 @@ export function SuburbInsights({ suburbName, rating = 4.4, isDevelopment = false
         </div>
 
         {/* Improvements */}
-        <div>
-          <div className="flex items-center gap-2 mb-4">
+        <div className="flex flex-col items-center text-center">
+          <div className="flex items-center justify-center gap-2 mb-4">
             <AlertTriangle className="h-5 w-5 text-orange-500" />
             <h3 className="text-lg font-semibold text-slate-900">Things that need improvement</h3>
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap justify-center gap-2">
             {CONS.map((con, index) => (
               <span key={index} className="inline-flex items-center px-3 py-1.5 rounded-full bg-slate-100 text-slate-700 text-sm font-medium border border-slate-200">
                 {con}
