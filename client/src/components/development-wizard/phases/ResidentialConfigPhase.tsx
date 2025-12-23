@@ -23,11 +23,12 @@ import { toast } from 'sonner';
 
 const RESIDENTIAL_ICONS: Record<ResidentialType, typeof Building2> = {
   apartment: Building2,
-  townhouse: Home,
-  freehold: Castle,
+  security_estate: Shield,
+  freehold: Home,
   mixed_residential: Building2,
   retirement: Users,
   student_accommodation: GraduationCap,
+  townhouse_cluster: Castle,
 };
 
 export function ResidentialConfigPhase() {

@@ -69,59 +69,182 @@ export const DEVELOPMENT_TYPE_OPTIONS: { value: DevelopmentType; label: string; 
 ];
 
 // =============================================================================
-// RESIDENTIAL CONFIGURATION
+// RESIDENTIAL CONFIGURATION (Primary Development Type)
 // =============================================================================
 
 export type ResidentialType =
   | 'apartment'
-  | 'townhouse'
+  | 'security_estate'
   | 'freehold'
   | 'mixed_residential'
   | 'retirement'
-  | 'student_accommodation';
+  | 'student_accommodation'
+  | 'townhouse_cluster';
 
 export const RESIDENTIAL_TYPE_OPTIONS: { value: ResidentialType; label: string; description: string }[] = [
-  { value: 'apartment', label: 'Apartment / Flat Development', description: 'Multi-storey residential blocks' },
-  { value: 'townhouse', label: 'Security Estate Developments', description: 'Gated estates with security features' },
-  { value: 'freehold', label: 'Freehold Housing Development', description: 'Standalone houses on individual plots' },
-  { value: 'mixed_residential', label: 'Mixed Residential', description: 'Combination of unit types' },
-  { value: 'retirement', label: 'Retirement Development', description: 'Age-restricted living facilities' },
-  { value: 'student_accommodation', label: 'Student Accommodation', description: 'Purpose-built student housing' },
+  { value: 'apartment', label: 'Apartment & Flat Development', description: 'Multi-storey residential, sectional title' },
+  { value: 'security_estate', label: 'Security Estate Development', description: 'Controlled access, estate governance' },
+  { value: 'freehold', label: 'Freehold Housing Development', description: 'Standalone homes, erf ownership' },
+  { value: 'mixed_residential', label: 'Mixed Residential Development', description: 'Multiple residential forms in one project' },
+  { value: 'retirement', label: 'Retirement Development', description: 'Age-restricted, services-driven' },
+  { value: 'student_accommodation', label: 'Student Accommodation', description: 'Purpose-built student living' },
+  { value: 'townhouse_cluster', label: 'Townhouse / Cluster Development', description: 'Attached or semi-detached units' },
 ];
 
 // =============================================================================
-// COMMUNITY / ESTATE TYPES (Multi-Select)
+// COMMUNITY / PROPERTY SUB-TYPES (Secondary Selection per Development Type)
 // =============================================================================
 
 export type CommunityType =
-  | 'security_estate'
-  | 'gated_community'
+  // Apartment & Flat Types
+  | 'apartment_block'
+  | 'flat_development'
+  | 'penthouse_development'
+  | 'loft_apartments'
+  | 'studio_apartment_development'
+  | 'walk_up_complex'
+  | 'high_rise_tower'
+  | 'mid_rise_complex'
+  | 'mixed_apartment_complex'
+  // Security Estate Types
+  | 'security_estate_general'
   | 'golf_estate'
-  | 'eco_estate'
-  | 'waterfront_estate'
+  | 'equestrian_estate'
+  | 'country_estate'
   | 'lifestyle_estate'
+  | 'eco_estate'
+  | 'game_estate'
+  | 'nature_estate'
+  | 'coastal_security_estate'
+  | 'mountain_estate'
+  | 'residential_estate'
+  // Freehold Housing Types
+  | 'freehold_housing_development'
+  | 'residential_township'
+  | 'housing_estate_non_security'
+  | 'suburban_housing_development'
+  | 'cluster_housing_freehold'
+  | 'infill_housing_development'
+  | 'turnkey_housing_development'
+  // Mixed Residential Types
+  | 'mixed_residential_development'
+  | 'integrated_residential_development'
+  | 'live_work_precinct'
+  | 'residential_lifestyle_precinct'
+  // Retirement Types
   | 'retirement_village'
+  | 'lifestyle_retirement_estate'
+  | 'assisted_living_development'
+  | 'frail_care_facility'
+  | 'ccrc'
+  | 'senior_living_apartments'
+  // Student Accommodation Types
+  | 'pbsa'
+  | 'student_residence'
+  | 'student_apartment_complex'
+  | 'private_student_village'
+  | 'campus_adjacent_housing'
+  // Townhouse / Cluster Types
+  | 'townhouse_development'
+  | 'cluster_development'
+  | 'gated_townhouse_complex'
+  | 'simplex_complex'
+  | 'duplex_complex'
+  // Generic fallback
   | 'non_estate';
 
 export const COMMUNITY_TYPE_OPTIONS: { value: CommunityType; label: string; description: string; triggersEstateProfile: boolean }[] = [
-  { value: 'security_estate', label: 'Security Estate', description: 'Secured perimeter with access control', triggersEstateProfile: true },
-  { value: 'gated_community', label: 'Gated Community', description: 'Controlled access, shared amenities', triggersEstateProfile: true },
+  // Apartment & Flat Types
+  { value: 'apartment_block', label: 'Apartment Block', description: 'Standard apartment building', triggersEstateProfile: false },
+  { value: 'flat_development', label: 'Flat Development', description: 'Multi-unit flat complex', triggersEstateProfile: false },
+  { value: 'penthouse_development', label: 'Penthouse Development', description: 'Luxury top-floor units', triggersEstateProfile: false },
+  { value: 'loft_apartments', label: 'Loft Apartments', description: 'Open-plan industrial style', triggersEstateProfile: false },
+  { value: 'studio_apartment_development', label: 'Studio Apartment Development', description: 'Compact single-room units', triggersEstateProfile: false },
+  { value: 'walk_up_complex', label: 'Walk-up Apartment Complex', description: 'Low-rise without elevator', triggersEstateProfile: false },
+  { value: 'high_rise_tower', label: 'High-rise Residential Tower', description: '10+ storey building', triggersEstateProfile: false },
+  { value: 'mid_rise_complex', label: 'Mid-rise Apartment Complex', description: '4-9 storey building', triggersEstateProfile: false },
+  { value: 'mixed_apartment_complex', label: 'Mixed Apartment Complex', description: 'Studio/1/2/3 bed mix', triggersEstateProfile: false },
+  // Security Estate Types
+  { value: 'security_estate_general', label: 'Security Estate', description: 'Secured perimeter with access control', triggersEstateProfile: true },
   { value: 'golf_estate', label: 'Golf Estate', description: 'Built around a golf course', triggersEstateProfile: true },
-  { value: 'eco_estate', label: 'Eco Estate', description: 'Environmentally focused development', triggersEstateProfile: true },
-  { value: 'waterfront_estate', label: 'Waterfront Estate', description: 'Located on water (dam, river, sea)', triggersEstateProfile: true },
-  { value: 'lifestyle_estate', label: 'Lifestyle Estate', description: 'Premium amenities and lifestyle focus', triggersEstateProfile: true },
-  { value: 'retirement_village', label: 'Retirement Village', description: 'Age-restricted with care facilities', triggersEstateProfile: true },
-  { value: 'non_estate', label: 'Non-Estate Development', description: 'Standard development, no estate structure', triggersEstateProfile: false },
+  { value: 'equestrian_estate', label: 'Equestrian Estate', description: 'Horse-friendly with stables', triggersEstateProfile: true },
+  { value: 'country_estate', label: 'Country Estate', description: 'Rural setting with large plots', triggersEstateProfile: true },
+  { value: 'lifestyle_estate', label: 'Lifestyle Estate', description: 'Premium amenities focus', triggersEstateProfile: true },
+  { value: 'eco_estate', label: 'Eco Estate', description: 'Environmentally focused', triggersEstateProfile: true },
+  { value: 'game_estate', label: 'Game Estate', description: 'Wildlife and game reserve', triggersEstateProfile: true },
+  { value: 'nature_estate', label: 'Nature Estate', description: 'Natural environment preserved', triggersEstateProfile: true },
+  { value: 'coastal_security_estate', label: 'Coastal Security Estate', description: 'Beachfront or coastal location', triggersEstateProfile: true },
+  { value: 'mountain_estate', label: 'Mountain Estate', description: 'Mountain or hillside location', triggersEstateProfile: true },
+  { value: 'residential_estate', label: 'Residential Estate (General)', description: 'Generic security estate', triggersEstateProfile: true },
+  // Freehold Housing Types
+  { value: 'freehold_housing_development', label: 'Freehold Housing Development', description: 'Standalone homes on erven', triggersEstateProfile: false },
+  { value: 'residential_township', label: 'Residential Township', description: 'Large-scale housing development', triggersEstateProfile: false },
+  { value: 'housing_estate_non_security', label: 'Housing Estate (Non-Security)', description: 'Open access housing estate', triggersEstateProfile: false },
+  { value: 'suburban_housing_development', label: 'Suburban Housing Development', description: 'Suburban family homes', triggersEstateProfile: false },
+  { value: 'cluster_housing_freehold', label: 'Cluster Housing (Freehold)', description: 'Freehold clusters', triggersEstateProfile: false },
+  { value: 'infill_housing_development', label: 'Infill Housing Development', description: 'Urban densification projects', triggersEstateProfile: false },
+  { value: 'turnkey_housing_development', label: 'Turnkey Housing Development', description: 'Ready-to-occupy homes', triggersEstateProfile: false },
+  // Mixed Residential Types
+  { value: 'mixed_residential_development', label: 'Mixed Residential Development', description: 'Multiple unit types', triggersEstateProfile: false },
+  { value: 'integrated_residential_development', label: 'Integrated Residential Development', description: 'Diverse housing integration', triggersEstateProfile: false },
+  { value: 'live_work_precinct', label: 'Live-Work Precinct', description: 'Residential with workspace', triggersEstateProfile: false },
+  { value: 'residential_lifestyle_precinct', label: 'Residential Lifestyle Precinct', description: 'Amenity-focused living', triggersEstateProfile: false },
+  // Retirement Types
+  { value: 'retirement_village', label: 'Retirement Village', description: 'Traditional retirement community', triggersEstateProfile: true },
+  { value: 'lifestyle_retirement_estate', label: 'Lifestyle Retirement Estate', description: 'Active adult community', triggersEstateProfile: true },
+  { value: 'assisted_living_development', label: 'Assisted Living Development', description: 'Support services included', triggersEstateProfile: true },
+  { value: 'frail_care_facility', label: 'Frail Care Facility', description: 'Full nursing care', triggersEstateProfile: true },
+  { value: 'ccrc', label: 'Continuing Care Retirement Community', description: 'Multi-level care campus', triggersEstateProfile: true },
+  { value: 'senior_living_apartments', label: 'Senior Living Apartments', description: 'Age-restricted apartments', triggersEstateProfile: true },
+  // Student Accommodation Types
+  { value: 'pbsa', label: 'Purpose-Built Student Accommodation', description: 'PBSA standard', triggersEstateProfile: false },
+  { value: 'student_residence', label: 'Student Residence', description: 'Traditional student dorms', triggersEstateProfile: false },
+  { value: 'student_apartment_complex', label: 'Student Apartment Complex', description: 'Self-catering units', triggersEstateProfile: false },
+  { value: 'private_student_village', label: 'Private Student Village', description: 'Campus-style living', triggersEstateProfile: false },
+  { value: 'campus_adjacent_housing', label: 'Campus-Adjacent Housing', description: 'Near university location', triggersEstateProfile: false },
+  // Townhouse / Cluster Types
+  { value: 'townhouse_development', label: 'Townhouse Development', description: 'Multi-storey attached homes', triggersEstateProfile: false },
+  { value: 'cluster_development', label: 'Cluster Development', description: 'Grouped sectional title homes', triggersEstateProfile: false },
+  { value: 'gated_townhouse_complex', label: 'Gated Townhouse Complex', description: 'Secure townhouse estate', triggersEstateProfile: true },
+  { value: 'simplex_complex', label: 'Simplex Complex', description: 'Single-level attached units', triggersEstateProfile: false },
+  { value: 'duplex_complex', label: 'Duplex Complex', description: 'Two-unit attached homes', triggersEstateProfile: false },
+  // Generic
+  { value: 'non_estate', label: 'Non-Estate Development', description: 'Standard development', triggersEstateProfile: false },
 ];
 
 // Mapping: Which community types are applicable for each residential type
 export const RESIDENTIAL_TO_COMMUNITY_MAP: Record<ResidentialType, CommunityType[]> = {
-  apartment: ['gated_community', 'lifestyle_estate', 'non_estate'],
-  townhouse: ['security_estate', 'gated_community', 'golf_estate', 'eco_estate', 'waterfront_estate', 'lifestyle_estate'],
-  freehold: ['security_estate', 'gated_community', 'golf_estate', 'eco_estate', 'waterfront_estate', 'lifestyle_estate', 'non_estate'],
-  mixed_residential: ['security_estate', 'gated_community', 'golf_estate', 'eco_estate', 'waterfront_estate', 'lifestyle_estate', 'non_estate'],
-  retirement: ['retirement_village'],
-  student_accommodation: ['non_estate'],
+  apartment: [
+    'apartment_block', 'flat_development', 'penthouse_development', 'loft_apartments',
+    'studio_apartment_development', 'walk_up_complex', 'high_rise_tower', 'mid_rise_complex',
+    'mixed_apartment_complex'
+  ],
+  security_estate: [
+    'security_estate_general', 'golf_estate', 'equestrian_estate', 'country_estate',
+    'lifestyle_estate', 'eco_estate', 'game_estate', 'nature_estate',
+    'coastal_security_estate', 'mountain_estate', 'residential_estate'
+  ],
+  freehold: [
+    'freehold_housing_development', 'residential_township', 'housing_estate_non_security',
+    'suburban_housing_development', 'cluster_housing_freehold', 'infill_housing_development',
+    'turnkey_housing_development'
+  ],
+  mixed_residential: [
+    'mixed_residential_development', 'integrated_residential_development',
+    'live_work_precinct', 'residential_lifestyle_precinct'
+  ],
+  retirement: [
+    'retirement_village', 'lifestyle_retirement_estate', 'assisted_living_development',
+    'frail_care_facility', 'ccrc', 'senior_living_apartments'
+  ],
+  student_accommodation: [
+    'pbsa', 'student_residence', 'student_apartment_complex',
+    'private_student_village', 'campus_adjacent_housing'
+  ],
+  townhouse_cluster: [
+    'townhouse_development', 'cluster_development', 'gated_townhouse_complex',
+    'simplex_complex', 'duplex_complex'
+  ],
 };
 
 // Helper to get filtered community options based on residential type
