@@ -1,6 +1,6 @@
-import { db } from '../../db';
-import { subtitles, suburbs, suburbReviews, users } from '../../drizzle/schema';
-import { eq, desc, and } from 'drizzle-orm';
+import { db } from '../db';
+import { suburbs, suburbReviews } from '../../drizzle/schema';
+import { eq, desc } from 'drizzle-orm';
 import { OpenAI } from 'openai';
 
 // Initialize OpenAI client - assumes OPENAI_API_KEY is in env

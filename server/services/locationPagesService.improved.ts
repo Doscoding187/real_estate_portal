@@ -564,9 +564,6 @@ export const locationPagesService = {
       investmentProjects,
       recommendedAgencies,
       topLocalities: topLocalitiesDetailed,
-
-      featuredDevelopments,
-      trendingSuburbs,
       stats: {
         totalListings: Number(stats?.totalListings || 0),
         avgPrice: Math.round(Number(stats?.avgPrice || 0)),
