@@ -255,8 +255,50 @@ export const locationRouter = router({
       })
     )
     .query(async ({ input }) => {
-      // Return empty array for now to prevent crash
-      return [];
+      const { googlePlacesService } = await import('./services/googlePlacesService');
+      const { latitude, longitude, radius, types, limit } = input;
+
+      try {
+        // Fetch specific place types in parallel (Google Places API 'type' parameter takes one type mostly for strict filtering or keyword)
+        // We will fetch for each type requested to ensure good coverage
+        const promises = types.map(type => 
+          googlePlacesService.getNearbyPlaces(latitude, longitude, radius, type)
+        );
+
+        const results = await Promise.all(promises);
+        const flattened = results.flat();
+
+        // Calculate distance and process
+        const processed = flattened.map(place => {
+          // Haversine formula for distance
+          const R = 6371; // Earth's radius in km
+          const dLat = ((place.latitude - latitude) * Math.PI) / 180;
+          const dLon = ((place.longitude - longitude) * Math.PI) / 180;
+          const a =
+            Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+            Math.cos((latitude * Math.PI) / 180) *
+              Math.cos((place.latitude * Math.PI) / 180) *
+              Math.sin(dLon / 2) *
+              Math.sin(dLon / 2);
+          const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+          const distance = Math.round(R * c * 10) / 10; // Round to 1 decimal place
+
+          return {
+            ...place,
+            distance: `${distance} km`,
+            distanceValue: distance,
+          };
+        });
+
+        // Deduplicate by place ID
+        const unique = Array.from(new Map(processed.map(item => [item.id, item])).values());
+
+        // Sort by distance
+        return unique.sort((a, b) => a.distanceValue - b.distanceValue).slice(0, limit || 20);
+      } catch (error) {
+        console.error('Error fetching nearby amenities:', error);
+        return [];
+      }
     }),
 
   /**

@@ -305,7 +305,10 @@ const ListingWizard: React.FC = () => {
               : {}
             : {}),
         },
-        propertyDetails: store.propertyDetails || {},
+        propertyDetails: {
+          ...(store.propertyDetails || {}),
+          ...(store.additionalInfo || {}),
+        },
         location: store.location!,
         // Send media IDs as strings (no numeric conversion)
         mediaIds: store.media.map((m: any) => m.id?.toString() || ''),

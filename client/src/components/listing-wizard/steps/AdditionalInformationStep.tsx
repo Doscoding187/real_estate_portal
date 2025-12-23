@@ -28,7 +28,9 @@ import {
   Mountain,
   X,
   Plus,
-  Flame
+  Flame,
+  Layers,
+  Car
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -413,7 +415,52 @@ export function AdditionalInformationStep() {
         </div>
       </Card>
 
-      {/* 5. Security */}
+      {/* 5. Interior & Exterior Features */}
+      <Card className="p-6 bg-white/60 backdrop-blur-xl border-slate-200/60 shadow-sm rounded-2xl space-y-6">
+        <div className="flex items-center gap-3 border-b border-slate-100 pb-4 mb-4">
+          <div className="p-2 bg-indigo-100 rounded-lg text-indigo-600">
+            <Home className="w-5 h-5" />
+          </div>
+          <h3 className="text-lg font-semibold text-slate-800">Interior & Exterior Features</h3>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {renderSelect('ownershipType', 'Ownership Type', [
+            { value: 'freehold', label: 'Freehold' },
+            { value: 'sectional_title', label: 'Sectional Title' },
+            { value: 'leasehold', label: 'Leasehold' },
+            { value: 'fractional', label: 'Fractional Ownership' },
+            { value: 'share_block', label: 'Share Block' },
+          ], 'Select ownership', Home)}
+
+          {renderSelect('flooring', 'Flooring', [
+             { value: 'tiled', label: 'Tiled' },
+             { value: 'laminated', label: 'Laminated' },
+             { value: 'carpets', label: 'Carpets' },
+             { value: 'wood', label: 'Solid Wood' },
+             { value: 'concrete', label: 'Polished Concrete' },
+             { value: 'vinyl', label: 'Vinyl' },
+          ], 'Select flooring', Layers)}
+
+          {renderSelect('parkingType', 'Parking Type', [
+            { value: 'garage', label: 'Garage' },
+            { value: 'covered_carport', label: 'Covered Carport' },
+            { value: 'open_parking', label: 'Open Parking' },
+            { value: 'street', label: 'Street Parking' },
+            { value: 'none', label: 'None' },
+          ], 'Select parking', Car)}
+
+          {renderSelect('petFriendly', 'Pet Friendly', [
+            { value: 'yes', label: 'Yes' },
+            { value: 'no', label: 'No' },
+            { value: 'cats_only', label: 'Cats Only' },
+            { value: 'dogs_only', label: 'Dogs Only' },
+            { value: 'with_permission', label: 'With Permission' },
+          ], 'Select policy', CheckCircle2)}
+        </div>
+      </Card>
+
+      {/* 6. Security */}
       <Card className="p-6 bg-white/60 backdrop-blur-xl border-slate-200/60 shadow-sm rounded-2xl space-y-6">
         {renderMultiSelect('securityFeatures', 'Security Features', [
           { value: 'alarm', label: 'Alarm System', icon: Shield },

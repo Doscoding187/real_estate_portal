@@ -37,6 +37,7 @@ interface GooglePropertyMapProps {
   onBoundsChange?: (bounds: google.maps.LatLngBounds) => void;
   onPropertySelect?: (propertyId: number) => void;
   className?: string;
+  minimal?: boolean;
 }
 
 export function GooglePropertyMap({
@@ -44,6 +45,7 @@ export function GooglePropertyMap({
   onBoundsChange,
   onPropertySelect,
   className,
+  minimal = false,
 }: GooglePropertyMapProps) {
   const { isLoaded } = useJsApiLoader({
     id: 'google-map-script',
@@ -55,14 +57,21 @@ export function GooglePropertyMap({
 
   const onLoad = useCallback(
     (map: google.maps.Map) => {
-      const bounds = new window.google.maps.LatLngBounds();
-      if (properties.length > 0) {
+      if (properties.length === 1 && properties[0].latitude && properties[0].longitude) {
+        map.setCenter({ lat: properties[0].latitude, lng: properties[0].longitude });
+        map.setZoom(15);
+      } else if (properties.length > 1) {
+        const bounds = new window.google.maps.LatLngBounds();
+        let hasValidBounds = false;
         properties.forEach((prop) => {
           if (prop.latitude && prop.longitude) {
             bounds.extend({ lat: prop.latitude, lng: prop.longitude });
+            hasValidBounds = true;
           }
         });
-        map.fitBounds(bounds);
+        if (hasValidBounds) {
+          map.fitBounds(bounds);
+        }
       } else {
         map.setCenter(defaultCenter);
         map.setZoom(10);
@@ -77,12 +86,13 @@ export function GooglePropertyMap({
   }, []);
 
   const handleBoundsChanged = () => {
-    if (map && onBoundsChange) {
+    if (map && onBoundsChange && !minimal) {
       onBoundsChange(map.getBounds()!);
     }
   };
 
   const handleMarkerClick = (property: PropertyMarker) => {
+    if (minimal) return;
     setSelectedProperty(property);
     if (onPropertySelect) {
       onPropertySelect(property.id);
@@ -96,14 +106,23 @@ export function GooglePropertyMap({
   };
 
   useEffect(() => {
-    if (map && properties.length > 0) {
-      const bounds = new window.google.maps.LatLngBounds();
-      properties.forEach((prop) => {
-        if (prop.latitude && prop.longitude) {
-          bounds.extend({ lat: prop.latitude, lng: prop.longitude });
+    if (map) {
+      if (properties.length === 1 && properties[0].latitude && properties[0].longitude) {
+        map.setCenter({ lat: properties[0].latitude, lng: properties[0].longitude });
+        map.setZoom(15);
+      } else if (properties.length > 1) {
+        const bounds = new window.google.maps.LatLngBounds();
+        let hasValidBounds = false;
+        properties.forEach((prop) => {
+          if (prop.latitude && prop.longitude) {
+            bounds.extend({ lat: prop.latitude, lng: prop.longitude });
+            hasValidBounds = true;
+          }
+        });
+        if (hasValidBounds) {
+          map.fitBounds(bounds);
         }
-      });
-      map.fitBounds(bounds);
+      }
     }
   }, [map, properties]);
 
@@ -128,7 +147,10 @@ export function GooglePropertyMap({
         options={{
           mapTypeControl: false,
           streetViewControl: false,
-          fullscreenControl: true,
+          fullscreenControl: !minimal,
+          zoomControl: !minimal,
+          gestureHandling: minimal ? 'none' : 'cooperative',
+          disableDefaultUI: minimal,
         }}
       >
         <MarkerClusterer>
@@ -139,14 +161,14 @@ export function GooglePropertyMap({
                   key={property.id}
                   position={{ lat: property.latitude, lng: property.longitude }}
                   onClick={() => handleMarkerClick(property)}
-                  clusterer={clusterer}
+                  clusterer={!minimal ? clusterer : null}
                 />
               ))}
             </>
           )}
         </MarkerClusterer>
 
-        {selectedProperty && (
+        {selectedProperty && !minimal && (
           <InfoWindow
             position={{ lat: selectedProperty.latitude, lng: selectedProperty.longitude }}
             onCloseClick={() => setSelectedProperty(null)}
@@ -182,16 +204,18 @@ export function GooglePropertyMap({
         )}
       </GoogleMap>
       
-      <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-10">
-         <Button 
-           variant="secondary" 
-           className="shadow-md bg-white/90 hover:bg-white text-slate-800"
-           onClick={handleSearchInArea}
-         >
-           <MapPin className="h-4 w-4 mr-2 text-blue-600" />
-           Search in this area
-         </Button>
-      </div>
+      {!minimal && (
+        <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-10">
+           <Button 
+             variant="secondary" 
+             className="shadow-md bg-white/90 hover:bg-white text-slate-800"
+             onClick={handleSearchInArea}
+           >
+             <MapPin className="h-4 w-4 mr-2 text-blue-600" />
+             Search in this area
+           </Button>
+        </div>
+      )}
     </div>
   );
 }

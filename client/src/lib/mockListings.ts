@@ -6,7 +6,9 @@ export const MOCK_LISTINGS = [
     location: {
       city: 'Cape Town',
       suburb: 'Camps Bay',
-      province: 'Western Cape'
+      province: 'Western Cape',
+      latitude: -33.9515,
+      longitude: 18.3759
     },
     images: [
       'https://images.unsplash.com/photo-1613490493576-7fde63acd811?ixlib=rb-4.0.3&auto=format&fit=crop&w=1600&q=80',
@@ -36,7 +38,9 @@ export const MOCK_LISTINGS = [
     location: {
       city: 'Sandton',
       suburb: 'Sandown',
-      province: 'Gauteng'
+      province: 'Gauteng',
+      latitude: -26.1076,
+      longitude: 28.0567
     },
     images: [
       'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?ixlib=rb-4.0.3&auto=format&fit=crop&w=1600&q=80',
@@ -64,7 +68,9 @@ export const MOCK_LISTINGS = [
     location: {
       city: 'Durban',
       suburb: 'Durban North',
-      province: 'KwaZulu-Natal'
+      province: 'KwaZulu-Natal',
+      latitude: -29.7997,
+      longitude: 31.0428
     },
     images: [
       'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?ixlib=rb-4.0.3&auto=format&fit=crop&w=1600&q=80',
@@ -93,7 +99,9 @@ export const MOCK_LISTINGS = [
     location: {
       city: 'Johannesburg',
       suburb: 'Rosebank',
-      province: 'Gauteng'
+      province: 'Gauteng',
+      latitude: -26.1466,
+      longitude: 28.0422
     },
     images: [
       'https://images.unsplash.com/photo-1497366216548-37526070297c?ixlib=rb-4.0.3&auto=format&fit=crop&w=1600&q=80'
@@ -119,7 +127,9 @@ export const MOCK_LISTINGS = [
     location: {
       city: 'Ballito',
       suburb: 'Zimbali',
-      province: 'KwaZulu-Natal'
+      province: 'KwaZulu-Natal',
+      latitude: -29.5447,
+      longitude: 31.1923
     },
     images: [
       'https://images.unsplash.com/photo-1500382017468-9049fed747ef?ixlib=rb-4.0.3&auto=format&fit=crop&w=1600&q=80'
@@ -144,7 +154,9 @@ export const MOCK_LISTINGS = [
     location: {
       city: 'Stellenbosch',
       suburb: 'Stellenbosch Farms',
-      province: 'Western Cape'
+      province: 'Western Cape',
+      latitude: -33.9321,
+      longitude: 18.8602
     },
     images: [
       'https://images.unsplash.com/photo-1533519828453-61b6c0e5323a?ixlib=rb-4.0.3&auto=format&fit=crop&w=1600&q=80'

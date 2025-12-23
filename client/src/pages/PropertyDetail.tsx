@@ -154,8 +154,8 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
       area: mockListing.propertyDetails.houseAreaM2 || mockListing.propertyDetails.unitSizeM2 || mockListing.propertyDetails.floorAreaM2 || 0,
       features: JSON.stringify(mockListing.features),
       amenities: JSON.stringify(mockListing.features), // Fallback
-      latitude: '-26.2041',
-      longitude: '28.0473',
+      latitude: (mockListing.location as any).latitude || '-26.2041',
+      longitude: (mockListing.location as any).longitude || '28.0473',
       images: mockListing.images,
       mainImage: mockListing.images[0],
       createdAt: new Date().toISOString(),
@@ -239,6 +239,31 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
   const displayDescription = showFullDescription || !shouldTruncate 
     ? description 
     : description.slice(0, 300) + '...';
+
+  // Parse Property Specs
+  interface PropertySpecs {
+    ownershipType?: string;
+    powerBackup?: string;
+    securityFeatures?: string[];
+    waterSupply?: string;
+    internetAccess?: string;
+    flooring?: string;
+    parkingType?: string;
+    petFriendly?: string;
+    electricitySupply?: string;
+    additionalRooms?: string[];
+  }
+  
+  let specs: PropertySpecs = {};
+  try {
+    if ((property as any).propertySettings) {
+      specs = typeof (property as any).propertySettings === 'string'
+        ? JSON.parse((property as any).propertySettings)
+        : (property as any).propertySettings;
+    }
+  } catch (e) {
+    console.error('Failed to parse property settings', e);
+  }
 
   const similarProperties = similarPropertiesData?.properties?.filter(
     p => p.id !== propertyId
@@ -396,16 +421,18 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
             </div>
 
             {/* Additional Rooms */}
-            <div>
-              <h3 className="text-lg font-medium text-slate-400 mb-3">Additional rooms & Specifications</h3>
-              <div className="flex flex-wrap gap-2">
-                {['Study Room', 'Office', 'Cottage'].map((room) => (
-                  <Badge key={room} variant="secondary" className="bg-orange-50 text-slate-900 hover:bg-orange-100 border-0 px-4 py-1.5 rounded-full font-medium">
-                    {room}
-                  </Badge>
-                ))}
+             {specs.additionalRooms && specs.additionalRooms.length > 0 && (
+              <div className="mb-6">
+                <h3 className="text-lg font-medium text-slate-400 mb-3">Additional rooms & Specifications</h3>
+                <div className="flex flex-wrap gap-2">
+                  {specs.additionalRooms.map((room) => (
+                    <Badge key={room} variant="secondary" className="bg-orange-50 text-slate-900 hover:bg-orange-100 border-0 px-4 py-1.5 rounded-full font-medium">
+                      {room}
+                    </Badge>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Amenities */}
             <div>
@@ -458,79 +485,101 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
               </CardContent>
             </Card>
 
-            {/* 2.2 Property Features / Specs Table */}
-            <Card className="border-slate-200 shadow-sm">
-              <CardHeader className="bg-slate-50/50 border-b border-slate-100">
-                <CardTitle className="text-xl font-bold text-slate-900">Property Features & Specifications</CardTitle>
-              </CardHeader>
-              <CardContent className="p-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                  <div className="flex items-start gap-2 p-2.5 bg-slate-50 rounded-lg">
-                    <Home className="h-5 w-5 text-orange-500 mt-0.5" />
-                    <div>
-                      <p className="text-sm text-slate-500">Ownership Type</p>
-                      <p className="font-semibold text-slate-900">Freehold</p>
-                    </div>
+            {/* 2.2 Property Features / Specs Table (Dynamic) */}
+            {(specs.ownershipType || specs.powerBackup || (specs.securityFeatures && specs.securityFeatures.length > 0) || specs.waterSupply || specs.internetAccess || specs.flooring || specs.parkingType || specs.petFriendly || specs.electricitySupply) && (
+              <Card className="border-slate-200 shadow-sm">
+                <CardHeader className="bg-slate-50/50 border-b border-slate-100">
+                  <CardTitle className="text-xl font-bold text-slate-900">Property Features & Specifications</CardTitle>
+                </CardHeader>
+                <CardContent className="p-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {specs.ownershipType && (
+                      <div className="flex items-start gap-2 p-2.5 bg-slate-50 rounded-lg">
+                        <Home className="h-5 w-5 text-orange-500 mt-0.5" />
+                        <div>
+                          <p className="text-sm text-slate-500">Ownership Type</p>
+                          <p className="font-semibold text-slate-900 capitalize">{specs.ownershipType.replace(/_/g, ' ')}</p>
+                        </div>
+                      </div>
+                    )}
+                    {specs.powerBackup && (
+                      <div className="flex items-start gap-2 p-2.5 bg-slate-50 rounded-lg">
+                        <Zap className="h-5 w-5 text-orange-500 mt-0.5" />
+                        <div>
+                          <p className="text-sm text-slate-500">Power Backup</p>
+                          <p className="font-semibold text-slate-900 capitalize">{specs.powerBackup.replace(/_/g, ' ')}</p>
+                        </div>
+                      </div>
+                    )}
+                    {specs.securityFeatures && specs.securityFeatures.length > 0 && (
+                      <div className="flex items-start gap-2 p-2.5 bg-slate-50 rounded-lg">
+                        <Shield className="h-5 w-5 text-orange-500 mt-0.5" />
+                        <div>
+                          <p className="text-sm text-slate-500">Security</p>
+                          <p className="font-semibold text-slate-900 capitalize text-ellipsis overflow-hidden whitespace-nowrap" title={specs.securityFeatures.join(', ').replace(/_/g, ' ')}>
+                             {specs.securityFeatures.length > 1 ? `${specs.securityFeatures.length} Features` : specs.securityFeatures[0].replace(/_/g, ' ')}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                    {specs.waterSupply && (
+                      <div className="flex items-start gap-2 p-2.5 bg-slate-50 rounded-lg">
+                        <Droplets className="h-5 w-5 text-orange-500 mt-0.5" />
+                        <div>
+                          <p className="text-sm text-slate-500">Water Supply</p>
+                          <p className="font-semibold text-slate-900 capitalize">{specs.waterSupply.replace(/_/g, ' ')}</p>
+                        </div>
+                      </div>
+                    )}
+                    {specs.internetAccess && (
+                      <div className="flex items-start gap-2 p-2.5 bg-slate-50 rounded-lg">
+                        <Wifi className="h-5 w-5 text-orange-500 mt-0.5" />
+                        <div>
+                          <p className="text-sm text-slate-500">Internet</p>
+                          <p className="font-semibold text-slate-900 capitalize">{specs.internetAccess.replace(/_/g, ' ')}</p>
+                        </div>
+                      </div>
+                    )}
+                    {specs.flooring && (
+                      <div className="flex items-start gap-2 p-2.5 bg-slate-50 rounded-lg">
+                        <Building2 className="h-5 w-5 text-orange-500 mt-0.5" />
+                        <div>
+                          <p className="text-sm text-slate-500">Flooring</p>
+                          <p className="font-semibold text-slate-900 capitalize">{specs.flooring.replace(/_/g, ' ')}</p>
+                        </div>
+                      </div>
+                    )}
+                    {specs.parkingType && (
+                      <div className="flex items-start gap-2 p-2.5 bg-slate-50 rounded-lg">
+                        <Car className="h-5 w-5 text-orange-500 mt-0.5" />
+                        <div>
+                          <p className="text-sm text-slate-500">Parking Type</p>
+                          <p className="font-semibold text-slate-900 capitalize">{specs.parkingType.replace(/_/g, ' ')}</p>
+                        </div>
+                      </div>
+                    )}
+                    {specs.petFriendly && (
+                      <div className="flex items-start gap-2 p-2.5 bg-slate-50 rounded-lg">
+                        <CheckCircle2 className="h-5 w-5 text-orange-500 mt-0.5" />
+                        <div>
+                          <p className="text-sm text-slate-500">Pet Friendly</p>
+                          <p className="font-semibold text-slate-900 capitalize">{specs.petFriendly.replace(/_/g, ' ')}</p>
+                        </div>
+                      </div>
+                    )}
+                    {specs.electricitySupply && (
+                      <div className="flex items-start gap-2 p-2.5 bg-slate-50 rounded-lg">
+                        <Zap className="h-5 w-5 text-orange-500 mt-0.5" />
+                        <div>
+                          <p className="text-sm text-slate-500">Electricity</p>
+                          <p className="font-semibold text-slate-900 capitalize">{specs.electricitySupply.replace(/_/g, ' ')}</p>
+                        </div>
+                      </div>
+                    )}
                   </div>
-                  <div className="flex items-start gap-2 p-2.5 bg-slate-50 rounded-lg">
-                    <Zap className="h-5 w-5 text-orange-500 mt-0.5" />
-                    <div>
-                      <p className="text-sm text-slate-500">Power Backup</p>
-                      <p className="font-semibold text-slate-900">Full Backup</p>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-2 p-2.5 bg-slate-50 rounded-lg">
-                    <Shield className="h-5 w-5 text-orange-500 mt-0.5" />
-                    <div>
-                      <p className="text-sm text-slate-500">Security</p>
-                      <p className="font-semibold text-slate-900">24/7 Security</p>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-2 p-2.5 bg-slate-50 rounded-lg">
-                    <Droplets className="h-5 w-5 text-orange-500 mt-0.5" />
-                    <div>
-                      <p className="text-sm text-slate-500">Water Supply</p>
-                      <p className="font-semibold text-slate-900">Municipal</p>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-2 p-2.5 bg-slate-50 rounded-lg">
-                    <Wifi className="h-5 w-5 text-orange-500 mt-0.5" />
-                    <div>
-                      <p className="text-sm text-slate-500">Internet</p>
-                      <p className="font-semibold text-slate-900">Fiber Ready</p>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-2 p-2.5 bg-slate-50 rounded-lg">
-                    <Building2 className="h-5 w-5 text-orange-500 mt-0.5" />
-                    <div>
-                      <p className="text-sm text-slate-500">Flooring</p>
-                      <p className="font-semibold text-slate-900">Tiled</p>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-2 p-2.5 bg-slate-50 rounded-lg">
-                    <Car className="h-5 w-5 text-orange-500 mt-0.5" />
-                    <div>
-                      <p className="text-sm text-slate-500">Parking Type</p>
-                      <p className="font-semibold text-slate-900">Covered Garage</p>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-2 p-2.5 bg-slate-50 rounded-lg">
-                    <CheckCircle2 className="h-5 w-5 text-orange-500 mt-0.5" />
-                    <div>
-                      <p className="text-sm text-slate-500">Pet Friendly</p>
-                      <p className="font-semibold text-slate-900">Yes</p>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-2 p-2.5 bg-slate-50 rounded-lg">
-                    <Zap className="h-5 w-5 text-orange-500 mt-0.5" />
-                    <div>
-                      <p className="text-sm text-slate-500">Electricity</p>
-                      <p className="font-semibold text-slate-900">Prepaid</p>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            )}
 
             {/* 2.3 Agent Overview */}
             {/* 2.3 Agent Overview */}
