@@ -162,69 +162,74 @@ export function ResidentialConfigPhase() {
         </CardContent>
       </Card>
 
-      {/* Step 1B: Community / Estate Type */}
-      <Card className="border-slate-200/60 shadow-sm">
-        <CardHeader className="pb-4">
-          <CardTitle className="text-xl text-slate-900 flex items-center gap-2">
-            <Castle className="w-5 h-5 text-purple-600" />
-            Community Type
-            <Badge variant="secondary" className="ml-2 text-xs">Optional</Badge>
-          </CardTitle>
-          <CardDescription>
-            Is this development part of an estate or gated community? Select all that apply.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-            {getApplicableCommunityTypes(residentialConfig.residentialType || null).map((option) => {
-              const isSelected = residentialConfig.communityTypes?.includes(option.value);
-              
-              return (
-                <label
-                  key={option.value}
-                  className={cn(
-                    "flex items-center gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all duration-200",
-                    isSelected 
-                      ? "border-purple-500 bg-purple-50" 
-                      : "border-slate-200 hover:border-purple-300 hover:bg-purple-50/30"
-                  )}
-                >
-                  <Checkbox
-                    checked={isSelected}
-                    onCheckedChange={() => handleCommunityTypeToggle(option.value)}
-                    className="data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600"
-                  />
-                  <div className="flex-1 min-w-0">
-                    <span className={cn(
-                      "font-medium text-sm",
-                      isSelected ? "text-purple-900" : "text-slate-700"
-                    )}>
-                      {option.label}
-                    </span>
-                    {option.triggersEstateProfile && (
-                      <p className="text-xs text-slate-500 mt-0.5">
-                        + Estate Profile
-                      </p>
+      {/* Step 1B: Community / Property Type - Only shows after development type is selected */}
+      {residentialConfig.residentialType && (
+        <Card className="border-slate-200/60 shadow-sm animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <CardHeader className="pb-4">
+            <CardTitle className="text-xl text-slate-900 flex items-center gap-2">
+              <Castle className="w-5 h-5 text-purple-600" />
+              Property Sub-Type
+              <Badge variant="secondary" className="ml-2 text-xs">Required</Badge>
+            </CardTitle>
+            <CardDescription>
+              What specific type of {RESIDENTIAL_TYPE_OPTIONS.find(o => o.value === residentialConfig.residentialType)?.label.toLowerCase() || 'development'} is this?
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {getApplicableCommunityTypes(residentialConfig.residentialType || null).map((option) => {
+                const isSelected = residentialConfig.communityTypes?.includes(option.value);
+                
+                return (
+                  <label
+                    key={option.value}
+                    className={cn(
+                      "flex items-center gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all duration-200",
+                      isSelected 
+                        ? "border-purple-500 bg-purple-50" 
+                        : "border-slate-200 hover:border-purple-300 hover:bg-purple-50/30"
                     )}
-                  </div>
-                </label>
-              );
-            })}
-          </div>
-          
-          {/* Info about Estate Profile */}
-          {residentialConfig.communityTypes?.some(t => 
-            COMMUNITY_TYPE_OPTIONS.find(o => o.value === t)?.triggersEstateProfile
-          ) && (
-            <div className="mt-4 flex items-start gap-2 p-3 bg-purple-50 rounded-lg text-sm text-purple-700">
-              <Info className="w-4 h-4 shrink-0 mt-0.5" />
-              <span>
-                You'll configure estate-level details (HOA, levies, estate amenities) in a dedicated step.
-              </span>
+                  >
+                    <Checkbox
+                      checked={isSelected}
+                      onCheckedChange={() => handleCommunityTypeToggle(option.value)}
+                      className="data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <span className={cn(
+                        "font-medium text-sm",
+                        isSelected ? "text-purple-900" : "text-slate-700"
+                      )}>
+                        {option.label}
+                      </span>
+                      <p className="text-xs text-slate-500 mt-0.5">
+                        {option.description}
+                      </p>
+                      {option.triggersEstateProfile && (
+                        <p className="text-xs text-purple-600 mt-0.5 font-medium">
+                          + Estate Profile
+                        </p>
+                      )}
+                    </div>
+                  </label>
+                );
+              })}
             </div>
-          )}
-        </CardContent>
-      </Card>
+            
+            {/* Info about Estate Profile */}
+            {residentialConfig.communityTypes?.some(t => 
+              COMMUNITY_TYPE_OPTIONS.find(o => o.value === t)?.triggersEstateProfile
+            ) && (
+              <div className="mt-4 flex items-start gap-2 p-3 bg-purple-50 rounded-lg text-sm text-purple-700">
+                <Info className="w-4 h-4 shrink-0 mt-0.5" />
+                <span>
+                  You'll configure estate-level details (HOA, levies, estate amenities) in a dedicated step.
+                </span>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Step 1C: Security Features (shown for estates OR apartments) */}
       {shouldShowSecurity && (
