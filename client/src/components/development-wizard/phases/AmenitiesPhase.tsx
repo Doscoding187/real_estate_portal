@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   Shield, Dumbbell, Leaf, Settings, Baby,
-  ArrowRight, ArrowLeft, Check, Info, Sparkles
+  ArrowRight, ArrowLeft, Check, Info, Sparkles, Plus, X
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useDevelopmentWizard } from '@/hooks/useDevelopmentWizard';
@@ -41,6 +42,8 @@ export function AmenitiesPhase() {
   const navigation = useWizardNavigation();
 
   const [activeTab, setActiveTab] = useState<AmenityCategory>('security');
+  const [customAmenityInput, setCustomAmenityInput] = useState('');
+  const [customAmenities, setCustomAmenities] = useState<string[]>([]);
 
   const handleBack = () => {
     // Go back to Estate Profile (4) or Identity (3) based on config
@@ -80,6 +83,43 @@ export function AmenitiesPhase() {
   };
 
   const commonPicksApplied = COMMON_PICK_AMENITIES.every(key => selectedAmenities.includes(key));
+
+  // Custom amenity handlers
+  const handleAddCustomAmenity = () => {
+    const trimmed = customAmenityInput.trim();
+    if (!trimmed) return;
+    
+    // Check if already exists (in registry or custom list)
+    const existsInRegistry = AMENITY_REGISTRY.some(a => 
+      a.label.toLowerCase() === trimmed.toLowerCase()
+    );
+    const existsInCustom = customAmenities.some(a => 
+      a.toLowerCase() === trimmed.toLowerCase()
+    );
+    
+    if (existsInRegistry) {
+      toast.error('This amenity already exists in the list - please select it from the categories');
+      return;
+    }
+    
+    if (existsInCustom) {
+      toast.error('You have already added this custom amenity');
+      return;
+    }
+    
+    // Add to custom list and selected amenities
+    const customKey = `custom_${trimmed.toLowerCase().replace(/\s+/g, '_')}`;
+    setCustomAmenities([...customAmenities, trimmed]);
+    setSelectedAmenities([...selectedAmenities, customKey]);
+    setCustomAmenityInput('');
+    toast.success(`Added "${trimmed}" to your amenities`);
+  };
+
+  const handleRemoveCustomAmenity = (amenityName: string) => {
+    const customKey = `custom_${amenityName.toLowerCase().replace(/\s+/g, '_')}`;
+    setCustomAmenities(customAmenities.filter(a => a !== amenityName));
+    setSelectedAmenities(selectedAmenities.filter(a => a !== customKey));
+  };
 
   const totalSelected = selectedAmenities.length;
 
@@ -284,6 +324,59 @@ export function AmenitiesPhase() {
           );
         })}
       </div>
+
+      {/* Custom Amenity Input */}
+      <Card className="border-slate-200/60 shadow-sm">
+        <CardHeader className="pb-4">
+          <CardTitle className="text-lg text-slate-900 flex items-center gap-2">
+            <Plus className="w-5 h-5 text-green-600" />
+            Add Custom Amenity
+          </CardTitle>
+          <CardDescription>
+            Can't find an amenity in our list? Add your own custom amenity below.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex gap-3">
+            <Input
+              placeholder="e.g., Helipad, Private Beach Access..."
+              value={customAmenityInput}
+              onChange={(e) => setCustomAmenityInput(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleAddCustomAmenity()}
+              className="flex-1"
+            />
+            <Button
+              onClick={handleAddCustomAmenity}
+              disabled={!customAmenityInput.trim()}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Add
+            </Button>
+          </div>
+
+          {/* Custom Amenities List */}
+          {customAmenities.length > 0 && (
+            <div className="flex flex-wrap gap-2 pt-2">
+              {customAmenities.map((amenity) => (
+                <Badge
+                  key={amenity}
+                  variant="secondary"
+                  className="flex items-center gap-2 px-3 py-1.5 bg-green-50 text-green-700 border border-green-200"
+                >
+                  {amenity}
+                  <button
+                    onClick={() => handleRemoveCustomAmenity(amenity)}
+                    className="p-0.5 hover:bg-green-200 rounded transition-colors"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </Badge>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Navigation */}
       <div className="flex justify-between pt-8 border-t border-slate-200">
