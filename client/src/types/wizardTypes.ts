@@ -82,7 +82,7 @@ export type ResidentialType =
 
 export const RESIDENTIAL_TYPE_OPTIONS: { value: ResidentialType; label: string; description: string }[] = [
   { value: 'apartment', label: 'Apartment / Flat Development', description: 'Multi-storey residential blocks' },
-  { value: 'townhouse', label: 'Townhouse / Cluster Development', description: 'Attached or semi-detached units' },
+  { value: 'townhouse', label: 'Security Estate Developments', description: 'Gated estates with security features' },
   { value: 'freehold', label: 'Freehold Housing Development', description: 'Standalone houses on individual plots' },
   { value: 'mixed_residential', label: 'Mixed Residential', description: 'Combination of unit types' },
   { value: 'retirement', label: 'Retirement Development', description: 'Age-restricted living facilities' },
