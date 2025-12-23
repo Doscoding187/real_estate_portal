@@ -114,6 +114,24 @@ export const COMMUNITY_TYPE_OPTIONS: { value: CommunityType; label: string; desc
   { value: 'non_estate', label: 'Non-Estate Development', description: 'Standard development, no estate structure', triggersEstateProfile: false },
 ];
 
+// Mapping: Which community types are applicable for each residential type
+export const RESIDENTIAL_TO_COMMUNITY_MAP: Record<ResidentialType, CommunityType[]> = {
+  apartment: ['gated_community', 'lifestyle_estate', 'non_estate'],
+  townhouse: ['security_estate', 'gated_community', 'golf_estate', 'eco_estate', 'waterfront_estate', 'lifestyle_estate'],
+  freehold: ['security_estate', 'gated_community', 'golf_estate', 'eco_estate', 'waterfront_estate', 'lifestyle_estate', 'non_estate'],
+  mixed_residential: ['security_estate', 'gated_community', 'golf_estate', 'eco_estate', 'waterfront_estate', 'lifestyle_estate', 'non_estate'],
+  retirement: ['retirement_village'],
+  student_accommodation: ['non_estate'],
+};
+
+// Helper to get filtered community options based on residential type
+export const getApplicableCommunityTypes = (residentialType: ResidentialType | null): typeof COMMUNITY_TYPE_OPTIONS => {
+  if (!residentialType) return COMMUNITY_TYPE_OPTIONS;
+  
+  const applicableValues = RESIDENTIAL_TO_COMMUNITY_MAP[residentialType] || [];
+  return COMMUNITY_TYPE_OPTIONS.filter(opt => applicableValues.includes(opt.value));
+};
+
 // Helper to check if estate profile should be shown
 export const shouldShowEstateProfile = (communityTypes: CommunityType[]): boolean => {
   return communityTypes.some(type => 

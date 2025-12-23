@@ -13,6 +13,7 @@ import {
   RESIDENTIAL_TYPE_OPTIONS, 
   COMMUNITY_TYPE_OPTIONS,
   SECURITY_FEATURE_OPTIONS,
+  getApplicableCommunityTypes,
   type ResidentialType,
   type CommunityType,
   type SecurityFeature,
@@ -37,7 +38,11 @@ export function ResidentialConfigPhase() {
   } = useDevelopmentWizard();
 
   const handleResidentialTypeSelect = (type: ResidentialType) => {
-    setResidentialConfig({ residentialType: type });
+    // Clear community types when residential type changes since options differ
+    setResidentialConfig({ 
+      residentialType: type,
+      communityTypes: []
+    });
   };
 
   const handleCommunityTypeToggle = (type: CommunityType) => {
@@ -170,7 +175,7 @@ export function ResidentialConfigPhase() {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-            {COMMUNITY_TYPE_OPTIONS.map((option) => {
+            {getApplicableCommunityTypes(residentialConfig.residentialType || null).map((option) => {
               const isSelected = residentialConfig.communityTypes?.includes(option.value);
               
               return (
