@@ -68,8 +68,9 @@ export function PreviewStep() {
   const pastProjects = [];
 
   // tRPC mutation for creating development
-  const createDevelopment = trpc.developer.createDevelopment.useMutation({
-    onSuccess: data => {
+  const createDevelopment = trpc.developer.createDevelopment.useMutation();
+  const publishDevelopment = trpc.developer.publishDevelopment.useMutation({
+    onSuccess: () => {
       toast.success('Development submitted successfully!', {
         description: 'Your development is now under review.',
       });
@@ -104,25 +105,42 @@ export function PreviewStep() {
   const handleSubmit = async () => {
     if (!isValid || !agreedToTerms) return;
 
-    // Prepare development data with coordinates
-    createDevelopment.mutate({
-      name: developmentName,
-      developmentType: 'residential', // Default type
-      description: description,
-      address: address,
-      city: city,
-      province: province,
-      // Include coordinates if available (from map pin)
-      latitude: latitude ? parseFloat(latitude) : undefined,
-      longitude: longitude ? parseFloat(longitude) : undefined,
-      showHouseAddress: true, // Default to showing address
-      priceFrom:
-        unitTypes.length > 0 ? Math.min(...unitTypes.map(u => u.basePriceFrom)) : undefined,
-      priceTo:
-        unitTypes.length > 0 ? Math.max(...unitTypes.map(u => u.basePriceTo || u.basePriceFrom)) : undefined,
-      amenities: amenities,
-      completionDate: undefined, // Not in new structure
-    });
+    try {
+      console.log('[PreviewStep] Starting submit flow...');
+      
+      // Step 1: Create development
+      const result = await createDevelopment.mutateAsync({
+        name: developmentName,
+        developmentType: 'residential', // Default type
+        description: description,
+        address: address,
+        city: city,
+        province: province,
+        // Include coordinates if available (from map pin)
+        latitude: latitude ? parseFloat(latitude) : undefined,
+        longitude: longitude ? parseFloat(longitude) : undefined,
+        showHouseAddress: true, // Default to showing address
+        priceFrom:
+          unitTypes.length > 0 ? Math.min(...unitTypes.map(u => u.basePriceFrom)) : undefined,
+        priceTo:
+          unitTypes.length > 0 ? Math.max(...unitTypes.map(u => u.basePriceTo || u.basePriceFrom)) : undefined,
+        amenities: amenities,
+        completionDate: undefined, // Not in new structure
+      });
+      
+      console.log('[PreviewStep] Development created:', result.development.id);
+      
+      // Step 2: Publish development (submit for review)
+      console.log('[PreviewStep] Publishing development...');
+      await publishDevelopment.mutateAsync({ id: result.development.id });
+      console.log('[PreviewStep] Publish complete');
+      
+    } catch (error: any) {
+      console.error('[PreviewStep] Submit failed:', error);
+      toast.error('Failed to submit development', {
+        description: error.message,
+      });
+    }
   };
 
   const handleSaveDraft = () => {
@@ -493,11 +511,11 @@ export function PreviewStep() {
 
           <Button
             onClick={handleSubmit}
-            disabled={!isValid || !agreedToTerms || createDevelopment.status === 'pending'}
+            disabled={!isValid || !agreedToTerms || createDevelopment.isPending || publishDevelopment.isPending}
             size="lg"
             className="flex-1 gap-2 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 shadow-lg"
           >
-            {createDevelopment.status === 'pending' ? (
+            {(createDevelopment.isPending || publishDevelopment.isPending) ? (
               'Submitting...'
             ) : (
               <>

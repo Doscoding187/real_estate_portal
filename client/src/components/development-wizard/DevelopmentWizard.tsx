@@ -103,8 +103,8 @@ export function DevelopmentWizard({ developmentId, isModal = false }: Developmen
     return calculateDevelopmentReadiness(devCandidate);
   }, [developmentData, overview, unitTypes]);
 
-  const { lastSaved, isSaving, error: autoSaveError } = useAutoSave(stateToWatch, {
-    debounceMs: 60000, // 1 Minute as requested
+  const { lastSaved, isSaving, error: autoSaveError, saveNow } = useAutoSave(stateToWatch, {
+    debounceMs: 60000, // 1 Minute debounce for continuous typing
     onSave: async () => {
       // Trigger backend draft save
       await saveDraft(async (data) => {
@@ -117,6 +117,16 @@ export function DevelopmentWizard({ developmentId, isModal = false }: Developmen
       });
     }
   });
+
+  // Save on phase transition (user-requested behavior)
+  const prevPhaseRef = React.useRef(currentPhase);
+  useEffect(() => {
+    if (prevPhaseRef.current !== currentPhase && prevPhaseRef.current !== 0) {
+      // Phase changed - trigger immediate save
+      saveNow();
+    }
+    prevPhaseRef.current = currentPhase;
+  }, [currentPhase, saveNow]);
 
   // tRPC hooks for draft operations
   const { data: loadedDraft, isLoading: isDraftLoading, error: draftError } = trpc.developer.getDraft.useQuery(

@@ -1,10 +1,12 @@
 /**
  * Save Status Indicator Component
  * 
- * Displays the current save status with icon and timestamp
+ * Displays the current save status with icon and timestamp.
+ * Shows status only when actively saving or on error.
+ * Auto-hides after save completes to avoid "saved X ago" noise.
  */
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Check, Loader2, AlertCircle, Cloud } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
@@ -36,6 +38,18 @@ export interface SaveStatusIndicatorProps {
    * @default 'full'
    */
   variant?: 'full' | 'compact';
+  
+  /**
+   * How long to show the "saved" status before hiding (ms)
+   * @default 3000
+   */
+  hideAfterMs?: number;
+  
+  /**
+   * Always show status (disables auto-hide)
+   * @default false
+   */
+  alwaysShow?: boolean;
 }
 
 export const SaveStatusIndicator: React.FC<SaveStatusIndicatorProps> = ({
@@ -44,16 +58,36 @@ export const SaveStatusIndicator: React.FC<SaveStatusIndicatorProps> = ({
   error,
   className,
   variant = 'full',
+  hideAfterMs = 3000,
+  alwaysShow = false,
 }) => {
+  const [showSaved, setShowSaved] = useState(false);
+  
+  // Show "Saved" briefly after save completes, then hide
+  useEffect(() => {
+    if (lastSaved && !isSaving && !error) {
+      setShowSaved(true);
+      const timer = setTimeout(() => {
+        setShowSaved(false);
+      }, hideAfterMs);
+      return () => clearTimeout(timer);
+    }
+  }, [lastSaved, isSaving, error, hideAfterMs]);
+
   // Determine status
   const getStatus = () => {
     if (error) return 'error';
     if (isSaving) return 'saving';
-    if (lastSaved) return 'saved';
+    if (showSaved && lastSaved) return 'saved';
     return 'idle';
   };
 
   const status = getStatus();
+  
+  // Don't render anything when idle (unless alwaysShow is true)
+  if (status === 'idle' && !alwaysShow) {
+    return null;
+  }
 
   // Status configurations
   const statusConfig = {
@@ -71,9 +105,7 @@ export const SaveStatusIndicator: React.FC<SaveStatusIndicatorProps> = ({
     },
     saved: {
       icon: Check,
-      text: lastSaved
-        ? `Saved ${formatDistanceToNow(lastSaved, { addSuffix: true })}`
-        : 'Saved',
+      text: 'Saved',
       color: 'text-green-600',
       bgColor: 'bg-green-50',
     },
@@ -90,25 +122,25 @@ export const SaveStatusIndicator: React.FC<SaveStatusIndicatorProps> = ({
 
   if (variant === 'compact') {
     return (
-      <motion.div
-        initial={{ opacity: 0, scale: 0.8 }}
-        animate={{ opacity: 1, scale: 1 }}
-        className={cn(
-          'flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium',
-          config.color,
-          config.bgColor,
-          className
-        )}
-      >
-        <Icon
-          className={cn('w-3 h-3', status === 'saving' && 'animate-spin')}
-        />
-        {status === 'saved' && lastSaved && (
-          <span className="hidden sm:inline">
-            {formatDistanceToNow(lastSaved, { addSuffix: true })}
-          </span>
-        )}
-      </motion.div>
+      <AnimatePresence>
+        <motion.div
+          key={status}
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.8 }}
+          className={cn(
+            'flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium',
+            config.color,
+            config.bgColor,
+            className
+          )}
+        >
+          <Icon
+            className={cn('w-3 h-3', status === 'saving' && 'animate-spin')}
+          />
+          <span className="hidden sm:inline">{config.text}</span>
+        </motion.div>
+      </AnimatePresence>
     );
   }
 
@@ -141,3 +173,4 @@ export const SaveStatusIndicator: React.FC<SaveStatusIndicatorProps> = ({
     </AnimatePresence>
   );
 };
+

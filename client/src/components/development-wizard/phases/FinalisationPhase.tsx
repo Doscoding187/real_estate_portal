@@ -68,9 +68,12 @@ export function FinalisationPhase() {
     }
 
     setIsSubmitting(true);
+    let devId = editingId;
+    let unitTypeErrors: string[] = [];
+    
     try {
-      let devId = editingId;
-
+      console.log('[FinalisationPhase] Starting publish flow...', { editingId, hasUnitTypes: unitTypes.length });
+      
       // Map Development Type
       let mappedType: 'residential' | 'commercial' | 'mixed_use' | 'estate' | 'complex' = 'residential';
       if (classification.type === 'commercial') mappedType = 'commercial';
@@ -97,48 +100,71 @@ export function FinalisationPhase() {
         priceTo: unitTypes.length > 0 ? Math.max(...unitTypes.map(u => u.basePriceFrom)) : undefined,
       };
 
+      // STEP 1: Create or Update Development
       if (devId) {
+        console.log('[FinalisationPhase] Updating existing development:', devId);
         await updateDevMutation.mutateAsync({
           id: devId,
           data: devPayload
         });
+        console.log('[FinalisationPhase] Development updated successfully');
       } else {
+        console.log('[FinalisationPhase] Creating new development');
         const res = await createDevMutation.mutateAsync(devPayload);
         devId = res.development.id;
+        console.log('[FinalisationPhase] Development created with ID:', devId);
       }
 
-      // Handle Unit Types (Create new ones)
-      // Note: In a real edit scenario, we should avoid duplicating existing units.
-      // For now, we assume unitTypes in store that have string IDs (e.g. "unit-123") are new.
-      if (unitTypes.length > 0) {
-        // DEBUG: Log first unit type for senior developer analysis
-        console.log('=== UNIT TYPES DEBUG (unitTypes[0]) ===');
-        console.log(JSON.stringify(unitTypes[0], null, 2));
-        console.log('=======================================');
+      // STEP 2: Handle Unit Types (non-blocking errors)
+      if (unitTypes.length > 0 && devId) {
+        console.log('[FinalisationPhase] Creating unit types:', unitTypes.length);
         
         for (const unit of unitTypes) {
-           await createUnitTypeMutation.mutateAsync({
-             developmentId: devId!,
-             name: unit.name,
-             bedrooms: unit.bedrooms,
-             bathrooms: unit.bathrooms,
-             parking: unit.parking,
-             unitSize: unit.unitSize,
-             basePriceFrom: unit.basePriceFrom,
-             amenities: [...unit.amenities.standard, ...unit.amenities.additional]
-           });
+          try {
+            await createUnitTypeMutation.mutateAsync({
+              developmentId: devId,
+              name: unit.name,
+              bedrooms: unit.bedrooms,
+              bathrooms: unit.bathrooms,
+              parking: unit.parking,
+              unitSize: unit.unitSize,
+              basePriceFrom: unit.basePriceFrom,
+              amenities: [...unit.amenities.standard, ...unit.amenities.additional]
+            });
+          } catch (unitError: any) {
+            console.warn('[FinalisationPhase] Failed to create unit type:', unit.name, unitError.message);
+            unitTypeErrors.push(`Unit "${unit.name}": ${unitError.message}`);
+          }
+        }
+        
+        if (unitTypeErrors.length > 0) {
+          console.warn('[FinalisationPhase] Some unit types failed to create:', unitTypeErrors);
         }
       }
 
-      // Publish
-      await publishDevMutation.mutateAsync({ id: devId! });
+      // STEP 3: ALWAYS Publish (critical step)
+      console.log('[FinalisationPhase] Publishing development:', devId);
+      const publishResult = await publishDevMutation.mutateAsync({ id: devId! });
+      console.log('[FinalisationPhase] Publish result:', { 
+        id: publishResult.development.id, 
+        approvalStatus: publishResult.development.approvalStatus,
+        isPublished: publishResult.development.isPublished
+      });
 
-      toast.success('Development published successfully!');
+      // Show appropriate success message
+      if (unitTypeErrors.length > 0) {
+        toast.warning('Development published with some unit type errors', {
+          description: `${unitTypeErrors.length} unit type(s) failed to save. You can add them later.`
+        });
+      } else {
+        toast.success('Development published successfully!');
+      }
+      
       reset();
       setLocation('/developer/dashboard');
 
     } catch (error: any) {
-      console.error(error);
+      console.error('[FinalisationPhase] Publish failed:', error);
       toast.error(error.message || 'Failed to publish development');
     } finally {
       setIsSubmitting(false);

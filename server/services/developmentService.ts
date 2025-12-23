@@ -289,19 +289,29 @@ export class DevelopmentService {
     const db = await getDb();
     if (!db) throw new Error('Database not available');
 
+    console.log('[DevelopmentService.publishDevelopment] Starting...', { developmentId, developerId, isTrusted });
+
     // Verify ownership
     const existing = await this.getDevelopment(developmentId);
     if (!existing || existing.developerId !== developerId) {
+       console.error('[DevelopmentService.publishDevelopment] Unauthorized access attempt');
        throw new Error('Unauthorized');
     }
 
+    console.log('[DevelopmentService.publishDevelopment] Current status:', {
+      approvalStatus: existing.approvalStatus,
+      isPublished: existing.isPublished
+    });
+
     // Guard: Prevent re-publishing if already approved
     if (existing.approvalStatus === 'approved') {
+       console.log('[DevelopmentService.publishDevelopment] Already approved, skipping');
        throw new Error('Development is already published');
     }
 
     // Guard: Prevent duplicate pending submissions for non-trusted devs
     if (!isTrusted && existing.approvalStatus === 'pending') {
+        console.log('[DevelopmentService.publishDevelopment] Already pending, skipping');
         throw new Error('Development is already pending review');
     }
 
@@ -313,6 +323,12 @@ export class DevelopmentService {
     const isPublished = isTrusted ? 1 : 0;
     const publishedAt = isTrusted ? new Date().toISOString() : null;
     const notes = isTrusted ? 'Auto-approved (trusted developer)' : null;
+
+    console.log('[DevelopmentService.publishDevelopment] Setting new status:', { 
+      newStatus, 
+      isPublished, 
+      isTrusted 
+    });
 
     // 1. Update Development Status
     await db.update(developments)
@@ -326,6 +342,11 @@ export class DevelopmentService {
 
     const development = await this.getDevelopment(developmentId);
     if (!development) throw new Error('Failed to update development status');
+
+    console.log('[DevelopmentService.publishDevelopment] After update:', {
+      approvalStatus: development.approvalStatus,
+      isPublished: development.isPublished
+    });
 
     // Determine submission type based on history
     const priorHistory = await db.select({ id: developmentApprovalQueue.id })
@@ -346,6 +367,8 @@ export class DevelopmentService {
       reviewedBy: isTrusted ? SYSTEM_REVIEWER_ID : undefined, 
       reviewedAt: publishedAt,
     });
+
+    console.log('[DevelopmentService.publishDevelopment] Complete. Queue entry created:', { submissionType });
 
     return development;
   }

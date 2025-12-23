@@ -22,6 +22,7 @@ import {
   Trees,
   Maximize,
   Check,
+  CheckCircle2,
   Lightbulb,
   Warehouse,
   Sofa,
