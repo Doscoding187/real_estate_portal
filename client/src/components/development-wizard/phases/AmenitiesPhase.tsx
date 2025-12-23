@@ -6,7 +6,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   Shield, Dumbbell, Leaf, Settings, Baby,
-  ArrowRight, ArrowLeft, Check, Info
+  ArrowRight, ArrowLeft, Check, Info, Sparkles
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useDevelopmentWizard } from '@/hooks/useDevelopmentWizard';
@@ -14,7 +14,9 @@ import { useWizardNavigation } from '@/hooks/useWizardNavigation';
 import { 
   AMENITY_REGISTRY, 
   AMENITY_CATEGORIES, 
+  COMMON_PICK_AMENITIES,
   getAmenitiesByCategory,
+  getAmenityByKey,
   type AmenityCategory 
 } from '@/config/amenityRegistry';
 import { toast } from 'sonner';
@@ -32,6 +34,7 @@ export function AmenitiesPhase() {
   const { 
     selectedAmenities, 
     toggleAmenity,
+    setSelectedAmenities,
     setPhase 
   } = useDevelopmentWizard();
   
@@ -63,6 +66,20 @@ export function AmenitiesPhase() {
       categoryAmenities.some(a => a.key === key)
     ).length;
   };
+
+  // Apply common picks (auto-suggest high-conversion amenities)
+  const applyCommonPicks = () => {
+    const newAmenities = [...selectedAmenities];
+    COMMON_PICK_AMENITIES.forEach(key => {
+      if (!newAmenities.includes(key)) {
+        newAmenities.push(key);
+      }
+    });
+    setSelectedAmenities(newAmenities);
+    toast.success('Added common amenities to your selection');
+  };
+
+  const commonPicksApplied = COMMON_PICK_AMENITIES.every(key => selectedAmenities.includes(key));
 
   const totalSelected = selectedAmenities.length;
 
@@ -104,6 +121,31 @@ export function AmenitiesPhase() {
           {totalSelected >= 3 ? '✓ Complete' : `${3 - totalSelected} more needed`}
         </Badge>
       </div>
+
+      {/* Quick Picks Button */}
+      {!commonPicksApplied && totalSelected < 3 && (
+        <div className="flex items-center justify-between p-4 bg-gradient-to-r from-amber-50 to-orange-50 rounded-xl border border-amber-200">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-white rounded-lg shadow-sm">
+              <Sparkles className="w-5 h-5 text-amber-600" />
+            </div>
+            <div>
+              <p className="font-medium text-slate-900">Quick Start</p>
+              <p className="text-sm text-slate-500">
+                Add recommended amenities: 24-Hour Security, Access Control, Fibre-Ready
+              </p>
+            </div>
+          </div>
+          <Button
+            variant="outline"
+            onClick={applyCommonPicks}
+            className="border-amber-300 bg-white hover:bg-amber-50 text-amber-700"
+          >
+            <Sparkles className="w-4 h-4 mr-2" />
+            Apply Common Picks
+          </Button>
+        </div>
+      )}
 
       {/* Tabs Structure */}
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as AmenityCategory)} className="w-full">
