@@ -64,7 +64,12 @@ export function DevelopmentWizard({ developmentId, isModal = false }: Developmen
   const [, params] = useRoute('/developer/create-development');
   const urlParams = new URLSearchParams(window.location.search);
   const draftIdFromUrl = urlParams.get('draftId');
+  const idFromUrl = urlParams.get('id');
   const [currentDraftId, setCurrentDraftId] = useState<number | undefined>(draftIdFromUrl ? parseInt(draftIdFromUrl) : undefined);
+  
+  // Resolve development ID from props or URL
+  const activeDevelopmentId = developmentId || (idFromUrl ? parseInt(idFromUrl) : undefined);
+
   const [showExitDialog, setShowExitDialog] = useState(false);
   const [showResumeDraftDialog, setShowResumeDraftDialog] = useState(false);
   const [apiError, setApiError] = useState<AppError | null>(null);
@@ -132,7 +137,7 @@ export function DevelopmentWizard({ developmentId, isModal = false }: Developmen
   const { data: loadedDraft, isLoading: isDraftLoading, error: draftError } = trpc.developer.getDraft.useQuery(
     { id: currentDraftId! },
     { 
-      enabled: !!currentDraftId && !developmentId, 
+      enabled: !!currentDraftId && !activeDevelopmentId, 
       retry: false,
       // Critical: Prevent background refetches from overwriting local state
       refetchOnWindowFocus: false,
@@ -143,9 +148,9 @@ export function DevelopmentWizard({ developmentId, isModal = false }: Developmen
 
   // tRPC hooks for Development Edit Mode
   const { data: editData, isLoading: isEditLoading, error: loadError } = trpc.developer.getDevelopment.useQuery(
-    { id: developmentId! },
+    { id: activeDevelopmentId! },
     { 
-      enabled: !!developmentId, 
+      enabled: !!activeDevelopmentId, 
       retry: false,
       refetchOnWindowFocus: false 
     }
@@ -204,7 +209,7 @@ export function DevelopmentWizard({ developmentId, isModal = false }: Developmen
   // Render Current Phase
   const renderPhase = () => {
     // Show loading state if hydrating
-    if (developmentId && isEditLoading) {
+    if (activeDevelopmentId && isEditLoading) {
         return (
             <div className="flex flex-col items-center justify-center h-64 text-gray-500">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
