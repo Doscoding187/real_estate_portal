@@ -732,7 +732,7 @@ export const developerRouter = router({
         const fullDev = await developmentService.getDevelopmentWithPhases(input.id);
         const readiness = calculateDevelopmentReadiness(fullDev);
         
-        if (readiness.score < 90) {
+        if (readiness.score < 75) {
              throw new TRPCError({
                 code: 'PRECONDITION_FAILED',
                 message: `Development is not ready for publishing (${readiness.score}%). Please complete missing sections.`,
