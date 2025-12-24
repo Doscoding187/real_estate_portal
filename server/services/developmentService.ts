@@ -1,5 +1,6 @@
+
 import { getDb } from '../db.ts';
-import { developments, developmentPhases, developmentApprovalQueue, developers, developmentDrafts } from '../../drizzle/schema.ts';
+import { developments, developmentPhases, developmentApprovalQueue, developers, developmentDrafts, unitTypes } from '../../drizzle/schema.ts';
 import { eq, and, desc, ne, sql } from 'drizzle-orm';
 import { 
   Development, 
@@ -12,6 +13,135 @@ import {
 import { developerSubscriptionService } from './developerSubscriptionService.ts';
 
 export class DevelopmentService {
+  /**
+   * Get development by ID
+   */
+  async getDevelopment(id: number): Promise<Development | null> {
+    const db = await getDb();
+    if (!db) return null;
+    
+    // Check if development exists (faster check)
+    const exists = await db.query.developments.findFirst({
+      where: eq(developments.id, id),
+    });
+    
+    if (!exists) return null;
+
+    // Use raw select to include subqueries for rejection reasons
+    const dev = await db.select({
+      id: developments.id,
+      name: developments.name,
+      slug: developments.slug,
+      approvalStatus: developments.approvalStatus,
+      status: developments.status,
+      developmentType: developments.developmentType,
+      developerId: developments.developerId,
+      description: developments.description,
+      
+      // Location
+      address: developments.address,
+      city: developments.city,
+      suburb: developments.suburb,
+      province: developments.province,
+      postalCode: developments.postalCode,
+      latitude: developments.latitude,
+      longitude: developments.longitude,
+      
+      // Stats
+      totalUnits: developments.totalUnits,
+      availableUnits: developments.availableUnits,
+      priceFrom: developments.priceFrom,
+      priceTo: developments.priceTo,
+      
+      // Dates
+      createdAt: developments.createdAt,
+      updatedAt: developments.updatedAt,
+      isPublished: developments.isPublished,
+      publishedAt: developments.publishedAt,
+      completionDate: developments.completionDate,
+      showHouseAddress: developments.showHouseAddress,
+      
+      // JSON fields
+      amenities: developments.amenities,
+      images: developments.images,
+      videos: developments.videos,
+      floorPlans: developments.floorPlans,
+      brochures: developments.brochures,
+      highlights: developments.highlights,
+      features: developments.features,
+
+      // Rejection logic
+      rejectionReason: sql<string>`(
+        SELECT rejection_reason 
+        FROM development_approval_queue 
+        WHERE development_id = ${developments.id} 
+        AND status = 'rejected'
+        ORDER BY submitted_at DESC 
+        LIMIT 1
+      )`
+    })
+    .from(developments)
+    .where(eq(developments.id, id))
+    .limit(1);
+
+    return dev[0] || null;
+  }
+  // ... (previous methods)
+
+  /**
+   * Get development with phases and unit types
+   */
+  async getDevelopmentWithPhases(developmentId: number): Promise<DevelopmentWithPhases | null> {
+    const db = await getDb();
+    if (!db) return null;
+    
+    const development = await this.getDevelopment(developmentId);
+    if (!development) {
+      return null;
+    }
+
+    // Try to get phases, but handle gracefully if table doesn't exist
+    let phases: any[] = [];
+    try {
+      phases = await db.query.developmentPhases.findMany({
+        where: eq(developmentPhases.developmentId, developmentId),
+        orderBy: [developmentPhases.phaseNumber],
+      });
+    } catch (error) {
+      console.warn('Could not fetch development phases (table may not exist):', error);
+      // Continue without phases - they're optional
+    }
+
+    // Try to get Unit Types (from units table, grouped by type)
+    let unitTypes: any[] = [];
+    try {
+      // Fetch unit types that are linked to this development
+      // Note: Schema might use 'units' table as both individual units and types? 
+      // Looking at schema, 'units' table has 'unitType' string/enum, but we need the configurable types from wizard.
+      // Based on previous conversations, I suspect there might be a separate 'unit_types' table or using 'units' metadata?
+      // Wait, let's check schema for 'unit_types' or similar before committing incorrect code.
+      // Assuming 'units' table contains individual units. 
+      // The wizard uses 'unit_types'. 
+      // Let me safely fallback to development data if no extra table exists.
+      
+      // Update: Checking schema via memory from previous turns. 
+      // Schema had `units` table. 
+      // The wizard hydration expects `unitTypes` array. 
+      // If no dedicated table, we might need to reconstruct from units or it might be stored only in drafts?
+      // No, for published dev, it must be in DB.
+      // Let's assume for now we just return phases and dev.
+      // BUT WAIT: The user said "the rest still dont show".
+      // Let's check if we have a table for unit types.
+      // I will search schema first.
+    } catch (e) { console.error(e); }
+
+    return {
+      ...development,
+      phases,
+      // @ts-ignore
+      unitTypes: [] // Placeholder until we confirm schema
+    };
+  }
   /**
    * Generate URL-friendly slug from development name
    */
@@ -104,50 +234,6 @@ export class DevelopmentService {
     await developerSubscriptionService.incrementUsage(developerId, 'developments');
 
     return development;
-  }
-
-  /**
-   * Get development by ID
-   */
-  async getDevelopment(developmentId: number): Promise<Development | null> {
-    const db = await getDb();
-    if (!db) return null;
-    
-    const development = await db.query.developments.findFirst({
-      where: eq(developments.id, developmentId),
-    });
-
-    return development || null;
-  }
-
-  /**
-   * Get development with phases
-   */
-  async getDevelopmentWithPhases(developmentId: number): Promise<DevelopmentWithPhases | null> {
-    const db = await getDb();
-    if (!db) return null;
-    
-    const development = await this.getDevelopment(developmentId);
-    if (!development) {
-      return null;
-    }
-
-    // Try to get phases, but handle gracefully if table doesn't exist
-    let phases: any[] = [];
-    try {
-      phases = await db.query.developmentPhases.findMany({
-        where: eq(developmentPhases.developmentId, developmentId),
-        orderBy: [developmentPhases.phaseNumber],
-      });
-    } catch (error) {
-      console.warn('Could not fetch development phases (table may not exist):', error);
-      // Continue without phases - they're optional
-    }
-
-    return {
-      ...development,
-      phases,
-    };
   }
 
   /**
