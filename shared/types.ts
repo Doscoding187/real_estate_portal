@@ -387,6 +387,7 @@ export interface CreateDevelopmentInput {
   priceFrom?: number;
   priceTo?: number;
   amenities?: string[];
+  images?: string[];
   completionDate?: string;
   showHouseAddress?: boolean;
 }

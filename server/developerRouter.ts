@@ -471,6 +471,7 @@ export const developerRouter = router({
         priceFrom: z.number().int().positive().optional(),
         priceTo: z.number().int().positive().optional(),
         amenities: z.array(z.string()).optional(),
+        images: z.array(z.string()).optional(),
         completionDate: z.string().optional(),
         showHouseAddress: z.boolean().default(true),
       })
