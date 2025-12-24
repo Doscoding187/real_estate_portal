@@ -82,13 +82,14 @@ export class DevelopmentService {
       address: input.address || null,
       city: input.city,
       province: input.province,
+      suburb: input.suburb || null,
       latitude: input.latitude || null,
       longitude: input.longitude || null,
-      placeId: input.placeId || null,
-      locationId: input.locationId || null, // New: Link to locations table
+      locationId: input.locationId || null, // Link to locations table
+      postalCode: input.postalCode || null,
       priceFrom: input.priceFrom || null,
       priceTo: input.priceTo || null,
-      amenities: input.amenities ? JSON.stringify(input.amenities) : null,
+      amenities: input.amenities || null,
       completionDate: input.completionDate || null,
       isFeatured: 0,
       isPublished: 0,
