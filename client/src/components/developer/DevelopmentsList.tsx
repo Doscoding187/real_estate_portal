@@ -92,6 +92,26 @@ const DevelopmentsList: React.FC = () => {
     }
   };
 
+
+  // Robust image parser helper
+  const safelyParseImages = (imagesData: any): string[] => {
+    if (!imagesData) return [];
+    if (Array.isArray(imagesData)) return imagesData;
+    if (typeof imagesData === 'string') {
+      try {
+        const parsed = JSON.parse(imagesData);
+        if (Array.isArray(parsed)) return parsed;
+        if (typeof parsed === 'string') return [parsed]; // Handle "url" case
+        return []; 
+      } catch (e) {
+        // If parsing fails, it might be a raw comma-separated list or a single URL
+        if (imagesData.startsWith('http')) return [imagesData];
+        return [];
+      }
+    }
+    return [];
+  };
+
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Header */}
@@ -131,7 +151,9 @@ const DevelopmentsList: React.FC = () => {
 
       {/* Developments Grid */}
       <div className="grid grid-cols-1 gap-4">
-        {filteredDevelopments.map(dev => (
+        {filteredDevelopments.map(dev => {
+          const parsedImages = safelyParseImages(dev.images);
+          return (
            <EntityStatusCard
               key={dev.id}
               type="development"
@@ -142,7 +164,7 @@ const DevelopmentsList: React.FC = () => {
                           dev.approvalStatus === 'approved' ? 'approved' : 
                           dev.approvalStatus === 'pending' ? 'pending' : 
                           dev.approvalStatus === 'rejected' ? 'rejected' : 'draft',
-                  images: dev.images ? JSON.parse(dev.images) : [], // Parse images JSON string
+                  images: parsedImages, // Use safely parsed images
                   priceFrom: dev.priceFrom, 
               }}
               readiness={calculateDevelopmentReadiness({
@@ -151,14 +173,14 @@ const DevelopmentsList: React.FC = () => {
                   address: dev.address || dev.city,
                   latitude: dev.latitude,
                   longitude: dev.longitude,
-                  images: dev.images ? JSON.parse(dev.images) : [],
+                  images: parsedImages,
                   priceFrom: dev.priceFrom // Ensure priceFrom is fetched
               })}
               onEdit={(id) => setLocation(`/developer/create-development?id=${id}`)}
               onDelete={(id) => handleDelete(id, dev.name)}
               onView={(id) => setLocation(`/development/${id}`)}
            />
-        ))}
+        )})}
         
         {filteredDevelopments.length === 0 && (
              <div className="text-center py-12 bg-white rounded-lg border border-dashed text-slate-500">
