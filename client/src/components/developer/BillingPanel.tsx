@@ -146,7 +146,7 @@ export default function BillingPanel() {
               </Button>
               {subscription.tier !== 'premium' && (
                 <Button 
-                  onClick={() => setLocation('/subscription-plans')} 
+                  onClick={() => setLocation('/developer/plans')} 
                   className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
                 >
                   Upgrade
@@ -288,7 +288,7 @@ export default function BillingPanel() {
                   Upgrade to Basic or Premium to unlock more developments, leads, and premium features.
                 </p>
                 <Button 
-                  onClick={() => setLocation('/subscription-plans')}
+                  onClick={() => setLocation('/developer/plans')}
                   className="bg-blue-600 hover:bg-blue-700"
                 >
                   View Plans

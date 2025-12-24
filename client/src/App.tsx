@@ -115,6 +115,7 @@ import DeveloperSettingsPage from './pages/DeveloperSettingsPage';
 import DeveloperTeamPage from './pages/DeveloperTeamPage';
 import DeveloperSubscriptionPage from './pages/DeveloperSubscriptionPage';
 import SubscriptionPlans from './pages/SubscriptionPlans';
+import DeveloperPlans from './pages/DeveloperPlans';
 import MyDrafts from './pages/developer/MyDrafts';
 
 // Import Comparison Page
@@ -466,6 +467,7 @@ function Router() {
       <Route path="/developer/settings" component={DeveloperSettingsPage} />
       <Route path="/developer/settings/team" component={DeveloperTeamPage} />
       <Route path="/developer/settings/subscription" component={DeveloperSubscriptionPage} />
+      <Route path="/developer/plans" component={DeveloperPlans} />
 
       {/* User Dashboard Route */}
       <Route path="/user/dashboard">
