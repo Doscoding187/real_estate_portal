@@ -296,42 +296,7 @@ export function UnitTypesPhase() {
       })));
   };
 
-  // Replaces handleFileUpload
-  // const handleFileUpload...
-    const files = e.target.files;
-    if (!files) return;
 
-    for (const file of Array.from(files)) {
-      try {
-        const result = await presignMutation.mutateAsync({
-          filename: file.name,
-          contentType: file.type
-        });
-        
-        await fetch(result.url, {
-          method: 'PUT',
-          body: file,
-          headers: { 'Content-Type': file.type }
-        });
-
-        const newMedia: MediaItem = {
-          id: crypto.randomUUID(),
-          url: result.publicUrl,
-          type: 'image',
-          category: category,
-          uploadedAt: new Date()
-        };
-
-        setMedia(prev => [...prev, newMedia]);
-        toast.success(`Uploaded: ${file.name}`);
-      } catch (error) {
-        toast.error(`Failed to upload: ${file.name}`);
-      }
-    }
-    
-    // Reset input
-    e.target.value = '';
-  };
 
   const removeMedia = (id: string, setMedia: React.Dispatch<React.SetStateAction<MediaItem[]>>) => {
     setMedia(prev => prev.filter(img => img.id !== id));

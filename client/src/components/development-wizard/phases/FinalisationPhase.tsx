@@ -302,6 +302,7 @@ export function FinalisationPhase() {
                 Publishing...
               </>
             ) : (
+              <>
                 <Send className="w-4 h-4 mr-2" />
                 {developmentData.approvalStatus === 'approved' ? 'Update Development' : 'Publish Development'}
               </>
