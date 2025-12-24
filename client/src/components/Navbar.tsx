@@ -1,6 +1,6 @@
 import { Link, useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
-import { Heart, User, Menu, Home, Plus, Play } from 'lucide-react';
+import { Heart, User, Menu, Home, Plus, Play, LayoutDashboard } from 'lucide-react';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { APP_TITLE } from '@/const';
 import { useBranding } from '@/contexts/BrandingContext';
@@ -27,8 +27,29 @@ export function Navbar() {
     logout();
   };
 
+  const getDashboardRoute = (role?: string) => {
+    switch (role) {
+      case 'admin':
+      case 'super_admin':
+        return '/admin';
+      case 'property_developer':
+        return '/developer';
+      case 'agency_admin':
+        return '/agency/dashboard';
+      case 'agent':
+        return '/agent/dashboard';
+      default:
+        return '/dashboard';
+    }
+  };
+
+  const dashboardRoute = getDashboardRoute(user?.role);
+  const showDashboardLink = user?.role && ['admin', 'super_admin', 'property_developer', 'agency_admin', 'agent'].includes(user.role);
+
   const navLinks = [
     { href: '/', label: 'Home', icon: Home },
+    // Add Dashboard link for specialized roles
+    ...(showDashboardLink ? [{ href: dashboardRoute, label: 'Dashboard', icon: LayoutDashboard }] : []),
     { href: '/properties', label: 'Properties' },
     { href: '/explore', label: 'Explore', icon: Play },
     { href: '/agents', label: 'Agents' },
