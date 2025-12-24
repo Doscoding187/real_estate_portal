@@ -3,11 +3,20 @@
  * Display developer-specific plans with comparison
  */
 
+import { useState } from 'react';
 import { useLocation } from 'wouter';
 import { trpc } from '@/lib/trpc';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { 
   Check, X, Gift, Zap, Crown, Building2, Users, 
   TrendingUp, Link, ArrowLeft, Sparkles 
@@ -97,24 +106,51 @@ const DEVELOPER_PLANS = [
 
 export default function DeveloperPlans() {
   const [, setLocation] = useLocation();
+  const [selectedPlan, setSelectedPlan] = useState<typeof DEVELOPER_PLANS[0] | null>(null);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   
   // Get current subscription to highlight current plan
-  const { data: subscriptionData } = trpc.developer.getSubscription.useQuery(
+  const { data: subscriptionData, refetch } = trpc.developer.getSubscription.useQuery(
     undefined,
     { staleTime: 0 }
   );
   
+  // Upgrade mutation
+  const upgradeMutation = trpc.developer.upgradeSubscription.useMutation({
+    onSuccess: (data) => {
+      setShowConfirmDialog(false);
+      setSelectedPlan(null);
+      refetch();
+      // Show success - navigate back to dashboard with success message
+      setLocation('/developer/dashboard');
+    },
+    onError: (error) => {
+      alert(`Upgrade failed: ${error.message}`);
+    }
+  });
+  
   const currentTier = subscriptionData?.subscription?.tier;
 
-  const handleSelectPlan = (planId: string) => {
-    if (planId === 'free_trial') {
-      // Already on free trial or start free trial
-      setLocation('/developer/dashboard');
-    } else {
-      // TODO: Integrate with payment flow
-      // For now, show coming soon or redirect to contact
-      alert('Payment integration coming soon! Contact us to upgrade.');
+  const handleSelectPlan = (plan: typeof DEVELOPER_PLANS[0]) => {
+    if (plan.tier === currentTier) {
+      // Already on this plan
+      return;
     }
+    
+    if (plan.tier === 'free_trial') {
+      // Can't downgrade to free trial
+      setLocation('/developer/dashboard');
+      return;
+    }
+    
+    // Show confirmation dialog for upgrade
+    setSelectedPlan(plan);
+    setShowConfirmDialog(true);
+  };
+
+  const handleConfirmUpgrade = () => {
+    if (!selectedPlan) return;
+    upgradeMutation.mutate({ tier: selectedPlan.tier });
   };
 
   return (
@@ -254,7 +290,7 @@ export default function DeveloperPlans() {
                             ? "bg-slate-900 hover:bg-slate-800"
                             : "bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700"
                       )}
-                      onClick={() => handleSelectPlan(plan.id)}
+                      onClick={() => handleSelectPlan(plan)}
                     >
                       {plan.isFree ? 'Start Free Trial' : `Upgrade to ${plan.name}`}
                     </Button>
@@ -309,6 +345,64 @@ export default function DeveloperPlans() {
         </div>
       </div>
     </div>
+
+    {/* Upgrade Confirmation Dialog */}
+    <Dialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle className="text-xl">Confirm Upgrade</DialogTitle>
+          <DialogDescription>
+            You're about to upgrade your subscription.
+          </DialogDescription>
+        </DialogHeader>
+        
+        {selectedPlan && (
+          <div className="py-4">
+            <div className="flex items-center gap-4 p-4 bg-slate-50 rounded-xl mb-4">
+              <div className={cn("p-3 rounded-xl", selectedPlan.bgColor)}>
+                {(() => {
+                  const PlanIcon = selectedPlan.icon;
+                  return <PlanIcon className="w-6 h-6" />;
+                })()}
+              </div>
+              <div>
+                <h4 className="font-bold text-lg">{selectedPlan.name}</h4>
+                <p className="text-slate-600">{selectedPlan.priceDisplay}{selectedPlan.period}</p>
+              </div>
+            </div>
+            
+            <div className="space-y-2 text-sm text-slate-600">
+              <p>✓ Your limits will be upgraded immediately</p>
+              <p>✓ All existing data will be preserved</p>
+              <p>✓ You can downgrade anytime</p>
+            </div>
+            
+            {!selectedPlan.isFree && (
+              <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
+                <strong>Note:</strong> Payment integration coming soon. For now, upgrades are activated instantly for testing.
+              </div>
+            )}
+          </div>
+        )}
+        
+        <DialogFooter className="gap-2 sm:gap-0">
+          <Button 
+            variant="outline" 
+            onClick={() => setShowConfirmDialog(false)}
+            disabled={upgradeMutation.isPending}
+          >
+            Cancel
+          </Button>
+          <Button 
+            onClick={handleConfirmUpgrade}
+            disabled={upgradeMutation.isPending}
+            className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+          >
+            {upgradeMutation.isPending ? 'Upgrading...' : 'Confirm Upgrade'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
     </DeveloperLayout>
   );
 }
