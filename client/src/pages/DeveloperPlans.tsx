@@ -12,7 +12,7 @@ import {
   Check, X, Gift, Zap, Crown, Building2, Users, 
   TrendingUp, Link, ArrowLeft, Sparkles 
 } from 'lucide-react';
-import { Navbar } from '@/components/Navbar';
+import { DeveloperLayout } from '@/components/developer/DeveloperLayout';
 import { cn } from '@/lib/utils';
 import { SUBSCRIPTION_TIER_LIMITS, type SubscriptionTier } from '../../shared/types';
 
@@ -118,11 +118,10 @@ export default function DeveloperPlans() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
-      <Navbar />
-
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12 pt-24">
-        {/* Back Button */}
+    <DeveloperLayout>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          {/* Back Button */}
         <Button 
           variant="ghost" 
           className="mb-6" 
@@ -310,6 +309,7 @@ export default function DeveloperPlans() {
         </div>
       </div>
     </div>
+    </DeveloperLayout>
   );
 }
 
