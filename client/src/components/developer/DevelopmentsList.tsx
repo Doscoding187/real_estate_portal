@@ -137,6 +137,11 @@ const DevelopmentsList: React.FC = () => {
               type="development"
               data={{
                   ...dev,
+                  // Map backend status to frontend status for the card
+                  status: dev.isPublished ? 'published' : 
+                          dev.approvalStatus === 'approved' ? 'approved' : 
+                          dev.approvalStatus === 'pending' ? 'pending' : 
+                          dev.approvalStatus === 'rejected' ? 'rejected' : 'draft',
                   images: dev.image ? [dev.image] : [], // Normalize image for card
                   priceFrom: dev.priceFrom, 
               }}
