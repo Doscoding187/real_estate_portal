@@ -114,6 +114,7 @@ import DeveloperPerformancePage from './pages/DeveloperPerformancePage';
 import DeveloperSettingsPage from './pages/DeveloperSettingsPage';
 import DeveloperTeamPage from './pages/DeveloperTeamPage';
 import DeveloperSubscriptionPage from './pages/DeveloperSubscriptionPage';
+import SubscriptionPlans from './pages/SubscriptionPlans';
 import MyDrafts from './pages/developer/MyDrafts';
 
 // Import Comparison Page
@@ -240,6 +241,7 @@ function Router() {
       <Route path="/advertise" component={AdvertiseWithUs} />
       <Route path="/advertise-with-us" component={() => { window.location.href = '/advertise'; return null; }} />
       <Route path="/advertise with us" component={() => { window.location.href = '/advertise'; return null; }} />
+      <Route path="/subscription-plans" component={SubscriptionPlans} />
 
 
       {/* Super Admin Dashboard Routes */}
