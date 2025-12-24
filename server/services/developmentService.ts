@@ -220,6 +220,8 @@ export class DevelopmentService {
       priceFrom: input.priceFrom || null,
       priceTo: input.priceTo || null,
       amenities: input.amenities || null,
+      images: input.images ? JSON.stringify(input.images) : null, // Stringify to match behavior
+      features: input.features || null,
       completionDate: input.completionDate || null,
       isFeatured: 0,
       isPublished: 0,
@@ -322,6 +324,9 @@ export class DevelopmentService {
     }
     if (input.videos) {
       updateData.videos = JSON.stringify(input.videos);
+    }
+    if (input.features) {
+      updateData.features = JSON.stringify(input.features);
     }
     if (input.floorPlans) {
       updateData.floorPlans = JSON.stringify(input.floorPlans);
