@@ -170,6 +170,10 @@ export class DevelopmentService {
       totalUnits: developments.totalUnits,
       createdAt: developments.createdAt,
       updatedAt: developments.updatedAt,
+      isPublished: developments.isPublished,
+      publishedAt: developments.publishedAt,
+      priceFrom: developments.priceFrom,
+      images: developments.images,
       // Subquery for latest rejection reason
       rejectionReason: sql<string>`(
         SELECT rejection_reason 

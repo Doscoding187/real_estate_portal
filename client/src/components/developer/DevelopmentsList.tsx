@@ -142,7 +142,7 @@ const DevelopmentsList: React.FC = () => {
                           dev.approvalStatus === 'approved' ? 'approved' : 
                           dev.approvalStatus === 'pending' ? 'pending' : 
                           dev.approvalStatus === 'rejected' ? 'rejected' : 'draft',
-                  images: dev.image ? [dev.image] : [], // Normalize image for card
+                  images: dev.images ? JSON.parse(dev.images) : [], // Parse images JSON string
                   priceFrom: dev.priceFrom, 
               }}
               readiness={calculateDevelopmentReadiness({
@@ -151,7 +151,7 @@ const DevelopmentsList: React.FC = () => {
                   address: dev.address || dev.city,
                   latitude: dev.latitude,
                   longitude: dev.longitude,
-                  images: dev.image ? [dev.image] : [],
+                  images: dev.images ? JSON.parse(dev.images) : [],
                   priceFrom: dev.priceFrom // Ensure priceFrom is fetched
               })}
               onEdit={(id) => setLocation(`/developer/create-development?id=${id}`)}
