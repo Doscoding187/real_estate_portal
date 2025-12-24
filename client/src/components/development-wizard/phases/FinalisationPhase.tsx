@@ -183,14 +183,18 @@ export function FinalisationPhase() {
         }
       }
 
-      // STEP 3: ALWAYS Publish (critical step)
-      console.log('[FinalisationPhase] Publishing development:', devId);
-      const publishResult = await publishDevMutation.mutateAsync({ id: devId! });
-      console.log('[FinalisationPhase] Publish result:', { 
-        id: publishResult.development.id, 
-        approvalStatus: publishResult.development.approvalStatus,
-        isPublished: publishResult.development.isPublished
-      });
+      // STEP 3: Publish (only if not already approved)
+      if (developmentData.approvalStatus !== 'approved') {
+        console.log('[FinalisationPhase] Publishing development:', devId);
+        const publishResult = await publishDevMutation.mutateAsync({ id: devId! });
+        console.log('[FinalisationPhase] Publish result:', { 
+          id: publishResult.development.id, 
+          approvalStatus: publishResult.development.approvalStatus,
+          isPublished: publishResult.development.isPublished
+        });
+      } else {
+        console.log('[FinalisationPhase] Development already approved, skipping publish status change.');
+      }
 
       // Show appropriate success message
       if (unitTypeErrors.length > 0) {
@@ -298,9 +302,8 @@ export function FinalisationPhase() {
                 Publishing...
               </>
             ) : (
-              <>
                 <Send className="w-4 h-4 mr-2" />
-                Publish Development
+                {developmentData.approvalStatus === 'approved' ? 'Update Development' : 'Publish Development'}
               </>
             )}
           </Button>

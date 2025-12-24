@@ -18,6 +18,7 @@ export interface MediaItem {
   isPrimary: boolean;
   displayOrder: number;
   uploadedAt?: Date;
+  fileName?: string;
 }
 
 // Document Interface
@@ -244,6 +245,8 @@ export interface DevelopmentWizardState {
     status?: string; 
     amenities: string[];
     highlights: string[];
+    approvalStatus?: 'draft' | 'pending' | 'approved' | 'rejected';
+    isPublished?: boolean;
   };
   
   // Phase 2: Classification (The "Brain")
@@ -760,7 +763,9 @@ const createActions = (
                   videos: videos
               },
               amenities,
-              highlights
+              highlights,
+              approvalStatus: data.approvalStatus,
+              isPublished: !!data.isPublished
           },
           classification: {
               type: data.developmentType || 'residential',

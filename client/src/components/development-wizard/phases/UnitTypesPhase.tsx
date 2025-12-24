@@ -10,11 +10,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { 
-  Trash2, Plus, Edit2, BedDouble, Bath, Car, Ruler, 
+import { Trash2, Plus, Edit2, BedDouble, Bath, Car, Ruler, 
   DollarSign, Image, BarChart3, ArrowLeft, ArrowRight,
-  Upload, X, FileImage, Layers, Settings, Sparkles
+  Upload, X, FileImage, Layers, Settings, Sparkles, Lightbulb
 } from 'lucide-react';
+import { MediaUploadZone } from '@/components/media/MediaUploadZone';
+import { SortableMediaGrid } from '@/components/media/SortableMediaGrid';
+import { UploadProgressList, UploadProgress } from '@/components/media/UploadProgressBar';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { trpc } from '@/lib/trpc';
@@ -123,21 +125,28 @@ export function UnitTypesPhase() {
     validatePhase 
   } = useDevelopmentWizard();
 
+  
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('basic');
   const [formData, setFormData] = useState<Partial<UnitType> & { featureSpecs: Record<string, string> }>(getDefaultFormData());
+  
   const [unitGallery, setUnitGallery] = useState<MediaItem[]>([]);
   const [floorPlanImages, setFloorPlanImages] = useState<MediaItem[]>([]);
   
-  const galleryInputRef = useRef<HTMLInputElement>(null);
-  const floorPlanInputRef = useRef<HTMLInputElement>(null);
+  // Upload Progress State
+  const [galleryUploads, setGalleryUploads] = useState<UploadProgress[]>([]);
+  const [floorPlanUploads, setFloorPlanUploads] = useState<UploadProgress[]>([]);
+  
   const presignMutation = trpc.upload.presign.useMutation();
 
+  // Reset function
   const resetForm = () => {
     setFormData(getDefaultFormData());
     setUnitGallery([]);
     setFloorPlanImages([]);
+    setGalleryUploads([]);
+    setFloorPlanUploads([]);
     setEditingId(null);
     setActiveTab('basic');
   };
@@ -185,11 +194,110 @@ export function UnitTypesPhase() {
     setIsDialogOpen(true);
   };
 
-  const handleFileUpload = async (
-    e: React.ChangeEvent<HTMLInputElement>, 
-    setMedia: React.Dispatch<React.SetStateAction<MediaItem[]>>,
-    category: 'gallery' | 'floorPlans'
-  ) => {
+  // Robust Media Upload Handler
+  const handleMediaUpload = async (files: File[], category: 'gallery' | 'floorPlans') => {
+    if (!files || files.length === 0) return;
+    
+    // Set appropriate state setters
+    const setUploads = category === 'gallery' ? setGalleryUploads : setFloorPlanUploads;
+    const setMedia = category === 'gallery' ? setUnitGallery : setFloorPlanImages;
+    const currentMedia = category === 'gallery' ? unitGallery : floorPlanImages;
+    
+    // Create upload progress entries
+    const newUploads: UploadProgress[] = files.map((file, index) => ({
+      id: `upload-${Date.now()}-${index}`,
+      fileName: file.name,
+      progress: 0,
+      status: 'uploading' as const,
+    }));
+    
+    setUploads(prev => [...prev, ...newUploads]);
+
+    // Process each file
+    for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const uploadId = newUploads[i].id;
+        const startTime = Date.now();
+
+        try {
+            const isImage = file.type.startsWith('image/');
+            const mediaType = isImage ? 'image' : 'video'; // Floorplans treated as images usually
+
+            // Progress: 10%
+            setUploads(prev => prev.map(u => u.id === uploadId ? { ...u, progress: 10 } : u));
+
+            // Presign
+            const result = await presignMutation.mutateAsync({
+                filename: file.name,
+                contentType: file.type,
+            });
+
+            // Progress: 20%
+            setUploads(prev => prev.map(u => u.id === uploadId ? { ...u, progress: 20 } : u));
+
+            // XHR Upload
+            const xhr = new XMLHttpRequest();
+            await new Promise<void>((resolve, reject) => {
+                xhr.upload.addEventListener('progress', (e) => {
+                    if (e.lengthComputable) {
+                        const percentComplete = 20 + (e.loaded / e.total) * 70; 
+                        setUploads(prev => prev.map(u => u.id === uploadId ? { ...u, progress: Math.round(percentComplete) } : u));
+                    }
+                });
+                xhr.addEventListener('load', () => xhr.status >= 200 && xhr.status < 300 ? resolve() : reject(new Error(`Status ${xhr.status}`)));
+                xhr.addEventListener('error', () => reject(new Error('Network error')));
+                xhr.open('PUT', result.url);
+                xhr.setRequestHeader('Content-Type', file.type);
+                xhr.send(file);
+            });
+
+            // Progress: 100%
+            setUploads(prev => prev.map(u => u.id === uploadId ? { ...u, progress: 100, status: 'completed' as const } : u));
+
+            // Add to Media State
+            const newItem: MediaItem = {
+                id: `media-${Date.now()}-${i}`,
+                url: result.publicUrl,
+                type: mediaType,
+                fileName: file.name,
+                isPrimary: currentMedia.length === 0 && i === 0 && category === 'gallery', // First gallery image is primary
+                displayOrder: currentMedia.length + i
+            };
+
+            setMedia(prev => [...prev, newItem]);
+
+        } catch (error: any) {
+            console.error('Upload failed:', error);
+            setUploads(prev => prev.map(u => u.id === uploadId ? { ...u, status: 'error' as const, error: error.message } : u));
+            toast.error(`Failed to upload ${file.name}`);
+        }
+    }
+  };
+
+  const handleMediaReorder = (items: MediaItem[], category: 'gallery' | 'floorPlans') => {
+      const setMedia = category === 'gallery' ? setUnitGallery : setFloorPlanImages;
+      // Update display order based on index
+      const updated = items.map((item, index) => ({
+          ...item,
+          displayOrder: index
+      }));
+      setMedia(updated);
+  };
+
+  const handleMediaRemove = (id: string, category: 'gallery' | 'floorPlans') => {
+      const setMedia = category === 'gallery' ? setUnitGallery : setFloorPlanImages;
+      setMedia(prev => prev.filter(item => item.id !== id));
+  };
+  
+  const handleSetPrimary = (id: string) => {
+      setUnitGallery(prev => prev.map(item => ({
+          ...item,
+          isPrimary: item.id === id
+      })));
+  };
+
+  // Replaces handleFileUpload
+  // const handleFileUpload...
     const files = e.target.files;
     if (!files) return;
 
@@ -728,73 +836,83 @@ export function UnitTypesPhase() {
               </TabsContent>
 
               {/* Tab 3: Media (Images + Floor Plans) */}
-              <TabsContent value="media" className="mt-0 space-y-4">
-                <input type="file" ref={galleryInputRef} className="hidden" accept="image/*" multiple
-                  onChange={(e) => handleFileUpload(e, setUnitGallery, 'gallery')} />
-                <input type="file" ref={floorPlanInputRef} className="hidden" accept="image/*" multiple
-                  onChange={(e) => handleFileUpload(e, setFloorPlanImages, 'floorPlans')} />
-
-                {/* Unit Gallery */}
-                <div className="p-4 bg-slate-50 rounded-lg">
-                  <div className="flex items-center justify-between mb-3">
-                    <h4 className="font-medium text-slate-900 flex items-center gap-2">
+              {/* Tab 3: Media (Images + Floor Plans) */}
+              <TabsContent value="media" className="mt-0 space-y-6">
+                
+                {/* Unit Gallery Section */}
+                <div className="space-y-4">
+                  <div>
+                    <h4 className="font-medium text-slate-900 flex items-center gap-2 mb-1">
                       <Image className="w-4 h-4 text-blue-600" />
                       Unit Gallery
                     </h4>
-                    <Button size="sm" variant="outline" onClick={() => galleryInputRef.current?.click()}>
-                      <Upload className="w-3 h-3 mr-2" />
-                      Upload
-                    </Button>
+                    <p className="text-sm text-slate-500">Upload photos of this specific unit type (e.g. kitchen, bedroom, bathroom).</p>
                   </div>
-                  {unitGallery.length > 0 ? (
-                    <div className="grid grid-cols-4 gap-2">
-                      {unitGallery.map((img) => (
-                        <div key={img.id} className="relative group aspect-square rounded overflow-hidden border">
-                          <img src={img.url} alt="Unit" className="w-full h-full object-cover" />
-                          <button onClick={() => removeMedia(img.id, setUnitGallery)}
-                            className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
-                            <X className="w-3 h-3" />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="text-center py-6 text-slate-400 text-sm border-2 border-dashed rounded-lg cursor-pointer hover:border-blue-300"
-                      onClick={() => galleryInputRef.current?.click()}>
-                      Click to upload unit images
-                    </div>
+
+                  <MediaUploadZone
+                    onUpload={(files) => handleMediaUpload(files, 'gallery')}
+                    maxFiles={10}
+                    maxSizeMB={5}
+                    acceptedTypes={['image/*']}
+                    existingMediaCount={unitGallery.length}
+                    disabled={galleryUploads.some(u => u.status === 'uploading')}
+                  />
+
+                  {galleryUploads.length > 0 && (
+                    <UploadProgressList
+                      uploads={galleryUploads}
+                      onCancel={(id) => setGalleryUploads(prev => prev.filter(u => u.id !== id))}
+                      onRetry={(id) => setGalleryUploads(prev => prev.filter(u => u.id !== id))} // Simplified retry
+                      onRemove={(id) => setGalleryUploads(prev => prev.filter(u => u.id !== id))}
+                    />
+                  )}
+
+                  {unitGallery.length > 0 && (
+                    <SortableMediaGrid
+                      media={unitGallery}
+                      onReorder={(items) => handleMediaReorder(items, 'gallery')}
+                      onRemove={(id) => handleMediaRemove(id, 'gallery')}
+                      onSetPrimary={handleSetPrimary}
+                    />
                   )}
                 </div>
 
-                {/* Floor Plans */}
-                <div className="p-4 bg-slate-50 rounded-lg">
-                  <div className="flex items-center justify-between mb-3">
-                    <h4 className="font-medium text-slate-900 flex items-center gap-2">
-                      <FileImage className="w-4 h-4 text-purple-600" />
+                <div className="h-px bg-slate-200" />
+
+                {/* Floor Plans Section */}
+                <div className="space-y-4">
+                  <div>
+                    <h4 className="font-medium text-slate-900 flex items-center gap-2 mb-1">
+                      <Layers className="w-4 h-4 text-purple-600" />
                       Floor Plans
                     </h4>
-                    <Button size="sm" variant="outline" onClick={() => floorPlanInputRef.current?.click()}>
-                      <Upload className="w-3 h-3 mr-2" />
-                      Upload
-                    </Button>
+                    <p className="text-sm text-slate-500">Upload 2D or 3D floor plans for this unit layout.</p>
                   </div>
-                  {floorPlanImages.length > 0 ? (
-                    <div className="grid grid-cols-3 gap-2">
-                      {floorPlanImages.map((img) => (
-                        <div key={img.id} className="relative group aspect-square rounded overflow-hidden border">
-                          <img src={img.url} alt="Floor plan" className="w-full h-full object-cover" />
-                          <button onClick={() => removeMedia(img.id, setFloorPlanImages)}
-                            className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
-                            <X className="w-3 h-3" />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="text-center py-6 text-slate-400 text-sm border-2 border-dashed rounded-lg cursor-pointer hover:border-blue-300"
-                      onClick={() => floorPlanInputRef.current?.click()}>
-                      Click to upload floor plans
-                    </div>
+
+                  <MediaUploadZone
+                    onUpload={(files) => handleMediaUpload(files, 'floorPlans')}
+                    maxFiles={5}
+                    maxSizeMB={5}
+                    acceptedTypes={['image/*']}
+                    existingMediaCount={floorPlanImages.length}
+                    disabled={floorPlanUploads.some(u => u.status === 'uploading')}
+                  />
+
+                  {floorPlanUploads.length > 0 && (
+                    <UploadProgressList
+                      uploads={floorPlanUploads}
+                      onCancel={(id) => setFloorPlanUploads(prev => prev.filter(u => u.id !== id))}
+                      onRetry={(id) => setFloorPlanUploads(prev => prev.filter(u => u.id !== id))}
+                      onRemove={(id) => setFloorPlanUploads(prev => prev.filter(u => u.id !== id))}
+                    />
+                  )}
+
+                  {floorPlanImages.length > 0 && (
+                    <SortableMediaGrid
+                      media={floorPlanImages}
+                      onReorder={(items) => handleMediaReorder(items, 'floorPlans')}
+                      onRemove={(id) => handleMediaRemove(id, 'floorPlans')}
+                    />
                   )}
                 </div>
               </TabsContent>
