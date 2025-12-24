@@ -737,7 +737,7 @@ const createActions = (
 
       return {
           ...state,
-          currentPhase: 1, // Reset to start for editing
+          currentPhase: 9, // Start at Finalisation (Step 9) for review/edit navigation
           developmentData: {
               nature: 'new',
               name: data.name || '',
