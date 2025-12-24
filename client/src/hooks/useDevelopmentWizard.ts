@@ -668,6 +668,13 @@ const createActions = (
       const highlights = parse(data.highlights, []);
       const rawFeatures = parse(data.features, []);
       
+      console.log('[hydrateDevelopment] Hydrating...', { 
+        id: data.id, 
+        features_raw: data.features, 
+        features_parsed: rawFeatures,
+        type_raw: data.features ? typeof data.features : 'undefined'
+      });
+      
       // Separate config features from display features
       const configFeatures: string[] = [];
       const displayFeatures: string[] = [];

@@ -326,7 +326,7 @@ export class DevelopmentService {
       updateData.videos = JSON.stringify(input.videos);
     }
     if (input.features) {
-      updateData.features = JSON.stringify(input.features);
+      updateData.features = input.features;
     }
     if (input.floorPlans) {
       updateData.floorPlans = JSON.stringify(input.floorPlans);
