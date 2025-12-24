@@ -369,6 +369,7 @@ export interface DevelopmentPhase {
 
 export interface DevelopmentWithPhases extends Development {
   phases: DevelopmentPhase[];
+  unitTypes?: any[]; // Aggregated unit types for wizard hydration
 }
 
 export interface CreateDevelopmentInput {
@@ -410,6 +411,7 @@ export interface UpdateDevelopmentInput {
   priceTo?: number;
   amenities?: string[];
   features?: string[];
+  highlights?: string[];
   images?: string[];
   videos?: string[];
   floorPlans?: string[];

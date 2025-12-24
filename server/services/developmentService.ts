@@ -1,6 +1,6 @@
 
 import { getDb } from '../db.ts';
-import { developments, developmentPhases, developmentApprovalQueue, developers, developmentDrafts, unitTypes } from '../../drizzle/schema.ts';
+import { developments, developmentPhases, developmentApprovalQueue, developers, developmentDrafts, developmentUnits } from '../../drizzle/schema.ts';
 import { eq, and, desc, ne, sql } from 'drizzle-orm';
 import { 
   Development, 
@@ -112,28 +112,54 @@ export class DevelopmentService {
       // Continue without phases - they're optional
     }
 
-    // Try to get Unit Types (from units table, grouped by type)
+    // Try to get Unit Types (aggregated from developmentUnits)
     let unitTypes: any[] = [];
     try {
-      // Fetch unit types that are linked to this development
-      // Note: Schema might use 'units' table as both individual units and types? 
-      // Looking at schema, 'units' table has 'unitType' string/enum, but we need the configurable types from wizard.
-      // Based on previous conversations, I suspect there might be a separate 'unit_types' table or using 'units' metadata?
-      // Wait, let's check schema for 'unit_types' or similar before committing incorrect code.
-      // Assuming 'units' table contains individual units. 
-      // The wizard uses 'unit_types'. 
-      // Let me safely fallback to development data if no extra table exists.
+      const units = await db.query.developmentUnits.findMany({
+        where: eq(developmentUnits.developmentId, developmentId),
+      });
+
+      // Aggregate units into types
+      const typeMap = new Map<string, any>();
       
-      // Update: Checking schema via memory from previous turns. 
-      // Schema had `units` table. 
-      // The wizard hydration expects `unitTypes` array. 
-      // If no dedicated table, we might need to reconstruct from units or it might be stored only in drafts?
-      // No, for published dev, it must be in DB.
-      // Let's assume for now we just return phases and dev.
-      // BUT WAIT: The user said "the rest still dont show".
-      // Let's check if we have a table for unit types.
-      // I will search schema first.
-    } catch (e) { console.error(e); }
+      units.forEach(u => {
+        // Group by characteristics
+        const key = `${u.unitType}-${u.bedrooms || 0}-${u.bathrooms || 0}-${u.size || 0}-${u.floorPlan || ''}`;
+        
+        if (!typeMap.has(key)) {
+           // Heuristic to determine a "Name" for the type
+           const bedLabel = u.bedrooms ? `${u.bedrooms} Bed` : u.unitType === 'studio' ? 'Studio' : u.unitType;
+           const sizeLabel = u.size ? `(${u.size}m²)` : '';
+           const name = `${bedLabel} ${u.unitType} ${sizeLabel}`.replace(/_/g, ' ').trim();
+
+           typeMap.set(key, {
+             id: `type-gen-${typeMap.size}`, // Generate a temporary ID for the wizard
+             name: name,
+             type: u.unitType,
+             totalUnits: 0, // Will count
+             bedrooms: u.bedrooms || 0,
+             bathrooms: Number(u.bathrooms || 0),
+             size: Number(u.size || 0),
+             basePriceFrom: Number(u.price),
+             basePriceTo: Number(u.price), // Track range
+             floorPlan: u.floorPlan || null,
+             count: 0
+           });
+        }
+        
+        const t = typeMap.get(key);
+        t.count++;
+        // Track min/max price for this definition
+        if (Number(u.price) < t.basePriceFrom) t.basePriceFrom = Number(u.price);
+        if (Number(u.price) > t.basePriceTo) t.basePriceTo = Number(u.price);
+        t.totalUnits++;
+      });
+      
+      unitTypes = Array.from(typeMap.values());
+      
+    } catch (e) { 
+      console.error('Error fetching/aggregating unit types:', e); 
+    }
 
     return {
       ...development,
@@ -222,6 +248,7 @@ export class DevelopmentService {
       amenities: input.amenities || null,
       images: input.images ? JSON.stringify(input.images) : null, // Stringify to match behavior
       features: input.features || null,
+      highlights: input.highlights || null,
       completionDate: input.completionDate || null,
       isFeatured: 0,
       isPublished: 0,
@@ -327,6 +354,9 @@ export class DevelopmentService {
     }
     if (input.features) {
       updateData.features = input.features;
+    }
+    if (input.highlights) {
+      updateData.highlights = input.highlights;
     }
     if (input.floorPlans) {
       updateData.floorPlans = JSON.stringify(input.floorPlans);

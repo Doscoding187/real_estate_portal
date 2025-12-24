@@ -114,6 +114,12 @@ export function FinalisationPhase() {
       // Combine with user-defined features
       const allFeatures = [...(overview.features || []), ...configFeatures];
 
+      // Prepare images (Hero + Gallery)
+      const allImages = [
+          ...(developmentData.media.heroImage ? [developmentData.media.heroImage] : []),
+          ...developmentData.media.photos
+      ];
+
       // Prepare Payload
       const devPayload = {
         name: developmentData.name,
@@ -127,8 +133,9 @@ export function FinalisationPhase() {
         latitude: developmentData.location.latitude,
         longitude: developmentData.location.longitude,
         amenities: overview.amenities,
+        highlights: overview.highlights, // Added highlights
         features: allFeatures,
-        images: developmentData.media.photos.map(p => p.url),
+        images: allImages.map(p => p.url), // Included Hero Image
         videos: developmentData.media.videos.map(v => v.url),
         priceFrom: unitTypes.length > 0 ? Math.min(...unitTypes.map(u => u.basePriceFrom)) : undefined,
         priceTo: unitTypes.length > 0 ? Math.max(...unitTypes.map(u => u.basePriceFrom)) : undefined,
