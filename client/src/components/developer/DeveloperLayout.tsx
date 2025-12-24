@@ -11,6 +11,7 @@ import SettingsPanel from './SettingsPanel';
 import TeamManagement from './TeamManagement';
 import AnalyticsPanel from './AnalyticsPanel';
 import MarketingCampaigns from './MarketingCampaigns';
+import BillingPanel from './BillingPanel';
 
 // Lazy load drafts page
 const MyDrafts = lazy(() => import('@/pages/developer/MyDrafts'));
@@ -97,7 +98,7 @@ export function DeveloperLayout({ children, defaultTab = 'overview' }: Developer
       case 'team':
         return <TeamManagement />;
       case 'subscription':
-        return <PlaceholderContent title="Subscription" />;
+        return <BillingPanel />;
       case 'settings':
         return <SettingsPanel />;
       case 'notifications':
