@@ -7,7 +7,7 @@ import { developerSubscriptionService } from './services/developerSubscriptionSe
 import { developmentService } from './services/developmentService';
 import { unitService } from './services/unitService';
 import { calculateAffordabilityCompanion, matchUnitsToAffordability } from './services/affordabilityCompanion';
-import { developmentDrafts } from '../drizzle/schema';
+import { developmentDrafts, developments } from '../drizzle/schema';
 import { eq, desc, and } from 'drizzle-orm';
 import { calculateDevelopmentReadiness } from './lib/readiness';
 
@@ -518,7 +518,10 @@ export const developerRouter = router({
         
         // Calculate initial readiness
         const readiness = calculateDevelopmentReadiness({ ...development, ...input }); // input has transient fields
-        await db.updateDevelopment(development.id, { readinessScore: readiness.score });
+        const dbInstance = await import('./db').then(m => m.getDb());
+        if (dbInstance) {
+          await dbInstance.update(developments).set({ readinessScore: readiness.score }).where(eq(developments.id, development.id));
+        }
 
         return { development, message: 'Development created successfully' };
       } catch (error: any) {
@@ -642,7 +645,10 @@ export const developerRouter = router({
         // Recalculate readiness
         const fullDev = await developmentService.getDevelopmentWithPhases(input.id);
         const readiness = calculateDevelopmentReadiness(fullDev);
-        await db.updateDevelopment(input.id, { readinessScore: readiness.score });
+        const dbInstance = await import('./db').then(m => m.getDb());
+        if (dbInstance) {
+          await dbInstance.update(developments).set({ readinessScore: readiness.score }).where(eq(developments.id, input.id));
+        }
 
         return { development, message: 'Development updated successfully' };
       } catch (error: any) {
