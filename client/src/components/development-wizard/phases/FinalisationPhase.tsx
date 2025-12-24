@@ -17,7 +17,12 @@ export function FinalisationPhase() {
     validateForPublish,
     setPhase,
     editingId,
-    reset
+    reset,
+    // Configs for serialization
+    residentialConfig,
+    landConfig,
+    commercialConfig,
+    estateProfile
   } = useDevelopmentWizard();
 
   const [, setLocation] = useLocation();
@@ -81,6 +86,34 @@ export function FinalisationPhase() {
       else if (classification.type === 'land') mappedType = 'estate';
       else if (classification.type === 'residential') mappedType = 'residential';
 
+      // Prepare Configuration Features (Serialized)
+      const configFeatures: string[] = [];
+      const addConfig = (key: string, value: string) => configFeatures.push(`cfg:${key}:${value}`);
+
+      // residential config
+      if (classification.type === 'residential') {
+          if (residentialConfig.residentialType) addConfig('res_type', residentialConfig.residentialType);
+          residentialConfig.communityTypes.forEach(t => addConfig('comm_type', t));
+          residentialConfig.securityFeatures.forEach(f => addConfig('sec_feat', f));
+      } 
+      else if (classification.type === 'land') {
+          if (landConfig.landType) addConfig('land_type', landConfig.landType);
+          landConfig.infrastructure.forEach(i => addConfig('infra', i));
+      }
+      else if (classification.type === 'commercial') {
+          if (commercialConfig.commercialType) addConfig('comm_use', commercialConfig.commercialType);
+          commercialConfig.features.forEach(f => addConfig('comm_feat', f));
+      }
+
+      // estate profile
+      if (estateProfile.classification) addConfig('est_class', estateProfile.classification);
+      if (estateProfile.hasHOA) addConfig('hoa', 'true');
+      if (estateProfile.architecturalGuidelines) addConfig('arch_guide', 'true');
+      estateProfile.estateAmenities.forEach(a => addConfig('est_amenity', a));
+
+      // Combine with user-defined features
+      const allFeatures = [...(overview.features || []), ...configFeatures];
+
       // Prepare Payload
       const devPayload = {
         name: developmentData.name,
@@ -94,6 +127,7 @@ export function FinalisationPhase() {
         latitude: developmentData.location.latitude,
         longitude: developmentData.location.longitude,
         amenities: overview.amenities,
+        features: allFeatures,
         images: developmentData.media.photos.map(p => p.url),
         videos: developmentData.media.videos.map(v => v.url),
         priceFrom: unitTypes.length > 0 ? Math.min(...unitTypes.map(u => u.basePriceFrom)) : undefined,

@@ -612,6 +612,12 @@ const createActions = (
       unitTypes: state.unitTypes,
       finalisation: state.finalisation,
       currentPhase: state.currentPhase,
+      // Include configs
+      residentialConfig: state.residentialConfig,
+      landConfig: state.landConfig,
+      commercialConfig: state.commercialConfig,
+      estateProfile: state.estateProfile,
+      developmentType: state.developmentType, // Include basic type too
     };
     if (saveCallback) {
       await saveCallback(draftData);
@@ -640,6 +646,12 @@ const createActions = (
           overview: { ...state.overview, ...data.overview },
           unitTypes: data.unitTypes || state.unitTypes,
           finalisation: { ...state.finalisation, ...data.finalisation },
+          // Hydrate configs if present
+          residentialConfig: data.residentialConfig || state.residentialConfig,
+          landConfig: data.landConfig || state.landConfig,
+          commercialConfig: data.commercialConfig || state.commercialConfig,
+          estateProfile: data.estateProfile || state.estateProfile,
+          developmentType: data.developmentType || state.developmentType,
         };
       }
 
@@ -654,7 +666,45 @@ const createActions = (
 
       const amenities = parse(data.amenities, []);
       const highlights = parse(data.highlights, []);
-      const features = parse(data.features, []);
+      const rawFeatures = parse(data.features, []);
+      
+      // Separate config features from display features
+      const configFeatures: string[] = [];
+      const displayFeatures: string[] = [];
+      
+      if (Array.isArray(rawFeatures)) {
+        rawFeatures.forEach((f: string) => {
+          if (f.startsWith('cfg:')) configFeatures.push(f);
+          else displayFeatures.push(f);
+        });
+      }
+
+      // Parse Configuration
+      const resConfig: any = { residentialType: null, communityTypes: [], securityFeatures: [] };
+      const lndConfig: any = { landType: null, infrastructure: [] };
+      const comConfig: any = { commercialType: null, features: [] };
+      const estProfile: any = { classification: '', hasHOA: false, levyRange: {min:0,max:0}, architecturalGuidelines: false, estateAmenities: [] };
+
+      configFeatures.forEach(f => {
+         const parts = f.split(':');
+         if (parts.length < 3) return;
+         const key = parts[1];
+         const val = parts.slice(2).join(':'); // handle values with colons if any
+
+         switch(key) {
+             case 'res_type': resConfig.residentialType = val; break;
+             case 'comm_type': resConfig.communityTypes.push(val); break;
+             case 'sec_feat': resConfig.securityFeatures.push(val); break;
+             case 'land_type': lndConfig.landType = val; break;
+             case 'infra': lndConfig.infrastructure.push(val); break;
+             case 'comm_use': comConfig.commercialType = val; break;
+             case 'comm_feat': comConfig.features.push(val); break;
+             case 'est_class': estProfile.classification = val; break;
+             case 'hoa': estProfile.hasHOA = val === 'true'; break;
+             case 'arch_guide': estProfile.architecturalGuidelines = val === 'true'; break;
+             case 'est_amenity': estProfile.estateAmenities.push(val); break;
+         }
+      });
       
       // Map Media
       const dbImages = parse(data.images, []); 
@@ -715,8 +765,13 @@ const createActions = (
               highlights,
               description: data.description || '',
               amenities,
-              features
+              features: displayFeatures
           },
+          // Hydrate Configs
+          residentialConfig: resConfig,
+          landConfig: lndConfig,
+          commercialConfig: comConfig,
+          estateProfile: estProfile, // Partial hydration (levy range omitted for now as not in payload)
           // Hydrate unit types if present in the payload
           unitTypes: Array.isArray(data.unitTypes) ? data.unitTypes.map((u: any) => ({
             ...u,
