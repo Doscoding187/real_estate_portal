@@ -188,19 +188,25 @@ async function calculateConversionRate(developerId: number, timeRange: TimeRange
  * Calculate units sold vs available
  */
 async function calculateUnitsMetrics(developerId: number): Promise<{ sold: number; available: number }> {
-  const units = await db
-    .select({
-      sold: count(sql`CASE WHEN status = 'sold' THEN 1 END`),
-      available: count(sql`CASE WHEN status = 'available' THEN 1 END`),
-    })
-    .from(developmentUnits)
-    .innerJoin(developments, eq(developments.id, developmentUnits.developmentId))
-    .where(eq(developments.developerId, developerId));
-  
-  return {
-    sold: Number(units[0]?.sold || 0),
-    available: Number(units[0]?.available || 0),
-  };
+  try {
+    const units = await db
+      .select({
+        sold: count(sql`CASE WHEN status = 'sold' THEN 1 END`),
+        available: count(sql`CASE WHEN status = 'available' THEN 1 END`),
+      })
+      .from(developmentUnits)
+      .innerJoin(developments, eq(developments.id, developmentUnits.developmentId))
+      .where(eq(developments.developerId, developerId));
+    
+    return {
+      sold: Number(units[0]?.sold || 0),
+      available: Number(units[0]?.available || 0),
+    };
+  } catch (error) {
+    console.warn('[KPI Service] Failed to calculate units metrics:', error);
+    // Return zeros when query fails (table might not exist or have data)
+    return { sold: 0, available: 0 };
+  }
 }
 
 /**
