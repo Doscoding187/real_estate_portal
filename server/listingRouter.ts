@@ -97,6 +97,14 @@ export const listingRouter = router({
           displayOrder: index,
           isPrimary: input.mainMediaId ? stringId === input.mainMediaId : index === 0,
           processingStatus: 'completed' as const,
+          // Initialize optional fields for db.createListing
+          thumbnailUrl: null,
+          fileName: null,
+          fileSize: null,
+          width: null,
+          height: null,
+          duration: null,
+          orientation: null,
         };
       });
 
@@ -192,7 +200,19 @@ export const listingRouter = router({
       };
     } catch (error) {
       console.error('Error creating listing:', error);
-      throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to create listing' });
+      // Re-throw TRPC errors
+      if (error instanceof TRPCError) {
+        throw error;
+      }
+      
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      console.error('Detailed error message:', errorMessage);
+      
+      throw new TRPCError({ 
+        code: 'INTERNAL_SERVER_ERROR', 
+        message: `Failed to create listing: ${errorMessage}`,
+        cause: error 
+      });
     }
   }),
 
