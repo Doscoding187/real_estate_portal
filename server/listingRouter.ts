@@ -81,10 +81,11 @@ export const listingRouter = router({
 
     try {
       // Generate slug from title
+      const timestamp = Date.now().toString(36);
       const slug = input.title
         .toLowerCase()
         .replace(/[^a-z0-9]+/g, '-')
-        .replace(/^-+|-+$/g, '');
+        .replace(/^-+|-+$/g, '') + `-${timestamp}`;
 
       // Prepare media array from mediaIds (which are S3 keys/URLs)
       const media = input.mediaIds.map((id, index) => {

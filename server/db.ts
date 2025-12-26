@@ -1798,6 +1798,13 @@ export async function createListing(listingData: any) {
         const [agent] = await tx.select().from(agents).where(eq(agents.userId, listingData.userId)).limit(1);
         const agentId = agent ? agent.id : null;
 
+        console.log('[db.createListing] Inserting listing:', {
+          ownerId: listingData.userId,
+          agentId,
+          slug: listingData.slug,
+          coords: { lat: listingData.latitude, lng: listingData.longitude }
+        });
+
         const [listingResult] = await tx.insert(listings).values({
           ownerId: listingData.userId,
           agentId: agentId,
@@ -1830,7 +1837,8 @@ export async function createListing(listingData: any) {
           postalCode: listingData.postalCode,
           placeId: listingData.placeId,
           locationId: listingData.locationId || null, // New: Link to locations table
-          slug: listingData.slug,
+          // Failsafe: Ensure slug is unique. regex checks for '-ts-<timestamp>' pattern.
+          slug: listingData.slug.match(/-ts-[a-z0-9]+$/) ? listingData.slug : `${listingData.slug}-ts-${Date.now().toString(36)}`,
           status: 'draft',
           approvalStatus: 'pending',
           createdAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
