@@ -1822,8 +1822,8 @@ export async function createListing(listingData: any) {
 
           propertyDetails: listingData.propertyDetails, // Pass object directly for JSON column
           address: listingData.address,
-          latitude: String(listingData.latitude),
-          longitude: String(listingData.longitude),
+          latitude: Number(listingData.latitude).toFixed(7),
+          longitude: Number(listingData.longitude).toFixed(7),
           city: listingData.city,
           suburb: listingData.suburb,
           province: listingData.province,
