@@ -557,7 +557,7 @@ export const listingRouter = router({
         const media = await db.getListingMedia(input.listingId);
         const readiness = calculateListingReadiness({ ...fullListing, media });
 
-        if (readiness.score < 90) { // Threshold 90%
+        if (readiness.score < 75) { // Threshold 75%
              throw new TRPCError({
                 code: 'PRECONDITION_FAILED',
                 message: `Listing is not ready for submission (${readiness.score}%). Please complete missing fields.`,
