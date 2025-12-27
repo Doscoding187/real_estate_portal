@@ -1805,7 +1805,8 @@ export async function createListing(listingData: any) {
           coords: { lat: listingData.latitude, lng: listingData.longitude }
         });
 
-        const [listingResult] = await tx.insert(listings).values({
+
+        const insertValues: any = {
           ownerId: listingData.userId,
           agentId: agentId,
           action: listingData.action,
@@ -1819,31 +1820,40 @@ export async function createListing(listingData: any) {
           transferCostEstimate: listingData.pricing.transferCostEstimate ? String(listingData.pricing.transferCostEstimate) : null,
           monthlyRent: listingData.pricing.monthlyRent ? String(listingData.pricing.monthlyRent) : null,
           deposit: listingData.pricing.deposit ? String(listingData.pricing.deposit) : null,
-          leaseTerms: listingData.pricing.leaseTerms,
+          leaseTerms: listingData.pricing.leaseTerms || null,
           availableFrom: listingData.pricing.availableFrom ? new Date(listingData.pricing.availableFrom).toISOString().slice(0, 19).replace('T', ' ') : null,
           utilitiesIncluded: listingData.pricing.utilitiesIncluded ? 1 : 0,
           startingBid: listingData.pricing.startingBid ? String(listingData.pricing.startingBid) : null,
           reservePrice: listingData.pricing.reservePrice ? String(listingData.pricing.reservePrice) : null,
           auctionDateTime: listingData.pricing.auctionDateTime ? new Date(listingData.pricing.auctionDateTime).toISOString().slice(0, 19).replace('T', ' ') : null,
-          auctionTermsDocumentUrl: listingData.pricing.auctionTermsDocumentUrl,
+          auctionTermsDocumentUrl: listingData.pricing.auctionTermsDocumentUrl || null,
 
-          propertyDetails: listingData.propertyDetails, // Pass object directly for JSON column
+          propertyDetails: listingData.propertyDetails, // Drizzle handles JSON
           address: listingData.address,
           latitude: Number(listingData.latitude).toFixed(7),
           longitude: Number(listingData.longitude).toFixed(7),
           city: listingData.city,
-          suburb: listingData.suburb,
           province: listingData.province,
-          postalCode: listingData.postalCode,
-          placeId: listingData.placeId,
-          locationId: listingData.locationId || null, // New: Link to locations table
-          // Failsafe: Ensure slug is unique. regex checks for '-ts-<timestamp>' pattern.
+          
+          // Failsafe: Ensure slug is unique
           slug: listingData.slug.match(/-ts-[a-z0-9]+$/) ? listingData.slug : `${listingData.slug}-ts-${Date.now().toString(36)}`,
           status: 'draft',
           approvalStatus: 'pending',
           createdAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
           updatedAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
-        });
+        };
+
+        // Add optional fields only if they exist
+        if (listingData.suburb) insertValues.suburb = listingData.suburb;
+        if (listingData.postalCode) insertValues.postalCode = listingData.postalCode;
+        if (listingData.placeId) insertValues.placeId = listingData.placeId;
+        if (listingData.locationId) insertValues.locationId = listingData.locationId;
+
+        // Explicit nulls for strictness if needed, but omitting them is cleaner for Drizzle
+        // insertValues.mainMediaId = null;
+        // insertValues.mainMediaType = null;
+
+        const [listingResult] = await tx.insert(listings).values(insertValues);
 
       const newListingId = Number(listingResult.insertId);
 
