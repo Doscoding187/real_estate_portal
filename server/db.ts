@@ -2461,8 +2461,26 @@ export function transformListingToProperty(listing: any, media: any[] = []) {
     bathrooms: propertyDetails.bathrooms || 0,
     area: propertyDetails.unitSizeM2 || propertyDetails.houseAreaM2 || propertyDetails.floorAreaM2 || 0,
     yardSize: propertyDetails.erfSizeM2 || propertyDetails.landSizeM2OrHa || 0,
-    amenities: propertyDetails.amenities || propertyDetails.amenitiesFeatures || [],
-    features: propertyDetails.amenities || propertyDetails.amenitiesFeatures || [],
+    amenities: [
+      ...(Array.isArray(propertyDetails.amenities) ? propertyDetails.amenities : []),
+      ...(Array.isArray(propertyDetails.amenitiesFeatures) ? propertyDetails.amenitiesFeatures : []),
+      ...(Array.isArray(propertyDetails.securityFeatures) ? propertyDetails.securityFeatures : []),
+      ...(Array.isArray(propertyDetails.kitchenFeatures) ? propertyDetails.kitchenFeatures : []),
+      ...(Array.isArray(propertyDetails.outdoorFeatures) ? propertyDetails.outdoorFeatures : []),
+      ...(Array.isArray(propertyDetails.energyFeatures) ? propertyDetails.energyFeatures : []),
+      propertyDetails.waterHeating,
+      propertyDetails.waterSupply
+    ].filter(Boolean).flat(),
+    features: [
+      ...(Array.isArray(propertyDetails.amenities) ? propertyDetails.amenities : []),
+      ...(Array.isArray(propertyDetails.amenitiesFeatures) ? propertyDetails.amenitiesFeatures : []),
+      ...(Array.isArray(propertyDetails.securityFeatures) ? propertyDetails.securityFeatures : []),
+      ...(Array.isArray(propertyDetails.kitchenFeatures) ? propertyDetails.kitchenFeatures : []),
+      ...(Array.isArray(propertyDetails.outdoorFeatures) ? propertyDetails.outdoorFeatures : []),
+      ...(Array.isArray(propertyDetails.energyFeatures) ? propertyDetails.energyFeatures : []),
+      propertyDetails.waterHeating,
+      propertyDetails.waterSupply
+    ].filter(Boolean).flat(),
     // Location fields
     city: listing.city,
     province: listing.province,
