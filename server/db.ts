@@ -1,6 +1,7 @@
 import {
   eq,
   desc,
+  getTableColumns,
   and,
   like,
   gte,
@@ -2517,6 +2518,19 @@ export function transformListingToProperty(listing: any, media: any[] = []) {
     updatedAt: listing.updatedAt,
     userId: listing.userId,
     ownerId: listing.userId,
+    // Linked Agent/User details from join
+    agent: listing.agentId ? {
+      name: listing.agentName,
+      image: listing.agentImage,
+      email: listing.agentEmail,
+      phone: listing.agentPhone,
+    } : null,
+    user: {
+      id: listing.ownerId,
+      name: listing.ownerName,
+      image: listing.ownerImage,
+      email: listing.ownerEmail,
+    }
   };
 }
 
@@ -2618,26 +2632,38 @@ export async function searchListings(params: ListingSearchParams) {
   }
 
   // Build query
-  let query = db.select().from(listings);
+  let query = db.select({
+    ...getTableColumns(listings),
+    ownerName: schema.users.name,
+    ownerImage: schema.users.image,
+    ownerEmail: schema.users.email,
+    agentName: schema.agents.name,
+    agentImage: schema.agents.image,
+    agentEmail: schema.agents.email,
+    agentPhone: schema.agents.phone,
+  })
+  .from(listings)
+  .leftJoin(schema.users, eq(listings.ownerId, schema.users.id))
+  .leftJoin(schema.agents, eq(listings.agentId, schema.agents.id)) as any;
 
   if (conditions.length > 0) {
-    query = query.where(and(...conditions)) as any;
+    query = query.where(and(...conditions));
   }
 
-  query = query.orderBy(desc(listings.createdAt)) as any;
+  query = query.orderBy(desc(listings.createdAt));
 
   if (params.limit) {
-    query = query.limit(params.limit) as any;
+    query = query.limit(params.limit);
   }
   if (params.offset) {
-    query = query.offset(params.offset) as any;
+    query = query.offset(params.offset);
   }
 
   const results = await query;
 
   // Fetch media for each listing
   const listingsWithMedia = await Promise.all(
-    results.map(async (listing) => {
+    results.map(async (listing: any) => {
       const media = await db
         .select()
         .from(listingMedia)
