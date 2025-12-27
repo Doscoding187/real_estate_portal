@@ -2506,7 +2506,7 @@ interface ListingSearchParams {
  * Search listings (replacement for searchProperties)
  */
 export async function searchListings(params: ListingSearchParams) {
-  console.log('[searchListings] Called with params:', JSON.stringify(params, null, 2));
+
   const db = await getDb();
   if (!db) return [];
 
@@ -2516,9 +2516,9 @@ export async function searchListings(params: ListingSearchParams) {
   // Use raw SQL to bypass Drizzle enum type mismatch
   conditions.push(sql`${listings.status} = 'published'`);
 
-  // Location filters
-  if (params.city) conditions.push(like(listings.city, `%${params.city}%`));
-  if (params.province) conditions.push(like(listings.province, `%${params.province}%`));
+  // Location filters - use LOWER for case-insensitive matching
+  if (params.city) conditions.push(sql`LOWER(${listings.city}) LIKE ${`%${params.city.toLowerCase()}%`}`);
+  if (params.province) conditions.push(sql`LOWER(${listings.province}) LIKE ${`%${params.province.toLowerCase()}%`}`);
 
   // Property type filter
   if (params.propertyType) conditions.push(eq(listings.propertyType, params.propertyType as any));

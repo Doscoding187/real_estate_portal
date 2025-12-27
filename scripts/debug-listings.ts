@@ -1,7 +1,7 @@
 import 'dotenv/config';
 import { drizzle } from 'drizzle-orm/mysql2';
 import mysql from 'mysql2/promise';
-import { eq, like, desc } from 'drizzle-orm';
+import { eq, like, desc, sql } from 'drizzle-orm';
 import * as schema from '../drizzle/schema.js';
 
 async function debugListings() {
@@ -55,9 +55,12 @@ async function debugListings() {
     title: schema.listings.title,
     city: schema.listings.city,
     status: schema.listings.status,
+    action: schema.listings.action,
+    propertyType: schema.listings.propertyType,
   })
   .from(schema.listings)
-  .where(eq(schema.listings.status, 'published' as any));
+  .where(sql`${schema.listings.status} = 'published'`);
+  
   
   console.table(publishedListings);
 
