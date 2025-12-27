@@ -2506,6 +2506,7 @@ interface ListingSearchParams {
  * Search listings (replacement for searchProperties)
  */
 export async function searchListings(params: ListingSearchParams) {
+  console.log('[searchListings] Called with params:', JSON.stringify(params, null, 2));
   const db = await getDb();
   if (!db) return [];
 
