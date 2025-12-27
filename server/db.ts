@@ -2478,11 +2478,15 @@ export function transformListingToProperty(listing: any, media: any[] = []) {
       if (url.startsWith('http')) return url;
       
       // Prepend CDN URL or S3 URL
-      const cdn = process.env.CLOUDFRONT_URL;
+      let cdn = process.env.CLOUDFRONT_URL;
       const bucket = process.env.S3_BUCKET_NAME;
       const region = process.env.AWS_REGION || 'us-east-1';
       
       if (cdn) {
+        // Remove protocol if present to avoid double https://
+        cdn = cdn.replace(/^https?:\/\//, '');
+        // Remove trailing slash
+        cdn = cdn.replace(/\/$/, '');
         return `https://${cdn}/${url}`;
       } else if (bucket) {
         return `https://${bucket}.s3.${region}.amazonaws.com/${url}`;

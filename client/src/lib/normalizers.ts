@@ -93,11 +93,24 @@ export function normalizePropertyForUI(raw: any): PropertyCardProps | null {
     videoCount,
     highlights: (() => {
       const source = raw.features || raw.amenities || raw.highlights;
-      if (Array.isArray(source)) return source;
+      
+      const formatHighlight = (s: string) => {
+        if (!s || typeof s !== 'string') return s;
+        // Parse snake_case or kebab-case
+        return s
+          .split(/[_-\s]+/)
+          .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+          .join(' ');
+      };
+
+      if (Array.isArray(source)) {
+        return source.map(formatHighlight);
+      }
+      
       if (typeof source === 'string') {
         try {
           const parsed = JSON.parse(source);
-          return Array.isArray(parsed) ? parsed : undefined;
+          return Array.isArray(parsed) ? parsed.map(formatHighlight) : undefined;
         } catch (e) {
           return undefined;
         }
