@@ -51,7 +51,7 @@ export default function CityPage({ params }: { params: { province: string; city:
   const isTransactionMode = searchParams.get('view') === 'list' || hasSearchFilters;
 
   if (isTransactionMode) {
-      return <SearchResults />;
+      return <SearchResults province={provinceSlug} city={citySlug} />;
   }
 
   // Restore data fetching

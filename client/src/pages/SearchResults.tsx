@@ -47,7 +47,7 @@ import {
 } from '@/lib/urlUtils';
 import { MOCK_LISTINGS } from '@/lib/mockListings';
 
-export default function SearchResults() {
+export default function SearchResults({ province: propProvince, city: propCity }: { province?: string; city?: string } = {}) {
   const { isAuthenticated } = useAuth();
   const [location, setLocation] = useLocation();
   
@@ -82,9 +82,10 @@ export default function SearchResults() {
         const parsedQuery = parseLegacyQueryParams(searchParams);
         
         // Extract location path params if they exist (from canonical routes)
+        // Use props as fallback when params are empty (e.g., when embedded in CityPage)
         const pathFilters: Partial<SearchFilters> = {};
-        if (params.province) pathFilters.province = params.province;
-        if (params.city) pathFilters.city = params.city;
+        pathFilters.province = params.province || propProvince;
+        pathFilters.city = params.city || propCity;
         if (params.suburb) pathFilters.suburb = params.suburb;
         
         // Also handle the generic /property-for-sale/:slug case (LocationDispatcher)
@@ -98,10 +99,10 @@ export default function SearchResults() {
     if (location.startsWith('/property-to-rent')) {
         const parsedQuery = parseLegacyQueryParams(searchParams);
         
-        // Extract location path params
+        // Extract location path params - use props as fallback
         const pathFilters: Partial<SearchFilters> = {};
-        if (params.province) pathFilters.province = params.province;
-        if (params.city) pathFilters.city = params.city;
+        pathFilters.province = params.province || propProvince;
+        pathFilters.city = params.city || propCity;
         if (params.suburb) pathFilters.suburb = params.suburb;
 
         setFilters({ ...parsedQuery, ...pathFilters, listingType: 'rent' });
@@ -118,7 +119,7 @@ export default function SearchResults() {
       const legacyFilters = parseLegacyQueryParams(searchParams);
       setFilters(legacyFilters);
     }
-  }, [params, location, window.location.search]);
+  }, [params, location, window.location.search, propProvince, propCity]);
 
   // Update document title for SEO
   useEffect(() => {
