@@ -45,7 +45,6 @@ import {
   generateCanonicalUrl,
   SearchFilters,
 } from '@/lib/urlUtils';
-import { MOCK_LISTINGS } from '@/lib/mockListings';
 
 export default function SearchResults({ province: propProvince, city: propCity }: { province?: string; city?: string } = {}) {
   const { isAuthenticated } = useAuth();
@@ -235,10 +234,9 @@ export default function SearchResults({ province: propProvince, city: propCity }
     }));
   };
 
-  // Determine properties to display (Real vs Mock)
-  // If fetching is done and no real properties found, show mock data for visualization
-  const displayProperties = (properties && properties.length > 0) ? properties : (!isLoading ? MOCK_LISTINGS : []);
-  const isUsingMockData = !isLoading && (!properties || properties.length === 0);
+  // Only show real properties - no mock data fallback
+  const displayProperties = properties || [];
+  
   
   // Sort properties (client-side for now)
   const sortedProperties = useMemo(() => {
@@ -304,14 +302,7 @@ export default function SearchResults({ province: propProvince, city: propCity }
               />
             </div>
 
-            {isUsingMockData && (
-              <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg text-blue-800 text-sm flex flex-col gap-1">
-                 <span className="font-bold flex items-center gap-2">
-                    ✨ Visualization Mode
-                 </span>
-                 <span>Showing example properties to demonstrate the layout. No exact matches found for your criteria.</span>
-              </div>
-            )}
+
 
             {/* Results */}
             <div className="mt-6">
