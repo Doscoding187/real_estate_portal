@@ -2459,10 +2459,10 @@ export function transformListingToProperty(listing: any, media: any[] = []) {
     // Extract from propertyDetails JSON
     bedrooms: propertyDetails.bedrooms || 0,
     bathrooms: propertyDetails.bathrooms || 0,
-    area: propertyDetails.unitSizeM2 || 0,
+    area: propertyDetails.unitSizeM2 || propertyDetails.houseAreaM2 || propertyDetails.floorAreaM2 || 0,
     yardSize: propertyDetails.erfSizeM2 || propertyDetails.landSizeM2OrHa || 0,
-    amenities: propertyDetails.amenitiesFeatures || [],
-    features: propertyDetails.amenitiesFeatures || [],
+    amenities: propertyDetails.amenities || propertyDetails.amenitiesFeatures || [],
+    features: propertyDetails.amenities || propertyDetails.amenitiesFeatures || [],
     // Location fields
     city: listing.city,
     province: listing.province,
@@ -2473,12 +2473,21 @@ export function transformListingToProperty(listing: any, media: any[] = []) {
     // Media
     // Media - prepend CDN URL if stored as path
     images: media.map((m: any) => {
-      const url = m.mediaUrl;
+      const url = m.processedUrl || m.originalUrl || m.mediaUrl;
       if (!url) return null;
       if (url.startsWith('http')) return url;
-      // Prepend CDN URL
-      const cdn = process.env.CLOUDFRONT_URL || '';
-      return cdn ? `https://${cdn}/${url}` : url;
+      
+      // Prepend CDN URL or S3 URL
+      const cdn = process.env.CLOUDFRONT_URL;
+      const bucket = process.env.S3_BUCKET_NAME;
+      const region = process.env.AWS_REGION || 'us-east-1';
+      
+      if (cdn) {
+        return `https://${cdn}/${url}`;
+      } else if (bucket) {
+        return `https://${bucket}.s3.${region}.amazonaws.com/${url}`;
+      }
+      return url;
     }).filter(Boolean),
     // Metadata
     status: listing.status,
