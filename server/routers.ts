@@ -156,12 +156,23 @@ export const appRouter = router({
           const rawImages = await db.getListingMedia(input.id);
           
           // Transform images to include imageUrl for PropertyImageGallery compatibility
-          const images = rawImages.map(img => ({
-            id: img.id,
-            imageUrl: img.originalUrl, // PropertyImageGallery expects imageUrl
-            isPrimary: img.isPrimary,
-            displayOrder: img.displayOrder,
-          }));
+          // S3 bucket configuration
+          const bucketName = process.env.S3_BUCKET_NAME || 'listify-properties-sa';
+          const awsRegion = process.env.AWS_REGION || 'af-south-1';
+          const cdnUrl = process.env.CLOUDFRONT_URL || `https://${bucketName}.s3.${awsRegion}.amazonaws.com`;
+          
+          const images = rawImages.map(img => {
+            // If originalUrl is already a full URL, use it; otherwise construct from bucket
+            const imageUrl = img.originalUrl.startsWith('http') 
+              ? img.originalUrl 
+              : `${cdnUrl}/${img.originalUrl}`;
+            return {
+              id: img.id,
+              imageUrl,
+              isPrimary: img.isPrimary,
+              displayOrder: img.displayOrder,
+            };
+          });
           
           // Transform listing to match property structure for backward compatibility
           const propertyDetails = listing.propertyDetails as any || {};
@@ -174,9 +185,22 @@ export const appRouter = router({
             // Extract property details from JSON
             bedrooms: propertyDetails.bedrooms || 0,
             bathrooms: propertyDetails.bathrooms || 0,
-            area: propertyDetails.erfSizeM2 || propertyDetails.unitSizeM2 || propertyDetails.landSizeM2OrHa || 0,
-            amenities: propertyDetails.amenitiesFeatures || [],
-            features: propertyDetails.amenitiesFeatures || [],
+            area: propertyDetails.erfSizeM2 || propertyDetails.unitSizeM2 || propertyDetails.landSizeM2OrHa || propertyDetails.houseAreaM2 || 0,
+            amenities: propertyDetails.amenitiesFeatures || propertyDetails.propertyHighlights || [],
+            features: propertyDetails.propertyHighlights || propertyDetails.amenitiesFeatures || [],
+            // Map property settings for specs display
+            propertySettings: {
+              ownershipType: propertyDetails.ownershipType,
+              powerBackup: propertyDetails.powerBackup,
+              securityFeatures: propertyDetails.securityFeatures,
+              waterSupply: propertyDetails.waterSupply,
+              internetAccess: propertyDetails.internetAccess,
+              flooring: propertyDetails.flooring,
+              parkingType: propertyDetails.parkingType,
+              petFriendly: propertyDetails.petFriendly,
+              electricitySupply: propertyDetails.electricitySupply,
+              additionalRooms: propertyDetails.additionalRooms,
+            },
             // Map location fields
             zipCode: listing.postalCode,
             // Keep original fields
