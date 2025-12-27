@@ -2459,7 +2459,8 @@ export function transformListingToProperty(listing: any, media: any[] = []) {
     // Extract from propertyDetails JSON
     bedrooms: propertyDetails.bedrooms || 0,
     bathrooms: propertyDetails.bathrooms || 0,
-    area: propertyDetails.erfSizeM2 || propertyDetails.unitSizeM2 || propertyDetails.landSizeM2OrHa || 0,
+    area: propertyDetails.unitSizeM2 || 0,
+    yardSize: propertyDetails.erfSizeM2 || propertyDetails.landSizeM2OrHa || 0,
     amenities: propertyDetails.amenitiesFeatures || [],
     features: propertyDetails.amenitiesFeatures || [],
     // Location fields

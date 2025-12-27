@@ -44,6 +44,7 @@ export function normalizePropertyForUI(raw: any): PropertyCardProps | null {
   const yardSize = 
     Number(details.erfSizeM2) ||      // Erf/Plot size for houses
     Number(details.landSizeM2OrHa) || // Land size
+    Number(raw.yardSize) ||          // Direct field from backend
     (Number(details.landSizeHa) ? Number(details.landSizeHa) * 10000 : undefined); // Convert hectares to m²
 
   // Determine agent/user info
