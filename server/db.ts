@@ -2511,8 +2511,8 @@ export async function searchListings(params: ListingSearchParams) {
 
   const conditions: SQL[] = [];
 
-  // Only show approved/published listings
-  conditions.push(eq(listings.status, 'approved' as any));
+  // Only show published listings (status after approval)
+  conditions.push(eq(listings.status, 'published' as any));
 
   // Location filters
   if (params.city) conditions.push(like(listings.city, `%${params.city}%`));
