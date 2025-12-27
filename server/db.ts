@@ -2470,7 +2470,15 @@ export function transformListingToProperty(listing: any, media: any[] = []) {
     latitude: listing.latitude,
     longitude: listing.longitude,
     // Media
-    images: media.map((m: any) => m.mediaUrl),
+    // Media - prepend CDN URL if stored as path
+    images: media.map((m: any) => {
+      const url = m.mediaUrl;
+      if (!url) return null;
+      if (url.startsWith('http')) return url;
+      // Prepend CDN URL
+      const cdn = process.env.CLOUDFRONT_URL || '';
+      return cdn ? `https://${cdn}/${url}` : url;
+    }).filter(Boolean),
     // Metadata
     status: listing.status,
     createdAt: listing.createdAt,
