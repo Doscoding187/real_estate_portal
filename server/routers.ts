@@ -141,6 +141,25 @@ export const appRouter = router({
         return await db.getFeaturedListings(input.limit);
       }),
 
+    // getAll - Same as search but with city/propertyType filtering
+    getAll: publicProcedure
+      .input(
+        z.object({
+          limit: z.number().default(20),
+          offset: z.number().default(0),
+          city: z.string().optional(),
+          propertyType: z.string().optional(),
+        }),
+      )
+      .query(async ({ input }) => {
+        return await db.searchListings({
+          city: input.city,
+          propertyType: input.propertyType as any,
+          limit: input.limit,
+          offset: input.offset,
+        });
+      }),
+
     getById: publicProcedure
       .input(
         z.object({
