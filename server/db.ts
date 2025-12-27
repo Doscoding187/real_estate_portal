@@ -2513,7 +2513,8 @@ export async function searchListings(params: ListingSearchParams) {
   const conditions: SQL[] = [];
 
   // Only show published listings (status after approval)
-  conditions.push(eq(listings.status, 'published' as any));
+  // Use raw SQL to bypass Drizzle enum type mismatch
+  conditions.push(sql`${listings.status} = 'published'`);
 
   // Location filters
   if (params.city) conditions.push(like(listings.city, `%${params.city}%`));

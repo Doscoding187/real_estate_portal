@@ -1,32 +1,62 @@
 import 'dotenv/config';
-import { getDb } from '../server/db';
-import { searchProperties } from '../server/db';
+import { drizzle } from 'drizzle-orm/mysql2';
+import mysql from 'mysql2/promise';
+import { eq, like, desc, and } from 'drizzle-orm';
+import * as schema from '../drizzle/schema.js';
 
-async function main() {
-  console.log('Testing searchProperties function...\n');
-
-  const results = await searchProperties({
-    status: 'available',
-    limit: 20,
-    offset: 0,
-  });
-
-  console.log(`Found ${results.length} properties with status='available':\n`);
+async function testSearch() {
+  console.log('Connecting to database...');
   
-  results.forEach((prop, index) => {
-    console.log(`${index + 1}. ID: ${prop.id} - ${prop.title}`);
-    console.log(`   Status: ${prop.status}`);
-    console.log(`   Price: R${prop.price}`);
-    console.log(`   Type: ${prop.propertyType} / ${prop.listingType}`);
-    console.log(`   Bedrooms: ${prop.bedrooms || 'N/A'}`);
-    console.log(`   Image: ${prop.mainImage ? 'Yes' : 'No'}`);
-    console.log('');
+  const dbUrl = process.env.DATABASE_URL || '';
+  const connection = await mysql.createConnection({
+    uri: dbUrl,
+    ssl: { rejectUnauthorized: false }
   });
-
-  process.exit(0);
+  
+  const db = drizzle(connection, { schema, mode: 'default' });
+  
+  // Test with lowercase (slug) - simulating frontend call
+  console.log('\n=== Search with lowercase city (slug): "alberton" ===');
+  const results1 = await db.select({
+    id: schema.listings.id,
+    title: schema.listings.title,
+    city: schema.listings.city,
+    status: schema.listings.status,
+    propertyType: schema.listings.propertyType,
+  })
+  .from(schema.listings)
+  .where(
+    and(
+      eq(schema.listings.status, 'published' as any),
+      like(schema.listings.city, '%alberton%')
+    )
+  );
+  
+  console.log(`Found ${results1.length} results:`);
+  console.table(results1);
+  
+  // Test with propertyType filter too
+  console.log('\n=== Search with city + propertyType ===');
+  const results2 = await db.select({
+    id: schema.listings.id,
+    title: schema.listings.title,
+    city: schema.listings.city,
+    propertyType: schema.listings.propertyType,
+  })
+  .from(schema.listings)
+  .where(
+    and(
+      eq(schema.listings.status, 'published' as any),
+      like(schema.listings.city, '%alberton%'),
+      eq(schema.listings.propertyType, 'house' as any)
+    )
+  );
+  
+  console.log(`Found ${results2.length} results:`);
+  console.table(results2);
+  
+  await connection.end();
+  console.log('\nDone!');
 }
 
-main().catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
+testSearch().catch(console.error);
