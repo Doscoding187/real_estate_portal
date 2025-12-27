@@ -639,7 +639,7 @@ export const listingRouter = router({
 
   /**
    * Approve listing (Super Admin only)
-   *
+   */
   approve: protectedProcedure
     .input(
       z.object({
