@@ -2634,17 +2634,16 @@ export async function searchListings(params: ListingSearchParams) {
   // Build query
   let query = db.select({
     ...getTableColumns(listings),
-    ownerName: schema.users.name,
-    ownerImage: schema.users.image,
-    ownerEmail: schema.users.email,
-    agentName: schema.agents.name,
-    agentImage: schema.agents.image,
-    agentEmail: schema.agents.email,
-    agentPhone: schema.agents.phone,
+    ownerName: users.name,
+    ownerEmail: users.email,
+    agentName: agents.displayName,
+    agentImage: agents.profileImage,
+    agentEmail: agents.email,
+    agentPhone: agents.phone,
   })
   .from(listings)
-  .leftJoin(schema.users, eq(listings.ownerId, schema.users.id))
-  .leftJoin(schema.agents, eq(listings.agentId, schema.agents.id)) as any;
+  .leftJoin(users, eq(listings.ownerId, users.id))
+  .leftJoin(agents, eq(listings.agentId, agents.id)) as any;
 
   if (conditions.length > 0) {
     query = query.where(and(...conditions));
