@@ -209,13 +209,36 @@ export function EnhancedHero() {
          return;
     }
 
-    // Otherwise, route to Interactive Results Page with Query Params
+    // If it's a City/Suburb (and not one of the special categories below), route to Interactive Results
+    if (selectedLocation && (activeTab === 'buy' || activeTab === 'rental')) {
+        const root = activeTab === 'rental' ? '/property-to-rent' : '/property-for-sale';
+        const params = new URLSearchParams();
+        
+        // Use 'locations' param for specific routing
+        params.set('locations', selectedLocation.slug);
+
+        // Add Active Filters
+        if (activeTab === 'buy') {
+             if (filters.propertyTypes.length > 0) params.set('propertyType', filters.propertyTypes[0].toLowerCase());
+             if (filters.priceMin) params.set('minPrice', filters.priceMin);
+             if (filters.priceMax) params.set('maxPrice', filters.priceMax);
+        } else { // rental
+             if (filters.propertyTypes.length > 0) params.set('propertyType', filters.propertyTypes[0].toLowerCase());
+             if (filters.budgetMin) params.set('minPrice', filters.budgetMin);
+             if (filters.budgetMax) params.set('maxPrice', filters.budgetMax);
+             if (filters.furnished) params.set('furnished', 'true');
+        }
+
+        setLocation(`${root}?${params.toString()}`);
+        return;
+    }
+
+    // Fallback Routing for Empty Searches or Special Categories
     switch (activeTab) {
       case 'buy': {
         const url = generatePropertyUrl({
           listingType: 'sale',
           propertyType: filters.propertyTypes[0]?.toLowerCase(),
-          locations,
           minPrice: filters.priceMin ? parseInt(filters.priceMin) : undefined,
           maxPrice: filters.priceMax ? parseInt(filters.priceMax) : undefined,
         });
@@ -227,7 +250,6 @@ export function EnhancedHero() {
         const url = generatePropertyUrl({
           listingType: 'rent',
           propertyType: filters.propertyTypes[0]?.toLowerCase(),
-          locations,
           minPrice: filters.budgetMin ? parseInt(filters.budgetMin) : undefined,
           maxPrice: filters.budgetMax ? parseInt(filters.budgetMax) : undefined,
           furnished: filters.furnished,
