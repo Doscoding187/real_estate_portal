@@ -140,6 +140,19 @@ export function generatePropertyUrl(filters: SearchFilters): string {
 
               const queryString = queryParams.toString();
               return path + (queryString ? `?${queryString}` : '');
+          } else if (loc.type === 'province' && loc.slug) {
+              // Handle Province Only
+              const queryParams = new URLSearchParams();
+              if (filters.propertyType) queryParams.set('propertyType', filters.propertyType);
+              if (filters.minPrice) queryParams.set('minPrice', filters.minPrice.toString());
+              if (filters.maxPrice) queryParams.set('maxPrice', filters.maxPrice.toString());
+              // Add other filters as needed...
+              if (filters.minBedrooms) queryParams.set('minBedrooms', filters.minBedrooms.toString());
+              if (filters.maxBedrooms) queryParams.set('maxBedrooms', filters.maxBedrooms.toString());
+              if (filters.furnished) queryParams.set('furnished', 'true');
+
+              const queryString = queryParams.toString();
+              return `${root}/${loc.slug}` + (queryString ? `?${queryString}` : '');
           }
       } else {
           // Multiple locations -> Filtered Search URL (NoIndex)

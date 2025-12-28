@@ -25,6 +25,8 @@ import { TrendingSuburbsCarousel } from '@/components/location/TrendingSuburbsCa
 import { LocationPropertyTypeExplorer } from '@/components/location/LocationPropertyTypeExplorer';
 import { DiscoverProperties } from '@/components/DiscoverProperties';
 import { ExploreCities } from '@/components/ExploreCities';
+import { EnhancedHero } from '@/components/EnhancedHero';
+import { Home, Building2, Key, MapPin } from 'lucide-react';
 
 export default function ProvincePage({ params }: { params: { province: string } }) {
   const [, navigate] = useLocation();
@@ -83,30 +85,29 @@ export default function ProvincePage({ params }: { params: { province: string } 
       />
 
       <LocationPageLayout
-        title={`${province.name} Property Market`}
-        description={`Find properties for sale and rent in ${province.name}. Market insights, trends, and top locations.`}
         locationName={province.name}
         locationSlug={provinceSlug}
         locationType="province"
         heroImage="/images/province-hero.jpg"
+        locationType="province"
+        heroImage="/images/province-hero.jpg"
         
         banner={
-          <MonetizedBanner
-            locationType="province"
-            locationId={province.id}
-            locationName={province.name}
-            defaultImage="https://images.unsplash.com/photo-1577931767667-0c58e744d081?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80"
-            campaign={heroCampaign}
-          />
+            <EnhancedHero 
+                variant="location"
+                title={<span>Property for Sale in <span className="text-blue-200">{province.name}</span></span>}
+                subtitle={`Explore ${stats.totalListings.toLocaleString()} properties and new developments across ${province.name}`}
+                backgroundImage="https://images.unsplash.com/photo-1577931767667-0c58e744d081?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80"
+                initialSearchQuery={province.name}
+                heroMode="city"
+                navigationItems={cities?.map((city: any) => ({
+                    label: city.name,
+                    path: `/${provinceSlug}/${city.slug}`,
+                })) || []}
+            />
         }
 
-        searchStage={
-          <SearchStage 
-            locationName={province.name} 
-            locationSlug={provinceSlug} 
-            totalListings={stats.totalListings} 
-          />
-        }
+        searchStage={null}
 
         featuredProperties={
           <FeaturedPropertiesCarousel 

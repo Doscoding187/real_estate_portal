@@ -38,10 +38,30 @@ export function ListingNavbar({ defaultLocations = [] }: ListingNavbarProps) {
   const typeOrder: Record<string, number> = { province: 1, city: 2, suburb: 3 };
 
   const handleSearch = () => {
-    // Strict Mode: allow search if we have locations OR if it's a blank "Browse All"
-    // But usually blank browse all is fine.
+    // Intelligent Routing:
+    // 1. Single Province -> SEO Page
+    // 2. Single City/Suburb -> Interactive Results Page (Query Param)
+    // 3. Multiple -> Interactive Results Page (Query Param)
     
-    // Generate URL using shared utility (handles 0, 1, or N locations)
+    if (selectedLocations.length === 1) {
+        const loc = selectedLocations[0];
+        const isProvince = loc.type === 'province' || (loc.type as any) === 'administrative_area_level_1'; // safety check
+        
+        if (!isProvince) {
+            // Force interactive results for single city/suburb
+            const root = listingType === 'rent' ? '/property-to-rent' : '/property-for-sale';
+            const params = new URLSearchParams();
+            params.set('locations', loc.slug);
+            // Add implicit filters if needed, but for now just location
+            
+            setLocation(`${root}?${params.toString()}`);
+            return;
+        }
+    }
+
+    // Default Behavior (Provinces & Multiple Locations handled correctly by generatePropertyUrl or above check)
+    // - Provinces fallback to path-based SEO URL via generatePropertyUrl
+    // - Multiple locations default to ?locations=... via generatePropertyUrl
     const url = generatePropertyUrl({
         listingType,
         locations: selectedLocations

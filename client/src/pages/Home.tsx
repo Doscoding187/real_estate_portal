@@ -27,7 +27,13 @@ export default function Home() {
     'Limpopo',
     'North West',
     'Free State',
+    'Northern Cape'
   ];
+
+  const provinceNavItems = provinces.map(p => ({
+      label: p,
+      path: `/${p.toLowerCase().replace(/\s+/g, '-')}`
+  }));
 
   // Mock development data with placeholder images
   const developmentsByProvince: Record<string, any[]> = {
@@ -120,7 +126,10 @@ export default function Home() {
       <EnhancedNavbar />
 
       {/* Enhanced Hero Section */}
-      <EnhancedHero />
+      <EnhancedHero 
+        heroMode="province" 
+        navigationItems={provinceNavItems}
+      />
 
 
 

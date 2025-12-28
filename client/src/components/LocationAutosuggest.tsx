@@ -2,6 +2,8 @@ import { useState, useEffect, useRef } from 'react';
 import { MapPin, Loader2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { useGoogleMaps } from '@/hooks/useGoogleMaps';
+import { CITY_PROVINCE_MAP, PROVINCE_SLUGS } from '@/lib/locationUtils';
+import { slugify } from '@/lib/urlUtils';
 
 interface PlacePrediction {
   place_id: string;
@@ -25,7 +27,7 @@ interface LocationAutosuggestProps {
 
 export function LocationAutosuggest({ 
   onSelect, 
-  placeholder = 'Search city or suburb...', 
+  placeholder = 'Search by city, suburb, or area...', 
   className = '',
   defaultValue = '',
   inputClassName = '',
@@ -96,36 +98,64 @@ export function LocationAutosuggest({
     setShowSuggestions(false);
 
     if (onSelect) {
-      // Basic slug generation (UI-side approximation)
-      // In production, you might want to fetch details or normalize via backend
-      const slug = mainText.toLowerCase().replace(/[^\w\s-]/g, '').replace(/\s+/g, '-');
-      const locationType = getLocationType(prediction.types);
+      // Robust slug and type resolution
+      const slug = slugify(mainText);
+      let locationType = getLocationType(prediction.types);
       
-      // Heuristic for parent slugs based on description
-      const parts = prediction.description.split(',').map(s => s.trim());
-      let provinceSlug = undefined;
-      let citySlug = undefined;
+      let provinceSlug: string | undefined = undefined;
+      let citySlug: string | undefined = undefined;
 
-      // Simplistic mapping for demo purposes
-      if (prediction.description.toLowerCase().includes('cape town')) provinceSlug = 'western-cape';
-      else if (prediction.description.toLowerCase().includes('durban')) provinceSlug = 'kwazulu-natal';
-      else provinceSlug = 'gauteng'; // Default heuristic
+      // 1. Check if the selection IS a known Province
+      if (PROVINCE_SLUGS.includes(slug)) {
+          locationType = 'province';
+          provinceSlug = slug;
+      }
+      // 2. Check if the selection IS a known City (populates province automatically)
+      else if (CITY_PROVINCE_MAP[slug]) {
+          locationType = 'city';
+          citySlug = slug;
+          provinceSlug = CITY_PROVINCE_MAP[slug];
+      }
+      // 3. Fallback / Heuristics for Suburbs or minor places
+      else {
+          // Attempt to derive context from description (e.g., "Sandton, Johannesburg, Gauteng")
+          const parts = prediction.description.split(',').map(s => slugify(s));
+          
+          // Check parts for known provinces
+          const foundProvince = parts.find(p => PROVINCE_SLUGS.includes(p));
+          if (foundProvince) provinceSlug = foundProvince;
+          
+          // Check parts for known cities (if not already the main slug)
+          // We iterate parts to see if any is a known city
+          if (!citySlug) {
+              const foundCity = parts.find(p => CITY_PROVINCE_MAP[p]);
+              if (foundCity) {
+                  citySlug = foundCity;
+                  // If we didn't find province yet, authoritative map wins
+                  if (!provinceSlug) provinceSlug = CITY_PROVINCE_MAP[foundCity];
+              }
+          }
+          
+          // If we still don't have a province but have a 'city' type selection that wasn't in our map, 
+          // we might just default to 'gauteng' or leave undefined (backend will handle or generic search)
+          if (!provinceSlug) {
+              // Heuristics for major hubs not in map or typo tolerance
+              if (prediction.description.toLowerCase().includes('cape town')) provinceSlug = 'western-cape';
+              else if (prediction.description.toLowerCase().includes('durban')) provinceSlug = 'kwazulu-natal';
+              // else provinceSlug = 'gauteng'; // RISKY to default, better to be undefined and fall back to broad search
+          }
+      }
 
-      // If suburb, assume City is the parent in description? 
-      // This is tricky without Place Details API, but sufficient for strict UI flow 
-      // if we rely on backend normalization later or accepted "approximate" slugs for search params.
-      
       onSelect({
         name: mainText,
         fullAddress: prediction.description,
         placeId: prediction.place_id,
         types: prediction.types,
-        // Expanded props
         slug,
-        type: locationType as any,
+        type: locationType,
         provinceSlug,
         citySlug
-      } as any);
+      });
     }
   };
 
