@@ -191,9 +191,25 @@ export function EnhancedHero() {
 
 
   const handleSearch = () => {
-    // Build SEO-friendly URLs using the utility
-    const locations = selectedLocation ? [selectedLocation] : undefined;
+    // Intelligent Routing Logic
+    // Province -> SEO Page (e.g., /western-cape)
+    // City/Suburb -> Interactive Results Page (e.g., /property-for-sale?city=Cape Town)
 
+    const isProvince = selectedLocation?.type === 'province' || (selectedLocation?.types && selectedLocation.types.includes('administrative_area_level_1'));
+    
+    // Base URL generation
+    const locations = selectedLocation ? [selectedLocation] : undefined;
+    
+    // If it's a province, we redirect to the specialized SEO page
+    if (isProvince && selectedLocation?.slug) {
+         // Determine intent prefix
+         const prefix = activeTab === 'rental' ? '/property-to-rent' : '/property-for-sale';
+         // SEO Page URL: /property-for-sale/western-cape
+         setLocation(`${prefix}/${selectedLocation.slug}`);
+         return;
+    }
+
+    // Otherwise, route to Interactive Results Page with Query Params
     switch (activeTab) {
       case 'buy': {
         const url = generatePropertyUrl({

@@ -149,6 +149,9 @@ export function LocationAutosuggest({
   };
 
   const getLocationType = (types: string[]) => {
+    if (types.includes('administrative_area_level_1')) {
+      return 'province';
+    }
     if (types.includes('locality') || types.includes('administrative_area_level_2')) {
       return 'city';
     }
