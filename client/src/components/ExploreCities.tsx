@@ -1,4 +1,4 @@
-import React from 'react';
+import { useState } from 'react';
 import { Link } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -6,6 +6,8 @@ import {
   MapPin,
   ArrowRight,
   ChevronRight,
+  ChevronDown,
+  Building,
 } from 'lucide-react';
 
 interface City {
@@ -13,8 +15,8 @@ interface City {
   province: string;
   slug: string;
   provinceSlug: string;
-  image: string;
-  propertyCount: string;
+  image?: string;
+  propertyCount?: string;
   featured?: boolean;
 }
 
@@ -25,9 +27,20 @@ interface ExploreCitiesProps {
   customLocations?: City[];
   basePath?: string;
   queryParams?: string;
+  initialLimit?: number;
 }
 
-export function ExploreCities({ provinceSlug, title, description, customLocations, basePath = '/property-for-sale', queryParams = '' }: ExploreCitiesProps = {}) {
+export function ExploreCities({ 
+  provinceSlug, 
+  title, 
+  description, 
+  customLocations, 
+  basePath = '/property-for-sale', 
+  queryParams = '',
+  initialLimit = 12 
+}: ExploreCitiesProps = {}) {
+  const [visibleCount, setVisibleCount] = useState(initialLimit);
+
   const cities: City[] = [
     {
       name: 'Johannesburg',
@@ -128,10 +141,12 @@ export function ExploreCities({ provinceSlug, title, description, customLocation
   ];
 
   // If custom locations are provided, use them. Otherwise, filter by province or show defaults.
-  // We limit to 12 items for the 3-row layout (4 cols x 3 rows).
-  const filteredCities = (customLocations || (provinceSlug 
+  const allCities = customLocations || (provinceSlug 
     ? cities.filter(city => city.provinceSlug.toLowerCase() === provinceSlug.toLowerCase())
-    : cities)).slice(0, 12);
+    : cities);
+
+  const displayedCities = allCities.slice(0, visibleCount);
+  const remainingCount = allCities.length - visibleCount;
 
   const displayTitle = title || "Explore Real Estate in Popular Cities";
   const displayDescription = description || "Browse properties in South Africa's most sought-after locations.";
@@ -157,19 +172,25 @@ export function ExploreCities({ provinceSlug, title, description, customLocation
           </Link>
         </div>
 
-        {/* Grid Layout (4 Cols x 3 Rows max) */}
+        {/* Grid Layout */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {filteredCities.map(city => (
+          {displayedCities.map(city => (
              <Link key={city.slug} href={`${basePath}/${city.provinceSlug}/${city.slug}${queryParams}`.replace(/\/\//g, '/')}>
               <div className="group cursor-pointer">
                 <div className="flex items-start gap-4 p-3 rounded-xl hover:bg-slate-50 transition-colors border border-transparent hover:border-slate-100">
                   {/* Image */}
-                  <div className="w-20 h-20 rounded-lg overflow-hidden flex-shrink-0 shadow-sm relative">
-                    <img 
-                      src={city.image} 
-                      alt={city.name} 
-                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                    />
+                  <div className="w-20 h-20 rounded-lg overflow-hidden flex-shrink-0 shadow-sm relative bg-slate-100">
+                    {city.image ? (
+                        <img 
+                            src={city.image} 
+                            alt={city.name} 
+                            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                        />
+                    ) : (
+                        <div className="w-full h-full flex items-center justify-center text-slate-300">
+                            <Building className="h-8 w-8" />
+                        </div>
+                    )}
                      <div className="absolute inset-0 bg-black/10 group-hover:bg-transparent transition-colors" />
                   </div>
 
@@ -179,9 +200,11 @@ export function ExploreCities({ provinceSlug, title, description, customLocation
                       {city.name}
                     </h3>
                     
-                    <p className="text-slate-500 text-sm mb-1 truncate">
-                        {city.propertyCount}
-                    </p>
+                    {city.propertyCount && (
+                        <p className="text-slate-500 text-sm mb-1 truncate">
+                            {city.propertyCount}
+                        </p>
+                    )}
                     
                     <div className="flex items-center gap-1 text-xs text-slate-400">
                       <MapPin className="h-3 w-3" />
@@ -193,6 +216,20 @@ export function ExploreCities({ provinceSlug, title, description, customLocation
             </Link>
           ))}
         </div>
+
+        {/* Show More Button */}
+        {remainingCount > 0 && (
+          <div className="mt-8 flex justify-center">
+            <Button
+              variant="outline"
+              onClick={() => setVisibleCount(prev => prev + 12)}
+              className="bg-white border-slate-200 hover:bg-slate-50 text-slate-600 min-w-[200px]"
+            >
+              Show More Locations ({remainingCount})
+              <ChevronDown className="ml-2 h-4 w-4" />
+            </Button>
+          </div>
+        )}
 
       </div>
     </section>

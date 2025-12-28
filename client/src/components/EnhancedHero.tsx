@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useLocation, Link } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -23,10 +23,13 @@ import {
   Mic,
   MapPinned,
   ChevronDown,
+  Loader2,
+  Key,
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { generatePropertyUrl } from '@/lib/urlUtils';
 import { LocationAutosuggest } from './LocationAutosuggest';
+import { trpc } from '@/lib/trpc';
 
 
 export function EnhancedHero() {
@@ -147,6 +150,48 @@ export function EnhancedHero() {
 
   const handleSearch = () => {
     // Build SEO-friendly URLs using the utility
+  // --- LIVE COUNT LOGIC ---
+  const countQueryFilters = useMemo(() => {
+    // Construct filters based on current selection to get live count
+    const activeFilters: any = {};
+    
+    // Location
+    if (selectedLocation) {
+        if (selectedLocation.type === 'city') activeFilters.city = selectedLocation.name;
+        if (selectedLocation.type === 'suburb') activeFilters.suburb = [selectedLocation.name];
+        if (selectedLocation.provinceSlug) activeFilters.province = selectedLocation.provinceSlug; // Heuristic
+    }
+
+    // Active Tab Filters
+    if (activeTab === 'buy') {
+        activeFilters.listingType = 'sale';
+        if (filters.propertyTypes.length > 0) activeFilters.propertyType = filters.propertyTypes.map(t => t.toLowerCase());
+        if (filters.priceMin) activeFilters.minPrice = parseInt(filters.priceMin);
+        if (filters.priceMax) activeFilters.maxPrice = parseInt(filters.priceMax);
+    } else if (activeTab === 'rental') {
+        activeFilters.listingType = 'rent';
+        if (filters.propertyTypes.length > 0) activeFilters.propertyType = filters.propertyTypes.map(t => t.toLowerCase());
+        if (filters.budgetMin) activeFilters.minPrice = parseInt(filters.budgetMin);
+        if (filters.budgetMax) activeFilters.maxPrice = parseInt(filters.budgetMax);
+    }
+    
+    return activeFilters;
+  }, [activeTab, filters, selectedLocation]);
+
+  // Fetch count
+  const { data: countData, isLoading: isCountLoading } = trpc.properties.getFilterCounts.useQuery(
+    { filters: countQueryFilters },
+    { 
+        enabled: !!selectedLocation || !!filters.propertyIntent || !!filters.priceMax, // Only fetch if user has interacted
+        staleTime: 30000 
+    }
+  );
+
+  const resultCount = countData?.data?.total || 0;
+
+
+  const handleSearch = () => {
+    // Build SEO-friendly URLs using the utility
     const locations = selectedLocation ? [selectedLocation] : undefined;
 
     switch (activeTab) {
@@ -232,6 +277,28 @@ export function EnhancedHero() {
       }
     }
   };
+
+  // --- SMART SHORTCUTS ---
+  const shortcuts = [
+    { label: '3 Bed Houses', icon: Home, filters: { listingType: 'sale', propertyType: ['house'], minBedrooms: 3 } },
+    { label: 'Apartments < R1.5M', icon: Building, filters: { listingType: 'sale', propertyType: ['apartment'], maxPrice: 1500000 } },
+    { label: 'New Developments', icon: Building2, path: '/new-developments' },
+    { label: 'Cheap Rentals', icon: Key, filters: { listingType: 'rent', maxPrice: 6000 } },
+  ];
+
+  const handleShortcutClick = (shortcut: any) => {
+      if (shortcut.path) {
+          setLocation(shortcut.path);
+          return;
+      }
+      // If it's a filter shortcut
+      // Resolving Intent isn't available here directly, but we can use generatePropertyUrl
+      // assuming standard paths.
+      // Or just map to URL:
+      const url = generatePropertyUrl(shortcut.filters);
+      setLocation(url);
+  };
+
 
   return (
     <div className="relative bg-gradient-to-br from-blue-900 via-blue-800 to-indigo-900 text-white overflow-hidden">
@@ -332,12 +399,38 @@ export function EnhancedHero() {
               {/* Search Button */}
               <Button
                 onClick={handleSearch}
-                className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white h-14 px-8 shadow-lg hover:shadow-xl transition-all font-semibold text-base"
+                className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white h-14 px-8 shadow-lg hover:shadow-xl transition-all font-semibold text-base min-w-[180px]"
                 size="lg"
               >
-                <Search className="h-5 w-5 mr-2" />
-                Search
+                  {isCountLoading ? (
+                      <Loader2 className="h-5 w-5 animate-spin" />
+                  ) : (
+                      <div className="flex flex-col items-center leading-none">
+                         <span className="flex items-center gap-2"><Search className="h-4 w-4" /> Search</span>
+                         {resultCount > 0 && (
+                            <span className="text-[10px] opacity-80 font-normal mt-1">Browse {resultCount}</span>
+                         )}
+                      </div>
+                  )}
               </Button>
+            </div>
+            
+            {/* SMART SHORTCUTS */}
+            <div className="mt-6 flex flex-wrap gap-3 items-center justify-center border-t border-slate-100 pt-4">
+                <span className="text-xs text-slate-500 font-medium uppercase tracking-wide mr-2">Quick Search:</span>
+                {shortcuts.map((shortcut, idx) => { 
+                    const Icon = shortcut.icon;
+                    return (
+                        <button
+                            key={idx}
+                            onClick={() => handleShortcutClick(shortcut)}
+                            className="flex items-center gap-2 px-4 py-2 bg-slate-50 hover:bg-blue-50 text-slate-600 hover:text-blue-600 rounded-full text-sm font-medium transition-colors border border-slate-200 hover:border-blue-200"
+                        >
+                            <Icon className="h-3.5 w-3.5" />
+                            {shortcut.label}
+                        </button>
+                    );
+                })}
             </div>
 
             {/* Dynamic Filter Panel */}
@@ -725,29 +818,6 @@ export function EnhancedHero() {
                 </div>
               </div>
             )}
-
-            {/* Popular Provinces */}
-            <div className="mt-6 pt-6 border-t">
-              <div className="flex flex-wrap items-center gap-2 text-sm">
-                <span className="text-foreground font-medium">Popular Locations:</span>
-                {[
-                  { name: 'Gauteng', slug: 'gauteng' },
-                  { name: 'Western Cape', slug: 'western-cape' },
-                  { name: 'KwaZulu-Natal', slug: 'kwazulu-natal' },
-                  { name: 'Eastern Cape', slug: 'eastern-cape' },
-                  { name: 'Free State', slug: 'free-state' },
-                  { name: 'Limpopo', slug: 'limpopo' },
-                ].map((province) => (
-                  <Link
-                    key={province.slug}
-                    href={`/${province.slug}`}
-                    className="px-4 py-1.5 rounded-full bg-blue-100 hover:bg-gradient-to-r hover:from-blue-600 hover:to-indigo-600 text-blue-900 hover:text-white font-medium transition-all border border-blue-200 hover:border-transparent shadow-sm hover:shadow-md cursor-pointer"
-                  >
-                    {province.name}
-                  </Link>
-                ))}
-            </div>
-            </div>
           </CardContent>
         </Card>
       </div>

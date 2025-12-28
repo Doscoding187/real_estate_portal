@@ -36,6 +36,7 @@ import {
   Zap,
   Droplets,
   User,
+  Square,
   Calculator,
 } from 'lucide-react';
 import { MOCK_LISTINGS } from '@/lib/mockListings';
@@ -54,6 +55,7 @@ import { ResponsiveHighlights } from '@/components/ResponsiveHighlights';
 import { NearbyLandmarks } from '@/components/property/NearbyLandmarks';
 import { SuburbInsights } from '@/components/property/SuburbInsights';
 import { LocalityGuide } from '@/components/property/LocalityGuide';
+import { PropertyMobileFooter } from '@/components/property/PropertyMobileFooter';
 
 const amenityIcons: Record<string, any> = {
   parking: Car,
@@ -89,7 +91,7 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
   // Fetch similar properties
   const { data: similarPropertiesData } = trpc.properties.getAll.useQuery(
     {
-      limit: 6,
+      limit: 10,
       city: data?.property?.city,
       propertyType: data?.property?.propertyType,
     },
@@ -267,7 +269,7 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
 
   const similarProperties = similarPropertiesData?.properties?.filter(
     p => p.id !== propertyId
-  ).slice(0, 3) || [];
+  ) || [];
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -710,70 +712,90 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
           </div>
         </div>
 
-        {/* SECTION 3 - FULL WIDTH FOOTER - Similar Properties */}
+        {/* SECTION 3 - FULL WIDTH FOOTER - Similar Properties Carousel */}
         {similarProperties.length > 0 && (
           <div className="mt-12">
-            <h3 className="text-2xl font-bold text-slate-900 mb-6">
-              Property Listings in {property.suburb || property.city}
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {similarProperties.map((prop) => (
-                <div
-                  key={prop.id}
-                  onClick={() => setLocation(`/property/${prop.id}`)}
-                  className="group cursor-pointer bg-white rounded-xl border border-slate-200 shadow-sm hover:shadow-lg transition-all overflow-hidden"
-                >
-                  {/* Image */}
-                  <div className="relative h-48 overflow-hidden bg-slate-100">
-                    <img
-                      src={prop.mainImage || '/placeholder-property.jpg'}
-                      alt={prop.title}
-                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                    />
-                  </div>
-
-                  {/* Content */}
-                  <div className="p-4 space-y-3">
-                    {/* Title */}
-                    <h4 className="font-bold text-slate-900 line-clamp-1 text-base">
-                      {prop.title}
-                    </h4>
-
-                    {/* Property Details */}
-                    <div className="grid grid-cols-2 gap-2 text-sm">
-                      <div className="flex items-center gap-1.5 text-slate-600">
-                        <Square className="h-4 w-4 text-slate-400" />
-                        <span>{prop.area} m²</span>
-                      </div>
-                      <div className="flex items-center gap-1.5 text-slate-600">
-                        <Bed className="h-4 w-4 text-slate-400" />
-                        <span>{prop.bedrooms || 0} Beds</span>
-                      </div>
-                      <div className="flex items-center gap-1.5 text-slate-600">
-                        <Bath className="h-4 w-4 text-slate-400" />
-                        <span>{prop.bathrooms || 0} Baths</span>
-                      </div>
-                      {(prop.propertyType === 'house' || prop.propertyType === 'villa') && (
-                        <div className="flex items-center gap-1.5 text-slate-600">
-                          <Square className="h-4 w-4 text-slate-400" />
-                          <span>{prop.area ? Math.round(prop.area * 0.3) : 0} m² Yard</span>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Price */}
-                    <div className="pt-2 border-t border-slate-100">
-                      <p className="text-xl font-bold text-[#005ca8]">
-                        R {prop.price.toLocaleString()}
-                      </p>
-                    </div>
-                  </div>
+            <div className="flex items-center justify-between mb-6">
+                <h3 className="text-2xl font-bold text-slate-900">
+                Property Listings in {property.suburb || property.city}
+                </h3>
+                <div className="text-sm font-medium text-blue-600 cursor-pointer hover:underline">
+                    View All
                 </div>
-              ))}
+            </div>
+            
+            {/* Horizontal Scroll Carousel */}
+            <div className="relative -mx-4 px-4 md:mx-0 md:px-0">
+                <div className="flex overflow-x-auto gap-4 pb-8 snap-x snap-mandatory scrollbar-hide">
+                {similarProperties.map((prop) => (
+                    <div
+                    key={prop.id}
+                    onClick={() => setLocation(`/property/${prop.id}`)}
+                    className="group cursor-pointer bg-white rounded-xl border border-slate-200 shadow-sm hover:shadow-lg transition-all overflow-hidden min-w-[280px] md:min-w-[300px] snap-start"
+                    >
+                    {/* Image */}
+                    <div className="relative h-44 overflow-hidden bg-slate-100">
+                        <img
+                        src={prop.mainImage || '/placeholder-property.jpg'}
+                        alt={prop.title}
+                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                        />
+                         <div className="absolute top-2 left-2">
+                             <Badge className="bg-white/90 text-slate-700 hover:bg-white backdrop-blur-sm shadow-sm border-0 text-xs py-0 h-5">
+                                 {prop.propertyType}
+                             </Badge>
+                         </div>
+                    </div>
+
+                    {/* Content */}
+                    <div className="p-3 space-y-2">
+                        {/* Price */}
+                         <p className="text-lg font-bold text-[#005ca8]">
+                            R {prop.price.toLocaleString()}
+                        </p>
+
+                        {/* Title */}
+                        <h4 className="font-semibold text-slate-800 line-clamp-1 text-sm">
+                        {prop.title}
+                        </h4>
+
+                        {/* Property Details */}
+                        <div className="flex items-center gap-3 text-xs text-slate-500">
+                           {prop.bedrooms && (
+                            <div className="flex items-center gap-1">
+                                <Bed className="h-3.5 w-3.5" />
+                                <span>{prop.bedrooms}</span>
+                            </div>
+                           )}
+                           {prop.bathrooms && (
+                            <div className="flex items-center gap-1">
+                                <Bath className="h-3.5 w-3.5" />
+                                <span>{prop.bathrooms}</span>
+                            </div>
+                           )}
+                           {prop.area && (
+                            <div className="flex items-center gap-1">
+                                <Square className="h-3.5 w-3.5" />
+                                <span>{prop.area} m²</span>
+                            </div>
+                           )}
+                        </div>
+                    </div>
+                    </div>
+                ))}
+                </div>
             </div>
           </div>
         )}
       </div>
+
+      {/* Sticky Mobile Footer */}
+      <PropertyMobileFooter 
+        agentName={agent?.name || "Agent"} 
+        onCall={() => window.open(`tel:${agent?.phone || ''}`)}
+        onEmail={() => setIsContactModalOpen(true)}
+        onWhatsApp={() => window.open(`https://wa.me/${agent?.phone?.replace(/\s+/g, '') || ''}`, '_blank')}
+      />
 
       {/* Modals */}
       <PropertyContactModal

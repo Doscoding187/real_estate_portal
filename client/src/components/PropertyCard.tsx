@@ -114,21 +114,45 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
           />
         )}
         
-        {/* Badges */}
-        <div className="absolute top-3 left-3 flex flex-col gap-2">
+        {/* Badges - Top Left */}
+        <div className="absolute top-3 left-3 flex flex-col gap-2 z-10">
+          {/* Status Badge (Transactional) */}
+          {status && status !== 'Available' && (
+             <Badge className={`border-0 backdrop-blur-md shadow-sm ${
+                status.toLowerCase().includes('sold') ? 'bg-red-600/90 text-white' :
+                status.toLowerCase().includes('offer') ? 'bg-orange-600/90 text-white' :
+                'bg-emerald-600/90 text-white'
+             }`}>
+               {status}
+             </Badge>
+          )}
+
           {/* Property Type Badge */}
           {propertyType && (
-            <Badge className="bg-white/90 backdrop-blur-sm hover:bg-white text-slate-700 border-0">
+            <Badge className="bg-white/90 backdrop-blur-sm hover:bg-white text-slate-900 border-0 shadow-sm font-semibold">
               {propertyType}
             </Badge>
           )}
           
           {/* Dynamic Badges */}
-          {badges?.map((badge, index) => (
-            <Badge key={index} className="bg-blue-600/90 backdrop-blur-sm hover:bg-blue-600 text-white border-0">
-              {badge}
-            </Badge>
-          ))}
+          {badges?.map((badge, index) => {
+             const lower = badge.toLowerCase();
+             let colorClass = 'bg-blue-600/90 text-white'; // Default Marketing
+             
+             if (lower.includes('price') || lower.includes('deal') || lower.includes('reduced')) {
+                 colorClass = 'bg-emerald-600/90 text-white'; // Financial
+             } else if (lower.includes('exclusive') || lower.includes('new')) {
+                 colorClass = 'bg-indigo-600/90 text-white'; // Marketing/Exclusive
+             } else if (lower.includes('sold') || lower.includes('archived')) {
+                 colorClass = 'bg-slate-800/90 text-white'; // Inactive
+             }
+
+             return (
+                <Badge key={index} className={`${colorClass} backdrop-blur-sm border-0 shadow-sm`}>
+                  {badge}
+                </Badge>
+             );
+          })}
         </div>
 
         {/* Favorite Button */}
@@ -136,28 +160,28 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
           <Button
             variant="ghost"
             size="icon"
-            className="absolute top-4 right-4 rounded-full bg-black/30 hover:bg-black/50 text-white backdrop-blur-sm h-9 w-9 border border-white/20"
+            className="absolute top-3 right-3 rounded-full bg-black/20 hover:bg-black/40 text-white backdrop-blur-sm h-8 w-8 transition-colors z-10"
             onClick={(e) => {
               e.stopPropagation();
               onFavoriteClick();
             }}
           >
-            <Heart className="h-5 w-5" />
+            <Heart className="h-5 w-5 drop-shadow-md" />
           </Button>
         )}
         
-        {/* Media Count Overlay */}
-        <div className="absolute bottom-4 right-4 flex gap-2">
+        {/* Media Count Overlay - Bottom Right */}
+        <div className="absolute bottom-3 right-3 flex gap-2 z-10">
           {imageCount > 0 && (
-            <div className="bg-black/60 text-white text-xs px-2 py-1 rounded flex items-center gap-1.5 backdrop-blur-sm">
-              <ImageIcon className="h-3.5 w-3.5" />
-              <span className="font-medium">{imageCount}</span>
+            <div className="bg-black/60 hover:bg-black/70 transition-colors text-white text-[10px] font-bold px-2 py-1 rounded-md flex items-center gap-1 backdrop-blur-sm shadow-sm">
+              <ImageIcon className="h-3 w-3" />
+              <span>{imageCount}</span>
             </div>
           )}
           {videoCount > 0 && (
-            <div className="bg-black/60 text-white text-xs px-2 py-1 rounded flex items-center gap-1.5 backdrop-blur-sm">
-              <PlayCircle className="h-3.5 w-3.5" />
-              <span className="font-medium">{videoCount}</span>
+            <div className="bg-black/60 hover:bg-black/70 transition-colors text-white text-[10px] font-bold px-2 py-1 rounded-md flex items-center gap-1 backdrop-blur-sm shadow-sm">
+              <PlayCircle className="h-3 w-3" />
+              <span>{videoCount}</span>
             </div>
           )}
         </div>

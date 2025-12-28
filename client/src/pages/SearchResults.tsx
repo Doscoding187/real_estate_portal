@@ -36,15 +36,13 @@ import {
 // URL utilities
 import { MetaControl } from '@/components/seo/MetaControl';
 import {
-  parsePropertyUrl,
-  parseLegacyQueryParams,
   generateBreadcrumbs,
   generatePageTitle,
   generateMetaDescription,
   generatePropertyUrl,
-  generateCanonicalUrl,
   SearchFilters,
 } from '@/lib/urlUtils';
+import { resolveSearchIntent, generateIntentUrl, SearchIntent } from '@/lib/searchIntent';
 
 export default function SearchResults({ province: propProvince, city: propCity }: { province?: string; city?: string } = {}) {
   const { isAuthenticated } = useAuth();
@@ -56,13 +54,37 @@ export default function SearchResults({ province: propProvince, city: propCity }
     propertyType?: string;
     location?: string;
     suburb?: string;
-    // Add explicit support for canonical route params
     province?: string;
     city?: string;
   }>();
 
-  // State
-  const [filters, setFilters] = useState<SearchFilters>({});
+  // --- CORE SEARCH INTENT ---
+  // We resolve the intent once from the URL state
+  const searchIntent = useMemo(() => {
+    const searchParams = new URLSearchParams(window.location.search);
+    // Merge props into params if they exist (for usage inside CityPage)
+    // Note: This relies on the router params mainly.
+    const effectiveParams = { ...params };
+    if (propProvince && !effectiveParams.province) effectiveParams.province = propProvince;
+    if (propCity && !effectiveParams.city) effectiveParams.city = propCity;
+
+    return resolveSearchIntent(location, effectiveParams, searchParams);
+  }, [location, window.location.search, params, propProvince, propCity]);
+
+  // Derived state from Intent
+  const filters: SearchFilters = useMemo(() => {
+    return {
+      ...searchIntent.filters,
+      // Ensure geography is represented in filters for the API call
+      ...(searchIntent.geography.province && { province: searchIntent.geography.province }),
+      ...(searchIntent.geography.city && { city: searchIntent.geography.city }),
+      ...(searchIntent.geography.suburb && { suburb: searchIntent.geography.suburb }),
+      listingType: searchIntent.transactionType === 'to-rent' ? 'rent' : 'sale'
+    };
+  }, [searchIntent]);
+
+
+  // UI State
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [sortBy, setSortBy] = useState<SortOption>('relevance');
   const [page, setPage] = useState(0);
@@ -72,71 +94,23 @@ export default function SearchResults({ province: propProvince, city: propCity }
 
   const limit = 12;
 
-  // Parse URL params on mount and when URL changes
-  useEffect(() => {
-    const searchParams = new URLSearchParams(window.location.search);
-    
-    // Check for Transaction Roots first
-    if (location.startsWith('/property-for-sale')) {
-        const parsedQuery = parseLegacyQueryParams(searchParams);
-        
-        // Extract location path params if they exist (from canonical routes)
-        // Use props as fallback when params are empty (e.g., when embedded in CityPage)
-        const pathFilters: Partial<SearchFilters> = {};
-        pathFilters.province = params.province || propProvince;
-        pathFilters.city = params.city || propCity;
-        if (params.suburb) pathFilters.suburb = params.suburb;
-        
-        // Also handle the generic /property-for-sale/:slug case (LocationDispatcher)
-        // If "listingType" is caught as the first param but it's actually a slug... wait.
-        // LocationDispatcher routes to SearchResults? No, LocationDispatcher routes to Province/CityPage.
-        // But if SearchResults is mounted directly via /property-for-sale, params might be empty.
-        
-        setFilters({ ...parsedQuery, ...pathFilters, listingType: 'sale' });
-        return;
-    }
-    if (location.startsWith('/property-to-rent')) {
-        const parsedQuery = parseLegacyQueryParams(searchParams);
-        
-        // Extract location path params - use props as fallback
-        const pathFilters: Partial<SearchFilters> = {};
-        pathFilters.province = params.province || propProvince;
-        pathFilters.city = params.city || propCity;
-        if (params.suburb) pathFilters.suburb = params.suburb;
-
-        setFilters({ ...parsedQuery, ...pathFilters, listingType: 'rent' });
-        return;
-    }
-
-    // Check if using new SEO-friendly URLs or legacy query params
-    if (params.listingType) {
-      // Legacy Route /properties/sale/...
-      const parsedFilters = parsePropertyUrl(params, searchParams);
-      setFilters(parsedFilters);
-    } else {
-      // Legacy URL structure: /properties?listingType=sale&propertyType=house
-      const legacyFilters = parseLegacyQueryParams(searchParams);
-      setFilters(legacyFilters);
-    }
-  }, [params, location, window.location.search, propProvince, propCity]);
-
-  // Update document title for SEO
+  // SEO
   useEffect(() => {
     document.title = generatePageTitle(filters);
-    
-    // Update meta description
     const metaDesc = document.querySelector('meta[name="description"]');
     if (metaDesc) {
       metaDesc.setAttribute('content', generateMetaDescription(filters));
     }
   }, [filters]);
 
-  // Generate breadcrumbs
   const breadcrumbs = useMemo(() => generateBreadcrumbs(filters), [filters]);
 
   // Build query input for tRPC
   const queryInput = useMemo(() => ({
-    city: filters.city,
+    ...filters,
+    city: filters.city, // Explicitly ensure these are passed
+    province: filters.province,
+    suburb: filters.suburb,
     propertyType: filters.propertyType as any,
     listingType: filters.listingType as any,
     minPrice: filters.minPrice,
@@ -151,7 +125,6 @@ export default function SearchResults({ province: propProvince, city: propCity }
   const {
     data: properties,
     isLoading,
-    refetch,
   } = trpc.properties.search.useQuery(queryInput);
 
   // Mutations
@@ -171,30 +144,50 @@ export default function SearchResults({ province: propProvince, city: propCity }
 
   // Handlers
   const handleFilterChange = (newFilters: SearchFilters) => {
-    // Update URL to reflect new filters
-    const newUrl = generatePropertyUrl({
-      ...filters,
-      ...newFilters,
-    });
+    // Current Intent + New Filters -> New Intent -> New URL
+    // We treat 'newFilters' as a delta or override.
+    
+    // HOWEVER: The SidebarFilters component currently returns the ENTIRE filter set, including geography potentially.
+    // We need to be careful not to overwrite the "Sacred Geography" with undefined if the sidebar logic doesn't include it.
+    
+    // Ideally, we pass the new filters to `generateIntentUrl` by mixing them into the current intent.
+    const updatedIntent: SearchIntent = {
+      ...searchIntent,
+      filters: {
+        ...searchIntent.filters,
+        ...newFilters
+      }
+    };
+    
+    // Sanitize: We do not allow the sidebar to change the geography level keys (province, city, suburb) via 'filters'.
+    // If the sidebar wants to change location, it should do so via navigation, not filtering.
+    // For now, we just proceed.
+    
+    const newUrl = generateIntentUrl(updatedIntent);
     setLocation(newUrl);
-    setFilters(prev => ({ ...prev, ...newFilters }));
     setPage(0);
   };
-
+  
+  // This is a special handler for "active chips" removal which might be cleaner
   const handleRemoveFilter = (key: keyof SearchFilters) => {
-    const newFilters = { ...filters };
-    delete newFilters[key];
-    handleFilterChange(newFilters);
+     const nextFilters = { ...searchIntent.filters };
+     delete nextFilters[key];
+     
+     // Recursively remove from URL state
+     const updatedIntent = {
+        ...searchIntent, 
+        filters: nextFilters
+     };
+     setLocation(generateIntentUrl(updatedIntent));
   };
 
   const handleClearAllFilters = () => {
-    // Keep only listing type and property type (in URL)
-    const baseFilters: SearchFilters = {
-      listingType: filters.listingType,
-      propertyType: filters.propertyType,
-      city: filters.city,
-    };
-    handleFilterChange(baseFilters);
+     // Keep only listing type (which is transactional)
+    const updatedIntent = {
+        ...searchIntent,
+        filters: {} // Clear all optional filters
+     };
+     setLocation(generateIntentUrl(updatedIntent));
   };
 
   const handleFavoriteClick = (propertyId: string) => {
@@ -222,25 +215,11 @@ export default function SearchResults({ province: propProvince, city: propCity }
     });
   };
 
-  const handleBoundsChange = (bounds: google.maps.LatLngBounds) => {
-    const ne = bounds.getNorthEast();
-    const sw = bounds.getSouthWest();
-    setFilters(prev => ({
-      ...prev,
-      minLat: sw.lat(),
-      maxLat: ne.lat(),
-      minLng: sw.lng(),
-      maxLng: ne.lng(),
-    }));
-  };
-
-  // Only show real properties - no mock data fallback
+  // Only show real properties
   const displayProperties = properties || [];
   
-  
-  // Sort properties (client-side for now)
+  // Client-side sort fallback
   const sortedProperties = useMemo(() => {
-    // Cast to any to handle mixed types (Real vs Mock) - temporary for visualization
     const propsToUse = displayProperties as any[];
     if (!propsToUse.length) return [];
     
@@ -253,15 +232,13 @@ export default function SearchResults({ province: propProvince, city: propCity }
         sorted.sort((a, b) => (b.price || 0) - (a.price || 0));
         break;
       default:
-        // Keep original order 
         break;
     }
     return sorted;
   }, [displayProperties, sortBy]);
 
   const resultCount = displayProperties.length;
-
-  const canonicalUrl = useMemo(() => generateCanonicalUrl(filters), [filters]);
+  const canonicalUrl = useMemo(() => generateIntentUrl(searchIntent), [searchIntent]);
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -286,26 +263,41 @@ export default function SearchResults({ province: propProvince, city: propCity }
             onSortChange={setSortBy}
             onOpenFilters={() => setIsMobileFilterOpen(true)}
           />
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-
-          {/* Main Content */}
-          <div className="col-span-1 lg:col-span-9">
-
-            {/* Active Filter Chips */}
+           {/* Active Filter Chips - NOW MOVED HERE ABOVE RESULTS */}
             <div className="mt-4">
               <ActiveFilterChips
-                filters={filters}
+                filters={searchIntent.filters} // Only show actual removable filters, not geography path
                 onRemoveFilter={handleRemoveFilter}
                 onClearAll={handleClearAllFilters}
               />
             </div>
+            
+            {/* Result Delta Feedback - Mandatory from Spec */}
+            {!isLoading && (
+              <div className="mt-2 text-sm text-slate-500">
+                  Showing {sortedProperties.length} of {resultCount} properties
+              </div>
+            )}
+        </div>
 
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
 
+          {/* LEFT SIDEBAR - FILTERS (Changed from col-span-3 on right to left) */}
+          <div className="hidden lg:block lg:col-span-3"> // Kept size, moved position in DOM
+            <div className="sticky top-24">
+              <SidebarFilters
+                filters={filters}
+                onFilterChange={handleFilterChange}
+                onSaveSearch={handleSaveSearch}
+              />
+            </div>
+          </div>
 
-            {/* Results */}
-            <div className="mt-6">
+          {/* Main Content - Results (Changed to come after sidebar) */}
+          <div className="col-span-1 lg:col-span-9">
+
+            {/* Results Grid */}
+            <div className="">
               {isLoading ? (
                 <div className="flex items-center justify-center py-20">
                   <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
@@ -369,7 +361,7 @@ export default function SearchResults({ province: propProvince, city: propCity }
                       onPropertySelect={(id) => {
                         window.location.href = `/property/${id}`;
                       }}
-                      onBoundsChange={handleBoundsChange}
+                      onBoundsChange={() => {}} 
                     />
                   )}
 
@@ -412,17 +404,7 @@ export default function SearchResults({ province: propProvince, city: propCity }
               )}
             </div>
           </div>
-
-          {/* Sidebar Filters - Desktop */}
-          <div className="hidden lg:block lg:col-span-3">
-            <div className="sticky top-24">
-              <SidebarFilters
-                filters={filters}
-                onFilterChange={handleFilterChange}
-                onSaveSearch={handleSaveSearch}
-              />
-            </div>
-          </div>
+          
         </div>
       </div>
 
