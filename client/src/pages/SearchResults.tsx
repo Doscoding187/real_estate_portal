@@ -283,7 +283,7 @@ export default function SearchResults({ province: propProvince, city: propCity }
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
 
           {/* LEFT SIDEBAR - FILTERS (Changed from col-span-3 on right to left) */}
-          <div className="hidden lg:block lg:col-span-3"> // Kept size, moved position in DOM
+          <div className="hidden lg:block lg:col-span-3">
             <div className="sticky top-24">
               <SidebarFilters
                 filters={filters}
