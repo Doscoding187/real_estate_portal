@@ -400,7 +400,13 @@ export function EnhancedHero({
           )}
           
           <p className="text-base md:text-lg text-white/90 animate-fade-in max-w-2xl mx-auto">
-            {subtitle || "From browsing properties to closing deals - your complete real estate journey starts here"}
+            {subtitle || (
+              <>
+                From browsing properties to closing deals - your complete
+                <br />
+                real estate journey starts here
+              </>
+            )}
           </p>
         </div>
 
