@@ -74,44 +74,41 @@ export function LocationHeroSection({
   };
 
   return (
-    <div className="relative w-full min-h-[60vh] lg:min-h-[70vh] overflow-hidden">
-      {/* Background Image Layer */}
-      <div 
-        className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-        style={{ backgroundImage: `url(${campaign?.imageUrl || backgroundImage})` }}
-      />
+    <div className="relative w-full">
+      {/* SEO Title/Subtitle - visually hidden but accessible for search engines */}
+      <h1 className="sr-only">
+        Property for Sale in {locationName} - Explore {listingCount.toLocaleString()} properties and new developments
+      </h1>
       
-      {/* Dark Gradient Overlay */}
-      <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/40 to-black/70" />
-      
-      {/* Campaign Sponsored Badge */}
-      {campaign && (
-        <a 
-          href={campaign.landingPageUrl || '#'} 
-          target="_blank" 
-          rel="noopener noreferrer"
-          className="absolute top-4 right-4 z-20"
-          onClick={() => trackEvent('hero_campaign_click', { locationId, locationType })}
-        >
-          <span className="bg-white/90 text-[10px] font-bold px-3 py-1 rounded text-slate-700 uppercase tracking-wider shadow-sm">
-            Sponsored
-          </span>
-        </a>
-      )}
+      {/* Banner Image Section - Reduced Height */}
+      <div className="relative w-full h-[30vh] lg:h-[35vh] overflow-hidden">
+        {/* Background Image Layer */}
+        <div 
+          className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+          style={{ backgroundImage: `url(${campaign?.imageUrl || backgroundImage})` }}
+        />
+        
+        {/* Dark Gradient Overlay */}
+        <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/20 to-black/50" />
+        
+        {/* Campaign Sponsored Badge */}
+        {campaign && (
+          <a 
+            href={campaign.landingPageUrl || '#'} 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="absolute top-4 right-4 z-20"
+            onClick={() => trackEvent('hero_campaign_click', { locationId, locationType })}
+          >
+            <span className="bg-white/90 text-[10px] font-bold px-3 py-1 rounded text-slate-700 uppercase tracking-wider shadow-sm">
+              Sponsored
+            </span>
+          </a>
+        )}
+      </div>
 
-      {/* Content Container */}
-      <div className="relative z-10 flex flex-col items-center justify-center min-h-[60vh] lg:min-h-[70vh] px-4 py-12">
-        
-        {/* Main Heading */}
-        <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white text-center mb-4 drop-shadow-lg">
-          Property for Sale in{' '}
-          <span className="text-blue-300">{locationName}</span>
-        </h1>
-        
-        {/* Subheading */}
-        <p className="text-lg md:text-xl text-white/90 text-center mb-8 max-w-2xl">
-          Explore {listingCount.toLocaleString()} properties and new developments across {locationName}
-        </p>
+      {/* Search Card Container - Positioned below banner */}
+      <div className="relative z-10 -mt-16 px-4 pb-6 flex justify-center">
 
         {/* Floating Search Card */}
         <Card className="w-full max-w-4xl bg-white/95 backdrop-blur-sm shadow-2xl rounded-2xl p-6 md:p-8">
