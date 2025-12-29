@@ -55,6 +55,7 @@ import * as schema from '../drizzle/schema.ts';
 
 import { ENV } from './_core/env.ts';
 import { type InferSelectModel, type InferInsertModel } from 'drizzle-orm';
+import { normalizeLocationFields, validateLocationForPublish } from './utils/locationUtils';
 
 export type User = InferSelectModel<typeof users>;
 export type InsertUser = InferInsertModel<typeof users>;
@@ -328,7 +329,17 @@ export async function verifyUserEmail(userId: number): Promise<void> {
 export async function createProperty(property: InsertProperty) {
   const db = await getDb();
   if (!db) throw new Error('Database not available');
-  const result = await db.insert(properties).values(property);
+  
+  // Normalize location fields for consistent querying
+  const normalizedProperty = normalizeLocationFields(property);
+  
+  // Validate location if publishing
+  const validationError = validateLocationForPublish(normalizedProperty);
+  if (validationError) {
+    throw new Error(validationError);
+  }
+  
+  const result = await db.insert(properties).values(normalizedProperty);
   return result[0].insertId;
 }
 
@@ -398,10 +409,20 @@ export async function updateProperty(
     throw new Error('Unauthorized: You can only update your own properties');
   }
 
+  // Normalize location fields for consistent querying
+  const normalizedUpdates = normalizeLocationFields(updates);
+  
+  // Validate location if publishing
+  const finalData = { ...property, ...normalizedUpdates };
+  const validationError = validateLocationForPublish(finalData);
+  if (validationError) {
+    throw new Error(validationError);
+  }
+
   await db
     .update(properties)
     .set({
-      ...updates,
+      ...normalizedUpdates,
       updatedAt: new Date(),
     })
     .where(eq(properties.id, propertyId));
