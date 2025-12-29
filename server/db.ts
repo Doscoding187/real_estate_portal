@@ -56,6 +56,7 @@ import * as schema from '../drizzle/schema.ts';
 import { ENV } from './_core/env.ts';
 import { type InferSelectModel, type InferInsertModel } from 'drizzle-orm';
 import { normalizeLocationFields, validateLocationForPublish } from './utils/locationUtils';
+import { locationResolver } from './services/locationResolverService';
 
 export type User = InferSelectModel<typeof users>;
 export type InsertUser = InferInsertModel<typeof users>;
@@ -339,6 +340,28 @@ export async function createProperty(property: InsertProperty) {
     throw new Error(validationError);
   }
   
+  // Resolve and populate location IDs if text fields are provided
+  // This ensures new properties have proper ID references
+  try {
+    if (normalizedProperty.province && !normalizedProperty.provinceId) {
+      const locationIds = await locationResolver.getLocationIds({
+        provinceSlug: normalizedProperty.province,
+        citySlug: normalizedProperty.city || undefined,
+      });
+      
+      if (locationIds.provinceId) {
+        normalizedProperty.provinceId = locationIds.provinceId;
+      }
+      if (locationIds.cityId) {
+        normalizedProperty.cityId = locationIds.cityId;
+      }
+    }
+  } catch (error) {
+    // If location resolution fails, continue without IDs
+    // The text-based fallback will still work
+    console.warn('[createProperty] Location ID resolution failed:', error);
+  }
+  
   const result = await db.insert(properties).values(normalizedProperty);
   return result[0].insertId;
 }
@@ -417,6 +440,29 @@ export async function updateProperty(
   const validationError = validateLocationForPublish(finalData);
   if (validationError) {
     throw new Error(validationError);
+  }
+
+  // Resolve and populate location IDs if location fields are being updated
+  try {
+    const province = normalizedUpdates.province || property.province;
+    const city = normalizedUpdates.city || property.city;
+    
+    if (province && (normalizedUpdates.province || normalizedUpdates.city)) {
+      const locationIds = await locationResolver.getLocationIds({
+        provinceSlug: province,
+        citySlug: city || undefined,
+      });
+      
+      if (locationIds.provinceId) {
+        normalizedUpdates.provinceId = locationIds.provinceId;
+      }
+      if (locationIds.cityId) {
+        normalizedUpdates.cityId = locationIds.cityId;
+      }
+    }
+  } catch (error) {
+    // If location resolution fails, continue without IDs
+    console.warn('[updateProperty] Location ID resolution failed:', error);
   }
 
   await db
