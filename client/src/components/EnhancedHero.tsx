@@ -351,6 +351,7 @@ export function EnhancedHero({
       setLocation(url);
   };
 
+  const isNavigationMode = heroMode === 'province' || heroMode === 'city';
 
   return (
     <div className="relative bg-gradient-to-br from-blue-900 via-blue-800 to-indigo-900 text-white overflow-hidden">
