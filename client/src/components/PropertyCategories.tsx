@@ -83,15 +83,20 @@ export function PropertyCategories({ preselectedLocation }: PropertyCategoriesPr
   ];
 
   const handleCategoryClick = (category: typeof categories[0]) => {
+    console.log('🖱️ [PropertyCategories] Card clicked:', category.title);
+    console.log('🖱️ [PropertyCategories] preselectedLocation:', preselectedLocation);
+    
     // If we have a preselected location (e.g. from City/Suburb page), 
     // navigate directly to the Transaction Page for that category + location.
     if (preselectedLocation) {
        const url = `/property-for-sale/${preselectedLocation.provinceSlug}/${preselectedLocation.slug}?propertyType=${category.type}&view=list`;
+       console.log('🖱️ [PropertyCategories] Navigating to:', url);
        setLocation(url);
        return;
     }
 
     // Default flow (Location Picker -> Filters)
+    console.log('🖱️ [PropertyCategories] Opening dialog (no preselected location)');
     setSelectedCategory(category);
     setStep(1);
     setSelectedLocation(null);
