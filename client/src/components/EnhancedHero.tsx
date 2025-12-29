@@ -917,6 +917,10 @@ export function EnhancedHero({
           </CardContent>
         </Card>
       </div>
+
+      </div>
     </div>
   );
 }
+
+

@@ -89,8 +89,6 @@ export default function ProvincePage({ params }: { params: { province: string } 
         locationSlug={provinceSlug}
         locationType="province"
         heroImage="/images/province-hero.jpg"
-        locationType="province"
-        heroImage="/images/province-hero.jpg"
         
         banner={
             <EnhancedHero 
