@@ -393,7 +393,8 @@ export function EnhancedHero({
                 South Africa's{' '}
                 <span className="bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent animate-gradient bg-[length:200%_auto]">
                   Fastest Growing
-                </span>{' '}
+                </span>
+                <br />
                 Real Estate Platform
               </h1>
           )}
