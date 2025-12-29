@@ -51,7 +51,13 @@ export default function CityPage({ params }: { params: { province: string; city:
 
   const isTransactionMode = searchParams.get('view') === 'list' || hasSearchFilters;
 
+  // DEBUG: Log mode detection
+  console.log('🏙️ [CityPage] location:', location);
+  console.log('🏙️ [CityPage] hasSearchFilters:', hasSearchFilters);
+  console.log('🏙️ [CityPage] isTransactionMode:', isTransactionMode);
+
   if (isTransactionMode) {
+      console.log('🏙️ [CityPage] Rendering SearchResults');
       return <SearchResults province={provinceSlug} city={citySlug} />;
   }
 
