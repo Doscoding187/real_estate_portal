@@ -148,11 +148,10 @@ export function LocationHeroSection({
           {/* Search Input */}
           <div className="relative flex items-center gap-3">
             <div className="relative flex-1">
-              <MapPin className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-400" />
               <LocationAutosuggest
                 placeholder={`Search in ${locationName}...`}
                 onLocationSelect={handleLocationSelect}
-                className="w-full pl-12 pr-12 py-4 text-lg border-2 border-slate-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
+                className="w-full py-4 text-lg border-2 border-slate-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
               />
               <button className="absolute right-4 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-blue-600 transition-colors">
                 <Mic className="h-5 w-5" />
