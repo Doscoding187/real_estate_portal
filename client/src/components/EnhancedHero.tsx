@@ -398,7 +398,7 @@ export function EnhancedHero({
           </p>
         </div>
 
-        {/* Category Tabs */}
+        {/* Category Tabs (Always Visible) */}
         <div className="flex justify-center mb-8">
           <div className="inline-flex bg-white/10 backdrop-blur-md rounded-xl p-1.5 gap-1 flex-wrap shadow-lg border border-white/20">
             {categories.map(category => {
@@ -425,84 +425,109 @@ export function EnhancedHero({
         </div>
 
         {/* Search Card */}
-        <Card className="max-w-5xl mx-auto shadow-2xl border-0 bg-white/95 backdrop-blur-sm">
-          <CardContent className="p-6 md:p-8">
-            {/* Main Search Row */}
-            <div className="flex flex-col md:flex-row gap-4">
-              {/* Unified Search Input */}
-              <div className="flex-1 relative group">
-                {/* Search Icon */}
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground z-10 pointer-events-none" />
-                
-                <LocationAutosuggest
-                  placeholder="Search by city, suburb, or area..."
-                  className="w-full"
-                  inputClassName="pl-12 pr-24 h-14 text-base border-2 hover:border-primary/50 focus:border-primary transition-colors w-full bg-transparent"
-                  showIcon={false}
-                  onSelect={(loc) => {
-                    setSearchQuery(loc.name);
-                    setSelectedLocation(loc);
-                  }}
-                  defaultValue={searchQuery}
-                />
-                
-                {/* Action Buttons (Voice/Location) */}
-                <div className="absolute right-2 top-1/2 -translate-y-1/2 flex gap-2 z-10">
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    className="h-10 w-10 hover:bg-primary/10"
-                    title="Use current location"
-                  >
-                    <MapPinned className="h-5 w-5" />
-                  </Button>
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    className="h-10 w-10 hover:bg-primary/10"
-                    title="Voice search"
-                  >
-                    <Mic className="h-5 w-5" />
-                  </Button>
+        <div className="max-w-4xl mx-auto">
+            <Card className="shadow-2xl border-0 bg-white/95 backdrop-blur-sm rounded-2xl">
+            <CardContent className="p-4 md:p-6">
+                {/* Main Search Row */}
+                <div className="flex flex-col md:flex-row gap-4">
+                {/* Unified Search Input */}
+                <div className="flex-1 relative group">
+                    {/* Search Icon */}
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground z-10 pointer-events-none" />
+                    
+                    <LocationAutosuggest
+                    placeholder="Search by city, suburb, or area..."
+                    className="w-full"
+                    inputClassName="pl-12 pr-24 h-14 text-base border-2 hover:border-primary/50 focus:border-primary transition-colors w-full bg-transparent rounded-xl"
+                    showIcon={false}
+                    onSelect={(loc) => {
+                        setSearchQuery(loc.name);
+                        setSelectedLocation(loc);
+                    }}
+                    defaultValue={searchQuery}
+                    />
+                    
+                    {/* Action Buttons (Voice/Location) */}
+                    <div className="absolute right-2 top-1/2 -translate-y-1/2 flex gap-2 z-10">
+                    <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-10 w-10 hover:bg-primary/10 rounded-lg"
+                        title="Use current location"
+                    >
+                        <MapPinned className="h-5 w-5" />
+                    </Button>
+                    <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-10 w-10 hover:bg-primary/10 rounded-lg"
+                        title="Voice search"
+                    >
+                        <Mic className="h-5 w-5" />
+                    </Button>
+                    </div>
                 </div>
-              </div>
 
-              {/* Search Button */}
-              <Button
-                onClick={handleSearch}
-                className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white h-14 px-8 shadow-lg hover:shadow-xl transition-all font-semibold text-base min-w-[180px]"
-                size="lg"
-              >
-                  {isCountLoading ? (
-                      <Loader2 className="h-5 w-5 animate-spin" />
-                  ) : (
-                      <div className="flex flex-col items-center leading-none">
-                         <span className="flex items-center gap-2"><Search className="h-4 w-4" /> Search</span>
-                         {resultCount > 0 && (
-                            <span className="text-[10px] opacity-80 font-normal mt-1">Browse {resultCount}</span>
-                         )}
-                      </div>
-                  )}
-              </Button>
-            </div>
-            
-            {/* SMART SHORTCUTS */}
-            <div className="mt-6 flex flex-wrap gap-3 items-center justify-center border-t border-slate-100 pt-4">
-                <span className="text-xs text-slate-500 font-medium uppercase tracking-wide mr-2">Quick Search:</span>
-                {shortcuts.map((shortcut, idx) => { 
-                    const Icon = shortcut.icon;
-                    return (
-                        <button
-                            key={idx}
-                            onClick={() => handleShortcutClick(shortcut)}
-                            className="flex items-center gap-2 px-4 py-2 bg-slate-50 hover:bg-blue-50 text-slate-600 hover:text-blue-600 rounded-full text-sm font-medium transition-colors border border-slate-200 hover:border-blue-200"
-                        >
-                            <Icon className="h-3.5 w-3.5" />
-                            {shortcut.label}
-                        </button>
-                    );
-                })}
-            </div>
+                {/* Search Button */}
+                <Button
+                    onClick={handleSearch}
+                    className="bg-blue-600 hover:bg-blue-700 text-white h-14 px-8 shadow-lg hover:shadow-xl transition-all font-semibold text-base min-w-[140px] rounded-xl"
+                    size="lg"
+                >
+                    {isCountLoading ? (
+                        <Loader2 className="h-5 w-5 animate-spin" />
+                    ) : (
+                        <div className="flex flex-col items-center leading-none">
+                            <span className="flex items-center gap-2"><Search className="h-4 w-4" /> Search</span>
+                        </div>
+                    )}
+                </Button>
+                </div>
+                
+                {/* FOOTER: Navigation Pills OR Shortcuts */}
+                <div className="mt-6 flex flex-wrap gap-3 items-center justify-center border-t border-slate-100 pt-4">
+                    
+                    {/* 1. If Navigation Mode (Province/City): Show Pills */}
+                    {isNavigationMode ? (
+                        <>
+                             <span className="text-xs text-slate-500 font-bold uppercase tracking-wider mr-1">
+                                {heroMode === 'province' ? 'Popular Locations:' : 'Popular Areas:'}
+                             </span>
+                             {navigationItems.map((item, idx) => (
+                                <Button
+                                    key={idx}
+                                    variant="outline"
+                                    onClick={() => setLocation(item.path)}
+                                    className={`
+                                        h-9 px-4 rounded-full text-sm font-medium border-blue-100 bg-blue-50/50 text-blue-700 
+                                        hover:bg-blue-100 hover:border-blue-200 hover:text-blue-800 transition-all
+                                        ${item.active ? 'ring-2 ring-blue-500 ring-offset-1' : ''}
+                                    `}
+                                >
+                                    {item.label}
+                                </Button>
+                             ))}
+                        </>
+                    ) : (
+                        /* 2. If Standard Mode: Show Shortcuts */
+                        <>
+                            <span className="text-xs text-slate-500 font-bold uppercase tracking-wider mr-1">Quick Search:</span>
+                            {shortcuts.map((shortcut, idx) => { 
+                                const Icon = shortcut.icon;
+                                return (
+                                    <button
+                                        key={idx}
+                                        onClick={() => handleShortcutClick(shortcut)}
+                                        className="flex items-center gap-2 px-3.5 py-2 bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-900 rounded-full text-sm font-medium transition-colors border border-slate-200 hover:border-slate-300 shadow-sm"
+                                    >
+                                        {Icon && <Icon className="h-3.5 w-3.5 text-slate-400" />}
+                                        {shortcut.label}
+                                    </button>
+                                );
+                            })}
+                        </>
+                    )}
+                </div>
 
             {/* Dynamic Filter Panel */}
             {showFilters && activeTab !== 'agents' && (
