@@ -35,11 +35,17 @@ export class PropertySearchService {
     }
 
     // Resolve location slugs to IDs for optimal queries
-    const locationIds = await locationResolver.getLocationIds({
-      provinceSlug: filters.province,
-      citySlug: filters.city,
-      suburbSlug: filters.suburb?.[0],
-    });
+    // NOTE: Wrapped in try-catch - if resolver fails, fall back to text queries
+    let locationIds: { provinceId?: number; cityId?: number; suburbId?: number } = {};
+    try {
+      locationIds = await locationResolver.getLocationIds({
+        provinceSlug: filters.province,
+        citySlug: filters.city,
+        suburbSlug: filters.suburb?.[0],
+      });
+    } catch (error) {
+      console.error('[PropertySearchService] Location resolver failed, using text fallback:', error);
+    }
 
     // Build query conditions with resolved location IDs
     const conditions = this.buildFilterConditions(filters, locationIds);
@@ -382,11 +388,17 @@ export class PropertySearchService {
     byPriceRange: Array<{ range: string; count: number }>;
   }> {
     // Resolve location slugs to IDs for optimal queries
-    const locationIds = await locationResolver.getLocationIds({
-      provinceSlug: baseFilters.province,
-      citySlug: baseFilters.city,
-      suburbSlug: baseFilters.suburb?.[0],
-    });
+    // NOTE: Wrapped in try-catch - if resolver fails, fall back to text queries
+    let locationIds: { provinceId?: number; cityId?: number; suburbId?: number } = {};
+    try {
+      locationIds = await locationResolver.getLocationIds({
+        provinceSlug: baseFilters.province,
+        citySlug: baseFilters.city,
+        suburbSlug: baseFilters.suburb?.[0],
+      });
+    } catch (error) {
+      console.error('[PropertySearchService] Location resolver failed in getFilterCounts, using text fallback:', error);
+    }
 
     const conditions = this.buildFilterConditions(baseFilters, locationIds);
 
