@@ -6,9 +6,10 @@
 
 import { db } from '../db';
 import { properties, propertyImages } from '../../drizzle/schema';
-import { eq, and, gte, lte, inArray, or, sql, SQL, desc, asc } from 'drizzle-orm';
+import { eq, and, gte, lte, inArray, or, sql, SQL, desc, asc, isNotNull } from 'drizzle-orm';
 import { redisCache, CacheTTL } from '../lib/redis';
 import type { PropertyFilters, SortOption, SearchResults, Property } from '../../shared/types';
+import { locationResolver } from './locationResolverService';
 
 // Cache key prefix for property searches
 const CACHE_PREFIX = 'property:search:';
@@ -33,8 +34,15 @@ export class PropertySearchService {
       return cached;
     }
 
-    // Build query conditions
-    const conditions = this.buildFilterConditions(filters);
+    // Resolve location slugs to IDs for optimal queries
+    const locationIds = await locationResolver.getLocationIds({
+      provinceSlug: filters.province,
+      citySlug: filters.city,
+      suburbSlug: filters.suburb?.[0],
+    });
+
+    // Build query conditions with resolved location IDs
+    const conditions = this.buildFilterConditions(filters, locationIds);
     
     // Get total count
     const countResult = await db
@@ -167,8 +175,13 @@ export class PropertySearchService {
   /**
    * Build filter conditions from PropertyFilters
    * Supports all filter types: location, price, bedrooms, SA-specific
+   * Uses hybrid approach: ID-based queries when available, text fallback otherwise
    */
-  private buildFilterConditions(filters: PropertyFilters): SQL[] {
+  private buildFilterConditions(filters: PropertyFilters, locationIds?: {
+    provinceId?: number;
+    cityId?: number;
+    suburbId?: number;
+  }): SQL[] {
     const conditions: SQL[] = [];
 
     // Only show published/available properties by default
@@ -179,15 +192,28 @@ export class PropertySearchService {
       )!
     );
 
-    // Location filters - CASE INSENSITIVE to handle mixed casing in data
-    if (filters.province) {
+    // Location filters - Use IDs when available, fallback to text matching
+    if (locationIds?.provinceId) {
+      // ID-based: Fast, exact match
+      conditions.push(eq(properties.provinceId, locationIds.provinceId));
+    } else if (filters.province) {
+      // Text fallback: Case-insensitive for legacy data
       conditions.push(sql`LOWER(${properties.province}) = LOWER(${filters.province})`);
     }
-    if (filters.city) {
+
+    if (locationIds?.cityId) {
+      // ID-based: Fast, exact match
+      conditions.push(eq(properties.cityId, locationIds.cityId));
+    } else if (filters.city) {
+      // Text fallback: Case-insensitive for legacy data
       conditions.push(sql`LOWER(${properties.city}) = LOWER(${filters.city})`);
     }
-    if (filters.suburb && filters.suburb.length > 0) {
-      // Suburb is stored in address field currently - case insensitive
+
+    if (locationIds?.suburbId) {
+      // ID-based: Fast, exact match
+      conditions.push(eq(properties.suburbId, locationIds.suburbId));
+    } else if (filters.suburb && filters.suburb.length > 0) {
+      // Text fallback: Search in address field (legacy approach)
       const suburbConditions = filters.suburb.map(suburb =>
         sql`LOWER(${properties.address}) LIKE LOWER(${`%${suburb}%`})`
       );
@@ -355,7 +381,14 @@ export class PropertySearchService {
     byPropertyType: Record<string, number>;
     byPriceRange: Array<{ range: string; count: number }>;
   }> {
-    const conditions = this.buildFilterConditions(baseFilters);
+    // Resolve location slugs to IDs for optimal queries
+    const locationIds = await locationResolver.getLocationIds({
+      provinceSlug: baseFilters.province,
+      citySlug: baseFilters.city,
+      suburbSlug: baseFilters.suburb?.[0],
+    });
+
+    const conditions = this.buildFilterConditions(baseFilters, locationIds);
 
     // Get total count
     const totalResult = await db
