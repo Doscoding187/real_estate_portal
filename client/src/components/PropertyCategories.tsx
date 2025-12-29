@@ -91,7 +91,8 @@ export function PropertyCategories({ preselectedLocation }: PropertyCategoriesPr
     if (preselectedLocation) {
        const url = `/property-for-sale/${preselectedLocation.provinceSlug}/${preselectedLocation.slug}?propertyType=${category.type}&view=list`;
        console.log('🖱️ [PropertyCategories] Navigating to:', url);
-       setLocation(url);
+       // Use window.location.href for full page navigation to ensure re-render
+       window.location.href = url;
        return;
     }
 
