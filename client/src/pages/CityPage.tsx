@@ -143,12 +143,22 @@ export default function CityPage({ params }: { params: { province: string; city:
         locationSlug={`${provinceSlug}/${citySlug}`}
         
         banner={
+          <>
+            {/* Monetized Banner Ad - Revenue generating */}
+            <MonetizedBanner
+              locationType="city"
+              locationId={city.id}
+              locationName={city.name}
+              defaultImage="https://images.unsplash.com/photo-1449824913935-59a10b8d2000?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80"
+              campaign={heroCampaign}
+            />
+            
+            {/* Search & Category Tabs */}
             <EnhancedHero 
                 variant="location"
                 heroMode="standard"
                 title={<span>Property for Sale in <span className="text-blue-200">{city.name}</span></span>}
                 subtitle={`Discover ${stats.totalListings.toLocaleString()} properties in ${city.name} and surrounding suburbs`}
-                backgroundImage="https://images.unsplash.com/photo-1449824913935-59a10b8d2000?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80"
                 initialSearchQuery={city.name}
                 customShortcuts={suburbs.slice(0, 5).map((suburb: any) => ({
                     label: suburb.name,
@@ -156,6 +166,7 @@ export default function CityPage({ params }: { params: { province: string; city:
                     path: `/property-for-sale/${provinceSlug}/${citySlug}/${suburb.slug}?view=list`
                 }))}
             />
+          </>
         }
 
         searchStage={null}

@@ -91,11 +91,21 @@ export default function ProvincePage({ params }: { params: { province: string } 
         heroImage="/images/province-hero.jpg"
         
         banner={
+          <>
+            {/* Monetized Banner Ad - Revenue generating */}
+            <MonetizedBanner
+              locationType="province"
+              locationId={province.id}
+              locationName={province.name}
+              defaultImage="https://images.unsplash.com/photo-1577931767667-0c58e744d081?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80"
+              campaign={heroCampaign}
+            />
+            
+            {/* Search & Category Tabs */}
             <EnhancedHero 
                 variant="location"
                 title={<span>Property for Sale in <span className="text-blue-200">{province.name}</span></span>}
                 subtitle={`Explore ${stats.totalListings.toLocaleString()} properties and new developments across ${province.name}`}
-                backgroundImage="https://images.unsplash.com/photo-1577931767667-0c58e744d081?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80"
                 initialSearchQuery={province.name}
                 heroMode="city"
                 navigationItems={cities?.map((city: any) => ({
@@ -103,6 +113,7 @@ export default function ProvincePage({ params }: { params: { province: string } 
                     path: `/${provinceSlug}/${city.slug}`,
                 })) || []}
             />
+          </>
         }
 
         searchStage={null}
