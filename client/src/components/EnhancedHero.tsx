@@ -39,6 +39,8 @@ export interface EnhancedHeroProps {
   title?: React.ReactNode;
   subtitle?: string;
   backgroundImage?: string;
+  heroMode?: 'standard' | 'province' | 'city';
+  navigationItems?: { label: string; path: string; active?: boolean; }[];
   customShortcuts?: {
     label: string;
     icon?: any;
@@ -53,6 +55,8 @@ export function EnhancedHero({
   title,
   subtitle,
   backgroundImage,
+  heroMode = 'standard',
+  navigationItems = [],
   customShortcuts,
   initialSearchQuery = ''
 }: EnhancedHeroProps) {
