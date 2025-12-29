@@ -111,10 +111,10 @@ export function LocationHeroSection({
       <div className="relative z-10 -mt-16 px-4 pb-6 flex justify-center">
 
         {/* Floating Search Card */}
-        <Card className="w-full max-w-4xl bg-white/95 backdrop-blur-sm shadow-2xl rounded-2xl p-6 md:p-8">
+        <Card className="w-full max-w-6xl bg-white/95 backdrop-blur-sm shadow-2xl rounded-2xl p-6 md:p-8">
           
           {/* Category Tabs */}
-          <div className="flex flex-wrap justify-center gap-2 mb-6">
+          <div className="flex flex-wrap lg:flex-nowrap justify-center gap-2 mb-6">
             {categories.map((category) => {
               const Icon = category.icon;
               const isActive = activeTab === category.id;
@@ -123,7 +123,7 @@ export function LocationHeroSection({
                   key={category.id}
                   onClick={() => handleCategoryClick(category.id)}
                   className={cn(
-                    'flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium text-sm transition-all duration-200',
+                    'flex items-center gap-1.5 px-3 py-2 rounded-lg font-medium text-sm transition-all duration-200 whitespace-nowrap',
                     isActive
                       ? 'bg-blue-600 text-white shadow-lg scale-105'
                       : 'bg-slate-100 text-slate-700 hover:bg-slate-200 hover:scale-102'
@@ -138,7 +138,7 @@ export function LocationHeroSection({
             {/* Post Property CTA */}
             <button
               onClick={handlePostProperty}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium text-sm bg-green-600 text-white hover:bg-green-700 transition-all duration-200 shadow-md"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-lg font-medium text-sm bg-green-600 text-white hover:bg-green-700 transition-all duration-200 shadow-md whitespace-nowrap"
             >
               <Plus className="h-4 w-4" />
               Post Property
