@@ -511,11 +511,6 @@ function Router() {
 // - If you want to make theme switchable, pass `switchable` ThemeProvider and use `useTheme` hook
 
 function App() {
-  // DIAGNOSTIC: Log build ID to verify deployment
-  console.log('🔥 BUILD ID:', import.meta.env.VITE_VERCEL_GIT_COMMIT_SHA || 'local-dev');
-  console.log('🔥 VERCEL ENV:', import.meta.env.VITE_VERCEL_ENV || 'local');
-  console.log('🔥 DEPLOYMENT URL:', import.meta.env.VITE_VERCEL_URL || 'localhost');
-  
   return (
     <ErrorBoundary>
       <BrandingProvider>

@@ -55,21 +55,12 @@ export function PropertyCategories({ preselectedLocation }: PropertyCategoriesPr
             listingType: 'sale',
           };
         }
-        console.log('🔍 [PropertyCategories] Query filters:', builtFilters);
-        console.log('🔍 [PropertyCategories] Location:', preselectedLocation);
         return builtFilters;
       })() : {}
     },
     {
       enabled: true,
       staleTime: 1000 * 60 * 5,
-      onSuccess: (data) => {
-        console.log('📊 [PropertyCategories] Counts received:', data);
-        console.log('📊 [PropertyCategories] By type:', data?.byPropertyType);
-      },
-      onError: (error) => {
-        console.error('❌ [PropertyCategories] Error:', error);
-      }
     }
   );
 
@@ -83,21 +74,16 @@ export function PropertyCategories({ preselectedLocation }: PropertyCategoriesPr
   ];
 
   const handleCategoryClick = (category: typeof categories[0]) => {
-    console.log('🖱️ [PropertyCategories] Card clicked:', category.title);
-    console.log('🖱️ [PropertyCategories] preselectedLocation:', preselectedLocation);
-    
     // If we have a preselected location (e.g. from City/Suburb page), 
     // navigate directly to the Transaction Page for that category + location.
     if (preselectedLocation) {
        const url = `/property-for-sale/${preselectedLocation.provinceSlug}/${preselectedLocation.slug}?propertyType=${category.type}&view=list`;
-       console.log('🖱️ [PropertyCategories] Navigating to:', url);
        // Use window.location.href for full page navigation to ensure re-render
        window.location.href = url;
        return;
     }
 
     // Default flow (Location Picker -> Filters)
-    console.log('🖱️ [PropertyCategories] Opening dialog (no preselected location)');
     setSelectedCategory(category);
     setStep(1);
     setSelectedLocation(null);
