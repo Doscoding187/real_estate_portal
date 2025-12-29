@@ -30,7 +30,10 @@ export default function Home() {
     'Northern Cape'
   ];
 
-  const provinceNavItems = provinces.map(p => ({
+  // Only show top 5 popular provinces in hero for better UX
+  const popularProvinces = provinces.slice(0, 5);
+
+  const provinceNavItems = popularProvinces.map(p => ({
       label: p,
       path: `/${p.toLowerCase().replace(/\s+/g, '-')}`
   }));
