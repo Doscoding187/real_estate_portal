@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
+import { trpc } from '@/lib/trpc';
 
 export interface PropertyCategoriesProps {
   preselectedLocation?: {
@@ -29,14 +30,27 @@ export function PropertyCategories({ preselectedLocation }: PropertyCategoriesPr
   const [maxPrice, setMaxPrice] = useState<string>('');
   const [bedrooms, setBedrooms] = useState<string>('');
   const [features, setFeatures] = useState<string[]>([]);
+  
+  // Fetch real property counts based on location
+  const { data: filterCounts } = trpc.properties.getFilterCounts.useQuery(
+    {
+      filters: preselectedLocation ? {
+        locationSlug: `${preselectedLocation.provinceSlug}/${preselectedLocation.slug}`.replace(/^\/+/, ''),
+      } : {}
+    },
+    {
+      enabled: true,
+      staleTime: 1000 * 60 * 5, // Cache for 5 minutes
+    }
+  );
 
   const categories = [
-    { Icon: Building2, title: 'Apartments', count: '2,500+', type: 'apartment', gradient: 'from-[#2774AE] to-[#2D68C4]' },
-    { Icon: HomeIcon, title: 'Houses', count: '3,200+', type: 'house', gradient: 'from-[#2D68C4] to-[#0F52BA]' },
-    { Icon: Building, title: 'Townhouses', count: '1,800+', type: 'townhouse', gradient: 'from-[#0F52BA] to-[#1560BD]' },
-    { Icon: Warehouse, title: 'Commercial', count: '950+', type: 'commercial', gradient: 'from-[#1560BD] to-[#2774AE]' },
-    { Icon: MapPin, title: 'Land & Plots', count: '1,200+', type: 'land', gradient: 'from-[#2774AE] to-[#2D68C4]' },
-    { Icon: Tractor, title: 'Farms', count: '450+', type: 'farm', gradient: 'from-[#2D68C4] to-[#0F52BA]' },
+    { Icon: Building2, title: 'Apartments', count: filterCounts?.propertyTypes?.apartment || 0, type: 'apartment', gradient: 'from-[#2774AE] to-[#2D68C4]' },
+    { Icon: HomeIcon, title: 'Houses', count: filterCounts?.propertyTypes?.house || 0, type: 'house', gradient: 'from-[#2D68C4] to-[#0F52BA]' },
+    { Icon: Building, title: 'Townhouses', count: filterCounts?.propertyTypes?.townhouse || 0, type: 'townhouse', gradient: 'from-[#0F52BA] to-[#1560BD]' },
+    { Icon: Warehouse, title: 'Commercial', count: filterCounts?.propertyTypes?.commercial || 0, type: 'commercial', gradient: 'from-[#1560BD] to-[#2774AE]' },
+    { Icon: MapPin, title: 'Land & Plots', count: filterCounts?.propertyTypes?.land || 0, type: 'land', gradient: 'from-[#2774AE] to-[#2D68C4]' },
+    { Icon: Tractor, title: 'Farms', count: filterCounts?.propertyTypes?.farm || 0, type: 'farm', gradient: 'from-[#2D68C4] to-[#0F52BA]' },
   ];
 
   const handleCategoryClick = (category: typeof categories[0]) => {
