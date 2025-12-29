@@ -179,17 +179,17 @@ export class PropertySearchService {
       )!
     );
 
-    // Location filters
+    // Location filters - CASE INSENSITIVE to handle mixed casing in data
     if (filters.province) {
-      conditions.push(eq(properties.province, filters.province));
+      conditions.push(sql`LOWER(${properties.province}) = LOWER(${filters.province})`);
     }
     if (filters.city) {
-      conditions.push(eq(properties.city, filters.city));
+      conditions.push(sql`LOWER(${properties.city}) = LOWER(${filters.city})`);
     }
     if (filters.suburb && filters.suburb.length > 0) {
-      // Suburb is stored in address field currently
+      // Suburb is stored in address field currently - case insensitive
       const suburbConditions = filters.suburb.map(suburb =>
-        sql`${properties.address} LIKE ${`%${suburb}%`}`
+        sql`LOWER(${properties.address}) LIKE LOWER(${`%${suburb}%`})`
       );
       conditions.push(or(...suburbConditions)!);
     }
