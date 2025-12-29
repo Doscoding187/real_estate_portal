@@ -34,9 +34,17 @@ export function PropertyCategories({ preselectedLocation }: PropertyCategoriesPr
   // Fetch real property counts based on location
   const { data: filterCounts } = trpc.properties.getFilterCounts.useQuery(
     {
-      filters: preselectedLocation ? {
-        locationSlug: `${preselectedLocation.provinceSlug}/${preselectedLocation.slug}`.replace(/^\/+/, ''),
-      } : {}
+      filters: preselectedLocation ? (() => {
+        // Parse the location slug to get province and city
+        const parts = preselectedLocation.type === 'province' 
+          ? [preselectedLocation.slug]
+          : [preselectedLocation.provinceSlug, preselectedLocation.slug];
+        
+        return {
+          province: parts[0],
+          city: parts.length > 1 ? parts[1] : undefined,
+        };
+      })() : {}
     },
     {
       enabled: true,
@@ -45,12 +53,12 @@ export function PropertyCategories({ preselectedLocation }: PropertyCategoriesPr
   );
 
   const categories = [
-    { Icon: Building2, title: 'Apartments', count: filterCounts?.propertyTypes?.apartment || 0, type: 'apartment', gradient: 'from-[#2774AE] to-[#2D68C4]' },
-    { Icon: HomeIcon, title: 'Houses', count: filterCounts?.propertyTypes?.house || 0, type: 'house', gradient: 'from-[#2D68C4] to-[#0F52BA]' },
-    { Icon: Building, title: 'Townhouses', count: filterCounts?.propertyTypes?.townhouse || 0, type: 'townhouse', gradient: 'from-[#0F52BA] to-[#1560BD]' },
-    { Icon: Warehouse, title: 'Commercial', count: filterCounts?.propertyTypes?.commercial || 0, type: 'commercial', gradient: 'from-[#1560BD] to-[#2774AE]' },
-    { Icon: MapPin, title: 'Land & Plots', count: filterCounts?.propertyTypes?.land || 0, type: 'land', gradient: 'from-[#2774AE] to-[#2D68C4]' },
-    { Icon: Tractor, title: 'Farms', count: filterCounts?.propertyTypes?.farm || 0, type: 'farm', gradient: 'from-[#2D68C4] to-[#0F52BA]' },
+    { Icon: Building2, title: 'Apartments', count: filterCounts?.byPropertyType?.apartment || 0, type: 'apartment', gradient: 'from-[#2774AE] to-[#2D68C4]' },
+    { Icon: HomeIcon, title: 'Houses', count: filterCounts?.byPropertyType?.house || 0, type: 'house', gradient: 'from-[#2D68C4] to-[#0F52BA]' },
+    { Icon: Building, title: 'Townhouses', count: filterCounts?.byPropertyType?.townhouse || 0, type: 'townhouse', gradient: 'from-[#0F52BA] to-[#1560BD]' },
+    { Icon: Warehouse, title: 'Commercial', count: filterCounts?.byPropertyType?.commercial || 0, type: 'commercial', gradient: 'from-[#1560BD] to-[#2774AE]' },
+    { Icon: MapPin, title: 'Land & Plots', count: filterCounts?.byPropertyType?.land || 0, type: 'land', gradient: 'from-[#2774AE] to-[#2D68C4]' },
+    { Icon: Tractor, title: 'Farms', count: filterCounts?.byPropertyType?.farm || 0, type: 'farm', gradient: 'from-[#2D68C4] to-[#0F52BA]' },
   ];
 
   const handleCategoryClick = (category: typeof categories[0]) => {
