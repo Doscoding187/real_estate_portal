@@ -1,3 +1,4 @@
+import React from 'react';
 import { useLocation } from 'wouter';
 import { MetaControl } from '@/components/seo/MetaControl';
 import { trpc } from '@/lib/trpc';
@@ -40,9 +41,31 @@ export default function CityPage({ params }: { params: { province: string; city:
   const [location, navigate] = useLocation();
   const { province: provinceSlug, city: citySlug } = params;
 
+  // Use window.location.search for reactivity to query param changes
+  // wouter's useLocation() only returns pathname, not query params
+  const [searchString, setSearchString] = React.useState(window.location.search);
+
+  // Listen for URL changes (popstate and custom navigation)
+  React.useEffect(() => {
+    const handleLocationChange = () => {
+      setSearchString(window.location.search);
+    };
+
+    // Listen to popstate (back/forward buttons)
+    window.addEventListener('popstate', handleLocationChange);
+    
+    // Check for URL changes on every render
+    if (window.location.search !== searchString) {
+      setSearchString(window.location.search);
+    }
+
+    return () => {
+      window.removeEventListener('popstate', handleLocationChange);
+    };
+  }, [location, searchString]); // Re-run when wouter's location changes
+
   // 2025 Architecture: Controller Logic (Transaction Mode)
-  // Derive search params from location to ensure reactivity
-  const searchParams = new URLSearchParams(location.split('?')[1] || '');
+  const searchParams = new URLSearchParams(searchString);
   const hasSearchFilters = 
     searchParams.has('propertyType') || 
     searchParams.has('minPrice') || 
@@ -52,7 +75,7 @@ export default function CityPage({ params }: { params: { province: string; city:
   const isTransactionMode = searchParams.get('view') === 'list' || hasSearchFilters;
 
   // DEBUG: Log mode detection
-  console.log('🏙️ [CityPage] location:', location);
+  console.log('🏙️ [CityPage] searchString:', searchString);
   console.log('🏙️ [CityPage] hasSearchFilters:', hasSearchFilters);
   console.log('🏙️ [CityPage] isTransactionMode:', isTransactionMode);
 
