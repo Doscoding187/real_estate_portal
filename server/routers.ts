@@ -148,6 +148,7 @@ export const appRouter = router({
           filters: z.object({
             city: z.string().optional(),
             province: z.string().optional(),
+            suburb: z.array(z.string()).optional(),
             propertyType: z.string().optional(),
             listingType: z.string().optional(),
             minPrice: z.number().optional(),

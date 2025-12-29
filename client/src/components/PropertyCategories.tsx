@@ -35,15 +35,23 @@ export function PropertyCategories({ preselectedLocation }: PropertyCategoriesPr
   const { data: filterCounts } = trpc.properties.getFilterCounts.useQuery(
     {
       filters: preselectedLocation ? (() => {
-        // Parse the location slug to get province and city
-        const parts = preselectedLocation.type === 'province' 
-          ? [preselectedLocation.slug]
-          : [preselectedLocation.provinceSlug, preselectedLocation.slug];
-        
-        return {
-          province: parts[0],
-          city: parts.length > 1 ? parts[1] : undefined,
-        };
+        // Build filter based on location type
+        if (preselectedLocation.type === 'province') {
+          return {
+            province: preselectedLocation.slug,
+          };
+        } else if (preselectedLocation.type === 'city') {
+          return {
+            province: preselectedLocation.provinceSlug,
+            city: preselectedLocation.slug,
+          };
+        } else if (preselectedLocation.type === 'suburb') {
+          return {
+            province: preselectedLocation.provinceSlug,
+            suburb: [preselectedLocation.slug], // Suburb is an array
+          };
+        }
+        return {};
       })() : {}
     },
     {
