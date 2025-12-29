@@ -34,12 +34,13 @@ import { Button } from '@/components/ui/button';
 import { ArrowRight } from 'lucide-react';
 
 export default function SuburbPage({ params }: { params: { province: string; city: string; suburb: string } }) {
-  const [, navigate] = useLocation();
+  const [location, navigate] = useLocation();
   const { province: provinceSlug, city: citySlug, suburb: suburbSlug } = params;
 
   // 2025 Architecture: Controller Logic
   // Render Transaction Page (SearchResults) if 'view=list' OR any search filters are present
-  const searchParams = new URLSearchParams(window.location.search);
+  // Derive search params from location to ensure reactivity
+  const searchParams = new URLSearchParams(location.split('?')[1] || '');
   const hasSearchFilters = 
     searchParams.has('propertyType') || 
     searchParams.has('minPrice') || 

@@ -37,11 +37,12 @@ import { LocationTopLocalities } from '@/components/location/LocationTopLocaliti
 import SearchResults from './SearchResults';
 
 export default function CityPage({ params }: { params: { province: string; city: string } }) {
-  const [, navigate] = useLocation();
+  const [location, navigate] = useLocation();
   const { province: provinceSlug, city: citySlug } = params;
 
   // 2025 Architecture: Controller Logic (Transaction Mode)
-  const searchParams = new URLSearchParams(window.location.search);
+  // Derive search params from location to ensure reactivity
+  const searchParams = new URLSearchParams(location.split('?')[1] || '');
   const hasSearchFilters = 
     searchParams.has('propertyType') || 
     searchParams.has('minPrice') || 
