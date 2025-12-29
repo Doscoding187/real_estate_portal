@@ -3,7 +3,7 @@ import { trpc } from '@/lib/trpc';
 import { LocationPageLayout } from '@/components/location/LocationPageLayout';
 import { MetaControl } from '@/components/seo/MetaControl';
 import { generateCanonicalUrl } from '@/lib/urlUtils';
-import { MonetizedBanner } from '@/components/location/MonetizedBanner';
+import { LocationHeroSection } from '@/components/location/LocationHeroSection';
 import { SearchStage } from '@/components/location/SearchStage';
 import { FeaturedPropertiesCarousel } from '@/components/location/FeaturedPropertiesCarousel';
 import { LocationGrid } from '@/components/location/LocationGrid';
@@ -25,8 +25,7 @@ import { TrendingSuburbsCarousel } from '@/components/location/TrendingSuburbsCa
 import { LocationPropertyTypeExplorer } from '@/components/location/LocationPropertyTypeExplorer';
 import { DiscoverProperties } from '@/components/DiscoverProperties';
 import { ExploreCities } from '@/components/ExploreCities';
-import { EnhancedHero } from '@/components/EnhancedHero';
-import { Home, Building2, Key, MapPin } from 'lucide-react';
+// EnhancedHero not needed - using LocationHeroSection for location pages
 
 export default function ProvincePage({ params }: { params: { province: string } }) {
   const [, navigate] = useLocation();
@@ -91,29 +90,19 @@ export default function ProvincePage({ params }: { params: { province: string } 
         heroImage="/images/province-hero.jpg"
         
         banner={
-          <>
-            {/* Monetized Banner Ad - Revenue generating */}
-            <MonetizedBanner
-              locationType="province"
-              locationId={province.id}
-              locationName={province.name}
-              defaultImage="https://images.unsplash.com/photo-1577931767667-0c58e744d081?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80"
-              campaign={heroCampaign}
-            />
-            
-            {/* Search & Category Tabs */}
-            <EnhancedHero 
-                variant="location"
-                title={<span>Property for Sale in <span className="text-blue-200">{province.name}</span></span>}
-                subtitle={`Explore ${stats.totalListings.toLocaleString()} properties and new developments across ${province.name}`}
-                initialSearchQuery={province.name}
-                heroMode="city"
-                navigationItems={cities?.map((city: any) => ({
-                    label: city.name,
-                    path: `/${provinceSlug}/${city.slug}`,
-                })) || []}
-            />
-          </>
+          <LocationHeroSection
+            locationName={province.name}
+            locationSlug={provinceSlug}
+            locationType="province"
+            locationId={province.id}
+            backgroundImage="https://images.unsplash.com/photo-1577931767667-0c58e744d081?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80"
+            listingCount={stats.totalListings}
+            campaign={heroCampaign}
+            quickLinks={cities?.slice(0, 5).map((city: any) => ({
+              label: city.name,
+              path: `/${provinceSlug}/${city.slug}`,
+            })) || []}
+          />
         }
 
         searchStage={null}

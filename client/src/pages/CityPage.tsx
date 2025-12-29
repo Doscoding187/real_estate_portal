@@ -2,16 +2,15 @@ import { useLocation } from 'wouter';
 import { MetaControl } from '@/components/seo/MetaControl';
 import { trpc } from '@/lib/trpc';
 import { LocationPageLayout } from '@/components/location/LocationPageLayout';
-import { MonetizedBanner } from '@/components/location/MonetizedBanner';
+import { LocationHeroSection } from '@/components/location/LocationHeroSection';
 import { SearchStage } from '@/components/location/SearchStage';
 import { FeaturedPropertiesCarousel } from '@/components/location/FeaturedPropertiesCarousel';
 
 import { LocationPropertyTypeExplorer } from '@/components/location/LocationPropertyTypeExplorer';
 import { DiscoverProperties } from '@/components/DiscoverProperties';
 import { ExploreCities } from '@/components/ExploreCities';
-import { EnhancedHero } from '@/components/EnhancedHero';
 import { PropertyCategories } from '@/components/PropertyCategories';
-import { MapPin } from 'lucide-react';
+// EnhancedHero not needed - using LocationHeroSection for location pages
 
 
 // Legacy components to be adapted or routed
@@ -143,30 +142,19 @@ export default function CityPage({ params }: { params: { province: string; city:
         locationSlug={`${provinceSlug}/${citySlug}`}
         
         banner={
-          <>
-            {/* Monetized Banner Ad - Revenue generating */}
-            <MonetizedBanner
-              locationType="city"
-              locationId={city.id}
-              locationName={city.name}
-              defaultImage="https://images.unsplash.com/photo-1449824913935-59a10b8d2000?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80"
-              campaign={heroCampaign}
-            />
-            
-            {/* Search & Category Tabs */}
-            <EnhancedHero 
-                variant="location"
-                heroMode="standard"
-                title={<span>Property for Sale in <span className="text-blue-200">{city.name}</span></span>}
-                subtitle={`Discover ${stats.totalListings.toLocaleString()} properties in ${city.name} and surrounding suburbs`}
-                initialSearchQuery={city.name}
-                customShortcuts={suburbs.slice(0, 5).map((suburb: any) => ({
-                    label: suburb.name,
-                    icon: MapPin,
-                    path: `/property-for-sale/${provinceSlug}/${citySlug}/${suburb.slug}?view=list`
-                }))}
-            />
-          </>
+          <LocationHeroSection
+            locationName={city.name}
+            locationSlug={`${provinceSlug}/${citySlug}`}
+            locationType="city"
+            locationId={city.id}
+            backgroundImage="https://images.unsplash.com/photo-1449824913935-59a10b8d2000?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80"
+            listingCount={stats.totalListings}
+            campaign={heroCampaign}
+            quickLinks={suburbs?.slice(0, 5).map((suburb: any) => ({
+              label: suburb.name,
+              path: `/${provinceSlug}/${citySlug}/${suburb.slug}`,
+            })) || []}
+          />
         }
 
         searchStage={null}

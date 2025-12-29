@@ -1,7 +1,7 @@
 import { useRoute, useLocation } from 'wouter';
 import { trpc } from '@/lib/trpc';
 import { LocationPageLayout } from '@/components/location/LocationPageLayout';
-import { MonetizedBanner } from '@/components/location/MonetizedBanner';
+import { LocationHeroSection } from '@/components/location/LocationHeroSection';
 import { SearchStage } from '@/components/location/SearchStage';
 import { LocationPropertyTypeExplorer as PropertyTypeExplorer } from '@/components/location/LocationPropertyTypeExplorer';
 
@@ -115,22 +115,22 @@ export default function SuburbPage({ params }: { params: { province: string; cit
         locationSlug={`${provinceSlug}/${citySlug}/${suburbSlug}`}
         
         banner={
-          <MonetizedBanner
+          <LocationHeroSection
+            locationName={suburb.name}
+            locationSlug={`${provinceSlug}/${citySlug}/${suburbSlug}`}
             locationType="suburb"
             locationId={suburb.id}
-            locationName={suburb.name}
-            defaultImage="https://images.unsplash.com/photo-1574362848149-11496d93a7c7?ixlib=rb-4.0.3&auto=format&fit=crop&w=1984&q=80"
+            backgroundImage="https://images.unsplash.com/photo-1574362848149-11496d93a7c7?ixlib=rb-4.0.3&auto=format&fit=crop&w=1984&q=80"
+            listingCount={stats.totalListings}
             campaign={heroCampaign}
+            quickLinks={subLocalities?.slice(0, 5).map((loc: any) => ({
+              label: loc.name,
+              path: `/${provinceSlug}/${citySlug}/${suburbSlug}/${loc.slug}`,
+            })) || []}
           />
         }
 
-        searchStage={
-          <SearchStage 
-            locationName={suburb.name} 
-            locationSlug={`${provinceSlug}/${citySlug}/${suburbSlug}`} 
-            totalListings={stats.totalListings} 
-          />
-        }
+        searchStage={null}
 
         // Suburb Page Specific: Property Type Explorer
         propertyTypeExplorer={<PropertyCategories preselectedLocation={{
