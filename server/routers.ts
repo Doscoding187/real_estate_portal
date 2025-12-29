@@ -141,6 +141,32 @@ export const appRouter = router({
         return await db.getFeaturedListings(input.limit);
       }),
 
+    // Get filter counts for search refinement
+    getFilterCounts: publicProcedure
+      .input(
+        z.object({
+          filters: z.object({
+            city: z.string().optional(),
+            province: z.string().optional(),
+            propertyType: z.string().optional(),
+            listingType: z.string().optional(),
+            minPrice: z.number().optional(),
+            maxPrice: z.number().optional(),
+            minBedrooms: z.number().optional(),
+            maxBedrooms: z.number().optional(),
+          }).optional(),
+        }),
+      )
+      .query(async ({ input }) => {
+        try {
+          const { propertySearchService } = await import('./services/propertySearchService');
+          return await propertySearchService.getFilterCounts(input.filters || {});
+        } catch (error) {
+          console.error('Error getting filter counts:', error);
+          return { total: 0, byType: {}, byBedrooms: {}, byPriceRange: {} };
+        }
+      }),
+
     // getAll - Same as search but with city/propertyType filtering
     getAll: publicProcedure
       .input(

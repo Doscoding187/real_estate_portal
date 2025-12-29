@@ -125,6 +125,27 @@ export const locationRouter = router({
     }),
 
   /**
+   * Get featured listings for a location
+   */
+  getFeaturedListings: publicProcedure
+    .input(
+      z.object({
+        limit: z.number().default(6),
+        locationId: z.number().optional(),
+        locationType: z.string().optional(),
+      }),
+    )
+    .query(async ({ input }) => {
+      const { getFeaturedListings } = await import('./db');
+      try {
+        return await getFeaturedListings(input.limit);
+      } catch (error) {
+        console.error('Error fetching featured listings:', error);
+        return [];
+      }
+    }),
+
+  /**
    * Get location hierarchy (provinces with their cities and suburbs)
    */
   getLocationHierarchy: publicProcedure
