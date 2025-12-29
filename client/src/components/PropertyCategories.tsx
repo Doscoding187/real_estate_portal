@@ -36,27 +36,40 @@ export function PropertyCategories({ preselectedLocation }: PropertyCategoriesPr
     {
       filters: preselectedLocation ? (() => {
         // Build filter based on location type
+        let builtFilters: any = {};
         if (preselectedLocation.type === 'province') {
-          return {
+          builtFilters = {
             province: preselectedLocation.slug,
+            listingType: 'sale',
           };
         } else if (preselectedLocation.type === 'city') {
-          return {
+          builtFilters = {
             province: preselectedLocation.provinceSlug,
             city: preselectedLocation.slug,
+            listingType: 'sale',
           };
         } else if (preselectedLocation.type === 'suburb') {
-          return {
+          builtFilters = {
             province: preselectedLocation.provinceSlug,
-            suburb: [preselectedLocation.slug], // Suburb is an array
+            suburb: [preselectedLocation.slug],
+            listingType: 'sale',
           };
         }
-        return {};
+        console.log('🔍 [PropertyCategories] Query filters:', builtFilters);
+        console.log('🔍 [PropertyCategories] Location:', preselectedLocation);
+        return builtFilters;
       })() : {}
     },
     {
       enabled: true,
-      staleTime: 1000 * 60 * 5, // Cache for 5 minutes
+      staleTime: 1000 * 60 * 5,
+      onSuccess: (data) => {
+        console.log('📊 [PropertyCategories] Counts received:', data);
+        console.log('📊 [PropertyCategories] By type:', data?.byPropertyType);
+      },
+      onError: (error) => {
+        console.error('❌ [PropertyCategories] Error:', error);
+      }
     }
   );
 
