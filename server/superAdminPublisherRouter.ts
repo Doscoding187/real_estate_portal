@@ -47,6 +47,30 @@ export const superAdminPublisherRouter = router({
       return await developerBrandProfileService.getBrandProfileWithStats(input.brandProfileId);
     }),
 
+  /**
+   * Create a new brand profile (Context Creation)
+   */
+  createBrandProfile: superAdminProcedure
+    .input(z.object({
+      brandName: z.string().min(2),
+      brandTier: z.enum(['national', 'regional', 'boutique']).default('regional'),
+      logoUrl: z.string().optional(),
+      operatingProvinces: z.array(z.string()).optional(),
+    }))
+    .mutation(async ({ input }) => {
+      // Create new platform-owned brand profile
+      const result = await developerBrandProfileService.createBrandProfile({
+        brandName: input.brandName,
+        brandTier: input.brandTier,
+        logoUrl: input.logoUrl,
+        operatingProvinces: input.operatingProvinces || [],
+        isVisible: true,
+        // Detailed defaults handled by service
+      });
+
+      return result;
+    }),
+
   // ==========================================================================
   // Development Management (Context-Aware)
   // ==========================================================================

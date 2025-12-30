@@ -8,6 +8,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
+import { CreateBrandProfileDialog } from './CreateBrandProfileDialog';
 
 export const DeveloperContextSelector: React.FC = () => {
   const { selectedBrand, setSelectedBrandId, isLoading } = useDeveloperContext();
@@ -81,6 +82,10 @@ export const DeveloperContextSelector: React.FC = () => {
             </div>
             <CommandEmpty>No brand found.</CommandEmpty>
             <CommandList>
+              <div className="p-1 border-b">
+                 <CreateBrandProfileDialog onSuccess={() => setOpen(false)} />
+              </div>
+              
               <CommandGroup heading="Available Brands">
                 {profiles?.map((brand: any) => (
                   <CommandItem
