@@ -412,6 +412,52 @@ async function getBrandLeadStats(brandProfileId: number) {
 // Export Service
 // ============================================================================
 
+/**
+ * Delete brand profile
+ * - Hard delete if no dependencies (leads/developments)
+ * - Soft delete (hide + rename) if dependencies exist
+ */
+async function deleteBrandProfile(id: number) {
+  // 1. Check dependencies
+  const devCount = await db
+    .select({ count: sql<number>`COUNT(*)` })
+    .from(developments)
+    .where(eq(developments.developerBrandProfileId, id));
+
+  const leadCount = await db
+    .select({ count: sql<number>`COUNT(*)` })
+    .from(leads)
+    .where(eq(leads.developerBrandProfileId, id));
+
+  const hasDeps = (devCount[0]?.count || 0) > 0 || (leadCount[0]?.count || 0) > 0;
+
+  if (hasDeps) {
+    // Soft Delete
+    const [current] = await db
+      .select({ brandName: developerBrandProfiles.brandName })
+      .from(developerBrandProfiles)
+      .where(eq(developerBrandProfiles.id, id));
+
+    await db
+      .update(developerBrandProfiles)
+      .set({
+        isVisible: 0,
+        brandName: `${current?.brandName} (Deleted ${new Date().toISOString().split('T')[0]})`,
+        slug: `deleted-${id}-${Date.now()}` // Free up the slug
+      })
+      .where(eq(developerBrandProfiles.id, id));
+
+    return { success: true, mode: 'soft' };
+  } else {
+    // Hard Delete
+    await db
+      .delete(developerBrandProfiles)
+      .where(eq(developerBrandProfiles.id, id));
+
+    return { success: true, mode: 'hard' };
+  }
+}
+
 export const developerBrandProfileService = {
   // CRUD
   createBrandProfile,
@@ -419,6 +465,7 @@ export const developerBrandProfileService = {
   getBrandProfileBySlug,
   listBrandProfiles,
   updateBrandProfile,
+  deleteBrandProfile, // Added
   toggleVisibility,
   
   // Development linking

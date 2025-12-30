@@ -116,6 +116,76 @@ export const superAdminPublisherRouter = router({
       return result;
     }),
 
+  /**
+   * Update an existing brand profile
+   */
+  updateBrandProfile: superAdminProcedure
+    .input(z.object({
+      brandProfileId: z.number().int(),
+      
+      // Identity
+      brandName: z.string().min(2).optional(),
+      brandTier: z.enum(['national', 'regional', 'boutique']).optional(),
+      logoUrl: z.string().optional(),
+      
+      // Company Info
+      description: z.string().optional(),
+      category: z.string().optional(),
+      establishedYear: z.number().nullable().optional(),
+      website: z.string().optional(),
+      
+      // Contact Info
+      email: z.string().email().optional().or(z.literal('')),
+      phone: z.string().optional(),
+      address: z.string().optional(),
+      city: z.string().optional(),
+      province: z.string().optional(),
+      
+      // Portfolio (We will just map specializations for now as project counts aren't in schema update yet)
+      specializations: z.array(z.string()).optional(),
+      
+      operatingProvinces: z.array(z.string()).optional(),
+    }))
+    .mutation(async ({ input }) => {
+      // Logic to combine address if partial updates are provided is tricky without reading first.
+      // ideally frontend sends full address data if updating address.
+      // We will perform a simple mapping assuming what is sent is what is intended.
+      
+      let headOfficeLocation = undefined;
+      // Only construct location if at least one component is present, implying an address update intention
+      // But for updates, usually better to let frontend send the combined string or we read-modify-write.
+      // For simplicity, we will update headOfficeLocation ONLY if 'city' or 'address' is explicitly provided.
+      if (input.city || input.address || input.province) {
+         headOfficeLocation = `${input.address || ''}, ${input.city || ''}, ${input.province || ''}`.replace(/^, /, '').replace(/, ,/, ',');
+      }
+
+      await developerBrandProfileService.updateBrandProfile(input.brandProfileId, {
+        brandName: input.brandName,
+        brandTier: input.brandTier,
+        logoUrl: input.logoUrl,
+        about: input.description,
+        foundedYear: input.establishedYear,
+        websiteUrl: input.website,
+        publicContactEmail: input.email,
+        propertyFocus: input.specializations, // simplified mapping
+        headOfficeLocation, // strict update
+        operatingProvinces: input.operatingProvinces,
+      });
+
+      return { success: true };
+    }),
+
+  /**
+   * Delete a brand profile
+   */
+  deleteBrandProfile: superAdminProcedure
+    .input(z.object({
+      brandProfileId: z.number().int(),
+    }))
+    .mutation(async ({ input }) => {
+      return await developerBrandProfileService.deleteBrandProfile(input.brandProfileId);
+    }),
+
   // ==========================================================================
   // Development Management (Context-Aware)
   // ==========================================================================

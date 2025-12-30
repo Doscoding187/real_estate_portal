@@ -3,7 +3,11 @@ import { DeveloperContextProvider, useDeveloperContext } from '@/contexts/Develo
 import { DeveloperContextSelector } from '@/components/admin/publisher/DeveloperContextSelector';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card } from '@/components/ui/card';
-import { Building2, LayoutList, Users, BarChart3, LockKeyhole } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Building2, LayoutList, Users, BarChart3, LockKeyhole, Edit, Trash2 } from 'lucide-react';
+import { EditBrandProfileDialog } from '@/components/admin/publisher/EditBrandProfileDialog';
+import { trpc } from '@/lib/trpc';
+import { toast } from 'sonner';
 
 // Import sub-pages (placeholders for now until implemented)
 import PublisherDevelopments from './PublisherDevelopments';
@@ -11,8 +15,26 @@ import PublisherLeads from './PublisherLeads';
 import PublisherMetrics from './PublisherMetrics';
 
 const PublisherContent: React.FC = () => {
-  const { isContextSet, selectedBrand } = useDeveloperContext();
+  const { isContextSet, selectedBrand, setSelectedBrandId } = useDeveloperContext();
   const [activeTab, setActiveTab] = useState('developments');
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const utils = trpc.useUtils();
+
+  const deleteMutation = trpc.superAdminPublisher.deleteBrandProfile.useMutation({
+    onSuccess: (data) => {
+        toast.success(data.mode === 'soft' ? 'Brand profile archived (soft delete)' : 'Brand profile permanently deleted');
+        utils.superAdminPublisher.listBrandProfiles.invalidate();
+        setSelectedBrandId(null); // Clear context
+    },
+    onError: (error) => toast.error(error.message || 'Failed to delete profile'),
+  });
+
+  const handleDelete = () => {
+    if (!selectedBrand) return;
+    if (confirm(`Are you sure you want to delete "${selectedBrand.brandName}"? This action cannot be undone.`)) {
+        deleteMutation.mutate({ brandProfileId: selectedBrand.id });
+    }
+  };
 
   if (!isContextSet) {
     return (
@@ -41,6 +63,14 @@ const PublisherContent: React.FC = () => {
 
   return (
     <div className="space-y-6 animate-fade-in">
+      {selectedBrand && (
+        <EditBrandProfileDialog 
+            open={isEditDialogOpen} 
+            setOpen={setIsEditDialogOpen} 
+            brandData={selectedBrand} 
+        />
+      )}
+
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <div className="flex items-center justify-between border-b pb-4 mb-6">
            <TabsList className="bg-muted/50 p-1 h-12">
@@ -58,8 +88,16 @@ const PublisherContent: React.FC = () => {
             </TabsTrigger>
           </TabsList>
           
-          <div className="text-xs text-muted-foreground font-mono bg-muted/30 px-3 py-1.5 rounded">
-            Context: {selectedBrand?.slug} (ID: {selectedBrand?.id})
+          <div className="flex items-center gap-2">
+            <div className="text-xs text-muted-foreground font-mono bg-muted/30 px-3 py-1.5 rounded mr-2">
+                Context: {selectedBrand?.slug} (ID: {selectedBrand?.id})
+            </div>
+            <Button variant="outline" size="sm" onClick={() => setIsEditDialogOpen(true)} className="h-8 gap-2">
+                <Edit className="w-3.5 h-3.5" /> Edit
+            </Button>
+            <Button variant="outline" size="sm" onClick={handleDelete} disabled={deleteMutation.isPending} className="h-8 gap-2 text-red-600 hover:text-red-700 hover:bg-red-50 hover:border-red-200">
+                <Trash2 className="w-3.5 h-3.5" />
+            </Button>
           </div>
         </div>
 
