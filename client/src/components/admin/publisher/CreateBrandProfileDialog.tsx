@@ -33,6 +33,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Plus, Loader2 } from 'lucide-react';
+import { LogoUploadZone } from '@/components/wizard/LogoUploadZone';
 
 const formSchema = z.object({
   brandName: z.string().min(2, 'Brand name must be at least 2 characters'),
@@ -58,6 +59,52 @@ export const CreateBrandProfileDialog: React.FC<CreateBrandProfileDialogProps> =
       logoUrl: '',
     },
   });
+
+  // Logo Upload State
+  const [isUploadingLogo, setIsUploadingLogo] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const presignMutation = trpc.upload.presign.useMutation();
+
+  const handleLogoUpload = async (file: File) => {
+    try {
+      setIsUploadingLogo(true);
+      setUploadProgress(10); // Start progress
+
+      // 1. Get presigned URL
+      const { url, publicUrl } = await presignMutation.mutateAsync({
+        filename: file.name,
+        contentType: file.type,
+      });
+
+      setUploadProgress(40);
+
+      // 2. Upload to S3
+      const uploadResponse = await fetch(url, {
+        method: 'PUT',
+        body: file,
+        headers: {
+          'Content-Type': file.type,
+        },
+      });
+
+      if (!uploadResponse.ok) {
+        throw new Error('Failed to upload image to storage');
+      }
+
+      setUploadProgress(100);
+      
+      // 3. Set the public URL in form
+      form.setValue('logoUrl', publicUrl, { shouldValidate: true });
+      toast.success('Logo uploaded successfully');
+
+    } catch (error) {
+      console.error('Logo upload error:', error);
+      toast.error('Failed to upload logo. Please try again.');
+    } finally {
+      setIsUploadingLogo(false);
+      setUploadProgress(0);
+    }
+  };
 
   const utils = trpc.useContext();
   const createMutation = trpc.superAdminPublisher.createBrandProfile.useMutation({
@@ -146,13 +193,19 @@ export const CreateBrandProfileDialog: React.FC<CreateBrandProfileDialogProps> =
               name="logoUrl"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Logo URL (Optional)</FormLabel>
+                  <FormLabel>Brand Logo</FormLabel>
                   <FormControl>
-                    <Input placeholder="https://..." {...field} />
+                    <LogoUploadZone
+                      value={field.value}
+                      onChange={(file) => {
+                        if (file) handleLogoUpload(file);
+                        else field.onChange(''); // Handle removal
+                      }}
+                      uploading={isUploadingLogo}
+                      uploadProgress={uploadProgress}
+                      error={field.formState.errors.logoUrl?.message}
+                    />
                   </FormControl>
-                  <FormDescription>
-                    Leave empty to use a generated placeholder.
-                  </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
