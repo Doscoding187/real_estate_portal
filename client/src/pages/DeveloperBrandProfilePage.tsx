@@ -27,7 +27,8 @@ import {
   ArrowRight,
   ShieldCheck,
   BarChart3,
-  Calendar
+  Calendar,
+  AlertCircle
 } from 'lucide-react';
 
 export default function DeveloperBrandProfilePage() {
