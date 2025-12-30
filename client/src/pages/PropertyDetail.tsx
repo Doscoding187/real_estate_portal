@@ -56,6 +56,7 @@ import { NearbyLandmarks } from '@/components/property/NearbyLandmarks';
 import { SuburbInsights } from '@/components/property/SuburbInsights';
 import { LocalityGuide } from '@/components/property/LocalityGuide';
 import { PropertyMobileFooter } from '@/components/property/PropertyMobileFooter';
+import { DeveloperBrandSection, DeveloperBrandData } from '@/components/property/DeveloperBrandSection';
 
 const amenityIcons: Record<string, any> = {
   parking: Car,
@@ -676,7 +677,14 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
               </div>
             </div>
 
-            {/* 2.4 Nearby Landmarks */}
+            {/* 2.4 Developer Brand Section (when property is linked to a brand profile) */}
+            {(usedData.developerBrand || (property as any).developerBrandProfile) && (
+              <DeveloperBrandSection 
+                brand={(usedData.developerBrand || (property as any).developerBrandProfile) as DeveloperBrandData} 
+              />
+            )}
+
+            {/* 2.5 Nearby Landmarks */}
             <NearbyLandmarks property={property} />
 
             {/* 2.5 Suburb Reviews & Insights */}

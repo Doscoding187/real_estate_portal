@@ -8,7 +8,7 @@ CREATE TABLE `activities` (
 	`relatedEntityType` enum('development','unit','lead','campaign','team_member'),
 	`relatedEntityId` int,
 	`userId` int,
-	`createdAt` timestamp NOT NULL DEFAULT 'CURRENT_TIMESTAMP',
+	`createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	CONSTRAINT `activities_id` PRIMARY KEY(`id`)
 );
 --> statement-breakpoint
@@ -23,7 +23,7 @@ CREATE TABLE `developer_notifications` (
 	`read` boolean NOT NULL DEFAULT false,
 	`actionUrl` varchar(500),
 	`metadata` json,
-	`createdAt` timestamp NOT NULL DEFAULT 'CURRENT_TIMESTAMP',
+	`createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	CONSTRAINT `developer_notifications_id` PRIMARY KEY(`id`)
 );
 --> statement-breakpoint
@@ -37,7 +37,7 @@ CREATE TABLE `developer_subscription_limits` (
 	`crmIntegrationEnabled` int NOT NULL DEFAULT 0,
 	`advancedAnalyticsEnabled` int NOT NULL DEFAULT 0,
 	`bondIntegrationEnabled` int NOT NULL DEFAULT 0,
-	`createdAt` timestamp NOT NULL DEFAULT 'CURRENT_TIMESTAMP',
+	`createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
 	CONSTRAINT `developer_subscription_limits_id` PRIMARY KEY(`id`)
 );
@@ -48,8 +48,8 @@ CREATE TABLE `developer_subscription_usage` (
 	`developmentsCount` int NOT NULL DEFAULT 0,
 	`leadsThisMonth` int NOT NULL DEFAULT 0,
 	`teamMembersCount` int NOT NULL DEFAULT 0,
-	`lastResetAt` timestamp NOT NULL DEFAULT 'CURRENT_TIMESTAMP',
-	`createdAt` timestamp NOT NULL DEFAULT 'CURRENT_TIMESTAMP',
+	`lastResetAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	`createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
 	CONSTRAINT `developer_subscription_usage_id` PRIMARY KEY(`id`)
 );
@@ -65,7 +65,7 @@ CREATE TABLE `developer_subscriptions` (
 	`currentPeriodEnd` timestamp,
 	`stripeSubscriptionId` varchar(100),
 	`stripeCustomerId` varchar(100),
-	`createdAt` timestamp NOT NULL DEFAULT 'CURRENT_TIMESTAMP',
+	`createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
 	CONSTRAINT `developer_subscriptions_id` PRIMARY KEY(`id`)
 );
@@ -83,7 +83,7 @@ CREATE TABLE `development_phases` (
 	`priceTo` int,
 	`launchDate` timestamp,
 	`completionDate` timestamp,
-	`createdAt` timestamp NOT NULL DEFAULT 'CURRENT_TIMESTAMP',
+	`createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
 	CONSTRAINT `development_phases_id` PRIMARY KEY(`id`)
 );
@@ -106,7 +106,7 @@ CREATE TABLE `development_units` (
 	`reservedAt` timestamp,
 	`reservedBy` int,
 	`soldAt` timestamp,
-	`createdAt` timestamp NOT NULL DEFAULT 'CURRENT_TIMESTAMP',
+	`createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
 	CONSTRAINT `development_units_id` PRIMARY KEY(`id`)
 );

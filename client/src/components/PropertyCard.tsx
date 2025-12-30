@@ -19,6 +19,14 @@ interface AgentInfo {
   image?: string;
 }
 
+// Developer Brand Profile info for platform-wide brand visibility
+interface DeveloperBrandInfo {
+  id: number;
+  brandName: string;
+  logoUrl?: string | null;
+  slug: string;
+}
+
 export interface PropertyCardProps {
   id: string;
   title: string;
@@ -37,6 +45,7 @@ export interface PropertyCardProps {
   transactionType?: string;
   onFavoriteClick?: () => void;
   agent?: AgentInfo;
+  developerBrand?: DeveloperBrandInfo; // Developer brand profile when linked
   badges?: string[];
   imageCount?: number;
   videoCount?: number;
@@ -61,6 +70,7 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
   transactionType = "New Booking",
   onFavoriteClick,
   agent,
+  developerBrand,
   badges,
   imageCount = 15,
   videoCount = 2,
@@ -264,7 +274,38 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
         {/* Footer Actions */}
         <div className="flex items-center justify-between pt-4 border-t border-slate-100 mt-auto">
           <div className="flex items-center gap-3">
-            {agent ? (
+            {/* Developer Brand takes priority if available */}
+            {developerBrand ? (
+               <>
+                <div 
+                  className="h-8 w-8 rounded-full bg-slate-100 overflow-hidden border border-slate-200 cursor-pointer"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setLocation(`/developer/${developerBrand.slug}`);
+                  }}
+                >
+                  {developerBrand.logoUrl ? (
+                    <img src={developerBrand.logoUrl} alt={developerBrand.brandName} className="h-full w-full object-cover" />
+                  ) : (
+                    <div className="h-full w-full flex items-center justify-center bg-indigo-600 text-white text-xs font-bold">
+                      {developerBrand.brandName.charAt(0)}
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <div 
+                    className="text-xs font-medium text-slate-900 hover:text-indigo-600 cursor-pointer transition-colors"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setLocation(`/developer/${developerBrand.slug}`);
+                    }}
+                  >
+                    {developerBrand.brandName}
+                  </div>
+                  <div className="text-[10px] text-slate-500">Developer</div>
+                </div>
+               </>
+            ) : agent ? (
                <>
                 <div className="h-8 w-8 rounded-full bg-slate-100 overflow-hidden border border-slate-200">
                   {agent.image ? (

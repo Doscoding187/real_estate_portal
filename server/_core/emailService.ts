@@ -558,4 +558,62 @@ export class EmailService {
       html,
     });
   }
+
+  // Brand Lead Notification Email
+  // Note: Email must clearly state lead originated from Property Listify
+
+  static async sendBrandLeadNotification(
+    developerEmail: string,
+    brandName: string,
+    leadData: {
+      leadId: number;
+      name: string;
+      email: string;
+      phone: string;
+      message: string;
+      developmentId?: number;
+      propertyId?: number;
+    }
+  ): Promise<boolean> {
+    const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #f8fafc; padding: 20px;">
+        <div style="background-color: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+          <h1 style="color: #1f2937; margin-bottom: 20px;">📩 New Buyer Enquiry from Property Listify</h1>
+          
+          <div style="background-color: #eff6ff; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+            <p style="margin: 0; color: #1e40af; font-size: 14px;">
+              This enquiry originated from <strong>Property Listify</strong> (propertylistify.co.za)
+            </p>
+          </div>
+
+          <div style="background-color: #f0fdf4; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+            <h2 style="color: #166534; margin: 0 0 10px 0;">Lead Details</h2>
+            <p style="margin: 5px 0; color: #374151;"><strong>Name:</strong> ${leadData.name}</p>
+            <p style="margin: 5px 0; color: #374151;"><strong>Email:</strong> <a href="mailto:${leadData.email}" style="color: #3b82f6;">${leadData.email}</a></p>
+            <p style="margin: 5px 0; color: #374151;"><strong>Phone:</strong> ${leadData.phone}</p>
+            ${leadData.message !== 'No message' ? `<p style="margin: 5px 0; color: #374151;"><strong>Message:</strong> "${leadData.message}"</p>` : ''}
+          </div>
+
+          <div style="text-align: center; margin-top: 30px;">
+            <a href="mailto:${leadData.email}?subject=Re: Your enquiry to ${brandName}"
+               style="background-color: #3b82f6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">
+              Contact Buyer Now
+            </a>
+          </div>
+
+          <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb; text-align: center; color: #6b7280; font-size: 12px;">
+            <p>This lead was captured via Property Listify on your behalf.</p>
+            <p>To view leads in your dashboard and access analytics, <a href="${process.env.NEXT_PUBLIC_APP_URL}/developer/subscribe" style="color: #3b82f6;">subscribe today</a>.</p>
+            <p style="margin-top: 15px; font-style: italic;">Reference: Lead #${leadData.leadId}</p>
+          </div>
+        </div>
+      </div>
+    `;
+
+    return this.sendEmail({
+      to: developerEmail,
+      subject: `📩 New Buyer Enquiry for ${brandName} via Property Listify`,
+      html,
+    });
+  }
 }

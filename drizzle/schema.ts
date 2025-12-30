@@ -419,6 +419,63 @@ export const developers = mysqlTable("developers", {
 	index("idx_developers_last_kpi_calculation").on(table.lastKpiCalculation),
 ]);
 
+// ============================================================================
+// DEVELOPER BRAND PROFILES (Platform-Owned Brand Data)
+// ============================================================================
+// IMPORTANT: This table is SEPARATE from `developers` (subscriber accounts).
+// - developerBrandProfiles = real-world brands, platform-owned until claimed
+// - developers = authenticated, billing-linked subscriber accounts
+// Ownership Semantics:
+// - ownerType='platform' = seeded or unmanaged listing
+// - ownerType='developer' = subscriber-managed with dashboard access
+// ============================================================================
+
+export const developerBrandProfiles = mysqlTable("developer_brand_profiles", {
+	id: int().autoincrement().notNull(),
+	
+	// Brand Identity
+	brandName: varchar("brand_name", { length: 255 }).notNull(),
+	slug: varchar({ length: 255 }).notNull(),
+	logoUrl: text("logo_url"),
+	about: text(),
+	foundedYear: int("founded_year"),
+	headOfficeLocation: varchar("head_office_location", { length: 255 }),
+	operatingProvinces: json("operating_provinces").$type<string[]>(),
+	propertyFocus: json("property_focus").$type<string[]>(), // estates, apartments, mixed-use
+	websiteUrl: varchar("website_url", { length: 500 }),
+	publicContactEmail: varchar("public_contact_email", { length: 320 }),
+	
+	// Brand Classification
+	brandTier: mysqlEnum("brand_tier", ['national', 'regional', 'boutique']).default('regional'),
+	sourceAttribution: varchar("source_attribution", { length: 255 }), // where data came from
+	
+	// Governance & State
+	profileType: mysqlEnum("profile_type", ['industry_reference', 'verified_partner']).default('industry_reference'),
+	isSubscriber: tinyint("is_subscriber").default(0).notNull(),
+	isClaimable: tinyint("is_claimable").default(1).notNull(),
+	isVisible: tinyint("is_visible").default(1).notNull(),
+	isContactVerified: tinyint("is_contact_verified").default(0).notNull(), // Refinement #2: track email verification
+	linkedDeveloperAccountId: int("linked_developer_account_id").references(() => developers.id, { onDelete: "set null" }),
+	ownerType: mysqlEnum("owner_type", ['platform', 'developer']).default('platform').notNull(),
+	claimRequestedAt: timestamp("claim_requested_at", { mode: 'string' }), // Refinement #5: sales SLA tracking
+	
+	// Lead Tracking (Monetisation Layer)
+	totalLeadsReceived: int("total_leads_received").default(0).notNull(),
+	lastLeadDate: timestamp("last_lead_date", { mode: 'string' }),
+	unclaimedLeadCount: int("unclaimed_lead_count").default(0).notNull(),
+	
+	// Audit
+	createdBy: int("created_by").references(() => users.id, { onDelete: "set null" }),
+	createdAt: timestamp("created_at", { mode: 'string' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
+	updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+}, (table) => [
+	index("idx_brand_profiles_slug").on(table.slug),
+	index("idx_brand_profiles_tier").on(table.brandTier),
+	index("idx_brand_profiles_visible").on(table.isVisible),
+	index("idx_brand_profiles_subscriber").on(table.isSubscriber),
+	index("idx_brand_profiles_owner").on(table.ownerType),
+]);
+
 export const developmentPhases = mysqlTable("development_phases", {
 	id: int().autoincrement().notNull(),
 	developmentId: int("development_id").notNull().references(() => developments.id, { onDelete: "cascade" } ),
@@ -481,6 +538,7 @@ export const developmentUnits = mysqlTable("development_units", {
 export const developments = mysqlTable("developments", {
 	id: int().autoincrement().notNull(),
 	developerId: int("developer_id").references(() => developers.id, { onDelete: "cascade" } ),
+	developerBrandProfileId: int("developer_brand_profile_id").references(() => developerBrandProfiles.id, { onDelete: "set null" }),
 	name: varchar({ length: 255 }).notNull(),
 	slug: varchar({ length: 255 }),
 	description: text(),
@@ -535,6 +593,9 @@ export const developments = mysqlTable("developments", {
 	demandScore: int("demand_score").default(0),
 	isHotSelling: int("is_hot_selling").default(0),
 	isHighDemand: int("is_high_demand").default(0),
+	// Brand Profile Ownership
+	devOwnerType: mysqlEnum("dev_owner_type", ['platform', 'developer']).default('developer'), // platform = seeded/unmanaged, developer = subscriber-managed
+	isShowcase: tinyint("is_showcase").default(0), // showcase listings for brand profiles
 	createdAt: timestamp({ mode: 'string' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
 },
@@ -1039,6 +1100,7 @@ export const leads = mysqlTable("leads", {
 	id: int().autoincrement().notNull(),
 	propertyId: int().references(() => properties.id, { onDelete: "set null" } ),
 	developmentId: int().references(() => developments.id, { onDelete: "set null" } ),
+	developerBrandProfileId: int("developer_brand_profile_id").references(() => developerBrandProfiles.id, { onDelete: "set null" }),
 	agencyId: int().references(() => agencies.id, { onDelete: "set null" } ),
 	agentId: int().references(() => agents.id, { onDelete: "set null" } ),
 	name: varchar({ length: 200 }).notNull(),
@@ -1066,6 +1128,9 @@ export const leads = mysqlTable("leads", {
 	assignedAt: timestamp("assigned_at", { mode: 'string' }),
 	convertedAt: timestamp("converted_at", { mode: 'string' }),
 	lostReason: text("lost_reason"),
+	// Brand Lead Tracking
+	brandLeadStatus: mysqlEnum("brand_lead_status", ['captured', 'delivered_unsubscribed', 'delivered_subscriber', 'claimed']).default('captured'),
+	leadDeliveryMethod: mysqlEnum("lead_delivery_method", ['email', 'crm_export', 'manual', 'none']).default('email'),
 },
 (table) => [
 	index("idx_leads_qualification_status").on(table.qualificationStatus),
@@ -1532,6 +1597,7 @@ export const properties = mysqlTable("properties", {
 	enquiries: int().notNull(),
 	agentId: int().references(() => agents.id, { onDelete: "set null" } ),
 	developmentId: int().references(() => developments.id, { onDelete: "set null" } ),
+	developerBrandProfileId: int("developer_brand_profile_id").references(() => developerBrandProfiles.id, { onDelete: "set null" }),
 	ownerId: int().notNull().references(() => users.id),
 	propertySettings: text(),
 	videoUrl: text(),

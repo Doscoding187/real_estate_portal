@@ -38,6 +38,8 @@ import { propertyResultsRouter } from './propertyResultsRouter';
 
 import { monetizationRouter } from './monetizationRouter';
 import { partnerRouter } from './partnerRouter';
+import { brandProfileRouter } from './brandProfileRouter';
+import { superAdminPublisherRouter } from './superAdminPublisherRouter';
 
 export const appRouter = router({
   system: systemRouter,
@@ -74,6 +76,8 @@ export const appRouter = router({
   similarProperties: similarPropertiesRouter,
   cache: cacheRouter,
   locationPages: locationPagesRouter,
+  brandProfile: brandProfileRouter,
+  superAdminPublisher: superAdminPublisherRouter,
 
   propertyResults: propertyResultsRouter,
 

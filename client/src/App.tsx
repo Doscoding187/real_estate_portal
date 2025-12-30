@@ -79,6 +79,7 @@ import DevelopmentOversight from './pages/admin/DevelopmentOversight';
 import UnifiedApprovalsPage from './pages/admin/UnifiedApprovalsPage';
 import EcosystemOverviewPage from './pages/admin/EcosystemOverviewPage';
 import PartnerNetworkPage from './pages/admin/PartnerNetworkPage';
+import SuperAdminPublisher from './pages/admin/publisher/SuperAdminPublisher';
 
 // Import new role-based dashboards
 import UserDashboard from './pages/UserDashboard';
@@ -117,6 +118,8 @@ import DeveloperSubscriptionPage from './pages/DeveloperSubscriptionPage';
 import SubscriptionPlans from './pages/SubscriptionPlans';
 import DeveloperPlans from './pages/DeveloperPlans';
 import MyDrafts from './pages/developer/MyDrafts';
+import DeveloperDirectoryPage from './pages/DeveloperDirectoryPage';
+import DeveloperBrandProfilePage from './pages/DeveloperBrandProfilePage';
 
 // Import Comparison Page
 import CompareProperties from './pages/CompareProperties';
@@ -219,6 +222,12 @@ function Router() {
       <Route path="/development/:slug" component={DevelopmentDetail} />
       <Route path="/developer/setup" component={DeveloperSetupWizard} />
       <Route path="/developer/success" component={() => <RegistrationSuccess role="developer" />} />
+      
+      {/* Developer Brand Directory (public) */}
+      <Route path="/developers" component={DeveloperDirectoryPage} />
+      {/* Developer Brand Profile Page (public) */}
+      <Route path="/developer/:slug" component={DeveloperBrandProfilePage} />
+      
       <Route path="/agency/setup" component={AgencySetupWizard} />
       <Route path="/agency/success" component={() => <RegistrationSuccess role="agency" />} />
       <Route path="/agent/success" component={() => <RegistrationSuccess role="agent" />} />
@@ -425,6 +434,16 @@ function Router() {
         component={() => (
           <SuperAdminDashboard>
             <PartnerNetworkPage />
+          </SuperAdminDashboard>
+        )}
+      />
+
+      {/* Developer Publisher Route */}
+      <Route
+        path="/admin/publisher"
+        component={() => (
+          <SuperAdminDashboard>
+            <SuperAdminPublisher />
           </SuperAdminDashboard>
         )}
       />
