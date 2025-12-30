@@ -203,7 +203,7 @@ export const CreateBrandProfileDialog: React.FC<CreateBrandProfileDialogProps> =
                       }}
                       uploading={isUploadingLogo}
                       uploadProgress={uploadProgress}
-                      error={field.formState.errors.logoUrl?.message}
+                      error={form.formState.errors.logoUrl?.message}
                     />
                   </FormControl>
                   <FormMessage />
