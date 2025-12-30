@@ -633,7 +633,8 @@ export const developmentApprovalQueue = mysqlTable("development_approval_queue",
 
 export const developmentDrafts = mysqlTable("development_drafts", {
 	id: int().autoincrement().notNull(),
-	developerId: int().notNull().references(() => developers.id, { onDelete: "cascade" }),
+	developerId: int().references(() => developers.id, { onDelete: "cascade" }),
+	developerBrandProfileId: int("developer_brand_profile_id").references(() => developerBrandProfiles.id, { onDelete: "cascade" }),
 	draftName: varchar({ length: 255 }),
 	draftData: json().notNull(),
 	progress: int().default(0).notNull(),
@@ -643,6 +644,7 @@ export const developmentDrafts = mysqlTable("development_drafts", {
 },
 (table) => [
 	index("idx_dev_drafts_developer_id").on(table.developerId),
+	index("idx_dev_drafts_brand_profile_id").on(table.developerBrandProfileId),
 	index("idx_dev_drafts_last_modified").on(table.lastModified),
 ]);
 

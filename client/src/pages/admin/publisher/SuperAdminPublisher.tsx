@@ -6,6 +6,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Building2, LayoutList, Users, BarChart3, LockKeyhole, Edit, Trash2 } from 'lucide-react';
 import { EditBrandProfileDialog } from '@/components/admin/publisher/EditBrandProfileDialog';
+import { LinkSubscriberDialog } from '@/components/admin/publisher/LinkSubscriberDialog';
 import { trpc } from '@/lib/trpc';
 import { toast } from 'sonner';
 
@@ -18,6 +19,7 @@ const PublisherContent: React.FC = () => {
   const { isContextSet, selectedBrand, setSelectedBrandId } = useDeveloperContext();
   const [activeTab, setActiveTab] = useState('developments');
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isLinkDialogOpen, setIsLinkDialogOpen] = useState(false);
   const utils = trpc.useUtils();
 
   const deleteMutation = trpc.superAdminPublisher.deleteBrandProfile.useMutation({
@@ -64,11 +66,19 @@ const PublisherContent: React.FC = () => {
   return (
     <div className="space-y-6 animate-fade-in">
       {selectedBrand && (
-        <EditBrandProfileDialog 
-            open={isEditDialogOpen} 
-            setOpen={setIsEditDialogOpen} 
-            brandData={selectedBrand} 
-        />
+        <>
+          <EditBrandProfileDialog 
+              open={isEditDialogOpen} 
+              setOpen={setIsEditDialogOpen} 
+              brandData={selectedBrand} 
+          />
+          <LinkSubscriberDialog
+              open={isLinkDialogOpen}
+              setOpen={setIsLinkDialogOpen}
+              brandProfile={selectedBrand}
+              onSuccess={() => utils.superAdminPublisher.listBrandProfiles.invalidate()}
+          />
+        </>
       )}
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
@@ -92,6 +102,11 @@ const PublisherContent: React.FC = () => {
             <div className="text-xs text-muted-foreground font-mono bg-muted/30 px-3 py-1.5 rounded mr-2">
                 Context: {selectedBrand?.slug} (ID: {selectedBrand?.id})
             </div>
+            {selectedBrand && !selectedBrand.isSubscriber && (
+               <Button variant="outline" size="sm" onClick={() => setIsLinkDialogOpen(true)} className="h-8 gap-2 text-blue-600 border-blue-200 hover:bg-blue-50">
+                  <Users className="w-3.5 h-3.5" /> Link Subscriber
+               </Button>
+            )}
             <Button variant="outline" size="sm" onClick={() => setIsEditDialogOpen(true)} className="h-8 gap-2">
                 <Edit className="w-3.5 h-3.5" /> Edit
             </Button>

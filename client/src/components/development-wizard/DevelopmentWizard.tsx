@@ -65,6 +65,8 @@ export function DevelopmentWizard({ developmentId, isModal = false }: Developmen
   const urlParams = new URLSearchParams(window.location.search);
   const draftIdFromUrl = urlParams.get('draftId');
   const idFromUrl = urlParams.get('id');
+  const brandProfileId = urlParams.get('brandProfileId') ? parseInt(urlParams.get('brandProfileId')!) : undefined;
+  
   const [currentDraftId, setCurrentDraftId] = useState<number | undefined>(draftIdFromUrl ? parseInt(draftIdFromUrl) : undefined);
   
   // Resolve development ID from props or URL
@@ -115,6 +117,7 @@ export function DevelopmentWizard({ developmentId, isModal = false }: Developmen
       await saveDraft(async (data) => {
         const result = await saveDraftMutation.mutateAsync({
           id: currentDraftId,
+          brandProfileId: brandProfileId, // Pass brand context
           draftData: data
         });
         // If it was a new draft, update the ID

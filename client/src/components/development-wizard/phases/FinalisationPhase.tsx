@@ -26,6 +26,9 @@ export function FinalisationPhase() {
   } = useDevelopmentWizard();
 
   const [, setLocation] = useLocation();
+  const urlParams = new URLSearchParams(window.location.search);
+  const brandProfileId = urlParams.get('brandProfileId') ? parseInt(urlParams.get('brandProfileId')!) : undefined;
+  
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [validationResult, setValidationResult] = useState<{ isValid: boolean; errors: string[] }>({ isValid: true, errors: [] });
 
@@ -122,6 +125,7 @@ export function FinalisationPhase() {
 
       // Prepare Payload
       const devPayload = {
+        brandProfileId, // Add brand context
         name: developmentData.name,
         developmentType: mappedType,
         description: overview.description,
@@ -169,7 +173,7 @@ export function FinalisationPhase() {
               bathrooms: unit.bathrooms,
               parking: unit.parking,
               unitSize: unit.unitSize,
-              basePriceFrom: unit.basePriceFrom,
+              basePriceFrom: unit.basePriceFrom || 0,
               amenities: [...unit.amenities.standard, ...unit.amenities.additional]
             });
           } catch (unitError: any) {

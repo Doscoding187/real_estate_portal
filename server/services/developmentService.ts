@@ -209,18 +209,28 @@ export class DevelopmentService {
    * Validates: Requirements 2.1
    */
   async createDevelopment(
-    developerId: number,
-    input: CreateDevelopmentInput
+    developerId: number | null,        // Nullable if brand-owned
+    input: CreateDevelopmentInput,
+    options?: {
+      brandProfileId?: number;
+      ownerType?: 'platform' | 'developer';
+    }
   ): Promise<Development> {
     const db = await getDb();
     if (!db) throw new Error('Database not available');
     
-    // Check tier limits before creating
-    const limitCheck = await developerSubscriptionService.checkLimit(developerId, 'developments');
-    if (!limitCheck.allowed) {
-      throw new Error(
-        `Development limit reached. Your ${limitCheck.tier} tier allows ${limitCheck.max} development(s). Please upgrade to create more developments.`
-      );
+    // Default Owner Type
+    const ownerType = options?.ownerType || 'developer';
+    const brandProfileId = options?.brandProfileId || null;
+    
+    // 1. Subscription Limit Check (Only for Standard Developers)
+    if (ownerType === 'developer' && developerId) {
+      const limitCheck = await developerSubscriptionService.checkLimit(developerId, 'developments');
+      if (!limitCheck.allowed) {
+        throw new Error(
+          `Development limit reached. Your ${limitCheck.tier} tier allows ${limitCheck.max} development(s). Please upgrade to create more developments.`
+        );
+      }
     }
 
     // Generate unique slug
@@ -229,7 +239,9 @@ export class DevelopmentService {
 
     // Create development
     const [result] = await db.insert(developments).values({
-      developerId,
+      developerId: developerId, // Can be null
+      developerBrandProfileId: brandProfileId,
+      devOwnerType: ownerType, // 'platform' or 'developer'
       name: input.name,
       slug,
       description: input.description || null,
@@ -259,8 +271,10 @@ export class DevelopmentService {
     const development = await this.getDevelopment(result.insertId as number);
     if (!development) throw new Error('Failed to create development');
 
-    // Increment usage counter
-    await developerSubscriptionService.incrementUsage(developerId, 'developments');
+    // Increment usage counter (Only for Standard Developers)
+    if (ownerType === 'developer' && developerId) {
+       await developerSubscriptionService.incrementUsage(developerId, 'developments');
+    }
 
     return development;
   }
@@ -393,7 +407,7 @@ export class DevelopmentService {
     if (!existing) {
       throw new Error('Development not found');
     }
-    if (existing.developerId !== developerId) {
+    if (developerId !== -1 && existing.developerId !== developerId) {
       throw new Error('Unauthorized: You do not own this development');
     }
 
@@ -419,8 +433,13 @@ export class DevelopmentService {
 
     // Verify ownership
     const existing = await this.getDevelopment(developmentId);
-    if (!existing || existing.developerId !== developerId) {
-       console.error('[DevelopmentService.publishDevelopment] Unauthorized access attempt');
+    if (!existing) {
+       console.error('[DevelopmentService.publishDevelopment] Development not found');
+       throw new Error('Development not found');
+    }
+    
+    if (developerId !== -1 && existing.developerId !== developerId) {
+       console.error('[DevelopmentService.publishDevelopment] Unauthorized: You do not own this development');
        throw new Error('Unauthorized');
     }
 
@@ -638,7 +657,7 @@ export class DevelopmentService {
     if (!development) {
       throw new Error('Development not found');
     }
-    if (development.developerId !== developerId) {
+    if (developerId !== -1 && development.developerId !== developerId) {
       throw new Error('Unauthorized: You do not own this development');
     }
 
@@ -727,7 +746,9 @@ export class DevelopmentService {
     }
 
     const development = await this.getDevelopment(phase.developmentId);
-    if (!development || development.developerId !== developerId) {
+    if (!development) throw new Error('Development not found');
+    
+    if (developerId !== -1 && development.developerId !== developerId) {
       throw new Error('Unauthorized: You do not own this development');
     }
 
