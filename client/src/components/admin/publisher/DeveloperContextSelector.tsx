@@ -13,6 +13,7 @@ import { CreateBrandProfileDialog } from './CreateBrandProfileDialog';
 export const DeveloperContextSelector: React.FC = () => {
   const { selectedBrand, setSelectedBrandId, isLoading } = useDeveloperContext();
   const [open, setOpen] = useState(false);
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
 
   // Custom Brand Blue from user request: oklch(54.6% .245 262.881) -> approx Hex #4f46e5 (Indigo 600) / #4338ca
@@ -86,7 +87,18 @@ export const DeveloperContextSelector: React.FC = () => {
             <CommandEmpty className="py-6 text-center text-sm text-blue-400">No brand found.</CommandEmpty>
             <CommandList>
               <div className="p-1 border-b border-blue-50">
-                 <CreateBrandProfileDialog onSuccess={() => setOpen(false)} />
+                <CommandItem onSelect={() => setIsCreateOpen(true)} className="flex items-center gap-2 cursor-pointer py-3 justify-center text-blue-600 hover:bg-blue-50 hover:text-blue-800 font-medium transition-colors">
+                  <Building2 className="h-4 w-4" />
+                  <span>Create New Brand Profile</span>
+                </CommandItem>
+                <CreateBrandProfileDialog 
+                  open={isCreateOpen} 
+                  setOpen={setIsCreateOpen}
+                  onSuccess={() => {
+                    setOpen(false);
+                    // setIsCreateOpen(false); // Handled inside dialog success
+                  }} 
+                />
               </div>
               
               <CommandGroup heading="Available Brands" className="text-blue-400">
