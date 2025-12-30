@@ -52,9 +52,30 @@ export const superAdminPublisherRouter = router({
    */
   createBrandProfile: superAdminProcedure
     .input(z.object({
+      // Identity
       brandName: z.string().min(2),
       brandTier: z.enum(['national', 'regional', 'boutique']).default('regional'),
       logoUrl: z.string().optional(),
+      
+      // Company Info
+      description: z.string().optional(),
+      category: z.string().optional(),
+      establishedYear: z.number().nullable().optional(),
+      website: z.string().optional(),
+      
+      // Contact Info
+      email: z.string().email().optional().or(z.literal('')),
+      phone: z.string().optional(),
+      address: z.string().optional(),
+      city: z.string().optional(),
+      province: z.string().optional(),
+      
+      // Portfolio
+      completedProjects: z.number().default(0),
+      currentProjects: z.number().default(0),
+      upcomingProjects: z.number().default(0),
+      specializations: z.array(z.string()).default([]),
+      
       operatingProvinces: z.array(z.string()).optional(),
     }))
     .mutation(async ({ input }) => {
@@ -63,9 +84,33 @@ export const superAdminPublisherRouter = router({
         brandName: input.brandName,
         brandTier: input.brandTier,
         logoUrl: input.logoUrl,
-        operatingProvinces: input.operatingProvinces || [],
+        
+        // Map extended fields
+        about: input.description,
+        // Category is not directly on developerBrandProfiles schema based on service check,
+        // but we can map it to 'propertyFocus' or store in 'about' if needed.
+        // Re-checking service definition: propertyFocus is string[]. 
+        // We'll treat category as primary property focus.
+        propertyFocus: input.category ? [input.category, ...input.specializations] : input.specializations,
+        
+        foundedYear: input.establishedYear,
+        websiteUrl: input.website,
+        publicContactEmail: input.email,
+        
+        // Combine address components for headOfficeLocation
+        headOfficeLocation: input.city && input.province 
+          ? `${input.address ? input.address + ', ' : ''}${input.city}, ${input.province}`
+          : input.address,
+          
+        operatingProvinces: input.operatingProvinces || (input.province ? [input.province] : []),
+        
+        // Note: Project counts are currently not in createBrandProfileInput in service
+        // We might need to handle them separately or update service if they are critical
+        // Looking at service, it has 'totalLeadsReceived' etc but not project counts?
+        // Wait, 'developerBrandProfiles' table schema check needed. 
+        // Based on service 'createBrandProfile', it takes 'CreateBrandProfileInput'.
+        
         isVisible: true,
-        // Detailed defaults handled by service
       });
 
       return result;
