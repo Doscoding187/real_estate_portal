@@ -98,7 +98,7 @@ export const DeveloperContextSelector: React.FC = () => {
                       setSelectedBrandId(brand.id);
                       setOpen(false);
                     }}
-                    className="flex items-center gap-2 cursor-pointer py-2 aria-selected:bg-blue-50 aria-selected:text-blue-900"
+                    className="group flex items-center gap-2 cursor-pointer py-2 aria-selected:bg-blue-600 aria-selected:text-white"
                   >
                     <Avatar className="h-6 w-6 rounded-sm border border-blue-100 bg-white">
                       <AvatarImage src={brand.logoUrl} alt={brand.brandName} />
@@ -108,15 +108,15 @@ export const DeveloperContextSelector: React.FC = () => {
                     </Avatar>
                     
                     <div className="flex flex-col flex-1 min-w-0">
-                      <span className="truncate font-semibold text-blue-900">{brand.brandName}</span>
-                      <span className="text-xs text-blue-500 capitalize truncate">
+                      <span className="truncate font-semibold text-blue-900 group-aria-selected:text-white">{brand.brandName}</span>
+                      <span className="text-xs text-blue-500 capitalize truncate group-aria-selected:text-blue-100">
                         {brand.brandTier} • {brand.slug}
                       </span>
                     </div>
 
                     <Check
                       className={cn(
-                        "mr-2 h-4 w-4 text-blue-600",
+                        "mr-2 h-4 w-4 text-blue-600 group-aria-selected:text-white",
                         selectedBrand?.id === brand.id ? "opacity-100" : "opacity-0"
                       )}
                     />
