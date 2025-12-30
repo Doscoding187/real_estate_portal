@@ -136,14 +136,14 @@ const SidebarNavigation: React.FC = () => {
       >
         {groups.map((group) => (
           <AccordionItem key={group.id} value={group.id} className="border-none">
-            <AccordionTrigger className="hover:no-underline py-2 px-3 rounded-lg hover:bg-slate-50 text-slate-600 data-[state=open]:bg-slate-100 data-[state=open]:text-slate-900">
+            <AccordionTrigger className="hover:no-underline py-2 px-3 rounded-lg hover:bg-primary/5 text-primary/70 font-medium data-[state=open]:bg-primary/10 data-[state=open]:text-primary mb-1">
               <div className="flex items-center gap-3">
                 <group.icon className="h-4 w-4" />
                 <span className="text-xs font-bold uppercase tracking-wider">{group.title}</span>
               </div>
             </AccordionTrigger>
             <AccordionContent className="pt-1 pb-2">
-              <div className="flex flex-col gap-1 ml-4 border-l border-slate-200 pl-4 mt-1">
+              <div className="flex flex-col gap-1 ml-4 border-l border-primary/20 pl-4 mt-1">
                 {group.items.map((item) => {
                    const isActive = location === item.path;
                    return (
@@ -153,8 +153,8 @@ const SidebarNavigation: React.FC = () => {
                       className={cn(
                         "text-sm text-left py-2 px-3 rounded-md transition-colors",
                          isActive 
-                           ? "bg-primary/10 text-primary font-medium" 
-                           : "text-slate-500 hover:text-slate-900 hover:bg-slate-50"
+                           ? "bg-primary text-primary-foreground font-medium shadow-sm" 
+                           : "text-primary/60 hover:text-primary hover:bg-primary/5"
                       )}
                     >
                       {item.name}

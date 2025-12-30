@@ -22,7 +22,7 @@ export const DeveloperContextSelector: React.FC = () => {
 
   return (
     <div className="flex flex-col gap-2">
-      <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+      <label className="text-xs font-bold text-primary uppercase tracking-wider">
         Operating As Developer
       </label>
       
@@ -32,26 +32,26 @@ export const DeveloperContextSelector: React.FC = () => {
             variant="outline"
             role="combobox"
             aria-expanded={open}
-            className="w-full sm:w-[350px] justify-between h-14 px-3 border-2 border-primary/20 bg-card hover:bg-accent/50"
+            className="w-full sm:w-[350px] justify-between h-14 px-3 border-2 border-primary/20 bg-white hover:bg-primary/5 hover:border-primary/40 text-primary"
           >
             {selectedBrand ? (
               <div className="flex items-center gap-3">
-                <Avatar className="h-8 w-8 rounded-md border bg-white">
+                <Avatar className="h-8 w-8 rounded-md border border-primary/20 bg-white">
                   <AvatarImage src={selectedBrand.logoUrl || ''} alt={selectedBrand.brandName} className="object-cover" />
-                  <AvatarFallback className="rounded-md bg-primary/10 text-primary">
+                  <AvatarFallback className="rounded-md bg-primary text-primary-foreground">
                     {selectedBrand.brandName.substring(0, 2).toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
                 <div className="flex flex-col items-start truncate text-left">
-                  <span className="font-semibold text-sm truncate w-[200px]">
+                  <span className="font-bold text-sm truncate w-[200px] text-primary">
                     {selectedBrand.brandName}
                   </span>
                   <div className="flex items-center gap-2">
-                    <span className="text-xs text-muted-foreground capitalize">
+                    <span className="text-xs text-primary/70 capitalize font-medium">
                       {selectedBrand.brandTier}
                     </span>
                     {selectedBrand.totalLeadsReceived !== undefined && (
-                      <Badge variant="secondary" className="h-4 px-1 text-[10px]">
+                      <Badge variant="secondary" className="h-4 px-1 text-[10px] bg-secondary/10 text-secondary-foreground hover:bg-secondary/20">
                         {selectedBrand.totalLeadsReceived} leads
                       </Badge>
                     )}
@@ -59,34 +59,34 @@ export const DeveloperContextSelector: React.FC = () => {
                 </div>
               </div>
             ) : (
-              <div className="flex items-center gap-3 text-muted-foreground">
-                <div className="h-8 w-8 rounded-md border border-dashed flex items-center justify-center bg-muted">
-                  <Building2 className="h-4 w-4" />
+              <div className="flex items-center gap-3 text-primary/60">
+                <div className="h-8 w-8 rounded-md border border-dashed border-primary/30 flex items-center justify-center bg-primary/5">
+                  <Building2 className="h-4 w-4 text-primary" />
                 </div>
-                <span className="text-sm">Select a developer brand...</span>
+                <span className="text-sm font-medium">Select a developer brand...</span>
               </div>
             )}
-            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50 text-primary" />
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-[350px] p-0" align="start">
-          <Command shouldFilter={false}>
-            <div className="flex items-center border-b px-3" cmdk-input-wrapper="">
-              <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
+        <PopoverContent className="w-[350px] p-0 border-primary/10" align="start">
+          <Command shouldFilter={false} className="border-primary/10">
+            <div className="flex items-center border-b border-primary/10 px-3" cmdk-input-wrapper="">
+              <Search className="mr-2 h-4 w-4 shrink-0 opacity-50 text-primary" />
               <input
-                className="flex h-11 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
+                className="flex h-11 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-primary/40 text-primary disabled:cursor-not-allowed disabled:opacity-50"
                 placeholder="Search developer brands..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
-            <CommandEmpty>No brand found.</CommandEmpty>
+            <CommandEmpty className="py-6 text-center text-sm text-primary/60">No brand found.</CommandEmpty>
             <CommandList>
-              <div className="p-1 border-b">
+              <div className="p-1 border-b border-primary/10">
                  <CreateBrandProfileDialog onSuccess={() => setOpen(false)} />
               </div>
               
-              <CommandGroup heading="Available Brands">
+              <CommandGroup heading="Available Brands" className="text-primary/80">
                 {profiles?.map((brand: any) => (
                   <CommandItem
                     key={brand.id}
@@ -95,18 +95,18 @@ export const DeveloperContextSelector: React.FC = () => {
                       setSelectedBrandId(brand.id);
                       setOpen(false);
                     }}
-                    className="flex items-center gap-2 cursor-pointer py-2"
+                    className="flex items-center gap-2 cursor-pointer py-2 aria-selected:bg-primary/10 aria-selected:text-primary"
                   >
-                    <Avatar className="h-6 w-6 rounded-sm border bg-white">
+                    <Avatar className="h-6 w-6 rounded-sm border border-primary/10 bg-white">
                       <AvatarImage src={brand.logoUrl} alt={brand.brandName} />
-                      <AvatarFallback className="text-[10px]">
+                      <AvatarFallback className="text-[10px] bg-primary/5 text-primary">
                         {brand.brandName.substring(0, 2)}
                       </AvatarFallback>
                     </Avatar>
                     
                     <div className="flex flex-col flex-1 min-w-0">
-                      <span className="truncate font-medium">{brand.brandName}</span>
-                      <span className="text-xs text-muted-foreground capitalize truncate">
+                      <span className="truncate font-semibold text-primary">{brand.brandName}</span>
+                      <span className="text-xs text-primary/60 capitalize truncate">
                         {brand.brandTier} • {brand.slug}
                       </span>
                     </div>
