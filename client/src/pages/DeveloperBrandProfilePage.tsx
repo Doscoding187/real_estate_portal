@@ -14,17 +14,20 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Helmet } from 'react-helmet';
 import { trpc } from '@/lib/trpc';
-import DevelopmentCard from '@/components/DevelopmentCard';
+import { DevelopmentCard } from '@/components/DevelopmentCard';
 import { 
   Loader2, 
-  Building2, 
   MapPin, 
   Globe, 
-  Calendar, 
-  Home,
-  AlertCircle,
-  CheckCircle,
-  ShieldCheck
+  Mail, 
+  Phone, 
+  Building2, 
+  CheckCircle2, 
+  Award,
+  ArrowRight,
+  ShieldCheck,
+  BarChart3,
+  Calendar
 } from 'lucide-react';
 
 export default function DeveloperBrandProfilePage() {
