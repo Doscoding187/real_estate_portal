@@ -223,6 +223,27 @@ function Router() {
       <Route path="/developer/setup" component={DeveloperSetupWizard} />
       <Route path="/developer/success" component={() => <RegistrationSuccess role="developer" />} />
       
+      {/* Property Developer Dashboard Routes - MUST BE BEFORE /developer/:slug */}
+      <Route path="/developer" component={PropertyDeveloperDashboard} />
+      <Route path="/developer/dashboard" component={PropertyDeveloperDashboard} />
+      <Route path="/developer/developments" component={DeveloperDevelopmentsPage} />
+      <Route path="/developer/developments/new" component={CreateDevelopment} />
+      <Route path="/developer/create-development" component={CreateDevelopment} />
+      <Route path="/developer/unit-types-demo" component={UnitTypesDemo} />
+      <Route path="/developer/drafts" component={MyDrafts} />
+      <Route path="/developer/leads" component={DeveloperLeadsPage} />
+      <Route path="/developer/messages" component={DeveloperMessagesPage} />
+      <Route path="/developer/tasks" component={DeveloperTasksPage} />
+      <Route path="/developer/reports" component={DeveloperReportsPage} />
+      <Route path="/developer/analytics" component={DeveloperAnalyticsPage} />
+      <Route path="/developer/campaigns" component={DeveloperCampaignsPage} />
+      <Route path="/developer/campaigns/new" component={DeveloperCampaignsPage} />
+      <Route path="/developer/performance" component={DeveloperPerformancePage} />
+      <Route path="/developer/settings" component={DeveloperSettingsPage} />
+      <Route path="/developer/settings/team" component={DeveloperTeamPage} />
+      <Route path="/developer/settings/subscription" component={DeveloperSubscriptionPage} />
+      <Route path="/developer/plans" component={DeveloperPlans} />
+
       {/* Developer Brand Directory (public) */}
       <Route path="/developers" component={DeveloperDirectoryPage} />
       {/* Developer Brand Profile Page (public) */}
