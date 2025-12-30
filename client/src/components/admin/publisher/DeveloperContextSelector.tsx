@@ -15,6 +15,9 @@ export const DeveloperContextSelector: React.FC = () => {
   const [open, setOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
 
+  // Custom Brand Blue from user request: oklch(54.6% .245 262.881) -> approx Hex #4f46e5 (Indigo 600) / #4338ca
+  // We will use a consistent blue theme here specifically.
+  
   const { data: profiles, isLoading: isLoadingProfiles } = trpc.superAdminPublisher.listBrandProfiles.useQuery(
     { search: searchTerm, limit: 20 },
     { keepPreviousData: true }
@@ -22,7 +25,7 @@ export const DeveloperContextSelector: React.FC = () => {
 
   return (
     <div className="flex flex-col gap-2">
-      <label className="text-xs font-bold text-blue-900 uppercase tracking-wider">
+      <label className="text-xs font-bold text-blue-700 uppercase tracking-wider">
         Operating As Developer
       </label>
       
