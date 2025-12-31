@@ -119,10 +119,42 @@ export function CreateBrandProfileDialog({
     },
   });
 
+  // Load draft from localStorage on mount
+  React.useEffect(() => {
+    try {
+      const savedDraft = localStorage.getItem('brandProfileDraft');
+      if (savedDraft) {
+        const parsed = JSON.parse(savedDraft);
+        // Only restore if it looks valid
+        if (parsed && typeof parsed === 'object') {
+          // Reset form with merged values
+          form.reset({
+            ...form.getValues(), // Current defaults
+            ...parsed,           // Saved values
+          });
+          toast.info('Restored saved draft');
+        }
+      }
+    } catch (e) {
+      console.error('Failed to load draft', e);
+    }
+  }, []);
+
+  // Save changes to localStorage
+  React.useEffect(() => {
+    const subscription = form.watch((value) => {
+      localStorage.setItem('brandProfileDraft', JSON.stringify(value));
+    });
+    return () => subscription.unsubscribe();
+  }, [form.watch]);
+
   const createMutation = trpc.superAdminPublisher.createBrandProfile.useMutation({
     onSuccess: (data) => {
       toast.success('Developer brand profile created successfully');
       utils.superAdminPublisher.listBrandProfiles.invalidate();
+      
+      // Clear draft on success
+      localStorage.removeItem('brandProfileDraft');
       
       // Auto-select the new brand
       setSelectedBrandId(data.id);
