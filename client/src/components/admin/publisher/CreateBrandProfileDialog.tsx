@@ -40,12 +40,14 @@ import {
   Briefcase, 
   CheckCircle2 
 } from 'lucide-react';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Checkbox } from '@/components/ui/checkbox';
 
 const formSchema = z.object({
   // Identity (Tab 1)
   brandName: z.string().min(2, 'Brand name must be at least 2 characters'),
   brandTier: z.enum(['national', 'regional', 'boutique']),
+  identityType: z.enum(['developer', 'marketing_agency', 'hybrid']).default('developer'),
   logoUrl: z.string().url('Must be a valid URL').optional().or(z.literal('')),
   
   // Company Info (Tab 1)
@@ -99,6 +101,7 @@ export function CreateBrandProfileDialog({
     defaultValues: {
       brandName: '',
       brandTier: 'regional',
+      identityType: 'developer',
       logoUrl: '',
       description: '',
       category: '',
@@ -182,6 +185,7 @@ export function CreateBrandProfileDialog({
     createMutation.mutate({
       brandName: values.brandName,
       brandTier: values.brandTier,
+      identityType: values.identityType,
       logoUrl: values.logoUrl || undefined,
       
       description: values.description || undefined,
@@ -234,8 +238,55 @@ export function CreateBrandProfileDialog({
                 </TabsTrigger>
               </TabsList>
 
+
               {/* === TAB 1: IDENTITY === */}
               <TabsContent value="identity" className="space-y-4 pt-4">
+                
+                <FormField
+                  control={form.control}
+                  name="identityType"
+                  render={({ field }) => (
+                    <FormItem className="space-y-3 p-4 border border-blue-100 rounded-lg bg-blue-50/30">
+                      <FormLabel className="text-base font-semibold text-blue-900">Publishing As</FormLabel>
+                      <FormControl>
+                        <RadioGroup
+                          onValueChange={field.onChange}
+                          defaultValue={field.value}
+                          className="grid grid-cols-2 gap-4"
+                        >
+                          <FormItem className="flex items-center space-x-3 space-y-0 rounded-md border border-blue-200 bg-white p-3 hover:bg-blue-50 cursor-pointer transition-colors shadow-sm [&:has([data-state=checked])]:border-blue-500 [&:has([data-state=checked])]:bg-blue-50">
+                            <FormControl>
+                              <RadioGroupItem value="developer" />
+                            </FormControl>
+                            <div className="space-y-1">
+                              <FormLabel className="font-semibold text-blue-900 cursor-pointer">
+                                Property Developer
+                              </FormLabel>
+                              <FormDescription className="text-xs text-slate-500">
+                                Creating and listing my own developments
+                              </FormDescription>
+                            </div>
+                          </FormItem>
+                          <FormItem className="flex items-center space-x-3 space-y-0 rounded-md border border-blue-200 bg-white p-3 hover:bg-blue-50 cursor-pointer transition-colors shadow-sm [&:has([data-state=checked])]:border-blue-500 [&:has([data-state=checked])]:bg-blue-50">
+                            <FormControl>
+                              <RadioGroupItem value="marketing_agency" />
+                            </FormControl>
+                            <div className="space-y-1">
+                              <FormLabel className="font-semibold text-blue-900 cursor-pointer">
+                                Marketing Agency
+                              </FormLabel>
+                              <FormDescription className="text-xs text-slate-500">
+                                Listing on behalf of other developers
+                              </FormDescription>
+                            </div>
+                          </FormItem>
+                        </RadioGroup>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
                 <div className="grid grid-cols-2 gap-4">
                   <FormField
                     control={form.control}

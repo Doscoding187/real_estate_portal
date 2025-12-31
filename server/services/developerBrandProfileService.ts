@@ -30,6 +30,7 @@ export interface CreateBrandProfileInput {
   websiteUrl?: string | null;
   publicContactEmail?: string | null;
   brandTier?: 'national' | 'regional' | 'boutique';
+  identityType?: 'developer' | 'marketing_agency' | 'hybrid';
   sourceAttribution?: string | null;
   isVisible?: boolean;
   isContactVerified?: boolean;
@@ -48,6 +49,7 @@ export interface UpdateBrandProfileInput {
   websiteUrl?: string | null;
   publicContactEmail?: string | null;
   brandTier?: 'national' | 'regional' | 'boutique';
+  identityType?: 'developer' | 'marketing_agency' | 'hybrid';
   sourceAttribution?: string | null;
   profileType?: 'industry_reference' | 'verified_partner';
   isSubscriber?: boolean;
@@ -103,6 +105,7 @@ async function createBrandProfile(input: CreateBrandProfileInput) {
     websiteUrl: input.websiteUrl || null,
     publicContactEmail: input.publicContactEmail || null,
     brandTier: input.brandTier || 'regional',
+    identityType: input.identityType || 'developer',
     sourceAttribution: input.sourceAttribution || null,
     profileType: 'industry_reference',
     isSubscriber: 0,
@@ -211,6 +214,7 @@ async function updateBrandProfile(id: number, input: UpdateBrandProfileInput) {
   if (input.websiteUrl !== undefined) updateData.websiteUrl = input.websiteUrl;
   if (input.publicContactEmail !== undefined) updateData.publicContactEmail = input.publicContactEmail;
   if (input.brandTier !== undefined) updateData.brandTier = input.brandTier;
+  if (input.identityType !== undefined) updateData.identityType = input.identityType;
   if (input.sourceAttribution !== undefined) updateData.sourceAttribution = input.sourceAttribution;
   if (input.profileType !== undefined) updateData.profileType = input.profileType;
   if (input.isSubscriber !== undefined) updateData.isSubscriber = input.isSubscriber ? 1 : 0;

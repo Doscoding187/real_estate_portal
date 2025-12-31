@@ -55,6 +55,7 @@ export const superAdminPublisherRouter = router({
       // Identity
       brandName: z.string().min(2),
       brandTier: z.enum(['national', 'regional', 'boutique']).default('regional'),
+      identityType: z.enum(['developer', 'marketing_agency', 'hybrid']).default('developer'),
       logoUrl: z.string().optional(),
       
       // Company Info
@@ -83,6 +84,7 @@ export const superAdminPublisherRouter = router({
       const result = await developerBrandProfileService.createBrandProfile({
         brandName: input.brandName,
         brandTier: input.brandTier,
+        identityType: input.identityType,
         logoUrl: input.logoUrl,
         
         // Map extended fields
@@ -126,6 +128,7 @@ export const superAdminPublisherRouter = router({
       // Identity
       brandName: z.string().min(2).optional(),
       brandTier: z.enum(['national', 'regional', 'boutique']).optional(),
+      identityType: z.enum(['developer', 'marketing_agency', 'hybrid']).optional(),
       logoUrl: z.string().optional(),
       
       // Company Info
@@ -162,6 +165,7 @@ export const superAdminPublisherRouter = router({
       await developerBrandProfileService.updateBrandProfile(input.brandProfileId, {
         brandName: input.brandName,
         brandTier: input.brandTier,
+        identityType: input.identityType,
         logoUrl: input.logoUrl,
         about: input.description,
         foundedYear: input.establishedYear,
