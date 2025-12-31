@@ -76,7 +76,7 @@ export function ResidentialConfigPhase() {
   };
 
   const handleBack = () => {
-    setPhase(1); // Back to Development Type
+    setPhase(2); // Back to Development Type
   };
 
   const handleContinue = () => {
@@ -85,7 +85,7 @@ export function ResidentialConfigPhase() {
       return;
     }
     
-    setPhase(3); // Will be updated to keyed navigation (identity)
+    setPhase(4); // Basic Details (Identity)
   };
 
   // Show security section if any estate/gated type is selected OR if it's an apartment/townhouse
@@ -290,7 +290,7 @@ export function ResidentialConfigPhase() {
           disabled={!residentialConfig.residentialType}
           className="px-8 h-11 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 shadow-md hover:shadow-lg transition-all duration-300"
         >
-          Continue to Identity
+          Continue to Basic Details
           <ArrowRight className="w-4 h-4 ml-2" />
         </Button>
       </div>

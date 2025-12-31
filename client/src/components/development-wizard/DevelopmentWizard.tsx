@@ -28,6 +28,7 @@ import {
 
 // Import Phases
 import { DevelopmentTypePhase } from './phases/DevelopmentTypePhase';
+import { RepresentationPhase } from './phases/RepresentationPhase';
 import { ResidentialConfigPhase } from './phases/ResidentialConfigPhase';
 import { LandConfigPhase } from './phases/LandConfigPhase';
 import { CommercialConfigPhase } from './phases/CommercialConfigPhase';
@@ -43,15 +44,16 @@ import { FinalisationPhase } from './phases/FinalisationPhase';
 
 // Phase Definitions (matches renderPhase cases)
 const PHASES = [
-  'Development Type',   // 1
-  'Configuration',      // 2
-  'Identity',           // 3 (includes Location)
-  'Estate Profile',     // 4 (conditional)
-  'Amenities',          // 5
-  'Overview',           // 6
-  'Media',              // 7
-  'Unit Types',         // 8
-  'Publish'             // 9
+  'Representation',     // 1
+  'Development Type',   // 2
+  'Configuration',      // 3
+  'Basic Details',      // 4 (was Identity)
+  'Estate Profile',     // 5 (conditional)
+  'Amenities',          // 6
+  'Overview',           // 7
+  'Media',              // 8
+  'Unit Types',         // 9
+  'Publish'             // 10
 ];
 
 interface DevelopmentWizardProps {
@@ -222,8 +224,9 @@ export function DevelopmentWizard({ developmentId, isModal = false }: Developmen
     }
 
     switch (currentPhase) {
-      case 1: return <DevelopmentTypePhase />;
-      case 2: 
+      case 1: return <RepresentationPhase />;
+      case 2: return <DevelopmentTypePhase />;
+      case 3: 
         // Route to appropriate config phase based on development type
         if (developmentType === 'land') {
           return <LandConfigPhase />;
@@ -234,8 +237,8 @@ export function DevelopmentWizard({ developmentId, isModal = false }: Developmen
         }
         // Default: Residential
         return <ResidentialConfigPhase />;
-      case 3: return <IdentityPhase />;
-      case 4: 
+      case 4: return <IdentityPhase />;
+      case 5: 
         // Conditional: Skip estate profile for Land/Commercial
         if (developmentType === 'land' || developmentType === 'commercial') {
           return <AmenitiesPhase />;
@@ -245,12 +248,12 @@ export function DevelopmentWizard({ developmentId, isModal = false }: Developmen
           return <AmenitiesPhase />;
         }
         return <EstateProfilePhase />;
-      case 5: return <AmenitiesPhase />;
-      case 6: return <OverviewPhase />;
-      case 7: return <MediaPhase />;
-      case 8: return <UnitTypesPhase />;
-      case 9: return <FinalisationPhase />;
-      default: return <DevelopmentTypePhase />;
+      case 6: return <AmenitiesPhase />;
+      case 7: return <OverviewPhase />;
+      case 8: return <MediaPhase />;
+      case 9: return <UnitTypesPhase />;
+      case 10: return <FinalisationPhase />;
+      default: return <RepresentationPhase />;
     }
   };
 
@@ -264,7 +267,7 @@ export function DevelopmentWizard({ developmentId, isModal = false }: Developmen
         wizardType="development"
         draftData={{
           currentStep: currentPhase,
-          totalSteps: 5,
+          totalSteps: 10,
           developmentName: developmentData.name || '',
           address: developmentData.location?.address || '',
           lastModified: loadedDraft?.lastModified || undefined,

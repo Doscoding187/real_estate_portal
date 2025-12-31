@@ -88,11 +88,11 @@ export function MixedUseConfigPhase() {
       commercialType: selectedCommercialTypes[0]
     });
     
-    setPhase(3); // Identity
+    setPhase(4); // Identity
   };
 
   const handleBack = () => {
-    setPhase(1); // Development Type
+    setPhase(2); // Development Type
   };
 
   return (

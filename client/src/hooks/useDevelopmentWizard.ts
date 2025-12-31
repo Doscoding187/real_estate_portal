@@ -173,6 +173,13 @@ export interface DevelopmentWizardState {
   currentPhase: number; // Legacy numeric (to be migrated to keyed)
   currentStep: number; // Internal step within a phase
   
+  // NEW: Listing Identity (Step 0)
+  listingIdentity: {
+    identityType: 'developer' | 'marketing_agency';
+    developerBrandProfileId?: number; // The Developer (Builder/Brand)
+    marketingRole?: 'exclusive' | 'joint' | 'open';
+  };
+  
   // NEW: Development Type (Step 0)
   developmentType: DevelopmentType;
   
@@ -291,6 +298,7 @@ export interface DevelopmentWizardState {
   setCurrentStep: (step: number) => void;
   
   // Data Setters
+  setListingIdentity: (data: Partial<DevelopmentWizardState['listingIdentity']>) => void;
   setIdentity: (data: Partial<DevelopmentWizardState['developmentData']>) => void;
   setClassification: (data: Partial<DevelopmentWizardState['classification']>) => void;
   setOverview: (data: Partial<DevelopmentWizardState['overview']>) => void;
@@ -354,6 +362,12 @@ const initialState: Omit<DevelopmentWizardState, keyof ReturnType<typeof createA
   currentPhase: 1,
   currentStep: 1,
   
+  // NEW: Listing Identity
+  listingIdentity: {
+    identityType: 'developer',
+    marketingRole: 'exclusive',
+  },
+
   // NEW: Development Type
   developmentType: 'residential',
   
@@ -448,6 +462,10 @@ const createActions = (
 
   // NEW ACTIONS
   
+  setListingIdentity: (data: Partial<DevelopmentWizardState['listingIdentity']>) => set((state) => ({
+    listingIdentity: { ...state.listingIdentity, ...data }
+  })),
+
   setPhase: (phase: number) => set({ currentPhase: phase }),
   
   setCurrentStep: (step: number) => set({ currentStep: step }),
@@ -545,25 +563,34 @@ const createActions = (
     const errors: string[] = [];
     
     switch (phase) {
-      case 1:
+      case 1: // Representation
+        if (state.listingIdentity.identityType === 'marketing_agency' && !state.listingIdentity.developerBrandProfileId) {
+          errors.push('Select the Developer Brand you are representing');
+        }
+        break;
+      case 2: // Development Type
+         // No validation needed usually, defaults to Residential
+        break;
+      case 3: // Configuration
+         // No specific validation? maybe
+        break;
+      case 4: // Identity / Basic Details
         if (!state.developmentData?.name) errors.push('Name is required');
         if (!state.developmentData?.location?.address) errors.push('Location is required');
         break;
-      case 2:
-        // Media Phase - usually we enforce at least one hero image for a draft that "Looks good"? 
-        // Or we keep it optional for Draft, mandatory for Publish.
-        // Let's enforce at least 1 image to encourage good quality.
+      case 8: // Media (was 6?) - Wait, Media is now 8
+        // Media Phase 
         const hasMedia = state.developmentData?.media?.heroImage || (state.developmentData?.media?.photos?.length || 0) > 0;
         if (!hasMedia) errors.push('Upload at least one image');
         break;
-      case 3:
-        if (!state.classification?.type) errors.push('Type is required');
+      case 6: // Amenities
+         // optional
         break;
-      case 4:
+      case 7: // Overview
         if ((state.overview?.highlights?.length || 0) < 3) errors.push('Add at least 3 highlights');
         if ((state.overview?.description?.length || 0) < 50) errors.push('Description must be at least 50 characters');
         break;
-      case 5:
+      case 9: // Unit Types
         if (state.classification?.type !== 'land' && (state.unitTypes?.length || 0) === 0) {
           errors.push('Add at least one unit type');
         }
@@ -616,6 +643,7 @@ const createActions = (
       finalisation: state.finalisation,
       currentPhase: state.currentPhase,
       // Include configs
+      listingIdentity: state.listingIdentity, // NEW
       residentialConfig: state.residentialConfig,
       landConfig: state.landConfig,
       commercialConfig: state.commercialConfig,
@@ -650,6 +678,7 @@ const createActions = (
           unitTypes: data.unitTypes || state.unitTypes,
           finalisation: { ...state.finalisation, ...data.finalisation },
           // Hydrate configs if present
+          listingIdentity: data.listingIdentity || state.listingIdentity,
           residentialConfig: data.residentialConfig || state.residentialConfig,
           landConfig: data.landConfig || state.landConfig,
           commercialConfig: data.commercialConfig || state.commercialConfig,

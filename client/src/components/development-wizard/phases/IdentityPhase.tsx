@@ -42,13 +42,13 @@ export function IdentityPhase() {
   };
 
   const handleNext = () => {
-    const { isValid, errors } = validatePhase(3); // Phase 3: Identity
+    const { isValid, errors } = validatePhase(4); // Phase 4: Basic Details
     if (isValid) {
-      // Skip to Estate Profile (4) or Amenities (5) based on config
+      // Skip to Estate Profile (5) or Amenities (6) based on config
       if (navigation.shouldShowEstateProfile) {
-        setPhase(4);
+        setPhase(5);
       } else {
-        setPhase(5); // Skip to Amenities
+        setPhase(6); // Skip to Amenities
       }
     } else {
       errors.forEach(e => toast.error(e));
@@ -56,7 +56,7 @@ export function IdentityPhase() {
   };
   
   const handleBack = () => {
-    setPhase(2); // Back to Residential Config
+    setPhase(3); // Back to Configuration
   };
 
   return (

@@ -214,6 +214,8 @@ export class DevelopmentService {
     options?: {
       brandProfileId?: number;
       ownerType?: 'platform' | 'developer';
+      marketingBrandProfileId?: number;
+      marketingRole?: 'exclusive' | 'joint' | 'open';
     }
   ): Promise<Development> {
     const db = await getDb();
@@ -222,6 +224,8 @@ export class DevelopmentService {
     // Default Owner Type
     const ownerType = options?.ownerType || 'developer';
     const brandProfileId = options?.brandProfileId || null;
+    const marketingBrandProfileId = options?.marketingBrandProfileId || null;
+    const marketingRole = options?.marketingRole || 'exclusive';
     
     // 1. Subscription Limit Check (Only for Standard Developers)
     if (ownerType === 'developer' && developerId) {
@@ -241,6 +245,8 @@ export class DevelopmentService {
     const [result] = await db.insert(developments).values({
       developerId: developerId, // Can be null
       developerBrandProfileId: brandProfileId,
+      marketingBrandProfileId: marketingBrandProfileId, // NEW
+      marketingRole: marketingRole, // NEW
       devOwnerType: ownerType, // 'platform' or 'developer'
       name: input.name,
       slug,

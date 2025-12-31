@@ -8,7 +8,7 @@ import { developmentService } from './services/developmentService';
 import { unitService } from './services/unitService';
 import { calculateAffordabilityCompanion, matchUnitsToAffordability } from './services/affordabilityCompanion';
 import { developmentDrafts, developments, developers, developerBrandProfiles } from '../drizzle/schema';
-import { eq, desc, and } from 'drizzle-orm';
+import { eq, desc, and, or } from 'drizzle-orm';
 import { calculateDevelopmentReadiness } from './lib/readiness';
 
 export const developerRouter = router({
@@ -457,7 +457,9 @@ export const developerRouter = router({
   createDevelopment: protectedProcedure
     .input(
       z.object({
-        brandProfileId: z.number().int().optional(), // SUPER ADMIN ONLY
+        brandProfileId: z.number().int().optional(), // SUPER ADMIN ONLY (Source/Owner)
+        marketingBrandProfileId: z.number().int().optional(), // Marketing Agency
+        marketingRole: z.enum(['exclusive', 'joint', 'open']).optional(),
         name: z.string().min(2, 'Development name must be at least 2 characters'),
         developmentType: z.enum(['residential', 'commercial', 'mixed_use', 'estate', 'complex']),
         description: z.string().optional(),
@@ -535,7 +537,9 @@ export const developerRouter = router({
           locationId,
         }, {
           brandProfileId,
-          ownerType
+          ownerType,
+          marketingBrandProfileId: input.marketingBrandProfileId,
+          marketingRole: input.marketingRole
         });
         
         // Calculate initial readiness
@@ -1763,6 +1767,10 @@ export const developerRouter = router({
         brandProfileId: z.number().int().optional(), // SUPER ADMIN ONLY: Creating draft for a brand
         draftData: z.object({
           developmentName: z.string().optional(),
+          // Marketing Identity in Draft
+          marketingBrandProfileId: z.number().int().optional(),
+          marketingRole: z.enum(['exclusive', 'joint', 'open']).optional(),
+          
           address: z.string().optional(),
           city: z.string().optional(),
           province: z.string().optional(),
@@ -2162,15 +2170,23 @@ export const developerRouter = router({
       if (!dbConn) return [];
       
       let whereClause;
+      // Define 'published' filter
+      const isPublished = eq(developments.isPublished, 1);
+
       if (input.profileType === 'subscriber') {
+         // Subscribers: standard developerId lookup
          whereClause = and(
            eq(developments.developerId, input.profileId),
-           eq(developments.isPublished, 1) // Only published
+           isPublished
          );
       } else {
+         // Brands: Can be EITHER the Developer (Builder) OR the Marketing Agency (Seller)
          whereClause = and(
-           eq(developments.developerBrandProfileId, input.profileId),
-           eq(developments.isPublished, 1)
+           or(
+             eq(developments.developerBrandProfileId, input.profileId),
+             eq(developments.marketingBrandProfileId, input.profileId) 
+           ),
+           isPublished
          );
       }
       
@@ -2182,6 +2198,33 @@ export const developerRouter = router({
       });
       
       return devs;
+    }),
+
+  /**
+   * Search brand profiles (for autocomplete)
+   * Auth: Protected or Public? Protected seems safer for now.
+   */
+  searchBrandProfiles: protectedProcedure
+    .input(z.object({ 
+      query: z.string().min(2),
+      limit: z.number().min(1).max(20).default(10) 
+    }))
+    .query(async ({ input }) => {
+      const dbConn = await db.getDb();
+      if (!dbConn) return [];
+      
+      const { like } = await import('drizzle-orm');
+      
+      return await dbConn.query.developerBrandProfiles.findMany({
+        columns: {
+          id: true,
+          brandName: true,
+          logoUrl: true,
+          isVerified: true,
+        },
+        where: like(developerBrandProfiles.brandName, `%${input.query}%`),
+        limit: input.limit,
+      });
     }),
 
   /**

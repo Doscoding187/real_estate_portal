@@ -43,6 +43,13 @@
       "when": 1767100383215,
       "tag": "0005_colorful_toxin",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "5",
+      "when": 1767192278671,
+      "tag": "0006_aspiring_shaman",
+      "breakpoints": true
     }
   ]
 }

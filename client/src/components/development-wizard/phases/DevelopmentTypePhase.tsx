@@ -45,7 +45,11 @@ export function DevelopmentTypePhase() {
     }
     
     // Navigate to next phase (residentialConfig for residential)
-    setPhase(2); // Will be updated to keyed navigation
+    setPhase(3); // Configuration
+  };
+
+  const handleBack = () => {
+    setPhase(1); // Back to Representation
   };
 
   return (
@@ -133,8 +137,15 @@ export function DevelopmentTypePhase() {
         })}
       </div>
 
-      {/* Continue Button */}
-      <div className="flex justify-center pt-6">
+      {/* Navigation Buttons */}
+      <div className="flex justify-between pt-6 max-w-lg mx-auto">
+        <Button 
+          variant="outline"
+          onClick={handleBack}
+          className="px-6 h-12 border-slate-300"
+        >
+          Back
+        </Button>
         <Button
           onClick={handleContinue}
           disabled={!developmentType || !DEVELOPMENT_TYPE_OPTIONS.find(o => o.value === developmentType)?.enabled}

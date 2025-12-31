@@ -451,6 +451,7 @@ export const developerBrandProfiles = mysqlTable("developer_brand_profiles", {
 	
 	// Governance & State
 	profileType: mysqlEnum("profile_type", ['industry_reference', 'verified_partner']).default('industry_reference'),
+	identityType: mysqlEnum("identity_type", ['developer', 'marketing_agency', 'hybrid']).default('developer').notNull(), // NEW: Distinguish roles
 	isSubscriber: tinyint("is_subscriber").default(0).notNull(),
 	isClaimable: tinyint("is_claimable").default(1).notNull(),
 	isVisible: tinyint("is_visible").default(1).notNull(),
@@ -539,6 +540,8 @@ export const developments = mysqlTable("developments", {
 	id: int().autoincrement().notNull(),
 	developerId: int("developer_id").references(() => developers.id, { onDelete: "cascade" } ),
 	developerBrandProfileId: int("developer_brand_profile_id").references(() => developerBrandProfiles.id, { onDelete: "set null" }),
+	marketingBrandProfileId: int("marketing_brand_profile_id").references(() => developerBrandProfiles.id, { onDelete: "set null" }), // NEW: Marketing Agency
+	marketingRole: mysqlEnum("marketing_role", ['exclusive', 'joint', 'open']).default('exclusive'), // NEW: Mandate type
 	name: varchar({ length: 255 }).notNull(),
 	slug: varchar({ length: 255 }),
 	description: text(),
