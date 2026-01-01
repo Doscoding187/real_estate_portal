@@ -43,10 +43,10 @@ export function MediaPhase() {
   const presignMutation = trpc.upload.presign.useMutation();
 
   const handleNext = () => {
-    // Phase 7 = Media, next is Phase 8 = Unit Types
-    const { isValid, errors } = validatePhase(7); 
+    // Phase 8 = Media, next is Phase 9 = Unit Types
+    const { isValid, errors } = validatePhase(8); 
     if (isValid) {
-      setPhase(8); // Go to Unit Types
+      setPhase(9); // Go to Unit Types
     } else {
       errors.forEach(e => toast.error(e));
     }
