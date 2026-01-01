@@ -42,6 +42,7 @@ export interface MediaItem {
   id: string;
   url: string;
   type: 'image' | 'video' | 'floorplan' | 'pdf';
+  category?: 'featured' | 'general' | 'amenities' | 'outdoors' | 'videos' | 'photo' | 'floorplan' | 'render' | 'document';
   fileName?: string;
   isPrimary?: boolean;
   displayOrder: number;
