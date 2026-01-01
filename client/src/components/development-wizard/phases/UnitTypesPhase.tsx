@@ -140,6 +140,47 @@ export function UnitTypesPhase() {
   
   const presignMutation = trpc.upload.presign.useMutation();
 
+  // Draft Persistence
+  const DRAFT_KEY = 'unitTypeDraft';
+
+  // Save draft to localStorage whenever form changes
+  React.useEffect(() => {
+    if (isDialogOpen && !editingId) {
+      const draftData = {
+        formData,
+        unitGallery,
+        floorPlanImages,
+        activeTab,
+        timestamp: Date.now()
+      };
+      localStorage.setItem(DRAFT_KEY, JSON.stringify(draftData));
+    }
+  }, [formData, unitGallery, floorPlanImages, activeTab, isDialogOpen, editingId]);
+
+  // Load draft on component mount
+  React.useEffect(() => {
+    const savedDraft = localStorage.getItem(DRAFT_KEY);
+    if (savedDraft && !editingId) {
+      try {
+        const parsed = JSON.parse(savedDraft);
+        // Check if draft is less than 7 days old
+        const daysSinceLastEdit = (Date.now() - parsed.timestamp) / (1000 * 60 * 60 * 24);
+        if (daysSinceLastEdit < 7) {
+          // Show a notification that a draft was found
+          toast.info('Draft unit type found. Click "Add Unit Type" to resume.', {
+            duration: 5000,
+          });
+        } else {
+          // Clear old draft
+          localStorage.removeItem(DRAFT_KEY);
+        }
+      } catch (error) {
+        console.error('Failed to parse draft:', error);
+        localStorage.removeItem(DRAFT_KEY);
+      }
+    }
+  }, []);
+
   // Reset function
   const resetForm = () => {
     setFormData(getDefaultFormData());
@@ -149,6 +190,8 @@ export function UnitTypesPhase() {
     setFloorPlanUploads([]);
     setEditingId(null);
     setActiveTab('basic');
+    // Clear draft from localStorage
+    localStorage.removeItem(DRAFT_KEY);
   };
 
   const handleOpenDialog = (unit?: UnitType) => {
@@ -189,7 +232,30 @@ export function UnitTypesPhase() {
       setUnitGallery(unit.baseMedia?.gallery || []);
       setFloorPlanImages(unit.baseMedia?.floorPlans || []);
     } else {
-      resetForm();
+      // Opening for new unit - check for saved draft
+      const savedDraft = localStorage.getItem(DRAFT_KEY);
+      if (savedDraft) {
+        try {
+          const parsed = JSON.parse(savedDraft);
+          const daysSinceLastEdit = (Date.now() - parsed.timestamp) / (1000 * 60 * 60 * 24);
+          if (daysSinceLastEdit < 7) {
+            // Restore draft
+            setFormData(parsed.formData || getDefaultFormData());
+            setUnitGallery(parsed.unitGallery || []);
+            setFloorPlanImages(parsed.floorPlanImages || []);
+            setActiveTab(parsed.activeTab || 'basic');
+            toast.success('Draft restored! Continue where you left off.');
+          } else {
+            // Draft too old
+            resetForm();
+          }
+        } catch (error) {
+          console.error('Failed to restore draft:', error);
+          resetForm();
+        }
+      } else {
+        resetForm();
+      }
     }
     setIsDialogOpen(true);
   };
@@ -259,6 +325,7 @@ export function UnitTypesPhase() {
                 id: `media-${Date.now()}-${i}`,
                 url: result.publicUrl,
                 type: mediaType,
+                category: category === 'gallery' ? 'photo' : 'floorplan',
                 fileName: file.name,
                 isPrimary: currentMedia.length === 0 && i === 0 && category === 'gallery', // First gallery image is primary
                 displayOrder: currentMedia.length + i
@@ -961,12 +1028,55 @@ export function UnitTypesPhase() {
             </div>
           </Tabs>
 
-          {/* Footer */}
+          {/* Footer - Progressive Navigation */}
           <DialogFooter className="px-6 py-4 border-t shrink-0 gap-2">
-            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
-            <Button onClick={handleSubmit} className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700">
-              {editingId ? 'Save Changes' : 'Add Unit Type'}
-            </Button>
+            <div className="flex justify-between w-full">
+              {/* Back / Cancel Button */}
+              {activeTab === 'basic' ? (
+                <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
+              ) : (
+                <Button 
+                  variant="outline" 
+                  onClick={() => {
+                    const tabs = ['basic', 'pricing', 'media', 'features', 'stock'];
+                    const currentIndex = tabs.indexOf(activeTab);
+                    if (currentIndex > 0) setActiveTab(tabs[currentIndex - 1]);
+                  }}
+                >
+                  <ArrowLeft className="w-4 h-4 mr-2" />
+                  Back
+                </Button>
+              )}
+
+              {/* Next / Submit Button */}
+              {activeTab === 'stock' ? (
+                <Button 
+                  onClick={handleSubmit} 
+                  className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  {editingId ? 'Save Changes' : 'Add Unit Type'}
+                </Button>
+              ) : (
+                <Button 
+                  onClick={() => {
+                    const tabs = ['basic', 'pricing', 'media', 'features', 'stock'];
+                    const tabLabels = {
+                      'basic': 'Pricing',
+                      'pricing': 'Media',
+                      'media': 'Features',
+                      'features': 'Stock'
+                    };
+                    const currentIndex = tabs.indexOf(activeTab);
+                    if (currentIndex < tabs.length - 1) setActiveTab(tabs[currentIndex + 1]);
+                  }}
+                  className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+                >
+                  Continue to {activeTab === 'basic' ? 'Pricing' : activeTab === 'pricing' ? 'Media' : activeTab === 'media' ? 'Features' : 'Stock'}
+                  <ArrowRight className="w-4 h-4 ml-2" />
+                </Button>
+              )}
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>
