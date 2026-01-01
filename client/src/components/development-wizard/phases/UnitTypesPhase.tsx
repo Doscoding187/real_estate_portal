@@ -50,11 +50,6 @@ const FEATURE_CATEGORIES = [
     placeholder: 'e.g. Porcelain tiles in living areas, carpet in bedrooms, laminate optional' 
   },
   { 
-    key: 'energy', 
-    label: 'Energy & Utilities', 
-    placeholder: 'e.g. Prepaid electricity, solar geyser, LED downlights, fibre ready' 
-  },
-  { 
     key: 'storage', 
     label: 'Storage & Built-ins', 
     placeholder: 'e.g. Built-in wardrobes in all bedrooms, linen cupboard, storeroom' 
