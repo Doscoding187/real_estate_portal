@@ -950,29 +950,89 @@ export function UnitTypesPhase() {
               </TabsContent>
 
               {/* Tab 4: Features & Specs */}
-              <TabsContent value="features" className="mt-0 space-y-4">
+              <TabsContent value="features" className="mt-0 space-y-6">
                 <p className="text-sm text-slate-600 mb-4">
-                  Describe the finishes and features included in this unit type.
+                  Add specific features and finishes for this unit type. Click + or press Enter to add each item.
                 </p>
-                <div className="space-y-4">
-                  {FEATURE_CATEGORIES.map((category) => (
-                    <div key={category.key} className="space-y-2">
-                      <Label htmlFor={category.key} className="text-sm font-medium text-slate-800">
-                        {category.label}
-                      </Label>
-                      <Textarea
-                        id={category.key}
-                        placeholder={category.placeholder}
-                        rows={2}
-                        value={formData.featureSpecs?.[category.key] || ''}
-                        onChange={(e) => updateFeatureSpec(category.key, e.target.value)}
-                        className="resize-none text-sm"
-                      />
-                    </div>
-                  ))}
+                <div className="space-y-6">
+                  {FEATURE_CATEGORIES.map((category) => {
+                    const categoryFeatures = formData.featureSpecs?.[category.key] 
+                      ? formData.featureSpecs[category.key].split('|').filter(f => f.trim()) 
+                      : [];
+                    const [currentInput, setCurrentInput] = React.useState('');
+
+                    const addFeature = () => {
+                      if (!currentInput.trim()) return;
+                      const existing = formData.featureSpecs?.[category.key] || '';
+                      const updated = existing 
+                        ? `${existing}|${currentInput.trim()}` 
+                        : currentInput.trim();
+                      updateFeatureSpec(category.key, updated);
+                      setCurrentInput('');
+                    };
+
+                    const removeFeature = (index: number) => {
+                      const features = categoryFeatures.filter((_, i) => i !== index);
+                      updateFeatureSpec(category.key, features.join('|'));
+                    };
+
+                    return (
+                      <Card key={category.key} className="border-slate-200/60 shadow-sm">
+                        <CardHeader className="pb-3">
+                          <CardTitle className="text-base font-medium text-slate-800">
+                            {category.label}
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-3">
+                          {/* Input Section */}
+                          <div className="flex gap-2">
+                            <Input 
+                              placeholder={category.placeholder}
+                              value={currentInput}
+                              onChange={(e) => setCurrentInput(e.target.value)}
+                              onKeyDown={(e) => e.key === 'Enter' && addFeature()}
+                              className="h-10 border-slate-200 focus:border-blue-400 text-sm"
+                            />
+                            <Button 
+                              onClick={addFeature}
+                              size="icon"
+                              type="button"
+                              className="h-10 w-10 bg-blue-600 hover:bg-blue-700 shrink-0"
+                            >
+                              <Plus className="w-4 h-4" />
+                            </Button>
+                          </div>
+
+                          {/* Features Display */}
+                          <div className="flex flex-wrap gap-2 min-h-[60px] content-start bg-gradient-to-br from-slate-50 to-blue-50/20 p-3 rounded-lg border border-dashed border-slate-200">
+                            {categoryFeatures.length === 0 && (
+                              <div className="w-full text-center py-2">
+                                <p className="text-xs text-slate-400">No features added yet</p>
+                              </div>
+                            )}
+                            {categoryFeatures.map((feature, idx) => (
+                              <Badge 
+                                key={idx}
+                                className="pl-2.5 pr-2 py-1.5 bg-white border-slate-300 shadow-sm hover:shadow-md transition-all text-slate-700 text-xs font-medium"
+                              >
+                                {feature}
+                                <button 
+                                  onClick={() => removeFeature(idx)}
+                                  type="button"
+                                  className="ml-1.5 hover:text-red-600 transition-colors"
+                                >
+                                  <X className="w-3 h-3" />
+                                </button>
+                              </Badge>
+                            ))}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
                 </div>
-                <div className="pt-2 text-sm text-slate-500">
-                  {Object.values(formData.featureSpecs || {}).filter(v => v.trim()).length} of {FEATURE_CATEGORIES.length} categories filled
+                <div className="pt-2 text-sm text-slate-500 bg-slate-50 p-3 rounded-lg border border-slate-200">
+                  <strong>{Object.values(formData.featureSpecs || {}).filter(v => v.trim()).length}</strong> of {FEATURE_CATEGORIES.length} categories have features
                 </div>
               </TabsContent>
 
