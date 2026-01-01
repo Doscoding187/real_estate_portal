@@ -60,7 +60,7 @@ export function AmenitiesPhase() {
       return;
     }
     
-    setPhase(6); // Forward to Media
+    setPhase(7); // Forward to Overview
   };
 
   const getCategoryCount = (category: AmenityCategory) => {
@@ -394,7 +394,7 @@ export function AmenitiesPhase() {
           disabled={totalSelected < 3}
           className="px-8 h-11 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 shadow-md hover:shadow-lg transition-all duration-300 disabled:opacity-50"
         >
-          Continue to Media
+          Continue to Overview
           <ArrowRight className="w-4 h-4 ml-2" />
         </Button>
       </div>
