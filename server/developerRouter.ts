@@ -725,32 +725,30 @@ export const developerRouter = router({
   deleteDevelopment: protectedProcedure
     .input(z.object({ id: z.number().int() }))
     .mutation(async ({ input, ctx }) => {
-      // Logic handled in service, but we need to pass a "bypass" flag or handle context here.
-      // Similar to updateDevelopment, we check for platform ownership if super admin.
-      
-      let developerId = 0;
-      let isPlatformAdmin = false;
+      // OWNERSHIP MODE RESOLUTION
+      let developerId: number = -1; // -1 indicates platform/brand mode (bypass ownership check)
 
       if (ctx.user.role === 'super_admin') {
-         const dev = await developmentService.getDevelopment(input.id);
-         if (dev && dev.devOwnerType === 'platform') {
-            isPlatformAdmin = true;
-         }
-      }
-
-      if (!isPlatformAdmin) {
-          const developer = await db.getDeveloperByUserId(ctx.user.id);
-          if (!developer) {
-            throw new TRPCError({ code: 'NOT_FOUND', message: 'Developer profile not found' });
-          }
-          developerId = developer.id;
+        // BRAND MODE: Super admins can delete any development
+        developerId = -1;
+        console.log('[DeveloperRouter] deleteDevelopment: Super Admin mode, bypassing ownership');
+      } else if (ctx.user.role === 'property_developer') {
+        // DEVELOPER MODE: Must have developer profile
+        const developer = await db.getDeveloperByUserId(ctx.user.id);
+        if (!developer) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Developer profile not found' });
+        }
+        developerId = developer.id;
+        console.log('[DeveloperRouter] deleteDevelopment: Developer Mode, id =', developerId);
+      } else {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'Only developers and super admins can delete developments',
+        });
       }
 
       try {
-        await developmentService.deleteDevelopment(
-            input.id, 
-            isPlatformAdmin ? -1 : developerId
-        );
+        await developmentService.deleteDevelopment(input.id, developerId);
         return { success: true, message: 'Development deleted successfully' };
       } catch (error: any) {
         if (error.message.includes('Unauthorized')) {
