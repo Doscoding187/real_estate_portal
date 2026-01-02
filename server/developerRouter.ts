@@ -789,12 +789,31 @@ export const developerRouter = router({
   publishDevelopment: protectedProcedure
     .input(z.object({ id: z.number().int() }))
     .mutation(async ({ input, ctx }) => {
-      const developer = await db.getDeveloperByUserId(ctx.user.id);
-      
-      if (!developer) {
+      // OWNERSHIP MODE RESOLUTION
+      let developerId: number = -1; // -1 indicates platform/brand mode
+      let isTrusted = false;
+
+      if (ctx.user.role === 'super_admin') {
+        // BRAND MODE: Super admins can publish any development
+        developerId = -1; // Special value to bypass ownership check in service
+        isTrusted = true; // Super admin publishes are auto-approved
+        console.log('[DeveloperRouter] publishDevelopment: Brand Mode (super_admin)');
+      } else if (ctx.user.role === 'property_developer') {
+        // DEVELOPER MODE: Must have developer profile
+        const developer = await db.getDeveloperByUserId(ctx.user.id);
+        if (!developer) {
+          throw new TRPCError({
+            code: 'NOT_FOUND',
+            message: 'Developer profile not found',
+          });
+        }
+        developerId = developer.id;
+        isTrusted = !!developer.isTrusted;
+        console.log('[DeveloperRouter] publishDevelopment: Developer Mode, id =', developerId);
+      } else {
         throw new TRPCError({
-          code: 'NOT_FOUND',
-          message: 'Developer profile not found',
+          code: 'FORBIDDEN',
+          message: 'Only developers and super admins can publish developments',
         });
       }
 
@@ -810,7 +829,7 @@ export const developerRouter = router({
             });
         }
 
-        const development = await developmentService.publishDevelopment(input.id, developer.id, !!developer.isTrusted);
+        const development = await developmentService.publishDevelopment(input.id, developerId, isTrusted);
         return { development, message: 'Development published successfully' };
       } catch (error: any) {
         if (error.message.includes('Unauthorized')) {
@@ -1993,13 +2012,35 @@ export const developerRouter = router({
       })
     )
     .mutation(async ({ input, ctx }) => {
-      const developer = await db.getDeveloperByUserId(ctx.user.id);
-      if (!developer) throw new TRPCError({ code: 'NOT_FOUND', message: 'Developer not found' });
+      // OWNERSHIP MODE RESOLUTION
+      let developerId: number | null = null;
+
+      if (ctx.user.role === 'super_admin') {
+        // BRAND MODE: Super admins can create unit types for any development
+        developerId = null; // No developer ownership check needed
+        console.log('[DeveloperRouter] createUnitType: Brand Mode (super_admin)');
+      } else if (ctx.user.role === 'property_developer') {
+        // DEVELOPER MODE: Must have developer profile
+        const developer = await db.getDeveloperByUserId(ctx.user.id);
+        if (!developer) throw new TRPCError({ code: 'NOT_FOUND', message: 'Developer not found' });
+        developerId = developer.id;
+        console.log('[DeveloperRouter] createUnitType: Developer Mode, id =', developerId);
+      } else {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'Only developers and super admins can create unit types',
+        });
+      }
 
       try {
-         // Logic to verify ownership
+         // Logic to verify ownership (skip for super_admin)
          const development = await developmentService.getDevelopmentWithPhases(input.developmentId);
-         if (!development || development.developerId !== developer.id) {
+         if (!development) {
+            throw new TRPCError({ code: 'NOT_FOUND', message: 'Development not found' });
+         }
+         
+         // Only check ownership for regular developers
+         if (developerId !== null && development.developerId !== developerId) {
             throw new TRPCError({ code: 'FORBIDDEN', message: 'Unauthorized' });
          }
 
