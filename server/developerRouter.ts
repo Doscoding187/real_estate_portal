@@ -482,28 +482,46 @@ export const developerRouter = router({
       })
     )
     .mutation(async ({ input, ctx }) => {
-      // CONTEXT RESOLUTION
+      // OWNERSHIP MODE RESOLUTION
+      // Rule: Super admins are ALWAYS in brand mode, developers are ALWAYS in developer mode
+      // These flows must never bleed into each other
       let developerId: number | null = null;
       let brandProfileId: number | undefined = undefined;
       let ownerType: 'developer' | 'platform' = 'developer';
 
-      if (input.brandProfileId) {
-        // CASE 1: Brand Mode (Super Admin Only)
-        if (ctx.user.role !== 'super_admin') {
-           throw new TRPCError({ code: 'FORBIDDEN', message: 'Only Super Admins can manage brand profiles' });
+      if (ctx.user.role === 'super_admin') {
+        // BRAND MODE (Super Admin seeding content)
+        // Super admins MUST provide a brandProfileId - they cannot create developer-owned developments
+        if (!input.brandProfileId) {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: 'brandProfileId is required when creating brand developments',
+          });
         }
         brandProfileId = input.brandProfileId;
         ownerType = 'platform';
-      } else {
-        // CASE 2: Developer Mode
+        developerId = null; // Explicitly null - brand developments have no developer owner
+        console.log('[DeveloperRouter] Brand Mode: brandProfileId =', brandProfileId);
+      } else if (ctx.user.role === 'property_developer') {
+        // DEVELOPER MODE (Self-serve)
+        // Developer creates their own development
         const developer = await db.getDeveloperByUserId(ctx.user.id);
         if (!developer) {
           throw new TRPCError({
             code: 'NOT_FOUND',
-            message: 'Developer profile not found',
+            message: 'Developer profile not found. Please complete your developer registration first.',
           });
         }
         developerId = developer.id;
+        ownerType = 'developer';
+        brandProfileId = undefined; // No brand profile for developer-owned developments
+        console.log('[DeveloperRouter] Developer Mode: developerId =', developerId);
+      } else {
+        // Unsupported role
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'Only property developers and super admins can create developments',
+        });
       }
 
       try {
