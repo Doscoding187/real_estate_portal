@@ -68,9 +68,23 @@ export const EntityStatusCard: React.FC<EntityStatusCardProps> = ({
 
   const title = isListing ? data.title : data.name;
   const image = isListing ? data.primaryImage : (data.images?.[0] || null);
-  const price = isListing 
+  const priceFrom = isListing 
     ? (data.pricing?.askingPrice || data.pricing?.monthlyRent) 
-    : (data.priceFrom);
+    : data.priceFrom;
+  const priceTo = !isListing ? data.priceTo : null;
+
+  // Format price display - show range for developments if both values exist
+  const formatPriceDisplay = () => {
+    if (!priceFrom) return null;
+    
+    // If we have both priceFrom and priceTo (for developments), show range
+    if (!isListing && priceTo && priceTo > priceFrom) {
+      return `${formatCurrency(priceFrom)} - ${formatCurrency(priceTo)}`;
+    }
+    
+    // Otherwise just show the single price
+    return formatCurrency(priceFrom);
+  };
 
   return (
     <Card className={cn("overflow-hidden bg-white border-slate-200 shadow-sm hover:shadow-md transition-all duration-200", className)}>
@@ -142,7 +156,7 @@ export const EntityStatusCard: React.FC<EntityStatusCardProps> = ({
                        <span>{data.address || data.city || 'No location set'}</span>
                    </div>
                    
-                   {price && <p className="font-semibold text-lg text-slate-900">{formatCurrency(price)}</p>}
+                   {formatPriceDisplay() && <p className="font-semibold text-lg text-slate-900">{formatPriceDisplay()}</p>}
                 
                     {/* Rejection Feedback */}
                     {isRejected && (
