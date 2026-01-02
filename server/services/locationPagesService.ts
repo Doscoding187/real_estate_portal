@@ -91,14 +91,14 @@ export const locationPagesService = {
 
     console.log(`[LocationPages] Fetched ${cityList.length} cities`);
 
-    // 3. Featured Developments in Province
+    // 3. Featured Developments in Province (show all published developments, regardless of status)
     console.log('[LocationPages] Fetching featured developments...');
     const featuredDevelopments = await db
       .select()
       .from(developments)
       .where(and(
-        eq(developments.province, province.name),
-        eq(developments.status, 'now-selling')
+        sql`TRIM(LOWER(${developments.province})) = LOWER(${province.name})`,
+        eq(developments.isPublished, 1)
       ))
       .limit(6);
       
@@ -257,15 +257,16 @@ export const locationPagesService = {
         ))
         .limit(6);
 
-      // 4. Developments in City
+      // 4. Developments in City (match by city name, trim whitespace, also include suburb matches)
+      // Cascading: show developments where city matches OR suburb is in this city's suburbs  
       const cityDevelopments = await db
         .select()
         .from(developments)
         .where(and(
-          eq(developments.city, city.name),
+          sql`(TRIM(LOWER(${developments.city})) = LOWER(${city.name}) OR TRIM(LOWER(${developments.suburb})) IN (SELECT LOWER(name) FROM suburbs WHERE city_id = ${city.id}))`,
           eq(developments.isPublished, 1)
         ))
-        .limit(4);
+        .limit(8);
 
       // 5. Aggregate Stats (handle empty case gracefully)
       const [stats] = await db
