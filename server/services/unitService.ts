@@ -23,7 +23,7 @@ export class UnitService {
     if (!development) {
       throw new Error('Development not found');
     }
-    if (development.developerId !== developerId) {
+    if (developerId !== -1 && development.developerId !== developerId) {
       throw new Error('Unauthorized: You do not own this development');
     }
 
@@ -75,7 +75,7 @@ export class UnitService {
     if (!development) {
       throw new Error('Development not found');
     }
-    if (development.developerId !== developerId) {
+    if (developerId !== -1 && development.developerId !== developerId) {
       throw new Error('Unauthorized: You do not own this development');
     }
 
@@ -169,7 +169,7 @@ export class UnitService {
       where: eq(developments.id, unit.developmentId),
     });
 
-    if (!development || development.developerId !== developerId) {
+    if (!development || (developerId !== -1 && development.developerId !== developerId)) {
       throw new Error('Unauthorized: You do not own this development');
     }
 
@@ -226,7 +226,7 @@ export class UnitService {
       where: eq(developments.id, unit.developmentId),
     });
 
-    if (!development || development.developerId !== developerId) {
+    if (!development || (developerId !== -1 && development.developerId !== developerId)) {
       throw new Error('Unauthorized: You do not own this development');
     }
 
@@ -306,7 +306,7 @@ export class UnitService {
       where: eq(developments.id, unit.developmentId),
     });
 
-    if (!development || development.developerId !== developerId) {
+    if (!development || (developerId !== -1 && development.developerId !== developerId)) {
       throw new Error('Unauthorized: You do not own this development');
     }
 
@@ -330,7 +330,7 @@ export class UnitService {
       where: eq(developments.id, firstUnit.developmentId),
     });
 
-    if (!development || development.developerId !== developerId) {
+    if (!development || (developerId !== -1 && development.developerId !== developerId)) {
       throw new Error('Unauthorized: You do not own this development');
     }
 

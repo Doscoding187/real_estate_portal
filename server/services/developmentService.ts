@@ -335,12 +335,12 @@ export class DevelopmentService {
     developerId: number,
     input: UpdateDevelopmentInput
   ): Promise<Development> {
-    // Verify ownership
+    // Verify ownership (skip for super_admin indicated by developerId === -1)
     const existing = await this.getDevelopment(developmentId);
     if (!existing) {
       throw new Error('Development not found');
     }
-    if (existing.developerId !== developerId) {
+    if (developerId !== -1 && existing.developerId !== developerId) {
       throw new Error('Unauthorized: You do not own this development');
     }
 
@@ -715,7 +715,7 @@ export class DevelopmentService {
     }
 
     const development = await this.getDevelopment(phase.developmentId);
-    if (!development || development.developerId !== developerId) {
+    if (!development || (developerId !== -1 && development.developerId !== developerId)) {
       throw new Error('Unauthorized: You do not own this development');
     }
 
