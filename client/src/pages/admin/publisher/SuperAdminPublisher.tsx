@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { DeveloperContextProvider, useDeveloperContext } from '@/contexts/DeveloperContextProvider';
 import { DeveloperContextSelector } from '@/components/admin/publisher/DeveloperContextSelector';
+import { ProvinceDevDashboard } from '@/components/admin/publisher/ProvinceDevDashboard';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Separator } from '@/components/ui/separator';
 import { Building2, LayoutList, Users, BarChart3, LockKeyhole, Edit, Trash2 } from 'lucide-react';
 import { EditBrandProfileDialog } from '@/components/admin/publisher/EditBrandProfileDialog';
 import { LinkSubscriberDialog } from '@/components/admin/publisher/LinkSubscriberDialog';
@@ -145,7 +147,22 @@ export const SuperAdminPublisher: React.FC = () => {
               </span>
             </h1>
             <p className="text-muted-foreground max-w-3xl">
-              Emulate developer workflows, publish properties, and validate lead routing across any platform-owned brand profile.
+              Browse and edit all developments by province, or select a brand profile to emulate developer workflows.
+            </p>
+          </div>
+        </div>
+
+        {/* Province-Based Development Dashboard - Quick Access */}
+        <ProvinceDevDashboard />
+
+        <Separator className="my-8" />
+
+        {/* Brand Context Section */}
+        <div className="space-y-6">
+          <div>
+            <h2 className="text-lg font-semibold mb-2">Brand Profile Mode</h2>
+            <p className="text-sm text-muted-foreground mb-4">
+              Select a brand profile to create new developments, manage leads, and view metrics.
             </p>
           </div>
           
@@ -153,11 +170,12 @@ export const SuperAdminPublisher: React.FC = () => {
             <div className="lg:col-span-1">
                <DeveloperContextSelector />
             </div>
-            {/* Useful stats or quick info could go here */}
           </div>
         </div>
 
-        <PublisherContent />
+        <div className="mt-8">
+          <PublisherContent />
+        </div>
       </div>
     </DeveloperContextProvider>
   );
