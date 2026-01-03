@@ -59,7 +59,16 @@ export function LocationHeroSection({
   const handleSearch = () => {
     const category = categories.find(c => c.id === activeTab);
     const listingType = category?.listingType || 'sale';
-    const searchPath = `/property-for-${listingType}/${locationSlug}?view=list`;
+    
+    // Special handling for developments - redirect to new-developments page with location filter
+    if (listingType === 'development') {
+      setLocation(`/new-developments?location=${encodeURIComponent(locationName)}`);
+      return;
+    }
+    
+    // For sale/rent listings, use the standard format
+    const baseRoute = listingType === 'rent' ? 'property-to-rent' : 'property-for-sale';
+    const searchPath = `/${baseRoute}/${locationSlug}?view=list`;
     setLocation(searchPath);
   };
 
