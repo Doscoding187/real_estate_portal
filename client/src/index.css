@@ -83,6 +83,23 @@
   --sidebar-accent-foreground: oklch(0.141 0.005 285.823);
   --sidebar-border: oklch(0.92 0.004 286.32);
   --sidebar-ring: oklch(0.623 0.214 259.815);
+
+  /* ========================= */
+  /* FLUID DESIGN SYSTEM       */
+  /* ========================= */
+  
+  /* Fluid spacing tokens - scales with viewport */
+  --space-xs: clamp(0.25rem, 0.5vw, 0.5rem);
+  --space-sm: clamp(0.5rem, 0.8vw, 0.75rem);
+  --space-md: clamp(0.75rem, 1.2vw, 1rem);
+  --space-lg: clamp(1rem, 1.8vw, 1.5rem);
+  --space-xl: clamp(1.5rem, 2.5vw, 2rem);
+  
+  /* Card-specific spacing */
+  --card-padding: clamp(0.75rem, 1.2vw, 1.1rem);
+  --card-gap: clamp(0.5rem, 0.8vw, 0.75rem);
+  --card-radius: 12px;
+  --card-border: 1px solid rgba(0, 0, 0, 0.06);
 }
 
 .dark {
@@ -121,9 +138,15 @@
 }
 
 @layer base {
+  /* Fluid base font size - smaller on mobile, comfortable on laptop, never huge on large screens */
+  html {
+    font-size: clamp(14px, 0.9vw, 16px);
+  }
+
   * {
     @apply border-border outline-ring/50;
   }
+  
   body {
     @apply bg-background text-foreground;
     font-family:
@@ -132,7 +155,31 @@
       BlinkMacSystemFont,
       'Segoe UI',
       sans-serif;
+    font-size: clamp(0.9rem, 0.95vw, 1rem);
+    line-height: 1.55;
   }
+  
+  /* Fluid headings - balanced, SquareYards-like */
+  h1 {
+    font-size: clamp(1.6rem, 2.2vw, 2.2rem);
+    line-height: 1.2;
+  }
+  
+  h2 {
+    font-size: clamp(1.3rem, 1.6vw, 1.75rem);
+    line-height: 1.3;
+  }
+  
+  h3 {
+    font-size: clamp(1.1rem, 1.2vw, 1.35rem);
+    line-height: 1.3;
+  }
+  
+  h4 {
+    font-size: clamp(1rem, 1.1vw, 1.15rem);
+    line-height: 1.4;
+  }
+
   button:not(:disabled),
   [role='button']:not([aria-disabled='true']),
   [type='button']:not(:disabled),

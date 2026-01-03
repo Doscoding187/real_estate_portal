@@ -27,7 +27,11 @@ export function SimpleDevelopmentCard({
 
   return (
     <div 
-      className="group relative rounded-2xl overflow-hidden bg-white shadow-md hover:shadow-2xl transition-all duration-500 border border-slate-200/60 hover:border-blue-300 cursor-pointer hover:-translate-y-2"
+      className="group relative rounded-xl overflow-hidden bg-white hover:shadow-lg transition-all duration-300 cursor-pointer hover:-translate-y-1"
+      style={{ 
+        border: 'var(--card-border)',
+        borderRadius: 'var(--card-radius)'
+      }}
       onClick={() => setLocation(`/development/${id}`)}
     >
       {/* Image */}
@@ -36,52 +40,70 @@ export function SimpleDevelopmentCard({
           src={image}
           alt={title}
           loading="lazy"
-          className="object-contain w-full h-full transition-transform duration-700 group-hover:scale-110"
+          className="object-contain w-full h-full transition-transform duration-500 group-hover:scale-105"
           onError={(e) => {
             const target = e.target as HTMLImageElement;
             target.onerror = null;
             target.src = 'https://placehold.co/600x400/e2e8f0/64748b?text=No+Image';
           }}
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
         
         {/* Badges */}
-        <div className="absolute top-4 right-4 flex flex-col gap-2 items-end">
+        <div className="absolute top-3 right-3 flex flex-col gap-1.5 items-end">
           {isHotSelling && (
-            <span className="bg-gradient-to-r from-red-500 to-orange-500 text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow-lg flex items-center gap-1.5 backdrop-blur-sm">
-              <span className="text-base">🔥</span>
-              Hot Selling
+            <span 
+              className="text-white text-xs font-semibold px-2.5 py-1 rounded-md shadow-sm flex items-center gap-1"
+              style={{ fontSize: 'clamp(0.65rem, 0.7vw, 0.75rem)', background: 'linear-gradient(135deg, #ef4444, #f97316)' }}
+            >
+              🔥 Hot Selling
             </span>
           )}
           {!isHotSelling && isHighDemand && (
-            <span className="bg-gradient-to-r from-blue-600 to-purple-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow-lg flex items-center gap-1.5 backdrop-blur-sm">
-              <span className="text-base">📈</span>
-              High Demand
+            <span 
+              className="text-white text-xs font-semibold px-2.5 py-1 rounded-md shadow-sm flex items-center gap-1"
+              style={{ fontSize: 'clamp(0.65rem, 0.7vw, 0.75rem)', background: 'linear-gradient(135deg, #2563eb, #7c3aed)' }}
+            >
+              📈 High Demand
             </span>
           )}
         </div>
       </div>
 
-      {/* Content */}
-      <div className="p-6">
-        {/* Title */}
-        <h3 className="text-base font-bold mb-2 line-clamp-2 text-slate-900 group-hover:text-blue-600 transition-colors leading-tight">
+      {/* Content - Tighter padding */}
+      <div style={{ padding: 'var(--card-padding)', gap: 'var(--card-gap)', display: 'flex', flexDirection: 'column' }}>
+        {/* Title - Fluid font size */}
+        <h3 
+          className="font-semibold line-clamp-2 text-slate-900 group-hover:text-blue-600 transition-colors leading-tight"
+          style={{ fontSize: 'clamp(0.9rem, 1vw, 1.05rem)' }}
+        >
           {title}
         </h3>
 
-        {/* City */}
-        <p className="text-sm text-slate-600 mb-4 flex items-center gap-1.5">
-          <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        {/* City - Smaller meta text */}
+        <p 
+          className="text-slate-500 flex items-center gap-1"
+          style={{ fontSize: 'clamp(0.75rem, 0.8vw, 0.85rem)' }}
+        >
+          <svg className="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
           </svg>
           {city}
         </p>
 
-        {/* Price Range */}
-        <div className="pt-4 border-t border-slate-200">
-          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Price Range</p>
-          <p className="text-base font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+        {/* Price Range - Compact */}
+        <div className="pt-2 mt-auto border-t border-slate-100">
+          <p 
+            className="font-semibold text-slate-600"
+            style={{ fontSize: 'clamp(0.65rem, 0.7vw, 0.75rem)', letterSpacing: '0.03em', textTransform: 'uppercase', marginBottom: '0.25rem' }}
+          >
+            Price Range
+          </p>
+          <p 
+            className="font-bold text-blue-600"
+            style={{ fontSize: 'clamp(0.85rem, 0.95vw, 1rem)' }}
+          >
             {formatCurrency(priceRange.min)} - {formatCurrency(priceRange.max)}
           </p>
         </div>
