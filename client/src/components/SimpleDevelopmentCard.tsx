@@ -65,7 +65,7 @@ export function SimpleDevelopmentCard({
       {/* Content */}
       <div className="p-6">
         {/* Title */}
-        <h3 className="text-lg font-bold mb-2 line-clamp-2 text-slate-900 group-hover:text-blue-600 transition-colors leading-tight">
+        <h3 className="text-base font-bold mb-2 line-clamp-2 text-slate-900 group-hover:text-blue-600 transition-colors leading-tight">
           {title}
         </h3>
 
@@ -81,7 +81,7 @@ export function SimpleDevelopmentCard({
         {/* Price Range */}
         <div className="pt-4 border-t border-slate-200">
           <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Price Range</p>
-          <p className="text-lg font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+          <p className="text-base font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
             {formatCurrency(priceRange.min)} - {formatCurrency(priceRange.max)}
           </p>
         </div>
