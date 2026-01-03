@@ -236,9 +236,12 @@ export function FinalisationPhase() {
       reset();
       
       // Redirect based on role
+      console.log('[FinalisationPhase] Redirecting user:', { role: user?.role, userId: user?.id });
       if (user?.role === 'super_admin') {
+        console.log('[FinalisationPhase] Redirecting to Super Admin Publisher');
         setLocation('/admin/publisher');
       } else {
+        console.log('[FinalisationPhase] Redirecting to Developer Dashboard');
         setLocation('/developer/dashboard');
       }
 
