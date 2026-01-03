@@ -164,8 +164,7 @@ export class DevelopmentService {
     return {
       ...development,
       phases,
-      // @ts-ignore
-      unitTypes: [] // Placeholder until we confirm schema
+      unitTypes, // Return the aggregated unit types
     };
   }
   /**
