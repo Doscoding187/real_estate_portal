@@ -2361,6 +2361,71 @@ export const developerRouter = router({
       // Import cleanly to avoid circular deps if possible (though service imports are fine)
       const { getKPIsWithCache } = await import('./services/kpiService');
       
-      return await getKPIsWithCache(developer.id, input.timeRange, input.forceRefresh);
+    }),
+
+  /**
+   * Public query: Get published developments by province
+   * Used for homepage and province pages
+   */
+  getPublishedDevelopments: publicProcedure
+    .input(z.object({
+      province: z.string().optional(),
+      limit: z.number().int().positive().max(20).default(8),
+    }))
+    .query(async ({ input }) => {
+      const { developments: devTable, developerBrandProfiles } = await import('../drizzle/schema');
+      const dbConn = await db.getDb();
+      if (!dbConn) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
+
+      // Build query
+      let query = dbConn
+        .select({
+          id: devTable.id,
+          name: devTable.name,
+          description: devTable.description,
+          city: devTable.city,
+          province: devTable.province,
+          slug: devTable.slug,
+          images: devTable.images,
+          videoUrl: devTable.videoUrl,
+          virtualTourUrl: devTable.virtualTourUrl,
+          priceFrom: devTable.priceFrom,
+          priceTo: devTable.priceTo,
+          developmentType: devTable.developmentType,
+          views: devTable.views,
+          isFeatured: devTable.isFeatured,
+          developerBrandProfileId: devTable.developerBrandProfileId,
+          brandName: developerBrandProfiles.name,
+          brandLogo: developerBrandProfiles.logo,
+        })
+        .from(devTable)
+        .leftJoin(developerBrandProfiles, eq(devTable.developerBrandProfileId, developerBrandProfiles.id))
+        .where(
+          and(
+            eq(devTable.isPublished, 1),
+            eq(devTable.approvalStatus, 'approved'),
+            input.province ? eq(devTable.province, input.province) : undefined
+          )
+        )
+        .orderBy(desc(devTable.isFeatured), desc(devTable.views))
+        .limit(input.limit);
+
+      const results = await query;
+
+      // Transform to frontend format
+      return results.map((dev: any) => ({
+        id: dev.id.toString(),
+        title: dev.name,
+        city: `${dev.city}, ${dev.province}`,
+        priceRange: {
+          min: dev.priceFrom ? Number(dev.priceFrom) : 0,
+          max: dev.priceTo ? Number(dev.priceTo) : 0,
+        },
+        image: dev.images?.[0] || '/placeholders/development_placeholder_1_1763712033438.png',
+        slug: dev.slug,
+        isHotSelling: dev.isFeatured === 1,
+        brandName: dev.brandName,
+        brandLogo: dev.brandLogo,
+      }));
     }),
 });

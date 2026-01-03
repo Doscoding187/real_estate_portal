@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useLocation } from 'wouter';
+import { trpc } from '@/lib/trpc';
 import { EnhancedNavbar } from '@/components/EnhancedNavbar';
 import { EnhancedHero } from '@/components/EnhancedHero';
 import { SimpleDevelopmentCard } from '@/components/SimpleDevelopmentCard';
@@ -39,89 +40,33 @@ export default function Home() {
       path: `/${p.toLowerCase().replace(/\s+/g, '-')}`
   }));
 
-  // Mock development data with placeholder images
+  // Fetch real developments from database
+  const { data: gautengDevelopments = [], isLoading: gautengLoading } = trpc.developer.getPublishedDevelopments.useQuery({ 
+    province: 'Gauteng', 
+    limit: 8 
+  });
+  const { data: westernCapeDevelopments = [], isLoading: westernCapeLoading } = trpc.developer.getPublishedDevelopments.useQuery({ 
+    province: 'Western Cape', 
+    limit: 8 
+  });
+  const { data: kznDevelopments = [], isLoading: kznLoading } = trpc.developer.getPublishedDevelopments.useQuery({ 
+    province: 'KwaZulu-Natal', 
+    limit: 8 
+  });
+
+  // Group developments by province
   const developmentsByProvince: Record<string, any[]> = {
-    'Gauteng': [
-      {
-        id: '1',
-        title: 'Sandton Heights Luxury Apartments',
-        city: 'Sandton, Johannesburg',
-        priceRange: { min: 2500000, max: 5500000 },
-        image: '/placeholders/development_placeholder_1_1763712033438.png',
-        isHotSelling: true,
-      },
-      {
-        id: '2',
-        title: 'Rosebank Modern Living Estate',
-        city: 'Rosebank, Johannesburg',
-        priceRange: { min: 1800000, max: 3200000 },
-        image: '/placeholders/development_placeholder_3_1763712078958.png',
-        isHighDemand: true,
-      },
-      {
-        id: '3',
-        title: 'Waterkloof Ridge Townhouses',
-        city: 'Waterkloof, Pretoria',
-        priceRange: { min: 3200000, max: 4800000 },
-        image: '/placeholders/development_placeholder_2_1763712057181.png',
-      },
-      {
-        id: '4',
-        title: 'Centurion Lake View Residences',
-        city: 'Centurion, Pretoria',
-        priceRange: { min: 1500000, max: 2800000 },
-        image: '/placeholders/development_placeholder_4_1763712099609.png',
-      },
-    ],
-    'Western Cape': [
-      {
-        id: '5',
-        title: 'Camps Bay Ocean View Apartments',
-        city: 'Camps Bay, Cape Town',
-        priceRange: { min: 4500000, max: 8500000 },
-        image: '/placeholders/development_placeholder_4_1763712099609.png',
-        isHotSelling: true,
-      },
-      {
-        id: '6',
-        title: 'Sea Point Modern Residences',
-        city: 'Sea Point, Cape Town',
-        priceRange: { min: 2200000, max: 4200000 },
-        image: '/placeholders/development_placeholder_2_1763712057181.png',
-      },
-      {
-        id: '7',
-        title: 'Stellenbosch Wine Estate Homes',
-        city: 'Stellenbosch',
-        priceRange: { min: 3500000, max: 6500000 },
-        image: '/placeholders/development_placeholder_1_1763712033438.png',
-        isHighDemand: true,
-      },
-      {
-        id: '8',
-        title: 'Century City Waterfront Living',
-        city: 'Century City, Cape Town',
-        priceRange: { min: 1900000, max: 3500000 },
-        image: '/placeholders/development_placeholder_3_1763712078958.png',
-      },
-    ],
-    'KwaZulu-Natal': [
-      {
-        id: '9',
-        title: 'Umhlanga Beachfront Towers',
-        city: 'Umhlanga, Durban',
-        priceRange: { min: 2800000, max: 5200000 },
-        image: '/placeholders/development_placeholder_4_1763712099609.png',
-      },
-      {
-        id: '10',
-        title: 'Ballito Coastal Estate',
-        city: 'Ballito',
-        priceRange: { min: 2100000, max: 4100000 },
-        image: '/placeholders/development_placeholder_2_1763712057181.png',
-      },
-    ],
+    'Gauteng': gautengDevelopments,
+    'Western Cape': westernCapeDevelopments,
+    'KwaZulu-Natal': kznDevelopments,
+    'Eastern Cape': [],
+    'Mpumalanga': [],
+    'Limpopo': [],
+    'North West': [],
+    'Free State': [],
+    'Northern Cape': [],
   };
+
 
 
 
