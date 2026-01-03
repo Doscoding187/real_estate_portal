@@ -62,6 +62,7 @@ const formSchema = z.object({
   address: z.string().optional(),
   city: z.string().optional(),
   province: z.string().optional(),
+  operatingProvinces: z.array(z.string()).default([]), // Multi-select for operating provinces
   
   // Portfolio (Tab 3)
   completedProjects: z.string().optional(), // Input as string
@@ -71,6 +72,18 @@ const formSchema = z.object({
 });
 
 type FormValues = z.infer<typeof formSchema>;
+
+const SA_PROVINCES = [
+  'Gauteng',
+  'Western Cape',
+  'KwaZulu-Natal',
+  'Eastern Cape',
+  'Free State',
+  'Limpopo',
+  'Mpumalanga',
+  'North West',
+  'Northern Cape',
+];
 
 const SPECIALIZATION_OPTIONS = [
   'Residential', 'Commercial', 'Mixed-Use', 'Luxury', 
@@ -112,6 +125,7 @@ export function CreateBrandProfileDialog({
       address: '',
       city: '',
       province: '',
+      operatingProvinces: [],
       completedProjects: '0',
       currentProjects: '0',
       upcomingProjects: '0',
@@ -236,8 +250,10 @@ export function CreateBrandProfileDialog({
       upcomingProjects: parseInt(values.upcomingProjects || '0'),
       specializations: values.specializations,
       
-      // Derive operating provinces from location if not explicitly set
-      operatingProvinces: values.province ? [values.province] : [],
+      // Use explicit operatingProvinces if set, otherwise derive from location
+      operatingProvinces: values.operatingProvinces?.length > 0 
+        ? values.operatingProvinces 
+        : (values.province ? [values.province] : []),
     });
   };
 
