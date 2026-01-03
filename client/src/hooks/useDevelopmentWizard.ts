@@ -840,6 +840,7 @@ const createActions = (
           developerId: data.developerId,
           selectedAmenities: amenities, // Hydrate selected amenities from DB data
       };
+  }),
   
   // LEGACY ACTIONS (Compatibility Layer)
   
