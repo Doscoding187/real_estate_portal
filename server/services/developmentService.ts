@@ -112,53 +112,39 @@ export class DevelopmentService {
       // Continue without phases - they're optional
     }
 
-    // Try to get Unit Types (aggregated from developmentUnits)
+    // Try to get Unit Types from the unit_types table
     let unitTypes: any[] = [];
     try {
-      const units = await db.query.developmentUnits.findMany({
-        where: eq(developmentUnits.developmentId, developmentId),
+      // Import unitTypes schema entity
+      const { unitTypes: unitTypesTable } = await import('../../drizzle/schema.ts');
+      
+      const rawUnitTypes = await db.query.unitTypes.findMany({
+        where: eq(unitTypesTable.developmentId, developmentId),
+        orderBy: [unitTypesTable.displayOrder],
       });
 
-      // Aggregate units into types
-      const typeMap = new Map<string, any>();
+      // Map to wizard-expected format
+      unitTypes = rawUnitTypes.map((u: any) => ({
+        id: u.id,
+        name: u.name,
+        type: 'residential', // Default
+        bedrooms: u.bedrooms || 0,
+        bathrooms: Number(u.bathrooms || 0),
+        size: u.unitSize || 0,
+        basePriceFrom: Number(u.basePriceFrom),
+        basePriceTo: u.basePriceTo ? Number(u.basePriceTo) : Number(u.basePriceFrom),
+        parking: u.parking || 'none',
+        totalUnits: 1, // Default, can be calculated if stock data exists
+        baseFeatures: u.baseFeatures || {},
+        baseFinishes: u.baseFinishes || {},
+        baseMedia: u.baseMedia || { gallery: [], floorPlans: [], renders: [] },
+        displayOrder: u.displayOrder || 0,
+        isActive: !!u.isActive,
+      }));
       
-      units.forEach(u => {
-        // Group by characteristics
-        const key = `${u.unitType}-${u.bedrooms || 0}-${u.bathrooms || 0}-${u.size || 0}-${u.floorPlan || ''}`;
-        
-        if (!typeMap.has(key)) {
-           // Heuristic to determine a "Name" for the type
-           const bedLabel = u.bedrooms ? `${u.bedrooms} Bed` : u.unitType === 'studio' ? 'Studio' : u.unitType;
-           const sizeLabel = u.size ? `(${u.size}m²)` : '';
-           const name = `${bedLabel} ${u.unitType} ${sizeLabel}`.replace(/_/g, ' ').trim();
-
-           typeMap.set(key, {
-             id: `type-gen-${typeMap.size}`, // Generate a temporary ID for the wizard
-             name: name,
-             type: u.unitType,
-             totalUnits: 0, // Will count
-             bedrooms: u.bedrooms || 0,
-             bathrooms: Number(u.bathrooms || 0),
-             size: Number(u.size || 0),
-             basePriceFrom: Number(u.price),
-             basePriceTo: Number(u.price), // Track range
-             floorPlan: u.floorPlan || null,
-             count: 0
-           });
-        }
-        
-        const t = typeMap.get(key);
-        t.count++;
-        // Track min/max price for this definition
-        if (Number(u.price) < t.basePriceFrom) t.basePriceFrom = Number(u.price);
-        if (Number(u.price) > t.basePriceTo) t.basePriceTo = Number(u.price);
-        t.totalUnits++;
-      });
-      
-      unitTypes = Array.from(typeMap.values());
-      
+      console.log(`[getDevelopmentWithPhases] Found ${unitTypes.length} unit types for development ${developmentId}`);
     } catch (e) { 
-      console.error('Error fetching/aggregating unit types:', e); 
+      console.error('Error fetching unit types:', e); 
     }
 
     return {
