@@ -172,6 +172,22 @@ function Router() {
       <Route path="/property-for-sale" component={SearchResults} />
       <Route path="/property-to-rent" component={SearchResults} />
       
+      {/* Property24-style Routes (Inverted Hierarchy + Location ID) */}
+      {/* Suburb Page: /houses-for-sale/sky-city/alberton/gauteng/17552 */}
+      {/* Matches: 5 segments. :action is dynamic (houses-for-sale) */}
+      <Route path="/:action/:suburb/:city/:province/:locationId" component={SuburbPage} />
+      
+      {/* City Page: /houses-for-sale/sandton/gauteng/109 */}
+      {/* Matches: 4 segments. Distinction vs Old Canonical is the locationId at the end */}
+      <Route path="/:action/:city/:province/:locationId" component={CityPage} />
+      
+      {/* Development Search: /new-developments-for-sale/sandton/gauteng/109 */}
+      {/* This actually matches the City Page pattern above (4 segments) if we consider 'new-developments-for-sale' as action */}
+      {/* So the CityPage component needs to handle 'developments' action type. */}
+      
+      {/* Province Page (Inferred P24 pattern): /houses-for-sale/gauteng/1 ?? */}
+      <Route path="/:action/:province/:locationId" component={ProvincePage} />
+
       {/* City Shortcuts (UX-only, Redirects to Canonical) AND Province Pages */}
       {/* Both share the same URL structure: /root/:slug */}
       <Route path="/property-for-sale/:slug" component={LocationDispatcher} />

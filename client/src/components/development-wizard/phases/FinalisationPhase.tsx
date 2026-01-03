@@ -8,7 +8,10 @@ import { trpc } from '@/lib/trpc';
 import { useLocation } from 'wouter';
 import { calculateDevelopmentReadiness } from '@/lib/readiness';
 
+import { useAuth } from '@/_core/hooks/useAuth';
+
 export function FinalisationPhase() {
+  const { user } = useAuth();
   const { 
     developmentData, 
     classification, 
@@ -210,8 +213,15 @@ export function FinalisationPhase() {
         toast.success('Development published successfully!');
       }
       
+      
       reset();
-      setLocation('/developer/dashboard');
+      
+      // Redirect based on role
+      if (user?.role === 'super_admin') {
+        setLocation('/admin/publisher');
+      } else {
+        setLocation('/developer/dashboard');
+      }
 
     } catch (error: any) {
       console.error('[FinalisationPhase] Publish failed:', error);

@@ -33,9 +33,9 @@ import { Link } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { ArrowRight } from 'lucide-react';
 
-export default function SuburbPage({ params }: { params: { province: string; city: string; suburb: string } }) {
+export default function SuburbPage({ params }: { params: { province: string; city: string; suburb: string; action?: string; locationId?: string } }) {
   const [location, navigate] = useLocation();
-  const { province: provinceSlug, city: citySlug, suburb: suburbSlug } = params;
+  const { province: provinceSlug, city: citySlug, suburb: suburbSlug, action, locationId } = params;
 
   // 2025 Architecture: Controller Logic
   // Render Transaction Page (SearchResults) if 'view=list' OR any search filters are present
@@ -50,7 +50,7 @@ export default function SuburbPage({ params }: { params: { province: string; cit
   const isTransactionMode = searchParams.get('view') === 'list' || hasSearchFilters;
 
   if (isTransactionMode) {
-      return <SearchResults />;
+      return <SearchResults locationId={locationId} />;
   }
 
   // Restore data fetching

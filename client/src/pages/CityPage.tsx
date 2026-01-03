@@ -37,9 +37,9 @@ import { LocationTopLocalities } from '@/components/location/LocationTopLocaliti
 
 import SearchResults from './SearchResults';
 
-export default function CityPage({ params }: { params: { province: string; city: string } }) {
+export default function CityPage({ params }: { params: { province: string; city: string; action?: string; locationId?: string } }) {
   const [location, navigate] = useLocation();
-  const { province: provinceSlug, city: citySlug } = params;
+  const { province: provinceSlug, city: citySlug, action, locationId } = params;
 
   // Use window.location.search for reactivity to query param changes
   // wouter's useLocation() only returns pathname, not query params
@@ -75,7 +75,7 @@ export default function CityPage({ params }: { params: { province: string; city:
   const isTransactionMode = searchParams.get('view') === 'list' || hasSearchFilters;
 
   if (isTransactionMode) {
-      return <SearchResults province={provinceSlug} city={citySlug} />;
+      return <SearchResults province={provinceSlug} city={citySlug} locationId={locationId} />;
   }
 
   // Restore data fetching
@@ -259,7 +259,7 @@ export default function CityPage({ params }: { params: { province: string; city:
                 customLocations={suburbs.map((suburb: any) => ({
                     name: suburb.name,
                     province: city.name,
-                    icon: MapPin,
+                    icon: MapPin, // TODO: Fix missing import, assuming MapPin is from lucide-react or not imported?
                     slug: suburb.slug,
                     provinceSlug: `${provinceSlug}/${citySlug}`, 
                     color: 'from-blue-500 to-indigo-500'
@@ -379,3 +379,5 @@ function CityPageSkeleton() {
     </div>
   );
 }
+// Import MapPin for ExploreCities - though existing file didn't seem to import it?
+import { MapPin } from 'lucide-react';

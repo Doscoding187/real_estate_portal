@@ -44,7 +44,7 @@ import {
 } from '@/lib/urlUtils';
 import { resolveSearchIntent, generateIntentUrl, SearchIntent } from '@/lib/searchIntent';
 
-export default function SearchResults({ province: propProvince, city: propCity }: { province?: string; city?: string } = {}) {
+export default function SearchResults({ province: propProvince, city: propCity, locationId: propLocationId }: { province?: string; city?: string; locationId?: string } = {}) {
   const { isAuthenticated } = useAuth();
   const [location, setLocation] = useLocation();
   
@@ -56,6 +56,7 @@ export default function SearchResults({ province: propProvince, city: propCity }
     suburb?: string;
     province?: string;
     city?: string;
+    locationId?: string;
   }>();
 
   // --- CORE SEARCH INTENT ---
@@ -67,9 +68,10 @@ export default function SearchResults({ province: propProvince, city: propCity }
     const effectiveParams = { ...params };
     if (propProvince && !effectiveParams.province) effectiveParams.province = propProvince;
     if (propCity && !effectiveParams.city) effectiveParams.city = propCity;
+    if (propLocationId && !effectiveParams.locationId) effectiveParams.locationId = propLocationId;
 
     return resolveSearchIntent(location, effectiveParams, searchParams);
-  }, [location, window.location.search, params, propProvince, propCity]);
+  }, [location, window.location.search, params, propProvince, propCity, propLocationId]);
 
   // Derived state from Intent
   const filters: SearchFilters = useMemo(() => {
@@ -79,6 +81,7 @@ export default function SearchResults({ province: propProvince, city: propCity }
       ...(searchIntent.geography.province && { province: searchIntent.geography.province }),
       ...(searchIntent.geography.city && { city: searchIntent.geography.city }),
       ...(searchIntent.geography.suburb && { suburb: searchIntent.geography.suburb }),
+      ...(searchIntent.geography.locationId && { locationId: searchIntent.geography.locationId }),
       listingType: searchIntent.transactionType === 'to-rent' ? 'rent' : 'sale'
     };
   }, [searchIntent]);
@@ -111,6 +114,7 @@ export default function SearchResults({ province: propProvince, city: propCity }
     city: filters.city, // Explicitly ensure these are passed
     province: filters.province,
     suburb: filters.suburb,
+    locationId: filters.locationId, // Pass locationId if backend supports it (optional filter usually)
     propertyType: filters.propertyType as any,
     listingType: filters.listingType as any,
     minPrice: filters.minPrice,
