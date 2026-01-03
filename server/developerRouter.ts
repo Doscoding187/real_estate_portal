@@ -2373,12 +2373,14 @@ export const developerRouter = router({
       limit: z.number().int().positive().max(20).default(8),
     }))
     .query(async ({ input }) => {
-      const { developments: devTable, developerBrandProfiles } = await import('../drizzle/schema');
+      const { developments: devTable } = await import('../drizzle/schema');
       const dbConn = await db.getDb();
       if (!dbConn) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
 
-      // Build query
-      let query = dbConn
+      console.log('[getPublishedDevelopments] Input:', input);
+
+      // Build query - simplified without brand join for now
+      const results = await dbConn
         .select({
           id: devTable.id,
           name: devTable.name,
@@ -2387,19 +2389,13 @@ export const developerRouter = router({
           province: devTable.province,
           slug: devTable.slug,
           images: devTable.images,
-          videoUrl: devTable.videoUrl,
-          virtualTourUrl: devTable.virtualTourUrl,
           priceFrom: devTable.priceFrom,
           priceTo: devTable.priceTo,
           developmentType: devTable.developmentType,
           views: devTable.views,
           isFeatured: devTable.isFeatured,
-          developerBrandProfileId: devTable.developerBrandProfileId,
-          brandName: developerBrandProfiles.name,
-          brandLogo: developerBrandProfiles.logo,
         })
         .from(devTable)
-        .leftJoin(developerBrandProfiles, eq(devTable.developerBrandProfileId, developerBrandProfiles.id))
         .where(
           and(
             eq(devTable.isPublished, 1),
@@ -2410,7 +2406,7 @@ export const developerRouter = router({
         .orderBy(desc(devTable.isFeatured), desc(devTable.views))
         .limit(input.limit);
 
-      const results = await query;
+      console.log('[getPublishedDevelopments] Found', results.length, 'developments');
 
       // Transform to frontend format
       return results.map((dev: any) => ({
@@ -2424,8 +2420,6 @@ export const developerRouter = router({
         image: dev.images?.[0] || '/placeholders/development_placeholder_1_1763712033438.png',
         slug: dev.slug,
         isHotSelling: dev.isFeatured === 1,
-        brandName: dev.brandName,
-        brandLogo: dev.brandLogo,
       }));
     }),
 });
