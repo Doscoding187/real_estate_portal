@@ -39,6 +39,7 @@ export function FinalisationPhase() {
   const createDevMutation = trpc.developer.createDevelopment.useMutation();
   const updateDevMutation = trpc.developer.updateDevelopment.useMutation();
   const createUnitTypeMutation = trpc.developer.createUnitType.useMutation();
+  const deleteUnitTypesMutation = trpc.developer.deleteUnitTypesForDevelopment.useMutation();
   const publishDevMutation = trpc.developer.publishDevelopment.useMutation();
 
   useEffect(() => {
@@ -165,9 +166,23 @@ export function FinalisationPhase() {
         console.log('[FinalisationPhase] Development created with ID:', devId);
       }
 
-      // STEP 2: Handle Unit Types (non-blocking errors)
+      // STEP 2: Handle Unit Types (replace old with new)
       if (unitTypes.length > 0 && devId) {
-        console.log('[FinalisationPhase] Creating unit types:', unitTypes.length);
+        console.log('[FinalisationPhase] Processing unit types:', unitTypes.length);
+        
+        // If editing, delete old unit types first (replace strategy)
+        if (editingId) {
+          try {
+            console.log('[FinalisationPhase] Deleting old unit types for development:', devId);
+            await deleteUnitTypesMutation.mutateAsync({ developmentId: devId });
+            console.log('[FinalisationPhase] Old unit types deleted successfully');
+          } catch (deleteError: any) {
+            console.warn('[FinalisationPhase] Failed to delete old unit types:', deleteError.message);
+            // Continue anyway - we'll try to create new ones
+          }
+        }
+        
+        console.log('[FinalisationPhase] Creating new unit types:', unitTypes.length);
         
         for (const unit of unitTypes) {
           try {

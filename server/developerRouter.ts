@@ -2139,6 +2139,29 @@ export const developerRouter = router({
       }
     }),
 
+  // Delete all unit types for a development (used before re-creating on edit)
+  deleteUnitTypesForDevelopment: protectedProcedure
+    .input(z.object({ developmentId: z.number().int() }))
+    .mutation(async ({ input, ctx }) => {
+      const { unitTypes } = await import('../drizzle/schema');
+      const { eq } = await import('drizzle-orm');
+      const dbConn = await db.getDb();
+      
+      console.log('[DeveloperRouter] Deleting unit types for development:', input.developmentId);
+      
+      try {
+        await dbConn.delete(unitTypes).where(eq(unitTypes.developmentId, input.developmentId));
+        console.log('[DeveloperRouter] Unit types deleted successfully');
+        return { success: true };
+      } catch (error: any) {
+        console.error('[DeveloperRouter] Failed to delete unit types:', error.message);
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: `Failed to delete unit types: ${error.message}`
+        });
+      }
+    }),
+
   // Legacy delete draft
   deleteDraft: protectedProcedure
     .input(z.object({ id: z.number().int() }))
