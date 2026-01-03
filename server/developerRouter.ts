@@ -618,14 +618,18 @@ export const developerRouter = router({
         });
       }
 
-      // Verify ownership
-      // CASE 1: Platform Owner (Super Admin)
+      // Verify ownership - super_admins can access any development
+      if (ctx.user.role === 'super_admin') {
+        // Super admin bypass - allow access to all developments
+        return development;
+      }
+      
+      // For non-super-admins, check owner type
       if (development.devOwnerType === 'platform') {
-        if (ctx.user.role !== 'super_admin') {
-           throw new TRPCError({ code: 'FORBIDDEN', message: 'Unauthorized' });
-        }
+        // Platform-owned developments are super_admin only (already handled above)
+        throw new TRPCError({ code: 'FORBIDDEN', message: 'Unauthorized' });
       } else {
-        // CASE 2: Developer Owner
+        // Developer-owned: verify the user owns this development
         const developer = await db.getDeveloperByUserId(ctx.user.id);
         if (!developer || development.developerId !== developer.id) {
           throw new TRPCError({
@@ -1377,13 +1381,15 @@ export const developerRouter = router({
         });
       }
 
-      // Verify ownership
-      const development = await developmentService.getDevelopmentWithPhases(input.developmentId);
-      if (!development || development.developerId !== developer.id) {
-        throw new TRPCError({
-          code: 'FORBIDDEN',
-          message: 'You do not own this development',
-        });
+      // Verify ownership (super_admin bypass)
+      if (ctx.user.role !== 'super_admin') {
+        const development = await developmentService.getDevelopmentWithPhases(input.developmentId);
+        if (!development || development.developerId !== developer.id) {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'You do not own this development',
+          });
+        }
       }
 
       const { leadService } = await import('./services/leadService');
@@ -1526,13 +1532,15 @@ export const developerRouter = router({
         });
       }
 
-      // Verify ownership
-      const development = await developmentService.getDevelopmentWithPhases(input.developmentId);
-      if (!development || development.developerId !== developer.id) {
-        throw new TRPCError({
-          code: 'FORBIDDEN',
-          message: 'You do not own this development',
-        });
+      // Verify ownership (super_admin bypass)
+      if (ctx.user.role !== 'super_admin') {
+        const development = await developmentService.getDevelopmentWithPhases(input.developmentId);
+        if (!development || development.developerId !== developer.id) {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'You do not own this development',
+          });
+        }
       }
 
       const { leadService } = await import('./services/leadService');
