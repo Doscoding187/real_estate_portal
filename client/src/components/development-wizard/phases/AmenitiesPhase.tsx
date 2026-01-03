@@ -45,6 +45,43 @@ export function AmenitiesPhase() {
   const [customAmenityInput, setCustomAmenityInput] = useState('');
   const [customAmenities, setCustomAmenities] = useState<string[]>([]);
 
+  // Restore custom amenities from selectedAmenities on mount
+  React.useEffect(() => {
+    if (selectedAmenities.length > 0 && customAmenities.length === 0) {
+      // Find amenities that are NOT in the registry
+      const registryKeys = AMENITY_REGISTRY.map(a => a.key);
+      const custom = selectedAmenities.filter(key => 
+        !registryKeys.includes(key) && 
+        !key.startsWith('custom_') // Avoid double prefix checks if we use that convention
+      );
+      
+      // Also handle keys that start with "custom_" if that's how we stored them
+      const prefixedCustom = selectedAmenities
+        .filter(key => key.startsWith('custom_'))
+        .map(key => key.replace('custom_', '').replace(/_/g, ' ')); // Rough attempt to restore original text
+        
+      // For now, let's just rely on the fact that if it's not in registry, it's custom.
+      // And we might have lost the exact original formatted text if we sluggified it.
+      // But looking at handleAddCustomAmenity:
+      // const customKey = `custom_${trimmed.toLowerCase().replace(/\s+/g, '_')}`;
+      // So we can try to restore or just show the key if we can't fully revert.
+      
+      // Better approach: filter selectedAmenities for things starting with custom_
+      const restored = selectedAmenities
+        .filter(k => k.startsWith('custom_'))
+        .map(k => {
+           // Try to un-slugify: custom_foo_bar -> Foo Bar? Hard to get casing back.
+           // For now, let's just capitalize words.
+           const clean = k.replace('custom_', '').replace(/_/g, ' ');
+           return clean.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+        });
+
+      if (restored.length > 0) {
+        setCustomAmenities(restored);
+      }
+    }
+  }, [selectedAmenities]); // Run once when selectedAmenities loads
+
   const handleBack = () => {
     // Go back to Estate Profile (4) or Identity (3) based on config
     if (navigation.shouldShowEstateProfile) {

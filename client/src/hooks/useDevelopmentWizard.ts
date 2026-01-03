@@ -830,8 +830,8 @@ const createActions = (
               isPublished: !!data.isPublished
           },
           editingId: data.id,
-          developerId: data.developerId
-      };
+          developerId: data.developerId,
+          selectedAmenities: amenities, // Hydrate selected amenities from DB data
   }),
   
   // LEGACY ACTIONS (Compatibility Layer)
