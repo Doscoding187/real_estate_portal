@@ -741,6 +741,8 @@ const createActions = (
              case 'est_class': estProfile.classification = val; break;
              case 'hoa': estProfile.hasHOA = val === 'true'; break;
              case 'arch_guide': estProfile.architecturalGuidelines = val === 'true'; break;
+             case 'est_levy_min': estProfile.levyRange.min = Number(val); break;
+             case 'est_levy_max': estProfile.levyRange.max = Number(val); break;
              case 'est_amenity': estProfile.estateAmenities.push(val); break;
          }
       });
@@ -809,6 +811,11 @@ const createActions = (
               features: displayFeatures
           },
           // Hydrate Configs
+          listingIdentity: {
+            identityType: data.marketingBrandProfileId ? 'marketing_agency' : 'developer',
+            developerBrandProfileId: data.developerBrandProfileId,
+            marketingRole: data.marketingRole || 'exclusive'
+          },
           residentialConfig: resConfig,
           landConfig: lndConfig,
           commercialConfig: comConfig,

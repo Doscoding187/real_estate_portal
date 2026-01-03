@@ -115,6 +115,8 @@ export function FinalisationPhase() {
       if (estateProfile.classification) addConfig('est_class', estateProfile.classification);
       if (estateProfile.hasHOA) addConfig('hoa', 'true');
       if (estateProfile.architecturalGuidelines) addConfig('arch_guide', 'true');
+      if (estateProfile.levyRange.min > 0) addConfig('est_levy_min', estateProfile.levyRange.min.toString());
+      if (estateProfile.levyRange.max > 0) addConfig('est_levy_max', estateProfile.levyRange.max.toString());
       estateProfile.estateAmenities.forEach(a => addConfig('est_amenity', a));
 
       // Combine with user-defined features
