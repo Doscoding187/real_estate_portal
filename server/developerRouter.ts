@@ -2002,7 +2002,7 @@ export const developerRouter = router({
    * Create a Unit Type (Phase 4)
    * Auth: Protected, must own development
    */
-  createUnitType: protectedProcedure
+   createUnitType: protectedProcedure
     .input(
       z.object({
         developmentId: z.number().int(),
@@ -2013,7 +2013,27 @@ export const developerRouter = router({
         unitSize: z.number().int().optional(),
         basePriceFrom: z.number().positive(),
         basePriceTo: z.number().positive().optional(),
-        amenities: z.array(z.string()).optional(), // Will map to baseFeatures/baseFinishes in service
+        amenities: z.array(z.string()).optional(),
+        baseMedia: z.object({
+          gallery: z.array(z.object({
+            id: z.string(),
+            url: z.string(),
+            file: z.any().optional(),
+            isPrimary: z.boolean().optional(),
+          })).optional(),
+          floorPlans: z.array(z.object({
+            id: z.string(),
+            url: z.string(),
+            file: z.any().optional(),
+            isPrimary: z.boolean().optional(),
+          })).optional(),
+          renders: z.array(z.object({
+            id: z.string(),
+            url: z.string(),
+            file: z.any().optional(),
+            isPrimary: z.boolean().optional(),
+          })).optional(),
+        }).optional(),
       })
     )
     .mutation(async ({ input, ctx }) => {
@@ -2085,7 +2105,7 @@ export const developerRouter = router({
              kitchenFeatures: '',
              bathroomFeatures: ''
            }),
-           baseMedia: JSON.stringify({ gallery: [], floorPlans: [], renders: [] })
+           baseMedia: JSON.stringify(input.baseMedia || { gallery: [], floorPlans: [], renders: [] })
          };
          
          // Only add basePriceTo if it's a valid positive number

@@ -174,7 +174,8 @@ export function FinalisationPhase() {
               parking: unit.parking,
               unitSize: unit.unitSize,
               basePriceFrom: unit.basePriceFrom || 0,
-              amenities: [...unit.amenities.standard, ...unit.amenities.additional]
+              amenities: [...unit.amenities.standard, ...unit.amenities.additional],
+              baseMedia: unit.baseMedia, // Pass unit type images
             });
           } catch (unitError: any) {
             console.warn('[FinalisationPhase] Failed to create unit type:', unit.name, unitError.message);
