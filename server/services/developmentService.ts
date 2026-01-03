@@ -124,6 +124,13 @@ export class DevelopmentService {
       });
 
       // Map to wizard-expected format
+      const parseJson = (val: any, fallback: any) => {
+          if (typeof val === 'string') {
+              try { return JSON.parse(val); } catch { return fallback; }
+          }
+          return val || fallback;
+      };
+
       unitTypes = rawUnitTypes.map((u: any) => ({
         id: u.id,
         name: u.name,
@@ -135,9 +142,9 @@ export class DevelopmentService {
         basePriceTo: u.basePriceTo ? Number(u.basePriceTo) : Number(u.basePriceFrom),
         parking: u.parking || 'none',
         totalUnits: 1, // Default, can be calculated if stock data exists
-        baseFeatures: u.baseFeatures || {},
-        baseFinishes: u.baseFinishes || {},
-        baseMedia: u.baseMedia || { gallery: [], floorPlans: [], renders: [] },
+        baseFeatures: parseJson(u.baseFeatures, {}),
+        baseFinishes: parseJson(u.baseFinishes, {}),
+        baseMedia: parseJson(u.baseMedia, { gallery: [], floorPlans: [], renders: [] }),
         displayOrder: u.displayOrder || 0,
         isActive: !!u.isActive,
       }));

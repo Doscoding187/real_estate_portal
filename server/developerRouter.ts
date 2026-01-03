@@ -2091,21 +2091,21 @@ export const developerRouter = router({
            unitSize: input.unitSize || null,
            basePriceFrom: String(input.basePriceFrom),
            // JSON columns - stringify for MySQL TEXT/JSON storage
-           baseFeatures: JSON.stringify({
+           baseFeatures: input.baseFeatures || {
              builtInWardrobes: true,
              tiledFlooring: true,
              graniteCounters: true,
              prepaidElectricity: true,
              balcony: false,
              petFriendly: false
-           }),
-           baseFinishes: JSON.stringify({
+           },
+           baseFinishes: input.baseFinishes || {
              paintAndWalls: '',
              flooringTypes: '',
              kitchenFeatures: '',
              bathroomFeatures: ''
-           }),
-           baseMedia: JSON.stringify(input.baseMedia || { gallery: [], floorPlans: [], renders: [] })
+           },
+           baseMedia: input.baseMedia || { gallery: [], floorPlans: [], renders: [] }
          };
          
          // Only add basePriceTo if it's a valid positive number
