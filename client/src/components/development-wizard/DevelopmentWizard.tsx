@@ -175,7 +175,9 @@ export function DevelopmentWizard({ developmentId, isModal = false }: Developmen
         // Hydrate the store atomically
         hydrateDevelopment(editData);
         setIsHydrated(true);
-        toast.success('Development loaded for editing');
+        // EDIT MODE: Start at Publish step (9) so user can navigate back to edit sections
+        setPhase(9);
+        toast.success('Development loaded for editing. Navigate back to edit any section.');
     }
   }, [editData, isHydrated]);
 
