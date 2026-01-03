@@ -9,7 +9,7 @@ import { properties, propertyImages } from '../../drizzle/schema';
 import { eq, and, gte, lte, inArray, or, sql, SQL, desc, asc, isNotNull } from 'drizzle-orm';
 import { redisCache, CacheTTL } from '../lib/redis';
 import type { PropertyFilters, SortOption, SearchResults, Property } from '../../shared/types';
-import { locationResolver } from './locationResolverService';
+import { locationResolver, ResolvedLocation } from './locationResolverService';
 
 // Cache key prefix for property searches
 const CACHE_PREFIX = 'property:search:';
@@ -37,12 +37,22 @@ export class PropertySearchService {
     // Resolve location slugs to IDs for optimal queries
     // NOTE: Wrapped in try-catch - if resolver fails, fall back to text queries
     let locationIds: { provinceId?: number; cityId?: number; suburbId?: number } = {};
+    let resolvedLocation: ResolvedLocation | null = null;
+    
     try {
-      locationIds = await locationResolver.getLocationIds({
+      resolvedLocation = await locationResolver.resolveLocation({
         provinceSlug: filters.province,
         citySlug: filters.city,
-        suburbSlug: filters.suburb?.[0],
+        suburbSlug: filters.suburb?.[0], // Only first suburb supported for resolution currently
       });
+      
+      if (resolvedLocation) {
+        locationIds = {
+          provinceId: resolvedLocation.province?.id,
+          cityId: resolvedLocation.city?.id,
+          suburbId: resolvedLocation.suburb?.id,
+        };
+      }
     } catch (error) {
       console.error('[PropertySearchService] Location resolver failed, using text fallback:', error);
     }
@@ -102,7 +112,7 @@ export class PropertySearchService {
       .offset(offset);
 
     // Get images for properties
-    const propertyIds = results.map(p => Number(p.id));
+    const propertyIds = results.map((p: any) => Number(p.id));
     const images = propertyIds.length > 0 ? await db
       .select({
         propertyId: propertyImages.propertyId,
@@ -115,7 +125,7 @@ export class PropertySearchService {
 
     // Group images by property
     const imagesByProperty = new Map<number, typeof images>();
-    images.forEach(img => {
+    images.forEach((img: any) => {
       const propId = img.propertyId;
       if (!imagesByProperty.has(propId)) {
         imagesByProperty.set(propId, []);
@@ -124,7 +134,7 @@ export class PropertySearchService {
     });
 
     // Transform results to Property type
-    const transformedProperties: Property[] = results.map(prop => ({
+    const transformedProperties: Property[] = results.map((prop: any) => ({
       id: String(prop.id),
       title: prop.title,
       price: prop.price,
@@ -144,7 +154,7 @@ export class PropertySearchService {
       petFriendly: prop.petFriendly,
       fibreReady: prop.fibreReady,
       loadSheddingSolutions: prop.loadSheddingSolutions,
-      images: (imagesByProperty.get(Number(prop.id)) || []).map(img => ({
+      images: (imagesByProperty.get(Number(prop.id)) || []).map((img: any) => ({
         url: img.imageUrl,
         thumbnailUrl: img.imageUrl,
       })),
@@ -164,12 +174,42 @@ export class PropertySearchService {
       highlights: prop.highlights,
     }));
 
+    let locationContext: SearchResults['locationContext'] = undefined;
+    
+    if (resolvedLocation) {
+      let name = resolvedLocation.province.name;
+      let slug = resolvedLocation.province.slug;
+      
+      if (resolvedLocation.level === 'city' && resolvedLocation.city) {
+        name = resolvedLocation.city.name;
+        slug = resolvedLocation.city.slug;
+      } else if (resolvedLocation.level === 'suburb' && resolvedLocation.suburb) {
+        name = resolvedLocation.suburb.name;
+        slug = resolvedLocation.suburb.slug;
+      }
+
+      locationContext = {
+        type: resolvedLocation.level,
+        name,
+        slug,
+        confidence: resolvedLocation.confidence,
+        fallbackLevel: resolvedLocation.fallbackLevel,
+        originalIntent: resolvedLocation.originalIntent,
+        hierarchy: {
+          province: resolvedLocation.province.name,
+          city: resolvedLocation.city?.name,
+          suburb: resolvedLocation.suburb?.name,
+        },
+      };
+    }
+
     const searchResults: SearchResults = {
       properties: transformedProperties,
       total,
       page,
       pageSize,
       hasMore,
+      locationContext,
     };
 
     // Cache the results
@@ -421,7 +461,7 @@ export class PropertySearchService {
       .groupBy(properties.propertyType);
 
     const byPropertyType: Record<string, number> = {};
-    typeResults.forEach(row => {
+    typeResults.forEach((row: any) => {
       byPropertyType[row.propertyType] = Number(row.count);
     });
 

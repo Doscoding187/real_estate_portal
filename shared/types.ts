@@ -832,6 +832,19 @@ export interface SearchResults {
   page: number;
   pageSize: number;
   hasMore: boolean;
+  locationContext?: {
+    type: 'province' | 'city' | 'suburb';
+    name: string;
+    slug: string;
+    confidence: 'exact' | 'expanded' | 'approximate';
+    fallbackLevel: 'none' | 'suburb_to_city' | 'city_to_province' | 'suburb_to_province';
+    originalIntent: string;
+    hierarchy?: {
+      province: string;
+      city?: string;
+      suburb?: string;
+    };
+  };
 }
 
 // Saved search

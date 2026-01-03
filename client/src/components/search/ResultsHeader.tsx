@@ -22,10 +22,19 @@ interface ResultsHeaderProps {
   onSortChange: (sort: SortOption) => void;
   onOpenFilters?: () => void;
   showMobileFilterButton?: boolean;
+  locationContext?: {
+    name: string;
+    type: 'province' | 'city' | 'suburb';
+    hierarchy?: {
+      province: string;
+      city?: string;
+      suburb?: string;
+    };
+  };
 }
 
 // Generate human-readable results title
-function generateResultsTitle(filters: SearchFilters, count: number, isLoading?: boolean): string {
+function generateResultsTitle(filters: SearchFilters, count: number, isLoading?: boolean, locationContext?: ResultsHeaderProps['locationContext']): string {
   const parts: string[] = [];
 
   // Count
@@ -50,11 +59,15 @@ function generateResultsTitle(filters: SearchFilters, count: number, isLoading?:
     parts.push('to Rent');
   }
 
-  // Location
-  if (filters.suburb && filters.city) {
-    parts.push(`in ${filters.suburb}, ${filters.city}`);
-  } else if (filters.city) {
-    parts.push(`in ${filters.city}`);
+  // Location - Use Context if available, else derive from filters
+  if (locationContext) {
+    parts.push(`in ${locationContext.name}`);
+  } else {
+    if (filters.suburb && filters.city) {
+      parts.push(`in ${filters.suburb}, ${filters.city}`);
+    } else if (filters.city) {
+      parts.push(`in ${filters.city}`);
+    }
   }
 
   return parts.join(' ');
@@ -70,8 +83,16 @@ export function ResultsHeader({
   onSortChange,
   onOpenFilters,
   showMobileFilterButton = true,
+  locationContext,
 }: ResultsHeaderProps) {
-  const title = generateResultsTitle(filters, resultCount, isLoading);
+  const title = generateResultsTitle(filters, resultCount, isLoading, locationContext);
+
+  // Generate hierarchy breadcrumbs if context exists
+  const locationHierarchy = locationContext?.hierarchy ? [
+    locationContext.hierarchy.suburb,
+    locationContext.hierarchy.city,
+    locationContext.hierarchy.province,
+  ].filter(Boolean).join(' · ') : null;
 
   return (
     <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 pb-6 border-b border-gray-100">
@@ -80,6 +101,11 @@ export function ResultsHeader({
         <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
           {title}
         </h1>
+        {locationHierarchy && (
+          <div className="text-sm text-slate-500 font-medium mt-1">
+            Searching in: <span className="text-slate-700">{locationHierarchy}</span>
+          </div>
+        )}
         {resultCount > 0 && (
             <div className="flex items-center gap-2 mt-2 text-sm text-slate-500">
                 <span className="flex h-2 w-2 relative">

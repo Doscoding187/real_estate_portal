@@ -687,6 +687,10 @@ export const unitTypes = mysqlTable("unit_types", {
 	basePriceFrom: decimal("base_price_from", { precision: 15, scale: 2 }).notNull(),
 	basePriceTo: decimal("base_price_to", { precision: 15, scale: 2 }),
 	
+	// Stock Tracking
+	totalUnits: int("total_units").default(0).notNull(),
+	availableUnits: int("available_units").default(0).notNull(),
+	
 	// Base Features (Defaults for all specs)
 	baseFeatures: json("base_features").$type<{
 		builtInWardrobes: boolean;

@@ -2013,6 +2013,8 @@ export const developerRouter = router({
         unitSize: z.number().int().optional(),
         basePriceFrom: z.number().positive(),
         basePriceTo: z.number().positive().optional(),
+        totalUnits: z.number().int().nonnegative().optional(),
+        availableUnits: z.number().int().nonnegative().optional(),
         amenities: z.array(z.string()).optional(),
         baseMedia: z.object({
           gallery: z.array(z.object({
@@ -2105,7 +2107,10 @@ export const developerRouter = router({
              kitchenFeatures: '',
              bathroomFeatures: ''
            },
-           baseMedia: input.baseMedia || { gallery: [], floorPlans: [], renders: [] }
+           baseMedia: input.baseMedia || { gallery: [], floorPlans: [], renders: [] },
+           totalUnits: input.totalUnits || 0,
+           // Default availableUnits to totalUnits if not explicitly set
+           availableUnits: input.availableUnits ?? input.totalUnits ?? 0,
          };
          
          // Only add basePriceTo if it's a valid positive number

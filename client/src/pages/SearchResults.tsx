@@ -32,6 +32,7 @@ import {
   ViewMode,
   SortOption,
 } from '@/components/search';
+import { SearchFallbackNotice } from '@/components/search/SearchFallbackNotice';
 
 // URL utilities
 import { MetaControl } from '@/components/seo/MetaControl';
@@ -127,9 +128,13 @@ export default function SearchResults({ province: propProvince, city: propCity, 
 
   // Fetch properties
   const {
-    data: properties,
+    data: searchResults,
     isLoading,
   } = trpc.properties.search.useQuery(queryInput);
+
+  const properties = searchResults?.properties || [];
+  const resultTotal = searchResults?.total || 0;
+  const locationContext = searchResults?.locationContext;
 
   // Mutations
   const addFavoriteMutation = trpc.favorites.add.useMutation({
@@ -219,6 +224,42 @@ export default function SearchResults({ province: propProvince, city: propCity, 
     });
   };
 
+  const handleBoundsChange = (bounds: google.maps.LatLngBounds) => {
+    // Map Lens Logic:
+    // 1. Reset specific geography (we are now searching via coordinates)
+    // 2. Apply bounds to filters
+    
+    const sw = bounds.getSouthWest();
+    const ne = bounds.getNorthEast();
+    
+    const nextFilters = {
+      ...searchIntent.filters,
+      minLat: sw.lat(),
+      maxLat: ne.lat(),
+      minLng: sw.lng(),
+      maxLng: ne.lng(),
+    };
+    
+    // Construct new intent clearing named geography
+    const mapIntent: SearchIntent = {
+      ...searchIntent,
+      geography: {
+        level: 'country', // Reset to top level
+        // Explicitly undefined to ensure they are cleared
+        province: undefined,
+        city: undefined,
+        suburb: undefined,
+        locationId: undefined,
+        slug: undefined
+      },
+      filters: nextFilters
+    };
+    
+    const newUrl = generateIntentUrl(mapIntent);
+    setLocation(newUrl);
+    setPage(0);
+  };
+
   // Only show real properties
   const displayProperties = properties || [];
   
@@ -241,7 +282,7 @@ export default function SearchResults({ province: propProvince, city: propCity, 
     return sorted;
   }, [displayProperties, sortBy]);
 
-  const resultCount = displayProperties.length;
+  const resultCount = resultTotal;
   const canonicalUrl = useMemo(() => generateIntentUrl(searchIntent), [searchIntent]);
 
   return (
@@ -254,6 +295,9 @@ export default function SearchResults({ province: propProvince, city: propCity, 
         <div className="mb-4">
           <Breadcrumbs items={breadcrumbs} />
         </div>
+
+        {/* Location Fallback Notice */}
+        <SearchFallbackNotice locationContext={locationContext} />
 
         {/* Results Header - Full Width */}
         <div className="mb-6 border-b border-gray-200 pb-4">
@@ -365,7 +409,7 @@ export default function SearchResults({ province: propProvince, city: propCity, 
                       onPropertySelect={(id) => {
                         window.location.href = `/property/${id}`;
                       }}
-                      onBoundsChange={() => {}} 
+                      onBoundsChange={handleBoundsChange} 
                     />
                   )}
 

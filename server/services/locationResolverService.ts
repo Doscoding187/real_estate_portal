@@ -45,6 +45,11 @@ export interface ResolvedLocation {
   province: ResolvedProvince;
   city?: ResolvedCity;
   suburb?: ResolvedSuburb;
+  
+  // New user-centric context fields
+  confidence: 'exact' | 'expanded' | 'approximate';
+  fallbackLevel: 'none' | 'suburb_to_city' | 'city_to_province' | 'suburb_to_province';
+  originalIntent: string; // "Sandton", "Sandton, Johannesburg", etc.
 }
 
 export class LocationResolverService {
@@ -64,6 +69,13 @@ export class LocationResolverService {
 
     // Must have at least province
     if (!provinceSlug) return null;
+
+    // Construct original intent for display/debugging
+    const parts = [];
+    if (suburbSlug) parts.push(suburbSlug);
+    if (citySlug) parts.push(citySlug);
+    if (provinceSlug) parts.push(provinceSlug);
+    const originalIntent = parts.join(', ');
 
     // Resolve province (case-insensitive)
     const provinceResult = await db
@@ -91,7 +103,13 @@ export class LocationResolverService {
 
     // Province only
     if (!citySlug) {
-      return { level: 'province', province };
+      return { 
+        level: 'province', 
+        province,
+        confidence: 'exact',
+        fallbackLevel: 'none',
+        originalIntent
+      };
     }
 
     // Resolve city (must belong to this province, case-insensitive)
@@ -116,7 +134,13 @@ export class LocationResolverService {
     if (cityResult.length === 0) {
       // City not found, fallback to province level
       console.warn(`[LocationResolver] City not found: ${citySlug} in ${provinceSlug}, falling back to province`);
-      return { level: 'province', province };
+      return { 
+        level: 'province', 
+        province,
+        confidence: 'expanded',
+        fallbackLevel: 'city_to_province',
+        originalIntent
+      };
     }
 
     const city: ResolvedCity = {
@@ -130,7 +154,14 @@ export class LocationResolverService {
 
     // City only (no suburb)
     if (!suburbSlug) {
-      return { level: 'city', province, city };
+      return { 
+        level: 'city', 
+        province, 
+        city,
+        confidence: 'exact',
+        fallbackLevel: 'none',
+        originalIntent
+      };
     }
 
     // Resolve suburb (must belong to this city, case-insensitive)
@@ -155,7 +186,14 @@ export class LocationResolverService {
     if (suburbResult.length === 0) {
       // Suburb not found, fallback to city level
       console.warn(`[LocationResolver] Suburb not found: ${suburbSlug} in ${citySlug}, falling back to city`);
-      return { level: 'city', province, city };
+      return { 
+        level: 'city', 
+        province, 
+        city,
+        confidence: 'expanded',
+        fallbackLevel: 'suburb_to_city',
+        originalIntent
+      };
     }
 
     const suburb: ResolvedSuburb = {
@@ -167,7 +205,15 @@ export class LocationResolverService {
       longitude: suburbResult[0].longitude || undefined,
     };
 
-    return { level: 'suburb', province, city, suburb };
+    return { 
+      level: 'suburb', 
+      province, 
+      city, 
+      suburb,
+      confidence: 'exact',
+      fallbackLevel: 'none',
+      originalIntent
+    };
   }
 
   /**

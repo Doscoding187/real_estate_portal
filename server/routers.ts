@@ -98,6 +98,7 @@ export const appRouter = router({
         z.object({
           city: z.string().optional(),
           province: z.string().optional(),
+          suburb: z.array(z.string()).optional(), // Added support for suburb array
           propertyType: z
             .enum([
               'apartment',
@@ -118,6 +119,7 @@ export const appRouter = router({
           maxPrice: z.number().optional(),
           minBedrooms: z.number().optional(),
           maxBedrooms: z.number().optional(),
+          minBathrooms: z.number().optional(), // Added
           minArea: z.number().optional(),
           maxArea: z.number().optional(),
           status: z.enum(['available', 'sold', 'rented', 'pending']).optional(),
@@ -129,10 +131,54 @@ export const appRouter = router({
           maxLng: z.number().optional(),
           limit: z.number().default(20),
           offset: z.number().default(0),
+          sortOption: z.enum([
+            'price_asc',
+            'price_desc',
+            'date_desc',
+            'date_asc',
+            'suburb_asc',
+            'suburb_desc',
+          ]).optional(), // Added sort option support
         }),
       )
       .query(async ({ input }) => {
-        return await db.searchListings(input);
+        const { propertySearchService } = await import('./services/propertySearchService');
+        
+        // Map input to PropertyFilters
+        const filters: any = {
+          city: input.city,
+          province: input.province,
+          suburb: input.suburb, // Now supported
+          propertyType: input.propertyType ? [input.propertyType as any] : undefined, // Service expects array
+          listingType: input.listingType as any,
+          minPrice: input.minPrice,
+          maxPrice: input.maxPrice,
+          minBedrooms: input.minBedrooms,
+          maxBedrooms: input.maxBedrooms,
+          minBathrooms: input.minBathrooms,
+          minErfSize: input.minArea, // Map area to erfSize/floorSize as generic size filter
+          maxErfSize: input.maxArea,
+          status: input.status ? [input.status as any] : undefined, // Service expects array
+          amenities: input.amenities, // Note: Service might need update if it processes amenities differently, but looks okay
+          // postedBy handling might differ or need explicit mapping if service supports it
+          bounds: (input.minLat && input.maxLat && input.minLng && input.maxLng) ? {
+            south: input.minLat,
+            north: input.maxLat,
+            west: input.minLng,
+            east: input.maxLng
+          } : undefined
+        };
+
+        const page = Math.floor(input.offset / input.limit) + 1;
+        
+        // Use the service
+        // We defaults/fallbacks are handled inside service or here
+        return await propertySearchService.searchProperties(
+          filters,
+          (input.sortOption as any) || 'date_desc',
+          page,
+          input.limit
+        );
       }),
 
     featured: publicProcedure

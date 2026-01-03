@@ -179,6 +179,8 @@ export function FinalisationPhase() {
               parking: unit.parking,
               unitSize: unit.unitSize,
               basePriceFrom: unit.basePriceFrom || 0,
+              totalUnits: unit.totalUnits || 0,
+              availableUnits: unit.availableUnits ?? unit.totalUnits ?? 0,
               amenities: [...unit.amenities.standard, ...unit.amenities.additional],
               baseMedia: unit.baseMedia, // Pass unit type images
             });
