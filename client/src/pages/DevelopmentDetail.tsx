@@ -81,23 +81,35 @@ export default function DevelopmentDetail() {
   // Create unified media array for lightbox
   const allPhotos = images.map((url: string) => ({ url, type: 'image' as const }));
 
-  // Map units
-  const units = (dev.unitTypes || []).map((u: any) => ({
-      id: u.id,
-      type: u.name,
-      ownershipType: 'Sectional Title', 
-      structuralType: 'Apartment',
-      bedrooms: u.bedrooms,
-      bathrooms: Number(u.bathrooms),
-      size: u.unitSize || 0,
-      price: Number(u.basePriceFrom),
-      priceTo: u.basePriceTo ? Number(u.basePriceTo) : undefined,
-      available: 1, 
-      image: parseJSON(u.baseMedia)?.gallery?.[0]?.url || images[0] || '', 
-      floors: '',
-      virtualTour: '',
-      yardSize: u.yardSize
-  }));
+  // Map units and sort by price low-to-high
+  const units = (dev.unitTypes || [])
+    .map((u: any) => {
+      // Try to get image from baseMedia, fallback to development images
+      let unitImage = '';
+      try {
+        const media = parseJSON(u.baseMedia);
+        unitImage = media?.gallery?.[0]?.url || '';
+      } catch {}
+      if (!unitImage) unitImage = images[0] || '';
+      
+      return {
+        id: u.id,
+        type: u.name,
+        ownershipType: 'Sectional Title', 
+        structuralType: 'Apartment',
+        bedrooms: u.bedrooms,
+        bathrooms: Number(u.bathrooms),
+        size: u.unitSize || u.size || 0,
+        price: Number(u.basePriceFrom),
+        priceTo: u.basePriceTo ? Number(u.basePriceTo) : undefined,
+        available: u.totalUnits || u.count || null, // Use actual count if available
+        image: unitImage,
+        floors: '',
+        virtualTour: '',
+        yardSize: u.yardSize
+      };
+    })
+    .sort((a, b) => a.price - b.price); // Sort by price ascending
 
   const development = {
     id: dev.id,
@@ -456,7 +468,11 @@ export default function DevelopmentDetail() {
                                 )}
                               </p>
                             </div>
-                            <Badge variant="secondary">{unit.available} available</Badge>
+                            {unit.available && unit.available > 0 ? (
+                              <Badge className="bg-green-100 text-green-700">Now Selling</Badge>
+                            ) : (
+                              <Badge className="bg-blue-100 text-blue-700">Available</Badge>
+                            )}
                           </div>
                           <div className="flex gap-2">
                             <Button className="flex-1 bg-blue-600 hover:bg-blue-700">
