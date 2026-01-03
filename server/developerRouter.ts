@@ -681,10 +681,9 @@ export const developerRouter = router({
       let isPlatformAdmin = false;
 
       if (ctx.user.role === 'super_admin') {
-         const dev = await developmentService.getDevelopment(input.id);
-         if (dev && dev.devOwnerType === 'platform') {
-            isPlatformAdmin = true;
-         }
+         // Super admin can edit ANY development - bypass developer profile lookup
+         isPlatformAdmin = true;
+         console.log('[DeveloperRouter] updateDevelopment: Super Admin mode, bypassing developer profile');
       }
 
       if (!isPlatformAdmin) {
