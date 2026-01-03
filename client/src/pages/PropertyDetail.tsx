@@ -39,7 +39,6 @@ import {
   Square,
   Calculator,
 } from 'lucide-react';
-import { MOCK_LISTINGS } from '@/lib/mockListings';
 import { Loader2 } from 'lucide-react';
 import { PropertyImageGallery } from '@/components/property/PropertyImageGallery';
 import { Breadcrumbs } from '@/components/search/Breadcrumbs';
@@ -136,55 +135,8 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
     setIsShareModalOpen(true);
   };
 
-  // Mock Data Integration
-  const mockListing = MOCK_LISTINGS.find(m => m.id === rawId);
-  
-  // Normalize Mock Data Structure if found
-  const mockData = mockListing ? {
-    property: {
-      id: rawId, // Keep as string for mock
-      title: mockListing.title,
-      description: mockListing.description,
-      price: mockListing.price,
-      address: `${mockListing.location.suburb}, ${mockListing.location.city}`,
-      city: mockListing.location.city,
-      suburb: mockListing.location.suburb,
-      province: mockListing.location.province,
-      propertyType: mockListing.propertyType,
-      listingType: mockListing.listingType,
-      bedrooms: mockListing.propertyDetails.bedrooms || 0,
-      bathrooms: mockListing.propertyDetails.bathrooms || 0,
-      area: mockListing.propertyDetails.houseAreaM2 || mockListing.propertyDetails.unitSizeM2 || mockListing.propertyDetails.floorAreaM2 || 0,
-      features: JSON.stringify(mockListing.features),
-      amenities: JSON.stringify(mockListing.features), // Fallback
-      latitude: (mockListing.location as any).latitude || '-26.2041',
-      longitude: (mockListing.location as any).longitude || '28.0473',
-      images: mockListing.images,
-      mainImage: mockListing.images[0],
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    },
-    images: mockListing.images.map((url, i) => ({
-      id: i,
-      propertyId: 0, // Mock doesn't really matter
-      imageUrl: url,
-      isMain: i === 0,
-      createdAt: new Date().toISOString()
-    })),
-    agent: {
-      id: 1,
-      name: mockListing.agent.name,
-      image: mockListing.agent.image,
-      email: 'agent@example.com',
-      phone: '0123456789',
-      totalListings: 12,
-      experience: 5
-    }
-  } : null;
-
-  const usedData = mockData || data;
-
-  if (isLoading && !usedData) {
+  // Loading state
+  if (isLoading) {
     return (
       <div className="min-h-screen bg-background">
         <ListingNavbar />
@@ -195,19 +147,21 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
     );
   }
 
-  if (!usedData?.property) {
+  // Property not found
+  if (!data?.property) {
     return (
       <div className="min-h-screen bg-background">
         <ListingNavbar />
         <div className="container py-20 text-center">
           <h2 className="text-2xl font-semibold mb-4">Property Not Found</h2>
+          <p className="text-slate-500 mb-6">The property you're looking for doesn't exist or has been removed.</p>
           <Button onClick={() => setLocation('/properties')}>Back to Properties</Button>
         </div>
       </div>
     );
   }
 
-  const { property, images, agent } = usedData;
+  const { property, images, agent } = data;
   
   // Safely parse amenities with error handling
   let amenitiesList:string[] = [];
