@@ -31,12 +31,12 @@ export function SimpleDevelopmentCard({
       onClick={() => setLocation(`/development/${id}`)}
     >
       {/* Image */}
-      <div className="relative aspect-[4/3] overflow-hidden bg-slate-100">
+      <div className="relative aspect-[4/3] overflow-hidden bg-slate-50">
         <img
           src={image}
           alt={title}
           loading="lazy"
-          className="object-cover w-full h-full transition-transform duration-700 group-hover:scale-110"
+          className="object-contain w-full h-full transition-transform duration-700 group-hover:scale-110"
           onError={(e) => {
             const target = e.target as HTMLImageElement;
             target.onerror = null;
