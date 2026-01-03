@@ -2409,17 +2409,33 @@ export const developerRouter = router({
       console.log('[getPublishedDevelopments] Found', results.length, 'developments');
 
       // Transform to frontend format
-      return results.map((dev: any) => ({
-        id: dev.id.toString(),
-        title: dev.name,
-        city: `${dev.city}, ${dev.province}`,
-        priceRange: {
-          min: dev.priceFrom ? Number(dev.priceFrom) : 0,
-          max: dev.priceTo ? Number(dev.priceTo) : 0,
-        },
-        image: dev.images?.[0] || '/placeholders/development_placeholder_1_1763712033438.png',
-        slug: dev.slug,
-        isHotSelling: dev.isFeatured === 1,
-      }));
+      return results.map((dev: any) => {
+        // Parse images if it's a JSON string
+        let imageArray: string[] = [];
+        if (dev.images) {
+          if (typeof dev.images === 'string') {
+            try {
+              imageArray = JSON.parse(dev.images);
+            } catch (e) {
+              console.error('[getPublishedDevelopments] Failed to parse images for', dev.name);
+            }
+          } else if (Array.isArray(dev.images)) {
+            imageArray = dev.images;
+          }
+        }
+
+        return {
+          id: dev.id.toString(),
+          title: dev.name,
+          city: `${dev.city}, ${dev.province}`,
+          priceRange: {
+            min: dev.priceFrom ? Number(dev.priceFrom) : 0,
+            max: dev.priceTo ? Number(dev.priceTo) : 0,
+          },
+          image: imageArray[0] || '/placeholders/development_placeholder_1_1763712033438.png',
+          slug: dev.slug,
+          isHotSelling: dev.isFeatured === 1,
+        };
+      });
     }),
 });
