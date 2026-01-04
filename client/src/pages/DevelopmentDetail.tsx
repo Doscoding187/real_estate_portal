@@ -36,6 +36,8 @@ import {
   Globe,
   Briefcase,
   Loader2,
+  ArrowUpRight,
+  Layers,
 } from 'lucide-react';
 import { MetaControl } from '@/components/seo/MetaControl';
 import { Breadcrumbs } from '@/components/search/Breadcrumbs';
@@ -128,8 +130,9 @@ export default function DevelopmentDetail() {
       // Try to get image from baseMedia, fallback to development images
       let unitImage = '';
       try {
+        // Try to get floor plan first, then gallery image
         const media = parseJSON(u.baseMedia);
-        unitImage = media?.gallery?.[0]?.url || '';
+        unitImage = media?.floorPlans?.[0]?.url || media?.gallery?.[0]?.url || '';
       } catch {}
       if (!unitImage) unitImage = images[0] || '';
       
@@ -145,7 +148,8 @@ export default function DevelopmentDetail() {
         priceTo: u.basePriceTo ? Number(u.basePriceTo) : undefined,
         available: u.totalUnits || u.count || null, // Use actual count if available
         image: unitImage,
-        floors: '',
+        floors: u.floorNumber || null,
+        erfSize: u.erfSize || u.plotSize || null,
         virtualTour: '',
         yardSize: u.yardSize
       };
@@ -386,7 +390,7 @@ export default function DevelopmentDetail() {
                                       </div>
 
                                       {/* Specs Grid - Compact */}
-                                      <div className="grid grid-cols-3 gap-2 py-2 border-t border-b border-slate-100 mt-auto">
+                                      <div className="grid grid-cols-4 gap-2 py-2 border-t border-b border-slate-100 mt-auto">
                                         <div className="flex flex-col items-center justify-center text-center">
                                           <Bed className="h-3.5 w-3.5 text-slate-400 mb-1" />
                                           <span className="text-xs font-semibold text-slate-700">{unit.bedrooms} Bed</span>
@@ -399,15 +403,28 @@ export default function DevelopmentDetail() {
                                           <Maximize className="h-3.5 w-3.5 text-slate-400 mb-1" />
                                           <span className="text-xs font-semibold text-slate-700">{unit.size} m²</span>
                                         </div>
+                                        {/* Dynamic 4th Spec */}
+                                        {["House", "Simplex", "Duplex", "Cluster Common", "Townhouse"].includes(unit.structuralType) ? (
+                                           unit.erfSize ? (
+                                            <div className="flex flex-col items-center justify-center text-center border-l border-slate-100">
+                                              <ArrowUpRight className="h-3.5 w-3.5 text-slate-400 mb-1" />
+                                              <span className="text-xs font-semibold text-slate-700">{unit.erfSize} m²</span>
+                                            </div>
+                                           ) : null
+                                        ) : (
+                                          unit.floors ? (
+                                            <div className="flex flex-col items-center justify-center text-center border-l border-slate-100">
+                                              <Layers className="h-3.5 w-3.5 text-slate-400 mb-1" />
+                                              <span className="text-xs font-semibold text-slate-700">{unit.floors} flr</span>
+                                            </div>
+                                          ) : null
+                                        )}
                                       </div>
 
                                       <div className="pt-1">
                                          <Button variant="outline" className="w-full border-blue-200 text-blue-600 hover:bg-blue-50 h-9 text-xs font-bold rounded-md shadow-none uppercase tracking-wide">
                                            Request callback
                                          </Button>
-                                         <div className="mt-2 text-center">
-                                            <span className="inline-block px-2 py-0.5 bg-slate-100 text-slate-500 text-[10px] rounded font-medium">Dec '27 possession</span>
-                                         </div>
                                       </div>
                                     </CardContent>
                                   </Card>
