@@ -159,13 +159,13 @@ export function PropertyCategories({ preselectedLocation }: PropertyCategoriesPr
   ];
 
   return (
-    <div className="py-16 md:py-20 bg-gradient-to-b from-white via-slate-50/30 to-white">
+    <div className="py-fluid-xl bg-gradient-to-b from-white via-slate-50/30 to-white">
       <div className="container">
         <div className="text-center mb-12">
-          <h2 className="text-3xl md:text-4xl font-bold mb-4 bg-gradient-to-r from-slate-900 via-[#2774AE] to-slate-900 bg-clip-text text-transparent">
+          <h2 className="font-bold mb-4 bg-gradient-to-r from-slate-900 via-[#2774AE] to-slate-900 bg-clip-text text-transparent">
             Explore Property Categories
           </h2>
-          <p className="text-slate-600 text-lg max-w-2xl mx-auto leading-relaxed">
+          <p className="text-slate-600 max-w-2xl mx-auto leading-relaxed">
             Find the perfect property type that suits your needs across South Africa
           </p>
         </div>
