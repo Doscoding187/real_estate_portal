@@ -129,6 +129,7 @@ export async function getPublicDevelopmentBySlug(slugOrId: string) {
 
     return {
       ...dev,
+      amenities: Array.isArray(dev.amenities) ? dev.amenities : [],
       unitTypes: units,
       phases: phases,
     };

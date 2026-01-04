@@ -70,7 +70,10 @@ export default function DevelopmentDetail() {
   const parseJSON = (val: any) => {
       if (!val) return [];
       if (Array.isArray(val)) return val;
-      try { return JSON.parse(val); } catch (e) { return []; }
+      try {
+          const parsed = JSON.parse(val);
+          return Array.isArray(parsed) ? parsed : [];
+      } catch (e) { return []; }
   };
 
   const images = parseJSON(dev.images);
