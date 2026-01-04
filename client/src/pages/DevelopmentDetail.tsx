@@ -5,6 +5,7 @@ import { ListingNavbar } from '@/components/ListingNavbar';
 import { MediaLightbox } from '@/components/MediaLightbox';
 import { DevelopmentHeader } from '@/components/DevelopmentHeader';
 import { DevelopmentGallery } from '@/components/DevelopmentGallery';
+import { DevelopmentOverviewCard } from '@/components/DevelopmentOverviewCard';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -277,6 +278,13 @@ export default function DevelopmentDetail() {
                   </CardContent>
                 </Card>
               </div>
+
+              <DevelopmentOverviewCard 
+                priceFrom={development.startingPrice}
+                completionDate="December 2025"
+                progressPercentage={5}
+                constructionStatus="Under Construction"
+              />
 
               <Separator className="bg-slate-100" />
 
