@@ -90,8 +90,8 @@ export default function Home() {
               <span className="text-2xl">🔥</span>
               <span className="text-sm font-semibold text-red-700">Trending Now</span>
             </div>
-            <h2 className="text-3xl md:text-4xl font-bold mb-4 bg-gradient-to-r from-slate-900 via-[#2774AE] to-slate-900 bg-clip-text text-transparent">
-              Hot Selling Real Estate Developments
+            <h2 className="font-bold mb-4 bg-gradient-to-r from-slate-900 via-[#2774AE] to-slate-900 bg-clip-text text-transparent">
+              Hot Selling Residential Developments
             </h2>
             <p className="text-slate-600 text-lg max-w-3xl leading-relaxed">
               A handpicked collection of the country's most in-demand residential developments.

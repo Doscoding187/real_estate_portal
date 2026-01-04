@@ -389,7 +389,7 @@ export function EnhancedHero({
               </h1>
           ) : (
               // Default Homepage Title
-              <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold mb-4 leading-tight">
+              <h1 className="text-3xl md:text-5xl lg:text-6xl font-bold mb-6 leading-tight tracking-tight">
                 South Africa's{' '}
                 <span className="bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent animate-gradient bg-[length:200%_auto]">
                   Fastest Growing
