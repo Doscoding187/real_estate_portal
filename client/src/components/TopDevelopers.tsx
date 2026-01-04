@@ -1,8 +1,7 @@
-import { Link, useLocation } from 'wouter';
+import { useLocation } from 'wouter';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Building2, ChevronRight, ArrowRight, MapPin } from 'lucide-react';
+import { ChevronRight, Building2, MapPin, ArrowRight } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   Carousel,
@@ -16,48 +15,49 @@ import { trpc } from '@/lib/trpc';
 export function TopDevelopers() {
   const [, setLocation] = useLocation();
 
-  // Fetch visible brand profiles
+  // Fetch visible brand profiles (now enriched with stats)
   const { data: developers, isLoading } = trpc.brandProfile.listBrandProfiles.useQuery({
     isVisible: true,
-    limit: 12, // Increased limit for carousel
+    limit: 12,
   });
-
-  const tierBadgeColor: Record<string, string> = {
-    national: 'bg-indigo-100 text-indigo-700',
-    regional: 'bg-blue-100 text-blue-700',
-    boutique: 'bg-emerald-100 text-emerald-700',
-  };
 
   if (!isLoading && (!developers || developers.length === 0)) {
     return null;
   }
 
   return (
-    <section className="py-fluid-xl bg-muted/30">
+    <section className="py-fluid-xl bg-white">
       <div className="container">
         {/* Section Header */}
         <div className="mb-8">
-           <div className="inline-flex items-center gap-2 bg-gradient-to-r from-indigo-50 to-blue-50 border border-indigo-200 rounded-full px-4 py-2 mb-4">
-            <Building2 className="h-4 w-4 text-indigo-600" />
-            <span className="text-sm font-semibold text-indigo-700">Property Developers</span>
-          </div>
-          <h2 className="text-fluid-h2 font-bold mb-3 bg-gradient-to-r from-slate-900 via-[#2774AE] to-slate-900 bg-clip-text text-transparent">
-            Recognised Property Developers
+           <h2 className="text-fluid-h2 font-bold mb-3 text-slate-900">
+            Top Developers in South Africa
           </h2>
-          <p className="text-muted-foreground text-fluid-h4 max-w-2xl">
-            Discover developments from leading property developers across South Africa.
-            Proven track records, high-quality construction, and trusted delivery.
+          <p className="text-slate-600 text-fluid-h4 max-w-4xl">
+            In real estate, the builder you choose makes a genuine difference. Our list of top developers 
+            features names that are industry leaders in customer satisfaction, design, and timely delivery. 
+            These brands have shaped the skyline with thoughtful living spaces. Know who's building your future before you invest.
           </p>
         </div>
 
         {isLoading ? (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-            {[...Array(4)].map((_, i) => (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[...Array(3)].map((_, i) => (
               <Card key={i} className="border-slate-200">
                 <CardContent className="p-6">
-                  <Skeleton className="w-16 h-16 rounded-xl mb-4" />
-                  <Skeleton className="h-5 w-3/4 mb-2" />
-                  <Skeleton className="h-4 w-1/2" />
+                  <div className="flex gap-4 mb-4">
+                    <Skeleton className="w-20 h-20 rounded-xl" />
+                    <div className="flex-1 space-y-2">
+                       <Skeleton className="h-5 w-3/4" />
+                       <Skeleton className="h-4 w-1/2" />
+                    </div>
+                  </div>
+                  <Skeleton className="h-20 w-full mb-4" />
+                  <div className="space-y-2">
+                     <Skeleton className="h-10 w-full" />
+                     <Skeleton className="h-10 w-full" />
+                     <Skeleton className="h-10 w-full" />
+                  </div>
                 </CardContent>
               </Card>
             ))}
@@ -68,84 +68,111 @@ export function TopDevelopers() {
             <Carousel
               opts={{
                 align: 'start',
-                loop: true,
+                loop: false, 
               }}
               className="w-full"
             >
               <CarouselContent className="-ml-6">
-                {developers?.map((developer) => (
-                  <CarouselItem key={developer.id} className="pl-6 md:basis-1/2 lg:basis-1/4">
+                {developers?.map((developer: any) => (
+                  <CarouselItem key={developer.id} className="pl-6 md:basis-1/2 lg:basis-1/3">
                     <Card 
-                      className="h-full hover:shadow-xl transition-all duration-300 border-slate-200 hover:border-indigo-300 bg-white/50 backdrop-blur-sm group cursor-pointer"
-                      onClick={() => setLocation(`/developer/${developer.slug}`)}
+                      className="h-full border border-slate-200 hover:border-slate-300 transition-colors bg-white rounded-xl shadow-sm hover:shadow-md"
                     >
-                      <CardContent className="p-6 text-center">
-                        {/* Developer Logo */}
-                        <div className="w-20 h-20 mx-auto mb-4 rounded-xl bg-white flex items-center justify-center flex-shrink-0 overflow-hidden shadow-sm border border-slate-200 group-hover:scale-105 transition-transform duration-300 group-hover:border-indigo-300">
-                          {developer.logoUrl ? (
-                            <img
-                              src={developer.logoUrl}
-                              alt={developer.brandName}
-                              className="w-full h-full object-cover"
-                            />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center bg-indigo-600 text-white text-xl font-bold">
-                              {developer.brandName.charAt(0)}
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Developer Name */}
-                        <div className="min-w-0">
-                          <h3 className="font-bold text-lg mb-2 text-slate-900 line-clamp-1 group-hover:text-indigo-600 transition-colors">
-                            {developer.brandName}
-                          </h3>
-                          
-                          {/* Tier Badge */}
-                          {developer.brandTier && (
-                             <Badge 
-                               className={`${tierBadgeColor[developer.brandTier] || 'bg-slate-100 text-slate-600'} border-0 text-xs px-2 py-0.5 pointer-events-none`}
-                             >
-                               {developer.brandTier.charAt(0).toUpperCase() + developer.brandTier.slice(1)}
-                             </Badge>
-                          )}
-
-                          {/* Location */}
-                           {developer.headOfficeLocation && (
-                            <p className="text-xs text-slate-500 mt-3 flex items-center justify-center gap-1 truncate">
-                              <MapPin className="h-3 w-3" />
-                              {developer.headOfficeLocation}
+                      <CardContent className="p-6">
+                        {/* Header: Logo & Identity */}
+                        <div className="flex gap-4 mb-6">
+                          <div className="w-20 h-20 flex-shrink-0 bg-white border border-slate-100 rounded-lg p-2 flex items-center justify-center">
+                            {developer.logoUrl ? (
+                              <img
+                                src={developer.logoUrl}
+                                alt={developer.brandName}
+                                className="max-w-full max-h-full object-contain"
+                              />
+                            ) : (
+                               <Building2 className="h-8 w-8 text-slate-300" />
+                            )}
+                          </div>
+                          <div className="flex flex-col justify-center">
+                            <h3 className="text-xl font-bold text-slate-900 leading-tight mb-1">
+                              {developer.brandName}
+                            </h3>
+                            <p className="text-sm text-slate-500 font-medium">
+                              {developer.headOfficeLocation || 'South Africa'}
                             </p>
-                          )}
-                        
+                           {/*  Optional: Add "Add Prestige to your life" tagline if available in future schemas */}
+                          </div>
                         </div>
-                         
-                         {/* View Profile CTA (Hidden hover effect) */}
-                         <div className="mt-4 pt-4 border-t border-slate-100 opacity-60 group-hover:opacity-100 transition-opacity">
-                             <div className="text-xs font-medium text-indigo-600 flex items-center justify-center gap-1">
-                                 View Profile <ArrowRight className="h-3 w-3" />
+
+                        {/* Stats Row */}
+                        <div className="flex items-center justify-between mb-6 px-2">
+                             <div className="flex flex-col">
+                                 <span className="text-2xl font-bold text-slate-900">
+                                     {developer.stats?.totalProjects || 0}
+                                 </span>
+                                 <span className="text-xs text-slate-500 font-medium uppercase tracking-wide">
+                                     Total Projects
+                                 </span>
                              </div>
-                         </div>
+                             
+                             {/* Vertical Divider could go here if needed */}
+                             
+                             <div className="flex flex-col text-right">
+                                 <span className="text-2xl font-bold text-slate-900">
+                                     {developer.stats?.experience || 0}
+                                 </span>
+                                 <span className="text-xs text-slate-500 font-medium uppercase tracking-wide">
+                                     Experience
+                                 </span>
+                             </div>
+                        </div>
+
+                        {/* Status Links (Interactive Rows) */}
+                        <div className="space-y-3">
+                            <button 
+                                className="w-full flex items-center justify-between p-3 rounded-lg border border-slate-100 hover:bg-slate-50 group transition-colors"
+                                onClick={() => setLocation(`/developer/${developer.slug}?status=ready-to-move`)}
+                            >
+                                <span className="text-slate-700 font-medium">Ready to Move ({developer.stats?.readyToMove || 0})</span>
+                                <ChevronRight className="h-4 w-4 text-slate-400 group-hover:text-slate-600" />
+                            </button>
+
+                            <button 
+                                className="w-full flex items-center justify-between p-3 rounded-lg border border-slate-100 hover:bg-slate-50 group transition-colors"
+                                onClick={() => setLocation(`/developer/${developer.slug}?status=under-construction`)}
+                            >
+                                <span className="text-slate-700 font-medium">Under Construction ({developer.stats?.underConstruction || 0})</span>
+                                <ChevronRight className="h-4 w-4 text-slate-400 group-hover:text-slate-600" />
+                            </button>
+
+                             <button 
+                                className="w-full flex items-center justify-between p-3 rounded-lg border border-slate-100 hover:bg-slate-50 group transition-colors"
+                                onClick={() => setLocation(`/developer/${developer.slug}?status=new-launch`)}
+                            >
+                                <span className="text-slate-700 font-medium">New Launch ({developer.stats?.newLaunch || 0})</span>
+                                <ChevronRight className="h-4 w-4 text-slate-400 group-hover:text-slate-600" />
+                            </button>
+                        </div>
+
                       </CardContent>
                     </Card>
                   </CarouselItem>
                 ))}
               </CarouselContent>
-              <CarouselPrevious className="hidden md:flex -left-4 opacity-0 group-hover/carousel:opacity-100 transition-all duration-300 bg-white/90 hover:bg-white text-indigo-900 border-0 shadow-lg hover:scale-110" />
-              <CarouselNext className="hidden md:flex -right-4 opacity-0 group-hover/carousel:opacity-100 transition-all duration-300 bg-white/90 hover:bg-white text-indigo-900 border-0 shadow-lg hover:scale-110" />
+              <CarouselPrevious className="hidden md:flex -left-4 bg-white shadow-md border-slate-200 text-slate-600 hover:text-slate-900" />
+              <CarouselNext className="hidden md:flex -right-4 bg-white shadow-md border-slate-200 text-slate-600 hover:text-slate-900" />
             </Carousel>
           </div>
         )}
 
-        {/* View All Link */}
-        <div className="mt-8 text-center md:text-left flex justify-center md:justify-start">
+        {/* View All Footer */}
+        <div className="mt-8">
           <Button 
             variant="link" 
             onClick={() => setLocation('/developers')}
-            className="text-lg font-semibold group text-indigo-600 hover:text-indigo-700 p-0 h-auto hover:no-underline"
+            className="text-slate-900 font-bold hover:no-underline p-0 flex items-center gap-2 text-base"
           >
-            View All Real Estate Developers in South Africa
-            <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
+            View All Developers in South Africa
+            <ArrowRight className="h-5 w-5" />
           </Button>
         </div>
       </div>

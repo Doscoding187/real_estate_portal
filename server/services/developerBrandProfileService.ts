@@ -12,7 +12,7 @@
 
 import { db } from '../db';
 import { developerBrandProfiles, developments, leads } from '../../drizzle/schema';
-import { eq, and, desc, sql, like, or, isNull } from 'drizzle-orm';
+import { eq, and, desc, sql, like, or, isNull, inArray } from 'drizzle-orm';
 
 // ============================================================================
 // Types
@@ -194,7 +194,55 @@ async function listBrandProfiles(filters: BrandProfileFilters = {}) {
     .limit(filters.limit || 50)
     .offset(filters.offset || 0);
 
-  return profiles;
+  // If no profiles found, return empty array
+  if (profiles.length === 0) {
+    return [];
+  }
+
+  // Fetch development stats for these profiles
+  const profileIds = profiles.map((p: any) => p.id);
+  const brandDevelopments = await db
+    .select({
+      id: developments.id,
+      developerBrandProfileId: developments.developerBrandProfileId,
+      status: developments.status,
+    })
+    .from(developments)
+    .where(inArray(developments.developerBrandProfileId, profileIds));
+
+  // Enrich profiles with stats
+  const enrichedProfiles = profiles.map((profile: any) => {
+    const profileDevs = brandDevelopments.filter((d: any) => d.developerBrandProfileId === profile.id);
+    const totalProjects = profileDevs.length;
+    
+    const readyToMove = profileDevs.filter((d: any) => 
+      ['ready-to-move', 'completed', 'phase-completed'].includes(d.status)
+    ).length;
+
+    const underConstruction = profileDevs.filter((d: any) => 
+      ['under-construction'].includes(d.status)
+    ).length;
+
+    const newLaunch = profileDevs.filter((d: any) => 
+      ['launching-soon', 'now-selling', 'new-phase-launching', 'coming_soon', 'planning'].includes(d.status)
+    ).length;
+
+    const currentYear = new Date().getFullYear();
+    const experience = profile.foundedYear ? (currentYear - profile.foundedYear) : 0;
+
+    return {
+      ...profile,
+      stats: {
+        totalProjects,
+        readyToMove,
+        underConstruction,
+        newLaunch,
+        experience
+      }
+    };
+  });
+
+  return enrichedProfiles;
 }
 
 /**
