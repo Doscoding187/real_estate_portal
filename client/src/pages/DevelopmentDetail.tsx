@@ -310,9 +310,6 @@ export default function DevelopmentDetail() {
               <div className="space-y-6">
                 <div className="flex items-center justify-between">
                   <h3 className="text-xl font-bold text-slate-900">Floor Plans & Pricing</h3>
-                  <Button variant="ghost" size="sm" className="text-orange-600 hover:text-orange-700 hover:bg-orange-50 font-medium h-8 text-xs">
-                     View All Units <ExternalLink className="ml-1 h-3 w-3" />
-                  </Button>
                 </div>
 
                 {(() => {
@@ -326,15 +323,24 @@ export default function DevelopmentDetail() {
                   return (
                     <Tabs defaultValue={defaultTab} className="w-full">
                        <TabsList className="bg-transparent p-0 flex flex-wrap gap-2 h-auto mb-6 justify-start">
-                        {bedroomCounts.map((count: any) => (
+                        {bedroomCounts.map((count: any) => {
+                          const unitsInGroup = development.units.filter((u: any) => u.bedrooms === count);
+                          // Determine structural type label
+                          const types = Array.from(new Set(unitsInGroup.map((u: any) => u.structuralType)));
+                          let label = "Apartments";
+                          if (types.length === 1 && types[0] === "House") label = "Houses";
+                          else if (types.length === 1) label = `${types[0]}s`; // Pluralize single type
+                          else if (types.every((t: any) => ["House", "Simplex", "Duplex"].includes(t))) label = "Houses"; 
+                          
+                          return (
                           <TabsTrigger 
                             key={count} 
                             value={count.toString()}
                             className="rounded-full border border-slate-200 bg-white px-6 py-2.5 text-sm font-medium text-slate-600 data-[state=active]:bg-slate-900 data-[state=active]:text-white data-[state=active]:border-slate-900 shadow-sm transition-all"
                           >
-                            {count} Bedroom <span className="ml-1 opacity-70 font-normal">Apartments</span>
+                            {count} Bedroom <span className="ml-1 opacity-70 font-normal">{label}</span>
                           </TabsTrigger>
-                        ))}
+                        )})}
                       </TabsList>
 
                       {bedroomCounts.map((count: any) => (
