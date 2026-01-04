@@ -78,11 +78,37 @@ export default function DevelopmentDetail() {
 
   const images = parseJSON(dev.images);
   const amenities = parseJSON(dev.amenities);
+  const videos = parseJSON(dev.videos).map((v: any) => typeof v === 'string' ? { url: v } : v);
+  const floorPlans = parseJSON(dev.floorPlans).map((f: any) => typeof f === 'string' ? { url: f } : f);
+  
   const outdoorsPhotos: any[] = []; 
   const amenitiesPhotos: any[] = [];
   
-  // Create unified media array for lightbox
-  const allPhotos = images.map((url: string) => ({ url, type: 'image' as const }));
+  // --- Unified Media Construction ---
+  const generalMedia = images.map((url: string) => ({ url, type: 'image' as const }));
+  const videoMedia = videos.map((v: any) => ({ url: v.url, type: 'video' as const }));
+  // Placeholder media categories (currently empty)
+  const amenityMedia = amenitiesPhotos.map((url: string) => ({ url, type: 'image' as const }));
+  const outdoorsMedia = outdoorsPhotos.map((url: string) => ({ url, type: 'image' as const }));
+  const floorPlanMedia = floorPlans.map((f: any) => ({ url: f.url, type: 'image' as const }));
+  
+  // Combine all media for unified lightbox
+  const unifiedMedia = [
+    ...generalMedia,
+    ...amenityMedia,
+    ...outdoorsMedia,
+    ...videoMedia,
+    ...floorPlanMedia
+  ];
+
+  // Start indices for jump-to
+  const indices = {
+    general: 0,
+    amenities: generalMedia.length,
+    outdoors: generalMedia.length + amenityMedia.length,
+    videos: generalMedia.length + amenityMedia.length + outdoorsMedia.length,
+    floorPlans: generalMedia.length + amenityMedia.length + outdoorsMedia.length + videoMedia.length
+  };
 
   // Map units and sort by price low-to-high
   const units = (dev.unitTypes || [])
@@ -125,7 +151,10 @@ export default function DevelopmentDetail() {
     totalUnits: dev.totalUnits || 0,
     availableUnits: dev.availableUnits || 0,
     startingPrice: Number(dev.priceFrom) || 0,
-    featuredMedia: {
+    featuredMedia: videos.length > 0 ? {
+      type: 'video',
+      url: videos[0].url,
+    } : {
       type: 'image',
       url: images[0] || '',
     },
@@ -133,17 +162,22 @@ export default function DevelopmentDetail() {
     images: images,
     amenities: amenities,
     units: units,
-    allPhotos: allPhotos,
-    amenitiesPhotos: amenitiesPhotos.length > 0 ? amenitiesPhotos : allPhotos,
-    outdoorsPhotos: outdoorsPhotos.length > 0 ? outdoorsPhotos : allPhotos,
-    videos: [],
+    unifiedMedia: unifiedMedia,
+    indices: indices,
+    videos: videos,
+    floorPlans: floorPlans,
   };
 
-  const openLightbox = (category: MediaCategory, title: string) => {
-    setLightboxCategory(category);
+  // State for index instead of category
+  const [lightboxIndex, setLightboxIndex] = useState(0);
+
+  const openLightbox = (index: number, title: string) => {
+    setLightboxIndex(index);
     setLightboxTitle(title);
     setLightboxOpen(true);
   };
+   
+  // Removed getLightboxMedia - using unifiedMedia directly
 
   const getLightboxMedia = () => {
     switch (lightboxCategory) {
@@ -152,7 +186,7 @@ export default function DevelopmentDetail() {
       case 'outdoors':
         return development.outdoorsPhotos;
       case 'videos':
-        return development.videos;
+        return development.videos; // Assuming videos are in a format MediaLightbox accepts, or need mapping?
       case 'all':
       default:
         return development.allPhotos;
@@ -263,7 +297,7 @@ export default function DevelopmentDetail() {
               <button
                 onClick={() =>
                   openLightbox(
-                    development.featuredMedia.type === 'video' ? 'videos' : 'all',
+                    development.featuredMedia.type === 'video' ? development.indices.videos : 0,
                     development.featuredMedia.type === 'video' ? 'Watch Video' : 'All Photos',
                   )
                 }
@@ -281,7 +315,7 @@ export default function DevelopmentDetail() {
               <div className="grid grid-cols-2 gap-3">
                 {/* Amenities Card */}
                 <button
-                  onClick={() => openLightbox('amenities', 'Amenities')}
+                  onClick={() => openLightbox(development.indices.amenities, 'Amenities')}
                   className="relative rounded-xl overflow-hidden shadow-md hover:shadow-lg transition-all group"
                 >
                   <img
@@ -299,7 +333,7 @@ export default function DevelopmentDetail() {
 
                 {/* Outdoors Card */}
                 <button
-                  onClick={() => openLightbox('outdoors', 'Outdoor Spaces')}
+                  onClick={() => openLightbox(development.indices.outdoors, 'Outdoor Spaces')}
                   className="relative rounded-xl overflow-hidden shadow-md hover:shadow-lg transition-all group"
                 >
                   <img
@@ -314,28 +348,66 @@ export default function DevelopmentDetail() {
                 </button>
               </div>
 
-              {/* Bottom Row: Single large card - Shows opposite media type */}
-              <button
-                onClick={() =>
-                  openLightbox(
-                    development.featuredMedia.type === 'video' ? 'all' : 'videos',
-                    development.featuredMedia.type === 'video' ? 'All Photos' : 'Videos',
-                  )
-                }
-                className="relative rounded-xl overflow-hidden shadow-md hover:shadow-lg transition-all group"
-              >
-                <img
-                  src="https://images.unsplash.com/photo-1600607687644-c7171b42498b?w=400"
-                  alt={development.featuredMedia.type === 'video' ? 'All Photos' : 'Videos'}
-                  className="w-full h-full object-cover"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
-                <span className="absolute right-2 bottom-2 bg-white/96 backdrop-blur-sm px-2.5 py-1.5 rounded-full font-semibold text-xs shadow-md border border-slate-200/50">
-                  {development.featuredMedia.type === 'video'
-                    ? `Photos (${development.totalPhotos})`
-                    : 'Videos'}
-                </span>
-              </button>
+              {/* Bottom Row: Dynamic Card (Videos -> Floor Plans -> Gallery) */}
+              {(() => {
+                  // If main media is NOT video, and we have videos, show video tile.
+                  // If main media IS video, skip video tile and go to Floor Plans/Gallery.
+                  const showVideoTile = development.videos && development.videos.length > 0 && development.featuredMedia.type !== 'video';
+
+                  if (showVideoTile) {
+                      return (
+                          <button
+                            onClick={() => openLightbox(development.indices.videos, 'Videos')}
+                            className="relative rounded-xl overflow-hidden shadow-md hover:shadow-lg transition-all group"
+                          >
+                            <img
+                              src="https://images.unsplash.com/photo-1600607687644-c7171b42498b?w=400"
+                              alt="Videos"
+                              className="w-full h-full object-cover"
+                            />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
+                            <span className="absolute right-2 bottom-2 bg-white/96 backdrop-blur-sm px-2.5 py-1.5 rounded-full font-semibold text-xs shadow-md border border-slate-200/50">
+                              Videos ({development.videos.length})
+                            </span>
+                          </button>
+                      );
+                  } else if (development.floorPlans && development.floorPlans.length > 0) {
+                      return (
+                          <button
+                             onClick={() => openLightbox(development.indices.floorPlans, 'Floor Plans')} 
+                             className="relative rounded-xl overflow-hidden shadow-md hover:shadow-lg transition-all group"
+                          >
+                              <img
+                                  src={development.floorPlans[0]?.url || development.images[1] || ''}
+                                  alt="Floor Plans"
+                                  className="w-full h-full object-cover"
+                              />
+                               <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
+                               <span className="absolute right-2 bottom-2 bg-white/96 backdrop-blur-sm px-2.5 py-1.5 rounded-full font-semibold text-xs shadow-md border border-slate-200/50">
+                                  Floor Plans
+                               </span>
+                          </button>
+                      );
+                  } else {
+                      // Fallback to Gallery (more photos)
+                       return (
+                          <button
+                             onClick={() => openLightbox(0, 'All Photos')} 
+                             className="relative rounded-xl overflow-hidden shadow-md hover:shadow-lg transition-all group"
+                          >
+                              <img
+                                  src={development.images[2] || development.images[0] || ''}
+                                  alt="Gallery"
+                                  className="w-full h-full object-cover"
+                              />
+                               <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
+                               <span className="absolute right-2 bottom-2 bg-white/96 backdrop-blur-sm px-2.5 py-1.5 rounded-full font-semibold text-xs shadow-md border border-slate-200/50">
+                                  View Gallery
+                               </span>
+                          </button>
+                      );
+                  }
+              })()}
             </div>
           </section>
         </div>
