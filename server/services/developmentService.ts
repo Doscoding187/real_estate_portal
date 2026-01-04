@@ -112,11 +112,15 @@ export async function getPublicDevelopmentBySlug(slugOrId: string) {
     .where(eq(developmentPhases.developmentId, dev.id))
     .orderBy(developmentPhases.phaseNumber);
 
-  return {
-    ...dev,
-    unitTypes: units,
-    phases: phases,
-  };
+    return {
+      ...dev,
+      unitTypes: units,
+      phases: phases,
+    };
+  } catch (err) {
+    console.error('[CRITICAL] Error in getPublicDevelopmentBySlug:', err);
+    return null;
+  }
 }
 
 export async function getPublicDevelopment(id: number) {

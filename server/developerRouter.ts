@@ -2353,30 +2353,6 @@ export const developerRouter = router({
     }),
 
   /**
-   * Get dashboard KPIs for the logged-in developer
-   * Auth: Protected
-   */
-  getDashboardKPIs: protectedProcedure
-    .input(z.object({
-      timeRange: z.enum(['7d', '30d', '90d']).default('30d'),
-      forceRefresh: z.boolean().default(false),
-    }))
-    .query(async ({ input, ctx }) => {
-      const developer = await db.getDeveloperByUserId(ctx.user.id);
-      
-      if (!developer) {
-        throw new TRPCError({
-          code: 'NOT_FOUND',
-          message: 'Developer profile not found',
-        });
-      }
-
-      // Import cleanly to avoid circular deps if possible (though service imports are fine)
-      const { getKPIsWithCache } = await import('./services/kpiService');
-      
-    }),
-
-  /**
    * Public query: Get published developments by province
    * Used for homepage and province pages
    */
