@@ -72,9 +72,9 @@ export function SimpleDevelopmentCard({
 
       {/* Content - Tighter padding */}
       <div style={{ padding: 'var(--card-padding)', gap: 'var(--card-gap)', display: 'flex', flexDirection: 'column' }}>
-        {/* Title - Fluid font size */}
+        {/* Title - Fluid font size, single line truncated */}
         <h3 
-          className="font-semibold line-clamp-2 text-slate-900 group-hover:text-blue-600 transition-colors leading-tight"
+          className="font-semibold truncate text-slate-900 group-hover:text-blue-600 transition-colors"
           style={{ fontSize: 'clamp(0.9rem, 1vw, 1.05rem)' }}
         >
           {title}
