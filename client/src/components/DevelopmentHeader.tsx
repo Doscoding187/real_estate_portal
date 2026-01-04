@@ -26,12 +26,12 @@ export function DevelopmentHeader({
       {/* Meta Badges Row */}
       <div className="flex flex-wrap items-center gap-2">
         {isNewLaunch && (
-          <Badge className="rounded-pill bg-blue-500 hover:bg-blue-600 text-white border-none px-3.5 py-1 text-xs font-bold shadow-sm tracking-wide">
+          <Badge className="rounded-pill bg-blue-500 hover:bg-blue-600 text-white border-none px-3 py-1.5 text-xs font-bold shadow-sm tracking-wide">
             NEW LAUNCH
           </Badge>
         )}
         {completionDate && (
-          <Badge variant="outline" className="rounded-pill border-slate-200 text-slate-600 px-3.5 py-1 text-xs font-semibold bg-white shadow-sm">
+          <Badge variant="outline" className="rounded-pill border-slate-200 text-slate-600 px-3 py-1.5 text-xs font-semibold bg-white shadow-sm">
             Completion in {completionDate}
           </Badge>
         )}
