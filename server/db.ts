@@ -3100,7 +3100,7 @@ export async function getPublicDevelopmentBySlug(slugOrId: string) {
     developers, 
     unitTypes, 
     developmentPhases 
-  } = await import('../drizzle/schema');
+  } = await import('../drizzle/schema.ts');
   
   const isNumeric = /^\d+$/.test(slugOrId);
 
@@ -3195,7 +3195,7 @@ export async function getPublicDevelopment(id: number) {
     developers, 
     unitTypes, 
     developmentPhases 
-  } = await import('../drizzle/schema');
+  } = await import('../drizzle/schema.ts');
 
   const results = await db
     .select({
@@ -3283,7 +3283,7 @@ export async function listPublicDevelopments(limit: number = 20) {
     developments, 
     developers, 
     unitTypes 
-  } = await import('../drizzle/schema');
+  } = await import('../drizzle/schema.ts');
 
   const results = await db
     .select({
