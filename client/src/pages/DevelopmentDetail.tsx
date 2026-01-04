@@ -225,267 +225,216 @@ export default function DevelopmentDetail() {
         </div>
 
         {/* Main Content */}
-        <div className="max-w-7xl mx-auto px-4 py-8">
-          {/* Quick Stats */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-            <Card>
-              <CardContent className="p-4 text-center">
-                <Building2 className="h-8 w-8 text-blue-600 mx-auto mb-2" />
-                <p className="text-fluid-h3 font-bold text-slate-900">{development.totalUnits}</p>
-                <p className="text-sm text-slate-600">Total Units</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-4 text-center">
-                <Home className="h-8 w-8 text-green-600 mx-auto mb-2" />
-                <p className="text-fluid-h3 font-bold text-slate-900">{development.availableUnits}</p>
-                <p className="text-sm text-slate-600">Available</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-4 text-center">
-                <Calendar className="h-8 w-8 text-orange-600 mx-auto mb-2" />
-                <p className="text-fluid-h3 font-bold text-slate-900">{development.completionDate}</p>
-                <p className="text-sm text-slate-600">Completion</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-4 text-center">
-                <span className="text-fluid-h3 font-bold text-slate-900">From</span>
-                <p className="text-xl font-bold text-blue-600">
-                  R {(development.startingPrice / 1000000).toFixed(1)}M
-                </p>
-                <p className="text-sm text-slate-600">Starting Price</p>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Two Column Layout */}
+        <div className="container max-w-7xl mx-auto px-4 pb-12">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Main Content - Left Column */}
+            
+            {/* Left Column - Details */}
             <div className="lg:col-span-2 space-y-8">
-              {/* About Development */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-fluid-h3">About This Development</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-slate-600 leading-relaxed">{development.description}</p>
-                  <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
-                    <p className="text-sm text-blue-900">
-                      <strong>Developer:</strong> {development.developer}
-                    </p>
-                    <p className="text-sm text-blue-900 mt-1">
-                      <strong>Location:</strong> {development.address}
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
+              {/* Quick Stats - Reduced density */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <Card className="shadow-none border border-slate-200/60 bg-slate-50/50">
+                  <CardContent className="p-3 flex items-center gap-3">
+                    <div className="p-1.5 bg-blue-50 rounded-md text-blue-600">
+                      <Home className="h-4 w-4" />
+                    </div>
+                    <div>
+                      <p className="text-xs text-slate-500 font-medium uppercase tracking-wide">Type</p>
+                      <p className="font-semibold text-sm text-slate-900">Residential</p>
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card className="shadow-none border border-slate-200/60 bg-slate-50/50">
+                  <CardContent className="p-3 flex items-center gap-3">
+                    <div className="p-1.5 bg-green-50 rounded-md text-green-600">
+                      <Check className="h-4 w-4" />
+                    </div>
+                    <div>
+                      <p className="text-xs text-slate-500 font-medium uppercase tracking-wide">Status</p>
+                      <p className="font-semibold text-sm text-slate-900">Selling</p>
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card className="shadow-none border border-slate-200/60 bg-slate-50/50">
+                  <CardContent className="p-3 flex items-center gap-3">
+                    <div className="p-1.5 bg-purple-50 rounded-md text-purple-600">
+                      <Building2 className="h-4 w-4" />
+                    </div>
+                    <div>
+                      <p className="text-xs text-slate-500 font-medium uppercase tracking-wide">Units</p>
+                      <p className="font-semibold text-sm text-slate-900">{development.availableUnits} Available</p>
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card className="shadow-none border border-slate-200/60 bg-slate-50/50">
+                  <CardContent className="p-3 flex items-center gap-3">
+                    <div className="p-1.5 bg-orange-50 rounded-md text-orange-600">
+                      <Calendar className="h-4 w-4" />
+                    </div>
+                    <div>
+                      <p className="text-xs text-slate-500 font-medium uppercase tracking-wide">Completion</p>
+                      <p className="font-semibold text-sm text-slate-900">{development.completionDate}</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
 
-              {/* Available Units */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-fluid-h3">Available Unit Types</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {development.units.map(unit => (
-                      <div
-                        key={unit.id}
-                        className="border border-slate-200 rounded-lg overflow-hidden hover:shadow-lg transition-shadow"
-                      >
-                        <img
-                          src={unit.image}
+              <Separator className="bg-slate-100" />
+
+              {/* About Section */}
+              <div className="space-y-3">
+                <h3 className="text-xl font-bold text-slate-900">About {development.name}</h3>
+                <div className="prose prose-slate max-w-none text-slate-600 leading-relaxed text-sm">
+                  <p>{development.description || "Experience luxury living in this exclusive new development. Providing state-of-the-art amenities and modern architectural design, this is the perfect place to call home."}</p>
+                </div>
+              </div>
+
+              <Separator className="bg-slate-100" />
+
+              {/* Available Units - Compact Cards */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xl font-bold text-slate-900">Available Units ({development.units.length})</h3>
+                  <Button variant="ghost" size="sm" className="text-orange-600 hover:text-orange-700 hover:bg-orange-50 font-medium h-8 text-xs">
+                    View All Units <ExternalLink className="ml-1 h-3 w-3" />
+                  </Button>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {development.units.map((unit: any) => (
+                    <Card key={unit.id} className="overflow-hidden hover:shadow-md transition-all duration-300 border-slate-200 grouped-card">
+                      {/* Reduced Image Height */}
+                      <div className="h-40 bg-slate-200 relative group">
+                        <img 
+                          src={unit.image} 
                           alt={unit.type}
-                          className="w-full h-48 object-cover"
+                          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                         />
-                        <div className="p-4">
-                          {/* Ownership & Structural Type Badges */}
-                          <div className="flex gap-2 mb-2 flex-wrap">
-                            {unit.ownershipType && (
-                              <Badge className="bg-blue-100 text-blue-700 text-xs">
-                                {unit.ownershipType}
-                              </Badge>
-                            )}
-                            {unit.structuralType && (
-                              <Badge className="bg-purple-100 text-purple-700 text-xs">
-                                {unit.structuralType}
-                              </Badge>
-                            )}
-                            {unit.floors && (
-                              <Badge className="bg-emerald-100 text-emerald-700 text-xs">
-                                {unit.floors}
-                              </Badge>
-                            )}
-                          </div>
-
-                          <h3 className="font-bold text-lg mb-2">{unit.type}</h3>
-                          <div className="grid grid-cols-3 gap-2 mb-3 text-sm">
-                            {unit.bedrooms > 0 && (
-                              <div className="flex items-center gap-1">
-                                <Bed className="h-4 w-4 text-slate-600" />
-                                <span>{unit.bedrooms}</span>
-                              </div>
-                            )}
-                            <div className="flex items-center gap-1">
-                              <Bath className="h-4 w-4 text-slate-600" />
-                              <span>{unit.bathrooms}</span>
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <Square className="h-4 w-4 text-slate-600" />
-                              <span>{unit.size}m²</span>
-                            </div>
-                            {unit.yardSize && (
-                              <div className="flex items-center gap-1 col-span-3">
-                                <Maximize className="h-4 w-4 text-green-600" />
-                                <span className="text-green-700">Garden: {unit.yardSize}m²</span>
-                              </div>
-                            )}
-                          </div>
-                          <div className="flex items-center justify-between mb-3">
-                            <div>
-                              <p className="text-xs text-slate-600">From</p>
-                              <p className="text-xl font-bold text-blue-600">
-                                R {(unit.price / 1000000).toFixed(1)}M
-                                {unit.priceTo && (
-                                  <span className="text-sm text-slate-600">
-                                    {' '}
-                                    - R{(unit.priceTo / 1000000).toFixed(1)}M
-                                  </span>
-                                )}
-                              </p>
-                            </div>
-                            {unit.available && unit.available > 0 ? (
-                              <Badge className="bg-green-100 text-green-700">Now Selling</Badge>
-                            ) : (
-                              <Badge className="bg-blue-100 text-blue-700">Available</Badge>
-                            )}
-                          </div>
-                          <div className="flex gap-2">
-                            <Button className="flex-1 bg-blue-600 hover:bg-blue-700">
-                              View Floor Plan
-                            </Button>
-                            {unit.virtualTour && (
-                              <Button
-                                variant="outline"
-                                className="flex-1 border-purple-300 text-purple-700 hover:bg-purple-50"
-                                onClick={() => window.open(unit.virtualTour, '_blank')}
-                              >
-                                <ExternalLink className="h-4 w-4 mr-1" />
-                                Virtual Tour
-                              </Button>
-                            )}
-                          </div>
+                        <div className="absolute top-2 right-2">
+                           <Badge className="bg-white/90 text-slate-900 backdrop-blur-sm shadow-sm border-none font-semibold px-2 py-0.5 text-[10px] rounded-sm">
+                             {unit.ownershipType}
+                           </Badge>
+                        </div>
+                        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-3">
+                           <p className="text-white font-bold text-lg leading-none">
+                             R {unit.price.toLocaleString()}
+                           </p>
+                           {unit.priceTo && (
+                             <p className="text-white/80 text-xs font-medium">
+                               - R {unit.priceTo.toLocaleString()}
+                             </p>
+                           )}
                         </div>
                       </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
+                      
+                      <CardContent className="p-3.5 space-y-3">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <h4 className="font-bold text-slate-900 text-sm">{unit.type}</h4>
+                            <p className="text-xs text-slate-500 mt-0.5">{unit.structuralType}</p>
+                          </div>
+                        </div>
 
-              {/* Amenities */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-fluid-h3">Development Amenities</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                    {development.amenities.map((amenity: any, index: number) => (
-                      <div
-                        key={index}
-                        className="flex items-center gap-2 p-2 bg-slate-50 rounded-lg"
-                      >
-                        <Check className="h-5 w-5 text-green-600" />
-                        <span className="text-sm">{amenity}</span>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
+                        {/* Specs Grid - Compact */}
+                        <div className="grid grid-cols-3 gap-2 py-2 border-t border-b border-slate-100">
+                          <div className="flex flex-col items-center justify-center text-center">
+                            <Bed className="h-3.5 w-3.5 text-slate-400 mb-1" />
+                            <span className="text-xs font-semibold text-slate-700">{unit.bedrooms} Bed</span>
+                          </div>
+                          <div className="flex flex-col items-center justify-center text-center border-l border-slate-100">
+                            <Bath className="h-3.5 w-3.5 text-slate-400 mb-1" />
+                            <span className="text-xs font-semibold text-slate-700">{unit.bathrooms} Bath</span>
+                          </div>
+                          <div className="flex flex-col items-center justify-center text-center border-l border-slate-100">
+                            <Maximize className="h-3.5 w-3.5 text-slate-400 mb-1" />
+                            <span className="text-xs font-semibold text-slate-700">{unit.size} m²</span>
+                          </div>
+                        </div>
+
+                        <div className="pt-1">
+                           <Button className="w-full bg-slate-900 hover:bg-slate-800 text-white h-9 text-xs font-medium rounded-md shadow-none">
+                             View Floor Plan
+                           </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </div>
             </div>
 
-            {/* Sticky Sidebar - Right Column */}
+            {/* Sticky Sidebar - Right Column - Compact */}
             <div className="lg:col-span-1">
-              <div className="sticky top-24 space-y-4">
+              <div className="sticky top-24 space-y-3">
                 {/* Contact Form */}
-                <Card>
-                  <CardHeader className="bg-gradient-to-r from-blue-600 to-blue-700 text-white">
-                    <CardTitle className="text-lg">Interested in This Development?</CardTitle>
+                <Card className="shadow-sm border-slate-200">
+                  <CardHeader className="bg-slate-50 border-b border-slate-100 py-3 px-4">
+                    <CardTitle className="text-sm font-bold text-slate-800">Interested in This Development?</CardTitle>
                   </CardHeader>
-                  <CardContent className="p-4 space-y-3">
-                    <Button className="w-full bg-orange-500 hover:bg-orange-600 text-white py-6">
-                      <Download className="mr-2 h-5 w-5" />
+                  <CardContent className="p-4 space-y-2.5">
+                    <Button className="w-full bg-orange-500 hover:bg-orange-600 text-white h-10 text-sm font-semibold shadow-sm">
+                      <Download className="mr-2 h-4 w-4" />
                       Download Brochure
                     </Button>
                     <Button
                       variant="outline"
-                      className="w-full py-6 border-2 border-blue-600 text-blue-600 hover:bg-blue-50"
+                      className="w-full h-10 border-blue-200 text-blue-600 hover:bg-blue-50 text-sm font-medium"
                     >
-                      <Phone className="mr-2 h-5 w-5" />
+                      <Phone className="mr-2 h-4 w-4" />
                       Schedule a Viewing
                     </Button>
-                    <Button variant="outline" className="w-full py-6">
-                      <Mail className="mr-2 h-5 w-5" />
+                    <Button variant="ghost" className="w-full h-9 text-slate-600 hover:text-slate-900 text-xs">
+                      <Mail className="mr-2 h-3.5 w-3.5" />
                       Contact Sales Team
                     </Button>
                   </CardContent>
                 </Card>
 
-                {/* Developer Info */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-base">Developer Information</CardTitle>
-                  </CardHeader>
+                {/* Developer Info - Compact */}
+                <Card className="shadow-sm border-slate-200">
                   <CardContent className="p-4">
                     <div className="flex items-start gap-3 mb-3">
                       {/* Mock logo */}
-                      <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center flex-shrink-0">
-                        <Building2 className="w-8 h-8 text-white" />
+                      <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-md flex items-center justify-center flex-shrink-0 shadow-sm">
+                        <Building2 className="w-5 h-5 text-white" />
                       </div>
-                      <div className="flex-1">
-                        <p className="font-semibold mb-1">{development.developer}</p>
-                        <Badge className="bg-orange-500 text-white text-xs mb-2">
-                          <Award className="w-3 h-3 mr-1" />
-                          FEATURED DEALER
-                        </Badge>
-                        <p className="text-sm text-slate-600 mb-2">
-                          Award-winning property developer with 20+ years of experience in luxury
-                          residential developments.
-                        </p>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-bold text-sm text-slate-900 truncate">{development.developer}</p>
+                        <div className="flex items-center gap-1 mt-0.5">
+                           <Award className="w-3 h-3 text-orange-500" />
+                           <span className="text-[10px] font-semibold text-orange-600 uppercase tracking-wide">Featured Developer</span>
+                        </div>
                       </div>
                     </div>
+                    
+                    <p className="text-xs text-slate-500 mb-3 leading-relaxed line-clamp-2">
+                       Award-winning property developer with 20+ years of experience in luxury residential developments.
+                    </p>
 
                     {/* Website */}
-                    <div className="flex items-center gap-2 text-sm text-slate-600 mb-2 p-2 bg-slate-50 rounded">
-                      <Globe className="w-4 h-4 text-blue-600" />
-                      <a
-                        href="https://www.developer-website.com"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-blue-600 hover:underline"
-                      >
-                        www.developer-website.com
-                      </a>
-                    </div>
+                    <a
+                      href="#"
+                      className="flex items-center gap-1.5 text-xs text-blue-600 hover:underline mb-3"
+                    >
+                      <Globe className="w-3 h-3" />
+                      <span>Visit Website</span>
+                    </a>
+
+                    <Separator className="bg-slate-100 my-3" />
 
                     {/* Past Projects */}
-                    <div className="mt-3 pt-3 border-t border-slate-200">
-                      <p className="text-xs font-semibold text-slate-700 mb-2 flex items-center gap-1">
-                        <Briefcase className="w-3 h-3" />
-                        Past Projects (5)
+                    <div>
+                      <p className="text-[10px] font-bold text-slate-900 uppercase tracking-wide mb-2 flex items-center gap-1">
+                        <Briefcase className="w-3 h-3 text-slate-400" />
+                        Past Projects
                       </p>
-                      <div className="space-y-1">
-                        <p className="text-xs text-slate-600">• Waterfall Estate, Midrand (2022)</p>
-                        <p className="text-xs text-slate-600">
-                          • Hyde Park Residences, Sandton (2021)
-                        </p>
-                        <p className="text-xs text-slate-600">
-                          • Century City Towers, Cape Town (2020)
-                        </p>
+                    <div className="space-y-1 pl-1 border-l-2 border-slate-100">
+                        <p className="text-xs text-slate-600 pl-2">Waterfall Estate, Midrand</p>
+                        <p className="text-xs text-slate-600 pl-2">Hyde Park Residences</p>
+                        <p className="text-xs text-slate-600 pl-2">Century City Towers</p>
                       </div>
                     </div>
 
-                    <Button variant="link" className="p-0 h-auto text-blue-600 mt-3">
+                    <Button variant="link" className="p-0 h-auto text-blue-600 mt-3 text-xs font-medium">
                       View Developer Profile →
                     </Button>
                   </CardContent>
