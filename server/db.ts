@@ -50,8 +50,8 @@ import {
   platformSettings,
   unitTypes,
   developmentPhases,
-} from '../drizzle/schema.ts';
-import * as schema from '../drizzle/schema.ts';
+} from '../drizzle/schema';
+import * as schema from '../drizzle/schema';
 
 import { ENV } from './_core/env.ts';
 import { type InferSelectModel, type InferInsertModel } from 'drizzle-orm';
@@ -3085,8 +3085,6 @@ export async function setDeveloperTrust(id: number, isTrusted: boolean) {
 
   return true;
 }
-
-
 
 // ==================== PARTNER NETWORK ====================
 

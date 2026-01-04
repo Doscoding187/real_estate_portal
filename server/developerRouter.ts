@@ -1,11 +1,6 @@
 import { z } from 'zod';
 import { router, protectedProcedure, publicProcedure } from './_core/trpc';
 import * as db from './db';
-import { 
-  getPublicDevelopment, 
-  listPublicDevelopments,
-  getPublicDevelopmentBySlug
-} from './services/developmentService';
 import { TRPCError } from '@trpc/server';
 import { EmailService } from './_core/emailService';
 import { developerSubscriptionService } from './services/developerSubscriptionService';
@@ -903,7 +898,7 @@ export const developerRouter = router({
   listPublicDevelopments: publicProcedure
     .input(z.object({ limit: z.number().default(20).optional() }))
     .query(async ({ input }) => {
-      return await db.listPublicDevelopments(input?.limit || 20);
+      return await developmentService.listPublicDevelopments(input?.limit || 20);
     }),
 
   /**
@@ -913,7 +908,7 @@ export const developerRouter = router({
   getPublicDevelopment: publicProcedure
     .input(z.object({ id: z.number() }))
     .query(async ({ input }) => {
-      const dev = await db.getPublicDevelopment(input.id);
+      const dev = await developmentService.getPublicDevelopment(input.id);
       if (!dev) {
          throw new TRPCError({
              code: 'NOT_FOUND',
@@ -930,12 +925,12 @@ export const developerRouter = router({
   getPublicDevelopmentBySlug: publicProcedure
     .input(z.object({ slug: z.string() }))
     .query(async ({ input }) => {
-      const dev = await db.getPublicDevelopmentBySlug(input.slug);
+      const dev = await developmentService.getPublicDevelopmentBySlug(input.slug);
       if (!dev) {
-         throw new TRPCError({
-             code: 'NOT_FOUND',
-             message: 'Development not found'
-         });
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Development not found'
+        });
       }
       return dev;
     }),
