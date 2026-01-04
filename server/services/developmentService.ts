@@ -20,8 +20,15 @@ import {
 // ===========================================================================
 
 export async function getPublicDevelopmentBySlug(slugOrId: string) {
-  const db = await getDb();
-  if (!db) return null;
+  console.log('[DEBUG] Service: getPublicDevelopmentBySlug called with:', slugOrId);
+  try {
+    const db = await getDb();
+    console.log('[DEBUG] Service: getDb result:', db ? 'Connected' : 'NULL');
+    
+    if (!db) {
+      console.error('[CRITICAL] Service: Database connection is NULL');
+      return null;
+    }
 
   const isNumeric = /^\d+$/.test(slugOrId);
   const idValue = isNumeric ? parseInt(slugOrId) : -1;

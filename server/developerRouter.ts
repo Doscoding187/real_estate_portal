@@ -925,14 +925,27 @@ export const developerRouter = router({
   getPublicDevelopmentBySlug: publicProcedure
     .input(z.object({ slug: z.string() }))
     .query(async ({ input }) => {
-      const dev = await developmentService.getPublicDevelopmentBySlug(input.slug);
-      if (!dev) {
-        throw new TRPCError({
-          code: 'NOT_FOUND',
-          message: 'Development not found'
-        });
+      console.log('[DEBUG] getPublicDevelopmentBySlug input:', input);
+      try {
+        if (!developmentService) {
+           console.error('[CRITICAL] developmentService is UNDEFINED');
+           throw new Error('developmentService is undefined');
+        }
+        console.log('[DEBUG] Calling developmentService.getPublicDevelopmentBySlug');
+        const dev = await developmentService.getPublicDevelopmentBySlug(input.slug);
+        console.log('[DEBUG] Result from developmentService:', dev ? 'Found' : 'Null');
+        
+        if (!dev) {
+          throw new TRPCError({
+            code: 'NOT_FOUND',
+            message: 'Development not found'
+          });
+        }
+        return dev;
+      } catch (err) {
+        console.error('[CRITICAL] Error in getPublicDevelopmentBySlug:', err);
+        throw err;
       }
-      return dev;
     }),
 
   /**
