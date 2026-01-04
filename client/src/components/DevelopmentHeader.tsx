@@ -26,12 +26,12 @@ export function DevelopmentHeader({
       {/* Meta Badges Row */}
       <div className="flex flex-wrap items-center gap-2">
         {isNewLaunch && (
-          <Badge className="rounded-pill bg-blue-500 hover:bg-blue-600 text-white border-none px-2.5 py-0.5 text-xs font-semibold shadow-none">
+          <Badge className="rounded-pill bg-blue-500 hover:bg-blue-600 text-white border-none px-3.5 py-1 text-xs font-bold shadow-sm tracking-wide">
             NEW LAUNCH
           </Badge>
         )}
         {completionDate && (
-          <Badge variant="outline" className="rounded-pill border-slate-300 text-slate-500 px-2.5 py-0.5 text-xs font-medium bg-white/50">
+          <Badge variant="outline" className="rounded-pill border-slate-200 text-slate-600 px-3.5 py-1 text-xs font-semibold bg-white shadow-sm">
             Completion in {completionDate}
           </Badge>
         )}
@@ -40,8 +40,8 @@ export function DevelopmentHeader({
       {/* Title & Location - Actions Row */}
       <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4">
         {/* Left: Title & Location */}
-        <div className="space-y-1 max-w-3xl">
-          <h1 className="text-3xl lg:text-4xl font-bold text-slate-900 tracking-tight leading-tight">
+        <div className="space-y-2 max-w-3xl">
+          <h1 className="text-2xl lg:text-3xl font-bold text-slate-900 tracking-tight leading-snug">
             {name}
           </h1>
           <div className="flex items-center gap-1.5 text-slate-500 text-sm font-medium">
