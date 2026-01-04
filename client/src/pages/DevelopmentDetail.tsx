@@ -178,7 +178,7 @@ export default function DevelopmentDetail() {
             <div className="flex items-start justify-between gap-4">
               <div>
                 <Badge className="mb-2 bg-orange-500 hover:bg-orange-600">New Development</Badge>
-                <h1 className="text-3xl font-bold text-slate-900">{development.name}</h1>
+                <h1 className="text-fluid-h1 font-bold text-slate-900">{development.name}</h1>
                 <div className="flex items-center gap-2 text-slate-600 mt-1">
                   <MapPin className="h-4 w-4" />
                   <span className="text-sm">{development.location}</span>
@@ -344,27 +344,27 @@ export default function DevelopmentDetail() {
             <Card>
               <CardContent className="p-4 text-center">
                 <Building2 className="h-8 w-8 text-blue-600 mx-auto mb-2" />
-                <p className="text-2xl font-bold text-slate-900">{development.totalUnits}</p>
+                <p className="text-fluid-h3 font-bold text-slate-900">{development.totalUnits}</p>
                 <p className="text-sm text-slate-600">Total Units</p>
               </CardContent>
             </Card>
             <Card>
               <CardContent className="p-4 text-center">
                 <Home className="h-8 w-8 text-green-600 mx-auto mb-2" />
-                <p className="text-2xl font-bold text-slate-900">{development.availableUnits}</p>
+                <p className="text-fluid-h3 font-bold text-slate-900">{development.availableUnits}</p>
                 <p className="text-sm text-slate-600">Available</p>
               </CardContent>
             </Card>
             <Card>
               <CardContent className="p-4 text-center">
                 <Calendar className="h-8 w-8 text-orange-600 mx-auto mb-2" />
-                <p className="text-2xl font-bold text-slate-900">{development.completionDate}</p>
+                <p className="text-fluid-h3 font-bold text-slate-900">{development.completionDate}</p>
                 <p className="text-sm text-slate-600">Completion</p>
               </CardContent>
             </Card>
             <Card>
               <CardContent className="p-4 text-center">
-                <span className="text-2xl font-bold text-slate-900">From</span>
+                <span className="text-fluid-h3 font-bold text-slate-900">From</span>
                 <p className="text-xl font-bold text-blue-600">
                   R {(development.startingPrice / 1000000).toFixed(1)}M
                 </p>
@@ -380,7 +380,7 @@ export default function DevelopmentDetail() {
               {/* About Development */}
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-2xl">About This Development</CardTitle>
+                  <CardTitle className="text-fluid-h3">About This Development</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <p className="text-slate-600 leading-relaxed">{development.description}</p>
@@ -398,7 +398,7 @@ export default function DevelopmentDetail() {
               {/* Available Units */}
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-2xl">Available Unit Types</CardTitle>
+                  <CardTitle className="text-fluid-h3">Available Unit Types</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -499,7 +499,7 @@ export default function DevelopmentDetail() {
               {/* Amenities */}
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-2xl">Development Amenities</CardTitle>
+                  <CardTitle className="text-fluid-h3">Development Amenities</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-3">

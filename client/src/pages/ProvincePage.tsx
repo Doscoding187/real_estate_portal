@@ -49,7 +49,7 @@ export default function ProvincePage({ params }: { params: { province: string } 
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <h1 className="text-2xl font-bold mb-2">Location Not Found</h1>
+          <h1 className="text-fluid-h3 font-bold mb-2">Location Not Found</h1>
           <p className="text-slate-500">We couldn't find the province you're looking for.</p>
         </div>
       </div>
@@ -193,7 +193,7 @@ export default function ProvincePage({ params }: { params: { province: string } 
 
         buyerCTA={
           <div className="py-8 text-center bg-blue-50 rounded-lg mx-4 md:mx-0">
-            <h3 className="text-xl font-bold mb-2">Looking for property in {province.name}?</h3>
+            <h3 className="text-fluid-h4 font-bold mb-2">Looking for property in {province.name}?</h3>
             <p className="mb-4 text-slate-600">Get alerts for new properties matching your criteria.</p>
             <button className="px-6 py-2 bg-blue-600 text-white rounded font-medium hover:bg-blue-700">
               Set Property Alert

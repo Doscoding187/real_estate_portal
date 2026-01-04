@@ -160,7 +160,7 @@ export function LocationHeroSection({
               <LocationAutosuggest
                 placeholder={`Search in ${locationName}...`}
                 onLocationSelect={handleLocationSelect}
-                className="w-full py-4 text-lg border-2 border-slate-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
+                className="w-full py-4 text-base border-2 border-slate-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
               />
               <button className="absolute right-4 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-blue-600 transition-colors">
                 <Mic className="h-5 w-5" />

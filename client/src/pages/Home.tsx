@@ -11,7 +11,7 @@ import { PropertyInsights } from '@/components/PropertyInsights';
 import { DiscoverProperties } from '@/components/DiscoverProperties';
 import { TopLocalities } from '@/components/TopLocalities';
 import { TopDevelopers } from '@/components/TopDevelopers';
-import { RecognisedDevelopers } from '@/components/RecognisedDevelopers';
+
 import { ExploreCities } from '@/components/ExploreCities';
 import { PropertyCategories } from '@/components/PropertyCategories';
 import { Footer } from '@/components/Footer';
@@ -170,8 +170,7 @@ export default function Home() {
       {/* Top Localities Section */}
       <TopLocalities />
 
-      {/* Recognised Developers Section (from brand profiles) */}
-      <RecognisedDevelopers />
+
 
       {/* Top Developers Section (legacy mock data) */}
       <TopDevelopers />

@@ -140,7 +140,7 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
     return (
       <div className="min-h-screen bg-background">
         <ListingNavbar />
-        <div className="flex items-center justify-center py-20">
+        <div className="flex items-center justify-center py-fluid-xl">
           <Loader2 className="h-12 w-12 animate-spin text-primary" />
         </div>
       </div>
@@ -152,7 +152,7 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
     return (
       <div className="min-h-screen bg-background">
         <ListingNavbar />
-        <div className="container py-20 text-center">
+        <div className="container py-fluid-xl text-center">
           <h2 className="text-2xl font-semibold mb-4">Property Not Found</h2>
           <p className="text-slate-500 mb-6">The property you're looking for doesn't exist or has been removed.</p>
           <Button onClick={() => setLocation('/properties')}>Back to Properties</Button>
@@ -256,7 +256,7 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
           {/* Title Row with Action Buttons */}
           <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4 mb-1">
             <div className="flex-1">
-              <h1 className="text-2xl font-bold text-slate-900 mb-1">{property.title}</h1>
+              <h1 className="text-fluid-h2 font-bold text-slate-900 mb-1">{property.title}</h1>
               <div className="flex items-center gap-2 text-slate-500">
                 <MapPin className="h-4 w-4" />
                 <span className="text-base text-slate-500">
@@ -300,7 +300,7 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
           <div className="lg:col-span-5 space-y-8">
             {/* Price Section */}
             <div>
-              <div className="text-4xl font-bold text-orange-500 mb-2">
+              <div className="text-fluid-h1 font-bold text-orange-500 mb-2">
                 {formatCurrency(property.price, { compact: false })}
               </div>
               <div className="flex items-center gap-2 text-sm">
@@ -314,7 +314,7 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
 
             {/* Property Details */}
             <div>
-              <h3 className="text-xl font-bold text-slate-900 mb-4">Property Details</h3>
+              <h3 className="text-fluid-h3 font-bold text-slate-900 mb-4">Property Details</h3>
               <div className="grid grid-cols-3 gap-4">
                 {property.bedrooms && (
                   <div className="flex items-start gap-3">
@@ -393,7 +393,7 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
 
             {/* Amenities */}
             <div>
-              <h3 className="text-xl font-bold text-slate-900 mb-4">Amenities & Features</h3>
+              <h3 className="text-fluid-h3 font-bold text-slate-900 mb-4">Amenities & Features</h3>
               {highlights.length > 0 ? (
                 <div className="grid grid-cols-3 gap-y-3 gap-x-2">
                   {highlights.map((amenity: string, index: number) => {
@@ -424,7 +424,7 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
             {/* 2.1 About This Property */}
             <Card className="border-slate-200 shadow-sm">
               <CardHeader className="bg-slate-50/50 border-b border-slate-100">
-                <CardTitle className="text-xl font-bold text-slate-900">About This Property</CardTitle>
+                <CardTitle className="text-fluid-h3 font-bold text-slate-900">About This Property</CardTitle>
               </CardHeader>
               <CardContent className="p-4">
                 <p className="text-slate-600 leading-relaxed whitespace-pre-line">
@@ -446,7 +446,7 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
             {(specs.ownershipType || specs.powerBackup || (specs.securityFeatures && specs.securityFeatures.length > 0) || specs.waterSupply || specs.internetAccess || specs.flooring || specs.parkingType || specs.petFriendly || specs.electricitySupply) && (
               <Card className="border-slate-200 shadow-sm">
                 <CardHeader className="bg-slate-50/50 border-b border-slate-100">
-                  <CardTitle className="text-xl font-bold text-slate-900">Property Features & Specifications</CardTitle>
+                  <CardTitle className="text-fluid-h3 font-bold text-slate-900">Property Features & Specifications</CardTitle>
                 </CardHeader>
                 <CardContent className="p-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -542,7 +542,7 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
             {/* 2.3 Agent Overview */}
             <div className="bg-slate-50 rounded-xl p-6 border border-slate-200 shadow-sm">
               <div className="flex items-center gap-4 mb-6 pb-4 border-b border-slate-200">
-                <h3 className="text-xl font-bold text-slate-900">Agent Overview</h3>
+                <h3 className="text-fluid-h3 font-bold text-slate-900">Agent Overview</h3>
               </div>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -571,7 +571,7 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
                   <div className="flex gap-4 mb-6">
                     <div className="flex-1 bg-slate-50 rounded-lg p-3 text-center border border-slate-100">
                       <div className="flex items-center justify-center gap-2 mb-1">
-                        <div className="text-3xl font-bold text-orange-500">
+                        <div className="text-fluid-h2 font-bold text-orange-500">
                           {agent?.experience || 9}
                         </div>
                       </div>
@@ -579,7 +579,7 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
                     </div>
                     <div className="flex-1 bg-slate-50 rounded-lg p-3 text-center border border-slate-100">
                       <div className="flex items-center justify-center gap-2 mb-1">
-                        <div className="text-3xl font-bold text-orange-500">
+                        <div className="text-fluid-h2 font-bold text-orange-500">
                           {agent?.totalListings || 54}
                         </div>
                       </div>

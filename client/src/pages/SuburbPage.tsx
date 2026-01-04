@@ -74,7 +74,7 @@ export default function SuburbPage({ params }: { params: { province: string; cit
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <h1 className="text-2xl font-bold mb-2">Location Not Found</h1>
+          <h1 className="text-fluid-h3 font-bold mb-2">Location Not Found</h1>
           <p className="text-slate-500">We couldn't find the suburb you're looking for.</p>
         </div>
       </div>
@@ -161,7 +161,7 @@ export default function SuburbPage({ params }: { params: { province: string; cit
 
         buyerCTA={
             <div className="py-8 text-center bg-blue-50 rounded-lg mx-4 md:mx-0">
-                <h3 className="text-xl font-bold mb-2">Looking for a home in {suburb.name}?</h3>
+                <h3 className="text-fluid-h4 font-bold mb-2">Looking for a home in {suburb.name}?</h3>
                 <p className="mb-4 text-slate-600">Get alerts when new properties are listed.</p>
                 <button className="px-6 py-2 bg-blue-600 text-white rounded font-medium hover:bg-blue-700">
                     Set Property Alert
@@ -175,11 +175,11 @@ export default function SuburbPage({ params }: { params: { province: string; cit
             {/* Sub-Localities Grid - moved to popularLocations for full width */}
 
             {/* Properties Preview Section (Transaction Intent Launcher) */}
-            <div className="py-16 bg-white">
+            <div className="py-fluid-xl bg-white">
               <div className="container">
                 <div className="flex justify-between items-end mb-8">
                   <div>
-                    <h2 className="text-2xl md:text-3xl font-bold mb-3">Homes in {suburb.name}</h2>
+                    <h2 className="text-fluid-h2 font-bold mb-3">Homes in {suburb.name}</h2>
                     <p className="text-muted-foreground text-base max-w-2xl">
                       Browse a selection of properties for sale in {suburb.name}. 
                     </p>
@@ -229,7 +229,7 @@ export default function SuburbPage({ params }: { params: { province: string; cit
             {/* Interactive Map Section */}
             {suburb.latitude && suburb.longitude && (
               <div className="py-4">
-                <h2 className="text-2xl font-bold mb-6">Explore {suburb.name} on the Map</h2>
+                <h2 className="text-fluid-h2 font-bold mb-6">Explore {suburb.name} on the Map</h2>
                 <InteractiveMap
                   center={{
                     lat: Number(suburb.latitude),
