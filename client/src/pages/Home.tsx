@@ -93,7 +93,7 @@ export default function Home() {
             <h2 className="font-bold mb-4 bg-gradient-to-r from-slate-900 via-[#2774AE] to-slate-900 bg-clip-text text-transparent">
               Hot Selling Residential Developments
             </h2>
-            <p className="text-slate-600 text-lg max-w-3xl leading-relaxed">
+            <p className="text-slate-600 max-w-3xl leading-relaxed">
               A handpicked collection of the country's most in-demand residential developments.
               These properties offer unmatched value in top cities with ideal locations, smart amenities, and trusted builders.
             </p>
