@@ -498,7 +498,8 @@ export default function DevelopmentDetail() {
 
       {/* Media Lightbox */}
       <MediaLightbox
-        media={getLightboxMedia()}
+        media={development.unifiedMedia}
+        initialIndex={lightboxIndex}
         isOpen={lightboxOpen}
         onClose={() => setLightboxOpen(false)}
         title={lightboxTitle}
