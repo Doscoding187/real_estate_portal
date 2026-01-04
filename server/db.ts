@@ -20,10 +20,7 @@ import {
   max,
   sum,
   aliasedTable,
-  getTableColumns,
 } from 'drizzle-orm';
-import { drizzle } from 'drizzle-orm/mysql2';
-import mysql from 'mysql2/promise';
 import {
   users,
   properties,
@@ -51,12 +48,16 @@ import {
   unitTypes,
   developmentPhases,
 } from '../drizzle/schema';
-import * as schema from '../drizzle/schema';
 
 import { ENV } from './_core/env.ts';
 import { type InferSelectModel, type InferInsertModel } from 'drizzle-orm';
 import { normalizeLocationFields, validateLocationForPublish } from './utils/locationUtils';
 import { locationResolver } from './services/locationResolverService';
+
+// Re-export getDb from the connection module to maintain backward compatibility
+// and break circular dependency with locationResolverService
+export { getDb } from './db-connection';
+import { getDb } from './db-connection';
 
 export type User = InferSelectModel<typeof users>;
 export type InsertUser = InferInsertModel<typeof users>;
@@ -64,43 +65,6 @@ export type Property = InferSelectModel<typeof properties>;
 export type InsertProperty = InferInsertModel<typeof properties>;
 export type InsertPropertyImage = InferInsertModel<typeof propertyImages>;
 export type Prospect = InferSelectModel<typeof prospects>;
-
-let _db: any = null;
-
-/* Debug database connection (single log) */
-console.log('[Database] Checking DATABASE_URL:', process.env.DATABASE_URL ? 'present' : 'missing');
-if (process.env.DATABASE_URL) {
-  console.log(
-    '[Database] DATABASE_URL (masked):',
-    process.env.DATABASE_URL.replace(/:([^:@]+)@/, ':****@'),
-  );
-}
-
-// Lazily create the drizzle instance so local tooling can run without a DB.
-export async function getDb() {
-  if (!_db && process.env.DATABASE_URL) {
-    try {
-      // TiDB Cloud requires SSL for secure connections
-      // Parse the DATABASE_URL and add explicit SSL configuration
-      const isProduction = process.env.NODE_ENV === 'production';
-      const poolConnection = mysql.createPool({
-        uri: process.env.DATABASE_URL,
-        ssl: {
-          rejectUnauthorized: isProduction, // Use true for production with valid certificates
-        },
-      });
-      _db = drizzle(poolConnection, { schema, mode: 'default' });
-      console.log(
-        '[Database] Connected to MySQL with SSL:',
-        process.env.DATABASE_URL.replace(/:([^:@]+)@/, ':****@'),
-      );
-    } catch (error) {
-      console.error('[Database] Failed to connect:', error);
-      _db = null;
-    }
-  }
-  return _db;
-}
 
 // Export a synchronous db object that throws if not initialized
 // This is for backwards compatibility with existing code

@@ -11,7 +11,7 @@
  *   });
  */
 
-import { db, getDb } from '../db';
+import { getDb } from '../db-connection';
 import { eq, and, sql } from 'drizzle-orm';
 import { provinces, cities, suburbs } from '../../drizzle/schema';
 

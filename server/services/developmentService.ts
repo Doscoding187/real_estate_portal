@@ -7,7 +7,7 @@ import {
   isNotNull,
   sql
 } from 'drizzle-orm';
-import { getDb } from '../db';
+import { getDb } from '../db-connection';
 import { 
   developments, 
   developers, 
