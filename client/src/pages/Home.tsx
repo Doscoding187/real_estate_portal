@@ -83,7 +83,7 @@ export default function Home() {
 
 
       {/* Hot Selling Developments Section */}
-      <div className="py-16 md:py-20 bg-gradient-to-b from-slate-50/50 to-white">
+      <div className="py-fluid-xl bg-gradient-to-b from-slate-50/50 to-white">
         <div className="container">
           <div className="text-left mb-12">
             <div className="inline-flex items-center gap-2 bg-gradient-to-r from-red-50 to-orange-50 border border-red-200 rounded-full px-4 py-2 mb-4">

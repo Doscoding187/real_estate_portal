@@ -27,10 +27,9 @@ export function SimpleDevelopmentCard({
 
   return (
     <div 
-      className="group relative rounded-xl overflow-hidden bg-white hover:shadow-lg transition-all duration-300 cursor-pointer hover:-translate-y-1"
+      className="group relative rounded-card overflow-hidden bg-white hover:shadow-lg transition-all duration-300 cursor-pointer hover:-translate-y-1"
       style={{ 
         border: 'var(--card-border)',
-        borderRadius: 'var(--card-radius)'
       }}
       onClick={() => setLocation(`/development/${id}`)}
     >
@@ -53,16 +52,16 @@ export function SimpleDevelopmentCard({
         <div className="absolute top-3 right-3 flex flex-col gap-1.5 items-end">
           {isHotSelling && (
             <span 
-              className="text-white text-xs font-semibold px-2.5 py-1 rounded-md shadow-sm flex items-center gap-1"
-              style={{ fontSize: 'clamp(0.65rem, 0.7vw, 0.75rem)', background: 'linear-gradient(135deg, #ef4444, #f97316)' }}
+              className="text-white font-semibold px-2.5 py-1 rounded-md shadow-sm flex items-center gap-1 text-xs"
+              style={{ background: 'linear-gradient(135deg, #ef4444, #f97316)' }}
             >
               🔥 Hot Selling
             </span>
           )}
           {!isHotSelling && isHighDemand && (
             <span 
-              className="text-white text-xs font-semibold px-2.5 py-1 rounded-md shadow-sm flex items-center gap-1"
-              style={{ fontSize: 'clamp(0.65rem, 0.7vw, 0.75rem)', background: 'linear-gradient(135deg, #2563eb, #7c3aed)' }}
+              className="text-white font-semibold px-2.5 py-1 rounded-md shadow-sm flex items-center gap-1 text-xs"
+              style={{ background: 'linear-gradient(135deg, #2563eb, #7c3aed)' }}
             >
               📈 High Demand
             </span>
@@ -70,21 +69,15 @@ export function SimpleDevelopmentCard({
         </div>
       </div>
 
-      {/* Content - Tighter padding */}
-      <div style={{ padding: 'var(--card-padding)', gap: 'var(--card-gap)', display: 'flex', flexDirection: 'column' }}>
-        {/* Title - Fluid font size, single line truncated */}
-        <h3 
-          className="font-semibold truncate text-slate-900 group-hover:text-blue-600 transition-colors"
-          style={{ fontSize: 'clamp(0.9rem, 1vw, 1.05rem)' }}
-        >
+      {/* Content - Using Fluid Tailwind Classes */}
+      <div className="flex flex-col p-card-p gap-card-g">
+        {/* Title - Fluid font size */}
+        <h3 className="text-fluid-h4 font-semibold truncate text-slate-900 group-hover:text-blue-600 transition-colors">
           {title}
         </h3>
 
-        {/* City - Smaller meta text */}
-        <p 
-          className="text-slate-500 flex items-center gap-1"
-          style={{ fontSize: 'clamp(0.75rem, 0.8vw, 0.85rem)' }}
-        >
+        {/* City - Smaller fluid text */}
+        <p className="text-slate-500 flex items-center gap-1 text-sm">
           <svg className="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -94,16 +87,10 @@ export function SimpleDevelopmentCard({
 
         {/* Price Range - Compact */}
         <div className="pt-2 mt-auto border-t border-slate-100">
-          <p 
-            className="font-semibold text-slate-600"
-            style={{ fontSize: 'clamp(0.65rem, 0.7vw, 0.75rem)', letterSpacing: '0.03em', textTransform: 'uppercase', marginBottom: '0.25rem' }}
-          >
+          <p className="font-semibold text-slate-600 text-xs tracking-wider uppercase mb-1">
             Price Range
           </p>
-          <p 
-            className="font-bold text-blue-600"
-            style={{ fontSize: 'clamp(0.85rem, 0.95vw, 1rem)' }}
-          >
+          <p className="font-bold text-blue-600 text-base">
             {formatCurrency(priceRange.min)} - {formatCurrency(priceRange.max)}
           </p>
         </div>
