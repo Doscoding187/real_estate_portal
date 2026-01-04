@@ -155,7 +155,7 @@ export function TopLocalities({
     <div className="py-16 bg-muted/30">
       <div className="container">
         <div className="mb-8">
-          <h2 className="text-2xl md:text-3xl font-bold mb-3">{displayTitle}</h2>
+          <h2 className="text-fluid-h2 font-bold mb-3 bg-gradient-to-r from-slate-900 via-[#2774AE] to-slate-900 bg-clip-text text-transparent">{displayTitle}</h2>
           <p className="text-muted-foreground text-lg max-w-2xl">
             {displaySubtitle}
           </p>

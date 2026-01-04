@@ -10,6 +10,7 @@ export interface SimpleDevelopmentCardProps {
     max: number;
   };
   image: string;
+  slug?: string;
   isHotSelling?: boolean;
   isHighDemand?: boolean;
 }
@@ -20,6 +21,7 @@ export function SimpleDevelopmentCard({
   city,
   priceRange,
   image,
+  slug,
   isHotSelling,
   isHighDemand,
 }: SimpleDevelopmentCardProps) {
@@ -31,7 +33,7 @@ export function SimpleDevelopmentCard({
       style={{ 
         border: 'var(--card-border)',
       }}
-      onClick={() => setLocation(`/development/${id}`)}
+      onClick={() => setLocation(`/development/${slug || id}`)}
     >
       {/* Image */}
       <div className="relative aspect-[4/3] overflow-hidden bg-slate-50">

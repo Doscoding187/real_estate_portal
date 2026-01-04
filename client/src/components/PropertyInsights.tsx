@@ -121,7 +121,7 @@ export function PropertyInsights() {
       <div className="py-16 bg-white">
         <div className="container">
           <div className="mb-10">
-            <h2 className="text-2xl md:text-3xl font-bold mb-3">
+            <h2 className="text-fluid-h2 font-bold mb-3 bg-gradient-to-r from-slate-900 via-[#2774AE] to-slate-900 bg-clip-text text-transparent">
               Property Price Insights in South Africa
             </h2>
             <p className="text-muted-foreground text-base max-w-2xl">
@@ -146,7 +146,7 @@ export function PropertyInsights() {
       <div className="py-16 bg-white">
         <div className="container">
           <div className="mb-10">
-            <h2 className="text-2xl md:text-3xl font-bold mb-3">
+            <h2 className="text-fluid-h2 font-bold mb-3 bg-gradient-to-r from-slate-900 via-[#2774AE] to-slate-900 bg-clip-text text-transparent">
               Property Price Insights in South Africa
             </h2>
             <p className="text-muted-foreground text-base max-w-2xl">
@@ -177,7 +177,7 @@ export function PropertyInsights() {
       <div className="py-16 bg-white">
         <div className="container">
           <div className="mb-10">
-            <h2 className="text-2xl md:text-3xl font-bold mb-3">
+            <h2 className="text-fluid-h2 font-bold mb-3 bg-gradient-to-r from-slate-900 via-[#2774AE] to-slate-900 bg-clip-text text-transparent">
               Property Price Insights in South Africa
             </h2>
             <p className="text-muted-foreground text-base max-w-2xl">
@@ -204,7 +204,7 @@ export function PropertyInsights() {
     <div className="py-16 bg-white">
       <div className="container">
         <div className="mb-10">
-          <h2 className="text-2xl md:text-3xl font-bold mb-3">
+          <h2 className="text-fluid-h2 font-bold mb-3 bg-gradient-to-r from-slate-900 via-[#2774AE] to-slate-900 bg-clip-text text-transparent">
             Property Price Insights in South Africa
           </h2>
           <p className="text-muted-foreground text-base max-w-2xl">

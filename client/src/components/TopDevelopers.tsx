@@ -30,7 +30,7 @@ export function TopDevelopers() {
       <div className="container">
         {/* Section Header */}
         <div className="mb-8">
-           <h2 className="text-fluid-h2 font-bold mb-3 text-slate-900">
+           <h2 className="text-fluid-h2 font-bold mb-3 bg-gradient-to-r from-slate-900 via-[#2774AE] to-slate-900 bg-clip-text text-transparent">
             Top Developers in South Africa
           </h2>
           <p className="text-slate-600 text-fluid-h4 max-w-4xl">
