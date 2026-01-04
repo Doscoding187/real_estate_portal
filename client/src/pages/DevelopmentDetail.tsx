@@ -10,6 +10,14 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+} from '@/components/ui/carousel';
 import {
   Building2,
   MapPin,
@@ -298,75 +306,118 @@ export default function DevelopmentDetail() {
 
               <Separator className="bg-slate-100" />
 
-              {/* Available Units - Compact Cards */}
-              <div className="space-y-4">
+              {/* Available Units - Tabs & Carousel */}
+              <div className="space-y-6">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-xl font-bold text-slate-900">Available Units ({development.units.length})</h3>
+                  <h3 className="text-xl font-bold text-slate-900">Floor Plans & Pricing</h3>
                   <Button variant="ghost" size="sm" className="text-orange-600 hover:text-orange-700 hover:bg-orange-50 font-medium h-8 text-xs">
-                    View All Units <ExternalLink className="ml-1 h-3 w-3" />
+                     View All Units <ExternalLink className="ml-1 h-3 w-3" />
                   </Button>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {development.units.map((unit: any) => (
-                    <Card key={unit.id} className="overflow-hidden hover:shadow-md transition-all duration-300 border-slate-200 grouped-card">
-                      {/* Reduced Image Height */}
-                      <div className="h-40 bg-slate-200 relative group">
-                        <img 
-                          src={unit.image} 
-                          alt={unit.type}
-                          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                        />
-                        <div className="absolute top-2 right-2">
-                           <Badge className="bg-white/90 text-slate-900 backdrop-blur-sm shadow-sm border-none font-semibold px-2 py-0.5 text-[10px] rounded-sm">
-                             {unit.ownershipType}
-                           </Badge>
-                        </div>
-                        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-3">
-                           <p className="text-white font-bold text-lg leading-none">
-                             R {unit.price.toLocaleString()}
-                           </p>
-                           {unit.priceTo && (
-                             <p className="text-white/80 text-xs font-medium">
-                               - R {unit.priceTo.toLocaleString()}
-                             </p>
-                           )}
-                        </div>
-                      </div>
-                      
-                      <CardContent className="p-3.5 space-y-3">
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <h4 className="font-bold text-slate-900 text-sm">{unit.type}</h4>
-                            <p className="text-xs text-slate-500 mt-0.5">{unit.structuralType}</p>
-                          </div>
-                        </div>
+                {(() => {
+                  // Group units by bedrooms
+                  const bedroomCounts = Array.from(new Set(development.units.map((u: any) => u.bedrooms))).sort((a: any, b: any) => a - b);
+                  
+                  // Initialize state (this needs to be at component level, but for this refactor we'll use a controlled Tabs component)
+                  // using default value of the first bedroom count
+                  const defaultTab = bedroomCounts[0]?.toString() || "0";
 
-                        {/* Specs Grid - Compact */}
-                        <div className="grid grid-cols-3 gap-2 py-2 border-t border-b border-slate-100">
-                          <div className="flex flex-col items-center justify-center text-center">
-                            <Bed className="h-3.5 w-3.5 text-slate-400 mb-1" />
-                            <span className="text-xs font-semibold text-slate-700">{unit.bedrooms} Bed</span>
-                          </div>
-                          <div className="flex flex-col items-center justify-center text-center border-l border-slate-100">
-                            <Bath className="h-3.5 w-3.5 text-slate-400 mb-1" />
-                            <span className="text-xs font-semibold text-slate-700">{unit.bathrooms} Bath</span>
-                          </div>
-                          <div className="flex flex-col items-center justify-center text-center border-l border-slate-100">
-                            <Maximize className="h-3.5 w-3.5 text-slate-400 mb-1" />
-                            <span className="text-xs font-semibold text-slate-700">{unit.size} m²</span>
-                          </div>
-                        </div>
+                  return (
+                    <Tabs defaultValue={defaultTab} className="w-full">
+                       <TabsList className="bg-transparent p-0 flex flex-wrap gap-2 h-auto mb-6 justify-start">
+                        {bedroomCounts.map((count: any) => (
+                          <TabsTrigger 
+                            key={count} 
+                            value={count.toString()}
+                            className="rounded-full border border-slate-200 bg-white px-6 py-2.5 text-sm font-medium text-slate-600 data-[state=active]:bg-slate-900 data-[state=active]:text-white data-[state=active]:border-slate-900 shadow-sm transition-all"
+                          >
+                            {count} Bedroom <span className="ml-1 opacity-70 font-normal">Apartments</span>
+                          </TabsTrigger>
+                        ))}
+                      </TabsList>
 
-                        <div className="pt-1">
-                           <Button className="w-full bg-slate-900 hover:bg-slate-800 text-white h-9 text-xs font-medium rounded-md shadow-none">
-                             View Floor Plan
-                           </Button>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
+                      {bedroomCounts.map((count: any) => (
+                        <TabsContent key={count} value={count.toString()} className="mt-0 focus-visible:outline-none">
+                          <Carousel
+                            opts={{
+                              align: "start",
+                              loop: true,
+                            }}
+                            className="w-full"
+                          >
+                            <CarouselContent className="-ml-4 pb-4">
+                              {development.units
+                                .filter((u: any) => u.bedrooms === count)
+                                .map((unit: any) => (
+                                <CarouselItem key={unit.id} className="pl-4 md:basis-1/2 lg:basis-1/2">
+                                  <Card className="overflow-hidden hover:shadow-md transition-all duration-300 border-slate-200 grouped-card h-full flex flex-col">
+                                    {/* Reduced Image Height */}
+                                    <div className="h-48 bg-slate-200 relative group shrink-0">
+                                      <img 
+                                        src={unit.image} 
+                                        alt={unit.type}
+                                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                                      />
+                                      <div className="absolute top-2 right-2">
+                                         <Badge className="bg-white/90 text-slate-900 backdrop-blur-sm shadow-sm border-none font-semibold px-2 py-0.5 text-[10px] rounded-sm">
+                                           {unit.ownershipType}
+                                         </Badge>
+                                      </div>
+                                    </div>
+                                    
+                                    <CardContent className="p-4 space-y-4 flex-1 flex flex-col">
+                                      <div className="flex justify-between items-start">
+                                        <div>
+                                          <h4 className="font-bold text-slate-900 text-lg">R {unit.price.toLocaleString()}</h4>
+                                          <p className="text-xs text-slate-500 mt-1">{unit.type}</p>
+                                          {unit.priceTo && (
+                                            <p className="text-xs text-slate-400 mt-0.5">
+                                              - R {unit.priceTo.toLocaleString()}
+                                            </p>
+                                          )}
+                                        </div>
+                                      </div>
+
+                                      {/* Specs Grid - Compact */}
+                                      <div className="grid grid-cols-3 gap-2 py-2 border-t border-b border-slate-100 mt-auto">
+                                        <div className="flex flex-col items-center justify-center text-center">
+                                          <Bed className="h-3.5 w-3.5 text-slate-400 mb-1" />
+                                          <span className="text-xs font-semibold text-slate-700">{unit.bedrooms} Bed</span>
+                                        </div>
+                                        <div className="flex flex-col items-center justify-center text-center border-l border-slate-100">
+                                          <Bath className="h-3.5 w-3.5 text-slate-400 mb-1" />
+                                          <span className="text-xs font-semibold text-slate-700">{unit.bathrooms} Bath</span>
+                                        </div>
+                                        <div className="flex flex-col items-center justify-center text-center border-l border-slate-100">
+                                          <Maximize className="h-3.5 w-3.5 text-slate-400 mb-1" />
+                                          <span className="text-xs font-semibold text-slate-700">{unit.size} m²</span>
+                                        </div>
+                                      </div>
+
+                                      <div className="pt-1">
+                                         <Button variant="outline" className="w-full border-blue-200 text-blue-600 hover:bg-blue-50 h-9 text-xs font-bold rounded-md shadow-none uppercase tracking-wide">
+                                           Request callback
+                                         </Button>
+                                         <div className="mt-2 text-center">
+                                            <span className="inline-block px-2 py-0.5 bg-slate-100 text-slate-500 text-[10px] rounded font-medium">Dec '27 possession</span>
+                                         </div>
+                                      </div>
+                                    </CardContent>
+                                  </Card>
+                                </CarouselItem>
+                              ))}
+                            </CarouselContent>
+                            <div className="hidden md:block">
+                               <CarouselPrevious className="-left-4 bg-white shadow-md border-slate-200" />
+                               <CarouselNext className="-right-4 bg-white shadow-md border-slate-200" />
+                            </div>
+                          </Carousel>
+                        </TabsContent>
+                      ))}
+                    </Tabs>
+                  );
+                })()}
               </div>
             </div>
 
