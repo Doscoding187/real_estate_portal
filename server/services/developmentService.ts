@@ -107,7 +107,22 @@ export async function getPublicDevelopmentBySlug(slugOrId: string) {
 
   // Fetch phases
   const phases = await db
-    .select()
+    .select({
+      id: developmentPhases.id,
+      developmentId: developmentPhases.developmentId,
+      name: developmentPhases.name,
+      phaseNumber: developmentPhases.phaseNumber,
+      description: developmentPhases.description,
+      status: developmentPhases.status,
+      totalUnits: developmentPhases.totalUnits,
+      availableUnits: developmentPhases.availableUnits,
+      priceFrom: developmentPhases.priceFrom,
+      priceTo: developmentPhases.priceTo,
+      launchDate: developmentPhases.launchDate,
+      completionDate: developmentPhases.completionDate,
+      // Removed latitude/longitude as they are missing in production
+      // Omit missing columns: specType, customSpecType, finishingDifferences, phaseHighlights
+    })
     .from(developmentPhases)
     .where(eq(developmentPhases.developmentId, dev.id))
     .orderBy(developmentPhases.phaseNumber);
