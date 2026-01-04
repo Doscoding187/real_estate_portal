@@ -3,6 +3,8 @@ import { useState } from 'react';
 import { trpc } from '@/lib/trpc';
 import { ListingNavbar } from '@/components/ListingNavbar';
 import { MediaLightbox } from '@/components/MediaLightbox';
+import { DevelopmentHeader } from '@/components/DevelopmentHeader';
+import { DevelopmentGallery } from '@/components/DevelopmentGallery';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -29,13 +31,14 @@ import {
 import { MetaControl } from '@/components/seo/MetaControl';
 import { Breadcrumbs } from '@/components/search/Breadcrumbs';
 
-type MediaCategory = 'all' | 'amenities' | 'outdoors' | 'videos';
+
 
 export default function DevelopmentDetail() {
   const { slug } = useParams();
   const [lightboxOpen, setLightboxOpen] = useState(false);
-  const [lightboxCategory, setLightboxCategory] = useState<MediaCategory>('all');
+
   const [lightboxTitle, setLightboxTitle] = useState('');
+  const [lightboxIndex, setLightboxIndex] = useState(0);
 
   // Fetch real development by slug
   const { data: dev, isLoading } = trpc.developer.getPublicDevelopmentBySlug.useQuery(
@@ -169,7 +172,7 @@ export default function DevelopmentDetail() {
   };
 
   // State for index instead of category
-  const [lightboxIndex, setLightboxIndex] = useState(0);
+
 
   const openLightbox = (index: number, title: string) => {
     setLightboxIndex(index);
@@ -179,19 +182,7 @@ export default function DevelopmentDetail() {
    
   // Removed getLightboxMedia - using unifiedMedia directly
 
-  const getLightboxMedia = () => {
-    switch (lightboxCategory) {
-      case 'amenities':
-        return development.amenitiesPhotos;
-      case 'outdoors':
-        return development.outdoorsPhotos;
-      case 'videos':
-        return development.videos; // Assuming videos are in a format MediaLightbox accepts, or need mapping?
-      case 'all':
-      default:
-        return development.allPhotos;
-    }
-  };
+
 
   return (
     <>
@@ -209,207 +200,28 @@ export default function DevelopmentDetail() {
             </div>
         </div>
         {/* Property Gallery - Hero + Category Cards */}
-        <div className="max-w-7xl mx-auto px-4 pt-24 pb-6">
-          {/* Header */}
-          <div className="mb-4">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <Badge className="mb-2 bg-orange-500 hover:bg-orange-600">New Development</Badge>
-                <h1 className="text-fluid-h1 font-bold text-slate-900">{development.name}</h1>
-                <div className="flex items-center gap-2 text-slate-600 mt-1">
-                  <MapPin className="h-4 w-4" />
-                  <span className="text-sm">{development.location}</span>
-                </div>
-              </div>
+        <div className="container max-w-7xl mx-auto px-4 pt-24 pb-6">
+          <DevelopmentHeader 
+            name={development.name}
+            location={development.location}
+            isNewLaunch={true} // TODO: Drive from data
+            completionDate="Dec, 2027" // TODO: Drive from data
+            onContact={() => console.log('Contact Developer')}
+            onShare={() => console.log('Share')}
+            onFavorite={() => console.log('Favorite')}
+          />
 
-              {/* Action Buttons */}
-              <div className="flex items-center gap-2 flex-shrink-0">
-                {/* Favorite Button */}
-                <button
-                  className="p-3 rounded-lg border border-slate-300 hover:bg-slate-50 transition-colors"
-                  aria-label="Add to favorites"
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="20"
-                    height="20"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z" />
-                  </svg>
-                </button>
+          <DevelopmentGallery
+            media={development.unifiedMedia}
+            totalPhotos={development.totalPhotos}
+            featuredMedia={development.featuredMedia}
+            indices={development.indices}
+            onOpenLightbox={(index, title) => openLightbox(index, title)}
+            videos={development.videos}
+            floorPlans={development.floorPlans}
+            images={development.images}
+          />
 
-                {/* Share Button */}
-                <button
-                  className="p-3 rounded-lg border border-slate-300 hover:bg-slate-50 transition-colors"
-                  aria-label="Share development"
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="20"
-                    height="20"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
-                    <polyline points="16 6 12 2 8 6" />
-                    <line x1="12" x2="12" y1="2" y2="15" />
-                  </svg>
-                </button>
-
-                {/* Contact Developer Button */}
-                <Button className="bg-orange-500 hover:bg-orange-600 text-white px-6 py-3 font-semibold">
-                  Contact Developer
-                </Button>
-              </div>
-            </div>
-          </div>
-
-          {/* Bento Gallery Grid - 60% left, 40% right */}
-          <section className="grid grid-cols-1 lg:grid-cols-5 gap-3 mb-8">
-            {/* LEFT: Featured Media (60% - 3 columns) */}
-            <div className="lg:col-span-3 relative rounded-xl overflow-hidden shadow-md h-[480px] group bg-slate-900">
-              {development.featuredMedia.type === 'video' ? (
-                <video
-                  src={development.featuredMedia.url}
-                  className="w-full h-full object-cover"
-                  controls
-                  poster="https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=1200"
-                />
-              ) : (
-                <img
-                  src={development.featuredMedia.url}
-                  alt={development.name}
-                  className="w-full h-full object-cover"
-                />
-              )}
-
-              {/* View all photos/video button - bottom right */}
-              <button
-                onClick={() =>
-                  openLightbox(
-                    development.featuredMedia.type === 'video' ? development.indices.videos : 0,
-                    development.featuredMedia.type === 'video' ? 'Watch Video' : 'All Photos',
-                  )
-                }
-                className="absolute bottom-3 right-3 bg-white/95 hover:bg-white backdrop-blur-sm px-4 py-2.5 rounded-full font-semibold text-sm shadow-lg border border-slate-200/50 transition-all hover:shadow-xl"
-              >
-                {development.featuredMedia.type === 'video'
-                  ? 'Watch video'
-                  : `View all ${development.totalPhotos} photos`}
-              </button>
-            </div>
-
-            {/* RIGHT: Category Cards (40% - 2 columns) */}
-            <div className="lg:col-span-2 grid grid-rows-2 gap-3 h-[480px]">
-              {/* Top Row: 2 cards side by side (50/50) */}
-              <div className="grid grid-cols-2 gap-3">
-                {/* Amenities Card */}
-                <button
-                  onClick={() => openLightbox(development.indices.amenities, 'Amenities')}
-                  className="relative rounded-xl overflow-hidden shadow-md hover:shadow-lg transition-all group"
-                >
-                  <img
-                    src="https://images.unsplash.com/photo-1540518614846-7eded433c457?w=400"
-                    alt="Amenities"
-                    className="w-full h-full object-cover"
-                  />
-                  {/* Gradient overlay */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
-                  {/* Label */}
-                  <span className="absolute right-2 bottom-2 bg-white/96 backdrop-blur-sm px-2.5 py-1.5 rounded-full font-semibold text-xs shadow-md border border-slate-200/50">
-                    Amenities
-                  </span>
-                </button>
-
-                {/* Outdoors Card */}
-                <button
-                  onClick={() => openLightbox(development.indices.outdoors, 'Outdoor Spaces')}
-                  className="relative rounded-xl overflow-hidden shadow-md hover:shadow-lg transition-all group"
-                >
-                  <img
-                    src="https://images.unsplash.com/photo-1560448204-603b3fc33ddc?w=400"
-                    alt="Outdoors"
-                    className="w-full h-full object-cover"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
-                  <span className="absolute right-2 bottom-2 bg-white/96 backdrop-blur-sm px-2.5 py-1.5 rounded-full font-semibold text-xs shadow-md border border-slate-200/50">
-                    Outdoors
-                  </span>
-                </button>
-              </div>
-
-              {/* Bottom Row: Dynamic Card (Videos -> Floor Plans -> Gallery) */}
-              {(() => {
-                  // If main media is NOT video, and we have videos, show video tile.
-                  // If main media IS video, skip video tile and go to Floor Plans/Gallery.
-                  const showVideoTile = development.videos && development.videos.length > 0 && development.featuredMedia.type !== 'video';
-
-                  if (showVideoTile) {
-                      return (
-                          <button
-                            onClick={() => openLightbox(development.indices.videos, 'Videos')}
-                            className="relative rounded-xl overflow-hidden shadow-md hover:shadow-lg transition-all group"
-                          >
-                            <img
-                              src="https://images.unsplash.com/photo-1600607687644-c7171b42498b?w=400"
-                              alt="Videos"
-                              className="w-full h-full object-cover"
-                            />
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
-                            <span className="absolute right-2 bottom-2 bg-white/96 backdrop-blur-sm px-2.5 py-1.5 rounded-full font-semibold text-xs shadow-md border border-slate-200/50">
-                              Videos ({development.videos.length})
-                            </span>
-                          </button>
-                      );
-                  } else if (development.floorPlans && development.floorPlans.length > 0) {
-                      return (
-                          <button
-                             onClick={() => openLightbox(development.indices.floorPlans, 'Floor Plans')} 
-                             className="relative rounded-xl overflow-hidden shadow-md hover:shadow-lg transition-all group"
-                          >
-                              <img
-                                  src={development.floorPlans[0]?.url || development.images[1] || ''}
-                                  alt="Floor Plans"
-                                  className="w-full h-full object-cover"
-                              />
-                               <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
-                               <span className="absolute right-2 bottom-2 bg-white/96 backdrop-blur-sm px-2.5 py-1.5 rounded-full font-semibold text-xs shadow-md border border-slate-200/50">
-                                  Floor Plans
-                               </span>
-                          </button>
-                      );
-                  } else {
-                      // Fallback to Gallery (more photos)
-                       return (
-                          <button
-                             onClick={() => openLightbox(0, 'All Photos')} 
-                             className="relative rounded-xl overflow-hidden shadow-md hover:shadow-lg transition-all group"
-                          >
-                              <img
-                                  src={development.images[2] || development.images[0] || ''}
-                                  alt="Gallery"
-                                  className="w-full h-full object-cover"
-                              />
-                               <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
-                               <span className="absolute right-2 bottom-2 bg-white/96 backdrop-blur-sm px-2.5 py-1.5 rounded-full font-semibold text-xs shadow-md border border-slate-200/50">
-                                  View Gallery
-                               </span>
-                          </button>
-                      );
-                  }
-              })()}
-            </div>
-          </section>
         </div>
 
         {/* Main Content */}
