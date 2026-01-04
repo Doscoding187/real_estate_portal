@@ -3094,7 +3094,16 @@ export async function getPublicDevelopmentBySlug(slugOrId: string) {
   const db = await getDb();
   if (!db) return null;
 
+  // Dynamic import to avoid circular dependencies
+  const { 
+    developments, 
+    developers, 
+    unitTypes, 
+    developmentPhases 
+  } = await import('../drizzle/schema');
+  
   const isNumeric = /^\d+$/.test(slugOrId);
+
   const idValue = isNumeric ? parseInt(slugOrId) : -1;
 
   const results = await db
@@ -3180,6 +3189,14 @@ export async function getPublicDevelopment(id: number) {
   const db = await getDb();
   if (!db) return null;
 
+  // Dynamic import to avoid circular dependencies
+  const { 
+    developments, 
+    developers, 
+    unitTypes, 
+    developmentPhases 
+  } = await import('../drizzle/schema');
+
   const results = await db
     .select({
       id: developments.id,
@@ -3260,6 +3277,13 @@ export async function getPublicDevelopment(id: number) {
 export async function listPublicDevelopments(limit: number = 20) {
   const db = await getDb();
   if (!db) return [];
+
+  // Dynamic import to avoid circular dependencies
+  const { 
+    developments, 
+    developers, 
+    unitTypes 
+  } = await import('../drizzle/schema');
 
   const results = await db
     .select({
