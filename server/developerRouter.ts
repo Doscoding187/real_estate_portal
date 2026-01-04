@@ -1,6 +1,11 @@
 import { z } from 'zod';
 import { router, protectedProcedure, publicProcedure } from './_core/trpc';
 import * as db from './db';
+import { 
+  getPublicDevelopment, 
+  listPublicDevelopments,
+  getPublicDevelopmentBySlug
+} from './services/developmentService';
 import { TRPCError } from '@trpc/server';
 import { EmailService } from './_core/emailService';
 import { developerSubscriptionService } from './services/developerSubscriptionService';
