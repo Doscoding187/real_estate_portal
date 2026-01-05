@@ -117,7 +117,9 @@ import DeveloperTeamPage from './pages/DeveloperTeamPage';
 import DeveloperSubscriptionPage from './pages/DeveloperSubscriptionPage';
 import SubscriptionPlans from './pages/SubscriptionPlans';
 import DeveloperPlans from './pages/DeveloperPlans';
-import MyDrafts from './pages/developer/MyDrafts';
+// Import Developer Layout directly for specific tab routing
+import { DeveloperLayout } from './components/developer/DeveloperLayout';
+// Import MyDrafts removed to prevent circular dependency with DeveloperLayout's lazy load
 import DeveloperDirectoryPage from './pages/DeveloperDirectoryPage';
 import DeveloperBrandProfilePage from './pages/DeveloperBrandProfilePage';
 
@@ -250,7 +252,7 @@ function Router() {
       <Route path="/developer/developments/new" component={CreateDevelopment} />
       <Route path="/developer/create-development" component={CreateDevelopment} />
       <Route path="/developer/unit-types-demo" component={UnitTypesDemo} />
-      <Route path="/developer/drafts" component={MyDrafts} />
+      <Route path="/developer/drafts" component={() => <DeveloperLayout defaultTab="drafts" />} />
       <Route path="/developer/leads" component={DeveloperLeadsPage} />
       <Route path="/developer/messages" component={DeveloperMessagesPage} />
       <Route path="/developer/tasks" component={DeveloperTasksPage} />
@@ -515,7 +517,7 @@ function Router() {
       <Route path="/developer/developments/new" component={CreateDevelopment} />
       <Route path="/developer/create-development" component={CreateDevelopment} />
       <Route path="/developer/unit-types-demo" component={UnitTypesDemo} />
-      <Route path="/developer/drafts" component={MyDrafts} />
+      <Route path="/developer/drafts" component={() => <DeveloperLayout defaultTab="drafts" />} />
       <Route path="/developer/leads" component={DeveloperLeadsPage} />
       <Route path="/developer/messages" component={DeveloperMessagesPage} />
       <Route path="/developer/tasks" component={DeveloperTasksPage} />
