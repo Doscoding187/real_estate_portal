@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useLocation } from 'wouter';
-import { Search, MapPin, Home, Building2, Key, Users, LandPlot, Store, Plus, Mic } from 'lucide-react';
+import { Search, MapPin, Home, Building2, Key, Users, LandPlot, Store, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
@@ -56,25 +56,37 @@ export function LocationHeroSection({
     trackEvent('hero_category_click', { category: categoryId, location: locationSlug });
   };
 
-  const handleSearch = () => {
-    const category = categories.find(c => c.id === activeTab);
-    const listingType = category?.listingType || 'sale';
-    
-    // Special handling for developments - redirect to new-developments page with location filter
-    if (listingType === 'development') {
-      setLocation(`/new-developments?location=${encodeURIComponent(locationName)}`);
-      return;
+  const getSearchPath = (categoryId: string, locSlug: string, locName: string) => {
+    const category = categories.find(c => c.id === categoryId);
+    if (!category) return '/';
+
+    if (category.listingType === 'development') {
+      return `/new-developments?location=${encodeURIComponent(locName)}`;
     }
+
+    const baseRoute = category.listingType === 'rent' || category.id === 'shared_living'
+      ? 'property-to-rent' 
+      : 'property-for-sale';
     
-    // For sale/rent listings, use the standard format
-    const baseRoute = listingType === 'rent' ? 'property-to-rent' : 'property-for-sale';
-    const searchPath = `/${baseRoute}/${locationSlug}?view=list`;
-    setLocation(searchPath);
+    const params = new URLSearchParams();
+    params.set('view', 'list');
+
+    if (category.id === 'commercial') params.set('type', 'commercial');
+    if (category.id === 'plot_land') params.set('type', 'vacant-land');
+    if (category.id === 'shared_living') params.set('type', 'flat-apartment');
+
+    return `/${baseRoute}/${locSlug}?${params.toString()}`;
   };
 
-  const handleLocationSelect = (location: any) => {
-    if (location?.path) {
-      setLocation(location.path);
+  const handleSearch = () => {
+    const path = getSearchPath(activeTab, locationSlug, locationName);
+    setLocation(path);
+  };
+
+  const handleLocationSelect = (selectedLoc: any) => {
+    if (selectedLoc?.slug) {
+      const path = getSearchPath(activeTab, selectedLoc.slug, selectedLoc.name);
+      setLocation(path);
     }
   };
 
@@ -159,18 +171,17 @@ export function LocationHeroSection({
             <div className="relative flex-1">
               <LocationAutosuggest
                 placeholder={`Search in ${locationName}...`}
-                onLocationSelect={handleLocationSelect}
-                className="w-full py-4 text-base border-2 border-slate-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
+                onSelect={handleLocationSelect}
+                onChange={setSearchQuery}
+                className="w-full h-12 text-base border-2 border-slate-200 rounded-lg focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-200 bg-white transition-all flex items-center"
+                inputClassName="h-full w-full bg-transparent border-0 focus-visible:ring-0 px-0 placeholder:text-slate-500 text-slate-900"
               />
-              <button className="absolute right-4 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-blue-600 transition-colors">
-                <Mic className="h-5 w-5" />
-              </button>
             </div>
             
             <Button 
               onClick={handleSearch}
               size="lg"
-              className="px-8 py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 hover:-translate-y-0.5"
+              className="px-8 h-12 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 hover:-translate-y-0.5 font-semibold"
             >
               <Search className="h-5 w-5 mr-2" />
               Search

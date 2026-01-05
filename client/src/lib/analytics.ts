@@ -7,7 +7,9 @@ type EventName =
   | 'hero_ad_click'
   | 'hero_ad_impression'
   | 'filter_change'
-  | 'inquiry_submit';
+  | 'inquiry_submit'
+  | 'hero_category_click'
+  | 'hero_campaign_click';
 
 interface EventProperties {
   locationId?: number;
