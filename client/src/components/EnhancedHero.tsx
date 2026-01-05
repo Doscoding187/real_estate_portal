@@ -223,6 +223,35 @@ export function EnhancedHero({
     if (activeTab === 'buy' || activeTab === 'rental') {
         const listingType = activeTab === 'rental' ? 'rent' : 'sale';
         
+        // 1. Single Location Selection logic (Matches ListingNavbar)
+        if (selectedLocation) {
+             const isProvince = selectedLocation.type === 'province' || selectedLocation.type === 'administrative_area_level_1';
+             
+             if (!isProvince) {
+                 // Force interactive results for single city/suburb
+                 const root = listingType === 'rent' ? '/property-to-rent' : '/property-for-sale';
+                 const params = new URLSearchParams();
+                 params.set('locations', selectedLocation.slug);
+                 
+                 // Add price filters if present
+                 if (activeTab === 'buy') {
+                    if (filters.priceMin) params.set('minPrice', filters.priceMin);
+                    if (filters.priceMax) params.set('maxPrice', filters.priceMax);
+                 } else {
+                    if (filters.budgetMin) params.set('minPrice', filters.budgetMin);
+                    if (filters.budgetMax) params.set('maxPrice', filters.budgetMax); 
+                 }
+
+                 if (filters.propertyTypes.length > 0) {
+                    params.set('propertyType', filters.propertyTypes[0].toLowerCase());
+                 }
+
+                 setLocation(`${root}?${params.toString()}`);
+                 return;
+             }
+        }
+
+        // 2. Default / Fallback Logic (Provinces or Text Search)
         const searchFilters: any = {
             listingType,
             propertyType: filters.propertyTypes.length > 0 ? filters.propertyTypes[0].toLowerCase() : undefined,
@@ -239,8 +268,10 @@ export function EnhancedHero({
         }
 
         if (selectedLocation) {
-             searchFilters.locations = [selectedLocation];
+             // It is a province (passed the check above)
+             searchFilters.province = selectedLocation.slug;
         } else if (searchQuery) {
+             // Text search fallback
              searchFilters.city = searchQuery;
         }
 
