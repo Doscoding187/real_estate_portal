@@ -13,35 +13,27 @@ export function MetaControl({ canonicalUrl, forceNoIndex = false }: MetaControlP
   const shouldNoIndex = () => {
     if (forceNoIndex) return true;
 
-    // Check for query parameters that trigger noindex
-    // Note: wouter's useLocation only returns the path, not the query string.
-    // We need to use window.location.search directly or rely on a wrapper that parses it.
-    // Assuming client-side, window.location is available.
     if (typeof window !== 'undefined') {
       const searchParams = new URLSearchParams(window.location.search);
       
-      // List of query params that are "safe" (don't trigger noindex) - if any?
-      // The user specified: "price, amenities, sort, pagination" should be noindex.
-      // Basically, if there are ANY functional filters in the query params, we should noindex.
-      // Exceptions might be tracking IDs or simple view toggles?
-      // Strict rule from plan: "Any URL with query parameters" -> noindex.
-      // But we might have some "safe" params in the future?
-      // For now, let's implement the strict rule, perhaps allowing 'page=1' if we want (but plan says pagination > 1).
-      
-      // Let's iterate over keys.
-      const unsafeParams = ['minPrice', 'maxPrice', 'sort', 'amenities', 'page', 'type', 'bed', 'bath'];
-      
+      // ALLOWED params (Routing/Canonical-friendly)
+      // These are params that essentially define the page content and are part of the canonical structure logic.
+      const allowedParams = [
+        'city', 
+        'suburb', 
+        'province', 
+        'locationId', 
+        'listingType', 
+        'propertyType' // propertyType maps to /houses-for-sale/, so it's canonical-safe usually
+      ];
+
+      // If we have ANY param that is NOT in the allowed list, we NoIndex.
+      // This covers price, beds, sort, pagination, amenities, etc.
       for (const key of searchParams.keys()) {
-        if (unsafeParams.includes(key) || unsafeParams.some(p => key.includes(p))) {
+        if (!allowedParams.includes(key)) {
             return true;
         }
-        // Strict approach: if ANY filter param exists.
-        // Let's assume most searchParams imply a filtered view that we might not want indexed unless it's a "clean" URL.
       }
-      
-      // Specific check for pagination > 1
-      const page = searchParams.get('page');
-      if (page && parseInt(page) > 1) return true;
     }
 
     return false;

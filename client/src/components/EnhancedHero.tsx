@@ -232,11 +232,25 @@ export function EnhancedHero({
                  const root = listingType === 'rent' ? '/property-to-rent' : '/property-for-sale';
                  const params = new URLSearchParams();
                  
+                 // Resolve province context using normalized lookup
+                 const { getProvinceForCity, normalizeLocationKey } = require('@/lib/locationUtils');
+                 const locationSlug = normalizeLocationKey(selectedLocation.name);
+                 const resolvedProvince = selectedLocation.provinceSlug || getProvinceForCity(selectedLocation.name);
+                 
                  if (selectedLocation.type === 'suburb') {
-                    params.set('suburb', selectedLocation.slug);
+                    params.set('suburb', locationSlug);
+                    // Include city context if available
+                    if (selectedLocation.citySlug) {
+                       params.set('city', normalizeLocationKey(selectedLocation.citySlug));
+                    }
                  } else {
                     // Default to city for 'city' or fallback
-                    params.set('city', selectedLocation.slug);
+                    params.set('city', locationSlug);
+                 }
+                 
+                 // Always include province for geographic accuracy
+                 if (resolvedProvince) {
+                    params.set('province', resolvedProvince);
                  }
                  
                  // Add price filters if present

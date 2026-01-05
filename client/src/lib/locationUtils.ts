@@ -62,17 +62,43 @@ export const PROVINCE_SLUGS = [
 ];
 
 /**
+ * Normalize any location string to a consistent slug format.
+ * This is the SINGLE SOURCE OF TRUTH for key normalization.
+ * All lookups into CITY_PROVINCE_MAP must use this.
+ */
+export function normalizeLocationKey(value: string): string {
+  if (!value) return '';
+  return value
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, '-');
+}
+
+/**
+ * Get the province slug for a given city name.
+ * Handles both slugified and unslugified inputs via normalization.
+ * 
+ * @param cityName - City name in any format (e.g., "Cape Town", "cape-town", "CAPE TOWN")
+ * @returns Province slug (e.g., "western-cape") or null if not found
+ */
+export function getProvinceForCity(cityName: string): string | null {
+  const slug = normalizeLocationKey(cityName);
+  return CITY_PROVINCE_MAP[slug] ?? null;
+}
+
+/**
  * Helper to get property URL
  */
 export const getCityUrl = (cityName: string) => {
-  const slug = cityName.toLowerCase().replace(/\s+/g, '-');
+  const slug = normalizeLocationKey(cityName);
   const province = CITY_PROVINCE_MAP[slug] || 'properties'; // Fallback if unknown
   return `/${province}/${slug}`;
 };
 
 export const getSuburbUrl = (cityName: string, suburbName: string) => {
-  const citySlug = cityName.toLowerCase().replace(/\s+/g, '-');
-  const suburbSlug = suburbName.toLowerCase().replace(/\s+/g, '-');
+  const citySlug = normalizeLocationKey(cityName);
+  const suburbSlug = normalizeLocationKey(suburbName);
   const province = CITY_PROVINCE_MAP[citySlug] || 'properties';
   return `/${province}/${citySlug}/${suburbSlug}`;
 };
+

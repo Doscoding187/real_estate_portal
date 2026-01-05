@@ -167,39 +167,43 @@ function Router() {
       <Switch>
       <Route path={'/'} component={Home} />
       
-      {/* SEO-friendly property search routes (more specific first) */}
-      {/* SEO-friendly Transaction Roots */}
+      {/* ============================================================== */}
+      {/* 1. TRANSACTION ROOTS (Query-Based SRP) - MUST BE FIRST         */}
+      {/* These catch /property-for-sale?city=alberton style URLs        */}
+      {/* ============================================================== */}
       <Route path="/property-for-sale" component={SearchResults} />
       <Route path="/property-to-rent" component={SearchResults} />
-      
-      {/* Property24-style Routes (Inverted Hierarchy + Location ID) */}
-      {/* Suburb Page: /houses-for-sale/sky-city/alberton/gauteng/17552 */}
-      {/* Matches: 5 segments. :action is dynamic (houses-for-sale) */}
-      <Route path="/:action/:suburb/:city/:province/:locationId" component={SuburbPage} />
-      
-      {/* City Page: /houses-for-sale/sandton/gauteng/109 */}
-      {/* Matches: 4 segments. Distinction vs Old Canonical is the locationId at the end */}
-      <Route path="/:action/:city/:province/:locationId" component={CityPage} />
-      
-      {/* Development Search: /new-developments-for-sale/sandton/gauteng/109 */}
-      {/* This actually matches the City Page pattern above (4 segments) if we consider 'new-developments-for-sale' as action */}
-      {/* So the CityPage component needs to handle 'developments' action type. */}
-      
-      {/* Province Page (Inferred P24 pattern): /houses-for-sale/gauteng/1 ?? */}
-      <Route path="/:action/:province/:locationId" component={ProvincePage} />
 
-      {/* City Shortcuts (UX-only, Redirects to Canonical) AND Province Pages */}
-      {/* Both share the same URL structure: /root/:slug */}
-      <Route path="/property-for-sale/:slug" component={LocationDispatcher} />
-      <Route path="/property-to-rent/:slug" component={LocationDispatcher} />
-
-      {/* Canonical Suburb Pages */}
+      {/* ============================================================== */}
+      {/* 2. CANONICAL SEO PAGES (Path-Based Discovery)                  */}
+      {/* Order: Most specific (4 segments) to least specific (2 segments) */}
+      {/* ============================================================== */}
+      
+      {/* Suburb Pages: /property-for-sale/gauteng/johannesburg/sandton */}
       <Route path="/property-for-sale/:province/:city/:suburb" component={SuburbPage} />
       <Route path="/property-to-rent/:province/:city/:suburb" component={SuburbPage} />
 
-      {/* Canonical City Pages */}
+      {/* City Pages: /property-for-sale/gauteng/johannesburg */}
       <Route path="/property-for-sale/:province/:city" component={CityPage} />
       <Route path="/property-to-rent/:province/:city" component={CityPage} />
+
+      {/* Province Pages: /property-for-sale/gauteng */}
+      <Route path="/property-for-sale/:province" component={ProvincePage} />
+      <Route path="/property-to-rent/:province" component={ProvincePage} />
+
+      {/* ============================================================== */}
+      {/* 3. LEGACY / P24-STYLE ROUTES (Lower Priority)                  */}
+      {/* ============================================================== */}
+      
+      {/* Property24-style Routes (Inverted Hierarchy + Location ID) */}
+      {/* Suburb Page: /houses-for-sale/sky-city/alberton/gauteng/17552 */}
+      <Route path="/:action/:suburb/:city/:province/:locationId" component={SuburbPage} />
+      
+      {/* City Page: /houses-for-sale/sandton/gauteng/109 */}
+      <Route path="/:action/:city/:province/:locationId" component={CityPage} />
+      
+      {/* Province Page (Legacy Pattern): /houses-for-sale/gauteng/1 */}
+      <Route path="/:action/:province/:locationId" component={ProvincePage} />
 
       {/* Legacy properties route (query params) */}
       <Route path="/properties" component={SearchResults} />

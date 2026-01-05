@@ -58,53 +58,73 @@ export function resolveSearchIntent(
     level: 'country', // Default
   };
 
-  // Check for locationId (most specific)
-  if (pathParams.locationId) {
-    geography.locationId = pathParams.locationId;
-  }
-
-  // Hierarchy Resolution:
-  // The router handles the matching, so we just trust the params provided.
-  // P24 Pattern: /.../[suburb]/[city]/[province]/[id]
+  // ============================================================
+  // PRIORITY: Query params ALWAYS win for SRP routing
+  // This ensures /property-for-sale?city=alberton works correctly
+  // ============================================================
   
-  if (pathParams.province) {
-    geography.level = 'province';
-    geography.province = pathParams.province.toLowerCase();
-  }
-
-  if (pathParams.city) {
-    geography.level = 'city';
-    geography.city = pathParams.city.toLowerCase();
-  }
-
-  if (pathParams.suburb) {
+  const queryProvince = searchParams.get('province');
+  const queryCity = searchParams.get('city');
+  const querySuburb = searchParams.get('suburb');
+  
+  if (querySuburb) {
     geography.level = 'locality';
-    geography.suburb = pathParams.suburb.toLowerCase();
+    geography.suburb = querySuburb.toLowerCase();
+  }
+  
+  if (queryCity) {
+    if (!geography.suburb) geography.level = 'city';
+    geography.city = queryCity.toLowerCase();
+  }
+  
+  if (queryProvince) {
+    if (!geography.city && !geography.suburb) geography.level = 'province';
+    geography.province = queryProvince.toLowerCase();
   }
 
-  // Handle Legacy "Slug" or Development specific routes if needed
-  if (pathParams.slug) {
-      // This might be a shortcut route or a development slug
-      // If we haven't determined level yet, maybe use this?
+  // Fallback to path params if no query params for geography
+  // This handles SEO page routes like /property-for-sale/gauteng
+  if (!geography.province && !geography.city && !geography.suburb) {
+    if (pathParams.locationId) {
+      geography.locationId = pathParams.locationId;
+    }
+    
+    if (pathParams.province) {
+      geography.level = 'province';
+      geography.province = pathParams.province.toLowerCase();
+    }
+
+    if (pathParams.city) {
+      geography.level = 'city';
+      geography.city = pathParams.city.toLowerCase();
+    }
+
+    if (pathParams.suburb) {
+      geography.level = 'locality';
+      geography.suburb = pathParams.suburb.toLowerCase();
+    }
+
+    // Handle Legacy "Slug" or Development specific routes if needed
+    if (pathParams.slug) {
       if (!geography.city && !geography.suburb && !geography.province) {
-         // Could be a province shortcut or city shortcut
-          if (PROVINCE_SLUGS.includes(pathParams.slug.toLowerCase())) {
-              geography.level = 'province';
-              geography.province = pathParams.slug.toLowerCase();
-          } else {
-               // Treat as city shortcut
-               geography.level = 'city';
-               geography.city = pathParams.slug.toLowerCase();
-          }
+        if (PROVINCE_SLUGS.includes(pathParams.slug.toLowerCase())) {
+          geography.level = 'province';
+          geography.province = pathParams.slug.toLowerCase();
+        } else {
+          geography.level = 'city';
+          geography.city = pathParams.slug.toLowerCase();
+        }
       }
       geography.slug = pathParams.slug;
+    }
   }
 
   // 3. Extract Filters (Query Params)
-  // We explicitly exclude geography from filters to avoid synchronization wars.
+  // We explicitly exclude geography keys from filters to avoid duplication
   const filters: Record<string, any> = {};
   searchParams.forEach((value, key) => {
-    // Skip known legacy params if they conflict, but generally we want to trust query params for *refinement*
+    // Skip geography keys - they're handled above
+    if (key === 'province' || key === 'city' || key === 'suburb') return;
     filters[key] = value;
   });
   
@@ -124,77 +144,67 @@ export function resolveSearchIntent(
 
 /**
  * Reconstructs the canonical URL from a SearchIntent object.
- * This ensures "One intent = one canonical URL".
- * Implementation follows Property24 pattern:
- * /[action]/[suburb]/[city]/[province]/[locationId]
+ * 
+ * CRITICAL ROUTING RULE (2025 Architecture):
+ * - Province searches → Path-based SEO URLs (/property-for-sale/gauteng)
+ * - City/Suburb searches → Query-based SRP URLs (/property-for-sale?city=alberton)
+ * 
+ * This ensures:
+ * - SEO pages are for discovery (provinces only)
+ * - SRP pages fulfill user intent (cities/suburbs with listings)
  */
 export function generateIntentUrl(intent: SearchIntent): string {
   const { transactionType, geography, filters } = intent;
   
-  // 1. Base Path based on Transaction
-  // User spec: /[action]-for-sale/
-  // Map transaction type to action prefix
-  let actionPrefix = 'property'; // Default
-  
-  // If explicitly requesting 'houses', use it.
-  if (filters.propertyType && typeof filters.propertyType === 'string') {
-      const pType = filters.propertyType.toLowerCase();
-      // Simple mapping assuming the filter value is singular (house -> houses)
-      if (pType === 'house') actionPrefix = 'houses';
-      else if (pType === 'apartment') actionPrefix = 'apartments';
-      else if (pType === 'townhouse') actionPrefix = 'townhouses';
-      else if (pType === 'farm') actionPrefix = 'farms';
-      else if (pType === 'vacant land' || pType === 'land') actionPrefix = 'vacant-land';
-      else if (pType === 'commercial property' || pType === 'commercial') actionPrefix = 'commercial-property';
-      else if (pType === 'industrial property' || pType === 'industrial') actionPrefix = 'industrial-property';
-      else actionPrefix = 'property'; 
-  }
-
-  let basePath = `/${actionPrefix}-for-sale`;
-  
-  if (transactionType === 'to-rent') {
-      basePath = `/${actionPrefix}-to-rent`;
-  }
+  // 1. Determine base path
+  let basePath = transactionType === 'to-rent' ? '/property-to-rent' : '/property-for-sale';
   
   if (transactionType === 'developments') {
-      // Spec: /new-developments-for-sale
-      // Also check if action prefix applies here? "New Developments" is usually the prefix itself.
-      // User Spec: /new-developments-for-sale/sandton/gauteng/109?dpt=4
-      basePath = '/new-developments-for-sale';
+    basePath = '/new-developments';
   }
 
-  let geoPath = '';
-  
-  // Construct path: [suburb]/[city]/[province]/[locationId]
-  
-  const parts: string[] = [];
-  
-  // P24 works like:
-  // Suburb Page: /houses-for-sale/sky-city/alberton/gauteng/17552
-  // City Page: /houses-for-sale/sandton/gauteng/109
-  // Province Page: /houses-for-sale/gauteng/1
-  
-  if (geography.suburb) parts.push(geography.suburb);
-  if (geography.city) parts.push(geography.city);
-  if (geography.province) parts.push(geography.province);
-  if (geography.locationId) parts.push(geography.locationId);
-
-  // Join parts with /
-  if (parts.length > 0) {
-      geoPath = '/' + parts.join('/');
-  }
-
-  // 2. Query String from Filters
+  // 2. Build query params from filters
   const queryParams = new URLSearchParams();
+  
   Object.entries(filters).forEach(([key, value]) => {
-    // inner logic to filter out defaults
-    if (key === 'listingType') return; 
-    if (key === 'propertyType') return; // Consumed in action prefix
+    // Skip internal keys that shouldn't appear in URL
+    if (key === 'listingType') return;
     if (!value) return;
-    
     queryParams.set(key, String(value));
   });
 
+  // ============================================================
+  // CRITICAL: City/Suburb searches MUST use query-based URLs
+  // Path-based URLs are ONLY for province-level SEO pages
+  // ============================================================
+  
+  if (geography.suburb) {
+    // Suburb search → Query-based SRP
+    queryParams.set('suburb', geography.suburb);
+    if (geography.city) queryParams.set('city', geography.city);
+    if (geography.province) queryParams.set('province', geography.province);
+    
+    const queryString = queryParams.toString();
+    return `${basePath}${queryString ? `?${queryString}` : ''}`;
+  }
+  
+  if (geography.city) {
+    // City search → Query-based SRP
+    queryParams.set('city', geography.city);
+    if (geography.province) queryParams.set('province', geography.province);
+    
+    const queryString = queryParams.toString();
+    return `${basePath}${queryString ? `?${queryString}` : ''}`;
+  }
+  
+  // Province-only search → Path-based SEO page
+  if (geography.province && geography.level === 'province') {
+    const queryString = queryParams.toString();
+    return `${basePath}/${geography.province}${queryString ? `?${queryString}` : ''}`;
+  }
+  
+  // Country-level / no geography → Base transaction root
   const queryString = queryParams.toString();
-  return `${basePath}${geoPath}${queryString ? `?${queryString}` : ''}`;
+  return `${basePath}${queryString ? `?${queryString}` : ''}`;
 }
+

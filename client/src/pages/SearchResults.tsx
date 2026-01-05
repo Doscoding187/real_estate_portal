@@ -9,7 +9,7 @@ import { normalizePropertyForUI } from '@/lib/normalizers';
 import { trpc } from '@/lib/trpc';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { toast } from 'sonner';
-import { Loader2, Building2 } from 'lucide-react';
+import { Loader2, Building2, Search, MapPin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -438,17 +438,62 @@ export default function SearchResults({ province: propProvince, city: propCity, 
                   )}
                 </>
               ) : (
-                <div className="flex flex-col items-center justify-center py-20 text-center">
-                  <Building2 className="h-16 w-16 text-slate-300 mb-4" />
-                  <h3 className="text-lg font-semibold text-slate-700 mb-2">
-                    No properties found
+                <div className="flex flex-col items-center justify-center py-20 text-center max-w-lg mx-auto">
+                  <div className="bg-slate-50 p-4 rounded-full mb-6 relative">
+                    <Building2 className="h-12 w-12 text-slate-300" />
+                    <div className="absolute -bottom-1 -right-1 bg-white rounded-full p-1 border border-slate-200">
+                        <Search className="h-4 w-4 text-slate-400" />
+                    </div>
+                  </div>
+                  
+                  <h3 className="text-xl font-bold text-slate-800 mb-2">
+                    No matching properties found
                   </h3>
-                  <p className="text-slate-500 max-w-md mb-6">
-                    Try adjusting your filters or search criteria to find more properties.
+                  
+                  <p className="text-slate-500 mb-8 max-w-md">
+                    We couldn't find any properties matching your exact criteria in 
+                    <span className="font-semibold text-slate-700"> coverage area</span>.
                   </p>
-                  <Button variant="outline" onClick={handleClearAllFilters}>
-                    Clear All Filters
-                  </Button>
+
+                  <div className="flex flex-col gap-3 w-full max-w-xs">
+                     {/* Smart Fallback Suggestions */}
+                     {locationContext && locationContext.type === 'suburb' && locationContext.ids?.cityId && (
+                         <Button 
+                            className="w-full bg-blue-600 hover:bg-blue-700 gap-2"
+                            onClick={() => {
+                                // Keep filters, but expand location to City
+                                const newFilters = { ...filters };
+                                delete newFilters.suburb;
+                                newFilters.city = locationContext.hierarchy.city; // Fallback to city name
+                                handleFilterChange(newFilters);
+                            }}
+                         >
+                            <MapPin className="h-4 w-4" />
+                            Search all {locationContext.hierarchy.city}
+                         </Button>
+                     )}
+
+                     {locationContext && locationContext.type === 'city' && (
+                         <Button 
+                            variant="secondary"
+                            className="w-full gap-2"
+                             onClick={() => {
+                                // Keep filters, but expand location to Province
+                                const newFilters = { ...filters };
+                                delete newFilters.city;
+                                newFilters.province = locationContext.hierarchy.province;
+                                handleFilterChange(newFilters);
+                            }}
+                         >
+                            <MapPin className="h-4 w-4" />
+                            Search all {locationContext.hierarchy.province}
+                         </Button>
+                     )}
+
+                     <Button variant="outline" className="w-full" onClick={handleClearAllFilters}>
+                        Clear Filters & Broaden Search
+                     </Button>
+                  </div>
                 </div>
               )}
             </div>
