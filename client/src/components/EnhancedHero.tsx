@@ -227,76 +227,79 @@ export function EnhancedHero({
         if (selectedLocation) {
              const isProvince = selectedLocation.type === 'province' || selectedLocation.type === 'administrative_area_level_1';
              
-             if (!isProvince) {
-                 // Force interactive results for single city/suburb
+             // ============================================================
+             // CRITICAL RULE: Province ALWAYS goes to SEO discovery page
+             // Province = discovery, never intent. No exceptions.
+             // ============================================================
+             if (isProvince) {
                  const root = listingType === 'rent' ? '/property-to-rent' : '/property-for-sale';
-                 const params = new URLSearchParams();
-                 
-                 // Resolve province context using normalized lookup
-                 const { getProvinceForCity, normalizeLocationKey } = require('@/lib/locationUtils');
-                 const locationSlug = normalizeLocationKey(selectedLocation.name);
-                 const resolvedProvince = selectedLocation.provinceSlug || getProvinceForCity(selectedLocation.name);
-                 
-                 if (selectedLocation.type === 'suburb') {
-                    params.set('suburb', locationSlug);
-                    // Include city context if available
-                    if (selectedLocation.citySlug) {
-                       params.set('city', normalizeLocationKey(selectedLocation.citySlug));
-                    }
-                 } else {
-                    // Default to city for 'city' or fallback
-                    params.set('city', locationSlug);
-                 }
-                 
-                 // Always include province for geographic accuracy
-                 if (resolvedProvince) {
-                    params.set('province', resolvedProvince);
-                 }
-                 
-                 // Add price filters if present
-                 if (activeTab === 'buy') {
-                    if (filters.priceMin) params.set('minPrice', filters.priceMin);
-                    if (filters.priceMax) params.set('maxPrice', filters.priceMax);
-                 } else {
-                    if (filters.budgetMin) params.set('minPrice', filters.budgetMin);
-                    if (filters.budgetMax) params.set('maxPrice', filters.budgetMax); 
-                 }
-
-                 if (filters.propertyTypes.length > 0) {
-                    params.set('propertyType', filters.propertyTypes[0].toLowerCase());
-                 }
-
-                 setLocation(`${root}?${params.toString()}`);
+                 const { normalizeLocationKey } = require('@/lib/locationUtils');
+                 const provinceSlug = normalizeLocationKey(selectedLocation.name);
+                 setLocation(`${root}/${provinceSlug}`);
                  return;
              }
+             
+             // City/Suburb → Query-based SRP with listings
+             const root = listingType === 'rent' ? '/property-to-rent' : '/property-for-sale';
+             const params = new URLSearchParams();
+             
+             // Resolve province context using normalized lookup
+             const { getProvinceForCity, normalizeLocationKey } = require('@/lib/locationUtils');
+             const locationSlug = normalizeLocationKey(selectedLocation.name);
+             const resolvedProvince = selectedLocation.provinceSlug || getProvinceForCity(selectedLocation.name);
+             
+             if (selectedLocation.type === 'suburb') {
+                params.set('suburb', locationSlug);
+                // Include city context if available
+                if (selectedLocation.citySlug) {
+                   params.set('city', normalizeLocationKey(selectedLocation.citySlug));
+                }
+             } else {
+                // Default to city for 'city' or fallback
+                params.set('city', locationSlug);
+             }
+             
+             // Always include province for geographic accuracy
+             if (resolvedProvince) {
+                params.set('province', resolvedProvince);
+             }
+             
+             // Add price filters if present
+             if (activeTab === 'buy') {
+                if (filters.priceMin) params.set('minPrice', filters.priceMin);
+                if (filters.priceMax) params.set('maxPrice', filters.priceMax);
+             } else {
+                if (filters.budgetMin) params.set('minPrice', filters.budgetMin);
+                if (filters.budgetMax) params.set('maxPrice', filters.budgetMax); 
+             }
+
+             if (filters.propertyTypes.length > 0) {
+                params.set('propertyType', filters.propertyTypes[0].toLowerCase());
+             }
+
+             setLocation(`${root}?${params.toString()}`);
+             return;
         }
 
-        // 2. Default / Fallback Logic (Provinces or Text Search)
-        const searchFilters: any = {
-            listingType,
-            propertyType: filters.propertyTypes.length > 0 ? filters.propertyTypes[0].toLowerCase() : undefined,
-            // Common price fields (default to buy)
-            minPrice: filters.priceMin ? parseInt(filters.priceMin) : undefined,
-            maxPrice: filters.priceMax ? parseInt(filters.priceMax) : undefined,
-        };
-
-        // Override for rental specific fields
-        if (activeTab === 'rental') {
-             if (filters.budgetMin) searchFilters.minPrice = parseInt(filters.budgetMin);
-             if (filters.budgetMax) searchFilters.maxPrice = parseInt(filters.budgetMax);
-             if (filters.furnished) searchFilters.furnished = true;
+        // 2. Text Search Fallback (no structured location selected)
+        // Treat as city search
+        if (searchQuery) {
+            const root = listingType === 'rent' ? '/property-to-rent' : '/property-for-sale';
+            const { normalizeLocationKey, getProvinceForCity } = require('@/lib/locationUtils');
+            const citySlug = normalizeLocationKey(searchQuery);
+            const province = getProvinceForCity(searchQuery);
+            
+            const params = new URLSearchParams();
+            params.set('city', citySlug);
+            if (province) params.set('province', province);
+            
+            setLocation(`${root}?${params.toString()}`);
+            return;
         }
-
-        if (selectedLocation) {
-             // It is a province (passed the check above)
-             searchFilters.province = selectedLocation.slug;
-        } else if (searchQuery) {
-             // Text search fallback
-             searchFilters.city = searchQuery;
-        }
-
-        const url = generatePropertyUrl(searchFilters);
-        setLocation(url);
+        
+        // 3. No location selected - go to base transaction root
+        const root = listingType === 'rent' ? '/property-to-rent' : '/property-for-sale';
+        setLocation(root);
         return;
     }
 
