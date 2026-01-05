@@ -29,7 +29,7 @@ export function ListingNavbar({ defaultLocations = [] }: ListingNavbarProps) {
     provinceSlug?: string;
     citySlug?: string;
     fullAddress: string;
-  }[]>(defaultLocations);
+  }[]>(Array.isArray(defaultLocations) ? defaultLocations : []);
 
   // Buy/Rent Dropdown State
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
