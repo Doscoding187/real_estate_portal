@@ -529,6 +529,7 @@ export function EnhancedHero({
                         setSearchQuery(loc.name);
                         setSelectedLocation(loc);
                     }}
+                    onSubmit={handleSearch}
                     defaultValue={searchQuery}
                     />
                     

@@ -18,6 +18,7 @@ interface PlacePrediction {
 interface LocationAutosuggestProps {
   onSelect?: (location: any) => void;
   onChange?: (value: string) => void;  // Sync typed value on every keystroke
+  onSubmit?: () => void;  // Called when Enter is pressed (for text search)
   placeholder?: string;
   className?: string;
   defaultValue?: string;
@@ -29,6 +30,7 @@ interface LocationAutosuggestProps {
 export function LocationAutosuggest({ 
   onSelect,
   onChange,
+  onSubmit,
   placeholder = 'Search by city, suburb, or area...', 
   className = '',
   defaultValue = '',
@@ -163,6 +165,27 @@ export function LocationAutosuggest({
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
+    // Handle Enter key for text search even without predictions
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      // If a suggestion is highlighted, select it
+      if (showSuggestions && predictions.length > 0 && selectedIndex >= 0) {
+        handleSelect(predictions[selectedIndex]);
+      } else {
+        // No suggestion selected - trigger text search
+        setShowSuggestions(false);
+        if (onSubmit) onSubmit();
+      }
+      return;
+    }
+    
+    // Escape to close
+    if (e.key === 'Escape') {
+      setShowSuggestions(false);
+      return;
+    }
+    
+    // Arrow navigation only when suggestions are visible
     if (!showSuggestions || predictions.length === 0) return;
 
     if (e.key === 'ArrowDown') {
@@ -171,13 +194,6 @@ export function LocationAutosuggest({
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
       setSelectedIndex(prev => (prev > 0 ? prev - 1 : -1));
-    } else if (e.key === 'Enter') {
-      e.preventDefault();
-      if (selectedIndex >= 0) {
-        handleSelect(predictions[selectedIndex]);
-      }
-    } else if (e.key === 'Escape') {
-      setShowSuggestions(false);
     }
   };
 
