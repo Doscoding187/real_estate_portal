@@ -58,6 +58,11 @@ export default defineConfig({
     
     // Video on failure
     video: 'retain-on-failure',
+
+    // Slow down interactions to prevent race conditions
+    launchOptions: {
+      slowMo: 500,
+    },
   },
 
   // Configure projects for major browsers and viewports

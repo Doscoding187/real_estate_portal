@@ -18,7 +18,9 @@ test.describe('Search Routing Architecture', () => {
         page,
         `/property-for-sale/${provinces.kwazuluNatal.slug}`
       );
-
+      
+      // Explicitly wait for SEO content to confirm successful routing
+      await expect(page.getByRole('heading', { level: 1 })).toContainText(new RegExp(provinces.kwazuluNatal.name, 'i'));
       await expect(page.url()).not.toContain('?city=');
     });
 
@@ -29,6 +31,9 @@ test.describe('Search Routing Architecture', () => {
         page,
         `/property-for-sale/${provinces.kwazuluNatal.slug}`
       );
+      
+      // Explicitly wait for SEO content
+      await expect(page.getByRole('heading', { level: 1 })).toContainText(new RegExp(provinces.kwazuluNatal.name, 'i'));
     });
 
     test('Province quick link navigates to SEO page', async ({ page }) => {
