@@ -335,6 +335,7 @@ export default function SearchResults({ province: propProvince, city: propCity, 
             <div className="sticky top-24">
               <SidebarFilters
                 filters={filters}
+                locationContext={locationContext}
                 onFilterChange={handleFilterChange}
                 onSaveSearch={handleSaveSearch}
               />

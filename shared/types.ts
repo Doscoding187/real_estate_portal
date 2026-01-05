@@ -839,10 +839,15 @@ export interface SearchResults {
     confidence: 'exact' | 'expanded' | 'approximate';
     fallbackLevel: 'none' | 'suburb_to_city' | 'city_to_province' | 'suburb_to_province';
     originalIntent: string;
-    hierarchy?: {
+    hierarchy: {
       province: string;
       city?: string;
       suburb?: string;
+    };
+    ids?: {
+      provinceId?: number;
+      cityId?: number;
+      suburbId?: number;
     };
   };
 }

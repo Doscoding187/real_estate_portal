@@ -10,10 +10,13 @@ import {
   AccordionTrigger,
 } from '@/components/ui/accordion';
 import { formatCurrency } from '@/lib/utils';
-import { SearchFilters } from './SearchBar';
+import { SearchFilters } from '@/lib/urlUtils';
+import { LocationRefinement } from '@/components/search/LocationRefinement';
+import { SearchResults } from '@shared/types';
 
 interface SidebarFiltersProps {
   filters: SearchFilters;
+  locationContext?: SearchResults['locationContext'];
   onFilterChange: (newFilters: SearchFilters) => void;
   onSaveSearch?: () => void;
 }
@@ -31,7 +34,7 @@ const AMENITIES = [
   'Wi-Fi',
 ];
 
-export function SidebarFilters({ filters, onFilterChange, onSaveSearch }: SidebarFiltersProps) {
+export function SidebarFilters({ filters, locationContext, onFilterChange, onSaveSearch }: SidebarFiltersProps) {
   // Local state for sliders to avoid excessive re-renders/fetches while dragging
   const [priceRange, setPriceRange] = useState<[number, number]>([
     filters.minPrice || 0,
@@ -112,6 +115,9 @@ export function SidebarFilters({ filters, onFilterChange, onSaveSearch }: Sideba
 
   return (
     <div className="w-full bg-white rounded-lg border border-slate-200 shadow-sm p-4">
+      {/* Location Refinement Section */}
+      <LocationRefinement context={locationContext} />
+
       <div className="flex items-center justify-between mb-4">
         <h3 className="font-bold text-lg text-slate-800">Filters</h3>
         <div className="flex gap-2">

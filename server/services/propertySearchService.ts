@@ -200,6 +200,11 @@ export class PropertySearchService {
           city: resolvedLocation.city?.name,
           suburb: resolvedLocation.suburb?.name,
         },
+        ids: {
+          provinceId: resolvedLocation.province.id,
+          cityId: resolvedLocation.city?.id,
+          suburbId: resolvedLocation.suburb?.id,
+        }
       };
     }
 
