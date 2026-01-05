@@ -3,7 +3,7 @@ import mysql from 'mysql2/promise';
 import * as schema from '../drizzle/schema';
 
 // Connection state
-let _db: any = null;
+export let _db: any = null;
 
 // Lazily create the drizzle instance
 export async function getDb() {

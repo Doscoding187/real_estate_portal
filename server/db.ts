@@ -57,7 +57,7 @@ import { locationResolver } from './services/locationResolverService';
 // Re-export getDb from the connection module to maintain backward compatibility
 // and break circular dependency with locationResolverService
 export { getDb } from './db-connection';
-import { getDb } from './db-connection';
+import { getDb, _db } from './db-connection';
 
 export type User = InferSelectModel<typeof users>;
 export type InsertUser = InferInsertModel<typeof users>;

@@ -36,7 +36,11 @@ export class PropertySearchService {
 
     // Resolve location slugs to IDs for optimal queries
     // NOTE: Wrapped in try-catch - if resolver fails, fall back to text queries
-    let locationIds: { provinceId?: number; cityId?: number; suburbId?: number } = {};
+    let locationIds: { 
+      provinceId?: number; provinceName?: string;
+      cityId?: number; cityName?: string;
+      suburbId?: number; suburbName?: string;
+    } = {};
     let resolvedLocation: ResolvedLocation | null = null;
     
     try {
@@ -49,8 +53,11 @@ export class PropertySearchService {
       if (resolvedLocation) {
         locationIds = {
           provinceId: resolvedLocation.province?.id,
+          provinceName: resolvedLocation.province?.name,
           cityId: resolvedLocation.city?.id,
+          cityName: resolvedLocation.city?.name,
           suburbId: resolvedLocation.suburb?.id,
+          suburbName: resolvedLocation.suburb?.name,
         };
       }
     } catch (error) {
@@ -229,9 +236,9 @@ export class PropertySearchService {
    * Uses hybrid approach: ID-based queries when available, text fallback otherwise
    */
   private buildFilterConditions(filters: PropertyFilters, locationIds?: {
-    provinceId?: number;
-    cityId?: number;
-    suburbId?: number;
+    provinceId?: number; provinceName?: string;
+    cityId?: number; cityName?: string;
+    suburbId?: number; suburbName?: string;
   }): SQL[] {
     const conditions: SQL[] = [];
 
@@ -243,26 +250,46 @@ export class PropertySearchService {
       )!
     );
 
-    // Location filters - Use IDs when available, fallback to text matching
+    // Location filters - Use Hybrid Approach (ID OR Text) to handle legitimate legacy data
+    
+    // Province
     if (locationIds?.provinceId) {
-      // ID-based: Fast, exact match
-      conditions.push(eq(properties.provinceId, locationIds.provinceId));
+      if (locationIds.provinceName) {
+        // ID or Text (Safety Net)
+        conditions.push(or(
+          eq(properties.provinceId, locationIds.provinceId),
+          sql`LOWER(${properties.province}) = LOWER(${locationIds.provinceName})`
+        )!);
+      } else {
+        conditions.push(eq(properties.provinceId, locationIds.provinceId));
+      }
     } else if (filters.province) {
-      // Text fallback: Case-insensitive for legacy data
+      // Text fallback
       conditions.push(sql`LOWER(${properties.province}) = LOWER(${filters.province})`);
     }
 
+    // City
     if (locationIds?.cityId) {
-      // ID-based: Fast, exact match
-      conditions.push(eq(properties.cityId, locationIds.cityId));
+       if (locationIds.cityName) {
+        // ID or Text (Safety Net)
+        conditions.push(or(
+          eq(properties.cityId, locationIds.cityId),
+          sql`LOWER(${properties.city}) = LOWER(${locationIds.cityName})`
+        )!);
+       } else {
+         conditions.push(eq(properties.cityId, locationIds.cityId));
+       }
     } else if (filters.city) {
-      // Text fallback: Case-insensitive for legacy data
+      // Text fallback
       conditions.push(sql`LOWER(${properties.city}) = LOWER(${filters.city})`);
     }
 
+    // Suburb
     if (locationIds?.suburbId) {
-      // ID-based: Fast, exact match
-      conditions.push(eq(properties.suburbId, locationIds.suburbId));
+       // Note: Suburb ID matching is strict, but we can relax it if we have a name
+       // Properties table doesn't have 'suburb' text column but uses 'address'
+       // We won't relax ID match here as 'address' matching is fuzzy and unpredictable with OR
+       conditions.push(eq(properties.suburbId, locationIds.suburbId));
     } else if (filters.suburb && filters.suburb.length > 0) {
       // Text fallback: Search in address field (legacy approach)
       const suburbConditions = filters.suburb.map(suburb =>
@@ -434,13 +461,28 @@ export class PropertySearchService {
   }> {
     // Resolve location slugs to IDs for optimal queries
     // NOTE: Wrapped in try-catch - if resolver fails, fall back to text queries
-    let locationIds: { provinceId?: number; cityId?: number; suburbId?: number } = {};
+    let locationIds: { 
+      provinceId?: number; provinceName?: string;
+      cityId?: number; cityName?: string;
+      suburbId?: number; suburbName?: string;
+    } = {};
     try {
-      locationIds = await locationResolver.getLocationIds({
+      const resolvedLocation = await locationResolver.resolveLocation({
         provinceSlug: baseFilters.province,
         citySlug: baseFilters.city,
         suburbSlug: baseFilters.suburb?.[0],
       });
+      
+      if (resolvedLocation) {
+        locationIds = {
+          provinceId: resolvedLocation.province?.id,
+          provinceName: resolvedLocation.province?.name,
+          cityId: resolvedLocation.city?.id,
+          cityName: resolvedLocation.city?.name,
+          suburbId: resolvedLocation.suburb?.id,
+          suburbName: resolvedLocation.suburb?.name,
+        };
+      }
     } catch (error) {
       console.error('[PropertySearchService] Location resolver failed in getFilterCounts, using text fallback:', error);
     }
