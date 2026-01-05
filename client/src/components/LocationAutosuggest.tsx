@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { MapPin, Loader2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { useGoogleMaps } from '@/hooks/useGoogleMaps';
-import { CITY_PROVINCE_MAP, PROVINCE_SLUGS } from '@/lib/locationUtils';
+import { CITY_PROVINCE_MAP, PROVINCE_SLUGS, isProvinceSearch } from '@/lib/locationUtils';
 import { slugify } from '@/lib/urlUtils';
 
 interface PlacePrediction {
@@ -105,10 +105,11 @@ export function LocationAutosuggest({
       let provinceSlug: string | undefined = undefined;
       let citySlug: string | undefined = undefined;
 
-      // 1. Check if the selection IS a known Province
-      if (PROVINCE_SLUGS.includes(slug)) {
+      // 1. Check if the selection IS a known Province (using fuzzy matching)
+      const matchedProvince = isProvinceSearch(mainText);
+      if (matchedProvince) {
           locationType = 'province';
-          provinceSlug = slug;
+          provinceSlug = matchedProvince;
       }
       // 2. Check if the selection IS a known City (populates province automatically)
       else if (CITY_PROVINCE_MAP[slug]) {
