@@ -282,10 +282,20 @@ export function EnhancedHero({
         }
 
         // 2. Text Search Fallback (no structured location selected)
-        // Treat as city search
+        // CRITICAL: Check if text matches a province BEFORE treating as city
         if (searchQuery) {
             const root = listingType === 'rent' ? '/property-to-rent' : '/property-for-sale';
-            const { normalizeLocationKey, getProvinceForCity } = require('@/lib/locationUtils');
+            const { normalizeLocationKey, getProvinceForCity, isProvinceSearch } = require('@/lib/locationUtils');
+            
+            // Check if the text input is actually a province
+            const matchedProvince = isProvinceSearch(searchQuery);
+            if (matchedProvince) {
+                // Province search → SEO discovery page (path-based)
+                setLocation(`${root}/${matchedProvince}`);
+                return;
+            }
+            
+            // Not a province → treat as city search (query-based SRP)
             const citySlug = normalizeLocationKey(searchQuery);
             const province = getProvinceForCity(searchQuery);
             

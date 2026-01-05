@@ -61,6 +61,48 @@ export const PROVINCE_SLUGS = [
   'northern-cape'
 ];
 
+// Province name variants for fuzzy matching (handles user input variations)
+export const PROVINCE_NAME_VARIANTS: Record<string, string> = {
+  'gauteng': 'gauteng',
+  'western cape': 'western-cape',
+  'western-cape': 'western-cape',
+  'kwazulu-natal': 'kwazulu-natal',
+  'kwazulu natal': 'kwazulu-natal',
+  'kzn': 'kwazulu-natal',
+  'eastern cape': 'eastern-cape',
+  'eastern-cape': 'eastern-cape',
+  'free state': 'free-state',
+  'free-state': 'free-state',
+  'limpopo': 'limpopo',
+  'mpumalanga': 'mpumalanga',
+  'north west': 'north-west',
+  'north-west': 'north-west',
+  'northern cape': 'northern-cape',
+  'northern-cape': 'northern-cape'
+};
+
+/**
+ * Check if a search string matches a province.
+ * Returns the canonical province slug if match, null otherwise.
+ */
+export function isProvinceSearch(searchText: string): string | null {
+  if (!searchText) return null;
+  const normalized = searchText.toLowerCase().trim();
+  
+  // Direct match against variants
+  if (PROVINCE_NAME_VARIANTS[normalized]) {
+    return PROVINCE_NAME_VARIANTS[normalized];
+  }
+  
+  // Check if normalized slug is in PROVINCE_SLUGS
+  const slug = normalized.replace(/\s+/g, '-');
+  if (PROVINCE_SLUGS.includes(slug)) {
+    return slug;
+  }
+  
+  return null;
+}
+
 /**
  * Normalize any location string to a consistent slug format.
  * This is the SINGLE SOURCE OF TRUTH for key normalization.
