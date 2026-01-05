@@ -1,13 +1,14 @@
 import { defineConfig, devices } from '@playwright/test';
 
 /**
- * Visual Regression Testing Configuration
+ * E2E Testing Configuration
  * 
- * This configuration sets up Playwright for visual regression testing
- * of the Advertise With Us landing page across multiple viewports.
+ * This configuration sets up Playwright for E2E testing including:
+ * - Routing architecture tests
+ * - Visual regression tests
  */
 export default defineConfig({
-  testDir: './client/src/components/advertise/__tests__/visual',
+  testDir: './e2e',
   
   // Timeout for each test
   timeout: 30 * 1000,
