@@ -114,7 +114,7 @@ export default function SearchResults({ province: propProvince, city: propCity, 
     ...filters,
     city: filters.city, // Explicitly ensure these are passed
     province: filters.province,
-    suburb: filters.suburb,
+    suburb: typeof filters.suburb === 'string' ? [filters.suburb] : filters.suburb,
     locationId: filters.locationId, // Pass locationId if backend supports it (optional filter usually)
     propertyType: filters.propertyType as any,
     listingType: filters.listingType as any,

@@ -231,7 +231,13 @@ export function EnhancedHero({
                  // Force interactive results for single city/suburb
                  const root = listingType === 'rent' ? '/property-to-rent' : '/property-for-sale';
                  const params = new URLSearchParams();
-                 params.set('locations', selectedLocation.slug);
+                 
+                 if (selectedLocation.type === 'suburb') {
+                    params.set('suburb', selectedLocation.slug);
+                 } else {
+                    // Default to city for 'city' or fallback
+                    params.set('city', selectedLocation.slug);
+                 }
                  
                  // Add price filters if present
                  if (activeTab === 'buy') {
