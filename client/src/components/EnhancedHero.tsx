@@ -220,8 +220,11 @@ export function EnhancedHero({
     // Intelligent Routing Logic
     // We utilize the structured location data from LocationAutosuggest directly.
     
-    if (activeTab === 'buy' || activeTab === 'rental') {
-        const listingType = activeTab === 'rental' ? 'rent' : 'sale';
+    // Default to 'buy' if no tab selected
+    const effectiveTab = activeTab || 'buy';
+    
+    if (effectiveTab === 'buy' || effectiveTab === 'rental') {
+        const listingType = effectiveTab === 'rental' ? 'rent' : 'sale';
         
         // 1. Single Location Selection logic (Matches ListingNavbar)
         if (selectedLocation) {
