@@ -17,6 +17,7 @@ interface PlacePrediction {
 
 interface LocationAutosuggestProps {
   onSelect?: (location: any) => void;
+  onChange?: (value: string) => void;  // Sync typed value on every keystroke
   placeholder?: string;
   className?: string;
   defaultValue?: string;
@@ -26,7 +27,8 @@ interface LocationAutosuggestProps {
 }
 
 export function LocationAutosuggest({ 
-  onSelect, 
+  onSelect,
+  onChange,
   placeholder = 'Search by city, suburb, or area...', 
   className = '',
   defaultValue = '',
@@ -219,9 +221,12 @@ export function LocationAutosuggest({
           placeholder={placeholder}
           value={query}
           onChange={(e) => {
-            setQuery(e.target.value);
+            const newValue = e.target.value;
+            setQuery(newValue);
             setShowSuggestions(true);
             setSelectedIndex(-1);
+            // Sync typed value to parent
+            if (onChange) onChange(newValue);
           }}
           onFocus={() => query.length >= 1 && setShowSuggestions(true)}
           onKeyDown={handleKeyDown}

@@ -519,6 +519,12 @@ export function EnhancedHero({
                     className="w-full"
                     inputClassName="pl-12 pr-24 h-14 text-base border-2 hover:border-primary/50 focus:border-primary transition-colors w-full bg-transparent rounded-xl"
                     showIcon={false}
+                    onChange={(value) => {
+                        // Sync typed value so text search fallback works
+                        setSearchQuery(value);
+                        // Clear selected location when typing new text
+                        setSelectedLocation(null);
+                    }}
                     onSelect={(loc) => {
                         setSearchQuery(loc.name);
                         setSelectedLocation(loc);
