@@ -190,7 +190,7 @@ export function LocationHeroSection({
 
           {/* Quick Links / Popular Areas */}
           {quickLinks.length > 0 && (
-            <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
+            <div className="mt-6 flex flex-wrap items-center justify-start gap-3">
               <span className="text-sm text-slate-500 font-medium">Popular:</span>
               {quickLinks.slice(0, 5).map((link, idx) => (
                 <button

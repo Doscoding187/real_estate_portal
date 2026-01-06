@@ -225,7 +225,7 @@ export function LocationAutosuggest({
 
   return (
     <div ref={wrapperRef} className={`relative ${className}`}>
-      <div className="relative h-full">
+      <div className="relative h-full w-full">
         {showIcon && <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />}
         <Input
           type="text"
@@ -255,7 +255,7 @@ export function LocationAutosuggest({
 
       {/* Suggestions Dropdown */}
       {showSuggestions && predictions.length > 0 && (
-        <div className="absolute z-[9999] w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-80 overflow-y-auto">
+        <div className="absolute z-[9999] top-full left-0 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-80 overflow-y-auto">
           {predictions.map((prediction, index) => {
             const locationType = getLocationType(prediction.types);
             return (
