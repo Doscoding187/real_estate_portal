@@ -69,31 +69,45 @@ export function NearbyLandmarks({ property }: NearbyLandmarksProps) {
       <div className="p-6 pb-0">
         <h3 className="text-xl font-bold text-slate-900 mb-6">Nearby Landmarks</h3>
         
-        {/* Map Preview */}
+        {/* Map Preview with Static Fallback */}
         <div className="relative rounded-xl overflow-hidden border border-slate-200 h-[240px] mb-6 group">
-          <GooglePropertyMap
-            center={{ lat: latitude, lng: longitude }}
-            zoom={14}
-            minimal={true}
-            className="pointer-events-none" // Disable all interaction with the map itself as it's a preview
-            properties={[
-              {
-                id: property.id,
-                title: property.title,
-                latitude,
-                longitude,
-                price: 0,
-                propertyType: 'property',
-                listingType: 'sale',
-                address: '',
-                city: '',
-                bedrooms: 0,
-                bathrooms: 0,
-                area: 0,
-                mainImage: ''
-              }
-            ]}
+          {/* Static map image as fallback background */}
+          <img 
+            src={`https://maps.googleapis.com/maps/api/staticmap?center=${latitude},${longitude}&zoom=14&size=800x400&maptype=roadmap&markers=color:red%7C${latitude},${longitude}&key=${import.meta.env.VITE_GOOGLE_MAPS_API_KEY || ''}`}
+            alt="Map location"
+            className="absolute inset-0 w-full h-full object-cover"
+            onError={(e) => {
+              // Fallback to a generic map placeholder if static map fails
+              (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1526778548025-fa2f459cd5c1?w=800&h=400&fit=crop';
+            }}
           />
+          
+          {/* Interactive map overlay */}
+          <div className="absolute inset-0">
+            <GooglePropertyMap
+              center={{ lat: latitude, lng: longitude }}
+              zoom={14}
+              minimal={true}
+              className="pointer-events-none"
+              properties={[
+                {
+                  id: property.id,
+                  title: property.title,
+                  latitude,
+                  longitude,
+                  price: 0,
+                  propertyType: 'property',
+                  listingType: 'sale',
+                  address: '',
+                  city: '',
+                  bedrooms: 0,
+                  bathrooms: 0,
+                  area: 0,
+                  mainImage: ''
+                }
+              ]}
+            />
+          </div>
           
           {/* Floating Button */}
           <div className="absolute inset-0 flex items-center justify-center pointer-events-auto bg-black/5 opacity-0 group-hover:opacity-100 transition-opacity">

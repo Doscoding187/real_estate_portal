@@ -471,96 +471,101 @@ export default function DevelopmentDetail() {
 
               <Separator className="bg-slate-100" />
 
-              {/* Development Specifications */}
-              <Card className="border-slate-200 shadow-sm">
-                <CardHeader className="bg-slate-50/50 border-b border-slate-100">
-                  <CardTitle className="font-bold text-slate-900">Development Specifications</CardTitle>
-                </CardHeader>
-                <CardContent className="p-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                    {/* Ownership Type */}
-                    <div className="flex items-start gap-2 p-2.5 bg-slate-50 rounded-lg">
-                      <Home className="h-5 w-5 text-orange-500 mt-0.5" />
-                      <div>
-                        <p className="text-sm text-slate-500">Ownership Type</p>
-                        <p className="font-semibold text-slate-900 capitalize">Sectional Title</p>
+              {/* Development Specifications - Dynamic from amenities/features */}
+              {(() => {
+                // Parse amenities to extract specifications
+                const allAmenities = development.amenities || [];
+                const allFeatures = parseJSON(dev.features) || [];
+                const allHighlights = parseJSON(dev.highlights) || [];
+                const combined = [...allAmenities, ...allFeatures, ...allHighlights].map(s => s.toLowerCase());
+                
+                // Helper to check if any keyword matches
+                const hasAny = (keywords: string[]) => keywords.some(k => combined.some(a => a.includes(k.toLowerCase())));
+                
+                // Build specs array dynamically
+                const specs: Array<{icon: any, label: string, value: string}> = [];
+                
+                // Security
+                const securityItems = combined.filter(a => 
+                  ['security', 'cctv', 'access control', 'biometric', 'guard', 'surveillance'].some(k => a.includes(k))
+                );
+                if (securityItems.length > 0) {
+                  specs.push({ 
+                    icon: Shield, 
+                    label: 'Security', 
+                    value: securityItems.length > 2 ? `${securityItems.length} Features` : securityItems.slice(0, 2).join(', ')
+                  });
+                }
+                
+                // Power / Electric
+                if (hasAny(['solar', 'generator', 'backup power', 'inverter'])) {
+                  const powerItems = combined.filter(a => ['solar', 'generator', 'backup', 'inverter'].some(k => a.includes(k)));
+                  specs.push({ icon: Zap, label: 'Power Backup', value: powerItems[0] || 'Available' });
+                }
+                
+                // Internet
+                if (hasAny(['fiber', 'fibre', 'internet', 'wifi', 'smart home'])) {
+                  specs.push({ icon: Wifi, label: 'Internet', value: 'Fibre Ready' });
+                }
+                
+                // Parking
+                const parkingItems = combined.filter(a => ['parking', 'garage', 'carport'].some(k => a.includes(k)));
+                if (parkingItems.length > 0) {
+                  specs.push({ icon: Car, label: 'Parking', value: parkingItems.join(' & ') });
+                }
+                
+                // Pet Friendly
+                if (hasAny(['pet friendly', 'pets allowed', 'pet-friendly'])) {
+                  specs.push({ icon: CheckCircle2, label: 'Pet Friendly', value: 'Yes' });
+                }
+                
+                // Estate Type
+                if (hasAny(['gated', 'estate', 'complex', 'secure estate'])) {
+                  specs.push({ icon: Building2, label: 'Estate Type', value: 'Gated Community' });
+                }
+                
+                // Pool
+                if (hasAny(['pool', 'swimming'])) {
+                  specs.push({ icon: Droplets, label: 'Swimming Pool', value: 'Available' });
+                }
+                
+                // Gym
+                if (hasAny(['gym', 'fitness'])) {
+                  specs.push({ icon: CheckCircle2, label: 'Gym / Fitness', value: 'Available' });
+                }
+                
+                // Clubhouse
+                if (hasAny(['clubhouse', 'function room'])) {
+                  specs.push({ icon: Building2, label: 'Clubhouse', value: 'Available' });
+                }
+                
+                // If no specs found, don't render the card
+                if (specs.length === 0) return null;
+                
+                return (
+                  <Card className="border-slate-200 shadow-sm">
+                    <CardHeader className="bg-slate-50/50 border-b border-slate-100">
+                      <CardTitle className="font-bold text-slate-900">Development Specifications</CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                        {specs.map((spec, index) => {
+                          const IconComponent = spec.icon;
+                          return (
+                            <div key={index} className="flex items-start gap-2 p-2.5 bg-slate-50 rounded-lg">
+                              <IconComponent className="h-5 w-5 text-orange-500 mt-0.5" />
+                              <div>
+                                <p className="text-sm text-slate-500">{spec.label}</p>
+                                <p className="font-semibold text-slate-900 capitalize">{spec.value}</p>
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
-                    </div>
-                    
-                    {/* Security */}
-                    <div className="flex items-start gap-2 p-2.5 bg-slate-50 rounded-lg">
-                      <Shield className="h-5 w-5 text-orange-500 mt-0.5" />
-                      <div>
-                        <p className="text-sm text-slate-500">Security</p>
-                        <p className="font-semibold text-slate-900 capitalize">24hr Security & CCTV</p>
-                      </div>
-                    </div>
-                    
-                    {/* Power Backup */}
-                    <div className="flex items-start gap-2 p-2.5 bg-slate-50 rounded-lg">
-                      <Zap className="h-5 w-5 text-orange-500 mt-0.5" />
-                      <div>
-                        <p className="text-sm text-slate-500">Power Backup</p>
-                        <p className="font-semibold text-slate-900 capitalize">Generator & Inverter Ready</p>
-                      </div>
-                    </div>
-                    
-                    {/* Water Supply */}
-                    <div className="flex items-start gap-2 p-2.5 bg-slate-50 rounded-lg">
-                      <Droplets className="h-5 w-5 text-orange-500 mt-0.5" />
-                      <div>
-                        <p className="text-sm text-slate-500">Water Supply</p>
-                        <p className="font-semibold text-slate-900 capitalize">Municipal & Borehole</p>
-                      </div>
-                    </div>
-                    
-                    {/* Internet */}
-                    <div className="flex items-start gap-2 p-2.5 bg-slate-50 rounded-lg">
-                      <Wifi className="h-5 w-5 text-orange-500 mt-0.5" />
-                      <div>
-                        <p className="text-sm text-slate-500">Internet</p>
-                        <p className="font-semibold text-slate-900 capitalize">Fibre Ready</p>
-                      </div>
-                    </div>
-                    
-                    {/* Parking */}
-                    <div className="flex items-start gap-2 p-2.5 bg-slate-50 rounded-lg">
-                      <Car className="h-5 w-5 text-orange-500 mt-0.5" />
-                      <div>
-                        <p className="text-sm text-slate-500">Parking</p>
-                        <p className="font-semibold text-slate-900 capitalize">Covered & Visitor Parking</p>
-                      </div>
-                    </div>
-                    
-                    {/* Pet Friendly */}
-                    <div className="flex items-start gap-2 p-2.5 bg-slate-50 rounded-lg">
-                      <CheckCircle2 className="h-5 w-5 text-orange-500 mt-0.5" />
-                      <div>
-                        <p className="text-sm text-slate-500">Pet Friendly</p>
-                        <p className="font-semibold text-slate-900 capitalize">Yes (Body Corporate Rules Apply)</p>
-                      </div>
-                    </div>
-                    
-                    {/* Electricity */}
-                    <div className="flex items-start gap-2 p-2.5 bg-slate-50 rounded-lg">
-                      <Zap className="h-5 w-5 text-orange-500 mt-0.5" />
-                      <div>
-                        <p className="text-sm text-slate-500">Electricity</p>
-                        <p className="font-semibold text-slate-900 capitalize">Prepaid Meters</p>
-                      </div>
-                    </div>
-                    
-                    {/* Estate Type */}
-                    <div className="flex items-start gap-2 p-2.5 bg-slate-50 rounded-lg">
-                      <Building2 className="h-5 w-5 text-orange-500 mt-0.5" />
-                      <div>
-                        <p className="text-sm text-slate-500">Estate Type</p>
-                        <p className="font-semibold text-slate-900 capitalize">Gated Community</p>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+                    </CardContent>
+                  </Card>
+                );
+              })()}
 
               <Separator className="bg-slate-100" />
 
