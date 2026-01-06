@@ -480,72 +480,92 @@ export default function DevelopmentDetail() {
 
               <Separator className="bg-slate-100" />
 
-              {/* Development Specifications - Dynamic from amenities/features */}
+              {/* Development Specifications - From estateSpecs or derived from amenities */}
               {(() => {
-                // Parse amenities to extract specifications
-                const allAmenities = development.amenities || [];
-                const allFeatures = Array.isArray(dev.features) ? dev.features : [];
-                const allHighlights = Array.isArray(dev.highlights) ? dev.highlights : [];
-                const combined = [...allAmenities, ...allFeatures, ...allHighlights].map(s => String(s).toLowerCase());
+                // Check for explicit estateSpecs first
+                const estateSpecs = (dev as any).estateSpecs || {};
+                const hasEstateSpecs = estateSpecs.ownershipType || estateSpecs.powerBackup || estateSpecs.waterSupply;
                 
-                // Helper to check if any keyword matches
-                const hasAny = (keywords: string[]) => keywords.some(k => combined.some(a => a.includes(k.toLowerCase())));
+                // Helper to format value labels
+                const formatLabel = (value: string) => {
+                  if (!value) return '';
+                  return value.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                };
                 
-                // Build specs array dynamically
+                // Build specs array from estateSpecs
                 const specs: Array<{icon: any, label: string, value: string}> = [];
                 
-                // Security
-                const securityItems = combined.filter(a => 
-                  ['security', 'cctv', 'access control', 'biometric', 'guard', 'surveillance'].some(k => a.includes(k))
-                );
-                if (securityItems.length > 0) {
-                  specs.push({ 
-                    icon: Shield, 
-                    label: 'Security', 
-                    value: securityItems.length > 2 ? `${securityItems.length} Features` : securityItems.slice(0, 2).join(', ')
-                  });
-                }
-                
-                // Power / Electric
-                if (hasAny(['solar', 'generator', 'backup power', 'inverter'])) {
-                  const powerItems = combined.filter(a => ['solar', 'generator', 'backup', 'inverter'].some(k => a.includes(k)));
-                  specs.push({ icon: Zap, label: 'Power Backup', value: powerItems[0] || 'Available' });
-                }
-                
-                // Internet
-                if (hasAny(['fiber', 'fibre', 'internet', 'wifi', 'smart home'])) {
-                  specs.push({ icon: Wifi, label: 'Internet', value: 'Fibre Ready' });
-                }
-                
-                // Parking
-                const parkingItems = combined.filter(a => ['parking', 'garage', 'carport'].some(k => a.includes(k)));
-                if (parkingItems.length > 0) {
-                  specs.push({ icon: Car, label: 'Parking', value: parkingItems.join(' & ') });
-                }
-                
-                // Pet Friendly
-                if (hasAny(['pet friendly', 'pets allowed', 'pet-friendly'])) {
-                  specs.push({ icon: CheckCircle2, label: 'Pet Friendly', value: 'Yes' });
-                }
-                
-                // Estate Type
-                if (hasAny(['gated', 'estate', 'complex', 'secure estate'])) {
-                  specs.push({ icon: Building2, label: 'Estate Type', value: 'Gated Community' });
-                }
-                
-                // Pool
-                if (hasAny(['pool', 'swimming'])) {
-                  specs.push({ icon: Droplets, label: 'Swimming Pool', value: 'Available' });
-                }
-                
-                // Gym
-                if (hasAny(['gym', 'fitness'])) {
-                  specs.push({ icon: CheckCircle2, label: 'Gym / Fitness', value: 'Available' });
-                }
-                
-                // Clubhouse
-                if (hasAny(['clubhouse', 'function room'])) {
-                  specs.push({ icon: Building2, label: 'Clubhouse', value: 'Available' });
+                if (hasEstateSpecs) {
+                  // Use explicit estateSpecs
+                  if (estateSpecs.ownershipType) {
+                    specs.push({ icon: Home, label: 'Ownership Type', value: formatLabel(estateSpecs.ownershipType) });
+                  }
+                  if (estateSpecs.powerBackup && estateSpecs.powerBackup !== 'none') {
+                    specs.push({ icon: Zap, label: 'Power Backup', value: formatLabel(estateSpecs.powerBackup) });
+                  }
+                  if (estateSpecs.securityFeatures?.length > 0) {
+                    const secCount = estateSpecs.securityFeatures.length;
+                    specs.push({ 
+                      icon: Shield, 
+                      label: 'Security', 
+                      value: secCount > 2 ? `${secCount} Features` : estateSpecs.securityFeatures.map(formatLabel).join(', ')
+                    });
+                  }
+                  if (estateSpecs.waterSupply) {
+                    specs.push({ icon: Droplets, label: 'Water Supply', value: formatLabel(estateSpecs.waterSupply) });
+                  }
+                  if (estateSpecs.internetAccess && estateSpecs.internetAccess !== 'none') {
+                    specs.push({ icon: Wifi, label: 'Internet', value: formatLabel(estateSpecs.internetAccess) });
+                  }
+                  if (estateSpecs.flooring) {
+                    specs.push({ icon: Layers, label: 'Flooring', value: formatLabel(estateSpecs.flooring) });
+                  }
+                  if (estateSpecs.parkingType && estateSpecs.parkingType !== 'none') {
+                    specs.push({ icon: Car, label: 'Parking', value: formatLabel(estateSpecs.parkingType) });
+                  }
+                  if (estateSpecs.petFriendly) {
+                    specs.push({ icon: CheckCircle2, label: 'Pet Friendly', value: formatLabel(estateSpecs.petFriendly) });
+                  }
+                  if (estateSpecs.electricitySupply) {
+                    specs.push({ icon: Zap, label: 'Electricity', value: formatLabel(estateSpecs.electricitySupply) });
+                  }
+                } else {
+                  // Fallback: Parse amenities to extract specifications
+                  const allAmenities = development.amenities || [];
+                  const allFeatures = Array.isArray(dev.features) ? dev.features : [];
+                  const allHighlights = Array.isArray(dev.highlights) ? dev.highlights : [];
+                  const combined = [...allAmenities, ...allFeatures, ...allHighlights].map(s => String(s).toLowerCase());
+                  
+                  const hasAny = (keywords: string[]) => keywords.some(k => combined.some(a => a.includes(k.toLowerCase())));
+                  
+                  // Security
+                  const securityItems = combined.filter(a => 
+                    ['security', 'cctv', 'access control', 'biometric', 'guard', 'surveillance'].some(k => a.includes(k))
+                  );
+                  if (securityItems.length > 0) {
+                    specs.push({ 
+                      icon: Shield, 
+                      label: 'Security', 
+                      value: securityItems.length > 2 ? `${securityItems.length} Features` : securityItems.slice(0, 2).join(', ')
+                    });
+                  }
+                  
+                  if (hasAny(['solar', 'generator', 'backup power', 'inverter'])) {
+                    specs.push({ icon: Zap, label: 'Power Backup', value: 'Available' });
+                  }
+                  if (hasAny(['fiber', 'fibre', 'internet', 'wifi', 'smart home'])) {
+                    specs.push({ icon: Wifi, label: 'Internet', value: 'Fibre Ready' });
+                  }
+                  const parkingItems = combined.filter(a => ['parking', 'garage', 'carport'].some(k => a.includes(k)));
+                  if (parkingItems.length > 0) {
+                    specs.push({ icon: Car, label: 'Parking', value: 'Available' });
+                  }
+                  if (hasAny(['pet friendly', 'pets allowed', 'pet-friendly'])) {
+                    specs.push({ icon: CheckCircle2, label: 'Pet Friendly', value: 'Yes' });
+                  }
+                  if (hasAny(['pool', 'swimming'])) {
+                    specs.push({ icon: Droplets, label: 'Swimming Pool', value: 'Available' });
+                  }
                 }
                 
                 // If no specs found, don't render the card

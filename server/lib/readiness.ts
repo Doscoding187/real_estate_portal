@@ -89,27 +89,28 @@ export const calculateDevelopmentReadiness = (dev: any): ReadinessResult => {
     basic: [],
     location: [],
     media: [],
+    amenities: [],
     specs: [],
   };
   let score = 0;
 
-  // 1. Basic Info (25%)
+  // 1. Basic Info (20%)
   if (dev.name && dev.description && dev.description.length > 50) {
-      score += 25;
+      score += 20;
   } else {
       if (!dev.name) missing.basic.push('Name');
       if (!dev.description || dev.description.length <= 50) missing.basic.push('Description (min 50 chars)');
   }
 
-  // 2. Location (25%)
+  // 2. Location (20%)
    if (dev.address && dev.latitude && dev.longitude) {
-    score += 25;
+    score += 20;
   } else {
     if (!dev.address) missing.location.push('Address');
     if (!dev.latitude || !dev.longitude) missing.location.push('Map Location');
   }
 
-  // 3. Media (25%)
+  // 3. Media (20%)
   let imageCount = 0;
    if (Array.isArray(dev.images)) {
       imageCount = dev.images.length;
@@ -121,16 +122,31 @@ export const calculateDevelopmentReadiness = (dev: any): ReadinessResult => {
   }
 
   if (imageCount >= 1) {
-       score += 25;
+       score += 20;
   } else {
       missing.media.push('Main Image');
   }
 
-  // 4. Units/Specs (25%)
-  // This is harder to check on the development object itself if units are separate.
-  // For now, we check if priceFrom is set as a proxy for "units configured"
+  // 4. Amenities (20%) - Require at least 3 amenities
+  let amenityCount = 0;
+  if (Array.isArray(dev.amenities)) {
+      amenityCount = dev.amenities.length;
+  } else if (typeof dev.amenities === 'string') {
+      try {
+          const parsed = JSON.parse(dev.amenities);
+          if (Array.isArray(parsed)) amenityCount = parsed.length;
+      } catch (e) {}
+  }
+
+  if (amenityCount >= 3) {
+      score += 20;
+  } else {
+      missing.amenities.push(`Select at least 3 amenities (Current: ${amenityCount})`);
+  }
+
+  // 5. Units/Specs (20%)
   if (dev.priceFrom && Number(dev.priceFrom) > 0) {
-      score += 25;
+      score += 20;
   } else {
       missing.specs.push('Price From (Units)');
   }

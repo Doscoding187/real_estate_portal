@@ -5,6 +5,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   X,
   Sparkles,
@@ -22,6 +23,9 @@ import {
   Home,
   Wrench,
   CheckCircle2,
+  Zap,
+  Droplets,
+  PawPrint,
 } from 'lucide-react';
 import { useState } from 'react';
 import { useFieldValidation } from '@/hooks/useFieldValidation';
@@ -102,6 +106,71 @@ const SPECIFICATIONS = {
   ],
 };
 
+// Estate-Level Specifications Options (Required for all developments)
+const ESTATE_SPECS_OPTIONS = {
+  ownershipType: [
+    { value: 'freehold', label: 'Freehold' },
+    { value: 'sectional_title', label: 'Sectional Title' },
+    { value: 'full_title', label: 'Full Title' },
+    { value: 'share_block', label: 'Share Block' },
+  ],
+  powerBackup: [
+    { value: 'solar', label: 'Solar Power' },
+    { value: 'generator', label: 'Generator' },
+    { value: 'inverter', label: 'Inverter Ready' },
+    { value: 'solar_inverter', label: 'Solar + Inverter' },
+    { value: 'none', label: 'None' },
+  ],
+  securityFeatures: [
+    { value: '24hr_security', label: '24/7 Security' },
+    { value: 'cctv', label: 'CCTV Surveillance' },
+    { value: 'access_control', label: 'Access Control' },
+    { value: 'electric_fencing', label: 'Electric Fencing' },
+    { value: 'alarm_system', label: 'Alarm System' },
+    { value: 'biometric', label: 'Biometric Entry' },
+    { value: 'guard_house', label: 'Guard House' },
+  ],
+  waterSupply: [
+    { value: 'municipal', label: 'Municipal Water' },
+    { value: 'borehole', label: 'Borehole' },
+    { value: 'jojo_tanks', label: 'JoJo Tanks' },
+    { value: 'rainwater', label: 'Rainwater Harvesting' },
+    { value: 'municipal_borehole', label: 'Municipal + Borehole' },
+  ],
+  internetAccess: [
+    { value: 'fibre', label: 'Fibre Ready' },
+    { value: 'adsl', label: 'ADSL' },
+    { value: 'lte', label: 'LTE Ready' },
+    { value: 'smart_home', label: 'Smart Home Enabled' },
+    { value: 'none', label: 'None' },
+  ],
+  flooring: [
+    { value: 'tiles', label: 'Tiles Throughout' },
+    { value: 'vinyl', label: 'Vinyl Flooring' },
+    { value: 'laminate', label: 'Laminate Flooring' },
+    { value: 'wooden', label: 'Wooden Flooring' },
+    { value: 'tiles_laminate', label: 'Tiles & Laminate' },
+    { value: 'carpet', label: 'Carpeted' },
+  ],
+  parkingType: [
+    { value: 'garage', label: 'Garage' },
+    { value: 'double_garage', label: 'Double Garage' },
+    { value: 'carport', label: 'Carport' },
+    { value: 'covered_bay', label: 'Covered Bay' },
+    { value: 'open_bay', label: 'Open Bay' },
+    { value: 'none', label: 'None' },
+  ],
+  petFriendly: [
+    { value: 'yes', label: 'Yes' },
+    { value: 'no', label: 'No' },
+    { value: 'with_restrictions', label: 'With Restrictions' },
+  ],
+  electricitySupply: [
+    { value: 'prepaid', label: 'Prepaid Meters' },
+    { value: 'conventional', label: 'Conventional' },
+  ],
+};
+
 export function HighlightsStep() {
   const store = useDevelopmentWizard();
   
@@ -125,6 +194,21 @@ export function HighlightsStep() {
     bathrooms?: string[];
     structure?: string[];
   }>({});
+
+  // Estate-Level Specifications (persisted to store)
+  const estateSpecs = (store.developmentData as any)?.estateSpecs || {};
+  const setEstateSpec = (key: string, value: string | string[]) => {
+    store.setDevelopmentData({ 
+      estateSpecs: { ...estateSpecs, [key]: value } 
+    } as any);
+  };
+  const toggleSecurityFeature = (feature: string) => {
+    const current = estateSpecs.securityFeatures || [];
+    const updated = current.includes(feature) 
+      ? current.filter((f: string) => f !== feature) 
+      : [...current, feature];
+    setEstateSpec('securityFeatures', updated);
+  };
 
   const [newHighlight, setNewHighlight] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
@@ -324,6 +408,221 @@ export function HighlightsStep() {
               ))}
             </div>
           )}
+        </div>
+      </Card>
+
+      {/* Estate-Level Specifications (Required) */}
+      <Card className="bg-white/70 backdrop-blur-sm rounded-[1.5rem] border-white/40 shadow-[0_8px_30px_rgba(8,_112,_184,_0.06)] p-6">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <Home className="w-5 h-5 text-blue-600" />
+            <h3 className="text-lg font-bold text-slate-800">Estate Specifications</h3>
+          </div>
+          <Badge className="bg-red-100 text-red-700 border-red-200">Required</Badge>
+        </div>
+        <p className="text-sm text-slate-600 mb-6">
+          These details help buyers understand the development's standard amenities and services.
+        </p>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {/* Ownership Type */}
+          <div className="space-y-2">
+            <Label className="text-slate-700 flex items-center gap-2">
+              <Home className="w-4 h-4 text-blue-500" />
+              Ownership Type <span className="text-red-500">*</span>
+            </Label>
+            <Select 
+              value={estateSpecs.ownershipType || ''} 
+              onValueChange={(v) => setEstateSpec('ownershipType', v)}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select ownership type" />
+              </SelectTrigger>
+              <SelectContent>
+                {ESTATE_SPECS_OPTIONS.ownershipType.map(opt => (
+                  <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Power Backup */}
+          <div className="space-y-2">
+            <Label className="text-slate-700 flex items-center gap-2">
+              <Zap className="w-4 h-4 text-yellow-500" />
+              Power Backup <span className="text-red-500">*</span>
+            </Label>
+            <Select 
+              value={estateSpecs.powerBackup || ''} 
+              onValueChange={(v) => setEstateSpec('powerBackup', v)}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select power option" />
+              </SelectTrigger>
+              <SelectContent>
+                {ESTATE_SPECS_OPTIONS.powerBackup.map(opt => (
+                  <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Water Supply */}
+          <div className="space-y-2">
+            <Label className="text-slate-700 flex items-center gap-2">
+              <Droplets className="w-4 h-4 text-cyan-500" />
+              Water Supply <span className="text-red-500">*</span>
+            </Label>
+            <Select 
+              value={estateSpecs.waterSupply || ''} 
+              onValueChange={(v) => setEstateSpec('waterSupply', v)}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select water source" />
+              </SelectTrigger>
+              <SelectContent>
+                {ESTATE_SPECS_OPTIONS.waterSupply.map(opt => (
+                  <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Internet Access */}
+          <div className="space-y-2">
+            <Label className="text-slate-700 flex items-center gap-2">
+              <Wifi className="w-4 h-4 text-purple-500" />
+              Internet <span className="text-red-500">*</span>
+            </Label>
+            <Select 
+              value={estateSpecs.internetAccess || ''} 
+              onValueChange={(v) => setEstateSpec('internetAccess', v)}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select internet type" />
+              </SelectTrigger>
+              <SelectContent>
+                {ESTATE_SPECS_OPTIONS.internetAccess.map(opt => (
+                  <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Flooring */}
+          <div className="space-y-2">
+            <Label className="text-slate-700 flex items-center gap-2">
+              <Building className="w-4 h-4 text-amber-600" />
+              Flooring <span className="text-red-500">*</span>
+            </Label>
+            <Select 
+              value={estateSpecs.flooring || ''} 
+              onValueChange={(v) => setEstateSpec('flooring', v)}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select flooring type" />
+              </SelectTrigger>
+              <SelectContent>
+                {ESTATE_SPECS_OPTIONS.flooring.map(opt => (
+                  <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Parking Type */}
+          <div className="space-y-2">
+            <Label className="text-slate-700 flex items-center gap-2">
+              <Car className="w-4 h-4 text-slate-600" />
+              Parking <span className="text-red-500">*</span>
+            </Label>
+            <Select 
+              value={estateSpecs.parkingType || ''} 
+              onValueChange={(v) => setEstateSpec('parkingType', v)}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select parking type" />
+              </SelectTrigger>
+              <SelectContent>
+                {ESTATE_SPECS_OPTIONS.parkingType.map(opt => (
+                  <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Pet Friendly */}
+          <div className="space-y-2">
+            <Label className="text-slate-700 flex items-center gap-2">
+              <PawPrint className="w-4 h-4 text-pink-500" />
+              Pet Friendly <span className="text-red-500">*</span>
+            </Label>
+            <Select 
+              value={estateSpecs.petFriendly || ''} 
+              onValueChange={(v) => setEstateSpec('petFriendly', v)}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select pet policy" />
+              </SelectTrigger>
+              <SelectContent>
+                {ESTATE_SPECS_OPTIONS.petFriendly.map(opt => (
+                  <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Electricity */}
+          <div className="space-y-2">
+            <Label className="text-slate-700 flex items-center gap-2">
+              <Zap className="w-4 h-4 text-orange-500" />
+              Electricity <span className="text-red-500">*</span>
+            </Label>
+            <Select 
+              value={estateSpecs.electricitySupply || ''} 
+              onValueChange={(v) => setEstateSpec('electricitySupply', v)}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select electricity type" />
+              </SelectTrigger>
+              <SelectContent>
+                {ESTATE_SPECS_OPTIONS.electricitySupply.map(opt => (
+                  <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        {/* Security Features (Multi-Select) */}
+        <div className="mt-6 pt-4 border-t border-slate-200">
+          <Label className="text-slate-700 flex items-center gap-2 mb-3">
+            <Shield className="w-4 h-4 text-green-600" />
+            Security Features <span className="text-red-500">*</span>
+            <Badge variant="secondary" className="ml-2 bg-green-50 text-green-700">
+              {(estateSpecs.securityFeatures || []).length} selected
+            </Badge>
+          </Label>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {ESTATE_SPECS_OPTIONS.securityFeatures.map(opt => (
+              <div 
+                key={opt.value}
+                onClick={() => toggleSecurityFeature(opt.value)}
+                className={`flex items-center gap-2 p-2.5 rounded-lg border cursor-pointer transition-all ${
+                  (estateSpecs.securityFeatures || []).includes(opt.value)
+                    ? 'bg-green-50 border-green-300 shadow-sm'
+                    : 'bg-white border-slate-200 hover:border-green-200 hover:bg-green-50/50'
+                }`}
+              >
+                <Checkbox
+                  checked={(estateSpecs.securityFeatures || []).includes(opt.value)}
+                  onCheckedChange={() => toggleSecurityFeature(opt.value)}
+                  className="border-slate-300 data-[state=checked]:bg-green-600 data-[state=checked]:border-green-600"
+                />
+                <span className="text-sm text-slate-700">{opt.label}</span>
+              </div>
+            ))}
+          </div>
         </div>
       </Card>
 
