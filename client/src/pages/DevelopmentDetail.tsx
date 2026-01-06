@@ -467,6 +467,99 @@ export default function DevelopmentDetail() {
 
               <Separator className="bg-slate-100" />
 
+              {/* Development Specifications */}
+              <Card className="border-slate-200 shadow-sm">
+                <CardHeader className="bg-slate-50/50 border-b border-slate-100">
+                  <CardTitle className="font-bold text-slate-900">Development Specifications</CardTitle>
+                </CardHeader>
+                <CardContent className="p-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {/* Ownership Type */}
+                    <div className="flex items-start gap-2 p-2.5 bg-slate-50 rounded-lg">
+                      <Home className="h-5 w-5 text-orange-500 mt-0.5" />
+                      <div>
+                        <p className="text-sm text-slate-500">Ownership Type</p>
+                        <p className="font-semibold text-slate-900 capitalize">Sectional Title</p>
+                      </div>
+                    </div>
+                    
+                    {/* Security */}
+                    <div className="flex items-start gap-2 p-2.5 bg-slate-50 rounded-lg">
+                      <Shield className="h-5 w-5 text-orange-500 mt-0.5" />
+                      <div>
+                        <p className="text-sm text-slate-500">Security</p>
+                        <p className="font-semibold text-slate-900 capitalize">24hr Security & CCTV</p>
+                      </div>
+                    </div>
+                    
+                    {/* Power Backup */}
+                    <div className="flex items-start gap-2 p-2.5 bg-slate-50 rounded-lg">
+                      <Zap className="h-5 w-5 text-orange-500 mt-0.5" />
+                      <div>
+                        <p className="text-sm text-slate-500">Power Backup</p>
+                        <p className="font-semibold text-slate-900 capitalize">Generator & Inverter Ready</p>
+                      </div>
+                    </div>
+                    
+                    {/* Water Supply */}
+                    <div className="flex items-start gap-2 p-2.5 bg-slate-50 rounded-lg">
+                      <Droplets className="h-5 w-5 text-orange-500 mt-0.5" />
+                      <div>
+                        <p className="text-sm text-slate-500">Water Supply</p>
+                        <p className="font-semibold text-slate-900 capitalize">Municipal & Borehole</p>
+                      </div>
+                    </div>
+                    
+                    {/* Internet */}
+                    <div className="flex items-start gap-2 p-2.5 bg-slate-50 rounded-lg">
+                      <Wifi className="h-5 w-5 text-orange-500 mt-0.5" />
+                      <div>
+                        <p className="text-sm text-slate-500">Internet</p>
+                        <p className="font-semibold text-slate-900 capitalize">Fibre Ready</p>
+                      </div>
+                    </div>
+                    
+                    {/* Parking */}
+                    <div className="flex items-start gap-2 p-2.5 bg-slate-50 rounded-lg">
+                      <Car className="h-5 w-5 text-orange-500 mt-0.5" />
+                      <div>
+                        <p className="text-sm text-slate-500">Parking</p>
+                        <p className="font-semibold text-slate-900 capitalize">Covered & Visitor Parking</p>
+                      </div>
+                    </div>
+                    
+                    {/* Pet Friendly */}
+                    <div className="flex items-start gap-2 p-2.5 bg-slate-50 rounded-lg">
+                      <CheckCircle2 className="h-5 w-5 text-orange-500 mt-0.5" />
+                      <div>
+                        <p className="text-sm text-slate-500">Pet Friendly</p>
+                        <p className="font-semibold text-slate-900 capitalize">Yes (Body Corporate Rules Apply)</p>
+                      </div>
+                    </div>
+                    
+                    {/* Electricity */}
+                    <div className="flex items-start gap-2 p-2.5 bg-slate-50 rounded-lg">
+                      <Zap className="h-5 w-5 text-orange-500 mt-0.5" />
+                      <div>
+                        <p className="text-sm text-slate-500">Electricity</p>
+                        <p className="font-semibold text-slate-900 capitalize">Prepaid Meters</p>
+                      </div>
+                    </div>
+                    
+                    {/* Estate Type */}
+                    <div className="flex items-start gap-2 p-2.5 bg-slate-50 rounded-lg">
+                      <Building2 className="h-5 w-5 text-orange-500 mt-0.5" />
+                      <div>
+                        <p className="text-sm text-slate-500">Estate Type</p>
+                        <p className="font-semibold text-slate-900 capitalize">Gated Community</p>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Separator className="bg-slate-100" />
+
               {/* Development Features & Specifications */}
               {(development.amenities.length > 0) && (
                 <Card className="border-slate-200 shadow-sm">
