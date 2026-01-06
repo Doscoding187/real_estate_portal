@@ -455,7 +455,7 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
                         <Home className="h-5 w-5 text-orange-500 mt-0.5" />
                         <div>
                           <p className="text-sm text-slate-500">Ownership Type</p>
-                          <p className="font-semibold text-slate-900 capitalize">{specs.ownershipType.replace(/_/g, ' ')}</p>
+                          <p className="font-semibold text-slate-900 capitalize">{String(specs.ownershipType).replace(/_/g, ' ')}</p>
                         </div>
                       </div>
                     )}
@@ -464,7 +464,7 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
                         <Zap className="h-5 w-5 text-orange-500 mt-0.5" />
                         <div>
                           <p className="text-sm text-slate-500">Power Backup</p>
-                          <p className="font-semibold text-slate-900 capitalize">{specs.powerBackup.replace(/_/g, ' ')}</p>
+                          <p className="font-semibold text-slate-900 capitalize">{String(specs.powerBackup).replace(/_/g, ' ')}</p>
                         </div>
                       </div>
                     )}
@@ -474,7 +474,7 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
                         <div>
                           <p className="text-sm text-slate-500">Security</p>
                           <p className="font-semibold text-slate-900 capitalize text-ellipsis overflow-hidden whitespace-nowrap" title={specs.securityFeatures.join(', ').replace(/_/g, ' ')}>
-                             {specs.securityFeatures.length > 1 ? `${specs.securityFeatures.length} Features` : specs.securityFeatures[0].replace(/_/g, ' ')}
+                             {specs.securityFeatures.length > 1 ? `${specs.securityFeatures.length} Features` : String(specs.securityFeatures[0]).replace(/_/g, ' ')}
                           </p>
                         </div>
                       </div>
@@ -484,7 +484,7 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
                         <Droplets className="h-5 w-5 text-orange-500 mt-0.5" />
                         <div>
                           <p className="text-sm text-slate-500">Water Supply</p>
-                          <p className="font-semibold text-slate-900 capitalize">{specs.waterSupply.replace(/_/g, ' ')}</p>
+                          <p className="font-semibold text-slate-900 capitalize">{String(specs.waterSupply).replace(/_/g, ' ')}</p>
                         </div>
                       </div>
                     )}
@@ -493,7 +493,7 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
                         <Wifi className="h-5 w-5 text-orange-500 mt-0.5" />
                         <div>
                           <p className="text-sm text-slate-500">Internet</p>
-                          <p className="font-semibold text-slate-900 capitalize">{specs.internetAccess.replace(/_/g, ' ')}</p>
+                          <p className="font-semibold text-slate-900 capitalize">{String(specs.internetAccess).replace(/_/g, ' ')}</p>
                         </div>
                       </div>
                     )}
@@ -502,7 +502,7 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
                         <Building2 className="h-5 w-5 text-orange-500 mt-0.5" />
                         <div>
                           <p className="text-sm text-slate-500">Flooring</p>
-                          <p className="font-semibold text-slate-900 capitalize">{specs.flooring.replace(/_/g, ' ')}</p>
+                          <p className="font-semibold text-slate-900 capitalize">{String(specs.flooring).replace(/_/g, ' ')}</p>
                         </div>
                       </div>
                     )}
@@ -511,7 +511,7 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
                         <Car className="h-5 w-5 text-orange-500 mt-0.5" />
                         <div>
                           <p className="text-sm text-slate-500">Parking Type</p>
-                          <p className="font-semibold text-slate-900 capitalize">{specs.parkingType.replace(/_/g, ' ')}</p>
+                          <p className="font-semibold text-slate-900 capitalize">{String(specs.parkingType).replace(/_/g, ' ')}</p>
                         </div>
                       </div>
                     )}
@@ -520,7 +520,7 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
                         <CheckCircle2 className="h-5 w-5 text-orange-500 mt-0.5" />
                         <div>
                           <p className="text-sm text-slate-500">Pet Friendly</p>
-                          <p className="font-semibold text-slate-900 capitalize">{specs.petFriendly.replace(/_/g, ' ')}</p>
+                          <p className="font-semibold text-slate-900 capitalize">{String(specs.petFriendly).replace(/_/g, ' ')}</p>
                         </div>
                       </div>
                     )}
@@ -529,7 +529,7 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
                         <Zap className="h-5 w-5 text-orange-500 mt-0.5" />
                         <div>
                           <p className="text-sm text-slate-500">Electricity</p>
-                          <p className="font-semibold text-slate-900 capitalize">{specs.electricitySupply.replace(/_/g, ' ')}</p>
+                          <p className="font-semibold text-slate-900 capitalize">{String(specs.electricitySupply).replace(/_/g, ' ')}</p>
                         </div>
                       </div>
                     )}
@@ -632,9 +632,9 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
             </div>
 
             {/* 2.4 Developer Brand Section (when property is linked to a brand profile) */}
-            {(usedData.developerBrand || (property as any).developerBrandProfile) && (
+            {((property as any).developerBrand || (property as any).developerBrandProfile) && (
               <DeveloperBrandSection 
-                brand={(usedData.developerBrand || (property as any).developerBrandProfile) as DeveloperBrandData} 
+                brand={((property as any).developerBrand || (property as any).developerBrandProfile) as DeveloperBrandData} 
               />
             )}
 
