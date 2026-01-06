@@ -17,6 +17,7 @@ interface LocationPageLayoutProps {
   propertyTypeExplorer?: React.ReactNode;
   topLocalities?: any[]; // Keep existing for data passing if needed
   topLocalitiesShowcase?: React.ReactNode;
+  propertyCategories?: React.ReactNode;
   highDemandDevelopments?: React.ReactNode;
   popularLocations?: React.ReactNode;
   recommendedAgents?: React.ReactNode;
@@ -40,6 +41,7 @@ export const LocationPageLayout: React.FC<LocationPageLayoutProps> = ({
   propertyTypeExplorer,
   topLocalities,
   topLocalitiesShowcase,
+  propertyCategories,
   highDemandDevelopments,
   popularLocations,
   recommendedAgents,
@@ -128,7 +130,14 @@ export const LocationPageLayout: React.FC<LocationPageLayoutProps> = ({
           </section>
         )}
 
-        {/* 6️⃣ High Demand Developments (Projects) */}
+        {/* 6️⃣ Property Categories (Explore by Type) */}
+        {propertyCategories && (
+          <section id="property-categories" className="scroll-mt-24">
+            {propertyCategories}
+          </section>
+        )}
+
+        {/* 7️⃣ High Demand Developments (Projects) */}
         {highDemandDevelopments && (
           <section id="high-demand-developments" className="scroll-mt-24">
             {highDemandDevelopments}

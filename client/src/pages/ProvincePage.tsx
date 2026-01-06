@@ -25,6 +25,7 @@ import { TrendingSuburbsCarousel } from '@/components/location/TrendingSuburbsCa
 import { LocationPropertyTypeExplorer } from '@/components/location/LocationPropertyTypeExplorer';
 import { DiscoverProperties } from '@/components/DiscoverProperties';
 import { ExploreCities } from '@/components/ExploreCities';
+import { PropertyCategories } from '@/components/PropertyCategories';
 // EnhancedHero not needed - using LocationHeroSection for location pages
 
 export default function ProvincePage({ params }: { params: { province: string } }) {
@@ -112,6 +113,17 @@ export default function ProvincePage({ params }: { params: { province: string } 
             locationId={province.id} 
             locationName={province.name} 
             locationScope="province" 
+          />
+        }
+        // Section: Property Categories (Explore by Type)
+        propertyCategories={
+          <PropertyCategories 
+            preselectedLocation={{
+              name: province.name,
+              slug: provinceSlug,
+              provinceSlug: provinceSlug,
+              type: 'province'
+            }}
           />
         }
 
