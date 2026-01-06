@@ -179,7 +179,7 @@ export default function DevelopmentDetail() {
     location: `${dev.suburb ? dev.suburb + ', ' : ''}${dev.city}`,
     address: dev.address || '',
     description: dev.description || '',
-    completionDate: dev.completionDate ? new Date(dev.completionDate).toLocaleDateString() : 'TBA',
+    completionDate: dev.completionDate ? new Date(dev.completionDate).toLocaleDateString() : null,
     totalUnits: dev.totalUnits || 0,
     availableUnits: dev.availableUnits || 0,
     startingPrice: Number(dev.priceFrom) || 0,
@@ -294,17 +294,19 @@ export default function DevelopmentDetail() {
                     </div>
                   </CardContent>
                 </Card>
-                <Card className="shadow-none border border-slate-200/60 bg-slate-50/50">
-                  <CardContent className="p-3 flex items-center gap-3">
-                    <div className="p-1.5 bg-orange-50 rounded-md text-orange-600">
-                      <Calendar className="h-4 w-4" />
-                    </div>
-                    <div>
-                      <p className="text-xs text-slate-500 font-medium uppercase tracking-wide">Completion</p>
-                      <p className="font-semibold text-sm text-slate-900">{development.completionDate}</p>
-                    </div>
-                  </CardContent>
-                </Card>
+                {development.completionDate && (
+                  <Card className="shadow-none border border-slate-200/60 bg-slate-50/50">
+                    <CardContent className="p-3 flex items-center gap-3">
+                      <div className="p-1.5 bg-orange-50 rounded-md text-orange-600">
+                        <Calendar className="h-4 w-4" />
+                      </div>
+                      <div>
+                        <p className="text-xs text-slate-500 font-medium uppercase tracking-wide">Completion</p>
+                        <p className="font-semibold text-sm text-slate-900">{development.completionDate}</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
               </div>
 
               <DevelopmentOverviewCard 
