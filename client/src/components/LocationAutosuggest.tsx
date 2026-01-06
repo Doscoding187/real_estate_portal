@@ -227,7 +227,7 @@ export function LocationAutosuggest({
       {/* Container simulating Input look and feel */}
       <div 
         onClick={handleWrapperClick}
-        className={`flex flex-wrap items-center gap-2 min-h-[44px] w-full rounded-lg border border-input bg-background px-3 py-1 ring-offset-background group-focus-within:ring-2 group-focus-within:ring-ring group-focus-within:ring-offset-2 ${inputClassName}`}
+        className={`flex flex-wrap items-center gap-2 min-h-[44px] w-full rounded-lg border border-blue-200 bg-blue-50/50 px-3 py-1 ring-offset-background group-focus-within:ring-2 group-focus-within:ring-blue-500 group-focus-within:ring-offset-2 ${inputClassName}`}
       >
         {/* Render Pills */}
         {selectedLocations.map((loc, index) => (
