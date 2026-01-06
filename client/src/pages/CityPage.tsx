@@ -174,9 +174,9 @@ export default function CityPage({ params }: { params: { province: string; city:
             backgroundImage="https://images.unsplash.com/photo-1449824913935-59a10b8d2000?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80"
             listingCount={stats.totalListings}
             campaign={heroCampaign}
-            quickLinks={suburbs?.slice(0, 5).map((suburb: any) => ({
+            quickLinks={suburbs?.slice(0, 10).map((suburb: any) => ({
               label: suburb.name,
-              path: `/${provinceSlug}/${citySlug}/${suburb.slug}`,
+              slug: suburb.slug,
             })) || []}
           />
         }
@@ -259,10 +259,9 @@ export default function CityPage({ params }: { params: { province: string; city:
                 customLocations={suburbs.map((suburb: any) => ({
                     name: suburb.name,
                     province: city.name,
-                    icon: MapPin, // TODO: Fix missing import, assuming MapPin is from lucide-react or not imported?
                     slug: suburb.slug,
                     provinceSlug: `${provinceSlug}/${citySlug}`, 
-                    color: 'from-blue-500 to-indigo-500'
+                    propertyCount: suburb.listingCount ? `${suburb.listingCount.toLocaleString()}+ Properties` : undefined,
                 }))}
                 title={`Popular Suburbs in ${city.name}`}
                 description={`Explore top-rated suburbs in ${city.name}, offering a mix of investment opportunities and dream homes.`}

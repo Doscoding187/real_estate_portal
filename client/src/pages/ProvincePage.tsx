@@ -98,9 +98,9 @@ export default function ProvincePage({ params }: { params: { province: string } 
             backgroundImage="https://images.unsplash.com/photo-1577931767667-0c58e744d081?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80"
             listingCount={stats.totalListings}
             campaign={heroCampaign}
-            quickLinks={cities?.slice(0, 5).map((city: any) => ({
+            quickLinks={cities?.slice(0, 10).map((city: any) => ({
               label: city.name,
-              path: `/${provinceSlug}/${city.slug}`,
+              slug: city.slug,
             })) || []}
           />
         }
@@ -203,10 +203,17 @@ export default function ProvincePage({ params }: { params: { province: string } 
 
         popularLocations={
           <ExploreCities 
-            provinceSlug={provinceSlug}
             basePath="/property-for-sale"
+            queryParams="?view=list"
             title={`Explore Popular Cities in ${province.name}`}
             description={`Find high-end residences and investment opportunities in top cities across ${province.name}.`}
+            customLocations={cities?.map((city: any) => ({
+              name: city.name,
+              province: province.name,
+              slug: city.slug,
+              provinceSlug: provinceSlug,
+              propertyCount: city.listingCount ? `${city.listingCount.toLocaleString()}+ Properties` : undefined,
+            })) || []}
           />
         }
 
