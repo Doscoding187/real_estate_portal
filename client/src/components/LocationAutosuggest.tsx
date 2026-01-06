@@ -226,7 +226,6 @@ export function LocationAutosuggest({
   return (
     <div ref={wrapperRef} className={`relative ${className}`}>
       <div className="relative h-full w-full">
-        {showIcon && <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />}
         <Input
           type="text"
           autoComplete="off"
@@ -246,11 +245,13 @@ export function LocationAutosuggest({
           }}
           onFocus={() => query.length >= 1 && setShowSuggestions(true)}
           onKeyDown={handleKeyDown}
-          className={`${showIcon ? 'pl-10' : 'pl-3'} ${inputClassName || 'bg-gray-100 border-0 rounded-lg h-11'}`}
+          className={`pl-4 ${showIcon || isLoading ? 'pr-10' : 'pr-3'} ${inputClassName || 'bg-gray-100 border-0 rounded-lg h-11'}`}
         />
-        {isLoading && (
-          <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 animate-spin" />
-        )}
+        {isLoading ? (
+          <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 animate-spin" />
+        ) : showIcon ? (
+          <MapPin className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+        ) : null}
       </div>
 
       {/* Suggestions Dropdown */}
