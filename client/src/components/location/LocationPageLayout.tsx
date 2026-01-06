@@ -137,6 +137,13 @@ export const LocationPageLayout: React.FC<LocationPageLayoutProps> = ({
           </section>
         )}
 
+        {/* 6.5️⃣ Trending Suburbs (Full Width Carousel) */}
+        {fullWidthSection && (
+          <section className="w-full scroll-mt-24">
+            {fullWidthSection}
+          </section>
+        )}
+
         {/* 7️⃣ High Demand Developments (Projects) */}
         {highDemandDevelopments && (
           <section id="high-demand-developments" className="scroll-mt-24">
@@ -190,13 +197,6 @@ export const LocationPageLayout: React.FC<LocationPageLayoutProps> = ({
          {buyerCTA && (
           <section className="my-16">
             {buyerCTA}
-          </section>
-        )}
-
-        {/* Full Width Section (for carousels that span container) */}
-        {fullWidthSection && (
-          <section className="w-full">
-            {fullWidthSection}
           </section>
         )}
 
