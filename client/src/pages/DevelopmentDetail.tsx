@@ -484,9 +484,9 @@ export default function DevelopmentDetail() {
               {(() => {
                 // Parse amenities to extract specifications
                 const allAmenities = development.amenities || [];
-                const allFeatures = parseJSON(dev.features) || [];
-                const allHighlights = parseJSON(dev.highlights) || [];
-                const combined = [...allAmenities, ...allFeatures, ...allHighlights].map(s => s.toLowerCase());
+                const allFeatures = Array.isArray(dev.features) ? dev.features : [];
+                const allHighlights = Array.isArray(dev.highlights) ? dev.highlights : [];
+                const combined = [...allAmenities, ...allFeatures, ...allHighlights].map(s => String(s).toLowerCase());
                 
                 // Helper to check if any keyword matches
                 const hasAny = (keywords: string[]) => keywords.some(k => combined.some(a => a.includes(k.toLowerCase())));
