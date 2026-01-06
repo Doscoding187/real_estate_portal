@@ -74,23 +74,26 @@ export function PropertyCategories({ preselectedLocation }: PropertyCategoriesPr
   ];
 
   const handleCategoryClick = (category: typeof categories[0]) => {
-    // If we have a preselected location (e.g. from City/Suburb page), 
-    // navigate directly to the Transaction Page for that category + location.
-    if (preselectedLocation) {
-       const url = `/property-for-sale/${preselectedLocation.provinceSlug}/${preselectedLocation.slug}?propertyType=${category.type}&view=list`;
-       // Use window.location.href for full page navigation to ensure re-render
-       window.location.href = url;
-       return;
-    }
-
-    // Default flow (Location Picker -> Filters)
     setSelectedCategory(category);
-    setStep(1);
-    setSelectedLocation(null);
     setFeatures([]);
     setMinPrice('');
     setMaxPrice('');
     setBedrooms('');
+    
+    // If we have a preselected location, pre-fill it and skip to step 2 (filters)
+    if (preselectedLocation) {
+      setSelectedLocation({
+        name: preselectedLocation.name,
+        slug: preselectedLocation.slug,
+        provinceSlug: preselectedLocation.provinceSlug,
+      });
+      setStep(2); // Go directly to filters
+    } else {
+      // No preselected location - start at step 1 (location picker)
+      setSelectedLocation(null);
+      setStep(1);
+    }
+    
     setIsDialogOpen(true);
   };
 
