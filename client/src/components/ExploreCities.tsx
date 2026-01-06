@@ -42,6 +42,7 @@ export function ExploreCities({
   const [visibleCount, setVisibleCount] = useState(initialLimit);
 
   const cities: City[] = [
+    // Gauteng
     {
       name: 'Johannesburg',
       province: 'Gauteng',
@@ -49,22 +50,6 @@ export function ExploreCities({
       provinceSlug: 'gauteng',
       image: 'https://images.unsplash.com/photo-1577948000111-9c9707350061?w=800&q=80',
       propertyCount: '24,500+ Properties'
-    },
-    {
-      name: 'Cape Town',
-      province: 'Western Cape',
-      slug: 'cape-town',
-      provinceSlug: 'western-cape',
-      image: 'https://images.unsplash.com/photo-1580060839134-75a5edca2e99?w=800&q=80',
-      propertyCount: '18,200+ Properties'
-    },
-    {
-      name: 'Durban',
-      province: 'KwaZulu-Natal',
-      slug: 'durban',
-      provinceSlug: 'kwazulu-natal',
-      image: 'https://images.unsplash.com/photo-1549297136-1c4b7b25055b?w=800&q=80',
-      propertyCount: '12,400+ Properties'
     },
     {
       name: 'Pretoria',
@@ -91,6 +76,81 @@ export function ExploreCities({
       propertyCount: '4,100+ Properties'
     },
     {
+      name: 'Centurion',
+      province: 'Gauteng',
+      slug: 'centurion',
+      provinceSlug: 'gauteng',
+      image: 'https://images.unsplash.com/photo-1605276374104-dee2a0ed3cd6?w=800&q=80',
+      propertyCount: '3,500+ Properties'
+    },
+    {
+      name: 'Randburg',
+      province: 'Gauteng',
+      slug: 'randburg',
+      provinceSlug: 'gauteng',
+      image: 'https://images.unsplash.com/photo-1628191011993-4350f555e09f?w=800&q=80',
+      propertyCount: '2,950+ Properties'
+    },
+    {
+      name: 'Roodepoort',
+      province: 'Gauteng',
+      slug: 'roodepoort',
+      provinceSlug: 'gauteng',
+      propertyCount: '2,800+ Properties'
+    },
+    {
+      name: 'Benoni',
+      province: 'Gauteng',
+      slug: 'benoni',
+      provinceSlug: 'gauteng',
+      propertyCount: '2,400+ Properties'
+    },
+    {
+      name: 'Boksburg',
+      province: 'Gauteng',
+      slug: 'boksburg',
+      provinceSlug: 'gauteng',
+      propertyCount: '2,200+ Properties'
+    },
+    {
+      name: 'Alberton',
+      province: 'Gauteng',
+      slug: 'alberton',
+      provinceSlug: 'gauteng',
+      propertyCount: '2,100+ Properties'
+    },
+    {
+      name: 'Kempton Park',
+      province: 'Gauteng',
+      slug: 'kempton-park',
+      provinceSlug: 'gauteng',
+      propertyCount: '1,900+ Properties'
+    },
+    {
+      name: 'Soweto',
+      province: 'Gauteng',
+      slug: 'soweto',
+      provinceSlug: 'gauteng',
+      propertyCount: '1,500+ Properties'
+    },
+    // Other Provinces (for Homepage)
+    {
+      name: 'Cape Town',
+      province: 'Western Cape',
+      slug: 'cape-town',
+      provinceSlug: 'western-cape',
+      image: 'https://images.unsplash.com/photo-1580060839134-75a5edca2e99?w=800&q=80',
+      propertyCount: '18,200+ Properties'
+    },
+    {
+      name: 'Durban',
+      province: 'KwaZulu-Natal',
+      slug: 'durban',
+      provinceSlug: 'kwazulu-natal',
+      image: 'https://images.unsplash.com/photo-1549297136-1c4b7b25055b?w=800&q=80',
+      propertyCount: '12,400+ Properties'
+    },
+    {
       name: 'Umhlanga',
       province: 'KwaZulu-Natal',
       slug: 'umhlanga',
@@ -107,25 +167,9 @@ export function ExploreCities({
       propertyCount: '2,800+ Properties'
     },
     {
-      name: 'Randburg',
-      province: 'Gauteng',
-      slug: 'randburg',
-      provinceSlug: 'gauteng',
-      image: 'https://images.unsplash.com/photo-1628191011993-4350f555e09f?w=800&q=80',
-      propertyCount: '2,950+ Properties'
-    },
-    {
-      name: 'Centurion',
-      province: 'Gauteng',
-      slug: 'centurion',
-      provinceSlug: 'gauteng',
-      image: 'https://images.unsplash.com/photo-1605276374104-dee2a0ed3cd6?w=800&q=80',
-      propertyCount: '3,500+ Properties'
-    },
-     {
-      name: 'Port Elizabeth',
+      name: 'Gqeberha',
       province: 'Eastern Cape',
-      slug: 'port-elizabeth',
+      slug: 'gqeberha',
       provinceSlug: 'eastern-cape',
       image: 'https://images.unsplash.com/photo-1577909384666-382559639556?w=800&q=80',
       propertyCount: '2,100+ Properties'
