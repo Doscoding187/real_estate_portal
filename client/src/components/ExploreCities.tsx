@@ -184,10 +184,12 @@ export function ExploreCities({
     }
   ];
 
-  // If custom locations are provided, use them. Otherwise, filter by province or show defaults.
-  const allCities = customLocations || (provinceSlug 
-    ? cities.filter(city => city.provinceSlug.toLowerCase() === provinceSlug.toLowerCase())
-    : cities);
+  // If custom locations are provided (even empty), use them. Only fall back to hardcoded cities when prop is undefined.
+  const allCities = customLocations !== undefined 
+    ? customLocations 
+    : (provinceSlug 
+        ? cities.filter(city => city.provinceSlug.toLowerCase() === provinceSlug.toLowerCase())
+        : cities);
 
   const displayedCities = allCities.slice(0, visibleCount);
   const remainingCount = allCities.length - visibleCount;
