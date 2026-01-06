@@ -175,6 +175,7 @@ export async function listPublicDevelopments(limit: number = 20) {
   const results = await db
     .select({
       id: developments.id,
+      developerId: developments.developerId,
       name: developments.name,
       slug: developments.slug,
       description: developments.description,

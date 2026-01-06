@@ -70,6 +70,12 @@ export default function DevelopmentDetail() {
       { enabled: !!slug }
   );
 
+  // Fetch other developments from same developer
+  const { data: allDevelopments } = trpc.developer.listPublicDevelopments.useQuery(
+      { limit: 50 },
+      { enabled: !!dev?.developer?.id }
+  );
+
   if (isLoading) {
       return (
           <div className="min-h-screen flex items-center justify-center">
@@ -796,18 +802,35 @@ export default function DevelopmentDetail() {
 
                     <Separator className="bg-slate-100 my-3" />
 
-                    {/* Past Projects */}
-                    <div>
-                      <p className="text-[10px] font-bold text-slate-900 uppercase tracking-wide mb-2 flex items-center gap-1">
-                        <Briefcase className="w-3 h-3 text-slate-400" />
-                        Past Projects
-                      </p>
-                    <div className="space-y-1 pl-1 border-l-2 border-slate-100">
-                        <p className="text-xs text-slate-600 pl-2">Waterfall Estate, Midrand</p>
-                        <p className="text-xs text-slate-600 pl-2">Hyde Park Residences</p>
-                        <p className="text-xs text-slate-600 pl-2">Century City Towers</p>
-                      </div>
-                    </div>
+                    {/* Other Projects */}
+                    {(() => {
+                      // Filter to show other projects from same developer
+                      const otherProjects = (allDevelopments || [])
+                        .filter((d: any) => d.developerId === dev.developer?.id && d.id !== dev.id)
+                        .slice(0, 3);
+                      
+                      if (otherProjects.length === 0) return null;
+                      
+                      return (
+                        <div>
+                          <p className="text-[10px] font-bold text-slate-900 uppercase tracking-wide mb-2 flex items-center gap-1">
+                            <Briefcase className="w-3 h-3 text-slate-400" />
+                            Other Projects
+                          </p>
+                          <div className="space-y-1 pl-1 border-l-2 border-slate-100">
+                            {otherProjects.map((project: any) => (
+                              <a 
+                                key={project.id}
+                                href={`/development/${project.slug}`}
+                                className="text-xs text-slate-600 pl-2 hover:text-blue-600 transition-colors block"
+                              >
+                                {project.name}
+                              </a>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })()}
 
                     <Button variant="link" className="p-0 h-auto text-blue-600 mt-3 text-xs font-medium">
                       View Developer Profile →
