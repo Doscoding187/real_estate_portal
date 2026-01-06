@@ -227,20 +227,20 @@ export function LocationAutosuggest({
       {/* Container simulating Input look and feel */}
       <div 
         onClick={handleWrapperClick}
-        className={`flex flex-wrap items-center gap-2 min-h-[44px] w-full rounded-lg border border-blue-200 bg-blue-50/50 px-3 py-1 ring-offset-background group-focus-within:ring-2 group-focus-within:ring-blue-500 group-focus-within:ring-offset-2 ${inputClassName}`}
+        className={`flex flex-wrap items-center gap-2 min-h-[44px] w-full rounded-lg border border-blue-200 bg-blue-50/50 px-3 py-1 ${inputClassName}`}
       >
         {/* Render Pills */}
         {selectedLocations.map((loc, index) => (
             <div 
                 key={`${loc.id}-${index}`}
-                className="flex items-center gap-1.5 bg-slate-900 text-white text-sm px-3 py-1.5 rounded-md whitespace-nowrap shadow-sm animate-in fade-in zoom-in duration-200"
+                className="flex items-center gap-1.5 bg-blue-500 text-white text-sm px-3 py-1.5 rounded-md whitespace-nowrap shadow-sm animate-in fade-in zoom-in duration-200"
                 onClick={(e) => e.stopPropagation()} 
             >
                 <span className="font-medium truncate max-w-[150px]">{loc.name}</span>
                 <button
                     type="button"
                     onClick={() => onRemove?.(index)}
-                    className="hover:bg-slate-700 rounded-full p-0.5 transition-colors focus:outline-none focus:ring-1 focus:ring-slate-400"
+                    className="hover:bg-blue-600 rounded-full p-0.5 transition-colors focus:outline-none focus:ring-1 focus:ring-blue-300"
                     aria-label={`Remove ${loc.name}`}
                 >
                     <X className="h-3.5 w-3.5" />
