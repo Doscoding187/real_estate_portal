@@ -213,19 +213,19 @@ export const locationAnalyticsService = {
       );
     
     // Separate sale and rental listings
-    const saleListings = activeListings.filter(l => l.action === 'sell' && l.askingPrice);
-    const rentalListings = activeListings.filter(l => l.action === 'rent' && l.monthlyRent);
+    const saleListings = activeListings.filter((l: any) => l.action === 'sell' && l.askingPrice);
+    const rentalListings = activeListings.filter((l: any) => l.action === 'rent' && l.monthlyRent);
     
     // Calculate average sale price
     // Property 24: Average sale price calculation
     const avgSalePrice = saleListings.length > 0
-      ? saleListings.reduce((sum, l) => sum + Number(l.askingPrice), 0) / saleListings.length
+      ? saleListings.reduce((sum: number, l) => sum + Number(l.askingPrice), 0) / saleListings.length
       : null;
     
     // Calculate average rental price
     // Property 25: Average rental price calculation
     const avgRentalPrice = rentalListings.length > 0
-      ? rentalListings.reduce((sum, l) => sum + Number(l.monthlyRent), 0) / rentalListings.length
+      ? rentalListings.reduce((sum: number, l) => sum + Number(l.monthlyRent), 0) / rentalListings.length
       : null;
     
     // Calculate median price (all listings)
@@ -238,13 +238,13 @@ export const locationAnalyticsService = {
     
     // Calculate price per square meter
     // Property 28: Price per square meter calculation
-    const listingsWithArea = saleListings.filter(l => {
+    const listingsWithArea = saleListings.filter((l: any) => {
       const details = l.propertyDetails as any;
       return details && (details.unitSizeM2 || details.houseAreaM2 || details.floorAreaM2);
     });
     
     const pricePerSqm = listingsWithArea.length > 0
-      ? listingsWithArea.reduce((sum, l) => {
+      ? listingsWithArea.reduce((sum: number, l) => {
           const details = l.propertyDetails as any;
           const area = details.unitSizeM2 || details.houseAreaM2 || details.floorAreaM2;
           return sum + (Number(l.askingPrice) / area);
@@ -329,14 +329,14 @@ export const locationAnalyticsService = {
     // Calculate average days on market
     // Property 27: Days on market calculation
     const now = new Date();
-    const daysOnMarket = activeListings.map(l => {
+    const daysOnMarket = activeListings.map((l: any) => {
       const createdAt = new Date(l.createdAt);
       const diffTime = Math.abs(now.getTime() - createdAt.getTime());
       return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     });
     
     const avgDaysOnMarket = daysOnMarket.length > 0
-      ? Math.round(daysOnMarket.reduce((sum, days) => sum + days, 0) / daysOnMarket.length)
+      ? Math.round(daysOnMarket.reduce((sum: number, days) => sum + days, 0) / daysOnMarket.length)
       : null;
     
     // Count new listings in last 30 days
@@ -357,8 +357,8 @@ export const locationAnalyticsService = {
     const newListingsLast30Days = Number(newListings[0]?.count || 0);
     
     // Count for sale vs to rent
-    const forSaleCount = activeListings.filter(l => l.action === 'sell').length;
-    const toRentCount = activeListings.filter(l => l.action === 'rent').length;
+    const forSaleCount = activeListings.filter((l: any) => l.action === 'sell').length;
+    const toRentCount = activeListings.filter((l: any) => l.action === 'rent').length;
     
     // TODO: Implement price reductions tracking
     // This would require a listing_history table to track price changes
@@ -596,7 +596,7 @@ export const locationAnalyticsService = {
           AND searched_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
       `);
       
-      const row = result.rows[0] as { total_searches: number; weighted_score: number };
+      const row = result.rows[0] as any;
       
       if (!row || row.total_searches === 0) {
         return 0;
@@ -604,7 +604,7 @@ export const locationAnalyticsService = {
       
       // Normalize weighted score to 0-100 scale
       // Assume 100+ weighted searches = score of 100
-      const normalizedScore = Math.min(100, (row.weighted_score / 100) * 100);
+      const normalizedScore = Math.min(100, (Number(row.weighted_score) / 100) * 100);
       
       return Math.round(normalizedScore);
     } catch (error) {

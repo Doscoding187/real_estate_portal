@@ -1,0 +1,702 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e2]:
+  - region "Notifications alt+T"
+  - link "Skip to main content" [ref=e3] [cursor=pointer]:
+    - /url: "#main-content"
+  - generic [ref=e4]:
+    - navigation [ref=e5]:
+      - generic [ref=e7]:
+        - link "Property Listify" [ref=e8] [cursor=pointer]:
+          - /url: /
+          - generic [ref=e10]: Property Listify
+        - navigation "Main" [ref=e11]:
+          - list [ref=e13]:
+            - listitem [ref=e14]:
+              - button "City" [ref=e15] [cursor=pointer]:
+                - text: City
+                - img [ref=e16]
+            - listitem [ref=e18]:
+              - button "For Buyers" [ref=e19] [cursor=pointer]:
+                - text: For Buyers
+                - img [ref=e20]
+            - listitem [ref=e22]:
+              - button "For Renters" [ref=e23] [cursor=pointer]:
+                - text: For Renters
+                - img [ref=e24]
+            - listitem [ref=e26]:
+              - button "For Sellers" [ref=e27] [cursor=pointer]:
+                - text: For Sellers
+                - img [ref=e28]
+            - listitem [ref=e30]:
+              - button "Insights" [ref=e31] [cursor=pointer]:
+                - text: Insights
+                - img [ref=e32]
+            - listitem [ref=e34]:
+              - link "Explore NEW" [ref=e35] [cursor=pointer]:
+                - /url: /explore/home
+                - button "Explore NEW" [ref=e36]:
+                  - text: Explore
+                  - generic [ref=e37]: NEW
+        - generic [ref=e38]:
+          - link "Advertise with us" [ref=e39] [cursor=pointer]:
+            - /url: /advertise
+            - button "Advertise with us" [ref=e40]:
+              - img
+              - text: Advertise with us
+          - button "Login" [ref=e41] [cursor=pointer]
+    - generic [ref=e48]:
+      - generic [ref=e49]:
+        - heading "South Africa's Fastest Growing Real Estate Platform" [level=1] [ref=e50]:
+          - text: South Africa's Fastest Growing
+          - text: Real Estate Platform
+        - paragraph [ref=e51]:
+          - text: From browsing properties to closing deals - your complete
+          - text: real estate journey starts here
+      - generic [ref=e53]:
+        - button "Buy" [ref=e54] [cursor=pointer]:
+          - img [ref=e55]
+          - text: Buy
+        - button "Rental" [ref=e58] [cursor=pointer]:
+          - img [ref=e59]
+          - text: Rental
+        - button "Developments" [ref=e61] [cursor=pointer]:
+          - img [ref=e62]
+          - text: Developments
+        - button "Shared Living" [ref=e70] [cursor=pointer]:
+          - img [ref=e71]
+          - text: Shared Living
+        - button "Plot & Land" [ref=e76] [cursor=pointer]:
+          - img [ref=e77]
+          - text: Plot & Land
+        - button "Commercial" [ref=e80] [cursor=pointer]:
+          - img [ref=e81]
+          - text: Commercial
+        - button "Agents" [ref=e84] [cursor=pointer]:
+          - img [ref=e85]
+          - text: Agents
+      - generic [ref=e92]:
+        - generic [ref=e93]:
+          - generic [ref=e94]:
+            - img
+            - generic [ref=e95]:
+              - textbox "Loading maps..." [disabled]
+            - generic [ref=e96]:
+              - button "Use current location" [ref=e97] [cursor=pointer]:
+                - img
+              - button "Voice search" [ref=e98] [cursor=pointer]:
+                - img
+          - button [ref=e99] [cursor=pointer]:
+            - img
+        - generic [ref=e100]:
+          - generic [ref=e101]: "Popular Locations:"
+          - button "Gauteng" [ref=e102] [cursor=pointer]
+          - button "Western Cape" [ref=e103] [cursor=pointer]
+          - button "KwaZulu-Natal" [ref=e104] [cursor=pointer]
+          - button "Eastern Cape" [ref=e105] [cursor=pointer]
+          - button "Mpumalanga" [ref=e106] [cursor=pointer]
+    - generic [ref=e108]:
+      - generic [ref=e109]:
+        - generic [ref=e110]:
+          - generic [ref=e111]: 🔥
+          - generic [ref=e112]: Trending Now
+        - heading "Hot Selling Residential Developments" [level=2] [ref=e113]
+        - paragraph [ref=e114]: A handpicked collection of the country's most in-demand residential developments. These properties offer unmatched value in top cities with ideal locations, smart amenities, and trusted builders.
+      - generic [ref=e115]:
+        - tablist [ref=e117] [cursor=pointer]:
+          - tab "Gauteng" [selected] [ref=e118]
+          - tab "Western Cape" [ref=e119]
+          - tab "KwaZulu-Natal" [ref=e120]
+          - tab "Eastern Cape" [ref=e121]
+          - tab "Mpumalanga" [ref=e122]
+          - tab "Limpopo" [ref=e123]
+          - tab "North West" [ref=e124]
+          - tab "Free State" [ref=e125]
+          - tab "Northern Cape" [ref=e126]
+        - tabpanel "Gauteng" [ref=e127] [cursor=pointer]:
+          - generic [ref=e128]:
+            - img [ref=e130]
+            - paragraph [ref=e138]: No developments available
+            - paragraph [ref=e139]: Check back soon for new listings in Gauteng
+      - button "Explore All in Gauteng" [ref=e141] [cursor=pointer]:
+        - text: Explore All in Gauteng
+        - img
+    - generic [ref=e143]:
+      - generic [ref=e144]:
+        - heading "Explore Property Categories" [level=2] [ref=e145]
+        - paragraph [ref=e146]: Find the perfect property type that suits your needs across South Africa
+      - generic [ref=e147]:
+        - button "Apartments 0" [ref=e148] [cursor=pointer]:
+          - img [ref=e151]
+          - heading "Apartments" [level=3] [ref=e159]
+          - paragraph [ref=e160]: "0"
+        - button "Houses 0" [ref=e161] [cursor=pointer]:
+          - img [ref=e164]
+          - heading "Houses" [level=3] [ref=e167]
+          - paragraph [ref=e168]: "0"
+        - button "Townhouses 0" [ref=e169] [cursor=pointer]:
+          - img [ref=e172]
+          - heading "Townhouses" [level=3] [ref=e184]
+          - paragraph [ref=e185]: "0"
+        - button "Commercial 0" [ref=e186] [cursor=pointer]:
+          - img [ref=e189]
+          - heading "Commercial" [level=3] [ref=e194]
+          - paragraph [ref=e195]: "0"
+        - button "Land & Plots 0" [ref=e196] [cursor=pointer]:
+          - img [ref=e199]
+          - heading "Land & Plots" [level=3] [ref=e202]
+          - paragraph [ref=e203]: "0"
+        - button "Farms 0" [ref=e204] [cursor=pointer]:
+          - img [ref=e207]
+          - heading "Farms" [level=3] [ref=e217]
+          - paragraph [ref=e218]: "0"
+    - generic [ref=e220]:
+      - generic [ref=e221]:
+        - heading "Property Price Insights in South Africa" [level=2] [ref=e222]
+        - paragraph [ref=e223]: Get accurate property price insights in South Africa with city-wise trends, median rates, and micro-market comparisons.
+      - generic [ref=e225]:
+        - img [ref=e226]
+        - paragraph [ref=e228]: Loading price insights...
+    - generic [ref=e230]:
+      - generic [ref=e231]:
+        - heading "Discover Properties in South Africa" [level=2] [ref=e232]
+        - paragraph [ref=e233]: Explore property sales, rentals, and new developments across South Africa's most vibrant locations.
+      - generic [ref=e235]:
+        - button "Cape Town" [ref=e236] [cursor=pointer]
+        - button "Johannesburg" [ref=e237] [cursor=pointer]
+        - button "Durban" [ref=e238] [cursor=pointer]
+        - button "Pretoria" [ref=e239] [cursor=pointer]
+        - button "Bloemfontein" [ref=e240] [cursor=pointer]
+        - button "Gqeberha" [ref=e241] [cursor=pointer]
+        - button "Polokwane" [ref=e242] [cursor=pointer]
+        - button "Kimberley" [ref=e243] [cursor=pointer]
+        - button "Mbombela" [ref=e244] [cursor=pointer]
+        - button "Mahikeng" [ref=e245] [cursor=pointer]
+      - generic [ref=e246]:
+        - generic [ref=e248]:
+          - generic [ref=e249]:
+            - button "Properties for Sale" [ref=e250] [cursor=pointer]:
+              - generic [ref=e251]: Properties for Sale
+              - img [ref=e253]
+            - generic [ref=e256]:
+              - paragraph [ref=e257]: Find your dream home in Cape Town. From affordable apartments to premium family houses, explore properties that match your budget and lifestyle.
+              - link "View Sale Listings" [ref=e258] [cursor=pointer]:
+                - /url: /properties?action=sale
+                - text: View Sale Listings
+                - img [ref=e259]
+          - generic [ref=e261]:
+            - button "Properties for Rent" [ref=e262] [cursor=pointer]:
+              - generic [ref=e263]: Properties for Rent
+              - img [ref=e265]
+            - generic [ref=e267]:
+              - paragraph [ref=e268]: Searching for a rental in Cape Town? Browse our selection of apartments, garden cottages, and corporate rentals available now.
+              - link "View Rental Listings" [ref=e269] [cursor=pointer]:
+                - /url: /properties?action=rent
+                - text: View Rental Listings
+                - img [ref=e270]
+          - generic [ref=e272]:
+            - button "New Developments" [ref=e273] [cursor=pointer]:
+              - generic [ref=e274]: New Developments
+              - img [ref=e276]
+            - generic [ref=e278]:
+              - paragraph [ref=e279]: Invest in the future with new developments in Cape Town. Explore off-plan opportunities and brand new estates.
+              - link "View Developments" [ref=e280] [cursor=pointer]:
+                - /url: /developments
+                - text: View Developments
+                - img [ref=e281]
+        - generic [ref=e283]:
+          - generic [ref=e285]:
+            - generic [ref=e287] [cursor=pointer]:
+              - img "Houses" [ref=e288]
+              - generic [ref=e290]:
+                - generic [ref=e292]: Explore
+                - heading "Houses" [level=3] [ref=e293]
+                - paragraph [ref=e294]:
+                  - generic [ref=e295]: For Sale
+                  - generic [ref=e296]: in Cape Town
+            - generic [ref=e298] [cursor=pointer]:
+              - img "Apartments" [ref=e299]
+              - generic [ref=e301]:
+                - generic [ref=e303]: Explore
+                - heading "Apartments" [level=3] [ref=e304]
+                - paragraph [ref=e305]:
+                  - generic [ref=e306]: For Sale
+                  - generic [ref=e307]: in Cape Town
+            - generic [ref=e309] [cursor=pointer]:
+              - img "Townhouses" [ref=e310]
+              - generic [ref=e312]:
+                - generic [ref=e314]: Explore
+                - heading "Townhouses" [level=3] [ref=e315]
+                - paragraph [ref=e316]:
+                  - generic [ref=e317]: For Sale
+                  - generic [ref=e318]: in Cape Town
+            - generic [ref=e320] [cursor=pointer]:
+              - img "Office Spaces" [ref=e321]
+              - generic [ref=e323]:
+                - generic [ref=e325]: Explore
+                - heading "Office Spaces" [level=3] [ref=e326]
+                - paragraph [ref=e327]:
+                  - generic [ref=e328]: For Sale
+                  - generic [ref=e329]: in Cape Town
+            - generic [ref=e331] [cursor=pointer]:
+              - img "Shops" [ref=e332]
+              - generic [ref=e334]:
+                - generic [ref=e336]: Explore
+                - heading "Shops" [level=3] [ref=e337]
+                - paragraph [ref=e338]:
+                  - generic [ref=e339]: For Sale
+                  - generic [ref=e340]: in Cape Town
+            - generic [ref=e342] [cursor=pointer]:
+              - img "Penthouses" [ref=e343]
+              - generic [ref=e345]:
+                - generic [ref=e347]: Explore
+                - heading "Penthouses" [level=3] [ref=e348]
+                - paragraph [ref=e349]:
+                  - generic [ref=e350]: For Sale
+                  - generic [ref=e351]: in Cape Town
+          - button [ref=e352] [cursor=pointer]:
+            - img
+          - button [ref=e353] [cursor=pointer]:
+            - img
+    - generic [ref=e355]:
+      - generic [ref=e356]:
+        - heading "Top Localities in South Africa" [level=2] [ref=e357]
+        - paragraph [ref=e358]: Discover South Africa's best localities known for liveability, infrastructure, and connectivity. Explore top neighbourhoods offering insights on new construction, rental trends, and average prices.
+      - generic [ref=e360]:
+        - button "Cape Town" [ref=e361] [cursor=pointer]
+        - button "Johannesburg" [ref=e362] [cursor=pointer]
+        - button "Durban" [ref=e363] [cursor=pointer]
+        - button "Pretoria" [ref=e364] [cursor=pointer]
+        - button "Bloemfontein" [ref=e365] [cursor=pointer]
+        - button "Gqeberha" [ref=e366] [cursor=pointer]
+        - button "Polokwane" [ref=e367] [cursor=pointer]
+        - button "Kimberley" [ref=e368] [cursor=pointer]
+        - button "Mbombela" [ref=e369] [cursor=pointer]
+        - button "Mahikeng" [ref=e370] [cursor=pointer]
+      - generic [ref=e371]:
+        - generic [ref=e373]:
+          - generic [ref=e376]:
+            - link "Camps Bay 4.8 (35 Reviews)" [ref=e377] [cursor=pointer]:
+              - /url: /western-cape/cape-town/camps-bay
+              - generic [ref=e378]:
+                - img [ref=e380]
+                - generic [ref=e383]:
+                  - heading "Camps Bay" [level=3] [ref=e384]
+                  - generic [ref=e385]:
+                    - generic [ref=e386]:
+                      - img [ref=e387]
+                      - generic [ref=e389]: "4.8"
+                    - generic [ref=e390]: (35 Reviews)
+            - generic [ref=e391]:
+              - generic [ref=e392]:
+                - paragraph [ref=e393]: Avg. Sale Price
+                - paragraph [ref=e394]: R 65,200/m²
+              - generic [ref=e395]:
+                - paragraph [ref=e396]: Avg. Rental
+                - paragraph [ref=e397]: R 420/m²
+            - generic [ref=e398]:
+              - link "1,540 Properties for Sale in Camps Bay" [ref=e399] [cursor=pointer]:
+                - /url: /western-cape/cape-town/camps-bay?listingType=sale
+                - generic [ref=e400]:
+                  - paragraph [ref=e401]: 1,540 Properties for Sale
+                  - paragraph [ref=e402]: in Camps Bay
+                - img [ref=e404]
+              - link "2,890 Properties for Rent in Camps Bay" [ref=e407] [cursor=pointer]:
+                - /url: /western-cape/cape-town/camps-bay?listingType=rent
+                - generic [ref=e408]:
+                  - paragraph [ref=e409]: 2,890 Properties for Rent
+                  - paragraph [ref=e410]: in Camps Bay
+                - img [ref=e412]
+          - generic [ref=e417]:
+            - link "Sea Point 4.6 (28 Reviews)" [ref=e418] [cursor=pointer]:
+              - /url: /western-cape/cape-town/sea-point
+              - generic [ref=e419]:
+                - img [ref=e421]
+                - generic [ref=e424]:
+                  - heading "Sea Point" [level=3] [ref=e425]
+                  - generic [ref=e426]:
+                    - generic [ref=e427]:
+                      - img [ref=e428]
+                      - generic [ref=e430]: "4.6"
+                    - generic [ref=e431]: (28 Reviews)
+            - generic [ref=e432]:
+              - generic [ref=e433]:
+                - paragraph [ref=e434]: Avg. Sale Price
+                - paragraph [ref=e435]: R 42,300/m²
+              - generic [ref=e436]:
+                - paragraph [ref=e437]: Avg. Rental
+                - paragraph [ref=e438]: R 310/m²
+            - generic [ref=e439]:
+              - link "2,650 Properties for Sale in Sea Point" [ref=e440] [cursor=pointer]:
+                - /url: /western-cape/cape-town/sea-point?listingType=sale
+                - generic [ref=e441]:
+                  - paragraph [ref=e442]: 2,650 Properties for Sale
+                  - paragraph [ref=e443]: in Sea Point
+                - img [ref=e445]
+              - link "4,120 Properties for Rent in Sea Point" [ref=e448] [cursor=pointer]:
+                - /url: /western-cape/cape-town/sea-point?listingType=rent
+                - generic [ref=e449]:
+                  - paragraph [ref=e450]: 4,120 Properties for Rent
+                  - paragraph [ref=e451]: in Sea Point
+                - img [ref=e453]
+          - generic [ref=e458]:
+            - link "Constantia 4.7 (24 Reviews)" [ref=e459] [cursor=pointer]:
+              - /url: /western-cape/cape-town/constantia
+              - generic [ref=e460]:
+                - img [ref=e462]
+                - generic [ref=e465]:
+                  - heading "Constantia" [level=3] [ref=e466]
+                  - generic [ref=e467]:
+                    - generic [ref=e468]:
+                      - img [ref=e469]
+                      - generic [ref=e471]: "4.7"
+                    - generic [ref=e472]: (24 Reviews)
+            - generic [ref=e473]:
+              - generic [ref=e474]:
+                - paragraph [ref=e475]: Avg. Sale Price
+                - paragraph [ref=e476]: R 38,900/m²
+              - generic [ref=e477]:
+                - paragraph [ref=e478]: Avg. Rental
+                - paragraph [ref=e479]: R 290/m²
+            - generic [ref=e480]:
+              - link "1,980 Properties for Sale in Constantia" [ref=e481] [cursor=pointer]:
+                - /url: /western-cape/cape-town/constantia?listingType=sale
+                - generic [ref=e482]:
+                  - paragraph [ref=e483]: 1,980 Properties for Sale
+                  - paragraph [ref=e484]: in Constantia
+                - img [ref=e486]
+              - link "2,340 Properties for Rent in Constantia" [ref=e489] [cursor=pointer]:
+                - /url: /western-cape/cape-town/constantia?listingType=rent
+                - generic [ref=e490]:
+                  - paragraph [ref=e491]: 2,340 Properties for Rent
+                  - paragraph [ref=e492]: in Constantia
+                - img [ref=e494]
+          - generic [ref=e499]:
+            - link "Claremont 4.5 (20 Reviews)" [ref=e500] [cursor=pointer]:
+              - /url: /western-cape/cape-town/claremont
+              - generic [ref=e501]:
+                - img [ref=e503]
+                - generic [ref=e506]:
+                  - heading "Claremont" [level=3] [ref=e507]
+                  - generic [ref=e508]:
+                    - generic [ref=e509]:
+                      - img [ref=e510]
+                      - generic [ref=e512]: "4.5"
+                    - generic [ref=e513]: (20 Reviews)
+            - generic [ref=e514]:
+              - generic [ref=e515]:
+                - paragraph [ref=e516]: Avg. Sale Price
+                - paragraph [ref=e517]: R 35,400/m²
+              - generic [ref=e518]:
+                - paragraph [ref=e519]: Avg. Rental
+                - paragraph [ref=e520]: R 265/m²
+            - generic [ref=e521]:
+              - link "2,340 Properties for Sale in Claremont" [ref=e522] [cursor=pointer]:
+                - /url: /western-cape/cape-town/claremont?listingType=sale
+                - generic [ref=e523]:
+                  - paragraph [ref=e524]: 2,340 Properties for Sale
+                  - paragraph [ref=e525]: in Claremont
+                - img [ref=e527]
+              - link "3,560 Properties for Rent in Claremont" [ref=e530] [cursor=pointer]:
+                - /url: /western-cape/cape-town/claremont?listingType=rent
+                - generic [ref=e531]:
+                  - paragraph [ref=e532]: 3,560 Properties for Rent
+                  - paragraph [ref=e533]: in Claremont
+                - img [ref=e535]
+        - button [ref=e538] [cursor=pointer]:
+          - img
+        - button [ref=e539] [cursor=pointer]:
+          - img
+      - link "View all localities in Cape Town" [ref=e541] [cursor=pointer]:
+        - /url: /western-cape/cape-town
+        - text: View all localities in Cape Town
+        - img [ref=e542]
+    - generic [ref=e546]:
+      - generic [ref=e547]:
+        - heading "Top Developers in South Africa" [level=2] [ref=e548]
+        - paragraph [ref=e549]: In real estate, the builder you choose makes a genuine difference. Our list of top developers features names that are industry leaders in customer satisfaction, design, and timely delivery. These brands have shaped the skyline with thoughtful living spaces. Know who's building your future before you invest.
+      - button "View All Developers in South Africa" [ref=e588] [cursor=pointer]:
+        - text: View All Developers in South Africa
+        - img
+    - generic [ref=e590]:
+      - generic [ref=e591]:
+        - generic [ref=e592]:
+          - heading "Explore Real Estate in Popular Cities" [level=2] [ref=e593]
+          - paragraph [ref=e594]: Browse properties in South Africa's most sought-after locations.
+        - link "View All Locations" [ref=e595] [cursor=pointer]:
+          - /url: /property-for-sale
+          - button "View All Locations" [ref=e596]:
+            - text: View All Locations
+            - img
+      - generic [ref=e597]:
+        - link "Johannesburg Johannesburg 24,500+ Properties Gauteng" [ref=e598] [cursor=pointer]:
+          - /url: /property-for-sale/gauteng/johannesburg
+          - generic [ref=e600]:
+            - img "Johannesburg" [ref=e602]
+            - generic [ref=e604]:
+              - heading "Johannesburg" [level=3] [ref=e605]
+              - paragraph [ref=e606]: 24,500+ Properties
+              - generic [ref=e607]:
+                - img [ref=e608]
+                - generic [ref=e611]: Gauteng
+        - link "Cape Town Cape Town 18,200+ Properties Western Cape" [ref=e612] [cursor=pointer]:
+          - /url: /property-for-sale/western-cape/cape-town
+          - generic [ref=e614]:
+            - img "Cape Town" [ref=e616]
+            - generic [ref=e618]:
+              - heading "Cape Town" [level=3] [ref=e619]
+              - paragraph [ref=e620]: 18,200+ Properties
+              - generic [ref=e621]:
+                - img [ref=e622]
+                - generic [ref=e625]: Western Cape
+        - link "Durban Durban 12,400+ Properties KwaZulu-Natal" [ref=e626] [cursor=pointer]:
+          - /url: /property-for-sale/kwazulu-natal/durban
+          - generic [ref=e628]:
+            - img "Durban" [ref=e630]
+            - generic [ref=e632]:
+              - heading "Durban" [level=3] [ref=e633]
+              - paragraph [ref=e634]: 12,400+ Properties
+              - generic [ref=e635]:
+                - img [ref=e636]
+                - generic [ref=e639]: KwaZulu-Natal
+        - link "Pretoria Pretoria 9,800+ Properties Gauteng" [ref=e640] [cursor=pointer]:
+          - /url: /property-for-sale/gauteng/pretoria
+          - generic [ref=e642]:
+            - img "Pretoria" [ref=e644]
+            - generic [ref=e646]:
+              - heading "Pretoria" [level=3] [ref=e647]
+              - paragraph [ref=e648]: 9,800+ Properties
+              - generic [ref=e649]:
+                - img [ref=e650]
+                - generic [ref=e653]: Gauteng
+        - link "Sandton Sandton 6,300+ Properties Gauteng" [ref=e654] [cursor=pointer]:
+          - /url: /property-for-sale/gauteng/sandton
+          - generic [ref=e656]:
+            - img "Sandton" [ref=e658]
+            - generic [ref=e660]:
+              - heading "Sandton" [level=3] [ref=e661]
+              - paragraph [ref=e662]: 6,300+ Properties
+              - generic [ref=e663]:
+                - img [ref=e664]
+                - generic [ref=e667]: Gauteng
+        - link "Midrand Midrand 4,100+ Properties Gauteng" [ref=e668] [cursor=pointer]:
+          - /url: /property-for-sale/gauteng/midrand
+          - generic [ref=e670]:
+            - img "Midrand" [ref=e672]
+            - generic [ref=e674]:
+              - heading "Midrand" [level=3] [ref=e675]
+              - paragraph [ref=e676]: 4,100+ Properties
+              - generic [ref=e677]:
+                - img [ref=e678]
+                - generic [ref=e681]: Gauteng
+        - link "Umhlanga Umhlanga 3,200+ Properties KwaZulu-Natal" [ref=e682] [cursor=pointer]:
+          - /url: /property-for-sale/kwazulu-natal/umhlanga
+          - generic [ref=e684]:
+            - img "Umhlanga" [ref=e686]
+            - generic [ref=e688]:
+              - heading "Umhlanga" [level=3] [ref=e689]
+              - paragraph [ref=e690]: 3,200+ Properties
+              - generic [ref=e691]:
+                - img [ref=e692]
+                - generic [ref=e695]: KwaZulu-Natal
+        - link "Stellenbosch Stellenbosch 2,800+ Properties Western Cape" [ref=e696] [cursor=pointer]:
+          - /url: /property-for-sale/western-cape/stellenbosch
+          - generic [ref=e698]:
+            - img "Stellenbosch" [ref=e700]
+            - generic [ref=e702]:
+              - heading "Stellenbosch" [level=3] [ref=e703]
+              - paragraph [ref=e704]: 2,800+ Properties
+              - generic [ref=e705]:
+                - img [ref=e706]
+                - generic [ref=e709]: Western Cape
+        - link "Randburg Randburg 2,950+ Properties Gauteng" [ref=e710] [cursor=pointer]:
+          - /url: /property-for-sale/gauteng/randburg
+          - generic [ref=e712]:
+            - img "Randburg" [ref=e714]
+            - generic [ref=e716]:
+              - heading "Randburg" [level=3] [ref=e717]
+              - paragraph [ref=e718]: 2,950+ Properties
+              - generic [ref=e719]:
+                - img [ref=e720]
+                - generic [ref=e723]: Gauteng
+        - link "Centurion Centurion 3,500+ Properties Gauteng" [ref=e724] [cursor=pointer]:
+          - /url: /property-for-sale/gauteng/centurion
+          - generic [ref=e726]:
+            - img "Centurion" [ref=e728]
+            - generic [ref=e730]:
+              - heading "Centurion" [level=3] [ref=e731]
+              - paragraph [ref=e732]: 3,500+ Properties
+              - generic [ref=e733]:
+                - img [ref=e734]
+                - generic [ref=e737]: Gauteng
+        - link "Port Elizabeth Port Elizabeth 2,100+ Properties Eastern Cape" [ref=e738] [cursor=pointer]:
+          - /url: /property-for-sale/eastern-cape/port-elizabeth
+          - generic [ref=e740]:
+            - img "Port Elizabeth" [ref=e742]
+            - generic [ref=e744]:
+              - heading "Port Elizabeth" [level=3] [ref=e745]
+              - paragraph [ref=e746]: 2,100+ Properties
+              - generic [ref=e747]:
+                - img [ref=e748]
+                - generic [ref=e751]: Eastern Cape
+        - link "Bloemfontein Bloemfontein 1,800+ Properties Free State" [ref=e752] [cursor=pointer]:
+          - /url: /property-for-sale/free-state/bloemfontein
+          - generic [ref=e754]:
+            - img "Bloemfontein" [ref=e756]
+            - generic [ref=e758]:
+              - heading "Bloemfontein" [level=3] [ref=e759]
+              - paragraph [ref=e760]: 1,800+ Properties
+              - generic [ref=e761]:
+                - img [ref=e762]
+                - generic [ref=e765]: Free State
+    - generic [ref=e767]:
+      - generic [ref=e768]:
+        - generic [ref=e769]:
+          - generic [ref=e770]: ⭐
+          - generic [ref=e771]: Trusted by Thousands
+        - heading "What Our Clients Say" [level=2] [ref=e772]
+        - paragraph [ref=e773]: Real experiences from people who found their dream homes with us
+      - generic [ref=e774]:
+        - generic [ref=e775]:
+          - generic [ref=e776]: "\""
+          - generic [ref=e777]:
+            - generic [ref=e778]:
+              - generic [ref=e779]: ★
+              - generic [ref=e780]: ★
+              - generic [ref=e781]: ★
+              - generic [ref=e782]: ★
+              - generic [ref=e783]: ★
+            - paragraph [ref=e784]: "\"Found my perfect apartment in Sandton within 2 weeks. The team was professional and responsive throughout the process.\""
+            - generic [ref=e785]:
+              - generic [ref=e786]: 👨🏿
+              - generic [ref=e787]:
+                - paragraph [ref=e788]: Thabo Mkhize
+                - paragraph [ref=e789]:
+                  - img [ref=e790]
+                  - text: Johannesburg
+        - generic [ref=e793]:
+          - generic [ref=e794]: "\""
+          - generic [ref=e795]:
+            - generic [ref=e796]:
+              - generic [ref=e797]: ★
+              - generic [ref=e798]: ★
+              - generic [ref=e799]: ★
+              - generic [ref=e800]: ★
+              - generic [ref=e801]: ★
+            - paragraph [ref=e802]: "\"Excellent service! They helped me find a beautiful family home in Constantia. Highly recommend for anyone looking in the Western Cape.\""
+            - generic [ref=e803]:
+              - generic [ref=e804]: 👩🏼
+              - generic [ref=e805]:
+                - paragraph [ref=e806]: Sarah van der Merwe
+                - paragraph [ref=e807]:
+                  - img [ref=e808]
+                  - text: Cape Town
+        - generic [ref=e811]:
+          - generic [ref=e812]: "\""
+          - generic [ref=e813]:
+            - generic [ref=e814]:
+              - generic [ref=e815]: ★
+              - generic [ref=e816]: ★
+              - generic [ref=e817]: ★
+              - generic [ref=e818]: ★
+              - generic [ref=e819]: ★
+            - paragraph [ref=e820]: "\"The property insights and market data helped me make an informed decision. Great platform for first-time buyers!\""
+            - generic [ref=e821]:
+              - generic [ref=e822]: 👩🏾
+              - generic [ref=e823]:
+                - paragraph [ref=e824]: Priya Naidoo
+                - paragraph [ref=e825]:
+                  - img [ref=e826]
+                  - text: Durban
+    - generic [ref=e835]:
+      - heading "Ready to Find Your Dream Property?" [level=2] [ref=e836]
+      - paragraph [ref=e837]: Join thousands of satisfied users. Whether you're buying, renting, or selling, we provide the best tools and insights to make your journey smooth.
+      - generic [ref=e838]:
+        - button "Browse All Properties" [ref=e839] [cursor=pointer]
+        - button "List Your Property" [ref=e840] [cursor=pointer]
+    - contentinfo [ref=e841]:
+      - generic [ref=e842]:
+        - generic [ref=e843]:
+          - generic [ref=e844]:
+            - generic [ref=e845]:
+              - generic [ref=e847]: R
+              - generic [ref=e848]: RealEstate
+            - paragraph [ref=e849]: South Africa's fastest growing real estate platform. We make buying, selling, and renting properties simple and transparent.
+            - generic [ref=e850]:
+              - link [ref=e851] [cursor=pointer]:
+                - /url: "#"
+                - img [ref=e852]
+              - link [ref=e854] [cursor=pointer]:
+                - /url: "#"
+                - img [ref=e855]
+              - link [ref=e857] [cursor=pointer]:
+                - /url: "#"
+                - img [ref=e858]
+              - link [ref=e862] [cursor=pointer]:
+                - /url: "#"
+                - img [ref=e863]
+          - generic [ref=e867]:
+            - heading "Quick Links" [level=3] [ref=e868]
+            - list [ref=e869]:
+              - listitem [ref=e870]:
+                - link "Home" [ref=e871] [cursor=pointer]:
+                  - /url: /
+                  - text: Home
+              - listitem [ref=e873]:
+                - link "Search Properties" [ref=e874] [cursor=pointer]:
+                  - /url: /properties
+                  - text: Search Properties
+              - listitem [ref=e876]:
+                - link "New Developments" [ref=e877] [cursor=pointer]:
+                  - /url: /developments
+                  - text: New Developments
+              - listitem [ref=e879]:
+                - link "List Your Property" [ref=e880] [cursor=pointer]:
+                  - /url: /list-property
+                  - text: List Your Property
+          - generic [ref=e882]:
+            - heading "Popular Locations" [level=3] [ref=e883]
+            - list [ref=e884]:
+              - listitem [ref=e885]:
+                - link "Johannesburg" [ref=e886] [cursor=pointer]:
+                  - /url: /gauteng/johannesburg
+              - listitem [ref=e887]:
+                - link "Cape Town" [ref=e888] [cursor=pointer]:
+                  - /url: /western-cape/cape-town
+              - listitem [ref=e889]:
+                - link "Durban" [ref=e890] [cursor=pointer]:
+                  - /url: /kwazulu-natal/durban
+              - listitem [ref=e891]:
+                - link "Pretoria" [ref=e892] [cursor=pointer]:
+                  - /url: /gauteng/pretoria
+              - listitem [ref=e893]:
+                - link "Sandton" [ref=e894] [cursor=pointer]:
+                  - /url: /gauteng/johannesburg/sandton
+          - generic [ref=e895]:
+            - heading "Contact Us" [level=3] [ref=e896]
+            - list [ref=e897]:
+              - listitem [ref=e898]:
+                - img [ref=e899]
+                - generic [ref=e902]: 123 Real Estate Ave, Sandton, Johannesburg, 2196
+              - listitem [ref=e903]:
+                - img [ref=e904]
+                - generic [ref=e906]: +27 10 123 4567
+              - listitem [ref=e907]:
+                - img [ref=e908]
+                - generic [ref=e911]: hello@realestate.co.za
+            - heading "Subscribe to our newsletter" [level=4] [ref=e912]
+            - generic [ref=e913]:
+              - textbox "Enter your email" [ref=e914]
+              - button [ref=e915] [cursor=pointer]:
+                - img
+        - generic [ref=e916]:
+          - paragraph [ref=e917]: © 2025 Real Estate Portal. All rights reserved.
+          - generic [ref=e918]:
+            - link "Privacy Policy" [ref=e919] [cursor=pointer]:
+              - /url: "#"
+            - link "Terms of Service" [ref=e920] [cursor=pointer]:
+              - /url: "#"
+            - link "Cookie Policy" [ref=e921] [cursor=pointer]:
+              - /url: "#"
+```

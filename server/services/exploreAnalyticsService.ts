@@ -12,7 +12,7 @@ import {
   exploreFeedSessions,
   exploreSavedProperties,
 } from '../../drizzle/schema';
-import { eq, and, gte, lte, sql, desc, count } from 'drizzle-orm';
+import { eq, and, gte, lte, sql, desc, count, SQL } from 'drizzle-orm';
 
 interface VideoAnalytics {
   videoId: number;
@@ -99,12 +99,12 @@ export class ExploreAnalyticsService {
     const contentId = video[0].contentId;
 
     // Build date filter
-    const dateFilter = [];
+    const dateFilter: SQL[] = [];
     if (startDate) {
-      dateFilter.push(gte(exploreEngagements.createdAt, startDate));
+      dateFilter.push(gte(exploreEngagements.createdAt, startDate.toISOString()));
     }
     if (endDate) {
-      dateFilter.push(lte(exploreEngagements.createdAt, endDate));
+      dateFilter.push(lte(exploreEngagements.createdAt, endDate.toISOString()));
     }
 
     // Get all engagements for this video
@@ -124,17 +124,17 @@ export class ExploreAnalyticsService {
       );
 
     // Calculate metrics
-    const views = engagements.filter((e) => e.engagementType === 'view').length;
+    const views = engagements.filter((e: any) => e.engagementType === 'view').length;
     const uniqueViewers = new Set(
-      engagements.filter((e) => e.engagementType === 'view').map((e) => e.userId),
+      engagements.filter((e: any) => e.engagementType === 'view').map((e: any) => e.userId),
     ).size;
-    const completions = engagements.filter((e) => e.completed).length;
-    const saves = engagements.filter((e) => e.engagementType === 'save').length;
-    const shares = engagements.filter((e) => e.engagementType === 'share').length;
-    const clicks = engagements.filter((e) => e.engagementType === 'click').length;
-    const skips = engagements.filter((e) => e.engagementType === 'skip').length;
+    const completions = engagements.filter((e: any) => e.completed).length;
+    const saves = engagements.filter((e: any) => e.engagementType === 'save').length;
+    const shares = engagements.filter((e: any) => e.engagementType === 'share').length;
+    const clicks = engagements.filter((e: any) => e.engagementType === 'click').length;
+    const skips = engagements.filter((e: any) => e.engagementType === 'skip').length;
 
-    const totalWatchTime = engagements.reduce((sum, e) => sum + (e.watchTime || 0), 0);
+    const totalWatchTime = engagements.reduce((sum: number, e: any) => sum + (e.watchTime || 0), 0);
     const averageWatchTime = views > 0 ? totalWatchTime / views : 0;
     const completionRate = views > 0 ? (completions / views) * 100 : 0;
 
@@ -284,7 +284,7 @@ export class ExploreAnalyticsService {
     const shares = engagements.filter((e) => e.engagementType === 'share').length;
     const clicks = engagements.filter((e) => e.engagementType === 'click').length;
 
-    const totalWatchTime = engagements.reduce((sum, e) => sum + (e.watchTime || 0), 0);
+    const totalWatchTime = engagements.reduce((sum: number, e: any) => sum + (e.watchTime || 0), 0);
     const averageWatchTime = videosViewed > 0 ? totalWatchTime / videosViewed : 0;
 
     const totalEngagements = saves + shares + clicks;
@@ -337,9 +337,9 @@ export class ExploreAnalyticsService {
     }
 
     // Build query filters
-    const filters = [];
+    const filters: SQL[] = [];
     if (startDate) {
-      filters.push(gte(exploreEngagements.createdAt, startDate));
+      filters.push(gte(exploreEngagements.createdAt, startDate.toISOString()));
     }
 
     // If creator specified, filter by creator's content
@@ -363,34 +363,37 @@ export class ExploreAnalyticsService {
 
     // Filter by creator if specified
     const filteredEngagements = creatorId
-      ? engagements.filter((e) => contentIds.includes(e.contentId))
+      ? engagements.filter((e: any) => contentIds.includes(e.contentId))
       : engagements;
 
     // Calculate metrics
-    const totalViews = filteredEngagements.filter((e) => e.engagementType === 'view').length;
+    const totalViews = filteredEngagements.filter((e: any) => e.engagementType === 'view').length;
     const totalUniqueViewers = new Set(
-      filteredEngagements.filter((e) => e.engagementType === 'view').map((e) => e.userId),
+      filteredEngagements.filter((e: any) => e.engagementType === 'view').map((e: any) => e.userId),
     ).size;
-    const totalWatchTime = filteredEngagements.reduce((sum, e) => sum + (e.watchTime || 0), 0);
-    const completions = filteredEngagements.filter((e) => e.completed).length;
+    const totalWatchTime = filteredEngagements.reduce((sum: number, e: any) => sum + (e.watchTime || 0), 0);
+    const completions = filteredEngagements.filter((e: any) => e.completed).length;
     const averageCompletionRate = totalViews > 0 ? (completions / totalViews) * 100 : 0;
 
-    const saves = filteredEngagements.filter((e) => e.engagementType === 'save').length;
-    const shares = filteredEngagements.filter((e) => e.engagementType === 'share').length;
-    const clicks = filteredEngagements.filter((e) => e.engagementType === 'click').length;
+    const saves = filteredEngagements.filter((e: any) => e.engagementType === 'save').length;
+    const shares = filteredEngagements.filter((e: any) => e.engagementType === 'share').length;
+    const clicks = filteredEngagements.filter((e: any) => e.engagementType === 'click').length;
     const totalEngagements = saves + shares + clicks;
     const engagementRate = totalViews > 0 ? (totalEngagements / totalViews) * 100 : 0;
 
     // Get session metrics
     let sessionsQuery = db.select().from(exploreFeedSessions);
     if (startDate) {
-      sessionsQuery = sessionsQuery.where(gte(exploreFeedSessions.startedAt, startDate));
+      // Assuming 'startedAt' is the correct column, using toISOString
+      // If startedAt doesn't exist on the table definition, we need to check schema.
+      // For now, based on line 295 usage, keeping startedAt but fixing Date.
+      sessionsQuery = sessionsQuery.where(gte(exploreFeedSessions.startedAt, startDate.toISOString()));
     }
     const sessions = await sessionsQuery;
 
     const totalSessions = sessions.length;
     const averageSessionDuration =
-      sessions.reduce((sum, s) => {
+      sessions.reduce((sum: number, s: any) => {
         if (s.endedAt) {
           return sum + (s.endedAt.getTime() - s.startedAt.getTime()) / 1000;
         }

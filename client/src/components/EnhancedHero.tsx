@@ -31,6 +31,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { generatePropertyUrl } from '@/lib/urlUtils';
 import { LocationAutosuggest } from './LocationAutosuggest';
 import { trpc } from '@/lib/trpc';
+import { normalizeLocationKey, getProvinceForCity, isProvinceSearch } from '@/lib/locationUtils';
+import { LocationNode } from '@/types/location';
 
 
 
@@ -63,7 +65,9 @@ export function EnhancedHero({
   const [, setLocation] = useLocation();
   const [activeTab, setActiveTab] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState(initialSearchQuery);
-  const [selectedLocation, setSelectedLocation] = useState<any>(null);
+  const [selectedLocations, setSelectedLocations] = useState<LocationNode[]>([]);
+  // computed for backward compatibility in single-select logic
+  const selectedLocation = selectedLocations.length === 1 ? selectedLocations[0] : null;
 
   const [budget, setBudget] = useState('');
   
@@ -213,10 +217,12 @@ export function EnhancedHero({
     }
   );
 
-  const resultCount = countData?.data?.total || 0;
+  const resultCount = countData?.total || 0;
 
 
   const handleSearch = () => {
+    console.log('[handleSearch] Called. selectedLocation:', selectedLocation, 'searchQuery:', searchQuery, 'activeTab:', activeTab);
+    
     // Intelligent Routing Logic
     // We utilize the structured location data from LocationAutosuggest directly.
     
@@ -226,48 +232,48 @@ export function EnhancedHero({
     if (effectiveTab === 'buy' || effectiveTab === 'rental') {
         const listingType = effectiveTab === 'rental' ? 'rent' : 'sale';
         
-        // 1. Single Location Selection logic (Matches ListingNavbar)
-        if (selectedLocation) {
-             const isProvince = selectedLocation.type === 'province' || selectedLocation.type === 'administrative_area_level_1';
+        // 1. Single or Multi Selection Logic
+        if (selectedLocations.length > 0) {
+             console.log('[handleSearch] selectedLocations:', selectedLocations);
              
-             // ============================================================
-             // CRITICAL RULE: Province ALWAYS goes to SEO discovery page
-             // Province = discovery, never intent. No exceptions.
-             // ============================================================
-             if (isProvince) {
-                 const root = listingType === 'rent' ? '/property-to-rent' : '/property-for-sale';
-                 const { normalizeLocationKey } = require('@/lib/locationUtils');
-                 const provinceSlug = normalizeLocationKey(selectedLocation.name);
-                 setLocation(`${root}/${provinceSlug}`);
-                 return;
-             }
-             
-             // City/Suburb → Query-based SRP with listings
              const root = listingType === 'rent' ? '/property-to-rent' : '/property-for-sale';
              const params = new URLSearchParams();
-             
-             // Resolve province context using normalized lookup
-             const { getProvinceForCity, normalizeLocationKey } = require('@/lib/locationUtils');
-             const locationSlug = normalizeLocationKey(selectedLocation.name);
-             const resolvedProvince = selectedLocation.provinceSlug || getProvinceForCity(selectedLocation.name);
-             
-             if (selectedLocation.type === 'suburb') {
-                params.set('suburb', locationSlug);
-                // Include city context if available
-                if (selectedLocation.citySlug) {
-                   params.set('city', normalizeLocationKey(selectedLocation.citySlug));
-                }
-             } else {
-                // Default to city for 'city' or fallback
-                params.set('city', locationSlug);
+
+             // CASE A: Single Location (Preserve SEO structure)
+             if (selectedLocations.length === 1) {
+                 const loc = selectedLocations[0];
+                 const isProvince = loc.type === 'province';
+                 
+                 // Province -> SEO Discovery
+                 if (isProvince) {
+                     const provinceSlug = normalizeLocationKey(loc.name);
+                     setLocation(`${root}/${provinceSlug}`);
+                     return;
+                 }
+
+                 // City/Suburb -> SEO Path
+                 const locationSlug = normalizeLocationKey(loc.name);
+                 const resolvedProvince = loc.provinceSlug || getProvinceForCity(loc.name);
+                 
+                 if (loc.type === 'suburb') {
+                    params.set('suburb', locationSlug);
+                    if (loc.citySlug) params.set('city', normalizeLocationKey(loc.citySlug));
+                 } else {
+                    params.set('city', locationSlug);
+                 }
+                 if (resolvedProvince) params.set('province', resolvedProvince);
+             } 
+             // CASE B: Multi-Location (Canonical Query Params)
+             else {
+                 selectedLocations.forEach(loc => {
+                     params.append('locations[]', loc.slug);
+                 });
+                 // Note: We don't set 'city'/'province' params here to avoid conflict. 
+                 // The backend should derive context from the slugs.
              }
-             
-             // Always include province for geographic accuracy
-             if (resolvedProvince) {
-                params.set('province', resolvedProvince);
-             }
-             
-             // Add price filters if present
+
+             // Common Filters
+             // Add price filters
              if (activeTab === 'buy') {
                 if (filters.priceMin) params.set('minPrice', filters.priceMin);
                 if (filters.priceMax) params.set('maxPrice', filters.priceMax);
@@ -279,8 +285,9 @@ export function EnhancedHero({
              if (filters.propertyTypes.length > 0) {
                 params.set('propertyType', filters.propertyTypes[0].toLowerCase());
              }
-
-             setLocation(`${root}?${params.toString()}`);
+             
+             const queryString = params.toString();
+             setLocation(`${root}?${queryString}`);
              return;
         }
 
@@ -288,7 +295,6 @@ export function EnhancedHero({
         // CRITICAL: Check if text matches a province BEFORE treating as city
         if (searchQuery) {
             const root = listingType === 'rent' ? '/property-to-rent' : '/property-for-sale';
-            const { normalizeLocationKey, getProvinceForCity, isProvinceSearch } = require('@/lib/locationUtils');
             
             // Check if the text input is actually a province
             const matchedProvince = isProvinceSearch(searchQuery);
@@ -519,18 +525,32 @@ export function EnhancedHero({
                     className="w-full"
                     inputClassName="pl-12 pr-24 h-14 text-base border-2 hover:border-primary/50 focus:border-primary transition-colors w-full bg-transparent rounded-xl"
                     showIcon={false}
+                    selectedLocations={selectedLocations}
+                    onRemove={(index) => {
+                        setSelectedLocations(prev => prev.filter((_, i) => i !== index));
+                    }}
                     onChange={(value) => {
-                        // Sync typed value so text search fallback works
                         setSearchQuery(value);
-                        // Clear selected location when typing new text
-                        setSelectedLocation(null);
                     }}
                     onSelect={(loc) => {
-                        setSearchQuery(loc.name);
-                        setSelectedLocation(loc);
+                        // Optimistic Search Query Update (shows last selected name temporarily if needed, but pills handle UX)
+                        setSearchQuery(''); 
+                        
+                        setSelectedLocations(prev => {
+                            // 1. Prevent Duplicates
+                            if (prev.some(p => p.slug === loc.slug)) return prev;
+                            
+                            // 2. Hierarchy / Conflict Handling (Property24 style)
+                            // "Prevent selecting a child if parent is already selected" or vice versa
+                            // Case A: User creates specific list (e.g. Sea Point + Green Point). 
+                            // Case B: User selects Province (Western Cape). Should we remove cities?
+                            // For V1, we append unique locations.
+                            
+                            return [...prev, loc];
+                        });
                     }}
                     onSubmit={handleSearch}
-                    defaultValue={searchQuery}
+                    maxLocations={5}
                     />
                     
                     {/* Action Buttons (Voice/Location) */}

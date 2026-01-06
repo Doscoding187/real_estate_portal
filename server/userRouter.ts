@@ -270,13 +270,13 @@ export const userRouter = router({
     const stats = {
       total: allUsers.length,
       byRole: {
-        super_admin: allUsers.filter(u => u.role === 'super_admin').length,
-        agency_admin: allUsers.filter(u => u.role === 'agency_admin').length,
-        agent: allUsers.filter(u => u.role === 'agent').length,
-        visitor: allUsers.filter(u => u.role === 'visitor').length,
+        super_admin: allUsers.filter((u: any) => u.role === 'super_admin').length,
+        agency_admin: allUsers.filter((u: any) => u.role === 'agency_admin').length,
+        agent: allUsers.filter((u: any) => u.role === 'agent').length,
+        visitor: allUsers.filter((u: any) => u.role === 'visitor').length,
       },
-      withAgency: allUsers.filter(u => u.agencyId !== null).length,
-      subaccounts: allUsers.filter(u => u.isSubaccount === 1).length,
+      withAgency: allUsers.filter((u: any) => u.agencyId !== null).length,
+      subaccounts: allUsers.filter((u: any) => u.isSubaccount === 1).length,
     };
 
     return stats;

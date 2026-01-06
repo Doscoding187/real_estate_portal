@@ -92,7 +92,7 @@ export const videoRouter = router({
         throw new Error('Only agents can upload videos');
       }
 
-      const agent = await ctx.db
+      const agent = await (ctx as any).db
         .select()
         .from(agents)
         .where(eq(agents.userId, ctx.user.id))
@@ -107,7 +107,7 @@ export const videoRouter = router({
         throw new Error('Listing videos must be linked to a property or development');
       }
 
-      const [newVideo] = await ctx.db
+      const [newVideo] = await (ctx as any).db
         .insert(videos)
         .values({
           agentId: agent[0].id,
@@ -124,7 +124,7 @@ export const videoRouter = router({
 
   // Get all videos for the explore feed
   getVideos: publicProcedure.query(async ({ ctx }) => {
-    const videosWithData = await ctx.db
+    const videosWithData = await (ctx as any).db
       .select({
         id: videos.id,
         videoUrl: videos.videoUrl,
@@ -187,7 +187,7 @@ export const videoRouter = router({
         ? and(eq(videos.isPublished, 1), eq(videos.type, input.type))
         : eq(videos.isPublished, 1);
 
-      const videosWithData = await ctx.db
+      const videosWithData = await (ctx as any).db
         .select({
           id: videos.id,
           videoUrl: videos.videoUrl,
@@ -237,7 +237,7 @@ export const videoRouter = router({
   toggleLike: protectedProcedure
     .input(z.object({ videoId: z.number() }))
     .mutation(async ({ ctx, input }) => {
-      const existingLike = await ctx.db
+      const existingLike = await (ctx as any).db
         .select()
         .from(videoLikes)
         .where(and(eq(videoLikes.videoId, input.videoId), eq(videoLikes.userId, ctx.user.id)))
@@ -245,10 +245,10 @@ export const videoRouter = router({
 
       if (existingLike[0]) {
         // Unlike - remove the like
-        await ctx.db.delete(videoLikes).where(eq(videoLikes.id, existingLike[0].id));
+        await (ctx as any).db.delete(videoLikes).where(eq(videoLikes.id, existingLike[0].id));
 
         // Decrement likes count
-        await ctx.db
+        await (ctx as any).db
           .update(videos)
           .set({ likes: sql`likes - 1` })
           .where(eq(videos.id, input.videoId));
@@ -256,13 +256,13 @@ export const videoRouter = router({
         return { liked: false };
       } else {
         // Like - add the like
-        await ctx.db.insert(videoLikes).values({
+        await (ctx as any).db.insert(videoLikes).values({
           videoId: input.videoId,
           userId: ctx.user.id,
         });
 
         // Increment likes count
-        await ctx.db
+        await (ctx as any).db
           .update(videos)
           .set({ likes: sql`likes + 1` })
           .where(eq(videos.id, input.videoId));
@@ -275,7 +275,7 @@ export const videoRouter = router({
   incrementViews: publicProcedure
     .input(z.object({ videoId: z.number() }))
     .mutation(async ({ ctx, input }) => {
-      await ctx.db
+      await (ctx as any).db
         .update(videos)
         .set({ views: sql`views + 1` })
         .where(eq(videos.id, input.videoId));
@@ -298,7 +298,7 @@ export const videoRouter = router({
     )
     .mutation(async ({ ctx, input }) => {
       // Get agent details
-      const agent = await ctx.db.select().from(agents).where(eq(agents.id, input.agentId)).limit(1);
+      const agent = await (ctx as any).db.select().from(agents).where(eq(agents.id, input.agentId)).limit(1);
 
       if (!agent[0]) {
         throw new Error('Agent not found');
@@ -317,7 +317,7 @@ export const videoRouter = router({
         propertyId: input.propertyId,
       };
 
-      const [newLead] = await ctx.db.insert(leads).values(leadData);
+      const [newLead] = await (ctx as any).db.insert(leads).values(leadData);
 
       // TODO: Send email notification to agent
       // This would integrate with the existing email service
@@ -343,7 +343,7 @@ export const videoRouter = router({
       let targetAgentId = input.agentId;
 
       if (!targetAgentId) {
-        const agent = await ctx.db
+        const agent = await (ctx as any).db
           .select()
           .from(agents)
           .where(eq(agents.userId, ctx.user.id))
@@ -356,7 +356,7 @@ export const videoRouter = router({
         targetAgentId = agent[0].id;
       }
 
-      const videosData = await ctx.db
+      const videosData = await (ctx as any).db
         .select({
           id: videos.id,
           videoUrl: videos.videoUrl,
@@ -392,13 +392,13 @@ export const videoRouter = router({
     .input(z.object({ videoId: z.number() }))
     .mutation(async ({ ctx, input }) => {
       // Verify video belongs to current user's agent profile
-      const video = await ctx.db.select().from(videos).where(eq(videos.id, input.videoId)).limit(1);
+      const video = await (ctx as any).db.select().from(videos).where(eq(videos.id, input.videoId)).limit(1);
 
       if (!video[0]) {
         throw new Error('Video not found');
       }
 
-      const agent = await ctx.db
+      const agent = await (ctx as any).db
         .select()
         .from(agents)
         .where(eq(agents.userId, ctx.user.id))
@@ -409,7 +409,7 @@ export const videoRouter = router({
       }
 
       // Delete video (likes cascade should handle this)
-      await ctx.db.delete(videos).where(eq(videos.id, input.videoId));
+      await (ctx as any).db.delete(videos).where(eq(videos.id, input.videoId));
 
       // TODO: Delete from S3 bucket as well
       // This would require getting the video URL and deleting from S3

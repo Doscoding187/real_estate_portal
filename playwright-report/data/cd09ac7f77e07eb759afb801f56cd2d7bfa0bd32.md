@@ -1,0 +1,41 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e2]:
+  - region "Notifications alt+T"
+  - link "Skip to main content" [ref=e3] [cursor=pointer]:
+    - /url: "#main-content"
+  - generic [ref=e4]:
+    - generic [ref=e5]:
+      - heading "Property Listify" [level=1] [ref=e7] [cursor=pointer]
+      - generic [ref=e8]:
+        - generic "Sign In" [ref=e9] [cursor=pointer]:
+          - img [ref=e10]
+        - generic "Menu" [ref=e14] [cursor=pointer]:
+          - img [ref=e15]
+    - generic [ref=e16]:
+      - navigation "Breadcrumb" [ref=e18]:
+        - link "Home" [ref=e20] [cursor=pointer]:
+          - /url: /
+          - generic [ref=e21]:
+            - img [ref=e22]
+            - text: Home
+        - generic [ref=e25]:
+          - img [ref=e26]
+          - generic [ref=e28]: For Sale
+      - generic [ref=e30]:
+        - heading "Loading Properties for Sale" [level=1] [ref=e32]
+        - combobox [ref=e35] [cursor=pointer]:
+          - generic: Relevance
+          - img
+      - img [ref=e40]
+    - generic [ref=e42]:
+      - button "Filters" [ref=e43] [cursor=pointer]:
+        - img
+        - generic [ref=e44]: Filters
+      - button "Map" [ref=e46] [cursor=pointer]:
+        - img
+        - generic [ref=e47]: Map
+      - button [ref=e49] [cursor=pointer]:
+        - img
+```

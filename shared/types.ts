@@ -777,6 +777,7 @@ export interface PropertyFilters {
   province?: string;
   city?: string;
   suburb?: string[];
+  locations?: string[];
   
   // Basic filters
   propertyType?: Property['propertyType'][];

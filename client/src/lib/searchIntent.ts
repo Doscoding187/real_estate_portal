@@ -122,9 +122,19 @@ export function resolveSearchIntent(
   // 3. Extract Filters (Query Params)
   // We explicitly exclude geography keys from filters to avoid duplication
   const filters: Record<string, any> = {};
+  
+  // Explicitly handle array parameters
+  const locations = searchParams.getAll('locations') || searchParams.getAll('locations[]');
+  if (locations && locations.length > 0) {
+    filters.locations = locations;
+  }
+
   searchParams.forEach((value, key) => {
     // Skip geography keys - they're handled above
     if (key === 'province' || key === 'city' || key === 'suburb') return;
+    // Skip array keys handled explicitly
+    if (key === 'locations' || key === 'locations[]') return;
+    
     filters[key] = value;
   });
   
@@ -170,7 +180,12 @@ export function generateIntentUrl(intent: SearchIntent): string {
     // Skip internal keys that shouldn't appear in URL
     if (key === 'listingType') return;
     if (!value) return;
-    queryParams.set(key, String(value));
+    
+    if (Array.isArray(value)) {
+      value.forEach(v => queryParams.append(key, String(v)));
+    } else {
+      queryParams.set(key, String(value));
+    }
   });
 
   // ============================================================

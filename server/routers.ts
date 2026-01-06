@@ -99,6 +99,7 @@ export const appRouter = router({
           city: z.string().optional(),
           province: z.string().optional(),
           suburb: z.array(z.string()).optional(), // Added support for suburb array
+          locations: z.array(z.string()).optional(), // Multi-location support
           propertyType: z
             .enum([
               'apartment',
@@ -149,6 +150,7 @@ export const appRouter = router({
           city: input.city,
           province: input.province,
           suburb: input.suburb, // Now supported
+          locations: input.locations, // Multi-location support
           propertyType: input.propertyType ? [input.propertyType as any] : undefined, // Service expects array
           listingType: input.listingType as any,
           minPrice: input.minPrice,

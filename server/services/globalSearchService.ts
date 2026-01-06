@@ -1,6 +1,6 @@
 import { getDb } from '../db';
 import { locations, locationSearches, properties, developments } from '../../drizzle/schema';
-import { eq, and, or, like, desc, sql, count, inArray } from 'drizzle-orm';
+import { eq, and, or, like, desc, sql, count, inArray, SQL } from 'drizzle-orm';
 
 /**
  * Global Search Service
@@ -407,17 +407,17 @@ export async function filterListingsByPlaceId(
   }
 
   // Build filter conditions
-  const conditions: any[] = [
+  const conditions: SQL[] = [
     eq(properties.locationId, location.id),
     eq(properties.status, 'published')
   ];
 
   if (filters?.propertyType && filters.propertyType.length > 0) {
-    conditions.push(inArray(properties.propertyType, filters.propertyType));
+    conditions.push(inArray(properties.propertyType, filters.propertyType as any));
   }
 
   if (filters?.listingType && filters.listingType.length > 0) {
-    conditions.push(inArray(properties.listingType, filters.listingType));
+    conditions.push(inArray(properties.listingType, filters.listingType as any));
   }
 
   if (filters?.minPrice) {
@@ -470,17 +470,17 @@ async function filterListingsByPlaceIdDirect(
 ): Promise<ListingResult[]> {
   const db = await getDb();
 
-  const conditions: any[] = [
+  const conditions: SQL[] = [
     eq(properties.placeId, placeId),
     eq(properties.status, 'published')
   ];
 
   if (filters?.propertyType && filters.propertyType.length > 0) {
-    conditions.push(inArray(properties.propertyType, filters.propertyType));
+    conditions.push(inArray(properties.propertyType, filters.propertyType as any));
   }
 
   if (filters?.listingType && filters.listingType.length > 0) {
-    conditions.push(inArray(properties.listingType, filters.listingType));
+    conditions.push(inArray(properties.listingType, filters.listingType as any));
   }
 
   if (filters?.minPrice) {

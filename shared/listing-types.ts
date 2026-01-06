@@ -169,7 +169,7 @@ export type WaterSupply = 'municipal' | 'prepaid' | 'borehole' | 'water_storage'
 
 export type Furnishing = 'unfurnished' | 'semi_furnished' | 'fully_furnished';
 
-export type FlooringType =
+export type FlooringTypeLegacy =
   | 'tiles'
   | 'laminated_wood'
   | 'vinyl'
@@ -213,7 +213,7 @@ export interface ExtendedPropertyDetails {
   internetAvailability?: InternetAvailability;
   waterSupply?: WaterSupply;
   furnishing?: Furnishing;
-  flooringType?: FlooringType;
+  flooringType?: FlooringTypeLegacy;
   leviesHoaOperatingCosts?: number;
   waterHeating?: WaterHeating;
 }
@@ -639,6 +639,8 @@ export const BADGE_TEMPLATES: Record<
   {
     label: string;
     description: string;
+    icon?: string;
+    color?: string;
   }
 > = {
   ready_to_move: {

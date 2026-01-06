@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
-import { MapPin, Loader2 } from 'lucide-react';
+import { MapPin, Loader2, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { useGoogleMaps } from '@/hooks/useGoogleMaps';
 import { CITY_PROVINCE_MAP, PROVINCE_SLUGS, isProvinceSearch } from '@/lib/locationUtils';
 import { slugify } from '@/lib/urlUtils';
+import { LocationNode } from '@/types/location';
 
 interface PlacePrediction {
   place_id: string;
@@ -16,34 +17,39 @@ interface PlacePrediction {
 }
 
 interface LocationAutosuggestProps {
-  onSelect?: (location: any) => void;
-  onChange?: (value: string) => void;  // Sync typed value on every keystroke
-  onSubmit?: () => void;  // Called when Enter is pressed (for text search)
+  selectedLocations?: LocationNode[];
+  onSelect?: (location: LocationNode) => void;
+  onRemove?: (index: number) => void;
+  // Legacy props kept/adapted
+  onChange?: (value: string) => void; 
+  onSubmit?: () => void;
   placeholder?: string;
   className?: string;
-  defaultValue?: string;
   inputClassName?: string;
   showIcon?: boolean;
-  clearOnSelect?: boolean;
+  maxLocations?: number;
 }
 
 export function LocationAutosuggest({ 
+  selectedLocations = [],
   onSelect,
+  onRemove,
   onChange,
   onSubmit,
   placeholder = 'Search by city, suburb, or area...', 
   className = '',
-  defaultValue = '',
   inputClassName = '',
   showIcon = true,
-  clearOnSelect = false
+  maxLocations = 5
 }: LocationAutosuggestProps) {
-  const [query, setQuery] = useState(defaultValue);
+  const [query, setQuery] = useState('');
   const [predictions, setPredictions] = useState<PlacePrediction[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(-1);
   const [isLoading, setIsLoading] = useState(false);
+  
   const wrapperRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const autocompleteService = useRef<google.maps.places.AutocompleteService | null>(null);
 
   const { isLoaded } = useGoogleMaps();
@@ -54,7 +60,6 @@ export function LocationAutosuggest({
       autocompleteService.current = new google.maps.places.AutocompleteService();
     }
   }, [isLoaded]);
-
 
   // Close suggestions when clicking outside
   useEffect(() => {
@@ -79,7 +84,7 @@ export function LocationAutosuggest({
     const request = {
       input: query,
       componentRestrictions: { country: 'za' }, // Restrict to South Africa
-      types: ['geocode'], // Use 'geocode' to get all geographic results (cities, suburbs, etc.) without businesses
+      types: ['geocode'],
     };
 
     autocompleteService.current.getPlacePredictions(request, (results, status) => {
@@ -92,17 +97,24 @@ export function LocationAutosuggest({
     });
   }, [query]);
 
-  const handleSelect = (prediction: PlacePrediction) => {
-    const mainText = prediction.structured_formatting.main_text;
-    if (!clearOnSelect) {
-        setQuery(mainText);
-    } else {
-        setQuery('');
+  const handlePredictionSelect = (prediction: PlacePrediction) => {
+    // Check max limit
+    if (selectedLocations.length >= maxLocations) {
+        // Optional: Trigger a toast or visual feedback here
+        return;
     }
+
+    const mainText = prediction.structured_formatting.main_text;
+    
+    // Clear query after selection
+    setQuery('');
+    if (onChange) onChange('');
+    
     setShowSuggestions(false);
+    // Keep focus on input for rapid multi-select
+    inputRef.current?.focus();
 
     if (onSelect) {
-      // Robust slug and type resolution
       const slug = slugify(mainText);
       let locationType = getLocationType(prediction.types);
       
@@ -123,41 +135,29 @@ export function LocationAutosuggest({
       }
       // 3. Fallback / Heuristics for Suburbs or minor places
       else {
-          // Attempt to derive context from description (e.g., "Sandton, Johannesburg, Gauteng")
           const parts = prediction.description.split(',').map(s => slugify(s));
-          
-          // Check parts for known provinces
           const foundProvince = parts.find(p => PROVINCE_SLUGS.includes(p));
           if (foundProvince) provinceSlug = foundProvince;
           
-          // Check parts for known cities (if not already the main slug)
-          // We iterate parts to see if any is a known city
           if (!citySlug) {
               const foundCity = parts.find(p => CITY_PROVINCE_MAP[p]);
               if (foundCity) {
                   citySlug = foundCity;
-                  // If we didn't find province yet, authoritative map wins
                   if (!provinceSlug) provinceSlug = CITY_PROVINCE_MAP[foundCity];
               }
           }
           
-          // If we still don't have a province but have a 'city' type selection that wasn't in our map, 
-          // we might just default to 'gauteng' or leave undefined (backend will handle or generic search)
           if (!provinceSlug) {
-              // Heuristics for major hubs not in map or typo tolerance
               if (prediction.description.toLowerCase().includes('cape town')) provinceSlug = 'western-cape';
               else if (prediction.description.toLowerCase().includes('durban')) provinceSlug = 'kwazulu-natal';
-              // else provinceSlug = 'gauteng'; // RISKY to default, better to be undefined and fall back to broad search
           }
       }
 
       onSelect({
+        id: prediction.place_id,
         name: mainText,
-        fullAddress: prediction.description,
-        placeId: prediction.place_id,
-        types: prediction.types,
         slug,
-        type: locationType,
+        type: locationType as any,
         provinceSlug,
         citySlug
       });
@@ -165,27 +165,29 @@ export function LocationAutosuggest({
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    // Handle Enter key for text search even without predictions
+    // Handle specific keys
+    if (e.key === 'Backspace' && query === '' && selectedLocations.length > 0 && onRemove) {
+        // Remove last tag on empty backspace
+        onRemove(selectedLocations.length - 1);
+        return;
+    }
+
     if (e.key === 'Enter') {
       e.preventDefault();
-      // If a suggestion is highlighted, select it
       if (showSuggestions && predictions.length > 0 && selectedIndex >= 0) {
-        handleSelect(predictions[selectedIndex]);
+        handlePredictionSelect(predictions[selectedIndex]);
       } else {
-        // No suggestion selected - trigger text search
         setShowSuggestions(false);
         if (onSubmit) onSubmit();
       }
       return;
     }
     
-    // Escape to close
     if (e.key === 'Escape') {
       setShowSuggestions(false);
       return;
     }
     
-    // Arrow navigation only when suggestions are visible
     if (!showSuggestions || predictions.length === 0) return;
 
     if (e.key === 'ArrowDown') {
@@ -198,71 +200,91 @@ export function LocationAutosuggest({
   };
 
   const getLocationType = (types: string[]) => {
-    if (types.includes('administrative_area_level_1')) {
-      return 'province';
-    }
-    if (types.includes('locality') || types.includes('administrative_area_level_2')) {
-      return 'city';
-    }
-    if (types.includes('sublocality') || types.includes('neighborhood')) {
-      return 'suburb';
-    }
-    return 'location';
+    if (types.includes('administrative_area_level_1')) return 'province';
+    if (types.includes('locality') || types.includes('administrative_area_level_2')) return 'city';
+    if (types.includes('sublocality') || types.includes('neighborhood')) return 'suburb';
+    return 'city'; // default fallback type
+  };
+
+  // Wrapper click focuses input
+  const handleWrapperClick = () => {
+      inputRef.current?.focus();
   };
 
   if (!isLoaded) {
     return (
       <div className={`relative ${className}`}>
-        <Input
-          type="text"
-          placeholder="Loading maps..."
-          disabled
-          className="bg-gray-50"
-        />
+        <Input type="text" placeholder="Loading maps..." disabled className="bg-gray-50" />
       </div>
     );
   }
 
+  const isLimitReached = selectedLocations.length >= maxLocations;
+  const showPlaceholder = selectedLocations.length === 0;
+
   return (
-    <div ref={wrapperRef} className={`relative ${className}`}>
-      <div className="relative h-full w-full">
-        <Input
+    <div ref={wrapperRef} className={`relative group cursor-text ${className}`}>
+      {/* Container simulating Input look and feel */}
+      <div 
+        onClick={handleWrapperClick}
+        className={`flex flex-wrap items-center gap-2 min-h-[44px] w-full rounded-lg border border-input bg-background px-3 py-1 ring-offset-background group-focus-within:ring-2 group-focus-within:ring-ring group-focus-within:ring-offset-2 ${inputClassName}`}
+      >
+        {/* Render Pills */}
+        {selectedLocations.map((loc, index) => (
+            <div 
+                key={`${loc.id}-${index}`}
+                className="flex items-center gap-1.5 bg-slate-900 text-white text-sm px-3 py-1.5 rounded-md whitespace-nowrap shadow-sm animate-in fade-in zoom-in duration-200"
+                onClick={(e) => e.stopPropagation()} 
+            >
+                <span className="font-medium truncate max-w-[150px]">{loc.name}</span>
+                <button
+                    type="button"
+                    onClick={() => onRemove?.(index)}
+                    className="hover:bg-slate-700 rounded-full p-0.5 transition-colors focus:outline-none focus:ring-1 focus:ring-slate-400"
+                    aria-label={`Remove ${loc.name}`}
+                >
+                    <X className="h-3.5 w-3.5" />
+                </button>
+            </div>
+        ))}
+
+        {/* The actual Input - borderless */}
+        <input
+          ref={inputRef}
           type="text"
           autoComplete="off"
-          autoCorrect="off"
-          autoCapitalize="off"
-          spellCheck="false"
-          data-lpignore="true"
-          placeholder={placeholder}
+          // Disable input if limit reached (optional, P24 behavior allows typing but no selecting? Let's keep typing allowed for UX)
+          // readOnly={isLimitReached} 
+          placeholder={showPlaceholder ? placeholder : (isLimitReached ? 'Limit reached' : '...add more')}
           value={query}
           onChange={(e) => {
             const newValue = e.target.value;
             setQuery(newValue);
             setShowSuggestions(true);
             setSelectedIndex(-1);
-            // Sync typed value to parent
             if (onChange) onChange(newValue);
           }}
           onFocus={() => query.length >= 1 && setShowSuggestions(true)}
           onKeyDown={handleKeyDown}
-          className={`pl-4 ${showIcon || isLoading ? 'pr-10' : 'pr-3'} ${inputClassName || 'bg-gray-100 border-0 rounded-lg h-11'}`}
+          className="flex-1 bg-transparent border-0 outline-none placeholder:text-muted-foreground min-w-[120px] h-8 text-sm"
         />
-        {isLoading ? (
-          <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 animate-spin" />
-        ) : showIcon ? (
-          <MapPin className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-        ) : null}
+        
+        {/* Right Icon */}
+        <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
+             {isLoading ? <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" /> : 
+              showIcon ? <MapPin className="h-4 w-4 text-muted-foreground" /> : null}
+        </div>
       </div>
 
       {/* Suggestions Dropdown */}
-      {showSuggestions && predictions.length > 0 && (
-        <div className="absolute z-[9999] top-full left-0 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-80 overflow-y-auto">
+      {showSuggestions && predictions.length > 0 && !isLimitReached && (
+        <div className="absolute z-[9999] top-full left-0 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-80 overflow-y-auto animate-in fade-in slide-in-from-top-1 duration-200">
           {predictions.map((prediction, index) => {
             const locationType = getLocationType(prediction.types);
             return (
               <div
                 key={prediction.place_id}
-                onClick={() => handleSelect(prediction)}
+                onClick={() => handlePredictionSelect(prediction)}
                 onMouseEnter={() => setSelectedIndex(index)}
                 className={`flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors ${
                   index === selectedIndex ? 'bg-blue-50' : 'hover:bg-gray-50'
@@ -290,14 +312,17 @@ export function LocationAutosuggest({
         </div>
       )}
 
-      {/* No results */}
-      {showSuggestions && query.length >= 2 && !isLoading && predictions.length === 0 && (
-        <div className="absolute z-[9999] w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg p-4">
-          <p className="text-sm text-gray-500 text-center">No locations found</p>
-        </div>
+      {/* No results or limit message */}
+      {(showSuggestions && !isLoading) && (
+          (predictions.length === 0 && query.length >= 2) ? (
+            <div className="absolute z-[9999] w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg p-4">
+               <p className="text-sm text-gray-500 text-center">No locations found</p>
+            </div>
+          ) : null
       )}
     </div>
   );
 }
+
 
 
