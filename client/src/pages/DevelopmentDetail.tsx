@@ -313,12 +313,22 @@ export default function DevelopmentDetail() {
               <Separator className="bg-slate-100" />
 
               {/* About Section */}
-              <div className="space-y-3">
-                <h3 className="text-xl font-bold text-slate-900">About {development.name}</h3>
-                <div className="prose prose-slate max-w-none text-slate-600 leading-relaxed text-sm">
-                  <p>{development.description || "Experience luxury living in this exclusive new development. Providing state-of-the-art amenities and modern architectural design, this is the perfect place to call home."}</p>
-                </div>
-              </div>
+              <Card className="border-slate-200 shadow-sm">
+                <CardHeader className="bg-slate-50/50 border-b border-slate-100">
+                  <CardTitle className="font-bold text-slate-900">About {development.name}</CardTitle>
+                </CardHeader>
+                <CardContent className="p-4">
+                  <p className="text-slate-600 leading-relaxed whitespace-pre-line">
+                    {development.description || "Experience luxury living in this exclusive new development. Providing state-of-the-art amenities and modern architectural design, this is the perfect place to call home."}
+                  </p>
+                  <Button 
+                    variant="link" 
+                    className="p-0 h-auto text-blue-600 font-medium mt-4"
+                  >
+                    Read Full Description
+                  </Button>
+                </CardContent>
+              </Card>
 
               <Separator className="bg-slate-100" />
 
