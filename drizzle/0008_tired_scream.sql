@@ -1,4 +1,4 @@
-CREATE TABLE `activities` (
+/* CREATE TABLE `activities` (
 	`id` int AUTO_INCREMENT NOT NULL,
 	`developerId` int NOT NULL,
 	`activityType` varchar(50) NOT NULL,
@@ -10,7 +10,7 @@ CREATE TABLE `activities` (
 	`userId` int,
 	`createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	CONSTRAINT `activities_id` PRIMARY KEY(`id`)
-);
+); */
 --> statement-breakpoint
 CREATE TABLE `developer_notifications` (
 	`id` int AUTO_INCREMENT NOT NULL,
@@ -139,8 +139,8 @@ ALTER TABLE `leads` ADD `assigned_at` timestamp;--> statement-breakpoint
 ALTER TABLE `leads` ADD `converted_at` timestamp;--> statement-breakpoint
 ALTER TABLE `leads` ADD `lost_reason` text;--> statement-breakpoint
 ALTER TABLE `developments` ADD CONSTRAINT `developments_slug_unique` UNIQUE(`slug`);--> statement-breakpoint
-ALTER TABLE `activities` ADD CONSTRAINT `activities_developerId_developers_id_fk` FOREIGN KEY (`developerId`) REFERENCES `developers`(`id`) ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE `activities` ADD CONSTRAINT `activities_userId_users_id_fk` FOREIGN KEY (`userId`) REFERENCES `users`(`id`) ON DELETE set null ON UPDATE no action;--> statement-breakpoint
+/* ALTER TABLE `activities` ADD CONSTRAINT `activities_developerId_developers_id_fk` FOREIGN KEY (`developerId`) REFERENCES `developers`(`id`) ON DELETE cascade ON UPDATE no action;*/--> statement-breakpoint
+/* ALTER TABLE `activities` ADD CONSTRAINT `activities_userId_users_id_fk` FOREIGN KEY (`userId`) REFERENCES `users`(`id`) ON DELETE set null ON UPDATE no action;*/--> statement-breakpoint
 ALTER TABLE `developer_notifications` ADD CONSTRAINT `developer_notifications_developerId_developers_id_fk` FOREIGN KEY (`developerId`) REFERENCES `developers`(`id`) ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE `developer_notifications` ADD CONSTRAINT `developer_notifications_userId_users_id_fk` FOREIGN KEY (`userId`) REFERENCES `users`(`id`) ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE `developer_subscription_limits` ADD CONSTRAINT `developer_subscription_limits_subscriptionId_developer_subscriptions_id_fk` FOREIGN KEY (`subscriptionId`) REFERENCES `developer_subscriptions`(`id`) ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
@@ -150,11 +150,11 @@ ALTER TABLE `developer_subscriptions` ADD CONSTRAINT `developer_subscriptions_pl
 ALTER TABLE `development_phases` ADD CONSTRAINT `development_phases_developmentId_developments_id_fk` FOREIGN KEY (`developmentId`) REFERENCES `developments`(`id`) ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE `development_units` ADD CONSTRAINT `development_units_developmentId_developments_id_fk` FOREIGN KEY (`developmentId`) REFERENCES `developments`(`id`) ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE `development_units` ADD CONSTRAINT `development_units_phaseId_development_phases_id_fk` FOREIGN KEY (`phaseId`) REFERENCES `development_phases`(`id`) ON DELETE set null ON UPDATE no action;--> statement-breakpoint
-CREATE INDEX `idx_activities_developer_id` ON `activities` (`developerId`);--> statement-breakpoint
-CREATE INDEX `idx_activities_type` ON `activities` (`activityType`);--> statement-breakpoint
-CREATE INDEX `idx_activities_created_at` ON `activities` (`createdAt`);--> statement-breakpoint
-CREATE INDEX `idx_activities_related_entity` ON `activities` (`relatedEntityType`,`relatedEntityId`);--> statement-breakpoint
-CREATE INDEX `idx_activities_feed` ON `activities` (`developerId`,`createdAt`);--> statement-breakpoint
+/* CREATE INDEX `idx_activities_developer_id` ON `activities` (`developerId`);*/--> statement-breakpoint
+/* CREATE INDEX `idx_activities_type` ON `activities` (`activityType`);*/--> statement-breakpoint
+/* CREATE INDEX `idx_activities_created_at` ON `activities` (`createdAt`);*/--> statement-breakpoint
+/* CREATE INDEX `idx_activities_related_entity` ON `activities` (`relatedEntityType`,`relatedEntityId`);*/--> statement-breakpoint
+/* CREATE INDEX `idx_activities_feed` ON `activities` (`developerId`,`createdAt`);*/--> statement-breakpoint
 CREATE INDEX `idx_developer_notifications_developer_id` ON `developer_notifications` (`developerId`);--> statement-breakpoint
 CREATE INDEX `idx_developer_notifications_user_id` ON `developer_notifications` (`userId`);--> statement-breakpoint
 CREATE INDEX `idx_developer_notifications_read` ON `developer_notifications` (`read`);--> statement-breakpoint

@@ -53,6 +53,7 @@ export async function getPublicDevelopmentBySlug(slugOrId: string) {
       amenities: developments.amenities,
       highlights: developments.highlights,
       features: developments.features,
+      estateSpecs: developments.estateSpecs,
       status: developments.status,
       developmentType: developments.developmentType,
       completionDate: developments.completionDate,
@@ -199,12 +200,13 @@ export async function listPublicDevelopments(limit: number = 20) {
 // ADMIN / DEVELOPER FUNCTIONS (Restored)
 // ===========================================================================
 
-async function createDevelopment(developerId: number, data: any) {
+async function createDevelopment(developerId: number, data: any, metadata: any = {}) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
   const [result] = await db.insert(developments).values({
     ...data,
+    ...metadata,
     developerId,
     // Ensure amenities are stringified if passed as array, or let Drizzle handle JSON if column is json
     amenities: Array.isArray(data.amenities) ? data.amenities : data.amenities
@@ -235,6 +237,35 @@ async function getDevelopmentsByDeveloperId(developerId: number) {
   return db.select().from(developments).where(eq(developments.developerId, developerId));
 }
 
+async function updateDevelopment(id: number, developerId: number, data: any) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  // If developerId is -1, bypass ownership check (Super Admin mode)
+  // Otherwise, verify ownership
+  if (developerId !== -1) {
+    const existing = await db
+      .select()
+      .from(developments)
+      .where(and(eq(developments.id, id), eq(developments.developerId, developerId)))
+      .limit(1);
+      
+    if (!existing.length) {
+      throw new Error("Unauthorized: Development not found or you don't have permission to update it");
+    }
+  }
+
+  const [result] = await db.update(developments)
+    .set({
+      ...data,
+      amenities: Array.isArray(data.amenities) ? data.amenities : data.amenities
+    })
+    .where(eq(developments.id, id))
+    .returning();
+  
+  return result;
+}
+
 async function createPhase(developmentId: number, developerId: number, data: any) {
    const db = await getDb();
    if (!db) throw new Error("Database not available");
@@ -258,14 +289,40 @@ async function updatePhase(phaseId: number, developerId: number, data: any) {
     return result;
 }
 
+async function deleteDevelopment(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  // Drizzle doesn't return deleted rows by default in MySQL, but we can return result info
+  const result = await db.delete(developments).where(eq(developments.id, id));
+  return result;
+}
+
+async function publishDevelopment(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const [result] = await db.update(developments)
+    .set({ 
+      isPublished: 1, 
+      publishedAt: new Date().toISOString(),
+      status: 'launching-soon' // Default status on publish
+    })
+    .where(eq(developments.id, id))
+    .returning();
+  return result;
+}
+
 // Object export to satisfy existing consumers
 export const developmentService = {
   getPublicDevelopmentBySlug,
   getPublicDevelopment,
   listPublicDevelopments,
   createDevelopment,
+  updateDevelopment,
   getDevelopmentWithPhases,
   getDevelopmentsByDeveloperId,
+  getDeveloperDevelopments: getDevelopmentsByDeveloperId, // Alias for router compatibility
   createPhase,
-  updatePhase
+  updatePhase,
+  deleteDevelopment,
+  publishDevelopment
 };

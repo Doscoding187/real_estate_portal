@@ -575,6 +575,7 @@ export const developments = mysqlTable("developments", {
 	amenities: json().$type<string[]>(), // Development amenities (Swimming Pool, Clubhouse, etc.)
 	highlights: json().$type<string[]>(), // Up to 5 development highlights
 	features: json().$type<string[]>(), // Estate-level features (Perimeter Wall, Fibre Ready, etc.)
+	estateSpecs: json().$type<any>(), // Structured specifications (Ownership, Power, Security, etc.)
 	images: text(),
 	videos: text(),
 	floorPlans: text(),
