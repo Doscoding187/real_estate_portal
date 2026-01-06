@@ -22,7 +22,7 @@ interface LocationHeroSectionProps {
   backgroundImage: string;
   listingCount: number;
   campaign?: HeroCampaign | null;
-  quickLinks?: { label: string; path: string }[];
+  quickLinks?: { label: string; path?: string; slug?: string; }[];
   initialSearchQuery?: string;
 }
 
@@ -48,7 +48,7 @@ export function LocationHeroSection({
   initialSearchQuery = '',
 }: LocationHeroSectionProps) {
   const [, setLocation] = useLocation();
-  const [activeTab, setActiveTab] = useState('buy');
+  const [activeTab, setActiveTab] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState(initialSearchQuery);
 
   const handleCategoryClick = (categoryId: string) => {
@@ -56,8 +56,10 @@ export function LocationHeroSection({
     trackEvent('hero_category_click', { category: categoryId, location: locationSlug });
   };
 
-  const getSearchPath = (categoryId: string, locSlug: string, locName: string) => {
-    const category = categories.find(c => c.id === categoryId);
+  const getSearchPath = (categoryId: string | null, locSlug: string, locName: string) => {
+    // Default to 'buy' if no category selected
+    const effectiveCategoryId = categoryId || 'buy';
+    const category = categories.find(c => c.id === effectiveCategoryId);
     if (!category) return '/';
 
     if (category.listingType === 'development') {
@@ -174,7 +176,7 @@ export function LocationHeroSection({
                 onSelect={handleLocationSelect}
                 onChange={setSearchQuery}
                 className="w-full h-12 text-base border-2 border-slate-200 rounded-lg focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-200 bg-white transition-all flex items-center"
-                inputClassName="h-full w-full bg-transparent border-0 focus-visible:ring-0 px-0 placeholder:text-slate-500 text-slate-900"
+                inputClassName="h-full w-full bg-transparent border-0 focus-visible:ring-0 placeholder:text-slate-500 text-slate-900"
               />
             </div>
             
@@ -192,10 +194,17 @@ export function LocationHeroSection({
           {quickLinks.length > 0 && (
             <div className="mt-6 flex flex-wrap items-center justify-start gap-3">
               <span className="text-sm text-slate-500 font-medium">Popular:</span>
-              {quickLinks.slice(0, 5).map((link, idx) => (
+              {quickLinks.map((link, idx) => (
                 <button
                   key={idx}
-                  onClick={() => setLocation(link.path)}
+                  onClick={() => {
+                      if (link.slug) {
+                          const path = getSearchPath(activeTab, link.slug, link.label);
+                          setLocation(path);
+                      } else if (link.path) {
+                          setLocation(link.path);
+                      }
+                  }}
                   className="px-3 py-1.5 text-sm bg-slate-100 text-slate-700 rounded-full hover:bg-blue-100 hover:text-blue-700 transition-colors"
                 >
                   {link.label}
