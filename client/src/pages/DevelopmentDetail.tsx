@@ -53,6 +53,7 @@ import { LocalityGuide } from '@/components/property/LocalityGuide';
 import { Input } from '@/components/ui/input';
 import { MetaControl } from '@/components/seo/MetaControl';
 import { Breadcrumbs } from '@/components/search/Breadcrumbs';
+import { Footer } from '@/components/Footer';
 
 
 
@@ -818,6 +819,9 @@ export default function DevelopmentDetail() {
           </div>
         </div>
       </div>
+
+      {/* Footer */}
+      <Footer />
 
       {/* Media Lightbox */}
       <MediaLightbox
