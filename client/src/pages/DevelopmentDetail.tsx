@@ -171,7 +171,11 @@ export default function DevelopmentDetail() {
   const development = {
     id: dev.id,
     name: dev.name,
-    developer: dev.developerName || 'Unknown Developer',
+    developer: dev.developer?.name || 'Unknown Developer',
+    developerLogo: dev.developer?.logo || null,
+    developerDescription: dev.developer?.description || 'Professional property developer committed to quality and excellence.',
+    developerWebsite: dev.developer?.website || null,
+    developerSlug: dev.developer?.slug || null,
     location: `${dev.suburb ? dev.suburb + ', ' : ''}${dev.city}`,
     address: dev.address || '',
     description: dev.description || '',
@@ -618,12 +622,16 @@ export default function DevelopmentDetail() {
                     {/* Header Area */}
                     <div className="flex items-center gap-4 mb-6">
                       <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 overflow-hidden border-2 border-slate-200 shrink-0 flex items-center justify-center">
-                        <Building2 className="w-8 h-8 text-white" />
+                        {development.developerLogo ? (
+                          <img src={development.developerLogo} alt={development.developer} className="w-full h-full object-cover" />
+                        ) : (
+                          <Building2 className="w-8 h-8 text-white" />
+                        )}
                       </div>
                       <div>
                         <h4 className="text-lg font-bold text-slate-900">{development.developer}</h4>
                         <Badge className="bg-orange-500 hover:bg-orange-600 text-white border-none rounded-full px-3 py-0.5 text-xs font-medium mt-1">
-                          FEATURED DEVELOPER
+                          VERIFIED DEVELOPER
                         </Badge>
                       </div>
                     </div>
@@ -744,31 +752,39 @@ export default function DevelopmentDetail() {
                 <Card className="shadow-sm border-slate-200">
                   <CardContent className="p-4">
                     <div className="flex items-start gap-3 mb-3">
-                      {/* Mock logo */}
-                      <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-md flex items-center justify-center flex-shrink-0 shadow-sm">
-                        <Building2 className="w-5 h-5 text-white" />
+                      {/* Developer logo */}
+                      <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-md flex items-center justify-center flex-shrink-0 shadow-sm overflow-hidden">
+                        {development.developerLogo ? (
+                          <img src={development.developerLogo} alt={development.developer} className="w-full h-full object-cover" />
+                        ) : (
+                          <Building2 className="w-5 h-5 text-white" />
+                        )}
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="font-bold text-sm text-slate-900 truncate">{development.developer}</p>
                         <div className="flex items-center gap-1 mt-0.5">
                            <Award className="w-3 h-3 text-orange-500" />
-                           <span className="text-[10px] font-semibold text-orange-600 uppercase tracking-wide">Featured Developer</span>
+                           <span className="text-[10px] font-semibold text-orange-600 uppercase tracking-wide">Verified Developer</span>
                         </div>
                       </div>
                     </div>
                     
                     <p className="text-xs text-slate-500 mb-3 leading-relaxed line-clamp-2">
-                       Award-winning property developer with 20+ years of experience in luxury residential developments.
+                       {development.developerDescription}
                     </p>
 
                     {/* Website */}
-                    <a
-                      href="#"
-                      className="flex items-center gap-1.5 text-xs text-blue-600 hover:underline mb-3"
-                    >
-                      <Globe className="w-3 h-3" />
-                      <span>Visit Website</span>
-                    </a>
+                    {development.developerWebsite && (
+                      <a
+                        href={development.developerWebsite}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-1.5 text-xs text-blue-600 hover:underline mb-3"
+                      >
+                        <Globe className="w-3 h-3" />
+                        <span>Visit Website</span>
+                      </a>
+                    )}
 
                     <Separator className="bg-slate-100 my-3" />
 
