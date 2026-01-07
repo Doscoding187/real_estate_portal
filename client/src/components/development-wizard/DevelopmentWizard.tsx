@@ -50,7 +50,7 @@ const PHASES = [
   'Configuration',      // 3
   'Basic Details',      // 4
   'Location',           // 5 (NEW)
-  'Estate Profile',     // 6 (was 5)
+  'Development Profile',     // 6 (was 5)
   'Amenities',          // 7 (was 6)
   'Overview',           // 8 (was 7)
   'Media',              // 9 (was 8)

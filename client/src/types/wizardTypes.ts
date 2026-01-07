@@ -29,7 +29,7 @@ export const PHASE_LABELS: Record<WizardPhase, string> = {
   residentialConfig: 'Configuration',
   identity: 'Identity',
   location: 'Location',
-  estateProfile: 'Estate Profile',
+  estateProfile: 'Development Profile',
   amenities: 'Amenities',
   media: 'Media',
   units: 'Unit Types',

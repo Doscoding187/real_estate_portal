@@ -110,10 +110,10 @@ export function EstateProfilePhase() {
           </div>
           <div>
             <h2 className="text-2xl md:text-3xl font-bold text-slate-900">
-              Estate Profile
+              Development Profile
             </h2>
             <p className="text-slate-600">
-              Configure estate-level details, rules, and shared amenities.
+              Configure development-level details, rules, and shared amenities.
             </p>
           </div>
         </div>

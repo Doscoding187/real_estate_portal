@@ -80,8 +80,8 @@ export const WIZARD_CONFIG: Record<DevelopmentType, WorkflowConfig> = {
       },
       {
         key: 'estateProfile',
-        label: 'Estate Profile',
-        description: 'HOA, levies, and estate-level amenities',
+        label: 'Development Profile',
+        description: 'HOA, levies, and development-level amenities',
         isConditional: true,
         condition: (state) => shouldShowEstateProfile(state.residentialConfig.communityTypes),
       },
@@ -144,7 +144,7 @@ export const WIZARD_CONFIG: Record<DevelopmentType, WorkflowConfig> = {
       },
       {
         key: 'estateProfile',
-        label: 'Estate Profile',
+        label: 'Development Profile',
         isConditional: true,
         condition: (state) => shouldShowEstateProfile(state.residentialConfig.communityTypes),
       },
