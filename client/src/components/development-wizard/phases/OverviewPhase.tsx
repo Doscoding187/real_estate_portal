@@ -4,242 +4,300 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { X, Plus, Sparkles, CheckCircle2 } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import {
+  X,
+  Plus,
+  Sparkles,
+  CheckCircle2,
+  Calendar,
+  Megaphone,
+  ArrowRight,
+  ArrowLeft
+} from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { DEVELOPMENT_STATUS_OPTIONS } from '@/types/wizardTypes';
 
 export function OverviewPhase() {
-  const { 
-    overview, 
-    setOverview, 
-    setPhase, 
-    validatePhase 
+  const {
+    developmentData,
+    setIdentity,
+    addHighlight,
+    removeHighlight,
+    setPhase,
+    validatePhase,
   } = useDevelopmentWizard();
 
   const [highlightInput, setHighlightInput] = useState('');
-  const [amenityInput, setAmenityInput] = useState('');
 
-  const addHighlight = () => {
+  // Local handler for highlights to use the store action
+  const handleAddHighlight = () => {
     if (!highlightInput.trim()) return;
-    if (overview.highlights.includes(highlightInput.trim())) {
+    if (developmentData.highlights.includes(highlightInput.trim())) {
       toast.error('Highlight already exists');
       return;
     }
-    setOverview({ highlights: [...overview.highlights, highlightInput.trim()] });
+    addHighlight(highlightInput.trim());
     setHighlightInput('');
   };
 
-  const removeHighlight = (index: number) => {
-    const newHighlights = [...overview.highlights];
-    newHighlights.splice(index, 1);
-    setOverview({ highlights: newHighlights });
-  };
-
-  const addAmenity = () => {
-    if (!amenityInput.trim()) return;
-    if (overview.amenities.includes(amenityInput.trim())) {
-      toast.error('Amenity already exists');
-      return;
-    }
-    setOverview({ amenities: [...overview.amenities, amenityInput.trim()] });
-    setAmenityInput('');
-  };
-
-  const removeAmenity = (index: number) => {
-    const newAmenities = [...overview.amenities];
-    newAmenities.splice(index, 1);
-    setOverview({ amenities: newAmenities });
-  };
-
   const handleNext = () => {
-    // Current phase is 6 (Overview)
-    const { isValid, errors } = validatePhase(6);
+    // Validate Step 8 (Overview/Marketing)
+    const { isValid, errors } = validatePhase(8);
     if (isValid) {
-      setPhase(8);
+      setPhase(9); // Correct next phase (Media)
     } else {
-      errors.forEach(e => toast.error(e));
+      errors.forEach((e) => toast.error(e));
     }
   };
+
+  const handleBack = () => {
+    setPhase(7); // Back to Amenities
+    // If amenities was step 6 index, then 7. Check Wizard mapping:
+    // Case 7: AmenitiesPhase. So setPhase(7) is correct.
+  };
+
+  const showCompletionDate =
+    developmentData.status === 'under_construction' ||
+    developmentData.status === 'launching_soon';
 
   return (
-    <div className="space-y-6 md:space-y-8">
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="text-center md:text-left">
-        <h2 className="text-2xl md:text-3xl font-bold text-slate-900 mb-2">Overview & Features</h2>
-        <p className="text-slate-600">Highlight the key selling points and status of the development.</p>
+        <h2 className="text-2xl md:text-3xl font-bold text-slate-900 mb-2">
+          Marketing Summary
+        </h2>
+        <p className="text-slate-600">
+          Create compelling content to attract buyers. This will be the first thing they see.
+        </p>
       </div>
 
-      <div className="space-y-6">
-        <Card className="border-slate-200/60 shadow-sm">
-          <CardContent className="pt-6 space-y-6">
-            <div className="grid md:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <Label className="text-sm font-medium text-slate-700">Development Status</Label>
-                <Select 
-                  value={overview.status} 
-                  onValueChange={(val: any) => setOverview({ status: val })}
-                >
-                  <SelectTrigger className="h-11 border-slate-200 focus:border-blue-400 focus:ring-blue-400/20">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="planning">Planning Phase</SelectItem>
-                    <SelectItem value="construction">Under Construction</SelectItem>
-                    <SelectItem value="near-completion">Near Completion</SelectItem>
-                    <SelectItem value="completed">Completed</SelectItem>
-                  </SelectContent>
-                </Select>
+      <div className="grid gap-8">
+        {/* Core Marketing Content */}
+        <Card className="border-slate-200 shadow-sm">
+          <CardHeader className="bg-slate-50/50 border-b border-slate-100">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-blue-100 rounded-lg">
+                <Megaphone className="w-5 h-5 text-blue-600" />
+              </div>
+              <div>
+                <CardTitle className="text-lg text-slate-900">
+                  Listing Content
+                </CardTitle>
+                <CardDescription>
+                  Define how your development appears in search results.
+                </CardDescription>
               </div>
             </div>
-
-            <div className="space-y-2">
-              <Label className="text-sm font-medium text-slate-700">Marketing Description</Label>
-              <Textarea 
-                placeholder="Detailed description for marketing purposes..."
-                className="min-h-[150px] border-slate-200 focus:border-blue-400 focus:ring-blue-400/20 resize-none"
-                value={overview.description}
-                onChange={(e) => setOverview({ description: e.target.value })}
+          </CardHeader>
+          <CardContent className="space-y-6 pt-6">
+            {/* Tagline */}
+            <div className="space-y-3">
+              <Label className="text-slate-900 font-medium">
+                Tagline <span className="text-slate-400 font-normal">(Optional)</span>
+              </Label>
+              <Input
+                placeholder="e.g. Where coastal luxury meets modern living"
+                value={developmentData.subtitle || ''}
+                onChange={(e) => setIdentity({ subtitle: e.target.value })}
+                maxLength={100}
+                className="h-11 border-slate-200 focus:border-blue-500"
               />
-              <div className="flex justify-between items-center">
-                <p className="text-xs text-slate-500">Minimum 50 characters required</p>
+              <p className="text-xs text-slate-500 text-right">
+                {(developmentData.subtitle?.length || 0)} / 100
+              </p>
+            </div>
+
+            {/* Description */}
+            <div className="space-y-3">
+              <Label className="text-slate-900 font-medium">
+                Development Description <span className="text-red-500">*</span>
+              </Label>
+              <Textarea
+                placeholder="Describe the lifestyle, location benefits, and unique selling points..."
+                className="min-h-[200px] border-slate-200 focus:border-blue-500 resize-y"
+                value={developmentData.description}
+                onChange={(e) => setIdentity({ description: e.target.value })}
+              />
+              <div className="flex justify-between items-center bg-slate-50 p-2 rounded-md border border-slate-100">
+                <div className="flex items-center gap-2">
+                   {developmentData.description.length < 50 ? (
+                      <span className="text-xs text-amber-600 flex items-center gap-1">
+                        ⚠️ Too short (min 50)
+                      </span>
+                   ) : developmentData.description.length < 150 ? (
+                      <span className="text-xs text-blue-600 flex items-center gap-1">
+                        ℹ️ Good start (aim for 150+)
+                      </span>
+                   ) : (
+                      <span className="text-xs text-green-600 flex items-center gap-1">
+                        ✅ Great length
+                      </span>
+                   )}
+                </div>
                 <p className={cn(
                   "text-xs font-medium",
-                  overview.description.length >= 50 ? "text-green-600" : "text-slate-500"
+                  developmentData.description.length >= 50 ? "text-slate-600" : "text-amber-600"
                 )}>
-                  {overview.description.length} / 50
+                  {developmentData.description.length} / 5000 chars
                 </p>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <div className="grid md:grid-cols-2 gap-6">
-          {/* Highlights Section */}
-          <Card className="border-slate-200/60 shadow-sm hover:shadow-md transition-shadow duration-300">
-            <CardHeader className="pb-4">
-              <CardTitle className="text-lg flex items-center gap-3">
-                <div className="p-2 bg-yellow-50 rounded-lg">
-                  <Sparkles className="w-5 h-5 text-yellow-600" />
-                </div>
-                <span className="text-slate-900">Key Highlights</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex gap-2">
-                <Input 
-                  placeholder="e.g. No Transfer Duty" 
-                  value={highlightInput}
-                  onChange={(e) => setHighlightInput(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && addHighlight()}
-                  className="h-11 border-slate-200 focus:border-blue-400 focus:ring-blue-400/20"
-                />
-                <Button 
-                  onClick={addHighlight} 
-                  size="icon" 
-                  className="h-11 w-11 bg-blue-600 hover:bg-blue-700 shadow-sm"
-                >
-                  <Plus className="w-5 h-5" />
-                </Button>
+        {/* Key Selling Points */}
+        <Card className="border-slate-200 shadow-sm">
+          <CardHeader className="bg-slate-50/50 border-b border-slate-100">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-amber-100 rounded-lg">
+                <Sparkles className="w-5 h-5 text-amber-600" />
               </div>
-              
-              <div className="flex flex-wrap gap-2 min-h-[120px] content-start bg-gradient-to-br from-slate-50 to-blue-50/30 p-4 rounded-xl border-2 border-dashed border-slate-200">
-                {overview.highlights.length === 0 && (
-                  <div className="w-full text-center py-6">
-                    <p className="text-sm text-slate-500 font-medium">Add at least 3 highlights</p>
-                    <p className="text-xs text-slate-400 mt-1">Press Enter or click + to add</p>
-                  </div>
-                )}
-                {overview.highlights.map((item, idx) => (
-                  <Badge 
-                    key={idx} 
-                    className="pl-3 pr-2 py-2 bg-white border-slate-300 shadow-sm hover:shadow-md transition-all text-slate-700 font-medium"
-                  >
-                    <CheckCircle2 className="w-3 h-3 mr-1.5 text-green-600" />
-                    {item}
-                    <button 
-                      onClick={() => removeHighlight(idx)} 
-                      className="ml-2 hover:text-red-600 transition-colors"
-                    >
-                      <X className="w-3.5 h-3.5" />
-                    </button>
-                  </Badge>
-                ))}
+              <div>
+                <CardTitle className="text-lg text-slate-900">
+                  Key Selling Points
+                </CardTitle>
+                <CardDescription>
+                  Add 3-8 bullet points summarizing why buyers should choose this estate.
+                </CardDescription>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-6 pt-6">
+            <div className="flex gap-2">
+              <Input
+                placeholder="e.g. No Transfer Duty"
+                value={highlightInput}
+                onChange={(e) => setHighlightInput(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleAddHighlight()}
+                className="h-11 border-slate-200 focus:border-blue-500"
+                maxLength={100}
+              />
+              <Button
+                onClick={handleAddHighlight}
+                size="icon"
+                className="h-11 w-11 bg-slate-900 hover:bg-slate-800 shrink-0"
+              >
+                <Plus className="w-5 h-5" />
+              </Button>
+            </div>
 
-          {/* Amenities Section */}
-          <Card className="border-slate-200/60 shadow-sm hover:shadow-md transition-shadow duration-300">
-            <CardHeader className="pb-4">
-              <CardTitle className="text-lg flex items-center gap-3">
-                <div className="p-2 bg-green-50 rounded-lg">
-                  <CheckCircle2 className="w-5 h-5 text-green-600" />
+            <div className="bg-slate-50 rounded-xl border-2 border-dashed border-slate-200 p-4 min-h-[100px]">
+              {developmentData.highlights.length === 0 ? (
+                <div className="text-center text-slate-500 py-4">
+                  <p className="text-sm font-medium">No highlights added yet.</p>
+                  <p className="text-xs mt-1">Add points like "Pet Friendly", "Backup Power", or "Prime Location".</p>
                 </div>
-                <span className="text-slate-900">Amenities & Services</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex gap-2">
-                <Input 
-                  placeholder="e.g. 24h Security" 
-                  value={amenityInput}
-                  onChange={(e) => setAmenityInput(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && addAmenity()}
-                  className="h-11 border-slate-200 focus:border-blue-400 focus:ring-blue-400/20"
-                />
-                <Button 
-                  onClick={addAmenity} 
-                  size="icon" 
-                  className="h-11 w-11 bg-blue-600 hover:bg-blue-700 shadow-sm"
-                >
-                  <Plus className="w-5 h-5" />
-                </Button>
-              </div>
-
-              <div className="flex flex-wrap gap-2 min-h-[120px] content-start bg-gradient-to-br from-slate-50 to-green-50/30 p-4 rounded-xl border-2 border-dashed border-slate-200">
-                {overview.amenities.length === 0 && (
-                  <div className="w-full text-center py-6">
-                    <p className="text-sm text-slate-500 font-medium">Add amenities and services</p>
-                    <p className="text-xs text-slate-400 mt-1">Press Enter or click + to add</p>
-                  </div>
-                )}
-                {overview.amenities.map((item, idx) => (
-                  <Badge 
-                    key={idx} 
-                    className="pl-3 pr-2 py-2 bg-white border-slate-300 shadow-sm hover:shadow-md transition-all text-slate-700 font-medium"
-                  >
-                    <CheckCircle2 className="w-3 h-3 mr-1.5 text-green-600" />
-                    {item}
-                    <button 
-                      onClick={() => removeAmenity(idx)} 
-                      className="ml-2 hover:text-red-600 transition-colors"
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  {developmentData.highlights.map((item, idx) => (
+                    <Badge
+                      key={idx}
+                      variant="secondary"
+                      className="pl-3 pr-1 py-1.5 bg-white border border-slate-200 shadow-sm text-slate-700 text-sm font-normal flex items-center gap-2"
                     >
-                      <X className="w-3.5 h-3.5" />
-                    </button>
-                  </Badge>
-                ))}
+                      <CheckCircle2 className="w-3.5 h-3.5 text-green-500" />
+                      {item}
+                      <button
+                        onClick={() => removeHighlight(idx)}
+                        className="p-1 hover:bg-red-50 hover:text-red-500 rounded-md transition-colors"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </Badge>
+                  ))}
+                </div>
+              )}
+            </div>
+             <p className="text-xs text-slate-500">
+                {developmentData.highlights.length} of 8 points added (Min 3)
+             </p>
+          </CardContent>
+        </Card>
+
+        {/* Development Status & Timeline */}
+        <Card className="border-slate-200 shadow-sm">
+           <CardHeader className="bg-slate-50/50 border-b border-slate-100">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-green-100 rounded-lg">
+                <Calendar className="w-5 h-5 text-green-600" />
               </div>
-            </CardContent>
-          </Card>
-        </div>
+              <div>
+                <CardTitle className="text-lg text-slate-900">
+                  Status & Timeline
+                </CardTitle>
+                <CardDescription>
+                  When will units be ready for occupation?
+                </CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="pt-6 space-y-6">
+             <div className="grid md:grid-cols-2 gap-6">
+                <div className="space-y-3">
+                   <Label>Current Development Status</Label>
+                   <Select
+                      value={developmentData.status}
+                      onValueChange={(val: any) => setIdentity({ status: val })}
+                   >
+                      <SelectTrigger className="h-11">
+                         <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                         {DEVELOPMENT_STATUS_OPTIONS.map(opt => (
+                            <SelectItem key={opt.value} value={opt.value}>
+                               {opt.label}
+                            </SelectItem>
+                         ))}
+                      </SelectContent>
+                   </Select>
+                </div>
+
+                {showCompletionDate && (
+                   <div className="space-y-3 animate-in fade-in slide-in-from-left-2">
+                      <Label>Expected Completion Date</Label>
+                      <Input
+                        type="date"
+                        className="h-11"
+                        value={developmentData.completionDate ? new Date(developmentData.completionDate).toISOString().split('T')[0] : ''}
+                        onChange={(e) => setIdentity({ completionDate: e.target.value ? new Date(e.target.value) : null })}
+                      />
+                      <p className="text-xs text-slate-500">
+                         Approximate date for first occupation.
+                      </p>
+                   </div>
+                )}
+             </div>
+          </CardContent>
+        </Card>
       </div>
 
-      <div className="flex justify-between pt-8 mt-8 border-t border-slate-200">
-        <Button 
-          variant="outline" 
-          onClick={() => setPhase(3)}
+      <div className="flex justify-between pt-8 border-t border-slate-200">
+        <Button
+          variant="outline"
+          onClick={handleBack}
           className="px-6 h-11 border-slate-300"
         >
+          <ArrowLeft className="w-4 h-4 mr-2" />
           Back
         </Button>
-        <Button 
-          onClick={handleNext} 
-          size="lg" 
+        <Button
+          onClick={handleNext}
+          size="lg"
           className="px-8 h-11 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 shadow-md hover:shadow-lg transition-all duration-300"
         >
           Continue to Media
+          <ArrowRight className="w-4 h-4 ml-2" />
         </Button>
       </div>
     </div>

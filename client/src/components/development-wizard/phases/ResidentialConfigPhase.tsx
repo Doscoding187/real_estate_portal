@@ -23,12 +23,11 @@ import { toast } from 'sonner';
 
 const RESIDENTIAL_ICONS: Record<ResidentialType, typeof Building2> = {
   apartment: Building2,
-  security_estate: Shield,
+  townhouse: Castle,
   freehold: Home,
-  mixed_residential: Building2,
   retirement: Users,
-  student_accommodation: GraduationCap,
-  townhouse_cluster: Castle,
+  student: GraduationCap,
+  mixed: Waves, // Placeholder icon
 };
 
 export function ResidentialConfigPhase() {
@@ -115,35 +114,47 @@ export function ResidentialConfigPhase() {
             {RESIDENTIAL_TYPE_OPTIONS.map((option) => {
               const Icon = RESIDENTIAL_ICONS[option.value];
               const isSelected = residentialConfig.residentialType === option.value;
+              const isDisabled = option.disabled;
               
               return (
                 <Card
                   key={option.value}
                   className={cn(
-                    "cursor-pointer transition-all duration-300 hover:scale-[1.02] relative overflow-hidden group",
-                    isSelected 
-                      ? "border-blue-500 bg-gradient-to-br from-blue-50 to-purple-50 ring-2 ring-blue-500 shadow-md" 
-                      : "border-slate-200 hover:border-blue-300 hover:shadow-sm"
+                    "relative overflow-hidden group transition-all duration-300",
+                    isDisabled 
+                       ? "cursor-not-allowed border-slate-200 bg-slate-50/50 opacity-60" 
+                       : "cursor-pointer hover:scale-[1.02] border-slate-200 hover:border-blue-300 hover:shadow-sm",
+                    isSelected && "border-blue-500 bg-gradient-to-br from-blue-50 to-purple-50 ring-2 ring-blue-500 shadow-md"
                   )}
-                  onClick={() => handleResidentialTypeSelect(option.value)}
+                  onClick={() => !isDisabled && handleResidentialTypeSelect(option.value)}
                 >
                   <CardContent className="p-5 flex items-start gap-4">
                     <div className={cn(
                       "p-3 rounded-xl transition-all duration-300 shrink-0",
                       isSelected 
                         ? "bg-gradient-to-br from-blue-500 to-purple-500 text-white" 
-                        : "bg-slate-100 text-slate-500 group-hover:bg-blue-100 group-hover:text-blue-600"
+                        : isDisabled
+                          ? "bg-slate-100 text-slate-400"
+                          : "bg-slate-100 text-slate-500 group-hover:bg-blue-100 group-hover:text-blue-600"
                     )}>
-                      <Icon className="w-6 h-6" />
+                      {Icon && <Icon className="w-6 h-6" />}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h4 className={cn(
-                        "font-semibold text-sm truncate",
-                        isSelected ? "text-blue-900" : "text-slate-900"
+                      <div className="flex items-center gap-2">
+                        <h4 className={cn(
+                          "font-semibold text-sm truncate",
+                          isSelected ? "text-blue-900" : isDisabled ? "text-slate-400" : "text-slate-900"
+                        )}>
+                          {option.label}
+                        </h4>
+                        {isDisabled && (
+                           <Badge variant="outline" className="text-[10px] h-5 px-1 bg-slate-100 text-slate-500">Soon</Badge>
+                        )}
+                      </div>
+                      <p className={cn(
+                        "text-xs mt-1 line-clamp-2",
+                        isDisabled ? "text-slate-400" : "text-slate-500"
                       )}>
-                        {option.label}
-                      </h4>
-                      <p className="text-xs text-slate-500 mt-1 line-clamp-2">
                         {option.description}
                       </p>
                     </div>

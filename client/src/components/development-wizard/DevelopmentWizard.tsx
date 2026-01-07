@@ -34,6 +34,7 @@ import { LandConfigPhase } from './phases/LandConfigPhase';
 import { CommercialConfigPhase } from './phases/CommercialConfigPhase';
 import { MixedUseConfigPhase } from './phases/MixedUseConfigPhase';
 import { IdentityPhase } from './phases/IdentityPhase';
+import { LocationPhase } from './phases/LocationPhase';
 import { EstateProfilePhase } from './phases/EstateProfilePhase';
 import { AmenitiesPhase } from './phases/AmenitiesPhase';
 import { MediaPhase } from './phases/MediaPhase';
@@ -47,13 +48,14 @@ const PHASES = [
   'Representation',     // 1
   'Development Type',   // 2
   'Configuration',      // 3
-  'Basic Details',      // 4 (was Identity)
-  'Estate Profile',     // 5 (conditional)
-  'Amenities',          // 6
-  'Overview',           // 7
-  'Media',              // 8
-  'Unit Types',         // 9
-  'Publish'             // 10
+  'Basic Details',      // 4
+  'Location',           // 5 (NEW)
+  'Estate Profile',     // 6 (was 5)
+  'Amenities',          // 7 (was 6)
+  'Overview',           // 8 (was 7)
+  'Media',              // 9 (was 8)
+  'Unit Types',         // 10 (was 9)
+  'Publish'             // 11 (was 10)
 ];
 
 interface DevelopmentWizardProps {
@@ -240,7 +242,8 @@ export function DevelopmentWizard({ developmentId, isModal = false }: Developmen
         // Default: Residential
         return <ResidentialConfigPhase />;
       case 4: return <IdentityPhase />;
-      case 5: 
+      case 5: return <LocationPhase />;
+      case 6: 
         // Conditional: Skip estate profile for Land/Commercial
         if (developmentType === 'land' || developmentType === 'commercial') {
           return <AmenitiesPhase />;
@@ -250,11 +253,11 @@ export function DevelopmentWizard({ developmentId, isModal = false }: Developmen
           return <AmenitiesPhase />;
         }
         return <EstateProfilePhase />;
-      case 6: return <AmenitiesPhase />;
-      case 7: return <OverviewPhase />;
-      case 8: return <MediaPhase />;
-      case 9: return <UnitTypesPhase />;
-      case 10: return <FinalisationPhase />;
+      case 7: return <AmenitiesPhase />;
+      case 8: return <OverviewPhase />;
+      case 9: return <MediaPhase />;
+      case 10: return <UnitTypesPhase />; // Unit Types (Step 10 now)
+      case 11: return <FinalisationPhase />; // Publish (Step 11 now)
       default: return <RepresentationPhase />;
     }
   };

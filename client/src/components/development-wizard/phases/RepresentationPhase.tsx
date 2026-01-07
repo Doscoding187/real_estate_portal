@@ -6,7 +6,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { trpc } from '@/lib/trpc';
-import { Search, Building2, Briefcase, CheckCircle2, ArrowRight } from 'lucide-react';
+import { Search, Building2, Briefcase, CheckCircle2, ArrowRight, Users } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -52,7 +52,7 @@ export function RepresentationPhase() {
         <p className="text-slate-500">Select your role for this designated development.</p>
       </div>
 
-      <div className="grid md:grid-cols-2 gap-6">
+      <div className="grid md:grid-cols-3 gap-6">
         {/* Developer Option */}
         <div 
           onClick={() => setListingIdentity({ identityType: 'developer', developerBrandProfileId: undefined })}
@@ -98,6 +98,30 @@ export function RepresentationPhase() {
           <h3 className="font-semibold text-lg mb-2">Marketing Agency</h3>
           <p className="text-sm text-slate-500 leading-relaxed">
             I am acting as a marketing agent or sales partner for a developer brand.
+          </p>
+        </div>
+
+        {/* Private Owner Option */}
+        <div 
+          onClick={() => setListingIdentity({ identityType: 'private_owner', developerBrandProfileId: undefined })}
+          className={cn(
+            "cursor-pointer group relative p-6 rounded-xl border-2 transition-all duration-300 hover:shadow-md",
+            listingIdentity.identityType === 'private_owner' 
+              ? "border-emerald-600 bg-emerald-50/50" 
+              : "border-slate-200 bg-white hover:border-emerald-200"
+          )}
+        >
+          {listingIdentity.identityType === 'private_owner' && (
+            <div className="absolute top-4 right-4 text-emerald-600">
+              <CheckCircle2 className="w-6 h-6" />
+            </div>
+          )}
+          <div className="w-12 h-12 bg-emerald-100 rounded-lg flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+            <Users className="w-6 h-6 text-emerald-600" />
+          </div>
+          <h3 className="font-semibold text-lg mb-2">Private Owner</h3>
+          <p className="text-sm text-slate-500 leading-relaxed">
+            I am an individual owner or representing a small private development entity.
           </p>
         </div>
       </div>

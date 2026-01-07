@@ -5,30 +5,31 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { Upload, X, Image as ImageIcon, MapPin, Building2, ArrowLeft, ArrowRight } from 'lucide-react';
+import { Upload, X, MapPin, Building2, ArrowLeft, ArrowRight, Calendar, Key, Tag } from 'lucide-react';
 import { LocationMapPicker, type LocationData } from '@/components/location/LocationMapPicker';
+import { 
+  DEVELOPMENT_STATUS_OPTIONS, 
+  TRANSACTION_TYPE_OPTIONS, 
+  OWNERSHIP_TYPE_OPTIONS 
+} from '@/types/wizardTypes';
 
 export function IdentityPhase() {
   const { 
     developmentData, 
     setIdentity, 
-    addMedia, 
-    removeMedia, 
-    setPrimaryImage,
     setPhase, 
     validatePhase 
   } = useDevelopmentWizard();
   
   const navigation = useWizardNavigation();
 
-
-
   const handleLocationSelect = (data: LocationData) => {
     setIdentity({
       location: {
+        ...developmentData.location,
         address: data.address || developmentData.location.address,
         city: data.city || developmentData.location.city,
         province: data.province || developmentData.location.province,
@@ -42,61 +43,69 @@ export function IdentityPhase() {
   };
 
   const handleNext = () => {
-    const { isValid, errors } = validatePhase(4); // Phase 4: Basic Details
+    const { isValid, errors } = validatePhase(4); 
     if (isValid) {
-      // Skip to Estate Profile (5) or Amenities (6) based on config
-      if (navigation.shouldShowEstateProfile) {
-        setPhase(5);
-      } else {
-        setPhase(6); // Skip to Amenities
-      }
+      setPhase(5); // Continue to Location
     } else {
       errors.forEach(e => toast.error(e));
     }
   };
   
   const handleBack = () => {
-    setPhase(3); // Back to Configuration
+    setPhase(3); 
   };
 
-  return (
-    <div className="space-y-6 md:space-y-8 max-w-4xl mx-auto">
-      <div className="space-y-6">
-        {/* Basic Info & Location */}
-        <div className="space-y-6">
-          
-          {/* Basic Information Card */}
-          <Card className="border-slate-200/60 shadow-sm hover:shadow-md transition-shadow duration-300">
-            <CardContent className="pt-6 space-y-5">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="p-2 bg-blue-50 rounded-lg">
-                  <Building2 className="w-5 h-5 text-blue-600" />
-                </div>
-                <h3 className="font-semibold text-lg text-slate-900">Development Details</h3>
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="name" className="text-sm font-medium text-slate-700">
-                  Development Name <span className="text-red-500">*</span>
-                </Label>
-                <Input 
-                  id="name" 
-                  placeholder="e.g. Sunset Heights" 
-                  value={developmentData.name}
-                  onChange={(e) => setIdentity({ name: e.target.value })}
-                  className="h-11 border-slate-200 focus:border-blue-400 focus:ring-blue-400/20"
-                />
-              </div>
+  // Check if current status implies active construction/launch
+  const showCompletionDate = ['under_construction', 'launching_soon', 'pre_launch'].includes(developmentData.status);
 
-              <div className="space-y-2">
-                <Label htmlFor="nature" className="text-sm font-medium text-slate-700">
-                  Nature of Development
-                </Label>
+  return (
+    <div className="space-y-8 max-w-4xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
+      
+      {/* 1. Identity Section */}
+      <Card className="border-slate-200/60 shadow-sm">
+        <CardHeader>
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-blue-50 rounded-lg">
+              <Building2 className="w-5 h-5 text-blue-600" />
+            </div>
+            <div>
+              <CardTitle className="text-lg text-slate-900">Development Identity</CardTitle>
+              <CardDescription>Name and describe your development.</CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-5">
+          <div className="grid md:grid-cols-2 gap-5">
+            <div className="space-y-2">
+              <Label htmlFor="name">Development Name <span className="text-red-500">*</span></Label>
+              <Input 
+                id="name" 
+                placeholder="e.g. Sunset Heights" 
+                value={developmentData.name}
+                onChange={(e) => setIdentity({ name: e.target.value })}
+                className="h-11"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="subtitle">Subtitle / Tagline</Label>
+              <Input 
+                id="subtitle" 
+                placeholder="e.g. Luxury Coastal Living" 
+                value={developmentData.subtitle || ''}
+                onChange={(e) => setIdentity({ subtitle: e.target.value })}
+                className="h-11"
+              />
+            </div>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-5">
+             <div className="space-y-2">
+                <Label htmlFor="nature">Nature of Development</Label>
                 <Select 
                   value={developmentData.nature} 
                   onValueChange={(val: any) => setIdentity({ nature: val })}
                 >
-                  <SelectTrigger className="h-11 border-slate-200 focus:border-blue-400 focus:ring-blue-400/20">
+                  <SelectTrigger className="h-11">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -105,151 +114,154 @@ export function IdentityPhase() {
                     <SelectItem value="extension">Extension / Redevelopment</SelectItem>
                   </SelectContent>
                 </Select>
-              </div>
+             </div>
+          </div>
 
-              <div className="grid gap-2">
-                <Label htmlFor="description">Description</Label>
-                <Textarea 
-                  id="description" 
-                  placeholder="Describe the vision and lifestyle..." 
-                  className="min-h-[120px]"
-                  value={developmentData.description}
-                  onChange={(e) => setIdentity({ description: e.target.value })}
-                />
-              </div>
+          <div className="space-y-2">
+            <Label htmlFor="description">Marketing Description</Label>
+            <Textarea 
+              id="description" 
+              placeholder="Describe the vision, lifestyle, and key selling points..." 
+              className="min-h-[100px] resize-y"
+              value={developmentData.description}
+              onChange={(e) => setIdentity({ description: e.target.value })}
+            />
+          </div>
+        </CardContent>
+      </Card>
 
-              {/* Project Status Section */}
-              <div className="pt-4 border-t border-slate-100">
-                <h4 className="font-medium text-slate-700 mb-4">Project Overview</h4>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="projectStatus" className="text-sm font-medium text-slate-700">
-                      Project Status
-                    </Label>
-                    <Select 
-                      value={developmentData.projectStatus} 
-                      onValueChange={(val: any) => setIdentity({ projectStatus: val })}
-                    >
-                      <SelectTrigger className="h-11 border-slate-200">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="pre_launch">Pre-Launch</SelectItem>
-                        <SelectItem value="under_construction">Under Construction</SelectItem>
-                        <SelectItem value="nearing_completion">Nearing Completion</SelectItem>
-                        <SelectItem value="ready_to_move">Ready to Move</SelectItem>
-                        <SelectItem value="completed">Completed</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="possessionDate" className="text-sm font-medium text-slate-700">
-                      Expected Possession
-                    </Label>
-                    <Input 
-                      id="possessionDate"
-                      type="month"
-                      value={developmentData.possessionDate || ''}
-                      onChange={(e) => setIdentity({ possessionDate: e.target.value })}
-                      className="h-11 border-slate-200"
-                    />
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4 mt-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="totalUnits" className="text-sm font-medium text-slate-700">
-                      Total Units
-                    </Label>
-                    <Input 
-                      id="totalUnits"
-                      type="number"
-                      placeholder="e.g. 120"
-                      value={developmentData.totalUnits || ''}
-                      onChange={(e) => setIdentity({ totalUnits: parseInt(e.target.value) || undefined })}
-                      className="h-11 border-slate-200"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="totalArea" className="text-sm font-medium text-slate-700">
-                      Development Area (m²)
-                    </Label>
-                    <Input 
-                      id="totalArea"
-                      type="number"
-                      placeholder="e.g. 25000"
-                      value={developmentData.totalDevelopmentArea || ''}
-                      onChange={(e) => setIdentity({ totalDevelopmentArea: parseInt(e.target.value) || undefined })}
-                      className="h-11 border-slate-200"
-                    />
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+      {/* 2. Timeline & Status Section */}
+      <Card className="border-slate-200/60 shadow-sm">
+        <CardHeader>
+           <div className="flex items-center gap-3">
+            <div className="p-2 bg-purple-50 rounded-lg">
+              <Calendar className="w-5 h-5 text-purple-600" />
+            </div>
+            <div>
+              <CardTitle className="text-lg text-slate-900">Timeline & Status</CardTitle>
+              <CardDescription>Current construction status and dates.</CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-5">
+          <div className="grid md:grid-cols-2 gap-5">
+            <div className="space-y-2">
+              <Label htmlFor="status">Development Status <span className="text-red-500">*</span></Label>
+              <Select 
+                value={developmentData.status} 
+                onValueChange={(val: any) => setIdentity({ status: val })}
+              >
+                <SelectTrigger className="h-11">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {DEVELOPMENT_STATUS_OPTIONS.map(opt => (
+                    <SelectItem key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-slate-500">
+                {DEVELOPMENT_STATUS_OPTIONS.find(o => o.value === developmentData.status)?.description}
+              </p>
+            </div>
 
-          {/* Location Card */}
-          <Card>
-            <CardContent className="pt-6 space-y-4">
-              <div className="flex items-center gap-2 mb-2">
-                <MapPin className="w-5 h-5 text-blue-600" />
-                <h3 className="font-semibold text-lg">Location</h3>
-              </div>
-
-              <div className="grid gap-2">
-                <Label className="text-sm font-medium text-slate-700">Pin Drop Location</Label>
-                <div className="rounded-lg overflow-hidden border border-slate-200 shadow-sm">
-                  <LocationMapPicker 
-                    initialLat={developmentData.location.latitude ? parseFloat(developmentData.location.latitude) : undefined}
-                    initialLng={developmentData.location.longitude ? parseFloat(developmentData.location.longitude) : undefined}
-                    onLocationSelect={handleLocationSelect}
-                    onGeocodingError={(err) => toast.error(err)}
-                  />
-                </div>
-              </div>
-
-              <div className="grid gap-2">
-                <Label htmlFor="address">Street Address <span className="text-red-500">*</span></Label>
+            {showCompletionDate && (
+              <div className="space-y-2 animate-in fade-in slide-in-from-top-2">
+                <Label htmlFor="completionDate">Expected Completion</Label>
                 <Input 
-                  id="address" 
-                  placeholder="123 Main Road" 
-                  value={developmentData.location.address}
-                  onChange={(e) => setIdentity({ location: { address: e.target.value } })}
+                  id="completionDate"
+                  type="date"
+                  value={developmentData.completionDate ? new Date(developmentData.completionDate).toISOString().split('T')[0] : ''}
+                  onChange={(e) => setIdentity({ completionDate: e.target.value ? new Date(e.target.value) : null })}
+                  className="h-11"
                 />
               </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="city">City <span className="text-red-500">*</span></Label>
-                  <Input 
-                    id="city" 
-                    placeholder="Cape Town" 
-                    value={developmentData.location.city}
-                    onChange={(e) => setIdentity({ location: { city: e.target.value } })}
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="province">Province</Label>
-                  <Select 
-                    value={developmentData.location.province} 
-                    onValueChange={(val) => setIdentity({ location: { province: val } })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select Province" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Western Cape">Western Cape</SelectItem>
-                      <SelectItem value="Gauteng">Gauteng</SelectItem>
-                      <SelectItem value="KwaZulu-Natal">KwaZulu-Natal</SelectItem>
-                      <SelectItem value="Eastern Cape">Eastern Cape</SelectItem>
-                      {/* Add others as needed */}
-                    </SelectContent>
-                  </Select>
-                </div>
+            )}
+          </div>
+          
+           {/* Legacy Totals - Keep nearby context */}
+           <div className="grid grid-cols-2 gap-5 pt-4 border-t border-slate-100/50">
+              <div className="space-y-2">
+                <Label htmlFor="totalUnits">Total Units</Label>
+                <Input 
+                  id="totalUnits"
+                  type="number"
+                  placeholder="e.g. 120"
+                  value={developmentData.totalUnits || ''}
+                  onChange={(e) => setIdentity({ totalUnits: parseInt(e.target.value) || undefined })}
+                  className="h-11"
+                />
               </div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
+              <div className="space-y-2">
+                <Label htmlFor="totalArea">Total Area (m²)</Label>
+                <Input 
+                  id="totalArea"
+                  type="number"
+                  placeholder="e.g. 25000"
+                  value={developmentData.totalDevelopmentArea || ''}
+                  onChange={(e) => setIdentity({ totalDevelopmentArea: parseInt(e.target.value) || undefined })}
+                  className="h-11"
+                />
+              </div>
+           </div>
+        </CardContent>
+      </Card>
+
+      {/* 3. Market Configuration */}
+       <Card className="border-slate-200/60 shadow-sm">
+        <CardHeader>
+           <div className="flex items-center gap-3">
+            <div className="p-2 bg-emerald-50 rounded-lg">
+              <Tag className="w-5 h-5 text-emerald-600" />
+            </div>
+            <div>
+              <CardTitle className="text-lg text-slate-900">Market Configuration</CardTitle>
+              <CardDescription>How this development is being sold.</CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="grid md:grid-cols-2 gap-5">
+           <div className="space-y-2">
+              <Label htmlFor="transactionType">Transaction Type <span className="text-red-500">*</span></Label>
+              <Select 
+                value={developmentData.transactionType} 
+                onValueChange={(val: any) => setIdentity({ transactionType: val })}
+              >
+                <SelectTrigger className="h-11">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {TRANSACTION_TYPE_OPTIONS.map(opt => (
+                    <SelectItem key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+           </div>
+           
+           <div className="space-y-2">
+              <Label htmlFor="ownershipType">Ownership Type <span className="text-red-500">*</span></Label>
+              <Select 
+                value={developmentData.ownershipType} 
+                onValueChange={(val: any) => setIdentity({ ownershipType: val })}
+              >
+                <SelectTrigger className="h-11">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {OWNERSHIP_TYPE_OPTIONS.map(opt => (
+                    <SelectItem key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+           </div>
+        </CardContent>
+      </Card>
 
       <div className="flex justify-between pt-8 mt-8 border-t border-slate-200">
         <Button 
@@ -265,7 +277,7 @@ export function IdentityPhase() {
           size="lg" 
           className="px-8 h-11 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 shadow-md hover:shadow-lg transition-all duration-300"
         >
-          {navigation.shouldShowEstateProfile ? 'Continue to Estate Profile' : 'Continue to Amenities'}
+         Continue to Location
           <ArrowRight className="w-4 h-4 ml-2" />
         </Button>
       </div>

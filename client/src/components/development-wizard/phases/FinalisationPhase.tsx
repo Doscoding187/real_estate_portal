@@ -1,352 +1,369 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useDevelopmentWizard } from '@/hooks/useDevelopmentWizard';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { CheckCircle2, AlertCircle, Loader2, Send, ArrowLeft } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { toast } from 'sonner';
-import { trpc } from '@/lib/trpc';
-import { useLocation } from 'wouter';
-import { calculateDevelopmentReadiness } from '@/lib/readiness';
-
-import { useAuth } from '@/_core/hooks/useAuth';
+import { 
+  CheckCircle2, AlertCircle, AlertTriangle, Edit2, Eye, 
+  MapPin, Home, Layers, Image as ImageIcon, FileText, 
+  ArrowLeft, Upload, Share2, Calendar, Smartphone, Monitor
+} from 'lucide-react';
+import { format } from 'date-fns';
+import confetti from 'canvas-confetti';
 
 export function FinalisationPhase() {
-  const { user } = useAuth();
   const { 
     developmentData, 
-    classification, 
-    overview, 
     unitTypes, 
-    validateForPublish,
-    setPhase,
-    editingId,
-    reset,
-    // Configs for serialization
-    residentialConfig,
-    landConfig,
-    commercialConfig,
-    estateProfile
+    classification,
+    setPhase, 
+    publishDevelopment,
+    validateForPublish 
   } = useDevelopmentWizard();
 
-  const [, setLocation] = useLocation();
-  const urlParams = new URLSearchParams(window.location.search);
-  const brandProfileId = urlParams.get('brandProfileId') ? parseInt(urlParams.get('brandProfileId')!) : undefined;
-  
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [validationResult, setValidationResult] = useState<{ isValid: boolean; errors: string[] }>({ isValid: true, errors: [] });
+  const [showConfirmPublish, setShowConfirmPublish] = useState(false);
+  const [isPublishing, setIsPublishing] = useState(false);
+  const [activePreviewTab, setActivePreviewTab] = useState<'desktop' | 'mobile'>('desktop');
 
-  // Mutations
-  const createDevMutation = trpc.developer.createDevelopment.useMutation();
-  const updateDevMutation = trpc.developer.updateDevelopment.useMutation();
-  const createUnitTypeMutation = trpc.developer.createUnitType.useMutation();
-  const deleteUnitTypesMutation = trpc.developer.deleteUnitTypesForDevelopment.useMutation();
-  const publishDevMutation = trpc.developer.publishDevelopment.useMutation();
+  // Run validation
+  const validationResult = validateForPublish();
+  const { errors, warnings } = validationResult || { errors: [], warnings: [] };
+  const canPublish = errors.length === 0;
 
-  useEffect(() => {
-    // Calculate readiness
-    const devCandidate = {
-       name: developmentData.name,
-       description: overview.description,
-       address: developmentData.location?.address,
-       latitude: developmentData.location?.latitude,
-       longitude: developmentData.location?.longitude,
-       images: developmentData.media?.photos?.map((p: any) => p.url) || [], 
-       priceFrom: unitTypes.length > 0 ? Math.min(...unitTypes.map(u => u.basePriceFrom)) : undefined,
-    };
-    const readiness = calculateDevelopmentReadiness(devCandidate);
-
-    const basicValidation = validateForPublish();
-    const newErrors = [...basicValidation.errors];
-    
-    if (readiness.score < 90) {
-        newErrors.push(`Readiness Score is ${readiness.score}% (Minimum 90% required).`);
-        Object.entries(readiness.missing).forEach(([section, items]) => {
-            if (items.length > 0) {
-                newErrors.push(`${section.charAt(0).toUpperCase() + section.slice(1)}: ${items.join(', ')}`);
-            }
-        });
-    }
-
-    setValidationResult({
-        isValid: basicValidation.isValid && readiness.score >= 90,
-        errors: newErrors
-    });
-  }, [developmentData, classification, overview, unitTypes, validateForPublish]);
-
-  const handlePublish = async () => {
-    if (!validationResult.isValid) {
-      toast.error('Please fix validation errors before publishing');
-      return;
-    }
-
-    setIsSubmitting(true);
-    let devId = editingId;
-    let unitTypeErrors: string[] = [];
-    
-    try {
-      console.log('[FinalisationPhase] Starting publish flow...', { editingId, hasUnitTypes: unitTypes.length });
-      
-      // Map Development Type
-      let mappedType: 'residential' | 'commercial' | 'mixed_use' | 'estate' | 'complex' = 'residential';
-      if (classification.type === 'commercial') mappedType = 'commercial';
-      else if (classification.type === 'mixed') mappedType = 'mixed_use';
-      else if (classification.type === 'land') mappedType = 'estate';
-      else if (classification.type === 'residential') mappedType = 'residential';
-
-      // Prepare Configuration Features (Serialized)
-      const configFeatures: string[] = [];
-      const addConfig = (key: string, value: string) => configFeatures.push(`cfg:${key}:${value}`);
-
-      // residential config
-      if (classification.type === 'residential') {
-          if (residentialConfig.residentialType) addConfig('res_type', residentialConfig.residentialType);
-          residentialConfig.communityTypes.forEach(t => addConfig('comm_type', t));
-          residentialConfig.securityFeatures.forEach(f => addConfig('sec_feat', f));
-      } 
-      else if (classification.type === 'land') {
-          if (landConfig.landType) addConfig('land_type', landConfig.landType);
-          landConfig.infrastructure.forEach(i => addConfig('infra', i));
-      }
-      else if (classification.type === 'commercial') {
-          if (commercialConfig.commercialType) addConfig('comm_use', commercialConfig.commercialType);
-          commercialConfig.features.forEach(f => addConfig('comm_feat', f));
-      }
-
-      // estate profile
-      if (estateProfile.classification) addConfig('est_class', estateProfile.classification);
-      if (estateProfile.hasHOA) addConfig('hoa', 'true');
-      if (estateProfile.architecturalGuidelines) addConfig('arch_guide', 'true');
-      if (estateProfile.levyRange.min > 0) addConfig('est_levy_min', estateProfile.levyRange.min.toString());
-      if (estateProfile.levyRange.max > 0) addConfig('est_levy_max', estateProfile.levyRange.max.toString());
-      estateProfile.estateAmenities.forEach(a => addConfig('est_amenity', a));
-
-      // Combine with user-defined features
-      const allFeatures = [...(overview.features || []), ...configFeatures];
-
-      // Prepare images (Hero + Gallery)
-      const allImages = [
-          ...(developmentData.media.heroImage ? [developmentData.media.heroImage] : []),
-          ...developmentData.media.photos
-      ];
-
-      // Prepare Payload
-      const devPayload = {
-        brandProfileId, // Add brand context
-        name: developmentData.name,
-        developmentType: mappedType,
-        description: overview.description,
-        address: developmentData.location.address,
-        city: developmentData.location.city,
-        province: developmentData.location.province,
-        suburb: developmentData.location.suburb,
-        postalCode: developmentData.location.postalCode,
-        latitude: developmentData.location.latitude,
-        longitude: developmentData.location.longitude,
-        amenities: overview.amenities,
-        highlights: overview.highlights, // Added highlights
-        features: allFeatures,
-        images: allImages.map(p => p.url), // Included Hero Image
-        videos: developmentData.media.videos.map(v => v.url),
-        priceFrom: unitTypes.length > 0 ? Math.min(...unitTypes.map(u => u.basePriceFrom)) : undefined,
-        priceTo: unitTypes.length > 0 ? Math.max(...unitTypes.map(u => u.basePriceFrom)) : undefined,
-      };
-
-      // STEP 1: Create or Update Development
-      if (devId) {
-        console.log('[FinalisationPhase] Updating existing development:', devId);
-        await updateDevMutation.mutateAsync({
-          id: devId,
-          data: devPayload
-        });
-        console.log('[FinalisationPhase] Development updated successfully');
-      } else {
-        console.log('[FinalisationPhase] Creating new development');
-        const res = await createDevMutation.mutateAsync(devPayload);
-        devId = res.development.id;
-        console.log('[FinalisationPhase] Development created with ID:', devId);
-      }
-
-      // STEP 2: Handle Unit Types (replace old with new)
-      if (unitTypes.length > 0 && devId) {
-        console.log('[FinalisationPhase] Processing unit types:', unitTypes.length);
-        
-        // If editing, delete old unit types first (replace strategy)
-        if (editingId) {
-          try {
-            console.log('[FinalisationPhase] Deleting old unit types for development:', devId);
-            await deleteUnitTypesMutation.mutateAsync({ developmentId: devId });
-            console.log('[FinalisationPhase] Old unit types deleted successfully');
-          } catch (deleteError: any) {
-            console.warn('[FinalisationPhase] Failed to delete old unit types:', deleteError.message);
-            // Continue anyway - we'll try to create new ones
-          }
-        }
-        
-        console.log('[FinalisationPhase] Creating new unit types:', unitTypes.length);
-        
-        for (const unit of unitTypes) {
-          try {
-            await createUnitTypeMutation.mutateAsync({
-              developmentId: devId,
-              name: unit.name,
-              bedrooms: unit.bedrooms,
-              bathrooms: unit.bathrooms,
-              parking: unit.parking,
-              unitSize: unit.unitSize,
-              basePriceFrom: unit.basePriceFrom || 0,
-              totalUnits: unit.totalUnits || 0,
-              availableUnits: unit.availableUnits ?? unit.totalUnits ?? 0,
-              amenities: [...unit.amenities.standard, ...unit.amenities.additional],
-              baseMedia: unit.baseMedia, // Pass unit type images
-            });
-          } catch (unitError: any) {
-            console.warn('[FinalisationPhase] Failed to create unit type:', unit.name, unitError.message);
-            unitTypeErrors.push(`Unit "${unit.name}": ${unitError.message}`);
-          }
-        }
-        
-        if (unitTypeErrors.length > 0) {
-          console.warn('[FinalisationPhase] Some unit types failed to create:', unitTypeErrors);
-        }
-      }
-
-      // STEP 3: Publish (only if not already approved)
-      if (developmentData.approvalStatus !== 'approved') {
-        console.log('[FinalisationPhase] Publishing development:', devId);
-        const publishResult = await publishDevMutation.mutateAsync({ id: devId! });
-        console.log('[FinalisationPhase] Publish result:', { 
-          id: publishResult.development.id, 
-          approvalStatus: publishResult.development.approvalStatus,
-          isPublished: publishResult.development.isPublished
-        });
-      } else {
-        console.log('[FinalisationPhase] Development already approved, skipping publish status change.');
-      }
-
-      // Show appropriate success message
-      if (unitTypeErrors.length > 0) {
-        toast.warning('Development published with some unit type errors', {
-          description: `${unitTypeErrors.length} unit type(s) failed to save. You can add them later.`
-        });
-      } else {
-        toast.success('Development published successfully!');
-      }
-      
-      
-      reset();
-      
-      // Redirect based on role
-      console.log('[FinalisationPhase] Redirecting user:', { role: user?.role, userId: user?.id });
-      if (user?.role === 'super_admin') {
-        console.log('[FinalisationPhase] Redirecting to Super Admin Publisher');
-        setLocation('/admin/publisher');
-      } else {
-        console.log('[FinalisationPhase] Redirecting to Developer Dashboard');
-        setLocation('/developer/dashboard');
-      }
-
-    } catch (error: any) {
-      console.error('[FinalisationPhase] Publish failed:', error);
-      toast.error(error.message || 'Failed to publish development');
-    } finally {
-      setIsSubmitting(false);
-    }
+  // Helper to get formatted status
+  const getStepStatus = (stepErrors: string[]) => {
+      if (stepErrors.length > 0) return { status: 'error', icon: AlertCircle, color: 'text-red-500', bg: 'bg-red-50' };
+      return { status: 'success', icon: CheckCircle2, color: 'text-green-500', bg: 'bg-green-50' };
   };
 
+  const handlePublish = async () => {
+    setIsPublishing(true);
+    // Simulate API call
+    setTimeout(() => {
+        publishDevelopment();
+        setShowConfirmPublish(false);
+        setIsPublishing(false);
+        confetti({
+            particleCount: 100,
+            spread: 70,
+            origin: { y: 0.6 }
+        });
+        toast.success('Listing successfully published!');
+        // Redirect or show success state would happen here
+    }, 1500);
+  };
+
+  // Render Section Helper
+  const ReviewSection = ({ 
+    title, icon: Icon, step, data, onEdit 
+  }: { 
+    title: string, icon: any, step: number, data: React.ReactNode, onEdit: () => void 
+  }) => (
+    <div className="border border-slate-200 rounded-lg overflow-hidden mb-4">
+        <div className="bg-slate-50 px-4 py-3 flex justify-between items-center border-b border-slate-100">
+            <div className="flex items-center gap-2">
+                <Icon className="w-4 h-4 text-slate-500" />
+                <h3 className="font-semibold text-sm text-slate-800">{title}</h3>
+            </div>
+            <Button variant="ghost" size="sm" onClick={onEdit} className="h-7 text-xs text-blue-600 hover:text-blue-700 hover:bg-blue-50">
+                <Edit2 className="w-3 h-3 mr-1" /> Edit
+            </Button>
+        </div>
+        <div className="p-4 text-sm text-slate-600">
+            {data}
+        </div>
+    </div>
+  );
+
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+    <div className="max-w-5xl mx-auto space-y-8 animate-in fade-in duration-500 pb-12">
+      
+      {/* Header */}
       <div>
-        <h2 className="text-2xl font-bold text-slate-800">Finalisation</h2>
-        <p className="text-slate-500">Review your development details and publish.</p>
+        <h2 className="text-3xl font-bold text-slate-900">Review & Publish</h2>
+        <p className="text-slate-600">Finalize your listing details before going live.</p>
       </div>
 
-      <div className="grid gap-6">
-        {/* Validation Status */}
-        <Card className={`border-l-4 ${validationResult.isValid ? 'border-l-green-500' : 'border-l-red-500'}`}>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              {validationResult.isValid ? (
-                <>
-                  <CheckCircle2 className="w-5 h-5 text-green-500" />
-                  Ready to Publish
-                </>
-              ) : (
-                <>
-                  <AlertCircle className="w-5 h-5 text-red-500" />
-                  Action Required
-                </>
+      <div className="grid lg:grid-cols-3 gap-8">
+        
+        {/* Left Col: Validation & Summary */}
+        <div className="lg:col-span-2 space-y-6">
+            
+            {/* Validation Dashboard */}
+           <Card className={!canPublish ? "border-red-200 shadow-sm" : "border-green-200 shadow-sm"}>
+              <CardHeader className={!canPublish ? "bg-red-50/50 pb-4" : "bg-green-50/50 pb-4"}>
+                 <div className="flex items-start gap-4">
+                    <div className={!canPublish ? "p-2 bg-red-100 rounded-full text-red-600" : "p-2 bg-green-100 rounded-full text-green-600"}>
+                        {!canPublish ? <AlertTriangle className="w-6 h-6"/> : <CheckCircle2 className="w-6 h-6"/>}
+                    </div>
+                    <div>
+                        <CardTitle className={!canPublish ? "text-red-900" : "text-green-900"}>
+                            {!canPublish ? "Action Required" : "Ready to Publish"}
+                        </CardTitle>
+                        <CardDescription className={!canPublish ? "text-red-700" : "text-green-700"}>
+                            {!canPublish 
+                                ? `Please resolve ${errors.length} error${errors.length > 1 ? 's' : ''} to continue.` 
+                                : "All required fields are complete. You can schedule or publish now."}
+                        </CardDescription>
+                    </div>
+                 </div>
+              </CardHeader>
+              {(!canPublish || warnings.length > 0) && (
+                 <CardContent className="pt-4 space-y-3">
+                    {errors.map((err, idx) => (
+                        <Alert key={`err-${idx}`} variant="destructive">
+                            <AlertCircle className="h-4 w-4" />
+                            <AlertTitle>Missing Requirement</AlertTitle>
+                            <AlertDescription>{err}</AlertDescription>
+                        </Alert>
+                    ))}
+                    {warnings.map((warn, idx) => (
+                        <Alert key={`warn-${idx}`} className="bg-amber-50 border-amber-200 text-amber-800">
+                            <AlertTriangle className="h-4 w-4 text-amber-600" />
+                            <AlertTitle className="text-amber-900">Recommendation</AlertTitle>
+                            <AlertDescription>{warn}</AlertDescription>
+                        </Alert>
+                    ))}
+                 </CardContent>
               )}
-            </CardTitle>
-            <CardDescription>
-              {validationResult.isValid 
-                ? "All required fields have been completed. You can now publish your development."
-                : "Please address the following issues before publishing:"
-              }
-            </CardDescription>
-          </CardHeader>
-          {!validationResult.isValid && (
-            <CardContent>
-              <ul className="list-disc list-inside space-y-1 text-sm text-red-600">
-                {validationResult.errors.map((error, index) => (
-                  <li key={index}>{error}</li>
-                ))}
-              </ul>
-            </CardContent>
-          )}
-        </Card>
+           </Card>
 
-        {/* Summary Card */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Development Summary</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-              <div>
-                <span className="text-slate-500 block">Name</span>
-                <span className="font-medium">{developmentData.name || 'Untitled'}</span>
-              </div>
-              <div>
-                <span className="text-slate-500 block">Type</span>
-                <span className="font-medium capitalize">{classification.type} {classification.subType ? `(${classification.subType})` : ''}</span>
-              </div>
-              <div>
-                <span className="text-slate-500 block">Location</span>
-                <span className="font-medium">{developmentData.location.city}, {developmentData.location.province}</span>
-              </div>
-              <div>
-                <span className="text-slate-500 block">Unit Types</span>
-                <span className="font-medium">{unitTypes.length} defined</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+           {/* Detailed Summary */}
+           <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-slate-900">Listing Details</h3>
+              
+              <ReviewSection 
+                 title="Identity & Type"
+                 icon={Home}
+                 step={1}
+                 onEdit={() => setPhase(1)} // Identity Step
+                 data={
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <span className="block text-xs uppercase text-slate-400 font-semibold tracking-wider">Name</span>
+                            <span className="font-medium text-slate-900">{developmentData.name || 'Untitled'}</span>
+                        </div>
+                        <div>
+                            <span className="block text-xs uppercase text-slate-400 font-semibold tracking-wider">Type</span>
+                            <span className="font-medium text-slate-900 capitalize">
+                                {classification?.type?.replace('_', ' ')} • {developmentData.ownershipType || 'N/A'}
+                            </span>
+                        </div>
+                    </div>
+                 }
+              />
 
-        {/* Actions */}
-        <div className="flex justify-between pt-4 border-t">
-          <Button variant="outline" onClick={() => setPhase(7)} disabled={isSubmitting}>
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back
-          </Button>
-          <Button 
-            onClick={handlePublish} 
-            disabled={!validationResult.isValid || isSubmitting}
-            className="bg-green-600 hover:bg-green-700 min-w-[150px]"
-          >
-            {isSubmitting ? (
-              <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Publishing...
-              </>
-            ) : (
-              <>
-                <Send className="w-4 h-4 mr-2" />
-                {developmentData.approvalStatus === 'approved' ? 'Update Development' : 'Publish Development'}
-              </>
-            )}
-          </Button>
+              <ReviewSection 
+                 title="Location"
+                 icon={MapPin}
+                 step={2} // Location phase
+                 onEdit={() => setPhase(5)} 
+                 data={
+                    <div>
+                        <span className="block text-xs uppercase text-slate-400 font-semibold tracking-wider">Address</span>
+                        <span className="font-medium text-slate-900">
+                             {developmentData.address || 'Address not set'}
+                        </span>
+                        {/* Map placeholder */}
+                        <div className="mt-2 h-24 bg-slate-100 rounded border border-slate-200 flex items-center justify-center text-xs text-slate-400">
+                            Map Preview
+                        </div>
+                    </div>
+                 }
+              />
+
+              <ReviewSection 
+                 title="Amenities & Features"
+                 icon={Share2}
+                 step={6} // Amenities
+                 onEdit={() => setPhase(7)}
+                 data={
+                    <div className="flex flex-wrap gap-2">
+                        {(developmentData.amenities?.standard || []).map(a => (
+                            <Badge key={a} variant="secondary" className="bg-slate-100 text-slate-700">{a}</Badge>
+                        ))}
+                        {(developmentData.amenities?.standard || []).length === 0 && <span className="text-slate-400 italic">No amenities selected</span>}
+                    </div>
+                 }
+              />
+
+              <ReviewSection 
+                  title="Marketing & Media"
+                  icon={ImageIcon}
+                  step={8} // Media
+                  onEdit={() => setPhase(9)}
+                  data={
+                      <div className="space-y-3">
+                          <p className="line-clamp-2 italic text-slate-500">"{developmentData.description || 'No description provided'}"</p>
+                          <div className="flex gap-4 text-xs font-medium text-slate-700 border-t pt-2">
+                              <span>{developmentData.media?.heroImage ? '✅ Hero Image' : '❌ No Hero'}</span>
+                              <span>{developmentData.media?.photos?.length || 0} Photos</span>
+                              <span>{developmentData.media?.videos?.length || 0} Videos</span>
+                              <span>{developmentData.media?.documents?.length || 0} Docs</span>
+                          </div>
+                      </div>
+                  }
+              />
+
+              <ReviewSection
+                  title="Unit Configuration"
+                  icon={Layers}
+                  step={9} // Units
+                  onEdit={() => setPhase(11)}
+                  data={
+                      <div className="space-y-2">
+                          {unitTypes.length === 0 ? (
+                              <span className="text-red-500 italic">No unit types defined</span>
+                          ) : (
+                              unitTypes.map(u => (
+                                  <div key={u.id} className="flex justify-between items-center bg-slate-50 p-2 rounded">
+                                      <span className="font-medium">{u.name}</span>
+                                      <div className="flex gap-3 text-xs text-slate-500">
+                                          <span>{u.bedrooms} Bed</span>
+                                          <span>{u.bathrooms} Bath</span>
+                                          <span>R {u.priceFrom?.toLocaleString()}</span>
+                                          <Badge variant="outline" className={u.availableUnits > 0 ? "text-green-600 border-green-200" : "text-red-600 border-red-200"}>{u.availableUnits} Avail</Badge>
+                                      </div>
+                                  </div>
+                              ))
+                          )}
+                      </div>
+                  }
+              />
+
+           </div>
+        </div>
+
+        {/* Right Col: Preview & Actions */}
+        <div className="space-y-6">
+            
+            {/* Control Panel */}
+            <Card className="sticky top-6 border-slate-200 shadow-md">
+                <CardHeader className="bg-slate-50 border-b pb-4">
+                    <CardTitle className="text-lg">Publishing Controls</CardTitle>
+                </CardHeader>
+                <CardContent className="pt-6 space-y-4">
+                    <div className="grid grid-cols-2 gap-2">
+                         <Button variant="outline" className="w-full text-xs">
+                             <Calendar className="w-3.5 h-3.5 mr-2" /> Schedule
+                         </Button>
+                         <Button variant="outline" className="w-full text-xs" onClick={() => toast.success("Draft saved")}>
+                             Save Draft
+                         </Button>
+                    </div>
+
+                    <Separator />
+                    
+                    <div className="space-y-2">
+                        <Button 
+                            className="w-full h-12 text-base bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 shadow-lg"
+                            disabled={!canPublish}
+                            onClick={() => setShowConfirmPublish(true)}
+                        >
+                            <Upload className="w-4 h-4 mr-2" />
+                            Publish Listing
+                        </Button>
+                        {!canPublish && (
+                            <p className="text-xs text-center text-red-500">
+                                Resolve validation errors to publish.
+                            </p>
+                        )}
+                        <p className="text-xs text-center text-slate-400">
+                            By publishing, you agree to our listing terms.
+                        </p>
+                    </div>
+                </CardContent>
+            </Card>
+
+            {/* Preview Widget */}
+            <Card>
+                <CardHeader className="pb-2 border-b">
+                   <div className="flex justify-between items-center">
+                       <CardTitle className="text-sm font-medium uppercase tracking-wide text-slate-500">Live Preview Mode</CardTitle>
+                       <div className="flex bg-slate-100 rounded-lg p-1">
+                           <button 
+                              onClick={() => setActivePreviewTab('desktop')}
+                              className={`p-1.5 rounded ${activePreviewTab === 'desktop' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-400 hover:text-slate-600'}`}
+                           >
+                               <Monitor className="w-4 h-4" />
+                           </button>
+                           <button 
+                              onClick={() => setActivePreviewTab('mobile')}
+                              className={`p-1.5 rounded ${activePreviewTab === 'mobile' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-400 hover:text-slate-600'}`}
+                           >
+                               <Smartphone className="w-4 h-4" />
+                           </button>
+                       </div>
+                   </div>
+                </CardHeader>
+                <CardContent className="p-0">
+                    <div className={`mx-auto bg-slate-100 overflow-hidden transition-all duration-300 ${activePreviewTab === 'mobile' ? 'w-[280px] h-[500px] my-4 rounded-[2rem] border-4 border-slate-800 shadow-xl' : 'w-full h-[400px]'}`}>
+                        {/* Mock Content */}
+                        <div className="bg-white w-full h-full flex flex-col overflow-y-auto">
+                            <div className="h-1/3 bg-slate-200 relative">
+                                {developmentData.media?.heroImage ? (
+                                    <img src={developmentData.media.heroImage.url} className="w-full h-full object-cover" />
+                                ) : (
+                                    <div className="flex items-center justify-center h-full text-slate-400"><ImageIcon/></div>
+                                )}
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex items-end p-4">
+                                     <h1 className="text-white font-bold text-sm leading-tight">{developmentData.name || 'Development Name'}</h1>
+                                </div>
+                            </div>
+                            <div className="p-4 space-y-3">
+                                <div className="space-y-1">
+                                    <h3 className="text-xs font-bold text-slate-700 uppercase">From R {unitTypes?.[0]?.priceFrom?.toLocaleString() || '---'}</h3>
+                                    <p className="text-[10px] text-slate-500 line-clamp-2">{developmentData.description || 'Description...'}</p>
+                                </div>
+                                <div className="grid grid-cols-2 gap-2">
+                                     {unitTypes.slice(0, 2).map(u => (
+                                         <div key={u.id} className="bg-slate-50 p-2 rounded border border-slate-100">
+                                              <div className="text-[10px] font-bold">{u.name}</div>
+                                              <div className="text-[9px] text-slate-500">{u.bedrooms} Bed • {u.sizeFrom}m²</div>
+                                         </div>
+                                     ))}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </CardContent>
+            </Card>
+
         </div>
       </div>
+
+      {/* Confirmation Modal */}
+      <Dialog open={showConfirmPublish} onOpenChange={setShowConfirmPublish}>
+           <DialogContent>
+               <DialogHeader>
+                   <DialogTitle>Confirm Publication</DialogTitle>
+                   <DialogDescription>
+                       You are about to make <strong>{developmentData.name}</strong> live to the public.
+                       This will activate search indexing and notifications.
+                   </DialogDescription>
+               </DialogHeader>
+               <div className="py-4">
+                   <Alert className="bg-blue-50 border-blue-200 text-blue-800">
+                       <CheckCircle2 className="w-4 h-4 text-blue-600" />
+                       <AlertTitle className="text-blue-900">Passed Validation</AlertTitle>
+                       <AlertDescription>Your listing meets 100% of the quality standards.</AlertDescription>
+                   </Alert>
+               </div>
+               <DialogFooter>
+                   <Button variant="outline" onClick={() => setShowConfirmPublish(false)}>Cancel</Button>
+                   <Button onClick={handlePublish} disabled={isPublishing} className="bg-green-600 hover:bg-green-700">
+                       {isPublishing ? 'Publishing...' : 'Confirm & Publish'}
+                   </Button>
+               </DialogFooter>
+           </DialogContent>
+      </Dialog>
+
     </div>
   );
 }

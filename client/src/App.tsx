@@ -194,6 +194,36 @@ function Router() {
       <Route path="/property-to-rent/:province" component={ProvincePage} />
 
       {/* ============================================================== */}
+      {/* 2A. DEVELOPER DASHBOARD ROUTES (Must be before legacy patterns)  */}
+      {/* These specific routes must match before /:action/:... wildcards  */}
+      {/* ============================================================== */}
+      <Route path="/developer" component={PropertyDeveloperDashboard} />
+      <Route path="/developer/dashboard" component={PropertyDeveloperDashboard} />
+      <Route path="/developer/setup" component={DeveloperSetupWizard} />
+      <Route path="/developer/success" component={() => <RegistrationSuccess role="developer" />} />
+      <Route path="/developer/developments" component={DeveloperDevelopmentsPage} />
+      <Route path="/developer/developments/new" component={CreateDevelopment} />
+      <Route path="/developer/create-development" component={CreateDevelopment} />
+      <Route path="/developer/unit-types-demo" component={UnitTypesDemo} />
+      <Route path="/developer/drafts" component={() => <DeveloperLayout defaultTab="drafts" />} />
+      <Route path="/developer/leads" component={DeveloperLeadsPage} />
+      <Route path="/developer/messages" component={DeveloperMessagesPage} />
+      <Route path="/developer/tasks" component={DeveloperTasksPage} />
+      <Route path="/developer/reports" component={DeveloperReportsPage} />
+      <Route path="/developer/analytics" component={DeveloperAnalyticsPage} />
+      <Route path="/developer/campaigns" component={DeveloperCampaignsPage} />
+      <Route path="/developer/campaigns/new" component={DeveloperCampaignsPage} />
+      <Route path="/developer/performance" component={DeveloperPerformancePage} />
+      <Route path="/developer/settings" component={DeveloperSettingsPage} />
+      <Route path="/developer/settings/team" component={DeveloperTeamPage} />
+      <Route path="/developer/settings/subscription" component={DeveloperSubscriptionPage} />
+      <Route path="/developer/plans" component={DeveloperPlans} />
+      {/* Developer Brand Directory (public) */}
+      <Route path="/developers" component={DeveloperDirectoryPage} />
+      {/* Developer Brand Profile Page (public) - MUST be after all /developer/* routes */}
+      <Route path="/developer/:slug" component={DeveloperBrandProfilePage} />
+
+      {/* ============================================================== */}
       {/* 3. LEGACY / P24-STYLE ROUTES (Lower Priority)                  */}
       {/* ============================================================== */}
       
@@ -242,34 +272,8 @@ function Router() {
       {/* Redirect Legacy /developments to /new-developments */}
       <Route path="/developments" component={() => { window.location.replace('/new-developments'); return null; }} />
       <Route path="/development/:slug" component={DevelopmentDetail} />
-      <Route path="/developer/setup" component={DeveloperSetupWizard} />
-      <Route path="/developer/success" component={() => <RegistrationSuccess role="developer" />} />
       
-      {/* Property Developer Dashboard Routes - MUST BE BEFORE /developer/:slug */}
-      <Route path="/developer" component={PropertyDeveloperDashboard} />
-      <Route path="/developer/dashboard" component={PropertyDeveloperDashboard} />
-      <Route path="/developer/developments" component={DeveloperDevelopmentsPage} />
-      <Route path="/developer/developments/new" component={CreateDevelopment} />
-      <Route path="/developer/create-development" component={CreateDevelopment} />
-      <Route path="/developer/unit-types-demo" component={UnitTypesDemo} />
-      <Route path="/developer/drafts" component={() => <DeveloperLayout defaultTab="drafts" />} />
-      <Route path="/developer/leads" component={DeveloperLeadsPage} />
-      <Route path="/developer/messages" component={DeveloperMessagesPage} />
-      <Route path="/developer/tasks" component={DeveloperTasksPage} />
-      <Route path="/developer/reports" component={DeveloperReportsPage} />
-      <Route path="/developer/analytics" component={DeveloperAnalyticsPage} />
-      <Route path="/developer/campaigns" component={DeveloperCampaignsPage} />
-      <Route path="/developer/campaigns/new" component={DeveloperCampaignsPage} />
-      <Route path="/developer/performance" component={DeveloperPerformancePage} />
-      <Route path="/developer/settings" component={DeveloperSettingsPage} />
-      <Route path="/developer/settings/team" component={DeveloperTeamPage} />
-      <Route path="/developer/settings/subscription" component={DeveloperSubscriptionPage} />
-      <Route path="/developer/plans" component={DeveloperPlans} />
-
-      {/* Developer Brand Directory (public) */}
-      <Route path="/developers" component={DeveloperDirectoryPage} />
-      {/* Developer Brand Profile Page (public) */}
-      <Route path="/developer/:slug" component={DeveloperBrandProfilePage} />
+      {/* NOTE: Developer routes moved to section 2A above legacy wildcards */}
       
       <Route path="/agency/setup" component={AgencySetupWizard} />
       <Route path="/agency/success" component={() => <RegistrationSuccess role="agency" />} />
@@ -510,26 +514,7 @@ function Router() {
       <Route path="/agency/invite" component={InviteAgents} />
       <Route path="/agency/agents" component={AgentManagement} />
 
-      {/* Property Developer Dashboard Routes */}
-      <Route path="/developer" component={PropertyDeveloperDashboard} />
-      <Route path="/developer/dashboard" component={PropertyDeveloperDashboard} />
-      <Route path="/developer/developments" component={DeveloperDevelopmentsPage} />
-      <Route path="/developer/developments/new" component={CreateDevelopment} />
-      <Route path="/developer/create-development" component={CreateDevelopment} />
-      <Route path="/developer/unit-types-demo" component={UnitTypesDemo} />
-      <Route path="/developer/drafts" component={() => <DeveloperLayout defaultTab="drafts" />} />
-      <Route path="/developer/leads" component={DeveloperLeadsPage} />
-      <Route path="/developer/messages" component={DeveloperMessagesPage} />
-      <Route path="/developer/tasks" component={DeveloperTasksPage} />
-      <Route path="/developer/reports" component={DeveloperReportsPage} />
-      <Route path="/developer/analytics" component={DeveloperAnalyticsPage} />
-      <Route path="/developer/campaigns" component={DeveloperCampaignsPage} />
-      <Route path="/developer/campaigns/new" component={DeveloperCampaignsPage} />
-      <Route path="/developer/performance" component={DeveloperPerformancePage} />
-      <Route path="/developer/settings" component={DeveloperSettingsPage} />
-      <Route path="/developer/settings/team" component={DeveloperTeamPage} />
-      <Route path="/developer/settings/subscription" component={DeveloperSubscriptionPage} />
-      <Route path="/developer/plans" component={DeveloperPlans} />
+      {/* NOTE: Developer routes are defined in section 2A above */}
 
       {/* User Dashboard Route */}
       <Route path="/user/dashboard">

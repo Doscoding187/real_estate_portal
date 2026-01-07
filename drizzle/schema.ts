@@ -543,6 +543,8 @@ export const developments = mysqlTable("developments", {
 	marketingBrandProfileId: int("marketing_brand_profile_id").references(() => developerBrandProfiles.id, { onDelete: "set null" }), // NEW: Marketing Agency
 	marketingRole: mysqlEnum("marketing_role", ['exclusive', 'joint', 'open']).default('exclusive'), // NEW: Mandate type
 	name: varchar({ length: 255 }).notNull(),
+	tagline: varchar({ length: 255 }), // NEW: Marketing tagline for hero section
+	marketingName: varchar("marketing_name", { length: 255 }), // NEW: Optional branding name
 	slug: varchar({ length: 255 }),
 	description: text(),
 	rating: decimal({ precision: 3, scale: 2 }), // Auto-calculated rating
@@ -691,6 +693,11 @@ export const unitTypes = mysqlTable("unit_types", {
 	// Stock Tracking
 	totalUnits: int("total_units").default(0).notNull(),
 	availableUnits: int("available_units").default(0).notNull(),
+	reservedUnits: int("reserved_units").default(0), // NEW: Units under offer
+	
+	// Pricing Details (NEW)
+	transferCostsIncluded: tinyint("transfer_costs_included").default(0), // NEW: Boolean flag
+	monthlyLevy: int("monthly_levy"), // NEW: Monthly levy/HOA estimate in ZAR
 	
 	// Base Features (Defaults for all specs)
 	baseFeatures: json("base_features").$type<{

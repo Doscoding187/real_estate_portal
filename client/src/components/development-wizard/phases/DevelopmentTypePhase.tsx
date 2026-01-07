@@ -21,6 +21,13 @@ const ICONS: Record<DevelopmentType, typeof Building2> = {
 export function DevelopmentTypePhase() {
   const { developmentType, setDevelopmentType, setPhase } = useDevelopmentWizard();
 
+  // Auto-select Residential as strict default
+  React.useEffect(() => {
+    if (!developmentType) {
+      setDevelopmentType('residential');
+    }
+  }, [developmentType, setDevelopmentType]);
+
   const handleSelect = (type: DevelopmentType) => {
     const option = DEVELOPMENT_TYPE_OPTIONS.find(o => o.value === type);
     

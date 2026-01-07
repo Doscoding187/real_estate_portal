@@ -110,9 +110,11 @@ export interface UnitType {
   sizeTo: number; // Max m² (can equal sizeFrom if fixed size)
   yardSize?: number; // m² (for townhouses/freeholds)
   
-  // Price Range
+  // Price Range & Costs
   priceFrom: number;
   priceTo: number; // Can equal priceFrom if fixed price
+  transferCostsIncluded?: boolean;
+  monthlyLevy?: number;
   
   // Availability Tracking
   totalUnits: number; // Total units of this type
@@ -129,10 +131,22 @@ export interface UnitType {
   // Amenities (Two-Level System)
   amenities: {
     standard: string[]; // Inherited from development (read-only)
-    additional: string[]; // Unit type-specific
+    additional: string[]; // Legacy flat list
   };
   
-  // Specifications & Finishes (Unit Type Level)
+  // Structured Unit Features (Mental Model: "What's inside?")
+  features?: {
+    kitchen: string[];
+    bathroom: string[];
+    flooring: string[];
+    storage: string[];
+    climate: string[];
+    security: string[];
+    outdoor: string[];
+    other: string[];
+  };
+
+  // Specifications & Finishes (Legacy / Detail View)
   specifications: {
     builtInFeatures: {
       builtInWardrobes: boolean;
@@ -175,7 +189,7 @@ export interface DevelopmentWizardState {
   
   // NEW: Listing Identity (Step 0)
   listingIdentity: {
-    identityType: 'developer' | 'marketing_agency';
+    identityType: 'developer' | 'marketing_agency' | 'private_owner';
     developerBrandProfileId?: number; // The Developer (Builder/Brand)
     marketingRole?: 'exclusive' | 'joint' | 'open';
   };
@@ -214,16 +228,21 @@ export interface DevelopmentWizardState {
   // NEW: Selected Amenities (keys from registry)
   selectedAmenities: string[];
   
-  // Phase 1: Identity
+    // Phase 1: Identity
   developmentData: {
     nature: 'new' | 'phase' | 'extension';
     parentDevelopmentId?: string; // For phases/extensions
     name: string;
+    subtitle?: string; // Marketing tagline
     description: string;
     
-    // Project Overview (from research: SquareYards, Property24)
-    projectStatus: 'pre_launch' | 'under_construction' | 'ready_to_move' | 'nearing_completion' | 'completed';
-    possessionDate?: string; // Expected or actual possession date (ISO string)
+    // Project Overview
+    status: import('@/types/wizardTypes').DevelopmentStatus;
+    completionDate?: Date | null; // Expected or actual possession date
+    transactionType: import('@/types/wizardTypes').TransactionType;
+    ownershipType: import('@/types/wizardTypes').OwnershipType;
+
+    // Legacy / Calculated (kept for compatibility)
     totalUnits?: number; // Total units across all types
     totalDevelopmentArea?: number; // Total area in m²
     
@@ -246,10 +265,10 @@ export interface DevelopmentWizardState {
       heroImage?: MediaItem;
       photos: MediaItem[];
       videos: MediaItem[];
+      documents: MediaItem[]; // New: Brochures, Site Plans
     };
     
     // Legacy props to prevent breaks
-    status?: string; 
     amenities: string[];
     highlights: string[];
     approvalStatus?: 'draft' | 'pending' | 'approved' | 'rejected';
@@ -406,8 +425,11 @@ const initialState: Omit<DevelopmentWizardState, keyof ReturnType<typeof createA
     nature: 'new',
     name: '',
     description: '',
-    projectStatus: 'pre_launch',
-    possessionDate: undefined,
+    subtitle: '',
+    status: 'pre_launch',
+    completionDate: null,
+    transactionType: 'sale',
+    ownershipType: 'sectional_title',
     totalUnits: undefined,
     totalDevelopmentArea: undefined,
     location: {
@@ -576,21 +598,46 @@ const createActions = (
         break;
       case 4: // Identity / Basic Details
         if (!state.developmentData?.name) errors.push('Name is required');
+        if (!state.developmentData?.status) errors.push('Status is required');
+        break;
+      
+      case 5: // Location (NEW)
         if (!state.developmentData?.location?.address) errors.push('Location is required');
+        if (!state.developmentData?.location?.city) errors.push('City is required');
         break;
-      case 8: // Media (was 6?) - Wait, Media is now 8
-        // Media Phase 
-        const hasMedia = state.developmentData?.media?.heroImage || (state.developmentData?.media?.photos?.length || 0) > 0;
-        if (!hasMedia) errors.push('Upload at least one image');
+
+      case 6: // Estate Profile (Conditional) OR Amenities if skipped
+        // Logic handled in component navigation largely, but good to check if we are on Estate Profile step
+        if (state.developmentData.nature === 'phase' && !state.estateProfile.classification) {
+           // weak check for now
+        }
         break;
-      case 6: // Amenities
-         // optional
+
+      case 7: // Amenities (was 6)
         break;
-      case 7: // Overview
-        if ((state.overview?.highlights?.length || 0) < 3) errors.push('Add at least 3 highlights');
-        if ((state.overview?.description?.length || 0) < 50) errors.push('Description must be at least 50 characters');
+
+      case 8: // Overview / Marketing Summary (was 7)
+        if ((state.developmentData?.highlights?.length || 0) < 3) errors.push('Add at least 3 key selling points');
+        if ((state.developmentData?.description?.length || 0) < 50) errors.push('Description must be at least 50 characters');
+        
+        // Conditional Validation for Completion Date
+        const status = state.developmentData?.status;
+        if (status === 'under_construction' || status === 'launching_soon') {
+           if (!state.developmentData?.completionDate) {
+              errors.push('Expected completion date is required for this status');
+           }
+        }
         break;
-      case 9: // Unit Types
+
+      case 9: // Media (was 8)
+        const media = state.developmentData?.media;
+        if (!media?.heroImage) errors.push('Hero image is required');
+        
+        const featuredCount = (media?.photos || []).filter(p => p.category === 'featured').length;
+        if (featuredCount < 2) errors.push(`Add at least 2 featured images (Current: ${featuredCount})`);
+        break;
+
+      case 10: // Unit Types (was 9)
         if (state.classification?.type !== 'land' && (state.unitTypes?.length || 0) === 0) {
           errors.push('Add at least one unit type');
         }
@@ -775,9 +822,14 @@ const createActions = (
           developmentData: {
               nature: 'new',
               name: data.name || '',
+              subtitle: data.subtitle || '',
               description: data.description || '',
-              projectStatus: data.projectStatus || 'pre_launch',
-              possessionDate: data.possessionDate,
+              status: (data.projectStatus as any) || 'pre_launch', // Type cast for legacy compat or update DB schema later
+              completionDate: data.possessionDate ? new Date(data.possessionDate) : null,
+              transactionType: data.transactionType || 'sale',
+              ownershipType: data.ownershipType || 'sectional_title',
+              
+              // Legacy / Calculated
               totalUnits: data.totalUnits,
               totalDevelopmentArea: data.totalDevelopmentArea,
               location: {
@@ -793,8 +845,8 @@ const createActions = (
                   photos: photos.filter(p => !p.isPrimary),
                   videos: videos
               },
-              amenities,
-              highlights,
+              amenities: amenities || [],
+              highlights: highlights || [],
               approvalStatus: data.approvalStatus,
               isPublished: !!data.isPublished
           },
@@ -892,12 +944,10 @@ const createActions = (
     
     if (newItem.type === 'video' || newItem.category === 'videos') {
        mediaState.videos = [...(mediaState.videos || []), newItem];
+    } else if (newItem.type === 'pdf' || newItem.category === 'document') {
+       mediaState.documents = [...(mediaState.documents || []), newItem];
     } else {
        // It's a photo/image
-       // Only add to photos if it's NOT the hero image (or if we want duplicates? usually not)
-       // But legacy 'media' getter aggregates them.
-       // Let's store in photos array regardless for safety, but typically Hero is separate.
-       // Actually, let's keep Hero separate.
        if (mediaState.heroImage?.id !== newItem.id) {
           mediaState.photos = [...(mediaState.photos || []), newItem];
        }
@@ -918,7 +968,8 @@ const createActions = (
         media: {
            heroImage: isHero ? undefined : media.heroImage,
            photos: media.photos?.filter(p => p.id !== id) || [],
-           videos: media.videos?.filter(v => v.id !== id) || []
+           videos: media.videos?.filter(v => v.id !== id) || [],
+           documents: media.documents?.filter(d => d.id !== id) || []
         }
       }
     };

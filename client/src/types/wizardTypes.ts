@@ -21,6 +21,8 @@ export type WizardPhase =
   | 'pricing'
   | 'publish';
 
+export type AmenityCategory = 'security' | 'lifestyle' | 'sustainability' | 'convenience' | 'family';
+
 // Phase labels for UI
 export const PHASE_LABELS: Record<WizardPhase, string> = {
   developmentType: 'Development Type',
@@ -52,19 +54,19 @@ export const DEVELOPMENT_TYPE_OPTIONS: { value: DevelopmentType; label: string; 
     value: 'mixed_use', 
     label: 'Mixed-Use Development', 
     description: 'Residential & commercial in one development',
-    enabled: true 
+    enabled: false 
   },
   { 
     value: 'land', 
     label: 'Land Development', 
     description: 'Serviced plots, vacant land, plot + build',
-    enabled: true 
+    enabled: false 
   },
   { 
     value: 'commercial', 
     label: 'Commercial Development', 
     description: 'Offices, retail, industrial, mixed commercial',
-    enabled: true 
+    enabled: false 
   },
 ];
 
@@ -74,21 +76,54 @@ export const DEVELOPMENT_TYPE_OPTIONS: { value: DevelopmentType; label: string; 
 
 export type ResidentialType =
   | 'apartment'
-  | 'security_estate'
+  | 'townhouse'
   | 'freehold'
-  | 'mixed_residential'
   | 'retirement'
-  | 'student_accommodation'
-  | 'townhouse_cluster';
+  | 'student'
+  | 'mixed';
 
-export const RESIDENTIAL_TYPE_OPTIONS: { value: ResidentialType; label: string; description: string }[] = [
-  { value: 'apartment', label: 'Apartment & Flat Development', description: 'Multi-storey residential, sectional title' },
-  { value: 'security_estate', label: 'Security Estate Development', description: 'Controlled access, estate governance' },
-  { value: 'freehold', label: 'Freehold Housing Development', description: 'Standalone homes, erf ownership' },
-  { value: 'mixed_residential', label: 'Mixed Residential Development', description: 'Multiple residential forms in one project' },
-  { value: 'retirement', label: 'Retirement Development', description: 'Age-restricted, services-driven' },
-  { value: 'student_accommodation', label: 'Student Accommodation', description: 'Purpose-built student living' },
-  { value: 'townhouse_cluster', label: 'Townhouse / Cluster Development', description: 'Attached or semi-detached units' },
+export const RESIDENTIAL_TYPE_OPTIONS: { value: ResidentialType; label: string; description: string; disabled?: boolean }[] = [
+  { value: 'apartment', label: 'Apartment Complex', description: 'Multi-unit building, shared amenities, sectional title.' },
+  { value: 'townhouse', label: 'Townhouse Estate', description: 'Row houses or clusters with private gardens.' },
+  { value: 'freehold', label: 'Freehold Homes', description: 'Standalone units on individual erven.' },
+  { value: 'retirement', label: 'Retirement Village', description: 'Age-restricted with lifestyle & medical amenities.' },
+  { value: 'student', label: 'Student Accommodation', description: 'High-density, leasing-focused, shared facilities.' },
+  { value: 'mixed', label: 'Mixed-Use Residential', description: 'Combined residential types in one development.', disabled: true },
+];
+
+// =============================================================================
+// DEVELOPMENT STATUS (Step 4)
+// =============================================================================
+
+export type DevelopmentStatus = 'pre_launch' | 'launching_soon' | 'under_construction' | 'ready' | 'completed';
+
+export const DEVELOPMENT_STATUS_OPTIONS: { value: DevelopmentStatus; label: string; description: string }[] = [
+  { value: 'pre_launch', label: 'Pre-Launch', description: 'Development not yet open for sales' },
+  { value: 'launching_soon', label: 'Launching Soon', description: 'Sales opening within 3 months' },
+  { value: 'under_construction', label: 'Under Construction', description: 'Units selling off-plan, construction in progress' },
+  { value: 'ready', label: 'Ready for Occupation', description: 'Units complete and ready to move in' },
+  { value: 'completed', label: 'Completed / Resales Only', description: 'Fully built, only resales available' },
+];
+
+// =============================================================================
+// TRANSACTION & OWNERSHIP (Step 4)
+// =============================================================================
+
+export type TransactionType = 'sale' | 'rent' | 'auction';
+
+export const TRANSACTION_TYPE_OPTIONS: { value: TransactionType; label: string; description: string }[] = [
+  { value: 'sale', label: 'For Sale', description: 'Units are being sold' },
+  { value: 'rent', label: 'For Rent / Lease', description: 'Residential leasing' },
+  { value: 'auction', label: 'Auction', description: 'Properties to be auctioned' },
+];
+
+export type OwnershipType = 'freehold' | 'leasehold' | 'sectional_title' | 'mixed';
+
+export const OWNERSHIP_TYPE_OPTIONS: { value: OwnershipType; label: string; description: string }[] = [
+  { value: 'freehold', label: 'Freehold', description: 'Buyers own individual property and land' },
+  { value: 'sectional_title', label: 'Sectional Title / Strata', description: 'Buyers own unit, share common areas' },
+  { value: 'leasehold', label: 'Leasehold', description: 'Buyers own property for a fixed lease period' },
+  { value: 'mixed', label: 'Other / Mixed', description: 'Mixed or complex ownership structures' },
 ];
 
 // =============================================================================
@@ -213,23 +248,25 @@ export const COMMUNITY_TYPE_OPTIONS: { value: CommunityType; label: string; desc
 ];
 
 // Mapping: Which community types are applicable for each residential type
+// Mapping: Which community types are applicable for each residential type
 export const RESIDENTIAL_TO_COMMUNITY_MAP: Record<ResidentialType, CommunityType[]> = {
   apartment: [
     'apartment_block', 'flat_development', 'penthouse_development', 'loft_apartments',
     'studio_apartment_development', 'walk_up_complex', 'high_rise_tower', 'mid_rise_complex',
     'mixed_apartment_complex'
   ],
-  security_estate: [
-    'security_estate_general', 'golf_estate', 'equestrian_estate', 'country_estate',
-    'lifestyle_estate', 'eco_estate', 'game_estate', 'nature_estate',
-    'coastal_security_estate', 'mountain_estate', 'residential_estate'
+  townhouse: [
+    'townhouse_development', 'cluster_development', 'gated_townhouse_complex',
+    'simplex_complex', 'duplex_complex', 'security_estate_general', 'residential_estate'
   ],
   freehold: [
     'freehold_housing_development', 'residential_township', 'housing_estate_non_security',
     'suburban_housing_development', 'cluster_housing_freehold', 'infill_housing_development',
-    'turnkey_housing_development'
+    'turnkey_housing_development', 'security_estate_general', 'golf_estate', 'equestrian_estate', 
+    'country_estate', 'lifestyle_estate', 'eco_estate', 'game_estate', 'nature_estate',
+    'coastal_security_estate', 'mountain_estate', 'residential_estate'
   ],
-  mixed_residential: [
+  mixed: [
     'mixed_residential_development', 'integrated_residential_development',
     'live_work_precinct', 'residential_lifestyle_precinct'
   ],
@@ -237,13 +274,9 @@ export const RESIDENTIAL_TO_COMMUNITY_MAP: Record<ResidentialType, CommunityType
     'retirement_village', 'lifestyle_retirement_estate', 'assisted_living_development',
     'frail_care_facility', 'ccrc', 'senior_living_apartments'
   ],
-  student_accommodation: [
+  student: [
     'pbsa', 'student_residence', 'student_apartment_complex',
     'private_student_village', 'campus_adjacent_housing'
-  ],
-  townhouse_cluster: [
-    'townhouse_development', 'cluster_development', 'gated_townhouse_complex',
-    'simplex_complex', 'duplex_complex'
   ],
 };
 
@@ -287,32 +320,6 @@ export const SECURITY_FEATURE_OPTIONS: { value: SecurityFeature; label: string }
   { value: 'boom_gate', label: 'Boom Gate' },
   { value: 'intercom', label: 'Intercom System' },
   { value: 'panic_buttons', label: 'Panic Buttons' },
-];
-
-// =============================================================================
-// DEVELOPMENT STATUS
-// =============================================================================
-
-export type DevelopmentStatus = 'planning' | 'construction' | 'near_completion' | 'completed';
-
-export const DEVELOPMENT_STATUS_OPTIONS: { value: DevelopmentStatus; label: string }[] = [
-  { value: 'planning', label: 'Planning Phase' },
-  { value: 'construction', label: 'Under Construction' },
-  { value: 'near_completion', label: 'Near Completion' },
-  { value: 'completed', label: 'Completed' },
-];
-
-// =============================================================================
-// OWNERSHIP TYPES
-// =============================================================================
-
-export type OwnershipType = 'full_title' | 'sectional_title' | 'leasehold' | 'life_rights';
-
-export const OWNERSHIP_TYPE_OPTIONS: { value: OwnershipType; label: string; description: string }[] = [
-  { value: 'full_title', label: 'Full Title / Freehold', description: 'Outright ownership of land and building' },
-  { value: 'sectional_title', label: 'Sectional Title', description: 'Ownership of a section within a scheme' },
-  { value: 'leasehold', label: 'Leasehold', description: 'Long-term lease, not ownership' },
-  { value: 'life_rights', label: 'Life Rights', description: 'Right to occupy for lifetime' },
 ];
 
 // =============================================================================
