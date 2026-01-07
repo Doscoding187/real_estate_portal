@@ -45,16 +45,8 @@ export function AgentTopNav() {
     : 'AG';
 
   // Mock notifications (replace with real data)
-  const notifications = [
-    { id: 1, text: 'New lead from John Smith', time: '5m ago', unread: true },
-    { id: 2, text: 'Showing scheduled for tomorrow', time: '1h ago', unread: true },
-    { id: 3, text: 'Commission payment processed', time: '3h ago', unread: false },
-  ];
-
-  const messages = [
-    { id: 1, from: 'Sarah Johnson', text: 'Interested in the Cape Town listing', time: '10m ago', unread: true },
-    { id: 2, from: 'Mike Davis', text: 'Can we schedule a viewing?', time: '2h ago', unread: false },
-  ];
+  const notifications: any[] = [];
+  const messages: any[] = [];
 
   const unreadNotifications = notifications.filter((n) => n.unread).length;
   const unreadMessages = messages.filter((m) => m.unread).length;
@@ -127,18 +119,25 @@ export function AgentTopNav() {
               <h3 className="font-semibold text-gray-900">Notifications</h3>
             </div>
             <div className="max-h-96 overflow-y-auto">
-              {notifications.map((notification) => (
-                <div
-                  key={notification.id}
-                  className={cn(
-                    'p-4 hover:bg-gray-50 transition-colors cursor-pointer border-b border-gray-50 last:border-0',
-                    notification.unread && 'bg-blue-50/30'
-                  )}
-                >
-                  <p className="text-sm text-gray-900 font-medium">{notification.text}</p>
-                  <p className="text-xs text-gray-500 mt-1">{notification.time}</p>
+              {notifications.length === 0 ? (
+                <div className="p-8 text-center text-gray-500">
+                  <Bell className="h-8 w-8 mx-auto mb-2 text-gray-300" />
+                  <p className="text-sm">No new notifications</p>
                 </div>
-              ))}
+              ) : (
+                notifications.map((notification) => (
+                  <div
+                    key={notification.id}
+                    className={cn(
+                      'p-4 hover:bg-gray-50 transition-colors cursor-pointer border-b border-gray-50 last:border-0',
+                      notification.unread && 'bg-blue-50/30'
+                    )}
+                  >
+                    <p className="text-sm text-gray-900 font-medium">{notification.text}</p>
+                    <p className="text-xs text-gray-500 mt-1">{notification.time}</p>
+                  </div>
+                ))
+              )}
             </div>
             <div className="p-3 border-t border-gray-100">
               <Button
@@ -169,19 +168,26 @@ export function AgentTopNav() {
               <h3 className="font-semibold text-gray-900">Messages</h3>
             </div>
             <div className="max-h-96 overflow-y-auto">
-              {messages.map((message) => (
-                <div
-                  key={message.id}
-                  className={cn(
-                    'p-4 hover:bg-gray-50 transition-colors cursor-pointer border-b border-gray-50 last:border-0',
-                    message.unread && 'bg-blue-50/30'
-                  )}
-                >
-                  <p className="text-sm text-gray-900 font-semibold">{message.from}</p>
-                  <p className="text-sm text-gray-600 mt-1 line-clamp-2">{message.text}</p>
-                  <p className="text-xs text-gray-500 mt-1">{message.time}</p>
+              {messages.length === 0 ? (
+                <div className="p-8 text-center text-gray-500">
+                  <MessageSquare className="h-8 w-8 mx-auto mb-2 text-gray-300" />
+                  <p className="text-sm">No new messages</p>
                 </div>
-              ))}
+              ) : (
+                messages.map((message) => (
+                  <div
+                    key={message.id}
+                    className={cn(
+                      'p-4 hover:bg-gray-50 transition-colors cursor-pointer border-b border-gray-50 last:border-0',
+                      message.unread && 'bg-blue-50/30'
+                    )}
+                  >
+                    <p className="text-sm text-gray-900 font-semibold">{message.from}</p>
+                    <p className="text-sm text-gray-600 mt-1 line-clamp-2">{message.text}</p>
+                    <p className="text-xs text-gray-500 mt-1">{message.time}</p>
+                  </div>
+                ))
+              )}
             </div>
             <div className="p-3 border-t border-gray-100">
               <Button

@@ -73,38 +73,17 @@ export function AgentDashboardOverview() {
   );
 
   // Mock data for today's snapshot (replace with real queries)
-  const todaysAppointments = [
-    { id: 1, time: '10:00 AM', title: 'Property Viewing - Cape Town Villa', client: 'John Smith', type: 'showing' },
-    { id: 2, time: '2:00 PM', title: 'Client Meeting - Investment Portfolio', client: 'Sarah Williams', type: 'meeting' },
-    { id: 3, time: '4:30 PM', title: 'Property Inspection - Sandton Apartment', client: 'Mike Davis', type: 'inspection' },
-  ];
+  const todaysAppointments: any[] = [];
 
-  const newLeads = [
-    { id: 1, name: 'Alice Johnson', property: 'Luxury Villa in Camps Bay', time: '30 min ago', budget: 'R 15M - R 20M' },
-    { id: 2, name: 'Robert Chen', property: 'Modern Apartment in Sandton', time: '1 hour ago', budget: 'R 3M - R 5M' },
-  ];
+  const newLeads: any[] = [];
 
-  const tasksToday = [
-    { id: 1, task: 'Follow up with Sarah about offer', completed: false, priority: 'high' },
-    { id: 2, task: 'Upload new photos for Waterfront listing', completed: true, priority: 'medium' },
-    { id: 3, task: 'Prepare market analysis report', completed: false, priority: 'high' },
-    { id: 4, task: 'Schedule viewing for Sandton property', completed: true, priority: 'low' },
-  ];
+  const tasksToday: any[] = [];
 
-  const exploreVideos = [
-    { id: 1, title: '360° Virtual Tour - Luxury Villa', views: 2345, engagement: 87, thumbnail: '/assets/video1.jpg' },
-    { id: 2, title: 'Cape Town Waterfront Apartment', views: 1823, engagement: 92, thumbnail: '/assets/video2.jpg' },
-  ];
+  const exploreVideos: any[] = [];
 
-  const activeListingsPerformance = [
-    { id: 1, title: 'Luxury Villa in Camps Bay', views: 456, enquiries: 12, price: 'R 25M' },
-    { id: 2, title: 'Modern Sandton Apartment', views: 234, enquiries: 8, price: 'R 4.5M' },
-  ];
+  const activeListingsPerformance: any[] = [];
 
-  const alerts = [
-    { id: 1, type: 'opportunity', message: 'Your Camps Bay listing has 3 new enquiries', action: 'View Enquiries' },
-    { id: 2, type: 'recommendation', message: 'Boost your visibility - Upload more Explore videos', action: 'Upload Now' },
-  ];
+  const alerts: any[] = [];
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -132,13 +111,11 @@ export function AgentDashboardOverview() {
             title="Active Listings"
             value={statsLoading ? '—' : stats?.activeListings ?? 0}
             icon={Building2}
-            trend={{ value: '+12% this month', positive: true }}
           />
           <QuickStatCard
             title="New Leads This Week"
             value={statsLoading ? '—' : stats?.newLeadsThisWeek ?? 0}
             icon={Users}
-            trend={{ value: '+8 new today', positive: true }}
           />
           <QuickStatCard
             title="Showings Today"
@@ -149,7 +126,6 @@ export function AgentDashboardOverview() {
             title="Commission Pending"
             value={statsLoading ? '—' : `R ${((stats?.commissionsPending ?? 0) / 100).toLocaleString()}`}
             icon={DollarSign}
-            trend={{ value: '+R 45k this week', positive: true }}
           />
         </div>
 
@@ -173,23 +149,27 @@ export function AgentDashboardOverview() {
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="space-y-3">
-                  {todaysAppointments.map((apt) => (
-                    <div key={apt.id} className="flex items-center gap-4 p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors cursor-pointer">
-                      <div className="flex-shrink-0 w-20 text-center">
-                        <p className="text-sm font-semibold text-gray-900">{apt.time}</p>
+                {todaysAppointments.length === 0 ? (
+                  <p className="text-center text-gray-500 py-6">No appointments scheduled for today.</p>
+                ) : (
+                  <div className="space-y-3">
+                    {todaysAppointments.map((apt) => (
+                      <div key={apt.id} className="flex items-center gap-4 p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors cursor-pointer">
+                        <div className="flex-shrink-0 w-20 text-center">
+                          <p className="text-sm font-semibold text-gray-900">{apt.time}</p>
+                        </div>
+                        <div className="h-10 w-1 bg-blue-500 rounded-full"></div>
+                        <div className="flex-1">
+                          <p className="font-semibold text-gray-900">{apt.title}</p>
+                          <p className="text-sm text-gray-500">with {apt.client}</p>
+                        </div>
+                        <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-200">
+                          {apt.type}
+                        </Badge>
                       </div>
-                      <div className="h-10 w-1 bg-blue-500 rounded-full"></div>
-                      <div className="flex-1">
-                        <p className="font-semibold text-gray-900">{apt.title}</p>
-                        <p className="text-sm text-gray-500">with {apt.client}</p>
-                      </div>
-                      <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-200">
-                        {apt.type}
-                      </Badge>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
 
@@ -209,21 +189,25 @@ export function AgentDashboardOverview() {
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="space-y-3">
-                  {newLeads.map((lead) => (
-                    <div key={lead.id} className="flex items-center gap-4 p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors cursor-pointer">
-                      <div className="h-12 w-12 bg-gradient-to-br from-green-500 to-green-600 rounded-full flex items-center justify-center text-white font-semibold">
-                        {lead.name.charAt(0)}
+                {newLeads.length === 0 ? (
+                  <p className="text-center text-gray-500 py-6">No new leads yet.</p>
+                ) : (
+                  <div className="space-y-3">
+                    {newLeads.map((lead) => (
+                      <div key={lead.id} className="flex items-center gap-4 p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors cursor-pointer">
+                        <div className="h-12 w-12 bg-gradient-to-br from-green-500 to-green-600 rounded-full flex items-center justify-center text-white font-semibold">
+                          {lead.name.charAt(0)}
+                        </div>
+                        <div className="flex-1">
+                          <p className="font-semibold text-gray-900">{lead.name}</p>
+                          <p className="text-sm text-gray-600">{lead.property}</p>
+                          <p className="text-xs text-gray-500 mt-1">Budget: {lead.budget}</p>
+                        </div>
+                        <p className="text-xs text-gray-400">{lead.time}</p>
                       </div>
-                      <div className="flex-1">
-                        <p className="font-semibold text-gray-900">{lead.name}</p>
-                        <p className="text-sm text-gray-600">{lead.property}</p>
-                        <p className="text-xs text-gray-500 mt-1">Budget: {lead.budget}</p>
-                      </div>
-                      <p className="text-xs text-gray-400">{lead.time}</p>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
 
@@ -243,26 +227,30 @@ export function AgentDashboardOverview() {
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="space-y-3">
-                  {activeListingsPerformance.map((listing) => (
-                    <div key={listing.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors cursor-pointer">
-                      <div className="flex-1">
-                        <p className="font-semibold text-gray-900">{listing.title}</p>
-                        <p className="text-lg font-bold text-blue-600 mt-1">{listing.price}</p>
-                      </div>
-                      <div className="flex items-center gap-6 text-sm">
-                        <div className="text-center">
-                          <p className="text-gray-500">Views</p>
-                          <p className="font-semibold text-gray-900">{listing.views}</p>
+                {activeListingsPerformance.length === 0 ? (
+                  <p className="text-center text-gray-500 py-6">No active listings to show.</p>
+                ) : (
+                  <div className="space-y-3">
+                    {activeListingsPerformance.map((listing) => (
+                      <div key={listing.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors cursor-pointer">
+                        <div className="flex-1">
+                          <p className="font-semibold text-gray-900">{listing.title}</p>
+                          <p className="text-lg font-bold text-blue-600 mt-1">{listing.price}</p>
                         </div>
-                        <div className="text-center">
-                          <p className="text-gray-500">Enquiries</p>
-                          <p className="font-semibold text-green-600">{listing.enquiries}</p>
+                        <div className="flex items-center gap-6 text-sm">
+                          <div className="text-center">
+                            <p className="text-gray-500">Views</p>
+                            <p className="font-semibold text-gray-900">{listing.views}</p>
+                          </div>
+                          <div className="text-center">
+                            <p className="text-gray-500">Enquiries</p>
+                            <p className="font-semibold text-green-600">{listing.enquiries}</p>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
@@ -280,24 +268,30 @@ export function AgentDashboardOverview() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-2">
-                  {tasksToday.map((task) => (
-                    <div key={task.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
-                      <div className={cn('h-5 w-5 rounded border-2 flex items-center justify-center', task.completed ? 'bg-green-500 border-green-500' : 'border-gray-300')}>
-                        {task.completed && <CheckCircle className="h-4 w-4 text-white" />}
-                      </div>
-                      <p className={cn('text-sm flex-1', task.completed ? 'text-gray-400 line-through' : 'text-gray-900')}>
-                        {task.task}
-                      </p>
-                      {task.priority === 'high' && !task.completed && (
-                        <Badge className="bg-red-100 text-red-700 text-xs">High</Badge>
-                      )}
+                {tasksToday.length === 0 ? (
+                  <p className="text-center text-gray-500 py-6">No tasks due today.</p>
+                ) : (
+                  <>
+                    <div className="space-y-2">
+                      {tasksToday.map((task) => (
+                        <div key={task.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                          <div className={cn('h-5 w-5 rounded border-2 flex items-center justify-center', task.completed ? 'bg-green-500 border-green-500' : 'border-gray-300')}>
+                            {task.completed && <CheckCircle className="h-4 w-4 text-white" />}
+                          </div>
+                          <p className={cn('text-sm flex-1', task.completed ? 'text-gray-400 line-through' : 'text-gray-900')}>
+                            {task.task}
+                          </p>
+                          {task.priority === 'high' && !task.completed && (
+                            <Badge className="bg-red-100 text-red-700 text-xs">High</Badge>
+                          )}
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
-                <Button variant="ghost" size="sm" className="w-full mt-4 text-blue-600" onClick={() => setLocation('/agent/productivity')}>
-                  View All Tasks
-                </Button>
+                    <Button variant="ghost" size="sm" className="w-full mt-4 text-blue-600" onClick={() => setLocation('/agent/productivity')}>
+                      View All Tasks
+                    </Button>
+                  </>
+                )}
               </CardContent>
             </Card>
 
@@ -312,31 +306,40 @@ export function AgentDashboardOverview() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-3">
-                  {exploreVideos.map((video) => (
-                    <div key={video.id} className="p-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors cursor-pointer">
-                      <div className="flex items-center gap-3">
-                        <div className="w-16 h-16 bg-gradient-to-br from-pink-500 to-pink-600 rounded-lg flex items-center justify-center">
-                          <Play className="h-6 w-6 text-white" />
-                        </div>
-                        <div className="flex-1">
-                          <p className="font-semibold text-sm text-gray-900">{video.title}</p>
-                          <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
-                            <span className="flex items-center gap-1">
-                              <Eye className="h-3 w-3" /> {video.views}
-                            </span>
-                            <span className="flex items-center gap-1">
-                              <Target className="h-3 w-3" /> {video.engagement}%
-                            </span>
+                {exploreVideos.length === 0 ? (
+                  <div className="text-center py-6">
+                    <p className="text-gray-500 mb-4">No videos uploaded yet.</p>
+                    <Button variant="ghost" size="sm" className="w-full text-blue-600" onClick={() => setLocation('/agent/marketing')}>
+                      Upload Video
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {exploreVideos.map((video) => (
+                      <div key={video.id} className="p-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors cursor-pointer">
+                        <div className="flex items-center gap-3">
+                          <div className="w-16 h-16 bg-gradient-to-br from-pink-500 to-pink-600 rounded-lg flex items-center justify-center">
+                            <Play className="h-6 w-6 text-white" />
+                          </div>
+                          <div className="flex-1">
+                            <p className="font-semibold text-sm text-gray-900">{video.title}</p>
+                            <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
+                              <span className="flex items-center gap-1">
+                                <Eye className="h-3 w-3" /> {video.views}
+                              </span>
+                              <span className="flex items-center gap-1">
+                                <Target className="h-3 w-3" /> {video.engagement}%
+                              </span>
+                            </div>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
-                <Button variant="ghost" size="sm" className="w-full mt-4 text-blue-600" onClick={() => setLocation('/agent/marketing')}>
-                  Upload More Videos
-                </Button>
+                    ))}
+                    <Button variant="ghost" size="sm" className="w-full mt-4 text-blue-600" onClick={() => setLocation('/agent/marketing')}>
+                      Upload More Videos
+                    </Button>
+                  </div>
+                )}
               </CardContent>
             </Card>
 
@@ -351,21 +354,25 @@ export function AgentDashboardOverview() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-3">
-                  {alerts.map((alert) => (
-                    <div key={alert.id} className="p-4 bg-blue-50 rounded-xl">
-                      <div className="flex items-start gap-2">
-                        <AlertCircle className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
-                        <div className="flex-1">
-                          <p className="text-sm text-gray-900 font-medium">{alert.message}</p>
-                          <Button variant="link" className="p-0 h-auto text-blue-600 text-sm mt-2">
-                            {alert.action} <ArrowRight className="h-3 w-3 ml-1" />
-                          </Button>
+                {alerts.length === 0 ? (
+                  <p className="text-center text-gray-500 py-6">No new alerts.</p>
+                ) : (
+                  <div className="space-y-3">
+                    {alerts.map((alert) => (
+                      <div key={alert.id} className="p-4 bg-blue-50 rounded-xl">
+                        <div className="flex items-start gap-2">
+                          <AlertCircle className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                          <div className="flex-1">
+                            <p className="text-sm text-gray-900 font-medium">{alert.message}</p>
+                            <Button variant="link" className="p-0 h-auto text-blue-600 text-sm mt-2">
+                              {alert.action} <ArrowRight className="h-3 w-3 ml-1" />
+                            </Button>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
 
@@ -379,11 +386,11 @@ export function AgentDashboardOverview() {
                     </div>
                     Messages
                   </CardTitle>
-                  <Badge className="bg-red-500 text-white">2</Badge>
+                  <Badge className="bg-gray-200 text-gray-600">0</Badge>
                 </div>
               </CardHeader>
               <CardContent>
-                <p className="text-sm text-gray-500 text-center py-4">2 unread messages</p>
+                <p className="text-sm text-gray-500 text-center py-4">No new messages</p>
                 <Button variant="ghost" size="sm" className="w-full text-blue-600" onClick={() => setLocation('/agent/leads')}>
                   View Messages
                 </Button>

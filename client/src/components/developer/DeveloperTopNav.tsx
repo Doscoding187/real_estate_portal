@@ -34,8 +34,8 @@ export function DeveloperTopNav() {
     setLocation('/login');
   };
 
-  const notificationCount = 3; // TODO: Get from backend
-  const messageCount = 2; // TODO: Get from backend
+  const notificationCount = 0; // TODO: Get from backend
+  const messageCount = 0; // TODO: Get from backend
 
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-gray-100 bg-white/80 backdrop-blur-xl px-6 shadow-soft transition-all duration-200">
@@ -114,27 +114,10 @@ export function DeveloperTopNav() {
               <h3 className="font-semibold text-sm">Notifications</h3>
             </div>
             <div className="max-h-96 overflow-y-auto">
-              <DropdownMenuItem className="p-3 cursor-pointer">
-                <div className="flex flex-col gap-1">
-                  <p className="text-sm font-medium">New lead captured</p>
-                  <p className="text-xs text-gray-500">John Doe submitted affordability form</p>
-                  <p className="text-xs text-gray-400">2 minutes ago</p>
-                </div>
-              </DropdownMenuItem>
-              <DropdownMenuItem className="p-3 cursor-pointer">
-                <div className="flex flex-col gap-1">
-                  <p className="text-sm font-medium">Unit sold</p>
-                  <p className="text-xs text-gray-500">Unit 2B in Sunset Heights</p>
-                  <p className="text-xs text-gray-400">1 hour ago</p>
-                </div>
-              </DropdownMenuItem>
-              <DropdownMenuItem className="p-3 cursor-pointer">
-                <div className="flex flex-col gap-1">
-                  <p className="text-sm font-medium">Report ready</p>
-                  <p className="text-xs text-gray-500">Monthly sales report generated</p>
-                  <p className="text-xs text-gray-400">3 hours ago</p>
-                </div>
-              </DropdownMenuItem>
+              <div className="p-8 text-center text-gray-500">
+                <Bell className="h-8 w-8 mx-auto mb-2 text-gray-300" />
+                <p className="text-sm">No new notifications</p>
+              </div>
             </div>
             <div className="p-2 border-t border-gray-100">
               <Button
@@ -169,32 +152,10 @@ export function DeveloperTopNav() {
               <h3 className="font-semibold text-sm">Messages</h3>
             </div>
             <div className="max-h-96 overflow-y-auto">
-              <DropdownMenuItem className="p-3 cursor-pointer">
-                <div className="flex items-start gap-3">
-                  <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
-                    <User className="h-5 w-5 text-blue-600" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">Sarah Johnson</p>
-                    <p className="text-xs text-gray-500 truncate">Interested in 3 bedroom unit...</p>
-                    <p className="text-xs text-gray-400">5 min ago</p>
-                  </div>
-                  <span className="w-2 h-2 rounded-full bg-blue-500 flex-shrink-0 mt-2"></span>
-                </div>
-              </DropdownMenuItem>
-              <DropdownMenuItem className="p-3 cursor-pointer">
-                <div className="flex items-start gap-3">
-                  <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
-                    <User className="h-5 w-5 text-green-600" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">Mike Chen</p>
-                    <p className="text-xs text-gray-500 truncate">When is the next viewing?</p>
-                    <p className="text-xs text-gray-400">1 hour ago</p>
-                  </div>
-                  <span className="w-2 h-2 rounded-full bg-blue-500 flex-shrink-0 mt-2"></span>
-                </div>
-              </DropdownMenuItem>
+              <div className="p-8 text-center text-gray-500">
+                <MessageSquare className="h-8 w-8 mx-auto mb-2 text-gray-300" />
+                <p className="text-sm">No new messages</p>
+              </div>
             </div>
             <div className="p-2 border-t border-gray-100">
               <Button
