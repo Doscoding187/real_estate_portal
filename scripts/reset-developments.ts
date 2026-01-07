@@ -1,10 +1,10 @@
 import 'dotenv/config';
 import { getDb } from '../server/db';
-import { developments, properties, developerSubscriptionUsage } from '../drizzle/schema';
-import { isNotNull, sql } from 'drizzle-orm';
+import { developments, properties, listings, developmentDrafts, developerSubscriptionUsage } from '../drizzle/schema';
+import { sql } from 'drizzle-orm';
 
-async function resetDevelopments() {
-  console.log('Starting development reset...');
+async function resetInventory() {
+  console.log('Starting full inventory reset...');
   const db = await getDb();
   if (!db) {
     console.error('Database connection failed');
@@ -12,20 +12,28 @@ async function resetDevelopments() {
   }
 
   try {
-    // 1. Delete Linked Properties (Unit listings created as properties)
-    console.log('Deleting linked properties...');
-    await db.delete(properties).where(isNotNull(properties.developmentId));
+    // 1. Delete Properties (Secondary market + units)
+    console.log('Deleting all properties...');
+    await db.delete(properties);
 
-    // 2. Delete Developments (Cascades to phases, units, approval queue)
-    console.log('Deleting developments...');
+    // 2. Delete Listings (Alternative table)
+    console.log('Deleting all listings...');
+    await db.delete(listings);
+
+    // 3. Delete Developments (Cascades to phases, units)
+    console.log('Deleting all developments...');
     await db.delete(developments);
 
-    // 3. Reset Subscription Usage
+    // 4. Delete Development Drafts
+    console.log('Deleting development drafts...');
+    await db.delete(developmentDrafts);
+
+    // 5. Reset Subscription Usage
     console.log('Resetting developer subscription usage...');
     await db.update(developerSubscriptionUsage)
       .set({ developmentsCount: 0 });
 
-    console.log('Development reset complete.');
+    console.log('Inventory reset complete.');
     process.exit(0);
   } catch (error) {
     console.error('Error during reset:', error);
@@ -33,4 +41,4 @@ async function resetDevelopments() {
   }
 }
 
-resetDevelopments();
+resetInventory();
