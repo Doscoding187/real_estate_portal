@@ -6,10 +6,12 @@ import { ExploreVideoFeed } from '@/components/explore-discovery/ExploreVideoFee
 import { LifestyleCategorySelector } from '@/components/explore-discovery/LifestyleCategorySelector';
 import { ResponsiveFilterPanel } from '@/components/explore-discovery/ResponsiveFilterPanel';
 import { PersonalizedContentBlock } from '@/components/explore-discovery/PersonalizedContentBlock';
+import { TrendingVideosSection } from '@/components/explore-discovery/TrendingVideosSection';
 import { useExploreCommonState } from '@/hooks/useExploreCommonState';
 import { usePersonalizedContent } from '@/hooks/usePersonalizedContent';
 import { useExploreFiltersStore } from '@/store/exploreFiltersStore';
 import { DiscoveryItem } from '@/hooks/useDiscoveryFeed';
+import { TrendingVideo } from '@/hooks/useTrendingVideos';
 import { designTokens } from '@/lib/design-tokens';
 import { 
   pageVariants, 
@@ -77,6 +79,17 @@ export default function ExploreHome() {
     console.log('See all:', sectionType);
     // Navigate to full view of section
     setViewMode('cards');
+  };
+
+  // Handle trending video click - switch to videos view
+  const handleTrendingVideoClick = (video: TrendingVideo) => {
+    console.log('Trending video clicked:', video);
+    setViewMode('videos');
+  };
+
+  // Handle "See All" for trending videos - switch to videos view
+  const handleTrendingVideosSeeAll = () => {
+    setViewMode('videos');
   };
 
   return (
@@ -226,6 +239,13 @@ export default function ExploreHome() {
               exit="exit"
               variants={getVariants(pageVariants)}
             >
+              {/* Trending Videos Section - First content after header */}
+              <TrendingVideosSection
+                categoryId={selectedCategoryId ?? undefined}
+                onVideoClick={handleTrendingVideoClick}
+                onSeeAll={handleTrendingVideosSeeAll}
+              />
+
               {/* Personalized Content Sections with stagger animation */}
               {sectionsLoading ? (
                 <motion.div

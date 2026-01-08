@@ -9,16 +9,19 @@ import { toast } from 'sonner';
 import { 
     Upload, X, Star, Image as ImageIcon, Video, TreePine, Dumbbell, 
     FileText, MapPin, Layout, ShieldCheck, AlertCircle, CheckCircle2,
-    ArrowRight, ArrowLeft
+    ArrowRight, ArrowLeft, GripVertical
 } from 'lucide-react';
 import { trpc } from '@/lib/trpc';
 import { cn } from '@/lib/utils';
+import { SortableMediaGrid } from '@/components/media/SortableMediaGrid';
+import type { MediaItem as GridMediaItem } from '@/components/media/SortableMediaGrid';
 
 export function MediaPhase() {
   const { 
     developmentData, 
     addMedia, 
     removeMedia, 
+    reorderMedia,
     setPrimaryImage, 
     setPhase, 
     validatePhase 
@@ -190,56 +193,82 @@ export function MediaPhase() {
             </div>
         )}
 
-        {/* File List / Grid */}
+        {/* File List / Grid - Use SortableMediaGrid for photos, simple list for documents */}
         {items.length > 0 && (
-            <div className={cn(
-                "grid gap-4", 
-                category === 'document' ? "grid-cols-1" : "grid-cols-2 sm:grid-cols-3 lg:grid-cols-4"
-            )}>
-            {items.map((item) => (
-                <div key={item.id} className={cn(
-                    "relative group rounded-xl overflow-hidden bg-slate-100 border border-slate-200 shadow-sm hover:shadow-md transition-all",
-                    category === 'document' ? "flex items-center p-3 gap-3" : "aspect-[4/3]"
-                )}>
-                    {category === 'document' ? (
-                        <>
-                           <div className="p-2 bg-red-50 rounded text-red-600">
-                              <FileText className="w-6 h-6" />
-                           </div>
-                           <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium text-slate-900 truncate">{item.fileName || 'Document'}</p>
-                              <p className="text-xs text-slate-500">PDF Document</p>
-                           </div>
-                        </>
-                    ) : item.type === 'video' ? (
-                        <video src={item.url} className="w-full h-full object-cover" controls={false} />
-                    ) : (
-                        <img src={item.url} alt="Media" className="w-full h-full object-cover" />
-                    )}
-                    
-                    {/* Overlay Actions */}
-                    <div className={cn(
-                        "absolute right-2 flex gap-1",
-                        category === 'document' ? "top-1/2 -translate-y-1/2" : "top-2 opacity-0 group-hover:opacity-100 transition-opacity bg-black/50 p-1 rounded-lg"
-                    )}>
-                        <Button 
-                            variant="destructive" 
-                            size="icon" 
-                            className="h-7 w-7" 
-                            onClick={(e) => { e.stopPropagation(); removeMedia(item.id); }}
-                        >
-                            <X className="w-3 h-3" />
-                        </Button>
+            <>
+                {/* Documents use simple list */}
+                {category === 'document' ? (
+                    <div className="grid gap-4 grid-cols-1">
+                        {items.map((item) => (
+                            <div key={item.id} className="relative group rounded-xl overflow-hidden bg-slate-100 border border-slate-200 shadow-sm hover:shadow-md transition-all flex items-center p-3 gap-3">
+                                <div className="p-2 bg-red-50 rounded text-red-600">
+                                   <FileText className="w-6 h-6" />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                   <p className="text-sm font-medium text-slate-900 truncate">{item.fileName || 'Document'}</p>
+                                   <p className="text-xs text-slate-500">PDF Document</p>
+                                </div>
+                                <Button 
+                                    variant="destructive" 
+                                    size="icon" 
+                                    className="h-7 w-7" 
+                                    onClick={(e) => { e.stopPropagation(); removeMedia(item.id); }}
+                                >
+                                    <X className="w-3 h-3" />
+                                </Button>
+                            </div>
+                        ))}
                     </div>
-
-                    {category !== 'document' && (
-                       <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/60 to-transparent p-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                          {isHero && <span className="text-[10px] text-yellow-300 font-bold uppercase tracking-wider">Primary Hero</span>}
-                       </div>
-                    )}
-                </div>
-            ))}
-            </div>
+                ) : isHero ? (
+                    /* Hero uses single image display */
+                    <div className="grid gap-4 grid-cols-1">
+                        {items.map((item) => (
+                            <div key={item.id} className="relative group rounded-xl overflow-hidden bg-slate-100 border border-slate-200 shadow-sm hover:shadow-md transition-all aspect-video max-w-lg">
+                                <img src={item.url} alt="Hero" className="w-full h-full object-cover" />
+                                <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity bg-black/50 p-1 rounded-lg">
+                                    <Button 
+                                        variant="destructive" 
+                                        size="icon" 
+                                        className="h-7 w-7" 
+                                        onClick={(e) => { e.stopPropagation(); removeMedia(item.id); }}
+                                    >
+                                        <X className="w-3 h-3" />
+                                    </Button>
+                                </div>
+                                <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/60 to-transparent p-2">
+                                   <span className="text-[10px] text-yellow-300 font-bold uppercase tracking-wider">Primary Hero</span>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                ) : (
+                    /* Gallery photos use SortableMediaGrid for drag-and-drop reordering */
+                    <SortableMediaGrid
+                        media={items.map((item, idx) => ({
+                            id: item.id,
+                            url: item.url,
+                            type: item.type === 'video' ? 'video' : item.type === 'pdf' ? 'pdf' : 'image',
+                            category: item.category,
+                            fileName: item.fileName,
+                            isPrimary: item.isPrimary,
+                            displayOrder: item.displayOrder ?? idx
+                        } as GridMediaItem))}
+                        onReorder={(reordered) => {
+                            // Convert back and call reorderMedia
+                            reorderMedia(reordered.map(r => ({
+                                id: r.id,
+                                url: r.url,
+                                type: r.type === 'video' ? 'video' : r.type === 'pdf' ? 'pdf' : 'image',
+                                category: r.category || category,
+                                isPrimary: r.isPrimary || false,
+                                displayOrder: r.displayOrder,
+                                fileName: r.fileName
+                            } as MediaItem)));
+                        }}
+                        onRemove={removeMedia}
+                    />
+                )}
+            </>
         )}
       </div>
     );
@@ -316,7 +345,7 @@ export function MediaPhase() {
                        <UploadSection category="outdoors" title="Exterior & Outdoors" description="Facades, gardens, and landscaping." icon={TreePine} />
                        <UploadSection category="general" title="Interior & Living" description="Living areas, bedrooms, and finishes." icon={ImageIcon} />
                        <UploadSection category="amenities" title="Amenities" description="Pool, gym, and shared spaces." icon={Dumbbell} />
-                       <UploadSection category="location" title="Location & Views" description="Neighborhood and scenic views." icon={MapPin} />
+                       <UploadSection category="general" title="Location & Views" description="Neighborhood and scenic views." icon={MapPin} />
                        <UploadSection category="general" title="Aerial & Drone" description="Site overview and scale." icon={Layout} />
                    </CardContent>
                 </Card>

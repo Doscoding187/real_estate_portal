@@ -9,6 +9,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { toast } from 'sonner';
+import { trpc } from '@/lib/trpc';
+import { useLocation } from 'wouter';
 import { 
   CheckCircle2, AlertCircle, AlertTriangle, Edit2, Eye, 
   MapPin, Home, Layers, Image as ImageIcon, FileText, 
@@ -18,22 +20,37 @@ import { format } from 'date-fns';
 import confetti from 'canvas-confetti';
 
 export function FinalisationPhase() {
+  const [, navigate] = useLocation();
+  const store = useDevelopmentWizard();
   const { 
     developmentData, 
     unitTypes, 
     classification,
+    developmentType,
+    residentialConfig,
+    selectedAmenities,
+    listingIdentity,
     setPhase, 
-    publishDevelopment,
+    reset,
     validateForPublish 
-  } = useDevelopmentWizard();
+  } = store;
+  
+  // Get editingId from store for edit mode detection
+  const editingId = (store as any).editingId as number | undefined;
 
   const [showConfirmPublish, setShowConfirmPublish] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
   const [activePreviewTab, setActivePreviewTab] = useState<'desktop' | 'mobile'>('desktop');
 
+  // Backend mutations
+  const createDevelopment = trpc.developer.createDevelopment.useMutation();
+  const updateDevelopment = trpc.developer.updateDevelopment.useMutation();
+  const publishDevelopment = trpc.developer.publishDevelopment.useMutation();
+
   // Run validation
   const validationResult = validateForPublish();
-  const { errors, warnings } = validationResult || { errors: [], warnings: [] };
+  const errors = validationResult?.errors || [];
+  const warnings: string[] = []; // Placeholder for future warnings support
   const canPublish = errors.length === 0;
 
   // Helper to get formatted status
@@ -42,21 +59,108 @@ export function FinalisationPhase() {
       return { status: 'success', icon: CheckCircle2, color: 'text-green-500', bg: 'bg-green-50' };
   };
 
+  // Extract images from media state
+  const extractImageUrls = (): string[] => {
+    const media = developmentData.media;
+    if (!media) return [];
+    
+    const urls: string[] = [];
+    // Hero image first
+    if (media.heroImage?.url) urls.push(media.heroImage.url);
+    // Then photos
+    media.photos?.forEach(p => { if (p.url) urls.push(p.url); });
+    return urls;
+  };
+
+  // Extract video URLs
+  const extractVideoUrls = (): string[] => {
+    return developmentData.media?.videos?.map(v => v.url).filter(Boolean) as string[] || [];
+  };
+
   const handlePublish = async () => {
     setIsPublishing(true);
-    // Simulate API call
-    setTimeout(() => {
-        publishDevelopment();
-        setShowConfirmPublish(false);
-        setIsPublishing(false);
-        confetti({
-            particleCount: 100,
-            spread: 70,
-            origin: { y: 0.6 }
+    
+    try {
+      const images = extractImageUrls();
+      const videos = extractVideoUrls();
+      
+      // Build features array (includes config prefixes for hydration)
+      const features: string[] = [];
+      if (residentialConfig?.residentialType) features.push(`cfg:res_type:${residentialConfig.residentialType}`);
+      residentialConfig?.communityTypes?.forEach(c => features.push(`cfg:comm_type:${c}`));
+      residentialConfig?.securityFeatures?.forEach(s => features.push(`cfg:sec_feat:${s}`));
+      
+      let developmentId: number;
+      
+      if (editingId) {
+        // UPDATE MODE
+        console.log('[FinalisationPhase] Update mode, editingId:', editingId);
+        await updateDevelopment.mutateAsync({
+          id: editingId,
+          data: {
+            name: developmentData.name,
+            description: developmentData.description,
+            developmentType: (developmentType || 'residential') as 'residential' | 'commercial' | 'mixed_use' | 'estate' | 'complex',
+            address: developmentData.location?.address,
+            city: developmentData.location?.city,
+            province: developmentData.location?.province,
+            latitude: developmentData.location?.latitude,
+            longitude: developmentData.location?.longitude,
+            amenities: selectedAmenities || developmentData.amenities || [],
+            features,
+            highlights: developmentData.highlights || [],
+            images,
+            videos,
+          }
         });
-        toast.success('Listing successfully published!');
-        // Redirect or show success state would happen here
-    }, 1500);
+        developmentId = editingId;
+        toast.success('Development updated!');
+      } else {
+        // CREATE MODE
+        console.log('[FinalisationPhase] Create mode');
+        const result = await createDevelopment.mutateAsync({
+          name: developmentData.name || 'Untitled Development',
+          developmentType: (developmentType || 'residential') as 'residential' | 'commercial' | 'mixed_use' | 'estate' | 'complex',
+          description: developmentData.description,
+          address: developmentData.location?.address,
+          city: developmentData.location?.city || 'Unknown',
+          province: developmentData.location?.province || 'Unknown',
+          latitude: developmentData.location?.latitude,
+          longitude: developmentData.location?.longitude,
+          amenities: selectedAmenities || developmentData.amenities || [],
+          features,
+          highlights: developmentData.highlights || [],
+          images,
+          priceFrom: unitTypes[0]?.priceFrom || unitTypes[0]?.basePriceFrom,
+          priceTo: unitTypes[unitTypes.length - 1]?.priceTo || unitTypes[unitTypes.length - 1]?.basePriceTo,
+        });
+        developmentId = result.development.id;
+        toast.success('Development created!');
+      }
+      
+      // Now publish (submit for review)
+      console.log('[FinalisationPhase] Publishing development:', developmentId);
+      await publishDevelopment.mutateAsync({ id: developmentId });
+      
+      // Success!
+      setShowConfirmPublish(false);
+      confetti({
+        particleCount: 100,
+        spread: 70,
+        origin: { y: 0.6 }
+      });
+      toast.success('Development submitted for review!');
+      
+      // Reset wizard and redirect
+      reset();
+      navigate('/developer/developments');
+      
+    } catch (error: any) {
+      console.error('[FinalisationPhase] Publish failed:', error);
+      toast.error('Failed to publish', { description: error.message });
+    } finally {
+      setIsPublishing(false);
+    }
   };
 
   // Render Section Helper
@@ -123,7 +227,7 @@ export function FinalisationPhase() {
                             <AlertDescription>{err}</AlertDescription>
                         </Alert>
                     ))}
-                    {warnings.map((warn, idx) => (
+                    {warnings.map((warn: string, idx: number) => (
                         <Alert key={`warn-${idx}`} className="bg-amber-50 border-amber-200 text-amber-800">
                             <AlertTriangle className="h-4 w-4 text-amber-600" />
                             <AlertTitle className="text-amber-900">Recommendation</AlertTitle>
@@ -168,7 +272,7 @@ export function FinalisationPhase() {
                     <div>
                         <span className="block text-xs uppercase text-slate-400 font-semibold tracking-wider">Address</span>
                         <span className="font-medium text-slate-900">
-                             {developmentData.address || 'Address not set'}
+                             {developmentData.location?.address || 'Address not set'}
                         </span>
                         {/* Map placeholder */}
                         <div className="mt-2 h-24 bg-slate-100 rounded border border-slate-200 flex items-center justify-center text-xs text-slate-400">
@@ -185,10 +289,10 @@ export function FinalisationPhase() {
                  onEdit={() => setPhase(7)}
                  data={
                     <div className="flex flex-wrap gap-2">
-                        {(developmentData.amenities?.standard || []).map(a => (
+                        {(selectedAmenities || developmentData.amenities || []).map((a: string) => (
                             <Badge key={a} variant="secondary" className="bg-slate-100 text-slate-700">{a}</Badge>
                         ))}
-                        {(developmentData.amenities?.standard || []).length === 0 && <span className="text-slate-400 italic">No amenities selected</span>}
+                        {(selectedAmenities || developmentData.amenities || []).length === 0 && <span className="text-slate-400 italic">No amenities selected</span>}
                     </div>
                  }
               />
