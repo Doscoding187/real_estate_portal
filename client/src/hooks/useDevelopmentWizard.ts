@@ -113,10 +113,15 @@ export interface UnitType {
   // Price Range & Costs
   priceFrom: number;
   priceTo: number; // Can equal priceFrom if fixed price
-  transferCostsIncluded?: boolean;
-  monthlyLevy?: number;
-  
-  // Availability Tracking
+  transferCostsIncluded?: boolean; // NEW: Boolean flag
+  // Extended Costs (Ranges for variable unit sizes)
+  monthlyLevyFrom?: number; 
+  monthlyLevyTo?: number;
+  ratesAndTaxesFrom?: number;
+  ratesAndTaxesTo?: number;
+
+  // Legacy (Keep for migration safety if needed, or remove if confident)
+  monthlyLevy?: number; // Deprecated -> use From/To
   totalUnits: number; // Total units of this type
   availableUnits: number; // Currently available
   reservedUnits: number; // Under offer / held

@@ -72,7 +72,10 @@ export function UnitTypesPhase() {
     priceFrom: 0,
     priceTo: 0,
     transferCostsIncluded: false,
-    monthlyLevy: 0,
+    monthlyLevyFrom: 0,
+    monthlyLevyTo: 0, // max levy
+    ratesAndTaxesFrom: 0,
+    ratesAndTaxesTo: 0,
     totalUnits: 0,
     availableUnits: 0,
     reservedUnits: 0,
@@ -92,7 +95,8 @@ export function UnitTypesPhase() {
       name: '', description: '', bedrooms: 1, bathrooms: 1, 
       parkingType: 'single_garage', parkingBays: 1,
       sizeFrom: 0, sizeTo: 0, yardSize: 0,
-      priceFrom: 0, priceTo: 0, transferCostsIncluded: false, monthlyLevy: 0,
+      priceFrom: 0, priceTo: 0, transferCostsIncluded: false, 
+      monthlyLevyFrom: 0, monthlyLevyTo: 0, ratesAndTaxesFrom: 0, ratesAndTaxesTo: 0,
       totalUnits: 0, availableUnits: 0, reservedUnits: 0,
       features: { kitchen: [], bathroom: [], flooring: [], storage: [], climate: [], outdoor: [], security: [], other: [] }
     });
@@ -357,52 +361,113 @@ export function UnitTypesPhase() {
               </TabsContent>
 
               <TabsContent value="pricing" className="mt-0 space-y-6">
-                 <div className="grid md:grid-cols-2 gap-8">
+                 <div className="space-y-8 max-w-3xl">
+                    
+                    {/* Section 1: Pricing Model & Base Price */}
                     <div className="space-y-4">
-                       <Label className="text-base">Pricing Model</Label>
-                       <RadioGroup 
-                          value={formData.priceFrom === formData.priceTo ? 'fixed' : 'range'}
-                          onValueChange={(v) => {
-                             if(v === 'fixed') setFormData(p => ({...p, priceTo: p.priceFrom}));
-                          }}
-                       >
-                          <div className="flex items-center space-x-2">
-                             <RadioGroupItem value="fixed" id="p-fixed" />
-                             <Label htmlFor="p-fixed">Fixed Price</Label>
-                          </div>
-                          <div className="flex items-center space-x-2">
-                             <RadioGroupItem value="range" id="p-range" />
-                             <Label htmlFor="p-range">Price Range</Label>
-                          </div>
-                       </RadioGroup>
+                       <Label className="text-base font-semibold text-slate-900 border-b pb-2 block">1. Unit Price</Label>
+                       
+                       <div className="grid md:grid-cols-2 gap-8 items-start">
+                           <div className="space-y-3">
+                               <Label className="text-sm">Pricing Model</Label>
+                               <RadioGroup 
+                                  value={formData.priceFrom === formData.priceTo ? 'fixed' : 'range'}
+                                  onValueChange={(v) => {
+                                     if(v === 'fixed') setFormData(p => ({...p, priceTo: p.priceFrom}));
+                                  }}
+                                  className="flex flex-col space-y-2"
+                               >
+                                  <div className="flex items-center space-x-2">
+                                     <RadioGroupItem value="fixed" id="p-fixed" />
+                                     <Label htmlFor="p-fixed" className="font-normal">Fixed Price</Label>
+                                  </div>
+                                  <div className="flex items-center space-x-2">
+                                     <RadioGroupItem value="range" id="p-range" />
+                                     <Label htmlFor="p-range" className="font-normal">Price Range (Min - Max)</Label>
+                                  </div>
+                               </RadioGroup>
+                           </div>
 
-                       <div className="grid gap-2">
-                          <Label>Price (ZAR)</Label>
-                          <div className="flex items-center gap-2">
-                             <span className="text-slate-400">R</span>
-                             <Input type="number" placeholder="From" value={formData.priceFrom} onChange={e => setFormData(p => ({...p, priceFrom: +e.target.value}))} />
-                          </div>
-                          {formData.priceFrom !== formData.priceTo && (
-                             <div className="flex items-center gap-2 mt-2">
-                                <span className="text-slate-400">To</span>
-                                <Input type="number" placeholder="To" value={formData.priceTo} onChange={e => setFormData(p => ({...p, priceTo: +e.target.value}))} />
-                             </div>
-                          )}
+                           <div className="space-y-3">
+                               <Label>Price (ZAR)</Label>
+                               <div className="flex items-center gap-2">
+                                  <span className="text-slate-400 font-medium w-8">From</span>
+                                  <div className="relative flex-1">
+                                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">R</span>
+                                      <Input className="pl-8" type="number" placeholder="0" value={formData.priceFrom} onChange={e => setFormData(p => ({...p, priceFrom: +e.target.value}))} />
+                                  </div>
+                               </div>
+                               {formData.priceFrom !== formData.priceTo && (
+                                  <div className="flex items-center gap-2">
+                                     <span className="text-slate-400 font-medium w-8">To</span>
+                                     <div className="relative flex-1">
+                                         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">R</span>
+                                         <Input className="pl-8" type="number" placeholder="0" value={formData.priceTo} onChange={e => setFormData(p => ({...p, priceTo: +e.target.value}))} />
+                                     </div>
+                                  </div>
+                               )}
+                           </div>
                        </div>
                     </div>
-                    <div className="space-y-4 p-4 bg-slate-50 rounded-xl">
-                       <div className="flex items-center space-x-2">
-                          <Checkbox id="transfer" checked={formData.transferCostsIncluded} onCheckedChange={(c) => setFormData(p => ({...p, transferCostsIncluded: !!c}))} />
-                          <Label htmlFor="transfer">Transfer Costs Included?</Label>
-                       </div>
-                       <div className="space-y-2">
-                          <Label>Estimated Monthly Levy</Label>
-                          <div className="flex items-center gap-2">
-                             <span className="text-slate-400">R</span>
-                             <Input type="number" value={formData.monthlyLevy} onChange={e => setFormData(p => ({...p, monthlyLevy: +e.target.value}))} />
-                          </div>
+
+                    {/* Section 2: Monthly Costs */}
+                    <div className="space-y-4">
+                       <Label className="text-base font-semibold text-slate-900 border-b pb-2 block">2. Monthly Costs & Levies</Label>
+                       
+                       <div className="p-5 bg-slate-50 border border-slate-200 rounded-xl space-y-6">
+                           
+                           {/* Transfer Costs Checkbox */}
+                           <div className="flex items-center space-x-2 pb-4 border-b border-slate-200">
+                              <Checkbox id="transfer" checked={formData.transferCostsIncluded} onCheckedChange={(c) => setFormData(p => ({...p, transferCostsIncluded: !!c}))} />
+                              <Label htmlFor="transfer" className="cursor-pointer font-medium">Price includes Transfer Costs?</Label>
+                           </div>
+
+                           {/* Levies Range */}
+                           <div className="space-y-3">
+                              <Label>Estimated Monthly Levy</Label>
+                              <div className="grid grid-cols-2 gap-4">
+                                  <div className="space-y-1">
+                                      <span className="text-xs text-slate-500 uppercase tracking-wider">Min</span>
+                                      <div className="relative">
+                                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">R</span>
+                                          <Input className="pl-8 bg-white" type="number" placeholder="Min" value={formData.monthlyLevyFrom} onChange={e => setFormData(p => ({...p, monthlyLevyFrom: +e.target.value}))} />
+                                      </div>
+                                  </div>
+                                  <div className="space-y-1">
+                                      <span className="text-xs text-slate-500 uppercase tracking-wider">Max</span>
+                                      <div className="relative">
+                                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">R</span>
+                                          <Input className="pl-8 bg-white" type="number" placeholder="Max" value={formData.monthlyLevyTo} onChange={e => setFormData(p => ({...p, monthlyLevyTo: +e.target.value}))} />
+                                      </div>
+                                  </div>
+                              </div>
+                              <p className="text-xs text-slate-500">Provide a range if levies vary by unit size or position.</p>
+                           </div>
+
+                           {/* Rates & Taxes Range */}
+                           <div className="space-y-3">
+                              <Label>Estimated Rates & Taxes</Label>
+                              <div className="grid grid-cols-2 gap-4">
+                                  <div className="space-y-1">
+                                      <span className="text-xs text-slate-500 uppercase tracking-wider">Min</span>
+                                      <div className="relative">
+                                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">R</span>
+                                          <Input className="pl-8 bg-white" type="number" placeholder="Min" value={formData.ratesAndTaxesFrom} onChange={e => setFormData(p => ({...p, ratesAndTaxesFrom: +e.target.value}))} />
+                                      </div>
+                                  </div>
+                                  <div className="space-y-1">
+                                      <span className="text-xs text-slate-500 uppercase tracking-wider">Max</span>
+                                      <div className="relative">
+                                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">R</span>
+                                          <Input className="pl-8 bg-white" type="number" placeholder="Max" value={formData.ratesAndTaxesTo} onChange={e => setFormData(p => ({...p, ratesAndTaxesTo: +e.target.value}))} />
+                                      </div>
+                                  </div>
+                              </div>
+                           </div>
+                           
                        </div>
                     </div>
+
                  </div>
               </TabsContent>
 

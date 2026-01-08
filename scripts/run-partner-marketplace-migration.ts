@@ -1,14 +1,18 @@
-import { db } from "../server/db";
+import { getDb } from "../server/db";
 import { sql } from "drizzle-orm";
 import * as fs from "fs";
 import * as path from "path";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 /**
  * Run Partner Marketplace Schema Migration
  * 
  * This script applies the partner marketplace schema migration which includes:
  * - Partner tiers configuration
- * - Partners table
+ * - Explore partners table
  * - Topics for intent-based navigation
  * - Content-to-topic mapping
  * - Content approval queue
@@ -16,7 +20,7 @@ import * as path from "path";
  * - Partner subscriptions
  * - Content quality scores
  * - Boost campaigns
- * - Leads
+ * - Partner leads
  * - Marketplace bundles
  * - Cold start infrastructure
  */
@@ -25,6 +29,9 @@ async function runMigration() {
   console.log("🚀 Starting Partner Marketplace Schema Migration...\n");
 
   try {
+    // Initialize database connection
+    const db = await getDb();
+    
     // Read the migration SQL file
     const migrationPath = path.join(
       __dirname,
@@ -104,16 +111,18 @@ async function runMigration() {
 }
 
 async function verifyTables() {
+  const db = await getDb();
+  
   const tablesToVerify = [
     "partner_tiers",
-    "partners",
+    "explore_partners",
     "topics",
     "content_topics",
     "content_approval_queue",
     "partner_subscriptions",
     "content_quality_scores",
     "boost_campaigns",
-    "leads",
+    "partner_leads",
     "marketplace_bundles",
     "bundle_partners",
     "launch_phases",

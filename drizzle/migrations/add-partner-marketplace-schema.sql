@@ -262,7 +262,7 @@ CREATE TABLE IF NOT EXISTS bundle_partners (
   PRIMARY KEY (bundle_id, partner_id),
   INDEX idx_bundle_category (bundle_id, category),
   FOREIGN KEY (bundle_id) REFERENCES marketplace_bundles(id) ON DELETE CASCADE,
-  FOREIGN KEY (partner_id) REFERENCES partners(id) ON DELETE CASCADE
+  FOREIGN KEY (partner_id) REFERENCES explore_partners(id) ON DELETE CASCADE
 );
 
 -- ============================================================================
@@ -335,7 +335,7 @@ CREATE TABLE IF NOT EXISTS founding_partners (
   warning_count INT DEFAULT 0,
   status ENUM('active', 'warning', 'revoked') DEFAULT 'active',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (partner_id) REFERENCES partners(id) ON DELETE CASCADE
+  FOREIGN KEY (partner_id) REFERENCES explore_partners(id) ON DELETE CASCADE
 );
 
 -- ============================================================================
