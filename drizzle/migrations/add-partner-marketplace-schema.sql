@@ -317,11 +317,11 @@ CREATE TABLE IF NOT EXISTS user_onboarding_state (
   welcome_overlay_shown BOOLEAN DEFAULT false,
   welcome_overlay_dismissed BOOLEAN DEFAULT false,
   suggested_topics JSON,
-  tooltips_shown JSON DEFAULT '[]',
+  tooltips_shown JSON,
   content_view_count INT DEFAULT 0,
   save_count INT DEFAULT 0,
   partner_engagement_count INT DEFAULT 0,
-  features_unlocked JSON DEFAULT '[]',
+  features_unlocked JSON,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
@@ -331,7 +331,7 @@ CREATE TABLE IF NOT EXISTS founding_partners (
   enrollment_date DATE NOT NULL,
   benefits_end_date DATE NOT NULL,
   pre_launch_content_delivered INT DEFAULT 0,
-  weekly_content_delivered JSON DEFAULT '[]',
+  weekly_content_delivered JSON,
   warning_count INT DEFAULT 0,
   status ENUM('active', 'warning', 'revoked') DEFAULT 'active',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

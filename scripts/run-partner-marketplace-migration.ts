@@ -41,11 +41,16 @@ async function runMigration() {
     console.log(`📖 Reading migration file: ${migrationPath}`);
     const migrationSQL = fs.readFileSync(migrationPath, "utf-8");
 
-    // Split the SQL into individual statements
-    const statements = migrationSQL
+    // Remove SQL comments (both single line and block if needed, but primarily single line --)
+    // This regex matches -- until end of line, and replaces with empty string
+    const cleanSQL = migrationSQL
+      .replace(/--.*$/gm, "")
+      .replace(/\r\n/g, "\n"); // Normalize line endings
+
+    const statements = cleanSQL
       .split(";")
       .map((stmt) => stmt.trim())
-      .filter((stmt) => stmt.length > 0 && !stmt.startsWith("--"));
+      .filter((stmt) => stmt.length > 0);
 
     console.log(`📝 Found ${statements.length} SQL statements to execute\n`);
 
