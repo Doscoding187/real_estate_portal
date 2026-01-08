@@ -45,17 +45,17 @@ import { FinalisationPhase } from './phases/FinalisationPhase';
 
 // Phase Definitions (matches renderPhase cases)
 const PHASES = [
-  'Representation',     // 1
-  'Development Type',   // 2
-  'Configuration',      // 3
-  'Basic Details',      // 4
-  'Location',           // 5 (NEW)
-  'Development Profile',     // 6 (was 5)
-  'Amenities',          // 7 (was 6)
-  'Overview',           // 8 (was 7)
-  'Media',              // 9 (was 8)
-  'Unit Types',         // 10 (was 9)
-  'Publish'             // 11 (was 10)
+  'Representation',       // 1
+  'Development Type',     // 2
+  'Configuration',        // 3
+  'Project Identity',     // 4 (was 'Basic Details')
+  'Location',             // 5
+  'Development Profile',  // 6 (conditional - skipped for Land/Commercial)
+  'Amenities',            // 7
+  'Marketing Summary',    // 8 (was 'Overview')
+  'Media',                // 9
+  'Unit Types',           // 10
+  'Review & Publish'      // 11 (was 'Publish')
 ];
 
 interface DevelopmentWizardProps {
