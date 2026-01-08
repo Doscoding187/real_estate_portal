@@ -5,16 +5,61 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
+import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import { 
     Upload, X, Star, Image as ImageIcon, Video, TreePine, Dumbbell, 
     FileText, MapPin, Layout, ShieldCheck, AlertCircle, CheckCircle2,
-    ArrowRight, ArrowLeft, GripVertical
+    ArrowRight, ArrowLeft, GripVertical, Link as LinkIcon, Plus
 } from 'lucide-react';
 import { trpc } from '@/lib/trpc';
 import { cn } from '@/lib/utils';
 import { SortableMediaGrid } from '@/components/media/SortableMediaGrid';
 import type { MediaItem as GridMediaItem } from '@/components/media/SortableMediaGrid';
+
+// Helper component for Video URL input
+function VideoUrlInput({ onAdd }: { onAdd: (url: string) => void }) {
+  const [url, setUrl] = useState('');
+  
+  const isValidVideoUrl = (link: string) => {
+    // Check for YouTube or Vimeo URLs
+    const youtubeRegex = /^(https?:\/\/)?(www\.)?(youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)[\w-]+/;
+    const vimeoRegex = /^(https?:\/\/)?(www\.)?vimeo\.com\/\d+/;
+    return youtubeRegex.test(link) || vimeoRegex.test(link);
+  };
+  
+  const handleAdd = () => {
+    if (!url.trim()) {
+      toast.error('Please enter a video URL');
+      return;
+    }
+    if (!isValidVideoUrl(url)) {
+      toast.error('Please enter a valid YouTube or Vimeo URL');
+      return;
+    }
+    onAdd(url.trim());
+    setUrl('');
+  };
+  
+  return (
+    <div className="flex gap-2">
+      <div className="relative flex-1">
+        <LinkIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+        <Input
+          placeholder="https://www.youtube.com/watch?v=..."
+          value={url}
+          onChange={(e) => setUrl(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
+          className="pl-9"
+        />
+      </div>
+      <Button onClick={handleAdd} variant="secondary" className="shrink-0">
+        <Plus className="w-4 h-4 mr-1" />
+        Add
+      </Button>
+    </div>
+  );
+}
 
 export function MediaPhase() {
   const { 
@@ -357,7 +402,7 @@ export function MediaPhase() {
                 </Card>
             </TabsContent>
 
-            <TabsContent value="videos" className="mt-0">
+            <TabsContent value="videos" className="mt-0 space-y-4">
                <Card>
                   <CardContent className="pt-6">
                      <UploadSection 
@@ -367,7 +412,32 @@ export function MediaPhase() {
                         icon={Video}
                         acceptedTypes="video/*"
                      />
-                     {/* Placeholder for Link Input if needed later */}
+                  </CardContent>
+               </Card>
+               
+               {/* Video URL Input */}
+               <Card>
+                  <CardHeader className="pb-3">
+                     <CardTitle className="text-base flex items-center gap-2">
+                        <Video className="w-4 h-4 text-purple-500" />
+                        Add Video Link
+                     </CardTitle>
+                     <CardDescription>
+                        Paste a YouTube or Vimeo URL to embed
+                     </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                     <VideoUrlInput onAdd={(url) => {
+                        addMedia({
+                           url,
+                           type: 'video',
+                           category: 'videos',
+                           isPrimary: false,
+                           displayOrder: videos.length,
+                           fileName: url.includes('youtube') ? 'YouTube Video' : url.includes('vimeo') ? 'Vimeo Video' : 'Video Link'
+                        });
+                        toast.success('Video link added!');
+                     }} />
                   </CardContent>
                </Card>
             </TabsContent>

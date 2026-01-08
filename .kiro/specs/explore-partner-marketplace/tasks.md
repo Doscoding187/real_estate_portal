@@ -3,15 +3,32 @@
 ## Overview
 
 This implementation plan follows a phased approach aligned with the Cold Start strategy:
-- **Sprint 0 (Pre-Launch)**: Partner system, content governance, cold start infrastructure
-- **Sprint 1 (Launch)**: Feed hierarchy, Topics, ranking, onboarding
-- **Sprint 2 (Ramp-Up)**: Partner profiles, quality scoring, analytics
-- **Sprint 3 (Monetization)**: Subscriptions, boosts, leads, bundles
+- **Sprint 0 (Pre-Launch, Weeks 1-8)**: Partner system, content governance, cold start infrastructure, admin tools
+- **Sprint 1 (Launch, Weeks 9-12)**: Feed hierarchy, Topics, ranking, onboarding, public launch
+- **Sprint 2 (Ramp-Up, Weeks 13-20)**: Monitor, optimize, scale, algorithm training
+- **Sprint 3 (Monetization, Weeks 21-24)**: Subscriptions, boosts, leads, bundles
+
+## Critical Path Dependencies
+
+**Longest lead time items (start immediately):**
+1. Founding partner recruitment (8 weeks) - Cannot be shortened
+2. Content creation (6 weeks) - Requires templates first
+3. Algorithm training (ongoing) - Requires 4+ weeks of user data
+
+## Launch Decision Criteria
+
+Launch when ALL are true:
+- ✅ 200+ pieces of content across all categories
+- ✅ 15 founding partners enrolled and trained
+- ✅ Launch readiness dashboard all green
+- ✅ First-time user onboarding tested with 10+ users
+- ✅ Feed performance <200ms consistently
+- ✅ Admin moderation queue functional
 
 ## Tasks
 
-- [ ] 1. Set up database schema and core infrastructure
-  - [ ] 1.1 Create partner_tiers table with seed data for 4 tiers
+- [-] 1. Set up database schema and core infrastructure
+  - [-] 1.1 Create partner_tiers table with seed data for 4 tiers
     - Define tier permissions (content types, CTAs)
     - Insert seed data for Property Professional, Home Service Provider, Financial Partner, Content Educator
     - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5_
