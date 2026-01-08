@@ -633,8 +633,9 @@ const createActions = (
         const media = state.developmentData?.media;
         if (!media?.heroImage) errors.push('Hero image is required');
         
-        const featuredCount = (media?.photos || []).filter(p => p.category === 'featured').length;
-        if (featuredCount < 2) errors.push(`Add at least 2 featured images (Current: ${featuredCount})`);
+        // At least 1 document/brochure required for developments
+        const docCount = (media?.documents || []).length;
+        if (docCount < 1) errors.push('Add at least 1 brochure or document');
         break;
 
       case 10: // Unit Types (was 9)

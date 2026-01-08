@@ -814,3 +814,280 @@ explore_feed_sessions (
 ```
 
 ---
+
+## Key Requirements Implementation
+
+### Requirement 1: Video Feed
+| Acceptance Criteria | Implementation |
+|---------------------|----------------|
+| Full-screen vertical videos | `ExploreVideoFeed.tsx`, `ExploreShorts.tsx` |
+| Swipe-up navigation | `SwipeEngine.tsx` with gesture detection |
+| Property overlay | `VideoOverlay.tsx` with price, location, beds, baths |
+| Double-tap to save | `SwipeEngine.onDoubleTap` → `useSaveProperty` |
+| Auto-loop videos | `VideoPlayer.tsx` with `loop` attribute |
+| 200ms load time | Video preloading in `useExploreVideoFeed` |
+
+### Requirement 2: Personalization
+| Acceptance Criteria | Implementation |
+|---------------------|----------------|
+| Price range learning | `recommendationEngineService.calculatePersonalizedScore()` |
+| Neighbourhood preference | `exploreUserPreferences.preferredLocations` |
+| Watch completion signal | `exploreEngagements.completed` flag |
+| Skip signal | `exploreEngagements.engagementType = 'skip'` |
+| Multi-factor algorithm | 6-factor scoring in `recommendationEngineService` |
+
+### Requirement 4: Lifestyle Categories
+| Acceptance Criteria | Implementation |
+|---------------------|----------------|
+| Horizontal category list | `LifestyleCategorySelector.tsx` |
+| Filter feed by category | `useTrendingVideos({ categoryId })` |
+| Session persistence | `exploreFiltersStore` with localStorage |
+
+### Requirement 7: Mixed Content Feed
+| Acceptance Criteria | Implementation |
+|---------------------|----------------|
+| Blend content types | `DiscoveryCardFeed.tsx` with 4 card types |
+| New content type every 5-7 items | `organizeIntoBlocks()` in `useDiscoveryFeed` |
+| 7-day recency priority | `recommendationEngineService` recency bonus |
+| Sponsored integration | `injectBoostedContent()` with 1:10 ratio |
+
+### Requirement 8: Video Upload
+| Acceptance Criteria | Implementation |
+|---------------------|----------------|
+| Required metadata | `validateVideoMetadata()` in `exploreVideoService` |
+| 5-minute processing | S3 presigned URLs for direct upload |
+| 8-60 second duration | `validateVideoDuration()` |
+| Creator analytics | `exploreAnalyticsService.getCreatorAnalytics()` |
+
+### Requirement 10: Performance
+| Acceptance Criteria | Implementation |
+|---------------------|----------------|
+| Preload next 2 videos | `useVideoPreload` hook |
+| Lazy-load images | `useImagePreload` hook |
+| Default muted playback | `isMuted` state in `ExploreVideoFeed` |
+| Loading skeletons | `SkeletonCard` components |
+
+---
+
+## File Structure Summary
+
+```
+client/src/
+├── pages/
+│   ├── ExploreHome.tsx          # Main explore page (video-first)
+│   ├── ExploreFeed.tsx          # Grid-based feed
+│   ├── ExploreShorts.tsx        # TikTok-style shorts
+│   ├── ExploreMap.tsx           # Map hybrid view
+│   ├── ExploreUpload.tsx        # Video upload page
+│   ├── NeighbourhoodDetail.tsx  # Neighbourhood deep-dive
+│   ├── SavedProperties.tsx      # Saved items
+│   └── FollowedItems.tsx        # Followed creators/areas
+│
+├── components/
+│   ├── explore-discovery/
+│   │   ├── TrendingVideosSection.tsx
+│   │   ├── TrendingVideoCard.tsx
+│   │   ├── DiscoveryCardFeed.tsx
+│   │   ├── ExploreVideoFeed.tsx
+│   │   ├── LifestyleCategorySelector.tsx
+│   │   ├── FilterPanel.tsx
+│   │   ├── ResponsiveFilterPanel.tsx
+│   │   ├── MobileFilterBottomSheet.tsx
+│   │   ├── PersonalizedContentBlock.tsx
+│   │   ├── MapHybridView.tsx
+│   │   ├── VideoPlayer.tsx
+│   │   ├── VideoOverlay.tsx
+│   │   ├── SaveButton.tsx
+│   │   ├── FollowButton.tsx
+│   │   ├── EmptyState.tsx
+│   │   ├── ErrorBoundary.tsx
+│   │   ├── OfflineIndicator.tsx
+│   │   ├── VirtualizedFeed.tsx
+│   │   ├── AmenityDisplay.tsx
+│   │   ├── PriceStatistics.tsx
+│   │   ├── AgencyHeader.tsx
+│   │   ├── AgencySelector.tsx
+│   │   └── cards/
+│   │       ├── PropertyCard.tsx
+│   │       ├── VideoCard.tsx
+│   │       ├── NeighbourhoodCard.tsx
+│   │       └── InsightCard.tsx
+│   │
+│   ├── explore/
+│   │   ├── ShortsContainer.tsx
+│   │   ├── SwipeEngine.tsx
+│   │   ├── VideoCard.tsx
+│   │   ├── PropertyOverlay.tsx
+│   │   ├── VideoFeedWithPreload.tsx
+│   │   ├── ContactAgentModal.tsx
+│   │   ├── EnhancedSearchBar.tsx
+│   │   └── VideoUploadModal.tsx
+│   │
+│   └── explore-analytics/
+│       ├── ExploreAnalyticsDashboard.tsx
+│       ├── AgencyAnalyticsDashboard.tsx
+│       ├── BoostCampaignManager.tsx
+│       └── ExploreSection.tsx
+│
+├── hooks/
+│   ├── useTrendingVideos.ts
+│   ├── useDiscoveryFeed.ts
+│   ├── useExploreVideoFeed.ts
+│   ├── useExploreCommonState.ts
+│   ├── usePersonalizedContent.ts
+│   ├── useMapHybridView.ts
+│   ├── useCategoryFilter.ts
+│   ├── useNeighbourhoodDetail.ts
+│   ├── useSaveProperty.ts
+│   ├── useFollowCreator.ts
+│   ├── useFollowNeighbourhood.ts
+│   ├── useVideoPlayback.ts
+│   ├── useVideoPreload.ts
+│   ├── useImagePreload.ts
+│   ├── useFilterUrlSync.ts
+│   ├── useSwipeGestures.ts
+│   ├── useShortsFeed.ts
+│   ├── usePropertyFilters.ts
+│   ├── useAgencyFeed.ts
+│   └── useAgencyAnalytics.ts
+│
+├── store/
+│   └── exploreFiltersStore.ts
+│
+└── data/
+    └── explorePlaceholderData.ts
+
+server/
+├── exploreRouter.ts
+├── exploreApiRouter.ts
+├── exploreVideoUploadRouter.ts
+├── exploreAnalyticsRouter.ts
+├── boostCampaignRouter.ts
+├── similarPropertiesRouter.ts
+│
+└── services/
+    ├── exploreFeedService.ts
+    ├── recommendationEngineService.ts
+    ├── exploreVideoService.ts
+    ├── exploreAnalyticsService.ts
+    ├── exploreInteractionService.ts
+    ├── exploreAgencyService.ts
+    ├── boostCampaignService.ts
+    ├── videoProcessingService.ts
+    └── similarPropertiesService.ts
+```
+
+---
+
+## Testing
+
+### Test Files Location
+```
+client/src/components/explore-discovery/__tests__/
+├── AriaCompliance.test.tsx
+├── EmptyState.test.tsx
+├── ErrorBoundary.test.tsx
+├── MobileFilterBottomSheet.test.tsx
+├── OfflineIndicator.test.tsx
+└── VirtualizedFeed.validation.md
+
+server/services/__tests__/
+├── exploreFeedService.test.ts
+├── exploreDiscoverySchema.test.ts
+├── exploreAgencyAttribution.test.ts
+└── exploreAgencyAttribution.integration.test.ts
+```
+
+---
+
+## Design System Integration
+
+### Design Tokens (`client/src/lib/design-tokens.ts`)
+```typescript
+designTokens = {
+  colors: {
+    bg: { primary, secondary, tertiary, dark },
+    text: { primary, secondary, tertiary, inverse },
+    accent: { primary, light, gradient },
+    glass: { bg, bgDark, border, borderDark, backdrop },
+    status: { error, success, warning },
+  },
+  shadows: { sm, md, lg, accent, accentHover },
+  typography: { fontWeight: { medium, semibold, bold } },
+  spacing: { xs, sm, md, lg, xl },
+}
+```
+
+### Animation System (`client/src/lib/animations/exploreAnimations.ts`)
+```typescript
+// Page transitions
+pageVariants = { initial, animate, exit }
+
+// Stagger animations for lists
+staggerContainerVariants
+staggerItemVariants
+
+// Button interactions
+buttonVariants = { hover, tap }
+```
+
+---
+
+## Performance Optimizations
+
+1. **Video Preloading**: Next 2 videos preloaded via `useVideoPreload`
+2. **Image Lazy Loading**: `useImagePreload` with intersection observer
+3. **Virtualized Lists**: `VirtualizedFeed.tsx` for large datasets
+4. **Redis Caching**: 5-minute TTL on feed queries
+5. **Debounced Filters**: `useDebounce` for filter changes
+6. **Skeleton Loading**: Immediate visual feedback
+
+---
+
+## Accessibility Features
+
+1. **ARIA Labels**: All interactive elements labeled
+2. **Keyboard Navigation**: `useKeyboardNavigation` hook
+3. **Skip Links**: `SkipToContent.tsx` component
+4. **Focus Management**: `useFocusManagement` hook
+5. **Reduced Motion**: `useReducedMotion` hook
+6. **Screen Reader Support**: Proper heading hierarchy
+
+---
+
+## Related Specifications
+
+- `.kiro/specs/explore-discovery-engine/requirements.md` - Full requirements
+- `.kiro/specs/explore-discovery-engine/design.md` - Technical design
+- `.kiro/specs/explore-video-first-layout/` - Video-first layout spec
+- `.kiro/specs/explore-frontend-refinement/` - UI refinement spec
+- `.kiro/specs/explore-agency-content-attribution/` - Agency attribution spec
+
+---
+
+## Quick Reference Commands
+
+```bash
+# Run Explore tests
+pnpm test -- --grep "explore"
+
+# Check Explore components
+pnpm lint client/src/components/explore-discovery/
+
+# Run database migrations
+pnpm tsx scripts/run-explore-discovery-migration.ts
+```
+
+---
+
+## Contact
+
+For questions about this feature, refer to:
+- Requirements: `.kiro/specs/explore-discovery-engine/requirements.md`
+- Implementation tasks: `.kiro/specs/explore-discovery-engine/tasks.md`
+- Video-first layout: `.kiro/specs/explore-video-first-layout/tasks.md`
+
+---
+
+*Document generated: January 8, 2026*
+*Version: 1.0*

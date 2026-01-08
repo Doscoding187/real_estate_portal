@@ -39,13 +39,15 @@ export function MediaPhase() {
   const featuredCount = photos.filter(p => p.category === 'featured').length;
   const galleryCount = photos.filter(p => p.category !== 'featured').length + featuredCount; // All photos count as gallery
   
-  // Progress Calculation - Simplified: Hero + Gallery
+  // Progress Calculation - Simplified: Hero + Gallery + Documents
   const hasHero = !!heroImage;
   const hasMinGallery = galleryCount >= 3;
+  const hasDocuments = documents.length >= 1;
   
   const progressPercent = [
-      hasHero ? 50 : 0, 
-      Math.min(galleryCount, 5) * 10   // Max 50 (5 items)
+      hasHero ? 40 : 0, 
+      Math.min(galleryCount, 5) * 6,   // Max 30 (5 items)
+      hasDocuments ? 30 : 0            // Documents requirement
   ].reduce((a, b) => a + b, 0);
 
 
@@ -301,6 +303,10 @@ export function MediaPhase() {
                     {hasMinGallery ? <CheckCircle2 className="w-3.5 h-3.5 text-green-500"/> : <AlertCircle className="w-3.5 h-3.5 text-slate-300"/>}
                     <span className={hasMinGallery ? "text-slate-600" : "text-slate-400"}>Gallery Images ({galleryCount}/3+)</span>
                  </div>
+                 <div className="flex items-center gap-2 text-xs">
+                    {hasDocuments ? <CheckCircle2 className="w-3.5 h-3.5 text-green-500"/> : <AlertCircle className="w-3.5 h-3.5 text-amber-500"/>}
+                    <span className={hasDocuments ? "text-slate-600" : "text-slate-400"}>Brochure/Documents (Required)</span>
+                 </div>
              </div>
          </div>
       </div>
@@ -389,10 +395,10 @@ export function MediaPhase() {
         <Button 
           onClick={handleNext} 
           size="lg" 
-          disabled={!hasHero} // Only require Hero Image
+          disabled={!hasHero || !hasDocuments} // Require Hero Image + Documents
           className={cn(
               "px-8 h-11 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 shadow-md hover:shadow-lg transition-all duration-300",
-              !hasHero && "opacity-50 cursor-not-allowed"
+              (!hasHero || !hasDocuments) && "opacity-50 cursor-not-allowed"
           )}
         >
           Continue to Unit Types
