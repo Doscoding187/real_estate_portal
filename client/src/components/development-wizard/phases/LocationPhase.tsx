@@ -179,7 +179,7 @@ export function LocationPhase() {
           size="lg" 
           className="px-8 h-11 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 shadow-md hover:shadow-lg transition-all duration-300"
         >
-          Continue to Amenities
+          Continue to Development Profile
           <ArrowRight className="w-4 h-4 ml-2" />
         </Button>
       </div>

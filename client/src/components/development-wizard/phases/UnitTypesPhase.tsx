@@ -556,7 +556,7 @@ export function UnitTypesPhase() {
       
       <div className="flex justify-between pt-8 border-t border-slate-200">
          <Button variant="outline" onClick={() => setPhase(9)} className="px-6 h-11"><ArrowLeft className="w-4 h-4 mr-2"/>Back</Button>
-         <Button onClick={() => validatePhase(10) && setPhase(11)} size="lg" className="px-8 h-11 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700">Continue to Publish<ArrowRight className="w-4 h-4 ml-2"/></Button>
+         <Button onClick={() => validatePhase(10) && setPhase(11)} size="lg" className="px-8 h-11 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700">Continue to Review & Publish<ArrowRight className="w-4 h-4 ml-2"/></Button>
       </div>
 
     </div>

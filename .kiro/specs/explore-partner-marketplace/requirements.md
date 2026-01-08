@@ -218,3 +218,90 @@ This spec builds upon the existing Explore Discovery Engine by adding the partne
 5. WHEN a partner repeatedly violates rules, THE System SHALL escalate to account review
 6. WHERE automated detection is uncertain, THE System SHALL route to manual review queue
 
+
+
+### Requirement 16: Cold Start & Launch Strategy
+
+**User Story:** As a platform administrator launching Explore, I want a structured cold start process, so that the feed has sufficient content and users understand how to navigate it from Day 1.
+
+#### Acceptance Criteria
+
+**Pre-Launch Content Seeding:**
+
+1. WHEN preparing for launch, THE System SHALL enable a "Pre-Launch Partner" registration type with special permissions
+2. WHEN a Pre-Launch Partner is approved, THE System SHALL allow batch content upload and provide content templates
+3. WHEN calculating minimum viable content, THE System SHALL require 200+ pieces across all content types before public launch
+4. WHEN pre-launch content is uploaded, THE System SHALL tag it as "Launch Content" for tracking purposes
+5. WHEN launch content distribution is calculated, THE System SHALL ensure: 50 property tours, 30 neighbourhood guides, 50 expert tips, 20 market insights, 30 service showcases, 20 inspiration pieces
+6. WHERE pre-launch content quotas are not met, THE System SHALL prevent public launch and notify administrators
+
+**First-Time User Onboarding:**
+
+7. WHEN a user opens Explore for the first time, THE System SHALL display a welcome overlay explaining "Discover properties, ideas, and insights—all in one place"
+8. WHEN the welcome overlay appears, THE System SHALL suggest 3 Topics based on user profile
+9. WHEN a first-time user selects a suggested Topic, THE System SHALL load feed with that Topic pre-filtered
+10. WHEN a first-time user scrolls past 5 items, THE System SHALL show a tooltip: "Tap any Topic above to change your view"
+11. WHEN a first-time user encounters partner content, THE System SHALL show a one-time tooltip: "This is educational content from a verified partner"
+12. WHERE a user dismisses onboarding, THE System SHALL not show tooltips again but SHALL track dismissal for analytics
+
+**Launch Period Feed Management (Weeks 1-4):**
+
+13. WHEN in Launch Period mode, THE System SHALL default all users to "Find Your Home" Topic unless explicitly changed
+14. WHEN displaying Secondary/Tertiary content during Launch Period, THE System SHALL add a "New" badge to signal novelty
+15. WHEN calculating feed composition during Launch Period, THE System SHALL increase Primary content ratio to 80% (vs normal 70%)
+16. WHEN Launch Period ends (after 4 weeks), THE System SHALL gradually transition to standard feed ratios over 2 weeks
+17. WHEN tracking Launch Period performance, THE System SHALL measure: % users engaging with Topics, % users scrolling 10+ items, % users watching 3+ videos, % users saving content
+18. WHERE Launch Period metrics underperform targets, THE System SHALL alert administrators and suggest interventions
+
+**Algorithm Ramp-Up (Weeks 5-12):**
+
+19. WHEN entering Algorithm Ramp-Up phase, THE System SHALL operate in Hybrid Mode: 50% manually curated, 50% algorithm-driven
+20. WHEN in Hybrid Mode, THE System SHALL clearly label manually curated content with "Featured" or "Trending" badges
+21. WHEN Week 9 begins, THE System SHALL shift to 80% algorithm-driven, 20% editorial highlights
+22. WHEN collecting user signals during Ramp-Up, THE System SHALL track: watch time per content type, Topic selection frequency, save/share behaviour, CTA engagement
+23. WHEN algorithm confidence score exceeds 75%, THE System SHALL automatically transition to full algorithm mode
+24. WHERE algorithm performance degrades, THE System SHALL automatically increase editorial curation and alert administrators
+
+**Partner Recruitment & Onboarding:**
+
+25. WHEN recruiting Early Partner Program members, THE System SHALL create "Founding Partner" designation with special benefits
+26. WHEN a Founding Partner signs up, THE System SHALL grant: 3 months free Featured tier status, "Founding Partner" badge, co-marketing opportunities
+27. WHEN onboarding early partners, THE System SHALL provide: content templates, topic guides, example scripts, best practices document
+28. WHEN an early partner submits content, THE System SHALL fast-track review (24-hour turnaround vs standard 48 hours)
+29. WHEN Early Partner Program reaches 15 partners, THE System SHALL close enrollment and transition to standard partner onboarding
+30. WHERE early partners fail to meet content commitments (5-10 pieces pre-launch, 2/week post-launch), THE System SHALL revoke Founding Partner status after 2 warnings
+
+**Cold Start Success Metrics:**
+
+31. WHEN Week 4 ends, THE System SHALL evaluate: 60%+ users engaged with Topics, 40%+ users watched partner content, 30%+ users saved/shared, 3+ Explore visits/week per active user
+32. WHEN any Cold Start metric misses target by >20%, THE System SHALL trigger "Cold Start Recovery Mode" with increased editorial curation
+33. WHEN Month 3 ends, THE System SHALL require: 500+ active partners, 2,000+ pieces of content, 70%+ users engaging with non-property content
+34. WHERE Month 3 targets are achieved, THE System SHALL transition to full Ecosystem Maturity mode
+35. WHERE Month 3 targets are missed, THE System SHALL extend Ramp-Up phase and alert leadership
+
+**Content Minimum Thresholds:**
+
+36. WHEN a Topic has fewer than 20 pieces of relevant content, THE System SHALL display "Coming Soon" message instead of empty feed
+37. WHEN calculating feed eligibility, THE System SHALL require minimum content inventory: 100 properties, 50 expert tips, 30 service showcases, 20 finance education pieces
+38. WHEN content inventory drops below minimums in any category, THE System SHALL alert administrators and suggest editorial content creation
+39. WHERE a partner tier has zero active partners, THE System SHALL hide related Topics until partners are recruited
+
+---
+
+## Requirement Refinements
+
+### Requirement 2 Refinement: Launch Period Exception
+
+**Additional Acceptance Criteria:**
+
+7. WHEN in Launch Period (first 4 weeks), THE System SHALL allow Primary content ratio of 80% to establish platform identity
+8. WHEN transitioning from Launch Period, THE System SHALL gradually reduce to standard 70% over 2-week transition period
+
+### Requirement 14 Refinement: Launch-Specific Behaviour
+
+**Additional Acceptance Criteria:**
+
+7. WHEN a user is in their first session, THE System SHALL show welcome overlay and suggested Topics
+8. WHEN in Launch Period, THE System SHALL use more aggressive progressive disclosure to educate users about features
+9. WHEN Launch Period ends, THE System SHALL transition to standard progressive disclosure timing
+
