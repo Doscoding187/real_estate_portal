@@ -970,9 +970,13 @@ export const exploreShorts = mysqlTable("explore_shorts", {
 	agentId: int("agent_id"),
 	developerId: int("developer_id"),
 	agencyId: int("agency_id"),
+	partnerId: varchar("partner_id", { length: 36 }),
 	contentType: mysqlEnum("content_type", ['property_tour', 'development_promo', 'agent_intro', 'neighbourhood_tour', 'market_insight', 'lifestyle', 'education']).default('property_tour').notNull(),
 	topicId: int("topic_id").references(() => exploreTopics.id, { onDelete: 'set null' }),
 	categoryId: int("category_id").references(() => exploreCategories.id, { onDelete: 'set null' }),
+	contentCategory: mysqlEnum("content_category", ['primary', 'secondary', 'tertiary']).default('primary'),
+	badgeType: varchar("badge_type", { length: 50 }),
+	isLaunchContent: boolean("is_launch_content").default(false),
 	title: varchar({ length: 255 }).notNull(),
 	caption: text(),
 	primaryMediaId: int("primary_media_id").notNull(),
@@ -1001,6 +1005,8 @@ export const exploreShorts = mysqlTable("explore_shorts", {
 	index("idx_explore_shorts_development_id").on(table.developmentId),
 	index("idx_explore_shorts_agent_id").on(table.agentId),
 	index("idx_explore_shorts_agency_id").on(table.agencyId),
+	index("idx_shorts_partner").on(table.partnerId),
+	index("idx_shorts_category").on(table.contentCategory),
 	index("idx_explore_shorts_performance_score").on(table.performanceScore),
 	index("idx_explore_shorts_boost_priority").on(table.boostPriority),
 	index("idx_explore_shorts_published").on(table.isPublished, table.publishedAt),
@@ -2154,6 +2160,10 @@ export const exploreContent = mysqlTable("explore_content", {
 	creatorId: int("creator_id"),
 	creatorType: mysqlEnum("creator_type", ['user', 'agent', 'developer', 'agency']).default('user').notNull(),
 	agencyId: int("agency_id"),
+	partnerId: varchar("partner_id", { length: 36 }),
+	contentCategory: mysqlEnum("content_category", ['primary', 'secondary', 'tertiary']).default('primary'),
+	badgeType: varchar("badge_type", { length: 50 }),
+	isLaunchContent: boolean("is_launch_content").default(false),
 	title: varchar({ length: 255 }),
 	description: text(),
 	thumbnailUrl: varchar("thumbnail_url", { length: 500 }),
@@ -2177,6 +2187,8 @@ export const exploreContent = mysqlTable("explore_content", {
 	index("idx_explore_content_creator").on(table.creatorId),
 	index("idx_explore_content_creator_type").on(table.creatorType),
 	index("idx_explore_content_agency_id").on(table.agencyId),
+	index("idx_content_partner").on(table.partnerId),
+	index("idx_content_category").on(table.contentCategory),
 	index("idx_explore_content_location").on(table.locationLat, table.locationLng),
 	index("idx_explore_content_engagement").on(table.engagementScore),
 	index("idx_explore_content_active").on(table.isActive, table.createdAt),
@@ -2449,3 +2461,224 @@ export const auditLogsRelations = relations(auditLogs, ({ one }) => ({
         references: [users.id],
     }),
 }));
+
+// ============================================================================
+// Partner Marketplace Schema
+// ============================================================================
+
+export const partnerTiers = mysqlTable("partner_tiers", {
+	id: int().notNull(),
+	name: varchar({ length: 100 }).notNull(),
+	allowedContentTypes: json("allowed_content_types").notNull(),
+	allowedCtas: json("allowed_ctas").notNull(),
+	requiresCredentials: boolean("requires_credentials").default(false),
+	maxMonthlyContent: int("max_monthly_content").default(10),
+	createdAt: timestamp("created_at", { mode: 'string' }).default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const explorePartners = mysqlTable("explore_partners", {
+	id: varchar({ length: 36 }).primaryKey(),
+	userId: varchar("user_id", { length: 36 }).notNull(),
+	tierId: int("tier_id").notNull().references(() => partnerTiers.id),
+	companyName: varchar("company_name", { length: 255 }).notNull(),
+	description: text(),
+	logoUrl: varchar("logo_url", { length: 500 }),
+	verificationStatus: mysqlEnum("verification_status", ['pending', 'verified', 'rejected']).default('pending'),
+	trustScore: decimal("trust_score", { precision: 5, scale: 2 }).default('50.00'),
+	serviceLocations: json("service_locations"),
+	approvedContentCount: int("approved_content_count").default(0),
+	createdAt: timestamp("created_at", { mode: 'string' }).default(sql`CURRENT_TIMESTAMP`),
+	updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow().onUpdateNow(),
+}, (table) => [
+	index("idx_partner_tier").on(table.tierId),
+	index("idx_partner_verification").on(table.verificationStatus),
+	index("idx_partner_trust").on(table.trustScore),
+]);
+
+export const topics = mysqlTable("topics", {
+	id: varchar({ length: 36 }).primaryKey(),
+	slug: varchar({ length: 100 }).notNull().unique(),
+	name: varchar({ length: 100 }).notNull(),
+	description: text(),
+	icon: varchar({ length: 50 }),
+	displayOrder: int("display_order").default(0),
+	isActive: boolean("is_active").default(true),
+	contentTags: json("content_tags"),
+	propertyFeatures: json("property_features"),
+	partnerCategories: json("partner_categories"),
+	createdAt: timestamp("created_at", { mode: 'string' }).default(sql`CURRENT_TIMESTAMP`),
+}, (table) => [
+	index("idx_topic_slug").on(table.slug),
+	index("idx_topic_active").on(table.isActive, table.displayOrder),
+]);
+
+export const contentTopics = mysqlTable("content_topics", {
+	contentId: varchar("content_id", { length: 36 }).notNull(),
+	topicId: varchar("topic_id", { length: 36 }).notNull().references(() => topics.id, { onDelete: 'cascade' }),
+	relevanceScore: decimal("relevance_score", { precision: 5, scale: 2 }).default('1.00'),
+	createdAt: timestamp("created_at", { mode: 'string' }).default(sql`CURRENT_TIMESTAMP`),
+}, (table) => [
+	index("idx_content_topic").on(table.topicId),
+]);
+
+export const contentApprovalQueue = mysqlTable("content_approval_queue", {
+	id: varchar({ length: 36 }).primaryKey(),
+	contentId: varchar("content_id", { length: 36 }).notNull(),
+	partnerId: varchar("partner_id", { length: 36 }).notNull().references(() => explorePartners.id, { onDelete: 'cascade' }),
+	status: mysqlEnum(['pending', 'approved', 'rejected', 'revision_requested']).default('pending'),
+	submittedAt: timestamp("submitted_at", { mode: 'string' }).default(sql`CURRENT_TIMESTAMP`),
+	reviewedAt: timestamp("reviewed_at", { mode: 'string' }),
+	reviewerId: varchar("reviewer_id", { length: 36 }),
+	feedback: text(),
+	autoApprovalEligible: boolean("auto_approval_eligible").default(false),
+}, (table) => [
+	index("idx_approval_status").on(table.status),
+	index("idx_approval_partner").on(table.partnerId),
+]);
+
+export const partnerSubscriptions = mysqlTable("partner_subscriptions", {
+	id: varchar({ length: 36 }).primaryKey(),
+	partnerId: varchar("partner_id", { length: 36 }).notNull().references(() => explorePartners.id, { onDelete: 'cascade' }),
+	tier: mysqlEnum(['free', 'basic', 'premium', 'featured']).notNull(),
+	priceMonthly: decimal("price_monthly", { precision: 10, scale: 2 }).notNull(),
+	startDate: timestamp("start_date", { mode: 'string' }).notNull(),
+	endDate: timestamp("end_date", { mode: 'string' }),
+	status: mysqlEnum(['active', 'cancelled', 'expired']).default('active'),
+	features: json().notNull(),
+	createdAt: timestamp("created_at", { mode: 'string' }).default(sql`CURRENT_TIMESTAMP`),
+}, (table) => [
+	index("idx_subscription_partner").on(table.partnerId),
+	index("idx_subscription_status").on(table.status),
+]);
+
+export const contentQualityScores = mysqlTable("content_quality_scores", {
+	contentId: varchar("content_id", { length: 36 }).primaryKey(),
+	overallScore: decimal("overall_score", { precision: 5, scale: 2 }).default('50.00'),
+	metadataScore: decimal("metadata_score", { precision: 5, scale: 2 }).default('0'),
+	engagementScore: decimal("engagement_score", { precision: 5, scale: 2 }).default('0'),
+	productionScore: decimal("production_score", { precision: 5, scale: 2 }).default('0'),
+	negativeSignals: int("negative_signals").default(0),
+	lastCalculatedAt: timestamp("last_calculated_at", { mode: 'string' }).default(sql`CURRENT_TIMESTAMP`),
+}, (table) => [
+	index("idx_quality_score").on(table.overallScore),
+]);
+
+export const boostCampaigns = mysqlTable("boost_campaigns", {
+	id: varchar({ length: 36 }).primaryKey(),
+	partnerId: varchar("partner_id", { length: 36 }).notNull().references(() => explorePartners.id, { onDelete: 'cascade' }),
+	contentId: varchar("content_id", { length: 36 }).notNull(),
+	topicId: varchar("topic_id", { length: 36 }).notNull().references(() => topics.id, { onDelete: 'cascade' }),
+	budget: decimal({ precision: 10, scale: 2 }).notNull(),
+	spent: decimal({ precision: 10, scale: 2 }).default('0'),
+	status: mysqlEnum(['draft', 'active', 'paused', 'completed', 'depleted']).default('draft'),
+	startDate: timestamp("start_date", { mode: 'string' }).notNull(),
+	endDate: timestamp("end_date", { mode: 'string' }),
+	impressions: int().default(0),
+	clicks: int().default(0),
+	costPerImpression: decimal("cost_per_impression", { precision: 6, scale: 4 }).default('0.10'),
+	createdAt: timestamp("created_at", { mode: 'string' }).default(sql`CURRENT_TIMESTAMP`),
+}, (table) => [
+	index("idx_boost_status").on(table.status),
+	index("idx_boost_topic").on(table.topicId, table.status),
+	index("idx_boost_partner").on(table.partnerId),
+]);
+
+export const partnerLeads = mysqlTable("partner_leads", {
+	id: varchar({ length: 36 }).primaryKey(),
+	partnerId: varchar("partner_id", { length: 36 }).notNull().references(() => explorePartners.id, { onDelete: 'cascade' }),
+	userId: varchar("user_id", { length: 36 }).notNull(),
+	contentId: varchar("content_id", { length: 36 }),
+	type: mysqlEnum(['quote_request', 'consultation', 'eligibility_check']).notNull(),
+	status: mysqlEnum(['new', 'contacted', 'converted', 'disputed', 'refunded']).default('new'),
+	price: decimal({ precision: 10, scale: 2 }).notNull(),
+	contactInfo: json("contact_info").notNull(),
+	intentDetails: text("intent_details"),
+	disputeReason: text("dispute_reason"),
+	createdAt: timestamp("created_at", { mode: 'string' }).default(sql`CURRENT_TIMESTAMP`),
+	updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow().onUpdateNow(),
+}, (table) => [
+	index("idx_lead_partner").on(table.partnerId),
+	index("idx_lead_status").on(table.status),
+	index("idx_lead_type").on(table.type),
+]);
+
+export const marketplaceBundles = mysqlTable("marketplace_bundles", {
+	id: varchar({ length: 36 }).primaryKey(),
+	slug: varchar({ length: 100 }).notNull().unique(),
+	name: varchar({ length: 255 }).notNull(),
+	description: text(),
+	targetAudience: varchar("target_audience", { length: 100 }),
+	isActive: boolean("is_active").default(true),
+	displayOrder: int("display_order").default(0),
+	createdAt: timestamp("created_at", { mode: 'string' }).default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const bundlePartners = mysqlTable("bundle_partners", {
+	bundleId: varchar("bundle_id", { length: 36 }).notNull().references(() => marketplaceBundles.id, { onDelete: 'cascade' }),
+	partnerId: varchar("partner_id", { length: 36 }).notNull().references(() => explorePartners.id, { onDelete: 'cascade' }),
+	category: varchar({ length: 100 }).notNull(),
+	displayOrder: int("display_order").default(0),
+	inclusionFee: decimal("inclusion_fee", { precision: 10, scale: 2 }),
+	performanceScore: decimal("performance_score", { precision: 5, scale: 2 }).default('50.00'),
+}, (table) => [
+	index("idx_bundle_category").on(table.bundleId, table.category),
+]);
+
+export const launchPhases = mysqlTable("launch_phases", {
+	id: varchar({ length: 36 }).primaryKey(),
+	phase: mysqlEnum(['pre_launch', 'launch_period', 'ramp_up', 'ecosystem_maturity']).notNull(),
+	startDate: timestamp("start_date", { mode: 'string' }).notNull(),
+	endDate: timestamp("end_date", { mode: 'string' }),
+	primaryContentRatio: decimal("primary_content_ratio", { precision: 3, scale: 2 }).default('0.70'),
+	algorithmWeight: decimal("algorithm_weight", { precision: 3, scale: 2 }).default('0.00'),
+	editorialWeight: decimal("editorial_weight", { precision: 3, scale: 2 }).default('1.00'),
+	isActive: boolean("is_active").default(false),
+	createdAt: timestamp("created_at", { mode: 'string' }).default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const launchContentQuotas = mysqlTable("launch_content_quotas", {
+	id: varchar({ length: 36 }).primaryKey(),
+	contentType: varchar("content_type", { length: 50 }).notNull().unique(),
+	requiredCount: int("required_count").notNull(),
+	currentCount: int("current_count").default(0),
+	lastUpdated: timestamp("last_updated", { mode: 'string' }).default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const launchMetrics = mysqlTable("launch_metrics", {
+	id: varchar({ length: 36 }).primaryKey(),
+	metricDate: timestamp("metric_date", { mode: 'string' }).notNull(),
+	topicEngagementRate: decimal("topic_engagement_rate", { precision: 5, scale: 2 }),
+	partnerContentWatchRate: decimal("partner_content_watch_rate", { precision: 5, scale: 2 }),
+	saveShareRate: decimal("save_share_rate", { precision: 5, scale: 2 }),
+	weeklyVisitsPerUser: decimal("weekly_visits_per_user", { precision: 5, scale: 2 }),
+	algorithmConfidenceScore: decimal("algorithm_confidence_score", { precision: 5, scale: 2 }),
+	createdAt: timestamp("created_at", { mode: 'string' }).default(sql`CURRENT_TIMESTAMP`),
+}, (table) => [
+	index("idx_metrics_date").on(table.metricDate),
+]);
+
+export const userOnboardingState = mysqlTable("user_onboarding_state", {
+	userId: varchar("user_id", { length: 36 }).primaryKey(),
+	isFirstSession: boolean("is_first_session").default(true),
+	welcomeOverlayShown: boolean("welcome_overlay_shown").default(false),
+	welcomeOverlayDismissed: boolean("welcome_overlay_dismissed").default(false),
+	suggestedTopics: json("suggested_topics"),
+	tooltipsShown: json("tooltips_shown").default('[]'),
+	contentViewCount: int("content_view_count").default(0),
+	saveCount: int("save_count").default(0),
+	partnerEngagementCount: int("partner_engagement_count").default(0),
+	featuresUnlocked: json("features_unlocked").default('[]'),
+	createdAt: timestamp("created_at", { mode: 'string' }).default(sql`CURRENT_TIMESTAMP`),
+	updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow().onUpdateNow(),
+});
+
+export const foundingPartners = mysqlTable("founding_partners", {
+	partnerId: varchar("partner_id", { length: 36 }).primaryKey().references(() => explorePartners.id, { onDelete: 'cascade' }),
+	enrollmentDate: timestamp("enrollment_date", { mode: 'string' }).notNull(),
+	benefitsEndDate: timestamp("benefits_end_date", { mode: 'string' }).notNull(),
+	preLaunchContentDelivered: int("pre_launch_content_delivered").default(0),
+	weeklyContentDelivered: json("weekly_content_delivered").default('[]'),
+	warningCount: int("warning_count").default(0),
+	status: mysqlEnum(['active', 'warning', 'revoked']).default('active'),
+	createdAt: timestamp("created_at", { mode: 'string' }).default(sql`CURRENT_TIMESTAMP`),
+});

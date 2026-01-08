@@ -27,28 +27,28 @@ Launch when ALL are true:
 
 ## Tasks
 
-- [-] 1. Set up database schema and core infrastructure
-  - [-] 1.1 Create partner_tiers table with seed data for 4 tiers
+- [x] 1. Set up database schema and core infrastructure
+  - [x] 1.1 Create partner_tiers table with seed data for 4 tiers
     - Define tier permissions (content types, CTAs)
     - Insert seed data for Property Professional, Home Service Provider, Financial Partner, Content Educator
     - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5_
-  - [ ] 1.2 Create partners table with indexes
+  - [x] 1.2 Create partners table with indexes
     - Include tier_id, verification_status, trust_score, service_locations
     - Add foreign key to users table
     - _Requirements: 1.1, 5.1_
-  - [ ] 1.3 Create topics table with seed data
+  - [x] 1.3 Create topics table with seed data
     - Insert 8 core topics (Find Your Home, Home Security, etc.)
     - Include content_tags, property_features, partner_categories
     - _Requirements: 3.1_
-  - [ ] 1.4 Create content_topics mapping table
+  - [x] 1.4 Create content_topics mapping table
     - Enable many-to-many relationship between content and topics
     - Include relevance_score field
     - _Requirements: 3.2, 3.4_
-  - [ ] 1.5 Create content_approval_queue table
+  - [x] 1.5 Create content_approval_queue table
     - Track submission status, reviewer, feedback
     - Include auto_approval_eligible flag
     - _Requirements: 6.1, 6.2_
-  - [ ] 1.6 Extend explore_content and explore_shorts tables
+  - [x] 1.6 Extend explore_content and explore_shorts tables
     - Add partner_id, content_category, badge_type columns
     - Add is_launch_content flag for cold start tracking
     - _Requirements: 4.1, 16.4_

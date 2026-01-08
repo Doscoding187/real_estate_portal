@@ -51,7 +51,7 @@ export function UnitTypesPhase() {
     updateUnitType, 
     removeUnitType, 
     setPhase,
-    validatePhase 
+    validatePhase
   } = useDevelopmentWizard();
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -262,7 +262,7 @@ export function UnitTypesPhase() {
 
       {/* Main Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-4xl h-[80vh] flex flex-col p-0">
+        <DialogContent className="max-w-6xl h-[75vh] flex flex-col p-0">
           <DialogHeader className="px-6 py-4 border-b">
             <DialogTitle>{editingId ? 'Edit Unit Type' : 'Add Unit Type'}</DialogTitle>
           </DialogHeader>
@@ -525,7 +525,10 @@ export function UnitTypesPhase() {
                 <div className="flex gap-2">
                    {/* Explicit Save Draft for user reassurance (auto-save is also active) */}
                    {activeTab !== 'stock' && (
-                      <Button variant="outline" onClick={() => toast.success('Draft saved successfully')}>
+                      <Button variant="outline" onClick={() => {
+                         // Auto-save is active in the wizard - this is just visual feedback
+                         toast.success('Draft saved! Your progress is preserved.');
+                      }}>
                          Save Draft
                       </Button>
                    )}
