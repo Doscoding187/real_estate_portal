@@ -5,7 +5,7 @@
 
 import { COOKIE_NAME, ONE_YEAR_MS } from '@shared/const';
 import { ForbiddenError } from '@shared/_core/errors';
-import type { Request } from 'express';
+import type { Request, Response, NextFunction } from 'express';
 import { SignJWT, jwtVerify } from 'jose';
 import { parse as parseCookieHeader } from 'cookie';
 import bcrypt from 'bcryptjs';
@@ -413,3 +413,18 @@ class AuthService {
 }
 
 export const authService = new AuthService();
+
+/**
+ * Express middleware to require authentication
+ */
+export const requireAuth = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const user = await authService.authenticateRequest(req);
+    // Attach user to request for use in route handlers
+    (req as any).user = user;
+    next();
+  } catch (error) {
+    console.warn('[AuthMiddleware] Unauthorized access attempt:', error);
+    res.status(401).json({ error: 'Unauthorized' });
+  }
+};

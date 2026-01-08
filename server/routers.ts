@@ -37,7 +37,7 @@ import { locationPagesRouter } from './locationPagesRouter';
 import { propertyResultsRouter } from './propertyResultsRouter';
 
 import { monetizationRouter } from './monetizationRouter';
-import { partnerRouter } from './partnerRouter';
+// import { partnerRouter } from './partnerRouter';
 import { brandProfileRouter } from './brandProfileRouter';
 import { superAdminPublisherRouter } from './superAdminPublisherRouter';
 
@@ -46,7 +46,7 @@ export const appRouter = router({
   // ... other routers
   analytics: analyticsRouter,
   monetization: monetizationRouter,
-  partners: partnerRouter,
+  // partners: partnerRouter,
   admin: adminRouter,
   agency: agencyRouter,
   user: userRouter,

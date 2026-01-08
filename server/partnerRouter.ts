@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { partnerService } from "./services/partnerService";
-import { requireAuth } from "./middleware/auth";
+import { requireAuth } from "./_core/auth";
 
 const router = Router();
 
