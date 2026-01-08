@@ -131,16 +131,12 @@ export const OWNERSHIP_TYPE_OPTIONS: { value: OwnershipType; label: string; desc
 // =============================================================================
 
 export type CommunityType =
-  // Apartment & Flat Types
+  // Apartment & Flat Types (Building/Development structure only)
   | 'apartment_block'
   | 'flat_development'
-  | 'penthouse_development'
-  | 'loft_apartments'
-  | 'studio_apartment_development'
   | 'walk_up_complex'
   | 'high_rise_tower'
   | 'mid_rise_complex'
-  | 'mixed_apartment_complex'
   // Security Estate Types
   | 'security_estate_general'
   | 'golf_estate'
@@ -189,16 +185,12 @@ export type CommunityType =
   | 'non_estate';
 
 export const COMMUNITY_TYPE_OPTIONS: { value: CommunityType; label: string; description: string; triggersEstateProfile: boolean }[] = [
-  // Apartment & Flat Types
+  // Apartment & Flat Types (Building/Development structure only)
   { value: 'apartment_block', label: 'Apartment Block', description: 'Standard apartment building', triggersEstateProfile: false },
   { value: 'flat_development', label: 'Flat Development', description: 'Multi-unit flat complex', triggersEstateProfile: false },
-  { value: 'penthouse_development', label: 'Penthouse Development', description: 'Luxury top-floor units', triggersEstateProfile: false },
-  { value: 'loft_apartments', label: 'Loft Apartments', description: 'Open-plan industrial style', triggersEstateProfile: false },
-  { value: 'studio_apartment_development', label: 'Studio Apartment Development', description: 'Compact single-room units', triggersEstateProfile: false },
   { value: 'walk_up_complex', label: 'Walk-up Apartment Complex', description: 'Low-rise without elevator', triggersEstateProfile: false },
   { value: 'high_rise_tower', label: 'High-rise Residential Tower', description: '10+ storey building', triggersEstateProfile: false },
   { value: 'mid_rise_complex', label: 'Mid-rise Apartment Complex', description: '4-9 storey building', triggersEstateProfile: false },
-  { value: 'mixed_apartment_complex', label: 'Mixed Apartment Complex', description: 'Studio/1/2/3 bed mix', triggersEstateProfile: false },
   // Security Estate Types
   { value: 'security_estate_general', label: 'Security Estate', description: 'Secured perimeter with access control', triggersEstateProfile: true },
   { value: 'golf_estate', label: 'Golf Estate', description: 'Built around a golf course', triggersEstateProfile: true },
@@ -251,9 +243,7 @@ export const COMMUNITY_TYPE_OPTIONS: { value: CommunityType; label: string; desc
 // Mapping: Which community types are applicable for each residential type
 export const RESIDENTIAL_TO_COMMUNITY_MAP: Record<ResidentialType, CommunityType[]> = {
   apartment: [
-    'apartment_block', 'flat_development', 'penthouse_development', 'loft_apartments',
-    'studio_apartment_development', 'walk_up_complex', 'high_rise_tower', 'mid_rise_complex',
-    'mixed_apartment_complex'
+    'apartment_block', 'flat_development', 'walk_up_complex', 'high_rise_tower', 'mid_rise_complex'
   ],
   townhouse: [
     'townhouse_development', 'cluster_development', 'gated_townhouse_complex',
@@ -294,6 +284,35 @@ export const shouldShowEstateProfile = (communityTypes: CommunityType[]): boolea
     COMMUNITY_TYPE_OPTIONS.find(opt => opt.value === type)?.triggersEstateProfile ?? false
   );
 };
+
+// =============================================================================
+// AVAILABLE UNIT CATEGORIES (What types of units exist in this development)
+// =============================================================================
+
+export type AvailableUnitCategory =
+  | 'studio'
+  | 'loft'
+  | '1_bedroom'
+  | '2_bedroom'
+  | '3_bedroom'
+  | '4_bedroom'
+  | 'penthouse'
+  | 'duplex_unit'
+  | 'garden_unit'
+  | 'ground_floor';
+
+export const AVAILABLE_UNIT_CATEGORY_OPTIONS: { value: AvailableUnitCategory; label: string; description: string }[] = [
+  { value: 'studio', label: 'Studio', description: 'Compact open-plan living' },
+  { value: 'loft', label: 'Loft', description: 'Open-plan industrial style' },
+  { value: '1_bedroom', label: '1 Bedroom', description: 'One bedroom units' },
+  { value: '2_bedroom', label: '2 Bedroom', description: 'Two bedroom units' },
+  { value: '3_bedroom', label: '3 Bedroom', description: 'Three bedroom units' },
+  { value: '4_bedroom', label: '4 Bedroom', description: 'Four bedroom units' },
+  { value: 'penthouse', label: 'Penthouse', description: 'Luxury top-floor units' },
+  { value: 'duplex_unit', label: 'Duplex Unit', description: 'Two-level apartment units' },
+  { value: 'garden_unit', label: 'Garden Unit', description: 'Ground floor with private garden' },
+  { value: 'ground_floor', label: 'Ground Floor', description: 'Street-level access units' },
+];
 
 // =============================================================================
 // SECURITY FEATURES (Independent of Estate - usable by apartments)

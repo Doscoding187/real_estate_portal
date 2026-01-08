@@ -34,17 +34,15 @@ export function MediaPhase() {
   const documents = developmentData.media?.documents || [];
 
   const featuredCount = photos.filter(p => p.category === 'featured').length;
-  const galleryCount = photos.filter(p => p.category !== 'featured').length;
+  const galleryCount = photos.filter(p => p.category !== 'featured').length + featuredCount; // All photos count as gallery
   
-  // Progress Calculation
+  // Progress Calculation - Simplified: Hero + Gallery
   const hasHero = !!heroImage;
-  const hasMinFeatured = featuredCount >= 2;
-  const hasMinGallery = galleryCount >= 5;
+  const hasMinGallery = galleryCount >= 3;
   
   const progressPercent = [
-      hasHero ? 25 : 0, 
-      Math.min(featuredCount, 2) * 12.5, // Max 25 (2 items)
-      Math.min(galleryCount, 5) * 10     // Max 50 (5 items)
+      hasHero ? 50 : 0, 
+      Math.min(galleryCount, 5) * 10   // Max 50 (5 items)
   ].reduce((a, b) => a + b, 0);
 
 
@@ -271,12 +269,8 @@ export function MediaPhase() {
                     <span className={hasHero ? "text-slate-600" : "text-slate-400"}>Hero Image (Required)</span>
                  </div>
                  <div className="flex items-center gap-2 text-xs">
-                    {hasMinFeatured ? <CheckCircle2 className="w-3.5 h-3.5 text-green-500"/> : <AlertCircle className="w-3.5 h-3.5 text-amber-500"/>}
-                    <span className={hasMinFeatured ? "text-slate-600" : "text-slate-400"}>Featured Images ({featuredCount}/2)</span>
-                 </div>
-                 <div className="flex items-center gap-2 text-xs">
                     {hasMinGallery ? <CheckCircle2 className="w-3.5 h-3.5 text-green-500"/> : <AlertCircle className="w-3.5 h-3.5 text-slate-300"/>}
-                    <span className={hasMinGallery ? "text-slate-600" : "text-slate-400"}>Gallery Images ({galleryCount}/5)</span>
+                    <span className={hasMinGallery ? "text-slate-600" : "text-slate-400"}>Gallery Images ({galleryCount}/3+)</span>
                  </div>
              </div>
          </div>
@@ -287,22 +281,17 @@ export function MediaPhase() {
          <Card>
             <CardHeader className="bg-slate-50/50 border-b border-slate-100 pb-4">
                <CardTitle className="text-lg flex items-center gap-2">
-                  <Star className="w-5 h-5 text-yellow-500 fill-yellow-500" /> Hero & Featured
+                  <Star className="w-5 h-5 text-yellow-500 fill-yellow-500" /> Hero Image
                </CardTitle>
+               <CardDescription>The main face of your development. This appears at the top of your listing.</CardDescription>
             </CardHeader>
-            <CardContent className="pt-6 grid md:grid-cols-2 gap-8">
+            <CardContent className="pt-6">
                <UploadSection 
                   category="featured"
                   title="Hero Image"
-                  description="The main face of your development."
+                  description="Upload a high-quality image that best represents your development."
                   icon={Star}
                   isHero={true}
-               />
-               <UploadSection 
-                  category="featured"
-                  title="Featured Highlights"
-                  description="2-4 key images for listing previews."
-                  icon={Sparkles}
                />
             </CardContent>
          </Card>
@@ -371,10 +360,10 @@ export function MediaPhase() {
         <Button 
           onClick={handleNext} 
           size="lg" 
-          disabled={!hasHero || !hasMinFeatured} // Enforce strict minimums for Next
+          disabled={!hasHero} // Only require Hero Image
           className={cn(
               "px-8 h-11 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 shadow-md hover:shadow-lg transition-all duration-300",
-              (!hasHero || !hasMinFeatured) && "opacity-50 cursor-not-allowed"
+              !hasHero && "opacity-50 cursor-not-allowed"
           )}
         >
           Continue to Unit Types
@@ -383,9 +372,4 @@ export function MediaPhase() {
       </div>
     </div>
   );
-}
-
-// Helper component for Icon (not exported, just local usage above)
-function Sparkles(props: any) {
-    return <Star {...props} /> // Reuse Star for now or import real Sparkles
 }
