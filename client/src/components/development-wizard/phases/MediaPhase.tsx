@@ -345,8 +345,8 @@ export function MediaPhase() {
                        <UploadSection category="outdoors" title="Exterior & Outdoors" description="Facades, gardens, and landscaping." icon={TreePine} />
                        <UploadSection category="general" title="Interior & Living" description="Living areas, bedrooms, and finishes." icon={ImageIcon} />
                        <UploadSection category="amenities" title="Amenities" description="Pool, gym, and shared spaces." icon={Dumbbell} />
-                       <UploadSection category="general" title="Location & Views" description="Neighborhood and scenic views." icon={MapPin} />
-                       <UploadSection category="general" title="Aerial & Drone" description="Site overview and scale." icon={Layout} />
+                       <UploadSection category="photo" title="Location & Views" description="Neighborhood and scenic views." icon={MapPin} />
+                       <UploadSection category="render" title="Aerial & Drone" description="Site overview and scale." icon={Layout} />
                    </CardContent>
                 </Card>
             </TabsContent>
