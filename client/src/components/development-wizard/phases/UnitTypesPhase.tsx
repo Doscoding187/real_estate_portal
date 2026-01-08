@@ -266,7 +266,7 @@ export function UnitTypesPhase() {
 
       {/* Main Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-6xl h-[75vh] flex flex-col p-0">
+        <DialogContent className="sm:max-w-4xl h-[75vh] flex flex-col p-0 gap-0">
           <DialogHeader className="px-6 py-4 border-b">
             <DialogTitle>{editingId ? 'Edit Unit Type' : 'Add Unit Type'}</DialogTitle>
           </DialogHeader>

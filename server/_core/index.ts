@@ -143,6 +143,10 @@ async function startServer() {
   // Analytics endpoint (for advertise page tracking)
   const analyticsRouter = await import('../routes/analytics');
   app.use('/api/analytics', analyticsRouter.default);
+
+  // Partner Management API
+  const partnerRouter = await import('../partnerRouter');
+  app.use('/api/partners', partnerRouter.default);
   // development mode uses Vite, production mode serves static files
   // Skip static file serving if SKIP_FRONTEND env var is set (for Railway backend-only deployment)
   console.log('[Server] NODE_ENV:', process.env.NODE_ENV);

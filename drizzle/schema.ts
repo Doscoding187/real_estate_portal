@@ -2682,3 +2682,74 @@ export const foundingPartners = mysqlTable("founding_partners", {
 	status: mysqlEnum(['active', 'warning', 'revoked']).default('active'),
 	createdAt: timestamp("created_at", { mode: 'string' }).default(sql`CURRENT_TIMESTAMP`),
 });
+
+// ============================================================================
+// Explore Partner Marketplace Relations
+// ============================================================================
+
+export const explorePartnersRelations = relations(explorePartners, ({ one, many }) => ({
+	tier: one(partnerTiers, {
+		fields: [explorePartners.tierId],
+		references: [partnerTiers.id],
+	}),
+	subscriptions: many(partnerSubscriptions),
+	boostCampaigns: many(boostCampaigns),
+	leads: many(partnerLeads),
+	content: many(exploreContent),
+	shorts: many(exploreShorts),
+}));
+
+export const partnerTiersRelations = relations(partnerTiers, ({ many }) => ({
+	partners: many(explorePartners),
+}));
+
+export const topicsRelations = relations(topics, ({ many }) => ({
+	contentTopics: many(contentTopics),
+	boostCampaigns: many(boostCampaigns),
+}));
+
+export const contentTopicsRelations = relations(contentTopics, ({ one }) => ({
+	topic: one(topics, {
+		fields: [contentTopics.topicId],
+		references: [topics.id],
+	}),
+}));
+
+export const partnerSubscriptionsRelations = relations(partnerSubscriptions, ({ one }) => ({
+	partner: one(explorePartners, {
+		fields: [partnerSubscriptions.partnerId],
+		references: [explorePartners.id],
+	}),
+}));
+
+export const boostCampaignsRelations = relations(boostCampaigns, ({ one }) => ({
+	partner: one(explorePartners, {
+		fields: [boostCampaigns.partnerId],
+		references: [explorePartners.id],
+	}),
+	topic: one(topics, {
+		fields: [boostCampaigns.topicId],
+		references: [topics.id],
+	}),
+}));
+
+export const partnerLeadsRelations = relations(partnerLeads, ({ one }) => ({
+	partner: one(explorePartners, {
+		fields: [partnerLeads.partnerId],
+		references: [explorePartners.id],
+	}),
+}));
+
+export const contentApprovalQueueRelations = relations(contentApprovalQueue, ({ one }) => ({
+	partner: one(explorePartners, {
+		fields: [contentApprovalQueue.partnerId],
+		references: [explorePartners.id],
+	}),
+}));
+
+export const foundingPartnersRelations = relations(foundingPartners, ({ one }) => ({
+	partner: one(explorePartners, {
+		fields: [foundingPartners.partnerId],
+		references: [explorePartners.id],
+	}),
+}));

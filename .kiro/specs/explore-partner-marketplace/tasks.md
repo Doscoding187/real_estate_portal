@@ -56,20 +56,20 @@ Launch when ALL are true:
     - **Property 1: Partner Tier Content Validation**
     - **Validates: Requirements 1.2, 1.3, 1.4, 1.5, 1.6**
 
-- [ ] 2. Implement Partner Management Service
-  - [ ] 2.1 Create PartnerService with registration and tier assignment
+- [x] 2. Implement Partner Management Service
+  - [x] 2.1 Create PartnerService with registration and tier assignment
     - Implement registerPartner() with tier validation
     - Implement assignTier() with permission checks
     - _Requirements: 1.1, 1.6_
-  - [ ] 2.2 Implement partner profile management
+  - [x] 2.2 Implement partner profile management
     - Create updateProfile() for company info, logo, description
     - Implement getPartnerProfile() with aggregated data
     - _Requirements: 5.1, 5.2, 5.3, 5.4_
-  - [ ] 2.3 Implement partner verification workflow
+  - [x] 2.3 Implement partner verification workflow
     - Create verifyPartner() with credential validation
     - Implement verification badge propagation to content
     - _Requirements: 5.5, 5.6_
-  - [ ] 2.4 Implement trust score calculation
+  - [x] 2.4 Implement trust score calculation
     - Calculate based on verification, reviews, content quality, engagement
     - Update score on relevant events
     - _Requirements: 10.5_
@@ -77,21 +77,21 @@ Launch when ALL are true:
     - **Property 5: Partner Verification Badge Propagation**
     - **Validates: Requirements 5.5**
 
-- [ ] 3. Implement Content Approval Service
-  - [ ] 3.1 Create ApprovalService with submission routing
+- [x] 3. Implement Content Approval Service
+  - [x] 3.1 Create ApprovalService with submission routing
     - Route first 3 submissions to manual queue
     - Enable auto-approval after 3 approved pieces
     - _Requirements: 6.1, 6.2_
-  - [ ] 3.2 Implement content validation rules
+  - [x] 3.2 Implement content validation rules
     - Validate content type against tier permissions
     - Validate CTAs against tier permissions
     - Validate metadata completeness
     - _Requirements: 1.6, 15.2, 15.3_
-  - [ ] 3.3 Implement content flagging and review routing
+  - [x] 3.3 Implement content flagging and review routing
     - Create flagContent() for user reports
     - Route flagged content to manual review
     - _Requirements: 6.3_
-  - [ ] 3.4 Implement review decision workflow
+  - [x] 3.4 Implement review decision workflow
     - Create reviewContent() with approve/reject/revision actions
     - Provide feedback on rejection
     - _Requirements: 6.5_
@@ -99,23 +99,23 @@ Launch when ALL are true:
     - **Property 6: Content Approval Routing**
     - **Validates: Requirements 6.1, 6.2, 6.3**
 
-- [ ] 4. Checkpoint - Ensure partner system tests pass
+- [x] 4. Checkpoint - Ensure partner system tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 5. Implement Content Hierarchy Engine
-  - [ ] 5.1 Create HierarchyEngine with content categorization
+- [x] 5. Implement Content Hierarchy Engine
+  - [x] 5.1 Create HierarchyEngine with content categorization
     - Categorize content as primary/secondary/tertiary
     - Map content types to categories
     - _Requirements: 2.1, 2.2, 2.3_
-  - [ ] 5.2 Implement ratio calculation and validation
+  - [x] 5.2 Implement ratio calculation and validation
     - Calculate ratios per 20-item segments
     - Validate against 70/20/10 bounds (60-80% primary)
     - _Requirements: 2.4, 2.5_
-  - [ ] 5.3 Implement feed rebalancing logic
+  - [x] 5.3 Implement feed rebalancing logic
     - Rebalance when primary drops below 60%
     - Surface older property content when needed
     - _Requirements: 2.4, 2.6_
-  - [ ] 5.4 Implement launch period ratio override
+  - [x] 5.4 Implement launch period ratio override
     - Use 80% primary during launch period
     - Gradually transition to 70% over 2 weeks
     - _Requirements: 2.7, 2.8, 16.15, 16.16_
@@ -123,20 +123,20 @@ Launch when ALL are true:
     - **Property 2: Content Hierarchy Ratio Enforcement**
     - **Validates: Requirements 2.1, 2.2, 2.3, 2.4, 2.5**
 
-- [ ] 6. Implement Topics Navigation Service
-  - [ ] 6.1 Create TopicsService with CRUD operations
+- [x] 6. Implement Topics Navigation Service
+  - [x] 6.1 Create TopicsService with CRUD operations
     - Implement getAllTopics() with display ordering
     - Implement getTopicBySlug() for URL routing
     - _Requirements: 3.1_
-  - [ ] 6.2 Implement topic-based content filtering
+  - [x] 6.2 Implement topic-based content filtering
     - Filter by content_tags, property_features, partner_categories
     - Apply to all content types (videos, cards, neighbourhoods)
     - _Requirements: 3.2, 3.3, 3.4_
-  - [ ] 6.3 Implement topic content tagging
+  - [x] 6.3 Implement topic content tagging
     - Create tagContentWithTopics() for content-topic mapping
     - Calculate relevance scores
     - _Requirements: 3.2_
-  - [ ] 6.4 Implement insufficient content handling
+  - [x] 6.4 Implement insufficient content handling
     - Show "Coming Soon" for topics with <20 items
     - Suggest related topics
     - _Requirements: 3.6, 16.36_
@@ -144,12 +144,12 @@ Launch when ALL are true:
     - **Property 3: Topic Feed Filtering**
     - **Validates: Requirements 3.2, 3.4**
 
-- [ ] 7. Implement Content Badge Service
-  - [ ] 7.1 Create BadgeService with type determination
+- [x] 7. Implement Content Badge Service
+  - [x] 7.1 Create BadgeService with type determination
     - Map content categories to badge types
     - Handle multi-category content (primary badge only)
     - _Requirements: 4.1, 4.7_
-  - [ ] 7.2 Implement badge rendering configuration
+  - [x] 7.2 Implement badge rendering configuration
     - Define icons, colors, labels for each badge type
     - Property (🏠, primary), Expert Tip (💡, amber), Service (🛠️, blue), Finance (💰, green), Design (📐, purple)
     - _Requirements: 4.2, 4.3, 4.4, 4.5, 4.6_
@@ -157,16 +157,16 @@ Launch when ALL are true:
     - **Property 4: Content Badge Consistency**
     - **Validates: Requirements 4.1, 4.2, 4.3, 4.4, 4.5, 4.6, 4.7**
 
-- [ ] 8. Implement Feed Ranking Service
-  - [ ] 8.1 Create RankingService with weighted scoring
+- [x] 8. Implement Feed Ranking Service
+  - [x] 8.1 Create RankingService with weighted scoring
     - Implement calculateRankingScore() with 5 factors
     - User Interest (35%), Quality (25%), Local (20%), Recency (10%), Trust (10%)
     - _Requirements: 10.1, 10.2, 10.3, 10.4, 10.5_
-  - [ ] 8.2 Implement boost multiplier application
+  - [x] 8.2 Implement boost multiplier application
     - Apply boost multipliers to ranking scores
     - Ensure boosted content doesn't dominate
     - _Requirements: 10.6_
-  - [ ] 8.3 Implement boost ratio enforcement
+  - [x] 8.3 Implement boost ratio enforcement
     - Limit boosted content to 1 per 10 organic items
     - _Requirements: 8.3_
   - [ ]* 8.4 Write property test for ranking weights
@@ -176,19 +176,19 @@ Launch when ALL are true:
     - **Property 10: Boost Ratio Limit**
     - **Validates: Requirements 8.3, 10.6**
 
-- [ ] 9. Checkpoint - Ensure feed generation tests pass
+- [x] 9. Checkpoint - Ensure feed generation tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 10. Implement Cold Start Infrastructure
-  - [ ] 10.1 Create launch_phases table and LaunchService
+- [-] 10. Implement Cold Start Infrastructure
+  - [x] 10.1 Create launch_phases table and LaunchService
     - Track current phase (pre_launch, launch_period, ramp_up, ecosystem_maturity)
     - Store phase configuration (ratios, weights)
     - _Requirements: 16.13, 16.19_
-  - [ ] 10.2 Implement content quota tracking
+  - [x] 10.2 Implement content quota tracking
     - Create launch_content_quotas table
     - Track progress toward 200+ content pieces
     - _Requirements: 16.3, 16.5_
-  - [ ] 10.3 Implement launch readiness check
+  - [-] 10.3 Implement launch readiness check
     - Validate all quotas are met before launch
     - Block launch if quotas not met
     - _Requirements: 16.6_
@@ -200,15 +200,15 @@ Launch when ALL are true:
     - **Property 23: Launch Content Quota Enforcement**
     - **Validates: Requirements 16.3, 16.5, 16.6**
 
-- [ ] 11. Implement Founding Partner Service
-  - [ ] 11.1 Create founding_partners table and service
+- [x] 11. Implement Founding Partner Service
+  - [x] 11.1 Create founding_partners table and service
     - Track enrollment, benefits, content commitments
     - Limit to 15 founding partners
     - _Requirements: 16.25, 16.29_
-  - [ ] 11.2 Implement founding partner benefits
+  - [x] 11.2 Implement founding partner benefits
     - Grant 3 months Featured tier, founding badge, fast-track review
     - _Requirements: 16.26, 16.28_
-  - [ ] 11.3 Implement content commitment tracking
+  - [x] 11.3 Implement content commitment tracking
     - Track pre-launch (5-10 pieces) and weekly (2/week) commitments
     - Issue warnings for missed commitments
     - _Requirements: 16.30_
@@ -216,20 +216,20 @@ Launch when ALL are true:
     - **Property 25: Founding Partner Enrollment Limit**
     - **Validates: Requirements 16.29**
 
-- [ ] 12. Implement Onboarding Service
-  - [ ] 12.1 Create user_onboarding_state table and service
+- [x] 12. Implement Onboarding Service
+  - [x] 12.1 Create user_onboarding_state table and service
     - Track first session, tooltips shown, features unlocked
     - _Requirements: 14.1, 14.2, 14.3, 14.4_
-  - [ ] 12.2 Implement welcome overlay flow
+  - [x] 12.2 Implement welcome overlay flow
     - Show overlay on first session
     - Suggest 3 topics based on user profile
     - _Requirements: 16.7, 16.8, 16.9_
-  - [ ] 12.3 Implement progressive disclosure logic
+  - [x] 12.3 Implement progressive disclosure logic
     - Unlock filters/save after 10+ views
     - Unlock Topics after 3+ saves
     - Unlock partner profiles after partner engagement
     - _Requirements: 14.2, 14.3, 14.4_
-  - [ ] 12.4 Implement tooltip system
+  - [x] 12.4 Implement tooltip system
     - Show topic tooltip after 5 items scrolled
     - Show partner content tooltip on first encounter
     - _Requirements: 16.10, 16.11, 16.12_

@@ -1,66 +1,190 @@
+import { Router } from "express";
+import { partnerService } from "./services/partnerService";
+import { requireAuth } from "./middleware/auth";
 
-import { z } from 'zod';
-import { router, superAdminProcedure } from './_core/trpc';
-import * as db from './db';
+const router = Router();
 
-const partnerSchema = z.object({
-  name: z.string().min(1),
-  category: z.enum(['mortgage_broker', 'lawyer', 'photographer', 'inspector', 'mover', 'other']),
-  description: z.string().optional(),
-  contactPerson: z.string().optional(),
-  email: z.string().email().optional().or(z.literal('')),
-  phone: z.string().optional(),
-  website: z.string().url().optional().or(z.literal('')),
-  logo: z.string().optional(),
-  status: z.enum(['active', 'inactive', 'pending']).default('active'),
-  isVerified: z.boolean().default(false),
-});
+/**
+ * POST /api/partners
+ * Register a new partner
+ * Requirement 1.1, 5.1, 5.2, 5.3, 5.4
+ */
+router.post("/", requireAuth, async (req, res) => {
+  try {
+    const { tierId, companyName, description, logoUrl, serviceLocations } = req.body;
 
-export const partnerRouter = router({
-  list: superAdminProcedure
-    .input(
-      z.object({
-        page: z.number().default(1),
-        limit: z.number().default(50),
-        category: z
-          .enum(['mortgage_broker', 'lawyer', 'photographer', 'inspector', 'mover', 'other'])
-          .optional(),
-        search: z.string().optional(),
-      })
-    )
-    .query(async ({ input }) => {
-      return db.listPartners(input);
-    }),
+    if (!tierId || !companyName) {
+      return res.status(400).json({
+        error: "Missing required fields: tierId, companyName"
+      });
+    }
 
-  create: superAdminProcedure.input(partnerSchema).mutation(async ({ input }) => {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { isVerified, ...data } = input;
-    return db.createPartner({
-      ...data,
-      isVerified: input.isVerified ? 1 : 0,
+    const partner = await partnerService.registerPartner({
+      userId: req.user!.id,
+      tierId,
+      companyName,
+      description,
+      logoUrl,
+      serviceLocations
     });
-  }),
 
-  update: superAdminProcedure
-    .input(
-      z.object({
-        id: z.number(),
-        data: partnerSchema.partial(),
-      })
-    )
-    .mutation(async ({ input }) => {
-      const { id, data } = input;
-      // Convert boolean to number for DB if present
-      const dbData: any = { ...data };
-      if (typeof data.isVerified !== 'undefined') {
-        dbData.isVerified = data.isVerified ? 1 : 0;
-      }
-      return db.updatePartner(id, dbData);
-    }),
-
-  delete: superAdminProcedure
-    .input(z.object({ id: z.number() }))
-    .mutation(async ({ input }) => {
-      return db.deletePartner(input.id);
-    }),
+    res.status(201).json(partner);
+  } catch (error: any) {
+    console.error("Error registering partner:", error);
+    res.status(400).json({ error: error.message });
+  }
 });
+
+/**
+ * GET /api/partners/:id
+ * Get partner profile
+ * Requirement 5.1, 5.2, 5.3, 5.4
+ */
+router.get("/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const profile = await partnerService.getPartnerProfile(id);
+
+    if (!profile) {
+      return res.status(404).json({ error: "Partner not found" });
+    }
+
+    res.json(profile);
+  } catch (error: any) {
+    console.error("Error fetching partner profile:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * PUT /api/partners/:id
+ * Update partner profile
+ * Requirement 5.1, 5.2, 5.3, 5.4
+ */
+router.put("/:id", requireAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { companyName, description, logoUrl, serviceLocations } = req.body;
+
+    // Verify ownership
+    const profile = await partnerService.getPartnerProfile(id);
+    if (!profile) {
+      return res.status(404).json({ error: "Partner not found" });
+    }
+
+    if (profile.userId !== req.user!.id) {
+      return res.status(403).json({ error: "Unauthorized" });
+    }
+
+    const updated = await partnerService.updateProfile(id, {
+      companyName,
+      description,
+      logoUrl,
+      serviceLocations
+    });
+
+    res.json(updated);
+  } catch (error: any) {
+    console.error("Error updating partner profile:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * POST /api/partners/:id/verify
+ * Submit verification request
+ * Requirement 5.5
+ */
+router.post("/:id/verify", requireAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { credentials, documentUrls, licenseNumber } = req.body;
+
+    // Verify ownership
+    const profile = await partnerService.getPartnerProfile(id);
+    if (!profile) {
+      return res.status(404).json({ error: "Partner not found" });
+    }
+
+    if (profile.userId !== req.user!.id) {
+      return res.status(403).json({ error: "Unauthorized" });
+    }
+
+    await partnerService.verifyPartner(id, {
+      credentials,
+      documentUrls,
+      licenseNumber
+    });
+
+    res.json({ message: "Verification submitted successfully" });
+  } catch (error: any) {
+    console.error("Error submitting verification:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * PUT /api/partners/:id/tier
+ * Assign partner tier (admin only)
+ * Requirement 1.1, 1.6
+ */
+router.put("/:id/tier", requireAuth, async (req, res) => {
+  try {
+    // Check if user is admin
+    if (req.user!.role !== 'super_admin') {
+      return res.status(403).json({ error: "Admin access required" });
+    }
+
+    const { id } = req.params;
+    const { tierId } = req.body;
+
+    if (!tierId) {
+      return res.status(400).json({ error: "Missing required field: tierId" });
+    }
+
+    await partnerService.assignTier(id, tierId);
+
+    res.json({ message: "Tier assigned successfully" });
+  } catch (error: any) {
+    console.error("Error assigning tier:", error);
+    res.status(400).json({ error: error.message });
+  }
+});
+
+/**
+ * POST /api/partners/:id/trust-score
+ * Recalculate trust score
+ * Requirement 10.5
+ */
+router.post("/:id/trust-score", requireAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const score = await partnerService.calculateTrustScore(id);
+
+    res.json({ trustScore: score });
+  } catch (error: any) {
+    console.error("Error calculating trust score:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * GET /api/partners/tier/:tierId
+ * Get partners by tier
+ */
+router.get("/tier/:tierId", async (req, res) => {
+  try {
+    const { tierId } = req.params;
+
+    const partners = await partnerService.getPartnersByTier(parseInt(tierId));
+
+    res.json(partners);
+  } catch (error: any) {
+    console.error("Error fetching partners by tier:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+export default router;
