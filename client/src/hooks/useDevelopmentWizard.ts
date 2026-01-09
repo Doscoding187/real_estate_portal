@@ -1187,6 +1187,12 @@ export const useDevelopmentWizard = create<DevelopmentWizardState>()(
                videos: (state.developmentData.media.videos || []).map(v => ({ ...v, file: undefined })),
             }
           },
+          listingIdentity: state.listingIdentity,
+          developmentType: state.developmentType,
+          residentialConfig: state.residentialConfig,
+          landConfig: state.landConfig,
+          commercialConfig: state.commercialConfig,
+          estateProfile: state.estateProfile,
           classification: state.classification,
           overview: state.overview,
           unitTypes: state.unitTypes,
