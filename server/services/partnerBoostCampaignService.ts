@@ -20,7 +20,7 @@ import {
   exploreShorts
 } from '../../drizzle/schema';
 import { eq, and, sql, gte, lte } from 'drizzle-orm';
-import { v4 as uuidv4 } from 'uuid';
+import { nanoid } from 'nanoid';
 
 export interface BoostCampaignCreate {
   partnerId: string;
@@ -98,7 +98,7 @@ export class PartnerBoostCampaignService {
     }
 
     // Create campaign
-    const campaignId = uuidv4();
+    const campaignId = nanoid();
     await db.insert(boostCampaigns).values({
       id: campaignId,
       partnerId: data.partnerId,

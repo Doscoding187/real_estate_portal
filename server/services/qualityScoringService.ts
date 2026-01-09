@@ -369,6 +369,23 @@ export class QualityScoringService {
   }
 
   /**
+   * Apply visibility reduction to content based on quality score
+   * Requirements: 11.4
+   * 
+   * This method applies the visibility multiplier to content's feed ranking.
+   * Content with low quality scores will appear less frequently in feeds.
+   */
+  async applyVisibilityReduction(contentId: string): Promise<number> {
+    const qualityScore = await this.getQualityScore(contentId);
+    if (!qualityScore) {
+      // If no quality score exists, return default multiplier
+      return 1.0;
+    }
+
+    return this.getVisibilityMultiplier(qualityScore.overallScore);
+  }
+
+  /**
    * Batch update production scores (would be called by video processing service)
    */
   async updateProductionScore(

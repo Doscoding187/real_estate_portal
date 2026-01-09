@@ -293,7 +293,7 @@ Launch when ALL are true:
     - **Property 11: Boost Budget Depletion**
     - **Validates: Requirements 8.5**
 
-- [-] 17. Implement Lead Generation Service
+- [x] 17. Implement Lead Generation Service
   - [x] 17.1 Create leads table and service
     - Define lead types and pricing ranges
     - Capture contact info and intent details
@@ -314,69 +314,69 @@ Launch when ALL are true:
     - **Property 12: Lead Pricing Bounds**
     - **Validates: Requirements 9.1, 9.2, 9.3**
 
-- [ ] 18. Implement Marketplace Bundles
-  - [ ] 18.1 Create marketplace_bundles and bundle_partners tables
+- [x] 18. Implement Marketplace Bundles
+  - [x] 18.1 Create marketplace_bundles and bundle_partners tables
     - Define bundle categories (Finance, Legal, Inspection, Insurance)
     - _Requirements: 12.1_
-  - [ ] 18.2 Implement bundle display with partner info
+  - [x] 18.2 Implement bundle display with partner info
     - Show partner ratings and verification status
     - _Requirements: 12.4_
-  - [ ] 18.3 Implement bundle attribution tracking
+  - [x] 18.3 Implement bundle attribution tracking
     - Track user engagements with bundle partners
     - _Requirements: 12.3_
   - [ ]* 18.4 Write property test for bundle attribution
     - **Property 18: Bundle Attribution Tracking**
     - **Validates: Requirements 12.3**
 
-- [ ] 19. Implement Partner Analytics Dashboard
-  - [ ] 19.1 Create analytics aggregation queries
+- [x] 19. Implement Partner Analytics Dashboard
+  - [x] 19.1 Create analytics aggregation queries
     - Calculate total views, engagement rate, lead conversions
     - _Requirements: 13.1_
-  - [ ] 19.2 Implement trend calculations
+  - [x] 19.2 Implement trend calculations
     - Show daily, weekly, monthly performance trends
     - _Requirements: 13.2_
-  - [ ] 19.3 Implement content ranking by performance
+  - [x] 19.3 Implement content ranking by performance
     - Rank partner's content pieces by engagement
     - _Requirements: 13.3_
-  - [ ] 19.4 Implement conversion funnel analytics
+  - [x] 19.4 Implement conversion funnel analytics
     - Track view → engagement → lead funnel
     - _Requirements: 13.4_
-  - [ ] 19.5 Implement benchmark comparisons
+  - [x] 19.5 Implement benchmark comparisons
     - Compare partner performance to tier averages
     - _Requirements: 13.5_
-  - [ ] 19.6 Implement boost ROI metrics
+  - [x] 19.6 Implement boost ROI metrics
     - Calculate ROI for each boost campaign
     - _Requirements: 13.6_
   - [ ]* 19.7 Write property test for analytics consistency
     - **Property 19: Analytics Metrics Calculation**
     - **Validates: Requirements 13.1, 13.2, 13.3, 13.4**
 
-- [ ] 20. Checkpoint - Ensure monetization tests pass
+- [x] 20. Checkpoint - Ensure monetization tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 21. Implement API Endpoints
-  - [ ] 21.1 Create Partner API routes
+- [-] 21. Implement API Endpoints
+  - [x] 21.1 Create Partner API routes
     - POST /api/partners - Register partner
     - GET /api/partners/:id - Get partner profile
     - PUT /api/partners/:id - Update partner profile
     - POST /api/partners/:id/verify - Submit verification
     - _Requirements: 1.1, 5.1, 5.2, 5.3, 5.4_
-  - [ ] 21.2 Create Content API routes
+  - [x] 21.2 Create Content API routes
     - POST /api/content/submit - Submit content for approval
     - GET /api/content/approval-queue - Get approval queue (admin)
     - POST /api/content/:id/review - Review content (admin)
     - POST /api/content/:id/flag - Flag content
     - _Requirements: 6.1, 6.3, 6.5_
-  - [ ] 21.3 Create Topics API routes
+  - [x] 21.3 Create Topics API routes
     - GET /api/topics - Get all topics
     - GET /api/topics/:slug/feed - Get topic-filtered feed
     - _Requirements: 3.1, 3.2_
-  - [ ] 21.4 Create Subscription API routes
+  - [x] 21.4 Create Subscription API routes
     - POST /api/subscriptions - Create subscription
     - PUT /api/subscriptions/:id - Upgrade subscription
     - DELETE /api/subscriptions/:id - Cancel subscription
     - _Requirements: 7.1, 7.4, 7.5_
-  - [ ] 21.5 Create Boost API routes
+  - [-] 21.5 Create Boost API routes
     - POST /api/boosts - Create boost campaign
     - PUT /api/boosts/:id/activate - Activate campaign
     - PUT /api/boosts/:id/pause - Pause campaign

@@ -266,7 +266,30 @@ CREATE TABLE IF NOT EXISTS bundle_partners (
 );
 
 -- ============================================================================
--- PART 12: Cold Start Infrastructure
+-- PART 12: Bundle Attribution Tracking
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS bundle_attributions (
+  id VARCHAR(36) PRIMARY KEY,
+  bundle_id VARCHAR(36) NOT NULL,
+  partner_id VARCHAR(36),
+  user_id VARCHAR(36) NOT NULL,
+  event_type ENUM('bundle_view', 'partner_click', 'profile_view', 'lead_generated', 'lead_converted') NOT NULL,
+  content_id VARCHAR(36),
+  lead_id VARCHAR(36),
+  metadata JSON,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_attribution_bundle (bundle_id),
+  INDEX idx_attribution_partner (partner_id),
+  INDEX idx_attribution_user (user_id),
+  INDEX idx_attribution_event (event_type),
+  INDEX idx_attribution_created (created_at),
+  FOREIGN KEY (bundle_id) REFERENCES marketplace_bundles(id) ON DELETE CASCADE,
+  FOREIGN KEY (partner_id) REFERENCES explore_partners(id) ON DELETE CASCADE
+);
+
+-- ============================================================================
+-- PART 13: Cold Start Infrastructure
 -- ============================================================================
 
 CREATE TABLE IF NOT EXISTS launch_phases (

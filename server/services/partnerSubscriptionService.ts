@@ -14,7 +14,7 @@
  */
 
 import { getDb } from '../db';
-import { v4 as uuidv4 } from 'uuid';
+import { nanoid } from 'nanoid';
 
 // =====================================================
 // TYPES
@@ -196,7 +196,7 @@ export async function createSubscription(
   }
 
   const pricing = TIER_PRICING[tier];
-  const id = uuidv4();
+  const id = nanoid();
   const startDate = new Date();
 
   await db.execute(
@@ -495,3 +495,41 @@ export function isHigherTier(tierA: SubscriptionTier, tierB: SubscriptionTier): 
   const hierarchy = getTierHierarchy();
   return hierarchy.indexOf(tierA) > hierarchy.indexOf(tierB);
 }
+
+// ============================================================================
+// SERVICE INSTANCE EXPORT
+// ============================================================================
+
+/**
+ * Singleton service instance for partner subscriptions
+ * Provides a unified interface for all subscription operations
+ */
+export const partnerSubscriptionService = {
+  // Subscription management
+  createSubscription,
+  upgradeSubscription,
+  cancelSubscription,
+  handleExpiredSubscription,
+  processExpiredSubscriptions,
+  
+  // Feature access
+  checkFeatureAccess,
+  getFeatureValue,
+  canPerformAction,
+  
+  // Subscription queries
+  getPartnerSubscription,
+  getPartnerSubscriptionHistory,
+  getActiveSubscription: getPartnerSubscription, // Alias for consistency
+  
+  // Pricing
+  getSubscriptionTierPricing,
+  getTierPricing,
+  
+  // Utilities
+  getTierHierarchy,
+  isHigherTier,
+  
+  // Alias for expired subscriptions handler
+  handleExpiredSubscriptions: processExpiredSubscriptions,
+};
