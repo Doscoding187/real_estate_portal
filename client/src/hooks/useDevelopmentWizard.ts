@@ -603,6 +603,7 @@ const createActions = (
     unitTypes: state.unitTypes.map(u => u.id === id ? { ...u, ...updates } : u)
   })),
   
+  removeUnitType: (id: string) => set((state) => ({
     unitTypes: state.unitTypes.filter(u => u.id !== id)
   })),
 
