@@ -70,9 +70,7 @@ export function UnitTypesPhase() {
     sizeFrom: 0,
     sizeTo: 0,
     yardSize: 0,
-    sizeFrom: 0,
-    sizeTo: 0,
-    yardSize: 0,
+
     // Refactored Pricing
     priceFrom: 0, // Base Price
     priceTo: 0,   // Calculated Max

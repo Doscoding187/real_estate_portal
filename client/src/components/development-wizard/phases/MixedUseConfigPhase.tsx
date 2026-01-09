@@ -13,11 +13,9 @@ import {
   RESIDENTIAL_TYPE_OPTIONS,
   COMMERCIAL_TYPE_OPTIONS,
   COMMUNITY_TYPE_OPTIONS,
-  SECURITY_FEATURE_OPTIONS,
   type ResidentialType,
   type CommercialType,
   type CommunityType,
-  type SecurityFeature
 } from '@/types/wizardTypes';
 import { useDevelopmentWizard } from '@/hooks/useDevelopmentWizard';
 import { toast } from 'sonner';
@@ -61,14 +59,7 @@ export function MixedUseConfigPhase() {
     }
   };
 
-  const handleSecurityToggle = (feature: SecurityFeature) => {
-    const current = residentialConfig.securityFeatures || [];
-    if (current.includes(feature)) {
-      setResidentialConfig({ securityFeatures: current.filter(f => f !== feature) });
-    } else {
-      setResidentialConfig({ securityFeatures: [...current, feature] });
-    }
-  };
+
 
   const handleContinue = () => {
     if (selectedResidentialTypes.length === 0) {
@@ -260,38 +251,7 @@ export function MixedUseConfigPhase() {
         </CardContent>
       </Card>
 
-      {/* Security Features */}
-      <Card className="border-slate-200">
-        <CardContent className="p-6">
-          <h3 className="font-semibold text-lg text-slate-900 mb-4 flex items-center gap-2">
-            <Shield className="w-5 h-5 text-green-600" />
-            Security Features
-          </h3>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-            {SECURITY_FEATURE_OPTIONS.map((option) => {
-              const isSelected = residentialConfig.securityFeatures?.includes(option.value);
-              return (
-                <label
-                  key={option.value}
-                  className={cn(
-                    "flex items-center gap-2 p-3 rounded-lg border cursor-pointer transition-all text-sm",
-                    isSelected 
-                      ? "border-green-500 bg-green-50" 
-                      : "border-slate-200 hover:border-green-300"
-                  )}
-                >
-                  <Checkbox
-                    checked={isSelected}
-                    onCheckedChange={() => handleSecurityToggle(option.value)}
-                    className="data-[state=checked]:bg-green-600"
-                  />
-                  <span className="font-medium">{option.label}</span>
-                </label>
-              );
-            })}
-          </div>
-        </CardContent>
-      </Card>
+
 
       {/* Navigation */}
       <div className="flex justify-between pt-6 border-t border-slate-200">
