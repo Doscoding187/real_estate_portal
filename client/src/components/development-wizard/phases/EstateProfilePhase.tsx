@@ -44,6 +44,7 @@ export function EstateProfilePhase() {
   const { 
     estateProfile, 
     setEstateProfile, 
+    setIdentity, // Sync global fields
     setPhase 
   } = useDevelopmentWizard();
 
@@ -61,6 +62,11 @@ export function EstateProfilePhase() {
         min: values[0], 
         max: values[1] 
       } 
+    });
+    // Sync to global development data for persistence
+    setIdentity({
+      monthlyLevyFrom: values[0],
+      monthlyLevyTo: values[1]
     });
   };
 

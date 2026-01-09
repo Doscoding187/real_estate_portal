@@ -70,13 +70,16 @@ export function UnitTypesPhase() {
     sizeFrom: 0,
     sizeTo: 0,
     yardSize: 0,
-    priceFrom: 0,
-    priceTo: 0,
-    transferCostsIncluded: false,
-    monthlyLevyFrom: 0,
-    monthlyLevyTo: 0, // max levy
-    ratesAndTaxesFrom: 0,
-    ratesAndTaxesTo: 0,
+    sizeFrom: 0,
+    sizeTo: 0,
+    yardSize: 0,
+    // Refactored Pricing
+    priceFrom: 0, // Base Price
+    priceTo: 0,   // Calculated Max
+    extras: [],   // { label, price }
+    
+    // Removed: transferCosts, levies, rates (Global now)
+    
     totalUnits: 0,
     availableUnits: 0,
     reservedUnits: 0,
@@ -96,8 +99,8 @@ export function UnitTypesPhase() {
       name: '', description: '', bedrooms: 1, bathrooms: 1, 
       parkingType: 'single_garage', parkingBays: 1,
       sizeFrom: 0, sizeTo: 0, yardSize: 0,
-      priceFrom: 0, priceTo: 0, transferCostsIncluded: false, 
-      monthlyLevyFrom: 0, monthlyLevyTo: 0, ratesAndTaxesFrom: 0, ratesAndTaxesTo: 0,
+      priceFrom: 0, priceTo: 0, extras: [],
+      // removed global financials
       totalUnits: 0, availableUnits: 0, reservedUnits: 0,
       features: { kitchen: [], bathroom: [], flooring: [], storage: [], climate: [], outdoor: [], security: [], other: [] }
     });
@@ -112,6 +115,8 @@ export function UnitTypesPhase() {
       setEditingId(unit.id);
       setFormData({
         ...unit,
+        ...unit,
+        extras: unit.extras || [],
         features: unit.features || { kitchen: [], bathroom: [], flooring: [], storage: [], climate: [], outdoor: [], security: [], other: [] }
       });
       setUnitGallery(unit.baseMedia?.gallery || []);
@@ -141,11 +146,18 @@ export function UnitTypesPhase() {
   const handleSave = (addAnother = false) => {
     // Validation
     if (!formData.name) return toast.error('Unit Name is required');
-    if (!formData.priceFrom) return toast.error('Price is required');
+    if (!formData.priceFrom) return toast.error('Base Price is required');
     if (!formData.totalUnits && formData.totalUnits !== 0) return toast.error('Total Units is required');
+
+    // Calculate Max Price (Base + Extras)
+    const basePrice = formData.priceFrom || 0;
+    const extrasTotal = (formData.extras || []).reduce((acc, curr) => acc + (Number(curr.price) || 0), 0);
+    const calculatedPriceTo = basePrice + extrasTotal;
 
     const newUnit: any = {
       ...formData,
+      priceTo: calculatedPriceTo, // Auto-calculated
+
       features: formData.features,
       baseMedia: {
         gallery: unitGallery,
@@ -367,110 +379,115 @@ export function UnitTypesPhase() {
               <TabsContent value="pricing" className="mt-0 space-y-6">
                  <div className="space-y-8 max-w-3xl">
                     
-                    {/* Section 1: Pricing Model & Base Price */}
-                    <div className="space-y-4">
-                       <Label className="text-base font-semibold text-slate-900 border-b pb-2 block">1. Unit Price</Label>
-                       
-                       <div className="grid md:grid-cols-2 gap-8 items-start">
-                           <div className="space-y-3">
-                               <Label className="text-sm">Pricing Model</Label>
-                               <RadioGroup 
-                                  value={formData.priceFrom === formData.priceTo ? 'fixed' : 'range'}
-                                  onValueChange={(v) => {
-                                     if(v === 'fixed') setFormData(p => ({...p, priceTo: p.priceFrom}));
-                                  }}
-                                  className="flex flex-col space-y-2"
-                               >
-                                  <div className="flex items-center space-x-2">
-                                     <RadioGroupItem value="fixed" id="p-fixed" />
-                                     <Label htmlFor="p-fixed" className="font-normal">Fixed Price</Label>
-                                  </div>
-                                  <div className="flex items-center space-x-2">
-                                     <RadioGroupItem value="range" id="p-range" />
-                                     <Label htmlFor="p-range" className="font-normal">Price Range (Min - Max)</Label>
-                                  </div>
-                               </RadioGroup>
-                           </div>
-
-                           <div className="space-y-3">
-                               <Label>Price (ZAR)</Label>
-                               <div className="flex items-center gap-2">
-                                  <span className="text-slate-400 font-medium w-8">From</span>
+                     {/* Section 1: Base Price & Extras */}
+                     <div className="space-y-6">
+                        <Label className="text-base font-semibold text-slate-900 border-b pb-2 block">1. Unit Pricing Strategy</Label>
+                        
+                        <div className="space-y-6">
+                           {/* Base Price */}
+                           <div className="bg-slate-50 p-6 rounded-xl border border-slate-200">
+                             <div className="space-y-3 max-w-sm">
+                                <Label className="text-slate-900 font-medium">Base Price (Starting From)</Label>
+                                <div className="flex items-center gap-2">
                                   <div className="relative flex-1">
-                                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">R</span>
-                                      <Input className="pl-8" type="number" placeholder="0" value={formData.priceFrom} onFocus={(e) => e.target.select()} onChange={e => setFormData(p => ({...p, priceFrom: +e.target.value}))} />
+                                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-medium">R</span>
+                                      <Input 
+                                        className="pl-8 h-11 text-lg font-semibold text-slate-900" 
+                                        type="number" 
+                                        placeholder="0" 
+                                        value={formData.priceFrom} 
+                                        onFocus={(e) => e.target.select()} 
+                                        onChange={e => setFormData(p => ({...p, priceFrom: +e.target.value}))} 
+                                      />
                                   </div>
-                               </div>
-                               {formData.priceFrom !== formData.priceTo && (
-                                  <div className="flex items-center gap-2">
-                                     <span className="text-slate-400 font-medium w-8">To</span>
-                                     <div className="relative flex-1">
-                                         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">R</span>
-                                         <Input className="pl-8" type="number" placeholder="0" value={formData.priceTo} onFocus={(e) => e.target.select()} onChange={e => setFormData(p => ({...p, priceTo: +e.target.value}))} />
-                                     </div>
-                                  </div>
-                               )}
-                           </div>
-                       </div>
-                    </div>
-
-                    {/* Section 2: Monthly Costs */}
-                    <div className="space-y-4">
-                       <Label className="text-base font-semibold text-slate-900 border-b pb-2 block">2. Monthly Costs & Levies</Label>
-                       
-                       <div className="p-5 bg-slate-50 border border-slate-200 rounded-xl space-y-6">
-                           
-                           {/* Transfer Costs Checkbox */}
-                           <div className="flex items-center space-x-2 pb-4 border-b border-slate-200">
-                              <Checkbox id="transfer" checked={formData.transferCostsIncluded} onCheckedChange={(c) => setFormData(p => ({...p, transferCostsIncluded: !!c}))} />
-                              <Label htmlFor="transfer" className="cursor-pointer font-medium">Price includes Transfer Costs?</Label>
+                                </div>
+                                <p className="text-xs text-slate-500">The base cost of the unit excluding any optional extras.</p>
+                             </div>
                            </div>
 
-                           {/* Levies Range */}
-                           <div className="space-y-3">
-                              <Label>Estimated Monthly Levy</Label>
-                              <div className="grid grid-cols-2 gap-4">
-                                  <div className="space-y-1">
-                                      <span className="text-xs text-slate-500 uppercase tracking-wider">Min</span>
-                                      <div className="relative">
-                                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">R</span>
-                                          <Input className="pl-8 bg-white" type="number" placeholder="Min" value={formData.monthlyLevyFrom} onFocus={(e) => e.target.select()} onChange={e => setFormData(p => ({...p, monthlyLevyFrom: +e.target.value}))} />
-                                      </div>
-                                  </div>
-                                  <div className="space-y-1">
-                                      <span className="text-xs text-slate-500 uppercase tracking-wider">Max</span>
-                                      <div className="relative">
-                                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">R</span>
-                                          <Input className="pl-8 bg-white" type="number" placeholder="Max" value={formData.monthlyLevyTo} onFocus={(e) => e.target.select()} onChange={e => setFormData(p => ({...p, monthlyLevyTo: +e.target.value}))} />
-                                      </div>
-                                  </div>
+                           {/* Optional Extras */}
+                           <div className="space-y-4">
+                              <div className="flex justify-between items-center">
+                                <Label className="text-sm font-medium">Optional Extras / Upgrades</Label>
+                                <Button 
+                                  variant="outline" 
+                                  size="sm" 
+                                  onClick={() => setFormData(p => ({...p, extras: [...(p.extras || []), { label: '', price: 0 }] }))}
+                                >
+                                  <Plus className="w-3 H-3 mr-1"/> Add Extra
+                                </Button>
                               </div>
-                              <p className="text-xs text-slate-500">Provide a range if levies vary by unit size or position.</p>
-                           </div>
 
-                           {/* Rates & Taxes Range */}
-                           <div className="space-y-3">
-                              <Label>Estimated Rates & Taxes</Label>
-                              <div className="grid grid-cols-2 gap-4">
-                                  <div className="space-y-1">
-                                      <span className="text-xs text-slate-500 uppercase tracking-wider">Min</span>
-                                      <div className="relative">
-                                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">R</span>
-                                          <Input className="pl-8 bg-white" type="number" placeholder="Min" value={formData.ratesAndTaxesFrom} onFocus={(e) => e.target.select()} onChange={e => setFormData(p => ({...p, ratesAndTaxesFrom: +e.target.value}))} />
+                              {(formData.extras?.length || 0) === 0 ? (
+                                <div className="text-center p-6 border-2 border-dashed border-slate-100 rounded-xl bg-slate-50/50">
+                                   <p className="text-sm text-slate-400">No optional extras added.</p>
+                                </div>
+                              ) : (
+                                <div className="space-y-3">
+                                   {formData.extras!.map((extra, idx) => (
+                                      <div key={idx} className="flex gap-3 items-center animate-in slide-in-from-left-2 fade-in">
+                                         <Input 
+                                            placeholder="Item Label (e.g. Pool, AC)" 
+                                            value={extra.label} 
+                                            onChange={(e) => {
+                                               const newExtras = [...(formData.extras || [])];
+                                               newExtras[idx].label = e.target.value;
+                                               setFormData(p => ({...p, extras: newExtras}));
+                                            }}
+                                            className="flex-1"
+                                         />
+                                         <div className="relative w-32">
+                                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs">R</span>
+                                            <Input 
+                                               type="number" 
+                                               placeholder="Price" 
+                                               value={extra.price}
+                                               onChange={(e) => {
+                                                  const newExtras = [...(formData.extras || [])];
+                                                  newExtras[idx].price = +e.target.value;
+                                                  setFormData(p => ({...p, extras: newExtras}));
+                                               }} 
+                                               className="pl-6"
+                                            />
+                                         </div>
+                                         <Button 
+                                            size="icon" 
+                                            variant="ghost" 
+                                            className="text-red-400 hover:text-red-500 hover:bg-red-50"
+                                            onClick={() => {
+                                               const newExtras = (formData.extras || []).filter((_, i) => i !== idx);
+                                               setFormData(p => ({...p, extras: newExtras}));
+                                            }}
+                                          >
+                                            <Trash2 className="w-4 h-4"/>
+                                         </Button>
                                       </div>
-                                  </div>
-                                  <div className="space-y-1">
-                                      <span className="text-xs text-slate-500 uppercase tracking-wider">Max</span>
-                                      <div className="relative">
-                                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">R</span>
-                                          <Input className="pl-8 bg-white" type="number" placeholder="Max" value={formData.ratesAndTaxesTo} onFocus={(e) => e.target.select()} onChange={e => setFormData(p => ({...p, ratesAndTaxesTo: +e.target.value}))} />
-                                      </div>
-                                  </div>
-                              </div>
+                                   ))}
+                                   
+                                   <div className="flex justify-end pt-2 border-t border-slate-100">
+                                      <p className="text-sm text-slate-500">
+                                        Max Potential Price: <strong className="text-slate-900">
+                                          R {((formData.priceFrom || 0) + (formData.extras || []).reduce((s, x) => s + (x.price || 0), 0)).toLocaleString()}
+                                        </strong>
+                                      </p>
+                                   </div>
+                                </div>
+                              )}
                            </div>
-                           
-                       </div>
-                    </div>
+                        </div>
+                     </div>
+                     
+                     {/* Section 2: Global Financials (Informational) */}
+                     <div className="space-y-4 opacity-75">
+                         <div className="flex items-center gap-2 pb-2 border-b">
+                            <Label className="text-base font-semibold text-slate-900">2. Monthly Costs</Label>
+                            <Badge variant="secondary" className="font-normal text-xs">Configured globally</Badge>
+                         </div>
+                         <div className="p-4 bg-slate-50 rounded-lg text-sm text-slate-500">
+                            Rates, Taxes, and Levies are now configured at the Development level (Overview Phase). 
+                            They will apply to all units unless specific overrides are built later.
+                         </div>
+                     </div>
 
                  </div>
               </TabsContent>

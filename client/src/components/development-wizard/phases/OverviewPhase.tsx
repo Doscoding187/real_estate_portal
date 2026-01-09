@@ -22,7 +22,8 @@ import {
   Calendar,
   Megaphone,
   ArrowRight,
-  ArrowLeft
+  ArrowLeft,
+  Coins
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -277,6 +278,81 @@ export function OverviewPhase() {
                       </p>
                    </div>
                 )}
+             </div>
+          </CardContent>
+        </Card>
+
+        {/* Financial Information */}
+        <Card className="border-slate-200 shadow-sm">
+           <CardHeader className="bg-slate-50/50 border-b border-slate-100">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-emerald-100 rounded-lg">
+                <Coins className="w-5 h-5 text-emerald-600" />
+              </div>
+              <div>
+                <CardTitle className="text-lg text-slate-900">
+                  Estimated Costs
+                </CardTitle>
+                <CardDescription>
+                  Provide estimated rates and taxes to help buyers budget.
+                </CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="pt-6 space-y-6">
+             {/* Rates & Taxes */}
+             <div className="space-y-3">
+                <Label>Estimated Rates & Taxes (Monthly)</Label>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <span className="text-xs text-slate-500 uppercase font-medium">From</span>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">R</span>
+                      <Input
+                        type="number"
+                        className="pl-7"
+                        placeholder="0"
+                        min={0}
+                        value={developmentData.ratesFrom || ''}
+                        onChange={(e) => setIdentity({ ratesFrom: Number(e.target.value) })}
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <span className="text-xs text-slate-500 uppercase font-medium">To</span>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">R</span>
+                      <Input
+                        type="number"
+                        className="pl-7"
+                        placeholder="0"
+                        min={0}
+                        value={developmentData.ratesTo || ''}
+                        onChange={(e) => setIdentity({ ratesTo: Number(e.target.value) })}
+                      />
+                    </div>
+                  </div>
+                </div>
+                <p className="text-xs text-slate-500">
+                   General rates range for units in this development.
+                </p>
+             </div>
+
+             {/* Transfer Costs */}
+             <div className="flex items-center space-x-2 border p-3 rounded-lg bg-slate-50">
+                <Checkbox 
+                  id="transferCosts" 
+                  checked={developmentData.transferCostsIncluded || false}
+                  onCheckedChange={(checked) => setIdentity({ transferCostsIncluded: checked === true })}
+                />
+                <div className="grid gap-1.5 leading-none">
+                  <Label htmlFor="transferCosts" className="cursor-pointer font-medium text-slate-700">
+                    Transfer Costs Included?
+                  </Label>
+                  <p className="text-xs text-slate-500">
+                    Check this if the developer covers transfer fees (marketing incentive).
+                  </p>
+                </div>
              </div>
           </CardContent>
         </Card>

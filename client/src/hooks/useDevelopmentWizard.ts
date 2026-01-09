@@ -150,6 +150,9 @@ export interface UnitType {
     outdoor: string[];
     other: string[];
   };
+  
+  // NEW: Pricing Extras (Base Price + Extras Model)
+  extras?: { label: string; price: number }[];
 
   // Specifications & Finishes (Legacy / Detail View)
   specifications: {
@@ -250,6 +253,13 @@ export interface DevelopmentWizardState {
     // Legacy / Calculated (kept for compatibility)
     totalUnits?: number; // Total units across all types
     totalDevelopmentArea?: number; // Total area in m²
+    
+    // Global Financials (NEW)
+    monthlyLevyFrom?: number;
+    monthlyLevyTo?: number;
+    ratesFrom?: number;
+    ratesTo?: number;
+    transferCostsIncluded?: boolean;
     
     // Location
     location: {
@@ -437,6 +447,14 @@ const initialState: Omit<DevelopmentWizardState, keyof ReturnType<typeof createA
     ownershipType: 'sectional_title',
     totalUnits: undefined,
     totalDevelopmentArea: undefined,
+    
+    // Global Financials
+    monthlyLevyFrom: undefined,
+    monthlyLevyTo: undefined,
+    ratesFrom: undefined,
+    ratesTo: undefined,
+    transferCostsIncluded: false,
+
     location: {
       latitude: '',
       longitude: '',
@@ -447,6 +465,7 @@ const initialState: Omit<DevelopmentWizardState, keyof ReturnType<typeof createA
     media: {
       photos: [],
       videos: [],
+      documents: [],
     },
     // Legacy inits
     amenities: [],
@@ -502,7 +521,7 @@ const createActions = (
       ...state.developmentData,
       ...data,
       location: { ...(state.developmentData?.location || {}), ...(data.location || {}) },
-      media: { ...(state.developmentData?.media || { photos: [], videos: [] }), ...(data.media || {}) },
+      media: { ...(state.developmentData?.media || { photos: [], videos: [], documents: [] }), ...(data.media || {}) },
     }
   })),
 
