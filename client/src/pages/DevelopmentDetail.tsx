@@ -54,6 +54,7 @@ import { Input } from '@/components/ui/input';
 import { MetaControl } from '@/components/seo/MetaControl';
 import { Breadcrumbs } from '@/components/search/Breadcrumbs';
 import { Footer } from '@/components/Footer';
+import { HouseMeasureIcon } from '@/components/icons/HouseMeasureIcon';
 
 
 
@@ -168,7 +169,7 @@ export default function DevelopmentDetail() {
         available: u.totalUnits || u.count || null, // Use actual count if available
         image: unitImage,
         floors: u.floorNumber || null,
-        erfSize: u.erfSize || u.plotSize || null,
+        erfSize: u.yardSize || u.erfSize || u.plotSize || null,
         virtualTour: '',
         yardSize: u.yardSize
       };
@@ -435,14 +436,14 @@ export default function DevelopmentDetail() {
                                           <span className="text-xs font-semibold text-slate-700">{unit.bathrooms} Bath</span>
                                         </div>
                                         <div className="flex flex-col items-center justify-center text-center border-l border-slate-100">
-                                          <Maximize className="h-3.5 w-3.5 text-slate-400 mb-1" />
+                                          <HouseMeasureIcon className="h-3.5 w-3.5 text-slate-400 mb-1" />
                                           <span className="text-xs font-semibold text-slate-700">{unit.size} m²</span>
                                         </div>
                                         {/* Dynamic 4th Spec */}
                                         {["House", "Simplex", "Duplex", "Cluster Common", "Townhouse"].includes(unit.structuralType) ? (
                                            unit.erfSize ? (
                                             <div className="flex flex-col items-center justify-center text-center border-l border-slate-100">
-                                              <ArrowUpRight className="h-3.5 w-3.5 text-slate-400 mb-1" />
+                                              <Maximize className="h-3.5 w-3.5 text-slate-400 mb-1" />
                                               <span className="text-xs font-semibold text-slate-700">{unit.erfSize} m²</span>
                                             </div>
                                            ) : null

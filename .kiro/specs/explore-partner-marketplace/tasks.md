@@ -274,19 +274,19 @@ Launch when ALL are true:
     - **Property 7: Subscription Feature Access**
     - **Validates: Requirements 7.1, 7.2, 7.3, 7.6**
 
-- [ ] 16. Implement Boost Campaign Service
-  - [ ] 16.1 Create boost_campaigns table and service
+- [-] 16. Implement Boost Campaign Service
+  - [x] 16.1 Create boost_campaigns table and service
     - Require topic selection for targeting
     - Track budget, spent, impressions, clicks
     - _Requirements: 8.1, 8.4_
-  - [ ] 16.2 Implement boost activation and budget tracking
+  - [x] 16.2 Implement boost activation and budget tracking
     - Record impressions and clicks
     - Auto-pause when budget depleted
     - _Requirements: 8.5_
-  - [ ] 16.3 Implement sponsored label display
+  - [x] 16.3 Implement sponsored label display
     - Add "Sponsored" label to boosted content
     - _Requirements: 8.2_
-  - [ ] 16.4 Implement boost eligibility validation
+  - [x] 16.4 Implement boost eligibility validation
     - Reject boosts that violate content hierarchy
     - _Requirements: 8.6_
   - [ ]* 16.5 Write property test for budget depletion

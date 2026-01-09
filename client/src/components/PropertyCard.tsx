@@ -1,10 +1,11 @@
 import { Button } from './ui/button';
-import { Heart, MapPin, Bed, Bath, Square, Image as ImageIcon, PlayCircle } from 'lucide-react';
+import { Heart, MapPin, Bed, Bath, Square, Image as ImageIcon, PlayCircle, Home, Maximize } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import { OptimizedImageCard } from './OptimizedImage';
 import { Badge } from './ui/badge';
 import { useLocation } from 'wouter';
 import { ResponsiveHighlights } from './ResponsiveHighlights';
+import { HouseMeasureIcon } from '@/components/icons/HouseMeasureIcon';
 
 interface ImageUrls {
   thumbnail: string;
@@ -227,7 +228,7 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
             {/* Building/Floor Size (always show if available) */}
             {area && (
               <div className="flex items-center gap-1.5">
-                <Square className="h-4 w-4 text-slate-400" />
+                <HouseMeasureIcon className="h-4 w-4 text-slate-400" />
                 <span className="font-medium">
                   Size {area.toLocaleString()} m²{getAreaLabel()}
                 </span>
@@ -248,7 +249,7 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
             {/* Yard/Land Size (only for houses, plots, farms) */}
             {showsYardSize() && yardSize && (
               <div className="flex items-center gap-1.5">
-                <Square className="h-4 w-4 text-slate-400" />
+                <Maximize className="h-4 w-4 text-slate-400" />
                 <span className="font-medium">
                   {getYardLabel()} {yardSize.toLocaleString()} m²
                 </span>

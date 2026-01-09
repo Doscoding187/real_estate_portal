@@ -14,10 +14,11 @@ import { useLocation } from 'wouter';
 import { 
   CheckCircle2, AlertCircle, AlertTriangle, Edit2, Eye, 
   MapPin, Home, Layers, Image as ImageIcon, FileText, 
-  ArrowLeft, Upload, Share2, Calendar, Smartphone, Monitor
+  ArrowLeft, Upload, Share2, Calendar, Smartphone, Monitor, Maximize
 } from 'lucide-react';
 import { format } from 'date-fns';
 import confetti from 'canvas-confetti';
+import { HouseMeasureIcon } from '@/components/icons/HouseMeasureIcon';
 
 export function FinalisationPhase() {
   const [, navigate] = useLocation();
@@ -431,7 +432,10 @@ export function FinalisationPhase() {
                                      {unitTypes.slice(0, 2).map(u => (
                                          <div key={u.id} className="bg-slate-50 p-2 rounded border border-slate-100">
                                               <div className="text-[10px] font-bold">{u.name}</div>
-                                              <div className="text-[9px] text-slate-500">{u.bedrooms} Bed • {u.sizeFrom}m²</div>
+                                              <div className="text-[9px] text-slate-500 flex items-center gap-2">
+                                                  <span className="flex items-center gap-1">{u.bedrooms} Bed &bull; <HouseMeasureIcon className="w-3 h-3"/> {u.sizeFrom}m²</span>
+                                                  {u.yardSize && u.yardSize > 0 && <span className="text-green-600 flex items-center gap-0.5"><Maximize className="w-2 h-2"/> {u.yardSize}m²</span>}
+                                              </div>
                                          </div>
                                      ))}
                                 </div>

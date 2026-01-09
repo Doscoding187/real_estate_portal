@@ -13,13 +13,14 @@ import { Progress } from '@/components/ui/progress';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Checkbox } from '@/components/ui/checkbox';
 import { 
-  Trash2, Plus, Edit2, BedDouble, Bath, Car, Ruler, 
+  Trash2, Plus, Edit2, BedDouble, Bath, Car, Home, 
   DollarSign, Image, BarChart3, ArrowLeft, ArrowRight,
-  Upload, X, FileImage, Layers, Sparkles, AlertCircle, Copy
+  Upload, X, FileImage, Layers, Sparkles, AlertCircle, Copy, Maximize
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { trpc } from '@/lib/trpc';
+import { HouseMeasureIcon } from '@/components/icons/HouseMeasureIcon';
 
 // -- CONSTANTS --
 
@@ -256,7 +257,10 @@ export function UnitTypesPhase() {
                      <div className="flex gap-4">
                         <span className="flex items-center gap-1"><BedDouble className="w-3.5 h-3.5"/> {unit.bedrooms}</span>
                         <span className="flex items-center gap-1"><Bath className="w-3.5 h-3.5"/> {unit.bathrooms}</span>
-                        <span className="flex items-center gap-1"><Ruler className="w-3.5 h-3.5"/> {unit.sizeFrom}m²</span>
+                        <span className="flex items-center gap-1"><HouseMeasureIcon className="w-3.5 h-3.5"/> {unit.sizeFrom}m²</span>
+                        {unit.yardSize && unit.yardSize > 0 && (
+                           <span className="flex items-center gap-1 text-green-700 bg-green-50 px-1.5 py-0.5 rounded-full text-xs border border-green-100"><Maximize className="w-3 H-3"/> {unit.yardSize}m²</span>
+                        )}
                      </div>
                   </CardContent>
               </Card>
@@ -332,7 +336,7 @@ export function UnitTypesPhase() {
                        </div>
                        <div className="space-y-2">
                           <Label>Parking Bays</Label>
-                          <Input type="number" value={formData.parkingBays} onChange={e => setFormData(p => ({...p, parkingBays: +e.target.value}))} />
+                          <Input type="number" value={formData.parkingBays} onFocus={(e) => e.target.select()} onChange={e => setFormData(p => ({...p, parkingBays: +e.target.value}))} />
                        </div>
                        <div className="space-y-2">
                           <Label>Parking Type</Label>
@@ -348,13 +352,13 @@ export function UnitTypesPhase() {
                        <div className="space-y-2">
                           <Label>Unit Size (m²)</Label>
                           <div className="flex gap-2">
-                             <Input type="number" placeholder="From" value={formData.sizeFrom} onChange={e => setFormData(p => ({...p, sizeFrom: +e.target.value}))} />
-                             <Input type="number" placeholder="To (Optional)" value={formData.sizeTo} onChange={e => setFormData(p => ({...p, sizeTo: +e.target.value}))} />
+                             <Input type="number" placeholder="From" value={formData.sizeFrom} onFocus={(e) => e.target.select()} onChange={e => setFormData(p => ({...p, sizeFrom: +e.target.value}))} />
+                             <Input type="number" placeholder="To (Optional)" value={formData.sizeTo} onFocus={(e) => e.target.select()} onChange={e => setFormData(p => ({...p, sizeTo: +e.target.value}))} />
                           </div>
                        </div>
                        <div className="space-y-2">
                           <Label>Erf/Garden Size (Optional)</Label>
-                          <Input type="number" placeholder="m²" value={formData.yardSize} onChange={e => setFormData(p => ({...p, yardSize: +e.target.value}))} />
+                          <Input type="number" placeholder="m²" value={formData.yardSize} onFocus={(e) => e.target.select()} onChange={e => setFormData(p => ({...p, yardSize: +e.target.value}))} />
                        </div>
                     </div>
                  </div>
@@ -394,7 +398,7 @@ export function UnitTypesPhase() {
                                   <span className="text-slate-400 font-medium w-8">From</span>
                                   <div className="relative flex-1">
                                       <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">R</span>
-                                      <Input className="pl-8" type="number" placeholder="0" value={formData.priceFrom} onChange={e => setFormData(p => ({...p, priceFrom: +e.target.value}))} />
+                                      <Input className="pl-8" type="number" placeholder="0" value={formData.priceFrom} onFocus={(e) => e.target.select()} onChange={e => setFormData(p => ({...p, priceFrom: +e.target.value}))} />
                                   </div>
                                </div>
                                {formData.priceFrom !== formData.priceTo && (
@@ -402,7 +406,7 @@ export function UnitTypesPhase() {
                                      <span className="text-slate-400 font-medium w-8">To</span>
                                      <div className="relative flex-1">
                                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">R</span>
-                                         <Input className="pl-8" type="number" placeholder="0" value={formData.priceTo} onChange={e => setFormData(p => ({...p, priceTo: +e.target.value}))} />
+                                         <Input className="pl-8" type="number" placeholder="0" value={formData.priceTo} onFocus={(e) => e.target.select()} onChange={e => setFormData(p => ({...p, priceTo: +e.target.value}))} />
                                      </div>
                                   </div>
                                )}
@@ -430,14 +434,14 @@ export function UnitTypesPhase() {
                                       <span className="text-xs text-slate-500 uppercase tracking-wider">Min</span>
                                       <div className="relative">
                                           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">R</span>
-                                          <Input className="pl-8 bg-white" type="number" placeholder="Min" value={formData.monthlyLevyFrom} onChange={e => setFormData(p => ({...p, monthlyLevyFrom: +e.target.value}))} />
+                                          <Input className="pl-8 bg-white" type="number" placeholder="Min" value={formData.monthlyLevyFrom} onFocus={(e) => e.target.select()} onChange={e => setFormData(p => ({...p, monthlyLevyFrom: +e.target.value}))} />
                                       </div>
                                   </div>
                                   <div className="space-y-1">
                                       <span className="text-xs text-slate-500 uppercase tracking-wider">Max</span>
                                       <div className="relative">
                                           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">R</span>
-                                          <Input className="pl-8 bg-white" type="number" placeholder="Max" value={formData.monthlyLevyTo} onChange={e => setFormData(p => ({...p, monthlyLevyTo: +e.target.value}))} />
+                                          <Input className="pl-8 bg-white" type="number" placeholder="Max" value={formData.monthlyLevyTo} onFocus={(e) => e.target.select()} onChange={e => setFormData(p => ({...p, monthlyLevyTo: +e.target.value}))} />
                                       </div>
                                   </div>
                               </div>
@@ -452,14 +456,14 @@ export function UnitTypesPhase() {
                                       <span className="text-xs text-slate-500 uppercase tracking-wider">Min</span>
                                       <div className="relative">
                                           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">R</span>
-                                          <Input className="pl-8 bg-white" type="number" placeholder="Min" value={formData.ratesAndTaxesFrom} onChange={e => setFormData(p => ({...p, ratesAndTaxesFrom: +e.target.value}))} />
+                                          <Input className="pl-8 bg-white" type="number" placeholder="Min" value={formData.ratesAndTaxesFrom} onFocus={(e) => e.target.select()} onChange={e => setFormData(p => ({...p, ratesAndTaxesFrom: +e.target.value}))} />
                                       </div>
                                   </div>
                                   <div className="space-y-1">
                                       <span className="text-xs text-slate-500 uppercase tracking-wider">Max</span>
                                       <div className="relative">
                                           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">R</span>
-                                          <Input className="pl-8 bg-white" type="number" placeholder="Max" value={formData.ratesAndTaxesTo} onChange={e => setFormData(p => ({...p, ratesAndTaxesTo: +e.target.value}))} />
+                                          <Input className="pl-8 bg-white" type="number" placeholder="Max" value={formData.ratesAndTaxesTo} onFocus={(e) => e.target.select()} onChange={e => setFormData(p => ({...p, ratesAndTaxesTo: +e.target.value}))} />
                                       </div>
                                   </div>
                               </div>
@@ -606,11 +610,11 @@ export function UnitTypesPhase() {
                     <div className="grid md:grid-cols-3 gap-6">
                        <div className="space-y-2">
                           <Label className="text-green-600">Available Units</Label>
-                          <Input type="number" className="border-green-200 focus:border-green-500" value={formData.availableUnits} onChange={e => setFormData(p => ({...p, availableUnits: +e.target.value}))} />
+                          <Input type="number" className="border-green-200 focus:border-green-500" value={formData.availableUnits} onFocus={(e) => e.target.select()} onChange={e => setFormData(p => ({...p, availableUnits: +e.target.value}))} />
                        </div>
                        <div className="space-y-2">
                           <Label className="text-blue-600">Reserved / Under Offer</Label>
-                          <Input type="number" className="border-blue-200 focus:border-blue-500" value={formData.reservedUnits} onChange={e => setFormData(p => ({...p, reservedUnits: +e.target.value}))} />
+                          <Input type="number" className="border-blue-200 focus:border-blue-500" value={formData.reservedUnits} onFocus={(e) => e.target.select()} onChange={e => setFormData(p => ({...p, reservedUnits: +e.target.value}))} />
                        </div>
                        <div className="space-y-2">
                           <Label className="text-slate-600">Sold Units (Historical)</Label>
