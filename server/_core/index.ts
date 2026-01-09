@@ -148,9 +148,25 @@ async function startServer() {
   const partnerRouter = await import('../partnerRouter');
   app.use('/api/partners', partnerRouter.default);
 
+  // Content Approval API
+  const contentRouter = await import('../contentRouter');
+  app.use('/api/content', contentRouter.default);
+
+  // Topics Navigation API
+  const topicsRouter = await import('../topicsRouter');
+  app.use('/api/topics', topicsRouter.default);
+
+  // Partner Subscription API
+  const partnerSubscriptionRouter = await import('../partnerSubscriptionRouter');
+  app.use('/api/subscriptions', partnerSubscriptionRouter.default);
+
+  // Partner Boost Campaign API
+  const partnerBoostCampaignRouter = await import('../partnerBoostCampaignRouter');
+  app.use('/api/boosts', partnerBoostCampaignRouter.default);
+
   // Partner Lead Generation API
   const partnerLeadRouter = await import('../partnerLeadRouter');
-  app.use('/api/partner-leads', partnerLeadRouter.default);
+  app.use('/api/leads', partnerLeadRouter.default);
   // development mode uses Vite, production mode serves static files
   // Skip static file serving if SKIP_FRONTEND env var is set (for Railway backend-only deployment)
   console.log('[Server] NODE_ENV:', process.env.NODE_ENV);

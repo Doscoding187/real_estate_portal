@@ -354,7 +354,7 @@ Launch when ALL are true:
 - [x] 20. Checkpoint - Ensure monetization tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
-- [-] 21. Implement API Endpoints
+- [x] 21. Implement API Endpoints
   - [x] 21.1 Create Partner API routes
     - POST /api/partners - Register partner
     - GET /api/partners/:id - Get partner profile
@@ -376,13 +376,13 @@ Launch when ALL are true:
     - PUT /api/subscriptions/:id - Upgrade subscription
     - DELETE /api/subscriptions/:id - Cancel subscription
     - _Requirements: 7.1, 7.4, 7.5_
-  - [-] 21.5 Create Boost API routes
+  - [x] 21.5 Create Boost API routes
     - POST /api/boosts - Create boost campaign
     - PUT /api/boosts/:id/activate - Activate campaign
     - PUT /api/boosts/:id/pause - Pause campaign
     - GET /api/boosts/:id/analytics - Get campaign analytics
     - _Requirements: 8.1, 8.4, 8.5_
-  - [ ] 21.6 Create Lead API routes
+  - [x] 21.6 Create Lead API routes
     - POST /api/leads - Create lead
     - GET /api/partners/:id/leads - Get partner leads
     - POST /api/leads/:id/dispute - Dispute lead
@@ -393,7 +393,7 @@ Launch when ALL are true:
     - Horizontal scrollable topic list
     - Active topic highlighting
     - _Requirements: 3.1_
-  - [ ] 22.2 Create Content Badge component
+  - [-] 22.2 Create Content Badge component
     - Render badge in top-left corner
     - Support all badge types with correct colors
     - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.5, 4.6_

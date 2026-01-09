@@ -388,7 +388,7 @@ export function UnitTypesPhase() {
                        </div>
                        <div className="space-y-2">
                           <Label>Parking Bays</Label>
-                          <Input type="number" value={formData.parkingBays} onFocus={(e) => e.target.select()} onChange={e => setFormData(p => ({...p, parkingBays: +e.target.value}))} />
+                          <Input type="number" value={formData.parkingBays || ''} onFocus={(e) => e.target.select()} onChange={e => setFormData(p => ({...p, parkingBays: +e.target.value}))} />
                        </div>
                        <div className="space-y-2">
                           <Label>Parking Type</Label>
@@ -404,13 +404,13 @@ export function UnitTypesPhase() {
                        <div className="space-y-2">
                           <Label>Unit Size (m²)</Label>
                           <div className="flex gap-2">
-                             <Input type="number" placeholder="From" value={formData.sizeFrom} onFocus={(e) => e.target.select()} onChange={e => setFormData(p => ({...p, sizeFrom: +e.target.value}))} />
-                             <Input type="number" placeholder="To (Optional)" value={formData.sizeTo} onFocus={(e) => e.target.select()} onChange={e => setFormData(p => ({...p, sizeTo: +e.target.value}))} />
+                             <Input type="number" placeholder="From" value={formData.sizeFrom || ''} onFocus={(e) => e.target.select()} onChange={e => setFormData(p => ({...p, sizeFrom: +e.target.value}))} />
+                             <Input type="number" placeholder="To (Optional)" value={formData.sizeTo || ''} onFocus={(e) => e.target.select()} onChange={e => setFormData(p => ({...p, sizeTo: +e.target.value}))} />
                           </div>
                        </div>
                        <div className="space-y-2">
                           <Label>Erf/Garden Size (Optional)</Label>
-                          <Input type="number" placeholder="m²" value={formData.yardSize} onFocus={(e) => e.target.select()} onChange={e => setFormData(p => ({...p, yardSize: +e.target.value}))} />
+                          <Input type="number" placeholder="m²" value={formData.yardSize || ''} onFocus={(e) => e.target.select()} onChange={e => setFormData(p => ({...p, yardSize: +e.target.value}))} />
                        </div>
                     </div>
                  </div>
@@ -435,7 +435,7 @@ export function UnitTypesPhase() {
                                         className="pl-8 h-11 text-lg font-semibold text-slate-900" 
                                         type="number" 
                                         placeholder="0" 
-                                        value={formData.priceFrom} 
+                                        value={formData.priceFrom || ''} 
                                         onFocus={(e) => e.target.select()} 
                                         onChange={e => setFormData(p => ({...p, priceFrom: +e.target.value}))} 
                                       />
@@ -481,7 +481,7 @@ export function UnitTypesPhase() {
                                             <Input 
                                                type="number" 
                                                placeholder="Price" 
-                                               value={extra.price}
+                                               value={extra.price === 0 ? '' : extra.price}
                                                onChange={(e) => {
                                                   const newExtras = [...(formData.extras || [])];
                                                   newExtras[idx].price = +e.target.value;
@@ -730,11 +730,11 @@ export function UnitTypesPhase() {
                     <div className="grid md:grid-cols-3 gap-6">
                        <div className="space-y-2">
                           <Label className="text-green-600">Available Units</Label>
-                          <Input type="number" className="border-green-200 focus:border-green-500" value={formData.availableUnits} onFocus={(e) => e.target.select()} onChange={e => setFormData(p => ({...p, availableUnits: +e.target.value}))} />
+                          <Input type="number" className="border-green-200 focus:border-green-500" value={formData.availableUnits || ''} onFocus={(e) => e.target.select()} onChange={e => setFormData(p => ({...p, availableUnits: +e.target.value}))} />
                        </div>
                        <div className="space-y-2">
                           <Label className="text-blue-600">Reserved / Under Offer</Label>
-                          <Input type="number" className="border-blue-200 focus:border-blue-500" value={formData.reservedUnits} onFocus={(e) => e.target.select()} onChange={e => setFormData(p => ({...p, reservedUnits: +e.target.value}))} />
+                          <Input type="number" className="border-blue-200 focus:border-blue-500" value={formData.reservedUnits || ''} onFocus={(e) => e.target.select()} onChange={e => setFormData(p => ({...p, reservedUnits: +e.target.value}))} />
                        </div>
                        <div className="space-y-2">
                           <Label className="text-slate-600">Sold Units (Historical)</Label>
@@ -748,7 +748,7 @@ export function UnitTypesPhase() {
                              <Label>Total Units (Auto-Calculated Override)</Label>
                              <Input 
                                 type="number" 
-                                value={formData.totalUnits} 
+                                value={formData.totalUnits || ''} 
                                 // Auto-calc total if user hasn't manually overridden (simplified here by allowing direct edit)
                                 onChange={e => setFormData(p => ({...p, totalUnits: +e.target.value}))} 
                                 className="font-semibold"
