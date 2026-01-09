@@ -184,3 +184,18 @@ All three features are currently functional but require refinement to improve us
 8. WHEN a developer saves a development with a pin location THEN the system SHALL store the latitude and longitude coordinates
 9. WHEN a developer returns to edit a development with saved coordinates THEN the system SHALL display the map with the pin at the saved location
 10. WHEN the map loads THEN the system SHALL include zoom controls and a search box for finding specific locations
+
+### Requirement 14: Remove Redundant Security Features Section
+
+**User Story:** As a user creating a property listing, I want security features to be managed through the amenities section only, so that I don't have to enter the same information twice and the interface is simpler.
+
+#### Acceptance Criteria
+
+1. WHEN a user reaches the Additional Information step THEN the system SHALL NOT display a separate "Security Features" section
+2. WHEN a user selects amenities THEN the system SHALL include security-related options (Alarm System, Electric Fence, CCTV, 24hr Security, Access Control, Security Gates) in the amenities list
+3. WHEN a user selects a security amenity THEN the system SHALL store it in the same way as other amenities
+4. WHEN a user views property filters THEN the system SHALL allow filtering by security amenities using the existing "Security" filter
+5. WHEN a user views a property listing THEN the system SHALL display security amenities alongside other amenities in the features section
+6. WHEN migrating existing listings THEN the system SHALL map any existing security features to the corresponding amenities
+7. WHEN a user edits an existing listing with security features THEN the system SHALL display those features as selected amenities
+8. WHEN a user creates a residential development THEN the system SHALL continue to use the existing security features configuration (this change applies to individual listings only)

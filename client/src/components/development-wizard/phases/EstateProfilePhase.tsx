@@ -88,7 +88,7 @@ export function EstateProfilePhase() {
       return;
     }
     
-    setPhase(6); // Forward to Amenities (skipping 5 which was this phase)
+    setPhase(5); // Forward to Amenities
   };
 
   const formatCurrency = (value: number) => {

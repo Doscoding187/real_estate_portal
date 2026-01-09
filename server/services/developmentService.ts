@@ -54,6 +54,12 @@ export async function getPublicDevelopmentBySlug(slugOrId: string) {
       highlights: developments.highlights,
       features: developments.features,
       estateSpecs: developments.estateSpecs,
+      // Global Financials
+      monthlyLevyFrom: developments.monthlyLevyFrom,
+      monthlyLevyTo: developments.monthlyLevyTo,
+      ratesFrom: developments.ratesFrom,
+      ratesTo: developments.ratesTo,
+      transferCostsIncluded: developments.transferCostsIncluded,
       status: developments.status,
       developmentType: developments.developmentType,
       completionDate: developments.completionDate,
@@ -156,6 +162,12 @@ export async function getPublicDevelopment(id: number) {
       province: developments.province,
       priceFrom: developments.priceFrom,
       priceTo: developments.priceTo,
+      // Global Financials
+      monthlyLevyFrom: developments.monthlyLevyFrom,
+      monthlyLevyTo: developments.monthlyLevyTo,
+      ratesFrom: developments.ratesFrom,
+      ratesTo: developments.ratesTo,
+      transferCostsIncluded: developments.transferCostsIncluded,
       status: developments.status,
       developerId: developments.developerId,
     })
@@ -307,14 +319,25 @@ async function persistUnitTypes(developmentId: number, unitTypesData: any[]) {
         sizeTo: Number(unit.sizeTo || unit.sizeFrom || unit.unitSize || 0),
         
         // Pricing
+        // Pricing
         priceFrom: Number(unit.priceFrom || unit.basePriceFrom || 0),
-        priceTo: Number(unit.priceTo || unit.priceFrom || unit.basePriceTo || 0),
+        priceTo: (() => {
+           // Calculate Max Price based on Base + Extras
+           const base = Number(unit.priceFrom || unit.basePriceFrom || 0);
+           const extrasTotal = Array.isArray(unit.extras) 
+              ? unit.extras.reduce((sum: number, item: any) => sum + (Number(item.price) || 0), 0)
+              : 0;
+           return base + extrasTotal;
+        })(),
         
         // NEW FIELDS
-        monthlyLevyFrom: unit.monthlyLevyFrom ? Number(unit.monthlyLevyFrom) : null,
-        monthlyLevyTo: unit.monthlyLevyTo ? Number(unit.monthlyLevyTo) : null,
-        ratesAndTaxesFrom: unit.ratesAndTaxesFrom ? Number(unit.ratesAndTaxesFrom) : null,
-        ratesAndTaxesTo: unit.ratesAndTaxesTo ? Number(unit.ratesAndTaxesTo) : null,
+        monthlyLevyFrom: null, // Deprecated on unit, migrated to development
+        monthlyLevyTo: null,
+        ratesAndTaxesFrom: null,
+        ratesAndTaxesTo: null,
+        
+        // Extras (Base Price + Extras Model)
+        extras: unit.extras ? unit.extras : [], // JSONB
         
         // Inventory
         totalUnits: Number(unit.totalUnits || 0),

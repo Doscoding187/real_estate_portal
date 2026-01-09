@@ -598,6 +598,13 @@ export const developments = mysqlTable("developments", {
 	inquiriesCount: int("inquiries_count").default(0),
 	demandScore: int("demand_score").default(0),
 	isHotSelling: int("is_hot_selling").default(0),
+
+	// Global Financials (NEW)
+	monthlyLevyFrom: decimal("monthly_levy_from", { precision: 10, scale: 2 }).default("0"),
+	monthlyLevyTo: decimal("monthly_levy_to", { precision: 10, scale: 2 }).default("0"),
+	ratesFrom: decimal("rates_from", { precision: 10, scale: 2 }).default("0"),
+	ratesTo: decimal("rates_to", { precision: 10, scale: 2 }).default("0"),
+	transferCostsIncluded: tinyint("transfer_costs_included").default(0),
 	isHighDemand: int("is_high_demand").default(0),
 	// Brand Profile Ownership
 	devOwnerType: mysqlEnum("dev_owner_type", ['platform', 'developer']).default('developer'), // platform = seeded/unmanaged, developer = subscriber-managed
@@ -702,6 +709,9 @@ export const unitTypes = mysqlTable("unit_types", {
 	monthlyLevyTo: int("monthly_levy_to"),
 	ratesAndTaxesFrom: int("rates_and_taxes_from"),
 	ratesAndTaxesTo: int("rates_and_taxes_to"),
+	
+	// Pricing Extras (NEW)
+	extras: json("extras").$type<{ label: string; price: number }[]>(),
 	
 	// Base Features (Defaults for all specs)
 	baseFeatures: json("base_features").$type<{

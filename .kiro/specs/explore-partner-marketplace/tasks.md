@@ -293,8 +293,8 @@ Launch when ALL are true:
     - **Property 11: Boost Budget Depletion**
     - **Validates: Requirements 8.5**
 
-- [ ] 17. Implement Lead Generation Service
-  - [ ] 17.1 Create leads table and service
+- [-] 17. Implement Lead Generation Service
+  - [-] 17.1 Create leads table and service
     - Define lead types and pricing ranges
     - Capture contact info and intent details
     - _Requirements: 9.1, 9.2, 9.3, 9.4_
