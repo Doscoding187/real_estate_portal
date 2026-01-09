@@ -287,6 +287,9 @@ function Router() {
       <Route path="/map-preview-demo" component={MapPreviewDemo} />
       <Route path="/explore" component={ExploreFeed} />
       
+      {/* Partner Profile */}
+      <Route path="/partner/:partnerId" component={PartnerProfile} />
+      
       <Route path="/compare" component={CompareProperties} />
       
       {/* Auth */}

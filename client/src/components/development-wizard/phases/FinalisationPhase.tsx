@@ -120,6 +120,8 @@ export function FinalisationPhase() {
       } else {
         // CREATE MODE
         console.log('[FinalisationPhase] Create mode');
+        console.log('[FinalisationPhase] Debug Identity:', listingIdentity);
+
         const result = await createDevelopment.mutateAsync({
           name: developmentData.name || 'Untitled Development',
           developmentType: (developmentType || 'residential') as 'residential' | 'commercial' | 'mixed_use' | 'estate' | 'complex',

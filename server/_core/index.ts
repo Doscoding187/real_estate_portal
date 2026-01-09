@@ -148,6 +148,10 @@ async function startServer() {
   const partnerRouter = await import('../partnerRouter');
   app.use('/api/partners', partnerRouter.default);
 
+  // Partner Analytics API
+  const partnerAnalyticsRouter = await import('../partnerAnalyticsRouter');
+  app.use('/api/partner-analytics', partnerAnalyticsRouter.default);
+
   // Content Approval API
   const contentRouter = await import('../contentRouter');
   app.use('/api/content', contentRouter.default);
