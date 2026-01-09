@@ -258,6 +258,8 @@ export interface DevelopmentWizardState {
     ratesFrom?: number;
     ratesTo?: number;
     transferCostsIncluded?: boolean;
+    reservePriceIncluded?: boolean;
+    reservePriceAmount?: number;
     
     // Location
     location: {
@@ -451,6 +453,8 @@ const initialState: Omit<DevelopmentWizardState, keyof ReturnType<typeof createA
     ratesFrom: undefined,
     ratesTo: undefined,
     transferCostsIncluded: false,
+    reservePriceIncluded: false,
+    reservePriceAmount: undefined,
 
     location: {
       latitude: '',

@@ -314,6 +314,20 @@ export function FinalisationPhase() {
                               <span>{developmentData.media?.videos?.length || 0} Videos</span>
                               <span>{developmentData.media?.documents?.length || 0} Docs</span>
                           </div>
+                          {(developmentData.transferCostsIncluded || developmentData.reservePriceIncluded) && (
+                            <div className="flex gap-2 mt-2 pt-2 border-t">
+                                {developmentData.transferCostsIncluded && (
+                                    <Badge variant="outline" className="text-emerald-700 bg-emerald-50 border-emerald-200">
+                                        Transfer Costs Included
+                                    </Badge>
+                                )}
+                                {developmentData.reservePriceIncluded && (
+                                    <Badge variant="outline" className="text-amber-700 bg-amber-50 border-amber-200">
+                                        Reserve: R {developmentData.reservePriceAmount?.toLocaleString() || '---'}
+                                    </Badge>
+                                )}
+                            </div>
+                          )}
                       </div>
                   }
               />

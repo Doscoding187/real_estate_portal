@@ -354,6 +354,42 @@ export function OverviewPhase() {
                   </p>
                 </div>
              </div>
+
+             {/* Reserve Price (New) */}
+             <div className="space-y-4 pt-4 border-t border-slate-100">
+                <div className="flex items-center space-x-2 border p-3 rounded-lg bg-slate-50">
+                    <Checkbox 
+                      id="reservePrice" 
+                      checked={developmentData.reservePriceIncluded || false}
+                      onCheckedChange={(checked) => setIdentity({ reservePriceIncluded: checked === true })}
+                    />
+                    <div className="grid gap-1.5 leading-none">
+                      <Label htmlFor="reservePrice" className="cursor-pointer font-medium text-slate-700">
+                        Reserve Price Included?
+                      </Label>
+                      <p className="text-xs text-slate-500">
+                        Does the listing have a minimum reserve price displayed to buyers?
+                      </p>
+                    </div>
+                </div>
+
+                {developmentData.reservePriceIncluded && (
+                    <div className="pl-4 animate-in fade-in slide-in-from-top-2">
+                        <Label className="text-sm font-medium">Reserve Price Amount</Label>
+                        <div className="relative mt-1.5 w-full md:w-1/2">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500">R</span>
+                          <Input
+                            type="number"
+                            className="pl-7"
+                            placeholder="e.g. 1 500 000"
+                            min={0}
+                            value={developmentData.reservePriceAmount || ''}
+                            onChange={(e) => setIdentity({ reservePriceAmount: Number(e.target.value) })}
+                          />
+                        </div>
+                    </div>
+                )}
+             </div>
           </CardContent>
         </Card>
       </div>
