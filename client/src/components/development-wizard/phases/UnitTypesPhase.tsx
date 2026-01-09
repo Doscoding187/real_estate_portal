@@ -1,4 +1,114 @@
-import React, { useState, useRef, useEffect } from 'react';
+import { SortableMediaGrid, type MediaItem as GridMediaItem } from '@/components/media/SortableMediaGrid';
+
+// ... (existing imports)
+
+// ... inside UnitTypesPhase component ...
+
+              <TabsContent value="media" className="mt-0 space-y-8">
+                 {/* Unit Gallery - Full Width */}
+                 <div className="space-y-4">
+                    <div className="flex justify-between items-center">
+                       <h3 className="font-medium flex items-center gap-2"><Image className="w-4 h-4"/> Unit Gallery</h3>
+                       <Button size="sm" variant="outline" onClick={() => document.getElementById('unit-gallery-upload')?.click()}>
+                          <Upload className="w-3 h-3 mr-2"/> Upload Photos
+                       </Button>
+                    </div>
+                    
+                    <input id="unit-gallery-upload" type="file" className="hidden" multiple accept="image/*" onChange={e => e.target.files && handleMediaUpload(Array.from(e.target.files), 'gallery')} />
+                    
+                    <div className="bg-slate-50/50 rounded-xl p-4 border border-slate-200 min-h-[200px]">
+                        {unitGallery.length === 0 ? (
+                            <div 
+                                className="border-2 border-dashed border-slate-300 rounded-xl p-12 text-center hover:bg-slate-50 cursor-pointer transition-colors flex flex-col items-center justify-center h-full"
+                                onClick={() => document.getElementById('unit-gallery-upload')?.click()}
+                            >
+                                <div className="bg-white p-3 rounded-full shadow-sm mb-3">
+                                    <Image className="w-6 h-6 text-slate-400"/>
+                                </div>
+                                <p className="text-sm font-medium text-slate-900">Click to upload unit photos</p>
+                                <p className="text-xs text-slate-500 mt-1">Drag and drop reordering enabled</p>
+                            </div>
+                        ) : (
+                            <SortableMediaGrid
+                                media={unitGallery.map((img, idx) => ({
+                                    id: img.id,
+                                    url: img.url,
+                                    type: 'image',
+                                    category: 'photo',
+                                    fileName: img.fileName,
+                                    isPrimary: idx === 0, // First item is primary
+                                    displayOrder: idx
+                                } as GridMediaItem))}
+                                onReorder={(reordered) => {
+                                    setUnitGallery(reordered.map((r, i) => ({
+                                        id: r.id,
+                                        url: r.url,
+                                        type: 'image',
+                                        category: 'photo',
+                                        isPrimary: i === 0,
+                                        displayOrder: i,
+                                        fileName: r.fileName
+                                    } as MediaItem)));
+                                }}
+                                onRemove={(id) => setUnitGallery(p => p.filter(i => i.id !== id))}
+                                onSetPrimary={(id) => {
+                                    // Move to front
+                                    setUnitGallery(prev => {
+                                        const item = prev.find(i => i.id === id);
+                                        if (!item) return prev;
+                                        const others = prev.filter(i => i.id !== id);
+                                        return [item, ...others];
+                                    });
+                                }}
+                                className="grid-cols-2 md:grid-cols-4 lg:grid-cols-5"
+                            />
+                        )}
+                    </div>
+                 </div>
+
+                 {/* Floor Plans - Full Width */}
+                 <div className="space-y-4 pt-6 border-t border-slate-100">
+                    <div className="flex justify-between items-center">
+                       <h3 className="font-medium flex items-center gap-2"><Layers className="w-4 h-4"/> Floor Plans</h3>
+                       <Button size="sm" variant="outline" onClick={() => document.getElementById('floorplan-upload')?.click()}>
+                          <Upload className="w-3 h-3 mr-2"/> Upload Floor Plans
+                       </Button>
+                    </div>
+                    
+                    <input id="floorplan-upload" type="file" className="hidden" multiple accept="image/*,application/pdf" onChange={e => e.target.files && handleMediaUpload(Array.from(e.target.files), 'floorPlans')} />
+
+                    <div className="bg-slate-50/50 rounded-xl p-4 border border-slate-200">
+                       {floorPlanImages.length === 0 ? (
+                           <div 
+                              className="border-2 border-dashed border-slate-300 rounded-xl p-8 text-center hover:bg-slate-50 cursor-pointer transition-colors"
+                              onClick={() => document.getElementById('floorplan-upload')?.click()}
+                           >
+                              <p className="text-sm text-slate-600">Click to upload PDF/Images</p>
+                           </div>
+                       ) : (
+                           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                              {floorPlanImages.map(d => (
+                                 <div key={d.id} className="relative group flex items-start p-3 bg-white rounded-lg border border-slate-200 shadow-sm hover:shadow-md transition-all">
+                                    <div className="p-2 bg-blue-50 text-blue-600 rounded mr-3">
+                                        <FileImage className="w-5 h-5"/>
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <p className="text-sm font-medium text-slate-900 truncate">{d.fileName || 'Floor Plan'}</p>
+                                        <p className="text-xs text-slate-500 uppercase">{d.type === 'pdf' ? 'PDF Document' : 'Image File'}</p>
+                                    </div>
+                                    <button 
+                                        onClick={() => setFloorPlanImages(p => p.filter(i => i.id !== d.id))}
+                                        className="text-slate-400 hover:text-red-500 transition-colors p-1"
+                                    >
+                                        <X className="w-4 h-4"/>
+                                    </button>
+                                 </div>
+                              ))}
+                           </div>
+                       )}
+                    </div>
+                 </div>
+              </TabsContent>
 import { useDevelopmentWizard, type UnitType, type MediaItem } from '@/hooks/useDevelopmentWizard';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
