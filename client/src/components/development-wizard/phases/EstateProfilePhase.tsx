@@ -94,7 +94,7 @@ export function EstateProfilePhase() {
       return;
     }
     
-    setPhase(5); // Forward to Amenities
+    setPhase(7); // Forward to Amenities
   };
 
   const formatCurrency = (value: number) => {
