@@ -109,6 +109,7 @@ export function FinalisationPhase() {
             amenities: selectedAmenities || developmentData.amenities || [],
             features,
             highlights: developmentData.highlights || [],
+            unitTypes: unitTypes || [],
             images,
             videos,
           }
@@ -130,6 +131,7 @@ export function FinalisationPhase() {
           amenities: selectedAmenities || developmentData.amenities || [],
           features,
           highlights: developmentData.highlights || [],
+          unitTypes: unitTypes || [],
           images,
           priceFrom: unitTypes[0]?.priceFrom || unitTypes[0]?.basePriceFrom,
           priceTo: unitTypes[unitTypes.length - 1]?.priceTo || unitTypes[unitTypes.length - 1]?.basePriceTo,

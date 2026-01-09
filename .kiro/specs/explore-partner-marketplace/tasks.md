@@ -237,36 +237,36 @@ Launch when ALL are true:
     - **Property 20: Progressive Disclosure Thresholds**
     - **Validates: Requirements 14.2, 14.3, 14.4**
 
-- [ ] 13. Checkpoint - Ensure cold start tests pass
+- [x] 13. Checkpoint - Ensure cold start tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 14. Implement Quality Scoring Service
-  - [ ] 14.1 Create content_quality_scores table and service
+- [x] 14. Implement Quality Scoring Service
+  - [x] 14.1 Create content_quality_scores table and service
     - Calculate initial score from metadata completeness
     - _Requirements: 11.1_
-  - [ ] 14.2 Implement engagement-based score updates
+  - [x] 14.2 Implement engagement-based score updates
     - Increase score for watch time, saves, click-throughs
     - Decrease score for quick skips, reports
     - _Requirements: 11.2, 11.3_
-  - [ ] 14.3 Implement visibility reduction for low scores
+  - [x] 14.3 Implement visibility reduction for low scores
     - Reduce feed visibility when score below threshold
     - _Requirements: 11.4_
-  - [ ] 14.4 Implement underperformance notifications
+  - [x] 14.4 Implement underperformance notifications
     - Notify partners of consistently underperforming content
     - _Requirements: 11.6_
   - [ ]* 14.5 Write property test for quality score updates
     - **Property 15: Quality Score Engagement Update**
     - **Validates: Requirements 11.2, 11.3**
 
-- [ ] 15. Implement Subscription Service
-  - [ ] 15.1 Create partner_subscriptions table and service
+- [x] 15. Implement Subscription Service
+  - [x] 15.1 Create partner_subscriptions table and service
     - Define tiers: free, basic (R500), premium (R2000), featured (R5000)
     - _Requirements: 7.1, 7.2, 7.3, 7.6_
-  - [ ] 15.2 Implement feature access control
+  - [x] 15.2 Implement feature access control
     - Map features to subscription tiers
     - Check feature access on relevant operations
     - _Requirements: 7.1, 7.2, 7.3_
-  - [ ] 15.3 Implement subscription state transitions
+  - [x] 15.3 Implement subscription state transitions
     - Handle upgrades with immediate benefit application
     - Handle lapses with downgrade to basic
     - _Requirements: 7.4, 7.5_

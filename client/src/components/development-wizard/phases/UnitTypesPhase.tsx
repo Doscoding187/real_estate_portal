@@ -515,26 +515,89 @@ export function UnitTypesPhase() {
               </TabsContent>
 
               <TabsContent value="features" className="mt-0 space-y-6">
-                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {Object.entries(UNIT_FEATURE_CATEGORIES).map(([catKey, items]) => (
-                       <Card key={catKey} className="border-slate-200 shadow-sm">
-                          <CardHeader className="py-3 px-4 bg-slate-50/50 border-b">
-                             <CardTitle className="text-sm capitalize text-slate-700">{catKey}</CardTitle>
-                          </CardHeader>
-                          <CardContent className="p-4 space-y-2">
-                             {items.map(item => (
-                                <div key={item} className="flex items-center space-x-2">
-                                   <Checkbox 
-                                      id={`${catKey}-${item}`} 
-                                      checked={(formData.features?.[catKey as keyof typeof formData.features] || []).includes(item)}
-                                      onCheckedChange={() => handleFeatureToggle(catKey as any, item)}
-                                   />
-                                   <Label htmlFor={`${catKey}-${item}`} className="text-sm font-normal cursor-pointer">{item}</Label>
+                 <div className="space-y-6">
+                    {Object.entries(UNIT_FEATURE_CATEGORIES).map(([catKey, items]) => {
+                       const cat = catKey as keyof typeof formData.features;
+                       const currentFeatures = formData.features?.[cat] || [];
+                       const customItems = currentFeatures.filter(f => !items.includes(f));
+                       
+                       return (
+                          <Card key={catKey} className="border-slate-200 shadow-sm overflow-hidden">
+                             <CardHeader className="py-3 px-4 bg-slate-50/50 border-b flex flex-row items-center justify-between">
+                                <CardTitle className="text-sm capitalize text-slate-700">{catKey}</CardTitle>
+                                {currentFeatures.length > 0 && <Badge variant="secondary" className="font-normal text-xs">{currentFeatures.length} selected</Badge>}
+                             </CardHeader>
+                             <CardContent className="p-6 space-y-6">
+                                <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-4">
+                                   {items.map(item => (
+                                      <div key={item} className="flex items-center space-x-2">
+                                         <Checkbox 
+                                            id={`${catKey}-${item}`} 
+                                            checked={currentFeatures.includes(item)}
+                                            onCheckedChange={() => handleFeatureToggle(cat as any, item)}
+                                         />
+                                         <Label htmlFor={`${catKey}-${item}`} className="text-sm font-normal cursor-pointer select-none">{item}</Label>
+                                      </div>
+                                   ))}
                                 </div>
-                             ))}
-                          </CardContent>
-                       </Card>
-                    ))}
+
+                                {customItems.length > 0 && (
+                                   <div className="space-y-2 pt-4 border-t border-slate-100">
+                                      <Label className="text-xs text-slate-500 uppercase tracking-wider">Custom additions</Label>
+                                      <div className="flex flex-wrap gap-2">
+                                         {customItems.map(item => (
+                                            <div key={item} className="flex items-center gap-1 bg-blue-50 text-blue-700 px-2 py-1 rounded text-sm border border-blue-100">
+                                               <span>{item}</span>
+                                               <button 
+                                                  type="button"
+                                                  onClick={() => handleFeatureToggle(cat as any, item)}
+                                                  className="hover:bg-blue-100 rounded-full p-0.5 transition-colors"
+                                               >
+                                                  <X className="w-3 h-3" />
+                                               </button>
+                                            </div>
+                                         ))}
+                                      </div>
+                                   </div>
+                                )}
+
+                                <div className="flex gap-2 items-center pt-2">
+                                   <Input 
+                                      placeholder={`Add other ${catKey} feature...`} 
+                                      className="h-9 text-sm max-w-sm"
+                                      onKeyDown={(e) => {
+                                         if (e.key === 'Enter') {
+                                            e.preventDefault();
+                                            const target = e.currentTarget;
+                                            const val = target.value.trim();
+                                            if (val && !currentFeatures.includes(val)) {
+                                               handleFeatureToggle(cat as any, val);
+                                               target.value = '';
+                                            }
+                                         }
+                                      }}
+                                   />
+                                   <Button 
+                                      type="button" 
+                                      variant="ghost" 
+                                      size="sm" 
+                                      className="h-9 px-2 text-slate-500 hover:text-blue-600 hover:bg-blue-50"
+                                      onClick={(e) => {
+                                         const input = e.currentTarget.previousElementSibling as HTMLInputElement;
+                                         const val = input.value.trim();
+                                         if (val && !currentFeatures.includes(val)) {
+                                            handleFeatureToggle(cat as any, val);
+                                            input.value = '';
+                                         }
+                                      }}
+                                   >
+                                      <Plus className="w-4 h-4 mr-1"/> Add
+                                   </Button>
+                                </div>
+                             </CardContent>
+                          </Card>
+                       );
+                    })}
                  </div>
               </TabsContent>
 

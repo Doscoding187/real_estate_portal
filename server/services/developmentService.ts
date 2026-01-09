@@ -204,13 +204,21 @@ async function createDevelopment(developerId: number, data: any, metadata: any =
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
+  // Extract unitTypes from data to prevent Drizzle error
+  const { unitTypes: unitTypesData, ...developmentData } = data;
+
   const [result] = await db.insert(developments).values({
-    ...data,
+    ...developmentData,
     ...metadata,
     developerId,
     // Ensure amenities are stringified if passed as array, or let Drizzle handle JSON if column is json
-    amenities: Array.isArray(data.amenities) ? data.amenities : data.amenities
+    amenities: Array.isArray(developmentData.amenities) ? developmentData.amenities : developmentData.amenities
   }).returning();
+
+  // Persist Unit Types
+  if (unitTypesData && Array.isArray(unitTypesData) && unitTypesData.length > 0) {
+     await persistUnitTypes(result.id, unitTypesData);
+  }
   
   return result;
 }
@@ -255,15 +263,85 @@ async function updateDevelopment(id: number, developerId: number, data: any) {
     }
   }
 
+  // Extract unitTypes from data to prevent Drizzle error on development update
+  const { unitTypes: unitTypesData, ...developmentData } = data;
+
   const [result] = await db.update(developments)
     .set({
-      ...data,
-      amenities: Array.isArray(data.amenities) ? data.amenities : data.amenities
+      ...developmentData,
+      amenities: Array.isArray(developmentData.amenities) ? developmentData.amenities : developmentData.amenities
     })
     .where(eq(developments.id, id))
     .returning();
+
+  // Handle Unit Types Persistence
+  if (unitTypesData && Array.isArray(unitTypesData) && unitTypesData.length > 0) {
+    await persistUnitTypes(id, unitTypesData);
+  }
   
   return result;
+}
+
+// Helper: Persist Unit Types
+async function persistUnitTypes(developmentId: number, unitTypesData: any[]) {
+   const db = await getDb();
+   if (!db) return;
+
+   console.log('[Service] persistUnitTypes: Processing', unitTypesData.length, 'unit types for dev', developmentId);
+    
+    for (const unit of unitTypesData) {
+      // Basic validation
+      if (!unit.id) continue;
+      
+      const unitPayload = {
+        developmentId: developmentId,
+        name: unit.name || 'Untitled Unit',
+        bedrooms: Number(unit.bedrooms || 0),
+        bathrooms: Number(unit.bathrooms || 0),
+        parking: unit.parking, // Enum mapped
+        parkingType: unit.parkingType, // Store if schema allows, or map to 'parking'
+        parkingBays: Number(unit.parkingBays || 0),
+        
+        // Dimensions
+        sizeFrom: Number(unit.sizeFrom || unit.unitSize || 0),
+        sizeTo: Number(unit.sizeTo || unit.sizeFrom || unit.unitSize || 0),
+        
+        // Pricing
+        priceFrom: Number(unit.priceFrom || unit.basePriceFrom || 0),
+        priceTo: Number(unit.priceTo || unit.priceFrom || unit.basePriceTo || 0),
+        
+        // NEW FIELDS
+        monthlyLevyFrom: unit.monthlyLevyFrom ? Number(unit.monthlyLevyFrom) : null,
+        monthlyLevyTo: unit.monthlyLevyTo ? Number(unit.monthlyLevyTo) : null,
+        ratesAndTaxesFrom: unit.ratesAndTaxesFrom ? Number(unit.ratesAndTaxesFrom) : null,
+        ratesAndTaxesTo: unit.ratesAndTaxesTo ? Number(unit.ratesAndTaxesTo) : null,
+        
+        // Inventory
+        totalUnits: Number(unit.totalUnits || 0),
+        availableUnits: Number(unit.availableUnits || 0),
+        
+        // Metadata
+        isActive: unit.isActive === false ? 0 : 1, // Default to 1
+        updatedAt: new Date().toISOString()
+      };
+
+      // Check if unit exists
+      const existingUnit = await db.select().from(unitTypes).where(eq(unitTypes.id, unit.id)).limit(1);
+      
+      if (existingUnit.length > 0) {
+        // Update
+        await db.update(unitTypes)
+          .set(unitPayload)
+          .where(eq(unitTypes.id, unit.id));
+      } else {
+        // Insert
+        await db.insert(unitTypes).values({
+          id: unit.id, // Use frontend generated ID
+          ...unitPayload,
+          createdAt: new Date().toISOString()
+        });
+      }
+    }
 }
 
 async function createPhase(developmentId: number, developerId: number, data: any) {

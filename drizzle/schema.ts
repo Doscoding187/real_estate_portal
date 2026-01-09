@@ -698,6 +698,10 @@ export const unitTypes = mysqlTable("unit_types", {
 	// Pricing Details (NEW)
 	transferCostsIncluded: tinyint("transfer_costs_included").default(0), // NEW: Boolean flag
 	monthlyLevy: int("monthly_levy"), // NEW: Monthly levy/HOA estimate in ZAR
+	monthlyLevyFrom: int("monthly_levy_from"),
+	monthlyLevyTo: int("monthly_levy_to"),
+	ratesAndTaxesFrom: int("rates_and_taxes_from"),
+	ratesAndTaxesTo: int("rates_and_taxes_to"),
 	
 	// Base Features (Defaults for all specs)
 	baseFeatures: json("base_features").$type<{
