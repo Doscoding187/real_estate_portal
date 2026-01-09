@@ -523,14 +523,25 @@ const createActions = (
   
   setCurrentStep: (step: number) => set({ currentStep: step }),
 
-  setIdentity: (data: Partial<DevelopmentWizardState['developmentData']>) => set((state) => ({
-    developmentData: {
-      ...state.developmentData,
-      ...data,
-      location: { ...(state.developmentData?.location || {}), ...(data.location || {}) },
-      media: { ...(state.developmentData?.media || { photos: [], videos: [], documents: [] }), ...(data.media || {}) },
-    }
-  })),
+  setIdentity: (data: Partial<DevelopmentWizardState['developmentData']>) => set((state) => {
+      const mergedData = {
+        ...state.developmentData,
+        ...data,
+        location: { ...(state.developmentData?.location || {}), ...(data.location || {}) },
+        media: { ...(state.developmentData?.media || { photos: [], videos: [], documents: [] }), ...(data.media || {}) },
+      };
+      
+      return {
+        developmentData: mergedData,
+        // Sync Overview Description if it changed
+        overview: { 
+            ...state.overview, 
+            description: mergedData.description || state.overview.description,
+            // Sync highlights if somehow data contained it (unlikely for setIdentity but safe)
+            highlights: mergedData.highlights || state.overview.highlights
+        } 
+      };
+  }),
 
   // THE BRAIN: Logic Engine
   setClassification: (data: Partial<DevelopmentWizardState['classification']>) => set((state) => {
@@ -967,13 +978,21 @@ const createActions = (
     developmentData: { ...state.developmentData, amenities: state.developmentData.amenities.filter(x => x !== a) }
   })),
   
-  addHighlight: (h: string) => set((state) => ({
-    developmentData: { ...state.developmentData, highlights: [...state.developmentData.highlights, h] }
-  })),
-  
-  removeHighlight: (i: number) => set((state) => ({
-    developmentData: { ...state.developmentData, highlights: state.developmentData.highlights.filter((_, idx) => idx !== i) }
-  })),
+  addHighlight: (h: string) => set((state) => {
+    const newHighlights = [...(state.developmentData.highlights || []), h];
+    return {
+      developmentData: { ...state.developmentData, highlights: newHighlights },
+      overview: { ...state.overview, highlights: newHighlights, description: state.developmentData.description } // Sync overview
+    };
+  }),
+
+  removeHighlight: (index: number) => set((state) => {
+    const newHighlights = state.developmentData.highlights.filter((_, i) => i !== index);
+    return {
+      developmentData: { ...state.developmentData, highlights: newHighlights },
+      overview: { ...state.overview, highlights: newHighlights }
+    };
+  }),
   
   // Robust Media Implementation
   addMedia: (item: any) => set((state) => {
