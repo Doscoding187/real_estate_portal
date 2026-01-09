@@ -22,6 +22,7 @@ import { ModernCard } from '@/components/ui/soft/ModernCard';
 import { cardVariants, buttonVariants } from '@/lib/animations/exploreAnimations';
 import { designTokens } from '@/lib/design-tokens';
 import { cn } from '@/lib/utils';
+import { ContentBadgeOverlay, type BadgeType } from '../ContentBadge';
 
 interface VideoCardProps {
   video: {
@@ -34,6 +35,7 @@ interface VideoCardProps {
     creatorName: string;
     creatorAvatar?: string;
     isSaved?: boolean;
+    badgeType?: BadgeType; // Requirements 4.1, 4.2, 4.3, 4.4, 4.5, 4.6
   };
   onClick: () => void;
   onSave: () => void;
@@ -88,6 +90,11 @@ export function VideoCard({ video, onClick, onSave, enablePreview = false }: Vid
     >
       {/* Thumbnail */}
       <div className="relative aspect-[9/16] overflow-hidden bg-gray-100">
+        {/* Content Badge - Requirements 4.1, 4.7 */}
+        {video.badgeType && (
+          <ContentBadgeOverlay type={video.badgeType} size="sm" />
+        )}
+
         {/* Loading skeleton */}
         {!imageLoaded && (
           <motion.div

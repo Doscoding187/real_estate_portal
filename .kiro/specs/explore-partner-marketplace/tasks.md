@@ -388,12 +388,12 @@ Launch when ALL are true:
     - POST /api/leads/:id/dispute - Dispute lead
     - _Requirements: 9.4, 9.5, 9.6_
 
-- [ ] 22. Implement Frontend Components
-  - [ ] 22.1 Create Topics navigation component
+- [-] 22. Implement Frontend Components
+  - [-] 22.1 Create Topics navigation component
     - Horizontal scrollable topic list
     - Active topic highlighting
     - _Requirements: 3.1_
-  - [-] 22.2 Create Content Badge component
+  - [x] 22.2 Create Content Badge component
     - Render badge in top-left corner
     - Support all badge types with correct colors
     - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.5, 4.6_

@@ -191,7 +191,6 @@ export class TopicsService {
       createdAt: dbTopic.createdAt,
     };
   }
-}
 
   /**
    * Get content for a specific topic with filtering

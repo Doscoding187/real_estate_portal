@@ -18,6 +18,7 @@ import { useState } from 'react';
 import { SaveButton } from '../SaveButton';
 import { ModernCard } from '@/components/ui/soft/ModernCard';
 import { designTokens } from '@/lib/design-tokens';
+import { ContentBadgeOverlay, type BadgeType } from '../ContentBadge';
 
 interface PropertyCardProps {
   property: {
@@ -32,6 +33,7 @@ interface PropertyCardProps {
     imageUrl: string;
     propertyType: string;
     isSaved?: boolean;
+    badgeType?: BadgeType; // Requirements 4.1, 4.2
   };
   onClick: () => void;
   onSave: () => void;
@@ -66,6 +68,11 @@ export function PropertyCard({ property, onClick, onSave }: PropertyCardProps) {
     >
       {/* Image */}
       <div className="relative aspect-[4/3] overflow-hidden bg-gray-100">
+        {/* Content Badge - Requirements 4.1, 4.2, 4.7 */}
+        {property.badgeType && (
+          <ContentBadgeOverlay type={property.badgeType} size="sm" />
+        )}
+
         {!imageLoaded && (
           <div className="absolute inset-0 animate-pulse bg-gray-200" />
         )}

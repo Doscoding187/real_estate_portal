@@ -14,6 +14,7 @@ import { ModernCard } from '@/components/ui/soft/ModernCard';
 import { designTokens } from '@/lib/design-tokens';
 import { cardVariants } from '@/lib/animations/exploreAnimations';
 import { cn } from '@/lib/utils';
+import { ContentBadgeOverlay, type BadgeType } from '../ContentBadge';
 
 interface InsightCardProps {
   insight: {
@@ -22,6 +23,7 @@ interface InsightCardProps {
     description: string;
     imageUrl?: string;
     insightType: 'market-trend' | 'price-analysis' | 'investment-tip' | 'area-spotlight';
+    badgeType?: BadgeType; // Requirements 4.1, 4.3, 4.5, 4.6
     data?: {
       value: string;
       change?: number;
@@ -111,6 +113,11 @@ export function InsightCard({ insight, onClick }: InsightCardProps) {
         'relative p-4 bg-gradient-to-br text-white',
         colors.gradient
       )}>
+        {/* Content Badge - Requirements 4.1, 4.7 */}
+        {insight.badgeType && (
+          <ContentBadgeOverlay type={insight.badgeType} size="sm" />
+        )}
+
         <div className="flex items-start justify-between mb-3">
           {/* Icon with glass effect */}
           <motion.div

@@ -18,6 +18,7 @@ import { useState } from 'react';
 import { ModernCard } from '@/components/ui/soft/ModernCard';
 import { designTokens } from '@/lib/design-tokens';
 import { motion } from 'framer-motion';
+import { ContentBadgeOverlay, type BadgeType } from '../ContentBadge';
 
 interface NeighbourhoodCardProps {
   neighbourhood: {
@@ -30,6 +31,7 @@ interface NeighbourhoodCardProps {
     priceChange?: number;
     followerCount?: number;
     highlights?: string[];
+    badgeType?: BadgeType; // Requirements 4.1, 4.2, 4.3, 4.4, 4.5, 4.6
   };
   onClick: () => void;
   onFollow: () => void;
@@ -65,6 +67,11 @@ export function NeighbourhoodCard({ neighbourhood, onClick, onFollow }: Neighbou
     >
       {/* Image */}
       <div className="relative aspect-[16/10] overflow-hidden bg-gray-100">
+        {/* Content Badge - Requirements 4.1, 4.7 */}
+        {neighbourhood.badgeType && (
+          <ContentBadgeOverlay type={neighbourhood.badgeType} size="sm" />
+        )}
+
         {!imageLoaded && (
           <div className="absolute inset-0 animate-pulse bg-gray-200" />
         )}
