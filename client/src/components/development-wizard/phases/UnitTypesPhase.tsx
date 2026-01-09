@@ -162,7 +162,9 @@ export function UnitTypesPhase() {
     updateUnitType, 
     removeUnitType, 
     setPhase,
-    validatePhase
+    validatePhase,
+    unitTypeDraft,
+    setUnitTypeDraft
   } = useDevelopmentWizard();
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -201,6 +203,23 @@ export function UnitTypesPhase() {
   const [floorPlanImages, setFloorPlanImages] = useState<MediaItem[]>([]);
   const presignMutation = trpc.upload.presign.useMutation();
 
+  // Auto-Save Draft (Only when adding new unit)
+  useEffect(() => {
+    if (isDialogOpen && !editingId) {
+        const timer = setTimeout(() => {
+            setUnitTypeDraft({
+                ...formData,
+                baseMedia: {
+                    gallery: unitGallery,
+                    floorPlans: floorPlanImages,
+                    renders: []
+                }
+            });
+        }, 500); // Debounce 500ms
+        return () => clearTimeout(timer);
+    }
+  }, [formData, unitGallery, floorPlanImages, isDialogOpen, editingId, setUnitTypeDraft]);
+
   // Reset Logic
   const resetForm = () => {
     setFormData({
@@ -223,16 +242,33 @@ export function UnitTypesPhase() {
       setEditingId(unit.id);
       setFormData({
         ...unit,
-        ...unit,
         extras: unit.extras || [],
         features: unit.features || { kitchen: [], bathroom: [], flooring: [], storage: [], climate: [], outdoor: [], security: [], other: [] }
       });
       setUnitGallery(unit.baseMedia?.gallery || []);
       setFloorPlanImages(unit.baseMedia?.floorPlans || []);
     } else {
-      resetForm();
+      // Check for Draft
+      if (unitTypeDraft) {
+          toast.info("Resumed your unsaved unit type", { icon: <Sparkles className="w-4 h-4 text-blue-500"/> });
+          setFormData({
+              ...unitTypeDraft,
+              features: unitTypeDraft.features || { kitchen: [], bathroom: [], flooring: [], storage: [], climate: [], outdoor: [], security: [], other: [] }
+          });
+          setUnitGallery(unitTypeDraft.baseMedia?.gallery || []);
+          setFloorPlanImages(unitTypeDraft.baseMedia?.floorPlans || []);
+          setEditingId(null);
+      } else {
+          resetForm();
+      }
     }
     setIsDialogOpen(true);
+  };
+  
+  const handleDiscardDraft = () => {
+      setUnitTypeDraft(null);
+      resetForm();
+      toast.success("Draft discarded");
   };
 
   // --- LOGIC HANDLERS ---
@@ -285,6 +321,7 @@ export function UnitTypesPhase() {
       toast.success('Unit type updated');
     } else {
       addUnitType(newUnit);
+      setUnitTypeDraft(null); // Clear draft on successful creation
       toast.success('Unit type created');
     }
 
@@ -292,12 +329,16 @@ export function UnitTypesPhase() {
       // Small delay to reset properly
       setTimeout(() => {
         resetForm();
-        setFormData(prev => ({ ...prev, name: '' })); // clear crucial fields but maybe keep generic ones? 
-        // Actually specs usually clear. Let's fully reset.
+        setUnitTypeDraft(null); // Ensure draft is cleared for next one
+        setFormData(prev => ({ ...prev, name: '' })); 
         setActiveTab('basic');
       }, 100);
     } else {
       setIsDialogOpen(false);
+      // We do NOT clear draft here if we closed, because we want consistency?
+      // Wait, if we successfully saved, we SHOULD close and clear.
+      // Yes, setUnitTypeDraft(null) above handles it for simple save.
+      // AddAnother handles it too.
     }
   };
 
@@ -803,10 +844,22 @@ export function UnitTypesPhase() {
                          if(curr < tabs.length - 1) setActiveTab(tabs[curr+1]);
                       }}>Next</Button>
                    ) : (
-                      <>
-                        <Button variant="secondary" onClick={() => handleSave(true)}><Copy className="w-4 h-4 mr-2"/> Save & Add Another</Button>
-                        <Button onClick={() => handleSave(false)} className="bg-green-600 hover:bg-green-700">Save & Close</Button>
-                      </>
+                      <DialogFooter className="px-6 py-4 border-t bg-slate-50 flex justify-between items-center sm:justify-between">
+           <div className="flex gap-2">
+              <Button variant="ghost" className="text-slate-500" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
+              {!editingId && (
+                  <Button variant="ghost" className="text-red-400 hover:text-red-500 hover:bg-red-50" onClick={handleDiscardDraft}>
+                      Clear Form
+                  </Button>
+              )}
+           </div>
+           <div className="flex gap-2">
+              <Button variant="outline" onClick={() => handleSave(true)}>Save & Add Another</Button>
+              <Button onClick={() => handleSave(false)} className="bg-gradient-to-r from-blue-600 to-purple-600 text-white">
+                {editingId ? 'Update Unit Type' : 'Create Unit Type'}
+              </Button>
+           </div>
+        </DialogFooter>
                    )}
                 </div>
              </div>

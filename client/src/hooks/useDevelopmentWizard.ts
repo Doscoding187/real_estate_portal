@@ -325,6 +325,9 @@ export interface DevelopmentWizardState {
   draftId?: number;
   editingId?: number; // ID of development being edited
   
+  // NEW: Unit Type Draft (Persistence against accidental closing)
+  unitTypeDraft?: Partial<UnitType> | null;
+  
   // ACTIONS ==================================================================
   
   // Navigation
@@ -351,6 +354,7 @@ export interface DevelopmentWizardState {
   addUnitType: (unitType: Omit<UnitType, 'id'>) => void;
   updateUnitType: (id: string, updates: Partial<UnitType>) => void;
   removeUnitType: (id: string) => void;
+  setUnitTypeDraft: (draft: Partial<UnitType> | null) => void;
   addGroup: (group: { name: string; type: 'residential' | 'commercial' }) => void;
   
   // Validation
@@ -431,6 +435,8 @@ const initialState: Omit<DevelopmentWizardState, keyof ReturnType<typeof createA
     architecturalGuidelines: false,
     estateAmenities: [],
   },
+  
+  unitTypeDraft: null,
   
   // NEW: Selected Amenities
   selectedAmenities: [],
@@ -597,9 +603,10 @@ const createActions = (
     unitTypes: state.unitTypes.map(u => u.id === id ? { ...u, ...updates } : u)
   })),
   
-  removeUnitType: (id: string) => set((state) => ({
     unitTypes: state.unitTypes.filter(u => u.id !== id)
   })),
+
+  setUnitTypeDraft: (draft) => set({ unitTypeDraft: draft }),
   
   addGroup: (group: { name: string; type: 'residential' | 'commercial' }) => set((state) => ({
     unitGroups: [...state.unitGroups, { ...group, id: `group-${Date.now()}` }]
