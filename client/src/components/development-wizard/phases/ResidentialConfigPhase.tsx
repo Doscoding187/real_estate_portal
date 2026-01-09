@@ -12,6 +12,7 @@ import { cn } from '@/lib/utils';
 import { 
   RESIDENTIAL_TYPE_OPTIONS, 
   COMMUNITY_TYPE_OPTIONS,
+  getApplicableCommunityTypes,
   type ResidentialType,
   type CommunityType,
 } from '@/types/wizardTypes';
