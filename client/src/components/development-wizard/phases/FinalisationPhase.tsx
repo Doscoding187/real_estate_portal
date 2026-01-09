@@ -136,6 +136,10 @@ export function FinalisationPhase() {
           images,
           priceFrom: unitTypes[0]?.priceFrom || unitTypes[0]?.basePriceFrom,
           priceTo: unitTypes[unitTypes.length - 1]?.priceTo || unitTypes[unitTypes.length - 1]?.basePriceTo,
+          // Identity & Branding
+          brandProfileId: listingIdentity?.developerBrandProfileId,
+          marketingBrandProfileId: listingIdentity?.identityType === 'marketing_agency' ? listingIdentity.marketingBrandProfileId : undefined,
+          marketingRole: listingIdentity?.marketingRole || 'exclusive',
         });
         developmentId = result.development.id;
         toast.success('Development created!');
