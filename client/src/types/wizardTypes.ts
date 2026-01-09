@@ -315,33 +315,6 @@ export const AVAILABLE_UNIT_CATEGORY_OPTIONS: { value: AvailableUnitCategory; la
 ];
 
 // =============================================================================
-// SECURITY FEATURES (Independent of Estate - usable by apartments)
-// =============================================================================
-
-export type SecurityFeature =
-  | 'access_controlled'
-  | 'guarded_entrance'
-  | 'security_24h'
-  | 'biometric_access'
-  | 'cctv'
-  | 'electric_fencing'
-  | 'boom_gate'
-  | 'intercom'
-  | 'panic_buttons';
-
-export const SECURITY_FEATURE_OPTIONS: { value: SecurityFeature; label: string }[] = [
-  { value: 'access_controlled', label: 'Access Controlled' },
-  { value: 'guarded_entrance', label: 'Guarded Entrance' },
-  { value: 'security_24h', label: '24/7 Security' },
-  { value: 'biometric_access', label: 'Biometric Access' },
-  { value: 'cctv', label: 'CCTV Surveillance' },
-  { value: 'electric_fencing', label: 'Electric Fencing' },
-  { value: 'boom_gate', label: 'Boom Gate' },
-  { value: 'intercom', label: 'Intercom System' },
-  { value: 'panic_buttons', label: 'Panic Buttons' },
-];
-
-// =============================================================================
 // LAND DEVELOPMENT CONFIGURATION
 // =============================================================================
 

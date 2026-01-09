@@ -12,11 +12,8 @@ import { cn } from '@/lib/utils';
 import { 
   RESIDENTIAL_TYPE_OPTIONS, 
   COMMUNITY_TYPE_OPTIONS,
-  SECURITY_FEATURE_OPTIONS,
-  getApplicableCommunityTypes,
   type ResidentialType,
   type CommunityType,
-  type SecurityFeature,
 } from '@/types/wizardTypes';
 import { useDevelopmentWizard } from '@/hooks/useDevelopmentWizard';
 import { toast } from 'sonner';
@@ -64,15 +61,6 @@ export function ResidentialConfigPhase() {
     }
   };
 
-  const handleSecurityFeatureToggle = (feature: SecurityFeature) => {
-    const current = residentialConfig.securityFeatures || [];
-    
-    if (current.includes(feature)) {
-      setResidentialConfig({ securityFeatures: current.filter(f => f !== feature) });
-    } else {
-      setResidentialConfig({ securityFeatures: [...current, feature] });
-    }
-  };
 
   const handleBack = () => {
     setPhase(2); // Back to Development Type
@@ -87,9 +75,7 @@ export function ResidentialConfigPhase() {
     setPhase(4); // Basic Details (Identity)
   };
 
-  // Show security section if any estate/gated type is selected OR if it's an apartment/townhouse
-  const shouldShowSecurity = (residentialConfig.communityTypes?.length || 0) > 0 || 
-    ['apartment', 'townhouse'].includes(residentialConfig.residentialType || '');
+
 
   return (
     <div className="space-y-8">
@@ -238,49 +224,6 @@ export function ResidentialConfigPhase() {
                 </span>
               </div>
             )}
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Step 1C: Security Features (shown for estates OR apartments) */}
-      {shouldShowSecurity && (
-        <Card className="border-slate-200/60 shadow-sm animate-in fade-in slide-in-from-bottom-4 duration-500">
-          <CardHeader className="pb-4">
-            <CardTitle className="text-xl text-slate-900 flex items-center gap-2">
-              <Shield className="w-5 h-5 text-green-600" />
-              Security Features
-            </CardTitle>
-            <CardDescription>
-              What security features does this development have? These are filterable attributes.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
-              {SECURITY_FEATURE_OPTIONS.map((option) => {
-                const isSelected = residentialConfig.securityFeatures?.includes(option.value);
-                
-                return (
-                  <label
-                    key={option.value}
-                    className={cn(
-                      "flex items-center gap-2 p-3 rounded-lg border cursor-pointer transition-all duration-200",
-                      isSelected 
-                        ? "border-green-500 bg-green-50 text-green-900" 
-                        : "border-slate-200 hover:border-green-300 hover:bg-green-50/30 text-slate-700"
-                    )}
-                  >
-                    <Checkbox
-                      checked={isSelected}
-                      onCheckedChange={() => handleSecurityFeatureToggle(option.value)}
-                      className="data-[state=checked]:bg-green-600 data-[state=checked]:border-green-600"
-                    />
-                    <span className="font-medium text-sm">
-                      {option.label}
-                    </span>
-                  </label>
-                );
-              })}
-            </div>
           </CardContent>
         </Card>
       )}

@@ -294,19 +294,19 @@ Launch when ALL are true:
     - **Validates: Requirements 8.5**
 
 - [-] 17. Implement Lead Generation Service
-  - [-] 17.1 Create leads table and service
+  - [x] 17.1 Create leads table and service
     - Define lead types and pricing ranges
     - Capture contact info and intent details
     - _Requirements: 9.1, 9.2, 9.3, 9.4_
-  - [ ] 17.2 Implement lead pricing calculation
+  - [x] 17.2 Implement lead pricing calculation
     - Quote request: R50-R200
     - Consultation: R100-R300
     - Eligibility check: R500-R1000
     - _Requirements: 9.1, 9.2, 9.3_
-  - [ ] 17.3 Implement partner notification
+  - [x] 17.3 Implement partner notification
     - Send email and dashboard notification on new lead
     - _Requirements: 9.5_
-  - [ ] 17.4 Implement dispute handling
+  - [x] 17.4 Implement dispute handling
     - Allow lead disputes with reason
     - Process refunds for valid disputes
     - _Requirements: 9.6_

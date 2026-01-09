@@ -147,6 +147,10 @@ async function startServer() {
   // Partner Management API
   const partnerRouter = await import('../partnerRouter');
   app.use('/api/partners', partnerRouter.default);
+
+  // Partner Lead Generation API
+  const partnerLeadRouter = await import('../partnerLeadRouter');
+  app.use('/api/partner-leads', partnerLeadRouter.default);
   // development mode uses Vite, production mode serves static files
   // Skip static file serving if SKIP_FRONTEND env var is set (for Railway backend-only deployment)
   console.log('[Server] NODE_ENV:', process.env.NODE_ENV);

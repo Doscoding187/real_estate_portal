@@ -4,7 +4,6 @@ import type {
   DevelopmentType,
   ResidentialType,
   CommunityType,
-  SecurityFeature,
 } from '@/types/wizardTypes';
 
 // Media Item Interface
@@ -209,7 +208,6 @@ export interface DevelopmentWizardState {
   residentialConfig: {
     residentialType: ResidentialType | null;
     communityTypes: CommunityType[];
-    securityFeatures: SecurityFeature[];
   };
   
   // NEW: Land Configuration (Step 1 for Land)
@@ -409,7 +407,6 @@ const initialState: Omit<DevelopmentWizardState, keyof ReturnType<typeof createA
   residentialConfig: {
     residentialType: null,
     communityTypes: [],
-    securityFeatures: [],
   },
   
   // NEW: Land Configuration
@@ -791,7 +788,7 @@ const createActions = (
       }
 
       // Parse Configuration
-      const resConfig: any = { residentialType: null, communityTypes: [], securityFeatures: [] };
+      const resConfig: any = { residentialType: null, communityTypes: [] };
       const lndConfig: any = { landType: null, infrastructure: [] };
       const comConfig: any = { commercialType: null, features: [] };
       const estProfile: any = { classification: '', hasHOA: false, levyRange: {min:0,max:0}, architecturalGuidelines: false, estateAmenities: [] };
@@ -805,7 +802,24 @@ const createActions = (
          switch(key) {
              case 'res_type': resConfig.residentialType = val; break;
              case 'comm_type': resConfig.communityTypes.push(val); break;
-             case 'sec_feat': resConfig.securityFeatures.push(val); break;
+             case 'sec_feat': 
+                // Migration: Map legacy security feature to amenity
+                const secMap: Record<string, string> = {
+                   'access_controlled': 'access_control',
+                   'guarded_entrance': 'guard_house',
+                   'security_24h': '24_hour_security',
+                   'biometric_access': 'biometric_access',
+                   'cctv': 'cctv_surveillance',
+                   'electric_fencing': 'electric_fencing',
+                   'boom_gate': 'boom_gates',
+                   'intercom': 'intercom_system',
+                   'panic_buttons': 'panic_button'
+                };
+                const mappedAmenity = secMap[val];
+                if (mappedAmenity && !amenities.includes(mappedAmenity)) {
+                    amenities.push(mappedAmenity);
+                }
+                break;
              case 'land_type': lndConfig.landType = val; break;
              case 'infra': lndConfig.infrastructure.push(val); break;
              case 'comm_use': comConfig.commercialType = val; break;
@@ -868,7 +882,8 @@ const createActions = (
               media: {
                   heroImage: photos.find(p => p.isPrimary),
                   photos: photos.filter(p => !p.isPrimary),
-                  videos: videos
+                  videos: videos,
+                  documents: [] // New field initialization
               },
               amenities: amenities || [],
               highlights: highlights || [],
@@ -1089,6 +1104,7 @@ const createActions = (
             heroImage,
             photos: (media.photos || []).map(updateItem),
             videos: (media.videos || []).map(updateItem),
+            documents: (media.documents || []).map(updateItem),
         }
       }
     };
