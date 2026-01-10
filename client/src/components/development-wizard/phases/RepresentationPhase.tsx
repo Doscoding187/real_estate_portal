@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useDevelopmentWizard } from '@/hooks/useDevelopmentWizard';
 import { useWizardNavigation } from '@/hooks/useWizardNavigation';
 import { useAuth } from '@/_core/hooks/useAuth';
+import { usePublisherContext, resolvePublishingIdentity } from '@/hooks/usePublisherContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
@@ -15,12 +16,31 @@ import { toast } from 'sonner';
 export function RepresentationPhase() {
   const { listingIdentity, setListingIdentity, setPhase } = useDevelopmentWizard();
   const { user } = useAuth();
+  const { context: publisherContext } = usePublisherContext();
   const isSuperAdmin = user?.role === 'super_admin';
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
+  const [hasAutoSkipped, setHasAutoSkipped] = useState(false);
+  
+  // AUTO-SKIP: If identity is already resolved from Publisher Emulator, skip Step 1
+  useEffect(() => {
+    if (hasAutoSkipped) return; // Prevent multiple skips
+    
+    const resolved = resolvePublishingIdentity(user?.role, publisherContext);
+    if (resolved) {
+      console.log('[RepresentationPhase] Identity resolved from publisher_emulator:', resolved);
+      setListingIdentity({
+        identityType: resolved.identityType,
+        developerBrandProfileId: resolved.brandProfileId,
+      });
+      setHasAutoSkipped(true);
+      toast.success(`Publishing as ${publisherContext?.brandProfileName}`);
+      setPhase(2); // Skip to Development Type
+    }
+  }, [user?.role, publisherContext, setListingIdentity, setPhase, hasAutoSkipped]);
   
   // Debounce search
-  React.useEffect(() => {
+  useEffect(() => {
     const timer = setTimeout(() => setDebouncedQuery(searchQuery), 300);
     return () => clearTimeout(timer);
   }, [searchQuery]);
