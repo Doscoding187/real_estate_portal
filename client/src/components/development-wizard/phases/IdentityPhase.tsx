@@ -116,17 +116,6 @@ export function IdentityPhase() {
                 </Select>
              </div>
           </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="description">Marketing Description</Label>
-            <Textarea 
-              id="description" 
-              placeholder="Describe the vision, lifestyle, and key selling points..." 
-              className="min-h-[100px] resize-y"
-              value={developmentData.description}
-              onChange={(e) => setIdentity({ description: e.target.value })}
-            />
-          </div>
         </CardContent>
       </Card>
 
