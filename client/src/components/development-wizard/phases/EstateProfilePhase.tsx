@@ -15,19 +15,6 @@ import { cn } from '@/lib/utils';
 import { useDevelopmentWizard } from '@/hooks/useDevelopmentWizard';
 import { toast } from 'sonner';
 
-// Estate-level amenities (different from development amenities)
-const ESTATE_AMENITIES = [
-  { key: 'clubhouse', label: 'Clubhouse', icon: Castle },
-  { key: 'golf_course', label: 'Golf Course', icon: TreePine },
-  { key: 'walking_trails', label: 'Walking Trails', icon: TreePine },
-  { key: 'private_school', label: 'Private School', icon: FileText },
-  { key: 'marina', label: 'Marina', icon: Waves },
-  { key: 'nature_reserve', label: 'Nature Reserve', icon: TreePine },
-  { key: 'sports_facilities', label: 'Sports Facilities', icon: Dumbbell },
-  { key: 'equestrian_centre', label: 'Equestrian Centre', icon: TreePine },
-  { key: 'restaurant', label: 'Restaurant / Dining', icon: Castle },
-  { key: 'spa_wellness', label: 'Spa & Wellness', icon: Dumbbell },
-];
 
 // Estate classification options
 const ESTATE_CLASSIFICATIONS = [
@@ -72,15 +59,6 @@ export function EstateProfilePhase() {
 
   const handleGuidelinesToggle = (checked: boolean) => {
     setEstateProfile({ architecturalGuidelines: checked });
-  };
-
-  const handleAmenityToggle = (key: string) => {
-    const current = estateProfile.estateAmenities || [];
-    if (current.includes(key)) {
-      setEstateProfile({ estateAmenities: current.filter(a => a !== key) });
-    } else {
-      setEstateProfile({ estateAmenities: [...current, key] });
-    }
   };
 
   const handleBack = () => {
@@ -241,56 +219,6 @@ export function EstateProfilePhase() {
               checked={estateProfile.architecturalGuidelines} 
               onCheckedChange={handleGuidelinesToggle}
             />
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Estate Amenities */}
-      <Card className="border-slate-200/60 shadow-sm">
-        <CardHeader className="pb-4">
-          <CardTitle className="text-xl text-slate-900 flex items-center gap-2">
-            <TreePine className="w-5 h-5 text-green-600" />
-            Estate Amenities
-          </CardTitle>
-          <CardDescription>
-            What shared facilities does the estate offer? 
-            <Badge variant="secondary" className="ml-2 text-xs">Estate-level</Badge>
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-            {ESTATE_AMENITIES.map((amenity) => {
-              const isSelected = estateProfile.estateAmenities?.includes(amenity.key);
-              const Icon = amenity.icon;
-              
-              return (
-                <label
-                  key={amenity.key}
-                  className={cn(
-                    "flex flex-col items-center gap-2 p-4 rounded-xl border-2 cursor-pointer transition-all duration-200 text-center",
-                    isSelected 
-                      ? "border-green-500 bg-green-50" 
-                      : "border-slate-200 hover:border-green-300 hover:bg-green-50/30"
-                  )}
-                >
-                  <Checkbox
-                    checked={isSelected}
-                    onCheckedChange={() => handleAmenityToggle(amenity.key)}
-                    className="sr-only"
-                  />
-                  <Icon className={cn(
-                    "w-6 h-6",
-                    isSelected ? "text-green-600" : "text-slate-400"
-                  )} />
-                  <span className={cn(
-                    "font-medium text-xs",
-                    isSelected ? "text-green-900" : "text-slate-600"
-                  )}>
-                    {amenity.label}
-                  </span>
-                </label>
-              );
-            })}
           </div>
         </CardContent>
       </Card>
