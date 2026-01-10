@@ -101,6 +101,9 @@ export function DevelopmentWizard({ developmentId, isModal = false }: Developmen
   }), [currentPhase, developmentData, classification, overview, unitTypes, finalisation]);
 
   // Calculate readiness
+  const selectedAmenities = store.selectedAmenities;
+  const developmentMedia = store.developmentData.media;
+  
   const readiness = React.useMemo(() => {
     // Map store to listing object expected by readiness calculator
     const devCandidate = {
@@ -109,11 +112,15 @@ export function DevelopmentWizard({ developmentId, isModal = false }: Developmen
        address: developmentData.location?.address,
        latitude: developmentData.location?.latitude,
        longitude: developmentData.location?.longitude,
-       images: developmentData.images || [], 
-       priceFrom: unitTypes.priceFrom // Ensure this field exists in store or derived
+       // Collect images from both top-level and media.photos
+       images: developmentMedia?.photos || developmentData.images || [], 
+       // Get priceFrom from unitTypes or residentialConfig
+       priceFrom: unitTypes.priceFrom || store.residentialConfig?.priceRange?.min,
+       // Map selectedAmenities to amenities field
+       amenities: selectedAmenities,
     };
     return calculateDevelopmentReadiness(devCandidate);
-  }, [developmentData, overview, unitTypes]);
+  }, [developmentData, overview, unitTypes, selectedAmenities, developmentMedia, store.residentialConfig]);
 
   const { lastSaved, isSaving, error: autoSaveError, saveNow } = useAutoSave(stateToWatch, {
     debounceMs: 60000, // 1 Minute debounce for continuous typing
