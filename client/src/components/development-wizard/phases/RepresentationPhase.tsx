@@ -50,9 +50,13 @@ export function RepresentationPhase() {
   };
 
   const selectBrand = (brand: { id: number; brandName: string; logoUrl: string | null }) => {
-    setListingIdentity({ developerBrandProfileId: brand.id });
+    // When a brand is selected, set identityType to 'brand' for proper routing
+    setListingIdentity({ 
+      identityType: 'brand', 
+      developerBrandProfileId: brand.id 
+    });
     setSearchQuery(brand.brandName); // Fill input
-    toast.success(`Selected ${brand.brandName}`);
+    toast.success(`Publishing as ${brand.brandName}`);
   };
 
   return (
@@ -63,7 +67,8 @@ export function RepresentationPhase() {
       </div>
 
       <div className="grid md:grid-cols-3 gap-6">
-        {/* Developer Option */}
+        {/* Developer Option - Hidden for Super Admins since they must use a Brand */}
+        {!isSuperAdmin && (
         <div 
           onClick={() => setListingIdentity({ identityType: 'developer', developerBrandProfileId: undefined })}
           className={cn(
@@ -86,6 +91,7 @@ export function RepresentationPhase() {
             I am the builder or owner of this development. I manage the project directly.
           </p>
         </div>
+        )}
 
         {/* Agency Option */}
         <div 

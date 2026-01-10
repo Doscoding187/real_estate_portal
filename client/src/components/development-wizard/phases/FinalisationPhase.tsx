@@ -123,6 +123,11 @@ export function FinalisationPhase() {
         console.log('[FinalisationPhase] Debug Identity:', listingIdentity);
         console.log('[FinalisationPhase] developerBrandProfileId:', listingIdentity?.developerBrandProfileId);
         console.log('[FinalisationPhase] identityType:', listingIdentity?.identityType);
+        
+        // Determine if this is a brand development
+        const isBrandDevelopment = listingIdentity?.identityType === 'brand' || listingIdentity?.identityType === 'marketing_agency';
+        console.log('[FinalisationPhase] isBrandDevelopment:', isBrandDevelopment);
+        console.log('[FinalisationPhase] Sending brandProfileId:', isBrandDevelopment ? listingIdentity?.developerBrandProfileId : undefined);
 
         const result = await createDevelopment.mutateAsync({
           name: developmentData.name || 'Untitled Development',
@@ -140,8 +145,8 @@ export function FinalisationPhase() {
           images,
           priceFrom: unitTypes[0]?.priceFrom || unitTypes[0]?.basePriceFrom,
           priceTo: unitTypes[unitTypes.length - 1]?.priceTo || unitTypes[unitTypes.length - 1]?.basePriceTo,
-          // Identity & Branding
-          brandProfileId: listingIdentity?.developerBrandProfileId,
+          // Identity & Branding - Send brandProfileId for brand or marketing_agency identity types
+          brandProfileId: isBrandDevelopment ? listingIdentity?.developerBrandProfileId : undefined,
           marketingBrandProfileId: listingIdentity?.identityType === 'marketing_agency' ? listingIdentity.marketingBrandProfileId : undefined,
           marketingRole: listingIdentity?.marketingRole || 'exclusive',
         });
