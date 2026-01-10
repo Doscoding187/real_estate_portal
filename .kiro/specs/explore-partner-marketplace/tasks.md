@@ -389,7 +389,7 @@ Launch when ALL are true:
     - _Requirements: 9.4, 9.5, 9.6_
 
 - [-] 22. Implement Frontend Components
-  - [-] 22.1 Create Topics navigation component
+  - [x] 22.1 Create Topics navigation component
     - Horizontal scrollable topic list
     - Active topic highlighting
     - _Requirements: 3.1_

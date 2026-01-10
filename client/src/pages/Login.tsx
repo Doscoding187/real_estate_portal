@@ -128,6 +128,9 @@ export default function Login() {
       
       // Role-based redirect
       const role = result.user?.role;
+      console.log('[Login] API result:', result);
+      console.log('[Login] User role:', role);
+      
       let redirectPath = '/user/dashboard';
       
       if (role === 'super_admin') redirectPath = '/admin/overview';
@@ -135,8 +138,11 @@ export default function Login() {
       else if (role === 'agency_admin') redirectPath = '/agency/dashboard';
       else if (role === 'agent') redirectPath = '/agent/dashboard';
       
+      console.log('[Login] Redirecting to:', redirectPath);
+      
       // Small delay for animation
       await new Promise(resolve => setTimeout(resolve, 300));
+      console.log('[Login] Executing redirect now...');
       window.location.href = redirectPath;
     } catch (error) {
       console.error('[Login] Error:', error);

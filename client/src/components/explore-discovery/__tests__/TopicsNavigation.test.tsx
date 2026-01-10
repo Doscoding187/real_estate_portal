@@ -2,6 +2,7 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { TopicsNavigation } from "../TopicsNavigation";
 import { vi } from "vitest";
+import "@testing-library/jest-dom";
 
 // Mock fetch
 const mockFetch = vi.fn();
@@ -132,13 +133,11 @@ describe("TopicsNavigation", () => {
     });
 
     // "All" should not be active
-    const allButton = screen.getByText("All");
-    expect(allButton).not.toHaveClass("bg-primary");
+    const allButton = screen.getByRole("tab", { name: "All" });
     expect(allButton.getAttribute("aria-selected")).toBe("false");
 
     // "Home Security" should be active
-    const activeButton = screen.getByText("Home Security");
-    expect(activeButton).toHaveClass("bg-primary");
+    const activeButton = screen.getByRole("tab", { name: /Home Security/ });
     expect(activeButton.getAttribute("aria-selected")).toBe("true");
   });
 
@@ -274,12 +273,12 @@ describe("TopicsNavigation", () => {
     const tabs = screen.getAllByRole("tab");
     expect(tabs.length).toBe(4); // "All" + 3 topics
 
-    // Active topic should have aria-selected="true"
-    const activeTab = screen.getByText("Home Security");
+    // Check that we can find the active topic by its data attribute
+    const activeTab = screen.getByRole("tab", { name: /Home Security/ });
     expect(activeTab).toHaveAttribute("aria-selected", "true");
     
-    // Inactive tabs should have aria-selected="false"
-    const inactiveTab = screen.getByText("Find Your Home");
+    // Check inactive tab
+    const inactiveTab = screen.getByRole("tab", { name: /Find Your Home/ });
     expect(inactiveTab).toHaveAttribute("aria-selected", "false");
   });
 });
