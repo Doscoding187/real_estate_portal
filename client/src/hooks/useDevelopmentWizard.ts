@@ -196,8 +196,9 @@ export interface DevelopmentWizardState {
   
   // NEW: Listing Identity (Step 0)
   listingIdentity: {
-    identityType: 'developer' | 'marketing_agency' | 'private_owner';
+    identityType: 'developer' | 'marketing_agency' | 'private_owner' | 'brand';
     developerBrandProfileId?: number; // The Developer (Builder/Brand)
+    marketingBrandProfileId?: number; // Marketing agency's own brand (if applicable)
     marketingRole?: 'exclusive' | 'joint' | 'open';
   };
   
