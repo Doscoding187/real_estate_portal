@@ -121,6 +121,8 @@ export function FinalisationPhase() {
         // CREATE MODE
         console.log('[FinalisationPhase] Create mode');
         console.log('[FinalisationPhase] Debug Identity:', listingIdentity);
+        console.log('[FinalisationPhase] developerBrandProfileId:', listingIdentity?.developerBrandProfileId);
+        console.log('[FinalisationPhase] identityType:', listingIdentity?.identityType);
 
         const result = await createDevelopment.mutateAsync({
           name: developmentData.name || 'Untitled Development',
