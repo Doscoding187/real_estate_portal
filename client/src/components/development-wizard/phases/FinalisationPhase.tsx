@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { toast } from 'sonner';
 import { trpc } from '@/lib/trpc';
 import { useLocation } from 'wouter';
+import { useAuth } from '@/_core/hooks/useAuth';
 import { 
   CheckCircle2, AlertCircle, AlertTriangle, Edit2, Eye, 
   MapPin, Home, Layers, Image as ImageIcon, FileText, 
@@ -22,6 +23,8 @@ import { HouseMeasureIcon } from '@/components/icons/HouseMeasureIcon';
 
 export function FinalisationPhase() {
   const [, navigate] = useLocation();
+  const { user } = useAuth();
+  const isSuperAdmin = user?.role === 'super_admin';
   const store = useDevelopmentWizard();
   const { 
     developmentData, 
@@ -167,9 +170,9 @@ export function FinalisationPhase() {
       });
       toast.success('Development submitted for review!');
       
-      // Reset wizard and redirect
+      // Reset wizard and redirect based on user role
       reset();
-      navigate('/developer/developments');
+      navigate(isSuperAdmin ? '/admin/overview' : '/developer/developments');
       
     } catch (error: any) {
       console.error('[FinalisationPhase] Publish failed:', error);

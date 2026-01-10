@@ -8,6 +8,7 @@ import { ProgressIndicator, generateSteps } from '@/components/wizard/ProgressIn
 import { ErrorAlert } from '@/components/ui/ErrorAlert';
 import { parseError, type AppError } from '@/lib/errors/ErrorRecoveryStrategy';
 import { handleSessionExpiry, wasSessionExpired, clearSessionExpiryFlags } from '@/lib/auth/SessionExpiryHandler';
+import { useAuth } from '@/_core/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { useLocation, useRoute } from 'wouter';
 import { toast } from 'sonner';
@@ -200,10 +201,14 @@ export function DevelopmentWizard({ developmentId, isModal = false }: Developmen
     }
   }, []);
 
+  const { user } = useAuth();
+  const isSuperAdmin = user?.role === 'super_admin';
+
   const handleExit = () => setShowExitDialog(true);
   const confirmExit = () => {
     reset();
-    setLocation('/developer');
+    // Redirect Super Admin to admin dashboard, others to developer dashboard
+    setLocation(isSuperAdmin ? '/admin/overview' : '/developer');
   };
 
   // Generate Progress Steps
