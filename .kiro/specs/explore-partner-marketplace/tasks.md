@@ -397,7 +397,7 @@ Launch when ALL are true:
     - Render badge in top-left corner
     - Support all badge types with correct colors
     - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.5, 4.6_
-  - [-] 22.3 Create Partner Profile page
+  - [ ] 22.3 Create Partner Profile page
     - Display verification badge, reviews, locations, metrics
     - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5, 5.6_
   - [ ] 22.4 Create Onboarding overlay and tooltips

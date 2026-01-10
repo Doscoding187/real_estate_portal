@@ -50,6 +50,7 @@ import ExploreFeed from './pages/ExploreFeed';
 import ExploreHome from './pages/ExploreHome';
 import ExploreShorts from './pages/ExploreShorts';
 import ExploreUpload from './pages/ExploreUpload';
+import PartnerProfile from './pages/PartnerProfile';
 import AgencyOnboarding from './pages/AgencyOnboarding';
 import OnboardingSuccess from './pages/OnboardingSuccess';
 import AgencySubscriptionPage from './pages/agency/SubscriptionPage';

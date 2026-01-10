@@ -1,18 +1,21 @@
 import React, { useState } from 'react';
 import { useDevelopmentWizard } from '@/hooks/useDevelopmentWizard';
 import { useWizardNavigation } from '@/hooks/useWizardNavigation';
+import { useAuth } from '@/_core/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { trpc } from '@/lib/trpc';
-import { Search, Building2, Briefcase, CheckCircle2, ArrowRight, Users } from 'lucide-react';
+import { Search, Building2, Briefcase, CheckCircle2, ArrowRight, Users, Shield } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
 export function RepresentationPhase() {
   const { listingIdentity, setListingIdentity, setPhase } = useDevelopmentWizard();
+  const { user } = useAuth();
+  const isSuperAdmin = user?.role === 'super_admin';
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
   
@@ -22,16 +25,23 @@ export function RepresentationPhase() {
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  // Search Query
+  // Search Query - Always enabled for Super Admins, or when Marketing Agency is selected
+  const showBrandSelector = isSuperAdmin || listingIdentity.identityType === 'marketing_agency';
   const { data: searchResults, isLoading } = trpc.developer.searchBrandProfiles.useQuery(
     { query: debouncedQuery },
     { 
-      enabled: debouncedQuery.length >= 2 && listingIdentity.identityType === 'marketing_agency',
+      enabled: debouncedQuery.length >= 2 && showBrandSelector,
       keepPreviousData: true 
     }
   );
 
   const handleNext = () => {
+    // Super Admins MUST always select a brand profile (for content seeding)
+    if (isSuperAdmin && !listingIdentity.developerBrandProfileId) {
+      toast.error('As a Super Admin, you must select a Developer Brand to publish under');
+      return;
+    }
+    // Marketing agencies must select the developer they represent
     if (listingIdentity.identityType === 'marketing_agency' && !listingIdentity.developerBrandProfileId) {
       toast.error('Please select the Developer Brand you are representing');
       return;
@@ -126,11 +136,11 @@ export function RepresentationPhase() {
         </div>
       </div>
 
-      {/* Conditional Search for Agency */}
-      {listingIdentity.identityType === 'marketing_agency' && (
+      {/* Conditional Search for Agency or Super Admin */}
+      {showBrandSelector && (
         <div className="mt-8 pt-8 border-t border-slate-200 animate-in fade-in duration-300">
           <Label className="text-base font-semibold mb-3 block">
-            Who is the Developer?
+            {isSuperAdmin ? 'Which Developer Brand are you publishing for?' : 'Who is the Developer?'}
           </Label>
           <div className="relative max-w-xl">
             <div className="relative">
