@@ -36,9 +36,17 @@ export function RepresentationPhase() {
   );
 
   const handleNext = () => {
-    // Super Admins MUST always select a brand profile (for content seeding)
-    if (isSuperAdmin && !listingIdentity.developerBrandProfileId) {
-      toast.error('As a Super Admin, you must select a Developer Brand to publish under');
+    // Super Admins CAN select a brand profile (for frontend grouping), but it's optional
+    // The backend uses the Seed Developer for ownership regardless
+    if (isSuperAdmin) {
+      if (listingIdentity.developerBrandProfileId) {
+        console.log('[RepresentationPhase] Super Admin seeding under brand:', listingIdentity.developerBrandProfileId);
+      } else {
+        console.log('[RepresentationPhase] Super Admin seeding without brand (platform-only)');
+        // Ensure identityType is set for Super Admin
+        setListingIdentity({ identityType: 'developer' });
+      }
+      setPhase(2); // Proceed - backend handles ownership
       return;
     }
     // Marketing agencies must select the developer they represent

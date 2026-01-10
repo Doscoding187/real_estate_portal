@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Play, Grid3x3, SlidersHorizontal, MapPin } from 'lucide-react';
 import { DiscoveryCardFeed } from '@/components/explore-discovery/DiscoveryCardFeed';
@@ -7,9 +7,13 @@ import { LifestyleCategorySelector } from '@/components/explore-discovery/Lifest
 import { ResponsiveFilterPanel } from '@/components/explore-discovery/ResponsiveFilterPanel';
 import { PersonalizedContentBlock } from '@/components/explore-discovery/PersonalizedContentBlock';
 import { TrendingVideosSection } from '@/components/explore-discovery/TrendingVideosSection';
+import { WelcomeOverlay } from '@/components/explore-discovery/WelcomeOverlay';
+import { OnboardingTooltip } from '@/components/explore-discovery/OnboardingTooltip';
 import { useExploreCommonState } from '@/hooks/useExploreCommonState';
 import { usePersonalizedContent } from '@/hooks/usePersonalizedContent';
 import { useExploreFiltersStore } from '@/store/exploreFiltersStore';
+import { useWelcomeOverlay } from '@/hooks/useWelcomeOverlay';
+import { useTopicNavigationTooltip, usePartnerContentTooltip } from '@/hooks/useOnboardingTooltip';
 import { DiscoveryItem } from '@/hooks/useDiscoveryFeed';
 import { TrendingVideo } from '@/hooks/useTrendingVideos';
 import { designTokens } from '@/lib/design-tokens';
@@ -32,6 +36,15 @@ export default function ExploreHome() {
     setShowFilters,
     filters,
   } = useExploreCommonState({ initialViewMode: 'home' });
+
+  // Onboarding hooks
+  const welcomeOverlay = useWelcomeOverlay();
+  const topicTooltip = useTopicNavigationTooltip();
+  const partnerTooltip = usePartnerContentTooltip();
+
+  // Refs for tooltip positioning
+  const topicsRef = useRef<HTMLDivElement>(null);
+  const partnerContentRef = useRef<HTMLDivElement>(null);
 
   // Get filter count from Zustand store
   const getFilterCount = useExploreFiltersStore((state) => state.getFilterCount);
@@ -64,6 +77,12 @@ export default function ExploreHome() {
 
   const handleItemClick = (item: DiscoveryItem) => {
     console.log('Item clicked:', item);
+    
+    // Track partner content encounters for tooltip
+    if (item.partnerId) {
+      partnerTooltip.onPartnerContentEncounter();
+    }
+    
     // TODO: Navigate to detail page based on item type
     if (item.type === 'property') {
       // Navigate to property detail
@@ -84,12 +103,26 @@ export default function ExploreHome() {
   // Handle trending video click - switch to videos view
   const handleTrendingVideoClick = (video: TrendingVideo) => {
     console.log('Trending video clicked:', video);
+    
+    // Increment scroll count for topic tooltip
+    topicTooltip.incrementScrollCount();
+    
     setViewMode('videos');
   };
 
   // Handle "See All" for trending videos - switch to videos view
   const handleTrendingVideosSeeAll = () => {
+    // Increment scroll count for topic tooltip
+    topicTooltip.incrementScrollCount();
+    
     setViewMode('videos');
+  };
+
+  // Handle topic selection from welcome overlay
+  const handleWelcomeTopicSelect = (topicSlug: string) => {
+    // This would normally set the selected topic and filter the feed
+    console.log('Topic selected from welcome:', topicSlug);
+    welcomeOverlay.onTopicSelect(topicSlug);
   };
 
   return (
@@ -208,13 +241,18 @@ export default function ExploreHome() {
 
           {/* Category filter - Modern chip design */}
           <motion.div
+            ref={topicsRef}
             initial={{ y: 10, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={{ delay: 0.2, duration: 0.3 }}
           >
             <LifestyleCategorySelector
               selectedCategoryId={selectedCategoryId ?? undefined}
-              onCategoryChange={(id) => setSelectedCategoryId(id ?? null)}
+              onCategoryChange={(id) => {
+                setSelectedCategoryId(id ?? null);
+                // Increment scroll count when category changes
+                topicTooltip.incrementScrollCount();
+              }}
               variant="light"
               className="pb-2"
             />
@@ -279,6 +317,7 @@ export default function ExploreHome() {
                   {sections.map((section) => (
                     <motion.div 
                       key={section.id}
+                      ref={section.type === 'partner' ? partnerContentRef : undefined}
                       variants={staggerItemVariants}
                       style={{ marginBottom: designTokens.spacing.xl }}
                     >
@@ -427,6 +466,32 @@ export default function ExploreHome() {
           setShowFilters(false);
           // Filters are automatically applied via Zustand store
         }}
+      />
+
+      {/* Welcome Overlay - First-time user onboarding */}
+      <WelcomeOverlay
+        isOpen={welcomeOverlay.isOpen}
+        suggestedTopics={welcomeOverlay.suggestedTopics}
+        onTopicSelect={handleWelcomeTopicSelect}
+        onDismiss={welcomeOverlay.onDismiss}
+      />
+
+      {/* Topic Navigation Tooltip - After 5 items scrolled */}
+      <OnboardingTooltip
+        tooltipId="topic_navigation"
+        isVisible={topicTooltip.isVisible}
+        onDismiss={topicTooltip.dismissTooltip}
+        position="bottom"
+        targetRef={topicsRef}
+      />
+
+      {/* Partner Content Tooltip - On first partner content encounter */}
+      <OnboardingTooltip
+        tooltipId="partner_content"
+        isVisible={partnerTooltip.isVisible}
+        onDismiss={partnerTooltip.dismissTooltip}
+        position="top"
+        targetRef={partnerContentRef}
       />
     </motion.div>
   );

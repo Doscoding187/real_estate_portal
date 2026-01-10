@@ -492,18 +492,19 @@ export const developerRouter = router({
       let ownerType: 'developer' | 'platform' = 'developer';
 
       if (ctx.user.role === 'super_admin') {
-        // BRAND MODE (Super Admin seeding content)
-        // Super admins MUST provide a brandProfileId - they cannot create developer-owned developments
-        if (!input.brandProfileId) {
-          throw new TRPCError({
-            code: 'BAD_REQUEST',
-            message: 'brandProfileId is required when creating brand developments',
-          });
-        }
+        // SEEDING MODE (Super Admin creating platform content)
+        // Super Admin uses a system Seed Developer for ownership, but brandProfileId for UI branding
+        // This separates: ownership (platform) from branding (Cosmopolitan, etc.)
+        
+        // Get or create the system Seed Developer (developer ID = 1 is reserved for platform)
+        const SEED_DEVELOPER_ID = 1; // System developer for platform-owned content
+        
+        // Use brandProfileId for frontend grouping/SEO if provided
         brandProfileId = input.brandProfileId;
+        developerId = SEED_DEVELOPER_ID; // Platform ownership
         ownerType = 'platform';
-        developerId = null; // Explicitly null - brand developments have no developer owner
-        console.log('[DeveloperRouter] Brand Mode: brandProfileId =', brandProfileId);
+        
+        console.log('[DeveloperRouter] Seeding Mode: developerId =', developerId, ', brandProfileId =', brandProfileId);
       } else if (ctx.user.role === 'property_developer') {
         // DEVELOPER MODE (Self-serve)
         // Developer creates their own development

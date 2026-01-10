@@ -400,7 +400,7 @@ Launch when ALL are true:
   - [x] 22.3 Create Partner Profile page
     - Display verification badge, reviews, locations, metrics
     - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5, 5.6_
-  - [ ] 22.4 Create Onboarding overlay and tooltips
+  - [-] 22.4 Create Onboarding overlay and tooltips
     - Welcome overlay with topic suggestions
     - Progressive disclosure tooltips
     - _Requirements: 16.7, 16.8, 16.10, 16.11_
