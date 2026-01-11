@@ -468,6 +468,7 @@ async function createDevelopment(
   }
 
   // Transform data for MySQL compatibility
+  // Transform data for MySQL compatibility
   const transformedData: any = {
     // Core Identity
     developerId,
@@ -516,15 +517,21 @@ async function createDevelopment(
     // Default values
     views: developmentData.views ?? 0,
     
-    // Normalize amenities
+    // JSON Fields (Drizzle handles these automatically as they are defined as json())
     amenities: normalizeAmenities(developmentData.amenities),
     highlights: normalizeAmenities(developmentData.highlights),
     features: normalizeAmenities(developmentData.features),
-    images: normalizeImages(developmentData.images),
-    videos: developmentData.videos || null,
-    floorPlans: developmentData.floorPlans || null,
-    brochures: developmentData.brochures || null,
-    estateSpecs: developmentData.estateSpecs || null,
+    estateSpecs: developmentData.estateSpecs || null, // Assuming JSON
+    
+    // Text Fields (MUST stringify arrays manually as they are defined as text() in schema)
+    // NOTE: We check if it's already a string (e.g. from comma-separated input) or an array
+    images: Array.isArray(normalizeImages(developmentData.images)) 
+      ? JSON.stringify(normalizeImages(developmentData.images)) 
+      : (typeof normalizeImages(developmentData.images) === 'string' ? normalizeImages(developmentData.images) : null),
+
+    videos: Array.isArray(developmentData.videos) ? JSON.stringify(developmentData.videos) : (developmentData.videos || null),
+    floorPlans: Array.isArray(developmentData.floorPlans) ? JSON.stringify(developmentData.floorPlans) : (developmentData.floorPlans || null),
+    brochures: Array.isArray(developmentData.brochures) ? JSON.stringify(developmentData.brochures) : (developmentData.brochures || null),
 
     // Dates
     completionDate: developmentData.completionDate || null,
