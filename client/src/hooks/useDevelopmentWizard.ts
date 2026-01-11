@@ -860,6 +860,7 @@ const createActions = (
       // Map Media
       const dbImages = parse(data.images, []); 
       const dbVideos = parse(data.videos, []);
+      const dbBrochures = parse(data.brochures, []);
       
       const photos: MediaItem[] = Array.isArray(dbImages) ? dbImages.map((url: string, i: number) => ({
         id: `img-${i}-${Date.now()}`,
@@ -875,6 +876,15 @@ const createActions = (
         url,
         type: 'video',
         category: 'videos',
+        isPrimary: false,
+        displayOrder: i
+      })) : [];
+
+      const documents: MediaItem[] = Array.isArray(dbBrochures) ? dbBrochures.map((url: string, i: number) => ({
+        id: `doc-${i}-${Date.now()}`,
+        url,
+        type: 'document',
+        category: 'brochures',
         isPrimary: false,
         displayOrder: i
       })) : [];
@@ -907,7 +917,7 @@ const createActions = (
                   heroImage: photos.find(p => p.isPrimary),
                   photos: photos.filter(p => !p.isPrimary),
                   videos: videos,
-                  documents: [] // New field initialization
+                  documents: documents // Hydrated from brochures field
               },
               amenities: amenities || [],
               highlights: highlights || [],
