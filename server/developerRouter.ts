@@ -499,6 +499,25 @@ export const developerRouter = router({
         // Get or create the system Seed Developer (developer ID = 1 is reserved for platform)
         const SEED_DEVELOPER_ID = 1; // System developer for platform-owned content
         
+        // Ensure Seed Developer exists to prevent FK violation
+        const dbConn = await db.getDb();
+        if (dbConn) {
+          const existingSeed = await dbConn.select().from(developers).where(eq(developers.id, SEED_DEVELOPER_ID)).limit(1);
+          if (existingSeed.length === 0) {
+            console.log('[DeveloperRouter] Creating Seed Developer (ID 1) to prevent FK error...');
+            await dbConn.insert(developers).values({
+              id: SEED_DEVELOPER_ID,
+              name: 'Real Estate Portal', // Platform Name
+              slug: 'real-estate-portal',
+              userId: ctx.user.id, // Linked to Super Admin
+              isVerified: 1,
+              status: 'approved',
+              category: 'residential',
+              description: 'Platform Seed Developer'
+            });
+          }
+        }
+        
         // Use brandProfileId for frontend grouping/SEO if provided
         brandProfileId = input.brandProfileId;
         developerId = SEED_DEVELOPER_ID; // Platform ownership
