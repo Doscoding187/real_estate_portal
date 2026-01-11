@@ -246,7 +246,7 @@ export const locationPagesService = {
       .from(developments)
       .leftJoin(cities, eq(developments.city, cities.name))
       .where(eq(developments.province, province.name))
-      .orderBy(desc(developments.isHotSelling))
+      .orderBy(desc(developments.isHotSelling), desc(developments.createdAt))
       .limit(12);
       
     // 7. Trending Suburbs
@@ -409,6 +409,7 @@ export const locationPagesService = {
           })
           .from(developments)
           .where(eq(developments.city, city?.name || cityIntel?.name || ''))
+          .orderBy(desc(developments.createdAt))
           .limit(10);
 
       return {
