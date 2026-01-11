@@ -53,6 +53,51 @@ interface DevelopmentError extends Error {
 // =========================================================================== 
 
 /**
+ * Generates a URL-friendly slug from a string
+ */
+export function generateSlug(text: string): string {
+  return text
+    .toString()
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, '-')           // Replace spaces with -
+    .replace(/[^\w\-]+/g, '')       // Remove all non-word chars
+    .replace(/\-\-+/g, '-')         // Replace multiple - with single -
+    .replace(/^-+/, '')             // Trim - from start
+    .replace(/-+$/, '');            // Trim - from end
+}
+
+/**
+ * Generates a unique slug by appending a number if needed
+ */
+export async function generateUniqueSlug(baseName: string): Promise<string> {
+  const db = await getDb();
+  if (!db) throw new Error('Database connection unavailable for slug generation');
+
+  let slug = generateSlug(baseName);
+  let counter = 1;
+  let isUnique = false;
+
+  while (!isUnique) {
+    const existing = await db
+      .select({ id: developments.id })
+      .from(developments)
+      .where(eq(developments.slug, slug))
+      .limit(1);
+
+    if (existing.length === 0) {
+      isUnique = true;
+    } else {
+      // Add counter to make it unique
+      slug = `${generateSlug(baseName)}-${counter}`;
+      counter++;
+    }
+  }
+
+  return slug;
+}
+
+/**
  * Converts boolean values to MySQL-compatible integers
  */
 function boolToInt(value: any): 0 | 1 {
@@ -386,17 +431,33 @@ async function createDevelopment(
   // Validate input before proceeding
   validateDevelopmentData({ ...developmentData, devOwnerType: ownerType || 'developer' }, developerId);
 
+  // CRITICAL: Generate slug if not provided or empty
+  let slug = developmentData.slug;
+  if (!slug || slug.trim() === '') {
+    if (!developmentData.name) {
+      throw createError('Either slug or name must be provided to generate a slug', 'VALIDATION_ERROR');
+    }
+    slug = await generateUniqueSlug(developmentData.name);
+    console.log('[createDevelopment] Generated slug:', slug);
+  } else {
+    // Ensure provided slug is properly formatted
+    slug = generateSlug(slug);
+  }
+
   // Transform data for MySQL compatibility
   const transformedData = {
     ...developmentData,
     ...restMetadata,
     developerId,
     
+    // CRITICAL: Ensure slug is set
+    slug,
+    
     // Ownership configuration
     devOwnerType: ownerType || 'developer',
     developerBrandProfileId: brandProfileId ?? developmentData.developerBrandProfileId ?? null,
     
-    // Boolean to integer conversions for MySQL
+    // Boolean to integer conversions for MySQL using helper
     showHouseAddress: boolToInt(developmentData.showHouseAddress),
     isFeatured: boolToInt(developmentData.isFeatured),
     isPublished: boolToInt(developmentData.isPublished),
@@ -406,13 +467,10 @@ async function createDevelopment(
     
     // Normalize amenities
     amenities: normalizeAmenities(developmentData.amenities),
-    
-    // Timestamps removed from insert payload as they are auto-generated/defaulted by schema usually,
-    // but Drizzle schema has .default(sql`CURRENT_TIMESTAMP`).
-    // Pass if you want to override or ensure consistency. Drizzle handles it.
   };
 
   console.log('[developmentService] Creating development:', {
+    slug: transformedData.slug,
     devOwnerType: transformedData.devOwnerType,
     brandProfileId: transformedData.developerBrandProfileId,
     developerId: transformedData.developerId,
