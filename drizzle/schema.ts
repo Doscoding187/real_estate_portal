@@ -619,7 +619,6 @@ export const developments = mysqlTable("developments", {
 	index("idx_developments_suburb").on(table.suburb),
 	index("idx_developments_location_id").on(table.locationId),
 	unique("unique_slug").on(table.slug),
-]);
 	index("idx_developments_rating").on(table.rating),
 	index("idx_developments_published").on(table.isPublished, table.publishedAt),
 ]);
