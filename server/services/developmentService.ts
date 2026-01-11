@@ -225,14 +225,18 @@ async function createDevelopment(developerId: number, data: any, metadata: any =
     developerId,
     // Ensure amenities are stringified if passed as array, or let Drizzle handle JSON if column is json
     amenities: Array.isArray(developmentData.amenities) ? developmentData.amenities : developmentData.amenities
-  }).returning();
+  });
+
+  const developmentId = result.insertId;
 
   // Persist Unit Types
   if (unitTypesData && Array.isArray(unitTypesData) && unitTypesData.length > 0) {
-     await persistUnitTypes(result.id, unitTypesData);
+     await persistUnitTypes(developmentId, unitTypesData);
   }
   
-  return result;
+  // Fetch and return the created development
+  const [created] = await db.select().from(developments).where(eq(developments.id, developmentId)).limit(1);
+  return created;
 }
 
 async function getDevelopmentWithPhases(id: number) {
@@ -278,20 +282,21 @@ async function updateDevelopment(id: number, developerId: number, data: any) {
   // Extract unitTypes from data to prevent Drizzle error on development update
   const { unitTypes: unitTypesData, ...developmentData } = data;
 
-  const [result] = await db.update(developments)
+  await db.update(developments)
     .set({
       ...developmentData,
       amenities: Array.isArray(developmentData.amenities) ? developmentData.amenities : developmentData.amenities
     })
-    .where(eq(developments.id, id))
-    .returning();
+    .where(eq(developments.id, id));
 
   // Handle Unit Types Persistence
   if (unitTypesData && Array.isArray(unitTypesData) && unitTypesData.length > 0) {
     await persistUnitTypes(id, unitTypesData);
   }
   
-  return result;
+  // Fetch and return the updated development
+  const [updated] = await db.select().from(developments).where(eq(developments.id, id)).limit(1);
+  return updated;
 }
 
 // Helper: Persist Unit Types
@@ -375,19 +380,24 @@ async function createPhase(developmentId: number, developerId: number, data: any
    const [result] = await db.insert(developmentPhases).values({
      ...data,
      developmentId
-   }).returning();
-   return result;
+   });
+   
+   // Fetch and return the created phase
+   const [created] = await db.select().from(developmentPhases).where(eq(developmentPhases.id, result.insertId)).limit(1);
+   return created;
 }
 
 async function updatePhase(phaseId: number, developerId: number, data: any) {
     const db = await getDb();
     if (!db) throw new Error("Database not available");
     // In real app, verify developer owns the development of this phase
-    const [result] = await db.update(developmentPhases)
+    await db.update(developmentPhases)
       .set(data)
-      .where(eq(developmentPhases.id, phaseId))
-      .returning();
-    return result;
+      .where(eq(developmentPhases.id, phaseId));
+    
+    // Fetch and return the updated phase
+    const [updated] = await db.select().from(developmentPhases).where(eq(developmentPhases.id, phaseId)).limit(1);
+    return updated;
 }
 
 async function deleteDevelopment(id: number) {
@@ -401,15 +411,17 @@ async function deleteDevelopment(id: number) {
 async function publishDevelopment(id: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const [result] = await db.update(developments)
+  await db.update(developments)
     .set({ 
       isPublished: 1, 
       publishedAt: new Date().toISOString(),
       status: 'launching-soon' // Default status on publish
     })
-    .where(eq(developments.id, id))
-    .returning();
-  return result;
+    .where(eq(developments.id, id));
+  
+  // Fetch and return the updated development
+  const [updated] = await db.select().from(developments).where(eq(developments.id, id)).limit(1);
+  return updated;
 }
 
 // Object export to satisfy existing consumers
