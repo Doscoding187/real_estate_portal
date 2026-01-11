@@ -219,11 +219,18 @@ async function createDevelopment(developerId: number, data: any, metadata: any =
   // Extract unitTypes from data to prevent Drizzle error
   const { unitTypes: unitTypesData, ...developmentData } = data;
 
+  // Extract ownerType from metadata and map to devOwnerType
+  const { ownerType, brandProfileId, ...restMetadata } = metadata;
+  
   // Transform booleans to integers for MySQL compatibility
   const transformedData = {
     ...developmentData,
-    ...metadata,
+    ...restMetadata,
     developerId,
+    // Map ownerType to devOwnerType column - 'platform' for super admin, 'developer' for regular
+    devOwnerType: ownerType || 'developer',
+    // Set developerBrandProfileId if provided
+    developerBrandProfileId: brandProfileId || developmentData.developerBrandProfileId || null,
     // Boolean to integer conversions for MySQL
     showHouseAddress: developmentData.showHouseAddress ? 1 : 0,
     isFeatured: developmentData.isFeatured ? 1 : 0,
@@ -232,6 +239,8 @@ async function createDevelopment(developerId: number, data: any, metadata: any =
     // Ensure amenities are handled correctly
     amenities: Array.isArray(developmentData.amenities) ? developmentData.amenities : developmentData.amenities
   };
+
+  console.log('[developmentService] Creating development with devOwnerType:', transformedData.devOwnerType, 'brandProfileId:', transformedData.developerBrandProfileId);
 
   const [result] = await db.insert(developments).values(transformedData);
 
