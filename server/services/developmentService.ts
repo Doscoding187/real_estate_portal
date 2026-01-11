@@ -219,13 +219,21 @@ async function createDevelopment(developerId: number, data: any, metadata: any =
   // Extract unitTypes from data to prevent Drizzle error
   const { unitTypes: unitTypesData, ...developmentData } = data;
 
-  const [result] = await db.insert(developments).values({
+  // Transform booleans to integers for MySQL compatibility
+  const transformedData = {
     ...developmentData,
     ...metadata,
     developerId,
-    // Ensure amenities are stringified if passed as array, or let Drizzle handle JSON if column is json
+    // Boolean to integer conversions for MySQL
+    showHouseAddress: developmentData.showHouseAddress ? 1 : 0,
+    isFeatured: developmentData.isFeatured ? 1 : 0,
+    isPublished: developmentData.isPublished ? 1 : 0,
+    views: developmentData.views ?? 0,
+    // Ensure amenities are handled correctly
     amenities: Array.isArray(developmentData.amenities) ? developmentData.amenities : developmentData.amenities
-  });
+  };
+
+  const [result] = await db.insert(developments).values(transformedData);
 
   const developmentId = result.insertId;
 
