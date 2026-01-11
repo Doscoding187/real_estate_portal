@@ -16,6 +16,15 @@ import {
 } from '../../drizzle/schema';
 
 // ===========================================================================
+// HELPER FUNCTIONS
+// ===========================================================================
+
+function toMySqlBool(value: any): number {
+  if (value === true || value === 'true' || value === 1 || value === '1') return 1;
+  return 0;
+}
+
+// ===========================================================================
 // PUBLIC FUNCTIONS (Moved from db.ts)
 // ===========================================================================
 
@@ -199,8 +208,14 @@ export async function listPublicDevelopments(limit: number = 20) {
       priceTo: developments.priceTo,
       status: developments.status,
       isFeatured: developments.isFeatured,
+      // Developer Info (Fixing N+1)
+      developer: {
+        name: developers.name,
+        logo: developers.logo,
+      }
     })
     .from(developments)
+    .leftJoin(developers, eq(developments.developerId, developers.id))
     .where(eq(developments.isPublished, 1))
     .orderBy(desc(developments.isFeatured), desc(developments.createdAt))
     .limit(limit);
@@ -231,10 +246,10 @@ async function createDevelopment(developerId: number, data: any, metadata: any =
     devOwnerType: ownerType || 'developer',
     // Set developerBrandProfileId if provided
     developerBrandProfileId: brandProfileId || developmentData.developerBrandProfileId || null,
-    // Boolean to integer conversions for MySQL
-    showHouseAddress: developmentData.showHouseAddress ? 1 : 0,
-    isFeatured: developmentData.isFeatured ? 1 : 0,
-    isPublished: developmentData.isPublished ? 1 : 0,
+    // Boolean to integer conversions for MySQL using helper
+    showHouseAddress: toMySqlBool(developmentData.showHouseAddress),
+    isFeatured: toMySqlBool(developmentData.isFeatured),
+    isPublished: toMySqlBool(developmentData.isPublished),
     views: developmentData.views ?? 0,
     // Ensure amenities are handled correctly
     amenities: Array.isArray(developmentData.amenities) ? developmentData.amenities : developmentData.amenities
@@ -242,10 +257,24 @@ async function createDevelopment(developerId: number, data: any, metadata: any =
 
   console.log('[developmentService] Creating development with devOwnerType:', transformedData.devOwnerType, 'brandProfileId:', transformedData.developerBrandProfileId);
   
-  let result;
+  let resultId: number;
+
   try {
-    const [insertResult] = await db.insert(developments).values(transformedData);
-    result = insertResult;
+    // USE TRANSACTION for Atomicity
+    const createdDev = await db.transaction(async (tx: any) => {
+       const [insertResult] = await tx.insert(developments).values(transformedData);
+       const newId = insertResult.insertId;
+
+       // Persist Unit Types within same transaction
+       if (unitTypesData && Array.isArray(unitTypesData) && unitTypesData.length > 0) {
+          await persistUnitTypes(tx, newId, unitTypesData);
+       }
+       
+       return newId;
+    });
+    
+    resultId = createdDev;
+
   } catch (error: any) {
     console.error('[developmentService] FAILED to insert development:', error);
     // Explicitly check for common MySQL errors to give better feedback
@@ -257,16 +286,9 @@ async function createDevelopment(developerId: number, data: any, metadata: any =
     }
     throw error;
   }
-
-  const developmentId = result.insertId;
-
-  // Persist Unit Types
-  if (unitTypesData && Array.isArray(unitTypesData) && unitTypesData.length > 0) {
-     await persistUnitTypes(developmentId, unitTypesData);
-  }
   
-  // Fetch and return the created development
-  const [created] = await db.select().from(developments).where(eq(developments.id, developmentId)).limit(1);
+  // Fetch and return the created development (outside transaction)
+  const [created] = await db.select().from(developments).where(eq(developments.id, resultId)).limit(1);
   return created;
 }
 
@@ -322,7 +344,7 @@ async function updateDevelopment(id: number, developerId: number, data: any) {
 
   // Handle Unit Types Persistence
   if (unitTypesData && Array.isArray(unitTypesData) && unitTypesData.length > 0) {
-    await persistUnitTypes(id, unitTypesData);
+    await persistUnitTypes(db, id, unitTypesData);
   }
   
   // Fetch and return the updated development
@@ -331,8 +353,7 @@ async function updateDevelopment(id: number, developerId: number, data: any) {
 }
 
 // Helper: Persist Unit Types
-async function persistUnitTypes(developmentId: number, unitTypesData: any[]) {
-   const db = await getDb();
+async function persistUnitTypes(db: any, developmentId: number, unitTypesData: any[]) {
    if (!db) return;
 
    console.log('[Service] persistUnitTypes: Processing', unitTypesData.length, 'unit types for dev', developmentId);
@@ -354,7 +375,6 @@ async function persistUnitTypes(developmentId: number, unitTypesData: any[]) {
         sizeFrom: Number(unit.sizeFrom || unit.unitSize || 0),
         sizeTo: Number(unit.sizeTo || unit.sizeFrom || unit.unitSize || 0),
         
-        // Pricing
         // Pricing
         priceFrom: Number(unit.priceFrom || unit.basePriceFrom || 0),
         priceTo: (() => {
@@ -380,7 +400,7 @@ async function persistUnitTypes(developmentId: number, unitTypesData: any[]) {
         availableUnits: Number(unit.availableUnits || 0),
         
         // Metadata
-        isActive: unit.isActive === false ? 0 : 1, // Default to 1
+        isActive: toMySqlBool(unit.isActive !== false), // Default to 1 (true)
         updatedAt: new Date().toISOString()
       };
 
