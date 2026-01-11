@@ -552,6 +552,7 @@ async function createDevelopment(
     showHouseAddress: boolToInt(developmentData.showHouseAddress),
     isFeatured: boolToInt(developmentData.isFeatured),
     isPublished: boolToInt(developmentData.isPublished),
+    publishedAt: boolToInt(developmentData.isPublished) === 1 ? new Date().toISOString() : null,
     
     // Default values
     views: developmentData.views ?? 0,

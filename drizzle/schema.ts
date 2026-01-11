@@ -1,4 +1,4 @@
-import { mysqlTable, index, foreignKey, int, varchar, text, json, mysqlEnum, timestamp, decimal, tinyint, boolean } from "drizzle-orm/mysql-core"
+import { mysqlTable, index, foreignKey, int, varchar, text, json, mysqlEnum, timestamp, decimal, tinyint, boolean, unique } from "drizzle-orm/mysql-core"
 import { sql, relations } from "drizzle-orm"
 
 export const activities = mysqlTable("activities", {
@@ -618,6 +618,8 @@ export const developments = mysqlTable("developments", {
 	index("idx_developments_gps_accuracy").on(table.gpsAccuracy),
 	index("idx_developments_suburb").on(table.suburb),
 	index("idx_developments_location_id").on(table.locationId),
+	unique("unique_slug").on(table.slug),
+]);
 	index("idx_developments_rating").on(table.rating),
 	index("idx_developments_published").on(table.isPublished, table.publishedAt),
 ]);
