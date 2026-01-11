@@ -11,6 +11,7 @@ import { Building2, Globe, Calendar } from 'lucide-react';
 import { GradientInput } from '../../ui/GradientInput';
 import { GradientTextarea } from '../../ui/GradientTextarea';
 import { GradientSelect, GradientSelectItem } from '../../ui/GradientSelect';
+import { OptimizedSelect } from '@/components/ui/OptimizedSelect';
 import { cn } from '@/lib/utils';
 
 export interface BasicInfoData {

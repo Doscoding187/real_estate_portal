@@ -241,8 +241,22 @@ async function createDevelopment(developerId: number, data: any, metadata: any =
   };
 
   console.log('[developmentService] Creating development with devOwnerType:', transformedData.devOwnerType, 'brandProfileId:', transformedData.developerBrandProfileId);
-
-  const [result] = await db.insert(developments).values(transformedData);
+  
+  let result;
+  try {
+    const [insertResult] = await db.insert(developments).values(transformedData);
+    result = insertResult;
+  } catch (error: any) {
+    console.error('[developmentService] FAILED to insert development:', error);
+    // Explicitly check for common MySQL errors to give better feedback
+    if (error.code === 'ER_NO_REFERENCED_ROW_2') {
+       console.error('[developmentService] FK Violation. Check developerId:', developerId, 'or developerBrandProfileId:', transformedData.developerBrandProfileId);
+    }
+    if (error.code === 'ER_TRUNCATED_WRONG_VALUE_FOR_FIELD') {
+       console.error('[developmentService] Enum mismatch likely for devOwnerType:', transformedData.devOwnerType);
+    }
+    throw error;
+  }
 
   const developmentId = result.insertId;
 

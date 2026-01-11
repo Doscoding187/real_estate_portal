@@ -516,6 +516,28 @@ export const developerRouter = router({
               description: 'Platform Seed Developer'
             });
           }
+
+          // Also ensure Seed Brand Profile (ID 1) exists if we are defaulting to it
+          // This handles the case where Super Admin hasn't selected a specific brand, or explicitly selected the seed brand
+          const SEED_BRAND_ID = 1;
+          const existingBrand = await dbConn.select().from(developerBrandProfiles).where(eq(developerBrandProfiles.id, SEED_BRAND_ID)).limit(1);
+          
+          if (existingBrand.length === 0) {
+             console.log('[DeveloperRouter] Creating Seed Brand Profile (ID 1) to prevent FK error...');
+             await dbConn.insert(developerBrandProfiles).values({
+                id: SEED_BRAND_ID,
+                brandName: 'Real Estate Portal',
+                slug: 'real-estate-portal',
+                identityType: 'developer',
+                ownerType: 'platform',
+                linkedDeveloperAccountId: SEED_DEVELOPER_ID,
+                createdBy: ctx.user.id,
+                isSubscriber: 0,
+                isClaimable: 0,
+                isVisible: 1,
+                brandTier: 'national'
+             });
+          }
         }
         
         // Use brandProfileId for frontend grouping/SEO if provided
