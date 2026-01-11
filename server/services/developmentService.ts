@@ -1,151 +1,293 @@
-
-import { 
-  eq, 
-  desc, 
-  and, 
-  or, 
-  isNotNull,
-  sql
-} from 'drizzle-orm';
+import { eq, desc, and, or, isNotNull, sql } from 'drizzle-orm';
 import { getDb } from '../db-connection';
-import { 
-  developments, 
-  developers, 
-  unitTypes, 
-  developmentPhases 
-} from '../../drizzle/schema';
+import { developments, developers, unitTypes, developmentPhases } from '../../drizzle/schema';
 
-// ===========================================================================
-// HELPER FUNCTIONS
-// ===========================================================================
+// =========================================================================== 
+// TYPES
+// =========================================================================== 
 
-function toMySqlBool(value: any): number {
+interface CreateDevelopmentData {
+  unitTypes?: UnitTypeData[];
+  amenities?: string[] | string;
+  showHouseAddress?: boolean;
+  isFeatured?: boolean;
+  isPublished?: boolean;
+  views?: number;
+  developerBrandProfileId?: number | null;
+  [key: string]: any;
+}
+
+interface UnitTypeData {
+  id?: string;
+  name?: string;
+  bedrooms?: number;
+  bathrooms?: number;
+  parking?: string;
+  parkingType?: string;
+  parkingBays?: number;
+  sizeFrom?: number;
+  sizeTo?: number;
+  unitSize?: number;
+  priceFrom?: number;
+  priceTo?: number;
+  basePriceFrom?: number;
+  extras?: Array<{ price: number; [key: string]: any }>;
+  totalUnits?: number;
+  availableUnits?: number;
+  isActive?: boolean;
+}
+
+interface DevelopmentMetadata {
+  ownerType?: 'platform' | 'developer';
+  brandProfileId?: number | null;
+  [key: string]: any;
+}
+
+interface DevelopmentError extends Error {
+  code?: string;
+  details?: Record<string, any>;
+}
+
+// =========================================================================== 
+// UTILITIES
+// =========================================================================== 
+
+/**
+ * Converts boolean values to MySQL-compatible integers
+ */
+function boolToInt(value: any): 0 | 1 {
   if (value === true || value === 'true' || value === 1 || value === '1') return 1;
   return 0;
 }
 
-// ===========================================================================
-// PUBLIC FUNCTIONS (Moved from db.ts)
-// ===========================================================================
+/**
+ * Safely validates and parses a slug or ID
+ */
+function parseSlugOrId(input: string): { isId: boolean; value: string | number } {
+  const trimmed = input.trim();
+  const isNumeric = /^\d+$/.test(trimmed);
+  
+  if (isNumeric) {
+    const parsed = parseInt(trimmed, 10);
+    if (!isNaN(parsed) && parsed > 0) {
+      return { isId: true, value: parsed };
+    }
+  }
+  
+  // Validate slug format (alphanumeric, hyphens, underscores) allowed
+  return { isId: false, value: trimmed };
+}
+
+/**
+ * Normalizes amenities to array format
+ */
+function normalizeAmenities(amenities: any): string[] {
+  if (Array.isArray(amenities)) return amenities;
+  if (typeof amenities === 'string') {
+    try {
+      const parsed = JSON.parse(amenities);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return amenities ? [amenities] : [];
+    }
+  }
+  return [];
+}
+
+/**
+ * Validates development data before insertion
+ */
+function validateDevelopmentData(data: CreateDevelopmentData, developerId: number): void {
+  if (!developerId) { // Allow negative/zero for some internal logic? No, create should have ID.
+     // But Super Admin uses 1.
+    throw createError('Invalid developerId', 'VALIDATION_ERROR', { developerId });
+  }
+
+  // Add more validation as needed
+  if (data.devOwnerType && !['platform', 'developer'].includes(data.devOwnerType)) {
+    throw createError(
+      `Invalid devOwnerType: ${data.devOwnerType}. Must be 'platform' or 'developer'`,
+      'VALIDATION_ERROR',
+      { devOwnerType: data.devOwnerType }
+    );
+  }
+}
+
+/**
+ * Creates a structured error object
+ */
+function createError(message: string, code: string, details?: Record<string, any>): DevelopmentError {
+  const error = new Error(message) as DevelopmentError;
+  error.code = code;
+  error.details = details;
+  return error;
+}
+
+/**
+ * Handles database errors with specific messages
+ */
+function handleDatabaseError(error: any, context: Record<string, any>): never {
+  console.error('[developmentService] Database error:', {
+    message: error.message,
+    code: error.code,
+    context,
+  });
+
+  switch (error.code) {
+    case 'ER_NO_REFERENCED_ROW_2':
+      throw createError(
+        'Foreign key constraint violation. Invalid developerId or developerBrandProfileId.',
+        'FK_CONSTRAINT_ERROR',
+        {
+          developerId: context.developerId,
+          developerBrandProfileId: context.developerBrandProfileId,
+        }
+      );
+
+    case 'ER_TRUNCATED_WRONG_VALUE_FOR_FIELD':
+      throw createError(
+        `Invalid enum value for devOwnerType: ${context.devOwnerType}. Must be 'platform' or 'developer'.`,
+        'ENUM_ERROR',
+        { devOwnerType: context.devOwnerType }
+      );
+
+    case 'ER_DUP_ENTRY':
+      throw createError(
+        'Duplicate entry detected. Development slug or unique field already exists.',
+        'DUPLICATE_ENTRY',
+        context
+      );
+
+    case 'ER_DATA_TOO_LONG':
+      throw createError(
+        'Data too long for one or more fields.',
+        'DATA_TOO_LONG',
+        context
+      );
+
+    default:
+      throw createError(
+        `Database operation failed: ${error.message}`,
+        error.code || 'DB_ERROR',
+        context
+      );
+  }
+}
+
+// =========================================================================== 
+// PUBLIC FUNCTIONS
+// =========================================================================== 
 
 export async function getPublicDevelopmentBySlug(slugOrId: string) {
   console.log('[DEBUG] Service: getPublicDevelopmentBySlug called with:', slugOrId);
+  
   try {
     const db = await getDb();
-    console.log('[DEBUG] Service: getDb result:', db ? 'Connected' : 'NULL');
-    
     if (!db) {
       console.error('[CRITICAL] Service: Database connection is NULL');
       return null;
     }
 
-  const isNumeric = /^\d+$/.test(slugOrId);
-  const idValue = isNumeric ? parseInt(slugOrId) : -1;
+    const { isId, value } = parseSlugOrId(slugOrId);
+    
+    // Safety check for empty slug
+    if (!isId && (!value || value === 'undefined' || value === 'null')) return null;
 
-  const results = await db
-    .select({
-      id: developments.id,
-      name: developments.name,
-      slug: developments.slug,
-      description: developments.description,
-      images: developments.images,
-      videos: developments.videos,
-      locationId: developments.locationId,
-      city: developments.city,
-      province: developments.province,
-      suburb: developments.suburb,
-      address: developments.address,
-      latitude: developments.latitude,
-      longitude: developments.longitude,
-      priceFrom: developments.priceFrom,
-      priceTo: developments.priceTo,
-      amenities: developments.amenities,
-      highlights: developments.highlights,
-      features: developments.features,
-      estateSpecs: developments.estateSpecs,
-      // Global Financials
-      monthlyLevyFrom: developments.monthlyLevyFrom,
-      monthlyLevyTo: developments.monthlyLevyTo,
-      ratesFrom: developments.ratesFrom,
-      ratesTo: developments.ratesTo,
-      transferCostsIncluded: developments.transferCostsIncluded,
-      status: developments.status,
-      developmentType: developments.developmentType,
-      completionDate: developments.completionDate,
-      totalUnits: developments.totalUnits,
-      availableUnits: developments.availableUnits,
-      floorPlans: developments.floorPlans,
-      brochures: developments.brochures,
-      showHouseAddress: developments.showHouseAddress,
-      isPublished: developments.isPublished,
-      marketingRole: developments.marketingRole, 
-      // Joined Developer Info
-      developer: {
-        id: developers.id,
-        name: developers.name,
-        slug: developers.slug,
-        logo: developers.logo,
-        description: developers.description,
-        website: developers.website,
-        email: developers.email, 
-        phone: developers.phone, 
-        status: developers.status,
-      },
-    })
-    .from(developments)
-    .leftJoin(developers, eq(developments.developerId, developers.id))
-    .where(
-      and(
-        or(
-          eq(developments.slug, slugOrId),
-          eq(developments.id, idValue)
-        ),
-        eq(developments.isPublished, 1) // Only public
-      )
-    )
-    .limit(1);
+    const whereClause = isId 
+      ? and(eq(developments.id, value as number), eq(developments.isPublished, 1))
+      : and(eq(developments.slug, value as string), eq(developments.isPublished, 1));
 
-  if (results.length === 0) return null;
+    const results = await db
+      .select({
+        id: developments.id,
+        name: developments.name,
+        slug: developments.slug,
+        description: developments.description,
+        images: developments.images,
+        videos: developments.videos,
+        locationId: developments.locationId,
+        city: developments.city,
+        province: developments.province,
+        suburb: developments.suburb,
+        address: developments.address,
+        latitude: developments.latitude,
+        longitude: developments.longitude,
+        priceFrom: developments.priceFrom,
+        priceTo: developments.priceTo,
+        amenities: developments.amenities,
+        highlights: developments.highlights,
+        features: developments.features,
+        estateSpecs: developments.estateSpecs,
+        monthlyLevyFrom: developments.monthlyLevyFrom,
+        monthlyLevyTo: developments.monthlyLevyTo,
+        ratesFrom: developments.ratesFrom,
+        ratesTo: developments.ratesTo,
+        transferCostsIncluded: developments.transferCostsIncluded,
+        status: developments.status,
+        developmentType: developments.developmentType,
+        completionDate: developments.completionDate,
+        totalUnits: developments.totalUnits,
+        availableUnits: developments.availableUnits,
+        floorPlans: developments.floorPlans,
+        brochures: developments.brochures,
+        showHouseAddress: developments.showHouseAddress,
+        isPublished: developments.isPublished,
+        marketingRole: developments.marketingRole,
+        developer: {
+          id: developers.id,
+          name: developers.name,
+          slug: developers.slug,
+          logo: developers.logo,
+          description: developers.description,
+          website: developers.website,
+          email: developers.email,
+          phone: developers.phone,
+          status: developers.status,
+        },
+      })
+      .from(developments)
+      .leftJoin(developers, eq(developments.developerId, developers.id))
+      .where(whereClause)
+      .limit(1);
 
-  const dev = results[0];
+    if (results.length === 0) return null;
 
-  // Fetch unit types
-  const units = await db
-    .select()
-    .from(unitTypes)
-    .where(
-      and(
-        eq(unitTypes.developmentId, dev.id),
-        eq(unitTypes.isActive, 1)
-      )
-    )
-    .orderBy(unitTypes.basePriceFrom);
+    const dev = results[0];
 
-  // Fetch phases
-  const phases = await db
-    .select({
-      id: developmentPhases.id,
-      developmentId: developmentPhases.developmentId,
-      name: developmentPhases.name,
-      phaseNumber: developmentPhases.phaseNumber,
-      description: developmentPhases.description,
-      status: developmentPhases.status,
-      totalUnits: developmentPhases.totalUnits,
-      availableUnits: developmentPhases.availableUnits,
-      priceFrom: developmentPhases.priceFrom,
-      priceTo: developmentPhases.priceTo,
-      launchDate: developmentPhases.launchDate,
-      completionDate: developmentPhases.completionDate,
-      // Removed latitude/longitude as they are missing in production
-      // Omit missing columns: specType, customSpecType, finishingDifferences, phaseHighlights
-    })
-    .from(developmentPhases)
-    .where(eq(developmentPhases.developmentId, dev.id))
-    .orderBy(developmentPhases.phaseNumber);
+    // Parallel fetch for better performance
+    const [units, phases] = await Promise.all([
+      db
+        .select()
+        .from(unitTypes)
+        .where(and(
+          eq(unitTypes.developmentId, dev.id),
+          eq(unitTypes.isActive, 1)
+        ))
+        .orderBy(unitTypes.basePriceFrom),
+      
+      db
+        .select({
+          id: developmentPhases.id,
+          developmentId: developmentPhases.developmentId,
+          name: developmentPhases.name,
+          phaseNumber: developmentPhases.phaseNumber,
+          description: developmentPhases.description,
+          status: developmentPhases.status,
+          totalUnits: developmentPhases.totalUnits,
+          availableUnits: developmentPhases.availableUnits,
+          priceFrom: developmentPhases.priceFrom,
+          priceTo: developmentPhases.priceTo,
+          launchDate: developmentPhases.launchDate,
+          completionDate: developmentPhases.completionDate,
+        })
+        .from(developmentPhases)
+        .where(eq(developmentPhases.developmentId, dev.id))
+        .orderBy(developmentPhases.phaseNumber)
+    ]);
 
     return {
       ...dev,
-      amenities: Array.isArray(dev.amenities) ? dev.amenities : [],
+      amenities: normalizeAmenities(dev.amenities),
       unitTypes: units,
       phases: phases,
     };
@@ -171,7 +313,6 @@ export async function getPublicDevelopment(id: number) {
       province: developments.province,
       priceFrom: developments.priceFrom,
       priceTo: developments.priceTo,
-      // Global Financials
       monthlyLevyFrom: developments.monthlyLevyFrom,
       monthlyLevyTo: developments.monthlyLevyTo,
       ratesFrom: developments.ratesFrom,
@@ -208,11 +349,11 @@ export async function listPublicDevelopments(limit: number = 20) {
       priceTo: developments.priceTo,
       status: developments.status,
       isFeatured: developments.isFeatured,
-      // Developer Info (Fixing N+1)
       developer: {
+        id: developers.id,
         name: developers.name,
         logo: developers.logo,
-      }
+      },
     })
     .from(developments)
     .leftJoin(developers, eq(developments.developerId, developers.id))
@@ -223,40 +364,60 @@ export async function listPublicDevelopments(limit: number = 20) {
   return results;
 }
 
-// ===========================================================================
-// ADMIN / DEVELOPER FUNCTIONS (Restored)
-// ===========================================================================
+// =========================================================================== 
+// ADMIN / DEVELOPER FUNCTIONS
+// =========================================================================== 
 
-async function createDevelopment(developerId: number, data: any, metadata: any = {}) {
+/**
+ * Creates a new development with associated unit types in a transaction
+ */
+async function createDevelopment(
+  developerId: number,
+  data: CreateDevelopmentData,
+  metadata: DevelopmentMetadata = {}
+) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
-  // Extract unitTypes from data to prevent Drizzle error
+  // Extract data that needs special handling
   const { unitTypes: unitTypesData, ...developmentData } = data;
-
-  // Extract ownerType from metadata and map to devOwnerType
   const { ownerType, brandProfileId, ...restMetadata } = metadata;
-  
-  // Transform booleans to integers for MySQL compatibility
+
+  // Validate input before proceeding
+  validateDevelopmentData({ ...developmentData, devOwnerType: ownerType || 'developer' }, developerId);
+
+  // Transform data for MySQL compatibility
   const transformedData = {
     ...developmentData,
     ...restMetadata,
     developerId,
-    // Map ownerType to devOwnerType column - 'platform' for super admin, 'developer' for regular
+    
+    // Ownership configuration
     devOwnerType: ownerType || 'developer',
-    // Set developerBrandProfileId if provided
-    developerBrandProfileId: brandProfileId || developmentData.developerBrandProfileId || null,
-    // Boolean to integer conversions for MySQL using helper
-    showHouseAddress: toMySqlBool(developmentData.showHouseAddress),
-    isFeatured: toMySqlBool(developmentData.isFeatured),
-    isPublished: toMySqlBool(developmentData.isPublished),
+    developerBrandProfileId: brandProfileId ?? developmentData.developerBrandProfileId ?? null,
+    
+    // Boolean to integer conversions for MySQL
+    showHouseAddress: boolToInt(developmentData.showHouseAddress),
+    isFeatured: boolToInt(developmentData.isFeatured),
+    isPublished: boolToInt(developmentData.isPublished),
+    
+    // Default values
     views: developmentData.views ?? 0,
-    // Ensure amenities are handled correctly
-    amenities: Array.isArray(developmentData.amenities) ? developmentData.amenities : developmentData.amenities
+    
+    // Normalize amenities
+    amenities: normalizeAmenities(developmentData.amenities),
+    
+    // Timestamps removed from insert payload as they are auto-generated/defaulted by schema usually,
+    // but Drizzle schema has .default(sql`CURRENT_TIMESTAMP`).
+    // Pass if you want to override or ensure consistency. Drizzle handles it.
   };
 
-  console.log('[developmentService] Creating development with devOwnerType:', transformedData.devOwnerType, 'brandProfileId:', transformedData.developerBrandProfileId);
-  
+  console.log('[developmentService] Creating development:', {
+    devOwnerType: transformedData.devOwnerType,
+    brandProfileId: transformedData.developerBrandProfileId,
+    developerId: transformedData.developerId,
+  });
+
   let resultId: number;
 
   try {
@@ -276,15 +437,11 @@ async function createDevelopment(developerId: number, data: any, metadata: any =
     resultId = createdDev;
 
   } catch (error: any) {
-    console.error('[developmentService] FAILED to insert development:', error);
-    // Explicitly check for common MySQL errors to give better feedback
-    if (error.code === 'ER_NO_REFERENCED_ROW_2') {
-       console.error('[developmentService] FK Violation. Check developerId:', developerId, 'or developerBrandProfileId:', transformedData.developerBrandProfileId);
-    }
-    if (error.code === 'ER_TRUNCATED_WRONG_VALUE_FOR_FIELD') {
-       console.error('[developmentService] Enum mismatch likely for devOwnerType:', transformedData.devOwnerType);
-    }
-    throw error;
+    handleDatabaseError(error, {
+      developerId,
+      devOwnerType: transformedData.devOwnerType,
+      developerBrandProfileId: transformedData.developerBrandProfileId,
+    });
   }
   
   // Fetch and return the created development (outside transaction)
@@ -292,83 +449,96 @@ async function createDevelopment(developerId: number, data: any, metadata: any =
   return created;
 }
 
-async function getDevelopmentWithPhases(id: number) {
-  const db = await getDb();
-  if (!db) return null;
-
-  const results = await db.select().from(developments).where(eq(developments.id, id)).limit(1);
-  if (!results.length) return null;
-  const dev = results[0];
-
-  const phases = await db.select().from(developmentPhases).where(eq(developmentPhases.developmentId, id));
-
-  return {
-    ...dev,
-    phases
-  };
-}
-
-async function getDevelopmentsByDeveloperId(developerId: number) {
-  const db = await getDb();
-  if (!db) return [];
-  return db.select().from(developments).where(eq(developments.developerId, developerId));
-}
-
-async function updateDevelopment(id: number, developerId: number, data: any) {
+async function updateDevelopment(id: number, developerId: number, data: CreateDevelopmentData) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
-  // If developerId is -1, bypass ownership check (Super Admin mode)
-  // Otherwise, verify ownership
+  // Verify ownership (bypass for super admin with developerId === -1)
   if (developerId !== -1) {
     const existing = await db
       .select()
       .from(developments)
-      .where(and(eq(developments.id, id), eq(developments.developerId, developerId)))
+      .where(and(
+        eq(developments.id, id),
+        eq(developments.developerId, developerId)
+      ))
       .limit(1);
-      
+
     if (!existing.length) {
-      throw new Error("Unauthorized: Development not found or you don't have permission to update it");
+      throw new Error(
+        "Unauthorized: Development not found or you don't have permission to update it"
+      );
     }
   }
 
-  // Extract unitTypes from data to prevent Drizzle error on development update
+  // Extract data that needs special handling
   const { unitTypes: unitTypesData, ...developmentData } = data;
 
+  // Update development
   await db.update(developments)
     .set({
       ...developmentData,
-      amenities: Array.isArray(developmentData.amenities) ? developmentData.amenities : developmentData.amenities
+      amenities: normalizeAmenities(developmentData.amenities),
+      updatedAt: new Date().toISOString(),
     })
     .where(eq(developments.id, id));
 
-  // Handle Unit Types Persistence
+  // Handle Unit Types if provided
   if (unitTypesData && Array.isArray(unitTypesData) && unitTypesData.length > 0) {
     await persistUnitTypes(db, id, unitTypesData);
   }
+
+  // Fetch and return updated development
+  const [updated] = await db
+    .select()
+    .from(developments)
+    .where(eq(developments.id, id))
+    .limit(1);
   
-  // Fetch and return the updated development
-  const [updated] = await db.select().from(developments).where(eq(developments.id, id)).limit(1);
   return updated;
 }
 
-// Helper: Persist Unit Types
-async function persistUnitTypes(db: any, developmentId: number, unitTypesData: any[]) {
-   if (!db) return;
+/**
+ * Persists unit types for a development.
+ * Accepts `db` (transaction or pool) to ensure atomicity.
+ */
+async function persistUnitTypes(
+  db: any,
+  developmentId: number,
+  unitTypesData: UnitTypeData[]
+): Promise<void> {
+  if (!db) return; // Should throw?
 
-   console.log('[Service] persistUnitTypes: Processing', unitTypesData.length, 'unit types for dev', developmentId);
-    
-    for (const unit of unitTypesData) {
-      // Basic validation
-      if (!unit.id) continue;
-      
+  console.log('[persistUnitTypes] Processing', unitTypesData.length, 'unit types');
+
+  const results = {
+    created: 0,
+    updated: 0,
+    skipped: 0,
+  };
+
+  for (const unit of unitTypesData) {
+    // Skip units without ID
+    if (!unit.id) {
+      console.warn('[persistUnitTypes] Skipping unit without ID:', unit.name);
+      results.skipped++;
+      continue;
+    }
+
+    try {
+      // Calculate price range
+      const basePrice = Number(unit.priceFrom || unit.basePriceFrom || 0);
+      const extrasTotal = Array.isArray(unit.extras)
+        ? unit.extras.reduce((sum, item) => sum + (Number(item.price) || 0), 0)
+        : 0;
+
       const unitPayload = {
-        developmentId: developmentId,
+        developmentId,
         name: unit.name || 'Untitled Unit',
         bedrooms: Number(unit.bedrooms || 0),
         bathrooms: Number(unit.bathrooms || 0),
-        parking: unit.parking, // Enum mapped
-        parkingType: unit.parkingType, // Store if schema allows, or map to 'parking'
+        parking: unit.parking || null,
+        parkingType: unit.parkingType || null,
         parkingBays: Number(unit.parkingBays || 0),
         
         // Dimensions
@@ -376,85 +546,129 @@ async function persistUnitTypes(db: any, developmentId: number, unitTypesData: a
         sizeTo: Number(unit.sizeTo || unit.sizeFrom || unit.unitSize || 0),
         
         // Pricing
-        priceFrom: Number(unit.priceFrom || unit.basePriceFrom || 0),
-        priceTo: (() => {
-           // Calculate Max Price based on Base + Extras
-           const base = Number(unit.priceFrom || unit.basePriceFrom || 0);
-           const extrasTotal = Array.isArray(unit.extras) 
-              ? unit.extras.reduce((sum: number, item: any) => sum + (Number(item.price) || 0), 0)
-              : 0;
-           return base + extrasTotal;
-        })(),
+        priceFrom: basePrice,
+        priceTo: basePrice + extrasTotal,
         
-        // NEW FIELDS
-        monthlyLevyFrom: null, // Deprecated on unit, migrated to development
-        monthlyLevyTo: null,
-        ratesAndTaxesFrom: null,
-        ratesAndTaxesTo: null,
-        
-        // Extras (Base Price + Extras Model)
-        extras: unit.extras ? unit.extras : [], // JSONB
+        // Extras
+        extras: unit.extras || [],
         
         // Inventory
         totalUnits: Number(unit.totalUnits || 0),
         availableUnits: Number(unit.availableUnits || 0),
         
         // Metadata
-        isActive: toMySqlBool(unit.isActive !== false), // Default to 1 (true)
-        updatedAt: new Date().toISOString()
+        isActive: boolToInt(unit.isActive !== false),
+        updatedAt: new Date().toISOString(),
       };
 
-      // Check if unit exists
-      const existingUnit = await db.select().from(unitTypes).where(eq(unitTypes.id, unit.id)).limit(1);
-      
+      // Upsert logic
+      const existingUnit = await db
+        .select()
+        .from(unitTypes)
+        .where(eq(unitTypes.id, unit.id))
+        .limit(1);
+
       if (existingUnit.length > 0) {
-        // Update
-        await db.update(unitTypes)
+        // Update existing unit
+        await db
+          .update(unitTypes)
           .set(unitPayload)
           .where(eq(unitTypes.id, unit.id));
+        
+        results.updated++;
       } else {
-        // Insert
+        // Insert new unit
         await db.insert(unitTypes).values({
-          id: unit.id, // Use frontend generated ID
+          id: unit.id,
           ...unitPayload,
-          createdAt: new Date().toISOString()
+          createdAt: new Date().toISOString(),
         });
+        
+        results.created++;
       }
+    } catch (error: any) {
+      console.error('[persistUnitTypes] Failed to persist unit:', {
+        unitId: unit.id,
+        unitName: unit.name,
+        error: error.message,
+      });
+      throw error; // Re-throw to trigger rollback logic
     }
+  }
+
+  console.log('[persistUnitTypes] Complete:', results);
+}
+
+async function getDevelopmentWithPhases(id: number) {
+  const db = await getDb();
+  if (!db) return null;
+
+  const results = await db
+    .select()
+    .from(developments)
+    .where(eq(developments.id, id))
+    .limit(1);
+
+  if (!results.length) return null;
+
+  const dev = results[0];
+  const phases = await db
+    .select()
+    .from(developmentPhases)
+    .where(eq(developmentPhases.developmentId, id));
+
+  return { ...dev, phases };
+}
+
+async function getDevelopmentsByDeveloperId(developerId: number) {
+  const db = await getDb();
+  if (!db) return [];
+
+  return db
+    .select()
+    .from(developments)
+    .where(eq(developments.developerId, developerId));
 }
 
 async function createPhase(developmentId: number, developerId: number, data: any) {
-   const db = await getDb();
-   if (!db) throw new Error("Database not available");
-   
-   // Verify ownership if needed, but assuming check is done before or via developerId match if we enforced it
-   const [result] = await db.insert(developmentPhases).values({
-     ...data,
-     developmentId
-   });
-   
-   // Fetch and return the created phase
-   const [created] = await db.select().from(developmentPhases).where(eq(developmentPhases.id, result.insertId)).limit(1);
-   return created;
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const [result] = await db.insert(developmentPhases).values({
+    ...data,
+    developmentId,
+  });
+
+  const [created] = await db
+    .select()
+    .from(developmentPhases)
+    .where(eq(developmentPhases.id, result.insertId))
+    .limit(1);
+
+  return created;
 }
 
 async function updatePhase(phaseId: number, developerId: number, data: any) {
-    const db = await getDb();
-    if (!db) throw new Error("Database not available");
-    // In real app, verify developer owns the development of this phase
-    await db.update(developmentPhases)
-      .set(data)
-      .where(eq(developmentPhases.id, phaseId));
-    
-    // Fetch and return the updated phase
-    const [updated] = await db.select().from(developmentPhases).where(eq(developmentPhases.id, phaseId)).limit(1);
-    return updated;
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  await db.update(developmentPhases)
+    .set(data)
+    .where(eq(developmentPhases.id, phaseId));
+
+  const [updated] = await db
+    .select()
+    .from(developmentPhases)
+    .where(eq(developmentPhases.id, phaseId))
+    .limit(1);
+
+  return updated;
 }
 
 async function deleteDevelopment(id: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  // Drizzle doesn't return deleted rows by default in MySQL, but we can return result info
+
   const result = await db.delete(developments).where(eq(developments.id, id));
   return result;
 }
@@ -462,31 +676,42 @@ async function deleteDevelopment(id: number) {
 async function publishDevelopment(id: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
+
   await db.update(developments)
-    .set({ 
-      isPublished: 1, 
+    .set({
+      isPublished: 1,
       publishedAt: new Date().toISOString(),
-      status: 'launching-soon' // Default status on publish
+      status: 'launching-soon',
     })
     .where(eq(developments.id, id));
-  
-  // Fetch and return the updated development
-  const [updated] = await db.select().from(developments).where(eq(developments.id, id)).limit(1);
+
+  const [updated] = await db
+    .select()
+    .from(developments)
+    .where(eq(developments.id, id))
+    .limit(1);
+
   return updated;
 }
 
-// Object export to satisfy existing consumers
+// =========================================================================== 
+// EXPORTS
+// =========================================================================== 
+
 export const developmentService = {
+  // Public
   getPublicDevelopmentBySlug,
   getPublicDevelopment,
   listPublicDevelopments,
+  
+  // Admin/Developer
   createDevelopment,
   updateDevelopment,
   getDevelopmentWithPhases,
   getDevelopmentsByDeveloperId,
-  getDeveloperDevelopments: getDevelopmentsByDeveloperId, // Alias for router compatibility
+  getDeveloperDevelopments: getDevelopmentsByDeveloperId,
   createPhase,
   updatePhase,
   deleteDevelopment,
-  publishDevelopment
+  publishDevelopment,
 };
