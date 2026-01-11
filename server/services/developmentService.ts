@@ -140,6 +140,24 @@ function normalizeAmenities(amenities: any): string[] {
 }
 
 /**
+ * Normalizes image arrays (handles both string and array formats)
+ */
+function normalizeImages(images: any): string[] {
+  if (Array.isArray(images)) return images;
+  
+  if (typeof images === 'string') {
+    // Handle comma-separated strings
+    if (images.includes(',')) {
+      return images.split(',').map(img => img.trim()).filter(Boolean);
+    }
+    // Single image
+    return images ? [images] : [];
+  }
+  
+  return []; // Return empty array if invalid, Drizzle might need JSON string, but schema usually handles array -> json
+}
+
+/**
  * Validates development data before insertion
  */
 function validateDevelopmentData(data: CreateDevelopmentData, developerId: number): void {
@@ -424,6 +442,11 @@ async function createDevelopment(
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
+  console.log('[createDevelopment] Input data:', {
+    name: data.name,
+    slug: data.slug,
+  });
+
   // Extract data that needs special handling
   const { unitTypes: unitTypesData, ...developmentData } = data;
   const { ownerType, brandProfileId, ...restMetadata } = metadata;
@@ -445,17 +468,45 @@ async function createDevelopment(
   }
 
   // Transform data for MySQL compatibility
-  const transformedData = {
-    ...developmentData,
-    ...restMetadata,
+  const transformedData: any = {
+    // Core Identity
     developerId,
-    
-    // CRITICAL: Ensure slug is set
     slug,
+    name: developmentData.name,
+    description: developmentData.description || null,
     
     // Ownership configuration
     devOwnerType: ownerType || 'developer',
     developerBrandProfileId: brandProfileId ?? developmentData.developerBrandProfileId ?? null,
+    marketingRole: developmentData.marketingRole || null,
+
+    // Location
+    address: developmentData.address || null,
+    city: developmentData.city || null,
+    province: developmentData.province || null,
+    suburb: developmentData.suburb || null,
+    latitude: developmentData.latitude || null,
+    longitude: developmentData.longitude || null,
+    locationId: developmentData.locationId || null,
+
+    // Development Details
+    developmentType: developmentData.developmentType || 'residential',
+    status: developmentData.status || 'pre-launch',
+
+    // Pricing
+    priceFrom: developmentData.priceFrom || null,
+    priceTo: developmentData.priceTo || null,
+
+    // Financial - Global level
+    monthlyLevyFrom: developmentData.monthlyLevyFrom || null,
+    monthlyLevyTo: developmentData.monthlyLevyTo || null,
+    ratesFrom: developmentData.ratesFrom || null,
+    ratesTo: developmentData.ratesTo || null,
+    transferCostsIncluded: developmentData.transferCostsIncluded || null,
+
+    // Inventory
+    totalUnits: developmentData.totalUnits || null,
+    availableUnits: developmentData.availableUnits || null,
     
     // Boolean to integer conversions for MySQL using helper
     showHouseAddress: boolToInt(developmentData.showHouseAddress),
@@ -467,9 +518,29 @@ async function createDevelopment(
     
     // Normalize amenities
     amenities: normalizeAmenities(developmentData.amenities),
+    highlights: normalizeAmenities(developmentData.highlights),
+    features: normalizeAmenities(developmentData.features),
+    images: normalizeImages(developmentData.images),
+    videos: developmentData.videos || null,
+    floorPlans: developmentData.floorPlans || null,
+    brochures: developmentData.brochures || null,
+    estateSpecs: developmentData.estateSpecs || null,
+
+    // Dates
+    completionDate: developmentData.completionDate || null,
+
+    // Metadata
+    // Note: Drizzle schema handles createdAt/updatedAt defaults usually
   };
 
-  console.log('[developmentService] Creating development:', {
+  // Add any remaining metadata fields (careful not to overwrite transformed ones)
+  Object.keys(restMetadata).forEach(key => {
+     if (!(key in transformedData)) {
+       transformedData[key] = restMetadata[key];
+     }
+  });
+
+  console.log('[developmentService] Creating development payload:', {
     slug: transformedData.slug,
     devOwnerType: transformedData.devOwnerType,
     brandProfileId: transformedData.developerBrandProfileId,
@@ -504,6 +575,11 @@ async function createDevelopment(
   
   // Fetch and return the created development (outside transaction)
   const [created] = await db.select().from(developments).where(eq(developments.id, resultId)).limit(1);
+  
+  if (!created) {
+    throw new Error(`Development created but not found on retrieval. ID: ${resultId}`);
+  }
+
   return created;
 }
 
@@ -537,6 +613,9 @@ async function updateDevelopment(id: number, developerId: number, data: CreateDe
     .set({
       ...developmentData,
       amenities: normalizeAmenities(developmentData.amenities),
+      highlights: normalizeAmenities(developmentData.highlights),
+      features: normalizeAmenities(developmentData.features),
+      images: normalizeImages(developmentData.images),
       updatedAt: new Date().toISOString(),
     })
     .where(eq(developments.id, id));
@@ -567,7 +646,7 @@ async function persistUnitTypes(
 ): Promise<void> {
   if (!db) return; // Should throw?
 
-  console.log('[persistUnitTypes] Processing', unitTypesData.length, 'unit types');
+  console.log('[persistUnitTypes] Processing', unitTypesData.length, 'unit types for dev', developmentId);
 
   const results = {
     created: 0,
