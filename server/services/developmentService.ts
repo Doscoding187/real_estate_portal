@@ -158,6 +158,33 @@ function normalizeImages(images: any): string[] {
 }
 
 /**
+ * Safely parses a JSON string field that might be stored as text
+ */
+function parseJsonField(field: any): any[] {
+  if (Array.isArray(field)) return field;
+  if (!field) return [];
+  
+  if (typeof field === 'string') {
+    try {
+      // Check if it looks like a JSON array
+      const trimmed = field.trim();
+      if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+        return JSON.parse(trimmed);
+      }
+      // Handle comma-separated list
+      if (trimmed.includes(',')) {
+         return trimmed.split(',').map((s: string) => s.trim());
+      }
+      return [trimmed];
+    } catch (e) {
+      console.warn('[developmentService] Failed to parse JSON field:', field);
+      return [];
+    }
+  }
+  return [];
+}
+
+/**
  * Validates development data before insertion
  */
 function validateDevelopmentData(data: CreateDevelopmentData, developerId: number): void {
@@ -350,7 +377,13 @@ export async function getPublicDevelopmentBySlug(slugOrId: string) {
 
     return {
       ...dev,
-      amenities: normalizeAmenities(dev.amenities),
+      amenities: normalizeAmenities(dev.amenities), // JSON column, Drizzle handles or we normalize
+      // Helper to parse TEXT columns that contain JSON strings
+      images: parseJsonField(dev.images),
+      videos: parseJsonField(dev.videos),
+      floorPlans: parseJsonField(dev.floorPlans),
+      brochures: parseJsonField(dev.brochures),
+      
       unitTypes: units,
       phases: phases,
     };
@@ -761,7 +794,16 @@ async function getDevelopmentWithPhases(id: number) {
     .from(developmentPhases)
     .where(eq(developmentPhases.developmentId, id));
 
-  return { ...dev, phases };
+  return { 
+    ...dev, 
+    amenities: normalizeAmenities(dev.amenities),
+    // Parse TEXT columns
+    images: parseJsonField(dev.images),
+    videos: parseJsonField(dev.videos),
+    floorPlans: parseJsonField(dev.floorPlans),
+    brochures: parseJsonField(dev.brochures),
+    phases 
+  };
 }
 
 async function getDevelopmentsByDeveloperId(developerId: number) {
@@ -772,6 +814,12 @@ async function getDevelopmentsByDeveloperId(developerId: number) {
     .select()
     .from(developments)
     .where(eq(developments.developerId, developerId));
+    
+  return results.map(dev => ({
+    ...dev,
+    images: parseJsonField(dev.images),
+    // Map other fields if necessary for the list view
+  }));
 }
 
 async function createPhase(developmentId: number, developerId: number, data: any) {
