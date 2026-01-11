@@ -428,7 +428,12 @@ export async function getPublicDevelopment(id: number) {
     ))
     .limit(1);
 
-  return results[0] || null;
+  if (!results[0]) return null;
+
+  return {
+    ...results[0],
+    images: parseJsonField(results[0].images),
+  };
 }
 
 export async function listPublicDevelopments(limit: number = 20) {
@@ -461,7 +466,10 @@ export async function listPublicDevelopments(limit: number = 20) {
     .orderBy(desc(developments.isFeatured), desc(developments.createdAt))
     .limit(limit);
 
-  return results;
+  return results.map(dev => ({
+    ...dev,
+    images: parseJsonField(dev.images),
+  }));
 }
 
 // =========================================================================== 
