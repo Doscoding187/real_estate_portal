@@ -817,15 +817,18 @@ async function getDevelopmentsByDeveloperId(developerId: number) {
   const db = await getDb();
   if (!db) return [];
 
-  return db
+  const results = await db
     .select()
     .from(developments)
     .where(eq(developments.developerId, developerId));
     
   return results.map(dev => ({
     ...dev,
+    amenities: normalizeAmenities(dev.amenities),
     images: parseJsonField(dev.images),
-    // Map other fields if necessary for the list view
+    videos: parseJsonField(dev.videos),
+    floorPlans: parseJsonField(dev.floorPlans),
+    brochures: parseJsonField(dev.brochures),
   }));
 }
 

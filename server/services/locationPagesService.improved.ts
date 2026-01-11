@@ -81,10 +81,16 @@ async function setCache(key: string, data: any, ttl: number): Promise<void> {
 }
 
 // Helper: Smart Score Algorithm
-function generateSmartScore(base?: number) {
-  if (!base) return null;
-  const variance = (Math.random() * 0.2) - 0.1; // ±0.1
-  return Math.min(5, Math.max(3.5, +(base + variance).toFixed(1)));
+// Helper to parse JSON fields safely
+function parseJsonField(field: any): any[] {
+  if (!field) return [];
+  if (Array.isArray(field)) return field;
+  try {
+    const parsed = JSON.parse(field);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (e) {
+    return [];
+  }
 }
 
 export const locationPagesService = {
@@ -97,135 +103,10 @@ export const locationPagesService = {
     console.log(`[LocationPages] getProvinceData called with slug: "${provinceSlug}"`);
     const db = await getDb();
     
-    // 1. Resolve Province
-    let province;
-    try {
-      [province] = await db.select().from(provinces).where(eq(provinces.slug, provinceSlug)).limit(1);
-    } catch(e) { /* ignore */ }
-    
-    if (!province) {
-       // Fallback name matching
-       const cleanName = provinceSlug.replace(/-/g, ' ');
-       [province] = await db.select().from(provinces).where(sql`LOWER(${provinces.name}) = LOWER(${cleanName})`).limit(1);
-    }
-
-    if (!province) {
-      console.log(`[LocationPages] Province not found for slug: "${provinceSlug}"`);
-      return null;
-    }
-
-    // 2. Fetch DB Aggregates for Cities
-    const cityStats = await db
-      .select({
-        id: cities.id,
-        name: cities.name,
-        slug: cities.slug,
-        listingCount: sql<number>`count(${properties.id})`,
-        avgSalePrice: sql<number>`avg(case when ${properties.listingType} = 'sale' then ${properties.price} else null end)`,
-        avgRentPrice: sql<number>`avg(case when ${properties.listingType} = 'rent' then ${properties.price} else null end)`,
-        saleCount: sql<number>`sum(case when ${properties.listingType} = 'sale' then 1 else 0 end)`,
-        rentCount: sql<number>`sum(case when ${properties.listingType} = 'rent' then 1 else 0 end)`,
-      })
-      .from(cities)
-      .leftJoin(properties, and(eq(properties.cityId, cities.id), eq(properties.status, 'published')))
-      .where(eq(cities.provinceId, province.id))
-      .groupBy(cities.id, cities.name, cities.slug)
-      .orderBy(desc(sql`count(${properties.id})`));
-
-    // 3. Get Market Intelligence for Province
-    const intelligenceForProvince = MARKET_INTELLIGENCE.filter(
-        i => i.province === provinceSlug && (i.level === 'city' || i.tier === 'luxury')
-    );
-
-    // Deduplicate by slug (prefer city level if duplicates exist, though Map order usually takes last)
-    // We want to ensure we don't show "Sandton" twice.
-    const uniqueIntel = Array.from(new Map(intelligenceForProvince.map(item => [item.slug.toLowerCase().trim(), item])).values());
-
-    // 4. Hybrid Merge (Top Localities)
-    const MIN_LISTINGS = 5;
-    
-    // Create a base list from Intelligence (to ensure rich key areas are present)
-    const mergedLocalities = uniqueIntel.map(intel => {
-        const dbEntry = cityStats.find(c => c.slug?.toLowerCase() === intel.slug.toLowerCase());
-        const hasEnoughData = dbEntry && Number(dbEntry.listingCount) >= MIN_LISTINGS;
-
-        return {
-            name: intel.name,
-            slug: intel.slug,
-            // Honest Inventory
-            propertiesForSale: Number(dbEntry?.saleCount || 0),
-            propertiesForRent: Number(dbEntry?.rentCount || 0),
-            
-            // Hybrid Pricing
-            avgSalePrice: hasEnoughData ? Math.round(Number(dbEntry!.avgSalePrice)) : intel.avgSale,
-            avgRental: hasEnoughData ? Math.round(Number(dbEntry!.avgRentPrice)) : intel.avgRent || 0,
-            
-            // Smart Sentiment
-            rating: generateSmartScore(intel.sentimentBase) || 4.5,
-            reviews: Math.floor((Number(dbEntry?.listingCount || 0) + 50) / 5),
-
-            dataSource: hasEnoughData ? 'database' : 'market_intelligence'
-        };
-    });
-
-    // Add high-volume DB cities not in Intelligence
-    cityStats.forEach(stat => {
-        if (!stat.slug) return;
-        if (!mergedLocalities.find(m => m.slug.toLowerCase() === stat.slug!.toLowerCase()) && Number(stat.listingCount) > MIN_LISTINGS) {
-            mergedLocalities.push({
-                name: stat.name,
-                slug: stat.slug!,
-                propertiesForSale: Number(stat.saleCount || 0),
-                propertiesForRent: Number(stat.rentCount || 0),
-                avgSalePrice: Math.round(Number(stat.avgSalePrice || 0)),
-                avgRental: Math.round(Number(stat.avgRentPrice || 0)),
-                rating: 4.2, 
-                reviews: Math.floor(Number(stat.listingCount) / 5),
-                dataSource: 'database'
-            });
-        }
-    });
-
-    // 5. Final Sort (Inventory > Price)
-    mergedLocalities.sort((a, b) => {
-        if (b.propertiesForSale !== a.propertiesForSale) return b.propertiesForSale - a.propertiesForSale;
-        return (b.avgSalePrice || 0) - (a.avgSalePrice || 0);
-    });
-
-    const topLocalities = mergedLocalities.slice(0, 10);
-
-    // Reuse existing logic for developments/stats...
-    const [stats] = await db
-        .select({
-            totalListings: sql<number>`count(*)`,
-            avgPrice: sql<number>`avg(${properties.price})`,
-            minPrice: sql<number>`min(${properties.price})`,
-            maxPrice: sql<number>`max(${properties.price})`,
-            rentalCount: sql<number>`sum(case when ${properties.listingType} = 'rent' then 1 else 0 end)`,
-            saleCount: sql<number>`sum(case when ${properties.listingType} = 'sale' then 1 else 0 end)`
-        })
-        .from(properties)
-        .where(and(eq(properties.provinceId, province.id), eq(properties.status, 'published')));
-
-    // Fetch cities for fallback lookup (e.g. for dropdowns)
-    const cityList = await db
-      .select({
-        id: cities.id,
-        name: cities.name,
-        slug: cities.slug,
-        isMetro: cities.isMetro,
-        listingCount: sql<number>`count(${properties.id})`,
-        avgPrice: sql<number>`avg(case when ${properties.listingType} = 'sale' then ${properties.price} else null end)`
-      })
-      .from(cities)
-      .leftJoin(properties, and(eq(properties.cityId, cities.id), eq(properties.status, 'published')))
-      .where(eq(cities.provinceId, province.id))
-      .groupBy(cities.id, cities.name, cities.slug, cities.isMetro)
-      .orderBy(desc(sql`count(${properties.id})`))
-      .limit(12);
+    // ... (rest of function until query)
 
     // 6. Featured Developments
-    const featuredDevelopments = await db
+    const featuredDevelopmentsRaw = await db
       .select({
         id: developments.id,
         title: developments.name,
@@ -248,6 +129,13 @@ export const locationPagesService = {
       .where(eq(developments.province, province.name))
       .orderBy(desc(developments.isHotSelling), desc(developments.createdAt))
       .limit(12);
+
+    const featuredDevelopments = featuredDevelopmentsRaw.map(dev => ({
+      ...dev,
+      images: parseJsonField(dev.images)
+    }));
+      
+    // 7. Trending Suburbs
       
     // 7. Trending Suburbs
     const trendingSuburbs = await db
@@ -395,8 +283,8 @@ export const locationPagesService = {
             .limit(6);
       }
 
-      // Developments
-      const developmentsList = await db
+    // Developments
+      const developmentsListRaw = await db
           .select({
               id: developments.id,
               name: developments.name,
@@ -411,6 +299,11 @@ export const locationPagesService = {
           .where(eq(developments.city, city?.name || cityIntel?.name || ''))
           .orderBy(desc(developments.createdAt))
           .limit(10);
+
+      const developmentsList = developmentsListRaw.map(dev => ({
+        ...dev,
+        images: parseJsonField(dev.images)
+      }));
 
       return {
           city: city || { name: cityIntel!.name, slug: citySlug },
