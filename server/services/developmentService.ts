@@ -220,6 +220,10 @@ function handleDatabaseError(error: any, context: Record<string, any>): never {
   console.error('[developmentService] Database error:', {
     message: error.message,
     code: error.code,
+    errno: error.errno,
+    sqlMessage: error.sqlMessage,
+    sqlState: error.sqlState,
+    keys: Object.keys(error),
     context,
   });
 
@@ -488,17 +492,19 @@ async function createDevelopment(
   validateDevelopmentData({ ...developmentData, devOwnerType: ownerType || 'developer' }, developerId);
 
   // CRITICAL: Generate slug if not provided or empty
-  let slug = developmentData.slug;
-  if (!slug || slug.trim() === '') {
+  // CRITICAL: Ensure Slug Uniqueness
+  // Whether provided or generated from name, we MUST ensure it's unique in the DB.
+  let baseSlug = developmentData.slug;
+  if (!baseSlug || baseSlug.trim() === '') {
     if (!developmentData.name) {
       throw createError('Either slug or name must be provided to generate a slug', 'VALIDATION_ERROR');
     }
-    slug = await generateUniqueSlug(developmentData.name);
-    console.log('[createDevelopment] Generated slug:', slug);
-  } else {
-    // Ensure provided slug is properly formatted
-    slug = generateSlug(slug);
+    baseSlug = developmentData.name; // Will be slugified inside generateUniqueSlug
   }
+  
+  // existing generateUniqueSlug handles slugification and appending counter
+  const slug = await generateUniqueSlug(baseSlug);
+  console.log('[createDevelopment] Final unique slug:', slug);
 
   // Transform data for MySQL compatibility
   // Transform data for MySQL compatibility
