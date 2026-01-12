@@ -115,11 +115,17 @@ export default function DevelopmentDetail() {
   const videos = parseJSON(dev.videos).map((v: any) => typeof v === 'string' ? { url: v } : v);
   const floorPlans = parseJSON(dev.floorPlans).map((f: any) => typeof f === 'string' ? { url: f } : f);
   
-  const outdoorsPhotos: any[] = []; 
-  const amenitiesPhotos: any[] = [];
+  // Use actual images from development - split them across categories
+  // First 60% = general, next 20% = amenities, last 20% = outdoors
+  const totalImages = images.length;
+  const generalCount = Math.ceil(totalImages * 0.6);
+  const amenityCount = Math.floor(totalImages * 0.2);
+  
+  const outdoorsPhotos: any[] = images.slice(generalCount + amenityCount); 
+  const amenitiesPhotos: any[] = images.slice(generalCount, generalCount + amenityCount);
   
   // --- Unified Media Construction ---
-  const generalMedia = images.map((url: string) => ({ url, type: 'image' as const }));
+  const generalMedia = images.slice(0, generalCount).map((url: string) => ({ url, type: 'image' as const }));
   const videoMedia = videos.map((v: any) => ({ url: v.url, type: 'video' as const }));
   // Placeholder media categories (currently empty)
   const amenityMedia = amenitiesPhotos.map((url: string) => ({ url, type: 'image' as const }));
@@ -263,10 +269,10 @@ export default function DevelopmentDetail() {
 
         {/* Main Content */}
         <div className="container max-w-7xl mx-auto px-4 pb-12">
-          <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-8">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             
             {/* Left Column - Details */}
-            <div className="space-y-8">
+            <div className="lg:col-span-2 space-y-8">
               {/* Quick Stats - Reduced density */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 <Card className="shadow-none border border-slate-200/60 bg-slate-50/50">
@@ -756,9 +762,9 @@ export default function DevelopmentDetail() {
               />
             </div>
 
-            {/* Sidebar - Right Column - Compact */}
-            <div className="lg:self-start">
-              <div className="space-y-3">
+            {/* Sticky Sidebar - Right Column - Compact */}
+            <div className="lg:col-span-1">
+              <div className="sticky top-24 space-y-3">
                 {/* Contact Form */}
                 <Card className="shadow-sm border-slate-200">
                   <CardHeader className="bg-slate-50 border-b border-slate-100 py-3 px-4">
