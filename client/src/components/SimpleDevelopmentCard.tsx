@@ -1,5 +1,5 @@
 import { formatCurrency } from '@/lib/utils';
-import { useLocation } from 'wouter';
+import { Link } from 'wouter';
 
 export interface SimpleDevelopmentCardProps {
   id: string;
@@ -25,15 +25,13 @@ export function SimpleDevelopmentCard({
   isHotSelling,
   isHighDemand,
 }: SimpleDevelopmentCardProps) {
-  const [, setLocation] = useLocation();
-
   return (
-    <div 
-      className="group relative rounded-card overflow-hidden bg-white hover:shadow-lg transition-all duration-300 cursor-pointer hover:-translate-y-1"
+    <Link 
+      href={`/development/${slug || id}`}
+      className="group relative rounded-card overflow-hidden bg-white hover:shadow-lg transition-all duration-300 cursor-pointer hover:-translate-y-1 block"
       style={{ 
         border: 'var(--card-border)',
       }}
-      onClick={() => setLocation(`/development/${slug || id}`)}
     >
       {/* Image */}
       <div className="relative aspect-[4/3] overflow-hidden bg-slate-50">
@@ -97,6 +95,6 @@ export function SimpleDevelopmentCard({
           </p>
         </div>
       </div>
-    </div>
+    </Link>
   );
 }
