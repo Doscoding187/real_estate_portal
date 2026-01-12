@@ -562,6 +562,12 @@ async function createDevelopment(
     isPublished: boolToInt(developmentData.isPublished),
     publishedAt: boolToInt(developmentData.isPublished) === 1 ? new Date().toISOString() : null,
     
+    // Auto-approve platform-seeded developments when published
+    // (Subscriber developments go through approval queue)
+    approvalStatus: boolToInt(developmentData.isPublished) === 1 && ownerType === 'platform' 
+      ? 'approved' 
+      : (developmentData.approvalStatus || 'draft'),
+    
     // Default values
     views: developmentData.views ?? 0,
     
