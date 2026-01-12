@@ -311,12 +311,12 @@ export async function getPublicDevelopmentBySlug(slugOrId: string) {
         amenities: developments.amenities,
         highlights: developments.highlights,
         features: developments.features,
-        estateSpecs: developments.estateSpecs,
-        monthlyLevyFrom: developments.monthlyLevyFrom,
-        monthlyLevyTo: developments.monthlyLevyTo,
-        ratesFrom: developments.ratesFrom,
-        ratesTo: developments.ratesTo,
-        transferCostsIncluded: developments.transferCostsIncluded,
+        // estateSpecs: developments.estateSpecs, // REMOVED: Ghost column
+        // monthlyLevyFrom: developments.monthlyLevyFrom, // REMOVED: Ghost column
+        // monthlyLevyTo: developments.monthlyLevyTo, // REMOVED: Ghost column
+        // ratesFrom: developments.ratesFrom, // REMOVED: Ghost column
+        // ratesTo: developments.ratesTo, // REMOVED: Ghost column
+        // transferCostsIncluded: developments.transferCostsIncluded, // REMOVED: Ghost column
         status: developments.status,
         developmentType: developments.developmentType,
         completionDate: developments.completionDate,
