@@ -810,10 +810,17 @@ async function getDevelopmentWithPhases(id: number) {
   if (!results.length) return null;
 
   const dev = results[0];
-  const phases = await db
-    .select()
-    .from(developmentPhases)
-    .where(eq(developmentPhases.developmentId, id));
+  
+  // Gracefully handle missing development_phases table
+  let phases: any[] = [];
+  try {
+    phases = await db
+      .select()
+      .from(developmentPhases)
+      .where(eq(developmentPhases.developmentId, id));
+  } catch (error: any) {
+    console.warn('[getDevelopmentWithPhases] Failed to query phases, defaulting to empty:', error.message);
+  }
 
   return { 
     ...dev, 
