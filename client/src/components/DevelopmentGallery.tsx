@@ -60,7 +60,7 @@ export function DevelopmentGallery({
   };
 
   return (
-    <section className="grid grid-cols-1 lg:grid-cols-5 gap-3 h-[400px] lg:h-[480px]">
+    <section className="grid grid-cols-1 lg:grid-cols-5 gap-3 h-[320px] lg:h-[380px]">
       {/* LEFT: Featured Media (60% - 3 columns) */}
       <div className="lg:col-span-3 relative rounded-card overflow-hidden shadow-sm h-full group bg-slate-900 ring-1 ring-black/5">
         {renderMediaContent(featuredMedia, 'Featured View')}
