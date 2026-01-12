@@ -263,10 +263,10 @@ export default function DevelopmentDetail() {
 
         {/* Main Content */}
         <div className="container max-w-7xl mx-auto px-4 pb-12">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-8">
             
             {/* Left Column - Details */}
-            <div className="lg:col-span-2 space-y-8">
+            <div className="space-y-8">
               {/* Quick Stats - Reduced density */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 <Card className="shadow-none border border-slate-200/60 bg-slate-50/50">
@@ -756,9 +756,9 @@ export default function DevelopmentDetail() {
               />
             </div>
 
-            {/* Sticky Sidebar - Right Column - Compact */}
-            <div className="lg:col-span-1">
-              <div className="sticky top-24 space-y-3">
+            {/* Sidebar - Right Column - Compact */}
+            <div className="lg:self-start">
+              <div className="space-y-3">
                 {/* Contact Form */}
                 <Card className="shadow-sm border-slate-200">
                   <CardHeader className="bg-slate-50 border-b border-slate-100 py-3 px-4">
