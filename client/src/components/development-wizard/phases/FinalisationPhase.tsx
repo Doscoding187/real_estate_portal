@@ -81,12 +81,18 @@ export function FinalisationPhase() {
     return developmentData.media?.videos?.map(v => v.url).filter(Boolean) as string[] || [];
   };
 
+  // Extract document/brochure URLs
+  const extractDocumentUrls = (): string[] => {
+    return developmentData.media?.documents?.map(d => d.url).filter(Boolean) as string[] || [];
+  };
+
   const handlePublish = async () => {
     setIsPublishing(true);
     
     try {
       const images = extractImageUrls();
       const videos = extractVideoUrls();
+      const brochures = extractDocumentUrls();
       
       // Build features array (includes config prefixes for hydration)
       const features: string[] = [];
@@ -116,6 +122,7 @@ export function FinalisationPhase() {
             unitTypes: unitTypes || [],
             images,
             videos,
+            brochures,
           }
         });
         developmentId = editingId;
@@ -146,6 +153,8 @@ export function FinalisationPhase() {
           highlights: developmentData.highlights || [],
           unitTypes: unitTypes || [],
           images,
+          videos,
+          brochures,
           priceFrom: unitTypes[0]?.priceFrom || unitTypes[0]?.basePriceFrom,
           priceTo: unitTypes[unitTypes.length - 1]?.priceTo || unitTypes[unitTypes.length - 1]?.basePriceTo,
           // Identity & Branding - Send brandProfileId for brand or marketing_agency identity types
