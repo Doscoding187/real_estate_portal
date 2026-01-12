@@ -5,6 +5,8 @@ import { ListingNavbar } from '@/components/ListingNavbar';
 import { MediaLightbox } from '@/components/MediaLightbox';
 import { DevelopmentHeader } from '@/components/DevelopmentHeader';
 import { DevelopmentGallery } from '@/components/DevelopmentGallery';
+import { DeveloperOverview } from '@/components/development/DeveloperOverview';
+import { StatCard } from '@/components/development/StatCard';
 import { DevelopmentOverviewCard } from '@/components/DevelopmentOverviewCard';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -269,57 +271,37 @@ export default function DevelopmentDetail() {
 
         {/* Main Content */}
         <div className="container max-w-7xl mx-auto px-4 pb-12">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-8">
             
-            {/* Left Column - Details */}
-            <div className="lg:col-span-2 space-y-8">
+            {/* Main Content Column */}
+            <main className="space-y-12">
               {/* Quick Stats - Reduced density */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                <Card className="shadow-none border border-slate-200/60 bg-slate-50/50">
-                  <CardContent className="p-3 flex items-center gap-3">
-                    <div className="p-1.5 bg-blue-50 rounded-md text-blue-600">
-                      <Home className="h-4 w-4" />
-                    </div>
-                    <div>
-                      <p className="text-xs text-slate-500 font-medium uppercase tracking-wide">Type</p>
-                      <p className="font-semibold text-sm text-slate-900">Residential</p>
-                    </div>
-                  </CardContent>
-                </Card>
-                <Card className="shadow-none border border-slate-200/60 bg-slate-50/50">
-                  <CardContent className="p-3 flex items-center gap-3">
-                    <div className="p-1.5 bg-green-50 rounded-md text-green-600">
-                      <Check className="h-4 w-4" />
-                    </div>
-                    <div>
-                      <p className="text-xs text-slate-500 font-medium uppercase tracking-wide">Status</p>
-                      <p className="font-semibold text-sm text-slate-900">Selling</p>
-                    </div>
-                  </CardContent>
-                </Card>
-                <Card className="shadow-none border border-slate-200/60 bg-slate-50/50">
-                  <CardContent className="p-3 flex items-center gap-3">
-                    <div className="p-1.5 bg-purple-50 rounded-md text-purple-600">
-                      <Building2 className="h-4 w-4" />
-                    </div>
-                    <div>
-                      <p className="text-xs text-slate-500 font-medium uppercase tracking-wide">Units</p>
-                      <p className="font-semibold text-sm text-slate-900">{development.availableUnits} Available</p>
-                    </div>
-                  </CardContent>
-                </Card>
+                <StatCard 
+                  icon={Home} 
+                  label="Type" 
+                  value="Residential" 
+                  color="blue" 
+                />
+                <StatCard 
+                  icon={Check} 
+                  label="Status" 
+                  value="Selling" 
+                  color="green" 
+                />
+                <StatCard 
+                  icon={Building2} 
+                  label="Units" 
+                  value={`${development.availableUnits} Available`} 
+                  color="purple" 
+                />
                 {development.completionDate && (
-                  <Card className="shadow-none border border-slate-200/60 bg-slate-50/50">
-                    <CardContent className="p-3 flex items-center gap-3">
-                      <div className="p-1.5 bg-orange-50 rounded-md text-orange-600">
-                        <Calendar className="h-4 w-4" />
-                      </div>
-                      <div>
-                        <p className="text-xs text-slate-500 font-medium uppercase tracking-wide">Completion</p>
-                        <p className="font-semibold text-sm text-slate-900">{development.completionDate}</p>
-                      </div>
-                    </CardContent>
-                  </Card>
+                  <StatCard 
+                    icon={Calendar} 
+                    label="Completion" 
+                    value={development.completionDate} 
+                    color="orange" 
+                  />
                 )}
               </div>
 
@@ -652,87 +634,11 @@ export default function DevelopmentDetail() {
               <Separator className="bg-slate-100" />
 
               {/* Developer Overview Section */}
-              <div className="bg-slate-50 rounded-xl p-6 border border-slate-200 shadow-sm">
-                <div className="flex items-center gap-4 mb-6 pb-4 border-b border-slate-200">
-                  <h3 className="text-xl font-bold text-slate-900">Developer Overview</h3>
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                  {/* Left Column: Developer Profile Card */}
-                  <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-100">
-                    {/* Header Area */}
-                    <div className="flex items-center gap-4 mb-6">
-                      <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 overflow-hidden border-2 border-slate-200 shrink-0 flex items-center justify-center">
-                        {development.developerLogo ? (
-                          <img src={development.developerLogo} alt={development.developer} className="w-full h-full object-cover" />
-                        ) : (
-                          <Building2 className="w-8 h-8 text-white" />
-                        )}
-                      </div>
-                      <div>
-                        <h4 className="text-lg font-bold text-slate-900">{development.developer}</h4>
-                        <Badge className="bg-orange-500 hover:bg-orange-600 text-white border-none rounded-full px-3 py-0.5 text-xs font-medium mt-1">
-                          VERIFIED DEVELOPER
-                        </Badge>
-                      </div>
-                    </div>
-
-                    {/* Stats Row */}
-                    <div className="flex gap-4 mb-6">
-                      <div className="flex-1 bg-slate-50 rounded-lg p-3 text-center border border-slate-100">
-                        <div className="flex items-center justify-center gap-2 mb-1">
-                          <div className="text-2xl font-bold text-orange-500">20+</div>
-                        </div>
-                        <p className="text-xs text-slate-500 font-medium">Years Experience</p>
-                      </div>
-                      <div className="flex-1 bg-slate-50 rounded-lg p-3 text-center border border-slate-100">
-                        <div className="flex items-center justify-center gap-2 mb-1">
-                          <div className="text-2xl font-bold text-orange-500">15</div>
-                        </div>
-                        <p className="text-xs text-slate-500 font-medium">Developments</p>
-                      </div>
-                    </div>
-
-                    {/* View Profile Button */}
-                    <Button variant="outline" className="w-full justify-between h-12 rounded-lg border-slate-200 hover:bg-slate-50 hover:text-slate-900 group">
-                      <span className="font-medium text-slate-700">View Developer Profile</span>
-                      <div className="flex items-center gap-2">
-                        <ChevronRight className="h-4 w-4 text-slate-400" />
-                      </div>
-                    </Button>
-                  </div>
-
-                  {/* Right Column: Contact Form */}
-                  <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-100 flex flex-col h-full">
-                    <div className="space-y-4 flex-1">
-                      <div className="space-y-1">
-                        <Input 
-                          placeholder="Name" 
-                          className="bg-slate-50 border-slate-200 focus:border-orange-500 focus:ring-orange-500/20 h-11" 
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <Input 
-                          type="email" 
-                          placeholder="Email" 
-                          className="bg-slate-50 border-slate-200 focus:border-orange-500 focus:ring-orange-500/20 h-11" 
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <Input 
-                          type="tel" 
-                          placeholder="Phone Number" 
-                          className="bg-slate-50 border-slate-200 focus:border-orange-500 focus:ring-orange-500/20 h-11" 
-                        />
-                      </div>
-                    </div>
-                    
-                    <Button className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold h-12 rounded-lg mt-6 shadow-sm">
-                      Contact Developer
-                    </Button>
-                  </div>
-                </div>
-              </div>
+              {/* Developer Overview Section */}
+              <DeveloperOverview 
+                developerName={development.developer}
+                developerLogo={development.developerLogo}
+              />
 
               {/* Nearby Landmarks */}
               <NearbyLandmarks 
@@ -760,11 +666,10 @@ export default function DevelopmentDetail() {
                 suburb={dev.suburb || dev.city} 
                 city={dev.city}
               />
-            </div>
+            </main>
 
-            {/* Sticky Sidebar - Right Column - Compact */}
-            <div className="lg:col-span-1">
-              <div className="sticky top-24 space-y-3">
+            {/* Sidebar - Right Column */}
+            <aside className="lg:sticky lg:top-24 lg:self-start space-y-3">
                 {/* Contact Form */}
                 <Card className="shadow-sm border-slate-200">
                   <CardHeader className="bg-slate-50 border-b border-slate-100 py-3 px-4">
@@ -864,10 +769,9 @@ export default function DevelopmentDetail() {
                     </Button>
                   </CardContent>
                 </Card>
-              </div>
+              </aside>
             </div>
           </div>
-        </div>
       </div>
 
       {/* Footer */}
