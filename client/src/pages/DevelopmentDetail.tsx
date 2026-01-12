@@ -7,6 +7,7 @@ import { DevelopmentHeader } from '@/components/DevelopmentHeader';
 import { DevelopmentGallery } from '@/components/DevelopmentGallery';
 import { DeveloperOverview } from '@/components/development/DeveloperOverview';
 import { StatCard } from '@/components/development/StatCard';
+import { SectionNav } from '@/components/development/SectionNav';
 import { DevelopmentOverviewCard } from '@/components/DevelopmentOverviewCard';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -269,6 +270,9 @@ export default function DevelopmentDetail() {
 
         </div>
 
+        {/* Section Navigation */}
+        <SectionNav />
+
         {/* Main Content */}
         <div className="container max-w-7xl mx-auto px-4 pb-12">
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-8">
@@ -276,7 +280,7 @@ export default function DevelopmentDetail() {
             {/* Main Content Column */}
             <main className="space-y-12">
               {/* Quick Stats - Reduced density */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <div id="overview" className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 <StatCard 
                   icon={Home} 
                   label="Type" 
@@ -335,7 +339,7 @@ export default function DevelopmentDetail() {
               <Separator className="bg-slate-100" />
 
               {/* Available Units - Tabs & Carousel */}
-              <div className="space-y-6">
+              <div id="floor-plans" className="space-y-6">
                 <div className="flex items-center justify-between">
                   <h3 className="text-xl font-bold text-slate-900">Floor Plans & Pricing</h3>
                 </div>
@@ -561,7 +565,7 @@ export default function DevelopmentDetail() {
                 if (specs.length === 0) return null;
                 
                 return (
-                  <Card className="border-slate-200 shadow-sm">
+                  <Card id="amenities" className="shadow-none border border-slate-200 bg-white">
                     <CardHeader className="bg-slate-50/50 border-b border-slate-100">
                       <CardTitle className="font-bold text-slate-900">Development Specifications</CardTitle>
                     </CardHeader>
@@ -635,13 +639,18 @@ export default function DevelopmentDetail() {
 
               {/* Developer Overview Section */}
               {/* Developer Overview Section */}
-              <DeveloperOverview 
+              <div id="developer">
+                <DeveloperOverview 
                 developerName={development.developer}
                 developerLogo={development.developerLogo}
               />
 
-              {/* Nearby Landmarks */}
-              <NearbyLandmarks 
+              </div>
+
+              {/* Location Section */}
+              <div id="location">
+                {/* Nearby Landmarks */}
+                <NearbyLandmarks 
                 property={{
                   id: dev.id,
                   title: dev.name,
@@ -666,6 +675,7 @@ export default function DevelopmentDetail() {
                 suburb={dev.suburb || dev.city} 
                 city={dev.city}
               />
+              </div>
             </main>
 
             {/* Sidebar - Right Column */}
