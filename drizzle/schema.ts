@@ -577,7 +577,7 @@ export const developments = mysqlTable("developments", {
 	amenities: json().$type<string[]>(), // Development amenities (Swimming Pool, Clubhouse, etc.)
 	highlights: json().$type<string[]>(), // Up to 5 development highlights
 	features: json().$type<string[]>(), // Estate-level features (Perimeter Wall, Fibre Ready, etc.)
-	// estateSpecs: json().$type<any>(), // Structured specifications (Ownership, Power, Security, etc.) - REMOVED: Missing in DB
+	estateSpecs: json().$type<any>(), // Structured specifications (Ownership, Power, Security, etc.)
 	images: text(),
 	videos: text(),
 	floorPlans: text(),
@@ -599,16 +599,16 @@ export const developments = mysqlTable("developments", {
 	demandScore: int("demand_score").default(0),
 	isHotSelling: int("is_hot_selling").default(0),
 
-	// Global Financials (NEW)
-	// monthlyLevyFrom: decimal("monthly_levy_from", { precision: 10, scale: 2 }).default("0"),
-	// monthlyLevyTo: decimal("monthly_levy_to", { precision: 10, scale: 2 }).default("0"),
-	// ratesFrom: decimal("rates_from", { precision: 10, scale: 2 }).default("0"),
-	// ratesTo: decimal("rates_to", { precision: 10, scale: 2 }).default("0"),
-	// transferCostsIncluded: tinyint("transfer_costs_included").default(0),
-	// isHighDemand: int("is_high_demand").default(0),
+	// Global Financials
+	monthlyLevyFrom: decimal("monthly_levy_from", { precision: 10, scale: 2 }),
+	monthlyLevyTo: decimal("monthly_levy_to", { precision: 10, scale: 2 }),
+	ratesFrom: decimal("rates_from", { precision: 10, scale: 2 }),
+	ratesTo: decimal("rates_to", { precision: 10, scale: 2 }),
+	transferCostsIncluded: tinyint("transfer_costs_included").default(0),
+	isHighDemand: int("is_high_demand").default(0),
 	// Brand Profile Ownership
-	// devOwnerType: mysqlEnum("dev_owner_type", ['platform', 'developer']).default('developer'), // platform = seeded/unmanaged, developer = subscriber-managed
-	// isShowcase: tinyint("is_showcase").default(0), // showcase listings for brand profiles
+	devOwnerType: mysqlEnum("dev_owner_type", ['platform', 'developer']).default('developer'), // platform = seeded/unmanaged, developer = subscriber-managed
+	isShowcase: tinyint("is_showcase").default(0), // showcase listings for brand profiles
 	createdAt: timestamp({ mode: 'string' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
 },
