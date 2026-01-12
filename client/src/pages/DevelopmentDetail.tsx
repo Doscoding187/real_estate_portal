@@ -247,7 +247,6 @@ export default function DevelopmentDetail() {
           <DevelopmentHeader 
             name={development.name}
             location={development.location}
-            price={development.startingPrice}
             isNewLaunch={true} // TODO: Drive from data
             completionDate="Dec, 2027" // TODO: Drive from data
             onContact={() => console.log('Contact Developer')}
@@ -274,30 +273,53 @@ export default function DevelopmentDetail() {
             
             {/* Left Column - Details */}
             <div className="lg:col-span-2 space-y-8">
-              {/* Quick Stats - Horizontal Chips (Housing.com style) */}
-              <div className="flex flex-wrap items-center gap-3 text-sm text-slate-600">
-                <span className="flex items-center gap-2">
-                  <Home className="w-4 h-4 text-blue-600" />
-                  <span className="font-medium">Residential</span>
-                </span>
-                <span className="text-slate-300">•</span>
-                <span className="flex items-center gap-2">
-                  <Check className="w-4 h-4 text-green-600" />
-                  <span className="font-medium">Selling</span>
-                </span>
-                <span className="text-slate-300">•</span>
-                <span className="flex items-center gap-2">
-                  <Building2 className="w-4 h-4 text-purple-600" />
-                  <span className="font-medium">{development.availableUnits} Units Available</span>
-                </span>
+              {/* Quick Stats - Reduced density */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <Card className="shadow-none border border-slate-200/60 bg-slate-50/50">
+                  <CardContent className="p-3 flex items-center gap-3">
+                    <div className="p-1.5 bg-blue-50 rounded-md text-blue-600">
+                      <Home className="h-4 w-4" />
+                    </div>
+                    <div>
+                      <p className="text-xs text-slate-500 font-medium uppercase tracking-wide">Type</p>
+                      <p className="font-semibold text-sm text-slate-900">Residential</p>
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card className="shadow-none border border-slate-200/60 bg-slate-50/50">
+                  <CardContent className="p-3 flex items-center gap-3">
+                    <div className="p-1.5 bg-green-50 rounded-md text-green-600">
+                      <Check className="h-4 w-4" />
+                    </div>
+                    <div>
+                      <p className="text-xs text-slate-500 font-medium uppercase tracking-wide">Status</p>
+                      <p className="font-semibold text-sm text-slate-900">Selling</p>
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card className="shadow-none border border-slate-200/60 bg-slate-50/50">
+                  <CardContent className="p-3 flex items-center gap-3">
+                    <div className="p-1.5 bg-purple-50 rounded-md text-purple-600">
+                      <Building2 className="h-4 w-4" />
+                    </div>
+                    <div>
+                      <p className="text-xs text-slate-500 font-medium uppercase tracking-wide">Units</p>
+                      <p className="font-semibold text-sm text-slate-900">{development.availableUnits} Available</p>
+                    </div>
+                  </CardContent>
+                </Card>
                 {development.completionDate && (
-                  <>
-                    <span className="text-slate-300">•</span>
-                    <span className="flex items-center gap-2">
-                      <Calendar className="w-4 h-4 text-orange-600" />
-                      <span className="font-medium">Ready {development.completionDate}</span>
-                    </span>
-                  </>
+                  <Card className="shadow-none border border-slate-200/60 bg-slate-50/50">
+                    <CardContent className="p-3 flex items-center gap-3">
+                      <div className="p-1.5 bg-orange-50 rounded-md text-orange-600">
+                        <Calendar className="h-4 w-4" />
+                      </div>
+                      <div>
+                        <p className="text-xs text-slate-500 font-medium uppercase tracking-wide">Completion</p>
+                        <p className="font-semibold text-sm text-slate-900">{development.completionDate}</p>
+                      </div>
+                    </CardContent>
+                  </Card>
                 )}
               </div>
 

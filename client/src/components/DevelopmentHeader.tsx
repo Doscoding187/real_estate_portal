@@ -15,22 +15,12 @@ interface DevelopmentHeaderProps {
 export function DevelopmentHeader({
   name,
   location,
-  price,
   isNewLaunch,
   completionDate,
   onContact,
   onShare,
   onFavorite,
 }: DevelopmentHeaderProps) {
-  const formatPrice = (amount: number) => {
-    return new Intl.NumberFormat('en-ZA', {
-      style: 'currency',
-      currency: 'ZAR',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(amount);
-  };
-
   return (
     <div className="w-full py-4 space-y-3">
       {/* Meta Badges Row */}
@@ -49,24 +39,38 @@ export function DevelopmentHeader({
 
       {/* Title & Location - Actions Row */}
       <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4">
-        {/* Left: Title, Price & Location */}
+        {/* Left: Title & Location */}
         <div className="space-y-2 max-w-3xl">
           <h1 className="text-2xl lg:text-3xl font-bold text-slate-900 tracking-tight leading-snug">
             {name}
           </h1>
-          {price && (
-            <p className="text-2xl lg:text-3xl font-bold text-blue-600">
-              Priced from {formatPrice(price)}
-            </p>
-          )}
           <div className="flex items-center gap-1.5 text-slate-500 text-sm font-medium">
             <MapPin className="h-4 w-4 flex-shrink-0" />
             <span>{location}</span>
           </div>
         </div>
 
-        {/* Right: Primary CTA Only */}
+        {/* Right: Actions */}
         <div className="flex items-center gap-2.5">
+          {/* Action Buttons */}
+          <div className="flex items-center gap-2">
+            <button
+              onClick={onFavorite}
+              className="p-2 rounded-full border border-slate-200 bg-white hover:bg-slate-50 text-slate-500 hover:text-red-500 transition-all shadow-sm"
+              aria-label="Add to favorites"
+            >
+              <Heart className="h-4 w-4" />
+            </button>
+            <button
+              onClick={onShare}
+              className="p-2 rounded-full border border-slate-200 bg-white hover:bg-slate-50 text-slate-500 hover:text-blue-600 transition-all shadow-sm"
+              aria-label="Share"
+            >
+              <Share2 className="h-4 w-4" />
+            </button>
+          </div>
+
+          {/* Primary CTA */}
           <Button 
             onClick={onContact}
             className="rounded-pill bg-orange-500 hover:bg-orange-600 text-white px-6 h-10 text-sm font-semibold shadow-sm transition-all"
