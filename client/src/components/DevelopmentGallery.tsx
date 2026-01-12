@@ -86,8 +86,8 @@ export function DevelopmentGallery({
         </button>
       </div>
 
-      {/* RIGHT: Category Cards (40% - 2 columns) */}
-      <div className="lg:col-span-2 grid grid-rows-2 gap-3 h-full">
+      {/* RIGHT: Category Cards (40% - 2 columns) - Hidden on mobile */}
+      <div className="hidden lg:grid lg:col-span-2 grid-rows-2 gap-3 h-full">
         {/* Top Row: 2 cards side by side (50/50) */}
         <div className="grid grid-cols-2 gap-3 h-full">
           {/* Amenities Card */}
