@@ -688,30 +688,51 @@ export const unitTypes = mysqlTable("unit_types", {
 	id: varchar({ length: 36 }).primaryKey(),
 	developmentId: int("development_id").notNull().references(() => developments.id, { onDelete: "cascade" }),
 	
-	// Basic Configuration
+	// Basic Configuration - NEW columns added to match production
+	label: varchar({ length: 255 }),
 	name: varchar({ length: 255 }).notNull(),
+	description: text(),
+	ownershipType: mysqlEnum("ownership_type", ['full-title', 'sectional-title', 'leasehold', 'life-rights']).default('sectional-title'),
+	structuralType: mysqlEnum("structural_type", ['apartment', 'freestanding-house', 'simplex', 'duplex', 'penthouse', 'plot-and-plan', 'townhouse', 'studio']).default('apartment'),
+	floors: mysqlEnum(['single-storey', 'double-storey', 'triplex']),
+	
+	// Room Configuration
 	bedrooms: int().notNull(),
 	bathrooms: decimal({ precision: 3, scale: 1 }).notNull(),
+	
+	// Parking
 	parking: mysqlEnum(['none', '1', '2', 'carport', 'garage']).default('none'),
+	parkingType: varchar("parking_type", { length: 50 }),
+	parkingBays: int("parking_bays").default(0),
+	
+	// Sizes
 	unitSize: int("unit_size"),
 	yardSize: int("yard_size"),
+	sizeFrom: int("size_from"),
+	sizeTo: int("size_to"),
+	
+	// Pricing - NEW price_from/price_to columns
+	priceFrom: decimal("price_from", { precision: 15, scale: 2 }),
+	priceTo: decimal("price_to", { precision: 15, scale: 2 }),
 	basePriceFrom: decimal("base_price_from", { precision: 15, scale: 2 }).notNull(),
 	basePriceTo: decimal("base_price_to", { precision: 15, scale: 2 }),
+	depositRequired: decimal("deposit_required", { precision: 15, scale: 2 }),
 	
 	// Stock Tracking
 	totalUnits: int("total_units").default(0).notNull(),
 	availableUnits: int("available_units").default(0).notNull(),
-	reservedUnits: int("reserved_units").default(0), // NEW: Units under offer
+	reservedUnits: int("reserved_units").default(0),
+	completionDate: date("completion_date"),
 	
-	// Pricing Details (NEW)
-	transferCostsIncluded: tinyint("transfer_costs_included").default(0), // NEW: Boolean flag
-	monthlyLevy: int("monthly_levy"), // NEW: Monthly levy/HOA estimate in ZAR
+	// Pricing Details
+	transferCostsIncluded: tinyint("transfer_costs_included").default(0),
+	monthlyLevy: int("monthly_levy"),
 	monthlyLevyFrom: int("monthly_levy_from"),
 	monthlyLevyTo: int("monthly_levy_to"),
 	ratesAndTaxesFrom: int("rates_and_taxes_from"),
 	ratesAndTaxesTo: int("rates_and_taxes_to"),
 	
-	// Pricing Extras (NEW)
+	// Pricing Extras
 	extras: json("extras").$type<{ label: string; price: number }[]>(),
 	
 	// Base Features (Defaults for all specs)
@@ -738,6 +759,17 @@ export const unitTypes = mysqlTable("unit_types", {
 		floorPlans: Array<{ id: string; url: string; type: 'image' | 'pdf' }>;
 		renders: Array<{ id: string; url: string; type: 'image' | 'video' }>;
 	}>(),
+	
+	// NEW: Structured JSON columns
+	specOverrides: json("spec_overrides"),
+	specifications: json("specifications"),
+	amenities: json("amenities"),
+	features: json("features"),
+	
+	// NEW: Description/Notes columns
+	configDescription: text("config_description"),
+	virtualTourLink: varchar("virtual_tour_link", { length: 500 }),
+	internalNotes: text("internal_notes"),
 	
 	// Metadata
 	displayOrder: int("display_order").default(0),
