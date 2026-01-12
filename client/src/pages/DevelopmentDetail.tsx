@@ -236,17 +236,13 @@ export default function DevelopmentDetail() {
       <ListingNavbar />
       <div className="min-h-screen bg-slate-50">
         {/* Breadcrumbs */}
-        <div className="bg-white border-b border-slate-200">
-            <div className="container mx-auto px-4 py-3">
-                <Breadcrumbs items={[
-                    { label: 'Home', href: '/' },
-                    { label: 'New Developments', href: '/new-developments' },
-                    { label: dev.name, href: '#' }
-                ]} />
-            </div>
-        </div>
+        <Breadcrumbs items={[
+            { label: 'Home', href: '/' },
+            { label: 'New Developments', href: '/new-developments' },
+            { label: dev.name, href: '#' }
+        ]} />
         {/* Property Gallery - Hero + Category Cards */}
-        <div className="container max-w-7xl mx-auto px-4 pt-24 pb-6">
+        <div className="container max-w-7xl mx-auto px-4 pt-6 pb-6">
           <DevelopmentHeader 
             name={development.name}
             location={development.location}
