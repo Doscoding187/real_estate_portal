@@ -63,17 +63,26 @@ export function FinalisationPhase() {
       return { status: 'success', icon: CheckCircle2, color: 'text-green-500', bg: 'bg-green-50' };
   };
 
-  // Extract images from media state
-  const extractImageUrls = (): string[] => {
+  // Extract images from media state with metadata
+  const extractImages = (): { url: string; category?: string }[] => {
     const media = developmentData.media;
     if (!media) return [];
     
-    const urls: string[] = [];
+    const images: { url: string; category?: string }[] = [];
+    
     // Hero image first
-    if (media.heroImage?.url) urls.push(media.heroImage.url);
-    // Then photos
-    media.photos?.forEach(p => { if (p.url) urls.push(p.url); });
-    return urls;
+    if (media.heroImage?.url) {
+      images.push({ url: media.heroImage.url, category: 'hero' });
+    }
+    
+    // Then photos (preserve their existing category from wizard)
+    media.photos?.forEach(p => { 
+      if (p.url) {
+        images.push({ url: p.url, category: p.category });
+      }
+    });
+    
+    return images;
   };
 
   // Extract video URLs
@@ -90,7 +99,7 @@ export function FinalisationPhase() {
     setIsPublishing(true);
     
     try {
-      const images = extractImageUrls();
+      const images = extractImages();
       const videos = extractVideoUrls();
       const brochures = extractDocumentUrls();
       
@@ -120,7 +129,7 @@ export function FinalisationPhase() {
             features,
             highlights: developmentData.highlights || [],
             unitTypes: unitTypes || [],
-            images,
+            images: images as any, // Cast to any to satisfy TS until router types propagate
             videos,
             brochures,
           }
@@ -152,7 +161,7 @@ export function FinalisationPhase() {
           features,
           highlights: developmentData.highlights || [],
           unitTypes: unitTypes || [],
-          images,
+          images: images as any,
           videos,
           brochures,
           priceFrom: unitTypes[0]?.priceFrom || unitTypes[0]?.basePriceFrom,

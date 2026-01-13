@@ -479,7 +479,10 @@ export const developerRouter = router({
         estateSpecs: z.record(z.any()).optional(),
         highlights: z.array(z.string()).optional(),
         unitTypes: z.array(z.any()).optional(),
-        images: z.array(z.string()).optional(),
+        images: z.array(z.union([
+          z.string(),
+          z.object({ url: z.string(), category: z.string().optional() })
+        ])).optional(),
         completionDate: z.string().optional(),
         showHouseAddress: z.boolean().default(true),
       })
@@ -713,7 +716,10 @@ export const developerRouter = router({
           estateSpecs: z.record(z.any()).optional(),
           highlights: z.array(z.string()).optional(),
           unitTypes: z.array(z.any()).optional(), // Use any for now to allow flexible structure matching frontend
-          images: z.array(z.string()).optional(),
+          images: z.array(z.union([
+            z.string(),
+            z.object({ url: z.string(), category: z.string().optional() })
+          ])).optional(),
           videos: z.array(z.string()).optional(),
           floorPlans: z.array(z.string()).optional(),
           brochures: z.array(z.string()).optional(),

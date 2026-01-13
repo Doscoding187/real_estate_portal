@@ -111,27 +111,34 @@ export default function DevelopmentDetail() {
       } catch (e) { return []; }
   };
 
-  const images = parseJSON(dev.images);
+  const rawImages = parseJSON(dev.images);
+  // Support both legacy string[] and new {url, category}[] formats
+  const images = rawImages.map((img: any) => typeof img === 'string' ? img : img.url);
   const amenities = parseJSON(dev.amenities);
   const videos = parseJSON(dev.videos).map((v: any) => typeof v === 'string' ? { url: v } : v);
   const floorPlans = parseJSON(dev.floorPlans).map((f: any) => typeof f === 'string' ? { url: f } : f);
   
+  // Extract specific category images for tiles
+  const explicitAmenity = rawImages.find((img: any) => typeof img === 'object' && img.category === 'amenities');
+  const explicitOutdoor = rawImages.find((img: any) => typeof img === 'object' && img.category === 'outdoors');
+
   console.log('[DevelopmentDetail] Debug Media:', { 
     id: dev.id, 
     rawVideos: dev.videos, 
     parsedVideos: videos, 
-    rawImages: dev.images 
+    rawImages: dev.images,
+    foundAmenity: explicitAmenity,
+    foundOutdoor: explicitOutdoor
   });
   
   // Use actual images from development - split them across categories
-  // Use actual images from development - split them safely
   const totalImages = images.length;
   // Reserve first image for main display if video not present
   const availableImages = images.slice(1); 
   
-  // Simple distribution strategy for now until we have tagged images
-  const amenityImage = availableImages.length > 0 ? availableImages[0] : images[0];
-  const outdoorImage = availableImages.length > 1 ? availableImages[1] : (images[0] || '');
+  // Prioritize explicitly categorized images, fallback to distribution strategy
+  const amenityImage = explicitAmenity ? explicitAmenity.url : (availableImages.length > 0 ? availableImages[0] : images[0]);
+  const outdoorImage = explicitOutdoor ? explicitOutdoor.url : (availableImages.length > 1 ? availableImages[1] : (images[0] || ''));
   
   // --- Unified Media Construction ---
   // We keep the original media grouping for the lightbox navigation to feel structured
@@ -183,8 +190,8 @@ export default function DevelopmentDetail() {
       return {
         id: u.id,
         type: u.name,
-        ownershipType: 'Sectional Title', 
-        structuralType: 'Apartment',
+        ownershipType: u.ownershipType || 'Sectional Title', 
+        structuralType: u.structuralType || 'Apartment',
         bedrooms: u.bedrooms,
         bathrooms: Number(u.bathrooms),
         size: u.unitSize || u.size || 0,
@@ -306,15 +313,28 @@ export default function DevelopmentDetail() {
                     <StatCard icon={Check} label="Status" value="Selling" color="green" />
                     <StatCard icon={Building2} label="Units" value={`${development.availableUnits} Available`} color="purple" />
                     {(() => {
-                        const types = new Set(development.units.map((u: any) => u.category || 'Unit'));
+                        // Logic: Check 'structuralType' first (DB column), fallback to 'name' (Wizard)
+                        // structuralType enum: 'apartment', 'freestanding-house', 'simplex', 'duplex', 'townhouse', etc.
+                        const getCategory = (u: any) => {
+                          const type = (u.structuralType || u.name || '').toLowerCase();
+                          if (/house|villa|townhouse|simplex|duplex|freestanding/i.test(type)) return 'House';
+                          if (/apartment|flat|studio|penthouse/i.test(type)) return 'Apartment';
+                          return 'Unit';
+                        };
+
+                        const types = new Set(development.units.map(getCategory));
                         let typeLabel = "Various";
-                        const hasHouses = Array.from(types).some(t => /house|villa|townhouse/i.test(t));
-                        const hasApartments = Array.from(types).some(t => /apartment|flat|studio|penthouse/i.test(t));
+                        const hasHouses = types.has('House');
+                        const hasApartments = types.has('Apartment');
 
                         if (hasHouses && hasApartments) typeLabel = "Houses & Apts";
                         else if (hasHouses) typeLabel = "Houses";
                         else if (hasApartments) typeLabel = "Apartments";
-                        else if (types.size === 1) typeLabel = Array.from(types)[0];
+                        else if (development.units.length > 0) {
+                           // Fallback: If all are 'Unit' (no match), try to show the first one's actual name type
+                           const firstType = (development.units[0].structuralType || development.units[0].category || '').replace(/-/g, ' ');
+                           if (firstType) typeLabel = firstType.charAt(0).toUpperCase() + firstType.slice(1);
+                        }
 
                         return <StatCard icon={LayoutGrid} label="Unit Types" value={typeLabel} color="orange" />;
                     })()}
