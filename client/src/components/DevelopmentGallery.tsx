@@ -70,7 +70,7 @@ export function DevelopmentGallery({
           onClick={() =>
             onOpenLightbox(
               featuredMedia.type === 'video' ? indices.videos : 0,
-              featuredMedia.type === 'video' ? 'Watch Video' : 'All Photos',
+              featuredMedia.type === 'video' ? 'Videos' : 'All Photos',
             )
           }
           className="absolute bottom-3 right-3 bg-white/95 hover:bg-white backdrop-blur-md px-3.5 py-2 rounded-pill font-semibold text-xs shadow-sm border border-white/20 transition-all hover:scale-105 flex items-center gap-2"
@@ -78,10 +78,10 @@ export function DevelopmentGallery({
           {featuredMedia.type === 'video' ? (
              <>
                <Play className="w-3.5 h-3.5 fill-current" />
-               <span>Watch Video</span>
+               <span>View all {videos.length > 1 ? videos.length + ' ' : ''}videos</span>
              </>
           ) : (
-             <span>View all {totalPhotos} photos</span>
+             <span>View Gallery</span>
           )}
         </button>
       </div>
