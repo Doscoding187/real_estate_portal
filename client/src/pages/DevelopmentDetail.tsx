@@ -59,12 +59,9 @@ import { Breadcrumbs } from '@/components/search/Breadcrumbs';
 import { Footer } from '@/components/Footer';
 import { HouseMeasureIcon } from '@/components/icons/HouseMeasureIcon';
 
-
-
 export default function DevelopmentDetail() {
   const { slug } = useParams();
   const [lightboxOpen, setLightboxOpen] = useState(false);
-
   const [lightboxTitle, setLightboxTitle] = useState('');
   const [lightboxIndex, setLightboxIndex] = useState(0);
 
@@ -119,7 +116,6 @@ export default function DevelopmentDetail() {
   const floorPlans = parseJSON(dev.floorPlans).map((f: any) => typeof f === 'string' ? { url: f } : f);
   
   // Use actual images from development - split them across categories
-  // First 60% = general, next 20% = amenities, last 20% = outdoors
   const totalImages = images.length;
   const generalCount = Math.ceil(totalImages * 0.6);
   const amenityCount = Math.floor(totalImages * 0.2);
@@ -130,7 +126,6 @@ export default function DevelopmentDetail() {
   // --- Unified Media Construction ---
   const generalMedia = images.slice(0, generalCount).map((url: string) => ({ url, type: 'image' as const }));
   const videoMedia = videos.map((v: any) => ({ url: v.url, type: 'video' as const }));
-  // Placeholder media categories (currently empty)
   const amenityMedia = amenitiesPhotos.map((url: string) => ({ url, type: 'image' as const }));
   const outdoorsMedia = outdoorsPhotos.map((url: string) => ({ url, type: 'image' as const }));
   const floorPlanMedia = floorPlans.map((f: any) => ({ url: f.url, type: 'image' as const }));
@@ -156,10 +151,8 @@ export default function DevelopmentDetail() {
   // Map units and sort by price low-to-high
   const units = (dev.unitTypes || [])
     .map((u: any) => {
-      // Try to get image from baseMedia, fallback to development images
       let unitImage = '';
       try {
-        // Try to get floor plan first, then gallery image
         const media = parseJSON(u.baseMedia);
         unitImage = media?.floorPlans?.[0]?.url || media?.gallery?.[0]?.url || '';
       } catch {}
@@ -175,7 +168,7 @@ export default function DevelopmentDetail() {
         size: u.unitSize || u.size || 0,
         price: Number(u.basePriceFrom),
         priceTo: u.basePriceTo ? Number(u.basePriceTo) : undefined,
-        available: u.totalUnits || u.count || null, // Use actual count if available
+        available: u.totalUnits || u.count || null,
         image: unitImage,
         floors: u.floorNumber || null,
         erfSize: u.yardSize || u.erfSize || u.plotSize || null,
@@ -183,7 +176,7 @@ export default function DevelopmentDetail() {
         yardSize: u.yardSize
       };
     })
-    .sort((a, b) => a.price - b.price); // Sort by price ascending
+    .sort((a, b) => a.price - b.price);
 
   const development = {
     id: dev.id,
@@ -217,580 +210,406 @@ export default function DevelopmentDetail() {
     floorPlans: floorPlans,
   };
 
-  // State for index instead of category
-
-
   const openLightbox = (index: number, title: string) => {
     setLightboxIndex(index);
     setLightboxTitle(title);
     setLightboxOpen(true);
   };
-   
-  // Removed getLightboxMedia - using unifiedMedia directly
-
-
 
   return (
     <>
       <MetaControl />
       <ListingNavbar />
+      
+      {/* CRITICAL: Single root container with proper flow */}
       <div className="min-h-screen bg-slate-50">
-        {/* Breadcrumbs */}
-        <Breadcrumbs items={[
-            { label: 'Home', href: '/' },
-            { label: 'New Developments', href: '/new-developments' },
-            { label: dev.name, href: '#' }
-        ]} />
-        {/* Property Gallery - Hero + Category Cards */}
-        <div className="container max-w-7xl mx-auto px-4 pt-6 pb-6">
-          <DevelopmentHeader 
-            name={development.name}
-            location={development.location}
-            isNewLaunch={true} // TODO: Drive from data
-            completionDate="Dec, 2027" // TODO: Drive from data
-            onContact={() => console.log('Contact Developer')}
-            onShare={() => console.log('Share')}
-            onFavorite={() => console.log('Favorite')}
-          />
-
-          <DevelopmentGallery
-            media={development.unifiedMedia}
-            totalPhotos={development.totalPhotos}
-            featuredMedia={development.featuredMedia}
-            indices={development.indices}
-            onOpenLightbox={(index, title) => openLightbox(index, title)}
-            videos={development.videos}
-            floorPlans={development.floorPlans}
-            images={development.images}
-          />
-
+        
+        {/* Breadcrumbs - Fixed container */}
+        <div className="w-full bg-white border-b border-slate-200">
+          <div className="container max-w-7xl mx-auto px-4 py-3">
+            <Breadcrumbs items={[
+                { label: 'Home', href: '/' },
+                { label: 'New Developments', href: '/new-developments' },
+                { label: dev.name, href: '#' }
+            ]} />
+          </div>
         </div>
 
-        {/* Section Navigation */}
-        <SectionNav />
+        {/* Hero Section - Contained, no overflow */}
+        <div className="w-full bg-white">
+          <div className="container max-w-7xl mx-auto px-4 py-6">
+            <DevelopmentHeader 
+              name={development.name}
+              location={development.location}
+              isNewLaunch={true}
+              completionDate="Dec, 2027"
+              onContact={() => console.log('Contact Developer')}
+              onShare={() => console.log('Share')}
+              onFavorite={() => console.log('Favorite')}
+            />
+          </div>
+        </div>
 
-        {/* Main Content */}
-        <div className="container max-w-7xl mx-auto px-4 pb-12">
-          <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-8">
-            
-            {/* Main Content Column */}
-            <main className="space-y-12">
-              {/* Quick Stats - Reduced density */}
-              <div id="overview" className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                <StatCard 
-                  icon={Home} 
-                  label="Type" 
-                  value="Residential" 
-                  color="blue" 
-                />
-                <StatCard 
-                  icon={Check} 
-                  label="Status" 
-                  value="Selling" 
-                  color="green" 
-                />
-                <StatCard 
-                  icon={Building2} 
-                  label="Units" 
-                  value={`${development.availableUnits} Available`} 
-                  color="purple" 
-                />
-                {development.completionDate && (
-                  <StatCard 
-                    icon={Calendar} 
-                    label="Completion" 
-                    value={development.completionDate} 
-                    color="orange" 
-                  />
-                )}
-              </div>
-
-              <DevelopmentOverviewCard 
-                priceFrom={development.startingPrice}
-                completionDate="December 2025"
-                progressPercentage={5}
-                constructionStatus="Under Construction"
+        {/* Gallery Section - CRITICAL: Isolated container with overflow control */}
+        <div className="w-full bg-white border-b border-slate-200">
+          <div className="container max-w-7xl mx-auto px-4 py-6">
+            {/* IMPORTANT: Wrapper to contain gallery overflow */}
+            <div className="relative w-full overflow-hidden">
+              <DevelopmentGallery
+                media={development.unifiedMedia}
+                totalPhotos={development.totalPhotos}
+                featuredMedia={development.featuredMedia}
+                indices={development.indices}
+                onOpenLightbox={(index, title) => openLightbox(index, title)}
+                videos={development.videos}
+                floorPlans={development.floorPlans}
+                images={development.images}
               />
-
-              <Separator className="bg-slate-100" />
-
-              {/* About Section */}
-              <Card className="border-slate-200 shadow-sm">
-                <CardHeader className="bg-slate-50/50 border-b border-slate-100">
-                  <CardTitle className="font-bold text-slate-900">About {development.name}</CardTitle>
-                </CardHeader>
-                <CardContent className="p-4">
-                  <p className="text-slate-600 leading-relaxed whitespace-pre-line">
-                    {development.description || "Experience luxury living in this exclusive new development. Providing state-of-the-art amenities and modern architectural design, this is the perfect place to call home."}
-                  </p>
-                  <Button 
-                    variant="link" 
-                    className="p-0 h-auto text-blue-600 font-medium mt-4"
-                  >
-                    Read Full Description
-                  </Button>
-                </CardContent>
-              </Card>
-
-              <Separator className="bg-slate-100" />
-
-              {/* Available Units - Tabs & Carousel */}
-              <div id="floor-plans" className="space-y-6">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-xl font-bold text-slate-900">Floor Plans & Pricing</h3>
-                </div>
-
-                {(() => {
-                  // Group units by bedrooms
-                  const bedroomCounts = Array.from(new Set(development.units.map((u: any) => u.bedrooms))).sort((a: any, b: any) => a - b);
-                  
-                  // Initialize state (this needs to be at component level, but for this refactor we'll use a controlled Tabs component)
-                  // using default value of the first bedroom count
-                  const defaultTab = bedroomCounts[0]?.toString() || "0";
-
-                  return (
-                    <Tabs defaultValue={defaultTab} className="w-full">
-                       <TabsList className="bg-transparent p-0 flex flex-wrap gap-2 h-auto mb-6 justify-start">
-                        {bedroomCounts.map((count: any) => {
-                          const unitsInGroup = development.units.filter((u: any) => u.bedrooms === count);
-                          // Determine structural type label
-                          const types = Array.from(new Set(unitsInGroup.map((u: any) => u.structuralType)));
-                          let label = "Apartments";
-                          if (types.length === 1 && types[0] === "House") label = "Houses";
-                          else if (types.length === 1) label = `${types[0]}s`; // Pluralize single type
-                          else if (types.every((t: any) => ["House", "Simplex", "Duplex"].includes(t))) label = "Houses"; 
-                          
-                          return (
-                          <TabsTrigger 
-                            key={count} 
-                            value={count.toString()}
-                            className="rounded-full border border-slate-200 bg-white px-6 py-2.5 text-sm font-medium text-slate-600 data-[state=active]:bg-slate-900 data-[state=active]:text-white data-[state=active]:border-slate-900 shadow-sm transition-all"
-                          >
-                            {count} Bedroom <span className="ml-1 opacity-70 font-normal">{label}</span>
-                          </TabsTrigger>
-                        )})}
-                      </TabsList>
-
-                      {bedroomCounts.map((count: any) => (
-                        <TabsContent key={count} value={count.toString()} className="mt-0 focus-visible:outline-none">
-                          <Carousel
-                            opts={{
-                              align: "start",
-                              loop: true,
-                            }}
-                            className="w-full"
-                          >
-                            <CarouselContent className="-ml-4 pb-4">
-                              {development.units
-                                .filter((u: any) => u.bedrooms === count)
-                                .map((unit: any) => (
-                                <CarouselItem key={unit.id} className="pl-4 md:basis-1/2 lg:basis-1/2">
-                                  <Card className="overflow-hidden hover:shadow-md transition-all duration-300 border-slate-200 grouped-card h-full flex flex-col">
-                                    {/* Reduced Image Height */}
-                                    <div className="h-48 bg-slate-200 relative group shrink-0">
-                                      <img 
-                                        src={unit.image} 
-                                        alt={unit.type}
-                                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                                      />
-                                      <div className="absolute top-2 right-2">
-                                         <Badge className="bg-white/90 text-slate-900 backdrop-blur-sm shadow-sm border-none font-semibold px-2 py-0.5 text-[10px] rounded-sm">
-                                           {unit.ownershipType}
-                                         </Badge>
-                                      </div>
-                                    </div>
-                                    
-                                    <CardContent className="p-4 space-y-4 flex-1 flex flex-col">
-                                      <div className="flex justify-between items-start">
-                                        <div>
-                                          <h4 className="font-bold text-slate-900 text-lg">R {unit.price.toLocaleString()}</h4>
-                                          <p className="text-xs text-slate-500 mt-1">{unit.type}</p>
-                                          {unit.priceTo && (
-                                            <p className="text-xs text-slate-400 mt-0.5">
-                                              - R {unit.priceTo.toLocaleString()}
-                                            </p>
-                                          )}
-                                        </div>
-                                      </div>
-
-                                      {/* Specs Grid - Compact */}
-                                      <div className="grid grid-cols-4 gap-2 py-2 border-t border-b border-slate-100 mt-auto">
-                                        <div className="flex flex-col items-center justify-center text-center">
-                                          <Bed className="h-3.5 w-3.5 text-slate-400 mb-1" />
-                                          <span className="text-xs font-semibold text-slate-700">{unit.bedrooms} Bed</span>
-                                        </div>
-                                        <div className="flex flex-col items-center justify-center text-center border-l border-slate-100">
-                                          <Bath className="h-3.5 w-3.5 text-slate-400 mb-1" />
-                                          <span className="text-xs font-semibold text-slate-700">{unit.bathrooms} Bath</span>
-                                        </div>
-                                        <div className="flex flex-col items-center justify-center text-center border-l border-slate-100">
-                                          <HouseMeasureIcon className="h-3.5 w-3.5 text-slate-400 mb-1" />
-                                          <span className="text-xs font-semibold text-slate-700">{unit.size} m²</span>
-                                        </div>
-                                        {/* Dynamic 4th Spec */}
-                                        {["House", "Simplex", "Duplex", "Cluster Common", "Townhouse"].includes(unit.structuralType) ? (
-                                           unit.erfSize ? (
-                                            <div className="flex flex-col items-center justify-center text-center border-l border-slate-100">
-                                              <Maximize className="h-3.5 w-3.5 text-slate-400 mb-1" />
-                                              <span className="text-xs font-semibold text-slate-700">{unit.erfSize} m²</span>
-                                            </div>
-                                           ) : null
-                                        ) : (
-                                          unit.floors ? (
-                                            <div className="flex flex-col items-center justify-center text-center border-l border-slate-100">
-                                              <Layers className="h-3.5 w-3.5 text-slate-400 mb-1" />
-                                              <span className="text-xs font-semibold text-slate-700">{unit.floors} flr</span>
-                                            </div>
-                                          ) : null
-                                        )}
-                                      </div>
-
-                                      <div className="pt-1">
-                                         <Button variant="outline" className="w-full border-blue-200 text-blue-600 hover:bg-blue-50 h-9 text-xs font-bold rounded-md shadow-none uppercase tracking-wide">
-                                           Request callback
-                                         </Button>
-                                      </div>
-                                    </CardContent>
-                                  </Card>
-                                </CarouselItem>
-                              ))}
-                            </CarouselContent>
-                            <div className="hidden md:block">
-                               <CarouselPrevious className="-left-4 bg-white shadow-md border-slate-200" />
-                               <CarouselNext className="-right-4 bg-white shadow-md border-slate-200" />
-                            </div>
-                          </Carousel>
-                        </TabsContent>
-                      ))}
-                    </Tabs>
-                  );
-                })()}
-              </div>
-
-              <Separator className="bg-slate-100" />
-
-              {/* Development Specifications - From estateSpecs or derived from amenities */}
-              {(() => {
-                // Check for explicit estateSpecs first
-                const estateSpecs = (dev as any).estateSpecs || {};
-                const hasEstateSpecs = estateSpecs.ownershipType || estateSpecs.powerBackup || estateSpecs.waterSupply;
-                
-                // Helper to format value labels
-                const formatLabel = (value: string) => {
-                  if (!value) return '';
-                  return value.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-                };
-                
-                // Build specs array from estateSpecs
-                const specs: Array<{icon: any, label: string, value: string}> = [];
-                
-                if (hasEstateSpecs) {
-                  // Use explicit estateSpecs
-                  if (estateSpecs.ownershipType) {
-                    specs.push({ icon: Home, label: 'Ownership Type', value: formatLabel(estateSpecs.ownershipType) });
-                  }
-                  if (estateSpecs.powerBackup && estateSpecs.powerBackup !== 'none') {
-                    specs.push({ icon: Zap, label: 'Power Backup', value: formatLabel(estateSpecs.powerBackup) });
-                  }
-                  if (estateSpecs.securityFeatures?.length > 0) {
-                    const secCount = estateSpecs.securityFeatures.length;
-                    specs.push({ 
-                      icon: Shield, 
-                      label: 'Security', 
-                      value: secCount > 2 ? `${secCount} Features` : estateSpecs.securityFeatures.map(formatLabel).join(', ')
-                    });
-                  }
-                  if (estateSpecs.waterSupply) {
-                    specs.push({ icon: Droplets, label: 'Water Supply', value: formatLabel(estateSpecs.waterSupply) });
-                  }
-                  if (estateSpecs.internetAccess && estateSpecs.internetAccess !== 'none') {
-                    specs.push({ icon: Wifi, label: 'Internet', value: formatLabel(estateSpecs.internetAccess) });
-                  }
-                  if (estateSpecs.flooring) {
-                    specs.push({ icon: Layers, label: 'Flooring', value: formatLabel(estateSpecs.flooring) });
-                  }
-                  if (estateSpecs.parkingType && estateSpecs.parkingType !== 'none') {
-                    specs.push({ icon: Car, label: 'Parking', value: formatLabel(estateSpecs.parkingType) });
-                  }
-                  if (estateSpecs.petFriendly) {
-                    specs.push({ icon: CheckCircle2, label: 'Pet Friendly', value: formatLabel(estateSpecs.petFriendly) });
-                  }
-                  if (estateSpecs.electricitySupply) {
-                    specs.push({ icon: Zap, label: 'Electricity', value: formatLabel(estateSpecs.electricitySupply) });
-                  }
-                } else {
-                  // Fallback: Parse amenities to extract specifications
-                  const allAmenities = development.amenities || [];
-                  const allFeatures = Array.isArray(dev.features) ? dev.features : [];
-                  const allHighlights = Array.isArray(dev.highlights) ? dev.highlights : [];
-                  const combined = [...allAmenities, ...allFeatures, ...allHighlights].map(s => String(s).toLowerCase());
-                  
-                  const hasAny = (keywords: string[]) => keywords.some(k => combined.some(a => a.includes(k.toLowerCase())));
-                  
-                  // Security
-                  const securityItems = combined.filter(a => 
-                    ['security', 'cctv', 'access control', 'biometric', 'guard', 'surveillance'].some(k => a.includes(k))
-                  );
-                  if (securityItems.length > 0) {
-                    specs.push({ 
-                      icon: Shield, 
-                      label: 'Security', 
-                      value: securityItems.length > 2 ? `${securityItems.length} Features` : securityItems.slice(0, 2).join(', ')
-                    });
-                  }
-                  
-                  if (hasAny(['solar', 'generator', 'backup power', 'inverter'])) {
-                    specs.push({ icon: Zap, label: 'Power Backup', value: 'Available' });
-                  }
-                  if (hasAny(['fiber', 'fibre', 'internet', 'wifi', 'smart home'])) {
-                    specs.push({ icon: Wifi, label: 'Internet', value: 'Fibre Ready' });
-                  }
-                  const parkingItems = combined.filter(a => ['parking', 'garage', 'carport'].some(k => a.includes(k)));
-                  if (parkingItems.length > 0) {
-                    specs.push({ icon: Car, label: 'Parking', value: 'Available' });
-                  }
-                  if (hasAny(['pet friendly', 'pets allowed', 'pet-friendly'])) {
-                    specs.push({ icon: CheckCircle2, label: 'Pet Friendly', value: 'Yes' });
-                  }
-                  if (hasAny(['pool', 'swimming'])) {
-                    specs.push({ icon: Droplets, label: 'Swimming Pool', value: 'Available' });
-                  }
-                }
-                
-                // If no specs found, don't render the card
-                if (specs.length === 0) return null;
-                
-                return (
-                  <Card id="amenities" className="shadow-none border border-slate-200 bg-white">
-                    <CardHeader className="bg-slate-50/50 border-b border-slate-100">
-                      <CardTitle className="font-bold text-slate-900">Development Specifications</CardTitle>
-                    </CardHeader>
-                    <CardContent className="p-4">
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                        {specs.map((spec, index) => {
-                          const IconComponent = spec.icon;
-                          return (
-                            <div key={index} className="flex items-start gap-2 p-2.5 bg-slate-50 rounded-lg">
-                              <IconComponent className="h-5 w-5 text-orange-500 mt-0.5" />
-                              <div>
-                                <p className="text-sm text-slate-500">{spec.label}</p>
-                                <p className="font-semibold text-slate-900 capitalize">{spec.value}</p>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })()}
-
-              <Separator className="bg-slate-100" />
-
-              {/* Development Features & Specifications */}
-              {(development.amenities.length > 0) && (
-                <Card className="border-slate-200 shadow-sm">
-                  <CardHeader className="bg-slate-50/50 border-b border-slate-100">
-                    <CardTitle className="text-lg font-bold text-slate-900">Development Features & Amenities</CardTitle>
-                  </CardHeader>
-                  <CardContent className="p-4">
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                      {development.amenities.map((amenity: string, index: number) => {
-                        // Map amenities to icons
-                        const iconMap: Record<string, any> = {
-                          'pool': Droplets,
-                          'swimming pool': Droplets,
-                          'security': Shield,
-                          '24hr security': Shield,
-                          'cctv': Shield,
-                          'wifi': Wifi,
-                          'fibre': Wifi,
-                          'internet': Wifi,
-                          'parking': Car,
-                          'garage': Car,
-                          'garden': Trees,
-                          'playground': Trees,
-                          'gym': CheckCircle2,
-                          'clubhouse': Building2,
-                          'generator': Zap,
-                          'solar': Zap,
-                          'borehole': Droplets,
-                        };
-                        const IconComponent = iconMap[amenity.toLowerCase()] || CheckCircle2;
-                        return (
-                          <div key={index} className="flex items-start gap-2 p-2.5 bg-slate-50 rounded-lg">
-                            <IconComponent className="h-5 w-5 text-orange-500 mt-0.5" />
-                            <div>
-                              <p className="font-semibold text-slate-900 capitalize text-sm">{amenity.replace(/_/g, ' ')}</p>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-
-              <Separator className="bg-slate-100" />
-
-              {/* Developer Overview Section */}
-              {/* Developer Overview Section */}
-              <div id="developer">
-                <DeveloperOverview 
-                developerName={development.developer}
-                developerLogo={development.developerLogo}
-              />
-
-              </div>
-
-              {/* Location Section */}
-              <div id="location">
-                {/* Nearby Landmarks */}
-                <NearbyLandmarks 
-                property={{
-                  id: dev.id,
-                  title: dev.name,
-                  latitude: dev.latitude || '0',
-                  longitude: dev.longitude || '0',
-                }} 
-              />
-
-              {/* Suburb Insights */}
-              <Card className="border-slate-200 shadow-sm">
-                <CardContent className="p-6">
-                  <SuburbInsights 
-                    suburbId={dev.suburbId || 0}
-                    suburbName={dev.suburb || dev.city} 
-                    isDevelopment={true}
-                  />
-                </CardContent>
-              </Card>
-
-              {/* Locality Guide */}
-              <LocalityGuide 
-                suburb={dev.suburb || dev.city} 
-                city={dev.city}
-              />
-              </div>
-            </main>
-
-            {/* Sidebar - Right Column */}
-            <aside className="lg:sticky lg:top-24 lg:self-start space-y-3">
-                {/* Contact Form */}
-                <Card className="shadow-sm border-slate-200">
-                  <CardHeader className="bg-slate-50 border-b border-slate-100 py-3 px-4">
-                    <CardTitle className="text-sm font-bold text-slate-800">Interested in This Development?</CardTitle>
-                  </CardHeader>
-                  <CardContent className="p-4 space-y-2.5">
-                    <Button className="w-full bg-orange-500 hover:bg-orange-600 text-white h-10 text-sm font-semibold shadow-sm">
-                      <Download className="mr-2 h-4 w-4" />
-                      Download Brochure
-                    </Button>
-                    <Button
-                      variant="outline"
-                      className="w-full h-10 border-blue-200 text-blue-600 hover:bg-blue-50 text-sm font-medium"
-                    >
-                      <Phone className="mr-2 h-4 w-4" />
-                      Schedule a Viewing
-                    </Button>
-                    <Button variant="ghost" className="w-full h-9 text-slate-600 hover:text-slate-900 text-xs">
-                      <Mail className="mr-2 h-3.5 w-3.5" />
-                      Contact Sales Team
-                    </Button>
-                  </CardContent>
-                </Card>
-
-                {/* Developer Info - Compact */}
-                <Card className="shadow-sm border-slate-200">
-                  <CardContent className="p-4">
-                    <div className="flex items-start gap-3 mb-3">
-                      {/* Developer logo */}
-                      <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-md flex items-center justify-center flex-shrink-0 shadow-sm overflow-hidden">
-                        {development.developerLogo ? (
-                          <img src={development.developerLogo} alt={development.developer} className="w-full h-full object-cover" />
-                        ) : (
-                          <Building2 className="w-5 h-5 text-white" />
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-bold text-sm text-slate-900 truncate">{development.developer}</p>
-                        <div className="flex items-center gap-1 mt-0.5">
-                           <Award className="w-3 h-3 text-orange-500" />
-                           <span className="text-[10px] font-semibold text-orange-600 uppercase tracking-wide">Verified Developer</span>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <p className="text-xs text-slate-500 mb-3 leading-relaxed line-clamp-2">
-                       {development.developerDescription}
-                    </p>
-
-                    {/* Website */}
-                    {development.developerWebsite && (
-                      <a
-                        href={development.developerWebsite}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-1.5 text-xs text-blue-600 hover:underline mb-3"
-                      >
-                        <Globe className="w-3 h-3" />
-                        <span>Visit Website</span>
-                      </a>
-                    )}
-
-                    <Separator className="bg-slate-100 my-3" />
-
-                    {/* Other Projects */}
-                    {(() => {
-                      // Filter to show other projects from same developer
-                      const otherProjects = (allDevelopments || [])
-                        .filter((d: any) => d.developerId === dev.developer?.id && d.id !== dev.id)
-                        .slice(0, 3);
-                      
-                      if (otherProjects.length === 0) return null;
-                      
-                      return (
-                        <div>
-                          <p className="text-[10px] font-bold text-slate-900 uppercase tracking-wide mb-2 flex items-center gap-1">
-                            <Briefcase className="w-3 h-3 text-slate-400" />
-                            Other Projects
-                          </p>
-                          <div className="space-y-1 pl-1 border-l-2 border-slate-100">
-                            {otherProjects.map((project: any) => (
-                              <a 
-                                key={project.id}
-                                href={`/development/${project.slug}`}
-                                className="text-xs text-slate-600 pl-2 hover:text-blue-600 transition-colors block"
-                              >
-                                {project.name}
-                              </a>
-                            ))}
-                          </div>
-                        </div>
-                      );
-                    })()}
-
-                    <Button variant="link" className="p-0 h-auto text-blue-600 mt-3 text-xs font-medium">
-                      View Developer Profile →
-                    </Button>
-                  </CardContent>
-                </Card>
-              </aside>
             </div>
           </div>
-      </div>
+        </div>
 
-      {/* Footer */}
-      <Footer />
+        {/* Section Navigation - Full width sticky */}
+        <div className="sticky top-0 z-40 bg-white border-b border-slate-200 shadow-sm">
+          <div className="container max-w-7xl mx-auto">
+            <SectionNav />
+          </div>
+        </div>
 
-      {/* Media Lightbox */}
-      <MediaLightbox
-        media={development.unifiedMedia}
-        initialIndex={lightboxIndex}
-        isOpen={lightboxOpen}
-        onClose={() => setLightboxOpen(false)}
-        title={lightboxTitle}
-      />
-    </>
-  );
-}
+        {/* Main Content Area - Proper grid without overflow */}
+        <div className="w-full py-8">
+          <div className="container max-w-7xl mx-auto px-4">
+            
+            {/* CRITICAL: Grid with proper gap, no negative margins */}
+            <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-8 items-start">
+              
+              {/* Main Content Column - No nested containers */}
+              <main className="w-full min-w-0 space-y-8">
+                
+                {/* Quick Stats */}
+                <section id="overview" className="w-full">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    <StatCard icon={Home} label="Type" value="Residential" color="blue" />
+                    <StatCard icon={Check} label="Status" value="Selling" color="green" />
+                    <StatCard icon={Building2} label="Units" value={`${development.availableUnits} Available`} color="purple" />
+                    {development.completionDate && (
+                      <StatCard icon={Calendar} label="Completion" value={development.completionDate} color="orange" />
+                    )}
+                  </div>
+                </section>
+
+                {/* Overview Card */}
+                <section className="w-full">
+                  <DevelopmentOverviewCard 
+                    priceFrom={development.startingPrice}
+                    completionDate="December 2025"
+                    progressPercentage={5}
+                    constructionStatus="Under Construction"
+                  />
+                </section>
+
+                <Separator className="bg-slate-200" />
+
+                {/* About Section */}
+                <section className="w-full">
+                  <Card className="border-slate-200 shadow-sm">
+                    <CardHeader className="bg-slate-50/50 border-b border-slate-100">
+                      <CardTitle className="font-bold text-slate-900">About {development.name}</CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-6">
+                      <p className="text-slate-600 leading-relaxed whitespace-pre-line">
+                        {development.description || "Experience luxury living in this exclusive new development. Providing state-of-the-art amenities and modern architectural design, this is the perfect place to call home."}
+                      </p>
+                      <Button variant="link" className="p-0 h-auto text-blue-600 font-medium mt-4">
+                        Read Full Description
+                      </Button>
+                    </CardContent>
+                  </Card>
+                </section>
+
+                <Separator className="bg-slate-200" />
+
+                {/* Floor Plans Section - CRITICAL: Carousel overflow contained */}
+                <section id="floor-plans" className="w-full">
+                  <div className="mb-6">
+                    <h3 className="text-2xl font-bold text-slate-900">Floor Plans & Pricing</h3>
+                  </div>
+
+                  {(() => {
+                    const bedroomCounts = Array.from(new Set(development.units.map((u: any) => u.bedrooms))).sort((a: any, b: any) => a - b);
+                    const defaultTab = bedroomCounts[0]?.toString() || "0";
+
+                    return (
+                      <Tabs defaultValue={defaultTab} className="w-full">
+                        <TabsList className="bg-transparent p-0 flex flex-wrap gap-2 h-auto mb-6 justify-start">
+                          {bedroomCounts.map((count: any) => {
+                            const unitsInGroup = development.units.filter((u: any) => u.bedrooms === count);
+                            const types = Array.from(new Set(unitsInGroup.map((u: any) => u.structuralType)));
+                            let label = "Apartments";
+                            if (types.length === 1 && types[0] === "House") label = "Houses";
+                            else if (types.length === 1) label = `${types[0]}s`;
+                            else if (types.every((t: any) => ["House", "Simplex", "Duplex"].includes(t))) label = "Houses"; 
+                            
+                            return (
+                              <TabsTrigger 
+                                key={count} 
+                                value={count.toString()}
+                                className="rounded-full border border-slate-200 bg-white px-6 py-2.5 text-sm font-medium text-slate-600 data-[state=active]:bg-slate-900 data-[state=active]:text-white data-[state=active]:border-slate-900 shadow-sm transition-all"
+                              >
+                                {count} Bedroom <span className="ml-1 opacity-70 font-normal">{label}</span>
+                              </TabsTrigger>
+                            );
+                          })}
+                        </TabsList>
+
+                        {bedroomCounts.map((count: any) => (
+                          <TabsContent key={count} value={count.toString()} className="mt-0 focus-visible:outline-none">
+                            {/* CRITICAL: Carousel container with proper boundaries */}
+                            <div className="relative w-full">
+                              <Carousel
+                                opts={{
+                                  align: "start",
+                                  loop: true,
+                                }}
+                                className="w-full"
+                              >
+                                <CarouselContent className="-ml-4">
+                                  {development.units
+                                    .filter((u: any) => u.bedrooms === count)
+                                    .map((unit: any) => (
+                                      <CarouselItem key={unit.id} className="pl-4 md:basis-1/2 lg:basis-1/2">
+                                        <Card className="overflow-hidden hover:shadow-md transition-all duration-300 border-slate-200 h-full flex flex-col">
+                                          {/* Image with fixed aspect ratio */}
+                                          <div className="relative w-full aspect-[16/10] bg-slate-200 overflow-hidden group">
+                                            <img 
+                                              src={unit.image} 
+                                              alt={unit.type}
+                                              className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                                            />
+                                            <div className="absolute top-2 right-2">
+                                              <Badge className="bg-white/90 text-slate-900 backdrop-blur-sm shadow-sm border-none font-semibold px-2 py-0.5 text-[10px] rounded-sm">
+                                                {unit.ownershipType}
+                                              </Badge>
+                                            </div>
+                                          </div>
+                                          
+                                          <CardContent className="p-4 space-y-4 flex-1 flex flex-col">
+                                            <div className="flex justify-between items-start">
+                                              <div>
+                                                <h4 className="font-bold text-slate-900 text-lg">R {unit.price.toLocaleString()}</h4>
+                                                <p className="text-xs text-slate-500 mt-1">{unit.type}</p>
+                                                {unit.priceTo && (
+                                                  <p className="text-xs text-slate-400 mt-0.5">
+                                                    - R {unit.priceTo.toLocaleString()}
+                                                  </p>
+                                                )}
+                                              </div>
+                                            </div>
+
+                                            <div className="grid grid-cols-4 gap-2 py-2 border-t border-b border-slate-100 mt-auto">
+                                              <div className="flex flex-col items-center justify-center text-center">
+                                                <Bed className="h-3.5 w-3.5 text-slate-400 mb-1" />
+                                                <span className="text-xs font-semibold text-slate-700">{unit.bedrooms} Bed</span>
+                                              </div>
+                                              <div className="flex flex-col items-center justify-center text-center border-l border-slate-100">
+                                                <Bath className="h-3.5 w-3.5 text-slate-400 mb-1" />
+                                                <span className="text-xs font-semibold text-slate-700">{unit.bathrooms} Bath</span>
+                                              </div>
+                                              <div className="flex flex-col items-center justify-center text-center border-l border-slate-100">
+                                                <HouseMeasureIcon className="h-3.5 w-3.5 text-slate-400 mb-1" />
+                                                <span className="text-xs font-semibold text-slate-700">{unit.size} m²</span>
+                                              </div>
+                                              {["House", "Simplex", "Duplex", "Cluster Common", "Townhouse"].includes(unit.structuralType) ? (
+                                                unit.erfSize ? (
+                                                  <div className="flex flex-col items-center justify-center text-center border-l border-slate-100">
+                                                    <Maximize className="h-3.5 w-3.5 text-slate-400 mb-1" />
+                                                    <span className="text-xs font-semibold text-slate-700">{unit.erfSize} m²</span>
+                                                  </div>
+                                                ) : null
+                                              ) : (
+                                                unit.floors ? (
+                                                  <div className="flex flex-col items-center justify-center text-center border-l border-slate-100">
+                                                    <Layers className="h-3.5 w-3.5 text-slate-400 mb-1" />
+                                                    <span className="text-xs font-semibold text-slate-700">{unit.floors} flr</span>
+                                                  </div>
+                                                ) : null
+                                              )}
+                                            </div>
+
+                                            <div className="pt-1">
+                                              <Button variant="outline" className="w-full border-blue-200 text-blue-600 hover:bg-blue-50 h-9 text-xs font-bold rounded-md shadow-none uppercase tracking-wide">
+                                                Request callback
+                                              </Button>
+                                            </div>
+                                          </CardContent>
+                                        </Card>
+                                      </CarouselItem>
+                                    ))}
+                                </CarouselContent>
+                                <div className="hidden md:block">
+                                  <CarouselPrevious className="absolute -left-4 top-1/2 -translate-y-1/2 bg-white shadow-md border-slate-200" />
+                                  <CarouselNext className="absolute -right-4 top-1/2 -translate-y-1/2 bg-white shadow-md border-slate-200" />
+                                </div>
+                              </Carousel>
+                            </div>
+                          </TabsContent>
+                        ))}
+                      </Tabs>
+                    );
+                  })()}
+                </section>
+
+                <Separator className="bg-slate-200" />
+
+                {/* Specifications */}
+                {(() => {
+                  const estateSpecs = (dev as any).estateSpecs || {};
+                  const hasEstateSpecs = estateSpecs.ownershipType || estateSpecs.powerBackup || estateSpecs.waterSupply;
+                  
+                  const formatLabel = (value: string) => {
+                    if (!value) return '';
+                    return value.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                  };
+                  
+                  const specs: Array<{icon: any, label: string, value: string}> = [];
+                  
+                  if (hasEstateSpecs) {
+                    if (estateSpecs.ownershipType) {
+                      specs.push({ icon: Home, label: 'Ownership Type', value: formatLabel(estateSpecs.ownershipType) });
+                    }
+                    if (estateSpecs.powerBackup && estateSpecs.powerBackup !== 'none') {
+                      specs.push({ icon: Zap, label: 'Power Backup', value: formatLabel(estateSpecs.powerBackup) });
+                    }
+                    if (estateSpecs.securityFeatures?.length > 0) {
+                      const secCount = estateSpecs.securityFeatures.length;
+                      specs.push({ 
+                        icon: Shield, 
+                        label: 'Security', 
+                        value: secCount > 2 ? `${secCount} Features` : estateSpecs.securityFeatures.map(formatLabel).join(', ')
+                      });
+                    }
+                    if (estateSpecs.waterSupply) {
+                      specs.push({ icon: Droplets, label: 'Water Supply', value: formatLabel(estateSpecs.waterSupply) });
+                    }
+                    if (estateSpecs.internetAccess && estateSpecs.internetAccess !== 'none') {
+                      specs.push({ icon: Wifi, label: 'Internet', value: formatLabel(estateSpecs.internetAccess) });
+                    }
+                    if (estateSpecs.flooring) {
+                      specs.push({ icon: Layers, label: 'Flooring', value: formatLabel(estateSpecs.flooring) });
+                    }
+                    if (estateSpecs.parkingType && estateSpecs.parkingType !== 'none') {
+                      specs.push({ icon: Car, label: 'Parking', value: formatLabel(estateSpecs.parkingType) });
+                    }
+                    if (estateSpecs.petFriendly) {
+                      specs.push({ icon: CheckCircle2, label: 'Pet Friendly', value: formatLabel(estateSpecs.petFriendly) });
+                    }
+                    if (estateSpecs.electricitySupply) {
+                      specs.push({ icon: Zap, label: 'Electricity', value: formatLabel(estateSpecs.electricitySupply) });
+                    }
+                  }
+                  
+                  if (specs.length === 0) return null;
+                  
+                  return (
+                    <section id="amenities" className="w-full">
+                      <Card className="shadow-sm border border-slate-200 bg-white">
+                        <CardHeader className="bg-slate-50/50 border-b border-slate-100">
+                          <CardTitle className="font-bold text-slate-900">Development Specifications</CardTitle>
+                        </CardHeader>
+                        <CardContent className="p-6">
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                            {specs.map((spec, index) => {
+                              const IconComponent = spec.icon;
+                              return (
+                                <div key={index} className="flex items-start gap-2 p-2.5 bg-slate-50 rounded-lg">
+                                  <IconComponent className="h-5 w-5 text-orange-500 mt-0.5 flex-shrink-0" />
+                                  <div className="min-w-0">
+                                    <p className="text-sm text-slate-500">{spec.label}</p>
+                                    <p className="font-semibold text-slate-900 capitalize">{spec.value}</p>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </section>
+                  );
+                })()}
+
+                {/* Amenities */}
+                {(development.amenities.length > 0) && (
+                  <>
+                    <Separator className="bg-slate-200" />
+                    <section className="w-full">
+                      <Card className="border-slate-200 shadow-sm">
+                        <CardHeader className="bg-slate-50/50 border-b border-slate-100">
+                          <CardTitle className="text-lg font-bold text-slate-900">Development Features & Amenities</CardTitle>
+                        </CardHeader>
+                        <CardContent className="p-6">
+                          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                            {development.amenities.map((amenity: string, index: number) => {
+                              const iconMap: Record<string, any> = {
+                                'pool': Droplets, 'swimming pool': Droplets, 'security': Shield,
+                                '24hr security': Shield, 'cctv': Shield, 'wifi': Wifi,
+                                'fibre': Wifi, 'internet': Wifi, 'parking': Car,
+                                'garage': Car, 'garden': Trees, 'playground': Trees,
+                                'gym': CheckCircle2, 'clubhouse': Building2, 'generator': Zap,
+                                'solar': Zap, 'borehole': Droplets,
+                              };
+                              const IconComponent = iconMap[amenity.toLowerCase()] || CheckCircle2;
+                              return (
+                                <div key={index} className="flex items-start gap-2 p-2.5 bg-slate-50 rounded-lg">
+                                  <IconComponent className="h-5 w-5 text-orange-500 mt-0.5 flex-shrink-0" />
+                                  <div className="min-w-0">
+                                    <p className="font-semibold text-slate-900 capitalize text-sm">{amenity.replace(/_/g, ' ')}</p>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </section>
+                  </>
+                )}
+
+                <Separator className="bg-slate-200" />
+
+                {/* Developer Overview */}
+                <section id="developer" className="w-full">
+                  <DeveloperOverview 
+                    developerName={development.developer}
+                    developerLogo={development.developerLogo}
+                  />
+                </section>
+
+                <Separator className="bg-slate-200" />
+
+                {/* Location Section */}
+                <section id="location" className="w-full space-y-6">
+                  <NearbyLandmarks 
+                    property={{
+                      id: dev.id,
+                      title: dev.name,
+                      latitude: dev.latitude || '0',
+                      longitude: dev.longitude || '0',
+                    }} 
+                  />
+
+                  <Card className="border-slate-200 shadow-sm">
+                    <CardContent className="p-6">
+                      <SuburbInsights 
+                        suburbId={dev.suburbId || 0}
+                        suburbName={dev.suburb || dev.city} 
+                        isDevelopment={true}
+                      />
+                    </CardContent>
+                  </Card>
+
+                  <LocalityGuide 
+                    suburb={dev.suburb || dev.city} 
+                    city={dev.city}
+                  />
+                </section>
+              </main
