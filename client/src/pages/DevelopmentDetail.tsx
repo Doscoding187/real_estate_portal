@@ -612,4 +612,127 @@ export default function DevelopmentDetail() {
                     city={dev.city}
                   />
                 </section>
-              </main
+              </main>
+
+              {/* Sidebar - CRITICAL: Proper sticky positioning */}
+              <aside className="w-full lg:w-[360px] space-y-4">
+                {/* Sticky wrapper with proper constraints */}
+                <div className="lg:sticky lg:top-24 space-y-4">
+                  
+                  {/* Contact Form */}
+                  <Card className="shadow-sm border-slate-200">
+                    <CardHeader className="bg-slate-50 border-b border-slate-100 py-3 px-4">
+                      <CardTitle className="text-sm font-bold text-slate-800">Interested in This Development?</CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-4 space-y-2.5">
+                      <Button className="w-full bg-orange-500 hover:bg-orange-600 text-white h-10 text-sm font-semibold shadow-sm">
+                        <Download className="mr-2 h-4 w-4" />
+                        Download Brochure
+                      </Button>
+                      <Button
+                        variant="outline"
+                        className="w-full h-10 border-blue-200 text-blue-600 hover:bg-blue-50 text-sm font-medium"
+                      >
+                        <Phone className="mr-2 h-4 w-4" />
+                        Schedule a Viewing
+                      </Button>
+                      <Button variant="ghost" className="w-full h-9 text-slate-600 hover:text-slate-900 text-xs">
+                        <Mail className="mr-2 h-3.5 w-3.5" />
+                        Contact Sales Team
+                      </Button>
+                    </CardContent>
+                  </Card>
+
+                  {/* Developer Info */}
+                  <Card className="shadow-sm border-slate-200">
+                    <CardContent className="p-4">
+                      <div className="flex items-start gap-3 mb-3">
+                        <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-md flex items-center justify-center flex-shrink-0 shadow-sm overflow-hidden">
+                          {development.developerLogo ? (
+                            <img src={development.developerLogo} alt={development.developer} className="w-full h-full object-cover" />
+                          ) : (
+                            <Building2 className="w-5 h-5 text-white" />
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-bold text-sm text-slate-900 truncate">{development.developer}</p>
+                          <div className="flex items-center gap-1 mt-0.5">
+                            <Award className="w-3 h-3 text-orange-500 flex-shrink-0" />
+                            <span className="text-[10px] font-semibold text-orange-600 uppercase tracking-wide">Verified Developer</span>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <p className="text-xs text-slate-500 mb-3 leading-relaxed line-clamp-2">
+                        {development.developerDescription}
+                      </p>
+
+                      {development.developerWebsite && (
+                        <a
+                          href={development.developerWebsite}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-1.5 text-xs text-blue-600 hover:underline mb-3"
+                        >
+                          <Globe className="w-3 h-3 flex-shrink-0" />
+                          <span className="truncate">Visit Website</span>
+                        </a>
+                      )}
+
+                      <Separator className="bg-slate-100 my-3" />
+
+                      {(() => {
+                        const otherProjects = (allDevelopments || [])
+                          .filter((d: any) => d.developerId === dev.developer?.id && d.id !== dev.id)
+                          .slice(0, 3);
+                        
+                        if (otherProjects.length === 0) return null;
+                        
+                        return (
+                          <div>
+                            <p className="text-[10px] font-bold text-slate-900 uppercase tracking-wide mb-2 flex items-center gap-1">
+                              <Briefcase className="w-3 h-3 text-slate-400 flex-shrink-0" />
+                              Other Projects
+                            </p>
+                            <div className="space-y-1 pl-1 border-l-2 border-slate-100">
+                              {otherProjects.map((project: any) => (
+                                <a 
+                                  key={project.id}
+                                  href={`/development/${project.slug}`}
+                                  className="text-xs text-slate-600 pl-2 hover:text-blue-600 transition-colors block truncate"
+                                >
+                                  {project.name}
+                                </a>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })()}
+
+                      <Button variant="link" className="p-0 h-auto text-blue-600 mt-3 text-xs font-medium">
+                        View Developer Profile →
+                      </Button>
+                    </CardContent>
+                  </Card>
+                  
+                </div>
+              </aside>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Footer - Outside main container */}
+      <Footer />
+
+      {/* Lightbox - Portal */}
+      <MediaLightbox
+        media={development.unifiedMedia}
+        initialIndex={lightboxIndex}
+        isOpen={lightboxOpen}
+        onClose={() => setLightboxOpen(false)}
+        title={lightboxTitle}
+      />
+    </>
+  );
+}
