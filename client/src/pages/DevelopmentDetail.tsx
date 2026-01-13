@@ -221,8 +221,8 @@ export default function DevelopmentDetail() {
       <MetaControl />
       <ListingNavbar />
       
-      {/* CRITICAL: Single root container with proper flow */}
-      <div className="min-h-screen bg-slate-50">
+      {/* CRITICAL: Single root container with proper flow - pt-16 offsets fixed navbar */}
+      <div className="min-h-screen bg-slate-50 pt-16">
         
         {/* Breadcrumbs - Fixed container */}
         <div className="w-full bg-white border-b border-slate-200">
