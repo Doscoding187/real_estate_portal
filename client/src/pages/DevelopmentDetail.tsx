@@ -268,24 +268,13 @@ export default function DevelopmentDetail() {
             </div>
           </div>
         </div>
-
-        {/* Section Navigation - Full width sticky */}
-        <div className="sticky top-0 z-40 bg-white border-b border-slate-200 shadow-sm">
-          <div className="container max-w-7xl mx-auto">
-            <SectionNav />
-          </div>
-        </div>
-
-        {/* Main Content Area - Proper grid without overflow */}
-        <div className="w-full py-8">
-          <div className="container max-w-7xl mx-auto px-4">
-            
-            {/* CRITICAL: Grid with proper gap, no negative margins */}
+        {/* Quick Info Section - ABOVE SectionNav */}
+        <div className="w-full bg-white border-b border-slate-200">
+          <div className="container max-w-7xl mx-auto px-4 py-6">
             <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-8 items-start">
               
-              {/* Main Content Column - No nested containers */}
-              <main className="w-full min-w-0 space-y-8">
-                
+              {/* Left Column - Stats + Overview Card */}
+              <div className="space-y-6">
                 {/* Quick Stats */}
                 <section id="overview" className="w-full">
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -299,16 +288,107 @@ export default function DevelopmentDetail() {
                 </section>
 
                 {/* Overview Card */}
-                <section className="w-full">
-                  <DevelopmentOverviewCard 
-                    priceFrom={development.startingPrice}
-                    completionDate="December 2025"
-                    progressPercentage={5}
-                    constructionStatus="Under Construction"
-                  />
-                </section>
+                <DevelopmentOverviewCard 
+                  priceFrom={development.startingPrice}
+                  completionDate="December 2025"
+                  progressPercentage={5}
+                  constructionStatus="Under Construction"
+                />
+              </div>
 
-                <Separator className="bg-slate-200" />
+              {/* Right Column - Developer Info Card */}
+              <div className="w-full lg:w-[360px]">
+                <Card className="shadow-sm border-slate-200">
+                  <CardContent className="p-4">
+                    <div className="flex items-start gap-3 mb-3">
+                      <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-md flex items-center justify-center flex-shrink-0 shadow-sm overflow-hidden">
+                        {development.developerLogo ? (
+                          <img src={development.developerLogo} alt={development.developer} className="w-full h-full object-cover" />
+                        ) : (
+                          <Building2 className="w-5 h-5 text-white" />
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-bold text-sm text-slate-900 truncate">{development.developer}</p>
+                        <div className="flex items-center gap-1 mt-0.5">
+                          <Award className="w-3 h-3 text-orange-500 flex-shrink-0" />
+                          <span className="text-[10px] font-semibold text-orange-600 uppercase tracking-wide">Verified Developer</span>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <p className="text-xs text-slate-500 mb-3 leading-relaxed line-clamp-2">
+                      {development.developerDescription}
+                    </p>
+
+                    {development.developerWebsite && (
+                      <a
+                        href={development.developerWebsite}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-1.5 text-xs text-blue-600 hover:underline mb-3"
+                      >
+                        <Globe className="w-3 h-3 flex-shrink-0" />
+                        <span className="truncate">Visit Website</span>
+                      </a>
+                    )}
+
+                    <Separator className="bg-slate-100 my-3" />
+
+                    {(() => {
+                      const otherProjects = (allDevelopments || [])
+                        .filter((d: any) => d.developerId === dev.developer?.id && d.id !== dev.id)
+                        .slice(0, 3);
+                      
+                      if (otherProjects.length === 0) return null;
+                      
+                      return (
+                        <div>
+                          <p className="text-[10px] font-bold text-slate-900 uppercase tracking-wide mb-2 flex items-center gap-1">
+                            <Briefcase className="w-3 h-3 text-slate-400 flex-shrink-0" />
+                            Other Projects
+                          </p>
+                          <div className="space-y-1 pl-1 border-l-2 border-slate-100">
+                            {otherProjects.map((project: any) => (
+                              <a 
+                                key={project.id}
+                                href={`/development/${project.slug}`}
+                                className="text-xs text-slate-600 pl-2 hover:text-blue-600 transition-colors block truncate"
+                              >
+                                {project.name}
+                              </a>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })()}
+
+                    <Button variant="link" className="p-0 h-auto text-blue-600 mt-3 text-xs font-medium">
+                      View Developer Profile →
+                    </Button>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Section Navigation - Full width sticky - SEPARATES upper from main content */}
+        <div className="sticky top-0 z-40 bg-white border-b border-slate-200 shadow-sm">
+          <div className="container max-w-7xl mx-auto">
+            <SectionNav />
+          </div>
+        </div>
+
+        {/* Main Content Area - BELOW SectionNav */}
+        <div className="w-full py-8">
+          <div className="container max-w-7xl mx-auto px-4">
+            
+            {/* CRITICAL: Grid with proper gap, no negative margins */}
+            <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-8 items-start">
+              
+              {/* Main Content Column - No nested containers */}
+              <main className="w-full min-w-0 space-y-8">
 
                 {/* About Section */}
                 <section className="w-full">
@@ -642,79 +722,6 @@ export default function DevelopmentDetail() {
                       </Button>
                     </CardContent>
                   </Card>
-
-                  {/* Developer Info */}
-                  <Card className="shadow-sm border-slate-200">
-                    <CardContent className="p-4">
-                      <div className="flex items-start gap-3 mb-3">
-                        <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-md flex items-center justify-center flex-shrink-0 shadow-sm overflow-hidden">
-                          {development.developerLogo ? (
-                            <img src={development.developerLogo} alt={development.developer} className="w-full h-full object-cover" />
-                          ) : (
-                            <Building2 className="w-5 h-5 text-white" />
-                          )}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="font-bold text-sm text-slate-900 truncate">{development.developer}</p>
-                          <div className="flex items-center gap-1 mt-0.5">
-                            <Award className="w-3 h-3 text-orange-500 flex-shrink-0" />
-                            <span className="text-[10px] font-semibold text-orange-600 uppercase tracking-wide">Verified Developer</span>
-                          </div>
-                        </div>
-                      </div>
-                      
-                      <p className="text-xs text-slate-500 mb-3 leading-relaxed line-clamp-2">
-                        {development.developerDescription}
-                      </p>
-
-                      {development.developerWebsite && (
-                        <a
-                          href={development.developerWebsite}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center gap-1.5 text-xs text-blue-600 hover:underline mb-3"
-                        >
-                          <Globe className="w-3 h-3 flex-shrink-0" />
-                          <span className="truncate">Visit Website</span>
-                        </a>
-                      )}
-
-                      <Separator className="bg-slate-100 my-3" />
-
-                      {(() => {
-                        const otherProjects = (allDevelopments || [])
-                          .filter((d: any) => d.developerId === dev.developer?.id && d.id !== dev.id)
-                          .slice(0, 3);
-                        
-                        if (otherProjects.length === 0) return null;
-                        
-                        return (
-                          <div>
-                            <p className="text-[10px] font-bold text-slate-900 uppercase tracking-wide mb-2 flex items-center gap-1">
-                              <Briefcase className="w-3 h-3 text-slate-400 flex-shrink-0" />
-                              Other Projects
-                            </p>
-                            <div className="space-y-1 pl-1 border-l-2 border-slate-100">
-                              {otherProjects.map((project: any) => (
-                                <a 
-                                  key={project.id}
-                                  href={`/development/${project.slug}`}
-                                  className="text-xs text-slate-600 pl-2 hover:text-blue-600 transition-colors block truncate"
-                                >
-                                  {project.name}
-                                </a>
-                              ))}
-                            </div>
-                          </div>
-                        );
-                      })()}
-
-                      <Button variant="link" className="p-0 h-auto text-blue-600 mt-3 text-xs font-medium">
-                        View Developer Profile →
-                      </Button>
-                    </CardContent>
-                  </Card>
-                  
                 </div>
               </aside>
             </div>
