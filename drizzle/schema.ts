@@ -623,6 +623,53 @@ export const developments = mysqlTable("developments", {
 	index("idx_developments_published").on(table.isPublished, table.publishedAt),
 ]);
 
+// Development Partners (Junction Table)
+// Allows developments to be shared across multiple brand profiles
+export const developmentPartners = mysqlTable("development_partners", {
+	id: int().autoincrement().primaryKey(),
+	developmentId: int("development_id").notNull().references(() => developments.id, { onDelete: "cascade" }),
+	brandProfileId: int("brand_profile_id").notNull().references(() => developerBrandProfiles.id, { onDelete: "cascade" }),
+	partnerType: mysqlEnum("partner_type", ['co_developer', 'joint_venture', 'investor', 'builder', 'marketing_agency', 'selling_agency']).default('co_developer').notNull(),
+	permissions: json("permissions").$type<{
+		version: number;
+		view_leads: boolean | 'assigned_only';
+		export_leads: boolean;
+		view_analytics: boolean | 'campaign_only' | 'limited';
+		edit_marketing: boolean;
+		edit_pricing: boolean;
+		edit_units: boolean;
+	}>(),
+	visibilityScope: mysqlEnum("visibility_scope", ['profile_public', 'internal_only', 'marketing_only']).default('profile_public').notNull(),
+	displayOrder: int("display_order").default(0).notNull(),
+	isPrimary: tinyint("is_primary").default(0).notNull(),
+	createdAt: timestamp("created_at", { mode: 'string' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
+},
+(table) => [
+	index("idx_dev_partners_development_id").on(table.developmentId),
+	index("idx_dev_partners_brand_profile_id").on(table.brandProfileId),
+	index("idx_dev_partners_partner_type").on(table.partnerType),
+	unique("idx_dev_partner_unique").on(table.developmentId, table.brandProfileId),
+]);
+
+// Development Lead Routes (Source-based lead routing)
+// Determines which brand profile receives leads based on entry point
+export const developmentLeadRoutes = mysqlTable("development_lead_routes", {
+	id: int().autoincrement().primaryKey(),
+	developmentId: int("development_id").notNull().references(() => developments.id, { onDelete: "cascade" }),
+	sourceType: mysqlEnum("source_type", ['developer_profile', 'agency_profile', 'development_page', 'campaign']).notNull(),
+	sourceBrandProfileId: int("source_brand_profile_id").references(() => developerBrandProfiles.id, { onDelete: "cascade" }),
+	receiverBrandProfileId: int("receiver_brand_profile_id").notNull().references(() => developerBrandProfiles.id, { onDelete: "cascade" }),
+	fallbackBrandProfileId: int("fallback_brand_profile_id").references(() => developerBrandProfiles.id, { onDelete: "set null" }),
+	priority: int("priority").default(0).notNull(),
+	isActive: tinyint("is_active").default(1).notNull(),
+	createdAt: timestamp("created_at", { mode: 'string' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
+},
+(table) => [
+	index("idx_lead_routes_development_id").on(table.developmentId),
+	index("idx_lead_routes_source_type").on(table.sourceType),
+	index("idx_lead_routes_lookup").on(table.developmentId, table.sourceType, table.sourceBrandProfileId),
+]);
+
 // Development Approval Queue
 export const developmentApprovalQueue = mysqlTable("development_approval_queue", {
 	id: int().autoincrement().notNull(),
