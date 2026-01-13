@@ -245,6 +245,8 @@ export default function DevelopmentDetail() {
     setLightboxOpen(true);
   };
 
+  const [isExpanded, setIsExpanded] = useState(false);
+
   return (
     <>
       <MetaControl />
@@ -451,11 +453,15 @@ export default function DevelopmentDetail() {
                       <CardTitle className="font-bold text-slate-900">About {development.name}</CardTitle>
                     </CardHeader>
                     <CardContent className="p-6">
-                      <p className="text-slate-600 leading-relaxed whitespace-pre-line">
+                      <div className={`text-slate-600 leading-relaxed whitespace-pre-line overflow-hidden transition-all duration-300 ${isExpanded ? '' : 'line-clamp-6'}`}>
                         {development.description || "Experience luxury living in this exclusive new development. Providing state-of-the-art amenities and modern architectural design, this is the perfect place to call home."}
-                      </p>
-                      <Button variant="link" className="p-0 h-auto text-blue-600 font-medium mt-4">
-                        Read Full Description
+                      </div>
+                      <Button 
+                        variant="link" 
+                        className="p-0 h-auto text-blue-600 font-medium mt-4 hover:text-blue-700"
+                        onClick={() => setIsExpanded(!isExpanded)}
+                      >
+                        {isExpanded ? "Show Less" : "Read Full Description"}
                       </Button>
                     </CardContent>
                   </Card>

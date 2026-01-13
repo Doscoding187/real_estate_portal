@@ -813,13 +813,17 @@ async function getDevelopmentWithPhases(id: number) {
   
   // Gracefully handle missing development_phases table
   let phases: any[] = [];
+  let unitTypesData: any[] = [];
+
   try {
-    phases = await db
-      .select()
-      .from(developmentPhases)
-      .where(eq(developmentPhases.developmentId, id));
+    const [phasesRes, unitTypesRes] = await Promise.all([
+      db.select().from(developmentPhases).where(eq(developmentPhases.developmentId, id)),
+      db.select().from(unitTypes).where(eq(unitTypes.developmentId, id))
+    ]);
+    phases = phasesRes;
+    unitTypesData = unitTypesRes;
   } catch (error: any) {
-    console.warn('[getDevelopmentWithPhases] Failed to query phases, defaulting to empty:', error.message);
+    console.warn('[getDevelopmentWithPhases] Failed to query related data:', error.message);
   }
 
   return { 
@@ -830,7 +834,8 @@ async function getDevelopmentWithPhases(id: number) {
     videos: parseJsonField(dev.videos),
     floorPlans: parseJsonField(dev.floorPlans),
     brochures: parseJsonField(dev.brochures),
-    phases 
+    phases,
+    unitTypes: unitTypesData
   };
 }
 
