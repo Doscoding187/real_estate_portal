@@ -177,13 +177,13 @@ export function DevelopmentGallery({
                            className="relative w-full h-[194px] rounded-card overflow-hidden shadow-sm hover:shadow-md transition-all group ring-1 ring-black/5"
                         >
                             <img
-                                src={images[Math.min(2, images.length-1)] || images[0] || ''}
+                                src={images.length > 2 ? images[2] : 'https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=800'} 
                                 alt="Gallery"
                                 className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                             />
                              <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
                              <span className="absolute right-2.5 bottom-2.5 bg-white/95 backdrop-blur-md px-3 py-1.5 rounded-pill font-semibold text-[11px] shadow-sm border border-white/20">
-                                Floor Plans
+                                View Gallery
                              </span>
                         </button>
                     );

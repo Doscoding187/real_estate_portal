@@ -137,9 +137,16 @@ export default function DevelopmentDetail() {
   // Reserve first image for main display if video not present
   const availableImages = images.slice(1); 
   
-  // Prioritize explicitly categorized images, fallback to distribution strategy
-  const amenityImage = explicitAmenity ? explicitAmenity.url : (availableImages.length > 0 ? availableImages[0] : images[0]);
-  const outdoorImage = explicitOutdoor ? explicitOutdoor.url : (availableImages.length > 1 ? availableImages[1] : (images[0] || ''));
+  // Placeholder constants for when specific images are missing
+  const PLACEHOLDERS = {
+    AMENITIES: 'https://images.unsplash.com/photo-1576485290814-1c72aa4bbb8e?w=800&q=80', // Modern interior/amenity
+    OUTDOORS: 'https://images.unsplash.com/photo-1624638760980-cb05d15a5198?w=800&q=80'    // Exterior/Outdoor view
+  };
+  
+  // Prioritize explicitly categorized images, fallback to distribution strategy, then to distinct placeholders
+  // We avoid using images[0] (the hero) as a fallback to prevent duplication in the grid
+  const amenityImage = explicitAmenity ? explicitAmenity.url : (availableImages.length > 0 ? availableImages[0] : PLACEHOLDERS.AMENITIES);
+  const outdoorImage = explicitOutdoor ? explicitOutdoor.url : (availableImages.length > 1 ? availableImages[1] : PLACEHOLDERS.OUTDOORS);
   
   // --- Unified Media Construction ---
   // We keep the original media grouping for the lightbox navigation to feel structured
