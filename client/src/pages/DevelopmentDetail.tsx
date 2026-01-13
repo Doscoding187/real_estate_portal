@@ -115,6 +115,13 @@ export default function DevelopmentDetail() {
   const videos = parseJSON(dev.videos).map((v: any) => typeof v === 'string' ? { url: v } : v);
   const floorPlans = parseJSON(dev.floorPlans).map((f: any) => typeof f === 'string' ? { url: f } : f);
   
+  console.log('[DevelopmentDetail] Debug Media:', { 
+    id: dev.id, 
+    rawVideos: dev.videos, 
+    parsedVideos: videos, 
+    rawImages: dev.images 
+  });
+  
   // Use actual images from development - split them across categories
   const totalImages = images.length;
   const generalCount = Math.ceil(totalImages * 0.6);

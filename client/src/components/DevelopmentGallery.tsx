@@ -81,7 +81,7 @@ export function DevelopmentGallery({
                <span>View all {videos.length > 1 ? videos.length + ' ' : ''}videos</span>
              </>
           ) : (
-             <span>View Gallery</span>
+             <span>View all {totalPhotos} photos</span>
           )}
         </button>
       </div>
