@@ -142,19 +142,34 @@ function normalizeAmenities(amenities: any): string[] {
 /**
  * Normalizes image arrays (handles both string and array formats)
  */
-function normalizeImages(images: any): string[] {
+/**
+ * Normalizes image arrays (handles both string and array formats)
+ * Preserves structured objects { url, category, caption }
+ * IMPORTANT: Do NOT normalize or flatten image/unit JSON.
+ * This data is used for wizard resume & edit flows.
+ * Breaking this will cause silent data loss.
+ */
+function normalizeImages(images: any): any[] {
   if (Array.isArray(images)) return images;
   
   if (typeof images === 'string') {
     // Handle comma-separated strings
-    if (images.includes(',')) {
+    if (images.includes(',') && !images.trim().startsWith('[')) {
       return images.split(',').map(img => img.trim()).filter(Boolean);
     }
-    // Single image
+    // Handle JSON string
+    try {
+      const parsed = JSON.parse(images);
+      if (Array.isArray(parsed)) return parsed;
+    } catch {
+      // Fallback for single image string
+      return images ? [images] : [];
+    }
+    // Single image string that failed JSON parse
     return images ? [images] : [];
   }
   
-  return []; // Return empty array if invalid, Drizzle might need JSON string, but schema usually handles array -> json
+  return []; 
 }
 
 /**
@@ -479,7 +494,7 @@ export async function listPublicDevelopments(limit: number = 20) {
 /**
  * Creates a new development with associated unit types in a transaction
  */
-async function createDevelopment(
+export async function createDevelopment(
   developerId: number,
   data: CreateDevelopmentData,
   metadata: DevelopmentMetadata = {}
@@ -579,9 +594,7 @@ async function createDevelopment(
     
     // Text Fields (MUST stringify arrays manually as they are defined as text() in schema)
     // NOTE: We check if it's already a string (e.g. from comma-separated input) or an array
-    images: Array.isArray(normalizeImages(developmentData.images)) 
-      ? JSON.stringify(normalizeImages(developmentData.images)) 
-      : (typeof normalizeImages(developmentData.images) === 'string' ? normalizeImages(developmentData.images) : null),
+    images: JSON.stringify(normalizeImages(developmentData.images)),
 
     videos: Array.isArray(developmentData.videos) ? JSON.stringify(developmentData.videos) : (developmentData.videos || null),
     floorPlans: Array.isArray(developmentData.floorPlans) ? JSON.stringify(developmentData.floorPlans) : (developmentData.floorPlans || null),
@@ -644,7 +657,7 @@ async function createDevelopment(
   return created;
 }
 
-async function updateDevelopment(id: number, developerId: number, data: CreateDevelopmentData) {
+export async function updateDevelopment(id: number, developerId: number, data: CreateDevelopmentData) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
@@ -669,16 +682,23 @@ async function updateDevelopment(id: number, developerId: number, data: CreateDe
   // Extract data that needs special handling
   const { unitTypes: unitTypesData, ...developmentData } = data;
 
+  // Safe Partial Update Logic
+  // IMPORTANT: Partial updates MUST NOT overwrite existing JSON fields.
+  // Wizard relies on patch semantics for resume/edit flows.
+  const updatePayload: any = {
+      ...developmentData,
+      updatedAt: new Date().toISOString(),
+  };
+
+  // Only normalize and overwrite if provided (Partial Update Safety)
+  if (developmentData.amenities !== undefined) updatePayload.amenities = normalizeAmenities(developmentData.amenities);
+  if (developmentData.highlights !== undefined) updatePayload.highlights = normalizeAmenities(developmentData.highlights);
+  if (developmentData.features !== undefined) updatePayload.features = normalizeAmenities(developmentData.features);
+  if (developmentData.images !== undefined) updatePayload.images = JSON.stringify(normalizeImages(developmentData.images));
+
   // Update development
   await db.update(developments)
-    .set({
-      ...developmentData,
-      amenities: normalizeAmenities(developmentData.amenities),
-      highlights: normalizeAmenities(developmentData.highlights),
-      features: normalizeAmenities(developmentData.features),
-      images: normalizeImages(developmentData.images),
-      updatedAt: new Date().toISOString(),
-    })
+    .set(updatePayload)
     .where(eq(developments.id, id));
 
   // Handle Unit Types if provided
@@ -746,9 +766,16 @@ async function persistUnitTypes(
         // Pricing
         priceFrom: basePrice,
         priceTo: basePrice + extrasTotal,
+        basePriceFrom: unit.basePriceFrom ? Number(unit.basePriceFrom) : basePrice,
+        basePriceTo: unit.basePriceTo ? Number(unit.basePriceTo) : basePrice + extrasTotal,
         
-        // Extras
+        // Extras & JSON Columns (CRITICAL FIX: Ensure these are saved)
         extras: unit.extras || [],
+        specifications: unit.specifications || {},
+        amenities: unit.amenities || {}, 
+        baseMedia: unit.baseMedia || {},
+        baseFeatures: unit.baseFeatures || {}, 
+        baseFinishes: unit.baseFinishes || {},
         
         // Inventory
         totalUnits: Number(unit.totalUnits || 0),
@@ -777,7 +804,7 @@ async function persistUnitTypes(
       } else {
         // Insert new unit
         await db.insert(unitTypes).values({
-          id: unit.id,
+          id: unit.id, // Ensure ID is passed (generated on client)
           ...unitPayload,
           createdAt: new Date().toISOString(),
         });
@@ -797,7 +824,7 @@ async function persistUnitTypes(
   console.log('[persistUnitTypes] Complete:', results);
 }
 
-async function getDevelopmentWithPhases(id: number) {
+export async function getDevelopmentWithPhases(id: number) {
   const db = await getDb();
   if (!db) return null;
 

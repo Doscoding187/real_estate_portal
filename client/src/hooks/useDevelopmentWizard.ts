@@ -862,14 +862,20 @@ const createActions = (
       const dbVideos = parse(data.videos, []);
       const dbBrochures = parse(data.brochures, []);
       
-      const photos: MediaItem[] = Array.isArray(dbImages) ? dbImages.map((url: string, i: number) => ({
-        id: `img-${i}-${Date.now()}`,
-        url,
-        type: 'image',
-        category: i === 0 ? 'featured' : 'general',
-        isPrimary: i === 0,
-        displayOrder: i
-      })) : [];
+      const photos: MediaItem[] = Array.isArray(dbImages) ? dbImages.map((img: any, i: number) => {
+         const isObj = typeof img === 'object' && img !== null;
+         const url = isObj ? img.url : img;
+         const existingCategory = isObj ? img.category : null;
+         
+         return {
+          id: `img-${i}-${Date.now()}`,
+          url,
+          type: 'image',
+          category: existingCategory || (i === 0 ? 'featured' : 'general'),
+          isPrimary: i === 0,
+          displayOrder: i
+        };
+      }) : [];
 
       const videos: MediaItem[] = Array.isArray(dbVideos) ? dbVideos.map((url: string, i: number) => ({
         id: `vid-${i}-${Date.now()}`,
