@@ -123,16 +123,30 @@ export default function DevelopmentDetail() {
   });
   
   // Use actual images from development - split them across categories
+  // Use actual images from development - split them safely
   const totalImages = images.length;
-  const generalCount = Math.ceil(totalImages * 0.6);
-  const amenityCount = Math.floor(totalImages * 0.2);
+  // Reserve first image for main display if video not present
+  const availableImages = images.slice(1); 
   
-  const outdoorsPhotos: any[] = images.slice(generalCount + amenityCount); 
-  const amenitiesPhotos: any[] = images.slice(generalCount, generalCount + amenityCount);
+  // Simple distribution strategy for now until we have tagged images
+  const amenityImage = availableImages.length > 0 ? availableImages[0] : images[0];
+  const outdoorImage = availableImages.length > 1 ? availableImages[1] : (images[0] || '');
   
   // --- Unified Media Construction ---
+  // We keep the original media grouping for the lightbox navigation to feel structured
+  // even if we don't have explicit tagging yet.
+  const generalCount = Math.max(1, Math.ceil(totalImages * 0.5));
+  
   const generalMedia = images.slice(0, generalCount).map((url: string) => ({ url, type: 'image' as const }));
   const videoMedia = videos.map((v: any) => ({ url: v.url, type: 'video' as const }));
+  
+  // Implicitly use remaining images for other categories if not explicitly defined
+  const remainingImages = images.slice(generalCount);
+  const midPoint = Math.ceil(remainingImages.length / 2);
+  
+  const amenitiesPhotos = remainingImages.slice(0, midPoint);
+  const outdoorsPhotos = remainingImages.slice(midPoint);
+
   const amenityMedia = amenitiesPhotos.map((url: string) => ({ url, type: 'image' as const }));
   const outdoorsMedia = outdoorsPhotos.map((url: string) => ({ url, type: 'image' as const }));
   const floorPlanMedia = floorPlans.map((f: any) => ({ url: f.url, type: 'image' as const }));
@@ -271,6 +285,8 @@ export default function DevelopmentDetail() {
                 videos={development.videos}
                 floorPlans={development.floorPlans}
                 images={development.images}
+                amenityImage={amenityImage}
+                outdoorImage={outdoorImage}
               />
             </div>
           </div>

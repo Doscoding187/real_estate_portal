@@ -30,15 +30,19 @@ export function DevelopmentGallery({
   onOpenLightbox,
   videos,
   floorPlans,
-  images
-}: DevelopmentGalleryProps) {
+  images,
+  amenityImage,
+  outdoorImage
+}: DevelopmentGalleryProps & { amenityImage?: string; outdoorImage?: string }) {
 
   // Logic to determine Bottom Right Tile content to avoid redundancy
   const showVideoTile = videos && videos.length > 0 && featuredMedia.type !== 'video';
   
   // Helper to render media content
-  const renderMediaContent = (item: MediaItem, alt: string) => {
-    if (item.type === 'video') {
+  const renderMediaContent = (item: MediaItem | undefined, alt: string) => {
+    if (!item) return <div className="w-full h-full bg-slate-100 flex items-center justify-center text-slate-400">No Image</div>;
+
+    if ('type' in item && item.type === 'video') {
       return (
         <video
           src={item.url}
@@ -52,7 +56,7 @@ export function DevelopmentGallery({
     }
     return (
       <img
-        src={item.url}
+        src={'url' in item ? item.url : item}
         alt={alt}
         className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
       />
@@ -96,7 +100,7 @@ export function DevelopmentGallery({
             className="relative rounded-card overflow-hidden shadow-sm hover:shadow-md transition-all group h-[194px] ring-1 ring-black/5"
           >
             <img
-              src="https://images.unsplash.com/photo-1540518614846-7eded433c457?w=400"
+              src={amenityImage || images[0]}
               alt="Amenities"
               className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
             />
@@ -112,7 +116,7 @@ export function DevelopmentGallery({
             className="relative rounded-card overflow-hidden shadow-sm hover:shadow-md transition-all group h-[194px] ring-1 ring-black/5"
           >
             <img
-              src="https://images.unsplash.com/photo-1560448204-603b3fc33ddc?w=400"
+              src={outdoorImage || images[0]}
               alt="Outdoors"
               className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
             />
@@ -155,7 +159,7 @@ export function DevelopmentGallery({
                            className="relative w-full h-[194px] rounded-card overflow-hidden shadow-sm hover:shadow-md transition-all group ring-1 ring-black/5"
                         >
                             <img
-                                src={floorPlans[0]?.url || images[1] || ''}
+                                src={floorPlans[0]?.url || images[Math.min(2, images.length-1)] || ''}
                                 alt="Floor Plans"
                                 className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                             />
@@ -173,13 +177,13 @@ export function DevelopmentGallery({
                            className="relative w-full h-[194px] rounded-card overflow-hidden shadow-sm hover:shadow-md transition-all group ring-1 ring-black/5"
                         >
                             <img
-                                src={images[2] || images[0] || ''}
+                                src={images[Math.min(2, images.length-1)] || images[0] || ''}
                                 alt="Gallery"
                                 className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                             />
                              <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
                              <span className="absolute right-2.5 bottom-2.5 bg-white/95 backdrop-blur-md px-3 py-1.5 rounded-pill font-semibold text-[11px] shadow-sm border border-white/20">
-                                View Gallery
+                                Floor Plans
                              </span>
                         </button>
                     );
