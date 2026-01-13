@@ -6,6 +6,7 @@ import { EmailService } from './_core/emailService';
 import { developerSubscriptionService } from './services/developerSubscriptionService';
 import { developmentService } from './services/developmentService';
 import { unitService } from './services/unitService';
+import * as partnershipService from './services/partnershipService';
 import { calculateAffordabilityCompanion, matchUnitsToAffordability } from './services/affordabilityCompanion';
 import { developmentDrafts, developments, developers, developerBrandProfiles } from '../drizzle/schema';
 import { eq, desc, and, or } from 'drizzle-orm';
@@ -2472,5 +2473,159 @@ export const developerRouter = router({
           isHotSelling: dev.isFeatured === 1,
         };
       });
+    }),
+
+  // ============================================
+  // PARTNERSHIP MANAGEMENT
+  // ============================================
+
+  /**
+   * Add a partner to a development
+   * Auth: Protected, must own development
+   */
+  addPartner: protectedProcedure
+    .input(
+      z.object({
+        developmentId: z.number().int(),
+        brandProfileId: z.number().int(),
+        partnerType: z.enum(['co_developer', 'joint_venture', 'investor', 'builder', 'marketing_agency', 'selling_agency']),
+        visibilityScope: z.enum(['profile_public', 'internal_only', 'marketing_only']).optional(),
+        isPrimary: z.boolean().optional(),
+        displayOrder: z.number().int().optional(),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      // Verify ownership
+      const dev = await developmentService.getDevelopmentById(input.developmentId);
+      if (!dev) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Development not found' });
+      }
+
+      const developer = await db.getDeveloperByUserId(ctx.user.id);
+      if (!developer || dev.developerId !== developer.id) {
+        throw new TRPCError({ code: 'FORBIDDEN', message: 'You can only add partners to your own developments' });
+      }
+
+      const result = await partnershipService.addPartner(
+        input.developmentId,
+        input.brandProfileId,
+        input.partnerType,
+        {
+          visibilityScope: input.visibilityScope,
+          isPrimary: input.isPrimary,
+          displayOrder: input.displayOrder,
+        }
+      );
+
+      return { success: true, partnerId: result.id };
+    }),
+
+  /**
+   * Remove a partner from a development
+   * Auth: Protected, must own development
+   */
+  removePartner: protectedProcedure
+    .input(
+      z.object({
+        developmentId: z.number().int(),
+        brandProfileId: z.number().int(),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      // Verify ownership
+      const dev = await developmentService.getDevelopmentById(input.developmentId);
+      if (!dev) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Development not found' });
+      }
+
+      const developer = await db.getDeveloperByUserId(ctx.user.id);
+      if (!developer || dev.developerId !== developer.id) {
+        throw new TRPCError({ code: 'FORBIDDEN', message: 'You can only remove partners from your own developments' });
+      }
+
+      await partnershipService.removePartner(input.developmentId, input.brandProfileId);
+
+      return { success: true, message: 'Partner removed' };
+    }),
+
+  /**
+   * Get all partners for a development
+   * Auth: Public (for display on development pages)
+   */
+  getPartners: publicProcedure
+    .input(z.object({ developmentId: z.number().int() }))
+    .query(async ({ input }) => {
+      return await partnershipService.getPartners(input.developmentId);
+    }),
+
+  /**
+   * Get developments where a brand is a partner
+   * Auth: Public (for profile pages)
+   */
+  getPartneredDevelopments: publicProcedure
+    .input(
+      z.object({
+        brandProfileId: z.number().int(),
+        visibilityScope: z.enum(['profile_public', 'internal_only', 'marketing_only']).optional(),
+      })
+    )
+    .query(async ({ input }) => {
+      return await partnershipService.getPartneredDevelopments(
+        input.brandProfileId,
+        input.visibilityScope || 'profile_public'
+      );
+    }),
+
+  /**
+   * Get lead routes for a development
+   * Auth: Protected, must own development or be admin
+   */
+  getLeadRoutes: protectedProcedure
+    .input(z.object({ developmentId: z.number().int() }))
+    .query(async ({ input, ctx }) => {
+      const dev = await developmentService.getDevelopmentById(input.developmentId);
+      if (!dev) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Development not found' });
+      }
+
+      // Allow owners and admins
+      const developer = await db.getDeveloperByUserId(ctx.user.id);
+      if (ctx.user.role !== 'super_admin' && (!developer || dev.developerId !== developer.id)) {
+        throw new TRPCError({ code: 'FORBIDDEN', message: 'Access denied' });
+      }
+
+      return await partnershipService.getLeadRoutes(input.developmentId);
+    }),
+
+  /**
+   * Update development page lead receiver
+   * Auth: Protected, must own development
+   */
+  updateLeadRouting: protectedProcedure
+    .input(
+      z.object({
+        developmentId: z.number().int(),
+        receiverBrandProfileId: z.number().int(),
+        fallbackBrandProfileId: z.number().int().optional(),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      const dev = await developmentService.getDevelopmentById(input.developmentId);
+      if (!dev) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Development not found' });
+      }
+
+      const developer = await db.getDeveloperByUserId(ctx.user.id);
+      if (!developer || dev.developerId !== developer.id) {
+        throw new TRPCError({ code: 'FORBIDDEN', message: 'You can only update routing for your own developments' });
+      }
+
+      await partnershipService.updateDevelopmentPageReceiver(
+        input.developmentId,
+        input.receiverBrandProfileId,
+        input.fallbackBrandProfileId
+      );
+
+      return { success: true, message: 'Lead routing updated' };
     }),
 });
