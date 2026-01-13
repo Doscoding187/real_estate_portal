@@ -92,7 +92,8 @@ export function MediaLightbox({
             onClick={onClose}
             variant="ghost"
             size="icon"
-            className="text-white hover:bg-white/20"
+            className="text-white hover:bg-white/20 rounded-full h-10 w-10"
+            aria-label="Close (Escape)"
           >
             <X className="h-6 w-6" />
           </Button>
@@ -108,9 +109,10 @@ export function MediaLightbox({
         {media.length > 1 && (
           <button
             onClick={goToPrevious}
-            className="absolute left-4 top-1/2 -translate-y-1/2 z-10 bg-white/10 hover:bg-white/20 backdrop-blur-sm p-3 rounded-full transition-all"
+            className="absolute left-4 top-1/2 -translate-y-1/2 z-50 bg-black/50 hover:bg-black/70 text-white p-3 rounded-full transition-all border border-white/10 shadow-lg"
+            aria-label="Previous image"
           >
-            <ChevronLeft className="h-6 w-6 text-white" />
+            <ChevronLeft className="h-8 w-8" />
           </button>
         )}
 
@@ -122,7 +124,7 @@ export function MediaLightbox({
               src={currentMedia.url}
               controls
               autoPlay
-              className="max-w-full max-h-[90vh] rounded-lg shadow-2xl"
+              className="max-w-full max-h-[85vh] rounded-lg shadow-2xl"
             >
               Your browser does not support the video tag.
             </video>
@@ -130,7 +132,7 @@ export function MediaLightbox({
             <img
               src={currentMedia.url}
               alt={currentMedia.alt || `Image ${currentIndex + 1}`}
-              className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl"
+              className="max-w-full max-h-[85vh] object-contain rounded-lg shadow-2xl"
             />
           )}
         </div>
@@ -139,9 +141,10 @@ export function MediaLightbox({
         {media.length > 1 && (
           <button
             onClick={goToNext}
-            className="absolute right-4 top-1/2 -translate-y-1/2 z-10 bg-white/10 hover:bg-white/20 backdrop-blur-sm p-3 rounded-full transition-all"
+            className="absolute right-4 top-1/2 -translate-y-1/2 z-50 bg-black/50 hover:bg-black/70 text-white p-3 rounded-full transition-all border border-white/10 shadow-lg"
+            aria-label="Next image"
           >
-            <ChevronRight className="h-6 w-6 text-white" />
+            <ChevronRight className="h-8 w-8" />
           </button>
         )}
       </div>
