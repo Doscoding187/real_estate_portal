@@ -43,6 +43,7 @@ import {
   Layers,
   Zap,
   Shield,
+  LayoutGrid,
   Droplets,
   Wifi,
   Car,
@@ -304,9 +305,19 @@ export default function DevelopmentDetail() {
                     <StatCard icon={Home} label="Type" value="Residential" color="blue" />
                     <StatCard icon={Check} label="Status" value="Selling" color="green" />
                     <StatCard icon={Building2} label="Units" value={`${development.availableUnits} Available`} color="purple" />
-                    {development.completionDate && (
-                      <StatCard icon={Calendar} label="Completion" value={development.completionDate} color="orange" />
-                    )}
+                    {(() => {
+                        const types = new Set(development.units.map((u: any) => u.category || 'Unit'));
+                        let typeLabel = "Various";
+                        const hasHouses = Array.from(types).some(t => /house|villa|townhouse/i.test(t));
+                        const hasApartments = Array.from(types).some(t => /apartment|flat|studio|penthouse/i.test(t));
+
+                        if (hasHouses && hasApartments) typeLabel = "Houses & Apts";
+                        else if (hasHouses) typeLabel = "Houses";
+                        else if (hasApartments) typeLabel = "Apartments";
+                        else if (types.size === 1) typeLabel = Array.from(types)[0];
+
+                        return <StatCard icon={LayoutGrid} label="Unit Types" value={typeLabel} color="orange" />;
+                    })()}
                   </div>
                 </section>
 
