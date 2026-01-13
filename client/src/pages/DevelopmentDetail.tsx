@@ -65,6 +65,7 @@ export default function DevelopmentDetail() {
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxTitle, setLightboxTitle] = useState('');
   const [lightboxIndex, setLightboxIndex] = useState(0);
+  const [isExpanded, setIsExpanded] = useState(false);
 
   // Fetch real development by slug
   const { data: dev, isLoading } = trpc.developer.getPublicDevelopmentBySlug.useQuery(
@@ -245,7 +246,7 @@ export default function DevelopmentDetail() {
     setLightboxOpen(true);
   };
 
-  const [isExpanded, setIsExpanded] = useState(false);
+
 
   return (
     <>
