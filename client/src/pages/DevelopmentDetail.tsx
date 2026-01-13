@@ -237,7 +237,7 @@ export default function DevelopmentDetail() {
 
         {/* Hero Section - Contained, no overflow */}
         <div className="w-full bg-white">
-          <div className="container max-w-7xl mx-auto px-4 py-6">
+          <div className="container max-w-7xl mx-auto px-4 py-4">
             <DevelopmentHeader 
               name={development.name}
               location={development.location}
@@ -252,7 +252,7 @@ export default function DevelopmentDetail() {
 
         {/* Gallery Section - CRITICAL: Isolated container with overflow control */}
         <div className="w-full bg-white border-b border-slate-200">
-          <div className="container max-w-7xl mx-auto px-4 py-6">
+          <div className="container max-w-7xl mx-auto px-4 py-4">
             {/* IMPORTANT: Wrapper to contain gallery overflow */}
             <div className="relative w-full overflow-hidden">
               <DevelopmentGallery
