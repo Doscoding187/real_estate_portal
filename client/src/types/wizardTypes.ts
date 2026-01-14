@@ -95,15 +95,15 @@ export const RESIDENTIAL_TYPE_OPTIONS: { value: ResidentialType; label: string; 
 // DEVELOPMENT STATUS (Step 4)
 // =============================================================================
 
-export type DevelopmentStatus = 'pre_launch' | 'launching_soon' | 'under_construction' | 'ready' | 'completed';
+export type DevelopmentStatus = 'launching-soon' | 'selling' | 'sold-out';
 
 export const DEVELOPMENT_STATUS_OPTIONS: { value: DevelopmentStatus; label: string; description: string }[] = [
-  { value: 'pre_launch', label: 'Pre-Launch', description: 'Development not yet open for sales' },
-  { value: 'launching_soon', label: 'Launching Soon', description: 'Sales opening within 3 months' },
-  { value: 'under_construction', label: 'Under Construction', description: 'Units selling off-plan, construction in progress' },
-  { value: 'ready', label: 'Ready for Occupation', description: 'Units complete and ready to move in' },
-  { value: 'completed', label: 'Completed / Resales Only', description: 'Fully built, only resales available' },
+  { value: 'launching-soon', label: 'Launching Soon', description: 'Sales opening soon' },
+  { value: 'selling', label: 'Selling', description: 'Development is active and selling' },
+  { value: 'sold-out', label: 'Sold Out', description: 'No units available' },
 ];
+
+export type ConstructionPhase = 'planning' | 'under_construction' | 'completed' | 'phase_completed';
 
 // =============================================================================
 // TRANSACTION & OWNERSHIP (Step 4)

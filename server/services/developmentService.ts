@@ -583,6 +583,12 @@ export async function createDevelopment(
       ? 'approved' 
       : (developmentData.approvalStatus || 'draft'),
     
+    // Identity & Classification
+    nature: developmentData.nature || 'new',
+    totalDevelopmentArea: developmentData.totalDevelopmentArea || null,
+    propertyTypes: developmentData.propertyTypes ? JSON.stringify(developmentData.propertyTypes) : null,
+    customClassification: developmentData.customClassification || null,
+    
     // Default values
     views: developmentData.views ?? 0,
     
@@ -695,6 +701,12 @@ export async function updateDevelopment(id: number, developerId: number, data: C
   if (developmentData.highlights !== undefined) updatePayload.highlights = normalizeAmenities(developmentData.highlights);
   if (developmentData.features !== undefined) updatePayload.features = normalizeAmenities(developmentData.features);
   if (developmentData.images !== undefined) updatePayload.images = JSON.stringify(normalizeImages(developmentData.images));
+
+  // Identity Updates
+  if (developmentData.nature !== undefined) updatePayload.nature = developmentData.nature;
+  if (developmentData.totalDevelopmentArea !== undefined) updatePayload.totalDevelopmentArea = developmentData.totalDevelopmentArea;
+  if (developmentData.propertyTypes !== undefined) updatePayload.propertyTypes = JSON.stringify(developmentData.propertyTypes);
+  if (developmentData.customClassification !== undefined) updatePayload.customClassification = developmentData.customClassification;
 
   // Update development
   await db.update(developments)

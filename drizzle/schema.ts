@@ -550,6 +550,11 @@ export const developments = mysqlTable("developments", {
 	rating: decimal({ precision: 3, scale: 2 }), // Auto-calculated rating
 	developmentType: mysqlEnum(['residential','commercial','mixed_use','estate','complex']).notNull(),
 	status: mysqlEnum([
+		'launching-soon',
+		'selling',
+		'sold-out'
+	]).default('launching-soon').notNull(),
+	legacyStatus: mysqlEnum("legacy_status", [
 		'now-selling',
 		'launching-soon',
 		'under-construction',
@@ -559,8 +564,16 @@ export const developments = mysqlTable("developments", {
 		'new-phase-launching',
 		'planning',
 		'completed',
-		'coming_soon'
-	]).default('planning').notNull(),
+		'coming_soon',
+		'pre_launch',
+		'ready'
+	]), // Retained for safety/audit
+	constructionPhase: mysqlEnum("construction_phase", [
+		'planning',
+		'under_construction',
+		'completed',
+		'phase_completed'
+	]), // Internal operational status
 	address: text(),
 	city: varchar({ length: 100 }).notNull(),
 	province: varchar({ length: 100 }).notNull(),
@@ -598,6 +611,12 @@ export const developments = mysqlTable("developments", {
 	inquiriesCount: int("inquiries_count").default(0),
 	demandScore: int("demand_score").default(0),
 	isHotSelling: int("is_hot_selling").default(0),
+
+	// Identity & Classification (New)
+	nature: mysqlEnum(['new', 'phase', 'extension', 'redevelopment']).default('new'),
+	totalDevelopmentArea: int("total_development_area"), // m²
+	propertyTypes: json("property_types").$type<string[]>(), // Multi-select: ['apartments', 'houses', 'townhouses']
+	customClassification: varchar("custom_classification", { length: 255 }), // User input: "Loft, Duplex"
 
 	// Global Financials
 	monthlyLevyFrom: decimal("monthly_levy_from", { precision: 10, scale: 2 }),

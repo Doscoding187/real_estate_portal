@@ -24,6 +24,8 @@ export interface DevelopmentCardProps {
   imageCount?: number;
   isFeatured?: boolean;
   isNewBooking?: boolean;
+  status?: 'launching-soon' | 'selling' | 'sold-out';
+  nature?: 'new' | 'phase' | 'extension' | 'redevelopment';
   onFavoriteClick?: () => void;
   onContactClick?: () => void;
 }
@@ -41,6 +43,8 @@ export function DevelopmentCard({
   imageCount = 15,
   isFeatured = false,
   isNewBooking = false,
+  status,
+  nature,
   onFavoriteClick,
   onContactClick,
 }: DevelopmentCardProps) {
@@ -128,11 +132,38 @@ export function DevelopmentCard({
                 )}
               </h3>
               
-              {isNewBooking && (
-                <Badge className="bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100 uppercase text-xs font-semibold">
-                  New Booking
-                </Badge>
-              )}
+              <div className="flex gap-2">
+                {/* Nature Badge */}
+                {nature === 'phase' && (
+                  <Badge variant="outline" className="border-blue-200 text-blue-700 bg-blue-50">
+                    New Phase
+                  </Badge>
+                )}
+                {nature === 'extension' && (
+                  <Badge variant="outline" className="border-purple-200 text-purple-700 bg-purple-50">
+                    Extension
+                  </Badge>
+                )}
+                
+                {/* Status Badge */}
+                {status === 'launching-soon' && (
+                  <Badge className="bg-amber-100 text-amber-800 border-amber-200 hover:bg-amber-100">
+                    Launching Soon
+                  </Badge>
+                )}
+                {status === 'sold-out' && (
+                  <Badge className="bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200">
+                    Sold Out
+                  </Badge>
+                )}
+                
+                {/* Legacy / High Priority Badges */}
+                {isNewBooking && (
+                  <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100 uppercase text-xs font-semibold">
+                    New Booking
+                  </Badge>
+                )}
+              </div>
             </div>
 
             <div className="flex items-center text-slate-600 text-sm mb-3">

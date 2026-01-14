@@ -12,8 +12,8 @@ export interface MediaItem {
   id: string;
   file?: File;
   url: string;
-  type: 'image' | 'pdf' | 'video' | 'floorplan';
-  category: 'featured' | 'general' | 'amenities' | 'outdoors' | 'videos' | 'photo' | 'floorplan' | 'render' | 'document';
+  type: 'image' | 'pdf' | 'video' | 'floorplan' | 'document';
+  category: 'featured' | 'general' | 'amenities' | 'outdoors' | 'videos' | 'photo' | 'floorplan' | 'render' | 'document' | 'brochures';
   isPrimary: boolean;
   displayOrder: number;
   uploadedAt?: Date;
@@ -239,15 +239,20 @@ export interface DevelopmentWizardState {
   developmentData: {
     nature: 'new' | 'phase' | 'extension';
     parentDevelopmentId?: string; // For phases/extensions
+    // Identity & Classification
     name: string;
     subtitle?: string; // Marketing tagline
     description: string;
     
+    // Market Configuration (New Schema)
+    transactionType: import('@/types/wizardTypes').TransactionType;
+    ownershipType: import('@/types/wizardTypes').OwnershipType;
+    propertyTypes: string[]; // Multi-select: ['apartments', 'houses', 'townhouses']
+    customClassification?: string; // Optional user input: "Loft, Duplex"
+    
     // Project Overview
     status: import('@/types/wizardTypes').DevelopmentStatus;
     completionDate?: Date | null; // Expected or actual possession date
-    transactionType: import('@/types/wizardTypes').TransactionType;
-    ownershipType: import('@/types/wizardTypes').OwnershipType;
 
     // Legacy / Calculated (kept for compatibility)
     totalUnits?: number; // Total units across all types
@@ -447,10 +452,14 @@ const initialState: Omit<DevelopmentWizardState, keyof ReturnType<typeof createA
     name: '',
     description: '',
     subtitle: '',
-    status: 'pre_launch',
+    status: 'launching-soon',
     completionDate: null,
     transactionType: 'sale',
     ownershipType: 'sectional_title',
+    propertyTypes: [],
+    customClassification: '',
+    
+    // Legacy / Calculated
     totalUnits: undefined,
     totalDevelopmentArea: undefined,
     
@@ -667,7 +676,7 @@ const createActions = (
         
         // Conditional Validation for Completion Date
         const status = state.developmentData?.status;
-        if (status === 'under_construction' || status === 'launching_soon') {
+        if (status === 'launching-soon' || status === 'selling') {
            if (!state.developmentData?.completionDate) {
               errors.push('Expected completion date is required for this status');
            }
@@ -907,6 +916,8 @@ const createActions = (
               completionDate: data.possessionDate ? new Date(data.possessionDate) : null,
               transactionType: data.transactionType || 'sale',
               ownershipType: data.ownershipType || 'sectional_title',
+              propertyTypes: typeof data.propertyTypes === 'string' ? parse(data.propertyTypes, []) : (data.propertyTypes || []),
+              customClassification: data.customClassification || '',
               
               // Legacy / Calculated
               totalUnits: data.totalUnits,

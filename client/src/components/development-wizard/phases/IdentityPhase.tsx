@@ -56,7 +56,7 @@ export function IdentityPhase() {
   };
 
   // Check if current status implies active construction/launch
-  const showCompletionDate = ['under_construction', 'launching_soon', 'pre_launch'].includes(developmentData.status);
+  const showCompletionDate = ['launching-soon', 'selling'].includes(developmentData.status);
 
   return (
     <div className="space-y-8 max-w-4xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -211,43 +211,87 @@ export function IdentityPhase() {
             </div>
           </div>
         </CardHeader>
-        <CardContent className="grid md:grid-cols-2 gap-5">
-           <div className="space-y-2">
-              <Label htmlFor="transactionType">Transaction Type <span className="text-red-500">*</span></Label>
-              <Select 
-                value={developmentData.transactionType} 
-                onValueChange={(val: any) => setIdentity({ transactionType: val })}
-              >
-                <SelectTrigger className="h-11">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {TRANSACTION_TYPE_OPTIONS.map(opt => (
-                    <SelectItem key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+        <CardContent className="space-y-5">
+           <div className="grid md:grid-cols-2 gap-5">
+              <div className="space-y-2">
+                 <Label htmlFor="transactionType">Transaction Type <span className="text-red-500">*</span></Label>
+                 <Select 
+                   value={developmentData.transactionType} 
+                   onValueChange={(val: any) => setIdentity({ transactionType: val })}
+                 >
+                   <SelectTrigger className="h-11">
+                     <SelectValue />
+                   </SelectTrigger>
+                   <SelectContent>
+                     {TRANSACTION_TYPE_OPTIONS.map(opt => (
+                       <SelectItem key={opt.value} value={opt.value}>
+                         {opt.label}
+                       </SelectItem>
+                     ))}
+                   </SelectContent>
+                 </Select>
+              </div>
+              
+              <div className="space-y-2">
+                 <Label htmlFor="ownershipType">Ownership Type <span className="text-red-500">*</span></Label>
+                 <Select 
+                   value={developmentData.ownershipType} 
+                   onValueChange={(val: any) => setIdentity({ ownershipType: val })}
+                 >
+                   <SelectTrigger className="h-11">
+                     <SelectValue />
+                   </SelectTrigger>
+                   <SelectContent>
+                     {OWNERSHIP_TYPE_OPTIONS.map(opt => (
+                       <SelectItem key={opt.value} value={opt.value}>
+                         {opt.label}
+                       </SelectItem>
+                     ))}
+                   </SelectContent>
+                 </Select>
+              </div>
            </div>
-           
+
+           {/* Property Types Multi-Select */}
+           <div className="space-y-3 pt-2">
+              <Label>Unit Types Available</Label>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                 {['Apartments', 'Houses', 'Townhouses', 'Land'].map((type) => {
+                    const isSelected = (developmentData.propertyTypes || []).includes(type.toLowerCase());
+                    return (
+                       <div 
+                         key={type}
+                         onClick={() => {
+                           const current = developmentData.propertyTypes || [];
+                           const val = type.toLowerCase();
+                           const newTypes = current.includes(val) 
+                             ? current.filter(t => t !== val)
+                             : [...current, val];
+                           setIdentity({ propertyTypes: newTypes });
+                         }}
+                         className={`cursor-pointer border rounded-lg p-3 flex items-center gap-2 transition-all ${isSelected ? 'bg-blue-50 border-blue-500 ring-1 ring-blue-500' : 'hover:bg-slate-50 border-slate-200'}`}
+                       >
+                          <div className={`w-4 h-4 rounded border flex items-center justify-center ${isSelected ? 'bg-blue-600 border-blue-600' : 'border-slate-300 bg-white'}`}>
+                              {isSelected && <div className="w-2 h-2 bg-white rounded-sm" />}
+                          </div>
+                          <span className={`text-sm font-medium ${isSelected ? 'text-blue-700' : 'text-slate-700'}`}>{type}</span>
+                       </div>
+                    );
+                 })}
+              </div>
+           </div>
+
+           {/* Custom Classification */}
            <div className="space-y-2">
-              <Label htmlFor="ownershipType">Ownership Type <span className="text-red-500">*</span></Label>
-              <Select 
-                value={developmentData.ownershipType} 
-                onValueChange={(val: any) => setIdentity({ ownershipType: val })}
-              >
-                <SelectTrigger className="h-11">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {OWNERSHIP_TYPE_OPTIONS.map(opt => (
-                    <SelectItem key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label htmlFor="customClassification">Specific Classification <span className="text-slate-400 font-normal">(Optional)</span></Label>
+              <Input 
+                id="customClassification" 
+                placeholder="e.g. Duplexes, Lofts, Clusters" 
+                value={developmentData.customClassification || ''}
+                onChange={(e) => setIdentity({ customClassification: e.target.value })}
+                className="h-11"
+              />
+              <p className="text-xs text-slate-500">Add specific keywords to aid in search filtering (comma separated).</p>
            </div>
         </CardContent>
       </Card>
