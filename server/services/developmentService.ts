@@ -1,4 +1,4 @@
-import { eq, desc, and, or, isNotNull, sql } from 'drizzle-orm';
+import { eq, desc, and, or, isNotNull, sql, inArray } from 'drizzle-orm';
 import { getDb } from '../db-connection';
 import { developments, developers, unitTypes, developmentPhases } from '../../drizzle/schema';
 
@@ -671,52 +671,68 @@ export async function createDevelopment(
   return created;
 }
 
-export async function updateDevelopment(id: number, developerId: number, data: CreateDevelopmentData) {
+export async function updateDevelopment(
+  id: number, 
+  developerId: number, 
+  data: CreateDevelopmentData
+) {
+  console.log('[updateDevelopment] Starting update for development:', id);
+  console.log('[updateDevelopment] Payload keys:', Object.keys(data));
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
-  // Verify ownership (bypass for super admin with developerId === -1)
-  if (developerId !== -1) {
-    const existing = await db
-      .select()
-      .from(developments)
-      .where(and(
-        eq(developments.id, id),
-        eq(developments.developerId, developerId)
-      ))
-      .limit(1);
+  // Separate concerns
+  const { 
+    unitTypes: unitTypesData,
+    media: mediaData,
+    amenities: amenitiesData,
+    estateSpecs: estateSpecsData,
+    specifications: specificationsData,
+    phases: phasesData,
+    ...developmentData 
+  } = data;
 
-    if (!existing.length) {
-      throw new Error(
-        "Unauthorized: Development not found or you don't have permission to update it"
-      );
-    }
-  }
+  // ============================================================================
+  // STEP 1: Core Development Table Fields
+  // ============================================================================
+  const updatePayload: any = {};
 
-  // Extract data that needs special handling
-  const { unitTypes: unitTypesData, ...developmentData } = data;
-
-  // Safe Partial Update Logic
-  // IMPORTANT: Partial updates MUST NOT overwrite existing JSON fields.
-  // Wizard relies on patch semantics for resume/edit flows.
-  const updatePayload: any = {
-      updatedAt: new Date().toISOString(),
-  };
-
-  // Explicitly map string fields (Safe from empty string vs undefined issues)
+  // Basic Identity Fields (always safe to update)
   if (developmentData.name !== undefined) updatePayload.name = developmentData.name;
-  if (developmentData.tagline !== undefined) updatePayload.tagline = developmentData.tagline; // Explicit Map
   if (developmentData.description !== undefined) updatePayload.description = developmentData.description;
-  if (developmentData.status !== undefined) updatePayload.status = developmentData.status;
-  if (developmentData.developmentType !== undefined) updatePayload.developmentType = developmentData.developmentType;
+  if (developmentData.tagline !== undefined) updatePayload.tagline = developmentData.tagline;
+  if (developmentData.subtitle !== undefined) updatePayload.subtitle = developmentData.subtitle;
 
-  // Explicitly map numerical fields - CRITICAL for Wizard Persistence
+  // Type & Classification
+  if (developmentData.developmentType !== undefined) updatePayload.developmentType = developmentData.developmentType;
+  if (developmentData.propertyCategory !== undefined) updatePayload.propertyCategory = developmentData.propertyCategory;
+  if (developmentData.subCategory !== undefined) updatePayload.subCategory = developmentData.subCategory;
+
+  // Location Fields
+  if (developmentData.address !== undefined) updatePayload.address = developmentData.address;
+  if (developmentData.suburb !== undefined) updatePayload.suburb = developmentData.suburb;
+  if (developmentData.city !== undefined) updatePayload.city = developmentData.city;
+  if (developmentData.province !== undefined) updatePayload.province = developmentData.province;
+  if (developmentData.postalCode !== undefined) updatePayload.postalCode = developmentData.postalCode;
+  if (developmentData.latitude !== undefined) updatePayload.latitude = developmentData.latitude;
+  if (developmentData.longitude !== undefined) updatePayload.longitude = developmentData.longitude;
+
+  // Status & Dates
+  if (developmentData.status !== undefined) updatePayload.status = developmentData.status;
+  if (developmentData.completionDate !== undefined) updatePayload.completionDate = developmentData.completionDate;
+  if (developmentData.launchDate !== undefined) updatePayload.launchDate = developmentData.launchDate;
+
+  // Numerical Fields - ALL of them
   const numericFields = [
-    'monthlyLevyFrom', 'monthlyLevyTo', 
-    'ratesFrom', 'ratesTo',
     'priceFrom', 'priceTo',
+    'monthlyLevyFrom', 'monthlyLevyTo',
+    'ratesFrom', 'ratesTo',
     'totalUnits', 'availableUnits',
-    'totalDevelopmentArea'
+    'totalDevelopmentArea',
+    'erfSizeFrom', 'erfSizeTo',
+    'floorSizeFrom', 'floorSizeTo',
+    'bedroomsFrom', 'bedroomsTo',
+    'bathroomsFrom', 'bathroomsTo'
   ];
 
   numericFields.forEach(field => {
@@ -725,193 +741,364 @@ export async function updateDevelopment(id: number, developerId: number, data: C
     }
   });
 
-  // Only normalize and overwrite if provided (Partial Update Safety)
-  if (developmentData.amenities !== undefined) updatePayload.amenities = normalizeAmenities(developmentData.amenities);
-  if (developmentData.highlights !== undefined) updatePayload.highlights = normalizeAmenities(developmentData.highlights);
-  if (developmentData.features !== undefined) updatePayload.features = normalizeAmenities(developmentData.features);
-  if (developmentData.images !== undefined) updatePayload.images = JSON.stringify(normalizeImages(developmentData.images));
+  // Boolean Fields - explicitly handle true/false/null
+  const booleanFields = [
+    'petsAllowed',
+    'fibreReady',
+    'solarReady',
+    'waterBackup',
+    'backupPower',
+    'gatedCommunity',
+    'featured',
+    'isPhasedDevelopment'
+  ];
 
-  // Merge Estate Specs (Don't overwrite if partial)
-  // Logic: We rely on the frontend to send the *complete* estate specs object if it changed, 
-  // currently we treat it as an atomic replace for simplicity, or we delve into merging.
-  // User plan advised: Merge-safe.
-  if (developmentData.estateSpecs !== undefined) {
-      // Since it's a JSON column, we can just save what the frontend sent as it contains the full state.
-      updatePayload.estateSpecs = developmentData.estateSpecs;
+  booleanFields.forEach(field => {
+    if (developmentData[field] !== undefined) {
+      updatePayload[field] = developmentData[field];
+    }
+  });
+
+  // ============================================================================
+  // STEP 2: JSON Fields - Preserve Structure
+  // ============================================================================
+  
+  // Media (Photos, Videos, Brochures)
+  if (mediaData !== undefined) {
+    updatePayload.media = typeof mediaData === 'string' 
+      ? mediaData 
+      : JSON.stringify(mediaData || { photos: [], videos: [], brochures: [] });
   }
 
-  // Identity Updates
-  if (developmentData.nature !== undefined) updatePayload.nature = developmentData.nature;
-  if (developmentData.propertyTypes !== undefined) updatePayload.propertyTypes = JSON.stringify(developmentData.propertyTypes);
-  if (developmentData.customClassification !== undefined) updatePayload.customClassification = developmentData.customClassification;
+  // Amenities (Standard + Additional)
+  if (amenitiesData !== undefined) {
+    updatePayload.amenities = typeof amenitiesData === 'string'
+      ? amenitiesData
+      : JSON.stringify(amenitiesData || { standard: [], additional: [] });
+  }
 
-  // Update development
-  await db.update(developments)
+  // Estate Specs (for Residential/Estate developments)
+  if (estateSpecsData !== undefined) {
+    updatePayload.estateSpecs = typeof estateSpecsData === 'string'
+      ? estateSpecsData
+      : JSON.stringify(estateSpecsData || {});
+  }
+
+  // Specifications (Master specs inherited by units)
+  if (specificationsData !== undefined) {
+    updatePayload.specifications = typeof specificationsData === 'string'
+      ? specificationsData
+      : JSON.stringify(specificationsData || {});
+  }
+
+  // Config-specific JSON fields
+  if (developmentData.residentialConfig !== undefined) {
+    updatePayload.residentialConfig = typeof developmentData.residentialConfig === 'string'
+      ? developmentData.residentialConfig
+      : JSON.stringify(developmentData.residentialConfig || {});
+  }
+
+  if (developmentData.landConfig !== undefined) {
+    updatePayload.landConfig = typeof developmentData.landConfig === 'string'
+      ? developmentData.landConfig
+      : JSON.stringify(developmentData.landConfig || {});
+  }
+
+  if (developmentData.commercialConfig !== undefined) {
+    updatePayload.commercialConfig = typeof developmentData.commercialConfig === 'string'
+      ? developmentData.commercialConfig
+      : JSON.stringify(developmentData.commercialConfig || {});
+  }
+
+  if (developmentData.mixedUseConfig !== undefined) {
+    updatePayload.mixedUseConfig = typeof developmentData.mixedUseConfig === 'string'
+      ? developmentData.mixedUseConfig
+      : JSON.stringify(developmentData.mixedUseConfig || {});
+  }
+
+  // Marketing & SEO
+  if (developmentData.metaTitle !== undefined) {
+     updatePayload.metaTitle = developmentData.metaTitle;
+  }
+  if (developmentData.metaDescription !== undefined) {
+     updatePayload.metaDescription = developmentData.metaDescription;
+  }
+  if (developmentData.keywords !== undefined) {
+    updatePayload.keywords = typeof developmentData.keywords === 'string'
+      ? developmentData.keywords
+      : JSON.stringify(developmentData.keywords || []);
+  }
+
+  // Developer References
+  if (developmentData.brandProfileId !== undefined) updatePayload.developerBrandProfileId = developmentData.brandProfileId;
+  if (developmentData.agentId !== undefined) updatePayload.agentId = developmentData.agentId;
+
+  // Always update timestamp
+  updatePayload.updatedAt = new Date().toISOString();
+
+  console.log('[updateDevelopment] Update payload fields:', Object.keys(updatePayload));
+
+  // Execute core table update
+  await db
+    .update(developments)
     .set(updatePayload)
     .where(eq(developments.id, id));
 
-  // Handle Unit Types if provided
-  if (unitTypesData && Array.isArray(unitTypesData) && unitTypesData.length > 0) {
-    await persistUnitTypes(db, id, unitTypesData);
+  // ============================================================================
+  // STEP 3: Unit Types (Full Sync with Deletion)
+  // ============================================================================
+  if (unitTypesData !== undefined) {
+    if (Array.isArray(unitTypesData)) {
+      if (unitTypesData.length === 0) {
+        console.warn('[updateDevelopment] Empty unitTypes - will DELETE all units');
+      }
+      await persistUnitTypes(db, id, unitTypesData);
+    } else {
+      console.warn('[updateDevelopment] unitTypes is not an array:', typeof unitTypesData);
+    }
+  } else {
+    console.log('[updateDevelopment] No unitTypes in payload - preserving existing');
   }
 
-  // Fetch and return updated development
-  const [updated] = await db
-    .select()
-    .from(developments)
-    .where(eq(developments.id, id))
-    .limit(1);
-  
-  return updated;
+  // ============================================================================
+  // STEP 4: Development Phases (if phased development)
+  // ============================================================================
+  if (phasesData !== undefined && Array.isArray(phasesData)) {
+    await persistDevelopmentPhases(db, id, phasesData);
+  }
+
+  console.log('[updateDevelopment] Update completed successfully');
+  return { success: true };
 }
 
 /**
- * Persists unit types for a development.
- * Accepts `db` (transaction or pool) to ensure atomicity.
+ * Persists unit types with proper deletion handling.
+ * This replaces the old "upsert-only" approach with a full sync strategy.
+ */
+/**
+ * PERSIST UNIT TYPES WITH FULL SYNC
+ * - Deletes units that were removed
+ * - Updates existing units
+ * - Inserts new units
  */
 async function persistUnitTypes(
   db: any,
   developmentId: number,
-  unitTypesData: UnitTypeData[]
+  unitTypesData: any[]
 ): Promise<void> {
-  if (!db) return; // Should throw?
+  console.log(`[persistUnitTypes] Processing ${unitTypesData.length} units`);
 
-  console.log('[persistUnitTypes] Processing', unitTypesData.length, 'unit types for dev', developmentId);
+  // Get existing unit IDs
+  const existingUnits = await db
+    .select({ id: unitTypes.id })
+    .from(unitTypes)
+    .where(eq(unitTypes.developmentId, developmentId));
 
-  const results = {
-    created: 0,
-    updated: 0,
-    skipped: 0,
-  };
+  const existingIds = new Set(existingUnits.map((u: any) => u.id));
+  const incomingIds = new Set(unitTypesData.filter(u => u.id).map(u => u.id));
 
-  for (const unit of unitTypesData) {
-    // Skip units without ID
-    if (!unit.id) {
-      console.warn('[persistUnitTypes] Skipping unit without ID:', unit.name);
-      results.skipped++;
-      continue;
-    }
-
-    try {
-      // Calculate price range
-      const basePrice = Number(unit.priceFrom || unit.basePriceFrom || 0);
-      const extrasTotal = Array.isArray(unit.extras)
-        ? unit.extras.reduce((sum, item) => sum + (Number(item.price) || 0), 0)
-        : 0;
-
-      const unitPayload = {
-        developmentId,
-        name: unit.name || 'Untitled Unit',
-        bedrooms: Number(unit.bedrooms || 0),
-        bathrooms: Number(unit.bathrooms || 0),
-        parking: unit.parking || null,
-        parkingType: unit.parkingType || null,
-        parkingBays: Number(unit.parkingBays || 0),
-        
-        // Dimensions
-        sizeFrom: Number(unit.sizeFrom || unit.unitSize || 0),
-        sizeTo: Number(unit.sizeTo || unit.sizeFrom || unit.unitSize || 0),
-        
-        // Pricing
-        priceFrom: basePrice,
-        priceTo: basePrice + extrasTotal,
-        basePriceFrom: unit.basePriceFrom ? Number(unit.basePriceFrom) : basePrice,
-        basePriceTo: unit.basePriceTo ? Number(unit.basePriceTo) : basePrice + extrasTotal,
-        
-        // Extras & JSON Columns (CRITICAL FIX: Ensure these are saved)
-        extras: unit.extras || [],
-        specifications: unit.specifications || {},
-        amenities: unit.amenities || {}, 
-        baseMedia: unit.baseMedia || {},
-        baseFeatures: unit.baseFeatures || {}, 
-        baseFinishes: unit.baseFinishes || {},
-        
-        // Inventory
-        totalUnits: Number(unit.totalUnits || 0),
-        availableUnits: Number(unit.availableUnits || 0),
-        
-        // Metadata
-        isActive: boolToInt(unit.isActive !== false),
-        updatedAt: new Date().toISOString(),
-      };
-
-      // Upsert logic
-      const existingUnit = await db
-        .select()
-        .from(unitTypes)
-        .where(eq(unitTypes.id, unit.id))
-        .limit(1);
-
-      if (existingUnit.length > 0) {
-        // Update existing unit
-        await db
-          .update(unitTypes)
-          .set(unitPayload)
-          .where(eq(unitTypes.id, unit.id));
-        
-        results.updated++;
-      } else {
-        // Insert new unit
-        await db.insert(unitTypes).values({
-          id: unit.id, // Ensure ID is passed (generated on client)
-          ...unitPayload,
-          createdAt: new Date().toISOString(),
-        });
-        
-        results.created++;
-      }
-    } catch (error: any) {
-      console.error('[persistUnitTypes] Failed to persist unit:', {
-        unitId: unit.id,
-        unitName: unit.name,
-        error: error.message,
-      });
-      throw error; // Re-throw to trigger rollback logic
-    }
+  // Delete removed units
+  const idsToDelete = [...existingIds].filter(id => !incomingIds.has(id));
+  if (idsToDelete.length > 0) {
+    console.log(`[persistUnitTypes] Deleting ${idsToDelete.length} units:`, idsToDelete);
+    await db.delete(unitTypes).where(
+      and(
+        eq(unitTypes.developmentId, developmentId),
+        inArray(unitTypes.id, idsToDelete)
+      )
+    );
   }
 
-  console.log('[persistUnitTypes] Complete:', results);
+  // Upsert each unit
+  for (const unit of unitTypesData) {
+    if (!unit.id) {
+      unit.id = `unit-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    }
+
+    const unitPayload = {
+      id: unit.id,
+      developmentId,
+      label: unit.label || unit.name || 'Unnamed Unit',
+      name: unit.name || unit.label || 'Unnamed Unit',
+      
+      // ALL fields explicitly mapped
+      ownershipType: unit.ownershipType || null,
+      structuralType: unit.structuralType || null,
+      bedrooms: unit.bedrooms !== undefined ? unit.bedrooms : null,
+      bathrooms: unit.bathrooms !== undefined ? unit.bathrooms : null,
+      floorSizeFrom: unit.floorSizeFrom || null,
+      floorSizeTo: unit.floorSizeTo || null,
+      yardSize: unit.yardSize || null,
+      parkingType: unit.parkingType || null,
+      parkingSpaces: unit.parkingSpaces !== undefined ? unit.parkingSpaces : null,
+      priceFrom: unit.priceFrom || null,
+      priceTo: unit.priceTo || null,
+      depositRequired: unit.depositRequired !== undefined ? unit.depositRequired : null,
+      availableUnits: unit.availableUnits !== undefined ? unit.availableUnits : null,
+      completionDate: unit.completionDate || null,
+      internalNotes: unit.internalNotes || null,
+      
+      // JSON fields
+      extras: JSON.stringify(unit.extras || []),
+      specifications: JSON.stringify(unit.specifications || {}),
+      amenities: JSON.stringify(unit.amenities || { standard: [], additional: [] }),
+      baseMedia: JSON.stringify(unit.baseMedia || { gallery: [], floorPlans: [], renders: [] }),
+      specs: JSON.stringify(unit.specs || []),
+      
+      updatedAt: new Date().toISOString(),
+    };
+
+    if (existingIds.has(unit.id)) {
+      await db.update(unitTypes).set(unitPayload).where(eq(unitTypes.id, unit.id));
+    } else {
+      await db.insert(unitTypes).values({
+        ...unitPayload,
+        createdAt: new Date().toISOString(),
+      });
+    }
+  }
 }
 
-export async function getDevelopmentWithPhases(id: number) {
-  const db = await getDb();
-  if (!db) return null;
+/**
+ * PERSIST DEVELOPMENT PHASES (for phased developments)
+ */
+async function persistDevelopmentPhases(
+  db: any,
+  developmentId: number,
+  phasesData: any[]
+): Promise<void> {
+  console.log(`[persistDevelopmentPhases] Processing ${phasesData.length} phases`);
 
-  const results = await db
+  // Get existing phases
+  const existingPhases = await db
+    .select({ id: developmentPhases.id })
+    .from(developmentPhases)
+    .where(eq(developmentPhases.developmentId, developmentId));
+
+  const existingIds = new Set(existingPhases.map((p: any) => p.id));
+  const incomingIds = new Set(phasesData.filter(p => p.id).map(p => p.id));
+
+  // Delete removed phases
+  const idsToDelete = [...existingIds].filter(id => !incomingIds.has(id));
+  if (idsToDelete.length > 0) {
+    await db.delete(developmentPhases).where(
+      and(
+        eq(developmentPhases.developmentId, developmentId),
+        inArray(developmentPhases.id, idsToDelete)
+      )
+    );
+  }
+
+  // Upsert phases
+  for (const phase of phasesData) {
+    if (!phase.id) {
+      phase.id = `phase-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    }
+
+    const phasePayload = {
+      id: phase.id,
+      developmentId,
+      name: phase.name || 'Unnamed Phase',
+      description: phase.description || null,
+      status: phase.status || 'planning',
+      completionDate: phase.completionDate || null,
+      totalUnits: phase.totalUnits || null,
+      availableUnits: phase.availableUnits || null,
+      media: JSON.stringify(phase.media || {}),
+    };
+
+    if (existingIds.has(phase.id)) {
+      await db.update(developmentPhases).set(phasePayload).where(eq(developmentPhases.id, phase.id));
+    } else {
+      await db.insert(developmentPhases).values({
+        ...phasePayload,
+        createdAt: new Date().toISOString(),
+      });
+    }
+  }
+}
+
+/**
+ * GET DEVELOPMENT WITH ALL RELATED DATA
+ * Critical: ALWAYS return arrays (never undefined) for related data
+ */
+export async function getDevelopmentWithPhases(id: number) {
+  console.log('[getDevelopmentWithPhases] Loading development:', id);
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const [dev] = await db
     .select()
     .from(developments)
     .where(eq(developments.id, id))
     .limit(1);
 
-  if (!results.length) return null;
-
-  const dev = results[0];
-  
-  // Gracefully handle missing development_phases table
-  let phases: any[] = [];
-  let unitTypesData: any[] = [];
-
-  try {
-    const [phasesRes, unitTypesRes] = await Promise.all([
-      db.select().from(developmentPhases).where(eq(developmentPhases.developmentId, id)),
-      db.select().from(unitTypes).where(eq(unitTypes.developmentId, id))
-    ]);
-    phases = phasesRes;
-    unitTypesData = unitTypesRes;
-  } catch (error: any) {
-    console.warn('[getDevelopmentWithPhases] Failed to query related data:', error.message);
+  if (!dev) {
+    throw new Error('Development not found');
   }
 
-  return { 
-    ...dev, 
-    amenities: normalizeAmenities(dev.amenities),
-    // Parse TEXT columns
-    images: parseJsonField(dev.images),
-    videos: parseJsonField(dev.videos),
-    floorPlans: parseJsonField(dev.floorPlans),
-    brochures: parseJsonField(dev.brochures),
-    phases,
-    unitTypes: unitTypesData
+  // Load related data
+  let unitTypesData: any[] = [];
+  let phasesData: any[] = [];
+
+  try {
+    const [unitTypesRes, phasesRes] = await Promise.all([
+      db.select().from(unitTypes).where(eq(unitTypes.developmentId, id)),
+      db.select().from(developmentPhases).where(eq(developmentPhases.developmentId, id))
+    ]);
+    
+    unitTypesData = unitTypesRes || [];
+    phasesData = phasesRes || [];
+    
+    console.log(`[getDevelopmentWithPhases] Loaded ${unitTypesData.length} units, ${phasesData.length} phases`);
+  } catch (error: any) {
+    console.error('[getDevelopmentWithPhases] Failed to load related data:', error.message);
+    // Still return empty arrays - don't crash
+  }
+
+  // Helper to safely parse JSON
+  const parse = (val: any, def: any) => {
+    if (!val) return def;
+    if (typeof val === 'string') {
+      try {
+        return JSON.parse(val);
+      } catch {
+        console.warn('[getDevelopmentWithPhases] JSON parse failed for:', val);
+        return def;
+      }
+    }
+    return val;
+  };
+
+  // Return complete development with ALL fields preserved
+  return {
+    ...dev,
+    
+    // Parse JSON columns
+    media: parse(dev.media, { photos: [], videos: [], brochures: [] }),
+    amenities: parse(dev.amenities, { standard: [], additional: [] }),
+    estateSpecs: parse(dev.estateSpecs, {}),
+    specifications: parse(dev.specifications, {}),
+    residentialConfig: parse(dev.residentialConfig, {}),
+    landConfig: parse(dev.landConfig, {}),
+    commercialConfig: parse(dev.commercialConfig, {}),
+    mixedUseConfig: parse(dev.mixedUseConfig, {}),
+    // keywords: parse(dev.keywords, []), 
+    
+    // CRITICAL: Always return arrays (never undefined)
+    unitTypes: unitTypesData.map(u => ({
+      ...u,
+      extras: parse(u.extras, []),
+      specifications: parse(u.specifications, {}),
+      amenities: parse(u.amenities, { standard: [], additional: [] }),
+      baseMedia: parse(u.baseMedia, { gallery: [], floorPlans: [], renders: [] }),
+      specs: parse(u.specs, []),
+    })),
+    
+    phases: phasesData.map(p => ({
+      ...p,
+      media: parse(p.media, {}),
+    })),
   };
 }
 

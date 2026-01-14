@@ -767,228 +767,310 @@ const createActions = (
   reset: () => set(initialState),
   
   hydrateDevelopment: (data: any) => set((state) => {
-      // 1. Handle Draft Data (matches store structure)
-      // We check for key properties that distinguish a draft from a DB entity
-      if (data.developmentData || data.classification) {
-        return {
-          ...state,
-          currentPhase: data.currentPhase ?? state.currentPhase,
-          currentStep: data.currentStep ?? state.currentStep,
-          developmentData: { ...state.developmentData, ...data.developmentData },
-          classification: { ...state.classification, ...data.classification },
-          overview: { ...state.overview, ...data.overview },
-          unitTypes: data.unitTypes || state.unitTypes,
-          finalisation: { ...state.finalisation, ...data.finalisation },
-          // Hydrate configs if present
-          listingIdentity: data.listingIdentity || state.listingIdentity,
-          residentialConfig: data.residentialConfig || state.residentialConfig,
-          landConfig: data.landConfig || state.landConfig,
-          commercialConfig: data.commercialConfig || state.commercialConfig,
-          estateProfile: data.estateProfile || state.estateProfile,
-          developmentType: data.developmentType || state.developmentType,
-        };
-      }
+    console.log('[hydrateDevelopment] Starting hydration with data:', data);
 
-      // 2. Handle DB Entity (Edit Mode)
-      // Helper to parse JSON fields safely
-      const parse = (val: any, def: any) => {
-        if (typeof val === 'string') {
-          try { return JSON.parse(val); } catch { return def; }
+    const isDraft = data.draftData !== undefined;
+    const source = isDraft ? data.draftData : data;
+
+    if (!source) {
+      console.error('[hydrateDevelopment] No data provided');
+      return state;
+    }
+
+    const parse = (val: any, def: any) => {
+      if (!val) return def;
+      if (typeof val === 'string') {
+        try {
+          return JSON.parse(val);
+        } catch {
+          return def;
         }
-        return val || def;
-      };
-
-      const amenities = parse(data.amenities, []);
-      const highlights = parse(data.highlights, []);
-      const rawFeatures = parse(data.features, []);
-      
-      console.log('[hydrateDevelopment] Hydrating...', { 
-        id: data.id, 
-        features_raw: data.features, 
-        features_parsed: rawFeatures,
-        type_raw: data.features ? typeof data.features : 'undefined'
-      });
-      
-      // Separate config features from display features
-      const configFeatures: string[] = [];
-      const displayFeatures: string[] = [];
-      
-      if (Array.isArray(rawFeatures)) {
-        rawFeatures.forEach((f: string) => {
-          if (f.startsWith('cfg:')) configFeatures.push(f);
-          else displayFeatures.push(f);
-        });
       }
+      return val;
+    };
 
-      // Parse Configuration
-      const resConfig: any = { residentialType: null, communityTypes: [] };
-      const lndConfig: any = { landType: null, infrastructure: [] };
-      const comConfig: any = { commercialType: null, features: [] };
-      const estProfile: any = { classification: '', hasHOA: false, levyRange: {min:0,max:0}, architecturalGuidelines: false, estateAmenities: [] };
+    // ============================================================================
+    // Hydrate Development Data
+    // ============================================================================
+    const hydratedDevelopmentData = {
+      // Identity
+      name: source.name || '',
+      description: source.description || '',
+      tagline: source.tagline || source.subtitle || '',
+      subtitle: source.subtitle || source.tagline || '',
 
-      configFeatures.forEach(f => {
-         const parts = f.split(':');
-         if (parts.length < 3) return;
-         const key = parts[1];
-         const val = parts.slice(2).join(':'); // handle values with colons if any
+      // Type & Classification
+      developmentType: source.developmentType || 'residential',
+      propertyCategory: source.propertyCategory || null,
+      subCategory: source.subCategory || null,
 
-         switch(key) {
-             case 'res_type': resConfig.residentialType = val; break;
-             case 'comm_type': resConfig.communityTypes.push(val); break;
-             case 'sec_feat': 
-                // Migration: Map legacy security feature to amenity
-                const secMap: Record<string, string> = {
-                   'access_controlled': 'access_control',
-                   'guarded_entrance': 'guard_house',
-                   'security_24h': '24_hour_security',
-                   'biometric_access': 'biometric_access',
-                   'cctv': 'cctv_surveillance',
-                   'electric_fencing': 'electric_fencing',
-                   'boom_gate': 'boom_gates',
-                   'intercom': 'intercom_system',
-                   'panic_buttons': 'panic_button'
-                };
-                const mappedAmenity = secMap[val];
-                if (mappedAmenity && !amenities.includes(mappedAmenity)) {
-                    amenities.push(mappedAmenity);
-                }
-                break;
-             case 'land_type': lndConfig.landType = val; break;
-             case 'infra': lndConfig.infrastructure.push(val); break;
-             case 'comm_use': comConfig.commercialType = val; break;
-             case 'comm_feat': comConfig.features.push(val); break;
-             case 'est_class': estProfile.classification = val; break;
-             case 'hoa': estProfile.hasHOA = val === 'true'; break;
-             case 'arch_guide': estProfile.architecturalGuidelines = val === 'true'; break;
-             case 'est_levy_min': estProfile.levyRange.min = Number(val); break;
-             case 'est_levy_max': estProfile.levyRange.max = Number(val); break;
-             case 'est_amenity': estProfile.estateAmenities.push(val); break;
-         }
-      });
+      // Location (COMPLETE)
+      location: {
+        address: source.address || '',
+        suburb: source.suburb || '',
+        city: source.city || '',
+        province: source.province || '',
+        postalCode: source.postalCode || '',
+        latitude: source.latitude || null,
+        longitude: source.longitude || null,
+      },
+
+      // Pricing
+      priceFrom: source.priceFrom || null,
+      priceTo: source.priceTo || null,
+      monthlyLevyFrom: source.monthlyLevyFrom || null,
+      monthlyLevyTo: source.monthlyLevyTo || null,
+      ratesFrom: source.ratesFrom || null,
+      ratesTo: source.ratesTo || null,
+
+      // Units
+      totalUnits: source.totalUnits || null,
+      availableUnits: source.availableUnits || null,
+      totalDevelopmentArea: source.totalDevelopmentArea || null,
       
-      // Map Media
-      const dbImages = parse(data.images, []); 
-      const dbVideos = parse(data.videos, []);
-      const dbBrochures = parse(data.brochures, []);
+      // Stand/Floor Sizes
+      erfSizeFrom: source.erfSizeFrom || null,
+      erfSizeTo: source.erfSizeTo || null,
+      floorSizeFrom: source.floorSizeFrom || null,
+      floorSizeTo: source.floorSizeTo || null,
+      bedroomsFrom: source.bedroomsFrom || null,
+      bedroomsTo: source.bedroomsTo || null,
+      bathroomsFrom: source.bathroomsFrom || null,
+      bathroomsTo: source.bathroomsTo || null,
+
+      // Dates
+      completionDate: source.completionDate ? new Date(source.completionDate) : null,
+      launchDate: source.launchDate ? new Date(source.launchDate) : null,
+
+      // Status
+      status: source.status || 'draft',
+
+      // Features (Booleans)
+      petsAllowed: source.petsAllowed !== undefined && source.petsAllowed !== null ? Boolean(source.petsAllowed) : null,
+      fibreReady: source.fibreReady !== undefined && source.fibreReady !== null ? Boolean(source.fibreReady) : null,
+      solarReady: source.solarReady !== undefined && source.solarReady !== null ? Boolean(source.solarReady) : null,
+      waterBackup: source.waterBackup !== undefined && source.waterBackup !== null ? Boolean(source.waterBackup) : null,
+      backupPower: source.backupPower !== undefined && source.backupPower !== null ? Boolean(source.backupPower) : null,
+      gatedCommunity: source.gatedCommunity !== undefined && source.gatedCommunity !== null ? Boolean(source.gatedCommunity) : null,
+      featured: source.featured !== undefined ? source.featured : false,
+      isPhasedDevelopment: source.isPhasedDevelopment !== undefined ? Boolean(source.isPhasedDevelopment) : false,
+
+      // Media
+      media: parse(source.media, { photos: [], videos: [], brochures: [] }),
       
-      const photos: MediaItem[] = Array.isArray(dbImages) ? dbImages.map((img: any, i: number) => {
-         const isObj = typeof img === 'object' && img !== null;
-         const url = isObj ? img.url : img;
-         const existingCategory = isObj ? img.category : null;
-         
-         return {
-          id: `img-${i}-${Date.now()}`,
-          url,
-          type: 'image',
-          category: existingCategory || (i === 0 ? 'featured' : 'general'),
-          isPrimary: i === 0,
-          displayOrder: i
+      // Legacy image handling for wizard
+      images: source.images ? parse(source.images, []) : parse(source.media, {})?.photos || [],
+
+      // References
+      brandProfileId: source.brandProfileId || source.developerBrandProfileId || null,
+      agentId: source.agentId || null,
+      
+      // Technical
+      nature: source.nature || 'new',
+      customClassification: source.customClassification || '',
+      transactionType: source.transactionType || 'sale',
+      ownershipType: source.ownershipType || 'sectional_title',
+      propertyTypes: typeof source.propertyTypes === 'string' ? parse(source.propertyTypes, []) : (source.propertyTypes || []),
+    };
+
+    // ============================================================================
+    // Hydrate Configuration Objects
+    // ============================================================================
+    const hydratedResidentialConfig = parse(source.residentialConfig, {
+      unitMix: { studios: 0, oneBed: 0, twoBed: 0, threeBed: 0, fourPlusBed: 0 },
+      priceRange: { min: null, max: null },
+      sizeRange: { min: null, max: null },
+      parkingOptions: [],
+      levy: { from: null, to: null },
+      rates: { from: null, to: null },
+      residentialType: null,
+      communityTypes: []
+    });
+
+    const hydratedLandConfig = parse(source.landConfig, {
+      totalStands: null,
+      availableStands: null,
+      erfSizeFrom: null,
+      erfSizeTo: null,
+      priceFrom: null,
+      priceTo: null,
+      serviced: null,
+      zoningType: null,
+      buildingRestrictions: null,
+      landType: null,
+      infrastructure: []
+    });
+
+    const hydratedCommercialConfig = parse(source.commercialConfig, {
+      totalSpace: null,
+      availableSpace: null,
+      spaceUnits: 'sqm',
+      rentalRate: null,
+      tenantType: [],
+      parkingRatio: null,
+      commercialType: null,
+      features: []
+    });
+
+    const hydratedMixedUseConfig = parse(source.mixedUseConfig, {
+      residentialUnits: null,
+      commercialSpace: null,
+      retailSpace: null,
+      officeSpace: null,
+    });
+
+    // ============================================================================
+    // Hydrate Estate Profile (for estates/complexes)
+    // ============================================================================
+    const hydratedEstateProfile = parse(source.estateSpecs, {
+      security: {
+        type: null,
+        features: [],
+      },
+      lifestyle: {
+        amenities: [],
+        clubhouse: null,
+        communityFacilities: [],
+      },
+      infrastructure: {
+        roadTypes: [],
+        utilities: [],
+        maintenance: null,
+      },
+      classification: '', 
+      hasHOA: false, 
+      levyRange: {min:0,max:0}, 
+      architecturalGuidelines: false, 
+      estateAmenities: []
+    });
+
+    // ============================================================================
+    // Hydrate Amenities
+    // ============================================================================
+    const hydratedAmenities = parse(source.amenities, { 
+      standard: [], 
+      additional: [] 
+    });
+    
+    // Normalize if it came back as array (legacy or strict DB)
+    let standardAmenities = Array.isArray(hydratedAmenities) ? hydratedAmenities : (hydratedAmenities.standard || []);
+    let additionalAmenities = hydratedAmenities.additional || [];
+
+    // ============================================================================
+    // Hydrate Unit Types (CRITICAL)
+    // ============================================================================
+    let hydratedUnitTypes: any[] = [];
+    
+    if (Array.isArray(source.unitTypes)) {
+      console.log(`[hydrateDevelopment] Hydrating ${source.unitTypes.length} unit types`);
+      
+      hydratedUnitTypes = source.unitTypes.map((u: any, idx: number) => {
+        if (!u.id) {
+          console.warn(`[hydrateDevelopment] Unit ${idx} missing ID, generating...`);
+          u.id = `unit-${Date.now()}-${idx}`;
+        }
+
+        return {
+          id: u.id,
+          label: u.label || u.name || 'Unnamed Unit',
+          name: u.name || u.label || 'Unnamed Unit',
+          
+          // Layout
+          bedrooms: u.bedrooms !== undefined ? u.bedrooms : null,
+          bathrooms: u.bathrooms !== undefined ? u.bathrooms : null,
+          floorSizeFrom: u.floorSizeFrom || null,
+          floorSizeTo: u.floorSizeTo || null,
+          yardSize: u.yardSize || null,
+          
+          // Type
+          ownershipType: u.ownershipType || null,
+          structuralType: u.structuralType || null,
+          
+          // Parking
+          parkingType: u.parkingType || null,
+          parkingSpaces: u.parkingSpaces !== undefined ? u.parkingSpaces : null,
+          parkingBays: u.parkingBays !== undefined ? u.parkingBays : null,
+          
+          // Pricing
+          priceFrom: u.priceFrom || null,
+          priceTo: u.priceTo || null,
+          depositRequired: u.depositRequired !== undefined ? u.depositRequired : null,
+          
+          // Availability
+          availableUnits: u.availableUnits !== undefined ? u.availableUnits : null,
+          totalUnits: u.totalUnits !== undefined ? u.totalUnits : null,
+          completionDate: u.completionDate || null,
+          
+          // Complex fields
+          amenities: parse(u.amenities, { standard: [], additional: [] }),
+          specifications: parse(u.specifications, { builtInFeatures: {}, finishes: {}, electrical: {} }),
+          baseMedia: parse(u.baseMedia, { gallery: [], floorPlans: [], renders: [] }),
+          extras: parse(u.extras, []),
+          specs: parse(u.specs, []),
+          
+          // Notes
+          internalNotes: u.internalNotes || null,
+          isActive: u.isActive !== false,
+          displayOrder: u.displayOrder || idx
         };
-      }) : [];
+      });
+    } else {
+      console.warn('[hydrateDevelopment] No unitTypes array found');
+    }
 
-      const videos: MediaItem[] = Array.isArray(dbVideos) ? dbVideos.map((url: string, i: number) => ({
-        id: `vid-${i}-${Date.now()}`,
-        url,
-        type: 'video',
-        category: 'videos',
-        isPrimary: false,
-        displayOrder: i
-      })) : [];
+    // ============================================================================
+    // Hydrate Marketing/Overview
+    // ============================================================================
+    const hydratedOverview = {
+      description: source.description || '',
+      keyFeatures: parse(source.keyFeatures || source.features, []), // Try both keys
+      highlights: source.highlights ? parse(source.highlights, []) : [],
+      metaTitle: source.metaTitle || '',
+      metaDescription: source.metaDescription || '',
+      keywords: parse(source.keywords, []),
+    };
 
-      const documents: MediaItem[] = Array.isArray(dbBrochures) ? dbBrochures.map((url: string, i: number) => ({
-        id: `doc-${i}-${Date.now()}`,
-        url,
-        type: 'document',
-        category: 'brochures',
-        isPrimary: false,
-        displayOrder: i
-      })) : [];
+    // ============================================================================
+    // Hydrate Classification
+    // ============================================================================
+    const hydratedClassification = {
+      propertyCategory: source.propertyCategory || null,
+      subCategory: source.subCategory || null,
+      tags: source.tags || [],
+    };
 
-      return {
-          ...state,
-          currentPhase: 9, // Start at Finalisation (Step 9) for review/edit navigation
-          developmentData: {
-              nature: 'new',
-              name: data.name || '',
-              subtitle: data.tagline ?? data.subtitle ?? '', // Hydrate Tagline (Prefer tagline from DB)
-              description: data.description || '',
-              status: (data.projectStatus as any) || 'pre_launch',
-              completionDate: data.possessionDate ? new Date(data.possessionDate) : null,
-              transactionType: data.transactionType || 'sale',
-              ownershipType: data.ownershipType || 'sectional_title',
-              propertyTypes: typeof data.propertyTypes === 'string' ? parse(data.propertyTypes, []) : (data.propertyTypes || []),
-              customClassification: data.customClassification || '',
-              
-              // Financials Validation
-              monthlyLevyFrom: data.monthlyLevyFrom || 0,
-              monthlyLevyTo: data.monthlyLevyTo || 0,
-              ratesFrom: data.ratesFrom || 0,
-              ratesTo: data.ratesTo || 0,
-              
-              // Legacy / Calculated
-              totalUnits: data.totalUnits,
-              totalDevelopmentArea: data.totalDevelopmentArea,
-              location: {
-                  address: data.address || '',
-                  city: data.city || '',
-                  province: data.province || '',
-                  latitude: data.latitude || '',
-                  longitude: data.longitude || '',
-                  postalCode: data.postalCode || '',
-              },
-              media: {
-                  heroImage: photos.find(p => p.isPrimary),
-                  photos: photos.filter(p => !p.isPrimary),
-                  videos: videos,
-                  documents: documents
-              },
-              amenities: amenities || [],
-              highlights: highlights || [],
-              approvalStatus: data.approvalStatus,
-              isPublished: !!data.isPublished
-          },
-          classification: {
-              type: data.developmentType || 'residential',
-              subType: '',
-              ownership: ''
-          },
-          overview: {
-              status: data.status || 'planning',
-              highlights,
-              description: data.description || '',
-              amenities,
-              features: displayFeatures
-          },
-          // Hydrate Configs
-          listingIdentity: {
-            identityType: data.marketingBrandProfileId ? 'marketing_agency' : 'developer',
-            developerBrandProfileId: data.developerBrandProfileId,
-            marketingRole: data.marketingRole || 'exclusive'
-          },
-          residentialConfig: resConfig,
-          landConfig: lndConfig,
-          commercialConfig: comConfig,
-          estateProfile: data.estateSpecs || estProfile, // Hydrate directly from JSON column estateSpecs
-          // Hydrate unit types if present in the payload
-          unitTypes: Array.isArray(data.unitTypes) ? data.unitTypes.map((u: any) => ({
-            ...u,
-            amenities: u.amenities || { standard: [], additional: [] },
-            specifications: u.specifications || {
-              builtInFeatures: { builtInWardrobes: false, tiledFlooring: false, graniteCounters: false },
-              finishes: {},
-              electrical: { prepaidElectricity: false }
-            },
-            baseMedia: u.baseMedia || { gallery: [], floorPlans: [], renders: [] },
-            specs: Array.isArray(u.specs) ? u.specs : []
-          })) : [],
-          finalisation: {
-              salesTeamIds: [],
-              isPublished: !!data.isPublished
-          },
-          editingId: data.id,
-          developerId: data.developerId,
-          selectedAmenities: amenities, // Hydrate selected amenities from DB data
-      };
+    // ============================================================================
+    // Return Complete Hydrated State
+    // ============================================================================
+    console.log('[hydrateDevelopment] Hydration Complete. State updated.');
+    
+    return {
+      ...state,
+      currentPhase: isDraft ? (source.currentPhase || 1) : 9,
+      
+      developmentData: hydratedDevelopmentData,
+      residentialConfig: hydratedResidentialConfig,
+      landConfig: hydratedLandConfig,
+      commercialConfig: hydratedCommercialConfig,
+      mixedUseConfig: hydratedMixedUseConfig,
+      estateProfile: hydratedEstateProfile,
+      
+      selectedAmenities: standardAmenities,
+      additionalAmenities: additionalAmenities,
+      
+      unitTypes: hydratedUnitTypes,
+      overview: hydratedOverview,
+      classification: hydratedClassification,
+      
+      developmentType: source.developmentType || 'residential',
+      
+      // Ensure specific fields are synced back to store root if needed by components
+      specifications: parse(source.specifications, {}),
+      
+      // Legacy compatibility
+      editingId: isDraft ? undefined : source.id,
+      developerId: source.developerId,
+    };
   }),
   
   // LEGACY ACTIONS (Compatibility Layer)

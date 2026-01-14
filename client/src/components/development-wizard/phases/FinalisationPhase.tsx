@@ -96,6 +96,15 @@ export function FinalisationPhase() {
   };
 
   const handlePublish = async () => {
+    // SECURITY: Warn if unit types are missing (Mass Deletion Prevention)
+    if (developmentType !== 'land' && (!unitTypes || unitTypes.length === 0)) {
+      console.warn('[FinalisationPhase] No unit types in payload');
+      const confirm = window.confirm(
+        'WARNING: No unit types found in this submission.\n\nSaving now will DELETE ALL existing unit types.\n\nAre you sure you want to continue?'
+      );
+      if (!confirm) return;
+    }
+
     setIsPublishing(true);
     
     try {
@@ -107,88 +116,140 @@ export function FinalisationPhase() {
       const features: string[] = [];
       if (residentialConfig?.residentialType) features.push(`cfg:res_type:${residentialConfig.residentialType}`);
       residentialConfig?.communityTypes?.forEach(c => features.push(`cfg:comm_type:${c}`));
+      
+      // NEW: Map security features to standard amenities AND config string
       residentialConfig?.securityFeatures?.forEach(s => features.push(`cfg:sec_feat:${s}`));
       
-      let developmentId: number;
+      if (store.landConfig?.landType) features.push(`cfg:land_type:${store.landConfig.landType}`);
+      store.landConfig?.infrastructure?.forEach(i => features.push(`cfg:infra:${i}`));
       
-      if (editingId) {
-        // UPDATE MODE
-        console.log('[FinalisationPhase] Update mode, editingId:', editingId);
-        await updateDevelopment.mutateAsync({
-          id: editingId,
-          data: {
-            name: developmentData.name,
-            tagline: developmentData.subtitle, // TAGLINE PERSISTENCE
-            description: developmentData.description,
-            developmentType: (developmentType || 'residential') as 'residential' | 'commercial' | 'mixed_use' | 'estate' | 'complex',
-            address: developmentData.location?.address,
-            city: developmentData.location?.city,
-            province: developmentData.location?.province,
-            latitude: developmentData.location?.latitude,
-            longitude: developmentData.location?.longitude,
-            
-            // Financials
-            monthlyLevyFrom: developmentData.monthlyLevyFrom,
-            monthlyLevyTo: developmentData.monthlyLevyTo,
-            ratesFrom: developmentData.ratesFrom,
-            ratesTo: developmentData.ratesTo,
-            
-            amenities: selectedAmenities || developmentData.amenities || [],
-            features,
-            highlights: developmentData.highlights || [],
-            unitTypes: unitTypes || [],
-            estateSpecs: store.estateProfile as any,
-            images: images as any, // Cast to any to satisfy TS until router types propagate
-            videos,
-            brochures,
-          }
-        });
-        developmentId = editingId;
-        toast.success('Development updated!');
-      } else {
-        // CREATE MODE
-        console.log('[FinalisationPhase] Create mode');
-        console.log('[FinalisationPhase] Debug Identity:', listingIdentity);
-        console.log('[FinalisationPhase] developerBrandProfileId:', listingIdentity?.developerBrandProfileId);
-        console.log('[FinalisationPhase] identityType:', listingIdentity?.identityType);
-        
-        // Determine if this is a brand development
-        const isBrandDevelopment = listingIdentity?.identityType === 'brand' || listingIdentity?.identityType === 'marketing_agency';
-        console.log('[FinalisationPhase] isBrandDevelopment:', isBrandDevelopment);
-        console.log('[FinalisationPhase] Sending brandProfileId:', isBrandDevelopment ? listingIdentity?.developerBrandProfileId : undefined);
+      if (store.commercialConfig?.commercialType) features.push(`cfg:comm_use:${store.commercialConfig.commercialType}`);
+      store.commercialConfig?.features?.forEach(f => features.push(`cfg:comm_feat:${f}`));
+      
+      // Estate Profile Configs
+      if (store.estateProfile?.classification) features.push(`cfg:est_class:${store.estateProfile.classification}`);
+      features.push(`cfg:hoa:${store.estateProfile?.hasHOA}`);
+      features.push(`cfg:arch_guide:${store.estateProfile?.architecturalGuidelines}`);
+      if (store.estateProfile?.levyRange?.min) features.push(`cfg:est_levy_min:${store.estateProfile.levyRange.min}`);
+      if (store.estateProfile?.levyRange?.max) features.push(`cfg:est_levy_max:${store.estateProfile.levyRange.max}`);
+      store.estateProfile?.estateAmenities?.forEach(a => features.push(`cfg:est_amenity:${a}`));
 
-        const result = await createDevelopment.mutateAsync({
+      // CONSTRUCT PAYLOAD (Explicit Mapping)
+      const payload: any = {
+          // Identity
           name: developmentData.name || 'Untitled Development',
-          tagline: developmentData.subtitle, // TAGLINE PERSISTENCE
-          developmentType: (developmentType || 'residential') as 'residential' | 'commercial' | 'mixed_use' | 'estate' | 'complex',
+          tagline: developmentData.subtitle, // Primary Tagline Field
+          subtitle: developmentData.subtitle, // Legacy support
           description: developmentData.description,
+          developmentType: (developmentType || 'residential') as any,
+          
+          // Location
           address: developmentData.location?.address,
           city: developmentData.location?.city || 'Unknown',
           province: developmentData.location?.province || 'Unknown',
+          suburb: developmentData.location?.suburb,
+          postalCode: developmentData.location?.postalCode,
           latitude: developmentData.location?.latitude,
           longitude: developmentData.location?.longitude,
           
           // Financials
+          priceFrom: unitTypes[0]?.priceFrom || unitTypes[0]?.basePriceFrom || developmentData.priceFrom,
+          priceTo: unitTypes[unitTypes.length - 1]?.priceTo || unitTypes[unitTypes.length - 1]?.basePriceTo || developmentData.priceTo,
           monthlyLevyFrom: developmentData.monthlyLevyFrom,
           monthlyLevyTo: developmentData.monthlyLevyTo,
           ratesFrom: developmentData.ratesFrom,
           ratesTo: developmentData.ratesTo,
+          
+          // Dates & Status
+          completionDate: developmentData.completionDate,
+          launchDate: developmentData.launchDate,
+          status: developmentData.status as any,
+          
+          // Metrics
+          totalUnits: developmentData.totalUnits,
+          availableUnits: developmentData.availableUnits,
+          totalDevelopmentArea: developmentData.totalDevelopmentArea,
+          
+          // Stand/Floor Sizes
+          erfSizeFrom: developmentData.erfSizeFrom,
+          erfSizeTo: developmentData.erfSizeTo,
+          floorSizeFrom: developmentData.floorSizeFrom,
+          floorSizeTo: developmentData.floorSizeTo,
+          bedroomsFrom: developmentData.bedroomsFrom,
+          bedroomsTo: developmentData.bedroomsTo,
+          bathroomsFrom: developmentData.bathroomsFrom,
+          bathroomsTo: developmentData.bathroomsTo,
+          
+          // Features (Booleans)
+          petsAllowed: developmentData.petsAllowed,
+          fibreReady: developmentData.fibreReady,
+          solarReady: developmentData.solarReady,
+          waterBackup: developmentData.waterBackup,
+          backupPower: developmentData.backupPower,
+          gatedCommunity: developmentData.gatedCommunity,
+          featured: developmentData.featured,
+          isPhasedDevelopment: developmentData.isPhasedDevelopment,
 
+          // Collections (Arrays/JSON)
           amenities: selectedAmenities || developmentData.amenities || [],
           features,
           highlights: developmentData.highlights || [],
           unitTypes: unitTypes || [],
+          
+          // Config Objects (Preserved as JSON)
           estateSpecs: store.estateProfile as any,
+          residentialConfig: residentialConfig as any,
+          landConfig: store.landConfig as any,
+          commercialConfig: store.commercialConfig as any,
+          mixedUseConfig: store.mixedUseConfig as any,
+          specifications: store.specifications as any,
+          
+          // Media
           images: images as any,
           videos,
           brochures,
-          priceFrom: unitTypes[0]?.priceFrom || unitTypes[0]?.basePriceFrom,
-          priceTo: unitTypes[unitTypes.length - 1]?.priceTo || unitTypes[unitTypes.length - 1]?.basePriceTo,
-          // Identity & Branding - Send brandProfileId for brand or marketing_agency identity types
-          brandProfileId: isBrandDevelopment ? listingIdentity?.developerBrandProfileId : undefined,
-          marketingBrandProfileId: listingIdentity?.identityType === 'marketing_agency' ? listingIdentity.marketingBrandProfileId : undefined,
-          marketingRole: listingIdentity?.marketingRole || 'exclusive',
+          media: { // New Media Object Structure
+             photos: images,
+             videos: developmentData.media?.videos || [],
+             brochures: developmentData.media?.documents || []
+          } as any,
+
+          // SEO
+          metaTitle: developmentData.overview?.metaTitle,
+          metaDescription: developmentData.overview?.metaDescription,
+          keywords: developmentData.overview?.keywords,
+      };
+
+      console.log('[FinalisationPhase] Payload Preview:', payload);
+      
+      let developmentId: number;
+      
+      if (editingId) {
+        // UPDATE OPERATION
+        console.log('[FinalisationPhase] Executing UPDATE for ID:', editingId);
+        await updateDevelopment.mutateAsync({
+          id: editingId,
+          data: payload
         });
+        developmentId = editingId;
+        toast.success('Development saved successfully!');
+      } else {
+        // CREATE OPERATION
+        console.log('[FinalisationPhase] Executing CREATE');
+        
+        // Identity & Branding logic
+        const isBrandDevelopment = listingIdentity?.identityType === 'brand' || listingIdentity?.identityType === 'marketing_agency';
+        
+        const createPayload = {
+            ...payload,
+             // Identity & Branding
+            brandProfileId: isBrandDevelopment ? listingIdentity?.developerBrandProfileId : undefined,
+            marketingBrandProfileId: listingIdentity?.identityType === 'marketing_agency' ? listingIdentity.marketingBrandProfileId : undefined,
+            marketingRole: listingIdentity?.marketingRole || 'exclusive',
+        };
+
+        const result = await createDevelopment.mutateAsync(createPayload);
+
         developmentId = result.development.id;
         toast.success('Development created!');
       }

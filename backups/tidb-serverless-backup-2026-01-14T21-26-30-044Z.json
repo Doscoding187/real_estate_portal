@@ -1,0 +1,1166 @@
+{
+  "timestamp": "2026-01-14T21:26:30.044Z",
+  "database": "tidb-serverless",
+  "developmentsCount": 1,
+  "unitTypesCount": 7,
+  "developments": [
+    {
+      "id": 300001,
+      "developerId": null,
+      "name": "Leopard's Rest Lifestyle Estate",
+      "description": "Leopard’s Rest Lifestyle Estate is a secure, family-focused residential estate offering modern homes in a well-planned environment. Designed for comfortable everyday living, the estate features 24-hour access-controlled security, landscaped open spaces, and quality infrastructure throughout.\n\nIdeally located with easy access to major highways, schools, shopping centres, and essential amenities, Leopard’s Rest provides the perfect balance between convenience and peace of mind. With affordable pricing, no transfer duty on selected units, and strong growth potential, the estate appeals to first-time buyers, growing families, and savvy investors alike.\n\nLeopard’s Rest is more than just a home — it’s a lifestyle built around safety, value, and long-term opportunity.",
+      "developmentType": "residential",
+      "address": "5085 Devil’s Knuckles Street",
+      "city": "Alberton",
+      "province": "Gauteng",
+      "latitude": "-26.36287534583383",
+      "longitude": "28.10587600030824",
+      "totalUnits": null,
+      "availableUnits": null,
+      "priceFrom": 1225000,
+      "priceTo": 1795000,
+      "amenities": "[\"24_hour_security\",\"access_control\",\"guard_house\",\"perimeter_fencing\",\"electric_fencing\",\"biometric_access\",\"controlled_gate_access\",\"boom_gates\",\"cctv_surveillance\",\"license_plate_recognition\",\"facial_recognition\",\"security_patrols\",\"visitor_access\",\"boundary_walls\",\"fibre_ready\",\"jungle_gym\",\"childrens_play_area\"]",
+      "images": "[{\"url\":\"https://d3fz99u3go2cmn.cloudfront.net/properties/fe2694f3-21d4-4aed-9709-cc27a0fde328/1768385086396-2a424beb-2dd1-4540-a15e-17c621014acf.jpg\",\"category\":\"hero\"},{\"url\":\"https://d3fz99u3go2cmn.cloudfront.net/properties/e33b5a02-e449-4d25-89f1-bf369d5b1db2/1768385125077-4a96ccae-830c-4162-abef-ee089e1152d9.jpg\",\"category\":\"outdoors\"},{\"url\":\"https://d3fz99u3go2cmn.cloudfront.net/properties/dabb663c-5fc0-4e5c-b4ae-017544ebfd26/1768385345540-218e4076-df9e-4f2a-967c-9c2cb2d20c49.jpg\",\"category\":\"general\"},{\"url\":\"https://d3fz99u3go2cmn.cloudfront.net/properties/de5f8ca9-a18c-4b0a-847a-8bcc9481b158/1768385364514-947eafdf-bb66-467b-8531-27a3f1d8d2a7.jpg\",\"category\":\"general\"},{\"url\":\"https://d3fz99u3go2cmn.cloudfront.net/properties/ab210070-0e04-4289-8ba7-d7372c21c8de/1768385364513-10c8dbce-35ee-4d13-b553-58002cccf9db.jpg\",\"category\":\"general\"},{\"url\":\"https://d3fz99u3go2cmn.cloudfront.net/properties/1f34824c-ecb1-46d5-a4eb-a5f9161d2803/1768385364513-c149ed2e-a8eb-4407-b22f-1b9b07d4952c.jpg\",\"category\":\"general\"},{\"url\":\"https://d3fz99u3go2cmn.cloudfront.net/properties/1ba5c1f3-ae3b-4559-9b1b-8d56dc7e1161/1768385364514-f620f8c3-9826-4bf3-9210-f09f34b98b93.jpg\",\"category\":\"general\"},{\"url\":\"https://d3fz99u3go2cmn.cloudfront.net/properties/9d817af5-718a-41df-98f2-15cfe5773cd0/1768385364514-5274e5b9-334d-490e-b6d3-577b1f0a77bb.jpg\",\"category\":\"general\"},{\"url\":\"https://d3fz99u3go2cmn.cloudfront.net/properties/94d05236-6587-4702-a763-3de27f52e69f/1768385364514-da08064d-49ef-4ff5-8d6b-bd92eb7a0907.jpg\",\"category\":\"general\"},{\"url\":\"https://d3fz99u3go2cmn.cloudfront.net/properties/87311de6-2217-402f-9a6a-dbe8c5be6e94/1768385364514-1dc723f9-8283-4b41-a455-4ca068a88513.jpg\",\"category\":\"general\"},{\"url\":\"https://d3fz99u3go2cmn.cloudfront.net/properties/fff35360-8329-4375-8b3c-b1fa66df47cb/1768385364514-264accff-6892-4060-b6f7-7a44f1e5f28e.jpg\",\"category\":\"general\"},{\"url\":\"https://d3fz99u3go2cmn.cloudfront.net/properties/0f7f4308-5dd2-44e2-ad2c-377213507e1c/1768385364515-25d66655-5b13-4578-ae73-28ca6afc5b83.jpg\",\"category\":\"general\"},{\"url\":\"https://d3fz99u3go2cmn.cloudfront.net/properties/e18df435-291d-41f5-9f76-a2e085dd14a8/1768385364514-0e6fd3f9-a1d0-4417-836b-fd586b7bc621.jpg\",\"category\":\"general\"},{\"url\":\"https://d3fz99u3go2cmn.cloudfront.net/properties/6aa1920b-bf4c-4c03-bc42-0b7e38b27947/1768385364515-a4123b61-62aa-4acd-8fa3-1ca8dbd0e9bd.jpg\",\"category\":\"general\"},{\"url\":\"https://d3fz99u3go2cmn.cloudfront.net/properties/b0df9d6d-9156-45f2-a06d-6c7136e298f7/1768385639001-fbe576c8-3f9e-4e5d-aced-f045a6d7e9dd.jpg\",\"category\":\"amenities\"},{\"url\":\"https://d3fz99u3go2cmn.cloudfront.net/properties/c5ccf111-26bd-490f-af90-e6fdea6820a5/1768385674155-781818cb-ebc9-4814-8420-65e688068919.jpg\",\"category\":\"amenities\"}]",
+      "videos": "https://d3fz99u3go2cmn.cloudfront.net/properties/79770bfb-c930-4485-a622-227e01cc000e/1768385745159-6ff94cdc-5a5d-43eb-9785-b1964e08a3be.mp4",
+      "completionDate": null,
+      "isFeatured": 0,
+      "views": 0,
+      "createdAt": "2026-01-11 22:58:01",
+      "updatedAt": "2026-01-14 12:28:10",
+      "slug": "leopards-rest-lifestyle-estate",
+      "isPublished": 1,
+      "publishedAt": "2026-01-14 12:28:11",
+      "showHouseAddress": 0,
+      "floorPlans": null,
+      "brochures": "https://d3fz99u3go2cmn.cloudfront.net/properties/0d61bda4-7d75-45f0-bf74-99a09cdbab15/1768385772592-1873d3d5-d577-45f6-a392-3c2cb8d28444.pdf",
+      "rating": null,
+      "suburb": null,
+      "location_id": null,
+      "postal_code": null,
+      "gps_accuracy": "approximate",
+      "highlights": [
+        "No Transfer Dulties",
+        "24-Hour Access-Controlled Security",
+        "Private School Located Within the Estate",
+        "Easy Access to Major Highways",
+        "Modern, Affordable Homes",
+        "Family-Friendly Lifestyle Estate",
+        "Close to Shopping Centres & Amenities",
+        "Strong Growth & Investment Potential"
+      ],
+      "features": [
+        "cfg:res_type:freehold",
+        "cfg:comm_type:security_estate_general"
+      ],
+      "inquiries_count": 0,
+      "demand_score": 0,
+      "is_hot_selling": 0,
+      "is_high_demand": 0,
+      "approval_status": "approved",
+      "developer_id": 1,
+      "readiness_score": 100,
+      "rejection_reasons": null,
+      "rejection_note": null,
+      "developer_brand_profile_id": 1,
+      "dev_owner_type": "developer",
+      "is_showcase": 0,
+      "marketing_brand_profile_id": null,
+      "marketing_role": "exclusive",
+      "tagline": null,
+      "marketing_name": null,
+      "monthly_levy_to": null,
+      "rates_to": null,
+      "monthly_levy_from": null,
+      "rates_from": null,
+      "transfer_costs_included": 0,
+      "estateSpecs": null,
+      "custom_classification": null,
+      "nature": "new",
+      "total_development_area": null,
+      "property_types": null,
+      "status": "launching-soon",
+      "legacy_status": "launching-soon",
+      "construction_phase": "planning"
+    }
+  ],
+  "unitTypes": [
+    {
+      "id": "unit-1768389485415",
+      "development_id": 300001,
+      "name": "Type A - 50m² Simplex House",
+      "bedrooms": 3,
+      "bathrooms": "2.0",
+      "parking": null,
+      "unit_size": null,
+      "yard_size": null,
+      "base_price_from": "1225000.00",
+      "base_price_to": "1225000.00",
+      "base_features": {},
+      "base_finishes": {},
+      "base_media": {
+        "floorPlans": [
+          {
+            "category": "floorplan",
+            "displayOrder": 0,
+            "fileName": "Leopards Rest 50 m² Floor Plan.png",
+            "id": "u-1768389357350-0.9179618499363831",
+            "isPrimary": false,
+            "type": "image",
+            "url": "https://d3fz99u3go2cmn.cloudfront.net/properties/0caf79a2-3a2b-4a60-85d5-b23d6beecb89/1768389353849-82b9e01b-ad9f-4519-a9d6-781f790ae909.png"
+          }
+        ],
+        "gallery": [
+          {
+            "category": "photo",
+            "displayOrder": 0,
+            "fileName": "imageye___-_imgi_4_Ensure1280x720.jpg",
+            "id": "u-1768389199968-0.6010296795704366",
+            "isPrimary": true,
+            "type": "image",
+            "url": "https://d3fz99u3go2cmn.cloudfront.net/properties/64a24f8b-68c9-4ddc-a272-943c9aff0f7e/1768389198299-e58c1663-67d7-4686-b5f9-356541e0942f.jpg"
+          },
+          {
+            "category": "photo",
+            "displayOrder": 1,
+            "fileName": "imageye___-_imgi_7_Ensure1280x720.jpg",
+            "id": "u-1768389202055-0.33042476038827084",
+            "isPrimary": false,
+            "type": "image",
+            "url": "https://d3fz99u3go2cmn.cloudfront.net/properties/9bf3dece-8db7-4a56-9625-924d1f658923/1768389200886-7e1cf757-18e4-447b-97f0-2df2c55242e9.jpg"
+          },
+          {
+            "category": "photo",
+            "displayOrder": 2,
+            "fileName": "imageye___-_imgi_16_Ensure1280x720.jpg",
+            "id": "u-1768389204763-0.5725008987763517",
+            "isPrimary": false,
+            "type": "image",
+            "url": "https://d3fz99u3go2cmn.cloudfront.net/properties/4a852802-655f-441c-9e62-17b1f09f3360/1768389204338-0fac9fbf-ea0f-4d7d-9171-02465e88306b.jpg"
+          },
+          {
+            "category": "photo",
+            "displayOrder": 3,
+            "fileName": "imageye___-_imgi_5_Ensure1280x720.jpg",
+            "id": "u-1768389206155-0.0010193336101923522",
+            "isPrimary": false,
+            "type": "image",
+            "url": "https://d3fz99u3go2cmn.cloudfront.net/properties/76982f37-d3ac-4759-86af-3569c8655eec/1768389205676-015cbbd3-e1e5-408c-9473-8ef8e249ae8a.jpg"
+          },
+          {
+            "category": "photo",
+            "displayOrder": 4,
+            "fileName": "imageye___-_imgi_6_Ensure1280x720.jpg",
+            "id": "u-1768389210265-0.6963359983578392",
+            "isPrimary": false,
+            "type": "image",
+            "url": "https://d3fz99u3go2cmn.cloudfront.net/properties/762643cf-a705-4cd9-b7a5-67ad4b305aca/1768389209806-a7ab73a2-5f4d-4321-ba0a-054b75fe8f71.jpg"
+          },
+          {
+            "category": "photo",
+            "displayOrder": 5,
+            "fileName": "imageye___-_imgi_14_Ensure1280x720.jpg",
+            "id": "u-1768389208907-0.823378568509822",
+            "isPrimary": false,
+            "type": "image",
+            "url": "https://d3fz99u3go2cmn.cloudfront.net/properties/3076d975-b112-4078-a095-051f0d343b0c/1768389208458-c38547cf-1811-45e9-b28c-0171ea77bafe.jpg"
+          },
+          {
+            "category": "photo",
+            "displayOrder": 6,
+            "fileName": "imageye___-_imgi_9_Ensure1280x720.jpg",
+            "id": "u-1768389211591-0.6799434193437048",
+            "isPrimary": false,
+            "type": "image",
+            "url": "https://d3fz99u3go2cmn.cloudfront.net/properties/623e8235-f143-45b6-86c6-513abb6d45f8/1768389211175-62399007-1920-49ed-a9b6-622a34bc7983.jpg"
+          },
+          {
+            "category": "photo",
+            "displayOrder": 7,
+            "fileName": "imageye___-_imgi_11_Ensure1280x720.jpg",
+            "id": "u-1768389212982-0.8871855732528435",
+            "isPrimary": false,
+            "type": "image",
+            "url": "https://d3fz99u3go2cmn.cloudfront.net/properties/b14b4ab2-0507-40d6-82a8-e1fc63ab6880/1768389212525-16b845dc-09db-4202-af5d-d5ebdc67d59d.jpg"
+          },
+          {
+            "category": "photo",
+            "displayOrder": 8,
+            "fileName": "imageye___-_imgi_12_Ensure1280x720.jpg",
+            "id": "u-1768389203437-0.3459432822500672",
+            "isPrimary": false,
+            "type": "image",
+            "url": "https://d3fz99u3go2cmn.cloudfront.net/properties/96675010-be7d-49d8-80bf-b68b859e0c31/1768389202995-31f90240-9d8d-4127-8eac-2dee1b1bfc5b.jpg"
+          },
+          {
+            "category": "photo",
+            "displayOrder": 9,
+            "fileName": "imageye___-_imgi_15_Ensure1280x720.jpg",
+            "id": "u-1768389214368-0.0931477969697625",
+            "isPrimary": false,
+            "type": "image",
+            "url": "https://d3fz99u3go2cmn.cloudfront.net/properties/d6d28572-ea9a-4e48-b056-915652ae51f9/1768389213888-d813f386-e756-434a-9daf-53955adf4875.jpg"
+          },
+          {
+            "category": "photo",
+            "displayOrder": 10,
+            "fileName": "imageye___-_imgi_13_Ensure1280x720.jpg",
+            "id": "u-1768389207557-0.8494775647899597",
+            "isPrimary": false,
+            "type": "image",
+            "url": "https://d3fz99u3go2cmn.cloudfront.net/properties/e0319f76-14fb-4b8c-ab3d-c6e2afab8633/1768389207064-633cef81-b13d-4228-bb07-ff904b729b39.jpg"
+          }
+        ],
+        "renders": []
+      },
+      "display_order": 0,
+      "is_active": 1,
+      "created_at": "2026-01-14 12:28:08",
+      "updated_at": "2026-01-14 12:28:08",
+      "total_units": 0,
+      "available_units": 200,
+      "reserved_units": 0,
+      "transfer_costs_included": 0,
+      "monthly_levy": null,
+      "monthly_levy_to": null,
+      "rates_and_taxes_to": null,
+      "monthly_levy_from": null,
+      "rates_and_taxes_from": null,
+      "extras": [],
+      "label": null,
+      "ownership_type": "sectional-title",
+      "structural_type": "apartment",
+      "floors": null,
+      "size_from": 50,
+      "size_to": 50,
+      "price_from": "1225000.00",
+      "price_to": "1225000.00",
+      "deposit_required": null,
+      "completion_date": null,
+      "config_description": null,
+      "description": null,
+      "virtual_tour_link": null,
+      "spec_overrides": null,
+      "specifications": {
+        "builtInFeatures": {},
+        "electrical": {
+          "prepaidElectricity": false
+        },
+        "finishes": {}
+      },
+      "amenities": {
+        "additional": [],
+        "standard": []
+      },
+      "features": null,
+      "parking_type": "carport",
+      "parking_bays": 1,
+      "internal_notes": null
+    },
+    {
+      "id": "unit-1768389824954",
+      "development_id": 300001,
+      "name": "Type A - 60m² simplex House",
+      "bedrooms": 3,
+      "bathrooms": "2.0",
+      "parking": null,
+      "unit_size": null,
+      "yard_size": null,
+      "base_price_from": "1345000.00",
+      "base_price_to": "1345000.00",
+      "base_features": {},
+      "base_finishes": {},
+      "base_media": {
+        "floorPlans": [
+          {
+            "category": "floorplan",
+            "displayOrder": 0,
+            "fileName": "plan.PNG",
+            "id": "u-1768389745468-0.017604400473973825",
+            "isPrimary": false,
+            "type": "image",
+            "url": "https://d3fz99u3go2cmn.cloudfront.net/properties/5ff92d66-993b-486d-a8b8-876f035cf2f3/1768389742574-0246f974-6e5f-40d4-8c37-cb282fc32c55.PNG"
+          }
+        ],
+        "gallery": [
+          {
+            "category": "photo",
+            "displayOrder": 0,
+            "fileName": "imgi_59_GetImage (2).jpg",
+            "id": "u-1768389654602-0.5358175579679936",
+            "isPrimary": true,
+            "type": "image",
+            "url": "https://d3fz99u3go2cmn.cloudfront.net/properties/90eb8d0a-7799-4ca3-bc29-d70764ed5ade/1768389651760-cd2a1f54-d78e-415e-8554-4534a21cb629.jpg"
+          },
+          {
+            "category": "photo",
+            "displayOrder": 1,
+            "fileName": "imgi_59_GetImage.jpg",
+            "id": "u-1768389659596-0.8956186205971908",
+            "isPrimary": false,
+            "type": "image",
+            "url": "https://d3fz99u3go2cmn.cloudfront.net/properties/04ab63e0-45ad-4cce-9726-fb78dc0e85dc/1768389655504-6f7db4a2-0a8c-4166-a3c7-2ee878132d2c.jpg"
+          },
+          {
+            "category": "photo",
+            "displayOrder": 2,
+            "fileName": "fdsggs.png",
+            "id": "u-1768389695359-0.3286504810085964",
+            "isPrimary": false,
+            "type": "image",
+            "url": "https://d3fz99u3go2cmn.cloudfront.net/properties/ba490563-1d5b-44ff-a43c-6a597b26682f/1768389689086-db3cb630-f802-4cf6-8013-a07c0341fb57.png"
+          },
+          {
+            "category": "photo",
+            "displayOrder": 3,
+            "fileName": "dafsafa.png",
+            "id": "u-1768389687393-0.2285983499735108",
+            "isPrimary": false,
+            "type": "image",
+            "url": "https://d3fz99u3go2cmn.cloudfront.net/properties/67cdb487-2963-4186-89a6-cadd42edce0e/1768389681060-e74067b2-f168-476d-ae95-a5b5635b85f4.png"
+          },
+          {
+            "category": "photo",
+            "displayOrder": 4,
+            "fileName": "dsafsdfsf.png",
+            "id": "u-1768389679512-0.3885597748213533",
+            "isPrimary": false,
+            "type": "image",
+            "url": "https://d3fz99u3go2cmn.cloudfront.net/properties/301f0069-20b8-4d2d-80a4-89fa3e8f5295/1768389673232-b50bcb0a-5807-4a51-b27d-ac3fc46325fd.png"
+          },
+          {
+            "category": "photo",
+            "displayOrder": 5,
+            "fileName": "sdfsafa333.png",
+            "id": "u-1768389663842-0.5419915797316871",
+            "isPrimary": false,
+            "type": "image",
+            "url": "https://d3fz99u3go2cmn.cloudfront.net/properties/be8f515f-ba40-4476-ab6f-653eb22255a6/1768389661159-23289f85-4712-4866-bce8-8e5ff8a2cff2.png"
+          },
+          {
+            "category": "photo",
+            "displayOrder": 6,
+            "fileName": "sadfsafaf.png",
+            "id": "u-1768389667521-0.416767480451704",
+            "isPrimary": false,
+            "type": "image",
+            "url": "https://d3fz99u3go2cmn.cloudfront.net/properties/eee7d738-b694-4034-8e73-32d99c411b13/1768389664744-3907fffb-3f25-465d-bf91-ff26d2aca9b3.png"
+          },
+          {
+            "category": "photo",
+            "displayOrder": 7,
+            "fileName": "dasffdsf.png",
+            "id": "u-1768389672313-0.6698387020520563",
+            "isPrimary": false,
+            "type": "image",
+            "url": "https://d3fz99u3go2cmn.cloudfront.net/properties/e579482d-4527-4cb6-b166-768a79f49096/1768389669049-0c5c31d1-4c01-47a0-aeaa-05c5a4cf569e.png"
+          }
+        ],
+        "renders": []
+      },
+      "display_order": 0,
+      "is_active": 1,
+      "created_at": "2026-01-14 12:28:08",
+      "updated_at": "2026-01-14 12:28:08",
+      "total_units": 0,
+      "available_units": 200,
+      "reserved_units": 0,
+      "transfer_costs_included": 0,
+      "monthly_levy": null,
+      "monthly_levy_to": null,
+      "rates_and_taxes_to": null,
+      "monthly_levy_from": null,
+      "rates_and_taxes_from": null,
+      "extras": [],
+      "label": null,
+      "ownership_type": "sectional-title",
+      "structural_type": "apartment",
+      "floors": null,
+      "size_from": 60,
+      "size_to": 60,
+      "price_from": "1345000.00",
+      "price_to": "1345000.00",
+      "deposit_required": null,
+      "completion_date": null,
+      "config_description": null,
+      "description": null,
+      "virtual_tour_link": null,
+      "spec_overrides": null,
+      "specifications": {
+        "builtInFeatures": {},
+        "electrical": {
+          "prepaidElectricity": false
+        },
+        "finishes": {}
+      },
+      "amenities": {
+        "additional": [],
+        "standard": []
+      },
+      "features": null,
+      "parking_type": "carport",
+      "parking_bays": 1,
+      "internal_notes": null
+    },
+    {
+      "id": "unit-1768390750817",
+      "development_id": 300001,
+      "name": "Type A - 70m² Simplex House",
+      "bedrooms": 3,
+      "bathrooms": "2.0",
+      "parking": null,
+      "unit_size": null,
+      "yard_size": null,
+      "base_price_from": "1470000.00",
+      "base_price_to": "1470000.00",
+      "base_features": {},
+      "base_finishes": {},
+      "base_media": {
+        "floorPlans": [
+          {
+            "category": "floorplan",
+            "displayOrder": 0,
+            "fileName": "plan.png",
+            "id": "u-1768390660680-0.29886989986965184",
+            "isPrimary": false,
+            "type": "image",
+            "url": "https://d3fz99u3go2cmn.cloudfront.net/properties/d148012c-ff0d-4744-bd0c-e5dae9d788b2/1768390658202-a8a7ef1b-ccbf-4d57-a55e-16e7e1d8d425.png"
+          }
+        ],
+        "gallery": [
+          {
+            "category": "photo",
+            "displayOrder": 0,
+            "fileName": "imageye___-_GetImage (1).jpg",
+            "id": "u-1768389990459-0.397483135287224",
+            "isPrimary": true,
+            "type": "image",
+            "url": "https://d3fz99u3go2cmn.cloudfront.net/properties/b7a06e18-172b-4151-b8c3-57aae4b32c3e/1768389982685-879ce651-e65e-4de7-96ac-76aa7413ef45.jpg"
+          },
+          {
+            "category": "photo",
+            "displayOrder": 1,
+            "fileName": "imageye___-_GetImage.jpg",
+            "id": "u-1768390032384-0.3908412830754535",
+            "isPrimary": false,
+            "type": "image",
+            "url": "https://d3fz99u3go2cmn.cloudfront.net/properties/31185cc6-9149-44e6-a434-0074c8e25d5b/1768390027022-1af90fd4-b61b-461f-86e3-2585bf2c7d4a.jpg"
+          },
+          {
+            "category": "photo",
+            "displayOrder": 2,
+            "fileName": "imageye___-_GetImage (2).jpg",
+            "id": "u-1768389994793-0.5943386523985051",
+            "isPrimary": false,
+            "type": "image",
+            "url": "https://d3fz99u3go2cmn.cloudfront.net/properties/571fb156-a7c4-49dd-8692-9855e8472e1a/1768389991525-7f43d274-bd86-4b19-8812-4663d997a0f8.jpg"
+          },
+          {
+            "category": "photo",
+            "displayOrder": 3,
+            "fileName": "imageye___-_GetImage (3).jpg",
+            "id": "u-1768389999438-0.3667814284617211",
+            "isPrimary": false,
+            "type": "image",
+            "url": "https://d3fz99u3go2cmn.cloudfront.net/properties/1dde7dc2-7ba6-4bf1-b203-d9897980780d/1768389995721-acf062a3-a441-40b7-984c-dcebd07125b2.jpg"
+          },
+          {
+            "category": "photo",
+            "displayOrder": 4,
+            "fileName": "imageye___-_GetImage (4).jpg",
+            "id": "u-1768390007199-0.5310584233018716",
+            "isPrimary": false,
+            "type": "image",
+            "url": "https://d3fz99u3go2cmn.cloudfront.net/properties/c4cd9dd3-b63c-4de1-b2cf-c0bd7fde2815/1768390000503-ea285b1f-f726-4fb8-82db-b238be859303.jpg"
+          },
+          {
+            "category": "photo",
+            "displayOrder": 5,
+            "fileName": "imageye___-_GetImage (7).jpg",
+            "id": "u-1768390025938-0.2747491837474386",
+            "isPrimary": false,
+            "type": "image",
+            "url": "https://d3fz99u3go2cmn.cloudfront.net/properties/bcdbf5b2-ab3e-4a1c-99eb-40eb78a19e30/1768390022388-2eb11be1-d092-47a4-9043-5c22ca349325.jpg"
+          },
+          {
+            "category": "photo",
+            "displayOrder": 6,
+            "fileName": "imageye___-_GetImage (6).jpg",
+            "id": "u-1768390021311-0.44540297368233717",
+            "isPrimary": false,
+            "type": "image",
+            "url": "https://d3fz99u3go2cmn.cloudfront.net/properties/27eb257f-dfa4-4cbb-8f9a-acb3c0abf3d3/1768390015753-52a9adf3-7905-44ff-a574-596e03b90f27.jpg"
+          },
+          {
+            "category": "photo",
+            "displayOrder": 7,
+            "fileName": "imageye___-_GetImage (5).jpg",
+            "id": "u-1768390014679-0.02816784449777543",
+            "isPrimary": false,
+            "type": "image",
+            "url": "https://d3fz99u3go2cmn.cloudfront.net/properties/bfea6e85-93ae-45c5-b35b-eb894df8ea43/1768390008259-7c484fb7-99a1-4421-b884-f55658c530c6.jpg"
+          }
+        ],
+        "renders": []
+      },
+      "display_order": 0,
+      "is_active": 1,
+      "created_at": "2026-01-14 12:28:08",
+      "updated_at": "2026-01-14 12:28:08",
+      "total_units": 0,
+      "available_units": 200,
+      "reserved_units": 0,
+      "transfer_costs_included": 0,
+      "monthly_levy": null,
+      "monthly_levy_to": null,
+      "rates_and_taxes_to": null,
+      "monthly_levy_from": null,
+      "rates_and_taxes_from": null,
+      "extras": [],
+      "label": null,
+      "ownership_type": "sectional-title",
+      "structural_type": "apartment",
+      "floors": null,
+      "size_from": 70,
+      "size_to": 70,
+      "price_from": "1470000.00",
+      "price_to": "1470000.00",
+      "deposit_required": null,
+      "completion_date": null,
+      "config_description": null,
+      "description": null,
+      "virtual_tour_link": null,
+      "spec_overrides": null,
+      "specifications": {
+        "builtInFeatures": {},
+        "electrical": {
+          "prepaidElectricity": false
+        },
+        "finishes": {}
+      },
+      "amenities": {
+        "additional": [],
+        "standard": []
+      },
+      "features": null,
+      "parking_type": "carport",
+      "parking_bays": 2,
+      "internal_notes": null
+    },
+    {
+      "id": "unit-1768391914034",
+      "development_id": 300001,
+      "name": "Type A1 - 70m² Simplex House",
+      "bedrooms": 4,
+      "bathrooms": "3.0",
+      "parking": null,
+      "unit_size": null,
+      "yard_size": null,
+      "base_price_from": "1470000.00",
+      "base_price_to": "1470000.00",
+      "base_features": {},
+      "base_finishes": {},
+      "base_media": {
+        "floorPlans": [
+          {
+            "category": "floorplan",
+            "displayOrder": 0,
+            "fileName": "plan.png",
+            "id": "u-1768391359766-0.739414601106727",
+            "isPrimary": false,
+            "type": "image",
+            "url": "https://d3fz99u3go2cmn.cloudfront.net/properties/cee39da7-080a-4ada-9852-c02bca901732/1768391357114-df605ae0-171d-454a-820a-02b755dc556c.png"
+          }
+        ],
+        "gallery": [
+          {
+            "category": "photo",
+            "displayOrder": 0,
+            "fileName": "imageye___-_GetImage.jpg",
+            "id": "u-1768390916669-0.239700980959333",
+            "isPrimary": true,
+            "type": "image",
+            "url": "https://d3fz99u3go2cmn.cloudfront.net/properties/32cd41e7-a46f-449d-a70b-d2c650e34d15/1768390914668-57fc43c0-8744-4150-bd61-1120541db713.jpg"
+          },
+          {
+            "category": "photo",
+            "displayOrder": 1,
+            "fileName": "imageye___-_GetImage (1).jpg",
+            "id": "u-1768390900778-0.8994142780075528",
+            "isPrimary": false,
+            "type": "image",
+            "url": "https://d3fz99u3go2cmn.cloudfront.net/properties/dd4917ab-1ddd-42b5-a417-1901292f12ff/1768390897999-0ab0f14c-3e21-4a0e-9e74-45f7278b5f08.jpg"
+          },
+          {
+            "category": "photo",
+            "displayOrder": 2,
+            "fileName": "imageye___-_GetImage (2).jpg",
+            "id": "u-1768390902739-0.7960412954193348",
+            "isPrimary": false,
+            "type": "image",
+            "url": "https://d3fz99u3go2cmn.cloudfront.net/properties/1ee6aaca-f5e2-4651-83d8-27a250bc2cba/1768390901721-d9a10616-a62f-4a7e-b4fb-4efcb0bb59a6.jpg"
+          },
+          {
+            "category": "photo",
+            "displayOrder": 3,
+            "fileName": "imageye___-_GetImage (3).jpg",
+            "id": "u-1768390905219-0.7258029674548006",
+            "isPrimary": false,
+            "type": "image",
+            "url": "https://d3fz99u3go2cmn.cloudfront.net/properties/1cb3b113-1a5d-4bd5-a392-aff3b89130ec/1768390904090-e8440230-0080-4318-9f25-adf0944b081a.jpg"
+          },
+          {
+            "category": "photo",
+            "displayOrder": 4,
+            "fileName": "imageye___-_GetImage (4).jpg",
+            "id": "u-1768390907395-0.2750003581771855",
+            "isPrimary": false,
+            "type": "image",
+            "url": "https://d3fz99u3go2cmn.cloudfront.net/properties/86952440-2c4c-4048-bd84-1998a69f0afd/1768390906143-fc68a6c0-0866-4c97-a3b1-2a6aaab90e45.jpg"
+          },
+          {
+            "category": "photo",
+            "displayOrder": 5,
+            "fileName": "imageye___-_GetImage (6).jpg",
+            "id": "u-1768390911252-0.06529647226561808",
+            "isPrimary": false,
+            "type": "image",
+            "url": "https://d3fz99u3go2cmn.cloudfront.net/properties/080c38b1-4314-452a-aa6d-4416559f2676/1768390910236-535807ed-e8fd-4a09-8bb8-7c36f1aaa268.jpg"
+          },
+          {
+            "category": "photo",
+            "displayOrder": 6,
+            "fileName": "imageye___-_GetImage (7).jpg",
+            "id": "u-1768390913144-0.7380230990224111",
+            "isPrimary": false,
+            "type": "image",
+            "url": "https://d3fz99u3go2cmn.cloudfront.net/properties/bc2bbca5-4563-40fc-a9a6-c8f33b5b6f79/1768390912190-c39678ed-1445-4e84-bd83-4ee7e7d432cc.jpg"
+          },
+          {
+            "category": "photo",
+            "displayOrder": 7,
+            "fileName": "imageye___-_GetImage (5).jpg",
+            "id": "u-1768390909318-0.8306735954523448",
+            "isPrimary": false,
+            "type": "image",
+            "url": "https://d3fz99u3go2cmn.cloudfront.net/properties/047180d7-a6ba-44f8-8d15-396e9d60037a/1768390908347-8dca5d47-c5d4-4731-9430-7e83a92b8047.jpg"
+          }
+        ],
+        "renders": []
+      },
+      "display_order": 0,
+      "is_active": 1,
+      "created_at": "2026-01-14 12:28:08",
+      "updated_at": "2026-01-14 12:28:08",
+      "total_units": 0,
+      "available_units": 200,
+      "reserved_units": 0,
+      "transfer_costs_included": 0,
+      "monthly_levy": null,
+      "monthly_levy_to": null,
+      "rates_and_taxes_to": null,
+      "monthly_levy_from": null,
+      "rates_and_taxes_from": null,
+      "extras": [],
+      "label": null,
+      "ownership_type": "sectional-title",
+      "structural_type": "apartment",
+      "floors": null,
+      "size_from": 70,
+      "size_to": 70,
+      "price_from": "1470000.00",
+      "price_to": "1470000.00",
+      "deposit_required": null,
+      "completion_date": null,
+      "config_description": null,
+      "description": null,
+      "virtual_tour_link": null,
+      "spec_overrides": null,
+      "specifications": {
+        "builtInFeatures": {},
+        "electrical": {
+          "prepaidElectricity": false
+        },
+        "finishes": {}
+      },
+      "amenities": {
+        "additional": [],
+        "standard": []
+      },
+      "features": null,
+      "parking_type": "carport",
+      "parking_bays": 2,
+      "internal_notes": null
+    },
+    {
+      "id": "unit-1768392862126",
+      "development_id": 300001,
+      "name": "Type B - 103m² Simplex House",
+      "bedrooms": 3,
+      "bathrooms": "2.0",
+      "parking": null,
+      "unit_size": null,
+      "yard_size": null,
+      "base_price_from": "1646000.00",
+      "base_price_to": "1646000.00",
+      "base_features": {},
+      "base_finishes": {},
+      "base_media": {
+        "floorPlans": [
+          {
+            "category": "floorplan",
+            "displayOrder": 0,
+            "fileName": "Leopards Rest Lifestyle 125 m² First Floor Plan.jpg",
+            "id": "u-1768392352516-0.5834848309430073",
+            "isPrimary": false,
+            "type": "image",
+            "url": "https://d3fz99u3go2cmn.cloudfront.net/properties/db822c7f-d730-41a6-b3ec-d63b2ae901da/1768392350918-4edb8925-01e8-4e06-a903-96a961416726.jpg"
+          },
+          {
+            "category": "floorplan",
+            "displayOrder": 0,
+            "fileName": "Leopards Rest Lifestyle 125 m² Ground Floor Plan.jpg",
+            "id": "u-1768392353973-0.21557304048422932",
+            "isPrimary": false,
+            "type": "image",
+            "url": "https://d3fz99u3go2cmn.cloudfront.net/properties/e4837513-27ab-4d9a-b940-80c3c91ca3c9/1768392353471-611a6ecc-9da3-4d06-bb1e-2af8291b32a4.jpg"
+          }
+        ],
+        "gallery": [
+          {
+            "category": "photo",
+            "displayOrder": 0,
+            "fileName": "imageye___-_GetImage (9).jpg",
+            "id": "u-1768392314170-0.035191691539853354",
+            "isPrimary": true,
+            "type": "image",
+            "url": "https://d3fz99u3go2cmn.cloudfront.net/properties/912e0222-454c-4e4d-bf98-3227d9438d22/1768392312438-7773d92d-d681-4713-aa2c-eea6c031ccdc.jpg"
+          },
+          {
+            "category": "photo",
+            "displayOrder": 1,
+            "fileName": "imageye___-_GetImage (1).jpg",
+            "id": "u-1768392294705-0.4479843640850312",
+            "isPrimary": false,
+            "type": "image",
+            "url": "https://d3fz99u3go2cmn.cloudfront.net/properties/0223c4aa-2554-4b22-b2c0-60b7c0959818/1768392291396-98c55869-2a7e-409c-a98f-45db99f6a9bc.jpg"
+          },
+          {
+            "category": "photo",
+            "displayOrder": 2,
+            "fileName": "imageye___-_GetImage (2).jpg",
+            "id": "u-1768392297109-0.405267292139475",
+            "isPrimary": false,
+            "type": "image",
+            "url": "https://d3fz99u3go2cmn.cloudfront.net/properties/78307ee5-8081-4a2b-89b6-cacf77955acc/1768392295646-96ff70f7-419c-4403-ad7e-e3b500cb9085.jpg"
+          },
+          {
+            "category": "photo",
+            "displayOrder": 3,
+            "fileName": "imageye___-_GetImage (3).jpg",
+            "id": "u-1768392299459-0.31465164088429665",
+            "isPrimary": false,
+            "type": "image",
+            "url": "https://d3fz99u3go2cmn.cloudfront.net/properties/6832ba62-4927-4b05-8d33-7a519cb4d34c/1768392298052-87e08f7e-e3da-472d-971a-53d37b31d896.jpg"
+          },
+          {
+            "category": "photo",
+            "displayOrder": 4,
+            "fileName": "imageye___-_GetImage (4).jpg",
+            "id": "u-1768392302135-0.5357170990141683",
+            "isPrimary": false,
+            "type": "image",
+            "url": "https://d3fz99u3go2cmn.cloudfront.net/properties/260cdd6d-7298-4c75-8130-1f687e990814/1768392301026-5c253f6e-1a45-4144-bf5c-6310c5f4bdcb.jpg"
+          },
+          {
+            "category": "photo",
+            "displayOrder": 5,
+            "fileName": "imageye___-_GetImage (5).jpg",
+            "id": "u-1768392304384-0.46715911395962706",
+            "isPrimary": false,
+            "type": "image",
+            "url": "https://d3fz99u3go2cmn.cloudfront.net/properties/679c754e-49a8-4439-beb7-033df9ff0453/1768392303076-2e3efb8a-d25e-46aa-ace3-fd94a3338239.jpg"
+          },
+          {
+            "category": "photo",
+            "displayOrder": 6,
+            "fileName": "imageye___-_GetImage (8).jpg",
+            "id": "u-1768392311510-0.8738380940120248",
+            "isPrimary": false,
+            "type": "image",
+            "url": "https://d3fz99u3go2cmn.cloudfront.net/properties/4b8b89c9-8be4-4791-b1a6-9f74669139b1/1768392309349-217e2b5a-4c36-41c3-8f63-a8dd7f1a35ad.jpg"
+          },
+          {
+            "category": "photo",
+            "displayOrder": 7,
+            "fileName": "imageye___-_GetImage.jpg",
+            "id": "u-1768392316420-0.09795341623721865",
+            "isPrimary": false,
+            "type": "image",
+            "url": "https://d3fz99u3go2cmn.cloudfront.net/properties/34e4dea9-364f-476d-9f3b-677df788fcb7/1768392315107-3714aa86-5b6d-4492-96fc-cfcbc00d9d96.jpg"
+          },
+          {
+            "category": "photo",
+            "displayOrder": 8,
+            "fileName": "imageye___-_GetImage (6).jpg",
+            "id": "u-1768392306435-0.4951400162871976",
+            "isPrimary": false,
+            "type": "image",
+            "url": "https://d3fz99u3go2cmn.cloudfront.net/properties/6b0e7587-ca6f-466d-9f92-d82a16c99a4b/1768392305318-9edb322c-6847-4331-99ea-6d6fd32862ac.jpg"
+          }
+        ],
+        "renders": []
+      },
+      "display_order": 0,
+      "is_active": 1,
+      "created_at": "2026-01-14 12:28:09",
+      "updated_at": "2026-01-14 12:28:09",
+      "total_units": 0,
+      "available_units": 200,
+      "reserved_units": 0,
+      "transfer_costs_included": 0,
+      "monthly_levy": null,
+      "monthly_levy_to": null,
+      "rates_and_taxes_to": null,
+      "monthly_levy_from": null,
+      "rates_and_taxes_from": null,
+      "extras": [],
+      "label": null,
+      "ownership_type": "sectional-title",
+      "structural_type": "apartment",
+      "floors": null,
+      "size_from": 103,
+      "size_to": 103,
+      "price_from": "1646000.00",
+      "price_to": "1646000.00",
+      "deposit_required": null,
+      "completion_date": null,
+      "config_description": null,
+      "description": null,
+      "virtual_tour_link": null,
+      "spec_overrides": null,
+      "specifications": {
+        "builtInFeatures": {},
+        "electrical": {
+          "prepaidElectricity": false
+        },
+        "finishes": {}
+      },
+      "amenities": {
+        "additional": [],
+        "standard": []
+      },
+      "features": null,
+      "parking_type": "carport",
+      "parking_bays": 2,
+      "internal_notes": null
+    },
+    {
+      "id": "unit-1768393362933",
+      "development_id": 300001,
+      "name": "Type B - 125m² Simplex House",
+      "bedrooms": 3,
+      "bathrooms": "2.5",
+      "parking": null,
+      "unit_size": null,
+      "yard_size": null,
+      "base_price_from": "1795000.00",
+      "base_price_to": "1795000.00",
+      "base_features": {},
+      "base_finishes": {},
+      "base_media": {
+        "floorPlans": [
+          {
+            "category": "floorplan",
+            "displayOrder": 0,
+            "fileName": "imageye___-_imgi_3_ (1).jpg",
+            "id": "u-1768393279954-0.9820553961387432",
+            "isPrimary": false,
+            "type": "image",
+            "url": "https://d3fz99u3go2cmn.cloudfront.net/properties/01d8809a-0ae7-45b6-a043-13776d3d4f33/1768393278520-c631904b-db3b-4194-b884-403f853ac0ae.jpg"
+          }
+        ],
+        "gallery": [
+          {
+            "category": "photo",
+            "displayOrder": 0,
+            "fileName": "imageye___-_imgi_61_GetImage (5).jpg",
+            "id": "u-1768393182889-0.5659938455150191",
+            "isPrimary": true,
+            "type": "image",
+            "url": "https://d3fz99u3go2cmn.cloudfront.net/properties/ce4de090-a6ed-4af7-9dc8-292f34d56d24/1768393181510-0a5844e8-dc3e-4fa9-b538-e5868e353e0c.jpg"
+          },
+          {
+            "category": "photo",
+            "displayOrder": 1,
+            "fileName": "imageye___-_imgi_62_GetImage.jpg",
+            "id": "u-1768393199704-0.8157406057393569",
+            "isPrimary": false,
+            "type": "image",
+            "url": "https://d3fz99u3go2cmn.cloudfront.net/properties/e65a960a-9890-498b-982e-f352e906019e/1768393196926-407bb2fd-36bb-4848-8d2a-c78099df913c.jpg"
+          },
+          {
+            "category": "photo",
+            "displayOrder": 2,
+            "fileName": "imageye___-_imgi_61_GetImage (1).jpg",
+            "id": "u-1768393174185-0.49170909801703255",
+            "isPrimary": false,
+            "type": "image",
+            "url": "https://d3fz99u3go2cmn.cloudfront.net/properties/af4a0e6b-2913-4eb6-943d-dbca026647a1/1768393171862-ebb82bb1-1d5b-4dcf-86ca-244ffe777926.jpg"
+          },
+          {
+            "category": "photo",
+            "displayOrder": 3,
+            "fileName": "imageye___-_imgi_62_GetImage (2).jpg",
+            "id": "u-1768393191694-0.06276670064583523",
+            "isPrimary": false,
+            "type": "image",
+            "url": "https://d3fz99u3go2cmn.cloudfront.net/properties/121f19c6-2be7-4fde-9989-d21fe136d2b7/1768393189924-5d98240e-b8a5-4f46-bd02-41386615b57a.jpg"
+          },
+          {
+            "category": "photo",
+            "displayOrder": 4,
+            "fileName": "imageye___-_imgi_61_GetImage.jpg",
+            "id": "u-1768393185494-0.4059514485427782",
+            "isPrimary": false,
+            "type": "image",
+            "url": "https://d3fz99u3go2cmn.cloudfront.net/properties/c079c5ca-dfbf-43bc-a620-65dfdccf9b9c/1768393183839-78f98391-990b-4adb-aa30-19543de4ae25.jpg"
+          },
+          {
+            "category": "photo",
+            "displayOrder": 5,
+            "fileName": "imageye___-_imgi_62_GetImage (1).jpg",
+            "id": "u-1768393188987-0.28411290035628234",
+            "isPrimary": false,
+            "type": "image",
+            "url": "https://d3fz99u3go2cmn.cloudfront.net/properties/01e84d4b-d052-4dcc-b566-f152048eff74/1768393187011-dc0164f6-f7cd-42c6-939f-8b913d67d92e.jpg"
+          },
+          {
+            "category": "photo",
+            "displayOrder": 6,
+            "fileName": "imageye___-_imgi_61_GetImage (4).jpg",
+            "id": "u-1768393180568-0.40100532269836364",
+            "isPrimary": false,
+            "type": "image",
+            "url": "https://d3fz99u3go2cmn.cloudfront.net/properties/c62c0c28-96c5-43e7-8490-1edd05559251/1768393179722-c611352c-0be5-4f71-93e8-ce818d06ebe1.jpg"
+          },
+          {
+            "category": "photo",
+            "displayOrder": 7,
+            "fileName": "imageye___-_imgi_62_GetImage (3).jpg",
+            "id": "u-1768393195369-0.9182260873386966",
+            "isPrimary": false,
+            "type": "image",
+            "url": "https://d3fz99u3go2cmn.cloudfront.net/properties/7a20d9dd-d1de-4f35-a019-698e7ac0ab0b/1768393192661-b258869c-0b9f-410b-8be3-5ead2dfd4aaf.jpg"
+          },
+          {
+            "category": "photo",
+            "displayOrder": 8,
+            "fileName": "imageye___-_imgi_61_GetImage (3).jpg",
+            "id": "u-1768393178788-0.4621589696209656",
+            "isPrimary": false,
+            "type": "image",
+            "url": "https://d3fz99u3go2cmn.cloudfront.net/properties/d0285a5e-70a6-451c-b3df-04b620b9d75e/1768393177629-399267df-23a3-465a-bee8-11ccae61648d.jpg"
+          }
+        ],
+        "renders": []
+      },
+      "display_order": 0,
+      "is_active": 1,
+      "created_at": "2026-01-14 12:28:09",
+      "updated_at": "2026-01-14 12:28:09",
+      "total_units": 0,
+      "available_units": 200,
+      "reserved_units": 0,
+      "transfer_costs_included": 0,
+      "monthly_levy": null,
+      "monthly_levy_to": null,
+      "rates_and_taxes_to": null,
+      "monthly_levy_from": null,
+      "rates_and_taxes_from": null,
+      "extras": [],
+      "label": null,
+      "ownership_type": "sectional-title",
+      "structural_type": "apartment",
+      "floors": null,
+      "size_from": 125,
+      "size_to": 125,
+      "price_from": "1795000.00",
+      "price_to": "1795000.00",
+      "deposit_required": null,
+      "completion_date": null,
+      "config_description": null,
+      "description": null,
+      "virtual_tour_link": null,
+      "spec_overrides": null,
+      "specifications": {
+        "builtInFeatures": {},
+        "electrical": {
+          "prepaidElectricity": false
+        },
+        "finishes": {}
+      },
+      "amenities": {
+        "additional": [],
+        "standard": []
+      },
+      "features": null,
+      "parking_type": "carport",
+      "parking_bays": 2,
+      "internal_notes": null
+    },
+    {
+      "id": "unit-1768393659325",
+      "development_id": 300001,
+      "name": "Type B1 - 125m² Duplex House",
+      "bedrooms": 4,
+      "bathrooms": "2.5",
+      "parking": null,
+      "unit_size": null,
+      "yard_size": null,
+      "base_price_from": "1745000.00",
+      "base_price_to": "1745000.00",
+      "base_features": {},
+      "base_finishes": {},
+      "base_media": {
+        "floorPlans": [
+          {
+            "category": "floorplan",
+            "displayOrder": 0,
+            "fileName": "imageye___-_imgi_3_ (1).jpg",
+            "id": "u-1768393594687-0.8046401486276521",
+            "isPrimary": false,
+            "type": "image",
+            "url": "https://d3fz99u3go2cmn.cloudfront.net/properties/b9eb66f4-eec3-48ff-b067-5d4ed96307c7/1768393593170-8ead2c17-83a1-41ba-9086-7ecb02827822.jpg"
+          }
+        ],
+        "gallery": [
+          {
+            "category": "photo",
+            "displayOrder": 0,
+            "fileName": "imageye___-_imgi_62_GetImage.jpg",
+            "id": "u-1768393544060-0.49244463011905415",
+            "isPrimary": true,
+            "type": "image",
+            "url": "https://d3fz99u3go2cmn.cloudfront.net/properties/1d5389fc-da78-4f58-8c8e-83a30ddb0b9d/1768393542770-c8b53faf-9fad-4514-b5d8-c112cda668f8.jpg"
+          },
+          {
+            "category": "photo",
+            "displayOrder": 1,
+            "fileName": "imageye___-_imgi_61_GetImage (5).jpg",
+            "id": "u-1768393532000-0.44669182811587105",
+            "isPrimary": false,
+            "type": "image",
+            "url": "https://d3fz99u3go2cmn.cloudfront.net/properties/ebe2ffe3-3dd7-4128-bd71-8e11a372bff5/1768393530776-87deaf7e-4809-4e49-bfe7-7862a0cd87ea.jpg"
+          },
+          {
+            "category": "photo",
+            "displayOrder": 2,
+            "fileName": "imageye___-_imgi_61_GetImage.jpg",
+            "id": "u-1768393534800-0.6934656445401876",
+            "isPrimary": false,
+            "type": "image",
+            "url": "https://d3fz99u3go2cmn.cloudfront.net/properties/d6ef7eef-5bb0-4b16-b4fb-01554e4a0c04/1768393533387-2b5a443d-ade8-44f6-be8c-99e90849800f.jpg"
+          },
+          {
+            "category": "photo",
+            "displayOrder": 3,
+            "fileName": "imageye___-_imgi_62_GetImage (1).jpg",
+            "id": "u-1768393536864-0.3774919079146254",
+            "isPrimary": false,
+            "type": "image",
+            "url": "https://d3fz99u3go2cmn.cloudfront.net/properties/d8e72cfe-98f8-48b6-a6b0-e0d7836c1819/1768393535762-34277086-457f-4339-a36e-a03dbb38e0a5.jpg"
+          },
+          {
+            "category": "photo",
+            "displayOrder": 4,
+            "fileName": "imageye___-_imgi_61_GetImage (1).jpg",
+            "id": "u-1768393522787-0.48817614805479514",
+            "isPrimary": false,
+            "type": "image",
+            "url": "https://d3fz99u3go2cmn.cloudfront.net/properties/4e4178da-4c7d-434a-8758-d9350a7ef88f/1768393520535-b352d54e-fc09-4001-8ccb-f6ae5fb7f4c0.jpg"
+          },
+          {
+            "category": "photo",
+            "displayOrder": 5,
+            "fileName": "imageye___-_imgi_62_GetImage (2).jpg",
+            "id": "u-1768393538948-0.94907392739574",
+            "isPrimary": false,
+            "type": "image",
+            "url": "https://d3fz99u3go2cmn.cloudfront.net/properties/df7cdb22-9221-4fe9-8eca-ac6523e7bcab/1768393537834-05f34870-498d-44df-a060-bf1d0f2d5e6d.jpg"
+          },
+          {
+            "category": "photo",
+            "displayOrder": 6,
+            "fileName": "imageye___-_imgi_61_GetImage (4).jpg",
+            "id": "u-1768393529826-0.7178573533181448",
+            "isPrimary": false,
+            "type": "image",
+            "url": "https://d3fz99u3go2cmn.cloudfront.net/properties/f47f994e-37da-4747-b967-51615c50bfbb/1768393528364-17df96c7-f16e-4748-963c-586f95fa5418.jpg"
+          },
+          {
+            "category": "photo",
+            "displayOrder": 7,
+            "fileName": "imageye___-_imgi_62_GetImage (3).jpg",
+            "id": "u-1768393541184-0.4780273325931984",
+            "isPrimary": false,
+            "type": "image",
+            "url": "https://d3fz99u3go2cmn.cloudfront.net/properties/0fa86f35-a713-4767-9cb3-94f756b8a614/1768393539885-ac03fb6b-3395-4721-9122-fc7284c3efb3.jpg"
+          },
+          {
+            "category": "photo",
+            "displayOrder": 8,
+            "fileName": "imageye___-_imgi_61_GetImage (3).jpg",
+            "id": "u-1768393527405-0.3791124992504491",
+            "isPrimary": false,
+            "type": "image",
+            "url": "https://d3fz99u3go2cmn.cloudfront.net/properties/1e05d224-eb44-4074-a7f6-73b53b52186b/1768393526215-713b38cc-e214-4619-a9bd-fcefffade1c8.jpg"
+          }
+        ],
+        "renders": []
+      },
+      "display_order": 0,
+      "is_active": 1,
+      "created_at": "2026-01-14 12:28:09",
+      "updated_at": "2026-01-14 12:28:09",
+      "total_units": 0,
+      "available_units": 200,
+      "reserved_units": 0,
+      "transfer_costs_included": 0,
+      "monthly_levy": null,
+      "monthly_levy_to": null,
+      "rates_and_taxes_to": null,
+      "monthly_levy_from": null,
+      "rates_and_taxes_from": null,
+      "extras": [],
+      "label": null,
+      "ownership_type": "sectional-title",
+      "structural_type": "apartment",
+      "floors": null,
+      "size_from": 125,
+      "size_to": 125,
+      "price_from": "1745000.00",
+      "price_to": "1745000.00",
+      "deposit_required": null,
+      "completion_date": null,
+      "config_description": null,
+      "description": null,
+      "virtual_tour_link": null,
+      "spec_overrides": null,
+      "specifications": {
+        "builtInFeatures": {},
+        "electrical": {
+          "prepaidElectricity": false
+        },
+        "finishes": {}
+      },
+      "amenities": {
+        "additional": [],
+        "standard": []
+      },
+      "features": null,
+      "parking_type": "carport",
+      "parking_bays": 2,
+      "internal_notes": null
+    }
+  ]
+}

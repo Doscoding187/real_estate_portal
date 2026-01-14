@@ -544,7 +544,10 @@ export const developments = mysqlTable("developments", {
 	marketingRole: mysqlEnum("marketing_role", ['exclusive', 'joint', 'open']).default('exclusive'), // NEW: Mandate type
 	name: varchar({ length: 255 }).notNull(),
 	tagline: varchar({ length: 255 }), // NEW: Marketing tagline for hero section
+	subtitle: varchar("subtitle", { length: 255 }), // NEW: Hero subtitle
 	marketingName: varchar("marketing_name", { length: 255 }), // NEW: Optional branding name
+	metaTitle: varchar("meta_title", { length: 255 }), // SEO Title
+	metaDescription: text("meta_description"), // SEO Description
 	slug: varchar({ length: 255 }),
 	description: text(),
 	rating: decimal({ precision: 3, scale: 2 }), // Auto-calculated rating

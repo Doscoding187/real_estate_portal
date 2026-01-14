@@ -191,6 +191,8 @@ export function UnitTypesPhase() {
 
     const newUnit: any = {
       ...formData,
+      // CRITICAL: Always ensure ID is present for persistence
+      id: editingId || `unit-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       priceTo: calculatedPriceTo, // Auto-calculated
 
       features: formData.features,
@@ -208,9 +210,11 @@ export function UnitTypesPhase() {
     };
 
     if (editingId) {
+      console.log('[UnitTypesPhase] Updating unit:', editingId);
       updateUnitType(editingId, newUnit);
       toast.success('Unit type updated');
     } else {
+      console.log('[UnitTypesPhase] Creating new unit:', newUnit.id);
       addUnitType(newUnit);
       setUnitTypeDraft(null); // Clear draft on successful creation
       toast.success('Unit type created');
@@ -226,10 +230,6 @@ export function UnitTypesPhase() {
       }, 100);
     } else {
       setIsDialogOpen(false);
-      // We do NOT clear draft here if we closed, because we want consistency?
-      // Wait, if we successfully saved, we SHOULD close and clear.
-      // Yes, setUnitTypeDraft(null) above handles it for simple save.
-      // AddAnother handles it too.
     }
   };
 

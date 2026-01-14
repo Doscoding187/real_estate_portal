@@ -286,6 +286,35 @@ export const shouldShowEstateProfile = (communityTypes: CommunityType[]): boolea
 };
 
 // =============================================================================
+// SECURITY FEATURES
+// =============================================================================
+
+export type SecurityFeature = 
+  | 'cctv' 
+  | 'access_controlled' 
+  | '24hr_security' 
+  | 'electric_fencing' 
+  | 'biometric_access' 
+  | 'perimeter_wall' 
+  | 'intercom' 
+  | 'guard_house' 
+  | 'manned_security'
+  | 'armed_response';
+
+export const SECURITY_FEATURE_OPTIONS: { value: SecurityFeature; label: string; description: string }[] = [
+  { value: '24hr_security', label: '24 Hour Security', description: 'Round-the-clock security presence' },
+  { value: 'access_controlled', label: 'Access Control', description: 'Gate or boom monitoring' },
+  { value: 'biometric_access', label: 'Biometric Access', description: 'Fingerprint or face recognition' },
+  { value: 'cctv', label: 'CCTV Surveillance', description: 'Cameras in common areas' },
+  { value: 'electric_fencing', label: 'Electric Fencing', description: 'Perimeter electric fence' },
+  { value: 'guard_house', label: 'Guard House', description: 'Manned entrance' },
+  { value: 'intercom', label: 'Intercom System', description: 'Direct communication to units' },
+  { value: 'manned_security', label: 'Manned Security', description: 'Guards patrolling the grounds' },
+  { value: 'perimeter_wall', label: 'Perimeter Wall', description: 'High walls surrounding the estate' },
+  { value: 'armed_response', label: 'Armed Response', description: 'Linked to armed response company' },
+];
+
+// =============================================================================
 // AVAILABLE UNIT CATEGORIES (What types of units exist in this development)
 // =============================================================================
 

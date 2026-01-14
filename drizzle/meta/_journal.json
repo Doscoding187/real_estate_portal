@@ -85,6 +85,13 @@
       "when": 1768321547185,
       "tag": "0011_cold_bill_hollister",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "5",
+      "when": 1768426762936,
+      "tag": "0012_crazy_yellow_claw",
+      "breakpoints": true
     }
   ]
 }
