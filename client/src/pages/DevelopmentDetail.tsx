@@ -163,6 +163,9 @@ export default function DevelopmentDetail() {
       floorPlans: 0 // Placeholder, we treat floorplans separate typically
   };
 
+  // Missing declaration restoration
+  const floorPlans: any[] = []; // Initialize as empty array for now, or derive from units if available later
+
   // ... (Update development object)
   const development = {
     // ... existing fields ...
