@@ -201,7 +201,26 @@ export default function DevelopmentDetail() {
     units: units,
   };
 
-  // ... (keep rest until return)
+  return (
+    <>
+        <MetaControl 
+            title={`${development.name} | ${development.developer}`}
+            description={development.description}
+            image={development.heroMedia.type === 'image' ? development.heroMedia.image?.url : undefined}
+        />
+        
+        <div className="min-h-screen bg-slate-50 pb-20">
+            <ListingNavbar />
+            
+            <div className="pt-24 pb-4 container max-w-7xl mx-auto px-4">
+                <Breadcrumbs 
+                    items={[
+                        { label: 'Home', href: '/' },
+                        { label: development.location, href: '#' },
+                        { label: development.name, href: `/development/${development.id}`, active: true }
+                    ]} 
+                />
+            </div>
 
             {/* Gallery Section - CRITICAL: Isolated container with overflow control */}
             <div className="w-full bg-white border-b border-slate-200">
