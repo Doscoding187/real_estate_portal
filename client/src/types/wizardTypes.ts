@@ -279,8 +279,8 @@ export const getApplicableCommunityTypes = (residentialType: ResidentialType | n
 };
 
 // Helper to check if estate profile should be shown
-export const shouldShowEstateProfile = (communityTypes: CommunityType[]): boolean => {
-  return communityTypes.some(type => 
+export const shouldShowEstateProfile = (communityTypes: CommunityType[] | undefined | null): boolean => {
+  return (communityTypes || []).some(type => 
     COMMUNITY_TYPE_OPTIONS.find(opt => opt.value === type)?.triggersEstateProfile ?? false
   );
 };

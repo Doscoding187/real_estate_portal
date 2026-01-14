@@ -856,7 +856,22 @@ const createActions = (
       isPhasedDevelopment: source.isPhasedDevelopment !== undefined ? Boolean(source.isPhasedDevelopment) : false,
 
       // Media
-      media: parse(source.media, { photos: [], videos: [], brochures: [] }),
+      media: (() => {
+        const parsedMedia = parse(source.media, { photos: [], videos: [], brochures: [] });
+        
+        // Fix: Restore heroImage if missing but present in photos (Legacy/Structure Mismatch handling)
+        if (!parsedMedia.heroImage && parsedMedia.photos?.length > 0) {
+           // Look for featured/primary photo first
+           const manualHero = parsedMedia.photos.find((p: any) => p.category === 'featured' || p.isPrimary) 
+                           || parsedMedia.photos[0];
+           
+           if (manualHero) {
+             console.log('[hydrateDevelopment] Restored missing heroImage from photos:', manualHero.id);
+             parsedMedia.heroImage = { ...manualHero, category: 'featured', isPrimary: true };
+           }
+        }
+        return parsedMedia;
+      })(),
       
       // Legacy image handling for wizard
       images: source.images ? parse(source.images, []) : parse(source.media, {})?.photos || [],
