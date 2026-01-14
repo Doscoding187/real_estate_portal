@@ -442,7 +442,7 @@ export default function DevelopmentDetail() {
                               <TabsTrigger 
                                 key={count} 
                                 value={count.toString()}
-                                className="rounded-full border border-slate-200 bg-white px-6 py-2.5 text-sm font-medium text-slate-600 data-[state=active]:bg-slate-900 data-[state=active]:text-white data-[state=active]:border-slate-900 shadow-sm transition-all"
+                                className="rounded-full border border-slate-200 bg-white px-6 py-2.5 text-sm font-medium text-slate-600 data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:border-blue-600 shadow-sm transition-all"
                               >
                                 {count} Bedroom <span className="ml-1 opacity-70 font-normal">{label}</span>
                               </TabsTrigger>
