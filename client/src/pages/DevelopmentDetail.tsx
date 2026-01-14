@@ -59,6 +59,11 @@ import { MetaControl } from '@/components/seo/MetaControl';
 import { Breadcrumbs } from '@/components/search/Breadcrumbs';
 import { Footer } from '@/components/Footer';
 import { HouseMeasureIcon } from '@/components/icons/HouseMeasureIcon';
+import {
+  getDevelopmentHeroMedia, buildDevelopmentGalleryImages, getGalleryStartIndex,
+  getDevelopmentAmenityTileImage, getDevelopmentOutdoorsTileImage, getDevelopmentViewGalleryTileImage,
+  type DevelopmentMedia
+} from '@/lib/media-logic';
 
 export default function DevelopmentDetail() {
   const { slug } = useParams();
@@ -112,110 +117,55 @@ export default function DevelopmentDetail() {
       } catch (e) { return []; }
   };
 
+  // 1. RAW DATA EXTRACTION
   const rawImages = parseJSON(dev.images);
-  // Support both legacy string[] and new {url, category}[] formats
-  const images = rawImages.map((img: any) => typeof img === 'string' ? img : img.url);
-  const amenities = parseJSON(dev.amenities);
-  const videos = parseJSON(dev.videos).map((v: any) => typeof v === 'string' ? { url: v } : v);
-  const floorPlans = parseJSON(dev.floorPlans).map((f: any) => typeof f === 'string' ? { url: f } : f);
+  const rawVideos = parseJSON(dev.videos);
   
-  // Extract specific category images for tiles
-  const explicitAmenity = rawImages.find((img: any) => typeof img === 'object' && img.category === 'amenities');
-  const explicitOutdoor = rawImages.find((img: any) => typeof img === 'object' && img.category === 'outdoors');
-
-  console.log('[DevelopmentDetail] Debug Media:', { 
-    id: dev.id, 
-    rawVideos: dev.videos, 
-    parsedVideos: videos, 
-    rawImages: dev.images,
-    foundAmenity: explicitAmenity,
-    foundOutdoor: explicitOutdoor
-  });
-  
-  // Use actual images from development - split them across categories
-  const totalImages = images.length;
-  // Reserve first image for main display if video not present
-  const availableImages = images.slice(1); 
-  
-  // Placeholder constants for when specific images are missing
-  const PLACEHOLDERS = {
-    AMENITIES: 'https://images.unsplash.com/photo-1576485290814-1c72aa4bbb8e?w=800&q=80', // Modern interior/amenity
-    OUTDOORS: 'https://images.unsplash.com/photo-1624638760980-cb05d15a5198?w=800&q=80'    // Exterior/Outdoor view
-  };
-  
-  // Prioritize explicitly categorized images, fallback to distribution strategy, then to distinct placeholders
-  // We avoid using images[0] (the hero) as a fallback to prevent duplication in the grid
-  const amenityImage = explicitAmenity ? explicitAmenity.url : (availableImages.length > 0 ? availableImages[0] : PLACEHOLDERS.AMENITIES);
-  const outdoorImage = explicitOutdoor ? explicitOutdoor.url : (availableImages.length > 1 ? availableImages[1] : PLACEHOLDERS.OUTDOORS);
-  
-  // --- Unified Media Construction ---
-  // We keep the original media grouping for the lightbox navigation to feel structured
-  // even if we don't have explicit tagging yet.
-  const generalCount = Math.max(1, Math.ceil(totalImages * 0.5));
-  
-  const generalMedia = images.slice(0, generalCount).map((url: string) => ({ url, type: 'image' as const }));
-  const videoMedia = videos.map((v: any) => ({ url: v.url, type: 'video' as const }));
-  
-  // Implicitly use remaining images for other categories if not explicitly defined
-  const remainingImages = images.slice(generalCount);
-  const midPoint = Math.ceil(remainingImages.length / 2);
-  
-  const amenitiesPhotos = remainingImages.slice(0, midPoint);
-  const outdoorsPhotos = remainingImages.slice(midPoint);
-
-  const amenityMedia = amenitiesPhotos.map((url: string) => ({ url, type: 'image' as const }));
-  const outdoorsMedia = outdoorsPhotos.map((url: string) => ({ url, type: 'image' as const }));
-  const floorPlanMedia = floorPlans.map((f: any) => ({ url: f.url, type: 'image' as const }));
-  
-  // Combine all media for unified lightbox
-  const unifiedMedia = [
-    ...generalMedia,
-    ...amenityMedia,
-    ...outdoorsMedia,
-    ...videoMedia,
-    ...floorPlanMedia
-  ];
-
-  // Start indices for jump-to
-  const indices = {
-    general: 0,
-    amenities: generalMedia.length,
-    outdoors: generalMedia.length + amenityMedia.length,
-    videos: generalMedia.length + amenityMedia.length + outdoorsMedia.length,
-    floorPlans: generalMedia.length + amenityMedia.length + outdoorsMedia.length + videoMedia.length
-  };
-
-  // Map units and sort by price low-to-high
-  const units = (dev.unitTypes || [])
-    .map((u: any) => {
-      let unitImage = '';
-      try {
-        const media = parseJSON(u.baseMedia);
-        unitImage = media?.floorPlans?.[0]?.url || media?.gallery?.[0]?.url || '';
-      } catch {}
-      if (!unitImage) unitImage = images[0] || '';
-      
-      return {
-        id: u.id,
-        type: u.name,
-        ownershipType: u.ownershipType || 'Sectional Title', 
-        structuralType: u.structuralType || 'Apartment',
-        bedrooms: u.bedrooms,
-        bathrooms: Number(u.bathrooms),
-        size: u.unitSize || u.size || 0,
-        price: Number(u.basePriceFrom),
-        priceTo: u.basePriceTo ? Number(u.basePriceTo) : undefined,
-        available: u.totalUnits || u.count || null,
-        image: unitImage,
-        floors: u.floorNumber || null,
-        erfSize: u.yardSize || u.erfSize || u.plotSize || null,
-        virtualTour: '',
-        yardSize: u.yardSize
+  // 2. NORMALIZE TO CANONICAL TYPES
+  // Convert DB format to our typed ImageMedia/VideoMedia
+  const normalizeImage = (img: any): any => { // Using any temporarily to bridge types, verified below
+      if (typeof img === 'string') return { url: img, category: 'featured' };
+      return { 
+          url: img.url, 
+          category: img.category || 'general',
+          isPrimary: img.isPrimary 
       };
-    })
-    .sort((a, b) => a.price - b.price);
+  };
 
+  const normalizeVideo = (v: any) => typeof v === 'string' ? { url: v } : v;
+
+  const normalizedImages = rawImages.map(normalizeImage);
+  const normalizedVideos = rawVideos.map(normalizeVideo);
+  
+  // Create the Data Object
+  const mediaData: DevelopmentMedia = {
+      featuredImage: normalizedImages.find((img: any) => img.isPrimary) || normalizedImages[0],
+      images: normalizedImages,
+      videos: normalizedVideos
+  };
+
+  // 3. APPLY CANONICAL LOGIC (Pure Decisions)
+  // 3. APPLY CANONICAL LOGIC (Pure Decisions)
+  const heroMedia = getDevelopmentHeroMedia(mediaData);
+  const galleryImages = buildDevelopmentGalleryImages(mediaData);
+  
+  // Bento Tiles
+  const amenityTile = getDevelopmentAmenityTileImage(mediaData);
+  const outdoorTile = getDevelopmentOutdoorsTileImage(mediaData);
+  const viewGalleryTile = getDevelopmentViewGalleryTileImage(mediaData);
+
+  // Jump Indices (Calculated once from the single truth gallery)
+  const galleryIndices = {
+      general: 0, // Always starts at 0
+      amenities: getGalleryStartIndex(galleryImages, 'amenities'),
+      outdoors: getGalleryStartIndex(galleryImages, 'outdoors'),
+      videos: 0, // Videos open separately in this UI pattern usually, or handled via specific index if mixed (but we don't mix)
+      floorPlans: 0 // Placeholder, we treat floorplans separate typically
+  };
+
+  // ... (Update development object)
   const development = {
+    // ... existing fields ...
     id: dev.id,
     name: dev.name,
     developer: dev.developer?.name || 'Unknown Developer',
@@ -230,85 +180,49 @@ export default function DevelopmentDetail() {
     totalUnits: dev.totalUnits || 0,
     availableUnits: dev.availableUnits || 0,
     startingPrice: Number(dev.priceFrom) || 0,
-    featuredMedia: videos.length > 0 ? {
-      type: 'video',
-      url: videos[0].url,
-    } : {
-      type: 'image',
-      url: images[0] || '',
-    },
-    totalPhotos: images.length,
-    images: images,
+    
+    // Media Props
+    heroMedia: heroMedia,
+    galleryImages: galleryImages,
+    
+    // Tiles
+    amenityTile: amenityTile,
+    outdoorTile: outdoorTile,
+    viewGalleryTile: viewGalleryTile,
+    
+    // Counts & Lists
+    totalPhotos: galleryImages.length,
+    totalVideos: normalizedVideos.length,
+    videoList: normalizedVideos,
+    floorPlans: floorPlans, // Kept separate for now
+    
+    indices: galleryIndices,
     amenities: amenities,
     units: units,
-    unifiedMedia: unifiedMedia,
-    indices: indices,
-    videos: videos,
-    floorPlans: floorPlans,
   };
 
-  const openLightbox = (index: number, title: string) => {
-    setLightboxIndex(index);
-    setLightboxTitle(title);
-    setLightboxOpen(true);
-  };
+  // ... (keep rest until return)
 
-
-
-  return (
-    <>
-      <MetaControl />
-      <ListingNavbar />
-      
-      {/* CRITICAL: Single root container with proper flow - pt-16 offsets fixed navbar */}
-      <div className="min-h-screen bg-slate-50 pt-16">
-        
-        {/* Breadcrumbs - Fixed container */}
-        <div className="w-full bg-white border-b border-slate-200">
-          <div className="container max-w-7xl mx-auto px-4 py-3">
-            <Breadcrumbs items={[
-                { label: 'Home', href: '/' },
-                { label: 'New Developments', href: '/new-developments' },
-                { label: dev.name, href: '#' }
-            ]} />
-          </div>
-        </div>
-
-        {/* Hero Section - Contained, no overflow */}
-        <div className="w-full bg-white">
-          <div className="container max-w-7xl mx-auto px-4 py-4">
-            <DevelopmentHeader 
-              name={development.name}
-              location={development.location}
-              isNewLaunch={true}
-              completionDate="Dec, 2027"
-              onContact={() => console.log('Contact Developer')}
-              onShare={() => console.log('Share')}
-              onFavorite={() => console.log('Favorite')}
-            />
-          </div>
-        </div>
-
-        {/* Gallery Section - CRITICAL: Isolated container with overflow control */}
-        <div className="w-full bg-white border-b border-slate-200">
-          <div className="container max-w-7xl mx-auto px-4 py-4">
-            {/* IMPORTANT: Wrapper to contain gallery overflow */}
-            <div className="relative w-full overflow-hidden">
-              <DevelopmentGallery
-                media={development.unifiedMedia}
-                totalPhotos={development.totalPhotos}
-                featuredMedia={development.featuredMedia}
-                indices={development.indices}
-                onOpenLightbox={(index, title) => openLightbox(index, title)}
-                videos={development.videos}
-                floorPlans={development.floorPlans}
-                images={development.images}
-                amenityImage={amenityImage}
-                outdoorImage={outdoorImage}
-              />
+            {/* Gallery Section - CRITICAL: Isolated container with overflow control */}
+            <div className="w-full bg-white border-b border-slate-200">
+              <div className="container max-w-7xl mx-auto px-4 py-4">
+                {/* IMPORTANT: Wrapper to contain gallery overflow */}
+                <div className="relative w-full overflow-hidden">
+                  <DevelopmentGallery
+                    featuredMedia={development.heroMedia}
+                    amenityTileImage={development.amenityTile}
+                    outdoorsTileImage={development.outdoorTile}
+                    viewGalleryTileImage={development.viewGalleryTile}
+                    totalPhotos={development.totalPhotos}
+                    totalVideos={development.totalVideos}
+                    videoList={development.videoList}
+                    floorPlans={development.floorPlans}
+                    indices={development.indices}
+                    onOpenLightbox={(index, title) => openLightbox(index, title)}
+                  />
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
         {/* Quick Info Section - ABOVE SectionNav */}
         <div className="w-full bg-white border-b border-slate-200">
           <div className="container max-w-7xl mx-auto px-4 py-6">

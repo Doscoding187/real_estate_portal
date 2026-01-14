@@ -7,6 +7,13 @@ import { developments, developers, unitTypes, developmentPhases } from '../../dr
 // =========================================================================== 
 
 interface CreateDevelopmentData {
+  // Identity
+  name: string;
+  tagline?: string;
+  developmentType: 'residential' | 'commercial' | 'mixed_use' | 'estate' | 'complex';
+  description?: string;
+  slug?: string;
+
   unitTypes?: UnitTypeData[];
   amenities?: string[] | string;
   showHouseAddress?: boolean;
@@ -536,6 +543,7 @@ export async function createDevelopment(
     developerId,
     slug,
     name: developmentData.name,
+    tagline: developmentData.tagline || null,
     description: developmentData.description || null,
     
     // Ownership configuration
@@ -692,9 +700,30 @@ export async function updateDevelopment(id: number, developerId: number, data: C
   // IMPORTANT: Partial updates MUST NOT overwrite existing JSON fields.
   // Wizard relies on patch semantics for resume/edit flows.
   const updatePayload: any = {
-      ...developmentData,
       updatedAt: new Date().toISOString(),
   };
+
+  // Explicitly map string fields (Safe from empty string vs undefined issues)
+  if (developmentData.name !== undefined) updatePayload.name = developmentData.name;
+  if (developmentData.tagline !== undefined) updatePayload.tagline = developmentData.tagline; // Explicit Map
+  if (developmentData.description !== undefined) updatePayload.description = developmentData.description;
+  if (developmentData.status !== undefined) updatePayload.status = developmentData.status;
+  if (developmentData.developmentType !== undefined) updatePayload.developmentType = developmentData.developmentType;
+
+  // Explicitly map numerical fields - CRITICAL for Wizard Persistence
+  const numericFields = [
+    'monthlyLevyFrom', 'monthlyLevyTo', 
+    'ratesFrom', 'ratesTo',
+    'priceFrom', 'priceTo',
+    'totalUnits', 'availableUnits',
+    'totalDevelopmentArea'
+  ];
+
+  numericFields.forEach(field => {
+    if (developmentData[field] !== undefined) {
+      updatePayload[field] = developmentData[field];
+    }
+  });
 
   // Only normalize and overwrite if provided (Partial Update Safety)
   if (developmentData.amenities !== undefined) updatePayload.amenities = normalizeAmenities(developmentData.amenities);
@@ -702,9 +731,17 @@ export async function updateDevelopment(id: number, developerId: number, data: C
   if (developmentData.features !== undefined) updatePayload.features = normalizeAmenities(developmentData.features);
   if (developmentData.images !== undefined) updatePayload.images = JSON.stringify(normalizeImages(developmentData.images));
 
+  // Merge Estate Specs (Don't overwrite if partial)
+  // Logic: We rely on the frontend to send the *complete* estate specs object if it changed, 
+  // currently we treat it as an atomic replace for simplicity, or we delve into merging.
+  // User plan advised: Merge-safe.
+  if (developmentData.estateSpecs !== undefined) {
+      // Since it's a JSON column, we can just save what the frontend sent as it contains the full state.
+      updatePayload.estateSpecs = developmentData.estateSpecs;
+  }
+
   // Identity Updates
   if (developmentData.nature !== undefined) updatePayload.nature = developmentData.nature;
-  if (developmentData.totalDevelopmentArea !== undefined) updatePayload.totalDevelopmentArea = developmentData.totalDevelopmentArea;
   if (developmentData.propertyTypes !== undefined) updatePayload.propertyTypes = JSON.stringify(developmentData.propertyTypes);
   if (developmentData.customClassification !== undefined) updatePayload.customClassification = developmentData.customClassification;
 

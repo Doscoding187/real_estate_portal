@@ -910,14 +910,20 @@ const createActions = (
           developmentData: {
               nature: 'new',
               name: data.name || '',
-              subtitle: data.subtitle || '',
+              subtitle: data.tagline ?? data.subtitle ?? '', // Hydrate Tagline (Prefer tagline from DB)
               description: data.description || '',
-              status: (data.projectStatus as any) || 'pre_launch', // Type cast for legacy compat or update DB schema later
+              status: (data.projectStatus as any) || 'pre_launch',
               completionDate: data.possessionDate ? new Date(data.possessionDate) : null,
               transactionType: data.transactionType || 'sale',
               ownershipType: data.ownershipType || 'sectional_title',
               propertyTypes: typeof data.propertyTypes === 'string' ? parse(data.propertyTypes, []) : (data.propertyTypes || []),
               customClassification: data.customClassification || '',
+              
+              // Financials Validation
+              monthlyLevyFrom: data.monthlyLevyFrom || 0,
+              monthlyLevyTo: data.monthlyLevyTo || 0,
+              ratesFrom: data.ratesFrom || 0,
+              ratesTo: data.ratesTo || 0,
               
               // Legacy / Calculated
               totalUnits: data.totalUnits,
@@ -934,7 +940,7 @@ const createActions = (
                   heroImage: photos.find(p => p.isPrimary),
                   photos: photos.filter(p => !p.isPrimary),
                   videos: videos,
-                  documents: documents // Hydrated from brochures field
+                  documents: documents
               },
               amenities: amenities || [],
               highlights: highlights || [],
@@ -962,7 +968,7 @@ const createActions = (
           residentialConfig: resConfig,
           landConfig: lndConfig,
           commercialConfig: comConfig,
-          estateProfile: estProfile, // Partial hydration (levy range omitted for now as not in payload)
+          estateProfile: data.estateSpecs || estProfile, // Hydrate directly from JSON column estateSpecs
           // Hydrate unit types if present in the payload
           unitTypes: Array.isArray(data.unitTypes) ? data.unitTypes.map((u: any) => ({
             ...u,

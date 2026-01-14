@@ -118,6 +118,7 @@ export function FinalisationPhase() {
           id: editingId,
           data: {
             name: developmentData.name,
+            tagline: developmentData.subtitle, // TAGLINE PERSISTENCE
             description: developmentData.description,
             developmentType: (developmentType || 'residential') as 'residential' | 'commercial' | 'mixed_use' | 'estate' | 'complex',
             address: developmentData.location?.address,
@@ -125,10 +126,18 @@ export function FinalisationPhase() {
             province: developmentData.location?.province,
             latitude: developmentData.location?.latitude,
             longitude: developmentData.location?.longitude,
+            
+            // Financials
+            monthlyLevyFrom: developmentData.monthlyLevyFrom,
+            monthlyLevyTo: developmentData.monthlyLevyTo,
+            ratesFrom: developmentData.ratesFrom,
+            ratesTo: developmentData.ratesTo,
+            
             amenities: selectedAmenities || developmentData.amenities || [],
             features,
             highlights: developmentData.highlights || [],
             unitTypes: unitTypes || [],
+            estateSpecs: store.estateProfile as any,
             images: images as any, // Cast to any to satisfy TS until router types propagate
             videos,
             brochures,
@@ -150,6 +159,7 @@ export function FinalisationPhase() {
 
         const result = await createDevelopment.mutateAsync({
           name: developmentData.name || 'Untitled Development',
+          tagline: developmentData.subtitle, // TAGLINE PERSISTENCE
           developmentType: (developmentType || 'residential') as 'residential' | 'commercial' | 'mixed_use' | 'estate' | 'complex',
           description: developmentData.description,
           address: developmentData.location?.address,
@@ -157,10 +167,18 @@ export function FinalisationPhase() {
           province: developmentData.location?.province || 'Unknown',
           latitude: developmentData.location?.latitude,
           longitude: developmentData.location?.longitude,
+          
+          // Financials
+          monthlyLevyFrom: developmentData.monthlyLevyFrom,
+          monthlyLevyTo: developmentData.monthlyLevyTo,
+          ratesFrom: developmentData.ratesFrom,
+          ratesTo: developmentData.ratesTo,
+
           amenities: selectedAmenities || developmentData.amenities || [],
           features,
           highlights: developmentData.highlights || [],
           unitTypes: unitTypes || [],
+          estateSpecs: store.estateProfile as any,
           images: images as any,
           videos,
           brochures,

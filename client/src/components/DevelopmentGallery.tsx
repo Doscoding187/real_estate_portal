@@ -1,14 +1,26 @@
 import { Play } from 'lucide-react';
-
-interface MediaItem {
-  type: 'image' | 'video';
-  url: string;
-}
+import type { ImageMedia, VideoMedia } from '@/lib/media-logic';
+import { VideoThumbnailGrid } from '@/components/media/VideoThumbnailGrid';
 
 interface DevelopmentGalleryProps {
-  media: MediaItem[];
+  // Pre-decided Media Buckets (Pure Data)
+  featuredMedia: { type: 'video', video: VideoMedia } | { type: 'image', image: ImageMedia | undefined };
+  
+  // Tiles (Jump Points)
+  amenityTileImage: ImageMedia | undefined;
+  outdoorsTileImage: ImageMedia | undefined;
+  viewGalleryTileImage: ImageMedia | undefined;
+
+  // Data for Labels/Badges
   totalPhotos: number;
-  featuredMedia: MediaItem;
+  totalVideos: number;
+  videoList: VideoMedia[]; // Needed for grid
+  floorPlans: { url: string }[];
+
+  // Action Handlers
+  onOpenLightbox: (index: number, title: string) => void;
+  
+  // Jump Indices
   indices: {
       general: number;
       amenities: number;
@@ -16,48 +28,48 @@ interface DevelopmentGalleryProps {
       videos: number;
       floorPlans: number;
   };
-  onOpenLightbox: (index: number, title: string) => void;
-  videos: any[];
-  floorPlans: any[];
-  images: string[];
 }
 
 export function DevelopmentGallery({
-  media,
-  totalPhotos,
   featuredMedia,
-  indices,
-  onOpenLightbox,
-  videos,
+  amenityTileImage,
+  outdoorsTileImage,
+  viewGalleryTileImage,
+  totalPhotos,
+  totalVideos,
+  videoList,
   floorPlans,
-  images,
-  amenityImage,
-  outdoorImage
-}: DevelopmentGalleryProps & { amenityImage?: string; outdoorImage?: string }) {
+  onOpenLightbox,
+  indices,
+}: DevelopmentGalleryProps) {
 
-  // Logic to determine Bottom Right Tile content to avoid redundancy
-  const showVideoTile = videos && videos.length > 0 && featuredMedia.type !== 'video';
+  // Logic to determine Bottom Right Tile content
+  // If videos trigger a dedicated tile, they take priority over floor plans/gallery
+  const showVideoTile = totalVideos > 0 && featuredMedia.type !== 'video';
   
   // Helper to render media content
-  const renderMediaContent = (item: MediaItem | undefined, alt: string) => {
-    if (!item) return <div className="w-full h-full bg-slate-100 flex items-center justify-center text-slate-400">No Image</div>;
-
-    if ('type' in item && item.type === 'video') {
-      return (
+  const renderFeaturedContent = () => {
+    if (featuredMedia.type === 'video') {
+       const video = featuredMedia.video;
+       return (
         <video
-          src={item.url}
+          src={video.url}
           className="w-full h-full object-cover"
           muted
           loop
           playsInline
-          poster="https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=1200"
+          // No generic placeholder - if video loads it shows, if not, browser default or we can add a specific poster later
         />
-      );
-    }
+       );
+    } 
+
+    const img = featuredMedia.image;
+    if (!img) return <div className="w-full h-full bg-slate-100 flex items-center justify-center text-slate-400">No Image</div>;
+
     return (
       <img
-        src={'url' in item ? item.url : item}
-        alt={alt}
+        src={img.url}
+        alt="Featured View"
         className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
       />
     );
@@ -67,7 +79,7 @@ export function DevelopmentGallery({
     <section className="grid grid-cols-1 lg:grid-cols-5 gap-3 h-[400px] max-h-[400px] overflow-hidden">
       {/* LEFT: Featured Media (60% - 3 columns) */}
       <div className="lg:col-span-3 relative rounded-card overflow-hidden shadow-sm h-full max-h-[400px] group bg-slate-900 ring-1 ring-black/5">
-        {renderMediaContent(featuredMedia, 'Featured View')}
+        {renderFeaturedContent()}
         
         {/* Overlay Action */}
         <button
@@ -82,7 +94,7 @@ export function DevelopmentGallery({
           {featuredMedia.type === 'video' ? (
              <>
                <Play className="w-3.5 h-3.5 fill-current" />
-               <span>View all {videos.length > 1 ? videos.length + ' ' : ''}videos</span>
+               <span>View all {totalVideos > 1 ? totalVideos + ' ' : ''}videos</span>
              </>
           ) : (
              <span>View all {totalPhotos} photos</span>
@@ -97,13 +109,17 @@ export function DevelopmentGallery({
           {/* Amenities Card */}
           <button
             onClick={() => onOpenLightbox(indices.amenities, 'Amenities')}
-            className="relative rounded-card overflow-hidden shadow-sm hover:shadow-md transition-all group h-[194px] ring-1 ring-black/5"
+            className="relative rounded-card overflow-hidden shadow-sm hover:shadow-md transition-all group h-[194px] ring-1 ring-black/5 bg-slate-100"
           >
-            <img
-              src={amenityImage || images[0]}
-              alt="Amenities"
-              className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-            />
+            {amenityTileImage ? (
+                <img
+                src={amenityTileImage.url}
+                alt="Amenities"
+                className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                />
+            ) : (
+                <div className="flex items-center justify-center h-full text-slate-400 text-xs">No Amenities</div>
+            )}
             <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
             <span className="absolute right-2.5 bottom-2.5 bg-white/95 backdrop-blur-md px-3 py-1.5 rounded-pill font-semibold text-[11px] shadow-sm border border-white/20">
               Amenities
@@ -113,13 +129,17 @@ export function DevelopmentGallery({
           {/* Outdoors Card */}
           <button
             onClick={() => onOpenLightbox(indices.outdoors, 'Outdoor Spaces')}
-            className="relative rounded-card overflow-hidden shadow-sm hover:shadow-md transition-all group h-[194px] ring-1 ring-black/5"
+            className="relative rounded-card overflow-hidden shadow-sm hover:shadow-md transition-all group h-[194px] ring-1 ring-black/5 bg-slate-100"
           >
-            <img
-              src={outdoorImage || images[0]}
-              alt="Outdoors"
-              className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-            />
+            {outdoorsTileImage ? (
+                <img
+                src={outdoorsTileImage.url}
+                alt="Outdoors"
+                className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                />
+            ) : (
+                <div className="flex items-center justify-center h-full text-slate-400 text-xs">No Outdoors</div>
+            )}
             <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
             <span className="absolute right-2.5 bottom-2.5 bg-white/95 backdrop-blur-md px-3 py-1.5 rounded-pill font-semibold text-[11px] shadow-sm border border-white/20">
               Outdoors
@@ -132,37 +152,32 @@ export function DevelopmentGallery({
             {(() => {
                 if (showVideoTile) {
                     return (
-                        <button
-                          onClick={() => onOpenLightbox(indices.videos, 'Videos')}
-                          className="relative w-full h-[194px] rounded-card overflow-hidden shadow-sm hover:shadow-md transition-all group ring-1 ring-black/5"
-                        >
-                          <img
-                            src="https://images.unsplash.com/photo-1600607687644-c7171b42498b?w=400"
-                            alt="Videos"
-                            className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-                          />
-                          <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
-                          <div className="absolute inset-0 flex items-center justify-center bg-black/10 group-hover:bg-black/0 transition-colors">
-                              <div className="w-9 h-9 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center border border-white/30">
-                                  <Play className="w-3.5 h-3.5 text-white fill-current" />
-                              </div>
-                          </div>
-                          <span className="absolute right-2.5 bottom-2.5 bg-white/95 backdrop-blur-md px-3 py-1.5 rounded-pill font-semibold text-[11px] shadow-sm border border-white/20">
-                            Videos ({videos.length})
-                          </span>
-                        </button>
+                        <div className="relative w-full h-[194px] rounded-card overflow-hidden shadow-sm hover:shadow-md transition-all group ring-1 ring-black/5 bg-black">
+                            {/* Uses the new VideoThumbnailGrid */}
+                            <VideoThumbnailGrid 
+                                videos={videoList} 
+                                onPlayClick={() => onOpenLightbox(indices.videos, 'Videos')}
+                                fallbackImage={viewGalleryTileImage?.url} 
+                            />
+                            
+                            <span className="absolute right-2.5 bottom-2.5 bg-white/95 backdrop-blur-md px-3 py-1.5 rounded-pill font-semibold text-[11px] shadow-sm border border-white/20 pointer-events-none">
+                                Videos ({totalVideos})
+                            </span>
+                        </div>
                     );
                 } else if (floorPlans && floorPlans.length > 0) {
                     return (
                         <button
                            onClick={() => onOpenLightbox(indices.floorPlans, 'Floor Plans')} 
-                           className="relative w-full h-[194px] rounded-card overflow-hidden shadow-sm hover:shadow-md transition-all group ring-1 ring-black/5"
+                           className="relative w-full h-[194px] rounded-card overflow-hidden shadow-sm hover:shadow-md transition-all group ring-1 ring-black/5 bg-slate-100"
                         >
-                            <img
-                                src={floorPlans[0]?.url || images[Math.min(2, images.length-1)] || ''}
-                                alt="Floor Plans"
-                                className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-                            />
+                            {floorPlans[0]?.url ? (
+                                <img
+                                    src={floorPlans[0].url}
+                                    alt="Floor Plans"
+                                    className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                                />
+                            ) : null}
                              <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
                              <span className="absolute right-2.5 bottom-2.5 bg-white/95 backdrop-blur-md px-3 py-1.5 rounded-pill font-semibold text-[11px] shadow-sm border border-white/20">
                                 Floor Plans
@@ -170,17 +185,19 @@ export function DevelopmentGallery({
                         </button>
                     );
                 } else {
-                    // Fallback to Gallery (more photos)
+                    // Fallback to Gallery (more photos) - using viewGalleryTileImage
                      return (
                         <button
                            onClick={() => onOpenLightbox(0, 'All Photos')} 
-                           className="relative w-full h-[194px] rounded-card overflow-hidden shadow-sm hover:shadow-md transition-all group ring-1 ring-black/5"
+                           className="relative w-full h-[194px] rounded-card overflow-hidden shadow-sm hover:shadow-md transition-all group ring-1 ring-black/5 bg-slate-100"
                         >
-                            <img
-                                src={images.length > 2 ? images[2] : 'https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=800'} 
-                                alt="Gallery"
-                                className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-                            />
+                            {viewGalleryTileImage ? (
+                                <img
+                                    src={viewGalleryTileImage.url}
+                                    alt="Gallery"
+                                    className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                                />
+                            ) : null}
                              <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
                              <span className="absolute right-2.5 bottom-2.5 bg-white/95 backdrop-blur-md px-3 py-1.5 rounded-pill font-semibold text-[11px] shadow-sm border border-white/20">
                                 View Gallery

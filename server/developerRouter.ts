@@ -462,6 +462,7 @@ export const developerRouter = router({
         marketingBrandProfileId: z.number().int().optional(), // Marketing Agency
         marketingRole: z.enum(['exclusive', 'joint', 'open']).optional(),
         name: z.string().min(2, 'Development name must be at least 2 characters'),
+        tagline: z.string().optional(),
         developmentType: z.enum(['residential', 'commercial', 'mixed_use', 'estate', 'complex']),
         description: z.string().optional(),
         address: z.string().optional(),
@@ -1011,7 +1012,9 @@ export const developerRouter = router({
       z.object({
         id: z.number().int(),
         data: z.object({
+          // Identity
           name: z.string().optional(),
+          tagline: z.string().optional(),
           description: z.string().optional(),
           status: z.enum(['planning', 'pre_launch', 'selling', 'sold_out', 'completed']).optional(),
           totalUnits: z.number().int().nonnegative().optional(),
