@@ -165,6 +165,8 @@ export default function DevelopmentDetail() {
 
   // Missing declaration restoration
   const floorPlans: any[] = []; // Initialize as empty array for now, or derive from units if available later
+  const amenities = parseJSON(dev.amenities);
+  const units = dev.unitTypes || [];
 
   // ... (Update development object)
   const development = {
@@ -183,6 +185,8 @@ export default function DevelopmentDetail() {
     totalUnits: dev.totalUnits || 0,
     availableUnits: dev.availableUnits || 0,
     startingPrice: Number(dev.priceFrom) || 0,
+    developmentType: dev.developmentType || 'residential',
+    status: dev.status,
     
     // Media Props
     heroMedia: heroMedia,
