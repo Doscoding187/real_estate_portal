@@ -24,13 +24,25 @@ export default function DevelopmentsDemo() {
   // Safe JSON parse helper
   const parseImages = (imagesVal: any): string[] => {
       if (!imagesVal) return [];
-      if (Array.isArray(imagesVal)) return imagesVal;
-      try {
-          const parsed = JSON.parse(imagesVal);
-          return Array.isArray(parsed) ? parsed : [];
-      } catch (e) {
-          return [];
+      
+      let parsed = imagesVal;
+      if (typeof imagesVal === 'string') {
+          try {
+              parsed = JSON.parse(imagesVal);
+          } catch (e) {
+              return [];
+          }
       }
+
+      if (Array.isArray(parsed)) {
+          return parsed.map((img: any) => {
+              if (typeof img === 'string') return img;
+              if (typeof img === 'object' && img !== null && 'url' in img) return img.url;
+              return '';
+          }).filter(Boolean);
+      }
+      
+      return [];
   };
 
   return (

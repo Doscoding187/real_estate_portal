@@ -200,9 +200,44 @@ export default function DeveloperBrandProfilePage() {
 
           {!isLoadingDevs && developments && developments.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {developments.map((dev) => (
-                <DevelopmentCard key={dev.id} development={dev} />
-              ))}
+              {developments.map((dev: any) => {
+                // Parse images safely
+                let images: string[] = [];
+                try {
+                  const rawImages = typeof dev.images === 'string' ? JSON.parse(dev.images) : dev.images;
+                  if (Array.isArray(rawImages)) {
+                    images = rawImages.map((img: any) => {
+                      if (typeof img === 'string') return img;
+                      if (typeof img === 'object' && img !== null && 'url' in img) return img.url;
+                      return '';
+                    }).filter(Boolean);
+                  }
+                } catch (e) {
+                  images = [];
+                }
+
+                return (
+                  <DevelopmentCard 
+                    key={dev.id} 
+                    id={dev.slug || String(dev.id)}
+                    title={dev.name}
+                    rating={Number(dev.rating) || 0}
+                    location={`${dev.suburb ? dev.suburb + ', ' : ''}${dev.city}`}
+                    description={dev.description || ''}
+                    image={images[0] || ''}
+                    unitTypes={dev.unitTypes || []}
+                    highlights={(dev.highlights as string[]) || []}
+                    developer={{
+                        name: profile.name,
+                        isFeatured: !!profile.stats.isVerified
+                    }}
+                    imageCount={images.length}
+                    isFeatured={!!dev.isFeatured}
+                    status={dev.status}
+                    nature={dev.nature} 
+                  />
+                );
+              })}
             </div>
           ) : !isLoadingDevs ? (
             <div className="bg-slate-100 rounded-xl p-12 text-center">

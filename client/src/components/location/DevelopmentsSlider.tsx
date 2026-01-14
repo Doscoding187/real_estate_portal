@@ -45,17 +45,25 @@ export function DevelopmentsSlider({ developments, locationName }: DevelopmentsS
             <CarouselContent className="-ml-4">
               {developments.map((dev) => {
                  // Handle image parsing safely
+                 // Handle image parsing safely
                  let mainImage = '';
-                 if (Array.isArray(dev.images) && dev.images.length > 0) {
-                   mainImage = dev.images[0];
+                 let imagesArr: any[] = [];
+                 
+                 if (Array.isArray(dev.images)) {
+                   imagesArr = dev.images;
                  } else if (typeof dev.images === 'string') {
                     try {
-                       // Sometimes comes as JSON string
-                       const parsed = JSON.parse(dev.images);
-                       mainImage = Array.isArray(parsed) ? parsed[0] : parsed;
+                       imagesArr = JSON.parse(dev.images);
+                       if (!Array.isArray(imagesArr)) imagesArr = [imagesArr];
                     } catch {
-                       mainImage = dev.images;
+                       imagesArr = [dev.images];
                     }
+                 }
+    
+                 if (imagesArr.length > 0) {
+                     const first = imagesArr[0];
+                     if (typeof first === 'string') mainImage = first;
+                     else if (typeof first === 'object' && first !== null && 'url' in first) mainImage = first.url;
                  }
 
                  return (

@@ -40,6 +40,30 @@ export default function Home() {
       path: `/${p.toLowerCase().replace(/\s+/g, '-')}`
   }));
 
+  // Helper to parse images
+  const parseImages = (imagesVal: any): string[] => {
+      if (!imagesVal) return [];
+      
+      let parsed = imagesVal;
+      if (typeof imagesVal === 'string') {
+          try {
+              parsed = JSON.parse(imagesVal);
+          } catch (e) {
+              return [];
+          }
+      }
+
+      if (Array.isArray(parsed)) {
+          return parsed.map((img: any) => {
+              if (typeof img === 'string') return img;
+              if (typeof img === 'object' && img !== null && 'url' in img) return img.url;
+              return '';
+          }).filter(Boolean);
+      }
+      
+      return [];
+  };
+
   // Fetch real developments from database
   const { data: gautengDevelopments = [], isLoading: gautengLoading } = trpc.developer.getPublishedDevelopments.useQuery({ 
     province: 'Gauteng', 
@@ -118,9 +142,16 @@ export default function Home() {
               <TabsContent key={province} value={province} className="mt-0 animate-slide-up">
                 {developmentsByProvince[province] && developmentsByProvince[province].length > 0 ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                    {developmentsByProvince[province].map(development => (
-                      <SimpleDevelopmentCard key={development.id} {...development} />
-                    ))}
+                    {developmentsByProvince[province].map(development => {
+                      const images = parseImages(development.images);
+                      return (
+                        <SimpleDevelopmentCard 
+                          key={development.id} 
+                          {...development} 
+                          image={images[0] || ''}
+                        />
+                      );
+                    })}
                   </div>
                 ) : (
                   <div className="text-left py-16 bg-gradient-to-br from-slate-50 to-blue-50/30 rounded-2xl border-2 border-dashed border-slate-300">
