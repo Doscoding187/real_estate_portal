@@ -69,7 +69,7 @@ export function GoogleLocationAutocomplete({
 
   // Initialize autocomplete service when API is loaded
   useEffect(() => {
-    if (!isLoaded || !window.google) return;
+    if (!isLoaded || !window.google || !window.google.maps || !window.google.maps.places) return;
 
     try {
       // Initialize Places service (requires a map, but we can use a dummy div)
@@ -105,7 +105,7 @@ export function GoogleLocationAutocomplete({
     if (!autocompleteServiceRef.current || !input.trim()) return;
 
     setIsLoading(true);
-    setError(null);
+    setLocalError(null);
 
     try {
       const request: any = {
@@ -134,7 +134,7 @@ export function GoogleLocationAutocomplete({
       });
     } catch (error) {
       console.error('Error getting place predictions:', error);
-      setError('Failed to get location suggestions');
+      setLocalError('Failed to get location suggestions');
       setIsLoading(false);
       setPredictions([]);
       setIsOpen(false);
@@ -200,11 +200,11 @@ export function GoogleLocationAutocomplete({
   // Get current location
   const getCurrentLocation = () => {
     if (!navigator.geolocation) {
-      setError('Geolocation is not supported by this browser.');
+      setLocalError('Geolocation is not supported by this browser.');
       return;
     }
 
-    setError(null);
+    setLocalError(null);
     navigator.geolocation.getCurrentPosition(
       position => {
         const { latitude, longitude } = position.coords;
@@ -253,7 +253,7 @@ export function GoogleLocationAutocomplete({
       },
       error => {
         console.error('Geolocation error:', error);
-        setError('Unable to get your current location. Please enable location services.');
+        setLocalError('Unable to get your current location. Please enable location services.');
       },
     );
   };

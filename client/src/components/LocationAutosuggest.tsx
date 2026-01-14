@@ -55,9 +55,11 @@ export function LocationAutosuggest({
   const { isLoaded } = useGoogleMaps();
 
   // Initialize autocomplete service
-  useEffect(() => {
-    if (isLoaded && window.google) {
+useEffect(() => {
+    if (isLoaded && window.google && window.google.maps && window.google.maps.places) {
       autocompleteService.current = new google.maps.places.AutocompleteService();
+    } else if (isLoaded && window.google && (!window.google.maps || !window.google.maps.places)) {
+      console.warn('Google Maps Places library is missing. Autocomplete will be disabled.');
     }
   }, [isLoaded]);
 

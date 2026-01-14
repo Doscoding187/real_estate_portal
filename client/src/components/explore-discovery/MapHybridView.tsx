@@ -21,10 +21,13 @@ interface MapHybridViewProps {
   onPropertyClick?: (propertyId: number) => void;
 }
 
+const libraries: ("places")[] = ['places'];
+
 export function MapHybridView({ categoryId, filters, onPropertyClick }: MapHybridViewProps) {
   const { isLoaded } = useJsApiLoader({
     id: 'google-map-script',
     googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '',
+    libraries,
   });
 
   const [viewMode, setViewMode] = useState<ViewMode>('split');

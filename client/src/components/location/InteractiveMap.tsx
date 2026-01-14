@@ -46,6 +46,8 @@ const defaultMapOptions = {
   fullscreenControl: true,
 };
 
+const libraries: ("places")[] = ['places'];
+
 export function InteractiveMap({ 
   center, 
   viewport, 
@@ -57,6 +59,7 @@ export function InteractiveMap({
 
   const { isLoaded, loadError } = useJsApiLoader({
     googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '',
+    libraries,
   });
 
   const onLoad = useCallback((map: google.maps.Map) => {
