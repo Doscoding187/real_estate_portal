@@ -56,8 +56,9 @@ export function DevelopmentGallery({
           src={video.url}
           className="w-full h-full object-cover"
           muted
-          loop
+          autoPlay
           playsInline
+          // loop={false} // User request: Play once then stop
           // No generic placeholder - if video loads it shows, if not, browser default or we can add a specific poster later
         />
        );
