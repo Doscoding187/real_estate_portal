@@ -484,7 +484,7 @@ export default function DevelopmentDetail() {
                                           <CardContent className="p-4 space-y-4 flex-1 flex flex-col">
                                             <div className="flex justify-between items-start">
                                               <div>
-                                                <h4 className="font-bold text-slate-900 text-lg">R {unit.price.toLocaleString()}</h4>
+                                                <h4 className="font-bold text-slate-900 text-lg">R {(unit.price || 0).toLocaleString()}</h4>
                                                 <p className="text-xs text-slate-500 mt-1">{unit.type}</p>
                                                 {unit.priceTo && (
                                                   <p className="text-xs text-slate-400 mt-0.5">
