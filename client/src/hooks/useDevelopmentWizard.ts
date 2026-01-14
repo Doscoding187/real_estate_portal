@@ -859,6 +859,18 @@ const createActions = (
       media: (() => {
         const parsedMedia = parse(source.media, { photos: [], videos: [], brochures: [] });
         
+        // Fix: Fallback to legacy 'images' column if 'media' column is empty
+        if ((!parsedMedia.photos || parsedMedia.photos.length === 0) && source.images) {
+           const legacyImages = parse(source.images, []);
+           if (Array.isArray(legacyImages) && legacyImages.length > 0) {
+             console.log('[hydrateDevelopment] Hydrating photos from legacy images source');
+             parsedMedia.photos = legacyImages.map((url: string | any) => {
+                if (typeof url === 'string') return { id: `img-${Math.random()}`, url, category: 'general', type: 'image' };
+                return url;
+             });
+           }
+        }
+        
         // Fix: Restore heroImage if missing but present in photos (Legacy/Structure Mismatch handling)
         if (!parsedMedia.heroImage && parsedMedia.photos?.length > 0) {
            // Look for featured/primary photo first

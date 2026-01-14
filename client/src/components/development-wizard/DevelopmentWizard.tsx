@@ -123,7 +123,7 @@ export function DevelopmentWizard({ developmentId, isModal = false }: Developmen
   }, [developmentData, overview, unitTypes, selectedAmenities, developmentMedia, store.residentialConfig]);
 
   const { lastSaved, isSaving, error: autoSaveError, saveNow } = useAutoSave(stateToWatch, {
-    debounceMs: 3000, // 3 Seconds debounce for safer persistence
+    debounceMs: 60000, // Reverted to 1 Minute because 3s caused data loss during hydration debugging
     onSave: async () => {
       // Trigger backend draft save
       await saveDraft(async (data) => {
