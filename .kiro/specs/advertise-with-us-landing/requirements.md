@@ -16,6 +16,7 @@ The "Advertise With Us" landing page is the primary conversion funnel for attrac
 - **Partner Type**: The category of advertiser (Agent, Developer, Bank, Bond Originator, Service Provider)
 - **High-Intent Audience**: Users actively searching for properties with clear purchase/rental intent
 - **Verified Lead**: A qualified inquiry that has been validated for authenticity
+- **Live Activity Feed**: A real-time ticker showing platform activity (e.g., "Agent X just joined", "Property listed in Sandton") to build trust
 - **Explore Feed**: The short-form video content discovery feature on the Platform
 - **Boost Campaign**: A paid promotion feature that increases content visibility
 
@@ -27,7 +28,7 @@ The "Advertise With Us" landing page is the primary conversion funnel for attrac
 
 #### Acceptance Criteria
 
-1. WHEN a user lands on the page THEN the Platform SHALL display a hero section with a clear headline communicating the core value proposition within 1.5 seconds
+1. WHEN a user lands on the page THEN the Platform SHALL display a hero section with a clear headline emphasizing "High-Intent Buyers Across South Africa"
 2. WHEN the hero section loads THEN the Platform SHALL present both primary and secondary CTAs with distinct visual hierarchy
 3. WHEN a user views the hero section THEN the Platform SHALL display a static, clickable billboard banner showcasing a featured development with image, name, tagline, and CTA
 4. WHEN the page loads THEN the Platform SHALL show trust signals including partner logos or trust statements below the hero CTAs
@@ -35,37 +36,37 @@ The "Advertise With Us" landing page is the primary conversion funnel for attrac
 
 ### Requirement 2
 
-**User Story:** As a potential partner, I want to quickly identify which partner category I belong to, so that I can access information relevant to my specific business type.
+**User Story:** As a potential partner, I want to immediately select my business role ("I am a..."), so that I see relevant benefits and don't feel lost in generic messaging.
 
 #### Acceptance Criteria
 
-1. WHEN a user scrolls to the partner selection section THEN the Platform SHALL display five distinct partner type cards (Agent, Developer, Bank, Bond Originator, Property Service Provider)
-2. WHEN a user views a partner type card THEN the Platform SHALL show an icon, title, one-sentence benefit, and a "Learn More" CTA for that partner type
-3. WHEN a user clicks a partner type card THEN the Platform SHALL navigate to the corresponding sub-landing page for that partner category
-4. WHEN a user hovers over a partner type card THEN the Platform SHALL apply a soft elevation animation with shadow expansion
+1. WHEN the hero section is viewed THEN the Platform SHALL display a prominent "Segmentation Layer" asking "I am a..." with options: Agent, Developer, Seller, or Partner
+2. WHEN a user selects a segment THEN the Platform SHALL dynamically update the immediate value proposition text to match that persona (e.g., "Get Qualified Leads" for Agents vs "Sell Faster" for Sellers)
+3. WHEN a user scrolls to the detailed partner selection section THEN the Platform SHALL display five distinct partner type cards with specific use-cases
+4. WHEN a user views a partner type card THEN the Platform SHALL show an icon, title, and a specific outcome-based benefit (e.g., "Agents: Close 3x more deals")
 5. WHERE the viewport is mobile THEN the Platform SHALL stack partner type cards vertically with touch-optimized spacing
 
 ### Requirement 3
 
-**User Story:** As a potential partner evaluating advertising options, I want to understand the key benefits of advertising on this platform, so that I can compare it against other advertising channels.
+**User Story:** As a potential partner, I want to understand specific benefits relevant to my role, so that I can see the ROI clearly.
 
 #### Acceptance Criteria
 
-1. WHEN a user views the value proposition section THEN the Platform SHALL display four feature blocks highlighting High-Intent Audience, AI-Driven Visibility, Verified Leads, and Dashboard Control
-2. WHEN each feature block loads THEN the Platform SHALL animate the block with a fade-up transition on scroll
-3. WHEN a user views a feature block THEN the Platform SHALL display a soft-UI icon, headline, and descriptive text for each benefit
-4. WHEN the value proposition section is visible THEN the Platform SHALL maintain consistent spacing and alignment across all feature blocks
+1. WHEN a user views the value proposition section THEN the Platform SHALL display four feature blocks: High-Intent Audience, AI-Driven Visibility, Verified Leads, and Dashboard Control
+2. WHEN displaying "AI-Driven Visibility" THEN the Platform SHALL explain the specific benefit (e.g., "Our algorithm matches your listing to buyers with verified budgets")
+3. WHEN displaying "Verified Leads" THEN the Platform SHALL highlight the friction-reduction benefit (e.g., "No more time-wasters, only pre-qualified buyers")
+4. WHEN a user interacts with a benefit block THEN the Platform SHALL show a "Use Case" tooltip or expander relevant to their selected segment
 5. WHERE the viewport is tablet or mobile THEN the Platform SHALL reflow feature blocks into a responsive grid maintaining readability
 
 ### Requirement 4
 
-**User Story:** As a potential partner new to the platform, I want to understand how the advertising process works, so that I can assess the effort required to get started.
+**User Story:** As a potential partner, I want to see a transparent, step-by-step process, so that I know exactly what to expect and don't fear complexity.
 
 #### Acceptance Criteria
 
-1. WHEN a user views the "How It Works" section THEN the Platform SHALL display three sequential steps with numbered indicators
-2. WHEN each step is displayed THEN the Platform SHALL show an icon, step title, and brief description for Create Profile, Add Listings, and Get Leads
-3. WHEN the "How It Works" section loads THEN the Platform SHALL present a prominent CTA button below the steps
+1. WHEN a user views the "How It Works" section THEN the Platform SHALL display a clear 3-step timeline: "Create Profile" → "Post Listing/Ad" → "Receive Leads"
+2. WHEN displaying the steps THEN the Platform SHALL include a "Friction Removal" statement (e.g., "Get started in under 2 minutes")
+3. WHEN the section loads THEN the Platform SHALL present a prominent CTA button "Start Now" that links to the onboarding flow
 4. WHEN a user views the steps THEN the Platform SHALL use visual hierarchy to indicate the sequential nature of the process
 5. WHERE the viewport is mobile THEN the Platform SHALL stack the three steps vertically with clear visual separation
 
@@ -83,13 +84,13 @@ The "Advertise With Us" landing page is the primary conversion funnel for attrac
 
 ### Requirement 6
 
-**User Story:** As a potential partner evaluating credibility, I want to see social proof and success metrics, so that I can trust that other businesses are successfully using this platform.
+**User Story:** As a potential partner, I want to see real-time activity and local success stories, so that I trust the platform is active and relevant in South Africa.
 
 #### Acceptance Criteria
 
-1. WHEN a user views the social proof section THEN the Platform SHALL display partner logos for developers, agencies, and financial institutions
-2. WHEN the social proof section loads THEN the Platform SHALL show four key metrics: Verified Leads Generated, Properties Promoted, Partner Satisfaction, and Active Partners
-3. WHEN metrics are displayed THEN the Platform SHALL use large, readable numbers with descriptive labels
+1. WHEN a user views the social proof section THEN the Platform SHALL display a "Live Activity Ticker" showing recent actions (e.g., "3 New Listings in Cape Town", "Agent Sarah joined")
+2. WHEN the social proof section loads THEN the Platform SHALL show key metrics: Verified Leads Generated, Properties Promoted, and Active Partners
+3. WHEN displaying testimonials THEN the Platform SHALL include the partner's role and location (e.g., "John D., Developer in Sandton")
 4. WHEN partner logos are shown THEN the Platform SHALL arrange them in a visually balanced grid or carousel
 5. WHERE actual data is unavailable THEN the Platform SHALL use placeholder metrics that will be replaced with real data
 
@@ -111,7 +112,7 @@ The "Advertise With Us" landing page is the primary conversion funnel for attrac
 
 #### Acceptance Criteria
 
-1. WHEN a user views the final CTA section THEN the Platform SHALL display a clean, minimal section with a compelling headline and subtext
+1. WHEN a user views the final CTA section THEN the Platform SHALL display a compelling headline addressing the primary benefit (e.g., "Ready to Grow Your Business?")
 2. WHEN the final CTA section loads THEN the Platform SHALL present both "Get Started" and "Request a Demo" buttons with distinct visual hierarchy
 3. WHERE the viewport is mobile THEN the Platform SHALL display a sticky CTA button labeled "Start Advertising" that remains visible during scroll
 4. WHEN a user clicks any primary CTA THEN the Platform SHALL navigate to the partner registration or contact form
@@ -119,13 +120,13 @@ The "Advertise With Us" landing page is the primary conversion funnel for attrac
 
 ### Requirement 9
 
-**User Story:** As a potential partner with questions, I want to quickly find answers to common concerns, so that I can resolve objections without needing to contact support.
+**User Story:** As a potential partner, I want answers to South Africa-specific questions, so that I know the platform works for my local market.
 
 #### Acceptance Criteria
 
-1. WHEN a user views the FAQ section THEN the Platform SHALL display 6-10 frequently asked questions in a collapsible accordion format
+1. WHEN a user views the FAQ section THEN the Platform SHALL display questions addressing local concerns (e.g., "Do you cover all 9 provinces?", "What are the payment methods in ZAR?")
 2. WHEN a user clicks an FAQ item THEN the Platform SHALL expand that item with a smooth animation while collapsing others
-3. WHEN FAQ items are displayed THEN the Platform SHALL use clear, concise language addressing common partner concerns
+3. WHEN FAQ items are displayed THEN the Platform SHALL address specific objections like "How is this different from Property24?"
 4. WHEN the FAQ section loads THEN the Platform SHALL organize questions in order of importance and frequency
 5. WHERE the viewport is mobile THEN the Platform SHALL ensure FAQ items are touch-friendly with adequate tap targets
 

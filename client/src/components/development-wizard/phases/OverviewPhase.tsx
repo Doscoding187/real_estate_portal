@@ -44,7 +44,8 @@ export function OverviewPhase() {
   // Local handler for highlights to use the store action
   const handleAddHighlight = () => {
     if (!highlightInput.trim()) return;
-    if (developmentData.highlights.includes(highlightInput.trim())) {
+    const highlights = developmentData.highlights || [];
+    if (highlights.includes(highlightInput.trim())) {
       toast.error('Highlight already exists');
       return;
     }
@@ -127,30 +128,30 @@ export function OverviewPhase() {
               <Textarea
                 placeholder="Describe the lifestyle, location benefits, and unique selling points..."
                 className="min-h-[200px] border-slate-200 focus:border-blue-500 resize-y"
-                value={developmentData.description}
+                value={developmentData.description || ''}
                 onChange={(e) => setIdentity({ description: e.target.value })}
               />
               <div className="flex justify-between items-center bg-slate-50 p-2 rounded-md border border-slate-100">
                 <div className="flex items-center gap-2">
-                   {developmentData.description.length < 50 ? (
-                      <span className="text-xs text-amber-600 flex items-center gap-1">
-                        ⚠️ Too short (min 50)
-                      </span>
-                   ) : developmentData.description.length < 150 ? (
-                      <span className="text-xs text-blue-600 flex items-center gap-1">
-                        ℹ️ Good start (aim for 150+)
-                      </span>
-                   ) : (
-                      <span className="text-xs text-green-600 flex items-center gap-1">
-                        ✅ Great length
-                      </span>
-                   )}
+                  {(developmentData.description?.length || 0) < 50 ? (
+                    <span className="text-xs text-amber-600 flex items-center gap-1">
+                      ⚠️ Too short (min 50)
+                    </span>
+                  ) : (developmentData.description?.length || 0) < 150 ? (
+                    <span className="text-xs text-blue-600 flex items-center gap-1">
+                      ℹ️ Good start (aim for 150+)
+                    </span>
+                  ) : (
+                    <span className="text-xs text-green-600 flex items-center gap-1">
+                      ✅ Great length
+                    </span>
+                  )}
                 </div>
                 <p className={cn(
                   "text-xs font-medium",
-                  developmentData.description.length >= 50 ? "text-slate-600" : "text-amber-600"
+                  (developmentData.description?.length || 0) >= 50 ? "text-slate-600" : "text-amber-600"
                 )}>
-                  {developmentData.description.length} / 5000 chars
+                  {developmentData.description?.length || 0} / 5000 chars
                 </p>
               </div>
             </div>
@@ -194,14 +195,14 @@ export function OverviewPhase() {
             </div>
 
             <div className="bg-slate-50 rounded-xl border-2 border-dashed border-slate-200 p-4 min-h-[100px]">
-              {developmentData.highlights.length === 0 ? (
+              {(developmentData.highlights?.length || 0) === 0 ? (
                 <div className="text-center text-slate-500 py-4">
                   <p className="text-sm font-medium">No highlights added yet.</p>
                   <p className="text-xs mt-1">Add points like "Pet Friendly", "Backup Power", or "Prime Location".</p>
                 </div>
               ) : (
                 <div className="flex flex-wrap gap-2">
-                  {developmentData.highlights.map((item, idx) => (
+                  {(developmentData.highlights || []).map((item, idx) => (
                     <Badge
                       key={idx}
                       variant="secondary"
@@ -220,15 +221,15 @@ export function OverviewPhase() {
                 </div>
               )}
             </div>
-             <p className="text-xs text-slate-500">
-                {developmentData.highlights.length} of 8 points added (Min 3)
-             </p>
+            <p className="text-xs text-slate-500">
+              {developmentData.highlights?.length || 0} of 8 points added (Min 3)
+            </p>
           </CardContent>
         </Card>
 
         {/* Development Status & Timeline */}
         <Card className="border-slate-200 shadow-sm">
-           <CardHeader className="bg-slate-50/50 border-b border-slate-100">
+          <CardHeader className="bg-slate-50/50 border-b border-slate-100">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-green-100 rounded-lg">
                 <Calendar className="w-5 h-5 text-green-600" />
@@ -244,47 +245,47 @@ export function OverviewPhase() {
             </div>
           </CardHeader>
           <CardContent className="pt-6 space-y-6">
-             <div className="grid md:grid-cols-2 gap-6">
-                <div className="space-y-3">
-                   <Label>Current Development Status</Label>
-                   <Select
-                      value={developmentData.status}
-                      onValueChange={(val: any) => setIdentity({ status: val })}
-                   >
-                      <SelectTrigger className="h-11">
-                         <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                         {DEVELOPMENT_STATUS_OPTIONS.map(opt => (
-                            <SelectItem key={opt.value} value={opt.value}>
-                               {opt.label}
-                            </SelectItem>
-                         ))}
-                      </SelectContent>
-                   </Select>
-                </div>
+            <div className="grid md:grid-cols-2 gap-6">
+              <div className="space-y-3">
+                <Label>Current Development Status</Label>
+                <Select
+                  value={developmentData.status}
+                  onValueChange={(val: any) => setIdentity({ status: val })}
+                >
+                  <SelectTrigger className="h-11">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {DEVELOPMENT_STATUS_OPTIONS.map(opt => (
+                      <SelectItem key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-                {showCompletionDate && (
-                   <div className="space-y-3 animate-in fade-in slide-in-from-left-2">
-                      <Label>Expected Completion Date</Label>
-                      <Input
-                        type="date"
-                        className="h-11"
-                        value={developmentData.completionDate ? new Date(developmentData.completionDate).toISOString().split('T')[0] : ''}
-                        onChange={(e) => setIdentity({ completionDate: e.target.value ? new Date(e.target.value) : null })}
-                      />
-                      <p className="text-xs text-slate-500">
-                         Approximate date for first occupation.
-                      </p>
-                   </div>
-                )}
-             </div>
+              {showCompletionDate && (
+                <div className="space-y-3 animate-in fade-in slide-in-from-left-2">
+                  <Label>Expected Completion Date</Label>
+                  <Input
+                    type="date"
+                    className="h-11"
+                    value={developmentData.completionDate ? new Date(developmentData.completionDate).toISOString().split('T')[0] : ''}
+                    onChange={(e) => setIdentity({ completionDate: e.target.value ? new Date(e.target.value) : null })}
+                  />
+                  <p className="text-xs text-slate-500">
+                    Approximate date for first occupation.
+                  </p>
+                </div>
+              )}
+            </div>
           </CardContent>
         </Card>
 
         {/* Financial Information */}
         <Card className="border-slate-200 shadow-sm">
-           <CardHeader className="bg-slate-50/50 border-b border-slate-100">
+          <CardHeader className="bg-slate-50/50 border-b border-slate-100">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-emerald-100 rounded-lg">
                 <Coins className="w-5 h-5 text-emerald-600" />
@@ -300,96 +301,96 @@ export function OverviewPhase() {
             </div>
           </CardHeader>
           <CardContent className="pt-6 space-y-6">
-             {/* Rates & Taxes */}
-             <div className="space-y-3">
-                <Label>Estimated Rates & Taxes (Monthly)</Label>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1">
-                    <span className="text-xs text-slate-500 uppercase font-medium">From</span>
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">R</span>
-                      <Input
-                        type="number"
-                        className="pl-7"
-                        placeholder="0"
-                        min={0}
-                        value={developmentData.ratesFrom || ''}
-                        onChange={(e) => setIdentity({ ratesFrom: Number(e.target.value) })}
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-1">
-                    <span className="text-xs text-slate-500 uppercase font-medium">To</span>
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">R</span>
-                      <Input
-                        type="number"
-                        className="pl-7"
-                        placeholder="0"
-                        min={0}
-                        value={developmentData.ratesTo || ''}
-                        onChange={(e) => setIdentity({ ratesTo: Number(e.target.value) })}
-                      />
-                    </div>
+            {/* Rates & Taxes */}
+            <div className="space-y-3">
+              <Label>Estimated Rates & Taxes (Monthly)</Label>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <span className="text-xs text-slate-500 uppercase font-medium">From</span>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">R</span>
+                    <Input
+                      type="number"
+                      className="pl-7"
+                      placeholder="0"
+                      min={0}
+                      value={developmentData.ratesFrom || ''}
+                      onChange={(e) => setIdentity({ ratesFrom: Number(e.target.value) })}
+                    />
                   </div>
                 </div>
-                <p className="text-xs text-slate-500">
-                   General rates range for units in this development.
-                </p>
-             </div>
+                <div className="space-y-1">
+                  <span className="text-xs text-slate-500 uppercase font-medium">To</span>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">R</span>
+                    <Input
+                      type="number"
+                      className="pl-7"
+                      placeholder="0"
+                      min={0}
+                      value={developmentData.ratesTo || ''}
+                      onChange={(e) => setIdentity({ ratesTo: Number(e.target.value) })}
+                    />
+                  </div>
+                </div>
+              </div>
+              <p className="text-xs text-slate-500">
+                General rates range for units in this development.
+              </p>
+            </div>
 
-             {/* Transfer Costs */}
-             <div className="flex items-center space-x-2 border p-3 rounded-lg bg-slate-50">
-                <Checkbox 
-                  id="transferCosts" 
-                  checked={developmentData.transferCostsIncluded || false}
-                  onCheckedChange={(checked) => setIdentity({ transferCostsIncluded: checked === true })}
+            {/* Transfer Costs */}
+            <div className="flex items-center space-x-2 border p-3 rounded-lg bg-slate-50">
+              <Checkbox
+                id="transferCosts"
+                checked={developmentData.transferCostsIncluded || false}
+                onCheckedChange={(checked) => setIdentity({ transferCostsIncluded: checked === true })}
+              />
+              <div className="grid gap-1.5 leading-none">
+                <Label htmlFor="transferCosts" className="cursor-pointer font-medium text-slate-700">
+                  Transfer Costs Included?
+                </Label>
+                <p className="text-xs text-slate-500">
+                  Check this if the developer covers transfer fees (marketing incentive).
+                </p>
+              </div>
+            </div>
+
+            {/* Reserve Price (New) */}
+            <div className="space-y-4 pt-4 border-t border-slate-100">
+              <div className="flex items-center space-x-2 border p-3 rounded-lg bg-slate-50">
+                <Checkbox
+                  id="reservePrice"
+                  checked={developmentData.reservePriceIncluded || false}
+                  onCheckedChange={(checked) => setIdentity({ reservePriceIncluded: checked === true })}
                 />
                 <div className="grid gap-1.5 leading-none">
-                  <Label htmlFor="transferCosts" className="cursor-pointer font-medium text-slate-700">
-                    Transfer Costs Included?
+                  <Label htmlFor="reservePrice" className="cursor-pointer font-medium text-slate-700">
+                    Reserve Price Included?
                   </Label>
                   <p className="text-xs text-slate-500">
-                    Check this if the developer covers transfer fees (marketing incentive).
+                    Does the listing have a minimum reserve price displayed to buyers?
                   </p>
                 </div>
-             </div>
+              </div>
 
-             {/* Reserve Price (New) */}
-             <div className="space-y-4 pt-4 border-t border-slate-100">
-                <div className="flex items-center space-x-2 border p-3 rounded-lg bg-slate-50">
-                    <Checkbox 
-                      id="reservePrice" 
-                      checked={developmentData.reservePriceIncluded || false}
-                      onCheckedChange={(checked) => setIdentity({ reservePriceIncluded: checked === true })}
+              {developmentData.reservePriceIncluded && (
+                <div className="pl-4 animate-in fade-in slide-in-from-top-2">
+                  <Label className="text-sm font-medium">Reserve Price Amount</Label>
+                  <div className="relative mt-1.5 w-full md:w-1/2">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500">R</span>
+                    <Input
+                      type="number"
+                      className="pl-7"
+                      placeholder="e.g. 1 500 000"
+                      min={0}
+                      value={developmentData.reservePriceAmount || ''}
+                      onChange={(e) => setIdentity({ reservePriceAmount: Number(e.target.value) })}
                     />
-                    <div className="grid gap-1.5 leading-none">
-                      <Label htmlFor="reservePrice" className="cursor-pointer font-medium text-slate-700">
-                        Reserve Price Included?
-                      </Label>
-                      <p className="text-xs text-slate-500">
-                        Does the listing have a minimum reserve price displayed to buyers?
-                      </p>
-                    </div>
+                  </div>
                 </div>
-
-                {developmentData.reservePriceIncluded && (
-                    <div className="pl-4 animate-in fade-in slide-in-from-top-2">
-                        <Label className="text-sm font-medium">Reserve Price Amount</Label>
-                        <div className="relative mt-1.5 w-full md:w-1/2">
-                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500">R</span>
-                          <Input
-                            type="number"
-                            className="pl-7"
-                            placeholder="e.g. 1 500 000"
-                            min={0}
-                            value={developmentData.reservePriceAmount || ''}
-                            onChange={(e) => setIdentity({ reservePriceAmount: Number(e.target.value) })}
-                          />
-                        </div>
-                    </div>
-                )}
-             </div>
+              )}
+            </div>
           </CardContent>
         </Card>
       </div>

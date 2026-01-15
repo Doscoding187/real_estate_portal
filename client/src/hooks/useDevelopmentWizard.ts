@@ -517,6 +517,42 @@ const initialState: Omit<DevelopmentWizardState, keyof ReturnType<typeof createA
   phaseDetails: {},
 };
 
+// =============================================================================
+// STATE NORMALIZER (Prevents partial updates from erasing required fields)
+// =============================================================================
+const DEFAULT_DEVELOPMENT_DATA = initialState.developmentData;
+
+/**
+ * Normalizes developmentData to ensure critical fields are never undefined.
+ * This prevents "Cannot read properties of undefined" errors in wizard phases.
+ */
+function normalizeDevelopmentData(
+  current: typeof DEFAULT_DEVELOPMENT_DATA,
+  updates: Partial<typeof DEFAULT_DEVELOPMENT_DATA>
+): typeof DEFAULT_DEVELOPMENT_DATA {
+  return {
+    ...current,
+    ...updates,
+    // CRITICAL: These fields must NEVER be undefined
+    name: updates.name ?? current.name ?? '',
+    description: updates.description ?? current.description ?? '',
+    highlights: updates.highlights ?? current.highlights ?? [],
+    amenities: updates.amenities ?? current.amenities ?? [],
+    propertyTypes: updates.propertyTypes ?? current.propertyTypes ?? [],
+    // Nested objects need deep merge
+    location: {
+      ...(current.location || {}),
+      ...(updates.location || {}),
+    },
+    media: {
+      photos: updates.media?.photos ?? current.media?.photos ?? [],
+      videos: updates.media?.videos ?? current.media?.videos ?? [],
+      documents: updates.media?.documents ?? current.media?.documents ?? [],
+      heroImage: updates.media?.heroImage ?? current.media?.heroImage,
+    },
+  };
+}
+
 // Helper function to create actions
 const createActions = (
   set: (partial: Partial<DevelopmentWizardState> | ((state: DevelopmentWizardState) => Partial<DevelopmentWizardState>)) => void,
@@ -534,21 +570,16 @@ const createActions = (
   setCurrentStep: (step: number) => set({ currentStep: step }),
 
   setIdentity: (data: Partial<DevelopmentWizardState['developmentData']>) => set((state) => {
-      const mergedData = {
-        ...state.developmentData,
-        ...data,
-        location: { ...(state.developmentData?.location || {}), ...(data.location || {}) },
-        media: { ...(state.developmentData?.media || { photos: [], videos: [], documents: [] }), ...(data.media || {}) },
-      };
+      // Use the normalizer to guarantee field preservation
+      const mergedData = normalizeDevelopmentData(state.developmentData, data);
       
       return {
         developmentData: mergedData,
         // Sync Overview Description if it changed
         overview: { 
             ...state.overview, 
-            description: mergedData.description || state.overview.description,
-            // Sync highlights if somehow data contained it (unlikely for setIdentity but safe)
-            highlights: mergedData.highlights || state.overview.highlights
+            description: mergedData.description || state.overview.description || '',
+            highlights: mergedData.highlights || state.overview.highlights || []
         } 
       };
   }),
@@ -898,6 +929,10 @@ const createActions = (
       transactionType: source.transactionType || 'sale',
       ownershipType: source.ownershipType || 'sectional_title',
       propertyTypes: typeof source.propertyTypes === 'string' ? parse(source.propertyTypes, []) : (source.propertyTypes || []),
+      
+      // CRITICAL: Marketing fields used by OverviewPhase - must NEVER be undefined
+      highlights: source.highlights ? parse(source.highlights, []) : [],
+      amenities: source.amenities ? parse(source.amenities, []) : [],
     };
 
     // ============================================================================
@@ -1103,7 +1138,8 @@ const createActions = (
   // LEGACY ACTIONS (Compatibility Layer)
   
   setDevelopmentData: (data: any) => set((state) => ({
-    developmentData: { ...state.developmentData, ...data }
+    // Use the normalizer to guarantee field preservation
+    developmentData: normalizeDevelopmentData(state.developmentData, data)
   })),
   
   setLocation: (loc: any) => set((state) => ({

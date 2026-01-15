@@ -1639,6 +1639,19 @@ export const platformSettings = mysqlTable("platform_settings", {
 	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
 });
 
+export const platformInquiries = mysqlTable("platform_inquiries", {
+	id: int().autoincrement().notNull(),
+	name: varchar({ length: 255 }).notNull(),
+	email: varchar({ length: 320 }).notNull(),
+	phone: varchar({ length: 50 }),
+	userType: mysqlEnum(['agent', 'developer', 'seller', 'partner', 'other']).notNull(),
+	intent: mysqlEnum(['advertise', 'software', 'partnership', 'support']).default('advertise').notNull(),
+	message: text(),
+	status: mysqlEnum(['new', 'contacted', 'converted', 'closed']).default('new').notNull(),
+	metadata: json(),
+	createdAt: timestamp({ mode: 'string' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
+});
+
 export const priceAnalytics = mysqlTable("price_analytics", {
 	id: int().autoincrement().notNull(),
 	locationId: int().notNull(),
