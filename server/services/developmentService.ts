@@ -1156,10 +1156,26 @@ async function updatePhase(phaseId: number, developerId: number, data: any) {
   return updated;
 }
 
-async function deleteDevelopment(id: number) {
+async function deleteDevelopment(id: number, developerId?: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
+  // Optionally verify ownership if developerId is provided and not -1 (platform mode)
+  if (developerId !== undefined && developerId !== -1) {
+    const [dev] = await db.select().from(developments).where(eq(developments.id, id)).limit(1);
+    if (!dev) throw new Error('Development not found');
+    if (dev.developerId !== developerId) throw new Error('Unauthorized: You do not own this development');
+  }
+
+  // CRITICAL: Delete child records first to avoid FK constraint errors
+  console.log('[deleteDevelopment] Deleting unit types for development:', id);
+  await db.delete(unitTypes).where(eq(unitTypes.developmentId, id));
+  
+  console.log('[deleteDevelopment] Deleting phases for development:', id);
+  await db.delete(developmentPhases).where(eq(developmentPhases.developmentId, id));
+
+  // Now delete the parent development
+  console.log('[deleteDevelopment] Deleting development:', id);
   const result = await db.delete(developments).where(eq(developments.id, id));
   return result;
 }
