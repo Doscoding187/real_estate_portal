@@ -1,119 +1,94 @@
 /**
  * PricingPreviewSection Component
  * 
- * Displays four pricing category cards with navigation to full pricing page.
- * Includes a "View Full Pricing" CTA button below the cards.
+ * Displays 3 pricing tiers (Starter, Professional, Enterprise) with feature lists.
+ * Highlights the "Professional" tier as most popular.
  * 
- * Requirements: 7.1, 7.2, 7.3, 7.4, 7.5
+ * Requirements: 7.1, 7.2, 7.3, 7.4, 7.5 (Updated to 3 tiers)
  */
 
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Users, Building2, Landmark, Wrench } from 'lucide-react';
-import { staggerContainer } from '@/lib/animations/advertiseAnimations';
-import { PricingCard } from './PricingCard';
+import { Check, Star } from 'lucide-react';
+import { staggerContainer, staggerItem } from '@/lib/animations/advertiseAnimations';
 import { CTAButton } from './CTAButton';
 
 export interface PricingPreviewSectionProps {
-  /**
-   * Optional custom pricing categories
-   */
-  pricingCategories?: Array<{
-    icon: any;
-    category: string;
-    description: string;
-    href: string;
-  }>;
-  
-  /**
-   * URL for the full pricing page
-   */
-  fullPricingHref?: string;
-  
-  /**
-   * Optional section title
-   */
   title?: string;
-  
-  /**
-   * Optional section subtitle
-   */
   subtitle?: string;
 }
 
-/**
- * Default pricing categories
- */
-const defaultPricingCategories = [
+interface PricingTier {
+  name: string;
+  price: string;
+  period?: string;
+  description: string;
+  features: string[];
+  ctaLabel: string;
+  ctaHref: string;
+  isPopular?: boolean;
+}
+
+const defaultPricingTiers: PricingTier[] = [
   {
-    icon: Users,
-    category: 'Agent Plans',
-    description: 'Flexible pricing for individual agents and small teams. Promote listings and capture leads.',
-    href: '/pricing/agents',
+    name: 'Starter',
+    price: 'R999',
+    period: '/mo',
+    description: 'Essential tools for individual agents to get started.',
+    features: [
+      'Up to 5 Active Listings',
+      'Basic Listing Promotion',
+      'Standard Email Support',
+      'Basic Performance Analytics',
+      'Mobile App Access'
+    ],
+    ctaLabel: 'Get Started',
+    ctaHref: '/register?plan=starter',
   },
   {
-    icon: Building2,
-    category: 'Developer Plans',
-    description: 'Comprehensive packages for property developers. Showcase developments and generate qualified leads.',
-    href: '/pricing/developers',
+    name: 'Professional',
+    price: 'R2,499',
+    period: '/mo',
+    description: 'Advanced features for growing agencies and top performers.',
+    features: [
+      'Unlimited Active Listings',
+      'Priority Search Placement',
+      'Verified Agent Badge',
+      'Advanced Lead Analytics',
+      'WhatsApp Lead Integration',
+      'Team Management (up to 5)'
+    ],
+    ctaLabel: 'Start Free Trial',
+    ctaHref: '/register?plan=professional',
+    isPopular: true,
   },
   {
-    icon: Landmark,
-    category: 'Bank/Loan Provider Plans',
-    description: 'Targeted advertising for financial institutions. Connect with home buyers seeking financing.',
-    href: '/pricing/financial',
-  },
-  {
-    icon: Wrench,
-    category: 'Service Provider Plans',
-    description: 'Affordable options for property service providers. Reach homeowners and property managers.',
-    href: '/pricing/services',
-  },
+    name: 'Enterprise',
+    price: 'Custom',
+    period: '',
+    description: 'Tailored solutions for large developers and franchises.',
+    features: [
+      'API Access & Integrations',
+      'Dedicated Account Manager',
+      'Custom Branding Options',
+      'Multi-Office Management',
+      'Custom Reporting & Exports',
+      'SLA & Priority Support'
+    ],
+    ctaLabel: 'Contact Sales',
+    ctaHref: '/contact/enterprise',
+  }
 ];
 
-/**
- * Track "View Full Pricing" CTA click
- */
-const trackViewFullPricingClick = (href: string) => {
-  if (typeof window !== 'undefined' && (window as any).gtag) {
-    (window as any).gtag('event', 'cta_click', {
-      label: 'View Full Pricing',
-      location: 'pricing_preview',
-      href,
-      timestamp: new Date().toISOString(),
-    });
-  }
-  
-  console.log('View Full Pricing Click:', { href });
-};
-
 export const PricingPreviewSection: React.FC<PricingPreviewSectionProps> = ({
-  pricingCategories = defaultPricingCategories,
-  fullPricingHref = '/pricing',
-  title = 'Pricing That Fits Your Business',
-  subtitle = 'Choose the plan that works for you. All plans include our core features with flexible options to scale as you grow.',
+  title = 'Simple, Transparent Pricing',
+  subtitle = 'Choose the plan that fits your business needs. No hidden fees.',
 }) => {
-  // Defensive check: ensure pricingCategories is defined and is an array
-  if (!pricingCategories || !Array.isArray(pricingCategories) || pricingCategories.length === 0) {
-    console.warn('PricingPreviewSection: pricingCategories prop is missing or empty');
-    return (
-      <section
-        className="pricing-preview-section py-20 md:py-28 bg-gray-50"
-        aria-labelledby="pricing-preview-heading"
-      >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <p className="text-gray-600">Loading pricing information...</p>
-        </div>
-      </section>
-    );
-  }
-
   return (
     <section
-      className="pricing-preview-section py-20 md:py-28 bg-white"
+      className="pricing-preview-section py-20 md:py-28 bg-gray-50"
       aria-labelledby="pricing-preview-heading"
     >
-      {/* Container with max width */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
         <motion.div
@@ -125,50 +100,83 @@ export const PricingPreviewSection: React.FC<PricingPreviewSectionProps> = ({
         >
           <h2
             id="pricing-preview-heading"
-            className="text-3xl md:text-4xl font-semibold leading-tight mb-4"
+            className="text-3xl md:text-4xl font-bold text-gray-900 mb-4"
           >
             {title}
           </h2>
-          <p
-            className="text-lg md:text-xl text-gray-600 leading-relaxed max-w-2xl mx-auto"
-          >
+          <p className="text-lg md:text-xl text-gray-600 max-w-2xl mx-auto">
             {subtitle}
           </p>
         </motion.div>
 
-        {/* Pricing Cards Grid */}
+        {/* Pricing Tiers Grid */}
         <motion.div
-          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8 pricing-cards-grid mb-10 md:mb-12"
+          className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto"
           variants={staggerContainer}
           initial="initial"
           whileInView="animate"
           viewport={{ once: true, margin: '-50px' }}
         >
-          {pricingCategories.map((category) => (
-            <PricingCard
-              key={category.category}
-              icon={category.icon}
-              category={category.category}
-              description={category.description}
-              href={category.href}
-            />
+          {defaultPricingTiers.map((tier, index) => (
+            <motion.div
+              key={tier.name}
+              variants={staggerItem}
+              className={`relative flex flex-col bg-white rounded-2xl shadow-lg overflow-hidden border-2 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl ${tier.isPopular ? 'border-blue-500 ring-4 ring-blue-500/10' : 'border-transparent'
+                }`}
+            >
+              {tier.isPopular && (
+                <div className="absolute top-0 right-0 bg-blue-500 text-white text-xs font-bold px-3 py-1 rounded-bl-lg flex items-center gap-1">
+                  <Star className="w-3 h-3 fill-current" />
+                  MOST POPULAR
+                </div>
+              )}
+
+              <div className="p-8 flex-grow">
+                <h3 className="text-xl font-bold text-gray-900 mb-2">{tier.name}</h3>
+                <div className="flex items-baseline mb-4">
+                  <span className="text-4xl font-extrabold text-gray-900">{tier.price}</span>
+                  {tier.period && <span className="text-gray-500 ml-1">{tier.period}</span>}
+                </div>
+                <p className="text-gray-600 mb-6 text-sm leading-relaxed">
+                  {tier.description}
+                </p>
+
+                <ul className="space-y-4 mb-8">
+                  {tier.features.map((feature, idx) => (
+                    <li key={idx} className="flex items-start gap-3">
+                      <div className="flex-shrink-0 w-5 h-5 rounded-full bg-green-100 flex items-center justify-center mt-0.5">
+                        <Check className="w-3 h-3 text-green-600" />
+                      </div>
+                      <span className="text-gray-600 text-sm">{feature}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              <div className="p-8 pt-0 mt-auto">
+                <CTAButton
+                  label={tier.ctaLabel}
+                  href={tier.ctaHref}
+                  variant={tier.isPopular ? 'primary' : 'secondary'}
+                  fullWidth
+                  className={tier.isPopular ? 'shadow-blue-200' : ''}
+                />
+              </div>
+            </motion.div>
           ))}
         </motion.div>
 
-        {/* View Full Pricing CTA */}
+        {/* Bottom Note */}
         <motion.div
-          className="flex justify-center"
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
+          className="text-center mt-12"
+          initial={{ opacity: 0 }}
+          whileInView={{ opacity: 1 }}
           viewport={{ once: true }}
-          transition={{ duration: 0.5, delay: 0.3 }}
+          transition={{ delay: 0.6 }}
         >
-          <CTAButton
-            label="View Full Pricing"
-            href={fullPricingHref}
-            variant="secondary"
-            onClick={() => trackViewFullPricingClick(fullPricingHref)}
-          />
+          <p className="text-gray-500 text-sm">
+            Prices exclude VAT. Annual billing available with 2 months free.
+          </p>
         </motion.div>
       </div>
     </section>
