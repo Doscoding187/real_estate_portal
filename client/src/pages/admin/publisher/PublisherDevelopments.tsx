@@ -27,7 +27,22 @@ const PublisherDevelopments: React.FC = () => {
     { enabled: !!selectedBrandId }
   );
 
-  // Delete mutation would go here, linked to admin functionality if needed
+  // Delete mutation for developments
+  const deleteMutation = trpc.developer.deleteDevelopment.useMutation({
+    onSuccess: () => {
+      toast.success('Development deleted successfully');
+      refetch();
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Failed to delete development');
+    },
+  });
+
+  const handleDeleteDevelopment = (devId: number, devName: string) => {
+    if (window.confirm(`Are you sure you want to delete "${devName}"? This action cannot be undone.`)) {
+      deleteMutation.mutate({ id: devId });
+    }
+  };
 
   const safeDevelopments = developments || [];
 
@@ -127,7 +142,7 @@ const PublisherDevelopments: React.FC = () => {
                     priceFrom: dev.priceFrom
                 })}
                 onEdit={(id) => setLocation(`/developer/create-development?id=${id}&brandProfileId=${selectedBrandId}`)}
-                onDelete={() => {}} // Disabled for now in emulator
+                onDelete={(id) => handleDeleteDevelopment(id, dev.name)}
                 onView={(id) => setLocation(`/development/${id}`)}
               />
           )})
