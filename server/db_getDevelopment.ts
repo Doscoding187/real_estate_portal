@@ -1,3 +1,6 @@
+import { getDb } from './db';
+import { developments, developers, unitTypes } from '../drizzle/schema';
+import { eq, and } from 'drizzle-orm';
 
 /**
  * Get a single public development by ID
@@ -50,8 +53,8 @@ export async function getPublicDevelopment(id: number) {
   // 2. Fetch Unit Types
   const unitTypesRes = await db
     .select()
-    .from(require('../drizzle/schema').unitTypes)
-    .where(eq(require('../drizzle/schema').unitTypes.developmentId, id));
+    .from(unitTypes)
+    .where(eq(unitTypes.developmentId, id));
 
   return {
     ...dev,
