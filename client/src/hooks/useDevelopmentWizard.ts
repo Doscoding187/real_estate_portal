@@ -91,11 +91,19 @@ export interface SpecVariation {
 // Unit Type Interface (with Inheritance)
 export interface UnitType {
   id: string;
-  developmentId?: number;
+  developmentId: number; // Required - FK to developments
   
   // Base Configuration
+  label?: string; // Optional display label (e.g., "Type A", "The Ebony")
   name: string; // "2 Bedroom Apartment", "60m² Simplex"
   description?: string; // Marketing description for this unit type
+  configDescription?: string; // Additional configuration notes
+  
+  // Ownership & Structure (from backend schema)
+  ownershipType?: 'full-title' | 'sectional-title' | 'leasehold' | 'life-rights';
+  structuralType?: 'apartment' | 'freestanding-house' | 'simplex' | 'duplex' | 'penthouse' | 'plot-and-plan' | 'townhouse' | 'studio';
+  floors?: 'single-storey' | 'double-storey' | 'triplex';
+  
   usageType?: 'residential' | 'commercial'; // For Mixed-Use
   bedrooms: number;
   bathrooms: number;
@@ -112,7 +120,8 @@ export interface UnitType {
   // Price Range & Costs
   priceFrom: number;
   priceTo: number; // Can equal priceFrom if fixed price
-  transferCostsIncluded?: boolean; // NEW: Boolean flag
+  depositRequired?: number; // Deposit amount required
+  transferCostsIncluded?: boolean; // Boolean flag
   // Extended Costs (Ranges for variable unit sizes)
   monthlyLevyFrom?: number; 
   monthlyLevyTo?: number;
@@ -153,8 +162,26 @@ export interface UnitType {
   // NEW: Pricing Extras (Base Price + Extras Model)
   extras?: { label: string; price: number }[];
 
-  // Specifications & Finishes (Legacy / Detail View)
-  specifications: {
+  // Base Features (from backend schema)
+  baseFeatures?: {
+    builtInWardrobes: boolean;
+    tiledFlooring: boolean;
+    graniteCounters: boolean;
+    prepaidElectricity: boolean;
+    balcony: boolean;
+    petFriendly: boolean;
+  };
+  
+  // Base Finishes (from backend schema)
+  baseFinishes?: {
+    paintAndWalls?: string;
+    flooringTypes?: string;
+    kitchenFeatures?: string;
+    bathroomFeatures?: string;
+  };
+  
+  // Legacy specifications structure (deprecated, use baseFeatures/baseFinishes)
+  specifications?: {
     builtInFeatures: {
       builtInWardrobes: boolean;
       tiledFlooring: boolean;
@@ -172,20 +199,28 @@ export interface UnitType {
   };
   
   // Base Media (inherited by all specs)
-  baseMedia: {
-    gallery: MediaItem[];
-    floorPlans: MediaItem[];
-    renders: MediaItem[];
+  baseMedia?: {
+    gallery: Array<{ id: string; url: string; isPrimary: boolean }>;
+    floorPlans: Array<{ id: string; url: string; type: 'image' | 'pdf' }>;
+    renders: Array<{ id: string; url: string; type: 'image' | 'video' }>;
   };
   
-  // Spec Variations
-  specs: SpecVariation[];
+  // Virtual Tour & Notes
+  virtualTourLink?: string; // URL to virtual tour
+  internalNotes?: string; // Internal notes (not shown to public)
+  
+  // Spec Variations & Overrides
+  specs?: SpecVariation[];
+  specOverrides?: any; // JSON field for spec-specific overrides
   
   // Metadata
-  displayOrder: number;
-  isActive: boolean;
-  createdAt: Date;
-  updatedAt: Date;
+  displayOrder?: number;
+  isActive?: boolean;
+  completionDate?: string; // ISO date string
+  
+  // DB-managed timestamps (optional - not part of input DTO)
+  createdAt?: string; // ISO timestamp string (DB-managed)
+  updatedAt?: string; // ISO timestamp string (DB-managed)
 }
 
 // Development Wizard State Interface
