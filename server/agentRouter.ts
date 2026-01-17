@@ -17,6 +17,7 @@ import {
 import { eq, and, desc, gte, lte, sql, count, inArray, like, or } from 'drizzle-orm';
 import { EmailService } from './_core/emailService';
 import { ENV } from './_core/env';
+import { nowAsDbTimestamp } from './utils/dbTypeUtils';
 
 // Pipeline stages for Kanban board
 const PIPELINE_STAGES = ['new', 'contacted', 'viewing', 'offer', 'closed'] as const;
@@ -60,10 +61,15 @@ export const agentRouter = router({
     }
 
     const agentId = agentRecord.id;
-    const now = new Date();
-    const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-    const today = new Date(now.setHours(0, 0, 0, 0));
-    const tomorrow = new Date(today.getTime() + 24 * 60 * 60 * 1000);
+    // Date calculations
+    const todayDate = new Date();
+    todayDate.setHours(0, 0, 0, 0);
+    const tomorrowDate = new Date(todayDate);
+    tomorrowDate.setDate(tomorrowDate.getDate() + 1);
+    
+    const today = todayDate.toISOString();
+    const tomorrow = tomorrowDate.toISOString();
+    const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
 
     // Active listings count
     const [activeListingsResult] = await db
@@ -156,11 +162,11 @@ export const agentRouter = router({
       }
 
       if (input.filters?.dateRange?.start) {
-        conditions.push(gte(leads.createdAt, new Date(input.filters.dateRange.start)));
+        conditions.push(gte(leads.createdAt, new Date(input.filters.dateRange.start).toISOString()));
       }
 
       if (input.filters?.dateRange?.end) {
-        conditions.push(lte(leads.createdAt, new Date(input.filters.dateRange.end)));
+        conditions.push(lte(leads.createdAt, new Date(input.filters.dateRange.end).toISOString()));
       }
 
       // Get all leads for this agent
@@ -281,7 +287,7 @@ export const agentRouter = router({
         .update(leads)
         .set({
           status: newStatus,
-          updatedAt: new Date(),
+          updatedAt: nowAsDbTimestamp(),
         })
         .where(eq(leads.id, input.leadId));
 
@@ -615,7 +621,7 @@ export const agentRouter = router({
         .update(leads)
         .set({
           status: input.status,
-          updatedAt: new Date(),
+          updatedAt: nowAsDbTimestamp(),
         })
         .where(eq(leads.id, input.leadId));
 
@@ -681,7 +687,7 @@ export const agentRouter = router({
       });
 
       // Update lead's updatedAt
-      await db.update(leads).set({ updatedAt: new Date() }).where(eq(leads.id, input.leadId));
+      await db.update(leads).set({ updatedAt: nowAsDbTimestamp() }).where(eq(leads.id, input.leadId));
 
       return { success: true };
     }),
@@ -736,10 +742,10 @@ export const agentRouter = router({
       const conditions = [eq(showings.agentId, agentRecord.id)];
 
       if (input.startDate) {
-        conditions.push(gte(showings.scheduledAt, new Date(input.startDate)));
+        conditions.push(gte(showings.scheduledAt, new Date(input.startDate).toISOString()));
       }
       if (input.endDate) {
-        conditions.push(lte(showings.scheduledAt, new Date(input.endDate)));
+        conditions.push(lte(showings.scheduledAt, new Date(input.endDate).toISOString()));
       }
       if (input.status && input.status !== 'all') {
         conditions.push(eq(showings.status, input.status as any));
@@ -811,7 +817,7 @@ export const agentRouter = router({
         .set({
           status: input.status,
           notes: input.notes || showings.notes,
-          updatedAt: new Date(),
+          updatedAt: nowAsDbTimestamp(),
         })
         .where(and(eq(showings.id, input.showingId), eq(showings.agentId, agentRecord.id)));
 
@@ -908,7 +914,7 @@ export const agentRouter = router({
         quarter: 90,
         year: 365,
       }[input.period];
-      const startDate = new Date(now.getTime() - periodDays * 24 * 60 * 60 * 1000);
+      const startDate = new Date(now.getTime() - periodDays * 24 * 60 * 60 * 1000).toISOString();
 
       // Leads contacted
       const [leadsContactedResult] = await db
@@ -1154,7 +1160,7 @@ export const agentRouter = router({
       }
 
       // Update property
-      const updateData: any = { ...input.updates, updatedAt: new Date() };
+      const updateData: any = { ...input.updates, updatedAt: nowAsDbTimestamp() };
       if (input.updates.featured !== undefined) {
         updateData.featured = input.updates.featured ? 1 : 0;
       }
