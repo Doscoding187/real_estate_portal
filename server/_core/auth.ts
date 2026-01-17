@@ -177,7 +177,7 @@ class AuthService {
     role: 'visitor' | 'agent' | 'agency_admin' | 'property_developer' = 'visitor',
     agentProfile?: {
       displayName: string;
-      phoneNumber: string;
+      phone: string;
       bio?: string;
       licenseNumber?: string;
       specializations?: string[];
@@ -213,11 +213,11 @@ class AuthService {
       if (database) {
         await database.execute(sql`
           INSERT INTO pending_agent_profiles 
-          (userId, displayName, phoneNumber, bio, licenseNumber, specializations)
+          (userId, displayName, phone, bio, licenseNumber, specializations)
           VALUES (
             ${userId}, 
             ${agentProfile.displayName}, 
-            ${agentProfile.phoneNumber}, 
+            ${agentProfile.phone}, 
             ${agentProfile.bio || null}, 
             ${agentProfile.licenseNumber || null}, 
             ${agentProfile.specializations ? agentProfile.specializations.join(',') : null}
@@ -396,7 +396,7 @@ class AuthService {
           await db.createAgentProfile({
             userId: user.id,
             displayName: profileData.displayName,
-            phoneNumber: profileData.phoneNumber,
+            phone: profileData.phone,
             bio: profileData.bio,
             licenseNumber: profileData.licenseNumber,
             specializations: profileData.specializations ? profileData.specializations.split(',') : undefined,
