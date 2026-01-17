@@ -2427,7 +2427,7 @@ export async function archiveListing(id: number) {
 export async function createAgentProfile(data: {
   userId: number;
   displayName: string;
-  phoneNumber: string;
+  phone: string;
   bio?: string;
   profilePhoto?: string;
   licenseNumber?: string;
@@ -2439,11 +2439,11 @@ export async function createAgentProfile(data: {
   const result = await db.insert(agents).values({
     userId: data.userId,
     displayName: data.displayName,
-    phoneNumber: data.phoneNumber || data.displayName, // Use displayName as fallback
+    phone: data.phone,
     bio: data.bio || null,
-    profilePhoto: data.profilePhoto || null,
+    profileImage: data.profilePhoto || null,
     licenseNumber: data.licenseNumber || null,
-    specializations: data.specializations ? data.specializations.join(',') : null,
+    specialization: data.specializations ? data.specializations.join(',') : null,
     firstName: data.displayName.split(' ')[0] || data.displayName,
     lastName: data.displayName.split(' ').slice(1).join(' ') || '',
     isVerified: 0,

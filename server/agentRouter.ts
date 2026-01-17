@@ -467,7 +467,7 @@ export const agentRouter = router({
     .input(
       z.object({
         displayName: z.string().min(2).max(100),
-        phoneNumber: z.string().min(10).max(20),
+        phone: z.string().min(10).max(20),
         bio: z.string().max(1000).optional(),
         profilePhoto: z.string().optional(),
         licenseNumber: z.string().optional(),
@@ -491,7 +491,12 @@ export const agentRouter = router({
       // Create agent profile
       const agentId = await db.createAgentProfile({
         userId: ctx.user.id,
-        ...input,
+        displayName: input.displayName,
+        phone: input.phone,
+        bio: input.bio,
+        profilePhoto: input.profilePhoto,
+        licenseNumber: input.licenseNumber,
+        specializations: input.specializations,
       });
 
       return { success: true, agentId };
