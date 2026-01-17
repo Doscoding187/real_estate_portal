@@ -38,6 +38,7 @@ import {
 } from '../drizzle/schema';
 import { eq, desc, asc, and, or, like, sql } from 'drizzle-orm';
 import { logAudit, AuditActions } from './_core/auditLog';
+import { nowAsDbTimestamp } from './utils/dbTypeUtils';
 import { developmentService } from './services/developmentService';
 
 /**
@@ -373,7 +374,7 @@ export const adminRouter = router({
         .set({
           status: input.status,
           reviewedBy: ctx.user.id,
-          reviewedAt: new Date(),
+          reviewedAt: nowAsDbTimestamp(),
         })
         .where(eq(agencyJoinRequests.id, input.requestId));
 
@@ -721,11 +722,11 @@ export const adminRouter = router({
 
       const updateData: any = {
         subscriptionPlan: input.plan,
-        updatedAt: new Date(),
+        updatedAt: nowAsDbTimestamp(),
       };
 
       if (input.status) updateData.subscriptionStatus = input.status;
-      if (input.expiry) updateData.subscriptionExpiry = new Date(input.expiry);
+      if (input.expiry) updateData.subscriptionExpiry = new Date(input.expiry).toISOString();
 
       await db.update(agencies).set(updateData).where(eq(agencies.id, input.agencyId));
 
@@ -802,8 +803,8 @@ export const adminRouter = router({
       const db = await getDb();
       if (!db) throw new Error('Database not available');
 
-      const startDate = input?.startDate ? new Date(input.startDate) : new Date(Date.now() - 90 * 24 * 60 * 60 * 1000); // Default: 90 days ago
-      const endDate = input?.endDate ? new Date(input.endDate) : new Date();
+      const startDate = input?.startDate ? new Date(input.startDate).toISOString() : new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString();
+      const endDate = input?.endDate ? new Date(input.endDate).toISOString() : new Date().toISOString();
 
       // Get commission revenue
       const [commissionStats] = await db.execute(sql`
@@ -889,8 +890,8 @@ export const adminRouter = router({
 
       if (input.status) conditions.push(eq(commissions.status, input.status));
       if (input.transactionType) conditions.push(eq(commissions.transactionType, input.transactionType));
-      if (input.startDate) conditions.push(gte(commissions.createdAt, new Date(input.startDate)));
-      if (input.endDate) conditions.push(lte(commissions.createdAt, new Date(input.endDate)));
+      if (input.startDate) conditions.push(gte(commissions.createdAt, new Date(input.startDate).toISOString()));
+      if (input.endDate) conditions.push(lte(commissions.createdAt, new Date(input.endDate).toISOString()));
 
       const where = conditions.length > 0 ? and(...conditions) : undefined;
 
@@ -1000,6 +1001,7 @@ export const adminRouter = router({
 
       const monthsAgo = new Date();
       monthsAgo.setMonth(monthsAgo.getMonth() - input.months);
+      const monthsAgoISO = monthsAgo.toISOString();
 
       // Get commission revenue by period
       const commissionRevenue = await db.execute(sql`
@@ -1008,7 +1010,7 @@ export const adminRouter = router({
           SUM(CASE WHEN status = 'paid' THEN amount ELSE 0 END) as revenue,
           COUNT(*) as count
         FROM ${commissions}
-        WHERE ${commissions.createdAt} >= ${monthsAgo}
+        WHERE ${commissions.createdAt} >= ${monthsAgoISO}
         GROUP BY DATE_FORMAT(${commissions.createdAt}, '%Y-%m')
         ORDER BY period ASC
       `);
@@ -1020,7 +1022,7 @@ export const adminRouter = router({
           SUM(CASE WHEN status = 'paid' THEN amount ELSE 0 END) as revenue,
           COUNT(*) as count
         FROM ${invoices}
-        WHERE ${invoices.createdAt} >= ${monthsAgo}
+        WHERE ${invoices.createdAt} >= ${monthsAgoISO}
         GROUP BY DATE_FORMAT(${invoices.createdAt}, '%Y-%m')
         ORDER BY period ASC
       `);
@@ -1189,12 +1191,13 @@ export const adminRouter = router({
       // Linear projection based on last 3 months
       const threeMonthsAgo = new Date();
       threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+      const threeMonthsAgoISO = threeMonthsAgo.toISOString();
 
       const recentRevenue = await db.execute(sql`
         SELECT SUM(amount) as total 
         FROM ${subscriptionTransactions} 
         WHERE status = 'completed' 
-        AND createdAt >= ${threeMonthsAgo}
+        AND createdAt >= ${threeMonthsAgoISO}
       `);
 
       const totalRecent = Number((recentRevenue as any)[0]?.total || 0) / 100;
@@ -1209,7 +1212,7 @@ export const adminRouter = router({
         predictedAmount: monthlyAverage * multiplier,
         confidenceScore: 0.7, // Moderate confidence for simple projection
         methodology: 'linear_projection_fallback',
-        createdAt: new Date(),
+        createdAt: nowAsDbTimestamp(),
       };
     }),
 
