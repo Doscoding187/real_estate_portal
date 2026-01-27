@@ -27,25 +27,35 @@ export function BasicInfoTab({ formData, updateFormData, classification }: Basic
       {/* Unit Type Name */}
       <Card className="p-6 bg-gradient-to-br from-blue-50 to-white border-blue-200">
         <div className="flex justify-between items-start mb-4">
-           <h3 className="text-lg font-semibold text-slate-900">Unit Identification</h3>
-           {isMixedUse && (
-             <div className="flex flex-col items-end gap-2">
-                <Label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Usage Type</Label>
-                <ToggleGroup 
-                  type="single" 
-                  value={formData.usageType || 'residential'}
-                  onValueChange={(val) => val && updateFormData({ usageType: val as any })}
-                  className="bg-white border rounded-lg p-1"
+          <h3 className="text-lg font-semibold text-slate-900">Unit Identification</h3>
+          {isMixedUse && (
+            <div className="flex flex-col items-end gap-2">
+              <Label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                Usage Type
+              </Label>
+              <ToggleGroup
+                type="single"
+                value={formData.usageType || 'residential'}
+                onValueChange={val => val && updateFormData({ usageType: val as any })}
+                className="bg-white border rounded-lg p-1"
+              >
+                <ToggleGroupItem
+                  value="residential"
+                  aria-label="Residential"
+                  className="data-[state=on]:bg-blue-100 data-[state=on]:text-blue-700"
                 >
-                   <ToggleGroupItem value="residential" aria-label="Residential" className="data-[state=on]:bg-blue-100 data-[state=on]:text-blue-700">
-                      <Home className="w-4 h-4 mr-2" /> Residential
-                   </ToggleGroupItem>
-                   <ToggleGroupItem value="commercial" aria-label="Commercial" className="data-[state=on]:bg-amber-100 data-[state=on]:text-amber-700">
-                      <Building className="w-4 h-4 mr-2" /> Commercial
-                   </ToggleGroupItem>
-                </ToggleGroup>
-             </div>
-           )}
+                  <Home className="w-4 h-4 mr-2" /> Residential
+                </ToggleGroupItem>
+                <ToggleGroupItem
+                  value="commercial"
+                  aria-label="Commercial"
+                  className="data-[state=on]:bg-amber-100 data-[state=on]:text-amber-700"
+                >
+                  <Building className="w-4 h-4 mr-2" /> Commercial
+                </ToggleGroupItem>
+              </ToggleGroup>
+            </div>
+          )}
         </div>
 
         <div className="space-y-4">
@@ -194,16 +204,16 @@ export function BasicInfoTab({ formData, updateFormData, classification }: Basic
             Parking Type
           </Label>
           <Select
-            value={formData.parking || 'none'}
-            onValueChange={value => updateFormData({ parking: value as any })}
+            value={formData.parkingType || 'none'}
+            onValueChange={value => updateFormData({ parkingType: value as any })}
           >
             <SelectTrigger id="parking" className="mt-1">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="none">None</SelectItem>
-              <SelectItem value="1">1 Bay</SelectItem>
-              <SelectItem value="2">2 Bays</SelectItem>
+              <SelectItem value="open">Open Bay</SelectItem>
+              <SelectItem value="covered">Covered Bay</SelectItem>
               <SelectItem value="carport">Carport</SelectItem>
               <SelectItem value="garage">Garage</SelectItem>
             </SelectContent>

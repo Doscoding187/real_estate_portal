@@ -1,9 +1,9 @@
 /**
  * Resource Hints Configuration
- * 
+ *
  * Task 12.3: Optimize CSS delivery
  * Requirements: 10.1
- * 
+ *
  * Provides utilities for adding resource hints to improve page load performance.
  * - preconnect: Establish early connections to important origins
  * - dns-prefetch: Resolve DNS early for third-party domains
@@ -37,7 +37,6 @@ export const advertisePageResourceHints: ResourceHint[] = [
     rel: 'dns-prefetch',
     href: 'https://images.unsplash.com',
   },
-
 ];
 
 /**
@@ -46,11 +45,11 @@ export const advertisePageResourceHints: ResourceHint[] = [
 export function injectResourceHints(hints: ResourceHint[]): void {
   if (typeof document === 'undefined') return;
 
-  hints.forEach((hint) => {
+  hints.forEach(hint => {
     const link = document.createElement('link');
     link.rel = hint.rel;
     link.href = hint.href;
-    
+
     if (hint.as) link.setAttribute('as', hint.as);
     if (hint.type) link.setAttribute('type', hint.type);
     if (hint.crossorigin) link.setAttribute('crossorigin', hint.crossorigin);
@@ -69,9 +68,9 @@ export function preloadCriticalCSS(href: string): void {
   link.rel = 'preload';
   link.as = 'style';
   link.href = href;
-  
+
   // Convert to stylesheet after load
-  link.onload = function() {
+  link.onload = function () {
     link.onload = null;
     link.rel = 'stylesheet';
   };
@@ -89,9 +88,9 @@ export function deferNonCriticalCSS(href: string): void {
   link.rel = 'stylesheet';
   link.href = href;
   link.media = 'print'; // Load with low priority
-  
+
   // Switch to all media after load
-  link.onload = function() {
+  link.onload = function () {
     link.media = 'all';
   };
 

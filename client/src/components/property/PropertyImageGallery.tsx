@@ -66,7 +66,7 @@ export function PropertyImageGallery({ images, propertyTitle }: PropertyImageGal
           className="w-full h-[500px] object-cover cursor-pointer transition-transform hover:scale-105"
           onClick={() => setIsLightboxOpen(true)}
         />
-        
+
         {/* Image Counter */}
         <div className="absolute top-4 right-4 bg-black/70 text-white px-3 py-1.5 rounded-full text-sm font-medium">
           {selectedImageIndex + 1} / {sortedImages.length}
@@ -96,11 +96,7 @@ export function PropertyImageGallery({ images, propertyTitle }: PropertyImageGal
 
         {/* Expand Buttons */}
         <div className="absolute bottom-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => setIsLightboxOpen(true)}
-          >
+          <Button variant="secondary" size="sm" onClick={() => setIsLightboxOpen(true)}>
             <ZoomIn className="h-4 w-4 mr-2" />
             View All Photos
           </Button>

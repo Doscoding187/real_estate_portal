@@ -1,6 +1,6 @@
 /**
  * SEO Head Component
- * 
+ *
  * Provides comprehensive meta tags for the Advertise With Us landing page:
  * - Title tag (50-70 characters)
  * - Meta description (150-160 characters)
@@ -9,7 +9,7 @@
  * - Canonical URL
  */
 
-import { Helmet } from 'react-helmet';
+import { Helmet } from 'react-helmet-async';
 
 interface SEOHeadProps {
   title?: string;
@@ -32,10 +32,10 @@ export function SEOHead({
       <title>{title}</title>
       <meta name="title" content={title} />
       <meta name="description" content={description} />
-      
+
       {/* Canonical URL */}
       <link rel="canonical" href={canonicalUrl} />
-      
+
       {/* Open Graph / Facebook */}
       <meta property="og:type" content={ogType} />
       <meta property="og:url" content={canonicalUrl} />
@@ -46,7 +46,7 @@ export function SEOHead({
       <meta property="og:image:height" content="630" />
       <meta property="og:site_name" content="Property Platform" />
       <meta property="og:locale" content="en_ZA" />
-      
+
       {/* Twitter Card */}
       <meta name="twitter:card" content="summary_large_image" />
       <meta name="twitter:url" content={canonicalUrl} />
@@ -54,17 +54,17 @@ export function SEOHead({
       <meta name="twitter:description" content={description} />
       <meta name="twitter:image" content={ogImage} />
       <meta name="twitter:image:alt" content="Advertise With Us - Property Platform" />
-      
+
       {/* Additional SEO Meta Tags */}
       <meta name="robots" content="index, follow" />
       <meta name="language" content="English" />
       <meta name="revisit-after" content="7 days" />
       <meta name="author" content="Property Platform" />
-      
+
       {/* Keywords (less important for modern SEO but still useful) */}
-      <meta 
-        name="keywords" 
-        content="property advertising, real estate marketing, property developers, estate agents, property leads, South Africa property, property promotion, real estate advertising" 
+      <meta
+        name="keywords"
+        content="property advertising, real estate marketing, property developers, estate agents, property leads, South Africa property, property promotion, real estate advertising"
       />
     </Helmet>
   );

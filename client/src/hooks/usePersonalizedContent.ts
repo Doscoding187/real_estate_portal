@@ -33,7 +33,7 @@ export function usePersonalizedContent(options: UsePersonalizedContentOptions = 
     limit: 10,
     offset: 0,
   });
-  
+
   const forYouData = forYouQuery.data;
   const forYouLoading = forYouQuery.isLoading;
 
@@ -47,9 +47,9 @@ export function usePersonalizedContent(options: UsePersonalizedContentOptions = 
     },
     {
       enabled: !!options.location,
-    }
+    },
   );
-  
+
   const popularNearYouData = popularNearYouQuery.data;
   const popularNearYouLoading = popularNearYouQuery.isLoading;
 
@@ -59,7 +59,7 @@ export function usePersonalizedContent(options: UsePersonalizedContentOptions = 
     limit: 10,
     offset: 0,
   });
-  
+
   const newDevelopmentsData = newDevelopmentsQuery.data;
   const newDevelopmentsLoading = newDevelopmentsQuery.isLoading;
 
@@ -69,7 +69,7 @@ export function usePersonalizedContent(options: UsePersonalizedContentOptions = 
     limit: 10,
     offset: 0,
   });
-  
+
   const trendingData = trendingQuery.data;
   const trendingLoading = trendingQuery.isLoading;
 
@@ -82,10 +82,12 @@ export function usePersonalizedContent(options: UsePersonalizedContentOptions = 
     const newSections: PersonalizedSection[] = [];
 
     // Check if we have any real data
-    const hasRealData = 
+    const hasRealData =
       (forYouData && Array.isArray(forYouData) && forYouData.length > 0) ||
       (popularNearYouData && Array.isArray(popularNearYouData) && popularNearYouData.length > 0) ||
-      (newDevelopmentsData && Array.isArray(newDevelopmentsData) && newDevelopmentsData.length > 0) ||
+      (newDevelopmentsData &&
+        Array.isArray(newDevelopmentsData) &&
+        newDevelopmentsData.length > 0) ||
       (trendingData && Array.isArray(trendingData) && trendingData.length > 0);
 
     // Use placeholder data if no real data and placeholder is enabled
@@ -125,11 +127,13 @@ export function usePersonalizedContent(options: UsePersonalizedContentOptions = 
     }
 
     // New Developments section
-    if (newDevelopmentsData && Array.isArray(newDevelopmentsData) && newDevelopmentsData.length > 0) {
-      const developments = newDevelopmentsData.filter(
-        (item: any) => item.developmentId
-      );
-      
+    if (
+      newDevelopmentsData &&
+      Array.isArray(newDevelopmentsData) &&
+      newDevelopmentsData.length > 0
+    ) {
+      const developments = newDevelopmentsData.filter((item: any) => item.developmentId);
+
       if (developments.length > 0) {
         newSections.push({
           id: 'new-developments',
@@ -148,9 +152,9 @@ export function usePersonalizedContent(options: UsePersonalizedContentOptions = 
     // Trending section
     if (trendingData && Array.isArray(trendingData) && trendingData.length > 0) {
       const sorted = [...trendingData].sort(
-        (a: any, b: any) => (b.viewCount || 0) - (a.viewCount || 0)
+        (a: any, b: any) => (b.viewCount || 0) - (a.viewCount || 0),
       );
-      
+
       newSections.push({
         id: 'trending',
         title: 'Trending',
@@ -171,7 +175,14 @@ export function usePersonalizedContent(options: UsePersonalizedContentOptions = 
     }
 
     setSections(newSections);
-  }, [forYouData, popularNearYouData, newDevelopmentsData, trendingData, usePlaceholderData, isLoading]);
+  }, [
+    forYouData,
+    popularNearYouData,
+    newDevelopmentsData,
+    trendingData,
+    usePlaceholderData,
+    isLoading,
+  ]);
 
   return {
     sections,

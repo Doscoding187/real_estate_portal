@@ -57,7 +57,7 @@ async function createBackup(): Promise<string> {
     // Save to file
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
     const backupDir = path.join(process.cwd(), 'backups');
-    
+
     if (!fs.existsSync(backupDir)) {
       fs.mkdirSync(backupDir, { recursive: true });
     }
@@ -102,7 +102,7 @@ async function removeOrphanedUnits(): Promise<number> {
         LEFT JOIN developments d ON ut.development_id = d.id
         WHERE d.id IS NULL
       `);
-      
+
       console.log(`   ✅ Deleted ${orphaned.length} orphaned units\n`);
     }
 
@@ -135,7 +135,8 @@ async function deduplicateUnits(): Promise<number> {
     if (duplicates.length > 0) {
       // For each duplicate ID, keep the newest (based on created_at)
       for (const dup of duplicates) {
-        await connection.execute(`
+        await connection.execute(
+          `
           DELETE FROM unit_types
           WHERE id = ?
           AND created_at < (
@@ -143,7 +144,9 @@ async function deduplicateUnits(): Promise<number> {
               SELECT created_at FROM unit_types WHERE id = ?
             ) as temp
           )
-        `, [dup.id, dup.id]);
+        `,
+          [dup.id, dup.id],
+        );
       }
 
       console.log(`   ✅ Removed duplicate entries\n`);
@@ -171,9 +174,15 @@ async function fixJsonFields(): Promise<number> {
     console.log(`   Processing ${allDevs.length} developments...`);
 
     const jsonFields = [
-      'media', 'amenities', 'estateSpecs', 'specifications',
-      'residentialConfig', 'landConfig', 'commercialConfig', 
-      'mixedUseConfig', 'keywords'
+      'media',
+      'amenities',
+      'estateSpecs',
+      'specifications',
+      'residentialConfig',
+      'landConfig',
+      'commercialConfig',
+      'mixedUseConfig',
+      'keywords',
     ];
 
     for (const dev of allDevs) {
@@ -182,7 +191,7 @@ async function fixJsonFields(): Promise<number> {
 
       for (const field of jsonFields) {
         const value = (dev as any)[field];
-        
+
         if (!value || value === 'null') {
           // Set default based on field
           const defaults: any = {
@@ -196,7 +205,7 @@ async function fixJsonFields(): Promise<number> {
             mixedUseConfig: {},
             keywords: [],
           };
-          
+
           updates[field] = JSON.stringify(defaults[field] || {});
           needsUpdate = true;
           continue;
@@ -208,7 +217,7 @@ async function fixJsonFields(): Promise<number> {
         // Try parsing to detect double-stringification
         try {
           const parsed = JSON.parse(value);
-          
+
           // If parsing returns a string, it's double-stringified
           if (typeof parsed === 'string') {
             const doubleParsed = JSON.parse(parsed);
@@ -228,16 +237,14 @@ async function fixJsonFields(): Promise<number> {
             mixedUseConfig: {},
             keywords: [],
           };
-          
+
           updates[field] = JSON.stringify(defaults[field] || {});
           needsUpdate = true;
         }
       }
 
       if (needsUpdate) {
-        await db.update(developments)
-          .set(updates)
-          .where(eq(developments.id, dev.id));
+        await db.update(developments).set(updates).where(eq(developments.id, dev.id));
         fixed++;
       }
     }
@@ -254,7 +261,7 @@ async function fixJsonFields(): Promise<number> {
 
       for (const field of unitJsonFields) {
         const value = (unit as any)[field];
-        
+
         if (!value || value === 'null') {
           const defaults: any = {
             extras: [],
@@ -263,7 +270,7 @@ async function fixJsonFields(): Promise<number> {
             baseMedia: { gallery: [], floorPlans: [], renders: [] },
             specs: [],
           };
-          
+
           updates[field] = JSON.stringify(defaults[field] || {});
           needsUpdate = true;
           continue;
@@ -285,16 +292,14 @@ async function fixJsonFields(): Promise<number> {
             baseMedia: { gallery: [], floorPlans: [], renders: [] },
             specs: [],
           };
-          
+
           updates[field] = JSON.stringify(defaults[field] || {});
           needsUpdate = true;
         }
       }
 
       if (needsUpdate) {
-        await db.update(unitTypes)
-          .set(updates)
-          .where(eq(unitTypes.id, unit.id));
+        await db.update(unitTypes).set(updates).where(eq(unitTypes.id, unit.id));
         fixed++;
       }
     }
@@ -373,7 +378,7 @@ async function verifyIntegrity(): Promise<void> {
     // Check 3: Count invalid JSON
     const allDevs = await db.select().from(developments);
     let invalidJson = 0;
-    
+
     for (const dev of allDevs) {
       try {
         if (dev.media) JSON.parse(dev.media as string);
@@ -387,7 +392,7 @@ async function verifyIntegrity(): Promise<void> {
     console.log(`   - Orphaned units: ${orphanCount}`);
     console.log(`   - Duplicate IDs: ${dupCount}`);
     console.log(`   - Invalid JSON: ${invalidJson}`);
-    
+
     if (orphanCount === 0 && dupCount === 0 && invalidJson === 0) {
       console.log('\n   ✅ Data integrity verified - All checks passed!\n');
     } else {

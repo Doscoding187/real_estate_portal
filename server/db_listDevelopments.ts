@@ -1,4 +1,3 @@
-
 /**
  * List public published developments with richer details for the demo page
  */
@@ -26,12 +25,7 @@ export async function listPublicDevelopments(limit: number = 20) {
     })
     .from(developments)
     .innerJoin(developers, eq(developments.developerId, developers.id))
-    .where(
-      and(
-        eq(developments.isPublished, 1),
-        eq(developments.approvalStatus, 'approved')
-      )
-    )
+    .where(and(eq(developments.isPublished, 1), eq(developments.approvalStatus, 'approved')))
     .orderBy(desc(developments.isFeatured), desc(developments.createdAt))
     .limit(limit);
 
@@ -39,9 +33,9 @@ export async function listPublicDevelopments(limit: number = 20) {
   // This is an N+1 query optimization using inArray if needed, or just iterate.
   // For simplicity/speed in this verification, I'll fetch unit types for all fetched dev IDs
   const devIds = results.map(d => d.id);
-  
+
   let unitTypesMap: Record<number, any[]> = {};
-  
+
   if (devIds.length > 0) {
     const units = await db
       .select({
@@ -53,19 +47,19 @@ export async function listPublicDevelopments(limit: number = 20) {
       .from(require('../drizzle/schema').unitTypes)
       .where(inArray(require('../drizzle/schema').unitTypes.developmentId, devIds));
 
-     // Group by developmentId
-     units.forEach((u: any) => {
-        if (!unitTypesMap[u.developmentId]) unitTypesMap[u.developmentId] = [];
-        unitTypesMap[u.developmentId].push({
-            bedrooms: u.bedrooms,
-            label: u.name,
-            priceFrom: Number(u.priceFrom)
-        });
-     });
+    // Group by developmentId
+    units.forEach((u: any) => {
+      if (!unitTypesMap[u.developmentId]) unitTypesMap[u.developmentId] = [];
+      unitTypesMap[u.developmentId].push({
+        bedrooms: u.bedrooms,
+        label: u.name,
+        priceFrom: Number(u.priceFrom),
+      });
+    });
   }
 
   return results.map(dev => ({
     ...dev,
-    unitTypes: unitTypesMap[dev.id] || []
+    unitTypes: unitTypesMap[dev.id] || [],
   }));
 }

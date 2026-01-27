@@ -1,6 +1,6 @@
 /**
  * CMS Content Types
- * 
+ *
  * Type definitions for all CMS-managed content on the Advertise With Us page.
  * These types align with the requirements and design document.
  */
@@ -157,7 +157,7 @@ export interface FinalCTAContent {
 
 /**
  * Complete Page Content Model
- * 
+ *
  * This represents all CMS-managed content for the Advertise With Us page.
  */
 export interface AdvertisePageContent {

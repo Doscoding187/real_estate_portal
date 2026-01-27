@@ -1,13 +1,14 @@
-import { db } from "../db";
-import { eq } from "drizzle-orm";
-import { launchService } from "./launchService";
+import { db } from '../db';
+import { eq, inArray, and } from 'drizzle-orm';
+import { launchService } from './launchService';
+import { unitTypes, developmentPhases, exploreContent } from '../../drizzle/schema';
 
 /**
  * Content Quota Service
- * 
+ *
  * Tracks progress toward launch content quotas and provides
  * detailed reporting on content inventory.
- * 
+ *
  * Requirements: 16.3, 16.5
  */
 
@@ -40,22 +41,22 @@ export interface ContentTypeMapping {
 class ContentQuotaService {
   // Map content types to quota categories
   private contentTypeMapping: ContentTypeMapping = {
-    'property_tour': 'property_tours',
-    'development_showcase': 'property_tours',
-    'agent_walkthrough': 'property_tours',
-    'neighbourhood_guide': 'neighbourhood_guides',
-    'area_overview': 'neighbourhood_guides',
-    'expert_tip': 'expert_tips',
-    'how_to': 'expert_tips',
-    'educational': 'expert_tips',
-    'market_insight': 'market_insights',
-    'market_analysis': 'market_insights',
-    'price_trends': 'market_insights',
-    'service_showcase': 'service_showcases',
-    'service_demo': 'service_showcases',
-    'inspiration': 'inspiration_pieces',
-    'design_showcase': 'inspiration_pieces',
-    'trend': 'inspiration_pieces'
+    property_tour: 'property_tours',
+    development_showcase: 'property_tours',
+    agent_walkthrough: 'property_tours',
+    neighbourhood_guide: 'neighbourhood_guides',
+    area_overview: 'neighbourhood_guides',
+    expert_tip: 'expert_tips',
+    how_to: 'expert_tips',
+    educational: 'expert_tips',
+    market_insight: 'market_insights',
+    market_analysis: 'market_insights',
+    price_trends: 'market_insights',
+    service_showcase: 'service_showcases',
+    service_demo: 'service_showcases',
+    inspiration: 'inspiration_pieces',
+    design_showcase: 'inspiration_pieces',
+    trend: 'inspiration_pieces',
   };
 
   /**
@@ -75,7 +76,7 @@ class ContentQuotaService {
         currentCount: quota.currentCount,
         percentComplete: Math.round(percentComplete * 10) / 10,
         isMet: quota.currentCount >= quota.requiredCount,
-        remaining
+        remaining,
       };
     });
   }
@@ -103,8 +104,8 @@ class ContentQuotaService {
       breakdown: {
         met,
         unmet,
-        total: progress.length
-      }
+        total: progress.length,
+      },
     };
   }
 
@@ -112,7 +113,7 @@ class ContentQuotaService {
    * Track content creation and update quotas
    * Requirements: 16.3, 16.5
    */
-  async trackContentCreation(contentType: string, partnerId: string): Promise<void> {
+  async trackContentCreation(contentType: string, _partnerId: string): Promise<void> {
     const quotaType = this.contentTypeMapping[contentType];
 
     if (quotaType) {
@@ -130,56 +131,60 @@ class ContentQuotaService {
   async syncQuotasFromContent(): Promise<void> {
     // Count property tours
     const propertyTours = await db.query.exploreContent.findMany({
-      where: (content, { inArray, eq, and }) => 
+      where: (content: typeof exploreContent) =>
         and(
-          inArray(content.contentType, ['property_tour', 'development_showcase', 'agent_walkthrough']),
-          eq(content.isLaunchContent, true)
-        )
+          inArray(content.contentType, [
+            'property_tour',
+            'development_showcase',
+            'agent_walkthrough',
+          ]),
+          eq(content.isLaunchContent, true),
+        ),
     });
 
     // Count neighbourhood guides
     const neighbourhoodGuides = await db.query.exploreContent.findMany({
-      where: (content, { inArray, eq, and }) => 
+      where: (content: typeof exploreContent) =>
         and(
           inArray(content.contentType, ['neighbourhood_guide', 'area_overview']),
-          eq(content.isLaunchContent, true)
-        )
+          eq(content.isLaunchContent, true),
+        ),
     });
 
     // Count expert tips
     const expertTips = await db.query.exploreContent.findMany({
-      where: (content, { inArray, eq, and }) => 
+      where: (content: typeof exploreContent) =>
         and(
           inArray(content.contentType, ['expert_tip', 'how_to', 'educational']),
-          eq(content.isLaunchContent, true)
-        )
+          eq(content.isLaunchContent, true),
+        ),
     });
 
     // Count market insights
     const marketInsights = await db.query.exploreContent.findMany({
-      where: (content, { inArray, eq, and }) => 
+      where: (content: typeof exploreContent) =>
         and(
           inArray(content.contentType, ['market_insight', 'market_analysis', 'price_trends']),
-          eq(content.isLaunchContent, true)
-        )
+          eq(content.isLaunchContent, true),
+        ),
     });
 
     // Count service showcases
     const serviceShowcases = await db.query.exploreContent.findMany({
-      where: (content, { inArray, eq, and }) => 
+      where: (content: typeof exploreContent) =>
         and(
           inArray(content.contentType, ['service_showcase', 'service_demo']),
-          eq(content.isLaunchContent, true)
-        )
+          eq(content.isLaunchContent, true),
+        ),
     });
 
     // Count inspiration pieces
     const inspirationPieces = await db.query.exploreContent.findMany({
-      where: (content, { inArray, eq, and }) => 
+      where: (content: typeof exploreContent) =>
         and(
           inArray(content.contentType, ['inspiration', 'design_showcase', 'trend']),
-          eq(content.isLaunchContent, true)
-        )
+          eq(content.isLaunchContent, true),
+        ),
     });
 
     // Update all quotas

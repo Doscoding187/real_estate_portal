@@ -1,10 +1,9 @@
-
 /**
  * SEO Content Generator
- * 
+ *
  * Generates unique, data-rich HTML content for location pages to improve SEO ranking.
  * Uses a template-based approach injected with real statistics to avoid duplicate content penalties.
- * 
+ *
  * Requirements 9.2: Auto-generate 150-500 words based on page level
  */
 
@@ -26,14 +25,14 @@ interface GeneratorOptions {
 }
 
 export function generateSEOContent({ type, name, parentName, stats }: GeneratorOptions): string {
-  const formattedPrice = new Intl.NumberFormat('en-ZA', { 
-    style: 'currency', 
+  const formattedPrice = new Intl.NumberFormat('en-ZA', {
+    style: 'currency',
     currency: 'ZAR',
-    maximumFractionDigits: 0 
+    maximumFractionDigits: 0,
   }).format(stats.avgPrice);
 
   const listingCount = stats.totalListings;
-  
+
   // Return different templates based on location type
   switch (type) {
     case 'province':
@@ -47,12 +46,16 @@ export function generateSEOContent({ type, name, parentName, stats }: GeneratorO
   }
 }
 
-function generateProvinceContent(name: string, stats: LocationStats, formattedPrice: string): string {
+function generateProvinceContent(
+  name: string,
+  stats: LocationStats,
+  formattedPrice: string,
+): string {
   // Rotate opening phrases to add variety
   const openers = [
     `<p>Discover the vibrant real estate market in <strong>${name}</strong>, a premier destination for property buyers and investors in South Africa.</p>`,
     `<p><strong>${name}</strong> offers a diverse range of real estate opportunities, from bustling urban centers to serene countryside retreats.</p>`,
-    `<p>Explore the best properties for sale in <strong>${name}</strong>. This province is known for its dynamic property market and exceptional lifestyle offerings.</p>`
+    `<p>Explore the best properties for sale in <strong>${name}</strong>. This province is known for its dynamic property market and exceptional lifestyle offerings.</p>`,
   ];
 
   const marketOverview = `
@@ -81,11 +84,16 @@ function generateProvinceContent(name: string, stats: LocationStats, formattedPr
     openers[Math.floor(Math.random() * openers.length)],
     marketOverview,
     lifestyle,
-    investment
+    investment,
   ].join('');
 }
 
-function generateCityContent(name: string, provinceName: string, stats: LocationStats, formattedPrice: string): string {
+function generateCityContent(
+  name: string,
+  provinceName: string,
+  stats: LocationStats,
+  formattedPrice: string,
+): string {
   return `
     <p><strong>${name}</strong> is a thriving city located in <strong>${provinceName}</strong>, offering a unique blend of business opportunities and residential charm. 
     It is a sought-after location for professionals, families, and investors alike.</p>
@@ -109,7 +117,12 @@ function generateCityContent(name: string, provinceName: string, stats: Location
   `;
 }
 
-function generateSuburbContent(name: string, cityName: string, stats: LocationStats, formattedPrice: string): string {
+function generateSuburbContent(
+  name: string,
+  cityName: string,
+  stats: LocationStats,
+  formattedPrice: string,
+): string {
   return `
     <p>Welcome to <strong>${name}</strong>, a popular suburb situated in the heart of <strong>${cityName}</strong>. 
     Known for its community atmosphere and convenient location, ${name} is a top choice for homebuyers.</p>

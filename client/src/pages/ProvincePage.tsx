@@ -15,7 +15,7 @@ import { FinalCTA } from '@/components/location/FinalCTA';
 import { AmenitiesSection } from '@/components/location/AmenitiesSection';
 import { InteractiveMap } from '@/components/location/InteractiveMap';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Helmet } from 'react-helmet';
+import { Helmet } from 'react-helmet-async';
 import { LocationSchema } from '@/components/location/LocationSchema';
 import { TopDevelopersCarousel } from '@/components/location/TopDevelopersCarousel';
 import { HighDemandProjectsCarousel } from '@/components/location/HighDemandProjectsCarousel';
@@ -33,13 +33,13 @@ export default function ProvincePage({ params }: { params: { province: string } 
   const provinceSlug = params.province;
 
   const { data, isLoading, error } = trpc.locationPages.getProvinceData.useQuery({
-    provinceSlug
+    provinceSlug,
   });
 
   // Fetch campaign for banner
-  const { data: heroCampaign } = trpc.locationPages.getHeroCampaign.useQuery({ 
+  const { data: heroCampaign } = trpc.locationPages.getHeroCampaign.useQuery({
     locationSlug: provinceSlug,
-    fallbacks: [] 
+    fallbacks: [],
   });
 
   if (isLoading) {
@@ -57,31 +57,48 @@ export default function ProvincePage({ params }: { params: { province: string } 
     );
   }
 
-  const { province, cities, featuredDevelopments, trendingSuburbs, stats, topDevelopers, investmentProjects, recommendedAgencies, topLocalities } = data;
+  const {
+    province,
+    cities,
+    featuredDevelopments,
+    trendingSuburbs,
+    stats,
+    topDevelopers,
+    investmentProjects,
+    recommendedAgencies,
+    topLocalities,
+  } = data;
 
   return (
     <div className="min-h-screen bg-white">
       <MetaControl />
       <Helmet>
         <title>Property for Sale in {province.name} | Real Estate Portal</title>
-        <meta name="description" content={`Find the best properties for sale in ${province.name}. Browse ${stats.totalListings} listings, including houses, apartments, and developments.`} />
+        <meta
+          name="description"
+          content={`Find the best properties for sale in ${province.name}. Browse ${stats.totalListings} listings, including houses, apartments, and developments.`}
+        />
       </Helmet>
 
-      <LocationSchema 
+      <LocationSchema
         type="Province"
         name={province.name}
         description={`Real estate in ${province.name}`}
         url={`/${provinceSlug}`}
         breadcrumbs={[
           { name: 'Home', url: '/' },
-          { name: province.name, url: `/${provinceSlug}` }
+          { name: province.name, url: `/${provinceSlug}` },
         ]}
         stats={stats}
         image="https://images.unsplash.com/photo-1577931767667-0c58e744d081?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80"
-        geo={province.latitude && province.longitude ? {
-          latitude: Number(province.latitude),
-          longitude: Number(province.longitude)
-        } : undefined}
+        geo={
+          province.latitude && province.longitude
+            ? {
+                latitude: Number(province.latitude),
+                longitude: Number(province.longitude),
+              }
+            : undefined
+        }
       />
 
       <LocationPageLayout
@@ -89,7 +106,6 @@ export default function ProvincePage({ params }: { params: { province: string } 
         locationSlug={provinceSlug}
         locationType="province"
         heroImage="/images/province-hero.jpg"
-        
         banner={
           <LocationHeroSection
             locationName={province.name}
@@ -99,34 +115,33 @@ export default function ProvincePage({ params }: { params: { province: string } 
             backgroundImage="https://images.unsplash.com/photo-1577931767667-0c58e744d081?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80"
             listingCount={stats.totalListings}
             campaign={heroCampaign}
-            quickLinks={cities?.slice(0, 10).map((city: any) => ({
-              label: city.name,
-              slug: city.slug,
-            })) || []}
+            quickLinks={
+              cities?.slice(0, 10).map((city: any) => ({
+                label: city.name,
+                slug: city.slug,
+              })) || []
+            }
           />
         }
-
         searchStage={null}
-
         featuredProperties={
-          <FeaturedPropertiesCarousel 
-            locationId={province.id} 
-            locationName={province.name} 
-            locationScope="province" 
+          <FeaturedPropertiesCarousel
+            locationId={province.id}
+            locationName={province.name}
+            locationScope="province"
           />
         }
         // Section: Property Categories (Explore by Type)
         propertyCategories={
-          <PropertyCategories 
+          <PropertyCategories
             preselectedLocation={{
               name: province.name,
               slug: provinceSlug,
               provinceSlug: provinceSlug,
-              type: 'province'
+              type: 'province',
             }}
           />
         }
-
         // Section 6: Hot Selling Developments (Tabbed by City)
         highDemandDevelopments={
           featuredDevelopments && featuredDevelopments.length > 0 ? (
@@ -140,95 +155,92 @@ export default function ProvincePage({ params }: { params: { province: string } 
                   id={dev.id.toString()}
                   title={dev.title}
                   city={dev.cityName || province.name}
-                  priceRange={{ 
-                    min: Number(dev.priceFrom), 
-                    max: Number(dev.priceTo) || Number(dev.priceFrom) 
+                  priceRange={{
+                    min: Number(dev.priceFrom),
+                    max: Number(dev.priceTo) || Number(dev.priceFrom),
                   }}
-                  image={dev.image || dev.images?.[0] || "https://placehold.co/600x400/e2e8f0/64748b?text=Development"}
+                  image={
+                    dev.image ||
+                    dev.images?.[0] ||
+                    'https://placehold.co/600x400/e2e8f0/64748b?text=Development'
+                  }
                   isHotSelling={true}
                 />
               )}
               filterItem={(dev: any, citySlug: string) => dev.citySlug === citySlug}
-              viewAllLink={(citySlug) => `/${provinceSlug}/${citySlug}`}
+              viewAllLink={citySlug => `/${provinceSlug}/${citySlug}`}
               viewAllText="Explore Developments in"
               emptyMessage="No featured developments in this city right now."
             />
           ) : undefined
         }
-
         // Section 6: Removed Property Type Explorer (Discovery Page)
         propertyTypeExplorer={undefined}
-
         topLocalitiesShowcase={
-           topLocalities && topLocalities.length > 0 ? (
-             <LocationTopLocalities 
-               localities={topLocalities} 
-               locationName={province.name} 
-             />
-           ) : undefined
+          topLocalities && topLocalities.length > 0 ? (
+            <LocationTopLocalities localities={topLocalities} locationName={province.name} />
+          ) : undefined
         }
-
         exploreMore={
-            <DiscoverProperties 
-                initialCity={cities?.[0]?.name} 
-                availableCities={cities?.map((c: any) => c.name)}
-                locationName={province.name}
-            />
+          <DiscoverProperties
+            initialCity={cities?.[0]?.name}
+            availableCities={cities?.map((c: any) => c.name)}
+            locationName={province.name}
+          />
         }
-
         developerShowcase={
           topDevelopers && topDevelopers.length > 0 ? (
-            <TopDevelopersCarousel 
-              developers={topDevelopers} 
-              locationName={province.name} 
-            />
+            <TopDevelopersCarousel developers={topDevelopers} locationName={province.name} />
           ) : undefined
         }
-
         investmentShowcase={
           investmentProjects && investmentProjects.length > 0 ? (
-            <HighDemandProjectsCarousel 
-              projects={investmentProjects} 
-              locationName={province.name} 
+            <HighDemandProjectsCarousel
+              projects={investmentProjects}
+              locationName={province.name}
             />
           ) : undefined
         }
-
         agencyShowcase={
           recommendedAgencies && recommendedAgencies.length > 0 ? (
-            <RecommendedAgenciesCarousel 
-              agencies={recommendedAgencies} 
-              locationName={province.name} 
+            <RecommendedAgenciesCarousel
+              agencies={recommendedAgencies}
+              locationName={province.name}
             />
           ) : undefined
         }
-
         buyerCTA={
           <div className="py-8 text-center bg-blue-50 rounded-lg mx-4 md:mx-0">
-            <h3 className="text-fluid-h4 font-bold mb-2">Looking for property in {province.name}?</h3>
-            <p className="mb-4 text-slate-600">Get alerts for new properties matching your criteria.</p>
+            <h3 className="text-fluid-h4 font-bold mb-2">
+              Looking for property in {province.name}?
+            </h3>
+            <p className="mb-4 text-slate-600">
+              Get alerts for new properties matching your criteria.
+            </p>
             <button className="px-6 py-2 bg-blue-600 text-white rounded font-medium hover:bg-blue-700">
               Set Property Alert
             </button>
           </div>
         }
-
         popularLocations={
-          <ExploreCities 
+          <ExploreCities
             basePath="/property-for-sale"
             queryParams="?view=list"
             title={`Explore Popular Cities in ${province.name}`}
             description={`Find high-end residences and investment opportunities in top cities across ${province.name}.`}
-            customLocations={cities?.map((city: any) => ({
-              name: city.name,
-              province: province.name,
-              slug: city.slug,
-              provinceSlug: provinceSlug,
-              propertyCount: city.listingCount ? `${city.listingCount.toLocaleString()}+ Properties` : undefined,
-            })) || []}
+            customLocations={
+              cities?.map((city: any) => ({
+                name: city.name,
+                province: province.name,
+                slug: city.slug,
+                provinceSlug: provinceSlug,
+                propertyCount: city.listingCount
+                  ? `${city.listingCount.toLocaleString()}+ Properties`
+                  : undefined,
+              })) || []
+            }
           />
         }
-
         fullWidthSection={
           trendingSuburbs && trendingSuburbs.length > 0 ? (
             <TrendingSuburbsCarousel
@@ -238,7 +250,6 @@ export default function ProvincePage({ params }: { params: { province: string } 
             />
           ) : null
         }
-
         sidebarContent={
           <SEOTextBlock
             title={`About Real Estate in ${province.name}`}
@@ -248,13 +259,7 @@ export default function ProvincePage({ params }: { params: { province: string } 
             content={province.description || undefined}
           />
         }
-
-        finalCTA={
-          <FinalCTA 
-            locationName={province.name}
-            provinceSlug={provinceSlug}
-          />
-        }
+        finalCTA={<FinalCTA locationName={province.name} provinceSlug={provinceSlug} />}
       />
     </div>
   );

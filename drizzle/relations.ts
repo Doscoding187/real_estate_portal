@@ -1,5 +1,5 @@
 import { relations } from "drizzle-orm/relations";
-import { developers, activities, users, agencies, agencyBranding, agencyJoinRequests, agencySubscriptions, plans, agents, agentCoverageAreas, suburbs, analyticsAggregations, cities, provinces, auditLogs, billingTransactions, boostCredits, cityPriceAnalytics, commissions, properties, leads, developerNotifications, developerSubscriptions, developerSubscriptionLimits, developerSubscriptionUsage, developments, developmentPhases, developmentUnits, emailTemplates, exploreVideos, favorites, invitations, invites, invoices, leadActivities, listings, listingAnalytics, listingApprovalQueue, listingLeads, listingMedia, listingViewings, notifications, offers, paymentMethods, platformSettings, priceHistory, pricePredictions, propertyImages, propertySimilarityIndex, prospects, prospectFavorites, recentlyViewed, reviews, savedSearches, scheduledViewings, showings, subscriptionEvents, subscriptionUsage, suburbPriceAnalytics, userBehaviorEvents, userPreferences, userRecommendations, userSubscriptions, videos, videoLikes } from "./schema";
+import { developers, activities, users, agencies, agencyBranding, agencyJoinRequests, agencySubscriptions, plans, agents, agentCoverageAreas, agentKnowledge, agentMemory, agentTasks, locations, amenities, suburbs, analyticsAggregations, cities, provinces, auditLogs, billingTransactions, explorePartners, boostCampaigns, topics, boostCredits, marketplaceBundles, bundlePartners, cityPriceAnalytics, commissions, properties, leads, contentApprovalQueue, contentTopics, developerBrandProfiles, developerNotifications, developerSubscriptions, developerSubscriptionLimits, developerSubscriptionUsage, developments, developmentApprovalQueue, developmentDrafts, developmentLeadRoutes, developmentPhases, developmentUnits, emailTemplates, exploreVideos, exploreContent, partnerTiers, exploreShorts, favorites, foundingPartners, invitations, invites, invoices, leadActivities, listings, listingAnalytics, listingApprovalQueue, listingLeads, listingMedia, listingViewings, notifications, offers, partnerLeads, partnerSubscriptions, paymentMethods, platformSettings, priceHistory, pricePredictions, propertyImages, propertySimilarityIndex, prospects, prospectFavorites, recentlyViewed, reviews, savedSearches, scheduledViewings, showings, subscriptionEvents, subscriptionUsage, suburbPriceAnalytics, unitTypes, userBehaviorEvents, userPreferences, userRecommendations, userSubscriptions, videos, videoLikes } from "./schema";
 
 export const activitiesRelations = relations(activities, ({one}) => ({
 	developer: one(developers, {
@@ -14,6 +14,7 @@ export const activitiesRelations = relations(activities, ({one}) => ({
 
 export const developersRelations = relations(developers, ({one, many}) => ({
 	activities: many(activities),
+	developerBrandProfiles: many(developerBrandProfiles),
 	developerNotifications: many(developerNotifications),
 	developerSubscriptions: many(developerSubscriptions),
 	user_userId: one(users, {
@@ -31,6 +32,7 @@ export const developersRelations = relations(developers, ({one, many}) => ({
 		references: [users.id],
 		relationName: "developers_rejectedBy_users_id"
 	}),
+	developmentDrafts: many(developmentDrafts),
 	developments: many(developments),
 }));
 
@@ -42,6 +44,9 @@ export const usersRelations = relations(users, ({one, many}) => ({
 	agencyJoinRequests_reviewedBy: many(agencyJoinRequests, {
 		relationName: "agencyJoinRequests_reviewedBy_users_id"
 	}),
+	agentKnowledges: many(agentKnowledge),
+	agentMemories: many(agentMemory),
+	agentTasks: many(agentTasks),
 	agents_userId: many(agents, {
 		relationName: "agents_userId_users_id"
 	}),
@@ -51,6 +56,7 @@ export const usersRelations = relations(users, ({one, many}) => ({
 	auditLogs: many(auditLogs),
 	billingTransactions: many(billingTransactions),
 	boostCredits: many(boostCredits),
+	developerBrandProfiles: many(developerBrandProfiles),
 	developerNotifications: many(developerNotifications),
 	developers_userId: many(developers, {
 		relationName: "developers_userId_users_id"
@@ -61,6 +67,13 @@ export const usersRelations = relations(users, ({one, many}) => ({
 	developers_rejectedBy: many(developers, {
 		relationName: "developers_rejectedBy_users_id"
 	}),
+	developmentApprovalQueues_submittedBy: many(developmentApprovalQueue, {
+		relationName: "developmentApprovalQueue_submittedBy_users_id"
+	}),
+	developmentApprovalQueues_reviewedBy: many(developmentApprovalQueue, {
+		relationName: "developmentApprovalQueue_reviewedBy_users_id"
+	}),
+	exploreContents: many(exploreContent),
 	favorites: many(favorites),
 	invitations_invitedBy: many(invitations, {
 		relationName: "invitations_invitedBy_users_id"
@@ -100,6 +113,8 @@ export const agenciesRelations = relations(agencies, ({many}) => ({
 	agencySubscriptions: many(agencySubscriptions),
 	agents: many(agents),
 	emailTemplates: many(emailTemplates),
+	exploreContents: many(exploreContent),
+	exploreShorts: many(exploreShorts),
 	invitations: many(invitations),
 	invites: many(invites),
 	invoices: many(invoices),
@@ -176,6 +191,39 @@ export const agentsRelations = relations(agents, ({one, many}) => ({
 	videos: many(videos),
 }));
 
+export const agentKnowledgeRelations = relations(agentKnowledge, ({one}) => ({
+	user: one(users, {
+		fields: [agentKnowledge.createdBy],
+		references: [users.id]
+	}),
+}));
+
+export const agentMemoryRelations = relations(agentMemory, ({one}) => ({
+	user: one(users, {
+		fields: [agentMemory.userId],
+		references: [users.id]
+	}),
+}));
+
+export const agentTasksRelations = relations(agentTasks, ({one}) => ({
+	user: one(users, {
+		fields: [agentTasks.userId],
+		references: [users.id]
+	}),
+}));
+
+export const amenitiesRelations = relations(amenities, ({one}) => ({
+	location: one(locations, {
+		fields: [amenities.locationId],
+		references: [locations.id]
+	}),
+}));
+
+export const locationsRelations = relations(locations, ({many}) => ({
+	amenities: many(amenities),
+	properties: many(properties),
+}));
+
 export const analyticsAggregationsRelations = relations(analyticsAggregations, ({one}) => ({
 	suburb: one(suburbs, {
 		fields: [analyticsAggregations.suburbId],
@@ -241,11 +289,55 @@ export const billingTransactionsRelations = relations(billingTransactions, ({one
 	}),
 }));
 
+export const boostCampaignsRelations = relations(boostCampaigns, ({one}) => ({
+	explorePartner: one(explorePartners, {
+		fields: [boostCampaigns.partnerId],
+		references: [explorePartners.id]
+	}),
+	topic: one(topics, {
+		fields: [boostCampaigns.topicId],
+		references: [topics.id]
+	}),
+}));
+
+export const explorePartnersRelations = relations(explorePartners, ({one, many}) => ({
+	boostCampaigns: many(boostCampaigns),
+	bundlePartners: many(bundlePartners),
+	contentApprovalQueues: many(contentApprovalQueue),
+	partnerTier: one(partnerTiers, {
+		fields: [explorePartners.tierId],
+		references: [partnerTiers.id]
+	}),
+	foundingPartners: many(foundingPartners),
+	partnerLeads: many(partnerLeads),
+	partnerSubscriptions: many(partnerSubscriptions),
+}));
+
+export const topicsRelations = relations(topics, ({many}) => ({
+	boostCampaigns: many(boostCampaigns),
+	contentTopics: many(contentTopics),
+}));
+
 export const boostCreditsRelations = relations(boostCredits, ({one}) => ({
 	user: one(users, {
 		fields: [boostCredits.userId],
 		references: [users.id]
 	}),
+}));
+
+export const bundlePartnersRelations = relations(bundlePartners, ({one}) => ({
+	marketplaceBundle: one(marketplaceBundles, {
+		fields: [bundlePartners.bundleId],
+		references: [marketplaceBundles.id]
+	}),
+	explorePartner: one(explorePartners, {
+		fields: [bundlePartners.partnerId],
+		references: [explorePartners.id]
+	}),
+}));
+
+export const marketplaceBundlesRelations = relations(marketplaceBundles, ({many}) => ({
+	bundlePartners: many(bundlePartners),
 }));
 
 export const cityPriceAnalyticsRelations = relations(cityPriceAnalytics, ({one}) => ({
@@ -306,6 +398,14 @@ export const propertiesRelations = relations(properties, ({one, many}) => ({
 		fields: [properties.ownerId],
 		references: [users.id]
 	}),
+	location: one(locations, {
+		fields: [properties.locationId],
+		references: [locations.id]
+	}),
+	developerBrandProfile: one(developerBrandProfiles, {
+		fields: [properties.developerBrandProfileId],
+		references: [developerBrandProfiles.id]
+	}),
 	propertyImages: many(propertyImages),
 	propertySimilarityIndices_propertyId1: many(propertySimilarityIndex, {
 		relationName: "propertySimilarityIndex_propertyId1_properties_id"
@@ -340,8 +440,58 @@ export const leadsRelations = relations(leads, ({one, many}) => ({
 		fields: [leads.agentId],
 		references: [agents.id]
 	}),
+	developerBrandProfile: one(developerBrandProfiles, {
+		fields: [leads.developerBrandProfileId],
+		references: [developerBrandProfiles.id]
+	}),
 	offers: many(offers),
 	showings: many(showings),
+}));
+
+export const contentApprovalQueueRelations = relations(contentApprovalQueue, ({one}) => ({
+	explorePartner: one(explorePartners, {
+		fields: [contentApprovalQueue.partnerId],
+		references: [explorePartners.id]
+	}),
+}));
+
+export const contentTopicsRelations = relations(contentTopics, ({one}) => ({
+	topic: one(topics, {
+		fields: [contentTopics.topicId],
+		references: [topics.id]
+	}),
+}));
+
+export const developerBrandProfilesRelations = relations(developerBrandProfiles, ({one, many}) => ({
+	developer: one(developers, {
+		fields: [developerBrandProfiles.linkedDeveloperAccountId],
+		references: [developers.id]
+	}),
+	user: one(users, {
+		fields: [developerBrandProfiles.createdBy],
+		references: [users.id]
+	}),
+	developmentDrafts: many(developmentDrafts),
+	developmentLeadRoutes_sourceBrandProfileId: many(developmentLeadRoutes, {
+		relationName: "developmentLeadRoutes_sourceBrandProfileId_developerBrandProfiles_id"
+	}),
+	developmentLeadRoutes_receiverBrandProfileId: many(developmentLeadRoutes, {
+		relationName: "developmentLeadRoutes_receiverBrandProfileId_developerBrandProfiles_id"
+	}),
+	developmentLeadRoutes_fallbackBrandProfileId: many(developmentLeadRoutes, {
+		relationName: "developmentLeadRoutes_fallbackBrandProfileId_developerBrandProfiles_id"
+	}),
+	developments_developerBrandProfileId: many(developments, {
+		relationName: "developments_developerBrandProfileId_developerBrandProfiles_id"
+	}),
+	developments_developerBrandProfileId: many(developments, {
+		relationName: "developments_developerBrandProfileId_developerBrandProfiles_id"
+	}),
+	developments_marketingBrandProfileId: many(developments, {
+		relationName: "developments_marketingBrandProfileId_developerBrandProfiles_id"
+	}),
+	leads: many(leads),
+	properties: many(properties),
 }));
 
 export const developerNotificationsRelations = relations(developerNotifications, ({one}) => ({
@@ -382,25 +532,93 @@ export const developerSubscriptionUsageRelations = relations(developerSubscripti
 	}),
 }));
 
-export const developmentPhasesRelations = relations(developmentPhases, ({one, many}) => ({
+export const developmentApprovalQueueRelations = relations(developmentApprovalQueue, ({one}) => ({
 	development: one(developments, {
-		fields: [developmentPhases.developmentId],
+		fields: [developmentApprovalQueue.developmentId],
 		references: [developments.id]
 	}),
-	developmentUnits: many(developmentUnits),
+	user_submittedBy: one(users, {
+		fields: [developmentApprovalQueue.submittedBy],
+		references: [users.id],
+		relationName: "developmentApprovalQueue_submittedBy_users_id"
+	}),
+	user_reviewedBy: one(users, {
+		fields: [developmentApprovalQueue.reviewedBy],
+		references: [users.id],
+		relationName: "developmentApprovalQueue_reviewedBy_users_id"
+	}),
 }));
 
 export const developmentsRelations = relations(developments, ({one, many}) => ({
+	developmentApprovalQueues: many(developmentApprovalQueue),
+	developmentLeadRoutes: many(developmentLeadRoutes),
 	developmentPhases: many(developmentPhases),
 	developmentUnits: many(developmentUnits),
 	developer: one(developers, {
 		fields: [developments.developerId],
 		references: [developers.id]
 	}),
+	developerBrandProfile_developerBrandProfileId: one(developerBrandProfiles, {
+		fields: [developments.developerBrandProfileId],
+		references: [developerBrandProfiles.id],
+		relationName: "developments_developerBrandProfileId_developerBrandProfiles_id"
+	}),
+	developerBrandProfile_developerBrandProfileId: one(developerBrandProfiles, {
+		fields: [developments.developerBrandProfileId],
+		references: [developerBrandProfiles.id],
+		relationName: "developments_developerBrandProfileId_developerBrandProfiles_id"
+	}),
+	developerBrandProfile_marketingBrandProfileId: one(developerBrandProfiles, {
+		fields: [developments.marketingBrandProfileId],
+		references: [developerBrandProfiles.id],
+		relationName: "developments_marketingBrandProfileId_developerBrandProfiles_id"
+	}),
 	exploreVideos: many(exploreVideos),
 	leads: many(leads),
 	properties: many(properties),
+	unitTypes: many(unitTypes),
 	videos: many(videos),
+}));
+
+export const developmentDraftsRelations = relations(developmentDrafts, ({one}) => ({
+	developerBrandProfile: one(developerBrandProfiles, {
+		fields: [developmentDrafts.developerBrandProfileId],
+		references: [developerBrandProfiles.id]
+	}),
+	developer: one(developers, {
+		fields: [developmentDrafts.developerId],
+		references: [developers.id]
+	}),
+}));
+
+export const developmentLeadRoutesRelations = relations(developmentLeadRoutes, ({one}) => ({
+	development: one(developments, {
+		fields: [developmentLeadRoutes.developmentId],
+		references: [developments.id]
+	}),
+	developerBrandProfile_sourceBrandProfileId: one(developerBrandProfiles, {
+		fields: [developmentLeadRoutes.sourceBrandProfileId],
+		references: [developerBrandProfiles.id],
+		relationName: "developmentLeadRoutes_sourceBrandProfileId_developerBrandProfiles_id"
+	}),
+	developerBrandProfile_receiverBrandProfileId: one(developerBrandProfiles, {
+		fields: [developmentLeadRoutes.receiverBrandProfileId],
+		references: [developerBrandProfiles.id],
+		relationName: "developmentLeadRoutes_receiverBrandProfileId_developerBrandProfiles_id"
+	}),
+	developerBrandProfile_fallbackBrandProfileId: one(developerBrandProfiles, {
+		fields: [developmentLeadRoutes.fallbackBrandProfileId],
+		references: [developerBrandProfiles.id],
+		relationName: "developmentLeadRoutes_fallbackBrandProfileId_developerBrandProfiles_id"
+	}),
+}));
+
+export const developmentPhasesRelations = relations(developmentPhases, ({one, many}) => ({
+	development: one(developments, {
+		fields: [developmentPhases.developmentId],
+		references: [developments.id]
+	}),
+	developmentUnits: many(developmentUnits),
 }));
 
 export const developmentUnitsRelations = relations(developmentUnits, ({one}) => ({
@@ -436,6 +654,28 @@ export const exploreVideosRelations = relations(exploreVideos, ({one}) => ({
 	}),
 }));
 
+export const exploreContentRelations = relations(exploreContent, ({one}) => ({
+	user: one(users, {
+		fields: [exploreContent.creatorId],
+		references: [users.id]
+	}),
+	agency: one(agencies, {
+		fields: [exploreContent.agencyId],
+		references: [agencies.id]
+	}),
+}));
+
+export const partnerTiersRelations = relations(partnerTiers, ({many}) => ({
+	explorePartners: many(explorePartners),
+}));
+
+export const exploreShortsRelations = relations(exploreShorts, ({one}) => ({
+	agency: one(agencies, {
+		fields: [exploreShorts.agencyId],
+		references: [agencies.id]
+	}),
+}));
+
 export const favoritesRelations = relations(favorites, ({one}) => ({
 	user: one(users, {
 		fields: [favorites.userId],
@@ -444,6 +684,13 @@ export const favoritesRelations = relations(favorites, ({one}) => ({
 	property: one(properties, {
 		fields: [favorites.propertyId],
 		references: [properties.id]
+	}),
+}));
+
+export const foundingPartnersRelations = relations(foundingPartners, ({one}) => ({
+	explorePartner: one(explorePartners, {
+		fields: [foundingPartners.partnerId],
+		references: [explorePartners.id]
 	}),
 }));
 
@@ -559,6 +806,20 @@ export const offersRelations = relations(offers, ({one}) => ({
 	agent: one(agents, {
 		fields: [offers.agentId],
 		references: [agents.id]
+	}),
+}));
+
+export const partnerLeadsRelations = relations(partnerLeads, ({one}) => ({
+	explorePartner: one(explorePartners, {
+		fields: [partnerLeads.partnerId],
+		references: [explorePartners.id]
+	}),
+}));
+
+export const partnerSubscriptionsRelations = relations(partnerSubscriptions, ({one}) => ({
+	explorePartner: one(explorePartners, {
+		fields: [partnerSubscriptions.partnerId],
+		references: [explorePartners.id]
 	}),
 }));
 
@@ -720,6 +981,13 @@ export const suburbPriceAnalyticsRelations = relations(suburbPriceAnalytics, ({o
 	province: one(provinces, {
 		fields: [suburbPriceAnalytics.provinceId],
 		references: [provinces.id]
+	}),
+}));
+
+export const unitTypesRelations = relations(unitTypes, ({one}) => ({
+	development: one(developments, {
+		fields: [unitTypes.developmentId],
+		references: [developments.id]
 	}),
 }));
 

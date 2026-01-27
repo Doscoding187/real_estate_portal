@@ -18,7 +18,9 @@ export default function SubscriptionPlans() {
   const [, setLocation] = useLocation();
   const [selectedCategory, setSelectedCategory] = useState<PlanCategory>('agent');
 
-  const { data: plans, isLoading } = trpc.subscription.getPlans.useQuery({ category: selectedCategory });
+  const { data: plans, isLoading } = trpc.subscription.getPlans.useQuery({
+    category: selectedCategory,
+  });
   const { data: mySubscription } = trpc.subscription.getMySubscription.useQuery();
 
   const formatPrice = (priceInCents: number) => {
@@ -68,16 +70,18 @@ export default function SubscriptionPlans() {
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-24">
         {/* Header */}
         <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold text-slate-900 mb-4">
-            Choose Your Perfect Plan
-          </h1>
+          <h1 className="text-4xl font-bold text-slate-900 mb-4">Choose Your Perfect Plan</h1>
           <p className="text-lg text-slate-600 max-w-2xl mx-auto">
             Start with a 14-day free trial of our premium features. No credit card required.
           </p>
         </div>
 
         {/* Category Tabs */}
-        <Tabs value={selectedCategory} onValueChange={(v) => setSelectedCategory(v as PlanCategory)} className="mb-12">
+        <Tabs
+          value={selectedCategory}
+          onValueChange={v => setSelectedCategory(v as PlanCategory)}
+          className="mb-12"
+        >
           <TabsList className="grid w-full max-w-md mx-auto grid-cols-3">
             <TabsTrigger value="agent" className="flex items-center gap-2">
               {getCategoryIcon('agent')}
@@ -95,7 +99,7 @@ export default function SubscriptionPlans() {
 
           <TabsContent value={selectedCategory}>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-8">
-              {plans?.map((plan) => (
+              {plans?.map(plan => (
                 <Card
                   key={plan.plan_id}
                   className={`relative overflow-hidden transition-all hover:shadow-xl ${
@@ -116,7 +120,9 @@ export default function SubscriptionPlans() {
                     <div className="flex items-center gap-3 mb-4">
                       <div
                         className={`p-3 rounded-lg ${
-                          plan.is_trial_plan ? 'bg-blue-100 text-blue-600' : 'bg-slate-100 text-slate-600'
+                          plan.is_trial_plan
+                            ? 'bg-blue-100 text-blue-600'
+                            : 'bg-slate-100 text-slate-600'
                         }`}
                       >
                         {getPlanIcon(plan.name)}
@@ -170,7 +176,11 @@ export default function SubscriptionPlans() {
                         }`}
                         onClick={() => setLocation(`/subscribe?plan=${plan.plan_id}`)}
                       >
-                        {plan.is_free_plan ? 'Get Started' : plan.is_trial_plan ? 'Start Free Trial' : 'Subscribe'}
+                        {plan.is_free_plan
+                          ? 'Get Started'
+                          : plan.is_trial_plan
+                            ? 'Start Free Trial'
+                            : 'Subscribe'}
                       </Button>
                     )}
                   </div>
@@ -188,7 +198,8 @@ export default function SubscriptionPlans() {
               <h3 className="font-semibold text-blue-900 mb-2">Full-Feature Free Trial</h3>
               <p className="text-sm text-blue-800">
                 Start with 14 days of our premium tier absolutely free. No credit card required.
-                After the trial, you'll be automatically downgraded to the free plan unless you choose to upgrade.
+                After the trial, you'll be automatically downgraded to the free plan unless you
+                choose to upgrade.
               </p>
             </div>
           </div>

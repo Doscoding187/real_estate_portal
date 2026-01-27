@@ -30,17 +30,17 @@ export const DeveloperContextProvider: React.FC<{ children: ReactNode }> = ({ ch
   // Fetch full brand details when ID changes
   const { data: brandDetails, isLoading } = trpc.superAdminPublisher.getBrandContext.useQuery(
     { brandProfileId: selectedBrandId! },
-    { 
+    {
       enabled: !!selectedBrandId,
-      staleTime: 5 * 60 * 1000, 
-    }
+      staleTime: 5 * 60 * 1000,
+    },
   );
 
   useEffect(() => {
     if (brandDetails) {
       const brand = brandDetails as unknown as BrandProfile;
       setSelectedBrand(brand);
-      
+
       // Sync with global publisher context store
       setOperatingAs({
         mode: 'seeding',
@@ -60,14 +60,10 @@ export const DeveloperContextProvider: React.FC<{ children: ReactNode }> = ({ ch
     selectedBrand,
     setSelectedBrandId,
     isContextSet: !!selectedBrandId,
-    isLoading
+    isLoading,
   };
 
-  return (
-    <DeveloperContext.Provider value={value}>
-      {children}
-    </DeveloperContext.Provider>
-  );
+  return <DeveloperContext.Provider value={value}>{children}</DeveloperContext.Provider>;
 };
 
 export const useDeveloperContext = () => {

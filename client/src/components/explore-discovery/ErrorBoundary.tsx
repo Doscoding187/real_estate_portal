@@ -1,12 +1,12 @@
 /**
  * ErrorBoundary Component for Explore Feature
- * 
+ *
  * A specialized error boundary for the Explore feature with:
  * - NetworkError component with retry functionality
  * - Modern styling with icons
  * - Clear error messaging
  * - Graceful error recovery
- * 
+ *
  * Requirements: 7.1
  */
 
@@ -80,7 +80,7 @@ export class ExploreErrorBoundary extends Component<ErrorBoundaryProps, ErrorBou
       }
 
       // Determine error type
-      const isNetworkError = 
+      const isNetworkError =
         this.state.error.message.includes('fetch') ||
         this.state.error.message.includes('network') ||
         this.state.error.message.includes('Failed to fetch');
@@ -109,11 +109,11 @@ interface NetworkErrorProps {
   className?: string;
 }
 
-export function NetworkError({ 
-  error, 
-  onRetry, 
+export function NetworkError({
+  error,
+  onRetry,
   isNetworkError = true,
-  className 
+  className,
 }: NetworkErrorProps) {
   const errorConfig = isNetworkError
     ? {
@@ -138,32 +138,28 @@ export function NetworkError({
       transition={{ duration: 0.3, ease: 'easeOut' }}
       className={cn('flex items-center justify-center p-8', className)}
     >
-      <ModernCard 
-        variant="elevated" 
-        className="max-w-md w-full p-8"
-        hoverable={false}
-      >
+      <ModernCard variant="elevated" className="max-w-md w-full p-8" hoverable={false}>
         <div className="flex flex-col items-center text-center">
           {/* Error Icon */}
           <motion.div
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
-            transition={{ 
-              delay: 0.1, 
-              type: 'spring', 
-              stiffness: 200, 
-              damping: 15 
+            transition={{
+              delay: 0.1,
+              type: 'spring',
+              stiffness: 200,
+              damping: 15,
             }}
             className={cn(
               'w-16 h-16 rounded-full flex items-center justify-center mb-6',
-              'bg-gradient-to-br from-gray-50 to-gray-100'
+              'bg-gradient-to-br from-gray-50 to-gray-100',
             )}
           >
             <Icon className={cn('w-8 h-8', errorConfig.iconColor)} />
           </motion.div>
 
           {/* Error Title */}
-          <h3 
+          <h3
             className="text-xl font-semibold mb-3"
             style={{ color: designTokens.colors.text.primary }}
           >
@@ -171,7 +167,7 @@ export function NetworkError({
           </h3>
 
           {/* Error Description */}
-          <p 
+          <p
             className="text-sm mb-6 leading-relaxed"
             style={{ color: designTokens.colors.text.secondary }}
           >
@@ -181,15 +177,15 @@ export function NetworkError({
           {/* Error Details (Development Only) */}
           {process.env.NODE_ENV === 'development' && (
             <details className="w-full mb-6">
-              <summary 
+              <summary
                 className="text-xs cursor-pointer mb-2 hover:underline"
                 style={{ color: designTokens.colors.text.tertiary }}
               >
                 Error Details
               </summary>
-              <div 
+              <div
                 className="text-left p-3 rounded-lg overflow-auto max-h-32 text-xs font-mono"
-                style={{ 
+                style={{
                   backgroundColor: designTokens.colors.bg.tertiary,
                   color: designTokens.colors.text.secondary,
                 }}
@@ -212,7 +208,7 @@ export function NetworkError({
               'transition-all duration-200',
               'hover:from-indigo-600 hover:to-indigo-700',
               'focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2',
-              'active:scale-95'
+              'active:scale-95',
             )}
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
@@ -246,7 +242,7 @@ export function InlineError({ message, onRetry, className }: InlineErrorProps) {
       className={cn(
         'flex items-center gap-3 p-4 rounded-lg',
         'bg-red-50 border border-red-200',
-        className
+        className,
       )}
     >
       <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
@@ -256,7 +252,7 @@ export function InlineError({ message, onRetry, className }: InlineErrorProps) {
           onClick={onRetry}
           className={cn(
             'text-sm font-medium text-red-600 hover:text-red-700',
-            'underline focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 rounded'
+            'underline focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 rounded',
           )}
           aria-label="Retry"
         >

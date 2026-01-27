@@ -25,9 +25,9 @@ export function useSaveProperty({
   const [isAnimating, setIsAnimating] = useState(false);
 
   const toggleSaveMutation = trpc.exploreApi.toggleSaveProperty.useMutation({
-    onSuccess: (data) => {
+    onSuccess: data => {
       setIsSaved(data.data.saved);
-      
+
       // Trigger animation
       setIsAnimating(true);
       setTimeout(() => setIsAnimating(false), 600);
@@ -44,7 +44,7 @@ export function useSaveProperty({
         onUnsaveSuccess();
       }
     },
-    onError: (error) => {
+    onError: error => {
       console.error('Failed to toggle save:', error);
       // Optionally show a toast notification
     },

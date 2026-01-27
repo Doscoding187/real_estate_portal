@@ -56,7 +56,7 @@ export const SoftDashboardLayout: React.FC<SoftDashboardLayoutProps> = ({
 
           {/* Navigation */}
           <nav className="flex-1 space-y-2">
-            {navItems.map((item) => {
+            {navItems.map(item => {
               const Icon = item.icon;
               const isActive = location === item.path || location.startsWith(item.path + '/');
 
@@ -67,7 +67,7 @@ export const SoftDashboardLayout: React.FC<SoftDashboardLayoutProps> = ({
                       'flex items-center h-12 rounded-2xl transition-all duration-200',
                       isActive
                         ? 'bg-gradient-to-r from-emerald-100 to-teal-100 text-emerald-700 shadow-lg'
-                        : 'text-slate-600 hover:bg-slate-100/50'
+                        : 'text-slate-600 hover:bg-slate-100/50',
                     )}
                   >
                     <div className="w-12 flex items-center justify-center flex-shrink-0">
@@ -92,7 +92,7 @@ export const SoftDashboardLayout: React.FC<SoftDashboardLayoutProps> = ({
           <button
             className={cn(
               'flex items-center h-12 rounded-2xl transition-all duration-200',
-              'text-slate-600 hover:bg-red-50 hover:text-red-600'
+              'text-slate-600 hover:bg-red-50 hover:text-red-600',
             )}
           >
             <div className="w-12 flex items-center justify-center flex-shrink-0">

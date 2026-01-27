@@ -1,4 +1,3 @@
-
 import { locationPagesRouter } from '../locationPagesRouter';
 import { describe, it, expect, vi } from 'vitest';
 
@@ -10,18 +9,18 @@ vi.mock('../services/locationPagesService.improved', () => ({
       cities: [],
       featuredDevelopments: [],
       trendingSuburbs: [],
-      stats: { totalListings: 100 }
+      stats: { totalListings: 100 },
     }),
     getEnhancedCityData: vi.fn(),
     getEnhancedSuburbData: vi.fn(),
-  }
+  },
 }));
 
 describe('LocationPages Router', () => {
   it('should fetch province data successfully', async () => {
     // Mock context
     const ctx = { req: {}, res: {}, user: null } as any;
-    
+
     // Create caller
     const caller = locationPagesRouter.createCaller(ctx);
 

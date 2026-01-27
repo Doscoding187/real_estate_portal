@@ -18,7 +18,12 @@ interface FeaturedListingsProps {
   viewAllLink: string;
 }
 
-export function FeaturedListings({ listings, title, subtitle, viewAllLink }: FeaturedListingsProps) {
+export function FeaturedListings({
+  listings,
+  title,
+  subtitle,
+  viewAllLink,
+}: FeaturedListingsProps) {
   if (!listings || listings.length === 0) return null;
 
   return (
@@ -43,10 +48,10 @@ export function FeaturedListings({ listings, title, subtitle, viewAllLink }: Fea
 
         <Carousel className="w-full">
           <CarouselContent className="-ml-4 pb-4">
-            {listings.map((item) => {
+            {listings.map(item => {
               const property = normalizePropertyForUI(item);
               if (!property) return null;
-              
+
               return (
                 <CarouselItem key={item.id} className="pl-4 md:basis-1/2 lg:basis-1/3 xl:basis-1/4">
                   <PropertyCard {...property} />

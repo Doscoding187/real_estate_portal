@@ -5,15 +5,15 @@
  */
 
 import { db } from '../db';
-import { 
-  explorePartners, 
-  exploreContent, 
+import {
+  explorePartners,
+  exploreContent,
   exploreShorts,
   exploreEngagements,
   partnerLeads,
   boostCampaigns,
   partnerTiers,
-  contentQualityScores
+  contentQualityScores,
 } from '../../drizzle/schema';
 import { eq, and, gte, lte, sql, desc, count, sum, avg } from 'drizzle-orm';
 
@@ -82,15 +82,16 @@ export interface BoostROI {
 export async function getPartnerAnalyticsSummary(
   partnerId: string,
   startDate?: Date,
-  endDate?: Date
+  endDate?: Date,
 ): Promise<PartnerAnalyticsSummary> {
   // Build date filter - convert dates to ISO strings for MySQL timestamp comparison
-  const dateFilter = startDate && endDate
-    ? and(
-        gte(exploreEngagements.createdAt, startDate.toISOString()),
-        lte(exploreEngagements.createdAt, endDate.toISOString())
-      )
-    : undefined;
+  const dateFilter =
+    startDate && endDate
+      ? and(
+          gte(exploreEngagements.createdAt, startDate.toISOString()),
+          lte(exploreEngagements.createdAt, endDate.toISOString()),
+        )
+      : undefined;
 
   // Get all content IDs for this partner
   const partnerContent = await db
@@ -105,7 +106,7 @@ export async function getPartnerAnalyticsSummary(
 
   const contentIds = [
     ...partnerContent.map((c: { id: string }) => c.id),
-    ...partnerShorts.map((s: { id: number }) => s.id.toString())
+    ...partnerShorts.map((s: { id: number }) => s.id.toString()),
   ];
 
   if (contentIds.length === 0) {
@@ -115,7 +116,7 @@ export async function getPartnerAnalyticsSummary(
       leadConversions: 0,
       totalLeads: 0,
       totalContent: 0,
-      averageQualityScore: 0
+      averageQualityScore: 0,
     };
   }
 
@@ -123,14 +124,19 @@ export async function getPartnerAnalyticsSummary(
   const engagementQuery = db
     .select({
       totalViews: count(exploreEngagements.id),
-      totalEngagements: sum(sql<number>`CASE WHEN ${exploreEngagements.engagementType} IN ('save', 'share', 'click') THEN 1 ELSE 0 END`)
+      totalEngagements: sum(
+        sql<number>`CASE WHEN ${exploreEngagements.engagementType} IN ('save', 'share', 'click') THEN 1 ELSE 0 END`,
+      ),
     })
     .from(exploreEngagements)
     .where(
       and(
-        sql`${exploreEngagements.contentId} IN (${sql.join(contentIds.map(id => sql`${id}`), sql`, `)})`,
-        dateFilter
-      )
+        sql`${exploreEngagements.contentId} IN (${sql.join(
+          contentIds.map(id => sql`${id}`),
+          sql`, `,
+        )})`,
+        dateFilter,
+      ),
     );
 
   const [engagementData] = await engagementQuery;
@@ -139,17 +145,21 @@ export async function getPartnerAnalyticsSummary(
   const leadQuery = db
     .select({
       totalLeads: count(partnerLeads.id),
-      convertedLeads: sum(sql<number>`CASE WHEN ${partnerLeads.status} = 'converted' THEN 1 ELSE 0 END`)
+      convertedLeads: sum(
+        sql<number>`CASE WHEN ${partnerLeads.status} = 'converted' THEN 1 ELSE 0 END`,
+      ),
     })
     .from(partnerLeads)
     .where(
       and(
         eq(partnerLeads.partnerId, partnerId),
-        dateFilter ? and(
-          gte(partnerLeads.createdAt, startDate!.toISOString()),
-          lte(partnerLeads.createdAt, endDate!.toISOString())
-        ) : undefined
-      )
+        dateFilter
+          ? and(
+              gte(partnerLeads.createdAt, startDate!.toISOString()),
+              lte(partnerLeads.createdAt, endDate!.toISOString()),
+            )
+          : undefined,
+      ),
     );
 
   const [leadData] = await leadQuery;
@@ -157,11 +167,14 @@ export async function getPartnerAnalyticsSummary(
   // Get quality scores
   const qualityQuery = db
     .select({
-      avgScore: avg(contentQualityScores.overallScore)
+      avgScore: avg(contentQualityScores.overallScore),
     })
     .from(contentQualityScores)
     .where(
-      sql`${contentQualityScores.contentId} IN (${sql.join(contentIds.map(id => sql`${id}`), sql`, `)})`
+      sql`${contentQualityScores.contentId} IN (${sql.join(
+        contentIds.map(id => sql`${id}`),
+        sql`, `,
+      )})`,
     );
 
   const [qualityData] = await qualityQuery;
@@ -176,7 +189,7 @@ export async function getPartnerAnalyticsSummary(
     leadConversions: Number(leadData?.convertedLeads || 0),
     totalLeads: Number(leadData?.totalLeads || 0),
     totalContent: contentIds.length,
-    averageQualityScore: Number(qualityData?.avgScore || 0)
+    averageQualityScore: Number(qualityData?.avgScore || 0),
   };
 }
 
@@ -188,7 +201,7 @@ export async function getPerformanceTrends(
   partnerId: string,
   period: 'daily' | 'weekly' | 'monthly',
   startDate: Date,
-  endDate: Date
+  endDate: Date,
 ): Promise<TrendData[]> {
   // Get all content IDs for this partner
   const partnerContent = await db
@@ -203,7 +216,7 @@ export async function getPerformanceTrends(
 
   const contentIds = [
     ...partnerContent.map((c: { id: string }) => c.id),
-    ...partnerShorts.map((s: { id: number }) => s.id.toString())
+    ...partnerShorts.map((s: { id: number }) => s.id.toString()),
   ];
 
   if (contentIds.length === 0) {
@@ -211,26 +224,27 @@ export async function getPerformanceTrends(
   }
 
   // Determine date grouping format
-  const dateFormat = period === 'daily' 
-    ? '%Y-%m-%d'
-    : period === 'weekly'
-    ? '%Y-%U'
-    : '%Y-%m';
+  const dateFormat = period === 'daily' ? '%Y-%m-%d' : period === 'weekly' ? '%Y-%U' : '%Y-%m';
 
   // Get engagement trends
   const trendsQuery = await db
     .select({
       date: sql<string>`DATE_FORMAT(${exploreEngagements.createdAt}, ${dateFormat})`,
       views: count(exploreEngagements.id),
-      engagements: sum(sql<number>`CASE WHEN ${exploreEngagements.engagementType} IN ('save', 'share', 'click') THEN 1 ELSE 0 END`)
+      engagements: sum(
+        sql<number>`CASE WHEN ${exploreEngagements.engagementType} IN ('save', 'share', 'click') THEN 1 ELSE 0 END`,
+      ),
     })
     .from(exploreEngagements)
     .where(
       and(
-        sql`${exploreEngagements.contentId} IN (${sql.join(contentIds.map(id => sql`${id}`), sql`, `)})`,
+        sql`${exploreEngagements.contentId} IN (${sql.join(
+          contentIds.map(id => sql`${id}`),
+          sql`, `,
+        )})`,
         gte(exploreEngagements.createdAt, startDate.toISOString()),
-        lte(exploreEngagements.createdAt, endDate.toISOString())
-      )
+        lte(exploreEngagements.createdAt, endDate.toISOString()),
+      ),
     )
     .groupBy(sql`DATE_FORMAT(${exploreEngagements.createdAt}, ${dateFormat})`);
 
@@ -238,26 +252,28 @@ export async function getPerformanceTrends(
   const leadTrendsQuery = await db
     .select({
       date: sql<string>`DATE_FORMAT(${partnerLeads.createdAt}, ${dateFormat})`,
-      leads: count(partnerLeads.id)
+      leads: count(partnerLeads.id),
     })
     .from(partnerLeads)
     .where(
       and(
         eq(partnerLeads.partnerId, partnerId),
         gte(partnerLeads.createdAt, startDate.toISOString()),
-        lte(partnerLeads.createdAt, endDate.toISOString())
-      )
+        lte(partnerLeads.createdAt, endDate.toISOString()),
+      ),
     )
     .groupBy(sql`DATE_FORMAT(${partnerLeads.createdAt}, ${dateFormat})`);
 
   // Merge engagement and lead trends
-  const leadMap = new Map(leadTrendsQuery.map((l: { date: string; leads: number }) => [l.date, Number(l.leads)]));
+  const leadMap = new Map(
+    leadTrendsQuery.map((l: { date: string; leads: number }) => [l.date, Number(l.leads)]),
+  );
 
   return trendsQuery.map((trend: { date: string; views: number; engagements: number | null }) => ({
     date: trend.date,
     views: Number(trend.views),
     engagements: Number(trend.engagements || 0),
-    leads: leadMap.get(trend.date) || 0
+    leads: leadMap.get(trend.date) || 0,
   }));
 }
 
@@ -267,7 +283,7 @@ export async function getPerformanceTrends(
  */
 export async function getContentRankedByPerformance(
   partnerId: string,
-  limit: number = 10
+  limit: number = 10,
 ): Promise<ContentPerformance[]> {
   // Get content with engagement metrics
   const contentPerformance = await db
@@ -277,14 +293,21 @@ export async function getContentRankedByPerformance(
       type: sql<'video' | 'card' | 'short'>`'card'`,
       createdAt: exploreContent.createdAt,
       views: count(exploreEngagements.id),
-      engagements: sum(sql<number>`CASE WHEN ${exploreEngagements.engagementType} IN ('save', 'share', 'click') THEN 1 ELSE 0 END`),
-      qualityScore: contentQualityScores.overallScore
+      engagements: sum(
+        sql<number>`CASE WHEN ${exploreEngagements.engagementType} IN ('save', 'share', 'click') THEN 1 ELSE 0 END`,
+      ),
+      qualityScore: contentQualityScores.overallScore,
     })
     .from(exploreContent)
     .leftJoin(exploreEngagements, eq(exploreContent.id, exploreEngagements.contentId))
     .leftJoin(contentQualityScores, eq(exploreContent.id, contentQualityScores.contentId))
     .where(eq(exploreContent.partnerId, partnerId))
-    .groupBy(exploreContent.id, exploreContent.title, exploreContent.createdAt, contentQualityScores.overallScore)
+    .groupBy(
+      exploreContent.id,
+      exploreContent.title,
+      exploreContent.createdAt,
+      contentQualityScores.overallScore,
+    )
     .orderBy(desc(count(exploreEngagements.id)))
     .limit(limit);
 
@@ -296,14 +319,27 @@ export async function getContentRankedByPerformance(
       type: sql<'video' | 'card' | 'short'>`'short'`,
       createdAt: exploreShorts.createdAt,
       views: count(exploreEngagements.id),
-      engagements: sum(sql<number>`CASE WHEN ${exploreEngagements.engagementType} IN ('save', 'share', 'click') THEN 1 ELSE 0 END`),
-      qualityScore: contentQualityScores.overallScore
+      engagements: sum(
+        sql<number>`CASE WHEN ${exploreEngagements.engagementType} IN ('save', 'share', 'click') THEN 1 ELSE 0 END`,
+      ),
+      qualityScore: contentQualityScores.overallScore,
     })
     .from(exploreShorts)
-    .leftJoin(exploreEngagements, sql`CAST(${exploreShorts.id} AS CHAR) = ${exploreEngagements.contentId}`)
-    .leftJoin(contentQualityScores, sql`CAST(${exploreShorts.id} AS CHAR) = ${contentQualityScores.contentId}`)
+    .leftJoin(
+      exploreEngagements,
+      sql`CAST(${exploreShorts.id} AS CHAR) = ${exploreEngagements.contentId}`,
+    )
+    .leftJoin(
+      contentQualityScores,
+      sql`CAST(${exploreShorts.id} AS CHAR) = ${contentQualityScores.contentId}`,
+    )
     .where(eq(exploreShorts.partnerId, partnerId))
-    .groupBy(exploreShorts.id, exploreShorts.title, exploreShorts.createdAt, contentQualityScores.overallScore)
+    .groupBy(
+      exploreShorts.id,
+      exploreShorts.title,
+      exploreShorts.createdAt,
+      contentQualityScores.overallScore,
+    )
     .orderBy(desc(count(exploreEngagements.id)))
     .limit(limit);
 
@@ -320,7 +356,7 @@ export async function getContentRankedByPerformance(
         engagements,
         engagementRate: views > 0 ? (engagements / views) * 100 : 0,
         qualityScore: Number(item.qualityScore || 0),
-        createdAt: item.createdAt
+        createdAt: item.createdAt,
       };
     })
     .sort((a, b) => b.views - a.views)
@@ -336,23 +372,19 @@ export async function getContentRankedByPerformance(
 export async function getConversionFunnel(
   partnerId: string,
   startDate?: Date,
-  endDate?: Date
+  endDate?: Date,
 ): Promise<ConversionFunnel> {
   const summary = await getPartnerAnalyticsSummary(partnerId, startDate, endDate);
 
-  const viewToEngagementRate = summary.totalViews > 0
-    ? (summary.engagementRate / 100)
-    : 0;
+  const viewToEngagementRate = summary.totalViews > 0 ? summary.engagementRate / 100 : 0;
 
   const totalEngagements = Math.round(summary.totalViews * viewToEngagementRate);
 
-  const engagementToLeadRate = totalEngagements > 0
-    ? (summary.totalLeads / totalEngagements) * 100
-    : 0;
+  const engagementToLeadRate =
+    totalEngagements > 0 ? (summary.totalLeads / totalEngagements) * 100 : 0;
 
-  const overallConversionRate = summary.totalViews > 0
-    ? (summary.totalLeads / summary.totalViews) * 100
-    : 0;
+  const overallConversionRate =
+    summary.totalViews > 0 ? (summary.totalLeads / summary.totalViews) * 100 : 0;
 
   return {
     totalViews: summary.totalViews,
@@ -360,7 +392,7 @@ export async function getConversionFunnel(
     totalLeads: summary.totalLeads,
     viewToEngagementRate: Math.round(viewToEngagementRate * 10000) / 100,
     engagementToLeadRate: Math.round(engagementToLeadRate * 100) / 100,
-    overallConversionRate: Math.round(overallConversionRate * 100) / 100
+    overallConversionRate: Math.round(overallConversionRate * 100) / 100,
   };
 }
 
@@ -398,7 +430,7 @@ export async function getTierBenchmarks(): Promise<TierBenchmark[]> {
         FROM partner_leads 
         WHERE partner_id = explore_partners.id 
         AND status = 'converted'
-      )`)
+      )`),
     })
     .from(partnerTiers)
     .leftJoin(explorePartners, eq(partnerTiers.id, explorePartners.tierId))
@@ -416,7 +448,7 @@ export async function getTierBenchmarks(): Promise<TierBenchmark[]> {
       tierName: b.tierName,
       averageViews: Math.round(avgViews),
       averageEngagementRate: Math.round(avgEngagementRate * 100) / 100,
-      averageLeadConversion: Math.round(avgLeads)
+      averageLeadConversion: Math.round(avgLeads),
     };
   });
 }
@@ -425,9 +457,7 @@ export async function getTierBenchmarks(): Promise<TierBenchmark[]> {
  * Get boost campaign ROI metrics
  * Requirement 13.6: Calculate ROI for each boost campaign
  */
-export async function getBoostCampaignROI(
-  partnerId: string
-): Promise<BoostROI[]> {
+export async function getBoostCampaignROI(partnerId: string): Promise<BoostROI[]> {
   const campaigns = await db
     .select({
       id: boostCampaigns.id,
@@ -436,7 +466,7 @@ export async function getBoostCampaignROI(
       spent: boostCampaigns.spent,
       impressions: boostCampaigns.impressions,
       clicks: boostCampaigns.clicks,
-      costPerImpression: boostCampaigns.costPerImpression
+      costPerImpression: boostCampaigns.costPerImpression,
     })
     .from(boostCampaigns)
     .where(eq(boostCampaigns.partnerId, partnerId));
@@ -447,14 +477,11 @@ export async function getBoostCampaignROI(
     // Get leads generated from this campaign's content
     const [leadData] = await db
       .select({
-        leads: count(partnerLeads.id)
+        leads: count(partnerLeads.id),
       })
       .from(partnerLeads)
       .where(
-        and(
-          eq(partnerLeads.partnerId, partnerId),
-          eq(partnerLeads.contentId, campaign.contentId)
-        )
+        and(eq(partnerLeads.partnerId, partnerId), eq(partnerLeads.contentId, campaign.contentId)),
       );
 
     const leads = Number(leadData?.leads || 0);
@@ -481,7 +508,7 @@ export async function getBoostCampaignROI(
       costPerImpression: Number(campaign.costPerImpression),
       costPerClick: Math.round(costPerClick * 100) / 100,
       costPerLead: Math.round(costPerLead * 100) / 100,
-      roi: Math.round(roi * 100) / 100
+      roi: Math.round(roi * 100) / 100,
     });
   }
 
@@ -496,15 +523,15 @@ export const partnerAnalyticsService = {
   getConversionFunnel,
   getTierBenchmarks,
   getBoostCampaignROI,
-  
+
   // Aliases for consistency with test expectations
   getPartnerAnalytics: getPartnerAnalyticsSummary,
   getContentRanking: getContentRankedByPerformance,
   getBenchmarkComparison: getTierBenchmarks,
   getBoostROI: getBoostCampaignROI,
-  
+
   // Additional helper method
   calculateEngagementRate: (views: number, engagements: number): number => {
     return views > 0 ? (engagements / views) * 100 : 0;
-  }
+  },
 };

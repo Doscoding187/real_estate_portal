@@ -1,6 +1,6 @@
 /**
  * Breadcrumb Component
- * 
+ *
  * Provides breadcrumb navigation for the Advertise With Us landing page.
  * Includes structured data for SEO.
  */
@@ -41,14 +41,11 @@ export function Breadcrumb({ items, className = '' }: BreadcrumbProps) {
       />
 
       {/* Breadcrumb navigation */}
-      <nav
-        aria-label="Breadcrumb"
-        className={`py-4 ${className}`}
-      >
+      <nav aria-label="Breadcrumb" className={`py-4 ${className}`}>
         <ol className="flex items-center space-x-2 text-sm">
           {/* Home link */}
           <li>
-            <Link 
+            <Link
               href="/"
               className="flex items-center text-slate-600 hover:text-blue-600 transition-colors"
               aria-label="Home"
@@ -65,14 +62,11 @@ export function Breadcrumb({ items, className = '' }: BreadcrumbProps) {
               <li key={item.href} className="flex items-center space-x-2">
                 <ChevronRight className="h-4 w-4 text-slate-400" aria-hidden="true" />
                 {isLast ? (
-                  <span
-                    className="text-slate-900 font-medium"
-                    aria-current="page"
-                  >
+                  <span className="text-slate-900 font-medium" aria-current="page">
                     {item.label}
                   </span>
                 ) : (
-                  <Link 
+                  <Link
                     href={item.href}
                     className="text-slate-600 hover:text-blue-600 transition-colors"
                   >
@@ -94,11 +88,7 @@ export function Breadcrumb({ items, className = '' }: BreadcrumbProps) {
 export function AdvertiseBreadcrumb() {
   return (
     <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      <Breadcrumb
-        items={[
-          { label: 'Advertise With Us', href: '/advertise' },
-        ]}
-      />
+      <Breadcrumb items={[{ label: 'Advertise With Us', href: '/advertise' }]} />
     </div>
   );
 }

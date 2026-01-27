@@ -22,7 +22,7 @@ import {
   Square,
   Home,
   Clock,
-  AlertCircle
+  AlertCircle,
 } from 'lucide-react';
 import { trpc } from '@/lib/trpc';
 import { formatCurrency } from '@/lib/utils';
@@ -46,43 +46,58 @@ export default function AgentListings() {
   // Map tabs to status for API
   const getStatusForTab = (tab: string) => {
     switch (tab) {
-      case 'active': return 'available';
-      case 'pending': return 'pending_review';
-      case 'draft': return 'draft';
-      case 'sold': return 'sold';
-      case 'archived': return 'archived';
-      default: return 'all';
+      case 'active':
+        return 'available';
+      case 'pending':
+        return 'pending_review';
+      case 'draft':
+        return 'draft';
+      case 'sold':
+        return 'sold';
+      case 'archived':
+        return 'archived';
+      default:
+        return 'all';
     }
   };
 
   const isDraftOrPending = activeTab === 'draft' || activeTab === 'pending';
 
   // Fetch agent listings (for Active, Sold, Archived)
-  const { data: agentListings, isLoading: isLoadingAgent } = trpc.agent.getMyListings.useQuery({
-    status: getStatusForTab(activeTab) as any,
-    limit: 50,
-  }, {
-    enabled: !!user && !isDraftOrPending,
-  });
+  const { data: agentListings, isLoading: isLoadingAgent } = trpc.agent.getMyListings.useQuery(
+    {
+      status: getStatusForTab(activeTab) as any,
+      limit: 50,
+    },
+    {
+      enabled: !!user && !isDraftOrPending,
+    },
+  );
 
   // Fetch draft/pending listings (from listings table)
-  const { data: draftListings, isLoading: isLoadingDraft, refetch: refetchDrafts } = trpc.listing.myListings.useQuery({
-    status: getStatusForTab(activeTab) as any,
-    limit: 50,
-  }, {
-    enabled: !!user && isDraftOrPending,
-  });
-
+  const {
+    data: draftListings,
+    isLoading: isLoadingDraft,
+    refetch: refetchDrafts,
+  } = trpc.listing.myListings.useQuery(
+    {
+      status: getStatusForTab(activeTab) as any,
+      limit: 50,
+    },
+    {
+      enabled: !!user && isDraftOrPending,
+    },
+  );
 
   const utils = trpc.useContext();
-  
+
   // Mutations for properties (Active, Sold, Archived tabs)
   const archivePropertyMutation = trpc.agent.archiveProperty.useMutation({
     onSuccess: () => {
       console.log('Archive property success');
       utils.agent.getMyListings.invalidate();
     },
-    onError: (error) => {
+    onError: error => {
       console.error('Archive property error:', error);
       alert('Failed to archive property: ' + error.message);
     },
@@ -93,7 +108,7 @@ export default function AgentListings() {
       console.log('Delete property success');
       utils.agent.getMyListings.invalidate();
     },
-    onError: (error) => {
+    onError: error => {
       console.error('Delete property error:', error);
       alert('Failed to delete property: ' + error.message);
     },
@@ -106,7 +121,7 @@ export default function AgentListings() {
       utils.listing.myListings.invalidate();
       refetchDrafts();
     },
-    onError: (error) => {
+    onError: error => {
       console.error('Archive listing error:', error);
       alert('Failed to archive listing: ' + error.message);
     },
@@ -118,7 +133,7 @@ export default function AgentListings() {
       utils.listing.myListings.invalidate();
       refetchDrafts();
     },
-    onError: (error) => {
+    onError: error => {
       console.error('Delete listing error:', error);
       alert('Failed to delete listing: ' + error.message);
     },
@@ -138,7 +153,11 @@ export default function AgentListings() {
 
   const handleDelete = (listingId: number) => {
     console.log('handleDelete called', { listingId, isDraftOrPending });
-    if (confirm('Are you sure you want to permanently delete this listing? This action cannot be undone.')) {
+    if (
+      confirm(
+        'Are you sure you want to permanently delete this listing? This action cannot be undone.',
+      )
+    ) {
       if (isDraftOrPending) {
         deleteListingMutation.mutate({ id: listingId });
       } else {
@@ -150,7 +169,7 @@ export default function AgentListings() {
   const isLoading = isDraftOrPending ? isLoadingDraft : isLoadingAgent;
 
   // Normalize data
-  const listings = isDraftOrPending 
+  const listings = isDraftOrPending
     ? draftListings?.map((l: any) => ({
         id: l.id,
         title: l.title,
@@ -159,7 +178,11 @@ export default function AgentListings() {
         price: l.pricing?.askingPrice || l.pricing?.monthlyRent || l.pricing?.startingBid || 0,
         bedrooms: l.propertyDetails?.bedrooms || 0,
         bathrooms: l.propertyDetails?.bathrooms || 0,
-        houseAreaM2: l.propertyDetails?.houseAreaM2 || l.propertyDetails?.unitSizeM2 || l.propertyDetails?.floorAreaM2 || 0,
+        houseAreaM2:
+          l.propertyDetails?.houseAreaM2 ||
+          l.propertyDetails?.unitSizeM2 ||
+          l.propertyDetails?.floorAreaM2 ||
+          0,
         primaryImage: l.primaryImage,
         status: l.status === 'pending_review' ? 'pending' : l.status,
         approvalStatus: l.approvalStatus,
@@ -176,7 +199,7 @@ export default function AgentListings() {
         price: l.pricing?.askingPrice || l.pricing?.monthlyRent || l.pricing?.startingBid || 0,
         primaryImage: l.primaryImage,
         readiness: calculateListingReadiness(l),
-    }));
+      }));
 
   // Redirect if not authenticated
   if (!loading && !isAuthenticated) {
@@ -189,10 +212,11 @@ export default function AgentListings() {
     return null;
   }
 
-  const filteredListings = listings?.filter((listing: any) => 
-    listing.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    listing.address?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    listing.city?.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredListings = listings?.filter(
+    (listing: any) =>
+      listing.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      listing.address?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      listing.city?.toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
   return (
@@ -219,7 +243,7 @@ export default function AgentListings() {
             <h1 className="text-2xl font-bold text-slate-900 tracking-tight">My Listings</h1>
           </div>
           <div className="flex items-center gap-3">
-            <Button 
+            <Button
               onClick={() => setLocation('/listings/create')}
               className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white shadow-md hover:shadow-lg transition-all duration-300 rounded-xl"
             >
@@ -234,15 +258,18 @@ export default function AgentListings() {
           <div className="flex flex-col sm:flex-row gap-4 items-center justify-between bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
             <div className="relative w-full sm:w-96">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-              <Input 
-                placeholder="Search listings..." 
+              <Input
+                placeholder="Search listings..."
                 className="pl-10 bg-white border-slate-200 focus:ring-slate-500 rounded-lg"
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={e => setSearchQuery(e.target.value)}
               />
             </div>
             <div className="flex items-center gap-2 w-full sm:w-auto">
-              <Button variant="outline" className="bg-white border-slate-200 text-slate-600 hover:text-slate-900 rounded-lg">
+              <Button
+                variant="outline"
+                className="bg-white border-slate-200 text-slate-600 hover:text-slate-900 rounded-lg"
+              >
                 <Filter className="h-4 w-4 mr-2" />
                 Filter
               </Button>
@@ -252,27 +279,45 @@ export default function AgentListings() {
           {/* Tabs */}
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="grid w-full max-w-3xl grid-cols-5 p-1 bg-slate-100 rounded-xl mb-6">
-              <TabsTrigger value="active" className="rounded-lg data-[state=active]:bg-white data-[state=active]:text-emerald-600 data-[state=active]:shadow-sm transition-all duration-200">
+              <TabsTrigger
+                value="active"
+                className="rounded-lg data-[state=active]:bg-white data-[state=active]:text-emerald-600 data-[state=active]:shadow-sm transition-all duration-200"
+              >
                 Active
               </TabsTrigger>
-              <TabsTrigger value="pending" className="rounded-lg data-[state=active]:bg-white data-[state=active]:text-amber-600 data-[state=active]:shadow-sm transition-all duration-200">
+              <TabsTrigger
+                value="pending"
+                className="rounded-lg data-[state=active]:bg-white data-[state=active]:text-amber-600 data-[state=active]:shadow-sm transition-all duration-200"
+              >
                 Pending
               </TabsTrigger>
-              <TabsTrigger value="draft" className="rounded-lg data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-sm transition-all duration-200">
+              <TabsTrigger
+                value="draft"
+                className="rounded-lg data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-sm transition-all duration-200"
+              >
                 Drafts
               </TabsTrigger>
-              <TabsTrigger value="sold" className="rounded-lg data-[state=active]:bg-white data-[state=active]:text-blue-600 data-[state=active]:shadow-sm transition-all duration-200">
+              <TabsTrigger
+                value="sold"
+                className="rounded-lg data-[state=active]:bg-white data-[state=active]:text-blue-600 data-[state=active]:shadow-sm transition-all duration-200"
+              >
                 Sold
               </TabsTrigger>
-              <TabsTrigger value="archived" className="rounded-lg data-[state=active]:bg-white data-[state=active]:text-slate-500 data-[state=active]:shadow-sm transition-all duration-200">
+              <TabsTrigger
+                value="archived"
+                className="rounded-lg data-[state=active]:bg-white data-[state=active]:text-slate-500 data-[state=active]:shadow-sm transition-all duration-200"
+              >
                 Archived
               </TabsTrigger>
             </TabsList>
 
-            <TabsContent value={activeTab} className="space-y-6 animate-in fade-in-50 duration-500 slide-in-from-bottom-2">
+            <TabsContent
+              value={activeTab}
+              className="space-y-6 animate-in fade-in-50 duration-500 slide-in-from-bottom-2"
+            >
               {isLoading ? (
                 <div className="flex flex-col gap-4">
-                  {[1, 2, 3].map((i) => (
+                  {[1, 2, 3].map(i => (
                     <div key={i} className="bg-white rounded-2xl p-4 flex gap-4">
                       <Skeleton className="h-32 w-48 rounded-xl shrink-0" />
                       <div className="flex-1 space-y-3">
@@ -289,10 +334,12 @@ export default function AgentListings() {
                   </div>
                   <h3 className="text-lg font-medium text-slate-900">No listings found</h3>
                   <p className="text-slate-500 mt-1">
-                    {searchQuery ? "Try adjusting your search terms" : `You don't have any ${activeTab} listings yet`}
+                    {searchQuery
+                      ? 'Try adjusting your search terms'
+                      : `You don't have any ${activeTab} listings yet`}
                   </p>
                   {!searchQuery && (activeTab === 'active' || activeTab === 'draft') && (
-                    <Button 
+                    <Button
                       onClick={() => setLocation('/listings/create')}
                       className="mt-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl"
                     >
@@ -308,9 +355,9 @@ export default function AgentListings() {
                       type="listing"
                       data={listing}
                       readiness={listing.readiness}
-                      onEdit={(id) => setLocation(`/listings/create?id=${id}&edit=true`)}
-                      onDelete={(id) => handleDelete(id)}
-                      onView={(id) => setLocation(`/property/${id}`)}
+                      onEdit={id => setLocation(`/listings/create?id=${id}&edit=true`)}
+                      onDelete={id => handleDelete(id)}
+                      onView={id => setLocation(`/property/${id}`)}
                     />
                   ))}
                 </div>

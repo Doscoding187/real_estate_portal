@@ -1,16 +1,16 @@
 /**
  * ExploreShorts Page - Refactored
- * 
+ *
  * TikTok-inspired vertical video feed with smooth swipe interactions
  * and modern glass overlay controls.
- * 
+ *
  * Features:
  * - Enhanced video playback with viewport detection
  * - Smooth swipe gestures for navigation
  * - Glass overlay controls with modern design
  * - TikTok-style interactions (double-tap to like, swipe to navigate)
  * - Responsive design for mobile and desktop
- * 
+ *
  * Requirements: 2.1, 2.5, 9.4
  */
 
@@ -68,7 +68,8 @@ export default function ExploreShorts() {
               whileTap="tap"
               className="flex items-center gap-2 px-5 py-3 rounded-full text-white font-semibold shadow-xl"
               style={{
-                background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.9) 0%, rgba(79, 70, 229, 0.9) 100%)',
+                background:
+                  'linear-gradient(135deg, rgba(99, 102, 241, 0.9) 0%, rgba(79, 70, 229, 0.9) 100%)',
                 backdropFilter: designTokens.colors.glass.backdrop,
                 border: `1px solid ${designTokens.colors.glass.border}`,
               }}

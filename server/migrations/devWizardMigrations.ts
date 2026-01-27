@@ -18,27 +18,24 @@ import { eq, isNull } from 'drizzle-orm';
 
 export async function migration001_generateMissingUnitTypeIds() {
   console.log('[Migration 001] Starting: Generate missing unit type IDs');
-  
+
   try {
     // Find units without IDs (if your schema allows it)
-    const unitsWithoutIds = await db
-      .select()
-      .from(unitTypes)
-      .where(isNull(unitTypes.id));
+    const unitsWithoutIds = await db.select().from(unitTypes).where(isNull(unitTypes.id));
 
     console.log(`[Migration 001] Found ${unitsWithoutIds.length} units without IDs`);
 
     let fixed = 0;
     for (const unit of unitsWithoutIds) {
       const newId = `unit-migrated-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-      
+
       // This assumes you can update by some other unique field
       // Adjust based on your actual schema constraints
       await db
         .update(unitTypes)
         .set({ id: newId })
         .where(eq(unitTypes.developmentId, unit.developmentId));
-      
+
       fixed++;
       console.log(`[Migration 001] Fixed unit for development ${unit.developmentId}: ${newId}`);
     }
@@ -60,7 +57,7 @@ export async function migration001_generateMissingUnitTypeIds() {
 
 export async function migration002_fixJsonFields() {
   console.log('[Migration 002] Starting: Fix JSON fields');
-  
+
   try {
     const allDevelopments = await db.select().from(developments);
     console.log(`[Migration 002] Processing ${allDevelopments.length} developments`);
@@ -74,7 +71,7 @@ export async function migration002_fixJsonFields() {
       // Helper to detect and fix double-stringified JSON
       const fixJsonField = (fieldName: string, defaultValue: any) => {
         const value = (dev as any)[fieldName];
-        
+
         if (!value) {
           updates[fieldName] = JSON.stringify(defaultValue);
           needsUpdate = true;
@@ -92,13 +89,15 @@ export async function migration002_fixJsonFields() {
         if (typeof value === 'string') {
           try {
             const parsed = JSON.parse(value);
-            
+
             // Check if it's double-stringified (parsing returns a string)
             if (typeof parsed === 'string') {
               const doubleParsed = JSON.parse(parsed);
               updates[fieldName] = JSON.stringify(doubleParsed);
               needsUpdate = true;
-              console.log(`[Migration 002] Fixed double-stringified ${fieldName} for dev ${dev.id}`);
+              console.log(
+                `[Migration 002] Fixed double-stringified ${fieldName} for dev ${dev.id}`,
+              );
             } else {
               // Already correctly stringified, keep as is
               updates[fieldName] = value;
@@ -124,10 +123,7 @@ export async function migration002_fixJsonFields() {
       fixJsonField('keywords', []);
 
       if (needsUpdate) {
-        await db
-          .update(developments)
-          .set(updates)
-          .where(eq(developments.id, dev.id));
+        await db.update(developments).set(updates).where(eq(developments.id, dev.id));
         fixed++;
       }
     }
@@ -142,7 +138,7 @@ export async function migration002_fixJsonFields() {
 
       const fixJsonField = (fieldName: string, defaultValue: any) => {
         const value = (unit as any)[fieldName];
-        
+
         if (!value) {
           updates[fieldName] = JSON.stringify(defaultValue);
           needsUpdate = true;
@@ -178,10 +174,7 @@ export async function migration002_fixJsonFields() {
       fixJsonField('specs', []);
 
       if (needsUpdate) {
-        await db
-          .update(unitTypes)
-          .set(updates)
-          .where(eq(unitTypes.id, unit.id));
+        await db.update(unitTypes).set(updates).where(eq(unitTypes.id, unit.id));
         fixed++;
       }
     }
@@ -203,7 +196,7 @@ export async function migration002_fixJsonFields() {
 
 export async function migration003_removeOrphanedUnits() {
   console.log('[Migration 003] Starting: Remove orphaned unit types');
-  
+
   try {
     // Get all development IDs
     const allDevs = await db.select({ id: developments.id }).from(developments);
@@ -211,13 +204,15 @@ export async function migration003_removeOrphanedUnits() {
 
     // Get all unit types
     const allUnits = await db.select().from(unitTypes);
-    
+
     let deleted = 0;
     for (const unit of allUnits) {
       if (!validDevIds.has(unit.developmentId)) {
         await db.delete(unitTypes).where(eq(unitTypes.id, unit.id));
         deleted++;
-        console.log(`[Migration 003] Deleted orphaned unit ${unit.id} (dev ${unit.developmentId} not found)`);
+        console.log(
+          `[Migration 003] Deleted orphaned unit ${unit.id} (dev ${unit.developmentId} not found)`,
+        );
       }
     }
 
@@ -238,10 +233,10 @@ export async function migration003_removeOrphanedUnits() {
 
 export async function migration004_deduplicateUnits() {
   console.log('[Migration 004] Starting: Deduplicate unit types');
-  
+
   try {
     const allUnits = await db.select().from(unitTypes);
-    
+
     // Group by ID
     const unitsByID = new Map<string, any[]>();
     for (const unit of allUnits) {
@@ -255,7 +250,7 @@ export async function migration004_deduplicateUnits() {
     for (const [id, units] of unitsByID.entries()) {
       if (units.length > 1) {
         console.log(`[Migration 004] Found ${units.length} units with ID ${id}`);
-        
+
         // Sort by createdAt (keep newest)
         units.sort((a, b) => {
           const dateA = new Date(a.createdAt || 0).getTime();
@@ -289,7 +284,7 @@ export async function migration004_deduplicateUnits() {
 
 export async function migration005_normalizeLocations() {
   console.log('[Migration 005] Starting: Normalize location data');
-  
+
   try {
     const allDevelopments = await db.select().from(developments);
     let fixed = 0;
@@ -301,9 +296,7 @@ export async function migration005_normalizeLocations() {
       // If location object exists but flat fields are null
       if (dev.location) {
         try {
-          const loc = typeof dev.location === 'string' 
-            ? JSON.parse(dev.location) 
-            : dev.location;
+          const loc = typeof dev.location === 'string' ? JSON.parse(dev.location) : dev.location;
 
           if (!dev.address && loc.address) {
             updates.address = loc.address;
@@ -335,10 +328,7 @@ export async function migration005_normalizeLocations() {
       }
 
       if (needsUpdate) {
-        await db
-          .update(developments)
-          .set(updates)
-          .where(eq(developments.id, dev.id));
+        await db.update(developments).set(updates).where(eq(developments.id, dev.id));
         fixed++;
         console.log(`[Migration 005] Normalized location for dev ${dev.id}`);
       }
@@ -361,14 +351,22 @@ export async function migration005_normalizeLocations() {
 
 export async function migration006_normalizeNullValues() {
   console.log('[Migration 006] Starting: Normalize null vs empty string');
-  
+
   try {
     const allDevelopments = await db.select().from(developments);
     let fixed = 0;
 
     const fieldsToNormalize = [
-      'description', 'tagline', 'subtitle', 'address', 'suburb', 
-      'city', 'province', 'postalCode', 'metaTitle', 'metaDescription'
+      'description',
+      'tagline',
+      'subtitle',
+      'address',
+      'suburb',
+      'city',
+      'province',
+      'postalCode',
+      'metaTitle',
+      'metaDescription',
     ];
 
     for (const dev of allDevelopments) {
@@ -384,10 +382,7 @@ export async function migration006_normalizeNullValues() {
       }
 
       if (needsUpdate) {
-        await db
-          .update(developments)
-          .set(updates)
-          .where(eq(developments.id, dev.id));
+        await db.update(developments).set(updates).where(eq(developments.id, dev.id));
         fixed++;
       }
     }
@@ -408,10 +403,10 @@ export async function migration006_normalizeNullValues() {
 
 export async function migration007_createBackup() {
   console.log('[Migration 007] Starting: Create backup snapshot');
-  
+
   try {
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    
+
     // Export all developments
     const allDevelopments = await db.select().from(developments);
     const allUnits = await db.select().from(unitTypes);
@@ -434,7 +429,7 @@ export async function migration007_createBackup() {
     const fs = require('fs');
     const path = require('path');
     const backupPath = path.join(process.cwd(), 'backups', `dev-wizard-backup-${timestamp}.json`);
-    
+
     // Ensure backup directory exists
     const backupDir = path.join(process.cwd(), 'backups');
     if (!fs.existsSync(backupDir)) {
@@ -460,7 +455,7 @@ export async function migration007_createBackup() {
 export async function migration008_restoreBackup(backupPath: string) {
   console.log('[Migration 008] Starting: Restore from backup');
   console.log(`[Migration 008] Backup path: ${backupPath}`);
-  
+
   try {
     const fs = require('fs');
     const backupData = JSON.parse(fs.readFileSync(backupPath, 'utf-8'));
@@ -472,7 +467,7 @@ export async function migration008_restoreBackup(backupPath: string) {
 
     // WARNING: This will REPLACE existing data
     console.log('[Migration 008] ⚠️  This will REPLACE all current data. Confirm? (yes/no)');
-    
+
     // In production, require manual confirmation
     // For script, we'll proceed with a flag
     const confirmed = true; // Set to false in production
@@ -586,7 +581,7 @@ export async function runAllMigrations() {
 if (require.main === module) {
   runAllMigrations()
     .then(() => process.exit(0))
-    .catch((err) => {
+    .catch(err => {
       console.error(err);
       process.exit(1);
     });

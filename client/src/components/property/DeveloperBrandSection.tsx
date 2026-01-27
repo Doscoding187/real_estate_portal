@@ -1,6 +1,6 @@
 /**
  * Developer Brand Section
- * 
+ *
  * Displays developer brand information on property detail pages
  * when a property/development is linked to a developerBrandProfile.
  */
@@ -31,11 +31,11 @@ interface DeveloperBrandSectionProps {
 
 export function DeveloperBrandSection({ brand }: DeveloperBrandSectionProps) {
   const [, setLocation] = useLocation();
-  
+
   // Fetch other developments by this brand
   const { data: developmentsData } = trpc.brandProfile.getBrandDevelopments.useQuery(
     { brandProfileId: brand.id },
-    { enabled: !!brand.id }
+    { enabled: !!brand.id },
   );
 
   const tierLabel = {
@@ -56,15 +56,15 @@ export function DeveloperBrandSection({ brand }: DeveloperBrandSectionProps) {
         {/* Brand Header */}
         <div className="flex items-start gap-4 mb-6">
           {/* Logo */}
-          <div 
+          <div
             className="w-16 h-16 rounded-xl bg-slate-100 overflow-hidden border border-slate-200 shrink-0 cursor-pointer hover:border-indigo-300 transition-colors"
             onClick={() => setLocation(`/developer/${brand.slug}`)}
           >
             {brand.logoUrl ? (
-              <img 
-                src={brand.logoUrl} 
-                alt={brand.brandName} 
-                className="w-full h-full object-cover" 
+              <img
+                src={brand.logoUrl}
+                alt={brand.brandName}
+                className="w-full h-full object-cover"
               />
             ) : (
               <div className="w-full h-full flex items-center justify-center bg-indigo-600 text-white text-xl font-bold">
@@ -72,22 +72,22 @@ export function DeveloperBrandSection({ brand }: DeveloperBrandSectionProps) {
               </div>
             )}
           </div>
-          
+
           {/* Brand Info */}
           <div className="flex-1">
-            <h4 
+            <h4
               className="text-lg font-bold text-slate-900 hover:text-indigo-600 cursor-pointer transition-colors"
               onClick={() => setLocation(`/developer/${brand.slug}`)}
             >
               {brand.brandName}
             </h4>
-            
+
             {brand.brandTier && (
               <Badge className="mt-1 bg-indigo-100 text-indigo-700 border-0 text-xs font-medium">
                 {tierLabel[brand.brandTier]}
               </Badge>
             )}
-            
+
             {brand.headOfficeLocation && (
               <div className="flex items-center gap-1 text-sm text-slate-500 mt-2">
                 <MapPin className="h-3.5 w-3.5" />
@@ -99,18 +99,16 @@ export function DeveloperBrandSection({ brand }: DeveloperBrandSectionProps) {
 
         {/* About */}
         {brand.about && (
-          <p className="text-sm text-slate-600 leading-relaxed mb-4 line-clamp-3">
-            {brand.about}
-          </p>
+          <p className="text-sm text-slate-600 leading-relaxed mb-4 line-clamp-3">{brand.about}</p>
         )}
 
         {/* Property Focus Tags */}
         {brand.propertyFocus && brand.propertyFocus.length > 0 && (
           <div className="flex flex-wrap gap-2 mb-4">
-            {brand.propertyFocus.map((focus) => (
-              <Badge 
-                key={focus} 
-                variant="secondary" 
+            {brand.propertyFocus.map(focus => (
+              <Badge
+                key={focus}
+                variant="secondary"
                 className="bg-slate-100 text-slate-700 hover:bg-slate-200 border-0 text-xs capitalize"
               >
                 {focus.replace(/_/g, ' ')}
@@ -129,8 +127,8 @@ export function DeveloperBrandSection({ brand }: DeveloperBrandSectionProps) {
                   {developmentsData.length} Developments by this Developer
                 </span>
               </div>
-              <Button 
-                variant="ghost" 
+              <Button
+                variant="ghost"
                 size="sm"
                 className="text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50"
                 onClick={() => setLocation(`/developer/${brand.slug}`)}
@@ -144,16 +142,16 @@ export function DeveloperBrandSection({ brand }: DeveloperBrandSectionProps) {
 
         {/* Action Buttons */}
         <div className="flex gap-3">
-          <Button 
+          <Button
             className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white"
             onClick={() => setLocation(`/developer/${brand.slug}`)}
           >
             View Developer Profile
           </Button>
-          
+
           {brand.websiteUrl && (
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               className="border-slate-200"
               onClick={() => window.open(brand.websiteUrl!, '_blank')}
             >
@@ -165,7 +163,8 @@ export function DeveloperBrandSection({ brand }: DeveloperBrandSectionProps) {
 
         {/* Legal Disclaimer */}
         <p className="text-xs text-slate-400 mt-4 italic">
-          Developer information is provided for identification purposes only and does not imply partnership or endorsement.
+          Developer information is provided for identification purposes only and does not imply
+          partnership or endorsement.
         </p>
       </CardContent>
     </Card>

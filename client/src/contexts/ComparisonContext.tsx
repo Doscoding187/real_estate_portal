@@ -38,7 +38,7 @@ export function ComparisonProvider({ children }: { children: ReactNode }) {
   }, [comparedProperties]);
 
   const addToComparison = (propertyId: number) => {
-    setComparedProperties((prev) => {
+    setComparedProperties(prev => {
       if (prev.includes(propertyId) || prev.length >= MAX_COMPARISON) {
         return prev;
       }
@@ -47,7 +47,7 @@ export function ComparisonProvider({ children }: { children: ReactNode }) {
   };
 
   const removeFromComparison = (propertyId: number) => {
-    setComparedProperties((prev) => prev.filter((id) => id !== propertyId));
+    setComparedProperties(prev => prev.filter(id => id !== propertyId));
   };
 
   const clearComparison = () => {

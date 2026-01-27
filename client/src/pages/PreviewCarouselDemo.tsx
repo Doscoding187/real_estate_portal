@@ -1,6 +1,6 @@
 /**
  * PreviewCarousel Demo Page
- * 
+ *
  * Demonstrates the PreviewCarousel component with sample slides
  */
 
@@ -29,26 +29,20 @@ export default function PreviewCarouselDemo() {
   return (
     <div className="min-h-screen bg-gray-50 py-12 px-4">
       <div className="container mx-auto max-w-4xl">
-        <h1 className="text-4xl font-bold text-gray-900 mb-8 text-center">
-          Preview Carousel Demo
-        </h1>
-        
+        <h1 className="text-4xl font-bold text-gray-900 mb-8 text-center">Preview Carousel Demo</h1>
+
         <div className="bg-white rounded-2xl shadow-lg p-8 mb-8">
-          <h2 className="text-2xl font-semibold text-gray-800 mb-4">
-            Auto-Rotating Carousel
-          </h2>
+          <h2 className="text-2xl font-semibold text-gray-800 mb-4">Auto-Rotating Carousel</h2>
           <p className="text-gray-600 mb-6">
-            This carousel auto-rotates every 5 seconds. Hover over it to pause.
-            Click the indicators to navigate manually.
+            This carousel auto-rotates every 5 seconds. Hover over it to pause. Click the indicators
+            to navigate manually.
           </p>
-          
+
           <PreviewCarousel slides={sampleSlides} />
         </div>
 
         <div className="bg-white rounded-2xl shadow-lg p-8">
-          <h2 className="text-2xl font-semibold text-gray-800 mb-4">
-            Features
-          </h2>
+          <h2 className="text-2xl font-semibold text-gray-800 mb-4">Features</h2>
           <ul className="space-y-2 text-gray-600">
             <li>✓ Auto-rotates every 5 seconds</li>
             <li>✓ Smooth fade transitions between slides</li>

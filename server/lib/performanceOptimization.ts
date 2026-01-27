@@ -1,9 +1,9 @@
 /**
  * Performance Optimization Utilities
- * 
+ *
  * Task 21: Add performance optimizations
  * Requirements 5.5, 24.5: Implement Redis caching and performance optimizations
- * 
+ *
  * This module provides:
  * - Redis caching for API responses and database queries
  * - Request deduplication to prevent duplicate concurrent requests
@@ -19,38 +19,30 @@ import { redisCache, CacheTTL } from './redis';
 
 export const LocationCacheKeys = {
   // Location statistics (5 minutes TTL)
-  locationStats: (locationId: number) => 
-    `location:stats:${locationId}`,
-  
-  priceStats: (locationId: number) =>
-    `location:price:${locationId}`,
-  
-  marketActivity: (locationId: number) =>
-    `location:market:${locationId}`,
-  
-  propertyTypes: (locationId: number) =>
-    `location:types:${locationId}`,
-  
+  locationStats: (locationId: number) => `location:stats:${locationId}`,
+
+  priceStats: (locationId: number) => `location:price:${locationId}`,
+
+  marketActivity: (locationId: number) => `location:market:${locationId}`,
+
+  propertyTypes: (locationId: number) => `location:types:${locationId}`,
+
   // Location pages (24 hours TTL for static content)
-  locationPage: (slug: string) =>
-    `location:page:${slug}`,
-  
+  locationPage: (slug: string) => `location:page:${slug}`,
+
   locationByPath: (province: string, city?: string, suburb?: string) =>
     `location:path:${province}:${city || ''}:${suburb || ''}`,
-  
+
   // Trending and recommendations (30 minutes TTL)
-  trendingSuburbs: (limit: number) =>
-    `location:trending:${limit}`,
-  
+  trendingSuburbs: (limit: number) => `location:trending:${limit}`,
+
   similarLocations: (locationId: number, limit: number) =>
     `location:similar:${locationId}:${limit}`,
-  
+
   // Location hierarchy (1 hour TTL)
-  locationHierarchy: (locationId: number) =>
-    `location:hierarchy:${locationId}`,
-  
-  locationChildren: (locationId: number) =>
-    `location:children:${locationId}`,
+  locationHierarchy: (locationId: number) => `location:hierarchy:${locationId}`,
+
+  locationChildren: (locationId: number) => `location:children:${locationId}`,
 };
 
 // ============================================================================
@@ -58,12 +50,12 @@ export const LocationCacheKeys = {
 // ============================================================================
 
 export const LocationCacheTTL = {
-  STATISTICS: 300,           // 5 minutes - dynamic market data
-  STATIC_CONTENT: 86400,     // 24 hours - static SEO content
-  TRENDING: 1800,            // 30 minutes - trending suburbs
-  SIMILAR_LOCATIONS: 1800,   // 30 minutes - similar locations
-  HIERARCHY: 3600,           // 1 hour - location hierarchy
-  SEARCH_RESULTS: 300,       // 5 minutes - search results
+  STATISTICS: 300, // 5 minutes - dynamic market data
+  STATIC_CONTENT: 86400, // 24 hours - static SEO content
+  TRENDING: 1800, // 30 minutes - trending suburbs
+  SIMILAR_LOCATIONS: 1800, // 30 minutes - similar locations
+  HIERARCHY: 3600, // 1 hour - location hierarchy
+  SEARCH_RESULTS: 300, // 5 minutes - search results
 } as const;
 
 // ============================================================================
@@ -81,7 +73,7 @@ class RequestDeduplicator {
   /**
    * Execute a function with deduplication
    * If the same key is already being processed, return the existing promise
-   * 
+   *
    * @param key - Unique key for this request
    * @param fn - Function to execute
    * @returns Result of the function
@@ -93,11 +85,10 @@ class RequestDeduplicator {
     }
 
     // Start new request
-    const promise = fn()
-      .finally(() => {
-        // Clean up after request completes
-        this.inFlightRequests.delete(key);
-      });
+    const promise = fn().finally(() => {
+      // Clean up after request completes
+      this.inFlightRequests.delete(key);
+    });
 
     this.inFlightRequests.set(key, promise);
     return promise;
@@ -129,14 +120,14 @@ export const requestDeduplicator = new RequestDeduplicator();
 
 /**
  * Wrap a function with Redis caching and request deduplication
- * 
+ *
  * This provides a complete caching solution:
  * 1. Check Redis cache
  * 2. If miss, deduplicate concurrent requests
  * 3. Execute function once
  * 4. Cache result in Redis
  * 5. Return result to all waiting callers
- * 
+ *
  * @param cacheKey - Redis cache key
  * @param ttlSeconds - Cache TTL in seconds
  * @param fn - Function to execute on cache miss
@@ -145,7 +136,7 @@ export const requestDeduplicator = new RequestDeduplicator();
 export async function withCache<T>(
   cacheKey: string,
   ttlSeconds: number,
-  fn: () => Promise<T>
+  fn: () => Promise<T>,
 ): Promise<T> {
   // Try cache first
   const cached = await redisCache.get<T>(cacheKey);
@@ -166,7 +157,7 @@ export async function withCache<T>(
 
 /**
  * Invalidate cache for a specific key or pattern
- * 
+ *
  * @param keyOrPattern - Cache key or pattern (e.g., "location:stats:*")
  */
 export async function invalidateCache(keyOrPattern: string): Promise<void> {
@@ -180,7 +171,7 @@ export async function invalidateCache(keyOrPattern: string): Promise<void> {
 /**
  * Invalidate all location-related caches for a specific location
  * This should be called when a listing is created/updated/deleted
- * 
+ *
  * @param locationId - Location ID
  */
 export async function invalidateLocationCache(locationId: number): Promise<void> {
@@ -189,7 +180,9 @@ export async function invalidateLocationCache(locationId: number): Promise<void>
     invalidateCache(LocationCacheKeys.priceStats(locationId)),
     invalidateCache(LocationCacheKeys.marketActivity(locationId)),
     invalidateCache(LocationCacheKeys.propertyTypes(locationId)),
-    invalidateCache(`${LocationCacheKeys.similarLocations(locationId, 0).split(':').slice(0, -1).join(':')}:*`),
+    invalidateCache(
+      `${LocationCacheKeys.similarLocations(locationId, 0).split(':').slice(0, -1).join(':')}:*`,
+    ),
   ]);
 }
 
@@ -206,7 +199,7 @@ export const CacheHeaders = {
    */
   static: {
     'Cache-Control': 'public, max-age=31536000, immutable',
-    'Vary': 'Accept-Encoding',
+    Vary: 'Accept-Encoding',
   },
 
   /**
@@ -215,7 +208,7 @@ export const CacheHeaders = {
    */
   locationPage: {
     'Cache-Control': 'public, max-age=300, stale-while-revalidate=3600',
-    'Vary': 'Accept-Encoding',
+    Vary: 'Accept-Encoding',
   },
 
   /**
@@ -223,7 +216,7 @@ export const CacheHeaders = {
    */
   api: {
     'Cache-Control': 'public, max-age=300',
-    'Vary': 'Accept-Encoding',
+    Vary: 'Accept-Encoding',
   },
 
   /**
@@ -231,8 +224,8 @@ export const CacheHeaders = {
    */
   dynamic: {
     'Cache-Control': 'no-cache, no-store, must-revalidate',
-    'Pragma': 'no-cache',
-    'Expires': '0',
+    Pragma: 'no-cache',
+    Expires: '0',
   },
 
   /**
@@ -240,13 +233,13 @@ export const CacheHeaders = {
    */
   images: {
     'Cache-Control': 'public, max-age=604800',
-    'Vary': 'Accept-Encoding, Accept',
+    Vary: 'Accept-Encoding, Accept',
   },
 };
 
 /**
  * Apply cache headers to Express response
- * 
+ *
  * @param res - Express response object
  * @param type - Cache type
  */
@@ -263,32 +256,31 @@ export function applyCacheHeaders(res: any, type: keyof typeof CacheHeaders): vo
 
 /**
  * Generate srcset for responsive images
- * 
+ *
  * @param baseUrl - Base image URL
  * @param widths - Array of widths to generate
  * @returns srcset string
  */
 export function generateSrcSet(baseUrl: string, widths: number[]): string {
-  return widths
-    .map(width => `${baseUrl}?w=${width} ${width}w`)
-    .join(', ');
+  return widths.map(width => `${baseUrl}?w=${width} ${width}w`).join(', ');
 }
 
 /**
  * Generate WebP source element attributes
- * 
+ *
  * @param baseUrl - Base image URL
  * @param widths - Array of widths
  * @returns Object with srcSet and type
  */
-export function generateWebPSource(baseUrl: string, widths: number[]): {
+export function generateWebPSource(
+  baseUrl: string,
+  widths: number[],
+): {
   srcSet: string;
   type: string;
 } {
   return {
-    srcSet: widths
-      .map(width => `${baseUrl}?w=${width}&format=webp ${width}w`)
-      .join(', '),
+    srcSet: widths.map(width => `${baseUrl}?w=${width}&format=webp ${width}w`).join(', '),
     type: 'image/webp',
   };
 }
@@ -302,14 +294,14 @@ export const RESPONSIVE_WIDTHS = [320, 640, 768, 1024, 1280, 1536, 1920];
  * Image loading strategies
  */
 export const ImageLoadingStrategy = {
-  EAGER: 'eager',      // Load immediately (above fold)
-  LAZY: 'lazy',        // Load when near viewport (below fold)
-  AUTO: 'auto',        // Browser decides
+  EAGER: 'eager', // Load immediately (above fold)
+  LAZY: 'lazy', // Load when near viewport (below fold)
+  AUTO: 'auto', // Browser decides
 } as const;
 
 /**
  * Get recommended loading strategy based on position
- * 
+ *
  * @param position - Image position (0-based index)
  * @returns Loading strategy
  */
@@ -372,15 +364,12 @@ export class PerformanceTimer {
 
 /**
  * Measure async function execution time
- * 
+ *
  * @param label - Label for logging
  * @param fn - Function to measure
  * @returns Function result
  */
-export async function measurePerformance<T>(
-  label: string,
-  fn: () => Promise<T>
-): Promise<T> {
+export async function measurePerformance<T>(label: string, fn: () => Promise<T>): Promise<T> {
   const timer = new PerformanceTimer();
   try {
     const result = await fn();

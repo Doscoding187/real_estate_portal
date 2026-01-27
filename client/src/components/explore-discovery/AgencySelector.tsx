@@ -1,7 +1,7 @@
 /**
  * Agency Selector Component
  * Requirements: 2.1, 9.5
- * 
+ *
  * Dropdown selector for filtering content by agency
  */
 
@@ -44,7 +44,7 @@ export function AgencySelector({
     ]);
   }, []);
 
-  const selectedAgency = agencies.find((a) => a.id === selectedAgencyId);
+  const selectedAgency = agencies.find(a => a.id === selectedAgencyId);
 
   const handleSelect = (agencyId: number | null) => {
     onAgencyChange(agencyId);
@@ -62,9 +62,7 @@ export function AgencySelector({
             ? designTokens.colors.accent.light
             : designTokens.colors.bg.tertiary,
           border: `1px solid ${
-            selectedAgencyId
-              ? designTokens.colors.accent.primary
-              : designTokens.colors.bg.tertiary
+            selectedAgencyId ? designTokens.colors.accent.primary : designTokens.colors.bg.tertiary
           }`,
         }}
       >
@@ -91,7 +89,7 @@ export function AgencySelector({
         </div>
         {selectedAgencyId && (
           <button
-            onClick={(e) => {
+            onClick={e => {
               e.stopPropagation();
               handleSelect(null);
             }}
@@ -107,10 +105,7 @@ export function AgencySelector({
         {isOpen && (
           <>
             {/* Backdrop */}
-            <div
-              className="fixed inset-0 z-10"
-              onClick={() => setIsOpen(false)}
-            />
+            <div className="fixed inset-0 z-10" onClick={() => setIsOpen(false)} />
 
             {/* Dropdown Menu */}
             <motion.div
@@ -155,13 +150,10 @@ export function AgencySelector({
               </button>
 
               {/* Divider */}
-              <div
-                className="h-px"
-                style={{ backgroundColor: designTokens.colors.bg.tertiary }}
-              />
+              <div className="h-px" style={{ backgroundColor: designTokens.colors.bg.tertiary }} />
 
               {/* Agency Options */}
-              {agencies.map((agency) => (
+              {agencies.map(agency => (
                 <button
                   key={agency.id}
                   onClick={() => handleSelect(agency.id)}

@@ -37,7 +37,7 @@ export function PriceStatistics({ avgPropertyPrice, priceTrend }: PriceStatistic
     : 0;
 
   // Find min and max for scaling
-  const prices = trendData.map((d) => d.avgPrice);
+  const prices = trendData.map(d => d.avgPrice);
   const minPrice = Math.min(...prices);
   const maxPrice = Math.max(...prices);
   const priceRange = maxPrice - minPrice;
@@ -62,18 +62,16 @@ export function PriceStatistics({ avgPropertyPrice, priceTrend }: PriceStatistic
             <span className="text-sm font-medium text-blue-900">Average Property Price</span>
           </div>
           <div className="flex items-end gap-3">
-            <span className="text-3xl font-bold text-blue-900">{formatPrice(avgPropertyPrice)}</span>
+            <span className="text-3xl font-bold text-blue-900">
+              {formatPrice(avgPropertyPrice)}
+            </span>
             {priceChange !== 0 && (
               <div
                 className={`flex items-center gap-1 px-2 py-1 rounded-full text-sm font-medium ${
-                  priceChange > 0
-                    ? 'bg-green-100 text-green-700'
-                    : 'bg-red-100 text-red-700'
+                  priceChange > 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
                 }`}
               >
-                <TrendingUp
-                  className={`w-4 h-4 ${priceChange < 0 ? 'rotate-180' : ''}`}
-                />
+                <TrendingUp className={`w-4 h-4 ${priceChange < 0 ? 'rotate-180' : ''}`} />
                 <span>{Math.abs(priceChange).toFixed(1)}%</span>
               </div>
             )}
@@ -140,8 +138,7 @@ export function PriceStatistics({ avgPropertyPrice, priceTrend }: PriceStatistic
                   points={trendData
                     .map((point, index) => {
                       const x = (index / (trendData.length - 1)) * 100;
-                      const y =
-                        100 - ((point.avgPrice - minPrice) / (priceRange || 1)) * 100;
+                      const y = 100 - ((point.avgPrice - minPrice) / (priceRange || 1)) * 100;
                       return `${x},${y}`;
                     })
                     .join(' ')}

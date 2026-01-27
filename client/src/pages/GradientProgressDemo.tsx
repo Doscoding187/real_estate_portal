@@ -6,7 +6,16 @@
 import { useState } from 'react';
 import { GradientProgressIndicator } from '@/components/wizard/GradientProgressIndicator';
 import { GradientButton } from '@/components/ui/GradientButton';
-import { Building2, Phone, Briefcase, FileText, Home, User, CreditCard, CheckCircle } from 'lucide-react';
+import {
+  Building2,
+  Phone,
+  Briefcase,
+  FileText,
+  Home,
+  User,
+  CreditCard,
+  CheckCircle,
+} from 'lucide-react';
 
 const wizardSteps = [
   { id: 1, title: 'Company Info', icon: Building2 },
@@ -68,9 +77,7 @@ export default function GradientProgressDemo() {
         {/* Interactive Demo */}
         <section className="bg-white rounded-2xl p-8 shadow-lg space-y-8">
           <div>
-            <h2 className="text-2xl font-semibold text-gray-900 mb-2">
-              Interactive Demo
-            </h2>
+            <h2 className="text-2xl font-semibold text-gray-900 mb-2">Interactive Demo</h2>
             <p className="text-gray-600 mb-6">
               Click the buttons to navigate through steps. Completed steps are clickable.
             </p>
@@ -101,18 +108,11 @@ export default function GradientProgressDemo() {
 
           {/* Navigation Buttons */}
           <div className="flex justify-between items-center">
-            <GradientButton
-              variant="outline"
-              onClick={handleBack}
-              disabled={currentStep === 1}
-            >
+            <GradientButton variant="outline" onClick={handleBack} disabled={currentStep === 1}>
               Back
             </GradientButton>
 
-            <GradientButton
-              variant="outline"
-              onClick={handleReset}
-            >
+            <GradientButton variant="outline" onClick={handleReset}>
               Reset
             </GradientButton>
 
@@ -131,7 +131,7 @@ export default function GradientProgressDemo() {
           {/* All States */}
           <section className="bg-white rounded-2xl p-8 shadow-lg space-y-6">
             <h2 className="text-2xl font-semibold text-gray-900">All States</h2>
-            
+
             <div className="space-y-8">
               <div>
                 <h3 className="text-sm font-medium text-gray-700 mb-4">Initial State</h3>
@@ -177,12 +177,12 @@ export default function GradientProgressDemo() {
             <p className="text-sm text-gray-600">
               Example of a checkout process with different icons
             </p>
-            
+
             <GradientProgressIndicator
               steps={checkoutSteps}
               currentStep={checkoutStep}
               completedSteps={checkoutCompleted}
-              onStepClick={(stepId) => {
+              onStepClick={stepId => {
                 if (checkoutCompleted.includes(stepId)) {
                   setCheckoutStep(stepId);
                 }
@@ -223,7 +223,7 @@ export default function GradientProgressDemo() {
         {/* Features */}
         <section className="bg-white rounded-2xl p-8 shadow-lg">
           <h2 className="text-2xl font-semibold text-gray-900 mb-6">Features</h2>
-          
+
           <div className="grid md:grid-cols-2 gap-6">
             <div className="space-y-3">
               <h3 className="font-semibold text-gray-900 flex items-center gap-2">
@@ -231,7 +231,8 @@ export default function GradientProgressDemo() {
                 Gradient Styling
               </h3>
               <p className="text-sm text-gray-600 ml-4">
-                Active steps use blue-to-indigo gradient, completed steps use green-to-emerald gradient
+                Active steps use blue-to-indigo gradient, completed steps use green-to-emerald
+                gradient
               </p>
             </div>
 
@@ -293,13 +294,9 @@ export default function GradientProgressDemo() {
           <p className="text-gray-600 mb-6">
             Resize your browser to see the compact mobile view, or view this on a mobile device
           </p>
-          
+
           <div className="max-w-sm mx-auto border-4 border-gray-300 rounded-2xl p-4 bg-gray-50">
-            <GradientProgressIndicator
-              steps={wizardSteps}
-              currentStep={2}
-              completedSteps={[1]}
-            />
+            <GradientProgressIndicator steps={wizardSteps} currentStep={2} completedSteps={[1]} />
           </div>
         </section>
       </div>

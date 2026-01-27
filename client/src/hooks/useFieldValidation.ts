@@ -1,6 +1,6 @@
 /**
  * useFieldValidation Hook
- * 
+ *
  * Provides easy-to-use field validation for form components
  */
 
@@ -13,22 +13,22 @@ interface UseFieldValidationOptions {
    * Field name to validate
    */
   field: string;
-  
+
   /**
    * Current field value
    */
   value: any;
-  
+
   /**
    * Validation context (action, propertyType, etc.)
    */
   context?: ValidationContext;
-  
+
   /**
    * When to trigger validation
    */
   trigger?: 'blur' | 'change' | 'submit';
-  
+
   /**
    * Debounce delay in ms (for 'change' trigger)
    */
@@ -40,32 +40,32 @@ interface UseFieldValidationReturn {
    * Current error message (if any)
    */
   error: string | undefined;
-  
+
   /**
    * Whether the field is currently valid
    */
   isValid: boolean;
-  
+
   /**
    * Whether validation is in progress
    */
   isValidating: boolean;
-  
+
   /**
    * Manually trigger validation
    */
   validate: () => Promise<boolean>;
-  
+
   /**
    * Clear the current error
    */
   clearError: () => void;
-  
+
   /**
    * Handler for onBlur event
    */
   onBlur: () => void;
-  
+
   /**
    * Handler for onChange event
    */
@@ -91,7 +91,7 @@ export const useFieldValidation = ({
    */
   const validate = useCallback(async (): Promise<boolean> => {
     setIsValidating(true);
-    
+
     try {
       const errorMessage = await getFieldError(field, value, context);
       setError(errorMessage);
@@ -130,7 +130,7 @@ export const useFieldValidation = ({
       const timer = setTimeout(() => {
         validate();
       }, debounceMs);
-      
+
       return () => clearTimeout(timer);
     }
   }, [trigger, touched, validate, debounceMs]);
@@ -143,7 +143,7 @@ export const useFieldValidation = ({
       const timer = setTimeout(() => {
         validate();
       }, debounceMs);
-      
+
       return () => clearTimeout(timer);
     }
   }, [value, trigger, touched, validate, debounceMs]);

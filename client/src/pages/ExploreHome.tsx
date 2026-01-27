@@ -17,12 +17,12 @@ import { useTopicNavigationTooltip, usePartnerContentTooltip } from '@/hooks/use
 import { DiscoveryItem } from '@/hooks/useDiscoveryFeed';
 import { TrendingVideo } from '@/hooks/useTrendingVideos';
 import { designTokens } from '@/lib/design-tokens';
-import { 
-  pageVariants, 
-  staggerContainerVariants, 
+import {
+  pageVariants,
+  staggerContainerVariants,
   staggerItemVariants,
   buttonVariants,
-  getVariants 
+  getVariants,
 } from '@/lib/animations/exploreAnimations';
 
 export default function ExploreHome() {
@@ -47,8 +47,8 @@ export default function ExploreHome() {
   const partnerContentRef = useRef<HTMLDivElement>(null);
 
   // Get filter count from Zustand store
-  const getFilterCount = useExploreFiltersStore((state) => state.getFilterCount);
-  
+  const getFilterCount = useExploreFiltersStore(state => state.getFilterCount);
+
   // User location state
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | undefined>();
 
@@ -62,27 +62,27 @@ export default function ExploreHome() {
   useEffect(() => {
     if ('geolocation' in navigator) {
       navigator.geolocation.getCurrentPosition(
-        (position) => {
+        position => {
           setUserLocation({
             lat: position.coords.latitude,
             lng: position.coords.longitude,
           });
         },
-        (error) => {
+        error => {
           console.log('Location access denied:', error);
-        }
+        },
       );
     }
   }, []);
 
   const handleItemClick = (item: DiscoveryItem) => {
     console.log('Item clicked:', item);
-    
+
     // Track partner content encounters for tooltip
     if (item.partnerId) {
       partnerTooltip.onPartnerContentEncounter();
     }
-    
+
     // TODO: Navigate to detail page based on item type
     if (item.type === 'property') {
       // Navigate to property detail
@@ -103,10 +103,10 @@ export default function ExploreHome() {
   // Handle trending video click - switch to videos view
   const handleTrendingVideoClick = (video: TrendingVideo) => {
     console.log('Trending video clicked:', video);
-    
+
     // Increment scroll count for topic tooltip
     topicTooltip.incrementScrollCount();
-    
+
     setViewMode('videos');
   };
 
@@ -114,7 +114,7 @@ export default function ExploreHome() {
   const handleTrendingVideosSeeAll = () => {
     // Increment scroll count for topic tooltip
     topicTooltip.incrementScrollCount();
-    
+
     setViewMode('videos');
   };
 
@@ -126,7 +126,7 @@ export default function ExploreHome() {
   };
 
   return (
-    <motion.div 
+    <motion.div
       className="min-h-screen"
       style={{ backgroundColor: designTokens.colors.bg.secondary }}
       initial="initial"
@@ -135,7 +135,7 @@ export default function ExploreHome() {
       variants={getVariants(pageVariants)}
     >
       {/* Header - Modern sticky design */}
-      <motion.header 
+      <motion.header
         className="sticky top-0 z-40 backdrop-blur-md"
         style={{
           backgroundColor: designTokens.colors.glass.bg,
@@ -151,9 +151,9 @@ export default function ExploreHome() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           {/* Title and View Mode Toggle */}
           <div className="flex items-center justify-between mb-4">
-            <motion.h1 
+            <motion.h1
               className="text-3xl font-bold"
-              style={{ 
+              style={{
                 color: designTokens.colors.text.primary,
                 fontWeight: designTokens.typography.fontWeight.bold,
               }}
@@ -163,9 +163,9 @@ export default function ExploreHome() {
             >
               Explore
             </motion.h1>
-            
+
             {/* View mode toggle - Modern pill design */}
-            <motion.div 
+            <motion.div
               className="flex items-center gap-1 p-1 rounded-full"
               style={{
                 backgroundColor: designTokens.colors.bg.tertiary,
@@ -180,8 +180,12 @@ export default function ExploreHome() {
                 onClick={() => setViewMode('home')}
                 className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all"
                 style={{
-                  backgroundColor: viewMode === 'home' ? designTokens.colors.bg.primary : 'transparent',
-                  color: viewMode === 'home' ? designTokens.colors.text.primary : designTokens.colors.text.secondary,
+                  backgroundColor:
+                    viewMode === 'home' ? designTokens.colors.bg.primary : 'transparent',
+                  color:
+                    viewMode === 'home'
+                      ? designTokens.colors.text.primary
+                      : designTokens.colors.text.secondary,
                   boxShadow: viewMode === 'home' ? designTokens.shadows.sm : 'none',
                   fontWeight: designTokens.typography.fontWeight.medium,
                 }}
@@ -200,8 +204,12 @@ export default function ExploreHome() {
                 onClick={() => setViewMode('cards')}
                 className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all"
                 style={{
-                  backgroundColor: viewMode === 'cards' ? designTokens.colors.bg.primary : 'transparent',
-                  color: viewMode === 'cards' ? designTokens.colors.text.primary : designTokens.colors.text.secondary,
+                  backgroundColor:
+                    viewMode === 'cards' ? designTokens.colors.bg.primary : 'transparent',
+                  color:
+                    viewMode === 'cards'
+                      ? designTokens.colors.text.primary
+                      : designTokens.colors.text.secondary,
                   boxShadow: viewMode === 'cards' ? designTokens.shadows.sm : 'none',
                   fontWeight: designTokens.typography.fontWeight.medium,
                 }}
@@ -220,8 +228,12 @@ export default function ExploreHome() {
                 onClick={() => setViewMode('videos')}
                 className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all"
                 style={{
-                  backgroundColor: viewMode === 'videos' ? designTokens.colors.bg.primary : 'transparent',
-                  color: viewMode === 'videos' ? designTokens.colors.text.primary : designTokens.colors.text.secondary,
+                  backgroundColor:
+                    viewMode === 'videos' ? designTokens.colors.bg.primary : 'transparent',
+                  color:
+                    viewMode === 'videos'
+                      ? designTokens.colors.text.primary
+                      : designTokens.colors.text.secondary,
                   boxShadow: viewMode === 'videos' ? designTokens.shadows.sm : 'none',
                   fontWeight: designTokens.typography.fontWeight.medium,
                 }}
@@ -248,7 +260,7 @@ export default function ExploreHome() {
           >
             <LifestyleCategorySelector
               selectedCategoryId={selectedCategoryId ?? undefined}
-              onCategoryChange={(id) => {
+              onCategoryChange={id => {
                 setSelectedCategoryId(id ?? null);
                 // Increment scroll count when category changes
                 topicTooltip.incrementScrollCount();
@@ -261,7 +273,7 @@ export default function ExploreHome() {
       </motion.header>
 
       {/* Content - Smooth transitions between view modes */}
-      <main 
+      <main
         className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"
         id="explore-content"
         role="main"
@@ -269,7 +281,7 @@ export default function ExploreHome() {
       >
         <AnimatePresence mode="wait">
           {viewMode === 'home' ? (
-            <motion.div 
+            <motion.div
               key="home-view"
               className="py-6 space-y-8"
               initial="initial"
@@ -286,11 +298,7 @@ export default function ExploreHome() {
 
               {/* Personalized Content Sections with stagger animation */}
               {sectionsLoading ? (
-                <motion.div
-                  variants={staggerContainerVariants}
-                  initial="initial"
-                  animate="animate"
-                >
+                <motion.div variants={staggerContainerVariants} initial="initial" animate="animate">
                   <motion.div variants={staggerItemVariants}>
                     <PersonalizedContentBlock
                       title="Loading..."
@@ -309,13 +317,9 @@ export default function ExploreHome() {
                   </motion.div>
                 </motion.div>
               ) : (
-                <motion.div
-                  variants={staggerContainerVariants}
-                  initial="initial"
-                  animate="animate"
-                >
-                  {sections.map((section) => (
-                    <motion.div 
+                <motion.div variants={staggerContainerVariants} initial="initial" animate="animate">
+                  {sections.map(section => (
+                    <motion.div
                       key={section.id}
                       ref={section.type === 'partner' ? partnerContentRef : undefined}
                       variants={staggerItemVariants}
@@ -335,7 +339,7 @@ export default function ExploreHome() {
 
               {/* Empty state - Modern design */}
               {!sectionsLoading && sections.length === 0 && (
-                <motion.div 
+                <motion.div
                   className="text-center py-16 px-4"
                   initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
@@ -346,14 +350,14 @@ export default function ExploreHome() {
                     animate={{ y: 0, opacity: 1 }}
                     transition={{ delay: 0.1 }}
                   >
-                    <MapPin 
-                      className="w-20 h-20 mx-auto mb-6" 
+                    <MapPin
+                      className="w-20 h-20 mx-auto mb-6"
                       style={{ color: designTokens.colors.text.tertiary }}
                     />
                   </motion.div>
-                  <motion.h3 
+                  <motion.h3
                     className="text-2xl font-semibold mb-3"
-                    style={{ 
+                    style={{
                       color: designTokens.colors.text.primary,
                       fontWeight: designTokens.typography.fontWeight.semibold,
                     }}
@@ -363,7 +367,7 @@ export default function ExploreHome() {
                   >
                     Start Exploring
                   </motion.h3>
-                  <motion.p 
+                  <motion.p
                     className="text-lg mb-8 max-w-md mx-auto"
                     style={{ color: designTokens.colors.text.secondary }}
                     initial={{ y: 20, opacity: 0 }}
@@ -393,7 +397,7 @@ export default function ExploreHome() {
               )}
             </motion.div>
           ) : viewMode === 'cards' ? (
-            <motion.div 
+            <motion.div
               key="cards-view"
               className="py-6"
               initial="initial"
@@ -440,7 +444,7 @@ export default function ExploreHome() {
         <SlidersHorizontal className="w-6 h-6" />
         <AnimatePresence>
           {getFilterCount() > 0 && (
-            <motion.span 
+            <motion.span
               className="absolute -top-1 -right-1 w-7 h-7 text-white text-xs font-bold rounded-full flex items-center justify-center"
               style={{
                 backgroundColor: designTokens.colors.status.error,

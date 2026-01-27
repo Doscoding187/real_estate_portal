@@ -20,9 +20,7 @@ interface UpgradePack {
 }
 
 export function ExtrasTab({ formData, updateFormData }: ExtrasTabProps) {
-  const [upgradePacks, setUpgradePacks] = useState<UpgradePack[]>(
-    formData.upgradePacks || []
-  );
+  const [upgradePacks, setUpgradePacks] = useState<UpgradePack[]>(formData.upgradePacks || []);
 
   const addUpgradePack = () => {
     const newPack: UpgradePack = {
@@ -37,9 +35,7 @@ export function ExtrasTab({ formData, updateFormData }: ExtrasTabProps) {
   };
 
   const updateUpgradePack = (id: string, field: keyof UpgradePack, value: any) => {
-    const updated = upgradePacks.map(pack =>
-      pack.id === id ? { ...pack, [field]: value } : pack
-    );
+    const updated = upgradePacks.map(pack => (pack.id === id ? { ...pack, [field]: value } : pack));
     setUpgradePacks(updated);
     updateFormData({ upgradePacks: updated });
   };
@@ -54,8 +50,8 @@ export function ExtrasTab({ formData, updateFormData }: ExtrasTabProps) {
     <div className="space-y-6">
       <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
         <p className="text-sm text-purple-900">
-          <strong>Optional Extras & Upgrade Packs:</strong> Add upgrades and optional features
-          that buyers can add to this unit type. These will appear as add-on options in the public
+          <strong>Optional Extras & Upgrade Packs:</strong> Add upgrades and optional features that
+          buyers can add to this unit type. These will appear as add-on options in the public
           listing.
         </p>
       </div>
@@ -63,7 +59,10 @@ export function ExtrasTab({ formData, updateFormData }: ExtrasTabProps) {
       {/* Upgrade Packs List */}
       <div className="space-y-4">
         {upgradePacks.map((pack, index) => (
-          <Card key={pack.id} className="p-6 bg-gradient-to-br from-white to-slate-50 border-slate-200">
+          <Card
+            key={pack.id}
+            className="p-6 bg-gradient-to-br from-white to-slate-50 border-slate-200"
+          >
             <div className="flex items-start justify-between mb-4">
               <div className="flex items-center gap-2">
                 <Package className="h-5 w-5 text-purple-600" />
@@ -189,10 +188,7 @@ export function ExtrasTab({ formData, updateFormData }: ExtrasTabProps) {
           <div className="flex items-center justify-between text-sm mt-2">
             <span className="text-slate-600">Total Optional Value:</span>
             <span className="font-semibold text-green-600">
-              R
-              {upgradePacks
-                .reduce((sum, pack) => sum + (pack.price || 0), 0)
-                .toLocaleString()}
+              R{upgradePacks.reduce((sum, pack) => sum + (pack.price || 0), 0).toLocaleString()}
             </span>
           </div>
         </Card>

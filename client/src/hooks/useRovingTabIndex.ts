@@ -1,9 +1,9 @@
 /**
  * useRovingTabIndex Hook
- * 
+ *
  * Implements roving tabindex pattern for keyboard navigation in card grids.
  * Allows arrow key navigation between items while maintaining a single tab stop.
- * 
+ *
  * Requirements: 10.5
  */
 
@@ -14,22 +14,22 @@ export interface UseRovingTabIndexOptions {
    * Total number of items in the grid
    */
   itemCount: number;
-  
+
   /**
    * Number of columns in the grid (for 2D navigation)
    */
   columns?: number;
-  
+
   /**
    * Enable/disable the roving tabindex
    */
   enabled?: boolean;
-  
+
   /**
    * Callback when an item is activated (Enter/Space)
    */
   onItemActivate?: (index: number) => void;
-  
+
   /**
    * Enable looping (wrap around at edges)
    */
@@ -41,7 +41,7 @@ export interface UseRovingTabIndexReturn {
    * Current focused index
    */
   focusedIndex: number;
-  
+
   /**
    * Get props for a specific item
    */
@@ -51,7 +51,7 @@ export interface UseRovingTabIndexReturn {
     onFocus: () => void;
     'data-roving-index': number;
   };
-  
+
   /**
    * Manually set the focused index
    */
@@ -116,11 +116,11 @@ export function useRovingTabIndex({
 
       if (newIndex !== focusedIndex && newIndex >= 0 && newIndex < itemCount) {
         setFocusedIndex(newIndex);
-        
+
         // Focus the element
         setTimeout(() => {
           const element = document.querySelector(
-            `[data-roving-index="${newIndex}"]`
+            `[data-roving-index="${newIndex}"]`,
           ) as HTMLElement;
           if (element) {
             element.focus();
@@ -128,7 +128,7 @@ export function useRovingTabIndex({
         }, 0);
       }
     },
-    [focusedIndex, itemCount, columns, enabled, loop]
+    [focusedIndex, itemCount, columns, enabled, loop],
   );
 
   const handleKeyDown = useCallback(
@@ -175,7 +175,7 @@ export function useRovingTabIndex({
           break;
       }
     },
-    [enabled, moveFocus, onItemActivate]
+    [enabled, moveFocus, onItemActivate],
   );
 
   const getItemProps = useCallback(
@@ -185,7 +185,7 @@ export function useRovingTabIndex({
       onFocus: () => setFocusedIndex(index),
       'data-roving-index': index,
     }),
-    [focusedIndex, handleKeyDown]
+    [focusedIndex, handleKeyDown],
   );
 
   return {

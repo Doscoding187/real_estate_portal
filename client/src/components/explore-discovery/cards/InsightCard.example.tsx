@@ -1,6 +1,6 @@
 /**
  * InsightCard Example Usage
- * 
+ *
  * Demonstrates all insight types with various configurations
  */
 
@@ -12,7 +12,8 @@ export function InsightCardExamples() {
     {
       id: 1,
       title: 'Sandton Property Market Surging',
-      description: 'Average property prices in Sandton have increased significantly over the past quarter, driven by high demand and limited supply in premium areas.',
+      description:
+        'Average property prices in Sandton have increased significantly over the past quarter, driven by high demand and limited supply in premium areas.',
       insightType: 'market-trend' as const,
       data: {
         value: 'R 2.5M',
@@ -26,7 +27,8 @@ export function InsightCardExamples() {
     {
       id: 2,
       title: 'Cape Town Coastal Properties Stabilizing',
-      description: 'After months of rapid growth, coastal property prices are showing signs of stabilization with slight decreases in some areas.',
+      description:
+        'After months of rapid growth, coastal property prices are showing signs of stabilization with slight decreases in some areas.',
       insightType: 'price-analysis' as const,
       data: {
         value: 'R 4.2M',
@@ -40,7 +42,8 @@ export function InsightCardExamples() {
     {
       id: 3,
       title: 'Best Time to Invest in Johannesburg',
-      description: 'Market analysis suggests Q2 2024 is optimal for Johannesburg investments, with favorable interest rates and increasing rental yields.',
+      description:
+        'Market analysis suggests Q2 2024 is optimal for Johannesburg investments, with favorable interest rates and increasing rental yields.',
       insightType: 'investment-tip' as const,
       data: {
         value: '8.5%',
@@ -53,7 +56,8 @@ export function InsightCardExamples() {
     {
       id: 4,
       title: 'Rosebank: The New Business Hub',
-      description: 'Rosebank is emerging as a prime business district with new developments, excellent transport links, and vibrant lifestyle amenities.',
+      description:
+        'Rosebank is emerging as a prime business district with new developments, excellent transport links, and vibrant lifestyle amenities.',
       insightType: 'area-spotlight' as const,
       imageUrl: 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=400',
     },
@@ -62,7 +66,8 @@ export function InsightCardExamples() {
     {
       id: 5,
       title: 'Understanding Property Transfer Costs',
-      description: 'Learn about the various costs involved in property transfers, including transfer duty, bond registration, and legal fees.',
+      description:
+        'Learn about the various costs involved in property transfers, including transfer duty, bond registration, and legal fees.',
       insightType: 'investment-tip' as const,
     },
 
@@ -70,7 +75,8 @@ export function InsightCardExamples() {
     {
       id: 6,
       title: 'Pretoria East Experiencing Boom',
-      description: 'The Pretoria East property market is experiencing unprecedented growth, with new developments and infrastructure improvements driving demand.',
+      description:
+        'The Pretoria East property market is experiencing unprecedented growth, with new developments and infrastructure improvements driving demand.',
       insightType: 'market-trend' as const,
       data: {
         value: 'R 1.8M',
@@ -84,16 +90,14 @@ export function InsightCardExamples() {
   return (
     <div className="min-h-screen bg-gray-50 p-8">
       <div className="max-w-7xl mx-auto">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">
-          InsightCard Examples
-        </h1>
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">InsightCard Examples</h1>
         <p className="text-gray-600 mb-8">
           Demonstrating all insight types with modern design and micro-interactions
         </p>
 
         {/* Grid Layout */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {insights.map((insight) => (
+          {insights.map(insight => (
             <InsightCard
               key={insight.id}
               insight={insight}
@@ -107,11 +111,9 @@ export function InsightCardExamples() {
 
         {/* Single Column Layout */}
         <div className="mt-12">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">
-            Single Column Layout
-          </h2>
+          <h2 className="text-2xl font-bold text-gray-900 mb-6">Single Column Layout</h2>
           <div className="max-w-2xl space-y-4">
-            {insights.slice(0, 3).map((insight) => (
+            {insights.slice(0, 3).map(insight => (
               <InsightCard
                 key={insight.id}
                 insight={insight}
@@ -123,11 +125,9 @@ export function InsightCardExamples() {
 
         {/* Compact Grid */}
         <div className="mt-12">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">
-            Compact Grid (4 columns)
-          </h2>
+          <h2 className="text-2xl font-bold text-gray-900 mb-6">Compact Grid (4 columns)</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {insights.map((insight) => (
+            {insights.map(insight => (
               <InsightCard
                 key={insight.id}
                 insight={insight}

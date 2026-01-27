@@ -82,13 +82,9 @@ export function ValidationErrorList({
                   <div className="font-medium text-red-900 text-sm">
                     {getFieldDisplayName(error.field)}
                   </div>
-                  <div className="text-sm text-red-700 mt-0.5">
-                    {error.message}
-                  </div>
+                  <div className="text-sm text-red-700 mt-0.5">{error.message}</div>
                   {error.step !== undefined && (
-                    <div className="text-xs text-red-600 mt-1">
-                      Step {error.step}
-                    </div>
+                    <div className="text-xs text-red-600 mt-1">Step {error.step}</div>
                   )}
                 </div>
                 {onFieldClick && error.step !== undefined && (

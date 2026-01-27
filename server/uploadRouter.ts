@@ -3,6 +3,7 @@ import { protectedProcedure, router } from './_core/trpc';
 import { generatePresignedUploadUrl } from './_core/imageUpload';
 import { ENV } from './_core/env';
 import crypto from 'crypto';
+import { TRPCError } from '@trpc/server';
 
 /**
  * Upload Router
@@ -21,7 +22,10 @@ export const uploadRouter = router({
         propertyId: z.string().optional(),
       }),
     )
-    .mutation(async ({ ctx, input }) => {
+    .mutation(async ({ ctx: _ctx, input }) => {
+      console.log(
+        `[UploadRouter] Presign requested for file: ${input.filename}, type: ${input.contentType}`,
+      );
       try {
         // Generate a unique property ID if not provided
         const propertyId = input.propertyId || crypto.randomUUID();
@@ -32,6 +36,8 @@ export const uploadRouter = router({
           input.contentType,
           propertyId,
         );
+
+        console.log(`[UploadRouter] generated presigned URL successfully`);
 
         // Build the public URL using CloudFront if configured, otherwise S3 bucket URL
         const cdnUrl =
@@ -44,8 +50,17 @@ export const uploadRouter = router({
           publicUrl,
         };
       } catch (error) {
-        console.error('Failed to generate presigned URL:', error);
-        throw new Error('Failed to generate upload URL. Please check your AWS configuration.');
+        console.error('[UploadRouter] Failed to generate presigned URL:', error);
+        // Log the stack trace if available
+        if (error instanceof Error) {
+          console.error(error.stack);
+        }
+
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to generate upload URL. Please check server logs.',
+          cause: error,
+        });
       }
     }),
 });

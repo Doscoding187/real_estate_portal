@@ -35,7 +35,6 @@ export function VideoOverlay({
   onViewListing,
   onToggleMute,
 }: VideoOverlayProps) {
-
   // Format price
   const formatPrice = () => {
     if (video.priceMin && video.priceMax) {
@@ -57,22 +56,14 @@ export function VideoOverlay({
       {/* Bottom overlay with property info - Requirement 1.3 */}
       <div className="absolute bottom-0 left-0 right-0 z-20 bg-gradient-to-t from-black/80 via-black/40 to-transparent pt-32 pb-6 px-6">
         {/* Property title */}
-        <h2 className="text-white text-2xl font-bold mb-2 line-clamp-2">
-          {video.title}
-        </h2>
+        <h2 className="text-white text-2xl font-bold mb-2 line-clamp-2">{video.title}</h2>
 
         {/* Price - Requirement 1.3 */}
-        {price && (
-          <div className="text-white text-xl font-semibold mb-3">
-            {price}
-          </div>
-        )}
+        {price && <div className="text-white text-xl font-semibold mb-3">{price}</div>}
 
         {/* Description */}
         {video.description && (
-          <p className="text-white/90 text-sm mb-4 line-clamp-2">
-            {video.description}
-          </p>
+          <p className="text-white/90 text-sm mb-4 line-clamp-2">{video.description}</p>
         )}
 
         {/* Tags */}

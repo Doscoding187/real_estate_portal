@@ -1,6 +1,6 @@
 /**
  * MapPreview Demo Page
- * 
+ *
  * Demonstrates the map preview feature with location autocomplete
  */
 
@@ -26,7 +26,8 @@ export default function MapPreviewDemo() {
           <CardHeader>
             <CardTitle>Location Selection</CardTitle>
             <CardDescription>
-              Search for a location and see it on the map. Click the map to expand and adjust the marker.
+              Search for a location and see it on the map. Click the map to expand and adjust the
+              marker.
             </CardDescription>
           </CardHeader>
           <CardContent>

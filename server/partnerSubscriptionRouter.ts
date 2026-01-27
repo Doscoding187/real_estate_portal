@@ -1,11 +1,11 @@
 /**
  * Partner Subscription Router
- * 
+ *
  * API endpoints for managing partner subscriptions, upgrades, downgrades,
  * and feature access checks.
- * 
+ *
  * Requirements: 7.1, 7.2, 7.3, 7.4, 7.5, 7.6
- * 
+ *
  * @module partnerSubscriptionRouter
  */
 
@@ -130,9 +130,9 @@ router.get('/partner/:partnerId/features', async (req, res) => {
 /**
  * POST /api/subscriptions
  * Create a new subscription for a partner
- * 
+ *
  * Requirements: 7.1, 7.2, 7.3, 7.6
- * 
+ *
  * Body:
  * {
  *   "partner_id": "uuid",
@@ -189,9 +189,9 @@ router.post('/', async (req, res) => {
 /**
  * PUT /api/subscriptions/:id/upgrade
  * Upgrade subscription to a higher tier
- * 
+ *
  * Requirements: 7.4
- * 
+ *
  * Body:
  * {
  *   "new_tier": "premium" | "featured"
@@ -209,9 +209,11 @@ router.put('/:id/upgrade', async (req, res) => {
     }
 
     // Get current subscription
-    const [rows] = await (await import('./db')).getDb().then(db => 
-      db!.execute('SELECT tier, partner_id FROM partner_subscriptions WHERE id = ?', [id])
-    );
+    const [rows] = await (await import('./db'))
+      .getDb()
+      .then(db =>
+        db!.execute('SELECT tier, partner_id FROM partner_subscriptions WHERE id = ?', [id]),
+      );
     const subscriptions = rows as any[];
 
     if (subscriptions.length === 0) {
@@ -256,7 +258,7 @@ router.put('/:id/upgrade', async (req, res) => {
 /**
  * DELETE /api/subscriptions/:id
  * Cancel subscription and downgrade to basic tier
- * 
+ *
  * Requirements: 7.5
  */
 router.delete('/:id', async (req, res) => {
@@ -264,9 +266,11 @@ router.delete('/:id', async (req, res) => {
     const { id } = req.params;
 
     // Get subscription before cancellation
-    const [rows] = await (await import('./db')).getDb().then(db => 
-      db!.execute('SELECT partner_id, tier FROM partner_subscriptions WHERE id = ?', [id])
-    );
+    const [rows] = await (await import('./db'))
+      .getDb()
+      .then(db =>
+        db!.execute('SELECT partner_id, tier FROM partner_subscriptions WHERE id = ?', [id]),
+      );
     const subscriptions = rows as any[];
 
     if (subscriptions.length === 0) {
@@ -301,9 +305,9 @@ router.delete('/:id', async (req, res) => {
 /**
  * POST /api/subscriptions/check-feature
  * Check if partner has access to a specific feature
- * 
+ *
  * Requirements: 7.1, 7.2, 7.3
- * 
+ *
  * Body:
  * {
  *   "partner_id": "uuid",
@@ -340,7 +344,7 @@ router.post('/check-feature', async (req, res) => {
 /**
  * POST /api/subscriptions/check-action
  * Check if partner can perform a specific action
- * 
+ *
  * Body:
  * {
  *   "partner_id": "uuid",

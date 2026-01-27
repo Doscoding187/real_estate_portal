@@ -84,7 +84,6 @@ export function GoogleAmenitiesMap({
 
   const error = localError || mapsError;
 
-
   // Initialize map
   useEffect(() => {
     if (!mapRef.current || !isLoaded) return;

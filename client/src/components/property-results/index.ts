@@ -1,6 +1,6 @@
 /**
  * Property Results Components
- * 
+ *
  * Export all property results page components including:
  * - QuickFilters: Preset filter buttons for SA market
  * - EnhancedSidebarFilters: Desktop sidebar with SA-specific filters

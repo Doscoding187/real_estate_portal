@@ -1,8 +1,8 @@
 /**
  * useSimilarLocations Hook
- * 
+ *
  * Fetches similar locations based on price bracket, property types, and market characteristics.
- * 
+ *
  * Requirements:
  * - 22.1-22.5: Get similar locations with statistics
  */
@@ -28,16 +28,20 @@ interface UseSimilarLocationsOptions {
   enabled?: boolean;
 }
 
-export function useSimilarLocations({ locationId, limit = 5, enabled = true }: UseSimilarLocationsOptions) {
+export function useSimilarLocations({
+  locationId,
+  limit = 5,
+  enabled = true,
+}: UseSimilarLocationsOptions) {
   return useQuery<SimilarLocation[]>({
     queryKey: ['similar-locations', locationId, limit],
     queryFn: async () => {
       const response = await fetch(`/api/locations/${locationId}/similar?limit=${limit}`);
-      
+
       if (!response.ok) {
         throw new Error('Failed to fetch similar locations');
       }
-      
+
       return response.json();
     },
     enabled: enabled && locationId > 0,

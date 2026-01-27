@@ -1,6 +1,6 @@
 /**
  * Welcome Overlay Hook
- * 
+ *
  * Manages welcome overlay state and interactions.
  * Implements Requirements 16.7, 16.8, 16.9
  */
@@ -78,9 +78,7 @@ export function useWelcomeOverlay() {
   // Check if overlay should be shown
   useEffect(() => {
     if (!isLoading && onboardingState) {
-      const shouldShow =
-        onboardingState.isFirstSession &&
-        !onboardingState.welcomeOverlayShown;
+      const shouldShow = onboardingState.isFirstSession && !onboardingState.welcomeOverlayShown;
 
       if (shouldShow) {
         setIsOpen(true);
@@ -90,8 +88,8 @@ export function useWelcomeOverlay() {
   }, [onboardingState, isLoading]);
 
   // Get suggested topics
-  const suggestedTopics = allTopics.filter((topic) =>
-    onboardingState?.suggestedTopics?.includes(topic.slug)
+  const suggestedTopics = allTopics.filter(topic =>
+    onboardingState?.suggestedTopics?.includes(topic.slug),
   );
 
   // Handle topic selection

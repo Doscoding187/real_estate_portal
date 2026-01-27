@@ -1,6 +1,6 @@
 /**
  * Advertise With Us Landing Page
- * 
+ *
  * The main landing page for advertising partners featuring all sections:
  * - Hero with billboard banner
  * - Partner selection
@@ -32,19 +32,17 @@ import { StructuredData } from '@/components/advertise/StructuredData';
 import { TrendingUp, Users, Star, Award } from 'lucide-react';
 import { useAdvertiseAnalytics } from '@/hooks/useAdvertiseAnalytics';
 import { SectionErrorBoundary } from '@/components/advertise/AdvertiseErrorBoundary';
-import { 
+import {
   HeroSectionSkeleton,
   FeaturesGridSkeleton,
   SocialProofSkeleton,
   FAQSectionSkeleton,
   SectionLoader,
 } from '@/components/advertise/SkeletonLoaders';
-import {
-  MetricsPlaceholder,
-} from '@/components/advertise/ErrorStates';
+import { MetricsPlaceholder } from '@/components/advertise/ErrorStates';
 
 // Lazy load below-the-fold sections for better performance with error handling
-const FeaturesGridSection = lazy(() => 
+const FeaturesGridSection = lazy(() =>
   import('@/components/advertise/FeaturesGridSection')
     .then(module => {
       console.log('✓ FeaturesGridSection loaded successfully');
@@ -53,10 +51,10 @@ const FeaturesGridSection = lazy(() =>
     .catch(error => {
       console.error('✗ Failed to load FeaturesGridSection:', error);
       throw error;
-    })
+    }),
 );
 
-const SocialProofSection = lazy(() => 
+const SocialProofSection = lazy(() =>
   import('@/components/advertise/SocialProofSection')
     .then(module => {
       console.log('✓ SocialProofSection loaded successfully');
@@ -65,10 +63,10 @@ const SocialProofSection = lazy(() =>
     .catch(error => {
       console.error('✗ Failed to load SocialProofSection:', error);
       throw error;
-    })
+    }),
 );
 
-const FinalCTASection = lazy(() => 
+const FinalCTASection = lazy(() =>
   import('@/components/advertise/FinalCTASection')
     .then(module => {
       console.log('✓ FinalCTASection loaded successfully');
@@ -77,10 +75,10 @@ const FinalCTASection = lazy(() =>
     .catch(error => {
       console.error('✗ Failed to load FinalCTASection:', error);
       throw error;
-    })
+    }),
 );
 
-const FAQSection = lazy(() => 
+const FAQSection = lazy(() =>
   import('@/components/advertise/FAQSection')
     .then(module => {
       console.log('✓ FAQSection loaded successfully');
@@ -89,7 +87,7 @@ const FAQSection = lazy(() =>
     .catch(error => {
       console.error('✗ Failed to load FAQSection:', error);
       throw error;
-    })
+    }),
 );
 
 // Import the actual section components
@@ -101,7 +99,7 @@ import { PricingPreviewSection } from '@/components/advertise/PricingPreviewSect
 export default function AdvertiseWithUs() {
   // Set up analytics tracking (tracks page view and scroll depth automatically)
   useAdvertiseAnalytics();
-  
+
   const isMobileStickyCTAVisible = useMobileStickyCTA('hero-section');
 
   // Loading and error states
@@ -159,7 +157,7 @@ export default function AdvertiseWithUs() {
         ogImage="https://platform.com/images/advertise-og-image.jpg"
         ogType="website"
       />
-      
+
       {/* Structured Data (Schema.org) */}
       <StructuredData
         pageUrl="https://platform.com/advertise"
@@ -167,21 +165,21 @@ export default function AdvertiseWithUs() {
         organizationUrl="https://platform.com"
         organizationLogo="https://platform.com/logo.png"
       />
-      
+
       {/* Performance optimization wrapper */}
       <PerformanceOptimizer />
-      
+
       {/* Skip links for accessibility */}
       <SkipLinks />
-      
+
       {/* Navigation */}
       <EnhancedNavbar />
-      
+
       {/* Breadcrumb Navigation */}
       <div className="w-full bg-slate-50 border-b border-slate-200">
         <AdvertiseBreadcrumb />
       </div>
-      
+
       {/* Main content - Scoped container for advertise page */}
       <main id="main-content" className="advertise-page bg-white">
         {/* Hero Section */}
@@ -244,11 +242,7 @@ export default function AdvertiseWithUs() {
         <SectionErrorBoundary sectionName="Social Proof">
           <Suspense fallback={<SocialProofSkeleton />}>
             <section id="social-proof" aria-labelledby="social-proof-heading">
-              {metricsError ? (
-                <MetricsPlaceholder />
-              ) : (
-                <SocialProofSection metrics={metrics} />
-              )}
+              {metricsError ? <MetricsPlaceholder /> : <SocialProofSection metrics={metrics} />}
             </section>
           </Suspense>
         </SectionErrorBoundary>
@@ -262,7 +256,9 @@ export default function AdvertiseWithUs() {
 
         {/* Final CTA Section - Lazy loaded */}
         <SectionErrorBoundary sectionName="Final CTA">
-          <Suspense fallback={<SectionLoader minHeight="300px" message="Loading final call-to-action..." />}>
+          <Suspense
+            fallback={<SectionLoader minHeight="300px" message="Loading final call-to-action..." />}
+          >
             <section id="final-cta" aria-labelledby="final-cta-heading">
               <FinalCTASection
                 headline="Ready to Grow Your Business?"

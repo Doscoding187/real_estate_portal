@@ -1,17 +1,17 @@
 /**
  * Quality Scoring Service
- * 
+ *
  * Calculates and updates content quality scores based on multiple signals:
  * - Metadata completeness (20%)
  * - Engagement metrics (40%)
  * - Production quality (25%)
  * - Negative signals (15% penalty)
- * 
+ *
  * Requirements: 11.1, 11.2, 11.3, 11.4, 11.6
  */
 
-import { db } from "../db";
-import { eq, and, lt } from "drizzle-orm";
+import { db } from '../db';
+import { eq, and, lt } from 'drizzle-orm';
 
 // ============================================================================
 // Types & Interfaces
@@ -19,28 +19,28 @@ import { eq, and, lt } from "drizzle-orm";
 
 export interface QualityScore {
   contentId: string;
-  overallScore: number;        // 0-100
-  metadataScore: number;       // Completeness of metadata
-  engagementScore: number;     // Watch time, saves, clicks
-  productionScore: number;     // Video/image quality
-  negativeSignals: number;     // Quick skips, reports
+  overallScore: number; // 0-100
+  metadataScore: number; // Completeness of metadata
+  engagementScore: number; // Watch time, saves, clicks
+  productionScore: number; // Video/image quality
+  negativeSignals: number; // Quick skips, reports
   lastCalculatedAt: Date;
 }
 
 export interface QualityWeights {
-  metadata: number;      // 0.20
-  engagement: number;    // 0.40
-  production: number;    // 0.25
+  metadata: number; // 0.20
+  engagement: number; // 0.40
+  production: number; // 0.25
   negativeSignals: number; // 0.15 (subtracted)
 }
 
 export interface EngagementData {
-  watchTime?: number;      // seconds
-  totalDuration?: number;  // seconds
+  watchTime?: number; // seconds
+  totalDuration?: number; // seconds
   saves?: number;
   shares?: number;
   clickThroughs?: number;
-  quickSkips?: number;     // watched < 3 seconds
+  quickSkips?: number; // watched < 3 seconds
   reports?: number;
 }
 
@@ -55,10 +55,10 @@ export interface ContentMetadata {
 
 // Default quality weights
 const DEFAULT_WEIGHTS: QualityWeights = {
-  metadata: 0.20,
-  engagement: 0.40,
+  metadata: 0.2,
+  engagement: 0.4,
   production: 0.25,
-  negativeSignals: 0.15
+  negativeSignals: 0.15,
 };
 
 // Quality thresholds
@@ -80,19 +80,18 @@ export class QualityScoringService {
    * Calculate initial quality score based on metadata completeness
    * Requirements: 11.1
    */
-  async calculateInitialScore(
-    contentId: string,
-    metadata: ContentMetadata
-  ): Promise<number> {
+  async calculateInitialScore(contentId: string, metadata: ContentMetadata): Promise<number> {
     const metadataScore = this.calculateMetadataScore(metadata);
-    
+
     // Initial score is based only on metadata (production score estimated at 50)
-    const initialScore = (metadataScore * this.weights.metadata) + 
-                        (50 * this.weights.production) +
-                        (50 * this.weights.engagement);
+    const initialScore =
+      metadataScore * this.weights.metadata +
+      50 * this.weights.production +
+      50 * this.weights.engagement;
 
     // Store in database
-    await db.execute(`
+    await db.execute(
+      `
       INSERT INTO content_quality_scores (
         content_id, 
         overall_score, 
@@ -106,7 +105,9 @@ export class QualityScoringService {
         overall_score = VALUES(overall_score),
         metadata_score = VALUES(metadata_score),
         last_calculated_at = NOW()
-    `, [contentId, initialScore, metadataScore]);
+    `,
+      [contentId, initialScore, metadataScore],
+    );
 
     return initialScore;
   }
@@ -171,10 +172,7 @@ export class QualityScoringService {
    * Update quality score based on engagement data
    * Requirements: 11.2, 11.3
    */
-  async updateScoreFromEngagement(
-    contentId: string,
-    engagement: EngagementData
-  ): Promise<void> {
+  async updateScoreFromEngagement(contentId: string, engagement: EngagementData): Promise<void> {
     // Get current scores
     const current = await this.getQualityScore(contentId);
     if (!current) {
@@ -183,27 +181,30 @@ export class QualityScoringService {
 
     // Calculate new engagement score
     const engagementScore = this.calculateEngagementScore(engagement);
-    
+
     // Update engagement score (weighted average with existing)
-    const newEngagementScore = (current.engagementScore * 0.7) + (engagementScore * 0.3);
+    const newEngagementScore = current.engagementScore * 0.7 + engagementScore * 0.3;
 
     // Recalculate overall score
     const overallScore = this.calculateOverallScore(
       current.metadataScore,
       newEngagementScore,
       current.productionScore,
-      current.negativeSignals
+      current.negativeSignals,
     );
 
     // Update database
-    await db.execute(`
+    await db.execute(
+      `
       UPDATE content_quality_scores
       SET 
         overall_score = ?,
         engagement_score = ?,
         last_calculated_at = NOW()
       WHERE content_id = ?
-    `, [overallScore, newEngagementScore, contentId]);
+    `,
+      [overallScore, newEngagementScore, contentId],
+    );
   }
 
   /**
@@ -242,7 +243,7 @@ export class QualityScoringService {
    */
   async recordNegativeSignal(
     contentId: string,
-    signalType: 'quick_skip' | 'report'
+    signalType: 'quick_skip' | 'report',
   ): Promise<void> {
     const current = await this.getQualityScore(contentId);
     if (!current) {
@@ -257,18 +258,21 @@ export class QualityScoringService {
       current.metadataScore,
       current.engagementScore,
       current.productionScore,
-      newNegativeSignals
+      newNegativeSignals,
     );
 
     // Update database
-    await db.execute(`
+    await db.execute(
+      `
       UPDATE content_quality_scores
       SET 
         overall_score = ?,
         negative_signals = ?,
         last_calculated_at = NOW()
       WHERE content_id = ?
-    `, [overallScore, newNegativeSignals, contentId]);
+    `,
+      [overallScore, newNegativeSignals, contentId],
+    );
   }
 
   /**
@@ -278,16 +282,16 @@ export class QualityScoringService {
     metadataScore: number,
     engagementScore: number,
     productionScore: number,
-    negativeSignals: number
+    negativeSignals: number,
   ): number {
-    const baseScore = 
-      (metadataScore * this.weights.metadata) +
-      (engagementScore * this.weights.engagement) +
-      (productionScore * this.weights.production);
+    const baseScore =
+      metadataScore * this.weights.metadata +
+      engagementScore * this.weights.engagement +
+      productionScore * this.weights.production;
 
     // Apply negative signal penalty (each signal reduces score)
     const penalty = Math.min(negativeSignals * this.weights.negativeSignals * 10, 50);
-    
+
     return Math.max(baseScore - penalty, 0);
   }
 
@@ -295,7 +299,8 @@ export class QualityScoringService {
    * Get quality score for content
    */
   async getQualityScore(contentId: string): Promise<QualityScore | null> {
-    const result = await db.execute(`
+    const result = await db.execute(
+      `
       SELECT 
         content_id as contentId,
         overall_score as overallScore,
@@ -306,7 +311,9 @@ export class QualityScoringService {
         last_calculated_at as lastCalculatedAt
       FROM content_quality_scores
       WHERE content_id = ?
-    `, [contentId]);
+    `,
+      [contentId],
+    );
 
     if (!result.rows || result.rows.length === 0) {
       return null;
@@ -320,14 +327,17 @@ export class QualityScoringService {
    * Requirements: 11.6
    */
   async getUnderperformingContent(partnerId: string): Promise<string[]> {
-    const result = await db.execute(`
+    const result = await db.execute(
+      `
       SELECT cqs.content_id
       FROM content_quality_scores cqs
       INNER JOIN explore_content ec ON cqs.content_id = ec.id
       WHERE ec.partner_id = ?
         AND cqs.overall_score < ?
       ORDER BY cqs.overall_score ASC
-    `, [partnerId, UNDERPERFORMANCE_THRESHOLD]);
+    `,
+      [partnerId, UNDERPERFORMANCE_THRESHOLD],
+    );
 
     return result.rows.map((row: any) => row.content_id);
   }
@@ -336,14 +346,14 @@ export class QualityScoringService {
    * Notify partner of consistently underperforming content
    * Requirements: 11.6
    */
-  async notifyPartnerOfLowQuality(
-    partnerId: string,
-    contentIds: string[]
-  ): Promise<void> {
+  async notifyPartnerOfLowQuality(partnerId: string, contentIds: string[]): Promise<void> {
     // In a real implementation, this would send an email or dashboard notification
     // For now, we'll log it
-    console.log(`[Quality Alert] Partner ${partnerId} has ${contentIds.length} underperforming content pieces:`, contentIds);
-    
+    console.log(
+      `[Quality Alert] Partner ${partnerId} has ${contentIds.length} underperforming content pieces:`,
+      contentIds,
+    );
+
     // TODO: Integrate with notification service
     // await notificationService.send({
     //   partnerId,
@@ -371,7 +381,7 @@ export class QualityScoringService {
   /**
    * Apply visibility reduction to content based on quality score
    * Requirements: 11.4
-   * 
+   *
    * This method applies the visibility multiplier to content's feed ranking.
    * Content with low quality scores will appear less frequently in feeds.
    */
@@ -388,10 +398,7 @@ export class QualityScoringService {
   /**
    * Batch update production scores (would be called by video processing service)
    */
-  async updateProductionScore(
-    contentId: string,
-    productionScore: number
-  ): Promise<void> {
+  async updateProductionScore(contentId: string, productionScore: number): Promise<void> {
     const current = await this.getQualityScore(contentId);
     if (!current) {
       throw new Error(`Quality score not found for content ${contentId}`);
@@ -402,18 +409,21 @@ export class QualityScoringService {
       current.metadataScore,
       current.engagementScore,
       productionScore,
-      current.negativeSignals
+      current.negativeSignals,
     );
 
     // Update database
-    await db.execute(`
+    await db.execute(
+      `
       UPDATE content_quality_scores
       SET 
         overall_score = ?,
         production_score = ?,
         last_calculated_at = NOW()
       WHERE content_id = ?
-    `, [overallScore, productionScore, contentId]);
+    `,
+      [overallScore, productionScore, contentId],
+    );
   }
 }
 

@@ -4,7 +4,7 @@ import { eq, and, or, like, desc, sql, count, inArray, SQL } from 'drizzle-orm';
 
 /**
  * Global Search Service
- * 
+ *
  * Provides unified search across locations, listings, and developments
  * with intelligent ranking based on multiple signals.
  */
@@ -65,23 +65,89 @@ export interface SearchResults {
   query: string;
 }
 
+type LocationRow = {
+  id: number;
+  name: string;
+  slug: string;
+  type: LocationResult['type'];
+  placeId: string | null;
+  description: string | null;
+  latitude: string | null;
+  longitude: string | null;
+  propertyCount: number | null;
+  parentId: number | null;
+};
+
+type TrendingRow = {
+  locationId: number | null;
+  searchCount: number | string;
+};
+
+type RecentSearchRow = {
+  locationId: number | null;
+};
+
+type ListingRow = {
+  id: number;
+  title: string;
+  price: number;
+  propertyType: string;
+  listingType: string;
+  city: string;
+  province: string;
+  locationId: number | null;
+  placeId: string | null;
+  mainImage: string | null;
+};
+
+type DevelopmentRow = {
+  id: number;
+  name: string;
+  description: string | null;
+  city: string;
+  province: string;
+  locationId: number | null;
+  suburb: string | null;
+  images: string | null;
+  placeId: string | null;
+};
+
+type ParentLocationRow = {
+  slug: string;
+  parentId: number | null;
+};
+
+function extractMainImage(images: string | null): string | null {
+  if (!images) return null;
+  const trimmed = images.trim();
+  if (!trimmed) return null;
+  if (trimmed.startsWith('[')) {
+    try {
+      const parsed = JSON.parse(trimmed);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        const first = parsed[0] as { url?: string } | string;
+        if (typeof first === 'string') return first;
+        if (first && typeof first === 'object' && typeof first.url === 'string') return first.url;
+      }
+    } catch {
+      return null;
+    }
+  }
+  return trimmed;
+}
+
 /**
  * Perform global search across all entity types
  */
 export async function globalSearch(options: SearchOptions): Promise<SearchResults> {
-  const {
-    query,
-    types = ['location', 'listing', 'development'],
-    limit = 20,
-    userId
-  } = options;
+  const { query, types = ['location', 'listing', 'development'], limit = 20, userId } = options;
 
   const results: SearchResults = {
     locations: [],
     listings: [],
     developments: [],
     totalResults: 0,
-    query
+    query,
   };
 
   // Search locations if requested
@@ -99,17 +165,15 @@ export async function globalSearch(options: SearchOptions): Promise<SearchResult
     results.developments = await searchDevelopments(query, Math.ceil(limit / 2));
   }
 
-  results.totalResults = 
-    results.locations.length + 
-    results.listings.length + 
-    results.developments.length;
+  results.totalResults =
+    results.locations.length + results.listings.length + results.developments.length;
 
   return results;
 }
 
 /**
  * Search locations with intelligent ranking
- * 
+ *
  * Ranking signals:
  * 1. Query similarity (text matching)
  * 2. Historical popularity (search frequency)
@@ -120,13 +184,13 @@ export async function globalSearch(options: SearchOptions): Promise<SearchResult
 export async function searchLocations(
   query: string,
   limit: number = 10,
-  userId?: number
+  userId?: number,
 ): Promise<LocationResult[]> {
   const db = await getDb();
   const searchQuery = `%${query.toLowerCase()}%`;
 
   // Get locations matching the query
-  const matchingLocations = await db
+  const matchingLocations = (await db
     .select({
       id: locations.id,
       name: locations.name,
@@ -144,19 +208,19 @@ export async function searchLocations(
       or(
         like(locations.name, searchQuery),
         like(locations.slug, searchQuery),
-        like(locations.description, searchQuery)
-      )
+        like(locations.description, searchQuery),
+      ),
     )
-    .limit(limit * 2); // Get more than needed for ranking
+    .limit(limit * 2)) as LocationRow[]; // Get more than needed for ranking
 
   if (matchingLocations.length === 0) {
     return [];
   }
 
-  const locationIds = matchingLocations.map(loc => loc.id);
+  const locationIds = matchingLocations.map((loc: LocationRow) => loc.id);
 
   // Calculate trending scores (search frequency in last 30 days)
-  const trendingScores = await db
+  const trendingScores = (await db
     .select({
       locationId: locationSearches.locationId,
       searchCount: count(locationSearches.id).as('searchCount'),
@@ -165,37 +229,41 @@ export async function searchLocations(
     .where(
       and(
         inArray(locationSearches.locationId, locationIds),
-        sql`${locationSearches.searchedAt} >= DATE_SUB(NOW(), INTERVAL 30 DAY)`
-      )
+        sql`${locationSearches.searchedAt} >= DATE_SUB(NOW(), INTERVAL 30 DAY)`,
+      ),
     )
-    .groupBy(locationSearches.locationId);
+    .groupBy(locationSearches.locationId)) as TrendingRow[];
 
   const trendingMap = new Map(
-    trendingScores.map(ts => [ts.locationId, Number(ts.searchCount)])
+    trendingScores
+      .filter((ts: TrendingRow) => ts.locationId !== null)
+      .map((ts: TrendingRow) => [ts.locationId as number, Number(ts.searchCount)]),
   );
 
   // Get user's recent searches for personalization
   let userRecentLocationIds: number[] = [];
   if (userId) {
     const { recentSearches } = await import('../../drizzle/schema');
-    const recentSearchResults = await db
+    const recentSearchResults = (await db
       .select({ locationId: recentSearches.locationId })
       .from(recentSearches)
       .where(eq(recentSearches.userId, userId))
       .orderBy(desc(recentSearches.searchedAt))
-      .limit(10);
-    
-    userRecentLocationIds = recentSearchResults.map(rs => rs.locationId);
+      .limit(10)) as RecentSearchRow[];
+
+    userRecentLocationIds = recentSearchResults
+      .map((rs: RecentSearchRow) => rs.locationId)
+      .filter((id): id is number => id !== null);
   }
 
   // Calculate relevance scores and build results
   const rankedResults = await Promise.all(
-    matchingLocations.map(async (location) => {
+    matchingLocations.map(async (location: LocationRow) => {
       // 1. Query similarity score (0-100)
       const nameLower = location.name.toLowerCase();
       const queryLower = query.toLowerCase();
       let similarityScore = 0;
-      
+
       if (nameLower === queryLower) {
         similarityScore = 100; // Exact match
       } else if (nameLower.startsWith(queryLower)) {
@@ -230,12 +298,12 @@ export async function searchLocations(
       }
 
       // Calculate weighted relevance score
-      const relevanceScore = 
-        (similarityScore * 0.35) +
-        (popularityScore * 0.20) +
-        (inventoryScore * 0.20) +
-        (typePriority * 0.15) +
-        (historyBonus * 0.10);
+      const relevanceScore =
+        similarityScore * 0.35 +
+        popularityScore * 0.2 +
+        inventoryScore * 0.2 +
+        typePriority * 0.15 +
+        historyBonus * 0.1;
 
       // Build hierarchical URL
       const url = await buildLocationUrl(db, location);
@@ -254,13 +322,11 @@ export async function searchLocations(
         trendingScore: Math.round(trendingScore),
         url,
       };
-    })
+    }),
   );
 
   // Sort by relevance score and return top results
-  return rankedResults
-    .sort((a, b) => b.relevanceScore - a.relevanceScore)
-    .slice(0, limit);
+  return rankedResults.sort((a, b) => b.relevanceScore - a.relevanceScore).slice(0, limit);
 }
 
 /**
@@ -273,11 +339,11 @@ async function buildLocationUrl(db: any, location: any): Promise<string> {
 
   // Traverse up the hierarchy
   while (currentLocation.parentId) {
-    const [parent] = await db
+    const [parent] = (await db
       .select({ slug: locations.slug, parentId: locations.parentId })
       .from(locations)
       .where(eq(locations.id, currentLocation.parentId))
-      .limit(1);
+      .limit(1)) as ParentLocationRow[];
 
     if (parent) {
       segments.unshift(parent.slug);
@@ -293,14 +359,11 @@ async function buildLocationUrl(db: any, location: any): Promise<string> {
 /**
  * Search listings with location-based filtering
  */
-async function searchListings(
-  query: string,
-  limit: number = 10
-): Promise<ListingResult[]> {
+async function searchListings(query: string, limit: number = 10): Promise<ListingResult[]> {
   const db = await getDb();
   const searchQuery = `%${query.toLowerCase()}%`;
 
-  const results = await db
+  const results = (await db
     .select({
       id: properties.id,
       title: properties.title,
@@ -320,14 +383,14 @@ async function searchListings(
           like(properties.title, searchQuery),
           like(properties.description, searchQuery),
           like(properties.city, searchQuery),
-          like(properties.suburb, searchQuery)
+          like(properties.locationText, searchQuery),
         ),
-        eq(properties.status, 'published')
-      )
+        eq(properties.status, 'published'),
+      ),
     )
-    .limit(limit);
+    .limit(limit)) as ListingRow[];
 
-  return results.map(listing => ({
+  return results.map((listing: ListingRow) => ({
     ...listing,
     price: Number(listing.price),
     relevanceScore: 50, // Basic relevance for now
@@ -337,14 +400,11 @@ async function searchListings(
 /**
  * Search developments with location-based filtering
  */
-async function searchDevelopments(
-  query: string,
-  limit: number = 10
-): Promise<DevelopmentResult[]> {
+async function searchDevelopments(query: string, limit: number = 10): Promise<DevelopmentResult[]> {
   const db = await getDb();
   const searchQuery = `%${query.toLowerCase()}%`;
 
-  const results = await db
+  const results = (await db
     .select({
       id: developments.id,
       name: developments.name,
@@ -352,32 +412,41 @@ async function searchDevelopments(
       city: developments.city,
       province: developments.province,
       locationId: developments.locationId,
-      placeId: developments.placeId,
-      mainImage: developments.mainImage,
+      suburb: developments.suburb,
+      images: developments.images,
+      placeId: locations.placeId,
     })
     .from(developments)
+    .leftJoin(locations, eq(developments.locationId, locations.id))
     .where(
       and(
         or(
           like(developments.name, searchQuery),
           like(developments.description, searchQuery),
           like(developments.city, searchQuery),
-          like(developments.suburb, searchQuery)
+          like(developments.suburb, searchQuery),
         ),
-        eq(developments.status, 'active')
-      )
+        inArray(developments.status, ['launching-soon', 'selling', 'sold-out']),
+      ),
     )
-    .limit(limit);
+    .limit(limit)) as DevelopmentRow[];
 
-  return results.map(dev => ({
-    ...dev,
+  return results.map((dev: DevelopmentRow) => ({
+    id: dev.id,
+    name: dev.name,
+    description: dev.description,
+    city: dev.city,
+    province: dev.province,
+    locationId: dev.locationId,
+    placeId: dev.placeId,
+    mainImage: extractMainImage(dev.images),
     relevanceScore: 50, // Basic relevance for now
   }));
 }
 
 /**
  * Filter listings by Place ID
- * 
+ *
  * Uses location_id for precise filtering without string matching ambiguity
  */
 export async function filterListingsByPlaceId(
@@ -390,7 +459,7 @@ export async function filterListingsByPlaceId(
     bedrooms?: number;
     bathrooms?: number;
   },
-  limit: number = 50
+  limit: number = 50,
 ): Promise<ListingResult[]> {
   const db = await getDb();
 
@@ -409,7 +478,7 @@ export async function filterListingsByPlaceId(
   // Build filter conditions
   const conditions: SQL[] = [
     eq(properties.locationId, location.id),
-    eq(properties.status, 'published')
+    eq(properties.status, 'published'),
   ];
 
   if (filters?.propertyType && filters.propertyType.length > 0) {
@@ -436,7 +505,7 @@ export async function filterListingsByPlaceId(
     conditions.push(eq(properties.bathrooms, filters.bathrooms));
   }
 
-  const results = await db
+  const results = (await db
     .select({
       id: properties.id,
       title: properties.title,
@@ -451,9 +520,9 @@ export async function filterListingsByPlaceId(
     })
     .from(properties)
     .where(and(...conditions))
-    .limit(limit);
+    .limit(limit)) as ListingRow[];
 
-  return results.map(listing => ({
+  return results.map((listing: ListingRow) => ({
     ...listing,
     price: Number(listing.price),
     relevanceScore: 100, // High relevance for exact location match
@@ -466,14 +535,11 @@ export async function filterListingsByPlaceId(
 async function filterListingsByPlaceIdDirect(
   placeId: string,
   filters?: any,
-  limit: number = 50
+  limit: number = 50,
 ): Promise<ListingResult[]> {
   const db = await getDb();
 
-  const conditions: SQL[] = [
-    eq(properties.placeId, placeId),
-    eq(properties.status, 'published')
-  ];
+  const conditions: SQL[] = [eq(properties.placeId, placeId), eq(properties.status, 'published')];
 
   if (filters?.propertyType && filters.propertyType.length > 0) {
     conditions.push(inArray(properties.propertyType, filters.propertyType as any));
@@ -499,7 +565,7 @@ async function filterListingsByPlaceIdDirect(
     conditions.push(eq(properties.bathrooms, filters.bathrooms));
   }
 
-  const results = await db
+  const results = (await db
     .select({
       id: properties.id,
       title: properties.title,
@@ -514,9 +580,9 @@ async function filterListingsByPlaceIdDirect(
     })
     .from(properties)
     .where(and(...conditions))
-    .limit(limit);
+    .limit(limit)) as ListingRow[];
 
-  return results.map(listing => ({
+  return results.map((listing: ListingRow) => ({
     ...listing,
     price: Number(listing.price),
     relevanceScore: 90, // Slightly lower relevance for direct Place ID match
@@ -526,10 +592,7 @@ async function filterListingsByPlaceIdDirect(
 /**
  * Track location search for trending analysis
  */
-export async function trackLocationSearch(
-  locationId: number,
-  userId?: number
-): Promise<void> {
+export async function trackLocationSearch(locationId: number, userId?: number): Promise<void> {
   const db = await getDb();
 
   await db.insert(locationSearches).values({

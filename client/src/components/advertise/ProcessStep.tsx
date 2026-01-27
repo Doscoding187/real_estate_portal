@@ -1,10 +1,10 @@
 /**
  * ProcessStep Component
- * 
+ *
  * Displays a single step in the "How It Works" process with number badge,
  * icon, title, and description. Includes staggered animation and gradient
  * number badge.
- * 
+ *
  * Requirements: 4.2
  */
 
@@ -20,27 +20,27 @@ export interface ProcessStepProps {
    * Step number (1, 2, 3, etc.)
    */
   stepNumber: number;
-  
+
   /**
    * Icon component from lucide-react
    */
   icon: LucideIcon;
-  
+
   /**
    * Step title
    */
   title: string;
-  
+
   /**
    * Step description text
    */
   description: string;
-  
+
   /**
    * Whether to show connecting line to next step (desktop only)
    */
   showConnector?: boolean;
-  
+
   /**
    * Optional additional CSS classes
    */
@@ -66,7 +66,7 @@ export const ProcessStep: React.FC<ProcessStepProps> = ({
       className={`process-step ${className}`}
       variants={staggerItem}
       initial="initial"
-      animate={isVisible ? "animate" : "initial"}
+      animate={isVisible ? 'animate' : 'initial'}
       style={{
         display: 'flex',
         flexDirection: 'column',

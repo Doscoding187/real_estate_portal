@@ -14,14 +14,14 @@ export type ExploreFeedType = 'recommended' | 'area' | 'category';
 
 /**
  * Common state and logic shared across all Explore pages
- * 
+ *
  * This hook extracts and centralizes:
  * - View mode state management
  * - Category selection state
  * - Filter visibility state
  * - Property filter integration
  * - Common callbacks and handlers
- * 
+ *
  * @example
  * ```tsx
  * function ExploreHome() {
@@ -35,7 +35,7 @@ export type ExploreFeedType = 'recommended' | 'area' | 'category';
  *     filters,
  *     filterActions,
  *   } = useExploreCommonState({ initialViewMode: 'home' });
- * 
+ *
  *   return (
  *     <div>
  *       <button onClick={() => setViewMode('cards')}>Cards View</button>
@@ -52,13 +52,13 @@ interface UseExploreCommonStateOptions {
    * @default 'home'
    */
   initialViewMode?: ExploreViewMode;
-  
+
   /**
    * Initial feed type for filtering
    * @default 'recommended'
    */
   initialFeedType?: ExploreFeedType;
-  
+
   /**
    * Whether to show filters panel initially
    * @default false
@@ -70,20 +70,20 @@ interface UseExploreCommonStateReturn {
   // View mode state
   viewMode: ExploreViewMode;
   setViewMode: (mode: ExploreViewMode) => void;
-  
+
   // Feed type state
   feedType: ExploreFeedType;
   setFeedType: (type: ExploreFeedType) => void;
-  
+
   // Category selection state
   selectedCategoryId: number | null;
   setSelectedCategoryId: (id: number | null) => void;
-  
+
   // Filter visibility state
   showFilters: boolean;
   setShowFilters: (show: boolean) => void;
   toggleFilters: () => void;
-  
+
   // Property filters
   filters: ReturnType<typeof usePropertyFilters>['filters'];
   filterActions: {
@@ -99,19 +99,19 @@ interface UseExploreCommonStateReturn {
 
 /**
  * Hook that provides common state management for all Explore pages
- * 
+ *
  * Consolidates:
  * - View mode switching (home, cards, videos, map, shorts)
  * - Feed type filtering (recommended, area, category)
  * - Category selection
  * - Filter panel visibility
  * - Property filter state and actions
- * 
- * This reduces code duplication across ExploreHome, ExploreFeed, 
+ *
+ * This reduces code duplication across ExploreHome, ExploreFeed,
  * ExploreShorts, and ExploreMap pages.
  */
 export function useExploreCommonState(
-  options: UseExploreCommonStateOptions = {}
+  options: UseExploreCommonStateOptions = {},
 ): UseExploreCommonStateReturn {
   const {
     initialViewMode = 'home',
@@ -121,16 +121,16 @@ export function useExploreCommonState(
 
   // View mode state
   const [viewMode, setViewMode] = useState<ExploreViewMode>(initialViewMode);
-  
+
   // Feed type state
   const [feedType, setFeedType] = useState<ExploreFeedType>(initialFeedType);
-  
+
   // Filter visibility state
   const [showFilters, setShowFilters] = useState(initialShowFilters);
-  
+
   // Category selection (from existing hook)
   const { selectedCategoryId, setSelectedCategoryId } = useCategoryFilter();
-  
+
   // Property filters (from existing hook)
   const {
     filters,
@@ -152,20 +152,20 @@ export function useExploreCommonState(
     // View mode
     viewMode,
     setViewMode,
-    
+
     // Feed type
     feedType,
     setFeedType,
-    
+
     // Category selection
     selectedCategoryId,
     setSelectedCategoryId,
-    
+
     // Filter visibility
     showFilters,
     setShowFilters,
     toggleFilters,
-    
+
     // Property filters
     filters,
     filterActions: {

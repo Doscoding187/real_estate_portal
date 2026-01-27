@@ -1,6 +1,6 @@
 /**
  * BackgroundOrbs Component
- * 
+ *
  * Decorative floating gradient orbs for visual depth and premium aesthetic
  */
 
@@ -22,7 +22,7 @@ export const BackgroundOrbs: React.FC = () => {
         }}
         aria-hidden="true"
       />
-      
+
       {/* Bottom-left orb */}
       <div
         className="absolute bottom-0 left-0 w-[500px] h-[500px] rounded-full pointer-events-none"

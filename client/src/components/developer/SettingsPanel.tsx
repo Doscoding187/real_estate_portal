@@ -5,23 +5,21 @@ import { RefreshCw, Building2 } from 'lucide-react';
 
 const SettingsPanel: React.FC = () => {
   const [isSyncing, setIsSyncing] = useState(false);
-  
+
   // Get subscription data
-  const { data: subscription, refetch: refetchSubscription } = trpc.developer.getSubscription.useQuery(
-    undefined,
-    { 
+  const { data: subscription, refetch: refetchSubscription } =
+    trpc.developer.getSubscription.useQuery(undefined, {
       staleTime: 0, // Always refetch on access
-      refetchOnMount: true 
-    }
-  );
-  
+      refetchOnMount: true,
+    });
+
   // Reset development count mutation
   const resetCountMutation = trpc.developer.resetDevelopmentCount.useMutation({
-    onSuccess: (data) => {
+    onSuccess: data => {
       toast.success(data.message);
       refetchSubscription();
     },
-    onError: (error) => {
+    onError: error => {
       toast.error(error.message || 'Failed to sync usage');
     },
   });
@@ -279,14 +277,17 @@ const SettingsPanel: React.FC = () => {
             <div className="space-y-4">
               <div className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-16">
                 <div className="text-sm text-gray-500">Current Tier</div>
-                <div className="font-medium text-lg capitalize">{subscription?.tier?.replace('_', ' ') || 'Loading...'}</div>
+                <div className="font-medium text-lg capitalize">
+                  {subscription?.tier?.replace('_', ' ') || 'Loading...'}
+                </div>
               </div>
 
               <div className="flex items-center justify-between p-3 border border-gray-200 rounded-12">
                 <div>
                   <div className="text-sm text-gray-500">Developments</div>
                   <div className="font-medium">
-                    {subscription?.usage?.developmentsCount ?? 0} / {subscription?.limits?.maxDevelopments ?? 1}
+                    {subscription?.usage?.developmentsCount ?? 0} /{' '}
+                    {subscription?.limits?.maxDevelopments ?? 1}
                   </div>
                 </div>
                 <button
@@ -302,14 +303,16 @@ const SettingsPanel: React.FC = () => {
               <div className="p-3 border border-gray-200 rounded-12">
                 <div className="text-sm text-gray-500">Leads This Month</div>
                 <div className="font-medium">
-                  {subscription?.usage?.leadsThisMonth ?? 0} / {subscription?.limits?.maxLeadsPerMonth ?? 50}
+                  {subscription?.usage?.leadsThisMonth ?? 0} /{' '}
+                  {subscription?.limits?.maxLeadsPerMonth ?? 50}
                 </div>
               </div>
 
               <div className="p-3 border border-gray-200 rounded-12">
                 <div className="text-sm text-gray-500">Team Members</div>
                 <div className="font-medium">
-                  {subscription?.usage?.teamMembersCount ?? 0} / {subscription?.limits?.maxTeamMembers ?? 1}
+                  {subscription?.usage?.teamMembersCount ?? 0} /{' '}
+                  {subscription?.limits?.maxTeamMembers ?? 1}
                 </div>
               </div>
             </div>

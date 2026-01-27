@@ -60,52 +60,54 @@ export interface QuickFiltersProps {
  * Check if a quick filter preset is currently active
  */
 const isPresetActive = (
-  preset: typeof QUICK_FILTER_PRESETS[keyof typeof QUICK_FILTER_PRESETS],
-  activeFilters: PropertyFilters
+  preset: (typeof QUICK_FILTER_PRESETS)[keyof typeof QUICK_FILTER_PRESETS],
+  activeFilters: PropertyFilters,
 ): boolean => {
   const presetFilters = preset.filters;
-  
+
   // Check each filter in the preset
   for (const [key, value] of Object.entries(presetFilters)) {
     const filterKey = key as keyof PropertyFilters;
     const activeValue = activeFilters[filterKey];
-    
+
     // Handle array comparisons (e.g., titleType)
     if (Array.isArray(value)) {
       if (!Array.isArray(activeValue)) return false;
       if (value.length !== activeValue.length) return false;
-      if (!value.every((v) => activeValue.includes(v))) return false;
+      if (!value.every(v => activeValue.includes(v))) return false;
     }
     // Handle boolean and number comparisons
     else if (activeValue !== value) {
       return false;
     }
   }
-  
+
   return true;
 };
 
 /**
  * QuickFilters Component
- * 
+ *
  * Displays preset filter buttons for common South African property searches.
  * Provides one-click access to popular filter combinations like Pet-Friendly,
  * Fibre Ready, Sectional Title, Under R2M, and Security Estate.
- * 
+ *
  * Features:
  * - SA-specific preset filters
  * - Active state styling
  * - Icon-based visual indicators
  * - Responsive layout
- * 
+ *
  * Requirements: 2.2
  */
 export function QuickFilters({ onFilterSelect, activeFilters, className }: QuickFiltersProps) {
   const presets = Object.values(QUICK_FILTER_PRESETS);
-  
-  const handlePresetClick = (preset: typeof QUICK_FILTER_PRESETS[keyof typeof QUICK_FILTER_PRESETS]) => {
+
+  const handlePresetClick = (
+    preset: (typeof QUICK_FILTER_PRESETS)[keyof typeof QUICK_FILTER_PRESETS],
+  ) => {
     const isActive = isPresetActive(preset, activeFilters);
-    
+
     if (isActive) {
       // If preset is active, clear its filters
       const clearedFilters: Partial<PropertyFilters> = {};
@@ -118,13 +120,13 @@ export function QuickFilters({ onFilterSelect, activeFilters, className }: Quick
       onFilterSelect(preset.filters);
     }
   };
-  
+
   return (
     <div className={cn('flex flex-wrap gap-2', className)}>
-      {presets.map((preset) => {
+      {presets.map(preset => {
         const Icon = preset.icon;
         const isActive = isPresetActive(preset, activeFilters);
-        
+
         return (
           <Button
             key={preset.id}
@@ -134,7 +136,7 @@ export function QuickFilters({ onFilterSelect, activeFilters, className }: Quick
             className={cn(
               'flex items-center gap-2 transition-all',
               isActive && 'bg-primary text-primary-foreground shadow-md',
-              !isActive && 'hover:bg-accent hover:text-accent-foreground'
+              !isActive && 'hover:bg-accent hover:text-accent-foreground',
             )}
             data-testid={`quick-filter-${preset.id}`}
             data-active={isActive}

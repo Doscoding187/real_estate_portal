@@ -72,7 +72,7 @@ export function KPICard({
       className={cn(
         'bg-white rounded-xl border border-gray-100 p-6 shadow-soft',
         'hover:shadow-hover hover:scale-[1.02] transition-all duration-200',
-        'cursor-pointer group'
+        'cursor-pointer group',
       )}
     >
       {/* Header */}
@@ -84,7 +84,7 @@ export function KPICard({
             'bg-gradient-to-br shadow-soft',
             gradientFrom,
             gradientTo,
-            'group-hover:scale-110 transition-transform duration-200'
+            'group-hover:scale-110 transition-transform duration-200',
           )}
         >
           <Icon className="w-6 h-6 text-white" />
@@ -95,7 +95,7 @@ export function KPICard({
           <div
             className={cn(
               'flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold',
-              getTrendColor()
+              getTrendColor(),
             )}
           >
             {getTrendIcon()}
@@ -115,7 +115,7 @@ export function KPICard({
         className={cn(
           'mt-4 h-1 rounded-full bg-gradient-to-r opacity-0 group-hover:opacity-100 transition-opacity duration-200',
           gradientFrom,
-          gradientTo
+          gradientTo,
         )}
       />
     </div>

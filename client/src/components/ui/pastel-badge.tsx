@@ -15,17 +15,17 @@ const variantStyles = {
   rose: 'bg-gradient-to-r from-rose-100 to-pink-100 text-rose-700 border-rose-200',
 };
 
-export const PastelBadge: React.FC<PastelBadgeProps> = ({ 
-  children, 
-  variant = 'mint', 
-  className 
+export const PastelBadge: React.FC<PastelBadgeProps> = ({
+  children,
+  variant = 'mint',
+  className,
 }) => {
   return (
     <span
       className={cn(
         'inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border',
         variantStyles[variant],
-        className
+        className,
       )}
     >
       {children}

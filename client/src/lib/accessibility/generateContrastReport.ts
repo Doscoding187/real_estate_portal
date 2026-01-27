@@ -35,7 +35,14 @@ console.log('\n📝 Full report generated. Writing to file...\n');
 import { writeFileSync } from 'fs';
 import { join } from 'path';
 
-const reportPath = join(process.cwd(), 'client', 'src', 'lib', 'accessibility', 'COLOR_CONTRAST_AUDIT_REPORT.md');
+const reportPath = join(
+  process.cwd(),
+  'client',
+  'src',
+  'lib',
+  'accessibility',
+  'COLOR_CONTRAST_AUDIT_REPORT.md',
+);
 writeFileSync(reportPath, report);
 
 console.log(`✅ Report saved to: ${reportPath}`);

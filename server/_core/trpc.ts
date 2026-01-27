@@ -1,10 +1,35 @@
 import { NOT_ADMIN_ERR_MSG, UNAUTHED_ERR_MSG } from '@shared/const';
 import { initTRPC, TRPCError } from '@trpc/server';
+import { ZodError } from 'zod';
 import superjson from 'superjson';
 import type { TrpcContext } from './context';
 
 const t = initTRPC.context<TrpcContext>().create({
   transformer: superjson,
+  errorFormatter({ shape, error }) {
+    const cause = error.cause;
+
+    // Zod v4 can be ZodError, but also sometimes wrapped / different instance
+    const isZod =
+      cause &&
+      typeof cause === 'object' &&
+      ('issues' in (cause as any) || cause instanceof ZodError);
+
+    const zodError = isZod
+      ? ((cause as any).flatten?.() ?? { formErrors: [], fieldErrors: {} })
+      : undefined;
+
+    return {
+      ...shape,
+      data: {
+        ...shape.data,
+        // Safe optional payload for client-side display/debugging
+        zodError,
+        _zod: zodError, // Backwards compatibility for some client versions
+        cause: cause ? String((cause as any)?.message ?? cause) : undefined, // safe string
+      },
+    };
+  },
 });
 
 export const router = t.router;

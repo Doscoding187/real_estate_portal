@@ -1,9 +1,9 @@
 /**
  * Error Boundary for Advertise Landing Page
- * 
+ *
  * Wraps major sections to catch and handle React errors gracefully.
  * Provides fallback UI and error logging to monitoring service.
- * 
+ *
  * Requirements: 10.1
  */
 
@@ -18,22 +18,22 @@ export interface AdvertiseErrorBoundaryProps {
    * Child components to protect
    */
   children: ReactNode;
-  
+
   /**
    * Optional custom fallback UI
    */
   fallback?: ReactNode;
-  
+
   /**
    * Section name for error logging
    */
   sectionName?: string;
-  
+
   /**
    * Optional error handler callback
    */
   onError?: (error: Error, errorInfo: ErrorInfo) => void;
-  
+
   /**
    * Whether to show the section name in error UI
    */
@@ -216,8 +216,8 @@ export class AdvertiseErrorBoundary extends Component<
                 lineHeight: softUITokens.typography.lineHeight.relaxed,
               }}
             >
-              We encountered an unexpected error while loading this section. 
-              Don't worry, our team has been notified and is working on a fix.
+              We encountered an unexpected error while loading this section. Don't worry, our team
+              has been notified and is working on a fix.
             </p>
 
             {/* Development Error Details */}
@@ -281,11 +281,11 @@ export class AdvertiseErrorBoundary extends Component<
                   transition: `all ${softUITokens.transitions.base}`,
                   boxShadow: softUITokens.shadows.soft,
                 }}
-                onMouseEnter={(e) => {
+                onMouseEnter={e => {
                   e.currentTarget.style.transform = 'translateY(-2px)';
                   e.currentTarget.style.boxShadow = softUITokens.shadows.softHover;
                 }}
-                onMouseLeave={(e) => {
+                onMouseLeave={e => {
                   e.currentTarget.style.transform = 'translateY(0)';
                   e.currentTarget.style.boxShadow = softUITokens.shadows.soft;
                 }}
@@ -311,10 +311,10 @@ export class AdvertiseErrorBoundary extends Component<
                   cursor: 'pointer',
                   transition: `all ${softUITokens.transitions.base}`,
                 }}
-                onMouseEnter={(e) => {
+                onMouseEnter={e => {
                   e.currentTarget.style.background = softUITokens.colors.primary.light;
                 }}
-                onMouseLeave={(e) => {
+                onMouseLeave={e => {
                   e.currentTarget.style.background = softUITokens.colors.neutral.white;
                 }}
                 aria-label="Reload page"
@@ -339,10 +339,10 @@ export class AdvertiseErrorBoundary extends Component<
                   cursor: 'pointer',
                   transition: `all ${softUITokens.transitions.base}`,
                 }}
-                onMouseEnter={(e) => {
+                onMouseEnter={e => {
                   e.currentTarget.style.background = softUITokens.colors.neutral.gray50;
                 }}
-                onMouseLeave={(e) => {
+                onMouseLeave={e => {
                   e.currentTarget.style.background = 'transparent';
                 }}
                 aria-label="Go to home page"
@@ -423,11 +423,7 @@ export const SectionErrorBoundary: React.FC<{
     <AdvertiseErrorBoundary
       sectionName={sectionName}
       showSectionName={true}
-      fallback={
-        minimal ? (
-          <MinimalErrorFallback sectionName={sectionName} />
-        ) : undefined
-      }
+      fallback={minimal ? <MinimalErrorFallback sectionName={sectionName} /> : undefined}
     >
       {children}
     </AdvertiseErrorBoundary>

@@ -31,7 +31,7 @@ interface ShareProfileModalProps {
 
 export function ShareProfileModal({ isOpen, onClose, agentId, agentName }: ShareProfileModalProps) {
   const [copied, setCopied] = useState(false);
-  
+
   const profileUrl = `${window.location.origin}/agent/profile/${agentId}`;
   const shareText = `Check out ${agentName}'s real estate profile!`;
 
@@ -49,7 +49,7 @@ export function ShareProfileModal({ isOpen, onClose, agentId, agentName }: Share
   const handleShare = (platform: string) => {
     const encodedUrl = encodeURIComponent(profileUrl);
     const encodedText = encodeURIComponent(shareText);
-    
+
     const urls: Record<string, string> = {
       facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}`,
       twitter: `https://twitter.com/intent/tweet?url=${encodedUrl}&text=${encodedText}`,
@@ -84,17 +84,8 @@ export function ShareProfileModal({ isOpen, onClose, agentId, agentName }: Share
               Your Profile Link
             </Label>
             <div className="flex gap-2">
-              <Input
-                id="profile-link"
-                value={profileUrl}
-                readOnly
-                className="bg-gray-50"
-              />
-              <Button
-                onClick={handleCopyLink}
-                variant="outline"
-                className="flex-shrink-0"
-              >
+              <Input id="profile-link" value={profileUrl} readOnly className="bg-gray-50" />
+              <Button onClick={handleCopyLink} variant="outline" className="flex-shrink-0">
                 {copied ? (
                   <Check className="h-4 w-4 text-green-600" />
                 ) : (
@@ -105,11 +96,7 @@ export function ShareProfileModal({ isOpen, onClose, agentId, agentName }: Share
           </div>
 
           {/* View Profile Button */}
-          <Button
-            onClick={handleViewProfile}
-            variant="outline"
-            className="w-full"
-          >
+          <Button onClick={handleViewProfile} variant="outline" className="w-full">
             <ExternalLink className="h-4 w-4 mr-2" />
             Preview Your Public Profile
           </Button>

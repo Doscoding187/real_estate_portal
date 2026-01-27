@@ -1,9 +1,9 @@
 /**
  * Cross-Browser Compatibility Tests
- * 
+ *
  * Tests CSS Grid/Flexbox support, Intersection Observer API support,
  * and animation compatibility across browsers.
- * 
+ *
  * Validates: Requirements 10.1
  */
 
@@ -77,11 +77,11 @@ describe('Cross-Browser Compatibility Tests', () => {
       };
 
       const { container } = render(<HeroSection {...props} />);
-      
+
       // Component should render successfully (CSS Grid is supported in all modern browsers)
       const section = container.querySelector('section');
       expect(section).toBeTruthy();
-      
+
       // Verify component has proper structure
       expect(container.querySelector('h1')).toBeTruthy();
       expect(container.querySelector('p')).toBeTruthy();
@@ -89,11 +89,11 @@ describe('Cross-Browser Compatibility Tests', () => {
 
     it('should use CSS Grid for partner selection layout', () => {
       const { container } = render(<PartnerSelectionSection />);
-      
+
       // Component should render successfully
       const section = container.querySelector('section');
       expect(section).toBeTruthy();
-      
+
       // Verify partner cards are rendered
       const partnerCards = container.querySelectorAll('[data-testid="partner-card"]');
       expect(partnerCards.length).toBeGreaterThan(0);
@@ -101,11 +101,11 @@ describe('Cross-Browser Compatibility Tests', () => {
 
     it('should use CSS Grid for value proposition layout', () => {
       const { container } = render(<ValuePropositionSection />);
-      
+
       // Component should render successfully
       const section = container.querySelector('section');
       expect(section).toBeTruthy();
-      
+
       // Verify feature blocks are rendered
       const featureBlocks = container.querySelectorAll('[data-testid="feature-block"]');
       expect(featureBlocks.length).toBeGreaterThan(0);
@@ -128,7 +128,7 @@ describe('Cross-Browser Compatibility Tests', () => {
       };
 
       const { container } = render(<HeroSection {...props} />);
-      
+
       // Component should render successfully even without grid support
       const section = container.querySelector('section');
       expect(section).toBeTruthy();
@@ -154,7 +154,7 @@ describe('Cross-Browser Compatibility Tests', () => {
       };
 
       const { container } = render(<HeroSection {...props} />);
-      
+
       // Component should render successfully (Flexbox is supported in all modern browsers)
       const ctaGroup = container.querySelector('[data-testid="cta-button-group"]');
       expect(ctaGroup).toBeTruthy();
@@ -162,11 +162,11 @@ describe('Cross-Browser Compatibility Tests', () => {
 
     it('should use Flexbox for responsive layouts', () => {
       const { container } = render(<PartnerSelectionSection />);
-      
+
       // Component should render successfully
       const section = container.querySelector('section');
       expect(section).toBeTruthy();
-      
+
       // Verify content is rendered
       const partnerCards = container.querySelectorAll('[data-testid="partner-card"]');
       expect(partnerCards.length).toBeGreaterThan(0);
@@ -189,7 +189,7 @@ describe('Cross-Browser Compatibility Tests', () => {
       };
 
       const { container } = render(<HeroSection {...props} />);
-      
+
       // Component should render with proper structure
       const section = container.querySelector('section');
       expect(section).toBeTruthy();
@@ -235,11 +235,11 @@ describe('Cross-Browser Compatibility Tests', () => {
 
     it('should use Intersection Observer for scroll animations', () => {
       const { container } = render(<ValuePropositionSection />);
-      
+
       // Component should render successfully
       const section = container.querySelector('section');
       expect(section).toBeTruthy();
-      
+
       // Note: Intersection Observer may not be called in test environment
       // The important thing is that the component renders without errors
     });
@@ -251,7 +251,7 @@ describe('Cross-Browser Compatibility Tests', () => {
 
       // Component should render with animations disabled
       const { container } = render(<PartnerSelectionSection />);
-      
+
       // Elements should still be visible (no animation delay)
       const partnerCards = container.querySelectorAll('[data-testid="partner-card"]');
       expect(partnerCards.length).toBeGreaterThan(0);
@@ -279,7 +279,7 @@ describe('Cross-Browser Compatibility Tests', () => {
       };
 
       const { container } = render(<HeroSection {...props} />);
-      
+
       // Component should render successfully (transform is supported in all modern browsers)
       const section = container.querySelector('section');
       expect(section).toBeTruthy();
@@ -287,7 +287,7 @@ describe('Cross-Browser Compatibility Tests', () => {
 
     it('should use opacity for fade animations', () => {
       const { container } = render(<PartnerSelectionSection />);
-      
+
       // Component should render successfully (opacity is supported in all modern browsers)
       const section = container.querySelector('section');
       expect(section).toBeTruthy();
@@ -309,17 +309,17 @@ describe('Cross-Browser Compatibility Tests', () => {
       window.matchMedia = mockMatchMedia;
 
       const { container } = render(<ValuePropositionSection />);
-      
+
       // Component should render without errors
       expect(container.querySelector('section')).toBeTruthy();
-      
+
       // Note: matchMedia may not be called in test environment with mocked framer-motion
       // The important thing is that the component renders without errors
     });
 
     it('should use transition classes for smooth animations', () => {
       const { container } = render(<PartnerSelectionSection />);
-      
+
       // Component should render successfully (transitions are supported in all modern browsers)
       const section = container.querySelector('section');
       expect(section).toBeTruthy();
@@ -344,18 +344,19 @@ describe('Cross-Browser Compatibility Tests', () => {
       };
 
       const { container } = render(<HeroSection {...props} />);
-      
+
       // Check for responsive classes (sm:, md:, lg:, xl:)
-      const hasResponsive = container.innerHTML.includes('sm:') ||
-                           container.innerHTML.includes('md:') ||
-                           container.innerHTML.includes('lg:') ||
-                           container.innerHTML.includes('xl:');
+      const hasResponsive =
+        container.innerHTML.includes('sm:') ||
+        container.innerHTML.includes('md:') ||
+        container.innerHTML.includes('lg:') ||
+        container.innerHTML.includes('xl:');
       expect(hasResponsive).toBe(true);
     });
 
     it('should have mobile-first responsive padding', () => {
       const { container } = render(<PartnerSelectionSection />);
-      
+
       // Component should render successfully with responsive design
       const section = container.querySelector('section');
       expect(section).toBeTruthy();
@@ -378,11 +379,11 @@ describe('Cross-Browser Compatibility Tests', () => {
       };
 
       const { container } = render(<HeroSection {...props} />);
-      
+
       // Check for responsive text size classes
-      const hasTextSize = container.innerHTML.includes('text-') &&
-                         (container.innerHTML.includes('sm:text-') ||
-                          container.innerHTML.includes('lg:text-'));
+      const hasTextSize =
+        container.innerHTML.includes('text-') &&
+        (container.innerHTML.includes('sm:text-') || container.innerHTML.includes('lg:text-'));
       expect(hasTextSize).toBe(true);
     });
   });
@@ -405,7 +406,7 @@ describe('Cross-Browser Compatibility Tests', () => {
       };
 
       const { container } = render(<HeroSection {...props} />);
-      
+
       // Check for gradient backgrounds (uses CSS variables in Tailwind)
       const section = container.querySelector('section');
       const style = section?.getAttribute('style');
@@ -414,7 +415,7 @@ describe('Cross-Browser Compatibility Tests', () => {
 
     it('should use backdrop-filter for modern effects', () => {
       const { container } = render(<PartnerSelectionSection />);
-      
+
       // Component should render successfully with modern CSS features
       // Note: backdrop-blur may not be present in all components
       expect(container.querySelector('section')).toBeTruthy();
@@ -437,7 +438,7 @@ describe('Cross-Browser Compatibility Tests', () => {
       };
 
       const { container } = render(<HeroSection {...props} />);
-      
+
       // Component should render successfully with modern CSS features
       // Note: aspect-ratio may not be present in all components
       expect(container.querySelector('section')).toBeTruthy();
@@ -447,14 +448,14 @@ describe('Cross-Browser Compatibility Tests', () => {
   describe('Browser-Specific Workarounds', () => {
     it('should handle Safari flexbox bugs', () => {
       const { container } = render(<PartnerSelectionSection />);
-      
+
       // Component should render successfully with Safari-compatible flexbox
       expect(container.querySelector('section')).toBeTruthy();
     });
 
     it('should handle IE11 grid fallbacks', () => {
       const { container } = render(<ValuePropositionSection />);
-      
+
       // Component should render successfully (modern browsers support grid, IE11 is no longer supported)
       const section = container.querySelector('section');
       expect(section).toBeTruthy();
@@ -462,7 +463,7 @@ describe('Cross-Browser Compatibility Tests', () => {
 
     it('should handle Firefox animation performance', () => {
       const { container } = render(<PartnerSelectionSection />);
-      
+
       // Component should render successfully with optimized animations
       expect(container.querySelector('section')).toBeTruthy();
     });
@@ -471,11 +472,11 @@ describe('Cross-Browser Compatibility Tests', () => {
   describe('Touch Device Support', () => {
     it('should have adequate touch targets (44px minimum)', () => {
       const { container } = render(<PartnerSelectionSection />);
-      
+
       // Component should render successfully with touch-friendly targets
       const section = container.querySelector('section');
       expect(section).toBeTruthy();
-      
+
       // Verify interactive elements are present
       const partnerCards = container.querySelectorAll('[data-testid="partner-card"]');
       expect(partnerCards.length).toBeGreaterThan(0);
@@ -483,7 +484,7 @@ describe('Cross-Browser Compatibility Tests', () => {
 
     it('should disable hover effects on touch devices', () => {
       const { container } = render(<PartnerSelectionSection />);
-      
+
       // Component should render successfully
       const section = container.querySelector('section');
       expect(section).toBeTruthy();
@@ -491,7 +492,7 @@ describe('Cross-Browser Compatibility Tests', () => {
 
     it('should support touch gestures', () => {
       const { container } = render(<PartnerSelectionSection />);
-      
+
       // Component should render successfully with touch support
       const section = container.querySelector('section');
       expect(section).toBeTruthy();

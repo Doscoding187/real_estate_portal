@@ -2,7 +2,7 @@
  * PortfolioStep Component
  * Third step of the developer registration wizard
  * Collects portfolio metrics and specializations
- * 
+ *
  * Requirements: 6.1, 6.2, 6.3, 6.4, 6.5, 7.1, 7.2, 7.3, 7.4, 7.5, 13.2
  */
 
@@ -135,30 +135,22 @@ export const PortfolioStep = React.forwardRef<HTMLDivElement, PortfolioStepProps
           <h2 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
             Portfolio & Expertise
           </h2>
-          <p className="text-gray-600">
-            Showcase your development experience and specializations
-          </p>
+          <p className="text-gray-600">Showcase your development experience and specializations</p>
         </div>
 
         <div className="space-y-4">
-          <h3 className="text-lg font-semibold text-gray-900">
-            Project Portfolio
-          </h3>
-          <p className="text-sm text-gray-600">
-            Enter the number of projects in each category.
-          </p>
-          
+          <h3 className="text-lg font-semibold text-gray-900">Project Portfolio</h3>
+          <p className="text-sm text-gray-600">Enter the number of projects in each category.</p>
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="space-y-2">
-              <label className="block text-sm font-medium text-gray-700">
-                Completed Projects
-              </label>
+              <label className="block text-sm font-medium text-gray-700">Completed Projects</label>
               <GradientInput
                 type="number"
                 min="0"
                 placeholder="0"
                 value={data.completedProjects.toString()}
-                onChange={(e) => handleMetricChange('completedProjects', e.target.value)}
+                onChange={e => handleMetricChange('completedProjects', e.target.value)}
                 error={errors?.completedProjects}
               />
               {errors?.completedProjects && (
@@ -167,15 +159,13 @@ export const PortfolioStep = React.forwardRef<HTMLDivElement, PortfolioStepProps
             </div>
 
             <div className="space-y-2">
-              <label className="block text-sm font-medium text-gray-700">
-                Current Projects
-              </label>
+              <label className="block text-sm font-medium text-gray-700">Current Projects</label>
               <GradientInput
                 type="number"
                 min="0"
                 placeholder="0"
                 value={data.currentProjects.toString()}
-                onChange={(e) => handleMetricChange('currentProjects', e.target.value)}
+                onChange={e => handleMetricChange('currentProjects', e.target.value)}
                 error={errors?.currentProjects}
               />
               {errors?.currentProjects && (
@@ -184,15 +174,13 @@ export const PortfolioStep = React.forwardRef<HTMLDivElement, PortfolioStepProps
             </div>
 
             <div className="space-y-2">
-              <label className="block text-sm font-medium text-gray-700">
-                Upcoming Projects
-              </label>
+              <label className="block text-sm font-medium text-gray-700">Upcoming Projects</label>
               <GradientInput
                 type="number"
                 min="0"
                 placeholder="0"
                 value={data.upcomingProjects.toString()}
-                onChange={(e) => handleMetricChange('upcomingProjects', e.target.value)}
+                onChange={e => handleMetricChange('upcomingProjects', e.target.value)}
                 error={errors?.upcomingProjects}
               />
               {errors?.upcomingProjects && (
@@ -205,9 +193,7 @@ export const PortfolioStep = React.forwardRef<HTMLDivElement, PortfolioStepProps
         </div>
 
         <div className="space-y-4">
-          <h3 className="text-lg font-semibold text-gray-900">
-            Development Specializations
-          </h3>
+          <h3 className="text-lg font-semibold text-gray-900">Development Specializations</h3>
           <p className="text-sm text-gray-600">
             Select your areas of expertise. Choose at least one specialization.
           </p>
@@ -216,7 +202,7 @@ export const PortfolioStep = React.forwardRef<HTMLDivElement, PortfolioStepProps
             <div className="space-y-2">
               <h4 className="text-sm font-medium text-gray-700">Selected:</h4>
               <div className="flex flex-wrap gap-2">
-                {data.specializations.map((specId) => {
+                {data.specializations.map(specId => {
                   const spec = availableSpecializations.find(s => s.id === specId);
                   return spec ? (
                     <SpecializationBadge
@@ -240,7 +226,7 @@ export const PortfolioStep = React.forwardRef<HTMLDivElement, PortfolioStepProps
             maxSelections={5}
             minSelections={1}
           />
-          
+
           {errors?.specializations && (
             <p className="text-sm text-red-600">{errors.specializations}</p>
           )}
@@ -248,12 +234,13 @@ export const PortfolioStep = React.forwardRef<HTMLDivElement, PortfolioStepProps
 
         <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
           <p className="text-sm text-purple-700">
-            <strong>Portfolio Tip:</strong> Accurate project numbers help build trust with potential clients.
+            <strong>Portfolio Tip:</strong> Accurate project numbers help build trust with potential
+            clients.
           </p>
         </div>
       </div>
     );
-  }
+  },
 );
 
 PortfolioStep.displayName = 'PortfolioStep';

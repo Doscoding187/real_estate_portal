@@ -16,7 +16,18 @@ import {
   FormDescription,
 } from '@/components/ui/form';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Home, Loader2, Eye, EyeOff, Building2, User, ArrowRight, Briefcase, HardHat, Search } from 'lucide-react';
+import {
+  Home,
+  Loader2,
+  Eye,
+  EyeOff,
+  Building2,
+  User,
+  ArrowRight,
+  Briefcase,
+  HardHat,
+  Search,
+} from 'lucide-react';
 import { toast } from 'sonner';
 import { APP_TITLE } from '@/const';
 import { trpc } from '@/lib/trpc';
@@ -60,7 +71,12 @@ const registerSchema = z
   .refine(
     data => {
       if (data.role === 'agent') {
-        return data.agentDisplayName && data.agentDisplayName.length >= 2 && data.agentPhone && data.agentPhone.length >= 10;
+        return (
+          data.agentDisplayName &&
+          data.agentDisplayName.length >= 2 &&
+          data.agentPhone &&
+          data.agentPhone.length >= 10
+        );
       }
       return true;
     },
@@ -123,23 +139,23 @@ export default function Login() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
       });
-      
+
       toast.success('Welcome back!');
-      
+
       // Role-based redirect
       const role = result.user?.role;
       console.log('[Login] API result:', result);
       console.log('[Login] User role:', role);
-      
+
       let redirectPath = '/user/dashboard';
-      
+
       if (role === 'super_admin') redirectPath = '/admin/overview';
       else if (role === 'property_developer') redirectPath = '/developer/dashboard';
       else if (role === 'agency_admin') redirectPath = '/agency/dashboard';
       else if (role === 'agent') redirectPath = '/agent/dashboard';
-      
+
       console.log('[Login] Redirecting to:', redirectPath);
-      
+
       // Small delay for animation
       await new Promise(resolve => setTimeout(resolve, 300));
       console.log('[Login] Executing redirect now...');
@@ -181,8 +197,11 @@ export default function Login() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
-      
-      toast.success(result.message || 'Account created successfully! Please check your email to verify your account.');
+
+      toast.success(
+        result.message ||
+          'Account created successfully! Please check your email to verify your account.',
+      );
       setActiveTab('login');
       registerForm.reset();
     } catch (error) {
@@ -215,7 +234,7 @@ export default function Login() {
             </div>
             <h1 className="text-4xl font-bold tracking-tight">Property Listify</h1>
           </div>
-          
+
           <div className="space-y-4 max-w-md">
             <h2 className="text-3xl font-bold leading-tight">
               Property Listing <br />
@@ -224,7 +243,8 @@ export default function Login() {
               </span>
             </h2>
             <p className="text-lg text-slate-600 dark:text-slate-400 leading-relaxed">
-              Join thousands of agents, developers, and buyers on the most modern real estate platform.
+              Join thousands of agents, developers, and buyers on the most modern real estate
+              platform.
             </p>
           </div>
 
@@ -232,22 +252,30 @@ export default function Login() {
             <div className="p-4 rounded-2xl bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-white/20 dark:border-slate-700/30">
               <User className="h-8 w-8 text-purple-600 mb-3" />
               <div className="font-semibold text-lg">For Buyers</div>
-              <p className="text-sm text-slate-500 dark:text-slate-400">Discover properties with AI insights</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400">
+                Discover properties with AI insights
+              </p>
             </div>
             <div className="p-4 rounded-2xl bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-white/20 dark:border-slate-700/30">
               <Briefcase className="h-8 w-8 text-blue-600 mb-3" />
               <div className="font-semibold text-lg">For Agents</div>
-              <p className="text-sm text-slate-500 dark:text-slate-400">Manage listings and leads efficiently</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400">
+                Manage listings and leads efficiently
+              </p>
             </div>
             <div className="p-4 rounded-2xl bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-white/20 dark:border-slate-700/30">
               <Building2 className="h-8 w-8 text-indigo-600 mb-3" />
               <div className="font-semibold text-lg">For Agencies</div>
-              <p className="text-sm text-slate-500 dark:text-slate-400">Scale your team and business</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400">
+                Scale your team and business
+              </p>
             </div>
             <div className="p-4 rounded-2xl bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-white/20 dark:border-slate-700/30">
               <HardHat className="h-8 w-8 text-cyan-600 mb-3" />
               <div className="font-semibold text-lg">For Developers</div>
-              <p className="text-sm text-slate-500 dark:text-slate-400">Showcase new developments</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400">
+                Showcase new developments
+              </p>
             </div>
           </div>
         </div>
@@ -265,13 +293,13 @@ export default function Login() {
 
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
               <TabsList className="grid w-full grid-cols-2 mb-8 p-1 bg-slate-100/50 dark:bg-slate-800/50 rounded-xl">
-                <TabsTrigger 
+                <TabsTrigger
                   value="login"
                   className="rounded-lg data-[state=active]:bg-white dark:data-[state=active]:bg-slate-800 data-[state=active]:shadow-sm transition-all"
                 >
                   Login
                 </TabsTrigger>
-                <TabsTrigger 
+                <TabsTrigger
                   value="register"
                   className="rounded-lg data-[state=active]:bg-white dark:data-[state=active]:bg-slate-800 data-[state=active]:shadow-sm transition-all"
                 >
@@ -289,11 +317,11 @@ export default function Login() {
                         <FormItem>
                           <FormLabel>Email</FormLabel>
                           <FormControl>
-                            <Input 
-                              type="email" 
-                              placeholder="you@example.com" 
+                            <Input
+                              type="email"
+                              placeholder="you@example.com"
                               className="bg-white/50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-blue-500/20 transition-all"
-                              {...field} 
+                              {...field}
                             />
                           </FormControl>
                           <FormMessage />
@@ -322,14 +350,18 @@ export default function Login() {
                               className="absolute right-0 top-0 h-full px-3 hover:bg-transparent text-slate-400 hover:text-slate-600"
                               onClick={() => setShowLoginPassword(!showLoginPassword)}
                             >
-                              {showLoginPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                              {showLoginPassword ? (
+                                <EyeOff className="h-4 w-4" />
+                              ) : (
+                                <Eye className="h-4 w-4" />
+                              )}
                             </Button>
                           </div>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
-                    
+
                     <div className="flex items-center justify-between pt-2">
                       <FormField
                         control={loginForm.control}
@@ -355,9 +387,9 @@ export default function Login() {
                       </Button>
                     </div>
 
-                    <Button 
-                      type="submit" 
-                      className="w-full h-11 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg shadow-blue-500/25 rounded-xl transition-all hover:scale-[1.02] active:scale-[0.98]" 
+                    <Button
+                      type="submit"
+                      className="w-full h-11 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg shadow-blue-500/25 rounded-xl transition-all hover:scale-[1.02] active:scale-[0.98]"
                       disabled={isLoading}
                     >
                       {isLoading ? (
@@ -385,10 +417,10 @@ export default function Login() {
                         <FormItem>
                           <FormLabel>Full Name</FormLabel>
                           <FormControl>
-                            <Input 
-                              placeholder="John Doe" 
+                            <Input
+                              placeholder="John Doe"
                               className="bg-white/50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-blue-500/20 transition-all"
-                              {...field} 
+                              {...field}
                             />
                           </FormControl>
                           <FormMessage />
@@ -402,11 +434,11 @@ export default function Login() {
                         <FormItem>
                           <FormLabel>Email</FormLabel>
                           <FormControl>
-                            <Input 
-                              type="email" 
-                              placeholder="you@example.com" 
+                            <Input
+                              type="email"
+                              placeholder="you@example.com"
                               className="bg-white/50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-blue-500/20 transition-all"
-                              {...field} 
+                              {...field}
                             />
                           </FormControl>
                           <FormMessage />
@@ -436,7 +468,11 @@ export default function Login() {
                                 className="absolute right-0 top-0 h-full px-3 hover:bg-transparent text-slate-400 hover:text-slate-600"
                                 onClick={() => setShowRegisterPassword(!showRegisterPassword)}
                               >
-                                {showRegisterPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                {showRegisterPassword ? (
+                                  <EyeOff className="h-4 w-4" />
+                                ) : (
+                                  <Eye className="h-4 w-4" />
+                                )}
                               </Button>
                             </div>
                             <FormMessage />
@@ -465,7 +501,11 @@ export default function Login() {
                                 className="absolute right-0 top-0 h-full px-3 hover:bg-transparent text-slate-400 hover:text-slate-600"
                                 onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                               >
-                                {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                {showConfirmPassword ? (
+                                  <EyeOff className="h-4 w-4" />
+                                ) : (
+                                  <Eye className="h-4 w-4" />
+                                )}
                               </Button>
                             </div>
                             <FormMessage />
@@ -488,7 +528,11 @@ export default function Login() {
                             >
                               <FormItem>
                                 <FormControl>
-                                  <RadioGroupItem value="visitor" id="r-visitor" className="peer sr-only" />
+                                  <RadioGroupItem
+                                    value="visitor"
+                                    id="r-visitor"
+                                    className="peer sr-only"
+                                  />
                                 </FormControl>
                                 <Label
                                   htmlFor="r-visitor"
@@ -500,7 +544,11 @@ export default function Login() {
                               </FormItem>
                               <FormItem>
                                 <FormControl>
-                                  <RadioGroupItem value="agent" id="r-agent" className="peer sr-only" />
+                                  <RadioGroupItem
+                                    value="agent"
+                                    id="r-agent"
+                                    className="peer sr-only"
+                                  />
                                 </FormControl>
                                 <Label
                                   htmlFor="r-agent"
@@ -512,7 +560,11 @@ export default function Login() {
                               </FormItem>
                               <FormItem>
                                 <FormControl>
-                                  <RadioGroupItem value="agency_admin" id="r-agency" className="peer sr-only" />
+                                  <RadioGroupItem
+                                    value="agency_admin"
+                                    id="r-agency"
+                                    className="peer sr-only"
+                                  />
                                 </FormControl>
                                 <Label
                                   htmlFor="r-agency"
@@ -524,7 +576,11 @@ export default function Login() {
                               </FormItem>
                               <FormItem>
                                 <FormControl>
-                                  <RadioGroupItem value="property_developer" id="r-developer" className="peer sr-only" />
+                                  <RadioGroupItem
+                                    value="property_developer"
+                                    id="r-developer"
+                                    className="peer sr-only"
+                                  />
                                 </FormControl>
                                 <Label
                                   htmlFor="r-developer"
@@ -547,7 +603,7 @@ export default function Login() {
                         <div className="text-sm font-medium text-blue-900 dark:text-blue-100">
                           Agent Profile Information
                         </div>
-                        
+
                         <FormField
                           control={registerForm.control}
                           name="agentDisplayName"
@@ -555,10 +611,10 @@ export default function Login() {
                             <FormItem>
                               <FormLabel>Display Name *</FormLabel>
                               <FormControl>
-                                <Input 
-                                  placeholder="John Smith" 
+                                <Input
+                                  placeholder="John Smith"
                                   className="bg-white dark:bg-slate-800"
-                                  {...field} 
+                                  {...field}
                                 />
                               </FormControl>
                               <FormMessage />
@@ -573,11 +629,11 @@ export default function Login() {
                             <FormItem>
                               <FormLabel>Phone Number *</FormLabel>
                               <FormControl>
-                                <Input 
+                                <Input
                                   type="tel"
-                                  placeholder="+27 12 345 6789" 
+                                  placeholder="+27 12 345 6789"
                                   className="bg-white dark:bg-slate-800"
-                                  {...field} 
+                                  {...field}
                                 />
                               </FormControl>
                               <FormMessage />
@@ -592,10 +648,10 @@ export default function Login() {
                             <FormItem>
                               <FormLabel>License Number (Optional)</FormLabel>
                               <FormControl>
-                                <Input 
-                                  placeholder="FFC1234567" 
+                                <Input
+                                  placeholder="FFC1234567"
                                   className="bg-white dark:bg-slate-800"
-                                  {...field} 
+                                  {...field}
                                 />
                               </FormControl>
                               <FormMessage />
@@ -610,10 +666,10 @@ export default function Login() {
                             <FormItem>
                               <FormLabel>Bio (Optional)</FormLabel>
                               <FormControl>
-                                <Input 
-                                  placeholder="Brief description of your experience..." 
+                                <Input
+                                  placeholder="Brief description of your experience..."
                                   className="bg-white dark:bg-slate-800"
-                                  {...field} 
+                                  {...field}
                                 />
                               </FormControl>
                               <FormMessage />
@@ -627,9 +683,9 @@ export default function Login() {
                       </div>
                     )}
 
-                    <Button 
-                      type="submit" 
-                      className="w-full h-11 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg shadow-blue-500/25 rounded-xl transition-all hover:scale-[1.02] active:scale-[0.98] mt-2" 
+                    <Button
+                      type="submit"
+                      className="w-full h-11 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg shadow-blue-500/25 rounded-xl transition-all hover:scale-[1.02] active:scale-[0.98] mt-2"
                       disabled={isLoading}
                     >
                       {isLoading ? (
@@ -647,9 +703,9 @@ export default function Login() {
             </Tabs>
 
             <div className="mt-8 text-center">
-              <Button 
-                variant="ghost" 
-                onClick={() => setLocation('/')} 
+              <Button
+                variant="ghost"
+                onClick={() => setLocation('/')}
                 className="text-sm text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200"
               >
                 Back to Home

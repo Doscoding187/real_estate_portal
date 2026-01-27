@@ -37,7 +37,8 @@ export function LocationPicker({
       // Fix Leaflet's default icon path
       delete (L.Icon.Default.prototype as any)._getIconUrl;
       L.Icon.Default.mergeOptions({
-        iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
+        iconRetinaUrl:
+          'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
         iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
         shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
       });
@@ -60,7 +61,7 @@ export function LocationPicker({
       newMarker.on('dragend', async (e: any) => {
         const newPos = e.target.getLatLng();
         setPosition({ lat: newPos.lat, lng: newPos.lng });
-        
+
         // Reverse geocode to get address
         const addressData = await reverseGeocode(newPos.lat, newPos.lng);
         if (addressData) {
@@ -111,7 +112,7 @@ export function LocationPicker({
   const reverseGeocode = async (lat: number, lng: number): Promise<string | undefined> => {
     try {
       const response = await fetch(
-        `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`
+        `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`,
       );
       const data = await response.json();
       return data.display_name || undefined;
@@ -129,8 +130,8 @@ export function LocationPicker({
     try {
       const response = await fetch(
         `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(
-          searchQuery
-        )}&format=json&limit=1`
+          searchQuery,
+        )}&format=json&limit=1`,
       );
       const data = await response.json();
 
@@ -161,7 +162,7 @@ export function LocationPicker({
     if (!navigator.geolocation || !map || !marker) return;
 
     navigator.geolocation.getCurrentPosition(
-      async (position) => {
+      async position => {
         const lat = position.coords.latitude;
         const lng = position.coords.longitude;
 
@@ -178,9 +179,9 @@ export function LocationPicker({
           onLocationChange({ lat, lng, address: addressData });
         }
       },
-      (error) => {
+      error => {
         console.error('Geolocation error:', error);
-      }
+      },
     );
   };
 
@@ -191,7 +192,7 @@ export function LocationPicker({
           <MapPin className="w-5 h-5 text-blue-600" />
           <h3 className="font-semibold text-gray-900">Pin Location on Map</h3>
         </div>
-        
+
         {showAddressInput && (
           <div className="flex gap-2">
             <div className="flex-1 relative">
@@ -200,8 +201,8 @@ export function LocationPicker({
                 type="text"
                 placeholder="Search address or area..."
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && searchAddress()}
+                onChange={e => setSearchQuery(e.target.value)}
+                onKeyPress={e => e.key === 'Enter' && searchAddress()}
                 className="pl-10 rounded-xl border-gray-100"
               />
             </div>
@@ -234,7 +235,7 @@ export function LocationPicker({
 
       <div className="relative">
         <div ref={mapRef} className="h-96 w-full" />
-        
+
         <div className="absolute bottom-4 left-4 right-4 bg-white/95 backdrop-blur-sm p-3 rounded-xl shadow-soft border border-gray-100">
           <div className="flex items-center justify-between text-sm">
             <div className="flex items-center gap-2">
@@ -244,9 +245,7 @@ export function LocationPicker({
                 {position.lat.toFixed(6)}, {position.lng.toFixed(6)}
               </code>
             </div>
-            <div className="text-gray-500 text-xs">
-              Drag pin or click map to set location
-            </div>
+            <div className="text-gray-500 text-xs">Drag pin or click map to set location</div>
           </div>
         </div>
       </div>

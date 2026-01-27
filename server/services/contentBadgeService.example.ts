@@ -1,6 +1,6 @@
 /**
  * Content Badge Service - Usage Examples
- * 
+ *
  * This file demonstrates practical usage patterns for the Content Badge Service
  */
 
@@ -18,8 +18,8 @@ export async function example1_PropertyContent() {
     metadata: {
       partnerCategory: 'Property Professional',
       price: 2500000,
-      bedrooms: 3
-    }
+      bedrooms: 3,
+    },
   };
 
   // Get complete badge configuration
@@ -49,8 +49,8 @@ export async function example2_MultiCategoryContent() {
     contentType: 'educational',
     tags: ['property', 'finance', 'investment', 'first_time_buyer'],
     metadata: {
-      partnerCategory: 'Financial Partner'
-    }
+      partnerCategory: 'Financial Partner',
+    },
   };
 
   // Service prioritizes: property > finance > service > design > expert_tip
@@ -63,7 +63,7 @@ export async function example2_MultiCategoryContent() {
     id: '457',
     contentType: 'educational',
     tags: ['finance', 'investment', 'service'],
-    metadata: {}
+    metadata: {},
   };
 
   const financeBadge = contentBadgeService.determineBadgeType(financeContent);
@@ -82,8 +82,8 @@ export async function example3_ServiceContent() {
     tags: ['renovation', 'home_improvement', 'kitchen'],
     metadata: {
       partnerCategory: 'Home Service Provider',
-      serviceType: 'Renovation'
-    }
+      serviceType: 'Renovation',
+    },
   };
 
   const badge = contentBadgeService.getBadgeForContent(serviceContent);
@@ -102,8 +102,8 @@ export async function example4_FinanceContent() {
     tags: ['bond', 'mortgage', 'affordability'],
     metadata: {
       partnerCategory: 'Financial Partner',
-      topic: 'Bond Eligibility'
-    }
+      topic: 'Bond Eligibility',
+    },
   };
 
   const badge = contentBadgeService.getBadgeForContent(financeContent);
@@ -122,8 +122,8 @@ export async function example5_DesignContent() {
     tags: ['design', 'architecture', 'modern', 'interior'],
     metadata: {
       partnerCategory: 'Content Educator',
-      style: 'Modern Minimalist'
-    }
+      style: 'Modern Minimalist',
+    },
   };
 
   const badge = contentBadgeService.getBadgeForContent(designContent);
@@ -142,8 +142,8 @@ export async function example6_ExpertTipContent() {
     tags: ['educational', 'tips', 'first_time_buyer', 'guide'],
     metadata: {
       partnerCategory: 'Content Educator',
-      topic: 'Home Buying Tips'
-    }
+      topic: 'Home Buying Tips',
+    },
   };
 
   const badge = contentBadgeService.getBadgeForContent(expertContent);
@@ -177,9 +177,9 @@ export async function example8_BatchUpdate() {
   const contentIds = ['id1', 'id2', 'id3', 'id4', 'id5'];
 
   console.log('Starting batch update for', contentIds.length, 'items...');
-  
+
   await contentBadgeService.batchUpdateContentBadges(contentIds, false);
-  
+
   console.log('Batch update complete!');
 }
 
@@ -189,12 +189,12 @@ export async function example8_BatchUpdate() {
 
 export async function example9_AllBadgeConfigs() {
   const allBadges = contentBadgeService.getAllBadgeConfigs();
-  
+
   console.log('All Badge Configurations:');
   allBadges.forEach(badge => {
     console.log(`- ${badge.label}: ${badge.icon} (${badge.color})`);
   });
-  
+
   // Output:
   // - Property: 🏠 (primary)
   // - Expert Tip: 💡 (amber)
@@ -213,29 +213,29 @@ export async function example10_FeedIntegration() {
     {
       id: '1',
       contentType: 'property_tour',
-      tags: ['property', 'listing']
+      tags: ['property', 'listing'],
     },
     {
       id: '2',
       contentType: 'how_to',
-      tags: ['educational', 'tips']
+      tags: ['educational', 'tips'],
     },
     {
       id: '3',
       contentType: 'service',
-      tags: ['renovation', 'home_improvement']
-    }
+      tags: ['renovation', 'home_improvement'],
+    },
   ];
 
   // Add badges to all feed items
   const feedWithBadges = feedItems.map(item => ({
     ...item,
     badge: contentBadgeService.getBadgeForContent(item),
-    category: contentBadgeService.getPrimaryCategory(item)
+    category: contentBadgeService.getPrimaryCategory(item),
   }));
 
   console.log('Feed with badges:', feedWithBadges);
-  
+
   // Can now use badges for display and category for hierarchy enforcement
 }
 
@@ -249,7 +249,7 @@ export async function example11_ContentWithoutType() {
     id: '404',
     contentType: '', // Empty content type
     tags: ['security', 'home_security', 'alarm_system'],
-    metadata: {}
+    metadata: {},
   };
 
   // Service will determine badge from tags
@@ -269,8 +269,8 @@ export async function example12_MetadataHints() {
     tags: [],
     metadata: {
       partnerCategory: 'Financial Partner',
-      categoryHint: 'finance'
-    }
+      categoryHint: 'finance',
+    },
   };
 
   // Service will use metadata hints when tags are absent
@@ -289,7 +289,7 @@ export async function example13_DefaultFallback() {
     id: '606',
     contentType: 'unknown',
     tags: [],
-    metadata: {}
+    metadata: {},
   };
 
   // Service defaults to property badge
@@ -330,7 +330,7 @@ export async function example14_ParseValidate() {
 
 export async function example15_APIEndpoint() {
   // Simulated API endpoint that returns content with badges
-  
+
   interface ContentResponse {
     id: string;
     title: string;
@@ -349,7 +349,7 @@ export async function example15_APIEndpoint() {
     id: '707',
     contentType: 'property_tour',
     tags: ['property', 'luxury', 'estate'],
-    metadata: { price: 5000000 }
+    metadata: { price: 5000000 },
   };
 
   // Prepare response with badge
@@ -358,11 +358,11 @@ export async function example15_APIEndpoint() {
     title: 'Luxury Estate Tour',
     contentType: dbContent.contentType,
     badge: contentBadgeService.getBadgeForContent(dbContent),
-    category: contentBadgeService.getPrimaryCategory(dbContent)
+    category: contentBadgeService.getPrimaryCategory(dbContent),
   };
 
   console.log('API Response:', response);
-  
+
   // Frontend can now render the badge directly
   return response;
 }

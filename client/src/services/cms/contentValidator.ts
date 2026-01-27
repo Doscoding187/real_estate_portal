@@ -1,21 +1,16 @@
 /**
  * Content Validator
- * 
+ *
  * Validates CMS content against requirements:
  * - Headline: 50-70 characters
  * - Subheadline: 100-150 characters
  * - Feature descriptions: 80-120 characters
  * - FAQ answers: 150-300 characters
- * 
+ *
  * Requirements: 1.1, 3.3, 9.3
  */
 
-import {
-  AdvertisePageContent,
-  HeroContent,
-  FeatureBlock,
-  FAQ,
-} from './types';
+import { AdvertisePageContent, HeroContent, FeatureBlock, FAQ } from './types';
 
 /**
  * Validation error
@@ -53,7 +48,7 @@ function validateLength(
   value: string,
   min: number,
   max: number,
-  field: string
+  field: string,
 ): ValidationError | null {
   const length = value.length;
 
@@ -87,7 +82,7 @@ function validateLengthWithWarning(
   min: number,
   max: number,
   field: string,
-  warningThreshold: number = 5
+  warningThreshold: number = 5,
 ): { error: ValidationError | null; warning: ValidationError | null } {
   const length = value.length;
   const error = validateLength(value, min, max, field);
@@ -127,7 +122,7 @@ export function validateHeroContent(hero: HeroContent): ValidationResult {
     hero.headline,
     VALIDATION_RULES.headline.min,
     VALIDATION_RULES.headline.max,
-    'Hero headline'
+    'Hero headline',
   );
   if (headlineValidation.error) errors.push(headlineValidation.error);
   if (headlineValidation.warning) warnings.push(headlineValidation.warning);
@@ -137,7 +132,7 @@ export function validateHeroContent(hero: HeroContent): ValidationResult {
     hero.subheadline,
     VALIDATION_RULES.subheadline.min,
     VALIDATION_RULES.subheadline.max,
-    'Hero subheadline'
+    'Hero subheadline',
   );
   if (subheadlineValidation.error) errors.push(subheadlineValidation.error);
   if (subheadlineValidation.warning) warnings.push(subheadlineValidation.warning);
@@ -177,7 +172,7 @@ export function validateFeatureBlocks(features: FeatureBlock[]): ValidationResul
       feature.description,
       VALIDATION_RULES.featureDescription.min,
       VALIDATION_RULES.featureDescription.max,
-      `Feature "${feature.headline}" description`
+      `Feature "${feature.headline}" description`,
     );
     if (descValidation.error) errors.push(descValidation.error);
     if (descValidation.warning) warnings.push(descValidation.warning);
@@ -211,7 +206,7 @@ export function validateFAQs(faqs: FAQ[]): ValidationResult {
       faq.answer,
       VALIDATION_RULES.faqAnswer.min,
       VALIDATION_RULES.faqAnswer.max,
-      `FAQ "${faq.question}" answer`
+      `FAQ "${faq.question}" answer`,
     );
     if (answerValidation.error) errors.push(answerValidation.error);
     if (answerValidation.warning) warnings.push(answerValidation.warning);
@@ -284,14 +279,14 @@ export function getValidationSummary(result: ValidationResult): string {
 
   if (result.errors.length > 0) {
     lines.push('\nErrors:');
-    result.errors.forEach((error) => {
+    result.errors.forEach(error => {
       lines.push(`  - ${error.message}`);
     });
   }
 
   if (result.warnings.length > 0) {
     lines.push('\nWarnings:');
-    result.warnings.forEach((warning) => {
+    result.warnings.forEach(warning => {
       lines.push(`  - ${warning.message}`);
     });
   }

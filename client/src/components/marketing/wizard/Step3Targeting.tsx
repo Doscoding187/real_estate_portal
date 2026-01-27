@@ -30,15 +30,7 @@ const BUYER_PROFILES = [
   'Luxury Buyer',
 ];
 
-const PROPERTY_TYPES = [
-  'Apartment',
-  'House',
-  'Villa',
-  'Townhouse',
-  'Land',
-  'Commercial',
-  'Farm',
-];
+const PROPERTY_TYPES = ['Apartment', 'House', 'Villa', 'Townhouse', 'Land', 'Commercial', 'Farm'];
 
 const Step3Targeting: React.FC<Step3Props> = ({ data, updateData, onNext, onBack, campaignId }) => {
   const [targeting, setTargeting] = useState({
@@ -116,7 +108,7 @@ const Step3Targeting: React.FC<Step3Props> = ({ data, updateData, onNext, onBack
           <div className="flex gap-2">
             <Input
               placeholder="Enter city or province..."
-              onKeyDown={(e) => {
+              onKeyDown={e => {
                 if (e.key === 'Enter') {
                   handleLocationAdd((e.target as HTMLInputElement).value);
                   (e.target as HTMLInputElement).value = '';
@@ -126,8 +118,8 @@ const Step3Targeting: React.FC<Step3Props> = ({ data, updateData, onNext, onBack
             <Button
               type="button"
               variant="outline"
-              onClick={(e) => {
-                const input = (e.currentTarget.previousSibling as HTMLInputElement);
+              onClick={e => {
+                const input = e.currentTarget.previousSibling as HTMLInputElement;
                 handleLocationAdd(input.value);
                 input.value = '';
               }}
@@ -161,7 +153,7 @@ const Step3Targeting: React.FC<Step3Props> = ({ data, updateData, onNext, onBack
             Buyer Profiles
           </Label>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-            {BUYER_PROFILES.map((profile) => (
+            {BUYER_PROFILES.map(profile => (
               <div key={profile} className="flex items-center space-x-2">
                 <Checkbox
                   id={profile}
@@ -188,7 +180,7 @@ const Step3Targeting: React.FC<Step3Props> = ({ data, updateData, onNext, onBack
                 type="number"
                 placeholder="Min Price"
                 value={targeting.minPrice}
-                onChange={(e) => setTargeting({ ...targeting, minPrice: e.target.value })}
+                onChange={e => setTargeting({ ...targeting, minPrice: e.target.value })}
               />
             </div>
             <div>
@@ -196,7 +188,7 @@ const Step3Targeting: React.FC<Step3Props> = ({ data, updateData, onNext, onBack
                 type="number"
                 placeholder="Max Price"
                 value={targeting.maxPrice}
-                onChange={(e) => setTargeting({ ...targeting, maxPrice: e.target.value })}
+                onChange={e => setTargeting({ ...targeting, maxPrice: e.target.value })}
               />
             </div>
           </div>
@@ -210,7 +202,7 @@ const Step3Targeting: React.FC<Step3Props> = ({ data, updateData, onNext, onBack
             Property Types
           </Label>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-            {PROPERTY_TYPES.map((type) => (
+            {PROPERTY_TYPES.map(type => (
               <div key={type} className="flex items-center space-x-2">
                 <Checkbox
                   id={type}

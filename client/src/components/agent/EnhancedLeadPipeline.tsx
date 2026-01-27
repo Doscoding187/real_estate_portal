@@ -193,7 +193,7 @@ export function EnhancedLeadPipeline({ onLeadClick, onAddLead }: EnhancedLeadPip
       activationConstraint: {
         distance: 8,
       },
-    })
+    }),
   );
 
   const handleDragStart = (event: DragStartEvent) => {
@@ -212,17 +212,17 @@ export function EnhancedLeadPipeline({ onLeadClick, onAddLead }: EnhancedLeadPip
     const overStageId = over.id as string;
 
     if (activeStageId && activeStageId !== overStageId) {
-      setStages((prevStages) => {
+      setStages(prevStages => {
         const newStages = [...prevStages];
-        const activeStageIndex = newStages.findIndex((s) => s.id === activeStageId);
-        const overStageIndex = newStages.findIndex((s) => s.id === overStageId);
+        const activeStageIndex = newStages.findIndex(s => s.id === activeStageId);
+        const overStageIndex = newStages.findIndex(s => s.id === overStageId);
 
-        const leadToMove = newStages[activeStageIndex].leads.find((l) => l.id === active.id);
+        const leadToMove = newStages[activeStageIndex].leads.find(l => l.id === active.id);
 
         if (leadToMove) {
           // Remove from old stage
           newStages[activeStageIndex].leads = newStages[activeStageIndex].leads.filter(
-            (l) => l.id !== active.id
+            l => l.id !== active.id,
           );
 
           // Add to new stage
@@ -238,7 +238,7 @@ export function EnhancedLeadPipeline({ onLeadClick, onAddLead }: EnhancedLeadPip
 
   const findStageByLeadId = (leadId: string): string | null => {
     for (const stage of stages) {
-      if (stage.leads.some((lead) => lead.id === leadId)) {
+      if (stage.leads.some(lead => lead.id === leadId)) {
         return stage.id;
       }
     }
@@ -248,7 +248,7 @@ export function EnhancedLeadPipeline({ onLeadClick, onAddLead }: EnhancedLeadPip
   const getActiveLead = () => {
     if (!activeId) return null;
     for (const stage of stages) {
-      const lead = stage.leads.find((l) => l.id === activeId);
+      const lead = stage.leads.find(l => l.id === activeId);
       if (lead) return lead;
     }
     return null;
@@ -321,7 +321,7 @@ export function EnhancedLeadPipeline({ onLeadClick, onAddLead }: EnhancedLeadPip
               <div>
                 <p className="text-sm text-gray-500 mb-1">Hot Leads</p>
                 <p className="text-2xl font-bold text-gray-900">
-                  {mockLeads.filter((l) => l.score >= 80).length}
+                  {mockLeads.filter(l => l.score >= 80).length}
                 </p>
               </div>
               <div className="p-3 bg-orange-50 rounded-xl">
@@ -340,7 +340,7 @@ export function EnhancedLeadPipeline({ onLeadClick, onAddLead }: EnhancedLeadPip
         onDragEnd={handleDragEnd}
       >
         <div className="grid grid-cols-1 xl:grid-cols-5 gap-4">
-          {stages.map((stage) => (
+          {stages.map(stage => (
             <div key={stage.id} className="flex flex-col">
               <Card className="shadow-soft hover:shadow-hover transition-all duration-300 flex-1">
                 <CardHeader className="pb-3">
@@ -350,7 +350,7 @@ export function EnhancedLeadPipeline({ onLeadClick, onAddLead }: EnhancedLeadPip
                         className={cn(
                           'p-2 rounded-lg bg-gradient-to-br',
                           stage.color,
-                          'text-white'
+                          'text-white',
                         )}
                       >
                         <stage.icon className="h-4 w-4" />
@@ -371,12 +371,12 @@ export function EnhancedLeadPipeline({ onLeadClick, onAddLead }: EnhancedLeadPip
                 </CardHeader>
                 <CardContent className="pt-0">
                   <SortableContext
-                    items={stage.leads.map((l) => l.id)}
+                    items={stage.leads.map(l => l.id)}
                     strategy={verticalListSortingStrategy}
                     id={stage.id}
                   >
                     <div className="space-y-3 min-h-[400px] p-2 bg-gray-50/50 rounded-xl">
-                      {stage.leads.map((lead) => (
+                      {stage.leads.map(lead => (
                         <SortableLeadCard
                           key={lead.id}
                           lead={lead}
@@ -417,7 +417,7 @@ function LeadCardContent({ lead, isDragging }: { lead: Lead; isDragging?: boolea
     <Card
       className={cn(
         'transition-all duration-200',
-        isDragging ? 'shadow-hover scale-105' : 'shadow-soft hover:shadow-hover'
+        isDragging ? 'shadow-hover scale-105' : 'shadow-soft hover:shadow-hover',
       )}
     >
       <CardContent className="p-4">
@@ -473,7 +473,7 @@ function LeadCardContent({ lead, isDragging }: { lead: Lead; isDragging?: boolea
           {/* Tags */}
           {lead.tags && lead.tags.length > 0 && (
             <div className="flex flex-wrap gap-1">
-              {lead.tags.map((tag) => (
+              {lead.tags.map(tag => (
                 <Badge key={tag} variant="outline" className="text-xs bg-white">
                   {tag}
                 </Badge>

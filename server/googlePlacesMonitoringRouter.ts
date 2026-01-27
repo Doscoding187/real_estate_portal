@@ -1,6 +1,6 @@
 /**
  * Google Places API Monitoring Router
- * 
+ *
  * Provides endpoints for monitoring Google Places API usage
  * Requirements: 26.4 - Create monitoring dashboard
  */
@@ -51,7 +51,7 @@ router.get('/alerts', async (req, res) => {
 router.post('/alerts/:id/resolve', async (req, res) => {
   try {
     const alertId = parseInt(req.params.id, 10);
-    
+
     if (isNaN(alertId)) {
       return res.status(400).json({ error: 'Invalid alert ID' });
     }
@@ -91,7 +91,7 @@ router.get('/config', async (req, res) => {
 router.put('/config', async (req, res) => {
   try {
     const updates = req.body;
-    
+
     // Validate updates
     const validKeys = [
       'dailyRequestLimit',
@@ -130,7 +130,7 @@ router.put('/config', async (req, res) => {
 router.get('/historical', async (req, res) => {
   try {
     const days = parseInt(req.query.days as string, 10) || 30;
-    
+
     if (days < 1 || days > 365) {
       return res.status(400).json({
         error: 'Invalid days parameter',
@@ -157,16 +157,17 @@ router.get('/health', async (req, res) => {
   try {
     const statistics = await googlePlacesApiMonitoring.getUsageStatistics();
     const config = await googlePlacesApiMonitoring.getConfig();
-    
+
     const usagePercentage = (statistics.today.totalRequests / config.dailyRequestLimit) * 100;
     const errorRate = statistics.today.errorRate;
-    
+
     const health = {
       status: 'healthy',
       checks: {
         usageWithinLimit: usagePercentage < config.usageAlertThreshold * 100,
         errorRateAcceptable: errorRate < config.errorRateThreshold * 100,
-        responseTimeAcceptable: statistics.currentHour.averageResponseTime < config.responseTimeThreshold,
+        responseTimeAcceptable:
+          statistics.currentHour.averageResponseTime < config.responseTimeThreshold,
       },
       metrics: {
         usagePercentage: usagePercentage.toFixed(2),

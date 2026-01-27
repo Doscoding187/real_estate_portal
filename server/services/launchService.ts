@@ -1,13 +1,18 @@
-import { db } from "../db";
-import { eq, and, desc } from "drizzle-orm";
+import { db } from '../db';
+import { eq, and, desc, asc } from 'drizzle-orm';
+import * as crypto from 'crypto';
+
+type EqFn = typeof eq;
+type DescFn = typeof desc;
+type AscFn = typeof asc;
 
 /**
  * Launch Service
- * 
+ *
  * Manages the phased launch process for the Explore Partner Marketplace.
  * Tracks launch phases, content quotas, and metrics to ensure successful
  * cold start and ecosystem maturity.
- * 
+ *
  * Requirements: 16.13, 16.19
  */
 
@@ -17,8 +22,8 @@ export interface LaunchPhase {
   startDate: Date;
   endDate?: Date;
   primaryContentRatio: number; // 0.80 for launch, 0.70 for maturity
-  algorithmWeight: number;     // 0.0 for launch, 0.50 for ramp-up, 1.0 for maturity
-  editorialWeight: number;     // 1.0 for launch, 0.50 for ramp-up, 0.0 for maturity
+  algorithmWeight: number; // 0.0 for launch, 0.50 for ramp-up, 1.0 for maturity
+  editorialWeight: number; // 1.0 for launch, 0.50 for ramp-up, 0.0 for maturity
   isActive: boolean;
   createdAt: Date;
 }
@@ -34,10 +39,10 @@ export interface LaunchContentQuota {
 export interface LaunchMetrics {
   id: string;
   metricDate: Date;
-  topicEngagementRate: number;    // Target: 60%
+  topicEngagementRate: number; // Target: 60%
   partnerContentWatchRate: number; // Target: 40%
-  saveShareRate: number;           // Target: 30%
-  weeklyVisitsPerUser: number;     // Target: 3+
+  saveShareRate: number; // Target: 30%
+  weeklyVisitsPerUser: number; // Target: 3+
   algorithmConfidenceScore: number; // Target: 75%
   createdAt: Date;
 }
@@ -70,8 +75,11 @@ class LaunchService {
    */
   async getCurrentPhase(): Promise<LaunchPhase | null> {
     const result = await db.query.launchPhases.findFirst({
-      where: (phases, { eq }) => eq(phases.isActive, true),
-      orderBy: (phases, { desc }) => [desc(phases.startDate)]
+      where: (phases: typeof db.schema.launchPhases, { eq }: { eq: EqFn }) =>
+        eq(phases.isActive, true),
+      orderBy: (phases: typeof db.schema.launchPhases, { desc }: { desc: DescFn }) => [
+        desc(phases.startDate),
+      ],
     });
 
     if (!result) return null;
@@ -85,7 +93,7 @@ class LaunchService {
       algorithmWeight: Number(result.algorithmWeight),
       editorialWeight: Number(result.editorialWeight),
       isActive: result.isActive,
-      createdAt: result.createdAt
+      createdAt: result.createdAt,
     };
   }
 
@@ -94,31 +102,34 @@ class LaunchService {
    * Requirements: 16.19
    */
   getPhaseConfiguration(phase: string): LaunchPhase {
-    const configs: Record<string, Omit<LaunchPhase, 'id' | 'startDate' | 'endDate' | 'isActive' | 'createdAt'>> = {
+    const configs: Record<
+      string,
+      Omit<LaunchPhase, 'id' | 'startDate' | 'endDate' | 'isActive' | 'createdAt'>
+    > = {
       pre_launch: {
         phase: 'pre_launch',
-        primaryContentRatio: 0.80,
+        primaryContentRatio: 0.8,
         algorithmWeight: 0.0,
-        editorialWeight: 1.0
+        editorialWeight: 1.0,
       },
       launch_period: {
         phase: 'launch_period',
-        primaryContentRatio: 0.80,
+        primaryContentRatio: 0.8,
         algorithmWeight: 0.0,
-        editorialWeight: 1.0
+        editorialWeight: 1.0,
       },
       ramp_up: {
         phase: 'ramp_up',
-        primaryContentRatio: 0.70,
-        algorithmWeight: 0.50,
-        editorialWeight: 0.50
+        primaryContentRatio: 0.7,
+        algorithmWeight: 0.5,
+        editorialWeight: 0.5,
       },
       ecosystem_maturity: {
         phase: 'ecosystem_maturity',
-        primaryContentRatio: 0.70,
+        primaryContentRatio: 0.7,
         algorithmWeight: 1.0,
-        editorialWeight: 0.0
-      }
+        editorialWeight: 0.0,
+      },
     };
 
     const config = configs[phase];
@@ -131,7 +142,7 @@ class LaunchService {
       id: '',
       startDate: new Date(),
       isActive: false,
-      createdAt: new Date()
+      createdAt: new Date(),
     };
   }
 
@@ -141,12 +152,12 @@ class LaunchService {
    */
   async checkLaunchReadiness(): Promise<LaunchReadinessResult> {
     const quotas = await this.getContentQuotas();
-    
+
     const quotaDetails = quotas.map(quota => ({
       contentType: quota.contentType,
       required: quota.requiredCount,
       current: quota.currentCount,
-      met: quota.currentCount >= quota.requiredCount
+      met: quota.currentCount >= quota.requiredCount,
     }));
 
     const missingQuotas = quotaDetails
@@ -163,7 +174,7 @@ class LaunchService {
       quotaDetails,
       missingQuotas,
       totalContentCount,
-      requiredContentCount
+      requiredContentCount,
     };
   }
 
@@ -173,15 +184,17 @@ class LaunchService {
    */
   async getContentQuotas(): Promise<LaunchContentQuota[]> {
     const results = await db.query.launchContentQuotas.findMany({
-      orderBy: (quotas, { asc }) => [asc(quotas.contentType)]
+      orderBy: (quotas: typeof db.schema.launchContentQuotas, { asc }: { asc: AscFn }) => [
+        asc(quotas.contentType),
+      ],
     });
 
-    return results.map(r => ({
+    return results.map((r: (typeof results)[number]) => ({
       id: r.id,
       contentType: r.contentType,
       requiredCount: r.requiredCount,
       currentCount: r.currentCount,
-      lastUpdated: r.lastUpdated
+      lastUpdated: r.lastUpdated,
     }));
   }
 
@@ -191,14 +204,17 @@ class LaunchService {
    */
   async getLaunchMetrics(date?: Date): Promise<LaunchMetrics | null> {
     let result;
-    
+
     if (date) {
       result = await db.query.launchMetrics.findFirst({
-        where: (metrics, { eq }) => eq(metrics.metricDate, date)
+        where: (metrics: typeof db.schema.launchMetrics, { eq }: { eq: EqFn }) =>
+          eq(metrics.metricDate, date),
       });
     } else {
       result = await db.query.launchMetrics.findFirst({
-        orderBy: (metrics, { desc }) => [desc(metrics.metricDate)]
+        orderBy: (metrics: typeof db.schema.launchMetrics, { desc }: { desc: DescFn }) => [
+          desc(metrics.metricDate),
+        ],
       });
     }
 
@@ -212,7 +228,7 @@ class LaunchService {
       saveShareRate: Number(result.saveShareRate || 0),
       weeklyVisitsPerUser: Number(result.weeklyVisitsPerUser || 0),
       algorithmConfidenceScore: Number(result.algorithmConfidenceScore || 0),
-      createdAt: result.createdAt
+      createdAt: result.createdAt,
     };
   }
 
@@ -226,10 +242,11 @@ class LaunchService {
 
     // Deactivate current phase
     if (currentPhase) {
-      await db.update(db.schema.launchPhases)
-        .set({ 
+      await db
+        .update(db.schema.launchPhases)
+        .set({
           isActive: false,
-          endDate: new Date()
+          endDate: new Date(),
         })
         .where(eq(db.schema.launchPhases.id, currentPhase.id));
     }
@@ -243,14 +260,14 @@ class LaunchService {
       primaryContentRatio: config.primaryContentRatio.toString(),
       algorithmWeight: config.algorithmWeight.toString(),
       editorialWeight: config.editorialWeight.toString(),
-      isActive: true
+      isActive: true,
     });
 
     return {
       success: true,
       previousPhase: currentPhase?.phase || 'none',
       newPhase: config.phase,
-      message: `Successfully transitioned from ${currentPhase?.phase || 'none'} to ${config.phase}`
+      message: `Successfully transitioned from ${currentPhase?.phase || 'none'} to ${config.phase}`,
     };
   }
 
@@ -261,7 +278,7 @@ class LaunchService {
    */
   async triggerRecoveryMode(): Promise<void> {
     const currentPhase = await this.getCurrentPhase();
-    
+
     if (!currentPhase) {
       throw new Error('No active phase found');
     }
@@ -270,14 +287,17 @@ class LaunchService {
     const recoveryEditorialWeight = Math.min(currentPhase.editorialWeight + 0.2, 1.0);
     const recoveryAlgorithmWeight = Math.max(currentPhase.algorithmWeight - 0.2, 0.0);
 
-    await db.update(db.schema.launchPhases)
+    await db
+      .update(db.schema.launchPhases)
       .set({
         editorialWeight: recoveryEditorialWeight.toString(),
-        algorithmWeight: recoveryAlgorithmWeight.toString()
+        algorithmWeight: recoveryAlgorithmWeight.toString(),
       })
       .where(eq(db.schema.launchPhases.id, currentPhase.id));
 
-    console.log(`Recovery mode activated: Editorial ${recoveryEditorialWeight}, Algorithm ${recoveryAlgorithmWeight}`);
+    console.log(
+      `Recovery mode activated: Editorial ${recoveryEditorialWeight}, Algorithm ${recoveryAlgorithmWeight}`,
+    );
   }
 
   /**
@@ -285,10 +305,11 @@ class LaunchService {
    * Requirements: 16.3, 16.5
    */
   async updateContentQuota(contentType: string, count: number): Promise<void> {
-    await db.update(db.schema.launchContentQuotas)
+    await db
+      .update(db.schema.launchContentQuotas)
       .set({
         currentCount: count,
-        lastUpdated: new Date()
+        lastUpdated: new Date(),
       })
       .where(eq(db.schema.launchContentQuotas.contentType, contentType));
   }
@@ -299,7 +320,8 @@ class LaunchService {
    */
   async incrementContentQuota(contentType: string): Promise<void> {
     const quota = await db.query.launchContentQuotas.findFirst({
-      where: (quotas, { eq }) => eq(quotas.contentType, contentType)
+      where: (quotas: typeof db.schema.launchContentQuotas, { eq }: { eq: EqFn }) =>
+        eq(quotas.contentType, contentType),
     });
 
     if (quota) {
@@ -320,7 +342,7 @@ class LaunchService {
     algorithmConfidenceScore: number;
   }): Promise<void> {
     const id = crypto.randomUUID();
-    
+
     await db.insert(db.schema.launchMetrics).values({
       id,
       metricDate: metrics.metricDate,
@@ -328,7 +350,7 @@ class LaunchService {
       partnerContentWatchRate: metrics.partnerContentWatchRate.toString(),
       saveShareRate: metrics.saveShareRate.toString(),
       weeklyVisitsPerUser: metrics.weeklyVisitsPerUser.toString(),
-      algorithmConfidenceScore: metrics.algorithmConfidenceScore.toString()
+      algorithmConfidenceScore: metrics.algorithmConfidenceScore.toString(),
     });
   }
 
@@ -338,21 +360,33 @@ class LaunchService {
    */
   async checkMetricsAndRecover(): Promise<boolean> {
     const metrics = await this.getLaunchMetrics();
-    
+
     if (!metrics) return false;
 
     const targets = {
       topicEngagementRate: 60,
       partnerContentWatchRate: 40,
       saveShareRate: 30,
-      weeklyVisitsPerUser: 3
+      weeklyVisitsPerUser: 3,
     };
 
     const underperforming = [
-      { name: 'Topic Engagement', value: metrics.topicEngagementRate, target: targets.topicEngagementRate },
-      { name: 'Partner Content Watch', value: metrics.partnerContentWatchRate, target: targets.partnerContentWatchRate },
+      {
+        name: 'Topic Engagement',
+        value: metrics.topicEngagementRate,
+        target: targets.topicEngagementRate,
+      },
+      {
+        name: 'Partner Content Watch',
+        value: metrics.partnerContentWatchRate,
+        target: targets.partnerContentWatchRate,
+      },
       { name: 'Save/Share', value: metrics.saveShareRate, target: targets.saveShareRate },
-      { name: 'Weekly Visits', value: metrics.weeklyVisitsPerUser, target: targets.weeklyVisitsPerUser }
+      {
+        name: 'Weekly Visits',
+        value: metrics.weeklyVisitsPerUser,
+        target: targets.weeklyVisitsPerUser,
+      },
     ].filter(m => m.value < m.target * 0.8); // 20% below target
 
     if (underperforming.length > 0) {

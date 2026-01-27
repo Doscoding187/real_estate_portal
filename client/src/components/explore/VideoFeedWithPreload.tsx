@@ -1,15 +1,15 @@
 /**
  * Video Feed with Preloading
- * 
+ *
  * Example component demonstrating integration of useVideoPreload hook
  * with video feed functionality.
- * 
+ *
  * Features:
  * - Automatic preloading of next 2 videos
  * - Network speed detection
  * - Low-bandwidth mode with manual play buttons
  * - Adaptive loading based on connection quality
- * 
+ *
  * Requirements: 2.2, 2.4
  */
 
@@ -48,24 +48,13 @@ function VideoCardWithPreload({
   lowBandwidthMode: boolean;
   onView: () => void;
 }) {
-  const {
-    videoRef,
-    containerRef,
-    isPlaying,
-    isBuffering,
-    error,
-    play,
-    retry,
-  } = useVideoPlayback({
+  const { videoRef, containerRef, isPlaying, isBuffering, error, play, retry } = useVideoPlayback({
     lowBandwidthMode,
     onEnterViewport: onView,
   });
 
   return (
-    <div
-      ref={containerRef}
-      className="relative w-full h-full bg-black"
-    >
+    <div ref={containerRef} className="relative w-full h-full bg-black">
       {/* Video element */}
       <video
         ref={videoRef}
@@ -91,9 +80,7 @@ function VideoCardWithPreload({
             <div className="w-20 h-20 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/30 shadow-2xl hover:bg-white/30 transition-all">
               <Play className="w-10 h-10 text-white ml-1" />
             </div>
-            <p className="text-white text-sm font-medium">
-              Tap to play
-            </p>
+            <p className="text-white text-sm font-medium">Tap to play</p>
           </div>
         </motion.button>
       )}
@@ -137,13 +124,9 @@ function VideoCardWithPreload({
 
       {/* Video info overlay */}
       <div className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-black via-black/80 to-transparent">
-        <h3 className="text-white text-xl font-bold mb-2">
-          {video.title}
-        </h3>
+        <h3 className="text-white text-xl font-bold mb-2">{video.title}</h3>
         {video.description && (
-          <p className="text-gray-300 text-sm line-clamp-2">
-            {video.description}
-          </p>
+          <p className="text-gray-300 text-sm line-clamp-2">{video.description}</p>
         )}
       </div>
     </div>
@@ -153,22 +136,15 @@ function VideoCardWithPreload({
 /**
  * Video feed component with intelligent preloading
  */
-export function VideoFeedWithPreload({
-  videos,
-  onVideoChange,
-}: VideoFeedWithPreloadProps) {
+export function VideoFeedWithPreload({ videos, onVideoChange }: VideoFeedWithPreloadProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
 
   // Video preloading with network detection
-  const {
-    isLowBandwidth,
-    networkInfo,
-    isPreloaded,
-  } = useVideoPreload({
+  const { isLowBandwidth, networkInfo, isPreloaded } = useVideoPreload({
     currentIndex,
-    videoUrls: videos.map((v) => v.url),
+    videoUrls: videos.map(v => v.url),
     preloadCount: 2,
-    onNetworkChange: (info) => {
+    onNetworkChange: info => {
       console.log('Network changed:', info);
     },
   });
@@ -182,9 +158,9 @@ export function VideoFeedWithPreload({
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'ArrowUp' && currentIndex > 0) {
-        setCurrentIndex((prev) => prev - 1);
+        setCurrentIndex(prev => prev - 1);
       } else if (e.key === 'ArrowDown' && currentIndex < videos.length - 1) {
-        setCurrentIndex((prev) => prev + 1);
+        setCurrentIndex(prev => prev + 1);
       }
     };
 
@@ -206,13 +182,10 @@ export function VideoFeedWithPreload({
             <div className="flex items-center justify-center gap-3">
               <WifiOff className="w-5 h-5" />
               <div className="text-center">
-                <p className="font-semibold text-sm">
-                  Low bandwidth mode active
-                </p>
+                <p className="font-semibold text-sm">Low bandwidth mode active</p>
                 {networkInfo && (
                   <p className="text-xs opacity-80">
-                    {networkInfo.effectiveType} connection 
-                    ({networkInfo.downlink.toFixed(1)} Mbps)
+                    {networkInfo.effectiveType} connection ({networkInfo.downlink.toFixed(1)} Mbps)
                   </p>
                 )}
               </div>
@@ -258,9 +231,7 @@ export function VideoFeedWithPreload({
             key={index}
             onClick={() => setCurrentIndex(index)}
             className={`h-1 rounded-full transition-all ${
-              index === currentIndex
-                ? 'w-8 bg-white'
-                : 'w-1 bg-gray-500 hover:bg-gray-400'
+              index === currentIndex ? 'w-8 bg-white' : 'w-1 bg-gray-500 hover:bg-gray-400'
             }`}
             aria-label={`Go to video ${index + 1}`}
           />
@@ -270,7 +241,7 @@ export function VideoFeedWithPreload({
       {/* Navigation buttons */}
       <div className="absolute right-4 bottom-1/2 transform translate-y-1/2 flex flex-col gap-4 z-20">
         <button
-          onClick={() => setCurrentIndex((prev) => Math.max(0, prev - 1))}
+          onClick={() => setCurrentIndex(prev => Math.max(0, prev - 1))}
           disabled={currentIndex === 0}
           className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center text-white disabled:opacity-30 disabled:cursor-not-allowed hover:bg-white/30 transition-all border border-white/30"
           aria-label="Previous video"
@@ -278,9 +249,7 @@ export function VideoFeedWithPreload({
           ↑
         </button>
         <button
-          onClick={() =>
-            setCurrentIndex((prev) => Math.min(videos.length - 1, prev + 1))
-          }
+          onClick={() => setCurrentIndex(prev => Math.min(videos.length - 1, prev + 1))}
           disabled={currentIndex === videos.length - 1}
           className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center text-white disabled:opacity-30 disabled:cursor-not-allowed hover:bg-white/30 transition-all border border-white/30"
           aria-label="Next video"

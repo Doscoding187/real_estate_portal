@@ -4,7 +4,14 @@ import { trpc } from '@/lib/trpc';
 import { Check, ChevronsUpDown, Building2, Search } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@/components/ui/command';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -18,18 +25,19 @@ export const DeveloperContextSelector: React.FC = () => {
 
   // Custom Brand Blue from user request: oklch(54.6% .245 262.881) -> approx Hex #4f46e5 (Indigo 600) / #4338ca
   // We will use a consistent blue theme here specifically.
-  
-  const { data: profiles, isLoading: isLoadingProfiles } = trpc.superAdminPublisher.listBrandProfiles.useQuery(
-    { search: searchTerm, limit: 20 },
-    { keepPreviousData: true }
-  );
+
+  const { data: profiles, isLoading: isLoadingProfiles } =
+    trpc.superAdminPublisher.listBrandProfiles.useQuery(
+      { search: searchTerm, limit: 20 },
+      { staleTime: 30_000, refetchOnWindowFocus: false },
+    );
 
   return (
     <div className="flex flex-col gap-2">
       <label className="text-xs font-bold text-blue-700 uppercase tracking-wider">
         Operating As Developer
       </label>
-      
+
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button
@@ -41,7 +49,11 @@ export const DeveloperContextSelector: React.FC = () => {
             {selectedBrand ? (
               <div className="flex items-center gap-3">
                 <Avatar className="h-8 w-8 rounded-md border border-blue-100 bg-white">
-                  <AvatarImage src={selectedBrand.logoUrl || ''} alt={selectedBrand.brandName} className="object-cover" />
+                  <AvatarImage
+                    src={selectedBrand.logoUrl || ''}
+                    alt={selectedBrand.brandName}
+                    className="object-cover"
+                  />
                   <AvatarFallback className="rounded-md bg-blue-100 text-blue-700">
                     {selectedBrand.brandName.substring(0, 2).toUpperCase()}
                   </AvatarFallback>
@@ -55,7 +67,10 @@ export const DeveloperContextSelector: React.FC = () => {
                       {selectedBrand.brandTier}
                     </span>
                     {selectedBrand.totalLeadsReceived !== undefined && (
-                      <Badge variant="secondary" className="h-4 px-1 text-[10px] bg-blue-100 text-blue-700 hover:bg-blue-200">
+                      <Badge
+                        variant="secondary"
+                        className="h-4 px-1 text-[10px] bg-blue-100 text-blue-700 hover:bg-blue-200"
+                      >
                         {selectedBrand.totalLeadsReceived} leads
                       </Badge>
                     )}
@@ -81,26 +96,31 @@ export const DeveloperContextSelector: React.FC = () => {
                 className="flex h-11 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-blue-300 text-blue-900 disabled:cursor-not-allowed disabled:opacity-50"
                 placeholder="Search developer brands..."
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={e => setSearchTerm(e.target.value)}
               />
             </div>
-            <CommandEmpty className="py-6 text-center text-sm text-blue-400">No brand found.</CommandEmpty>
+            <CommandEmpty className="py-6 text-center text-sm text-blue-400">
+              No brand found.
+            </CommandEmpty>
             <CommandList>
               <div className="p-1 border-b border-blue-50">
-                <CommandItem onSelect={() => setIsCreateOpen(true)} className="flex items-center gap-2 cursor-pointer py-3 justify-center text-blue-600 hover:bg-blue-50 hover:text-blue-800 font-medium transition-colors">
+                <CommandItem
+                  onSelect={() => setIsCreateOpen(true)}
+                  className="flex items-center gap-2 cursor-pointer py-3 justify-center text-blue-600 hover:bg-blue-50 hover:text-blue-800 font-medium transition-colors"
+                >
                   <Building2 className="h-4 w-4" />
                   <span>Create New Brand Profile</span>
                 </CommandItem>
-                <CreateBrandProfileDialog 
-                  open={isCreateOpen} 
+                <CreateBrandProfileDialog
+                  open={isCreateOpen}
                   setOpen={setIsCreateOpen}
                   onSuccess={() => {
                     setOpen(false);
                     // setIsCreateOpen(false); // Handled inside dialog success
-                  }} 
+                  }}
                 />
               </div>
-              
+
               <CommandGroup heading="Available Brands" className="text-blue-400">
                 {profiles?.map((brand: any) => (
                   <CommandItem
@@ -118,9 +138,11 @@ export const DeveloperContextSelector: React.FC = () => {
                         {brand.brandName.substring(0, 2)}
                       </AvatarFallback>
                     </Avatar>
-                    
+
                     <div className="flex flex-col flex-1 min-w-0">
-                      <span className="truncate font-semibold text-blue-900 group-aria-selected:text-white">{brand.brandName}</span>
+                      <span className="truncate font-semibold text-blue-900 group-aria-selected:text-white">
+                        {brand.brandName}
+                      </span>
                       <span className="text-xs text-blue-500 capitalize truncate group-aria-selected:text-blue-100">
                         {brand.brandTier} • {brand.slug}
                       </span>
@@ -128,8 +150,8 @@ export const DeveloperContextSelector: React.FC = () => {
 
                     <Check
                       className={cn(
-                        "mr-2 h-4 w-4 text-blue-600 group-aria-selected:text-white",
-                        selectedBrand?.id === brand.id ? "opacity-100" : "opacity-0"
+                        'mr-2 h-4 w-4 text-blue-600 group-aria-selected:text-white',
+                        selectedBrand?.id === brand.id ? 'opacity-100' : 'opacity-0',
                       )}
                     />
                   </CommandItem>

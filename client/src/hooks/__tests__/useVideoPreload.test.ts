@@ -1,6 +1,6 @@
 /**
  * Tests for useVideoPreload hook
- * 
+ *
  * Requirements: 2.2, 2.4
  */
 
@@ -22,7 +22,7 @@ describe('useVideoPreload', () => {
   beforeEach(() => {
     // Reset DOM
     document.body.innerHTML = '';
-    
+
     // Mock Network Information API
     Object.defineProperty(navigator, 'connection', {
       writable: true,
@@ -40,7 +40,7 @@ describe('useVideoPreload', () => {
         useVideoPreload({
           currentIndex: 0,
           videoUrls: ['video1.mp4', 'video2.mp4', 'video3.mp4'],
-        })
+        }),
       );
 
       expect(result.current.isLowBandwidth).toBe(false);
@@ -54,7 +54,7 @@ describe('useVideoPreload', () => {
         useVideoPreload({
           currentIndex: 0,
           videoUrls: ['video1.mp4'],
-        })
+        }),
       );
 
       expect(typeof result.current.isPreloaded).toBe('function');
@@ -74,7 +74,7 @@ describe('useVideoPreload', () => {
         useVideoPreload({
           currentIndex: 0,
           videoUrls: ['video1.mp4'],
-        })
+        }),
       );
 
       expect(result.current.isLowBandwidth).toBe(false);
@@ -90,7 +90,7 @@ describe('useVideoPreload', () => {
         useVideoPreload({
           currentIndex: 0,
           videoUrls: ['video1.mp4'],
-        })
+        }),
       );
 
       expect(result.current.isLowBandwidth).toBe(true);
@@ -105,7 +105,7 @@ describe('useVideoPreload', () => {
         useVideoPreload({
           currentIndex: 0,
           videoUrls: ['video1.mp4'],
-        })
+        }),
       );
 
       expect(result.current.isLowBandwidth).toBe(true);
@@ -120,7 +120,7 @@ describe('useVideoPreload', () => {
         useVideoPreload({
           currentIndex: 0,
           videoUrls: ['video1.mp4'],
-        })
+        }),
       );
 
       expect(result.current.isLowBandwidth).toBe(true);
@@ -136,7 +136,7 @@ describe('useVideoPreload', () => {
         useVideoPreload({
           currentIndex: 0,
           videoUrls: ['video1.mp4'],
-        })
+        }),
       );
 
       expect(result.current.isLowBandwidth).toBe(true);
@@ -152,7 +152,7 @@ describe('useVideoPreload', () => {
         useVideoPreload({
           currentIndex: 0,
           videoUrls: ['video1.mp4'],
-        })
+        }),
       );
 
       expect(result.current.networkInfo).toBeNull();
@@ -167,13 +167,13 @@ describe('useVideoPreload', () => {
           currentIndex: 0,
           videoUrls: ['video1.mp4'],
           onNetworkChange,
-        })
+        }),
       );
 
       // Simulate network change
       act(() => {
         const changeHandler = mockConnection.addEventListener.mock.calls.find(
-          (call) => call[0] === 'change'
+          call => call[0] === 'change',
         )?.[1];
         if (changeHandler) {
           changeHandler();
@@ -194,11 +194,11 @@ describe('useVideoPreload', () => {
           currentIndex: 0,
           videoUrls: ['video1.mp4', 'video2.mp4', 'video3.mp4'],
           preloadCount: 2,
-        })
+        }),
       );
 
       expect(result.current.isLowBandwidth).toBe(true);
-      
+
       // Wait a bit to ensure no preloading happens
       act(() => {
         vi.advanceTimersByTime(1000);
@@ -217,7 +217,7 @@ describe('useVideoPreload', () => {
           currentIndex: 0,
           videoUrls: ['video1.mp4', 'video2.mp4', 'video3.mp4'],
           preloadCount: 2,
-        })
+        }),
       );
 
       expect(result.current.isLowBandwidth).toBe(false);
@@ -236,7 +236,7 @@ describe('useVideoPreload', () => {
           currentIndex: 0,
           videoUrls: ['v1.mp4', 'v2.mp4', 'v3.mp4', 'v4.mp4', 'v5.mp4'],
           preloadCount: 3,
-        })
+        }),
       );
 
       // Should preload next 3 videos (v2, v3, v4)
@@ -252,7 +252,7 @@ describe('useVideoPreload', () => {
             videoUrls: ['v1.mp4', 'v2.mp4', 'v3.mp4', 'v4.mp4'],
             preloadCount: 2,
           }),
-        { initialProps: { currentIndex: 0 } }
+        { initialProps: { currentIndex: 0 } },
       );
 
       // Move to next video
@@ -269,7 +269,7 @@ describe('useVideoPreload', () => {
         useVideoPreload({
           currentIndex: 0,
           videoUrls: ['video1.mp4', 'video2.mp4'],
-        })
+        }),
       );
 
       act(() => {
@@ -286,7 +286,7 @@ describe('useVideoPreload', () => {
         useVideoPreload({
           currentIndex: 0,
           videoUrls: ['video1.mp4', 'video2.mp4'],
-        })
+        }),
       );
 
       expect(result.current.isPreloaded('video2.mp4')).toBe(false);
@@ -304,7 +304,7 @@ describe('useVideoPreload', () => {
         useVideoPreload({
           currentIndex: 0,
           videoUrls: ['video1.mp4', 'video2.mp4'],
-        })
+        }),
       );
 
       act(() => {
@@ -316,7 +316,7 @@ describe('useVideoPreload', () => {
       });
 
       expect(result.current.preloadedUrls.size).toBe(0);
-      
+
       // Check that video elements were removed
       const videoElements = document.querySelectorAll('video[style*="display: none"]');
       expect(videoElements.length).toBe(0);
@@ -327,7 +327,7 @@ describe('useVideoPreload', () => {
         useVideoPreload({
           currentIndex: 0,
           videoUrls: ['video1.mp4', 'video2.mp4'],
-        })
+        }),
       );
 
       act(() => {
@@ -352,7 +352,7 @@ describe('useVideoPreload', () => {
         useVideoPreload({
           currentIndex: 0,
           videoUrls: ['video1.mp4', 'video2.mp4'],
-        })
+        }),
       );
 
       act(() => {
@@ -376,7 +376,7 @@ describe('useVideoPreload', () => {
             videoUrls: ['v1.mp4', 'v2.mp4', 'v3.mp4', 'v4.mp4', 'v5.mp4'],
             preloadCount: 2,
           }),
-        { initialProps: { currentIndex: 0 } }
+        { initialProps: { currentIndex: 0 } },
       );
 
       // Move far ahead
@@ -394,7 +394,7 @@ describe('useVideoPreload', () => {
         useVideoPreload({
           currentIndex: 0,
           videoUrls: [],
-        })
+        }),
       );
 
       expect(result.current.preloadedUrls.size).toBe(0);
@@ -406,7 +406,7 @@ describe('useVideoPreload', () => {
           currentIndex: 2,
           videoUrls: ['v1.mp4', 'v2.mp4', 'v3.mp4'],
           preloadCount: 2,
-        })
+        }),
       );
 
       // Should not crash when trying to preload beyond array
@@ -418,7 +418,7 @@ describe('useVideoPreload', () => {
         useVideoPreload({
           currentIndex: -1,
           videoUrls: ['v1.mp4', 'v2.mp4'],
-        })
+        }),
       );
 
       expect(result.current).toBeDefined();
@@ -429,7 +429,7 @@ describe('useVideoPreload', () => {
         useVideoPreload({
           currentIndex: 10,
           videoUrls: ['v1.mp4', 'v2.mp4'],
-        })
+        }),
       );
 
       expect(result.current).toBeDefined();

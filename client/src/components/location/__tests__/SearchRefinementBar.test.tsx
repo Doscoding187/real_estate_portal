@@ -1,4 +1,3 @@
-
 import { render, screen, fireEvent } from '@testing-library/react';
 import { SearchRefinementBar } from '../SearchRefinementBar';
 import { describe, it, expect, vi } from 'vitest';
@@ -14,10 +13,10 @@ describe('SearchRefinementBar', () => {
   it('calls onSearch when search button is clicked', () => {
     const mockSearch = vi.fn();
     render(<SearchRefinementBar onSearch={mockSearch} defaultLocation="Sandton" />);
-    
+
     const searchBtn = screen.getByText('Search');
     fireEvent.click(searchBtn);
-    
+
     expect(mockSearch).toHaveBeenCalled();
   });
 });

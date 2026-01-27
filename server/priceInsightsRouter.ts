@@ -3,7 +3,7 @@ import { priceInsightsService } from './services/priceInsightsService';
 
 /**
  * Price Insights tRPC Router
- * 
+ *
  * Provides API endpoints for property price insights and market analytics
  */
 

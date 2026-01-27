@@ -4,14 +4,7 @@
  * Requirements: 2.3, 2.4
  */
 
-import {
-  Users,
-  UserCheck,
-  TrendingUp,
-  Home,
-  DollarSign,
-  Target,
-} from 'lucide-react';
+import { Users, UserCheck, TrendingUp, Home, DollarSign, Target } from 'lucide-react';
 import { KPICard } from './KPICard';
 import { trpc } from '@/lib/trpc';
 
@@ -20,7 +13,11 @@ interface KPIGridProps {
 }
 
 export function KPIGrid({ timeRange = '30d' }: KPIGridProps) {
-  const { data: kpis, isLoading, error } = trpc.developer.getDashboardKPIs.useQuery({
+  const {
+    data: kpis,
+    isLoading,
+    error,
+  } = trpc.developer.getDashboardKPIs.useQuery({
     timeRange,
     forceRefresh: false,
   });

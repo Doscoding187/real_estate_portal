@@ -3,7 +3,7 @@ import { GoogleMap, Marker, Autocomplete, useJsApiLoader } from '@react-google-m
 import { Loader2, Info } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
-const libraries: ("places" | "geometry")[] = ['places'];
+const libraries: ('places' | 'geometry')[] = ['places'];
 
 const mapContainerStyle = {
   width: '100%',
@@ -46,18 +46,22 @@ export function LocationMapPicker({
   });
 
   const [markerPosition, setMarkerPosition] = useState<{ lat: number; lng: number } | null>(
-    initialLat && initialLng ? { lat: initialLat, lng: initialLng } : null
+    initialLat && initialLng ? { lat: initialLat, lng: initialLng } : null,
   );
   const [isGeocoding, setIsGeocoding] = useState(false);
   const mapRef = useRef<google.maps.Map | null>(null);
   const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
 
   const parseGeocodingResult = useCallback(
-    (result: google.maps.GeocoderResult | google.maps.places.PlaceResult, lat: number, lng: number): LocationData => {
+    (
+      result: google.maps.GeocoderResult | google.maps.places.PlaceResult,
+      lat: number,
+      lng: number,
+    ): LocationData => {
       const addressComponents = result.address_components || [];
 
       const getComponent = (type: string): string | undefined => {
-        const component = addressComponents.find((c) => c.types.includes(type));
+        const component = addressComponents.find(c => c.types.includes(type));
         return component?.long_name;
       };
 
@@ -83,7 +87,7 @@ export function LocationMapPicker({
         formattedAddress: result.formatted_address,
       };
     },
-    []
+    [],
   );
 
   const performGeocoding = useCallback(
@@ -107,7 +111,7 @@ export function LocationMapPicker({
         setIsGeocoding(false);
       }
     },
-    [onLocationSelect, onGeocodingError, parseGeocodingResult]
+    [onLocationSelect, onGeocodingError, parseGeocodingResult],
   );
 
   const handleMapClick = useCallback(
@@ -120,7 +124,7 @@ export function LocationMapPicker({
       setMarkerPosition({ lat, lng });
       await performGeocoding(lat, lng);
     },
-    [performGeocoding]
+    [performGeocoding],
   );
 
   const handleMarkerDragEnd = useCallback(
@@ -133,7 +137,7 @@ export function LocationMapPicker({
       setMarkerPosition({ lat, lng });
       await performGeocoding(lat, lng);
     },
-    [performGeocoding]
+    [performGeocoding],
   );
 
   const handlePlaceSelect = useCallback(() => {
@@ -156,7 +160,9 @@ export function LocationMapPicker({
   if (loadError) {
     return (
       <Alert variant="destructive">
-        <AlertDescription>Failed to load Google Maps. Please check your API key configuration.</AlertDescription>
+        <AlertDescription>
+          Failed to load Google Maps. Please check your API key configuration.
+        </AlertDescription>
       </Alert>
     );
   }
@@ -177,22 +183,36 @@ export function LocationMapPicker({
           center={markerPosition || defaultCenter}
           zoom={markerPosition ? 15 : 6}
           onClick={handleMapClick}
-          onLoad={(map) => {
+          onLoad={map => {
             mapRef.current = map;
           }}
           options={{
             streetViewControl: false,
             mapTypeControl: true,
             fullscreenControl: true,
+            restriction: {
+              latLngBounds: {
+                north: -22.0,
+                south: -35.0,
+                west: 16.0,
+                east: 33.0,
+              },
+              strictBounds: false,
+            },
           }}
         >
-          {markerPosition && <Marker position={markerPosition} draggable={true} onDragEnd={handleMarkerDragEnd} />}
+          {markerPosition && (
+            <Marker position={markerPosition} draggable={true} onDragEnd={handleMarkerDragEnd} />
+          )}
 
           <Autocomplete
-            onLoad={(autocomplete) => {
+            onLoad={autocomplete => {
               autocompleteRef.current = autocomplete;
             }}
             onPlaceChanged={handlePlaceSelect}
+            options={{
+              componentRestrictions: { country: 'za' },
+            }}
           >
             <input
               type="text"
@@ -215,8 +235,8 @@ export function LocationMapPicker({
       <div className="flex items-start gap-2 text-sm text-slate-600 bg-blue-50 p-3 rounded-lg">
         <Info className="w-4 h-4 mt-0.5 flex-shrink-0" />
         <p>
-          Click on the map or search for a location to drop a pin at your show house. The address fields will be
-          automatically populated. You can drag the pin to adjust the location.
+          Click on the map or search for a location to drop a pin at your show house. The address
+          fields will be automatically populated. You can drag the pin to adjust the location.
         </p>
       </div>
     </div>

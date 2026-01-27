@@ -11,7 +11,7 @@ export const guestMigrationRouter = router({
       z.object({
         viewedProperties: z.array(z.number()).optional(),
         favoriteProperties: z.array(z.number()).optional(),
-      })
+      }),
     )
     .mutation(async ({ input, ctx }) => {
       const userId = ctx.user.id;
@@ -21,7 +21,7 @@ export const guestMigrationRouter = router({
       try {
         // Migrate viewed properties
         if (input.viewedProperties && input.viewedProperties.length > 0) {
-          const viewedRecords = input.viewedProperties.map((propertyId) => ({
+          const viewedRecords = input.viewedProperties.map(propertyId => ({
             userId,
             propertyId,
             viewedAt: new Date(),
@@ -40,7 +40,7 @@ export const guestMigrationRouter = router({
 
         // Migrate favorites
         if (input.favoriteProperties && input.favoriteProperties.length > 0) {
-          const favoriteRecords = input.favoriteProperties.map((propertyId) => ({
+          const favoriteRecords = input.favoriteProperties.map(propertyId => ({
             userId,
             propertyId,
             createdAt: new Date(),

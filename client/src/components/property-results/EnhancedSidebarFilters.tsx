@@ -1,6 +1,6 @@
 /**
  * Enhanced Sidebar Filters Component
- * 
+ *
  * SA-specific property filters including:
  * - Title type (Freehold/Sectional Title)
  * - Levy range slider
@@ -9,7 +9,7 @@
  * - Fibre-ready checkbox
  * - Load-shedding solutions checkboxes
  * - Erf size range slider
- * 
+ *
  * Requirements: 2.1, 8.1, 16.5
  */
 
@@ -26,19 +26,19 @@ import {
 } from '@/components/ui/accordion';
 import { formatCurrency } from '@/lib/utils';
 import type { PropertyFilters } from '../../../../shared/types';
-import { 
-  Home, 
-  Building2, 
-  Shield, 
-  Heart, 
-  Wifi, 
-  Sun, 
-  Zap, 
+import {
+  Home,
+  Building2,
+  Shield,
+  Heart,
+  Wifi,
+  Sun,
+  Zap,
   Battery,
   Ruler,
   DollarSign,
   Filter,
-  X
+  X,
 } from 'lucide-react';
 
 export interface EnhancedSidebarFiltersProps {
@@ -60,8 +60,18 @@ const PROPERTY_TYPES = [
 
 // Title types for SA market
 const TITLE_TYPES = [
-  { value: 'freehold', label: 'Freehold', icon: Home, description: 'Full ownership of property and land' },
-  { value: 'sectional', label: 'Sectional Title', icon: Building2, description: 'Shared ownership in complex' },
+  {
+    value: 'freehold',
+    label: 'Freehold',
+    icon: Home,
+    description: 'Full ownership of property and land',
+  },
+  {
+    value: 'sectional',
+    label: 'Sectional Title',
+    icon: Building2,
+    description: 'Shared ownership in complex',
+  },
 ];
 
 // Load-shedding solutions
@@ -79,7 +89,7 @@ const DEFAULT_FLOOR_SIZE_RANGE: [number, number] = [0, 1000];
 
 /**
  * EnhancedSidebarFilters Component
- * 
+ *
  * Provides comprehensive filtering options for SA property market including
  * title type, levy, security estate, pet-friendly, fibre-ready, and
  * load-shedding solutions.
@@ -96,17 +106,17 @@ export function EnhancedSidebarFilters({
     filters.minPrice ?? DEFAULT_PRICE_RANGE[0],
     filters.maxPrice ?? DEFAULT_PRICE_RANGE[1],
   ]);
-  
+
   const [levyRange, setLevyRange] = useState<[number, number]>([
     0,
     filters.maxLevy ?? DEFAULT_LEVY_RANGE[1],
   ]);
-  
+
   const [erfSizeRange, setErfSizeRange] = useState<[number, number]>([
     filters.minErfSize ?? DEFAULT_ERF_SIZE_RANGE[0],
     filters.maxErfSize ?? DEFAULT_ERF_SIZE_RANGE[1],
   ]);
-  
+
   const [floorSizeRange, setFloorSizeRange] = useState<[number, number]>([
     filters.minFloorSize ?? DEFAULT_FLOOR_SIZE_RANGE[0],
     filters.maxFloorSize ?? DEFAULT_FLOOR_SIZE_RANGE[1],
@@ -143,126 +153,150 @@ export function EnhancedSidebarFilters({
     setPriceRange([value[0], value[1]]);
   }, []);
 
-  const handlePriceCommit = useCallback((value: number[]) => {
-    onFilterChange({
-      ...filters,
-      minPrice: value[0] > 0 ? value[0] : undefined,
-      maxPrice: value[1] < DEFAULT_PRICE_RANGE[1] ? value[1] : undefined,
-    });
-  }, [filters, onFilterChange]);
+  const handlePriceCommit = useCallback(
+    (value: number[]) => {
+      onFilterChange({
+        ...filters,
+        minPrice: value[0] > 0 ? value[0] : undefined,
+        maxPrice: value[1] < DEFAULT_PRICE_RANGE[1] ? value[1] : undefined,
+      });
+    },
+    [filters, onFilterChange],
+  );
 
   // Handler for levy range changes
   const handleLevyChange = useCallback((value: number[]) => {
     setLevyRange([0, value[1]]);
   }, []);
 
-  const handleLevyCommit = useCallback((value: number[]) => {
-    onFilterChange({
-      ...filters,
-      maxLevy: value[1] < DEFAULT_LEVY_RANGE[1] ? value[1] : undefined,
-    });
-  }, [filters, onFilterChange]);
+  const handleLevyCommit = useCallback(
+    (value: number[]) => {
+      onFilterChange({
+        ...filters,
+        maxLevy: value[1] < DEFAULT_LEVY_RANGE[1] ? value[1] : undefined,
+      });
+    },
+    [filters, onFilterChange],
+  );
 
   // Handler for erf size range changes
   const handleErfSizeChange = useCallback((value: number[]) => {
     setErfSizeRange([value[0], value[1]]);
   }, []);
 
-  const handleErfSizeCommit = useCallback((value: number[]) => {
-    onFilterChange({
-      ...filters,
-      minErfSize: value[0] > 0 ? value[0] : undefined,
-      maxErfSize: value[1] < DEFAULT_ERF_SIZE_RANGE[1] ? value[1] : undefined,
-    });
-  }, [filters, onFilterChange]);
+  const handleErfSizeCommit = useCallback(
+    (value: number[]) => {
+      onFilterChange({
+        ...filters,
+        minErfSize: value[0] > 0 ? value[0] : undefined,
+        maxErfSize: value[1] < DEFAULT_ERF_SIZE_RANGE[1] ? value[1] : undefined,
+      });
+    },
+    [filters, onFilterChange],
+  );
 
   // Handler for floor size range changes
   const handleFloorSizeChange = useCallback((value: number[]) => {
     setFloorSizeRange([value[0], value[1]]);
   }, []);
 
-  const handleFloorSizeCommit = useCallback((value: number[]) => {
-    onFilterChange({
-      ...filters,
-      minFloorSize: value[0] > 0 ? value[0] : undefined,
-      maxFloorSize: value[1] < DEFAULT_FLOOR_SIZE_RANGE[1] ? value[1] : undefined,
-    });
-  }, [filters, onFilterChange]);
+  const handleFloorSizeCommit = useCallback(
+    (value: number[]) => {
+      onFilterChange({
+        ...filters,
+        minFloorSize: value[0] > 0 ? value[0] : undefined,
+        maxFloorSize: value[1] < DEFAULT_FLOOR_SIZE_RANGE[1] ? value[1] : undefined,
+      });
+    },
+    [filters, onFilterChange],
+  );
 
   // Handler for property type changes
-  const handlePropertyTypeChange = useCallback((type: string, checked: boolean) => {
-    const currentTypes = filters.propertyType || [];
-    let newTypes: string[];
-    
-    if (checked) {
-      newTypes = [...currentTypes, type];
-    } else {
-      newTypes = currentTypes.filter((t) => t !== type);
-    }
-    
-    onFilterChange({
-      ...filters,
-      propertyType: newTypes.length > 0 ? newTypes as any : undefined,
-    });
-  }, [filters, onFilterChange]);
+  const handlePropertyTypeChange = useCallback(
+    (type: string, checked: boolean) => {
+      const currentTypes = filters.propertyType || [];
+      let newTypes: string[];
+
+      if (checked) {
+        newTypes = [...currentTypes, type];
+      } else {
+        newTypes = currentTypes.filter(t => t !== type);
+      }
+
+      onFilterChange({
+        ...filters,
+        propertyType: newTypes.length > 0 ? (newTypes as any) : undefined,
+      });
+    },
+    [filters, onFilterChange],
+  );
 
   // Handler for title type changes
-  const handleTitleTypeChange = useCallback((type: 'freehold' | 'sectional', checked: boolean) => {
-    const currentTypes = filters.titleType || [];
-    let newTypes: ('freehold' | 'sectional')[];
-    
-    if (checked) {
-      newTypes = [...currentTypes, type];
-    } else {
-      newTypes = currentTypes.filter((t) => t !== type);
-    }
-    
-    onFilterChange({
-      ...filters,
-      titleType: newTypes.length > 0 ? newTypes : undefined,
-    });
-  }, [filters, onFilterChange]);
+  const handleTitleTypeChange = useCallback(
+    (type: 'freehold' | 'sectional', checked: boolean) => {
+      const currentTypes = filters.titleType || [];
+      let newTypes: ('freehold' | 'sectional')[];
+
+      if (checked) {
+        newTypes = [...currentTypes, type];
+      } else {
+        newTypes = currentTypes.filter(t => t !== type);
+      }
+
+      onFilterChange({
+        ...filters,
+        titleType: newTypes.length > 0 ? newTypes : undefined,
+      });
+    },
+    [filters, onFilterChange],
+  );
 
   // Handler for bedroom changes
-  const handleBedroomChange = useCallback((beds: number) => {
-    if (filters.minBedrooms === beds) {
-      const { minBedrooms, ...rest } = filters;
-      onFilterChange(rest);
-    } else {
-      onFilterChange({ ...filters, minBedrooms: beds });
-    }
-  }, [filters, onFilterChange]);
+  const handleBedroomChange = useCallback(
+    (beds: number) => {
+      if (filters.minBedrooms === beds) {
+        const { minBedrooms, ...rest } = filters;
+        onFilterChange(rest);
+      } else {
+        onFilterChange({ ...filters, minBedrooms: beds });
+      }
+    },
+    [filters, onFilterChange],
+  );
 
   // Handler for boolean filter changes
-  const handleBooleanFilterChange = useCallback((
-    key: 'securityEstate' | 'petFriendly' | 'fibreReady',
-    checked: boolean
-  ) => {
-    if (checked) {
-      onFilterChange({ ...filters, [key]: true });
-    } else {
-      const newFilters = { ...filters };
-      delete newFilters[key];
-      onFilterChange(newFilters);
-    }
-  }, [filters, onFilterChange]);
+  const handleBooleanFilterChange = useCallback(
+    (key: 'securityEstate' | 'petFriendly' | 'fibreReady', checked: boolean) => {
+      if (checked) {
+        onFilterChange({ ...filters, [key]: true });
+      } else {
+        const newFilters = { ...filters };
+        delete newFilters[key];
+        onFilterChange(newFilters);
+      }
+    },
+    [filters, onFilterChange],
+  );
 
   // Handler for load-shedding solutions changes
-  const handleLoadSheddingChange = useCallback((solution: 'solar' | 'generator' | 'inverter', checked: boolean) => {
-    const currentSolutions = filters.loadSheddingSolutions || [];
-    let newSolutions: ('solar' | 'generator' | 'inverter' | 'none')[];
-    
-    if (checked) {
-      newSolutions = [...currentSolutions.filter(s => s !== 'none'), solution];
-    } else {
-      newSolutions = currentSolutions.filter((s) => s !== solution);
-    }
-    
-    onFilterChange({
-      ...filters,
-      loadSheddingSolutions: newSolutions.length > 0 ? newSolutions : undefined,
-    });
-  }, [filters, onFilterChange]);
+  const handleLoadSheddingChange = useCallback(
+    (solution: 'solar' | 'generator' | 'inverter', checked: boolean) => {
+      const currentSolutions = filters.loadSheddingSolutions || [];
+      let newSolutions: ('solar' | 'generator' | 'inverter' | 'none')[];
+
+      if (checked) {
+        newSolutions = [...currentSolutions.filter(s => s !== 'none'), solution];
+      } else {
+        newSolutions = currentSolutions.filter(s => s !== solution);
+      }
+
+      onFilterChange({
+        ...filters,
+        loadSheddingSolutions: newSolutions.length > 0 ? newSolutions : undefined,
+      });
+    },
+    [filters, onFilterChange],
+  );
 
   // Reset all filters
   const handleResetFilters = useCallback(() => {
@@ -293,7 +327,9 @@ export function EnhancedSidebarFilters({
   const activeFilterCount = getActiveFilterCount();
 
   return (
-    <div className={`w-full bg-white rounded-lg border border-slate-200 shadow-sm p-4 ${className || ''}`}>
+    <div
+      className={`w-full bg-white rounded-lg border border-slate-200 shadow-sm p-4 ${className || ''}`}
+    >
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
@@ -307,12 +343,7 @@ export function EnhancedSidebarFilters({
         </div>
         <div className="flex gap-2">
           {onSaveSearch && (
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-8 text-xs"
-              onClick={onSaveSearch}
-            >
+            <Button variant="outline" size="sm" className="h-8 text-xs" onClick={onSaveSearch}>
               Save
             </Button>
           )}
@@ -334,9 +365,9 @@ export function EnhancedSidebarFilters({
         </div>
       )}
 
-      <Accordion 
-        type="multiple" 
-        defaultValue={['budget', 'type', 'titleType', 'bedrooms', 'saFeatures']} 
+      <Accordion
+        type="multiple"
+        defaultValue={['budget', 'type', 'titleType', 'bedrooms', 'saFeatures']}
         className="w-full"
       >
         {/* Budget Filter */}
@@ -373,12 +404,12 @@ export function EnhancedSidebarFilters({
           </AccordionTrigger>
           <AccordionContent>
             <div className="space-y-3 pt-2">
-              {PROPERTY_TYPES.map((type) => (
+              {PROPERTY_TYPES.map(type => (
                 <div key={type.value} className="flex items-center space-x-2">
                   <Checkbox
                     id={`type-${type.value}`}
                     checked={filters.propertyType?.includes(type.value as any) || false}
-                    onCheckedChange={(checked) =>
+                    onCheckedChange={checked =>
                       handlePropertyTypeChange(type.value, checked as boolean)
                     }
                   />
@@ -404,15 +435,18 @@ export function EnhancedSidebarFilters({
           </AccordionTrigger>
           <AccordionContent>
             <div className="space-y-3 pt-2">
-              {TITLE_TYPES.map((type) => {
+              {TITLE_TYPES.map(type => {
                 const Icon = type.icon;
                 return (
                   <div key={type.value} className="flex items-start space-x-2">
                     <Checkbox
                       id={`title-${type.value}`}
                       checked={filters.titleType?.includes(type.value as any) || false}
-                      onCheckedChange={(checked) =>
-                        handleTitleTypeChange(type.value as 'freehold' | 'sectional', checked as boolean)
+                      onCheckedChange={checked =>
+                        handleTitleTypeChange(
+                          type.value as 'freehold' | 'sectional',
+                          checked as boolean,
+                        )
                       }
                       className="mt-0.5"
                     />
@@ -443,22 +477,22 @@ export function EnhancedSidebarFilters({
           </AccordionTrigger>
           <AccordionContent>
             <div className="px-2 pt-2 pb-6">
-              <p className="text-xs text-slate-500 mb-3">
-                For sectional title properties
-              </p>
+              <p className="text-xs text-slate-500 mb-3">For sectional title properties</p>
               <Slider
                 value={[levyRange[1]]}
                 max={DEFAULT_LEVY_RANGE[1]}
                 step={500}
                 min={0}
-                onValueChange={(value) => handleLevyChange([0, value[0]])}
-                onValueCommit={(value) => handleLevyCommit([0, value[0]])}
+                onValueChange={value => handleLevyChange([0, value[0]])}
+                onValueCommit={value => handleLevyCommit([0, value[0]])}
                 className="mb-4"
               />
               <div className="flex items-center justify-between text-xs text-slate-500">
                 <span>R0</span>
                 <span className="font-medium text-slate-700">
-                  {levyRange[1] >= DEFAULT_LEVY_RANGE[1] ? 'No limit' : `R${levyRange[1].toLocaleString()}/month`}
+                  {levyRange[1] >= DEFAULT_LEVY_RANGE[1]
+                    ? 'No limit'
+                    : `R${levyRange[1].toLocaleString()}/month`}
                 </span>
               </div>
             </div>
@@ -472,7 +506,7 @@ export function EnhancedSidebarFilters({
           </AccordionTrigger>
           <AccordionContent>
             <div className="flex flex-wrap gap-2 pt-2">
-              {[1, 2, 3, 4, 5].map((num) => (
+              {[1, 2, 3, 4, 5].map(num => (
                 <Button
                   key={num}
                   variant={filters.minBedrooms === num ? 'default' : 'outline'}
@@ -484,7 +518,8 @@ export function EnhancedSidebarFilters({
                   }`}
                   onClick={() => handleBedroomChange(num)}
                 >
-                  {num}{num === 5 ? '+' : ''}
+                  {num}
+                  {num === 5 ? '+' : ''}
                 </Button>
               ))}
             </div>
@@ -506,7 +541,7 @@ export function EnhancedSidebarFilters({
                 <Checkbox
                   id="security-estate"
                   checked={filters.securityEstate || false}
-                  onCheckedChange={(checked) =>
+                  onCheckedChange={checked =>
                     handleBooleanFilterChange('securityEstate', checked as boolean)
                   }
                 />
@@ -524,7 +559,7 @@ export function EnhancedSidebarFilters({
                 <Checkbox
                   id="pet-friendly"
                   checked={filters.petFriendly || false}
-                  onCheckedChange={(checked) =>
+                  onCheckedChange={checked =>
                     handleBooleanFilterChange('petFriendly', checked as boolean)
                   }
                 />
@@ -542,7 +577,7 @@ export function EnhancedSidebarFilters({
                 <Checkbox
                   id="fibre-ready"
                   checked={filters.fibreReady || false}
-                  onCheckedChange={(checked) =>
+                  onCheckedChange={checked =>
                     handleBooleanFilterChange('fibreReady', checked as boolean)
                   }
                 />
@@ -568,15 +603,20 @@ export function EnhancedSidebarFilters({
           </AccordionTrigger>
           <AccordionContent>
             <div className="space-y-3 pt-2">
-              {LOAD_SHEDDING_SOLUTIONS.map((solution) => {
+              {LOAD_SHEDDING_SOLUTIONS.map(solution => {
                 const Icon = solution.icon;
                 return (
                   <div key={solution.value} className="flex items-center space-x-2">
                     <Checkbox
                       id={`loadshedding-${solution.value}`}
-                      checked={filters.loadSheddingSolutions?.includes(solution.value as any) || false}
-                      onCheckedChange={(checked) =>
-                        handleLoadSheddingChange(solution.value as 'solar' | 'generator' | 'inverter', checked as boolean)
+                      checked={
+                        filters.loadSheddingSolutions?.includes(solution.value as any) || false
+                      }
+                      onCheckedChange={checked =>
+                        handleLoadSheddingChange(
+                          solution.value as 'solar' | 'generator' | 'inverter',
+                          checked as boolean,
+                        )
                       }
                     />
                     <Label
@@ -614,7 +654,11 @@ export function EnhancedSidebarFilters({
               />
               <div className="flex items-center justify-between text-xs text-slate-500">
                 <span>{erfSizeRange[0].toLocaleString()} m²</span>
-                <span>{erfSizeRange[1] >= DEFAULT_ERF_SIZE_RANGE[1] ? '5,000+ m²' : `${erfSizeRange[1].toLocaleString()} m²`}</span>
+                <span>
+                  {erfSizeRange[1] >= DEFAULT_ERF_SIZE_RANGE[1]
+                    ? '5,000+ m²'
+                    : `${erfSizeRange[1].toLocaleString()} m²`}
+                </span>
               </div>
             </div>
           </AccordionContent>
@@ -641,7 +685,11 @@ export function EnhancedSidebarFilters({
               />
               <div className="flex items-center justify-between text-xs text-slate-500">
                 <span>{floorSizeRange[0].toLocaleString()} m²</span>
-                <span>{floorSizeRange[1] >= DEFAULT_FLOOR_SIZE_RANGE[1] ? '1,000+ m²' : `${floorSizeRange[1].toLocaleString()} m²`}</span>
+                <span>
+                  {floorSizeRange[1] >= DEFAULT_FLOOR_SIZE_RANGE[1]
+                    ? '1,000+ m²'
+                    : `${floorSizeRange[1].toLocaleString()} m²`}
+                </span>
               </div>
             </div>
           </AccordionContent>

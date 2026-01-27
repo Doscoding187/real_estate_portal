@@ -45,10 +45,14 @@ import {
 } from '@/lib/urlUtils';
 import { resolveSearchIntent, generateIntentUrl, SearchIntent } from '@/lib/searchIntent';
 
-export default function SearchResults({ province: propProvince, city: propCity, locationId: propLocationId }: { province?: string; city?: string; locationId?: string } = {}) {
+export default function SearchResults({
+  province: propProvince,
+  city: propCity,
+  locationId: propLocationId,
+}: { province?: string; city?: string; locationId?: string } = {}) {
   const { isAuthenticated } = useAuth();
   const [location, setLocation] = useLocation();
-  
+
   // Get URL params from wouter
   const params = useParams<{
     listingType?: string;
@@ -83,10 +87,9 @@ export default function SearchResults({ province: propProvince, city: propCity, 
       ...(searchIntent.geography.city && { city: searchIntent.geography.city }),
       ...(searchIntent.geography.suburb && { suburb: searchIntent.geography.suburb }),
       ...(searchIntent.geography.locationId && { locationId: searchIntent.geography.locationId }),
-      listingType: searchIntent.transactionType === 'to-rent' ? 'rent' : 'sale'
+      listingType: searchIntent.transactionType === 'to-rent' ? 'rent' : 'sale',
     };
   }, [searchIntent]);
-
 
   // UI State
   const [viewMode, setViewMode] = useState<ViewMode>('list');
@@ -110,28 +113,28 @@ export default function SearchResults({ province: propProvince, city: propCity, 
   const breadcrumbs = useMemo(() => generateBreadcrumbs(filters), [filters]);
 
   // Build query input for tRPC
-  const queryInput = useMemo(() => ({
-    ...filters,
-    city: filters.city, // Explicitly ensure these are passed
-    province: filters.province,
-    suburb: typeof filters.suburb === 'string' ? [filters.suburb] : filters.suburb,
-    locations: filters.locations, // Pass multi-location array
-    locationId: filters.locationId, // Pass locationId if backend supports it (optional filter usually)
-    propertyType: filters.propertyType as any,
-    listingType: filters.listingType as any,
-    minPrice: filters.minPrice,
-    maxPrice: filters.maxPrice,
-    minBedrooms: filters.minBedrooms,
-    status: 'available' as const,
-    limit,
-    offset: page * limit,
-  }), [filters, page]);
+  const queryInput = useMemo(
+    () => ({
+      ...filters,
+      city: filters.city, // Explicitly ensure these are passed
+      province: filters.province,
+      suburb: typeof filters.suburb === 'string' ? [filters.suburb] : filters.suburb,
+      locations: filters.locations, // Pass multi-location array
+      locationId: filters.locationId, // Pass locationId if backend supports it (optional filter usually)
+      propertyType: filters.propertyType as any,
+      listingType: filters.listingType as any,
+      minPrice: filters.minPrice,
+      maxPrice: filters.maxPrice,
+      minBedrooms: filters.minBedrooms,
+      status: 'available' as const,
+      limit,
+      offset: page * limit,
+    }),
+    [filters, page],
+  );
 
   // Fetch properties
-  const {
-    data: searchResults,
-    isLoading,
-  } = trpc.properties.search.useQuery(queryInput);
+  const { data: searchResults, isLoading } = trpc.properties.search.useQuery(queryInput);
 
   const properties = searchResults?.properties || [];
   const resultTotal = searchResults?.total || 0;
@@ -149,55 +152,55 @@ export default function SearchResults({ province: propProvince, city: propCity, 
       setIsSaveSearchOpen(false);
       setSaveSearchName('');
     },
-    onError: (error) => toast.error(error.message),
+    onError: error => toast.error(error.message),
   });
 
   // Handlers
   const handleFilterChange = (newFilters: SearchFilters) => {
     // Current Intent + New Filters -> New Intent -> New URL
     // We treat 'newFilters' as a delta or override.
-    
+
     // HOWEVER: The SidebarFilters component currently returns the ENTIRE filter set, including geography potentially.
     // We need to be careful not to overwrite the "Sacred Geography" with undefined if the sidebar logic doesn't include it.
-    
+
     // Ideally, we pass the new filters to `generateIntentUrl` by mixing them into the current intent.
     const updatedIntent: SearchIntent = {
       ...searchIntent,
       filters: {
         ...searchIntent.filters,
-        ...newFilters
-      }
+        ...newFilters,
+      },
     };
-    
+
     // Sanitize: We do not allow the sidebar to change the geography level keys (province, city, suburb) via 'filters'.
     // If the sidebar wants to change location, it should do so via navigation, not filtering.
     // For now, we just proceed.
-    
+
     const newUrl = generateIntentUrl(updatedIntent);
     setLocation(newUrl);
     setPage(0);
   };
-  
+
   // This is a special handler for "active chips" removal which might be cleaner
   const handleRemoveFilter = (key: keyof SearchFilters) => {
-     const nextFilters = { ...searchIntent.filters };
-     delete nextFilters[key];
-     
-     // Recursively remove from URL state
-     const updatedIntent = {
-        ...searchIntent, 
-        filters: nextFilters
-     };
-     setLocation(generateIntentUrl(updatedIntent));
+    const nextFilters = { ...searchIntent.filters };
+    delete nextFilters[key];
+
+    // Recursively remove from URL state
+    const updatedIntent = {
+      ...searchIntent,
+      filters: nextFilters,
+    };
+    setLocation(generateIntentUrl(updatedIntent));
   };
 
   const handleClearAllFilters = () => {
-     // Keep only listing type (which is transactional)
+    // Keep only listing type (which is transactional)
     const updatedIntent = {
-        ...searchIntent,
-        filters: {} // Clear all optional filters
-     };
-     setLocation(generateIntentUrl(updatedIntent));
+      ...searchIntent,
+      filters: {}, // Clear all optional filters
+    };
+    setLocation(generateIntentUrl(updatedIntent));
   };
 
   const handleFavoriteClick = (propertyId: string) => {
@@ -229,10 +232,10 @@ export default function SearchResults({ province: propProvince, city: propCity, 
     // Map Lens Logic:
     // 1. Reset specific geography (we are now searching via coordinates)
     // 2. Apply bounds to filters
-    
+
     const sw = bounds.getSouthWest();
     const ne = bounds.getNorthEast();
-    
+
     const nextFilters = {
       ...searchIntent.filters,
       minLat: sw.lat(),
@@ -240,7 +243,7 @@ export default function SearchResults({ province: propProvince, city: propCity, 
       minLng: sw.lng(),
       maxLng: ne.lng(),
     };
-    
+
     // Construct new intent clearing named geography
     const mapIntent: SearchIntent = {
       ...searchIntent,
@@ -251,11 +254,11 @@ export default function SearchResults({ province: propProvince, city: propCity, 
         city: undefined,
         suburb: undefined,
         locationId: undefined,
-        slug: undefined
+        slug: undefined,
       },
-      filters: nextFilters
+      filters: nextFilters,
     };
-    
+
     const newUrl = generateIntentUrl(mapIntent);
     setLocation(newUrl);
     setPage(0);
@@ -263,12 +266,12 @@ export default function SearchResults({ province: propProvince, city: propCity, 
 
   // Only show real properties
   const displayProperties = properties || [];
-  
+
   // Client-side sort fallback
   const sortedProperties = useMemo(() => {
     const propsToUse = displayProperties as any[];
     if (!propsToUse.length) return [];
-    
+
     const sorted = [...propsToUse];
     switch (sortBy) {
       case 'price_asc':
@@ -312,25 +315,24 @@ export default function SearchResults({ province: propProvince, city: propCity, 
             onSortChange={setSortBy}
             onOpenFilters={() => setIsMobileFilterOpen(true)}
           />
-           {/* Active Filter Chips - NOW MOVED HERE ABOVE RESULTS */}
-            <div className="mt-4">
-              <ActiveFilterChips
-                filters={searchIntent.filters} // Only show actual removable filters, not geography path
-                onRemoveFilter={handleRemoveFilter}
-                onClearAll={handleClearAllFilters}
-              />
+          {/* Active Filter Chips - NOW MOVED HERE ABOVE RESULTS */}
+          <div className="mt-4">
+            <ActiveFilterChips
+              filters={searchIntent.filters} // Only show actual removable filters, not geography path
+              onRemoveFilter={handleRemoveFilter}
+              onClearAll={handleClearAllFilters}
+            />
+          </div>
+
+          {/* Result Delta Feedback - Mandatory from Spec */}
+          {!isLoading && (
+            <div className="mt-2 text-sm text-slate-500">
+              Showing {sortedProperties.length} of {resultCount} properties
             </div>
-            
-            {/* Result Delta Feedback - Mandatory from Spec */}
-            {!isLoading && (
-              <div className="mt-2 text-sm text-slate-500">
-                  Showing {sortedProperties.length} of {resultCount} properties
-              </div>
-            )}
+          )}
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-
           {/* LEFT SIDEBAR - FILTERS (Changed from col-span-3 on right to left) */}
           <div className="hidden lg:block lg:col-span-3">
             <div className="sticky top-24">
@@ -345,7 +347,6 @@ export default function SearchResults({ province: propProvince, city: propCity, 
 
           {/* Main Content - Results (Changed to come after sidebar) */}
           <div className="col-span-1 lg:col-span-9">
-
             {/* Results Grid */}
             <div className="">
               {isLoading ? (
@@ -356,7 +357,7 @@ export default function SearchResults({ province: propProvince, city: propCity, 
                 <>
                   {viewMode === 'list' && (
                     <div className="flex flex-col gap-4">
-                      {sortedProperties.map((property) => {
+                      {sortedProperties.map(property => {
                         const normalized = normalizePropertyForUI(property);
                         if (!normalized) return null;
                         return (
@@ -372,15 +373,10 @@ export default function SearchResults({ province: propProvince, city: propCity, 
 
                   {viewMode === 'grid' && (
                     <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
-                      {sortedProperties.map((property) => {
+                      {sortedProperties.map(property => {
                         const normalized = normalizePropertyForUI(property);
                         if (!normalized) return null;
-                        return (
-                          <PropertyCard
-                            key={normalized.id}
-                            {...normalized}
-                          />
-                        );
+                        return <PropertyCard key={normalized.id} {...normalized} />;
                       })}
                     </div>
                   )}
@@ -408,10 +404,10 @@ export default function SearchResults({ province: propProvince, city: propCity, 
                           };
                         })
                         .filter((p): p is NonNullable<typeof p> => p !== null)}
-                      onPropertySelect={(id) => {
+                      onPropertySelect={id => {
                         window.location.href = `/property/${id}`;
                       }}
-                      onBoundsChange={handleBoundsChange} 
+                      onBoundsChange={handleBoundsChange}
                     />
                   )}
 
@@ -425,9 +421,7 @@ export default function SearchResults({ province: propProvince, city: propCity, 
                       >
                         Previous
                       </Button>
-                      <span className="text-sm text-muted-foreground">
-                        Page {page + 1}
-                      </span>
+                      <span className="text-sm text-muted-foreground">Page {page + 1}</span>
                       <Button
                         variant="outline"
                         disabled={resultCount < limit}
@@ -443,68 +437,69 @@ export default function SearchResults({ province: propProvince, city: propCity, 
                   <div className="bg-slate-50 p-4 rounded-full mb-6 relative">
                     <Building2 className="h-12 w-12 text-slate-300" />
                     <div className="absolute -bottom-1 -right-1 bg-white rounded-full p-1 border border-slate-200">
-                        <Search className="h-4 w-4 text-slate-400" />
+                      <Search className="h-4 w-4 text-slate-400" />
                     </div>
                   </div>
-                  
+
                   <h3 className="text-xl font-bold text-slate-800 mb-2">
                     No matching properties found
                   </h3>
-                  
+
                   <p className="text-slate-500 mb-8 max-w-md">
-                    We couldn't find any properties matching your exact criteria in 
+                    We couldn't find any properties matching your exact criteria in
                     <span className="font-semibold text-slate-700"> coverage area</span>.
                   </p>
 
                   <div className="flex flex-col gap-3 w-full max-w-xs">
-                     {/* Smart Fallback Suggestions */}
-                     {locationContext && locationContext.type === 'suburb' && locationContext.ids?.cityId && (
-                         <Button 
-                            className="w-full bg-blue-600 hover:bg-blue-700 gap-2"
-                            onClick={() => {
-                                // Keep filters, but expand location to City
-                                const newFilters = { ...filters };
-                                delete newFilters.suburb;
-                                newFilters.city = locationContext.hierarchy.city; // Fallback to city name
-                                handleFilterChange(newFilters);
-                            }}
-                         >
-                            <MapPin className="h-4 w-4" />
-                            Search all {locationContext.hierarchy.city}
-                         </Button>
-                     )}
+                    {/* Smart Fallback Suggestions */}
+                    {locationContext &&
+                      locationContext.type === 'suburb' &&
+                      locationContext.ids?.cityId && (
+                        <Button
+                          className="w-full bg-blue-600 hover:bg-blue-700 gap-2"
+                          onClick={() => {
+                            // Keep filters, but expand location to City
+                            const newFilters = { ...filters };
+                            delete newFilters.suburb;
+                            newFilters.city = locationContext.hierarchy.city; // Fallback to city name
+                            handleFilterChange(newFilters);
+                          }}
+                        >
+                          <MapPin className="h-4 w-4" />
+                          Search all {locationContext.hierarchy.city}
+                        </Button>
+                      )}
 
-                     {locationContext && locationContext.type === 'city' && (
-                         <Button 
-                            variant="secondary"
-                            className="w-full gap-2"
-                             onClick={() => {
-                                // Keep filters, but expand location to Province
-                                const newFilters = { ...filters };
-                                delete newFilters.city;
-                                newFilters.province = locationContext.hierarchy.province;
-                                handleFilterChange(newFilters);
-                            }}
-                         >
-                            <MapPin className="h-4 w-4" />
-                            Search all {locationContext.hierarchy.province}
-                         </Button>
-                     )}
+                    {locationContext && locationContext.type === 'city' && (
+                      <Button
+                        variant="secondary"
+                        className="w-full gap-2"
+                        onClick={() => {
+                          // Keep filters, but expand location to Province
+                          const newFilters = { ...filters };
+                          delete newFilters.city;
+                          newFilters.province = locationContext.hierarchy.province;
+                          handleFilterChange(newFilters);
+                        }}
+                      >
+                        <MapPin className="h-4 w-4" />
+                        Search all {locationContext.hierarchy.province}
+                      </Button>
+                    )}
 
-                     <Button variant="outline" className="w-full" onClick={handleClearAllFilters}>
-                        Clear Filters & Broaden Search
-                     </Button>
+                    <Button variant="outline" className="w-full" onClick={handleClearAllFilters}>
+                      Clear Filters & Broaden Search
+                    </Button>
                   </div>
                 </div>
               )}
             </div>
           </div>
-          
         </div>
       </div>
 
       {/* Mobile Sticky Controls (Persistent Bottom Bar) */}
-      <MobileStickyControls 
+      <MobileStickyControls
         onOpenFilters={() => setIsMobileFilterOpen(true)}
         currentView={viewMode}
         onViewChange={setViewMode}
@@ -537,7 +532,7 @@ export default function SearchResults({ province: propProvince, city: propCity, 
                 id="search-name"
                 placeholder="e.g. 2 Bed Apartments in Sandton"
                 value={saveSearchName}
-                onChange={(e) => setSaveSearchName(e.target.value)}
+                onChange={e => setSaveSearchName(e.target.value)}
               />
             </div>
           </div>

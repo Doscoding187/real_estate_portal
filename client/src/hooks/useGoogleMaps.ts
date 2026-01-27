@@ -1,6 +1,6 @@
 /**
  * Shared Google Maps API loader hook
- * 
+ *
  * This hook centralizes loading the Google Maps JavaScript API to prevent
  * multiple script tags from being injected, which causes "Element already defined" errors.
  */
@@ -104,7 +104,7 @@ export function useGoogleMaps(): UseGoogleMapsResult {
           loadCallbacks.length = 0;
         }
       }, 100);
-      
+
       // Timeout after 10 seconds
       setTimeout(() => {
         clearInterval(checkGoogle);
@@ -137,7 +137,8 @@ export function useGoogleMaps(): UseGoogleMapsResult {
     };
 
     script.onerror = () => {
-      const errMsg = 'Failed to load Google Maps. Please check your API key and internet connection.';
+      const errMsg =
+        'Failed to load Google Maps. Please check your API key and internet connection.';
       loadErrorGlobal = errMsg;
       isLoadingGlobal = false;
       setError(errMsg);

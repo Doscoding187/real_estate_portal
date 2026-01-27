@@ -1,10 +1,10 @@
 /**
  * Property-Based Tests for PricingCard Component
- * 
+ *
  * Feature: advertise-with-us-landing, Property 12: Pricing card navigation
  * Validates: Requirements 7.3
- * 
- * Property: For any pricing category card, clicking the card should navigate 
+ *
+ * Property: For any pricing category card, clicking the card should navigate
  * to the full pricing page
  */
 
@@ -30,14 +30,14 @@ const pricingCardArbitrary = fc.record({
 describe('PricingCard - Property 12: Pricing card navigation', () => {
   it('should navigate to the full pricing page when clicked', () => {
     fc.assert(
-      fc.property(pricingCardArbitrary, (pricingData) => {
+      fc.property(pricingCardArbitrary, pricingData => {
         const { container } = render(
           <PricingCard
             icon={pricingData.icon}
             category={pricingData.category}
             description={pricingData.description}
             href={pricingData.href}
-          />
+          />,
         );
 
         // Find the link element
@@ -54,23 +54,23 @@ describe('PricingCard - Property 12: Pricing card navigation', () => {
         // Verify the link is clickable (has cursor pointer)
         const style = linkElement?.getAttribute('style');
         expect(style).toContain('cursor: pointer');
-        
+
         cleanup();
       }),
-      { numRuns: 100 }
+      { numRuns: 100 },
     );
   });
 
   it('should have proper accessibility attributes for navigation', () => {
     fc.assert(
-      fc.property(pricingCardArbitrary, (pricingData) => {
+      fc.property(pricingCardArbitrary, pricingData => {
         const { container } = render(
           <PricingCard
             icon={pricingData.icon}
             category={pricingData.category}
             description={pricingData.description}
             href={pricingData.href}
-          />
+          />,
         );
 
         const linkElement = container.querySelector('a');
@@ -81,10 +81,10 @@ describe('PricingCard - Property 12: Pricing card navigation', () => {
         expect(ariaLabel).toBeTruthy();
         expect(ariaLabel?.toLowerCase()).toContain(pricingData.category.trim().toLowerCase());
         expect(ariaLabel?.toLowerCase()).toContain('pricing');
-        
+
         cleanup();
       }),
-      { numRuns: 100 }
+      { numRuns: 100 },
     );
   });
 
@@ -97,14 +97,14 @@ describe('PricingCard - Property 12: Pricing card navigation', () => {
           description: fc.string({ minLength: 1, maxLength: 500 }).filter(s => s.trim().length > 0),
           href: fc.webUrl(),
         }),
-        (pricingData) => {
+        pricingData => {
           const { container } = render(
             <PricingCard
               icon={pricingData.icon}
               category={pricingData.category}
               description={pricingData.description}
               href={pricingData.href}
-            />
+            />,
           );
 
           const linkElement = container.querySelector('a');
@@ -113,24 +113,24 @@ describe('PricingCard - Property 12: Pricing card navigation', () => {
           // Navigation URL should be preserved regardless of content length
           const actualHref = linkElement?.getAttribute('href');
           expect(actualHref).toBe(pricingData.href);
-          
+
           cleanup();
-        }
+        },
       ),
-      { numRuns: 100 }
+      { numRuns: 100 },
     );
   });
 
   it('should render as a single clickable link element', () => {
     fc.assert(
-      fc.property(pricingCardArbitrary, (pricingData) => {
+      fc.property(pricingCardArbitrary, pricingData => {
         const { container } = render(
           <PricingCard
             icon={pricingData.icon}
             category={pricingData.category}
             description={pricingData.description}
             href={pricingData.href}
-          />
+          />,
         );
 
         // Should have exactly one link element
@@ -140,23 +140,23 @@ describe('PricingCard - Property 12: Pricing card navigation', () => {
         // The entire card should be the link
         const linkElement = links[0];
         expect(linkElement.getAttribute('href')).toBe(pricingData.href);
-        
+
         cleanup();
       }),
-      { numRuns: 100 }
+      { numRuns: 100 },
     );
   });
 
   it('should have the pricing-card class for styling', () => {
     fc.assert(
-      fc.property(pricingCardArbitrary, (pricingData) => {
+      fc.property(pricingCardArbitrary, pricingData => {
         const { container } = render(
           <PricingCard
             icon={pricingData.icon}
             category={pricingData.category}
             description={pricingData.description}
             href={pricingData.href}
-          />
+          />,
         );
 
         const linkElement = container.querySelector('a');
@@ -165,10 +165,10 @@ describe('PricingCard - Property 12: Pricing card navigation', () => {
         // Verify the element has the pricing-card class
         const className = linkElement?.getAttribute('class');
         expect(className).toContain('pricing-card');
-        
+
         cleanup();
       }),
-      { numRuns: 100 }
+      { numRuns: 100 },
     );
   });
 });
@@ -179,14 +179,14 @@ describe('PricingCard - Property 12: Pricing card navigation', () => {
 describe('PricingCard - Structure and Styling', () => {
   it('should contain all required elements: icon, category, description, and CTA', () => {
     fc.assert(
-      fc.property(pricingCardArbitrary, (pricingData) => {
+      fc.property(pricingCardArbitrary, pricingData => {
         const { container } = render(
           <PricingCard
             icon={pricingData.icon}
             category={pricingData.category}
             description={pricingData.description}
             href={pricingData.href}
-          />
+          />,
         );
 
         const card = within(container);
@@ -208,23 +208,23 @@ describe('PricingCard - Structure and Styling', () => {
         // 4. Check for "View Pricing" CTA
         const ctaElement = card.getByText('View Pricing');
         expect(ctaElement).toBeTruthy();
-        
+
         cleanup();
       }),
-      { numRuns: 100 }
+      { numRuns: 100 },
     );
   });
 
   it('should have minimalist card styling with border', () => {
     fc.assert(
-      fc.property(pricingCardArbitrary, (pricingData) => {
+      fc.property(pricingCardArbitrary, pricingData => {
         const { container } = render(
           <PricingCard
             icon={pricingData.icon}
             category={pricingData.category}
             description={pricingData.description}
             href={pricingData.href}
-          />
+          />,
         );
 
         const linkElement = container.querySelector('a');
@@ -237,23 +237,23 @@ describe('PricingCard - Structure and Styling', () => {
         expect(style).toContain('border');
         expect(style).toContain('border-radius');
         expect(style).toContain('background');
-        
+
         cleanup();
       }),
-      { numRuns: 100 }
+      { numRuns: 100 },
     );
   });
 
   it('should have hover-capable styling for border glow effect', () => {
     fc.assert(
-      fc.property(pricingCardArbitrary, (pricingData) => {
+      fc.property(pricingCardArbitrary, pricingData => {
         const { container } = render(
           <PricingCard
             icon={pricingData.icon}
             category={pricingData.category}
             description={pricingData.description}
             href={pricingData.href}
-          />
+          />,
         );
 
         const linkElement = container.querySelector('a');
@@ -267,10 +267,10 @@ describe('PricingCard - Structure and Styling', () => {
         // Verify it's a motion component (has tabindex)
         const tabIndex = linkElement?.getAttribute('tabindex');
         expect(tabIndex).toBe('0');
-        
+
         cleanup();
       }),
-      { numRuns: 100 }
+      { numRuns: 100 },
     );
   });
 });

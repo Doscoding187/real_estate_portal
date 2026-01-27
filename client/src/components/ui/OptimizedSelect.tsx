@@ -1,10 +1,10 @@
 /**
  * OptimizedSelect Component
- * 
+ *
  * High-performance select component for large datasets.
  * Uses virtua for virtualization to ensure 60fps interaction
  * even with thousands of items (e.g., Year, Suburbs, Countries).
- * 
+ *
  * Features:
  * - Virtualized rendering (VList from virtua)
  * - Gradient styling matching design system
@@ -54,7 +54,7 @@ const OptimizedSelect = React.forwardRef<HTMLButtonElement, OptimizedSelectProps
       height = 300,
       itemHeight = 35,
     },
-    ref
+    ref,
   ) => {
     const selectId = `opt-select-${React.useId()}`;
     const hasError = !!error;
@@ -66,10 +66,7 @@ const OptimizedSelect = React.forwardRef<HTMLButtonElement, OptimizedSelectProps
       <div className={cn('space-y-2', containerClassName)}>
         {/* Label */}
         {label && (
-          <label
-            htmlFor={selectId}
-            className="block text-sm font-medium text-gray-700"
-          >
+          <label htmlFor={selectId} className="block text-sm font-medium text-gray-700">
             {label}
             {required && (
               <span
@@ -83,11 +80,7 @@ const OptimizedSelect = React.forwardRef<HTMLButtonElement, OptimizedSelectProps
         )}
 
         {/* Select */}
-        <SelectPrimitive.Root
-          value={value}
-          onValueChange={onValueChange}
-          disabled={disabled}
-        >
+        <SelectPrimitive.Root value={value} onValueChange={onValueChange} disabled={disabled}>
           <SelectPrimitive.Trigger
             ref={ref}
             id={selectId}
@@ -115,7 +108,7 @@ const OptimizedSelect = React.forwardRef<HTMLButtonElement, OptimizedSelectProps
               // Disabled state
               'disabled:bg-gray-50 disabled:text-gray-500 disabled:cursor-not-allowed disabled:opacity-60',
               // Placeholder
-              'data-[placeholder]:text-gray-400'
+              'data-[placeholder]:text-gray-400',
             )}
             aria-invalid={hasError}
           >
@@ -134,7 +127,7 @@ const OptimizedSelect = React.forwardRef<HTMLButtonElement, OptimizedSelectProps
                 'data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
                 'data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95',
                 'data-[side=bottom]:slide-in-from-top-2',
-                'data-[side=top]:slide-in-from-bottom-2'
+                'data-[side=top]:slide-in-from-bottom-2',
               )}
               position="popper"
               sideOffset={4}
@@ -142,7 +135,7 @@ const OptimizedSelect = React.forwardRef<HTMLButtonElement, OptimizedSelectProps
             >
               <SelectPrimitive.Viewport className="p-0">
                 <VList style={{ height: listHeight }}>
-                  {options.map((option) => (
+                  {options.map(option => (
                     <SelectPrimitive.Item
                       key={option.value}
                       value={option.value}
@@ -159,7 +152,7 @@ const OptimizedSelect = React.forwardRef<HTMLButtonElement, OptimizedSelectProps
                         'data-[state=checked]:bg-gradient-to-r data-[state=checked]:from-blue-500 data-[state=checked]:to-indigo-600',
                         'data-[state=checked]:text-white data-[state=checked]:font-medium',
                         // Disabled state
-                        'data-[disabled]:pointer-events-none data-[disabled]:opacity-50'
+                        'data-[disabled]:pointer-events-none data-[disabled]:opacity-50',
                       )}
                     >
                       <span className="absolute left-2 flex h-3.5 w-3.5 items-center justify-center">
@@ -184,14 +177,10 @@ const OptimizedSelect = React.forwardRef<HTMLButtonElement, OptimizedSelectProps
         )}
 
         {/* Helper Text */}
-        {!error && helperText && (
-          <p className="text-sm text-gray-500">
-            {helperText}
-          </p>
-        )}
+        {!error && helperText && <p className="text-sm text-gray-500">{helperText}</p>}
       </div>
     );
-  }
+  },
 );
 
 OptimizedSelect.displayName = 'OptimizedSelect';

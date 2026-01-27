@@ -1,9 +1,9 @@
 /**
  * Property-Based Tests for Hero Section Load Performance
- * 
+ *
  * Feature: advertise-with-us-landing, Property 1: Hero section load performance
  * Validates: Requirements 1.1, 10.1
- * 
+ *
  * Property: For any hero section configuration, the component should render
  * within 100ms and all critical content should be visible within 200ms
  */
@@ -101,7 +101,7 @@ describe('Property 1: Hero section load performance', () => {
 
           // Create trust signals
           const trustSignals = Array.from({ length: trustSignalCount }, (_, i) => ({
-            type: i % 2 === 0 ? 'logo' : 'text' as any,
+            type: i % 2 === 0 ? 'logo' : ('text' as any),
             content: `Trust Signal ${i}`,
             imageUrl: i % 2 === 0 ? `/logo-${i}.png` : undefined,
           }));
@@ -135,9 +135,9 @@ describe('Property 1: Hero section load performance', () => {
 
           // Verify component rendered
           expect(container.querySelector('section')).toBeTruthy();
-        }
+        },
       ),
-      { numRuns: 50 } // Run 50 iterations for performance testing
+      { numRuns: 50 }, // Run 50 iterations for performance testing
     );
   });
 
@@ -196,9 +196,9 @@ describe('Property 1: Hero section load performance', () => {
           // Verify section has proper ARIA label
           const section = container.querySelector('section');
           expect(section?.getAttribute('aria-labelledby')).toBe('hero-headline');
-        }
+        },
       ),
-      { numRuns: 100 }
+      { numRuns: 100 },
     );
   });
 
@@ -241,18 +241,18 @@ describe('Property 1: Hero section load performance', () => {
           // Verify section has minimum height set (prevents layout shift)
           // Note: React inline styles convert camelCase, so we check the computed style
           expect(section).toBeTruthy();
-          
+
           // Check that section has overflow hidden (prevents content overflow)
           expect(section?.className).toContain('overflow-hidden');
 
           // Verify section has overflow hidden (prevents content overflow)
           expect(section?.className).toContain('overflow-hidden');
-          
+
           // Verify section has relative positioning for proper layout
           expect(section?.className).toContain('relative');
-        }
+        },
       ),
-      { numRuns: 100 }
+      { numRuns: 100 },
     );
   });
 
@@ -261,52 +261,49 @@ describe('Property 1: Hero section load performance', () => {
    */
   it('should render efficiently with or without trust signals', () => {
     fc.assert(
-      fc.property(
-        fc.boolean(),
-        (hasTrustSignals) => {
-          const trustSignals = hasTrustSignals
-            ? [
-                { type: 'text' as const, content: 'Trusted by 1000+ partners' },
-                { type: 'logo' as const, content: 'Partner Logo', imageUrl: '/logo.png' },
-              ]
-            : [];
+      fc.property(fc.boolean(), hasTrustSignals => {
+        const trustSignals = hasTrustSignals
+          ? [
+              { type: 'text' as const, content: 'Trusted by 1000+ partners' },
+              { type: 'logo' as const, content: 'Partner Logo', imageUrl: '/logo.png' },
+            ]
+          : [];
 
-          const props: HeroSectionProps = {
-            headline: 'Advertise Your Properties',
-            subheadline: 'Reach high-intent buyers and grow your business',
-            primaryCTA: {
-              label: 'Get Started',
-              href: '/register',
-              variant: 'primary',
-            },
-            secondaryCTA: {
-              label: 'Learn More',
-              href: '/about',
-              variant: 'secondary',
-            },
-            billboard: {
-              imageUrl: '/development.jpg',
-              alt: 'Development',
-              developmentName: 'Test Development',
-              tagline: 'Luxury living',
-              href: '/development',
-            },
-            trustSignals,
-          };
+        const props: HeroSectionProps = {
+          headline: 'Advertise Your Properties',
+          subheadline: 'Reach high-intent buyers and grow your business',
+          primaryCTA: {
+            label: 'Get Started',
+            href: '/register',
+            variant: 'primary',
+          },
+          secondaryCTA: {
+            label: 'Learn More',
+            href: '/about',
+            variant: 'secondary',
+          },
+          billboard: {
+            imageUrl: '/development.jpg',
+            alt: 'Development',
+            developmentName: 'Test Development',
+            tagline: 'Luxury living',
+            href: '/development',
+          },
+          trustSignals,
+        };
 
-          const startTime = performance.now();
-          const { container } = render(<HeroSection {...props} />);
-          const endTime = performance.now();
-          const renderTime = endTime - startTime;
+        const startTime = performance.now();
+        const { container } = render(<HeroSection {...props} />);
+        const endTime = performance.now();
+        const renderTime = endTime - startTime;
 
-          // Should render quickly regardless of trust signals
-          expect(renderTime).toBeLessThan(100);
+        // Should render quickly regardless of trust signals
+        expect(renderTime).toBeLessThan(100);
 
-          // Verify component rendered
-          expect(container.querySelector('section')).toBeTruthy();
-        }
-      ),
-      { numRuns: 100 }
+        // Verify component rendered
+        expect(container.querySelector('section')).toBeTruthy();
+      }),
+      { numRuns: 100 },
     );
   });
 
@@ -358,9 +355,9 @@ describe('Property 1: Hero section load performance', () => {
 
           // Section should reference H1 via aria-labelledby
           expect(section?.getAttribute('aria-labelledby')).toBe('hero-headline');
-        }
+        },
       ),
-      { numRuns: 100 }
+      { numRuns: 100 },
     );
   });
 
@@ -369,42 +366,39 @@ describe('Property 1: Hero section load performance', () => {
    */
   it('should apply gradient background for any configuration', () => {
     fc.assert(
-      fc.property(
-        fc.string({ minLength: 30, maxLength: 70 }),
-        (headline) => {
-          const props: HeroSectionProps = {
-            headline,
-            subheadline: 'Test subheadline',
-            primaryCTA: {
-              label: 'Get Started',
-              href: '/register',
-              variant: 'primary',
-            },
-            secondaryCTA: {
-              label: 'Learn More',
-              href: '/about',
-              variant: 'secondary',
-            },
-            billboard: {
-              imageUrl: '/development.jpg',
-              alt: 'Development',
-              developmentName: 'Test Development',
-              tagline: 'Luxury living',
-              href: '/development',
-            },
-            trustSignals: [],
-          };
+      fc.property(fc.string({ minLength: 30, maxLength: 70 }), headline => {
+        const props: HeroSectionProps = {
+          headline,
+          subheadline: 'Test subheadline',
+          primaryCTA: {
+            label: 'Get Started',
+            href: '/register',
+            variant: 'primary',
+          },
+          secondaryCTA: {
+            label: 'Learn More',
+            href: '/about',
+            variant: 'secondary',
+          },
+          billboard: {
+            imageUrl: '/development.jpg',
+            alt: 'Development',
+            developmentName: 'Test Development',
+            tagline: 'Luxury living',
+            href: '/development',
+          },
+          trustSignals: [],
+        };
 
-          const { container } = render(<HeroSection {...props} />);
-          const section = container.querySelector('section');
+        const { container } = render(<HeroSection {...props} />);
+        const section = container.querySelector('section');
 
-          // Should have gradient background
-          const style = section?.getAttribute('style');
-          expect(style).toContain('linear-gradient');
-          expect(style).toContain('135deg');
-        }
-      ),
-      { numRuns: 100 }
+        // Should have gradient background
+        const style = section?.getAttribute('style');
+        expect(style).toContain('linear-gradient');
+        expect(style).toContain('135deg');
+      }),
+      { numRuns: 100 },
     );
   });
 
@@ -413,45 +407,42 @@ describe('Property 1: Hero section load performance', () => {
    */
   it('should render efficiently with any development name', () => {
     fc.assert(
-      fc.property(
-        fc.string({ minLength: 10, maxLength: 100 }),
-        (developmentName) => {
-          const props: HeroSectionProps = {
-            headline: 'Advertise Your Properties',
-            subheadline: 'Reach high-intent buyers and grow your business',
-            primaryCTA: {
-              label: 'Get Started',
-              href: '/register',
-              variant: 'primary',
-            },
-            secondaryCTA: {
-              label: 'Learn More',
-              href: '/about',
-              variant: 'secondary',
-            },
-            billboard: {
-              imageUrl: '/development.jpg',
-              alt: 'Development',
-              developmentName,
-              tagline: 'Luxury living',
-              href: '/development',
-            },
-            trustSignals: [],
-          };
+      fc.property(fc.string({ minLength: 10, maxLength: 100 }), developmentName => {
+        const props: HeroSectionProps = {
+          headline: 'Advertise Your Properties',
+          subheadline: 'Reach high-intent buyers and grow your business',
+          primaryCTA: {
+            label: 'Get Started',
+            href: '/register',
+            variant: 'primary',
+          },
+          secondaryCTA: {
+            label: 'Learn More',
+            href: '/about',
+            variant: 'secondary',
+          },
+          billboard: {
+            imageUrl: '/development.jpg',
+            alt: 'Development',
+            developmentName,
+            tagline: 'Luxury living',
+            href: '/development',
+          },
+          trustSignals: [],
+        };
 
-          const startTime = performance.now();
-          const { container } = render(<HeroSection {...props} />);
-          const endTime = performance.now();
-          const renderTime = endTime - startTime;
+        const startTime = performance.now();
+        const { container } = render(<HeroSection {...props} />);
+        const endTime = performance.now();
+        const renderTime = endTime - startTime;
 
-          // Should render quickly regardless of development name length
-          expect(renderTime).toBeLessThan(150);
+        // Should render quickly regardless of development name length
+        expect(renderTime).toBeLessThan(150);
 
-          // Verify component rendered
-          expect(container.querySelector('section')).toBeTruthy();
-        }
-      ),
-      { numRuns: 50 }
+        // Verify component rendered
+        expect(container.querySelector('section')).toBeTruthy();
+      }),
+      { numRuns: 50 },
     );
   });
 
@@ -460,55 +451,52 @@ describe('Property 1: Hero section load performance', () => {
    */
   it('should apply responsive classes for any configuration', () => {
     fc.assert(
-      fc.property(
-        fc.string({ minLength: 30, maxLength: 70 }),
-        (headline) => {
-          const props: HeroSectionProps = {
-            headline,
-            subheadline: 'Test subheadline',
-            primaryCTA: {
-              label: 'Get Started',
-              href: '/register',
-              variant: 'primary',
-            },
-            secondaryCTA: {
-              label: 'Learn More',
-              href: '/about',
-              variant: 'secondary',
-            },
-            billboard: {
-              imageUrl: '/development.jpg',
-              alt: 'Development',
-              developmentName: 'Test Development',
-              tagline: 'Luxury living',
-              href: '/development',
-            },
-            trustSignals: [],
-          };
+      fc.property(fc.string({ minLength: 30, maxLength: 70 }), headline => {
+        const props: HeroSectionProps = {
+          headline,
+          subheadline: 'Test subheadline',
+          primaryCTA: {
+            label: 'Get Started',
+            href: '/register',
+            variant: 'primary',
+          },
+          secondaryCTA: {
+            label: 'Learn More',
+            href: '/about',
+            variant: 'secondary',
+          },
+          billboard: {
+            imageUrl: '/development.jpg',
+            alt: 'Development',
+            developmentName: 'Test Development',
+            tagline: 'Luxury living',
+            href: '/development',
+          },
+          trustSignals: [],
+        };
 
-          const { container } = render(<HeroSection {...props} />);
+        const { container } = render(<HeroSection {...props} />);
 
-          // Should have responsive grid classes
-          const grid = container.querySelector('.grid');
-          expect(grid).toBeTruthy();
-          expect(grid?.className).toContain('grid-cols-1');
-          expect(grid?.className).toContain('lg:grid-cols-2');
+        // Should have responsive grid classes
+        const grid = container.querySelector('.grid');
+        expect(grid).toBeTruthy();
+        expect(grid?.className).toContain('grid-cols-1');
+        expect(grid?.className).toContain('lg:grid-cols-2');
 
-          // Should have responsive padding
-          const containerDiv = container.querySelector('.container');
-          expect(containerDiv?.className).toContain('px-4');
-          expect(containerDiv?.className).toContain('sm:px-6');
-          expect(containerDiv?.className).toContain('lg:px-8');
+        // Should have responsive padding
+        const containerDiv = container.querySelector('.container');
+        expect(containerDiv?.className).toContain('px-4');
+        expect(containerDiv?.className).toContain('sm:px-6');
+        expect(containerDiv?.className).toContain('lg:px-8');
 
-          // Headline should have responsive text sizes
-          const h1 = container.querySelector('h1');
-          expect(h1?.className).toContain('text-4xl');
-          expect(h1?.className).toContain('sm:text-5xl');
-          expect(h1?.className).toContain('lg:text-6xl');
-          expect(h1?.className).toContain('xl:text-7xl');
-        }
-      ),
-      { numRuns: 100 }
+        // Headline should have responsive text sizes
+        const h1 = container.querySelector('h1');
+        expect(h1?.className).toContain('text-4xl');
+        expect(h1?.className).toContain('sm:text-5xl');
+        expect(h1?.className).toContain('lg:text-6xl');
+        expect(h1?.className).toContain('xl:text-7xl');
+      }),
+      { numRuns: 100 },
     );
   });
 });

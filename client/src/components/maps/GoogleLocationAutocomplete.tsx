@@ -76,7 +76,7 @@ export function GoogleLocationAutocomplete({
       const mapDiv = document.createElement('div');
       const map = new window.google.maps.Map(mapDiv);
       placesServiceRef.current = new window.google.maps.places.PlacesService(map);
-      
+
       // Initialize autocomplete service
       autocompleteServiceRef.current = new window.google.maps.places.AutocompleteService();
     } catch (err) {
@@ -101,45 +101,54 @@ export function GoogleLocationAutocomplete({
   };
 
   // Get place predictions using AutocompleteService
-  const getPlacePredictions = useCallback((input: string) => {
-    if (!autocompleteServiceRef.current || !input.trim()) return;
+  const getPlacePredictions = useCallback(
+    (input: string) => {
+      if (!autocompleteServiceRef.current || !input.trim()) return;
 
-    setIsLoading(true);
-    setLocalError(null);
+      setIsLoading(true);
+      setLocalError(null);
 
-    try {
-      const request: any = {
-        input: input,
-        types: ['address'], // Focus on addresses
-        componentRestrictions: { country: 'za' }, // South Africa
-      };
+      try {
+        const request: any = {
+          input: input,
+          types: ['address'], // Focus on addresses
+          componentRestrictions: { country: 'za' }, // South Africa
+        };
 
-      // Add location bias if available
-      if (locationBias) {
-        request.location = new window.google.maps.LatLng(locationBias.latitude, locationBias.longitude);
-        request.radius = radius;
-      }
-
-      autocompleteServiceRef.current.getPlacePredictions(request, (predictions: PlacePrediction[] | null, status: string) => {
-        setIsLoading(false);
-
-        if (status === window.google.maps.places.PlacesServiceStatus.OK && predictions) {
-          setPredictions(predictions.slice(0, 5));
-          setIsOpen(true);
-          setSelectedIndex(-1);
-        } else {
-          setPredictions([]);
-          setIsOpen(false);
+        // Add location bias if available
+        if (locationBias) {
+          request.location = new window.google.maps.LatLng(
+            locationBias.latitude,
+            locationBias.longitude,
+          );
+          request.radius = radius;
         }
-      });
-    } catch (error) {
-      console.error('Error getting place predictions:', error);
-      setLocalError('Failed to get location suggestions');
-      setIsLoading(false);
-      setPredictions([]);
-      setIsOpen(false);
-    }
-  }, [locationBias, radius]);
+
+        autocompleteServiceRef.current.getPlacePredictions(
+          request,
+          (predictions: PlacePrediction[] | null, status: string) => {
+            setIsLoading(false);
+
+            if (status === window.google.maps.places.PlacesServiceStatus.OK && predictions) {
+              setPredictions(predictions.slice(0, 5));
+              setIsOpen(true);
+              setSelectedIndex(-1);
+            } else {
+              setPredictions([]);
+              setIsOpen(false);
+            }
+          },
+        );
+      } catch (error) {
+        console.error('Error getting place predictions:', error);
+        setLocalError('Failed to get location suggestions');
+        setIsLoading(false);
+        setPredictions([]);
+        setIsOpen(false);
+      }
+    },
+    [locationBias, radius],
+  );
 
   // Handle keyboard navigation
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {

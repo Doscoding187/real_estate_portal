@@ -74,7 +74,9 @@ const PropertyInformationStep: React.FC = () => {
               className="text-lg border-blue-200 focus:border-blue-400 focus:ring-blue-400"
               maxLength={255}
             />
-            <p className="text-xs text-gray-500">{title.length}/255 characters (minimum 10 required)</p>
+            <p className="text-xs text-gray-500">
+              {title.length}/255 characters (minimum 10 required)
+            </p>
           </div>
 
           <div className="space-y-2">
@@ -104,9 +106,7 @@ const PropertyInformationStep: React.FC = () => {
             Property Specifications
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          {renderPropertyFields()}
-        </CardContent>
+        <CardContent>{renderPropertyFields()}</CardContent>
       </Card>
     </div>
   );
@@ -294,7 +294,10 @@ const HouseFields: React.FC<{ details: any; updateDetail: any }> = ({ details, u
     </div>
 
     <div className="flex items-center space-x-2">
-      <Checkbox checked={details.garden || false} onCheckedChange={v => updateDetail('garden', v)} />
+      <Checkbox
+        checked={details.garden || false}
+        onCheckedChange={v => updateDetail('garden', v)}
+      />
       <Label>Has Garden</Label>
     </div>
 

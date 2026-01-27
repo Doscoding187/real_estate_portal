@@ -1,7 +1,7 @@
 /**
  * Agency Header Component
  * Requirements: 9.3, 9.4
- * 
+ *
  * Displays agency profile information including:
  * - Agency logo and name
  * - Verification badge
@@ -135,10 +135,7 @@ export function AgencyHeader({
                   backgroundColor: designTokens.colors.bg.tertiary,
                 }}
               >
-                <Users
-                  className="w-4 h-4"
-                  style={{ color: designTokens.colors.text.secondary }}
-                />
+                <Users className="w-4 h-4" style={{ color: designTokens.colors.text.secondary }} />
               </div>
               <div>
                 <div
@@ -150,10 +147,7 @@ export function AgencyHeader({
                 >
                   {formatNumber(metadata.totalContent)}
                 </div>
-                <div
-                  className="text-xs"
-                  style={{ color: designTokens.colors.text.tertiary }}
-                >
+                <div className="text-xs" style={{ color: designTokens.colors.text.tertiary }}>
                   Properties
                 </div>
               </div>
@@ -168,10 +162,7 @@ export function AgencyHeader({
                     backgroundColor: designTokens.colors.bg.tertiary,
                   }}
                 >
-                  <Eye
-                    className="w-4 h-4"
-                    style={{ color: designTokens.colors.text.secondary }}
-                  />
+                  <Eye className="w-4 h-4" style={{ color: designTokens.colors.text.secondary }} />
                 </div>
                 <div>
                   <div
@@ -183,10 +174,7 @@ export function AgencyHeader({
                   >
                     {formatNumber(totalViews)}
                   </div>
-                  <div
-                    className="text-xs"
-                    style={{ color: designTokens.colors.text.tertiary }}
-                  >
+                  <div className="text-xs" style={{ color: designTokens.colors.text.tertiary }}>
                     Views
                   </div>
                 </div>
@@ -217,10 +205,7 @@ export function AgencyHeader({
                   >
                     {formatNumber(totalEngagements)}
                   </div>
-                  <div
-                    className="text-xs"
-                    style={{ color: designTokens.colors.text.tertiary }}
-                  >
+                  <div className="text-xs" style={{ color: designTokens.colors.text.tertiary }}>
                     Engagements
                   </div>
                 </div>
@@ -251,10 +236,7 @@ export function AgencyHeader({
                   >
                     {formatNumber(followerCount)}
                   </div>
-                  <div
-                    className="text-xs"
-                    style={{ color: designTokens.colors.text.tertiary }}
-                  >
+                  <div className="text-xs" style={{ color: designTokens.colors.text.tertiary }}>
                     Followers
                   </div>
                 </div>
@@ -272,12 +254,8 @@ export function AgencyHeader({
               background: isFollowing
                 ? designTokens.colors.bg.tertiary
                 : designTokens.colors.accent.gradient,
-              color: isFollowing
-                ? designTokens.colors.text.primary
-                : 'white',
-              boxShadow: isFollowing
-                ? 'none'
-                : designTokens.shadows.accent,
+              color: isFollowing ? designTokens.colors.text.primary : 'white',
+              boxShadow: isFollowing ? 'none' : designTokens.shadows.accent,
               fontWeight: designTokens.typography.fontWeight.medium,
             }}
             variants={buttonVariants}
@@ -304,10 +282,7 @@ export function AgencyHeader({
           animate={{ opacity: 1 }}
           transition={{ delay: 0.5, duration: 0.3 }}
         >
-          <p
-            className="text-sm"
-            style={{ color: designTokens.colors.text.secondary }}
-          >
+          <p className="text-sm" style={{ color: designTokens.colors.text.secondary }}>
             Showing content from {metadata.agencyName} and their agents
           </p>
         </motion.div>

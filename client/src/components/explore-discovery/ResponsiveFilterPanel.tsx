@@ -14,28 +14,12 @@ interface ResponsiveFilterPanelProps {
   onApply?: () => void;
 }
 
-export function ResponsiveFilterPanel({
-  isOpen,
-  onClose,
-  onApply,
-}: ResponsiveFilterPanelProps) {
+export function ResponsiveFilterPanel({ isOpen, onClose, onApply }: ResponsiveFilterPanelProps) {
   const isMobile = useIsMobile();
 
   if (isMobile) {
-    return (
-      <MobileFilterBottomSheet
-        isOpen={isOpen}
-        onClose={onClose}
-        onApply={onApply}
-      />
-    );
+    return <MobileFilterBottomSheet isOpen={isOpen} onClose={onClose} onApply={onApply} />;
   }
 
-  return (
-    <FilterPanel
-      isOpen={isOpen}
-      onClose={onClose}
-      onApply={onApply}
-    />
-  );
+  return <FilterPanel isOpen={isOpen} onClose={onClose} onApply={onApply} />;
 }

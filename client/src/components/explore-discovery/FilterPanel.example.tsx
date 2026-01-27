@@ -1,6 +1,6 @@
 /**
  * FilterPanel Usage Example
- * 
+ *
  * This example demonstrates how to use the refactored FilterPanel component
  * with Zustand integration and modern chip-style filters.
  */
@@ -24,7 +24,7 @@ export function FilterPanelExample() {
   return (
     <div className="p-8">
       <h1 className="text-2xl font-bold mb-6">FilterPanel Example</h1>
-      
+
       {/* Filter Button */}
       <button
         onClick={() => setIsFilterOpen(true)}
@@ -60,12 +60,25 @@ function FilterStateDisplay() {
 
   return (
     <div className="bg-gray-50 p-4 rounded-lg space-y-2 text-sm">
-      <div><strong>Property Type:</strong> {filters.propertyType || 'All'}</div>
-      <div><strong>Price Range:</strong> {filters.priceMin || 'No min'} - {filters.priceMax || 'No max'}</div>
-      <div><strong>Bedrooms:</strong> {filters.bedrooms ? `${filters.bedrooms}+` : 'Any'}</div>
-      <div><strong>Bathrooms:</strong> {filters.bathrooms ? `${filters.bathrooms}+` : 'Any'}</div>
-      <div><strong>Location:</strong> {filters.location || 'Any'}</div>
-      <div><strong>Category ID:</strong> {filters.categoryId || 'None'}</div>
+      <div>
+        <strong>Property Type:</strong> {filters.propertyType || 'All'}
+      </div>
+      <div>
+        <strong>Price Range:</strong> {filters.priceMin || 'No min'} -{' '}
+        {filters.priceMax || 'No max'}
+      </div>
+      <div>
+        <strong>Bedrooms:</strong> {filters.bedrooms ? `${filters.bedrooms}+` : 'Any'}
+      </div>
+      <div>
+        <strong>Bathrooms:</strong> {filters.bathrooms ? `${filters.bathrooms}+` : 'Any'}
+      </div>
+      <div>
+        <strong>Location:</strong> {filters.location || 'Any'}
+      </div>
+      <div>
+        <strong>Category ID:</strong> {filters.categoryId || 'None'}
+      </div>
       <div className="pt-2 border-t border-gray-200">
         <strong>Active Filters:</strong> {filters.getFilterCount()}
       </div>

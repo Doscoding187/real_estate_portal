@@ -3,16 +3,17 @@ import { fc } from '@fast-check/vitest';
 
 /**
  * Feature: location-pages-system, Property 2: Hierarchical Data Consistency & Navigation
- * 
+ *
  * Validates that location data structures maintain strict hierarchy (Province -> City -> Suburb)
  * and generate valid, accessible URL paths.
- * 
+ *
  * Validates: Requirements 1.2, 2.3, 4.2, 4.3
  */
 describe('LocationHierarchy - Property 2: Hierarchical Data Consistency', () => {
-  
   // Data Generators for consistent testing
-  const slugGenerator = fc.string({ minLength: 3, maxLength: 20 }).map(s => s.toLowerCase().replace(/[^a-z0-9]/g, '-'));
+  const slugGenerator = fc
+    .string({ minLength: 3, maxLength: 20 })
+    .map(s => s.toLowerCase().replace(/[^a-z0-9]/g, '-'));
   const nameGenerator = fc.string({ minLength: 3, maxLength: 30 });
   const idGenerator = fc.integer({ min: 1, max: 99999 });
 
@@ -22,25 +23,25 @@ describe('LocationHierarchy - Property 2: Hierarchical Data Consistency', () => 
         fc.record({
           province: fc.record({ name: nameGenerator, slug: slugGenerator }),
           city: fc.option(fc.record({ name: nameGenerator, slug: slugGenerator })),
-          suburb: fc.option(fc.record({ name: nameGenerator, slug: slugGenerator }))
+          suburb: fc.option(fc.record({ name: nameGenerator, slug: slugGenerator })),
         }),
-        (hierarchy) => {
+        hierarchy => {
           // Construct URL path based on hierarchy depth
           let path = `/${hierarchy.province.slug}`;
-          
+
           if (hierarchy.city) {
             path += `/${hierarchy.city.slug}`;
-            
+
             // Property: If suburb exists, city MUST exist (enforced by generator structure, but validated here)
             if (hierarchy.suburb) {
               path += `/${hierarchy.suburb.slug}`;
             }
           } else {
-             // If no city, there should be no suburb path appended (testing logic consistency)
+            // If no city, there should be no suburb path appended (testing logic consistency)
           }
 
           // Assertions
-          
+
           // 1. Path must start with /
           expect(path).toMatch(/^\//);
 
@@ -58,15 +59,15 @@ describe('LocationHierarchy - Property 2: Hierarchical Data Consistency', () => 
 
           // 5. If suburb exists, path must contain suburb slug and city slug
           if (hierarchy.city && hierarchy.suburb) {
-             expect(path).toContain(hierarchy.suburb.slug);
-             // 6. Hierarchy order check: City before Suburb
-             const cityIndex = path.indexOf(hierarchy.city.slug);
-             const suburbIndex = path.indexOf(hierarchy.suburb.slug);
-             expect(suburbIndex).toBeGreaterThan(cityIndex);
+            expect(path).toContain(hierarchy.suburb.slug);
+            // 6. Hierarchy order check: City before Suburb
+            const cityIndex = path.indexOf(hierarchy.city.slug);
+            const suburbIndex = path.indexOf(hierarchy.suburb.slug);
+            expect(suburbIndex).toBeGreaterThan(cityIndex);
           }
-        }
+        },
       ),
-      { numRuns: 100 }
+      { numRuns: 100 },
     );
   });
 
@@ -75,21 +76,24 @@ describe('LocationHierarchy - Property 2: Hierarchical Data Consistency', () => 
       fc.property(
         fc.record({
           provinceId: idGenerator,
-          cities: fc.array(fc.record({
-             id: idGenerator,
-             name: nameGenerator,
-             provinceId: fc.integer() // Potentially mismatching ID
-          }), { minLength: 1, maxLength: 5 })
+          cities: fc.array(
+            fc.record({
+              id: idGenerator,
+              name: nameGenerator,
+              provinceId: fc.integer(), // Potentially mismatching ID
+            }),
+            { minLength: 1, maxLength: 5 },
+          ),
         }),
-        (data) => {
+        data => {
           // Simulate filtering cities by province
           // This tests the logic used in CityList to ensure we only show matching cities
-          
-          const validCities = data.cities.map(c => ({...c, provinceId: data.provinceId}));
+
+          const validCities = data.cities.map(c => ({ ...c, provinceId: data.provinceId }));
           const mixedCities = [...data.cities, ...validCities];
-          
+
           const filteredCities = mixedCities.filter(c => c.provinceId === data.provinceId);
-          
+
           // Property: All filtered cities must have the correct parent ID
           filteredCities.forEach(city => {
             expect(city.provinceId).toBe(data.provinceId);
@@ -97,25 +101,22 @@ describe('LocationHierarchy - Property 2: Hierarchical Data Consistency', () => 
 
           // Property: Filtered count should be at least the number of valid cities we created
           expect(filteredCities.length).toBeGreaterThanOrEqual(validCities.length);
-        }
-      ), 
-      { numRuns: 100 }
+        },
+      ),
+      { numRuns: 100 },
     );
   });
 
   it('should validate slug format constraints', () => {
-     fc.assert(
-        fc.property(
-           slugGenerator,
-           (slug) => {
-              // Property: Slugs should be lowercase and safe URL characters
-              const isValidSlug = /^[a-z0-9-]+$/.test(slug);
-              expect(isValidSlug).toBe(true);
-              
-              // Property: Slugs should not contain spaces
-              expect(slug).not.toContain(' ');
-           }
-        )
-     )
+    fc.assert(
+      fc.property(slugGenerator, slug => {
+        // Property: Slugs should be lowercase and safe URL characters
+        const isValidSlug = /^[a-z0-9-]+$/.test(slug);
+        expect(isValidSlug).toBe(true);
+
+        // Property: Slugs should not contain spaces
+        expect(slug).not.toContain(' ');
+      }),
+    );
   });
 });

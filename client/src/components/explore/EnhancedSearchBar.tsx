@@ -12,7 +12,10 @@ interface EnhancedSearchBarProps {
   placeholder?: string;
 }
 
-export function EnhancedSearchBar({ onSearch, placeholder = "Search properties, areas, agents..." }: EnhancedSearchBarProps) {
+export function EnhancedSearchBar({
+  onSearch,
+  placeholder = 'Search properties, areas, agents...',
+}: EnhancedSearchBarProps) {
   const [query, setQuery] = useState('');
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -30,8 +33,8 @@ export function EnhancedSearchBar({ onSearch, placeholder = "Search properties, 
   useEffect(() => {
     if (query.length > 1) {
       // Filter suggestions based on query
-      const filtered = mockSuggestions.filter(s => 
-        s.label.toLowerCase().includes(query.toLowerCase())
+      const filtered = mockSuggestions.filter(s =>
+        s.label.toLowerCase().includes(query.toLowerCase()),
       );
       setSuggestions(filtered);
       setShowSuggestions(true);
@@ -76,7 +79,7 @@ export function EnhancedSearchBar({ onSearch, placeholder = "Search properties, 
           <input
             type="text"
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={e => setQuery(e.target.value)}
             placeholder={placeholder}
             className="w-full pl-12 pr-4 py-3.5 rounded-full border-2 border-gray-200 bg-white/90 backdrop-blur-sm focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 transition-all duration-300 outline-none text-gray-900 placeholder-gray-500 shadow-sm hover:shadow-md"
           />

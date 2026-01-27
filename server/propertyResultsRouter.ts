@@ -18,7 +18,9 @@ const propertyFiltersSchema = z.object({
   province: z.string().optional(),
   city: z.string().optional(),
   suburb: z.array(z.string()).optional(),
-  propertyType: z.array(z.enum(['house', 'apartment', 'townhouse', 'plot', 'commercial'])).optional(),
+  propertyType: z
+    .array(z.enum(['house', 'apartment', 'townhouse', 'plot', 'commercial']))
+    .optional(),
   listingType: z.enum(['sale', 'rent']).optional(),
   minPrice: z.number().optional(),
   maxPrice: z.number().optional(),
@@ -36,12 +38,14 @@ const propertyFiltersSchema = z.object({
   fibreReady: z.boolean().optional(),
   loadSheddingSolutions: z.array(z.enum(['solar', 'generator', 'inverter', 'none'])).optional(),
   status: z.array(z.enum(['available', 'under_offer', 'sold', 'let'])).optional(),
-  bounds: z.object({
-    north: z.number(),
-    south: z.number(),
-    east: z.number(),
-    west: z.number(),
-  }).optional(),
+  bounds: z
+    .object({
+      north: z.number(),
+      south: z.number(),
+      east: z.number(),
+      west: z.number(),
+    })
+    .optional(),
 });
 
 const sortOptionSchema = z.enum([
@@ -65,7 +69,7 @@ export const propertyResultsRouter = router({
         sortOption: sortOptionSchema.default('date_desc'),
         page: z.number().int().positive().default(1),
         pageSize: z.number().int().positive().max(100).default(12),
-      })
+      }),
     )
     .query(async ({ input }) => {
       try {
@@ -73,7 +77,7 @@ export const propertyResultsRouter = router({
           input.filters as PropertyFilters,
           input.sortOption as SortOption,
           input.page,
-          input.pageSize
+          input.pageSize,
         );
 
         return {
@@ -97,12 +101,12 @@ export const propertyResultsRouter = router({
     .input(
       z.object({
         filters: propertyFiltersSchema,
-      })
+      }),
     )
     .query(async ({ input }) => {
       try {
         const counts = await propertySearchService.getFilterCounts(
-          input.filters as PropertyFilters
+          input.filters as PropertyFilters,
         );
 
         return {
@@ -133,7 +137,7 @@ export const propertyResultsRouter = router({
           filters: propertyFiltersSchema,
           notificationMethod: z.enum(['email', 'whatsapp', 'both', 'none']).default('none'),
           notificationFrequency: z.enum(['instant', 'daily', 'weekly']).default('weekly'),
-        })
+        }),
       )
       .mutation(async ({ ctx, input }) => {
         const db = await getDb();
@@ -186,12 +190,7 @@ export const propertyResultsRouter = router({
         const searches = await db
           .select()
           .from(savedSearches)
-          .where(
-            and(
-              eq(savedSearches.userId, ctx.user.id),
-              eq(savedSearches.isActive, 1)
-            )
-          )
+          .where(and(eq(savedSearches.userId, ctx.user.id), eq(savedSearches.isActive, 1)))
           .orderBy(desc(savedSearches.createdAt));
 
         // Get result counts for each saved search
@@ -200,13 +199,9 @@ export const propertyResultsRouter = router({
             try {
               const filters = search.filters as PropertyFilters;
               const counts = await propertySearchService.getFilterCounts(filters);
-              
+
               // Extract location info from filters
-              const location = [
-                filters.suburb?.join(', '),
-                filters.city,
-                filters.province,
-              ]
+              const location = [filters.suburb?.join(', '), filters.city, filters.province]
                 .filter(Boolean)
                 .join(', ');
 
@@ -222,7 +217,10 @@ export const propertyResultsRouter = router({
                 lastNotified: search.lastNotified,
               };
             } catch (error) {
-              console.error(`[PropertyResults] Error getting counts for search ${search.id}:`, error);
+              console.error(
+                `[PropertyResults] Error getting counts for search ${search.id}:`,
+                error,
+              );
               return {
                 id: search.id,
                 name: search.name,
@@ -235,7 +233,7 @@ export const propertyResultsRouter = router({
                 lastNotified: search.lastNotified,
               };
             }
-          })
+          }),
         );
 
         return {
@@ -259,7 +257,7 @@ export const propertyResultsRouter = router({
       .input(
         z.object({
           id: z.number().int().positive(),
-        })
+        }),
       )
       .query(async ({ ctx, input }) => {
         const db = await getDb();
@@ -278,8 +276,8 @@ export const propertyResultsRouter = router({
               and(
                 eq(savedSearches.id, input.id),
                 eq(savedSearches.userId, ctx.user.id),
-                eq(savedSearches.isActive, 1)
-              )
+                eq(savedSearches.isActive, 1),
+              ),
             )
             .limit(1);
 
@@ -317,7 +315,7 @@ export const propertyResultsRouter = router({
       .input(
         z.object({
           id: z.number().int().positive(),
-        })
+        }),
       )
       .mutation(async ({ ctx, input }) => {
         const db = await getDb();
@@ -333,12 +331,7 @@ export const propertyResultsRouter = router({
           const search = await db
             .select()
             .from(savedSearches)
-            .where(
-              and(
-                eq(savedSearches.id, input.id),
-                eq(savedSearches.userId, ctx.user.id)
-              )
-            )
+            .where(and(eq(savedSearches.id, input.id), eq(savedSearches.userId, ctx.user.id)))
             .limit(1);
 
           if (search.length === 0) {
@@ -349,10 +342,7 @@ export const propertyResultsRouter = router({
           }
 
           // Soft delete by setting isActive to false
-          await db
-            .update(savedSearches)
-            .set({ isActive: 0 })
-            .where(eq(savedSearches.id, input.id));
+          await db.update(savedSearches).set({ isActive: 0 }).where(eq(savedSearches.id, input.id));
 
           return {
             success: true,
@@ -384,7 +374,7 @@ export const propertyResultsRouter = router({
           sortOrder: sortOptionSchema,
           viewMode: z.enum(['list', 'grid', 'map']),
           sessionId: z.string(),
-        })
+        }),
       )
       .mutation(async ({ ctx, input }) => {
         const db = await getDb();
@@ -428,7 +418,7 @@ export const propertyResultsRouter = router({
           position: z.number().int().nonnegative(),
           searchFilters: propertyFiltersSchema,
           sessionId: z.string(),
-        })
+        }),
       )
       .mutation(async ({ ctx, input }) => {
         const db = await getDb();
@@ -461,4 +451,3 @@ export const propertyResultsRouter = router({
       }),
   }),
 });
-

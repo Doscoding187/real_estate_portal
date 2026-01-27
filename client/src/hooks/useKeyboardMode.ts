@@ -1,10 +1,10 @@
 /**
  * Keyboard Mode Detection Hook
- * 
+ *
  * Detects when user is navigating with keyboard vs mouse.
  * Adds 'keyboard-navigation' class to body for enhanced focus styles.
  * Requirements: 5.1
- * 
+ *
  * Features:
  * - Automatic detection of keyboard usage
  * - Body class management
@@ -47,7 +47,7 @@ export function useKeyboardMode() {
 
 /**
  * Focus Management Hook
- * 
+ *
  * Provides utilities for managing focus programmatically.
  */
 
@@ -64,7 +64,7 @@ export function useFocusManagement() {
   const focusFirstInteractive = (container?: HTMLElement) => {
     const root = container || document.body;
     const firstInteractive = root.querySelector<HTMLElement>(
-      'button:not(:disabled), [href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex="-1"])'
+      'button:not(:disabled), [href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex="-1"])',
     );
     if (firstInteractive) {
       firstInteractive.focus();
@@ -77,8 +77,8 @@ export function useFocusManagement() {
     const root = container || document.body;
     const interactiveElements = Array.from(
       root.querySelectorAll<HTMLElement>(
-        'button:not(:disabled), [href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex="-1"])'
-      )
+        'button:not(:disabled), [href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex="-1"])',
+      ),
     );
     const lastInteractive = interactiveElements[interactiveElements.length - 1];
     if (lastInteractive) {

@@ -1,9 +1,9 @@
 /**
  * Location Resolver Service
- * 
+ *
  * Single source of truth for location resolution.
  * Converts slugs to IDs, validates hierarchy, and provides fallback logic.
- * 
+ *
  * Usage:
  *   const location = await locationResolver.resolveLocation({
  *     provinceSlug: 'gauteng',
@@ -45,7 +45,7 @@ export interface ResolvedLocation {
   province: ResolvedProvince;
   city?: ResolvedCity;
   suburb?: ResolvedSuburb;
-  
+
   // New user-centric context fields
   confidence: 'exact' | 'expanded' | 'approximate';
   fallbackLevel: 'none' | 'suburb_to_city' | 'city_to_province' | 'suburb_to_province';
@@ -103,12 +103,12 @@ export class LocationResolverService {
 
     // Province only
     if (!citySlug) {
-      return { 
-        level: 'province', 
+      return {
+        level: 'province',
         province,
         confidence: 'exact',
         fallbackLevel: 'none',
-        originalIntent
+        originalIntent,
       };
     }
 
@@ -124,22 +124,21 @@ export class LocationResolverService {
       })
       .from(cities)
       .where(
-        and(
-          sql`LOWER(${cities.slug}) = LOWER(${citySlug})`,
-          eq(cities.provinceId, province.id)
-        )
+        and(sql`LOWER(${cities.slug}) = LOWER(${citySlug})`, eq(cities.provinceId, province.id)),
       )
       .limit(1);
 
     if (cityResult.length === 0) {
       // City not found, fallback to province level
-      console.warn(`[LocationResolver] City not found: ${citySlug} in ${provinceSlug}, falling back to province`);
-      return { 
-        level: 'province', 
+      console.warn(
+        `[LocationResolver] City not found: ${citySlug} in ${provinceSlug}, falling back to province`,
+      );
+      return {
+        level: 'province',
         province,
         confidence: 'expanded',
         fallbackLevel: 'city_to_province',
-        originalIntent
+        originalIntent,
       };
     }
 
@@ -154,13 +153,13 @@ export class LocationResolverService {
 
     // City only (no suburb)
     if (!suburbSlug) {
-      return { 
-        level: 'city', 
-        province, 
+      return {
+        level: 'city',
+        province,
         city,
         confidence: 'exact',
         fallbackLevel: 'none',
-        originalIntent
+        originalIntent,
       };
     }
 
@@ -175,24 +174,21 @@ export class LocationResolverService {
         longitude: suburbs.longitude,
       })
       .from(suburbs)
-      .where(
-        and(
-          sql`LOWER(${suburbs.slug}) = LOWER(${suburbSlug})`,
-          eq(suburbs.cityId, city.id)
-        )
-      )
+      .where(and(sql`LOWER(${suburbs.slug}) = LOWER(${suburbSlug})`, eq(suburbs.cityId, city.id)))
       .limit(1);
 
     if (suburbResult.length === 0) {
       // Suburb not found, fallback to city level
-      console.warn(`[LocationResolver] Suburb not found: ${suburbSlug} in ${citySlug}, falling back to city`);
-      return { 
-        level: 'city', 
-        province, 
+      console.warn(
+        `[LocationResolver] Suburb not found: ${suburbSlug} in ${citySlug}, falling back to city`,
+      );
+      return {
+        level: 'city',
+        province,
         city,
         confidence: 'expanded',
         fallbackLevel: 'suburb_to_city',
-        originalIntent
+        originalIntent,
       };
     }
 
@@ -205,14 +201,14 @@ export class LocationResolverService {
       longitude: suburbResult[0].longitude || undefined,
     };
 
-    return { 
-      level: 'suburb', 
-      province, 
-      city, 
+    return {
+      level: 'suburb',
+      province,
+      city,
       suburb,
       confidence: 'exact',
       fallbackLevel: 'none',
-      originalIntent
+      originalIntent,
     };
   }
 
@@ -223,7 +219,7 @@ export class LocationResolverService {
   async validateHierarchy(
     provinceSlug: string,
     citySlug?: string,
-    suburbSlug?: string
+    suburbSlug?: string,
   ): Promise<boolean> {
     const location = await this.resolveLocation({
       provinceSlug,
@@ -256,7 +252,7 @@ export class LocationResolverService {
     suburbId?: number;
   }> {
     const location = await this.resolveLocation(opts);
-    
+
     if (!location) return {};
 
     return {

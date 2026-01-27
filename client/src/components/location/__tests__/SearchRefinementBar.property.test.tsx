@@ -4,11 +4,11 @@ import { fc } from '@fast-check/vitest';
 
 /**
  * Feature: location-pages-system, Property 6: Search URL Construction
- * 
+ *
  * For any combination of search filters (property type, price range, bedrooms, bathrooms),
  * the constructed search URL should contain all selected filter parameters and navigate
  * to the correct search results page.
- * 
+ *
  * Validates: Requirements 14.1, 14.2, 14.3
  */
 describe('SearchRefinementBar - Property 6: Search URL Construction', () => {
@@ -16,7 +16,9 @@ describe('SearchRefinementBar - Property 6: Search URL Construction', () => {
     fc.assert(
       fc.property(
         fc.record({
-          propertyType: fc.option(fc.constantFrom('house', 'apartment', 'townhouse', 'villa'), { nil: undefined }),
+          propertyType: fc.option(fc.constantFrom('house', 'apartment', 'townhouse', 'villa'), {
+            nil: undefined,
+          }),
           minPrice: fc.option(fc.integer({ min: 0, max: 5000000 }), { nil: undefined }),
           maxPrice: fc.option(fc.integer({ min: 5000000, max: 10000000 }), { nil: undefined }),
           bedrooms: fc.option(fc.integer({ min: 1, max: 5 }), { nil: undefined }),
@@ -24,17 +26,21 @@ describe('SearchRefinementBar - Property 6: Search URL Construction', () => {
           location: fc.string({ minLength: 1, maxLength: 50 }),
           placeId: fc.option(fc.string({ minLength: 10, maxLength: 100 }), { nil: undefined }),
         }),
-        (filters) => {
+        filters => {
           // Simulate URL construction logic
           const params = new URLSearchParams();
-          
+
           if (filters.location) params.append('location', filters.location);
           if (filters.placeId) params.append('placeId', filters.placeId);
           if (filters.propertyType) params.append('propertyType', filters.propertyType);
-          if (filters.minPrice !== undefined) params.append('minPrice', filters.minPrice.toString());
-          if (filters.maxPrice !== undefined) params.append('maxPrice', filters.maxPrice.toString());
-          if (filters.bedrooms !== undefined) params.append('bedrooms', filters.bedrooms.toString());
-          if (filters.bathrooms !== undefined) params.append('bathrooms', filters.bathrooms.toString());
+          if (filters.minPrice !== undefined)
+            params.append('minPrice', filters.minPrice.toString());
+          if (filters.maxPrice !== undefined)
+            params.append('maxPrice', filters.maxPrice.toString());
+          if (filters.bedrooms !== undefined)
+            params.append('bedrooms', filters.bedrooms.toString());
+          if (filters.bathrooms !== undefined)
+            params.append('bathrooms', filters.bathrooms.toString());
 
           const searchUrl = `/properties?${params.toString()}`;
 
@@ -66,9 +72,9 @@ describe('SearchRefinementBar - Property 6: Search URL Construction', () => {
           if (filters.placeId) {
             expect(urlParams.get('placeId')).toBe(filters.placeId);
           }
-        }
+        },
       ),
-      { numRuns: 100 }
+      { numRuns: 100 },
     );
   });
 
@@ -81,7 +87,7 @@ describe('SearchRefinementBar - Property 6: Search URL Construction', () => {
           bedrooms: fc.option(fc.integer({ min: 1, max: 10 }), { nil: undefined }),
           bathrooms: fc.option(fc.integer({ min: 1, max: 10 }), { nil: undefined }),
         }),
-        (filters) => {
+        filters => {
           // Property: Price values should be non-negative
           if (filters.minPrice !== undefined) {
             expect(filters.minPrice).toBeGreaterThanOrEqual(0);
@@ -105,56 +111,53 @@ describe('SearchRefinementBar - Property 6: Search URL Construction', () => {
             // We accept both valid and invalid combinations to test the property
             expect(typeof isValid).toBe('boolean');
           }
-        }
+        },
       ),
-      { numRuns: 100 }
+      { numRuns: 100 },
     );
   });
 });
 
 /**
  * Feature: location-pages-system, Property 3: Property Type Count Invariant
- * 
+ *
  * For any location, the sum of property counts across all property types
  * should equal the total listing count for that location.
- * 
+ *
  * Validates: Requirements 2.2, 3.2, 6.1
  */
 describe('PropertyTypeExplorer - Property 3: Property Type Count Invariant', () => {
   it('should maintain count invariant across property types', () => {
     fc.assert(
-      fc.property(
-        fc.integer({ min: 10, max: 1000 }),
-        (totalListings) => {
-          // Generate property type breakdown that sums to totalListings
-          const houseCount = Math.floor(totalListings * 0.4);
-          const apartmentCount = Math.floor(totalListings * 0.35);
-          const townhouseCount = Math.floor(totalListings * 0.15);
-          const villaCount = totalListings - houseCount - apartmentCount - townhouseCount;
+      fc.property(fc.integer({ min: 10, max: 1000 }), totalListings => {
+        // Generate property type breakdown that sums to totalListings
+        const houseCount = Math.floor(totalListings * 0.4);
+        const apartmentCount = Math.floor(totalListings * 0.35);
+        const townhouseCount = Math.floor(totalListings * 0.15);
+        const villaCount = totalListings - houseCount - apartmentCount - townhouseCount;
 
-          const propertyTypes = [
-            { type: 'house', count: houseCount, avgPrice: 2000000 },
-            { type: 'apartment', count: apartmentCount, avgPrice: 1500000 },
-            { type: 'townhouse', count: townhouseCount, avgPrice: 1800000 },
-            { type: 'villa', count: villaCount, avgPrice: 3000000 },
-          ];
+        const propertyTypes = [
+          { type: 'house', count: houseCount, avgPrice: 2000000 },
+          { type: 'apartment', count: apartmentCount, avgPrice: 1500000 },
+          { type: 'townhouse', count: townhouseCount, avgPrice: 1800000 },
+          { type: 'villa', count: villaCount, avgPrice: 3000000 },
+        ];
 
-          // Property: Sum of all property type counts should equal total listings
-          const sumOfCounts = propertyTypes.reduce((sum, pt) => sum + pt.count, 0);
-          expect(sumOfCounts).toBe(totalListings);
+        // Property: Sum of all property type counts should equal total listings
+        const sumOfCounts = propertyTypes.reduce((sum, pt) => sum + pt.count, 0);
+        expect(sumOfCounts).toBe(totalListings);
 
-          // Property: No property type should have negative count
-          propertyTypes.forEach(pt => {
-            expect(pt.count).toBeGreaterThanOrEqual(0);
-          });
+        // Property: No property type should have negative count
+        propertyTypes.forEach(pt => {
+          expect(pt.count).toBeGreaterThanOrEqual(0);
+        });
 
-          // Property: Each property type count should be less than or equal to total
-          propertyTypes.forEach(pt => {
-            expect(pt.count).toBeLessThanOrEqual(totalListings);
-          });
-        }
-      ),
-      { numRuns: 100 }
+        // Property: Each property type count should be less than or equal to total
+        propertyTypes.forEach(pt => {
+          expect(pt.count).toBeLessThanOrEqual(totalListings);
+        });
+      }),
+      { numRuns: 100 },
     );
   });
 
@@ -167,12 +170,12 @@ describe('PropertyTypeExplorer - Property 3: Property Type Count Invariant', () 
             count: fc.integer({ min: 0, max: 100 }),
             avgPrice: fc.integer({ min: 500000, max: 5000000 }),
           }),
-          { minLength: 1, maxLength: 10 }
+          { minLength: 1, maxLength: 10 },
         ),
-        (propertyTypes) => {
+        propertyTypes => {
           // Property: Filtering should remove all types with count === 0
           const filtered = propertyTypes.filter(pt => pt.count > 0);
-          
+
           // All filtered items should have count > 0
           filtered.forEach(pt => {
             expect(pt.count).toBeGreaterThan(0);
@@ -187,9 +190,9 @@ describe('PropertyTypeExplorer - Property 3: Property Type Count Invariant', () 
           if (hasNonZero) {
             expect(filtered.length).toBeGreaterThan(0);
           }
-        }
+        },
       ),
-      { numRuns: 100 }
+      { numRuns: 100 },
     );
   });
 });

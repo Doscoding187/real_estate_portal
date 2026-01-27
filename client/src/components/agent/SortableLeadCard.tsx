@@ -3,15 +3,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import {
-  Home,
-  Mail,
-  Phone,
-  DollarSign,
-  Calendar,
-  MoreVertical,
-  GripVertical,
-} from 'lucide-react';
+import { Home, Mail, Phone, DollarSign, Calendar, MoreVertical, GripVertical } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface Lead {
@@ -52,7 +44,7 @@ export function SortableLeadCard({ lead, onClick }: SortableLeadCardProps) {
       <Card
         className={cn(
           'cursor-pointer transition-all duration-200 hover:shadow-hover group',
-          isDragging && 'shadow-hover rotate-2 scale-105'
+          isDragging && 'shadow-hover rotate-2 scale-105',
         )}
         onClick={onClick}
       >
@@ -64,7 +56,7 @@ export function SortableLeadCard({ lead, onClick }: SortableLeadCardProps) {
                 {...attributes}
                 {...listeners}
                 className="cursor-grab active:cursor-grabbing p-1 hover:bg-gray-100 rounded transition-colors mt-0.5"
-                onClick={(e) => e.stopPropagation()}
+                onClick={e => e.stopPropagation()}
               >
                 <GripVertical className="h-4 w-4 text-gray-400" />
               </button>
@@ -83,7 +75,7 @@ export function SortableLeadCard({ lead, onClick }: SortableLeadCardProps) {
                 variant="ghost"
                 size="icon"
                 className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
-                onClick={(e) => {
+                onClick={e => {
                   e.stopPropagation();
                   // Handle more options
                 }}
@@ -130,7 +122,7 @@ export function SortableLeadCard({ lead, onClick }: SortableLeadCardProps) {
             {/* Tags */}
             {lead.tags && lead.tags.length > 0 && (
               <div className="flex flex-wrap gap-1">
-                {lead.tags.map((tag) => (
+                {lead.tags.map(tag => (
                   <Badge
                     key={tag}
                     variant="outline"

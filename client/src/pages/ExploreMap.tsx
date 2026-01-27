@@ -1,11 +1,11 @@
 /**
  * ExploreMap Page
- * 
+ *
  * Map-centric view for exploring properties with synchronized feed.
  * Features modern design with clean map pins, glass overlays, and smooth interactions.
- * 
+ *
  * Requirements: 3.1, 3.2, 3.3
- * 
+ *
  * Features:
  * - Map/feed synchronization with throttling and debouncing
  * - Modern category filter bar with pill design
@@ -44,7 +44,7 @@ export default function ExploreMap() {
   return (
     <div className="h-screen flex flex-col bg-gray-50">
       {/* Modern category filter bar with glass effect */}
-      <motion.div 
+      <motion.div
         className="bg-white/95 backdrop-blur-md border-b border-gray-200/50 px-4 py-3 z-20 shadow-sm"
         initial={{ y: -20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
@@ -65,7 +65,7 @@ export default function ExploreMap() {
               variant="light"
             />
           </div>
-          
+
           {/* Modern filter button with accent gradient */}
           <motion.button
             onClick={toggleFilters}
@@ -90,7 +90,7 @@ export default function ExploreMap() {
       </motion.div>
 
       {/* Map hybrid view with modern design */}
-      <motion.div 
+      <motion.div
         className="flex-1 overflow-hidden"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
@@ -111,7 +111,9 @@ export default function ExploreMap() {
         onPropertyTypeChange={filterActions.setPropertyType}
         priceMin={filters.priceMin}
         priceMax={filters.priceMax}
-        onPriceChange={(min, max) => filterActions.updateCommonFilters({ priceMin: min, priceMax: max })}
+        onPriceChange={(min, max) =>
+          filterActions.updateCommonFilters({ priceMin: min, priceMax: max })
+        }
         residentialFilters={filters.residential}
         onResidentialFiltersChange={filterActions.updateResidentialFilters}
         developmentFilters={filters.development}

@@ -1,11 +1,7 @@
 import { useState, useCallback } from 'react';
 import useEmblaCarousel from 'embla-carousel-react';
-import {
-  ChevronLeft,
-  ChevronRight,
-  ChevronRight as ChevronRightIcon,
-} from 'lucide-react';
-import { CITY_PROVINCE_MAP } from "../lib/locationUtils";
+import { ChevronLeft, ChevronRight, ChevronRight as ChevronRightIcon } from 'lucide-react';
+import { CITY_PROVINCE_MAP } from '../lib/locationUtils';
 import { Button } from '@/components/ui/button';
 
 interface PropertyType {
@@ -91,16 +87,16 @@ const propertyTypes: PropertyType[] = [
 ];
 
 const cities = [
-  'Cape Town',        // Western Cape
-  'Johannesburg',     // Gauteng
-  'Durban',           // KwaZulu-Natal
-  'Pretoria',         // Gauteng (admin capital)
-  'Bloemfontein',     // Free State
-  'Gqeberha',         // Eastern Cape (Port Elizabeth)
-  'Polokwane',        // Limpopo
-  'Kimberley',        // Northern Cape
-  'Mbombela',         // Mpumalanga
-  'Mahikeng',         // North West
+  'Cape Town', // Western Cape
+  'Johannesburg', // Gauteng
+  'Durban', // KwaZulu-Natal
+  'Pretoria', // Gauteng (admin capital)
+  'Bloemfontein', // Free State
+  'Gqeberha', // Eastern Cape (Port Elizabeth)
+  'Polokwane', // Limpopo
+  'Kimberley', // Northern Cape
+  'Mbombela', // Mpumalanga
+  'Mahikeng', // North West
 ];
 
 interface DiscoverPropertiesProps {
@@ -111,12 +107,12 @@ interface DiscoverPropertiesProps {
   locationName?: string;
 }
 
-export function DiscoverProperties({ 
-  initialCity, 
+export function DiscoverProperties({
+  initialCity,
   availableCities,
   title,
   subtitle,
-  locationName = "South Africa"
+  locationName = 'South Africa',
 }: DiscoverPropertiesProps = {}) {
   const defaultTitle = `Discover Properties in ${locationName}`;
   const defaultSubtitle = `Explore property sales, rentals, and new developments across ${locationName}${locationName.endsWith('s') ? "'" : "'s"} most vibrant locations.`;
@@ -125,7 +121,7 @@ export function DiscoverProperties({
   const displaySubtitle = subtitle || defaultSubtitle;
 
   const [selectedCity, setSelectedCity] = useState(initialCity || 'Cape Town');
-  
+
   const displayCities = availableCities || cities;
 
   const [listingType, setListingType] = useState<'sale' | 'rent' | 'developments'>('sale');
@@ -184,7 +180,7 @@ export function DiscoverProperties({
         'Ready to Move': 'ready_to_move',
         'New Launch': 'new_launch',
         'Affordable Housing': 'affordable',
-        'Luxury Projects': 'luxury'
+        'Luxury Projects': 'luxury',
       };
       const filter = typeMap[propertyType] || '';
       window.location.href = `/developments${filter ? `?type=${filter}` : ''}`;
@@ -193,38 +189,35 @@ export function DiscoverProperties({
       // Use helper to construct hierarchical URL if possible
       const action = listingType === 'sale' ? 'sale' : 'rent';
       const citySlug = selectedCity.toLowerCase().replace(/\s+/g, '-');
-      
+
       // Use shared map to lookup province
       const provinceSlug = CITY_PROVINCE_MAP[citySlug];
-      
+
       let url = '';
       if (provinceSlug) {
         url = `/${provinceSlug}/${citySlug}?listingType=${action}`;
       } else {
         url = `/properties?city=${selectedCity}&listingType=${action}`;
       }
-      
+
       if (propertyType && propertyType !== 'All') {
         // Map display names to url values if needed, otherwise slugify
         const typeSlug = propertyType.toLowerCase().replace(/\s+/g, '-');
         url += `&propertyType=${typeSlug}`;
       }
-      
+
       window.location.href = url;
     }
-
   };
 
   return (
     <div className="py-16 bg-gradient-to-b from-white to-muted/20">
       <div className="container">
         <div className="mb-8">
-            <h2 className="text-fluid-h2 font-bold mb-4 bg-gradient-to-r from-slate-900 via-[#2774AE] to-slate-900 bg-clip-text text-transparent">
+          <h2 className="text-fluid-h2 font-bold mb-4 bg-gradient-to-r from-slate-900 via-[#2774AE] to-slate-900 bg-clip-text text-transparent">
             {displayTitle}
-            </h2>
-            <p className="text-muted-foreground text-base max-w-2xl">
-            {displaySubtitle}
-            </p>
+          </h2>
+          <p className="text-muted-foreground text-base max-w-2xl">{displaySubtitle}</p>
         </div>
 
         {/* City Tabs */}
@@ -258,29 +251,32 @@ export function DiscoverProperties({
                 <button
                   onClick={handleSaleClick}
                   className={`w-full p-4 flex items-center justify-between transition-all duration-300 ${
-                    saleExpanded 
-                      ? 'bg-blue-50/80 text-blue-700' 
+                    saleExpanded
+                      ? 'bg-blue-50/80 text-blue-700'
                       : 'hover:bg-slate-50 text-slate-700'
                   }`}
                 >
                   <span className="font-bold text-base">Properties for Sale</span>
-                  <div className={`rounded-full p-1 transition-colors ${saleExpanded ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-400 group-hover:bg-slate-200'}`}>
-                      <ChevronRightIcon
-                        className={`h-4 w-4 transition-transform duration-300 ${saleExpanded ? 'rotate-90' : ''}`}
-                      />
+                  <div
+                    className={`rounded-full p-1 transition-colors ${saleExpanded ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-400 group-hover:bg-slate-200'}`}
+                  >
+                    <ChevronRightIcon
+                      className={`h-4 w-4 transition-transform duration-300 ${saleExpanded ? 'rotate-90' : ''}`}
+                    />
                   </div>
                 </button>
-                <div 
+                <div
                   className={`overflow-hidden transition-all duration-300 ease-in-out ${
                     saleExpanded ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
                   }`}
                 >
                   <div className="px-5 pb-5 pt-2 bg-blue-50/30">
                     <p className="text-sm text-slate-600 leading-relaxed mb-5">
-                      Find your dream home in {selectedCity}. From affordable apartments to premium family houses, explore properties that match your budget and lifestyle.
+                      Find your dream home in {selectedCity}. From affordable apartments to premium
+                      family houses, explore properties that match your budget and lifestyle.
                     </p>
-                    <a 
-                      href="/properties?action=sale" 
+                    <a
+                      href="/properties?action=sale"
                       className="text-sm font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1 transition-colors group"
                     >
                       View Sale Listings
@@ -295,29 +291,32 @@ export function DiscoverProperties({
                 <button
                   onClick={handleRentClick}
                   className={`w-full p-4 flex items-center justify-between transition-all duration-300 ${
-                    rentExpanded 
-                      ? 'bg-blue-50/80 text-blue-700' 
+                    rentExpanded
+                      ? 'bg-blue-50/80 text-blue-700'
                       : 'hover:bg-slate-50 text-slate-700'
                   }`}
                 >
                   <span className="font-bold text-base">Properties for Rent</span>
-                   <div className={`rounded-full p-1 transition-colors ${rentExpanded ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-400 group-hover:bg-slate-200'}`}>
-                      <ChevronRightIcon
-                        className={`h-4 w-4 transition-transform duration-300 ${rentExpanded ? 'rotate-90' : ''}`}
-                      />
+                  <div
+                    className={`rounded-full p-1 transition-colors ${rentExpanded ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-400 group-hover:bg-slate-200'}`}
+                  >
+                    <ChevronRightIcon
+                      className={`h-4 w-4 transition-transform duration-300 ${rentExpanded ? 'rotate-90' : ''}`}
+                    />
                   </div>
                 </button>
-                <div 
+                <div
                   className={`overflow-hidden transition-all duration-300 ease-in-out ${
                     rentExpanded ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
                   }`}
                 >
                   <div className="px-5 pb-5 pt-2 bg-blue-50/30">
                     <p className="text-sm text-slate-600 leading-relaxed mb-5">
-                      Searching for a rental in {selectedCity}? Browse our selection of apartments, garden cottages, and corporate rentals available now.
+                      Searching for a rental in {selectedCity}? Browse our selection of apartments,
+                      garden cottages, and corporate rentals available now.
                     </p>
-                    <a 
-                      href="/properties?action=rent" 
+                    <a
+                      href="/properties?action=rent"
                       className="text-sm font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1 transition-colors group"
                     >
                       View Rental Listings
@@ -332,29 +331,32 @@ export function DiscoverProperties({
                 <button
                   onClick={handleDevelopmentsClick}
                   className={`w-full p-4 flex items-center justify-between transition-all duration-300 ${
-                    developmentsExpanded 
-                      ? 'bg-blue-50/80 text-blue-700' 
+                    developmentsExpanded
+                      ? 'bg-blue-50/80 text-blue-700'
                       : 'hover:bg-slate-50 text-slate-700'
                   }`}
                 >
                   <span className="font-bold text-base">New Developments</span>
-                   <div className={`rounded-full p-1 transition-colors ${developmentsExpanded ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-400 group-hover:bg-slate-200'}`}>
-                      <ChevronRightIcon
-                        className={`h-4 w-4 transition-transform duration-300 ${developmentsExpanded ? 'rotate-90' : ''}`}
-                      />
+                  <div
+                    className={`rounded-full p-1 transition-colors ${developmentsExpanded ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-400 group-hover:bg-slate-200'}`}
+                  >
+                    <ChevronRightIcon
+                      className={`h-4 w-4 transition-transform duration-300 ${developmentsExpanded ? 'rotate-90' : ''}`}
+                    />
                   </div>
                 </button>
-                <div 
+                <div
                   className={`overflow-hidden transition-all duration-300 ease-in-out ${
                     developmentsExpanded ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
                   }`}
                 >
                   <div className="px-5 pb-5 pt-2 bg-blue-50/30">
                     <p className="text-sm text-slate-600 leading-relaxed mb-5">
-                      Invest in the future with new developments in {selectedCity}. Explore off-plan opportunities and brand new estates.
+                      Invest in the future with new developments in {selectedCity}. Explore off-plan
+                      opportunities and brand new estates.
                     </p>
-                    <a 
-                      href="/developments" 
+                    <a
+                      href="/developments"
                       className="text-sm font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1 transition-colors group"
                     >
                       View Developments
@@ -368,7 +370,10 @@ export function DiscoverProperties({
 
           {/* Right Side - Property Carousel */}
           <div className="lg:col-span-9 relative group/carousel">
-            <div className="overflow-hidden rounded-2xl shadow-xl ring-1 ring-black/5" ref={emblaRef}>
+            <div
+              className="overflow-hidden rounded-2xl shadow-xl ring-1 ring-black/5"
+              ref={emblaRef}
+            >
               <div className="flex gap-6 pl-4 py-1">
                 {filteredProperties.map((property, idx) => (
                   <div
@@ -383,23 +388,31 @@ export function DiscoverProperties({
                         className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 opacity-90 group-hover:opacity-100"
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/40 to-transparent opacity-80 group-hover:opacity-70 transition-opacity duration-300" />
-                      
+
                       {/* Content Overlay */}
                       <div className="absolute bottom-0 left-0 right-0 p-6 text-white transform translate-y-2 group-hover:translate-y-0 transition-transform duration-300">
                         <div className="w-12 h-1 bg-blue-500 mb-4 rounded-full transform origin-left scale-x-0 group-hover:scale-x-100 transition-transform duration-500 delay-100" />
-                        
+
                         <div className="flex items-center gap-2 mb-2 opacity-0 group-hover:opacity-100 transition-opacity duration-500 delay-75 transform -translate-y-2 group-hover:translate-y-0">
-                             <span className="bg-blue-600 text-white text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider">
-                                Explore
-                             </span>
+                          <span className="bg-blue-600 text-white text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider">
+                            Explore
+                          </span>
                         </div>
 
-                        <h3 className="text-2xl font-bold mb-2 text-white group-hover:text-blue-50 transition-colors">{property.type}</h3>
+                        <h3 className="text-2xl font-bold mb-2 text-white group-hover:text-blue-50 transition-colors">
+                          {property.type}
+                        </h3>
                         <p className="text-sm text-slate-300 font-medium flex items-center gap-2">
                           <span className="bg-white/10 backdrop-blur-md px-2 py-1 rounded text-xs uppercase tracking-wider border border-white/10">
-                            {listingType === 'sale' ? 'For Sale' : listingType === 'rent' ? 'For Rent' : 'New Development'}
+                            {listingType === 'sale'
+                              ? 'For Sale'
+                              : listingType === 'rent'
+                                ? 'For Rent'
+                                : 'New Development'}
                           </span>
-                          <span className="text-slate-300 opacity-80 group-hover:opacity-100 transition-opacity">in {selectedCity}</span>
+                          <span className="text-slate-300 opacity-80 group-hover:opacity-100 transition-opacity">
+                            in {selectedCity}
+                          </span>
                         </p>
                       </div>
                     </div>

@@ -1,6 +1,6 @@
-import { db } from "../db";
-import { topics, contentTopics, exploreContent, exploreShorts } from "../../drizzle/schema";
-import { eq, and, inArray, sql, desc, asc } from "drizzle-orm";
+import { db } from '../db';
+import { topics, contentTopics, exploreContent, exploreShorts } from '../../drizzle/schema';
+import { eq, and, inArray, sql, desc, asc } from 'drizzle-orm';
 
 export interface Topic {
   id: string;
@@ -40,7 +40,7 @@ export interface TopicFeedRequest {
 /**
  * Topics Navigation Service
  * Manages intent-based navigation and feed reconfiguration
- * 
+ *
  * Requirements: 3.1, 3.2, 3.3, 3.4, 3.6, 16.36
  */
 export class TopicsService {
@@ -66,10 +66,7 @@ export class TopicsService {
     const result = await db
       .select()
       .from(topics)
-      .where(and(
-        eq(topics.slug, slug),
-        eq(topics.isActive, true)
-      ))
+      .where(and(eq(topics.slug, slug), eq(topics.isActive, true)))
       .limit(1);
 
     if (result.length === 0) {
@@ -83,11 +80,7 @@ export class TopicsService {
    * Get a single topic by its ID
    */
   async getTopicById(topicId: string): Promise<Topic | null> {
-    const result = await db
-      .select()
-      .from(topics)
-      .where(eq(topics.id, topicId))
-      .limit(1);
+    const result = await db.select().from(topics).where(eq(topics.id, topicId)).limit(1);
 
     if (result.length === 0) {
       return null;
@@ -124,32 +117,30 @@ export class TopicsService {
 
     // Find topics with overlapping tags, features, or categories
     const allTopics = await this.getAllTopics();
-    
+
     const scoredTopics = allTopics
       .filter(t => t.id !== topicId)
       .map(topic => {
         let score = 0;
-        
+
         // Score based on overlapping content tags
         if (currentTopic.contentTags && topic.contentTags) {
-          const overlap = currentTopic.contentTags.filter(tag => 
-            topic.contentTags?.includes(tag)
-          );
+          const overlap = currentTopic.contentTags.filter(tag => topic.contentTags?.includes(tag));
           score += overlap.length * 3;
         }
 
         // Score based on overlapping property features
         if (currentTopic.propertyFeatures && topic.propertyFeatures) {
-          const overlap = currentTopic.propertyFeatures.filter(feature => 
-            topic.propertyFeatures?.includes(feature)
+          const overlap = currentTopic.propertyFeatures.filter(feature =>
+            topic.propertyFeatures?.includes(feature),
           );
           score += overlap.length * 2;
         }
 
         // Score based on overlapping partner categories
         if (currentTopic.partnerCategories && topic.partnerCategories) {
-          const overlap = currentTopic.partnerCategories.filter(category => 
-            topic.partnerCategories?.includes(category)
+          const overlap = currentTopic.partnerCategories.filter(category =>
+            topic.partnerCategories?.includes(category),
           );
           score += overlap.length * 2;
         }
@@ -205,7 +196,7 @@ export class TopicsService {
       contentTypes?: string[];
       priceMin?: number;
       priceMax?: number;
-    }
+    },
   ): Promise<any[]> {
     const topic = await this.getTopicById(topicId);
     if (!topic) {
@@ -227,9 +218,7 @@ export class TopicsService {
 
     // If we have tagged content, include those IDs
     if (taggedIds.length > 0) {
-      conditions.push(
-        sql`${exploreContent.id} IN ${taggedIds.map(id => parseInt(id))}`
-      );
+      conditions.push(sql`${exploreContent.id} IN ${taggedIds.map(id => parseInt(id))}`);
     } else {
       // Otherwise, filter by topic's tags, features, and categories
       const tagConditions: any[] = [];
@@ -237,9 +226,7 @@ export class TopicsService {
       // Filter by content tags
       if (topic.contentTags && topic.contentTags.length > 0) {
         for (const tag of topic.contentTags) {
-          tagConditions.push(
-            sql`JSON_CONTAINS(${exploreContent.tags}, JSON_QUOTE(${tag}))`
-          );
+          tagConditions.push(sql`JSON_CONTAINS(${exploreContent.tags}, JSON_QUOTE(${tag}))`);
         }
       }
 
@@ -247,7 +234,7 @@ export class TopicsService {
       if (topic.propertyFeatures && topic.propertyFeatures.length > 0) {
         for (const feature of topic.propertyFeatures) {
           tagConditions.push(
-            sql`JSON_CONTAINS(${exploreContent.metadata}, JSON_QUOTE(${feature}), '$.propertyFeatures')`
+            sql`JSON_CONTAINS(${exploreContent.metadata}, JSON_QUOTE(${feature}), '$.propertyFeatures')`,
           );
         }
       }
@@ -256,7 +243,7 @@ export class TopicsService {
       if (topic.partnerCategories && topic.partnerCategories.length > 0) {
         for (const category of topic.partnerCategories) {
           tagConditions.push(
-            sql`JSON_CONTAINS(${exploreContent.metadata}, JSON_QUOTE(${category}), '$.partnerCategory')`
+            sql`JSON_CONTAINS(${exploreContent.metadata}, JSON_QUOTE(${category}), '$.partnerCategory')`,
           );
         }
       }
@@ -301,7 +288,7 @@ export class TopicsService {
     pagination: Pagination,
     filters?: {
       contentTypes?: string[];
-    }
+    },
   ): Promise<any[]> {
     const topic = await this.getTopicById(topicId);
     if (!topic) {
@@ -311,9 +298,7 @@ export class TopicsService {
     const offset = (pagination.page - 1) * pagination.limit;
 
     // Build filter conditions
-    const conditions: any[] = [
-      eq(exploreShorts.isPublished, 1)
-    ];
+    const conditions: any[] = [eq(exploreShorts.isPublished, 1)];
 
     // Filter by topic's tags and categories
     const tagConditions: any[] = [];
@@ -326,9 +311,7 @@ export class TopicsService {
     // Filter by highlights that match topic tags
     if (topic.contentTags && topic.contentTags.length > 0) {
       for (const tag of topic.contentTags) {
-        tagConditions.push(
-          sql`JSON_CONTAINS(${exploreShorts.highlights}, JSON_QUOTE(${tag}))`
-        );
+        tagConditions.push(sql`JSON_CONTAINS(${exploreShorts.highlights}, JSON_QUOTE(${tag}))`);
       }
     }
 
@@ -361,12 +344,10 @@ export class TopicsService {
       tags?: string[];
       propertyFeatures?: string[];
       partnerCategory?: string;
-    }
+    },
   ): Promise<void> {
     // Remove existing mappings for this content
-    await db
-      .delete(contentTopics)
-      .where(eq(contentTopics.contentId, contentId));
+    await db.delete(contentTopics).where(eq(contentTopics.contentId, contentId));
 
     // Create new mappings with relevance scores
     for (const topicId of topicIds) {
@@ -396,7 +377,7 @@ export class TopicsService {
       tags?: string[];
       propertyFeatures?: string[];
       partnerCategory?: string;
-    }
+    },
   ): number {
     if (!contentData) return 1.0;
 
@@ -406,17 +387,15 @@ export class TopicsService {
     // Score based on matching content tags (weight: 3 points per match)
     if (topic.contentTags && contentData.tags) {
       maxScore += topic.contentTags.length * 3;
-      const matches = topic.contentTags.filter(tag => 
-        contentData.tags?.includes(tag)
-      ).length;
+      const matches = topic.contentTags.filter(tag => contentData.tags?.includes(tag)).length;
       score += matches * 3;
     }
 
     // Score based on matching property features (weight: 2 points per match)
     if (topic.propertyFeatures && contentData.propertyFeatures) {
       maxScore += topic.propertyFeatures.length * 2;
-      const matches = topic.propertyFeatures.filter(feature => 
-        contentData.propertyFeatures?.includes(feature)
+      const matches = topic.propertyFeatures.filter(feature =>
+        contentData.propertyFeatures?.includes(feature),
       ).length;
       score += matches * 2;
     }
@@ -431,7 +410,7 @@ export class TopicsService {
 
     // Normalize score to 0-10 range
     if (maxScore === 0) return 1.0;
-    
+
     const normalizedScore = (score / maxScore) * 10;
     return Math.max(0.1, Math.min(10.0, normalizedScore));
   }
@@ -441,19 +420,17 @@ export class TopicsService {
    * Automatically suggests topics for content based on tags, features, and categories
    * Requirement 3.2: Intelligent topic suggestion
    */
-  async suggestTopicsForContent(
-    contentData: {
-      tags?: string[];
-      propertyFeatures?: string[];
-      partnerCategory?: string;
-    }
-  ): Promise<{ topicId: string; relevanceScore: number }[]> {
+  async suggestTopicsForContent(contentData: {
+    tags?: string[];
+    propertyFeatures?: string[];
+    partnerCategory?: string;
+  }): Promise<{ topicId: string; relevanceScore: number }[]> {
     const allTopics = await this.getAllTopics();
-    
+
     const scoredTopics = allTopics
       .map(topic => ({
         topicId: topic.id,
-        relevanceScore: this.calculateRelevanceScore(topic, contentData)
+        relevanceScore: this.calculateRelevanceScore(topic, contentData),
       }))
       .filter(item => item.relevanceScore >= 3.0) // Only suggest topics with score >= 3.0
       .sort((a, b) => b.relevanceScore - a.relevanceScore);
@@ -473,7 +450,7 @@ export class TopicsService {
       contentTypes?: string[];
       priceMin?: number;
       priceMax?: number;
-    }
+    },
   ): Promise<{
     topic: Topic | null;
     hasSufficientContent: boolean;
@@ -490,7 +467,7 @@ export class TopicsService {
         content: [],
         shorts: [],
         relatedTopics: [],
-        message: "Topic not found"
+        message: 'Topic not found',
       };
     }
 
@@ -499,14 +476,15 @@ export class TopicsService {
     if (!hasSufficientContent) {
       // Get related topics to suggest
       const relatedTopics = await this.getRelatedTopics(topicId, 3);
-      
+
       return {
         topic,
         hasSufficientContent: false,
         content: [],
         shorts: [],
         relatedTopics,
-        message: "Coming Soon - This topic doesn't have enough content yet. Check out these related topics!"
+        message:
+          "Coming Soon - This topic doesn't have enough content yet. Check out these related topics!",
       };
     }
 
@@ -552,22 +530,24 @@ export class TopicsService {
    * Useful for admin dashboards to monitor topic health
    * Requirements: 3.6, 16.36
    */
-  async getAllTopicsWithStatistics(): Promise<Array<{
-    topic: Topic;
-    statistics: {
-      contentCount: number;
-      hasSufficientContent: boolean;
-      minimumRequired: number;
-      percentageComplete: number;
-    };
-  }>> {
+  async getAllTopicsWithStatistics(): Promise<
+    Array<{
+      topic: Topic;
+      statistics: {
+        contentCount: number;
+        hasSufficientContent: boolean;
+        minimumRequired: number;
+        percentageComplete: number;
+      };
+    }>
+  > {
     const allTopics = await this.getAllTopics();
-    
+
     const topicsWithStats = await Promise.all(
-      allTopics.map(async (topic) => {
+      allTopics.map(async topic => {
         const statistics = await this.getTopicStatistics(topic.id);
         return { topic, statistics };
-      })
+      }),
     );
 
     return topicsWithStats;
@@ -589,10 +569,7 @@ export class TopicsService {
     const topicIds = mappings.map(m => m.topicId);
     if (topicIds.length === 0) return [];
 
-    const topicsData = await db
-      .select()
-      .from(topics)
-      .where(inArray(topics.id, topicIds));
+    const topicsData = await db.select().from(topics).where(inArray(topics.id, topicIds));
 
     return topicsData.map(this.mapTopicFromDb);
   }
@@ -608,11 +585,15 @@ export class TopicsService {
       contentTypes?: string[];
       priceMin?: number;
       priceMax?: number;
-    }
+    },
   ): Promise<{ content: any[]; shorts: any[] }> {
     const [content, shorts] = await Promise.all([
       this.getContentForTopic(topicId, pagination, filters),
-      this.getShortsForTopic(topicId, { page: pagination.page, limit: Math.floor(pagination.limit / 2) }, filters)
+      this.getShortsForTopic(
+        topicId,
+        { page: pagination.page, limit: Math.floor(pagination.limit / 2) },
+        filters,
+      ),
     ]);
 
     return { content, shorts };

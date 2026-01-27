@@ -1,6 +1,6 @@
 /**
  * Partner Subscription Service - Usage Examples
- * 
+ *
  * This file demonstrates common usage patterns for the partner subscription service.
  */
 
@@ -183,32 +183,29 @@ async function example7_displayPricing() {
 // =====================================================
 
 import express from 'express';
-import { requirePartnerAction, attachPartnerSubscription } from '../middleware/partnerFeatureAccess';
+import {
+  requirePartnerAction,
+  attachPartnerSubscription,
+} from '../middleware/partnerFeatureAccess';
 
 const router = express.Router();
 
 // Require action permission
-router.post('/content', 
-  requirePartnerAction('create_content'),
-  async (req, res) => {
-    // Only accessible if partner can create content
-    // (checks monthly limit automatically)
-    res.json({ message: 'Content created' });
-  }
-);
+router.post('/content', requirePartnerAction('create_content'), async (req, res) => {
+  // Only accessible if partner can create content
+  // (checks monthly limit automatically)
+  res.json({ message: 'Content created' });
+});
 
 // Attach subscription to request
-router.get('/dashboard', 
-  attachPartnerSubscription,
-  async (req, res) => {
-    const subscription = req.partnerSubscription;
-    
-    res.json({
-      tier: subscription?.tier || 'free',
-      features: subscription?.features,
-    });
-  }
-);
+router.get('/dashboard', attachPartnerSubscription, async (req, res) => {
+  const subscription = req.partnerSubscription;
+
+  res.json({
+    tier: subscription?.tier || 'free',
+    features: subscription?.features,
+  });
+});
 
 // =====================================================
 // EXAMPLE 9: Handle Subscription Expiration (Cron)
@@ -219,9 +216,9 @@ import { processExpiredSubscriptions } from './partnerSubscriptionService';
 async function example9_cronJob() {
   // Run daily at midnight
   console.log('Processing expired subscriptions...');
-  
+
   await processExpiredSubscriptions();
-  
+
   console.log('Expired subscriptions processed');
   // All expired subscriptions are now downgraded to basic
 }

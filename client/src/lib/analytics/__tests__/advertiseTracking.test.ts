@@ -1,6 +1,6 @@
 /**
  * Analytics Tracking Tests
- * 
+ *
  * Tests for the advertise landing page analytics tracking system.
  * Validates event tracking, metadata collection, and integration.
  */
@@ -28,7 +28,7 @@ beforeEach(() => {
   resetScrollDepthTracking();
   mockSessionStorage.clear();
   mockLocalStorage.clear();
-  
+
   // Mock window
   Object.defineProperty(global, 'window', {
     value: {
@@ -47,7 +47,7 @@ beforeEach(() => {
     },
     writable: true,
   });
-  
+
   // Mock document
   Object.defineProperty(global, 'document', {
     value: {
@@ -90,7 +90,7 @@ describe('Session Management', () => {
   it('should retrieve existing session ID from sessionStorage', () => {
     const existingId = 'session_123_abc';
     mockSessionStorage.set('advertise_session_id', existingId);
-    
+
     const sessionId = getSessionId();
     expect(sessionId).toBe(existingId);
   });
@@ -138,7 +138,7 @@ describe('CTA Click Tracking', () => {
         cta_href: '/register',
         deviceType: expect.any(String),
         sessionId: expect.any(String),
-      })
+      }),
     );
   });
 });
@@ -154,7 +154,7 @@ describe('Scroll Depth Tracking', () => {
         event_category: 'engagement',
         event_label: '50%',
         scroll_percentage: 50,
-      })
+      }),
     );
   });
 
@@ -172,7 +172,7 @@ describe('Scroll Depth Tracking', () => {
     expect((window as any).gtag).toHaveBeenCalledTimes(1);
 
     resetScrollDepthTracking();
-    
+
     trackScrollDepth({ percentage: 50 });
     expect((window as any).gtag).toHaveBeenCalledTimes(2);
   });
@@ -191,7 +191,7 @@ describe('Partner Type Click Tracking', () => {
       expect.objectContaining({
         event_category: 'engagement',
         event_label: 'agent',
-      })
+      }),
     );
   });
 });
@@ -210,7 +210,7 @@ describe('FAQ Expand Tracking', () => {
         event_category: 'engagement',
         event_label: 'How much does it cost?',
         faq_index: 0,
-      })
+      }),
     );
   });
 });
@@ -225,7 +225,7 @@ describe('Page View Tracking', () => {
       expect.objectContaining({
         page_path: '/advertise',
         page_title: 'Advertise With Us',
-      })
+      }),
     );
   });
 });
@@ -243,7 +243,7 @@ describe('Event Metadata', () => {
       'cta_click',
       expect.objectContaining({
         deviceType: expect.stringMatching(/^(mobile|tablet|desktop)$/),
-      })
+      }),
     );
   });
 
@@ -259,7 +259,7 @@ describe('Event Metadata', () => {
       'cta_click',
       expect.objectContaining({
         sessionId: expect.stringMatching(/^session_\d+_[a-z0-9]+$/),
-      })
+      }),
     );
   });
 
@@ -275,7 +275,7 @@ describe('Event Metadata', () => {
       'cta_click',
       expect.objectContaining({
         timestamp: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/),
-      })
+      }),
     );
   });
 });

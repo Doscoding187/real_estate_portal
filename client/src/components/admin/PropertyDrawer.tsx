@@ -61,7 +61,9 @@ export const PropertyDrawer: React.FC<PropertyDrawerProps> = ({
             <div className="p-4 bg-slate-50 rounded-lg border border-slate-100">
               <div className="text-sm text-slate-500 mb-1">Asking Price</div>
               <div className="text-2xl font-bold text-slate-900">
-                {new Intl.NumberFormat('en-ZA', { style: 'currency', currency: 'ZAR' }).format(property.price)}
+                {new Intl.NumberFormat('en-ZA', { style: 'currency', currency: 'ZAR' }).format(
+                  property.price,
+                )}
               </div>
               {property.propertyDetails?.size && (
                 <div className="text-sm text-slate-500 mt-1">
@@ -97,9 +99,7 @@ export const PropertyDrawer: React.FC<PropertyDrawerProps> = ({
             {/* Description */}
             <div>
               <h4 className="text-sm font-medium mb-2">Description</h4>
-              <div className="text-sm text-slate-600 leading-relaxed">
-                {property.description}
-              </div>
+              <div className="text-sm text-slate-600 leading-relaxed">{property.description}</div>
             </div>
           </TabsContent>
 
@@ -109,11 +109,18 @@ export const PropertyDrawer: React.FC<PropertyDrawerProps> = ({
                 {/* Placeholder for media grid - in real app would map through property.media */}
                 {property.thumbnail && (
                   <div className="col-span-2 aspect-video rounded-lg overflow-hidden bg-slate-100">
-                    <img src={property.thumbnail} alt="Main" className="w-full h-full object-cover" />
+                    <img
+                      src={property.thumbnail}
+                      alt="Main"
+                      className="w-full h-full object-cover"
+                    />
                   </div>
                 )}
-                {[1, 2, 3, 4].map((i) => (
-                  <div key={i} className="aspect-square rounded-lg bg-slate-100 flex items-center justify-center text-slate-300">
+                {[1, 2, 3, 4].map(i => (
+                  <div
+                    key={i}
+                    className="aspect-square rounded-lg bg-slate-100 flex items-center justify-center text-slate-300"
+                  >
                     Media {i}
                   </div>
                 ))}
@@ -131,11 +138,14 @@ export const PropertyDrawer: React.FC<PropertyDrawerProps> = ({
                 {property.agent?.firstName} {property.agent?.lastName}
               </h3>
               {property.agent?.isVerified === 1 && (
-                <Badge variant="secondary" className="mt-2 bg-blue-100 text-blue-700 hover:bg-blue-100">
+                <Badge
+                  variant="secondary"
+                  className="mt-2 bg-blue-100 text-blue-700 hover:bg-blue-100"
+                >
                   <CheckCircle2 className="h-3 w-3 mr-1" /> Verified Agent
                 </Badge>
               )}
-              
+
               <div className="w-full mt-6 space-y-3">
                 <Button variant="outline" className="w-full justify-start" asChild>
                   <a href={`mailto:${property.owner?.email}`}>
@@ -153,26 +163,26 @@ export const PropertyDrawer: React.FC<PropertyDrawerProps> = ({
         <SheetFooter className="mt-8 pt-4 border-t">
           {property.approvalStatus === 'pending' ? (
             <div className="flex gap-2 w-full">
-              <Button 
+              <Button
                 className="flex-1 bg-green-600 hover:bg-green-700"
                 onClick={() => onApprove(property)}
               >
                 <CheckCircle2 className="h-4 w-4 mr-2" /> Approve Listing
               </Button>
-              <Button 
-                variant="destructive" 
-                className="flex-1"
-                onClick={() => onReject(property)}
-              >
+              <Button variant="destructive" className="flex-1" onClick={() => onReject(property)}>
                 <XCircle className="h-4 w-4 mr-2" /> Reject
               </Button>
             </div>
           ) : (
-             <div className="flex gap-2 w-full">
-               <Button variant="outline" className="w-full" onClick={() => alert('Request Edit feature coming soon')}>
-                 <AlertTriangle className="h-4 w-4 mr-2" /> Request Edit
-               </Button>
-             </div>
+            <div className="flex gap-2 w-full">
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={() => alert('Request Edit feature coming soon')}
+              >
+                <AlertTriangle className="h-4 w-4 mr-2" /> Request Edit
+              </Button>
+            </div>
           )}
         </SheetFooter>
       </SheetContent>

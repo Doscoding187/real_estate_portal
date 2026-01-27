@@ -1,6 +1,6 @@
 /**
  * Icon Mapper
- * 
+ *
  * Maps icon names from CMS to Lucide React icons.
  * This allows CMS to specify icons by name without importing all icons.
  */
@@ -66,10 +66,10 @@ const iconRegistry: Record<string, LucideIcon> = {
 
 /**
  * Get icon component by name
- * 
+ *
  * @param iconName - Name of the icon (e.g., 'Home', 'Building2')
  * @returns Lucide icon component or fallback icon
- * 
+ *
  * @example
  * ```tsx
  * const Icon = getIconByName('Home');
@@ -78,7 +78,7 @@ const iconRegistry: Record<string, LucideIcon> = {
  */
 export function getIconByName(iconName: string): LucideIcon {
   const icon = iconRegistry[iconName];
-  
+
   if (!icon) {
     console.warn(`Icon "${iconName}" not found in registry, using fallback`);
     return Home; // Fallback icon
@@ -89,7 +89,7 @@ export function getIconByName(iconName: string): LucideIcon {
 
 /**
  * Check if an icon name exists in the registry
- * 
+ *
  * @param iconName - Name of the icon to check
  * @returns true if icon exists, false otherwise
  */
@@ -99,7 +99,7 @@ export function hasIcon(iconName: string): boolean {
 
 /**
  * Get all available icon names
- * 
+ *
  * @returns Array of all registered icon names
  */
 export function getAvailableIcons(): string[] {
@@ -108,10 +108,10 @@ export function getAvailableIcons(): string[] {
 
 /**
  * Register a new icon
- * 
+ *
  * @param name - Name to register the icon under
  * @param icon - Lucide icon component
- * 
+ *
  * @example
  * ```tsx
  * import { Calendar } from 'lucide-react';

@@ -1,7 +1,7 @@
 /**
  * Cache Monitoring tRPC Router
  * Task 17: Performance Optimization
- * 
+ *
  * Provides cache statistics and management endpoints
  */
 
@@ -17,7 +17,7 @@ export const cacheRouter = router({
   getStats: publicProcedure.query(async () => {
     try {
       const stats = await getCacheStats();
-      
+
       return {
         success: true,
         stats: {
@@ -44,7 +44,7 @@ export const cacheRouter = router({
 
     try {
       await redisCache.delByPattern('explore:*');
-      
+
       return {
         success: true,
         message: 'Cache cleared successfully',
@@ -62,7 +62,7 @@ export const cacheRouter = router({
     .input(
       z.object({
         pattern: z.string(),
-      })
+      }),
     )
     .mutation(async ({ ctx, input }) => {
       // TODO: Add admin role check
@@ -72,7 +72,7 @@ export const cacheRouter = router({
 
       try {
         await redisCache.delByPattern(`explore:${input.pattern}:*`);
-        
+
         return {
           success: true,
           message: `Cache pattern 'explore:${input.pattern}:*' cleared successfully`,
@@ -89,7 +89,7 @@ export const cacheRouter = router({
   health: publicProcedure.query(async () => {
     try {
       const stats = await getCacheStats();
-      
+
       return {
         success: true,
         healthy: true,

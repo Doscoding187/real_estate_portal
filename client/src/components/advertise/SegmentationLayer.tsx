@@ -21,20 +21,22 @@ const segments: SegmentData[] = [
     label: 'Agent',
     icon: User,
     headline: 'Get Qualified Leads',
-    subheadline: 'Connect with high-intent buyers and close deals faster with our AI-powered matching engine.',
+    subheadline:
+      'Connect with high-intent buyers and close deals faster with our AI-powered matching engine.',
     benefits: ['Verified buyer leads', 'Area exclusivity options', 'Personal branding tools'],
     ctaText: 'Start as Agent',
-    ctaLink: '/register/agent'
+    ctaLink: '/register/agent',
   },
   {
     id: 'developer',
     label: 'Developer',
     icon: Building2,
     headline: 'Sell Developments Faster',
-    subheadline: 'Showcase your projects to millions of verified buyers with premium branding and analytics.',
+    subheadline:
+      'Showcase your projects to millions of verified buyers with premium branding and analytics.',
     benefits: ['3D project showcases', 'Lead pre-qualification', 'Real-time inventory management'],
     ctaText: 'Developer Solutions',
-    ctaLink: '/register/developer'
+    ctaLink: '/register/developer',
   },
   {
     id: 'seller',
@@ -44,39 +46,36 @@ const segments: SegmentData[] = [
     subheadline: 'List your property directly and reach potential buyers without the hassle.',
     benefits: ['List for free', 'Instant valuation', 'Verified buyer requests'],
     ctaText: 'List Property',
-    ctaLink: '/list-property'
+    ctaLink: '/list-property',
   },
   {
     id: 'partner',
     label: 'Partner',
     icon: Handshake,
     headline: 'Grow Your Business',
-    subheadline: 'Banks, bond originators, and service providers - reach your target audience effectively.',
+    subheadline:
+      'Banks, bond originators, and service providers - reach your target audience effectively.',
     benefits: ['Targeted advertising', 'Service marketplace listing', 'Performance analytics'],
     ctaText: 'Partner With Us',
-    ctaLink: '/contact/partner'
-  }
+    ctaLink: '/contact/partner',
+  },
 ];
 
 export const SegmentationLayer: React.FC = () => {
   const [activeSegment, setActiveSegment] = useState<SegmentType | null>(null);
 
   // Default view or specific segment view
-  const currentContent = activeSegment
-    ? segments.find(s => s.id === activeSegment)!
-    : null;
+  const currentContent = activeSegment ? segments.find(s => s.id === activeSegment)! : null;
 
   return (
     <div className="w-full max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 -mt-12">
       <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
         <div className="p-6 md:p-8">
-          <h2 className="text-2xl font-bold text-gray-900 text-center mb-8">
-            I am a...
-          </h2>
+          <h2 className="text-2xl font-bold text-gray-900 text-center mb-8">I am a...</h2>
 
           {/* Segment Selection Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-            {segments.map((segment) => {
+            {segments.map(segment => {
               const Icon = segment.icon;
               const isActive = activeSegment === segment.id;
 
@@ -84,18 +83,27 @@ export const SegmentationLayer: React.FC = () => {
                 <button
                   key={segment.id}
                   onClick={() => setActiveSegment(segment.id)}
-                  className={`flex flex-col items-center p-4 rounded-xl transition-all duration-300 border-2 group ${isActive
+                  className={`flex flex-col items-center p-4 rounded-xl transition-all duration-300 border-2 group ${
+                    isActive
                       ? 'border-primary-500 bg-primary-50 shadow-md transform scale-105'
                       : 'border-transparent bg-gray-50 hover:bg-gray-100 hover:border-gray-200'
-                    }`}
+                  }`}
                   aria-pressed={isActive}
                 >
-                  <div className={`p-3 rounded-full mb-3 transition-colors ${isActive ? 'bg-primary-100 text-primary-600' : 'bg-white text-gray-500 group-hover:text-primary-500'
-                    }`}>
+                  <div
+                    className={`p-3 rounded-full mb-3 transition-colors ${
+                      isActive
+                        ? 'bg-primary-100 text-primary-600'
+                        : 'bg-white text-gray-500 group-hover:text-primary-500'
+                    }`}
+                  >
                     <Icon className="w-6 h-6" />
                   </div>
-                  <span className={`font-semibold text-sm md:text-base ${isActive ? 'text-primary-900' : 'text-gray-700'
-                    }`}>
+                  <span
+                    className={`font-semibold text-sm md:text-base ${
+                      isActive ? 'text-primary-900' : 'text-gray-700'
+                    }`}
+                  >
                     {segment.label}
                   </span>
                 </button>
@@ -111,7 +119,7 @@ export const SegmentationLayer: React.FC = () => {
                 initial={{ opacity: 0, y: 10, height: 0 }}
                 animate={{ opacity: 1, y: 0, height: 'auto' }}
                 exit={{ opacity: 0, y: -10, height: 0 }}
-                transition={{ duration: 0.3, ease: "easeOut" }}
+                transition={{ duration: 0.3, ease: 'easeOut' }}
                 className="bg-gray-50 rounded-xl p-6 md:p-8 border border-gray-100"
               >
                 <div className="flex flex-col md:flex-row gap-8 items-start md:items-center">
@@ -124,7 +132,10 @@ export const SegmentationLayer: React.FC = () => {
                     </p>
                     <div className="flex flex-wrap gap-3 mt-4">
                       {currentContent.benefits.map((benefit, index) => (
-                        <div key={index} className="flex items-center text-sm font-medium text-gray-700 bg-white px-3 py-1.5 rounded-full border border-gray-200 shadow-sm">
+                        <div
+                          key={index}
+                          className="flex items-center text-sm font-medium text-gray-700 bg-white px-3 py-1.5 rounded-full border border-gray-200 shadow-sm"
+                        >
                           <CheckCircle2 className="w-4 h-4 text-green-500 mr-2" />
                           {benefit}
                         </div>

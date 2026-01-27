@@ -34,12 +34,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useDeveloperContext } from '@/contexts/DeveloperContextProvider';
 import { LogoUploadZone } from '@/components/wizard/LogoUploadZone';
-import { 
-  Building2, 
-  Phone, 
-  Briefcase, 
-  CheckCircle2 
-} from 'lucide-react';
+import { Building2, Phone, Briefcase, CheckCircle2 } from 'lucide-react';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Checkbox } from '@/components/ui/checkbox';
 
@@ -49,13 +44,13 @@ const formSchema = z.object({
   brandTier: z.enum(['national', 'regional', 'boutique']),
   identityType: z.enum(['developer', 'marketing_agency', 'hybrid']).default('developer'),
   logoUrl: z.string().url('Must be a valid URL').optional().or(z.literal('')),
-  
+
   // Company Info (Tab 1)
   description: z.string().optional(),
   category: z.string().optional(),
   establishedYear: z.string().optional(), // Form input as string, convert to number
   website: z.string().url('Invalid URL').optional().or(z.literal('')),
-  
+
   // Contact Info (Tab 2)
   email: z.string().email('Invalid email').optional().or(z.literal('')),
   phone: z.string().optional(),
@@ -63,11 +58,11 @@ const formSchema = z.object({
   city: z.string().optional(),
   province: z.string().optional(),
   operatingProvinces: z.array(z.string()).default([]), // Multi-select for operating provinces
-  
+
   // Portfolio (Tab 3)
   completedProjects: z.string().optional(), // Input as string
   currentProjects: z.string().optional(),
-  upcomingProjects: z.string().optional(), 
+  upcomingProjects: z.string().optional(),
   specializations: z.array(z.string()).default([]),
 });
 
@@ -86,8 +81,14 @@ const SA_PROVINCES = [
 ];
 
 const SPECIALIZATION_OPTIONS = [
-  'Residential', 'Commercial', 'Mixed-Use', 'Luxury', 
-  'Affordable Housing', 'Sustainable', 'Renovation', 'Industrial'
+  'Residential',
+  'Commercial',
+  'Mixed-Use',
+  'Luxury',
+  'Affordable Housing',
+  'Sustainable',
+  'Renovation',
+  'Industrial',
 ];
 
 interface CreateBrandProfileDialogProps {
@@ -104,7 +105,7 @@ export function CreateBrandProfileDialog({
   const { setSelectedBrandId } = useDeveloperContext();
   const utils = trpc.useUtils();
   const [activeTab, setActiveTab] = useState('identity');
-  
+
   // Upload State
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -144,7 +145,7 @@ export function CreateBrandProfileDialog({
           // Reset form with merged values
           form.reset({
             ...form.getValues(), // Current defaults
-            ...parsed,           // Saved values
+            ...parsed, // Saved values
           });
           toast.info('Restored saved draft');
         }
@@ -156,75 +157,77 @@ export function CreateBrandProfileDialog({
 
   // Save changes to localStorage
   React.useEffect(() => {
-    const subscription = form.watch((value) => {
+    const subscription = form.watch(value => {
       localStorage.setItem('brandProfileDraft', JSON.stringify(value));
     });
     return () => subscription.unsubscribe();
   }, [form.watch]);
 
   const createMutation = trpc.superAdminPublisher.createBrandProfile.useMutation({
-    onSuccess: (data) => {
+    onSuccess: data => {
       toast.success('Developer brand profile created successfully');
       utils.superAdminPublisher.listBrandProfiles.invalidate();
-      
+
       // Clear draft on success
       localStorage.removeItem('brandProfileDraft');
-      
+
       // Auto-select the new brand
       setSelectedBrandId(data.id);
-      
+
       form.reset();
       setOpen(false);
       setActiveTab('identity'); // Reset tab
-      
+
       if (onSuccess) onSuccess(data.id);
     },
-    onError: (error) => {
+    onError: error => {
       toast.error(error.message || 'Failed to create brand profile');
     },
   });
 
   const presignMutation = trpc.upload.presign.useMutation();
 
-  const handleLogoUpload = async (file: File) => {
-    try {
-      setIsUploadingLogo(true);
-      setUploadProgress(10);
+  const handleLogoUpload = (file: File | null) => {
+    if (!file) return;
+    void (async () => {
+      try {
+        setIsUploadingLogo(true);
+        setUploadProgress(10);
 
-      // 1. Get presigned URL
-      const { url, publicUrl } = await presignMutation.mutateAsync({
-        filename: file.name,
-        contentType: file.type,
-      });
+        // 1. Get presigned URL
+        const { url, publicUrl } = await presignMutation.mutateAsync({
+          filename: file.name,
+          contentType: file.type,
+        });
 
-      setUploadProgress(40);
+        setUploadProgress(40);
 
-      // 2. Upload to S3
-      const uploadResponse = await fetch(url, {
-        method: 'PUT',
-        body: file,
-        headers: {
-          'Content-Type': file.type,
-        },
-      });
+        // 2. Upload to S3
+        const uploadResponse = await fetch(url, {
+          method: 'PUT',
+          body: file,
+          headers: {
+            'Content-Type': file.type,
+          },
+        });
 
-      if (!uploadResponse.ok) {
-        throw new Error('Failed to upload image to storage');
+        if (!uploadResponse.ok) {
+          throw new Error('Failed to upload image to storage');
+        }
+
+        setUploadProgress(100);
+
+        // 3. Set URL in form
+        form.setValue('logoUrl', publicUrl, { shouldValidate: true });
+        toast.success('Logo uploaded successfully');
+      } catch (error) {
+        console.error('Logo upload error:', error);
+        toast.error('Failed to upload logo. Please try again.');
+      } finally {
+        setIsUploadingLogo(false);
+        setUploadProgress(0);
       }
-
-      setUploadProgress(100);
-
-      // 3. Set URL in form
-      form.setValue('logoUrl', publicUrl, { shouldValidate: true });
-      toast.success('Logo uploaded successfully');
-
-    } catch (error) {
-      console.error('Logo upload error:', error);
-      toast.error('Failed to upload logo. Please try again.');
-    } finally {
-      setIsUploadingLogo(false);
-      setUploadProgress(0);
-    }
+    })();
   };
 
   const onSubmit = (values: FormValues) => {
@@ -233,27 +236,30 @@ export function CreateBrandProfileDialog({
       brandTier: values.brandTier,
       identityType: values.identityType,
       logoUrl: values.logoUrl || undefined,
-      
+
       description: values.description || undefined,
       category: values.category || undefined,
       establishedYear: values.establishedYear ? parseInt(values.establishedYear) : undefined,
       website: values.website || undefined,
-      
+
       email: values.email || undefined,
       phone: values.phone || undefined,
       address: values.address || undefined,
       city: values.city || undefined,
       province: values.province || undefined,
-      
+
       completedProjects: parseInt(values.completedProjects || '0'),
       currentProjects: parseInt(values.currentProjects || '0'),
       upcomingProjects: parseInt(values.upcomingProjects || '0'),
       specializations: values.specializations,
-      
+
       // Use explicit operatingProvinces if set, otherwise derive from location
-      operatingProvinces: values.operatingProvinces?.length > 0 
-        ? values.operatingProvinces 
-        : (values.province ? [values.province] : []),
+      operatingProvinces:
+        values.operatingProvinces?.length > 0
+          ? values.operatingProvinces
+          : values.province
+            ? [values.province]
+            : [],
     });
   };
 
@@ -272,7 +278,6 @@ export function CreateBrandProfileDialog({
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
               <TabsList className="grid w-full grid-cols-3">
                 <TabsTrigger value="identity" className="flex items-center gap-2">
@@ -286,16 +291,16 @@ export function CreateBrandProfileDialog({
                 </TabsTrigger>
               </TabsList>
 
-
               {/* === TAB 1: IDENTITY === */}
               <TabsContent value="identity" className="space-y-4 pt-4">
-                
                 <FormField
                   control={form.control}
                   name="identityType"
                   render={({ field }) => (
                     <FormItem className="space-y-3 p-4 border border-blue-100 rounded-lg bg-blue-50/30">
-                      <FormLabel className="text-base font-semibold text-blue-900">Publishing As</FormLabel>
+                      <FormLabel className="text-base font-semibold text-blue-900">
+                        Publishing As
+                      </FormLabel>
                       <FormControl>
                         <RadioGroup
                           onValueChange={field.onChange}
@@ -356,10 +361,7 @@ export function CreateBrandProfileDialog({
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Tier</FormLabel>
-                        <Select
-                          onValueChange={field.onChange}
-                          defaultValue={field.value}
-                        >
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
                           <FormControl>
                             <SelectTrigger>
                               <SelectValue placeholder="Select tier" />
@@ -384,10 +386,7 @@ export function CreateBrandProfileDialog({
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Primary Category</FormLabel>
-                        <Select
-                          onValueChange={field.onChange}
-                          defaultValue={field.value}
-                        >
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
                           <FormControl>
                             <SelectTrigger>
                               <SelectValue placeholder="Select category" />
@@ -441,10 +440,10 @@ export function CreateBrandProfileDialog({
                     <FormItem>
                       <FormLabel>Description</FormLabel>
                       <FormControl>
-                        <Textarea 
-                          placeholder="Brief description of the developer..." 
+                        <Textarea
+                          placeholder="Brief description of the developer..."
                           className="resize-none"
-                          {...field} 
+                          {...field}
                         />
                       </FormControl>
                       <FormMessage />
@@ -532,17 +531,14 @@ export function CreateBrandProfileDialog({
                       </FormItem>
                     )}
                   />
-                  
+
                   <FormField
                     control={form.control}
                     name="province"
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Province</FormLabel>
-                         <Select
-                          onValueChange={field.onChange}
-                          defaultValue={field.value}
-                        >
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
                           <FormControl>
                             <SelectTrigger>
                               <SelectValue placeholder="Select province" />
@@ -609,7 +605,7 @@ export function CreateBrandProfileDialog({
                 <div className="space-y-3">
                   <FormLabel>Specializations</FormLabel>
                   <div className="grid grid-cols-2 gap-2">
-                    {SPECIALIZATION_OPTIONS.map((spec) => (
+                    {SPECIALIZATION_OPTIONS.map(spec => (
                       <FormField
                         key={spec}
                         control={form.control}
@@ -619,19 +615,13 @@ export function CreateBrandProfileDialog({
                             <div className="flex flex-row items-center space-x-2 space-y-0">
                               <Checkbox
                                 checked={field.value?.includes(spec)}
-                                onCheckedChange={(checked) => {
+                                onCheckedChange={checked => {
                                   return checked
                                     ? field.onChange([...field.value, spec])
-                                    : field.onChange(
-                                        field.value?.filter(
-                                          (value) => value !== spec
-                                        )
-                                      );
+                                    : field.onChange(field.value?.filter(value => value !== spec));
                                 }}
                               />
-                              <label className="text-sm font-normal cursor-pointer">
-                                {spec}
-                              </label>
+                              <label className="text-sm font-normal cursor-pointer">{spec}</label>
                             </div>
                           );
                         }}
@@ -655,4 +645,4 @@ export function CreateBrandProfileDialog({
       </DialogContent>
     </Dialog>
   );
-};
+}

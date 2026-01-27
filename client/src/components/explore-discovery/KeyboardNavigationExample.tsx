@@ -1,9 +1,9 @@
 /**
  * Keyboard Navigation Example
- * 
+ *
  * Demonstrates how to implement keyboard navigation in Explore pages.
  * Requirements: 5.1, 5.6
- * 
+ *
  * This example shows:
  * - Keyboard shortcuts
  * - Focus management
@@ -63,13 +63,13 @@ export function KeyboardNavigationExample() {
   // Enable arrow key navigation
   const { setCurrentIndex } = useArrowKeyNavigation(
     items.length,
-    (index) => {
+    index => {
       setSelectedIndex(index);
       // Scroll to item
       const element = document.getElementById(`item-${index}`);
       element?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     },
-    true
+    true,
   );
 
   // Close shortcuts guide with Escape
@@ -83,9 +83,7 @@ export function KeyboardNavigationExample() {
       {/* Header */}
       <header className="bg-white border-b border-gray-200 px-6 py-4">
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-gray-900">
-            Keyboard Navigation Example
-          </h1>
+          <h1 className="text-2xl font-bold text-gray-900">Keyboard Navigation Example</h1>
 
           <div className="flex items-center gap-3">
             <IconButton
@@ -128,18 +126,10 @@ export function KeyboardNavigationExample() {
       </header>
 
       {/* Main Content */}
-      <main
-        id="main-content"
-        className="container mx-auto px-6 py-8"
-        tabIndex={-1}
-      >
+      <main id="main-content" className="container mx-auto px-6 py-8" tabIndex={-1}>
         <div className="mb-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-2">
-            Properties
-          </h2>
-          <p className="text-gray-600">
-            Use arrow keys to navigate, Enter to select
-          </p>
+          <h2 className="text-lg font-semibold text-gray-900 mb-2">Properties</h2>
+          <p className="text-gray-600">Use arrow keys to navigate, Enter to select</p>
         </div>
 
         {/* Property Grid */}
@@ -153,9 +143,7 @@ export function KeyboardNavigationExample() {
                 setCurrentIndex(index);
               }}
               className={`p-6 ${
-                selectedIndex === index
-                  ? 'ring-2 ring-indigo-500 ring-offset-2'
-                  : ''
+                selectedIndex === index ? 'ring-2 ring-indigo-500 ring-offset-2' : ''
               }`}
               hoverable
               variant="default"
@@ -164,9 +152,7 @@ export function KeyboardNavigationExample() {
               aria-current={selectedIndex === index ? 'true' : undefined}
             >
               <div className="aspect-video bg-gray-200 rounded-lg mb-4" />
-              <h3 className="text-lg font-semibold text-gray-900">
-                {item.title}
-              </h3>
+              <h3 className="text-lg font-semibold text-gray-900">{item.title}</h3>
               <p className="text-gray-600 mt-2">
                 {selectedIndex === index ? '✓ Selected' : 'Click or press Enter to select'}
               </p>
@@ -205,10 +191,7 @@ export function KeyboardNavigationExample() {
       </main>
 
       {/* Keyboard Shortcuts Guide */}
-      <KeyboardShortcutsGuide
-        isOpen={showShortcuts}
-        onClose={() => setShowShortcuts(false)}
-      />
+      <KeyboardShortcutsGuide isOpen={showShortcuts} onClose={() => setShowShortcuts(false)} />
 
       {/* Filters Panel (example) */}
       {filtersOpen && (
@@ -219,12 +202,10 @@ export function KeyboardNavigationExample() {
           <ModernCard
             className="w-full max-w-md p-6"
             variant="elevated"
-            onClick={(e) => e.stopPropagation()}
+            onClick={e => e.stopPropagation()}
           >
             <h3 className="text-xl font-bold text-gray-900 mb-4">Filters</h3>
-            <p className="text-gray-600 mb-4">
-              Press Escape to close this panel
-            </p>
+            <p className="text-gray-600 mb-4">Press Escape to close this panel</p>
             <button
               onClick={() => setFiltersOpen(false)}
               className="w-full px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"

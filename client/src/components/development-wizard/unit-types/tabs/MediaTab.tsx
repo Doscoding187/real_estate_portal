@@ -99,9 +99,7 @@ export function MediaTab({ formData, updateFormData }: MediaTabProps) {
           />
           <label htmlFor={`upload-${category}`} className="cursor-pointer">
             <Upload className="h-8 w-8 mx-auto text-slate-400 mb-2" />
-            <p className="text-sm font-medium text-slate-700">
-              Click to upload or drag and drop
-            </p>
+            <p className="text-sm font-medium text-slate-700">Click to upload or drag and drop</p>
             <p className="text-xs text-slate-500 mt-1">
               {category === 'floorplan' ? 'PNG, JPG, PDF up to 10MB' : 'PNG, JPG up to 10MB'}
             </p>
@@ -168,8 +166,8 @@ export function MediaTab({ formData, updateFormData }: MediaTabProps) {
     <div className="space-y-6">
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
         <p className="text-sm text-blue-900">
-          <strong>Tip:</strong> Upload unit-specific media to help buyers visualize this exact
-          unit type. Set a primary image to be featured in listings.
+          <strong>Tip:</strong> Upload unit-specific media to help buyers visualize this exact unit
+          type. Set a primary image to be featured in listings.
         </p>
       </div>
 

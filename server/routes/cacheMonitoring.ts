@@ -1,7 +1,7 @@
 /**
  * Cache Monitoring Routes
  * Task 17: Performance Optimization
- * 
+ *
  * Provides cache statistics and management endpoints
  */
 
@@ -18,7 +18,7 @@ const router = Router();
 router.get('/stats', async (req, res) => {
   try {
     const stats = await getCacheStats();
-    
+
     res.json({
       success: true,
       stats: {
@@ -30,9 +30,9 @@ router.get('/stats', async (req, res) => {
     });
   } catch (error) {
     console.error('Error fetching cache stats:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: 'Failed to fetch cache statistics' 
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch cache statistics',
     });
   }
 });
@@ -44,18 +44,18 @@ router.get('/stats', async (req, res) => {
 router.post('/clear', async (req, res) => {
   try {
     // TODO: Add admin authentication middleware
-    
+
     await redisCache.delByPattern('explore:*');
-    
+
     res.json({
       success: true,
       message: 'Cache cleared successfully',
     });
   } catch (error) {
     console.error('Error clearing cache:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: 'Failed to clear cache' 
+    res.status(500).json({
+      success: false,
+      error: 'Failed to clear cache',
     });
   }
 });
@@ -67,19 +67,19 @@ router.post('/clear', async (req, res) => {
 router.post('/clear/:pattern', async (req, res) => {
   try {
     // TODO: Add admin authentication middleware
-    
+
     const { pattern } = req.params;
     await redisCache.delByPattern(`explore:${pattern}:*`);
-    
+
     res.json({
       success: true,
       message: `Cache pattern 'explore:${pattern}:*' cleared successfully`,
     });
   } catch (error) {
     console.error('Error clearing cache pattern:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: 'Failed to clear cache pattern' 
+    res.status(500).json({
+      success: false,
+      error: 'Failed to clear cache pattern',
     });
   }
 });
@@ -91,7 +91,7 @@ router.post('/clear/:pattern', async (req, res) => {
 router.get('/health', async (req, res) => {
   try {
     const stats = await getCacheStats();
-    
+
     res.json({
       success: true,
       healthy: true,

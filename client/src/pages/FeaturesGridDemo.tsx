@@ -1,6 +1,6 @@
 /**
  * FeaturesGridSection Demo Page
- * 
+ *
  * Demonstrates the FeaturesGridSection component with six feature tiles
  * in a responsive grid layout.
  */
@@ -47,7 +47,8 @@ export default function FeaturesGridDemo() {
           <li>Six feature tiles with soft-UI card styling</li>
           <li>Hover lift animation with shadow expansion</li>
           <li>Icon color transition on hover</li>
-          <li>Responsive grid layout:
+          <li>
+            Responsive grid layout:
             <ul style={{ listStyle: 'circle', paddingLeft: '2rem', marginTop: '0.5rem' }}>
               <li>Desktop (≥1024px): 3 columns</li>
               <li>Tablet (768px-1023px): 2 columns</li>
@@ -58,10 +59,23 @@ export default function FeaturesGridDemo() {
           <li>Accessible with proper ARIA labels and semantic HTML</li>
         </ul>
 
-        <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', marginTop: '2rem', marginBottom: '1rem' }}>
+        <h3
+          style={{
+            fontSize: '1.25rem',
+            fontWeight: 'bold',
+            marginTop: '2rem',
+            marginBottom: '1rem',
+          }}
+        >
           Features Included
         </h3>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1rem' }}>
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+            gap: '1rem',
+          }}
+        >
           <div style={{ padding: '1rem', background: 'white', borderRadius: '8px' }}>
             <strong>Listing Promotion</strong>
             <p style={{ fontSize: '0.875rem', color: '#6b7280', marginTop: '0.5rem' }}>
@@ -100,7 +114,14 @@ export default function FeaturesGridDemo() {
           </div>
         </div>
 
-        <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', marginTop: '2rem', marginBottom: '1rem' }}>
+        <h3
+          style={{
+            fontSize: '1.25rem',
+            fontWeight: 'bold',
+            marginTop: '2rem',
+            marginBottom: '1rem',
+          }}
+        >
           Testing Instructions
         </h3>
         <ol style={{ listStyle: 'decimal', paddingLeft: '2rem', lineHeight: '1.8' }}>

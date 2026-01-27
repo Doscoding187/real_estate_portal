@@ -5,7 +5,7 @@ import { exploreInteractionService } from './services/exploreInteractionService'
 
 /**
  * Explore Shorts tRPC Router
- * 
+ *
  * Provides API endpoints for the Property Explore Shorts feature
  */
 
@@ -24,7 +24,7 @@ export const exploreRouter = router({
         agencyId: z.number().optional(),
         includeAgentContent: z.boolean().default(true),
         userId: z.number().optional(),
-      })
+      }),
     )
     .query(async ({ input, ctx }) => {
       const userId = ctx.user?.id || input.userId;
@@ -36,7 +36,7 @@ export const exploreRouter = router({
             limit: input.limit,
             offset: input.offset,
           });
-        
+
         case 'area':
           if (!input.location) {
             throw new Error('Location is required for area feed');
@@ -46,7 +46,7 @@ export const exploreRouter = router({
             limit: input.limit,
             offset: input.offset,
           });
-        
+
         case 'category':
           if (!input.category) {
             throw new Error('Category is required for category feed');
@@ -56,7 +56,7 @@ export const exploreRouter = router({
             limit: input.limit,
             offset: input.offset,
           });
-        
+
         case 'agent':
           if (!input.agentId) {
             throw new Error('Agent ID is required for agent feed');
@@ -66,7 +66,7 @@ export const exploreRouter = router({
             limit: input.limit,
             offset: input.offset,
           });
-        
+
         case 'developer':
           if (!input.developerId) {
             throw new Error('Developer ID is required for developer feed');
@@ -76,7 +76,7 @@ export const exploreRouter = router({
             limit: input.limit,
             offset: input.offset,
           });
-        
+
         case 'agency':
           if (!input.agencyId) {
             throw new Error('Agency ID is required for agency feed');
@@ -87,7 +87,7 @@ export const exploreRouter = router({
             offset: input.offset,
             includeAgentContent: input.includeAgentContent,
           });
-        
+
         default:
           throw new Error('Invalid feed type');
       }
@@ -112,7 +112,7 @@ export const exploreRouter = router({
         feedType: z.enum(['recommended', 'area', 'category', 'agent', 'developer', 'agency']),
         feedContext: z.record(z.string(), z.any()).optional(),
         deviceType: z.enum(['mobile', 'tablet', 'desktop']).default('mobile'),
-      })
+      }),
     )
     .mutation(async ({ input, ctx }) => {
       const userId = ctx.user?.id;
@@ -139,7 +139,7 @@ export const exploreRouter = router({
     .input(
       z.object({
         shortId: z.number(),
-      })
+      }),
     )
     .mutation(async ({ input, ctx }) => {
       await exploreInteractionService.saveProperty(input.shortId, ctx.user.id);
@@ -152,7 +152,7 @@ export const exploreRouter = router({
       z.object({
         shortId: z.number(),
         platform: z.string().optional(),
-      })
+      }),
     )
     .mutation(async ({ input, ctx }) => {
       const userId = ctx.user?.id;
@@ -162,7 +162,7 @@ export const exploreRouter = router({
         input.shortId,
         userId,
         sessionId,
-        input.platform
+        input.platform,
       );
 
       return { success: true };
@@ -204,7 +204,7 @@ export const exploreRouter = router({
         listingId: z.number().optional(),
         developmentId: z.number().optional(),
         attributeToAgency: z.boolean().default(true), // NEW: Agency attribution opt-out
-      })
+      }),
     )
     .mutation(async ({ input, ctx }) => {
       const { db } = await import('./db');
@@ -226,23 +226,29 @@ export const exploreRouter = router({
           .from(agents)
           .where(eq(agents.userId, ctx.user.id))
           .limit(1);
-        
+
         if (agent[0]) {
           agentId = agent[0].id;
-          
+
           // Only attribute to agency if agent opted in and has an agency
           // Requirements 10.4: Allow agents to opt-out of agency attribution
           if (input.attributeToAgency && agent[0].agencyId) {
             agencyId = agent[0].agencyId;
             console.log(`[ExploreUpload] Agent ${agentId} uploading with agency ${agencyId}`);
           } else {
-            console.log(`[ExploreUpload] Agent ${agentId} uploading without agency attribution (opted out or no agency)`);
+            console.log(
+              `[ExploreUpload] Agent ${agentId} uploading without agency attribution (opted out or no agency)`,
+            );
           }
         }
       } else if (ctx.user.role === 'property_developer') {
-        const developer = await db.select().from(developers).where(eq(developers.userId, ctx.user.id)).limit(1);
+        const developer = await db
+          .select()
+          .from(developers)
+          .where(eq(developers.userId, ctx.user.id))
+          .limit(1);
         developerId = developer[0]?.id || null;
-        
+
         console.log(`[ExploreUpload] Developer ${developerId} uploading`);
       }
 
@@ -294,7 +300,9 @@ export const exploreRouter = router({
         caption: input.caption || null,
         primaryMediaId: 1, // Placeholder - would be actual media ID in production
         mediaIds: JSON.stringify(input.mediaUrls),
-        highlights: input.highlights ? JSON.stringify(input.highlights.filter(h => h.trim())) : null,
+        highlights: input.highlights
+          ? JSON.stringify(input.highlights.filter(h => h.trim()))
+          : null,
         performanceScore: 0,
         boostPriority: 0,
         isPublished: 1,

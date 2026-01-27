@@ -1,33 +1,33 @@
 /**
  * EmptyState Component for Explore Feature
- * 
+ *
  * Provides user-friendly empty states for different scenarios:
  * - No results found
  * - No location access
  * - Offline mode
  * - No saved items
  * - No followed items
- * 
+ *
  * Features:
  * - Modern design with clear messaging
  * - Suggested actions for each state
  * - Smooth animations
  * - Accessible with proper ARIA labels
- * 
+ *
  * Requirements: 7.2
  */
 
 import { motion } from 'framer-motion';
-import { 
-  Search, 
-  MapPin, 
-  WifiOff, 
-  Heart, 
-  Users, 
+import {
+  Search,
+  MapPin,
+  WifiOff,
+  Heart,
+  Users,
   Compass,
   Filter,
   Home,
-  LucideIcon
+  LucideIcon,
 } from 'lucide-react';
 import { ModernCard } from '@/components/ui/soft/ModernCard';
 import { designTokens } from '@/lib/design-tokens';
@@ -36,7 +36,7 @@ import { cn } from '@/lib/utils';
 /**
  * Empty State Types
  */
-export type EmptyStateType = 
+export type EmptyStateType =
   | 'noResults'
   | 'noLocation'
   | 'offline'
@@ -65,7 +65,8 @@ const emptyStateConfigs: Record<EmptyStateType, EmptyStateConfig> = {
   noResults: {
     icon: Search,
     title: 'No properties found',
-    description: 'We couldn\'t find any properties matching your search. Try adjusting your filters or exploring a different area.',
+    description:
+      "We couldn't find any properties matching your search. Try adjusting your filters or exploring a different area.",
     actionLabel: 'Clear Filters',
     secondaryActionLabel: 'Browse All',
     iconColor: 'text-blue-500',
@@ -74,7 +75,8 @@ const emptyStateConfigs: Record<EmptyStateType, EmptyStateConfig> = {
   noLocation: {
     icon: MapPin,
     title: 'Enable location access',
-    description: 'Get personalized property recommendations based on your location. We\'ll show you homes and developments nearby.',
+    description:
+      "Get personalized property recommendations based on your location. We'll show you homes and developments nearby.",
     actionLabel: 'Enable Location',
     secondaryActionLabel: 'Search Manually',
     iconColor: 'text-green-500',
@@ -82,8 +84,9 @@ const emptyStateConfigs: Record<EmptyStateType, EmptyStateConfig> = {
   },
   offline: {
     icon: WifiOff,
-    title: 'You\'re offline',
-    description: 'It looks like you\'re not connected to the internet. Check your connection and try again.',
+    title: "You're offline",
+    description:
+      "It looks like you're not connected to the internet. Check your connection and try again.",
     actionLabel: 'Retry Connection',
     secondaryActionLabel: 'View Cached Content',
     iconColor: 'text-orange-500',
@@ -92,7 +95,8 @@ const emptyStateConfigs: Record<EmptyStateType, EmptyStateConfig> = {
   noSavedProperties: {
     icon: Heart,
     title: 'No saved properties yet',
-    description: 'Start exploring and save properties you love. They\'ll appear here for easy access later.',
+    description:
+      "Start exploring and save properties you love. They'll appear here for easy access later.",
     actionLabel: 'Explore Properties',
     iconColor: 'text-pink-500',
     iconBgGradient: 'from-pink-50 to-pink-100',
@@ -100,7 +104,8 @@ const emptyStateConfigs: Record<EmptyStateType, EmptyStateConfig> = {
   noFollowedItems: {
     icon: Users,
     title: 'Not following anyone yet',
-    description: 'Follow developers, agents, or neighborhoods to see their latest updates and properties in your feed.',
+    description:
+      'Follow developers, agents, or neighborhoods to see their latest updates and properties in your feed.',
     actionLabel: 'Discover Creators',
     iconColor: 'text-purple-500',
     iconBgGradient: 'from-purple-50 to-purple-100',
@@ -108,7 +113,8 @@ const emptyStateConfigs: Record<EmptyStateType, EmptyStateConfig> = {
   noContent: {
     icon: Compass,
     title: 'No content available',
-    description: 'There\'s no content to display right now. Check back later or explore other sections.',
+    description:
+      "There's no content to display right now. Check back later or explore other sections.",
     actionLabel: 'Go to Home',
     iconColor: 'text-indigo-500',
     iconBgGradient: 'from-indigo-50 to-indigo-100',
@@ -116,7 +122,8 @@ const emptyStateConfigs: Record<EmptyStateType, EmptyStateConfig> = {
   noFiltersMatch: {
     icon: Filter,
     title: 'No matches for these filters',
-    description: 'Try broadening your search criteria or removing some filters to see more results.',
+    description:
+      'Try broadening your search criteria or removing some filters to see more results.',
     actionLabel: 'Reset Filters',
     secondaryActionLabel: 'Adjust Filters',
     iconColor: 'text-teal-500',
@@ -140,7 +147,7 @@ interface EmptyStateProps {
 
 /**
  * EmptyState Component
- * 
+ *
  * Displays a user-friendly empty state with icon, message, and suggested actions
  */
 export function EmptyState({
@@ -165,38 +172,30 @@ export function EmptyState({
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
       transition={{ duration: 0.3, ease: 'easeOut' }}
-      className={cn(
-        'flex items-center justify-center',
-        compact ? 'p-6' : 'p-12',
-        className
-      )}
+      className={cn('flex items-center justify-center', compact ? 'p-6' : 'p-12', className)}
     >
-      <div className={cn(
-        'flex flex-col items-center text-center',
-        compact ? 'max-w-sm' : 'max-w-md'
-      )}>
+      <div
+        className={cn('flex flex-col items-center text-center', compact ? 'max-w-sm' : 'max-w-md')}
+      >
         {/* Icon */}
         <motion.div
           initial={{ scale: 0, rotate: -180 }}
           animate={{ scale: 1, rotate: 0 }}
-          transition={{ 
-            delay: 0.1, 
-            type: 'spring', 
-            stiffness: 200, 
-            damping: 15 
+          transition={{
+            delay: 0.1,
+            type: 'spring',
+            stiffness: 200,
+            damping: 15,
           }}
           className={cn(
             compact ? 'w-16 h-16 mb-4' : 'w-20 h-20 mb-6',
             'rounded-full flex items-center justify-center',
-            `bg-gradient-to-br ${config.iconBgGradient}`
+            `bg-gradient-to-br ${config.iconBgGradient}`,
           )}
           role="img"
           aria-label={`${type} icon`}
         >
-          <Icon className={cn(
-            compact ? 'w-8 h-8' : 'w-10 h-10',
-            config.iconColor
-          )} />
+          <Icon className={cn(compact ? 'w-8 h-8' : 'w-10 h-10', config.iconColor)} />
         </motion.div>
 
         {/* Title */}
@@ -204,10 +203,7 @@ export function EmptyState({
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
-          className={cn(
-            compact ? 'text-lg mb-2' : 'text-xl mb-3',
-            'font-semibold'
-          )}
+          className={cn(compact ? 'text-lg mb-2' : 'text-xl mb-3', 'font-semibold')}
           style={{ color: designTokens.colors.text.primary }}
         >
           {title}
@@ -218,10 +214,7 @@ export function EmptyState({
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
-          className={cn(
-            compact ? 'text-sm mb-4' : 'text-base mb-6',
-            'leading-relaxed'
-          )}
+          className={cn(compact ? 'text-sm mb-4' : 'text-base mb-6', 'leading-relaxed')}
           style={{ color: designTokens.colors.text.secondary }}
         >
           {description}
@@ -247,7 +240,7 @@ export function EmptyState({
                   'hover:from-indigo-600 hover:to-indigo-700',
                   'focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2',
                   'active:scale-95',
-                  compact ? 'text-sm' : 'text-base'
+                  compact ? 'text-sm' : 'text-base',
                 )}
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
@@ -269,7 +262,7 @@ export function EmptyState({
                   'hover:border-gray-300 hover:bg-gray-50',
                   'focus:outline-none focus:ring-2 focus:ring-gray-300 focus:ring-offset-2',
                   'active:scale-95',
-                  compact ? 'text-sm' : 'text-base'
+                  compact ? 'text-sm' : 'text-base',
                 )}
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
@@ -287,23 +280,16 @@ export function EmptyState({
 
 /**
  * EmptyStateCard Component
- * 
+ *
  * EmptyState wrapped in a ModernCard for use within other components
  */
 interface EmptyStateCardProps extends EmptyStateProps {
   cardClassName?: string;
 }
 
-export function EmptyStateCard({
-  cardClassName,
-  ...emptyStateProps
-}: EmptyStateCardProps) {
+export function EmptyStateCard({ cardClassName, ...emptyStateProps }: EmptyStateCardProps) {
   return (
-    <ModernCard 
-      variant="elevated" 
-      className={cn('w-full', cardClassName)}
-      hoverable={false}
-    >
+    <ModernCard variant="elevated" className={cn('w-full', cardClassName)} hoverable={false}>
       <EmptyState {...emptyStateProps} />
     </ModernCard>
   );
@@ -311,7 +297,7 @@ export function EmptyStateCard({
 
 /**
  * InlineEmptyState Component
- * 
+ *
  * Compact empty state for inline use (e.g., within lists or grids)
  */
 interface InlineEmptyStateProps {
@@ -335,19 +321,10 @@ export function InlineEmptyState({
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className={cn(
-        'flex flex-col items-center justify-center py-8 px-4',
-        className
-      )}
+      className={cn('flex flex-col items-center justify-center py-8 px-4', className)}
     >
-      <Icon 
-        className="w-12 h-12 text-gray-300 mb-3" 
-        aria-hidden="true"
-      />
-      <p 
-        className="text-sm text-center mb-3"
-        style={{ color: designTokens.colors.text.secondary }}
-      >
+      <Icon className="w-12 h-12 text-gray-300 mb-3" aria-hidden="true" />
+      <p className="text-sm text-center mb-3" style={{ color: designTokens.colors.text.secondary }}>
         {message}
       </p>
       {actionLabel && onAction && (
@@ -355,7 +332,7 @@ export function InlineEmptyState({
           onClick={onAction}
           className={cn(
             'text-sm font-medium text-indigo-600 hover:text-indigo-700',
-            'underline focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 rounded'
+            'underline focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 rounded',
           )}
           aria-label={actionLabel}
         >
@@ -369,11 +346,7 @@ export function InlineEmptyState({
 /**
  * Hook for managing empty states
  */
-export function useEmptyState(
-  hasData: boolean,
-  isLoading: boolean,
-  error: Error | null
-) {
+export function useEmptyState(hasData: boolean, isLoading: boolean, error: Error | null) {
   if (isLoading) {
     return { showEmpty: false, emptyType: null };
   }

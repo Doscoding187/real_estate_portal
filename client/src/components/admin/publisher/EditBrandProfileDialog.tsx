@@ -41,20 +41,20 @@ const formSchema = z.object({
   brandName: z.string().min(2, 'Brand name must be at least 2 characters'),
   brandTier: z.enum(['national', 'regional', 'boutique']),
   logoUrl: z.string().url('Must be a valid URL').optional().or(z.literal('')),
-  
+
   // Company Info
   description: z.string().optional(),
   category: z.string().optional(),
-  establishedYear: z.string().optional(), 
+  establishedYear: z.string().optional(),
   website: z.string().url('Invalid URL').optional().or(z.literal('')),
-  
+
   // Contact Info
   email: z.string().email('Invalid email').optional().or(z.literal('')),
   phone: z.string().optional(),
   address: z.string().optional(),
   city: z.string().optional(),
   province: z.string().optional(),
-  
+
   // Portfolio
   specializations: z.array(z.string()).default([]),
 });
@@ -62,8 +62,14 @@ const formSchema = z.object({
 type FormValues = z.infer<typeof formSchema>;
 
 const SPECIALIZATION_OPTIONS = [
-  'Residential', 'Commercial', 'Mixed-Use', 'Luxury', 
-  'Affordable Housing', 'Sustainable', 'Renovation', 'Industrial'
+  'Residential',
+  'Commercial',
+  'Mixed-Use',
+  'Luxury',
+  'Affordable Housing',
+  'Sustainable',
+  'Renovation',
+  'Industrial',
 ];
 
 interface EditBrandProfileDialogProps {
@@ -81,7 +87,7 @@ export function EditBrandProfileDialog({
 }: EditBrandProfileDialogProps) {
   const utils = trpc.useUtils();
   const [activeTab, setActiveTab] = useState('identity');
-  
+
   // Upload State
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -114,17 +120,17 @@ export function EditBrandProfileDialog({
       let city = '';
       let province = '';
       let address = '';
-      
+
       if (brandData.headOfficeLocation) {
         const parts = brandData.headOfficeLocation.split(',').map((s: string) => s.trim());
         if (parts.length >= 2) {
-            province = parts[parts.length - 1];
-            city = parts[parts.length - 2];
-            if (parts.length > 2) {
-                address = parts.slice(0, parts.length - 2).join(', ');
-            }
+          province = parts[parts.length - 1];
+          city = parts[parts.length - 2];
+          if (parts.length > 2) {
+            address = parts.slice(0, parts.length - 2).join(', ');
+          }
         } else {
-            address = brandData.headOfficeLocation;
+          address = brandData.headOfficeLocation;
         }
       }
 
@@ -155,52 +161,54 @@ export function EditBrandProfileDialog({
       setOpen(false);
       if (onSuccess) onSuccess();
     },
-    onError: (error) => {
+    onError: error => {
       toast.error(error.message || 'Failed to update profile');
     },
   });
 
   const presignMutation = trpc.upload.presign.useMutation();
 
-  const handleLogoUpload = async (file: File) => {
-    try {
-      setIsUploadingLogo(true);
-      setUploadProgress(10);
+  const handleLogoUpload = (file: File | null) => {
+    if (!file) return;
+    void (async () => {
+      try {
+        setIsUploadingLogo(true);
+        setUploadProgress(10);
 
-      // 1. Get presigned URL
-      const { url, publicUrl } = await presignMutation.mutateAsync({
-        filename: file.name,
-        contentType: file.type,
-      });
+        // 1. Get presigned URL
+        const { url, publicUrl } = await presignMutation.mutateAsync({
+          filename: file.name,
+          contentType: file.type,
+        });
 
-      setUploadProgress(40);
+        setUploadProgress(40);
 
-      // 2. Upload to S3
-      const uploadResponse = await fetch(url, {
-        method: 'PUT',
-        body: file,
-        headers: {
-          'Content-Type': file.type,
-        },
-      });
+        // 2. Upload to S3
+        const uploadResponse = await fetch(url, {
+          method: 'PUT',
+          body: file,
+          headers: {
+            'Content-Type': file.type,
+          },
+        });
 
-      if (!uploadResponse.ok) {
-        throw new Error('Failed to upload image to storage');
+        if (!uploadResponse.ok) {
+          throw new Error('Failed to upload image to storage');
+        }
+
+        setUploadProgress(100);
+
+        // 3. Set URL in form
+        form.setValue('logoUrl', publicUrl, { shouldValidate: true });
+        toast.success('Logo uploaded successfully');
+      } catch (error) {
+        console.error('Logo upload error:', error);
+        toast.error('Failed to upload logo. Please try again.');
+      } finally {
+        setIsUploadingLogo(false);
+        setUploadProgress(0);
       }
-
-      setUploadProgress(100);
-
-      // 3. Set URL in form
-      form.setValue('logoUrl', publicUrl, { shouldValidate: true });
-      toast.success('Logo uploaded successfully');
-
-    } catch (error) {
-      console.error('Logo upload error:', error);
-      toast.error('Failed to upload logo. Please try again.');
-    } finally {
-      setIsUploadingLogo(false);
-      setUploadProgress(0);
-    }
+    })();
   };
 
   const onSubmit = (values: FormValues) => {
@@ -237,7 +245,6 @@ export function EditBrandProfileDialog({
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
               <TabsList className="grid w-full grid-cols-3">
                 <TabsTrigger value="identity" className="flex items-center gap-2">
@@ -274,10 +281,7 @@ export function EditBrandProfileDialog({
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Tier</FormLabel>
-                        <Select
-                          onValueChange={field.onChange}
-                          defaultValue={field.value}
-                        >
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
                           <FormControl>
                             <SelectTrigger>
                               <SelectValue placeholder="Select tier" />
@@ -302,10 +306,7 @@ export function EditBrandProfileDialog({
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Primary Category</FormLabel>
-                        <Select
-                          onValueChange={field.onChange}
-                          defaultValue={field.value}
-                        >
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
                           <FormControl>
                             <SelectTrigger>
                               <SelectValue placeholder="Select category" />
@@ -359,10 +360,10 @@ export function EditBrandProfileDialog({
                     <FormItem>
                       <FormLabel>Description</FormLabel>
                       <FormControl>
-                        <Textarea 
-                          placeholder="Brief description of the developer..." 
+                        <Textarea
+                          placeholder="Brief description of the developer..."
                           className="resize-none"
-                          {...field} 
+                          {...field}
                         />
                       </FormControl>
                       <FormMessage />
@@ -450,17 +451,14 @@ export function EditBrandProfileDialog({
                       </FormItem>
                     )}
                   />
-                  
+
                   <FormField
                     control={form.control}
                     name="province"
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Province</FormLabel>
-                         <Select
-                          onValueChange={field.onChange}
-                          defaultValue={field.value}
-                        >
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
                           <FormControl>
                             <SelectTrigger>
                               <SelectValue placeholder="Select province" />
@@ -485,7 +483,7 @@ export function EditBrandProfileDialog({
                 <div className="space-y-3">
                   <FormLabel>Specializations</FormLabel>
                   <div className="grid grid-cols-2 gap-2">
-                    {SPECIALIZATION_OPTIONS.map((spec) => (
+                    {SPECIALIZATION_OPTIONS.map(spec => (
                       <FormField
                         key={spec}
                         control={form.control}
@@ -495,19 +493,13 @@ export function EditBrandProfileDialog({
                             <div className="flex flex-row items-center space-x-2 space-y-0">
                               <Checkbox
                                 checked={field.value?.includes(spec)}
-                                onCheckedChange={(checked) => {
+                                onCheckedChange={checked => {
                                   return checked
                                     ? field.onChange([...field.value, spec])
-                                    : field.onChange(
-                                        field.value?.filter(
-                                          (value) => value !== spec
-                                        )
-                                      );
+                                    : field.onChange(field.value?.filter(value => value !== spec));
                                 }}
                               />
-                              <label className="text-sm font-normal cursor-pointer">
-                                {spec}
-                              </label>
+                              <label className="text-sm font-normal cursor-pointer">{spec}</label>
                             </div>
                           );
                         }}

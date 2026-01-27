@@ -42,7 +42,6 @@ import {
   recentlyViewed,
   developers,
   developments,
-  partners,
   commissions,
   platformSettings,
   unitTypes,
@@ -71,10 +70,12 @@ export type Prospect = InferSelectModel<typeof prospects>;
 export const db = new Proxy({} as any, {
   get(_target, prop) {
     if (!_db) {
-      throw new Error('Database not initialized. Call getDb() first or use await getDb() in async functions.');
+      throw new Error(
+        'Database not initialized. Call getDb() first or use await getDb() in async functions.',
+      );
     }
     return _db[prop];
-  }
+  },
 });
 
 export async function upsertUser(user: InsertUser): Promise<void> {
@@ -294,16 +295,16 @@ export async function verifyUserEmail(userId: number): Promise<void> {
 export async function createProperty(property: InsertProperty) {
   const db = await getDb();
   if (!db) throw new Error('Database not available');
-  
+
   // Normalize location fields for consistent querying
   const normalizedProperty = normalizeLocationFields(property);
-  
+
   // Validate location if publishing
   const validationError = validateLocationForPublish(normalizedProperty);
   if (validationError) {
     throw new Error(validationError);
   }
-  
+
   // Resolve and populate location IDs if text fields are provided
   // This ensures new properties have proper ID references
   try {
@@ -312,7 +313,7 @@ export async function createProperty(property: InsertProperty) {
         provinceSlug: normalizedProperty.province,
         citySlug: normalizedProperty.city || undefined,
       });
-      
+
       if (locationIds.provinceId) {
         normalizedProperty.provinceId = locationIds.provinceId;
       }
@@ -325,7 +326,7 @@ export async function createProperty(property: InsertProperty) {
     // The text-based fallback will still work
     console.warn('[createProperty] Location ID resolution failed:', error);
   }
-  
+
   const result = await db.insert(properties).values(normalizedProperty);
   return result[0].insertId;
 }
@@ -398,7 +399,7 @@ export async function updateProperty(
 
   // Normalize location fields for consistent querying
   const normalizedUpdates = normalizeLocationFields(updates);
-  
+
   // Validate location if publishing
   const finalData = { ...property, ...normalizedUpdates };
   const validationError = validateLocationForPublish(finalData);
@@ -410,13 +411,13 @@ export async function updateProperty(
   try {
     const province = normalizedUpdates.province || property.province;
     const city = normalizedUpdates.city || property.city;
-    
+
     if (province && (normalizedUpdates.province || normalizedUpdates.city)) {
       const locationIds = await locationResolver.getLocationIds({
         provinceSlug: province,
         citySlug: city || undefined,
       });
-      
+
       if (locationIds.provinceId) {
         normalizedUpdates.provinceId = locationIds.provinceId;
       }
@@ -568,7 +569,10 @@ export async function searchProperties(params: PropertySearchParams) {
       conditions.push(
         inArray(
           properties.ownerId,
-          db.select({ id: users.id }).from(users).where(or(...roleConditions)),
+          db
+            .select({ id: users.id })
+            .from(users)
+            .where(or(...roleConditions)),
         ),
       );
     }
@@ -577,12 +581,12 @@ export async function searchProperties(params: PropertySearchParams) {
   // Bounds filter
   if (params.minLat !== undefined && params.maxLat !== undefined) {
     conditions.push(
-      sql`CAST(${properties.latitude} AS DECIMAL(10, 6)) >= ${params.minLat} AND CAST(${properties.latitude} AS DECIMAL(10, 6)) <= ${params.maxLat}`
+      sql`CAST(${properties.latitude} AS DECIMAL(10, 6)) >= ${params.minLat} AND CAST(${properties.latitude} AS DECIMAL(10, 6)) <= ${params.maxLat}`,
     );
   }
   if (params.minLng !== undefined && params.maxLng !== undefined) {
     conditions.push(
-      sql`CAST(${properties.longitude} AS DECIMAL(10, 6)) >= ${params.minLng} AND CAST(${properties.longitude} AS DECIMAL(10, 6)) <= ${params.maxLng}`
+      sql`CAST(${properties.longitude} AS DECIMAL(10, 6)) >= ${params.minLng} AND CAST(${properties.longitude} AS DECIMAL(10, 6)) <= ${params.maxLng}`,
     );
   }
 
@@ -616,9 +620,7 @@ export async function searchProperties(params: PropertySearchParams) {
         .where(inArray(properties.id, boostedIds));
 
       // Remove boosted from regular results to avoid duplicates
-      const filteredResults = results.filter(
-        (prop: any) => !boostedIds.includes(prop.id)
-      );
+      const filteredResults = results.filter((prop: any) => !boostedIds.includes(prop.id));
 
       // Merge: boosted first, then regular
       return [...boostedProperties, ...filteredResults].slice(0, params.limit || 20);
@@ -698,18 +700,14 @@ export async function getAllAgents() {
   const db = await getDb();
   if (!db) return [];
 
-  return await db.select().from(require('../drizzle/schema').agents);
+  return await db.select().from(agents);
 }
 
 export async function getAgentById(id: number) {
   const db = await getDb();
   if (!db) return undefined;
 
-  const result = await db
-    .select()
-    .from(require('../drizzle/schema').agents)
-    .where(eq(require('../drizzle/schema').agents.id, id))
-    .limit(1);
+  const result = await db.select().from(agents).where(eq(agents.id, id)).limit(1);
   return result.length > 0 ? result[0] : undefined;
 }
 
@@ -717,11 +715,7 @@ export async function getFeaturedAgents(limit: number = 6) {
   const db = await getDb();
   if (!db) return [];
 
-  return await db
-    .select()
-    .from(require('../drizzle/schema').agents)
-    .where(eq(require('../drizzle/schema').agents.isFeatured, 1))
-    .limit(limit);
+  return await db.select().from(agents).where(eq(agents.isFeatured, 1)).limit(limit);
 }
 
 // ==================== DEVELOPMENTS ====================
@@ -730,18 +724,14 @@ export async function getAllDevelopments() {
   const db = await getDb();
   if (!db) return [];
 
-  return await db.select().from(require('../drizzle/schema').developments);
+  return await db.select().from(developments);
 }
 
 export async function getDevelopmentById(id: number) {
   const db = await getDb();
   if (!db) return undefined;
 
-  const result = await db
-    .select()
-    .from(require('../drizzle/schema').developments)
-    .where(eq(require('../drizzle/schema').developments.id, id))
-    .limit(1);
+  const result = await db.select().from(developments).where(eq(developments.id, id)).limit(1);
   return result.length > 0 ? result[0] : undefined;
 }
 
@@ -749,11 +739,7 @@ export async function getFeaturedDevelopments(limit: number = 6) {
   const db = await getDb();
   if (!db) return [];
 
-  return await db
-    .select()
-    .from(require('../drizzle/schema').developments)
-    .where(eq(require('../drizzle/schema').developments.isFeatured, 1))
-    .limit(limit);
+  return await db.select().from(developments).where(eq(developments.isFeatured, 1)).limit(limit);
 }
 
 export async function getDevelopmentProperties(developmentId: number) {
@@ -770,8 +756,6 @@ export async function searchDevelopers(query: string, limit: number = 10) {
   const db = await getDb();
   if (!db) return [];
 
-
-
   return await db
     .select({
       id: developers.id,
@@ -785,8 +769,8 @@ export async function searchDevelopers(query: string, limit: number = 10) {
     .where(
       and(
         sql`LOWER(${developers.name}) LIKE ${`%${query.toLowerCase()}%`}`,
-        eq(developers.status, 'approved' as any) // Only show approved developers
-      )
+        eq(developers.status, 'approved' as any), // Only show approved developers
+      ),
     )
     .limit(limit);
 }
@@ -797,8 +781,6 @@ export async function searchDevelopers(query: string, limit: number = 10) {
 export async function searchDevelopments(query: string, developerId?: number, limit: number = 10) {
   const db = await getDb();
   if (!db) return [];
-
-
 
   const conditions = [
     sql`LOWER(${developments.name}) LIKE ${`%${query.toLowerCase()}%`}`,
@@ -831,17 +813,16 @@ export async function getAllServices() {
   const db = await getDb();
   if (!db) return [];
 
-  return await db.select().from(require('../drizzle/schema').services);
+  // services table would need to be imported at top if used
+  return await db.select().from(services);
 }
-
 
 export async function getServicesByCategory(category: string) {
   const db = await getDb();
   if (!db) return [];
-  
-  return await db.select().from(require('../drizzle/schema').services).where(eq(require('../drizzle/schema').services.category, category));
-}
 
+  return await db.select().from(services).where(eq(services.category, category));
+}
 
 // ==================== REVIEWS ====================
 
@@ -849,7 +830,7 @@ export async function getReviewsByTarget(reviewType: string, targetId: number) {
   const db = await getDb();
   if (!db) return [];
 
-  const { reviews } = require('../drizzle/schema');
+  // reviews table would need to be imported at top if used
   return await db
     .select()
     .from(reviews)
@@ -866,7 +847,7 @@ export async function createReview(reviewData: any) {
   const db = await getDb();
   if (!db) throw new Error('Database not available');
 
-  const { reviews } = require('../drizzle/schema');
+  // reviews table would need to be imported at top if used
   const result = await db.insert(reviews).values(reviewData);
   return result[0].insertId;
 }
@@ -877,7 +858,7 @@ export async function createLead(leadData: any) {
   const db = await getDb();
   if (!db) throw new Error('Database not available');
 
-  const { leads } = require('../drizzle/schema');
+  // leads already imported at top
   const result = await db.insert(leads).values(leadData);
   return result[0].insertId;
 }
@@ -886,7 +867,7 @@ export async function getLeadsByAgent(agentId: number) {
   const db = await getDb();
   if (!db) return [];
 
-  const { leads } = require('../drizzle/schema');
+  // leads already imported at top
   return await db.select().from(leads).where(eq(leads.agentId, agentId));
 }
 
@@ -896,7 +877,7 @@ export async function getAllExploreVideos(limit: number = 20) {
   const db = await getDb();
   if (!db) return [];
 
-  const { exploreVideos } = require('../drizzle/schema');
+  // exploreVideos table would need to be imported at top if used
   return await db.select().from(exploreVideos).where(eq(exploreVideos.isPublished, 1)).limit(limit);
 }
 
@@ -904,7 +885,7 @@ export async function getExploreVideoById(id: number) {
   const db = await getDb();
   if (!db) return undefined;
 
-  const { exploreVideos } = require('../drizzle/schema');
+  // exploreVideos table would need to be imported at top if used
   const result = await db.select().from(exploreVideos).where(eq(exploreVideos.id, id)).limit(1);
   return result.length > 0 ? result[0] : undefined;
 }
@@ -913,10 +894,10 @@ export async function incrementVideoViews(id: number) {
   const db = await getDb();
   if (!db) return;
 
-  const { exploreVideos } = require('../drizzle/schema');
+  // exploreVideos table would need to be imported at top if used
   await db
     .update(exploreVideos)
-    .set({ views: require('drizzle-orm').sql`views + 1` })
+    .set({ views: sql`views + 1` })
     .where(eq(exploreVideos.id, id));
 }
 
@@ -926,7 +907,7 @@ export async function getAllLocations() {
   const db = await getDb();
   if (!db) return [];
 
-  const { locations } = require('../drizzle/schema');
+  // locations table would need to be imported at top if used
   return await db.select().from(locations);
 }
 
@@ -934,7 +915,7 @@ export async function getLocationsByType(type: string) {
   const db = await getDb();
   if (!db) return [];
 
-  const { locations } = require('../drizzle/schema');
+  // locations table would need to be imported at top if used
   return await db
     .select()
     .from(locations)
@@ -958,7 +939,7 @@ export async function getAgencyDashboardStats(agencyId: number) {
     };
   }
 
-  const { properties, leads, users, agents } = require('../drizzle/schema');
+  // tables already imported at top
 
   // Get all properties owned by agency agents
   const agencyProperties = await db
@@ -1327,7 +1308,7 @@ export async function getAgencyPerformanceData(agencyId: number, months: number 
   const db = await getDb();
   if (!db) return [];
 
-  const { properties, leads } = require('../drizzle/schema');
+  // tables already imported at top
 
   const currentDate = new Date();
   const performanceData: any[] = [];
@@ -1378,7 +1359,7 @@ export async function getAgencyRecentLeads(agencyId: number, limit: number = 5) 
   const db = await getDb();
   if (!db) return [];
 
-  const { leads } = require('../drizzle/schema');
+  // leads already imported at top
 
   return await db
     .select()
@@ -1392,7 +1373,7 @@ export async function getAgencyRecentListings(agencyId: number, limit: number = 
   const db = await getDb();
   if (!db) return [];
 
-  const { properties } = require('../drizzle/schema');
+  // properties already imported at top
 
   return await db
     .select({
@@ -1416,7 +1397,7 @@ export async function getAgencyAgents(agencyId: number) {
   const db = await getDb();
   if (!db) return [];
 
-  const { users, agents } = require('../drizzle/schema');
+  // tables already imported at top
 
   // Get users who are subaccounts of this agency
   const agencyUsers = await db
@@ -1445,7 +1426,7 @@ export async function getLeadConversionStats(agencyId: number, months: number = 
   const db = await getDb();
   if (!db) return { total: 0, converted: 0, conversionRate: 0, byStatus: [] };
 
-  const { leads } = require('../drizzle/schema');
+  // leads already imported at top
 
   const startDate = new Date();
   startDate.setMonth(startDate.getMonth() - months);
@@ -1499,7 +1480,7 @@ export async function getAgencyCommissionStats(agencyId: number, months: number 
   if (!db)
     return { totalEarnings: 0, paidCommissions: 0, pendingCommissions: 0, monthlyBreakdown: [] };
 
-  const { commissions, agents } = require('../drizzle/schema');
+  // tables already imported at top
 
   const startDate = new Date();
   startDate.setMonth(startDate.getMonth() - months);
@@ -1573,7 +1554,7 @@ export async function getAgentPerformanceLeaderboard(agencyId: number, months: n
   const db = await getDb();
   if (!db) return [];
 
-  const { commissions, agents, leads, properties } = require('../drizzle/schema');
+  // tables already imported at top
 
   const startDate = new Date();
   startDate.setMonth(startDate.getMonth() - months);
@@ -1722,7 +1703,6 @@ export async function getPlatformAnalytics() {
       (SELECT COUNT(*) FROM ${developers}) as developerCount
   `);
 
-
   // Monthly revenue (from commissions) - assume last 30 days
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
@@ -1756,7 +1736,7 @@ export async function getListingStats() {
   const db = await getDb();
   if (!db) return { pending: 0, approved: 0, rejected: 0, total: 0 };
 
-  const { properties } = require('../drizzle/schema');
+  // properties already imported at top
 
   const [pending] = await db
     .select({ count: sql<number>`count(*)` })
@@ -1784,7 +1764,7 @@ export async function getSubscriptionStats() {
   const db = await getDb();
   if (!db) return { free: 0, basic: 0, premium: 0, enterprise: 0, total: 0 };
 
-  const { agencies } = require('../drizzle/schema');
+  // agencies already imported at top
 
   const [free] = await db
     .select({ count: sql<number>`count(*)` })
@@ -1822,70 +1802,92 @@ export async function createListing(listingData: any) {
 
   try {
     // Use Drizzle transaction API
-    const listingId = await db.transaction(async (tx) => {
+    const listingId = await db.transaction(async tx => {
       // Create listing record
       // Convert latitude and longitude to strings to match schema
-        // Look up agent ID
-        const { agents } = require('../drizzle/schema');
-        const [agent] = await tx.select().from(agents).where(eq(agents.userId, listingData.userId)).limit(1);
-        const agentId = agent ? agent.id : null;
+      // Look up agent ID
+      // agents already imported at top
+      const [agent] = await tx
+        .select()
+        .from(agents)
+        .where(eq(agents.userId, listingData.userId))
+        .limit(1);
+      const agentId = agent ? agent.id : null;
 
-        console.log('[db.createListing] Inserting listing:', {
-          ownerId: listingData.userId,
-          agentId,
-          slug: listingData.slug,
-          coords: { lat: listingData.latitude, lng: listingData.longitude }
-        });
+      console.log('[db.createListing] Inserting listing:', {
+        ownerId: listingData.userId,
+        agentId,
+        slug: listingData.slug,
+        coords: { lat: listingData.latitude, lng: listingData.longitude },
+      });
 
+      const insertValues: any = {
+        ownerId: listingData.userId,
+        agentId: agentId,
+        action: listingData.action,
+        propertyType: listingData.propertyType,
+        title: listingData.title,
+        description: listingData.description,
 
-        const insertValues: any = {
-          ownerId: listingData.userId,
-          agentId: agentId,
-          action: listingData.action,
-          propertyType: listingData.propertyType,
-          title: listingData.title,
-          description: listingData.description,
-          
-          // Map pricing fields
-          askingPrice: listingData.pricing.askingPrice ? String(listingData.pricing.askingPrice) : null,
-          negotiable: listingData.pricing.negotiable ? 1 : 0,
-          transferCostEstimate: listingData.pricing.transferCostEstimate ? String(listingData.pricing.transferCostEstimate) : null,
-          monthlyRent: listingData.pricing.monthlyRent ? String(listingData.pricing.monthlyRent) : null,
-          deposit: listingData.pricing.deposit ? String(listingData.pricing.deposit) : null,
-          leaseTerms: listingData.pricing.leaseTerms || null,
-          availableFrom: listingData.pricing.availableFrom ? new Date(listingData.pricing.availableFrom).toISOString().slice(0, 19).replace('T', ' ') : null,
-          utilitiesIncluded: listingData.pricing.utilitiesIncluded ? 1 : 0,
-          startingBid: listingData.pricing.startingBid ? String(listingData.pricing.startingBid) : null,
-          reservePrice: listingData.pricing.reservePrice ? String(listingData.pricing.reservePrice) : null,
-          auctionDateTime: listingData.pricing.auctionDateTime ? new Date(listingData.pricing.auctionDateTime).toISOString().slice(0, 19).replace('T', ' ') : null,
-          auctionTermsDocumentUrl: listingData.pricing.auctionTermsDocumentUrl || null,
+        // Map pricing fields
+        askingPrice: listingData.pricing.askingPrice
+          ? String(listingData.pricing.askingPrice)
+          : null,
+        negotiable: listingData.pricing.negotiable ? 1 : 0,
+        transferCostEstimate: listingData.pricing.transferCostEstimate
+          ? String(listingData.pricing.transferCostEstimate)
+          : null,
+        monthlyRent: listingData.pricing.monthlyRent
+          ? String(listingData.pricing.monthlyRent)
+          : null,
+        deposit: listingData.pricing.deposit ? String(listingData.pricing.deposit) : null,
+        leaseTerms: listingData.pricing.leaseTerms || null,
+        availableFrom: listingData.pricing.availableFrom
+          ? new Date(listingData.pricing.availableFrom).toISOString().slice(0, 19).replace('T', ' ')
+          : null,
+        utilitiesIncluded: listingData.pricing.utilitiesIncluded ? 1 : 0,
+        startingBid: listingData.pricing.startingBid
+          ? String(listingData.pricing.startingBid)
+          : null,
+        reservePrice: listingData.pricing.reservePrice
+          ? String(listingData.pricing.reservePrice)
+          : null,
+        auctionDateTime: listingData.pricing.auctionDateTime
+          ? new Date(listingData.pricing.auctionDateTime)
+              .toISOString()
+              .slice(0, 19)
+              .replace('T', ' ')
+          : null,
+        auctionTermsDocumentUrl: listingData.pricing.auctionTermsDocumentUrl || null,
 
-          propertyDetails: listingData.propertyDetails, // Drizzle handles JSON
-          address: listingData.address,
-          latitude: Number(listingData.latitude).toFixed(7),
-          longitude: Number(listingData.longitude).toFixed(7),
-          city: listingData.city,
-          province: listingData.province,
-          
-          // Failsafe: Ensure slug is unique
-          slug: listingData.slug.match(/-ts-[a-z0-9]+$/) ? listingData.slug : `${listingData.slug}-ts-${Date.now().toString(36)}`,
-          status: 'draft',
-          approvalStatus: 'pending',
-          createdAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
-          updatedAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
-        };
+        propertyDetails: listingData.propertyDetails, // Drizzle handles JSON
+        address: listingData.address,
+        latitude: Number(listingData.latitude).toFixed(7),
+        longitude: Number(listingData.longitude).toFixed(7),
+        city: listingData.city,
+        province: listingData.province,
 
-        // Add optional fields only if they exist
-        if (listingData.suburb) insertValues.suburb = listingData.suburb;
-        if (listingData.postalCode) insertValues.postalCode = listingData.postalCode;
-        if (listingData.placeId) insertValues.placeId = listingData.placeId;
-        if (listingData.locationId) insertValues.locationId = listingData.locationId;
+        // Failsafe: Ensure slug is unique
+        slug: listingData.slug.match(/-ts-[a-z0-9]+$/)
+          ? listingData.slug
+          : `${listingData.slug}-ts-${Date.now().toString(36)}`,
+        status: 'draft',
+        approvalStatus: 'pending',
+        createdAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
+        updatedAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
+      };
 
-        // Explicit nulls for strictness if needed, but omitting them is cleaner for Drizzle
-        // insertValues.mainMediaId = null;
-        // insertValues.mainMediaType = null;
+      // Add optional fields only if they exist
+      if (listingData.suburb) insertValues.suburb = listingData.suburb;
+      if (listingData.postalCode) insertValues.postalCode = listingData.postalCode;
+      if (listingData.placeId) insertValues.placeId = listingData.placeId;
+      // Note: locationId removed - column doesn't exist in database
 
-        const [listingResult] = await tx.insert(listings).values(insertValues);
+      // Explicit nulls for strictness if needed, but omitting them is cleaner for Drizzle
+      // insertValues.mainMediaId = null;
+      // insertValues.mainMediaType = null;
+
+      const [listingResult] = await tx.insert(listings).values(insertValues);
 
       const newListingId = Number(listingResult.insertId);
 
@@ -1958,7 +1960,9 @@ export async function getListingById(listingId: number) {
   const pricing = {
     askingPrice: listing.askingPrice ? Number(listing.askingPrice) : undefined,
     negotiable: listing.negotiable === 1,
-    transferCostEstimate: listing.transferCostEstimate ? Number(listing.transferCostEstimate) : undefined,
+    transferCostEstimate: listing.transferCostEstimate
+      ? Number(listing.transferCostEstimate)
+      : undefined,
     monthlyRent: listing.monthlyRent ? Number(listing.monthlyRent) : undefined,
     deposit: listing.deposit ? Number(listing.deposit) : undefined,
     leaseTerms: listing.leaseTerms,
@@ -1989,12 +1993,12 @@ export async function getUserListings(
   userId: number,
   status?: string,
   limit: number = 20,
-  offset: number = 0
+  offset: number = 0,
 ) {
   const db = await getDb();
   if (!db) throw new Error('Database not available');
 
-  const { listingMedia } = require('../drizzle/schema');
+  // listingMedia already imported at top
 
   let query = db.select().from(listings).where(eq(listings.ownerId, userId));
 
@@ -2002,14 +2006,11 @@ export async function getUserListings(
     query = query.where(eq(listings.status, status as any));
   }
 
-  const listingsData = await query
-    .orderBy(desc(listings.createdAt))
-    .limit(limit)
-    .offset(offset);
+  const listingsData = await query.orderBy(desc(listings.createdAt)).limit(limit).offset(offset);
 
   // Fetch primary images
   const listingsWithImages = await Promise.all(
-    listingsData.map(async (listing) => {
+    listingsData.map(async listing => {
       const images = await db
         .select()
         .from(listingMedia)
@@ -2017,15 +2018,21 @@ export async function getUserListings(
         .orderBy(listingMedia.displayOrder)
         .limit(1);
 
-      const cdnUrl = ENV.cloudFrontUrl || `https://${ENV.s3BucketName}.s3.${ENV.awsRegion}.amazonaws.com`;
-      const primaryImage = images.length > 0 
-        ? (images[0].originalUrl.startsWith('http') ? images[0].originalUrl : `${cdnUrl}/${images[0].originalUrl}`)
-        : null;
+      const cdnUrl =
+        ENV.cloudFrontUrl || `https://${ENV.s3BucketName}.s3.${ENV.awsRegion}.amazonaws.com`;
+      const primaryImage =
+        images.length > 0
+          ? images[0].originalUrl.startsWith('http')
+            ? images[0].originalUrl
+            : `${cdnUrl}/${images[0].originalUrl}`
+          : null;
 
       const pricing = {
         askingPrice: listing.askingPrice ? Number(listing.askingPrice) : undefined,
         negotiable: listing.negotiable === 1,
-        transferCostEstimate: listing.transferCostEstimate ? Number(listing.transferCostEstimate) : undefined,
+        transferCostEstimate: listing.transferCostEstimate
+          ? Number(listing.transferCostEstimate)
+          : undefined,
         monthlyRent: listing.monthlyRent ? Number(listing.monthlyRent) : undefined,
         deposit: listing.deposit ? Number(listing.deposit) : undefined,
         leaseTerms: listing.leaseTerms,
@@ -2046,7 +2053,7 @@ export async function getUserListings(
         propertyDetails,
         primaryImage,
       };
-    })
+    }),
   );
 
   return listingsWithImages;
@@ -2067,19 +2074,45 @@ export async function updateListing(listingId: number, updateData: any) {
 
   // Map pricing fields if present
   if (updateData.pricing) {
-    if (updateData.pricing.askingPrice !== undefined) updateFields.askingPrice = updateData.pricing.askingPrice ? String(updateData.pricing.askingPrice) : null;
-    if (updateData.pricing.negotiable !== undefined) updateFields.negotiable = updateData.pricing.negotiable ? 1 : 0;
-    if (updateData.pricing.transferCostEstimate !== undefined) updateFields.transferCostEstimate = updateData.pricing.transferCostEstimate ? String(updateData.pricing.transferCostEstimate) : null;
-    if (updateData.pricing.monthlyRent !== undefined) updateFields.monthlyRent = updateData.pricing.monthlyRent ? String(updateData.pricing.monthlyRent) : null;
-    if (updateData.pricing.deposit !== undefined) updateFields.deposit = updateData.pricing.deposit ? String(updateData.pricing.deposit) : null;
-    if (updateData.pricing.leaseTerms !== undefined) updateFields.leaseTerms = updateData.pricing.leaseTerms;
-    if (updateData.pricing.availableFrom !== undefined) updateFields.availableFrom = updateData.pricing.availableFrom ? new Date(updateData.pricing.availableFrom).toISOString().slice(0, 19).replace('T', ' ') : null;
-    if (updateData.pricing.utilitiesIncluded !== undefined) updateFields.utilitiesIncluded = updateData.pricing.utilitiesIncluded ? 1 : 0;
-    if (updateData.pricing.startingBid !== undefined) updateFields.startingBid = updateData.pricing.startingBid ? String(updateData.pricing.startingBid) : null;
-    if (updateData.pricing.reservePrice !== undefined) updateFields.reservePrice = updateData.pricing.reservePrice ? String(updateData.pricing.reservePrice) : null;
-    if (updateData.pricing.auctionDateTime !== undefined) updateFields.auctionDateTime = updateData.pricing.auctionDateTime ? new Date(updateData.pricing.auctionDateTime).toISOString().slice(0, 19).replace('T', ' ') : null;
-    if (updateData.pricing.auctionTermsDocumentUrl !== undefined) updateFields.auctionTermsDocumentUrl = updateData.pricing.auctionTermsDocumentUrl;
-    
+    if (updateData.pricing.askingPrice !== undefined)
+      updateFields.askingPrice = updateData.pricing.askingPrice
+        ? String(updateData.pricing.askingPrice)
+        : null;
+    if (updateData.pricing.negotiable !== undefined)
+      updateFields.negotiable = updateData.pricing.negotiable ? 1 : 0;
+    if (updateData.pricing.transferCostEstimate !== undefined)
+      updateFields.transferCostEstimate = updateData.pricing.transferCostEstimate
+        ? String(updateData.pricing.transferCostEstimate)
+        : null;
+    if (updateData.pricing.monthlyRent !== undefined)
+      updateFields.monthlyRent = updateData.pricing.monthlyRent
+        ? String(updateData.pricing.monthlyRent)
+        : null;
+    if (updateData.pricing.deposit !== undefined)
+      updateFields.deposit = updateData.pricing.deposit ? String(updateData.pricing.deposit) : null;
+    if (updateData.pricing.leaseTerms !== undefined)
+      updateFields.leaseTerms = updateData.pricing.leaseTerms;
+    if (updateData.pricing.availableFrom !== undefined)
+      updateFields.availableFrom = updateData.pricing.availableFrom
+        ? new Date(updateData.pricing.availableFrom).toISOString().slice(0, 19).replace('T', ' ')
+        : null;
+    if (updateData.pricing.utilitiesIncluded !== undefined)
+      updateFields.utilitiesIncluded = updateData.pricing.utilitiesIncluded ? 1 : 0;
+    if (updateData.pricing.startingBid !== undefined)
+      updateFields.startingBid = updateData.pricing.startingBid
+        ? String(updateData.pricing.startingBid)
+        : null;
+    if (updateData.pricing.reservePrice !== undefined)
+      updateFields.reservePrice = updateData.pricing.reservePrice
+        ? String(updateData.pricing.reservePrice)
+        : null;
+    if (updateData.pricing.auctionDateTime !== undefined)
+      updateFields.auctionDateTime = updateData.pricing.auctionDateTime
+        ? new Date(updateData.pricing.auctionDateTime).toISOString().slice(0, 19).replace('T', ' ')
+        : null;
+    if (updateData.pricing.auctionTermsDocumentUrl !== undefined)
+      updateFields.auctionTermsDocumentUrl = updateData.pricing.auctionTermsDocumentUrl;
+
     delete updateFields.pricing;
   }
 
@@ -2208,12 +2241,13 @@ export async function approveListing(listingId: number, reviewedBy: number, note
   let pricingData: any = {};
   if (listing.pricing) {
     try {
-      pricingData = typeof listing.pricing === 'string' ? JSON.parse(listing.pricing) : listing.pricing;
+      pricingData =
+        typeof listing.pricing === 'string' ? JSON.parse(listing.pricing) : listing.pricing;
     } catch (e) {
       console.error('Failed to parse pricing:', e);
     }
   }
-  
+
   // Determine price based on listing type
   let price = 0;
   price = pricingData.askingPrice || pricingData.monthlyRent || pricingData.startingBid || 0;
@@ -2222,39 +2256,41 @@ export async function approveListing(listingId: number, reviewedBy: number, note
   let details: any = {};
   if (listing.propertyDetails) {
     try {
-      details = typeof listing.propertyDetails === 'string' ? JSON.parse(listing.propertyDetails) : listing.propertyDetails;
+      details =
+        typeof listing.propertyDetails === 'string'
+          ? JSON.parse(listing.propertyDetails)
+          : listing.propertyDetails;
     } catch (e) {
       console.error('Failed to parse propertyDetails:', e);
     }
   }
-  
+
   const bedrooms = Number(details.bedrooms) || 0;
   const bathrooms = Number(details.bathrooms) || 0;
-  
+
   // Determine area (prioritize building size, not land size)
-  const area = 
-    Number(details.unitSizeM2) || 
-    Number(details.houseAreaM2) || 
-    Number(details.floorAreaM2) || 
-    0;
+  const area =
+    Number(details.unitSizeM2) || Number(details.houseAreaM2) || Number(details.floorAreaM2) || 0;
 
   // Map amenities
   const amenitiesList = [
     ...(details.amenities || []),
     ...(details.amenitiesFeatures || []),
     ...(details.securityFeatures || []),
-    ...(details.outdoorFeatures || [])
+    ...(details.outdoorFeatures || []),
   ];
   const amenitiesString = amenitiesList.length > 0 ? amenitiesList.join(',') : null;
 
   // 3. Insert into properties table
-  
+
   const [propertyResult] = await db.insert(properties).values({
     title: listing.title,
     description: listing.description,
     propertyType: listing.propertyType,
-    listingType: listing.action === 'sell' ? 'sale' : listing.action === 'rent' ? 'rent' : 'auction', // Map 'sell' to 'sale'
-    transactionType: listing.action === 'sell' ? 'sale' : listing.action === 'rent' ? 'rent' : 'auction',
+    listingType:
+      listing.action === 'sell' ? 'sale' : listing.action === 'rent' ? 'rent' : 'auction', // Map 'sell' to 'sale'
+    transactionType:
+      listing.action === 'sell' ? 'sale' : listing.action === 'rent' ? 'rent' : 'auction',
     price: price,
     bedrooms: bedrooms,
     bathrooms: bathrooms,
@@ -2286,13 +2322,16 @@ export async function approveListing(listingId: number, reviewedBy: number, note
 
   // 4. Sync Media
   const mediaItems = await getListingMedia(listingId);
-  
+
   if (mediaItems && mediaItems.length > 0) {
     // Find main image to update property record
-    const mainMedia = mediaItems.find(m => m.isPrimary && m.mediaType === 'image') || mediaItems.find(m => m.mediaType === 'image');
-    
+    const mainMedia =
+      mediaItems.find(m => m.isPrimary && m.mediaType === 'image') ||
+      mediaItems.find(m => m.mediaType === 'image');
+
     if (mainMedia) {
-      await db.update(properties)
+      await db
+        .update(properties)
         .set({ mainImage: mainMedia.processedUrl || mainMedia.originalUrl })
         .where(eq(properties.id, newPropertyId));
     }
@@ -2339,7 +2378,13 @@ export async function approveListing(listingId: number, reviewedBy: number, note
 /**
  * Reject listing
  */
-export async function rejectListing(listingId: number, reviewedBy: number, reason: string, reasons?: string[], note?: string) {
+export async function rejectListing(
+  listingId: number,
+  reviewedBy: number,
+  reason: string,
+  reasons?: string[],
+  note?: string,
+) {
   const db = await getDb();
   if (!db) throw new Error('Database not available');
 
@@ -2367,9 +2412,13 @@ export async function rejectListing(listingId: number, reviewedBy: number, reaso
       reviewNotes: note || reason,
       rejectionReason: reason,
     })
-    .where(and(eq(listingApprovalQueue.listingId, listingId), eq(listingApprovalQueue.status, 'pending')));
+    .where(
+      and(
+        eq(listingApprovalQueue.listingId, listingId),
+        eq(listingApprovalQueue.status, 'pending'),
+      ),
+    );
 }
-
 
 /**
  * Archive property (Soft Delete)
@@ -2379,7 +2428,10 @@ export async function archiveProperty(id: number) {
   if (!db) throw new Error('Database not available');
   await db
     .update(properties)
-    .set({ status: 'archived' as any, updatedAt: new Date().toISOString().slice(0, 19).replace('T', ' ') })
+    .set({
+      status: 'archived' as any,
+      updatedAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
+    })
     .where(eq(properties.id, id));
 }
 
@@ -2389,10 +2441,10 @@ export async function archiveProperty(id: number) {
 export async function deleteListing(id: number) {
   const db = await getDb();
   if (!db) throw new Error('Database not available');
-  
+
   // Delete related media first to avoid foreign key constraint errors
   await db.delete(listingMedia).where(eq(listingMedia.listingId, id));
-  
+
   // Delete from approval queue if exists
   await db.delete(listingApprovalQueue).where(eq(listingApprovalQueue.listingId, id));
 
@@ -2404,7 +2456,7 @@ export async function deleteListing(id: number) {
 
   // Delete viewings
   await db.delete(listingViewings).where(eq(listingViewings.listingId, id));
-  
+
   // Now delete the listing
   await db.delete(listings).where(eq(listings.id, id));
 }
@@ -2417,7 +2469,10 @@ export async function archiveListing(id: number) {
   if (!db) throw new Error('Database not available');
   await db
     .update(listings)
-    .set({ status: 'archived' as any, updatedAt: new Date().toISOString().slice(0, 19).replace('T', ' ') })
+    .set({
+      status: 'archived' as any,
+      updatedAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
+    })
     .where(eq(listings.id, id));
 }
 
@@ -2463,11 +2518,7 @@ export async function getAgentByUserId(userId: number) {
   const db = await getDb();
   if (!db) throw new Error('Database not available');
 
-  const [agent] = await db
-    .select()
-    .from(agents)
-    .where(eq(agents.userId, userId))
-    .limit(1);
+  const [agent] = await db.select().from(agents).where(eq(agents.userId, userId)).limit(1);
 
   return agent || null;
 }
@@ -2478,8 +2529,8 @@ export async function getAgentByUserId(userId: number) {
  * Transform listing to property format for backward compatibility
  */
 export function transformListingToProperty(listing: any, media: any[] = []) {
-  const propertyDetails = listing.propertyDetails as any || {};
-  
+  const propertyDetails = (listing.propertyDetails as any) || {};
+
   return {
     id: listing.id,
     title: listing.title,
@@ -2491,28 +2542,37 @@ export function transformListingToProperty(listing: any, media: any[] = []) {
     // Extract from propertyDetails JSON
     bedrooms: propertyDetails.bedrooms || 0,
     bathrooms: propertyDetails.bathrooms || 0,
-    area: propertyDetails.unitSizeM2 || propertyDetails.houseAreaM2 || propertyDetails.floorAreaM2 || 0,
+    area:
+      propertyDetails.unitSizeM2 || propertyDetails.houseAreaM2 || propertyDetails.floorAreaM2 || 0,
     yardSize: propertyDetails.erfSizeM2 || propertyDetails.landSizeM2OrHa || 0,
     amenities: [
       ...(Array.isArray(propertyDetails.amenities) ? propertyDetails.amenities : []),
-      ...(Array.isArray(propertyDetails.amenitiesFeatures) ? propertyDetails.amenitiesFeatures : []),
+      ...(Array.isArray(propertyDetails.amenitiesFeatures)
+        ? propertyDetails.amenitiesFeatures
+        : []),
       ...(Array.isArray(propertyDetails.securityFeatures) ? propertyDetails.securityFeatures : []),
       ...(Array.isArray(propertyDetails.kitchenFeatures) ? propertyDetails.kitchenFeatures : []),
       ...(Array.isArray(propertyDetails.outdoorFeatures) ? propertyDetails.outdoorFeatures : []),
       ...(Array.isArray(propertyDetails.energyFeatures) ? propertyDetails.energyFeatures : []),
       propertyDetails.waterHeating,
-      propertyDetails.waterSupply
-    ].filter(Boolean).flat(),
+      propertyDetails.waterSupply,
+    ]
+      .filter(Boolean)
+      .flat(),
     features: [
       ...(Array.isArray(propertyDetails.amenities) ? propertyDetails.amenities : []),
-      ...(Array.isArray(propertyDetails.amenitiesFeatures) ? propertyDetails.amenitiesFeatures : []),
+      ...(Array.isArray(propertyDetails.amenitiesFeatures)
+        ? propertyDetails.amenitiesFeatures
+        : []),
       ...(Array.isArray(propertyDetails.securityFeatures) ? propertyDetails.securityFeatures : []),
       ...(Array.isArray(propertyDetails.kitchenFeatures) ? propertyDetails.kitchenFeatures : []),
       ...(Array.isArray(propertyDetails.outdoorFeatures) ? propertyDetails.outdoorFeatures : []),
       ...(Array.isArray(propertyDetails.energyFeatures) ? propertyDetails.energyFeatures : []),
       propertyDetails.waterHeating,
-      propertyDetails.waterSupply
-    ].filter(Boolean).flat(),
+      propertyDetails.waterSupply,
+    ]
+      .filter(Boolean)
+      .flat(),
     // Location fields
     city: listing.city,
     province: listing.province,
@@ -2522,27 +2582,29 @@ export function transformListingToProperty(listing: any, media: any[] = []) {
     longitude: listing.longitude,
     // Media
     // Media - prepend CDN URL if stored as path
-    images: media.map((m: any) => {
-      const url = m.processedUrl || m.originalUrl || m.mediaUrl;
-      if (!url) return null;
-      if (url.startsWith('http')) return url;
-      
-      // Prepend CDN URL or S3 URL
-      let cdn = process.env.CLOUDFRONT_URL;
-      const bucket = process.env.S3_BUCKET_NAME;
-      const region = process.env.AWS_REGION || 'us-east-1';
-      
-      if (cdn) {
-        // Remove protocol if present to avoid double https://
-        cdn = cdn.replace(/^https?:\/\//, '');
-        // Remove trailing slash
-        cdn = cdn.replace(/\/$/, '');
-        return `https://${cdn}/${url}`;
-      } else if (bucket) {
-        return `https://${bucket}.s3.${region}.amazonaws.com/${url}`;
-      }
-      return url;
-    }).filter(Boolean),
+    images: media
+      .map((m: any) => {
+        const url = m.processedUrl || m.originalUrl || m.mediaUrl;
+        if (!url) return null;
+        if (url.startsWith('http')) return url;
+
+        // Prepend CDN URL or S3 URL
+        let cdn = process.env.CLOUDFRONT_URL;
+        const bucket = process.env.S3_BUCKET_NAME;
+        const region = process.env.AWS_REGION || 'us-east-1';
+
+        if (cdn) {
+          // Remove protocol if present to avoid double https://
+          cdn = cdn.replace(/^https?:\/\//, '');
+          // Remove trailing slash
+          cdn = cdn.replace(/\/$/, '');
+          return `https://${cdn}/${url}`;
+        } else if (bucket) {
+          return `https://${bucket}.s3.${region}.amazonaws.com/${url}`;
+        }
+        return url;
+      })
+      .filter(Boolean),
     // Metadata
     status: listing.status,
     createdAt: listing.createdAt,
@@ -2550,18 +2612,20 @@ export function transformListingToProperty(listing: any, media: any[] = []) {
     userId: listing.userId,
     ownerId: listing.userId,
     // Linked Agent/User details from join
-    agent: listing.agentId ? {
-      name: listing.agentName,
-      image: listing.agentImage,
-      email: listing.agentEmail,
-      phone: listing.agentPhone,
-    } : null,
+    agent: listing.agentId
+      ? {
+          name: listing.agentName,
+          image: listing.agentImage,
+          email: listing.agentEmail,
+          phone: listing.agentPhone,
+        }
+      : null,
     user: {
       id: listing.ownerId,
       name: listing.ownerName,
       image: listing.ownerImage,
       email: listing.ownerEmail,
-    }
+    },
   };
 }
 
@@ -2591,7 +2655,6 @@ interface ListingSearchParams {
  * Search listings (replacement for searchProperties)
  */
 export async function searchListings(params: ListingSearchParams) {
-
   const db = await getDb();
   if (!db) return [];
 
@@ -2602,8 +2665,10 @@ export async function searchListings(params: ListingSearchParams) {
   conditions.push(sql`${listings.status} = 'published'`);
 
   // Location filters - use LOWER for case-insensitive matching
-  if (params.city) conditions.push(sql`LOWER(${listings.city}) LIKE ${`%${params.city.toLowerCase()}%`}`);
-  if (params.province) conditions.push(sql`LOWER(${listings.province}) LIKE ${`%${params.province.toLowerCase()}%`}`);
+  if (params.city)
+    conditions.push(sql`LOWER(${listings.city}) LIKE ${`%${params.city.toLowerCase()}%`}`);
+  if (params.province)
+    conditions.push(sql`LOWER(${listings.province}) LIKE ${`%${params.province.toLowerCase()}%`}`);
 
   // Property type filter
   if (params.propertyType) conditions.push(eq(listings.propertyType, params.propertyType as any));
@@ -2611,11 +2676,11 @@ export async function searchListings(params: ListingSearchParams) {
   // Listing type filter (map to action)
   if (params.listingType) {
     const actionMap: Record<string, string> = {
-      'sale': 'sell',
-      'rent': 'rent',
-      'auction': 'auction',
-      'rent_to_buy': 'rent',
-      'shared_living': 'rent',
+      sale: 'sell',
+      rent: 'rent',
+      auction: 'auction',
+      rent_to_buy: 'rent',
+      shared_living: 'rent',
     };
     const action = actionMap[params.listingType] || params.listingType;
     conditions.push(eq(listings.action, action as any));
@@ -2624,27 +2689,27 @@ export async function searchListings(params: ListingSearchParams) {
   // Price filters - handle different price fields based on action
   if (params.minPrice || params.maxPrice) {
     const priceConditions: SQL[] = [];
-    
+
     if (params.minPrice) {
       priceConditions.push(
         or(
           gte(listings.askingPrice, params.minPrice.toString()),
           gte(listings.monthlyRent, params.minPrice.toString()),
-          gte(listings.startingBid, params.minPrice.toString())
-        )!
+          gte(listings.startingBid, params.minPrice.toString()),
+        )!,
       );
     }
-    
+
     if (params.maxPrice) {
       priceConditions.push(
         or(
           lte(listings.askingPrice, params.maxPrice.toString()),
           lte(listings.monthlyRent, params.maxPrice.toString()),
-          lte(listings.startingBid, params.maxPrice.toString())
-        )!
+          lte(listings.startingBid, params.maxPrice.toString()),
+        )!,
       );
     }
-    
+
     if (priceConditions.length > 0) {
       conditions.push(and(...priceConditions)!);
     }
@@ -2653,28 +2718,29 @@ export async function searchListings(params: ListingSearchParams) {
   // Geographic bounds filter
   if (params.minLat !== undefined && params.maxLat !== undefined) {
     conditions.push(
-      sql`CAST(${listings.latitude} AS DECIMAL(10, 6)) >= ${params.minLat} AND CAST(${listings.latitude} AS DECIMAL(10, 6)) <= ${params.maxLat}`
+      sql`CAST(${listings.latitude} AS DECIMAL(10, 6)) >= ${params.minLat} AND CAST(${listings.latitude} AS DECIMAL(10, 6)) <= ${params.maxLat}`,
     );
   }
   if (params.minLng !== undefined && params.maxLng !== undefined) {
     conditions.push(
-      sql`CAST(${listings.longitude} AS DECIMAL(10, 6)) >= ${params.minLng} AND CAST(${listings.longitude} AS DECIMAL(10, 6)) <= ${params.maxLng}`
+      sql`CAST(${listings.longitude} AS DECIMAL(10, 6)) >= ${params.minLng} AND CAST(${listings.longitude} AS DECIMAL(10, 6)) <= ${params.maxLng}`,
     );
   }
 
   // Build query
-  let query = db.select({
-    ...getTableColumns(listings),
-    ownerName: users.name,
-    ownerEmail: users.email,
-    agentName: agents.displayName,
-    agentImage: agents.profileImage,
-    agentEmail: agents.email,
-    agentPhone: agents.phone,
-  })
-  .from(listings)
-  .leftJoin(users, eq(listings.ownerId, users.id))
-  .leftJoin(agents, eq(listings.agentId, agents.id)) as any;
+  let query = db
+    .select({
+      ...getTableColumns(listings),
+      ownerName: users.name,
+      ownerEmail: users.email,
+      agentName: agents.displayName,
+      agentImage: agents.profileImage,
+      agentEmail: agents.email,
+      agentPhone: agents.phone,
+    })
+    .from(listings)
+    .leftJoin(users, eq(listings.ownerId, users.id))
+    .leftJoin(agents, eq(listings.agentId, agents.id)) as any;
 
   if (conditions.length > 0) {
     query = query.where(and(...conditions));
@@ -2699,9 +2765,9 @@ export async function searchListings(params: ListingSearchParams) {
         .from(listingMedia)
         .where(eq(listingMedia.listingId, listing.id))
         .orderBy(listingMedia.displayOrder);
-      
+
       return transformListingToProperty(listing, media);
-    })
+    }),
   );
 
   // Apply filters that require JSON extraction (bedrooms, bathrooms, area, amenities)
@@ -2720,10 +2786,10 @@ export async function searchListings(params: ListingSearchParams) {
     filtered = filtered.filter(p => p.area <= params.maxArea!);
   }
   if (params.amenities && params.amenities.length > 0) {
-    filtered = filtered.filter(p => 
-      params.amenities!.every(amenity => 
-        p.amenities.some((a: string) => a.toLowerCase().includes(amenity.toLowerCase()))
-      )
+    filtered = filtered.filter(p =>
+      params.amenities!.every(amenity =>
+        p.amenities.some((a: string) => a.toLowerCase().includes(amenity.toLowerCase())),
+      ),
     );
   }
 
@@ -2740,24 +2806,21 @@ export async function getFeaturedListings(limit: number = 6) {
   const results = await db
     .select()
     .from(listings)
-    .where(and(
-      eq(listings.featured, 1),
-      eq(listings.status, 'approved' as any)
-    ))
+    .where(and(eq(listings.featured, 1), eq(listings.status, 'approved' as any)))
     .orderBy(desc(listings.createdAt))
     .limit(limit);
 
   // Fetch media for each listing
   const listingsWithMedia = await Promise.all(
-    results.map(async (listing) => {
+    results.map(async listing => {
       const media = await db
         .select()
         .from(listingMedia)
         .where(eq(listingMedia.listingId, listing.id))
         .orderBy(listingMedia.displayOrder);
-      
+
       return transformListingToProperty(listing, media);
-    })
+    }),
   );
 
   return listingsWithMedia;
@@ -2794,11 +2857,10 @@ export async function createDeveloper(data: {
 
   // Valid category values for the enum
   const validCategories = ['residential', 'commercial', 'mixed_use', 'industrial'];
-  
+
   // Find first valid category from specializations, or use provided category, or default to residential
-  const category = data.category || 
-                   data.specializations?.find(s => validCategories.includes(s)) || 
-                   'residential';
+  const category =
+    data.category || data.specializations?.find(s => validCategories.includes(s)) || 'residential';
 
   const [result] = await db.insert(developers).values({
     name: data.name,
@@ -2873,11 +2935,7 @@ export async function getDeveloperById(id: number) {
   const db = await getDb();
   if (!db) return null;
 
-  const [developer] = await db
-    .select()
-    .from(developers)
-    .where(eq(developers.id, id))
-    .limit(1);
+  const [developer] = await db.select().from(developers).where(eq(developers.id, id)).limit(1);
 
   return developer || null;
 }
@@ -2903,7 +2961,7 @@ export async function updateDeveloper(
     completedProjects: number;
     currentProjects: number;
     upcomingProjects: number;
-  }>
+  }>,
 ) {
   const db = await getDb();
   if (!db) throw new Error('Database not available');
@@ -3010,11 +3068,7 @@ export async function approveDeveloper(id: number, approvedBy: number) {
 /**
  * Admin: Reject developer
  */
-export async function rejectDeveloper(
-  id: number,
-  rejectedBy: number,
-  reason: string
-) {
+export async function rejectDeveloper(id: number, rejectedBy: number, reason: string) {
   const db = await getDb();
   if (!db) throw new Error('Database not available');
 
@@ -3155,7 +3209,7 @@ export async function countPendingListings() {
 export async function countPendingDevelopments() {
   const db = await getDb();
   if (!db) throw new Error('Database not available');
-  
+
   // Use developmentApprovalQueue or direct status check depending on architecture
   // Based on adminRouter imports, developmentApprovalQueue exists
   // For now, let's count simple 'pending' status on developments table directly for speed
@@ -3163,7 +3217,7 @@ export async function countPendingDevelopments() {
     .select({ count: count() })
     .from(developments)
     .where(eq(developments.approvalStatus, 'pending'));
-    
+
   return result[0]?.count ?? 0;
 }
 
@@ -3175,64 +3229,61 @@ export async function getEcosystemStats() {
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
   const dateStr = thirtyDaysAgo.toISOString(); // Assuming string storage for dates based on other code
 
-  const [
-    totalAgencies,
-    activeAgencies,
-    newAgencies
-  ] = await Promise.all([
+  const [totalAgencies, activeAgencies, newAgencies] = await Promise.all([
     db.select({ count: count() }).from(agencies),
     db.select({ count: count() }).from(agencies).where(eq(agencies.isVerified, 1)),
-    db.select({ count: count() }).from(agencies).where(sql`${agencies.createdAt} > ${dateStr}`)
+    db
+      .select({ count: count() })
+      .from(agencies)
+      .where(sql`${agencies.createdAt} > ${dateStr}`),
   ]);
 
-  const [
-    totalAgents,
-    activeAgents,
-    newAgents
-  ] = await Promise.all([
+  const [totalAgents, activeAgents, newAgents] = await Promise.all([
     db.select({ count: count() }).from(agents),
     db.select({ count: count() }).from(agents).where(eq(agents.status, 'approved')),
-    db.select({ count: count() }).from(agents).where(sql`${agents.createdAt} > ${dateStr}`)
+    db
+      .select({ count: count() })
+      .from(agents)
+      .where(sql`${agents.createdAt} > ${dateStr}`),
   ]);
 
-  const [
-    totalDevelopers,
-    activeDevelopers,
-    newDevelopers
-  ] = await Promise.all([
+  const [totalDevelopers, activeDevelopers, newDevelopers] = await Promise.all([
     db.select({ count: count() }).from(developers),
     db.select({ count: count() }).from(developers).where(eq(developers.status, 'approved')),
-    db.select({ count: count() }).from(developers).where(sql`${developers.createdAt} > ${dateStr}`)
+    db
+      .select({ count: count() })
+      .from(developers)
+      .where(sql`${developers.createdAt} > ${dateStr}`),
   ]);
 
-  const [
-    totalUsers,
-    newUsers
-  ] = await Promise.all([
+  const [totalUsers, newUsers] = await Promise.all([
     db.select({ count: count() }).from(users).where(eq(users.role, 'visitor')), // Assuming 'visitor' is end user
-    db.select({ count: count() }).from(users).where(and(eq(users.role, 'visitor'), sql`${users.createdAt} > ${dateStr}`))
+    db
+      .select({ count: count() })
+      .from(users)
+      .where(and(eq(users.role, 'visitor'), sql`${users.createdAt} > ${dateStr}`)),
   ]);
 
   return {
     agencies: {
       total: totalAgencies[0]?.count ?? 0,
       active: activeAgencies[0]?.count ?? 0,
-      growth: newAgencies[0]?.count ?? 0
+      growth: newAgencies[0]?.count ?? 0,
     },
     agents: {
       total: totalAgents[0]?.count ?? 0,
       active: activeAgents[0]?.count ?? 0,
-      growth: newAgents[0]?.count ?? 0
+      growth: newAgents[0]?.count ?? 0,
     },
     developers: {
       total: totalDevelopers[0]?.count ?? 0,
       active: activeDevelopers[0]?.count ?? 0,
-      growth: newDevelopers[0]?.count ?? 0
+      growth: newDevelopers[0]?.count ?? 0,
     },
     users: {
       total: totalUsers[0]?.count ?? 0,
       active: totalUsers[0]?.count ?? 0, // Users generally considered active if they exist for now
-      growth: newUsers[0]?.count ?? 0
-    }
+      growth: newUsers[0]?.count ?? 0,
+    },
   };
 }

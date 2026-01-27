@@ -6,7 +6,7 @@ import { exploreAgencyService } from '../exploreAgencyService';
 
 /**
  * Explore Agency Service Tests
- * 
+ *
  * Tests agency-level analytics and metrics aggregation
  * Requirements: 3.1, 3.2, 3.3, 3.4
  */
@@ -31,9 +31,11 @@ describe('Explore Agency Service', () => {
   beforeEach(async () => {
     // Clean up test data before each test
     await db.execute(sql`DELETE FROM explore_shorts WHERE title LIKE 'TEST:AGENCY:%'`);
-    await db.execute(sql`DELETE FROM agents WHERE first_name = 'TEST' AND last_name LIKE 'AGENCY%'`);
+    await db.execute(
+      sql`DELETE FROM agents WHERE first_name = 'TEST' AND last_name LIKE 'AGENCY%'`,
+    );
     await db.execute(sql`DELETE FROM agencies WHERE name LIKE 'TEST:AGENCY:%'`);
-    
+
     testAgentIds = [];
     testShortIds = [];
   });
@@ -41,7 +43,9 @@ describe('Explore Agency Service', () => {
   afterAll(async () => {
     // Final cleanup
     await db.execute(sql`DELETE FROM explore_shorts WHERE title LIKE 'TEST:AGENCY:%'`);
-    await db.execute(sql`DELETE FROM agents WHERE first_name = 'TEST' AND last_name LIKE 'AGENCY%'`);
+    await db.execute(
+      sql`DELETE FROM agents WHERE first_name = 'TEST' AND last_name LIKE 'AGENCY%'`,
+    );
     await db.execute(sql`DELETE FROM agencies WHERE name LIKE 'TEST:AGENCY:%'`);
   });
 
@@ -202,7 +206,7 @@ describe('Explore Agency Service', () => {
     expect(breakdown.length).toBe(2);
     expect(breakdown[0].contentCount).toBeGreaterThan(0);
     expect(breakdown[0].totalViews).toBeGreaterThan(0);
-    
+
     // Should be sorted by views (descending)
     expect(breakdown[0].totalViews).toBeGreaterThanOrEqual(breakdown[1].totalViews);
 
@@ -253,11 +257,11 @@ describe('Explore Agency Service', () => {
 
     // Verify top content
     expect(topContent.length).toBeLessThanOrEqual(10);
-    
+
     // Should be sorted by performance score (descending)
     for (let i = 0; i < topContent.length - 1; i++) {
       expect(topContent[i].performanceScore).toBeGreaterThanOrEqual(
-        topContent[i + 1].performanceScore
+        topContent[i + 1].performanceScore,
       );
     }
 

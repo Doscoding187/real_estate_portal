@@ -30,7 +30,7 @@ interface LocationHeroSectionProps {
   backgroundImage: string;
   listingCount: number;
   campaign?: HeroCampaign | null;
-  quickLinks?: { label: string; path?: string; slug?: string; }[];
+  quickLinks?: { label: string; path?: string; slug?: string }[];
   initialSearchQuery?: string;
 }
 
@@ -60,7 +60,14 @@ const filterConfig = {
     leaseTerms: ['Month-to-month', '6 months', '12 months', '24+ months'],
   },
   developments: {
-    types: ['Full Title', 'Sectional Title', 'Security Estate', 'Retirement', 'Luxury', 'Affordable Housing'],
+    types: [
+      'Full Title',
+      'Sectional Title',
+      'Security Estate',
+      'Retirement',
+      'Luxury',
+      'Affordable Housing',
+    ],
     statuses: ['Off-Plan', 'Under Construction', 'Completed', 'Launching Soon'],
   },
   plot_land: {
@@ -90,7 +97,7 @@ export function LocationHeroSection({
   const [activeTab, setActiveTab] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState(initialSearchQuery);
   const [showFilters, setShowFilters] = useState(false);
-  
+
   // Filter state
   const [filters, setFilters] = useState({
     propertyIntent: '',
@@ -126,10 +133,11 @@ export function LocationHeroSection({
       return `/new-developments?location=${encodeURIComponent(locName)}`;
     }
 
-    const baseRoute = category.listingType === 'rent' || category.id === 'shared_living'
-      ? 'property-to-rent' 
-      : 'property-for-sale';
-    
+    const baseRoute =
+      category.listingType === 'rent' || category.id === 'shared_living'
+        ? 'property-to-rent'
+        : 'property-for-sale';
+
     const params = new URLSearchParams();
     params.set('view', 'list');
 
@@ -168,19 +176,19 @@ export function LocationHeroSection({
       <h1 className="sr-only">
         Property for Sale in {locationName} - Explore {listingCount.toLocaleString()} properties
       </h1>
-      
+
       {/* Banner Image Section */}
       <div className="relative w-full h-[30vh] lg:h-[35vh] overflow-hidden">
-        <div 
+        <div
           className="absolute inset-0 bg-cover bg-center bg-no-repeat"
           style={{ backgroundImage: `url(${campaign?.imageUrl || backgroundImage})` }}
         />
         <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/20 to-black/50" />
-        
+
         {campaign && (
-          <a 
-            href={campaign.landingPageUrl || '#'} 
-            target="_blank" 
+          <a
+            href={campaign.landingPageUrl || '#'}
+            target="_blank"
             rel="noopener noreferrer"
             className="absolute top-4 right-4 z-20"
             onClick={() => trackEvent('hero_campaign_click', { locationId, locationType })}
@@ -195,10 +203,9 @@ export function LocationHeroSection({
       {/* Search Card Container */}
       <div className="relative z-10 -mt-16 px-4 pb-6 flex justify-center">
         <Card className="w-full max-w-6xl bg-white/95 backdrop-blur-sm shadow-2xl rounded-2xl p-6 md:p-8">
-          
           {/* Category Tabs */}
           <div className="flex flex-wrap lg:flex-nowrap justify-center gap-2 mb-6">
-            {categories.map((category) => {
+            {categories.map(category => {
               const Icon = category.icon;
               const isActive = activeTab === category.id;
               return (
@@ -209,7 +216,7 @@ export function LocationHeroSection({
                     'flex items-center gap-1.5 px-3 py-2 rounded-lg font-medium text-sm transition-all duration-200 whitespace-nowrap',
                     isActive
                       ? 'bg-blue-600 text-white shadow-lg scale-105'
-                      : 'bg-slate-100 text-slate-700 hover:bg-slate-200 hover:scale-102'
+                      : 'bg-slate-100 text-slate-700 hover:bg-slate-200 hover:scale-102',
                   )}
                 >
                   <Icon className="h-4 w-4" />
@@ -217,7 +224,7 @@ export function LocationHeroSection({
                 </button>
               );
             })}
-            
+
             {/* Post Property CTA */}
             <button
               onClick={handlePostProperty}
@@ -232,37 +239,70 @@ export function LocationHeroSection({
           {showFilters && activeTab && (
             <div className="mb-6 pt-4 border-t border-slate-100 animate-in slide-in-from-top-2 duration-200">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                
                 {/* BUY FILTERS */}
                 {activeTab === 'buy' && (
                   <>
                     <div className="space-y-1.5">
-                      <Label className="text-xs font-semibold text-muted-foreground uppercase">Property Category</Label>
-                      <Select value={filters.propertyIntent} onValueChange={(val) => handleFilterChange('propertyIntent', val)}>
-                        <SelectTrigger className="h-10 bg-gray-50/50"><SelectValue placeholder="Any Category" /></SelectTrigger>
+                      <Label className="text-xs font-semibold text-muted-foreground uppercase">
+                        Property Category
+                      </Label>
+                      <Select
+                        value={filters.propertyIntent}
+                        onValueChange={val => handleFilterChange('propertyIntent', val)}
+                      >
+                        <SelectTrigger className="h-10 bg-gray-50/50">
+                          <SelectValue placeholder="Any Category" />
+                        </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="all">Any Category</SelectItem>
-                          {filterConfig.buy.intents.map(intent => <SelectItem key={intent} value={intent}>{intent}</SelectItem>)}
+                          {filterConfig.buy.intents.map(intent => (
+                            <SelectItem key={intent} value={intent}>
+                              {intent}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     </div>
                     <div className="space-y-1.5">
-                      <Label className="text-xs font-semibold text-muted-foreground uppercase">Property Type</Label>
-                      <Select value={filters.propertyTypes[0] || ''} onValueChange={(val) => handleFilterChange('propertyTypes', [val])}>
-                        <SelectTrigger className="h-10 bg-gray-50/50"><SelectValue placeholder="Any Type" /></SelectTrigger>
+                      <Label className="text-xs font-semibold text-muted-foreground uppercase">
+                        Property Type
+                      </Label>
+                      <Select
+                        value={filters.propertyTypes[0] || ''}
+                        onValueChange={val => handleFilterChange('propertyTypes', [val])}
+                      >
+                        <SelectTrigger className="h-10 bg-gray-50/50">
+                          <SelectValue placeholder="Any Type" />
+                        </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="all">Any Type</SelectItem>
-                          {(filters.propertyIntent && filterConfig.buy.propertyTypes[filters.propertyIntent as keyof typeof filterConfig.buy.propertyTypes]
-                            ? filterConfig.buy.propertyTypes[filters.propertyIntent as keyof typeof filterConfig.buy.propertyTypes]
+                          {(filters.propertyIntent &&
+                          filterConfig.buy.propertyTypes[
+                            filters.propertyIntent as keyof typeof filterConfig.buy.propertyTypes
+                          ]
+                            ? filterConfig.buy.propertyTypes[
+                                filters.propertyIntent as keyof typeof filterConfig.buy.propertyTypes
+                              ]
                             : Object.values(filterConfig.buy.propertyTypes).flat()
-                          ).map((type: string) => <SelectItem key={type} value={type}>{type}</SelectItem>)}
+                          ).map((type: string) => (
+                            <SelectItem key={type} value={type}>
+                              {type}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     </div>
                     <div className="space-y-1.5">
-                      <Label className="text-xs font-semibold text-muted-foreground uppercase">Min Price</Label>
-                      <Select value={filters.priceMin} onValueChange={(val) => handleFilterChange('priceMin', val)}>
-                        <SelectTrigger className="h-10 bg-gray-50/50"><SelectValue placeholder="No Min" /></SelectTrigger>
+                      <Label className="text-xs font-semibold text-muted-foreground uppercase">
+                        Min Price
+                      </Label>
+                      <Select
+                        value={filters.priceMin}
+                        onValueChange={val => handleFilterChange('priceMin', val)}
+                      >
+                        <SelectTrigger className="h-10 bg-gray-50/50">
+                          <SelectValue placeholder="No Min" />
+                        </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="0">R 0</SelectItem>
                           <SelectItem value="500000">R 500,000</SelectItem>
@@ -273,9 +313,16 @@ export function LocationHeroSection({
                       </Select>
                     </div>
                     <div className="space-y-1.5">
-                      <Label className="text-xs font-semibold text-muted-foreground uppercase">Max Price</Label>
-                      <Select value={filters.priceMax} onValueChange={(val) => handleFilterChange('priceMax', val)}>
-                        <SelectTrigger className="h-10 bg-gray-50/50"><SelectValue placeholder="No Max" /></SelectTrigger>
+                      <Label className="text-xs font-semibold text-muted-foreground uppercase">
+                        Max Price
+                      </Label>
+                      <Select
+                        value={filters.priceMax}
+                        onValueChange={val => handleFilterChange('priceMax', val)}
+                      >
+                        <SelectTrigger className="h-10 bg-gray-50/50">
+                          <SelectValue placeholder="No Max" />
+                        </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="1000000">R 1,000,000</SelectItem>
                           <SelectItem value="2000000">R 2,000,000</SelectItem>
@@ -292,29 +339,58 @@ export function LocationHeroSection({
                 {activeTab === 'rental' && (
                   <>
                     <div className="space-y-1.5">
-                      <Label className="text-xs font-semibold text-muted-foreground uppercase">Property Type</Label>
-                      <Select value={filters.propertyTypes[0] || ''} onValueChange={(val) => handleFilterChange('propertyTypes', [val])}>
-                        <SelectTrigger className="h-10 bg-gray-50/50"><SelectValue placeholder="Any Type" /></SelectTrigger>
+                      <Label className="text-xs font-semibold text-muted-foreground uppercase">
+                        Property Type
+                      </Label>
+                      <Select
+                        value={filters.propertyTypes[0] || ''}
+                        onValueChange={val => handleFilterChange('propertyTypes', [val])}
+                      >
+                        <SelectTrigger className="h-10 bg-gray-50/50">
+                          <SelectValue placeholder="Any Type" />
+                        </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="all">Any Type</SelectItem>
-                          {filterConfig.rental.propertyTypes.map((type) => <SelectItem key={type} value={type}>{type}</SelectItem>)}
+                          {filterConfig.rental.propertyTypes.map(type => (
+                            <SelectItem key={type} value={type}>
+                              {type}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     </div>
                     <div className="space-y-1.5">
-                      <Label className="text-xs font-semibold text-muted-foreground uppercase">Lease Term</Label>
-                      <Select value={filters.leaseTerm} onValueChange={(val) => handleFilterChange('leaseTerm', val)}>
-                        <SelectTrigger className="h-10 bg-gray-50/50"><SelectValue placeholder="Any Term" /></SelectTrigger>
+                      <Label className="text-xs font-semibold text-muted-foreground uppercase">
+                        Lease Term
+                      </Label>
+                      <Select
+                        value={filters.leaseTerm}
+                        onValueChange={val => handleFilterChange('leaseTerm', val)}
+                      >
+                        <SelectTrigger className="h-10 bg-gray-50/50">
+                          <SelectValue placeholder="Any Term" />
+                        </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="all">Any Term</SelectItem>
-                          {filterConfig.rental.leaseTerms.map(term => <SelectItem key={term} value={term}>{term}</SelectItem>)}
+                          {filterConfig.rental.leaseTerms.map(term => (
+                            <SelectItem key={term} value={term}>
+                              {term}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     </div>
                     <div className="space-y-1.5">
-                      <Label className="text-xs font-semibold text-muted-foreground uppercase">Max Budget</Label>
-                      <Select value={filters.priceMax} onValueChange={(val) => handleFilterChange('priceMax', val)}>
-                        <SelectTrigger className="h-10 bg-gray-50/50"><SelectValue placeholder="Any Budget" /></SelectTrigger>
+                      <Label className="text-xs font-semibold text-muted-foreground uppercase">
+                        Max Budget
+                      </Label>
+                      <Select
+                        value={filters.priceMax}
+                        onValueChange={val => handleFilterChange('priceMax', val)}
+                      >
+                        <SelectTrigger className="h-10 bg-gray-50/50">
+                          <SelectValue placeholder="Any Budget" />
+                        </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="5000">R 5,000</SelectItem>
                           <SelectItem value="10000">R 10,000</SelectItem>
@@ -324,8 +400,14 @@ export function LocationHeroSection({
                       </Select>
                     </div>
                     <div className="flex items-center space-x-2 h-10 mt-6">
-                      <Checkbox id="furnished" checked={filters.furnished} onCheckedChange={(checked) => handleFilterChange('furnished', checked)} />
-                      <Label htmlFor="furnished" className="font-normal cursor-pointer">Furnished Only</Label>
+                      <Checkbox
+                        id="furnished"
+                        checked={filters.furnished}
+                        onCheckedChange={checked => handleFilterChange('furnished', checked)}
+                      />
+                      <Label htmlFor="furnished" className="font-normal cursor-pointer">
+                        Furnished Only
+                      </Label>
                     </div>
                   </>
                 )}
@@ -334,29 +416,58 @@ export function LocationHeroSection({
                 {activeTab === 'developments' && (
                   <>
                     <div className="space-y-1.5">
-                      <Label className="text-xs font-semibold text-muted-foreground uppercase">Development Type</Label>
-                      <Select value={filters.developmentType} onValueChange={(val) => handleFilterChange('developmentType', val)}>
-                        <SelectTrigger className="h-10 bg-gray-50/50"><SelectValue placeholder="Any Type" /></SelectTrigger>
+                      <Label className="text-xs font-semibold text-muted-foreground uppercase">
+                        Development Type
+                      </Label>
+                      <Select
+                        value={filters.developmentType}
+                        onValueChange={val => handleFilterChange('developmentType', val)}
+                      >
+                        <SelectTrigger className="h-10 bg-gray-50/50">
+                          <SelectValue placeholder="Any Type" />
+                        </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="all">Any Type</SelectItem>
-                          {filterConfig.developments.types.map(type => <SelectItem key={type} value={type}>{type}</SelectItem>)}
+                          {filterConfig.developments.types.map(type => (
+                            <SelectItem key={type} value={type}>
+                              {type}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     </div>
                     <div className="space-y-1.5">
-                      <Label className="text-xs font-semibold text-muted-foreground uppercase">Status</Label>
-                      <Select value={filters.developmentStatus} onValueChange={(val) => handleFilterChange('developmentStatus', val)}>
-                        <SelectTrigger className="h-10 bg-gray-50/50"><SelectValue placeholder="Any Status" /></SelectTrigger>
+                      <Label className="text-xs font-semibold text-muted-foreground uppercase">
+                        Status
+                      </Label>
+                      <Select
+                        value={filters.developmentStatus}
+                        onValueChange={val => handleFilterChange('developmentStatus', val)}
+                      >
+                        <SelectTrigger className="h-10 bg-gray-50/50">
+                          <SelectValue placeholder="Any Status" />
+                        </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="all">Any Status</SelectItem>
-                          {filterConfig.developments.statuses.map(status => <SelectItem key={status} value={status}>{status}</SelectItem>)}
+                          {filterConfig.developments.statuses.map(status => (
+                            <SelectItem key={status} value={status}>
+                              {status}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     </div>
                     <div className="space-y-1.5">
-                      <Label className="text-xs font-semibold text-muted-foreground uppercase">Min Price</Label>
-                      <Select value={filters.priceMin} onValueChange={(val) => handleFilterChange('priceMin', val)}>
-                        <SelectTrigger className="h-10 bg-gray-50/50"><SelectValue placeholder="No Min" /></SelectTrigger>
+                      <Label className="text-xs font-semibold text-muted-foreground uppercase">
+                        Min Price
+                      </Label>
+                      <Select
+                        value={filters.priceMin}
+                        onValueChange={val => handleFilterChange('priceMin', val)}
+                      >
+                        <SelectTrigger className="h-10 bg-gray-50/50">
+                          <SelectValue placeholder="No Min" />
+                        </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="500000">R 500,000</SelectItem>
                           <SelectItem value="1000000">R 1,000,000</SelectItem>
@@ -365,9 +476,16 @@ export function LocationHeroSection({
                       </Select>
                     </div>
                     <div className="space-y-1.5">
-                      <Label className="text-xs font-semibold text-muted-foreground uppercase">Max Price</Label>
-                      <Select value={filters.priceMax} onValueChange={(val) => handleFilterChange('priceMax', val)}>
-                        <SelectTrigger className="h-10 bg-gray-50/50"><SelectValue placeholder="No Max" /></SelectTrigger>
+                      <Label className="text-xs font-semibold text-muted-foreground uppercase">
+                        Max Price
+                      </Label>
+                      <Select
+                        value={filters.priceMax}
+                        onValueChange={val => handleFilterChange('priceMax', val)}
+                      >
+                        <SelectTrigger className="h-10 bg-gray-50/50">
+                          <SelectValue placeholder="No Max" />
+                        </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="2000000">R 2,000,000</SelectItem>
                           <SelectItem value="5000000">R 5,000,000</SelectItem>
@@ -382,19 +500,37 @@ export function LocationHeroSection({
                 {activeTab === 'plot_land' && (
                   <>
                     <div className="space-y-1.5">
-                      <Label className="text-xs font-semibold text-muted-foreground uppercase">Land Type</Label>
-                      <Select value={filters.landType} onValueChange={(val) => handleFilterChange('landType', val)}>
-                        <SelectTrigger className="h-10 bg-gray-50/50"><SelectValue placeholder="Any Type" /></SelectTrigger>
+                      <Label className="text-xs font-semibold text-muted-foreground uppercase">
+                        Land Type
+                      </Label>
+                      <Select
+                        value={filters.landType}
+                        onValueChange={val => handleFilterChange('landType', val)}
+                      >
+                        <SelectTrigger className="h-10 bg-gray-50/50">
+                          <SelectValue placeholder="Any Type" />
+                        </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="all">Any Type</SelectItem>
-                          {filterConfig.plot_land.types.map(type => <SelectItem key={type} value={type}>{type}</SelectItem>)}
+                          {filterConfig.plot_land.types.map(type => (
+                            <SelectItem key={type} value={type}>
+                              {type}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     </div>
                     <div className="space-y-1.5">
-                      <Label className="text-xs font-semibold text-muted-foreground uppercase">Min Price</Label>
-                      <Select value={filters.priceMin} onValueChange={(val) => handleFilterChange('priceMin', val)}>
-                        <SelectTrigger className="h-10 bg-gray-50/50"><SelectValue placeholder="No Min" /></SelectTrigger>
+                      <Label className="text-xs font-semibold text-muted-foreground uppercase">
+                        Min Price
+                      </Label>
+                      <Select
+                        value={filters.priceMin}
+                        onValueChange={val => handleFilterChange('priceMin', val)}
+                      >
+                        <SelectTrigger className="h-10 bg-gray-50/50">
+                          <SelectValue placeholder="No Min" />
+                        </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="100000">R 100,000</SelectItem>
                           <SelectItem value="500000">R 500,000</SelectItem>
@@ -403,9 +539,16 @@ export function LocationHeroSection({
                       </Select>
                     </div>
                     <div className="space-y-1.5">
-                      <Label className="text-xs font-semibold text-muted-foreground uppercase">Max Price</Label>
-                      <Select value={filters.priceMax} onValueChange={(val) => handleFilterChange('priceMax', val)}>
-                        <SelectTrigger className="h-10 bg-gray-50/50"><SelectValue placeholder="No Max" /></SelectTrigger>
+                      <Label className="text-xs font-semibold text-muted-foreground uppercase">
+                        Max Price
+                      </Label>
+                      <Select
+                        value={filters.priceMax}
+                        onValueChange={val => handleFilterChange('priceMax', val)}
+                      >
+                        <SelectTrigger className="h-10 bg-gray-50/50">
+                          <SelectValue placeholder="No Max" />
+                        </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="1000000">R 1,000,000</SelectItem>
                           <SelectItem value="5000000">R 5,000,000</SelectItem>
@@ -420,19 +563,37 @@ export function LocationHeroSection({
                 {activeTab === 'commercial' && (
                   <>
                     <div className="space-y-1.5">
-                      <Label className="text-xs font-semibold text-muted-foreground uppercase">Use Type</Label>
-                      <Select value={filters.commercialUseType} onValueChange={(val) => handleFilterChange('commercialUseType', val)}>
-                        <SelectTrigger className="h-10 bg-gray-50/50"><SelectValue placeholder="Any Type" /></SelectTrigger>
+                      <Label className="text-xs font-semibold text-muted-foreground uppercase">
+                        Use Type
+                      </Label>
+                      <Select
+                        value={filters.commercialUseType}
+                        onValueChange={val => handleFilterChange('commercialUseType', val)}
+                      >
+                        <SelectTrigger className="h-10 bg-gray-50/50">
+                          <SelectValue placeholder="Any Type" />
+                        </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="all">Any Type</SelectItem>
-                          {filterConfig.commercial.useTypes.map(type => <SelectItem key={type} value={type}>{type}</SelectItem>)}
+                          {filterConfig.commercial.useTypes.map(type => (
+                            <SelectItem key={type} value={type}>
+                              {type}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     </div>
                     <div className="space-y-1.5">
-                      <Label className="text-xs font-semibold text-muted-foreground uppercase">Min Price</Label>
-                      <Select value={filters.priceMin} onValueChange={(val) => handleFilterChange('priceMin', val)}>
-                        <SelectTrigger className="h-10 bg-gray-50/50"><SelectValue placeholder="No Min" /></SelectTrigger>
+                      <Label className="text-xs font-semibold text-muted-foreground uppercase">
+                        Min Price
+                      </Label>
+                      <Select
+                        value={filters.priceMin}
+                        onValueChange={val => handleFilterChange('priceMin', val)}
+                      >
+                        <SelectTrigger className="h-10 bg-gray-50/50">
+                          <SelectValue placeholder="No Min" />
+                        </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="500000">R 500,000</SelectItem>
                           <SelectItem value="1000000">R 1,000,000</SelectItem>
@@ -441,9 +602,16 @@ export function LocationHeroSection({
                       </Select>
                     </div>
                     <div className="space-y-1.5">
-                      <Label className="text-xs font-semibold text-muted-foreground uppercase">Max Price</Label>
-                      <Select value={filters.priceMax} onValueChange={(val) => handleFilterChange('priceMax', val)}>
-                        <SelectTrigger className="h-10 bg-gray-50/50"><SelectValue placeholder="No Max" /></SelectTrigger>
+                      <Label className="text-xs font-semibold text-muted-foreground uppercase">
+                        Max Price
+                      </Label>
+                      <Select
+                        value={filters.priceMax}
+                        onValueChange={val => handleFilterChange('priceMax', val)}
+                      >
+                        <SelectTrigger className="h-10 bg-gray-50/50">
+                          <SelectValue placeholder="No Max" />
+                        </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="5000000">R 5,000,000</SelectItem>
                           <SelectItem value="10000000">R 10,000,000</SelectItem>
@@ -458,29 +626,58 @@ export function LocationHeroSection({
                 {activeTab === 'shared_living' && (
                   <>
                     <div className="space-y-1.5">
-                      <Label className="text-xs font-semibold text-muted-foreground uppercase">Room Type</Label>
-                      <Select value={filters.roomType} onValueChange={(val) => handleFilterChange('roomType', val)}>
-                        <SelectTrigger className="h-10 bg-gray-50/50"><SelectValue placeholder="Any Type" /></SelectTrigger>
+                      <Label className="text-xs font-semibold text-muted-foreground uppercase">
+                        Room Type
+                      </Label>
+                      <Select
+                        value={filters.roomType}
+                        onValueChange={val => handleFilterChange('roomType', val)}
+                      >
+                        <SelectTrigger className="h-10 bg-gray-50/50">
+                          <SelectValue placeholder="Any Type" />
+                        </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="all">Any Type</SelectItem>
-                          {filterConfig.shared_living.roomTypes.map(type => <SelectItem key={type} value={type}>{type}</SelectItem>)}
+                          {filterConfig.shared_living.roomTypes.map(type => (
+                            <SelectItem key={type} value={type}>
+                              {type}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     </div>
                     <div className="space-y-1.5">
-                      <Label className="text-xs font-semibold text-muted-foreground uppercase">Gender Preference</Label>
-                      <Select value={filters.genderPreference} onValueChange={(val) => handleFilterChange('genderPreference', val)}>
-                        <SelectTrigger className="h-10 bg-gray-50/50"><SelectValue placeholder="Any" /></SelectTrigger>
+                      <Label className="text-xs font-semibold text-muted-foreground uppercase">
+                        Gender Preference
+                      </Label>
+                      <Select
+                        value={filters.genderPreference}
+                        onValueChange={val => handleFilterChange('genderPreference', val)}
+                      >
+                        <SelectTrigger className="h-10 bg-gray-50/50">
+                          <SelectValue placeholder="Any" />
+                        </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="all">Any</SelectItem>
-                          {filterConfig.shared_living.genderOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
+                          {filterConfig.shared_living.genderOptions.map(opt => (
+                            <SelectItem key={opt} value={opt}>
+                              {opt}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     </div>
                     <div className="space-y-1.5">
-                      <Label className="text-xs font-semibold text-muted-foreground uppercase">Max Budget</Label>
-                      <Select value={filters.priceMax} onValueChange={(val) => handleFilterChange('priceMax', val)}>
-                        <SelectTrigger className="h-10 bg-gray-50/50"><SelectValue placeholder="Any Budget" /></SelectTrigger>
+                      <Label className="text-xs font-semibold text-muted-foreground uppercase">
+                        Max Budget
+                      </Label>
+                      <Select
+                        value={filters.priceMax}
+                        onValueChange={val => handleFilterChange('priceMax', val)}
+                      >
+                        <SelectTrigger className="h-10 bg-gray-50/50">
+                          <SelectValue placeholder="Any Budget" />
+                        </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="3000">R 3,000</SelectItem>
                           <SelectItem value="5000">R 5,000</SelectItem>
@@ -505,8 +702,8 @@ export function LocationHeroSection({
                 inputClassName="h-full w-full bg-transparent border-0 focus-visible:ring-0 placeholder:text-slate-500 text-slate-900"
               />
             </div>
-            
-            <Button 
+
+            <Button
               onClick={handleSearch}
               size="lg"
               className="px-8 h-12 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 hover:-translate-y-0.5 font-semibold"
@@ -524,12 +721,12 @@ export function LocationHeroSection({
                 <button
                   key={idx}
                   onClick={() => {
-                      if (link.slug) {
-                          const path = getSearchPath(activeTab, link.slug, link.label);
-                          setLocation(path);
-                      } else if (link.path) {
-                          setLocation(link.path);
-                      }
+                    if (link.slug) {
+                      const path = getSearchPath(activeTab, link.slug, link.label);
+                      setLocation(path);
+                    } else if (link.path) {
+                      setLocation(link.path);
+                    }
                   }}
                   className="px-3 py-1.5 text-sm bg-slate-100 text-slate-700 rounded-full hover:bg-blue-100 hover:text-blue-700 transition-colors"
                 >

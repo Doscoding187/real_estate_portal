@@ -5,7 +5,7 @@
  */
 
 import { db } from '../db';
-import { properties, propertyImages } from '../../drizzle/schema';
+import { properties, propertyImages, developments } from '../../drizzle/schema';
 import { eq, and, gte, lte, inArray, or, sql, SQL, desc, asc, isNotNull } from 'drizzle-orm';
 import { redisCache, CacheTTL } from '../lib/redis';
 import type { PropertyFilters, SortOption, SearchResults, Property } from '../../shared/types';
@@ -23,11 +23,11 @@ export class PropertySearchService {
     filters: PropertyFilters,
     sortOption: SortOption = 'date_desc',
     page: number = 1,
-    pageSize: number = 12
+    pageSize: number = 12,
   ): Promise<SearchResults> {
     // Generate cache key
     const cacheKey = this.generateCacheKey(filters, sortOption, page, pageSize);
-    
+
     // Try to get from cache
     const cached = await redisCache.get<SearchResults>(cacheKey);
     if (cached) {
@@ -36,62 +36,67 @@ export class PropertySearchService {
 
     // Resolve location slugs to IDs for optimal queries
     // NOTE: Wrapped in try-catch - if resolver fails, fall back to text queries
-    const locationIds: Array<{ 
-      provinceId?: number; provinceName?: string;
-      cityId?: number; cityName?: string;
-      suburbId?: number; suburbName?: string;
+    const locationIds: Array<{
+      provinceId?: number;
+      provinceName?: string;
+      cityId?: number;
+      cityName?: string;
+      suburbId?: number;
+      suburbName?: string;
     }> = [];
     let resolvedLocation: ResolvedLocation | null = null;
-    
+
     try {
       // Priority 1: Multi-location Search (New P24 Style)
       if (filters.locations && filters.locations.length > 0) {
-         await Promise.all(filters.locations.map(async (slug) => {
+        await Promise.all(
+          filters.locations.map(async slug => {
             const resolved = await locationResolver.resolveLocation({
               // We don't know the type, so we try to resolve purely by slug if possible
               // The resolver might need an update or we try all slots.
               // For now, let's assume the resolver can handle a generic slug lookup
               // or we pass it as city/suburb specifically if we knew.
               // BUT, since we only have a slug, we might need a smarter resolver method.
-              // Hack for now: try city first, then suburb? 
+              // Hack for now: try city first, then suburb?
               // Actually, locationResolver usually takes {provinceSlug, citySlug, suburbSlug}
-              
+
               // Let's assume the slug could be anything.
               // Ideally locationResolver should have `resolveSlug(slug)`
-              
+
               // For now, we'll try to guess based on context or just pass it as city (most common)
               // or rely on a new resolver method if it existed.
               // Current implementation of resolveLocation uses rigid hierarchy.
-              
-              // Let's rely on the text fallback for now if resolution is hard, 
+
+              // Let's rely on the text fallback for now if resolution is hard,
               // OR try to resolve each independently.
-              
+
               // Temporary strategy: Try resolving as city first (most high value), then suburb.
-              citySlug: slug
+              citySlug: slug,
             });
-            
+
             if (resolved) {
               if (resolved.city || resolved.suburb || resolved.province) {
-                 locationIds.push({
+                locationIds.push({
                   provinceId: resolved.province?.id,
                   provinceName: resolved.province?.name,
                   cityId: resolved.city?.id,
                   cityName: resolved.city?.name,
                   suburbId: resolved.suburb?.id,
                   suburbName: resolved.suburb?.name,
-                 });
+                });
               }
             }
-         }));
-      } 
+          }),
+        );
+      }
       // Priority 2: Hierarchical Search (Legacy / Single Location)
       else {
         resolvedLocation = await locationResolver.resolveLocation({
           provinceSlug: filters.province,
           citySlug: filters.city,
-          suburbSlug: filters.suburb?.[0], 
+          suburbSlug: filters.suburb?.[0],
         });
-        
+
         if (resolvedLocation) {
           locationIds.push({
             provinceId: resolvedLocation.province?.id,
@@ -104,18 +109,22 @@ export class PropertySearchService {
         }
       }
     } catch (error) {
-      console.error('[PropertySearchService] Location resolver failed, using text fallback:', error);
+      console.error(
+        '[PropertySearchService] Location resolver failed, using text fallback:',
+        error,
+      );
     }
 
     // Build query conditions with resolved location IDs
     const conditions = this.buildFilterConditions(filters, locationIds);
-    
+
     // Get total count
     const countResult = await db
       .select({ count: sql<number>`count(*)` })
       .from(properties)
+      .leftJoin(developments, eq(properties.developmentId, developments.id))
       .where(and(...conditions));
-    
+
     const total = Number(countResult[0]?.count || 0);
 
     // Calculate pagination
@@ -146,7 +155,9 @@ export class PropertySearchService {
         securityEstate: sql<boolean>`false`, // Default until migration
         petFriendly: sql<boolean>`false`, // Default until migration
         fibreReady: sql<boolean>`false`, // Default until migration
-        loadSheddingSolutions: sql<Array<'solar' | 'generator' | 'inverter' | 'none'>>`JSON_ARRAY('none')`,
+        loadSheddingSolutions: sql<
+          Array<'solar' | 'generator' | 'inverter' | 'none'>
+        >`JSON_ARRAY('none')`,
         videoCount: sql<number>`0`, // Will be calculated from related tables
         status: properties.status,
         listedDate: properties.createdAt,
@@ -156,6 +167,7 @@ export class PropertySearchService {
         agentId: properties.agentId,
       })
       .from(properties)
+      .leftJoin(developments, eq(properties.developmentId, developments.id))
       .where(and(...conditions))
       .orderBy(orderBy)
       .limit(pageSize)
@@ -163,15 +175,18 @@ export class PropertySearchService {
 
     // Get images for properties
     const propertyIds = results.map((p: any) => Number(p.id));
-    const images = propertyIds.length > 0 ? await db
-      .select({
-        propertyId: propertyImages.propertyId,
-        imageUrl: propertyImages.imageUrl,
-        isPrimary: propertyImages.isPrimary,
-      })
-      .from(propertyImages)
-      .where(inArray(propertyImages.propertyId, propertyIds))
-      .orderBy(desc(propertyImages.isPrimary), asc(propertyImages.displayOrder)) : [];
+    const images =
+      propertyIds.length > 0
+        ? await db
+            .select({
+              propertyId: propertyImages.propertyId,
+              imageUrl: propertyImages.imageUrl,
+              isPrimary: propertyImages.isPrimary,
+            })
+            .from(propertyImages)
+            .where(inArray(propertyImages.propertyId, propertyIds))
+            .orderBy(desc(propertyImages.isPrimary), asc(propertyImages.displayOrder))
+        : [];
 
     // Group images by property
     const imagesByProperty = new Map<number, typeof images>();
@@ -225,11 +240,11 @@ export class PropertySearchService {
     }));
 
     let locationContext: SearchResults['locationContext'] = undefined;
-    
+
     if (resolvedLocation) {
       let name = resolvedLocation.province.name;
       let slug = resolvedLocation.province.slug;
-      
+
       if (resolvedLocation.level === 'city' && resolvedLocation.city) {
         name = resolvedLocation.city.name;
         slug = resolvedLocation.city.slug;
@@ -254,7 +269,7 @@ export class PropertySearchService {
           provinceId: resolvedLocation.province.id,
           cityId: resolvedLocation.city?.id,
           suburbId: resolvedLocation.suburb?.id,
-        }
+        },
       };
     }
 
@@ -278,90 +293,95 @@ export class PropertySearchService {
    * Supports all filter types: location, price, bedrooms, SA-specific
    * Uses hybrid approach: ID-based queries when available, text fallback otherwise
    */
-  private buildFilterConditions(filters: PropertyFilters, locationIds: Array<{
-    provinceId?: number; provinceName?: string;
-    cityId?: number; cityName?: string;
-    suburbId?: number; suburbName?: string;
-  }> = []): SQL[] {
+  private buildFilterConditions(
+    filters: PropertyFilters,
+    locationIds: Array<{
+      provinceId?: number;
+      provinceName?: string;
+      cityId?: number;
+      cityName?: string;
+      suburbId?: number;
+      suburbName?: string;
+    }> = [],
+  ): SQL[] {
     const conditions: SQL[] = [];
 
     // Only show published/available properties by default
-    conditions.push(
-      or(
-        eq(properties.status, 'available'),
-        eq(properties.status, 'published')
-      )!
-    );
+    conditions.push(or(eq(properties.status, 'available'), eq(properties.status, 'published'))!);
 
     // Location filters - Use Hybrid Approach (ID OR Text) to handle legitimate legacy data
-    
-    // Location filters - Use Hybrid Approach (ID OR Text) 
-    
+
+    // Location filters - Use Hybrid Approach (ID OR Text)
+
     // We collect all location conditions and OR them together
     const locationConditions: SQL[] = [];
 
     // 1. Process Resolved IDs (Multi-select support)
     if (locationIds.length > 0) {
       for (const loc of locationIds) {
-          // Determine the most specific level for this location object
-          if (loc.suburbId) {
-             locationConditions.push(eq(properties.suburbId, loc.suburbId));
-          } else if (loc.cityId) {
-             if (loc.cityName) {
-                locationConditions.push(or(
-                  eq(properties.cityId, loc.cityId),
-                  sql`LOWER(${properties.city}) = LOWER(${loc.cityName})`
-                )!);
-             } else {
-                locationConditions.push(eq(properties.cityId, loc.cityId));
-             }
-          } else if (loc.provinceId) {
-               if (loc.provinceName) {
-                locationConditions.push(or(
-                  eq(properties.provinceId, loc.provinceId),
-                  sql`LOWER(${properties.province}) = LOWER(${loc.provinceName})`
-                )!);
-              } else {
-                locationConditions.push(eq(properties.provinceId, loc.provinceId));
-              }
+        // Determine the most specific level for this location object
+        if (loc.suburbId) {
+          locationConditions.push(eq(properties.suburbId, loc.suburbId));
+        } else if (loc.cityId) {
+          if (loc.cityName) {
+            locationConditions.push(
+              or(
+                eq(properties.cityId, loc.cityId),
+                sql`LOWER(${properties.city}) = LOWER(${loc.cityName})`,
+              )!,
+            );
+          } else {
+            locationConditions.push(eq(properties.cityId, loc.cityId));
           }
+        } else if (loc.provinceId) {
+          if (loc.provinceName) {
+            locationConditions.push(
+              or(
+                eq(properties.provinceId, loc.provinceId),
+                sql`LOWER(${properties.province}) = LOWER(${loc.provinceName})`,
+              )!,
+            );
+          } else {
+            locationConditions.push(eq(properties.provinceId, loc.provinceId));
+          }
+        }
       }
-    } 
+    }
 
     // 2. Process Text Fallbacks (if no IDs found or explicit text overrides)
     // Legacy support for single text filters if not covered by ID list
     if (locationIds.length === 0) {
-        if (filters.province) {
-          locationConditions.push(sql`LOWER(${properties.province}) = LOWER(${filters.province})`);
-        }
-        if (filters.city) {
-          locationConditions.push(sql`LOWER(${properties.city}) = LOWER(${filters.city})`);
-        }
-        if (filters.suburb && filters.suburb.length > 0) {
-           const suburbConditions = filters.suburb.map(suburb =>
-            sql`LOWER(${properties.address}) LIKE LOWER(${`%${suburb}%`})`
-          );
-          locationConditions.push(or(...suburbConditions)!);
-        }
+      if (filters.province) {
+        locationConditions.push(sql`LOWER(${properties.province}) = LOWER(${filters.province})`);
+      }
+      if (filters.city) {
+        locationConditions.push(sql`LOWER(${properties.city}) = LOWER(${filters.city})`);
+      }
+      if (filters.suburb && filters.suburb.length > 0) {
+        const suburbConditions = filters.suburb.map(
+          suburb => sql`LOWER(${properties.address}) LIKE LOWER(${`%${suburb}%`})`,
+        );
+        locationConditions.push(or(...suburbConditions)!);
+      }
     }
-    
+
     // 3. Process Generic 'Locations' text array (from multi-select if resolution failed)
     if (filters.locations && filters.locations.length > 0 && locationIds.length === 0) {
-        // Fallback: search these strings in city or suburb (address)
-        const multiTextConditions = filters.locations.map(slug => {
-            // Unslugify loosely for search (replace - with space)
-            const textParams = slug.replace(/-/g, ' '); 
-            return or(
-                 sql`LOWER(${properties.city}) LIKE LOWER(${`%${textParams}%`})`,
-                 sql`LOWER(${properties.address}) LIKE LOWER(${`%${textParams}%`})`
-            );
-        });
-        locationConditions.push(or(...multiTextConditions)!);
+      // Fallback: search these strings in city or suburb (address)
+      const multiTextConditions = filters.locations.map(slug => {
+        // Unslugify loosely for search (replace - with space)
+        const textParams = slug.replace(/-/g, ' ');
+        return or(
+          sql`LOWER(${properties.city}) LIKE LOWER(${`%${textParams}%`})`,
+          sql`LOWER(${properties.address}) LIKE LOWER(${`%${textParams}%`})`,
+        );
+      });
+      locationConditions.push(or(...multiTextConditions)!);
     }
-    
+
     // Combine all location conditions with OR (Match ANY of the selected locations)
     if (locationConditions.length > 0) {
-        conditions.push(or(...locationConditions)!);
+      conditions.push(or(...locationConditions)!);
     }
 
     // Property type filter
@@ -409,6 +429,21 @@ export class PropertySearchService {
       conditions.push(lte(properties.area, filters.maxFloorSize));
     }
 
+    // Ownership Type (from Developments table)
+    if (filters.ownershipType && filters.ownershipType.length > 0) {
+      conditions.push(inArray(developments.ownershipType, filters.ownershipType));
+    }
+
+    // Structural Type (from Developments table)
+    if (filters.structuralType && filters.structuralType.length > 0) {
+      conditions.push(inArray(developments.structuralType, filters.structuralType));
+    }
+
+    // Floors (from Developments table)
+    if (filters.floors && filters.floors.length > 0) {
+      conditions.push(inArray(developments.floors, filters.floors));
+    }
+
     // SA-specific filters (will be fully functional after migration)
     // For now, these are placeholders that won't filter anything
     // TODO: Update after migration adds these columns
@@ -440,8 +475,8 @@ export class PropertySearchService {
           sql`CAST(${properties.latitude} AS DECIMAL(10,8)) >= ${filters.bounds.south}`,
           sql`CAST(${properties.latitude} AS DECIMAL(10,8)) <= ${filters.bounds.north}`,
           sql`CAST(${properties.longitude} AS DECIMAL(11,8)) >= ${filters.bounds.west}`,
-          sql`CAST(${properties.longitude} AS DECIMAL(11,8)) <= ${filters.bounds.east}`
-        )!
+          sql`CAST(${properties.longitude} AS DECIMAL(11,8)) <= ${filters.bounds.east}`,
+        )!,
       );
     }
 
@@ -496,7 +531,7 @@ export class PropertySearchService {
     filters: PropertyFilters,
     sortOption: SortOption,
     page: number,
-    pageSize: number
+    pageSize: number,
   ): string {
     const filterStr = JSON.stringify(filters);
     const hash = this.simpleHash(filterStr);
@@ -510,7 +545,7 @@ export class PropertySearchService {
     let hash = 0;
     for (let i = 0; i < str.length; i++) {
       const char = str.charCodeAt(i);
-      hash = ((hash << 5) - hash) + char;
+      hash = (hash << 5) - hash + char;
       hash = hash & hash; // Convert to 32bit integer
     }
     return Math.abs(hash).toString(36);
@@ -527,48 +562,56 @@ export class PropertySearchService {
   }> {
     // Resolve location slugs to IDs for optimal queries
     // NOTE: Wrapped in try-catch - if resolver fails, fall back to text queries
-    let locationIds: Array<{ 
-      provinceId?: number; provinceName?: string;
-      cityId?: number; cityName?: string;
-      suburbId?: number; suburbName?: string;
+    let locationIds: Array<{
+      provinceId?: number;
+      provinceName?: string;
+      cityId?: number;
+      cityName?: string;
+      suburbId?: number;
+      suburbName?: string;
     }> = [];
     try {
       if (baseFilters.locations && baseFilters.locations.length > 0) {
-          // Quick resolve logic similar to searchProperties
-           await Promise.all(baseFilters.locations.map(async (slug) => {
-               // ... simplified resolution for counts ...
-               const resolved = await locationResolver.resolveLocation({ citySlug: slug });
-                if (resolved && (resolved.city || resolved.suburb || resolved.province)) {
-                     locationIds.push({
-                      provinceId: resolved.province?.id,
-                      provinceName: resolved.province?.name,
-                      cityId: resolved.city?.id,
-                      cityName: resolved.city?.name,
-                      suburbId: resolved.suburb?.id,
-                      suburbName: resolved.suburb?.name,
-                     });
-                }
-           }));
+        // Quick resolve logic similar to searchProperties
+        await Promise.all(
+          baseFilters.locations.map(async slug => {
+            // ... simplified resolution for counts ...
+            const resolved = await locationResolver.resolveLocation({ citySlug: slug });
+            if (resolved && (resolved.city || resolved.suburb || resolved.province)) {
+              locationIds.push({
+                provinceId: resolved.province?.id,
+                provinceName: resolved.province?.name,
+                cityId: resolved.city?.id,
+                cityName: resolved.city?.name,
+                suburbId: resolved.suburb?.id,
+                suburbName: resolved.suburb?.name,
+              });
+            }
+          }),
+        );
       } else {
-          const resolvedLocation = await locationResolver.resolveLocation({
-            provinceSlug: baseFilters.province,
-            citySlug: baseFilters.city,
-            suburbSlug: baseFilters.suburb?.[0],
+        const resolvedLocation = await locationResolver.resolveLocation({
+          provinceSlug: baseFilters.province,
+          citySlug: baseFilters.city,
+          suburbSlug: baseFilters.suburb?.[0],
+        });
+
+        if (resolvedLocation) {
+          locationIds.push({
+            provinceId: resolvedLocation.province?.id,
+            provinceName: resolvedLocation.province?.name,
+            cityId: resolvedLocation.city?.id,
+            cityName: resolvedLocation.city?.name,
+            suburbId: resolvedLocation.suburb?.id,
+            suburbName: resolvedLocation.suburb?.name,
           });
-          
-          if (resolvedLocation) {
-            locationIds.push({
-              provinceId: resolvedLocation.province?.id,
-              provinceName: resolvedLocation.province?.name,
-              cityId: resolvedLocation.city?.id,
-              cityName: resolvedLocation.city?.name,
-              suburbId: resolvedLocation.suburb?.id,
-              suburbName: resolvedLocation.suburb?.name,
-            });
-          }
+        }
       }
     } catch (error) {
-      console.error('[PropertySearchService] Location resolver failed in getFilterCounts, using text fallback:', error);
+      console.error(
+        '[PropertySearchService] Location resolver failed in getFilterCounts, using text fallback:',
+        error,
+      );
     }
 
     const conditions = this.buildFilterConditions(baseFilters, locationIds);
@@ -577,8 +620,9 @@ export class PropertySearchService {
     const totalResult = await db
       .select({ count: sql<number>`count(*)` })
       .from(properties)
+      .leftJoin(developments, eq(properties.developmentId, developments.id))
       .where(and(...conditions));
-    
+
     const total = Number(totalResult[0]?.count || 0);
 
     // Get counts by property type
@@ -588,6 +632,7 @@ export class PropertySearchService {
         count: sql<number>`count(*)`,
       })
       .from(properties)
+      .leftJoin(developments, eq(properties.developmentId, developments.id))
       .where(and(...conditions))
       .groupBy(properties.propertyType);
 
@@ -615,13 +660,14 @@ export class PropertySearchService {
         const result = await db
           .select({ count: sql<number>`count(*)` })
           .from(properties)
+          .leftJoin(developments, eq(properties.developmentId, developments.id))
           .where(and(...rangeConditions));
-        
+
         return {
           range,
           count: Number(result[0]?.count || 0),
         };
-      })
+      }),
     );
 
     return {

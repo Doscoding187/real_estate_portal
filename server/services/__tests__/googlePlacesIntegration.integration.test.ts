@@ -1,20 +1,27 @@
 /**
  * Integration Tests for Google Places Autocomplete Integration
  * Task 23: Write integration tests for complete flows
- * 
+ *
  * Tests:
  * - Complete autocomplete flow: input → suggestions → selection → Place Details → form population
  * - Location record creation from listing submission
  * - Location page rendering with static and dynamic content
  * - Search flow: autocomplete → location page → filtered listings
  * - Trending suburbs calculation from search events
- * 
+ *
  * Requirements: All
  */
 
 import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from 'vitest';
 import { getDb } from '../../db';
-import { locations, listings, locationSearches, provinces, cities, suburbs } from '../../../drizzle/schema';
+import {
+  locations,
+  listings,
+  locationSearches,
+  provinces,
+  cities,
+  suburbs,
+} from '../../../drizzle/schema';
 import { sql } from 'drizzle-orm';
 import { googlePlacesService, PlaceDetails } from '../googlePlacesService';
 import { locationPagesServiceEnhanced } from '../locationPagesServiceEnhanced';
@@ -37,7 +44,7 @@ describe('Google Places Autocomplete Integration - Integration Tests', () => {
     // Initialize database connection
     try {
       db = await getDb();
-      
+
       if (!db) {
         console.warn('⚠️  Database connection not available. Skipping integration tests.');
         return;
@@ -55,13 +62,15 @@ describe('Google Places Autocomplete Integration - Integration Tests', () => {
     if (!db) return;
 
     // Clean up test data
-    await db.execute(sql`DELETE FROM location_searches WHERE location_id IN (SELECT id FROM locations WHERE name LIKE 'TEST:INTEGRATION:%')`);
+    await db.execute(
+      sql`DELETE FROM location_searches WHERE location_id IN (SELECT id FROM locations WHERE name LIKE 'TEST:INTEGRATION:%')`,
+    );
     await db.execute(sql`DELETE FROM listings WHERE title LIKE 'TEST:INTEGRATION:%'`);
     await db.execute(sql`DELETE FROM locations WHERE name LIKE 'TEST:INTEGRATION:%'`);
     await db.execute(sql`DELETE FROM suburbs WHERE name LIKE 'TEST:INTEGRATION:%'`);
     await db.execute(sql`DELETE FROM cities WHERE name LIKE 'TEST:INTEGRATION:%'`);
     await db.execute(sql`DELETE FROM provinces WHERE name LIKE 'TEST:INTEGRATION:%'`);
-    
+
     testLocationIds = [];
     testListingIds = [];
     testSearchIds = [];
@@ -71,7 +80,9 @@ describe('Google Places Autocomplete Integration - Integration Tests', () => {
     if (!db) return;
 
     // Final cleanup
-    await db.execute(sql`DELETE FROM location_searches WHERE location_id IN (SELECT id FROM locations WHERE name LIKE 'TEST:INTEGRATION:%')`);
+    await db.execute(
+      sql`DELETE FROM location_searches WHERE location_id IN (SELECT id FROM locations WHERE name LIKE 'TEST:INTEGRATION:%')`,
+    );
     await db.execute(sql`DELETE FROM listings WHERE title LIKE 'TEST:INTEGRATION:%'`);
     await db.execute(sql`DELETE FROM locations WHERE name LIKE 'TEST:INTEGRATION:%'`);
     await db.execute(sql`DELETE FROM suburbs WHERE name LIKE 'TEST:INTEGRATION:%'`);
@@ -82,7 +93,7 @@ describe('Google Places Autocomplete Integration - Integration Tests', () => {
   /**
    * Integration Test 1: Complete autocomplete flow
    * Requirements: 1.1-1.5, 2.1-2.5, 3.1-3.5, 4.1-4.5
-   * 
+   *
    * Tests the complete flow from user input to form population:
    * 1. User types in location field (minimum 3 characters)
    * 2. System fetches autocomplete suggestions from Google Places API
@@ -105,16 +116,24 @@ describe('Google Places Autocomplete Integration - Integration Tests', () => {
         name: 'Sandton',
         types: ['sublocality', 'political'],
         addressComponents: [
-          { longName: 'Sandton', shortName: 'Sandton', types: ['sublocality_level_1', 'sublocality', 'political'] },
+          {
+            longName: 'Sandton',
+            shortName: 'Sandton',
+            types: ['sublocality_level_1', 'sublocality', 'political'],
+          },
           { longName: 'Johannesburg', shortName: 'JHB', types: ['locality', 'political'] },
-          { longName: 'Gauteng', shortName: 'GP', types: ['administrative_area_level_1', 'political'] },
+          {
+            longName: 'Gauteng',
+            shortName: 'GP',
+            types: ['administrative_area_level_1', 'political'],
+          },
           { longName: 'South Africa', shortName: 'ZA', types: ['country', 'political'] },
         ],
         geometry: {
           location: { lat: -26.107407, lng: 28.056229 },
           viewport: {
-            northeast: { lat: -26.0500, lng: 28.1000 },
-            southwest: { lat: -26.1500, lng: 28.0000 },
+            northeast: { lat: -26.05, lng: 28.1 },
+            southwest: { lat: -26.15, lng: 28.0 },
           },
         },
       };
@@ -175,7 +194,7 @@ describe('Google Places Autocomplete Integration - Integration Tests', () => {
   /**
    * Integration Test 2: Location record creation from listing submission
    * Requirements: 16.1-16.5, 25.1, 27.1-27.5
-   * 
+   *
    * Tests the complete flow of creating location records when a listing is submitted:
    * 1. User submits listing with location data from autocomplete
    * 2. System creates/finds province location record
@@ -335,7 +354,7 @@ describe('Google Places Autocomplete Integration - Integration Tests', () => {
   /**
    * Integration Test 3: Location page rendering with static and dynamic content
    * Requirements: 24.1-24.5, 28.1-28.5, 29.1-29.5
-   * 
+   *
    * Tests location page data fetching and rendering:
    * 1. Create location with static SEO content
    * 2. Create listings in that location
@@ -393,10 +412,30 @@ describe('Google Places Autocomplete Integration - Integration Tests', () => {
 
       // Step 2: Create listings in the suburb
       const listingData = [
-        { title: 'TEST:INTEGRATION:Apartment 1', price: 3000000, propertyType: 'apartment', listingType: 'for-sale' },
-        { title: 'TEST:INTEGRATION:Apartment 2', price: 3500000, propertyType: 'apartment', listingType: 'for-sale' },
-        { title: 'TEST:INTEGRATION:House 1', price: 5000000, propertyType: 'house', listingType: 'for-sale' },
-        { title: 'TEST:INTEGRATION:Rental 1', price: 15000, propertyType: 'apartment', listingType: 'to-rent' },
+        {
+          title: 'TEST:INTEGRATION:Apartment 1',
+          price: 3000000,
+          propertyType: 'apartment',
+          listingType: 'for-sale',
+        },
+        {
+          title: 'TEST:INTEGRATION:Apartment 2',
+          price: 3500000,
+          propertyType: 'apartment',
+          listingType: 'for-sale',
+        },
+        {
+          title: 'TEST:INTEGRATION:House 1',
+          price: 5000000,
+          propertyType: 'house',
+          listingType: 'for-sale',
+        },
+        {
+          title: 'TEST:INTEGRATION:Rental 1',
+          price: 15000,
+          propertyType: 'apartment',
+          listingType: 'to-rent',
+        },
       ];
 
       for (const data of listingData) {
@@ -424,7 +463,7 @@ describe('Google Places Autocomplete Integration - Integration Tests', () => {
       const locationPageData = await locationPagesServiceEnhanced.getLocationByPath(
         'test-integration-western-cape',
         'test-integration-cape-town',
-        'test-integration-sea-point'
+        'test-integration-sea-point',
       );
 
       // Step 4: Verify static content
@@ -434,7 +473,9 @@ describe('Google Places Autocomplete Integration - Integration Tests', () => {
       expect(locationPageData!.type).toBe('suburb');
       expect(locationPageData!.description).toBe('Test suburb for integration testing');
       expect(locationPageData!.seoTitle).toBe('Properties in TEST:INTEGRATION:Sea Point');
-      expect(locationPageData!.seoDescription).toBe('Find properties in TEST:INTEGRATION:Sea Point');
+      expect(locationPageData!.seoDescription).toBe(
+        'Find properties in TEST:INTEGRATION:Sea Point',
+      );
       expect(locationPageData!.latitude).toBe('-33.9249');
       expect(locationPageData!.longitude).toBe('18.4241');
       expect(locationPageData!.placeId).toBe('TEST_PLACE_ID_SEA_POINT');
@@ -458,12 +499,16 @@ describe('Google Places Autocomplete Integration - Integration Tests', () => {
       // City URL: /south-africa/{province-slug}/{city-slug}
       expect(cityLocation.slug).toBe('test-integration-cape-town');
       const cityUrl = `/south-africa/${provinceLocation.slug}/${cityLocation.slug}`;
-      expect(cityUrl).toBe('/south-africa/test-integration-western-cape/test-integration-cape-town');
+      expect(cityUrl).toBe(
+        '/south-africa/test-integration-western-cape/test-integration-cape-town',
+      );
 
       // Suburb URL: /south-africa/{province-slug}/{city-slug}/{suburb-slug}
       expect(suburbLocation.slug).toBe('test-integration-sea-point');
       const suburbUrl = `/south-africa/${provinceLocation.slug}/${cityLocation.slug}/${suburbLocation.slug}`;
-      expect(suburbUrl).toBe('/south-africa/test-integration-western-cape/test-integration-cape-town/test-integration-sea-point');
+      expect(suburbUrl).toBe(
+        '/south-africa/test-integration-western-cape/test-integration-cape-town/test-integration-sea-point',
+      );
 
       // Clean up
       for (const id of testListingIds) {
@@ -478,7 +523,7 @@ describe('Google Places Autocomplete Integration - Integration Tests', () => {
   /**
    * Integration Test 4: Search flow from autocomplete to filtered listings
    * Requirements: 19.1-19.5, 25.1-25.5
-   * 
+   *
    * Tests the complete search flow:
    * 1. User searches for location in global search
    * 2. System returns location results
@@ -538,7 +583,7 @@ describe('Google Places Autocomplete Integration - Integration Tests', () => {
 
       // Verify location appears in search results
       const foundLocation = searchResults.find(
-        (loc: any) => loc.name === 'TEST:INTEGRATION:Sandton'
+        (loc: any) => loc.name === 'TEST:INTEGRATION:Sandton',
       );
       expect(foundLocation).toBeDefined();
       expect(foundLocation.placeId).toBe('TEST_PLACE_ID_SANDTON_SEARCH');
@@ -557,7 +602,7 @@ describe('Google Places Autocomplete Integration - Integration Tests', () => {
 
       // Step 5: Verify filtered results
       expect(filteredListings.length).toBe(5);
-      
+
       for (const listing of filteredListings) {
         expect(listing.locationId).toBe(selectedLocationId);
         expect(listing.title).toContain('TEST:INTEGRATION:Property');
@@ -658,7 +703,7 @@ describe('Google Places Autocomplete Integration - Integration Tests', () => {
   /**
    * Integration Test 5: Trending suburbs calculation from search events
    * Requirements: 21.1-21.5
-   * 
+   *
    * Tests trending suburbs feature:
    * 1. Record location search events
    * 2. Calculate trending score based on search frequency
@@ -695,7 +740,7 @@ describe('Google Places Autocomplete Integration - Integration Tests', () => {
       // Suburb 5: 1 search (least popular)
 
       const searchCounts = [10, 7, 5, 3, 1];
-      
+
       for (let i = 0; i < suburbs.length; i++) {
         for (let j = 0; j < searchCounts[i]; j++) {
           const [search] = await db
@@ -720,9 +765,7 @@ describe('Google Places Autocomplete Integration - Integration Tests', () => {
       expect(trendingSuburbs.length).toBeLessThanOrEqual(10);
 
       // Most popular suburb should be first
-      const topSuburb = trendingSuburbs.find(
-        (s: any) => s.name === 'TEST:INTEGRATION:Suburb1'
-      );
+      const topSuburb = trendingSuburbs.find((s: any) => s.name === 'TEST:INTEGRATION:Suburb1');
       expect(topSuburb).toBeDefined();
 
       // Verify trending scores are calculated
@@ -735,7 +778,7 @@ describe('Google Places Autocomplete Integration - Integration Tests', () => {
       // Verify suburbs are sorted by trending score (descending)
       for (let i = 0; i < trendingSuburbs.length - 1; i++) {
         expect(trendingSuburbs[i].trendingScore).toBeGreaterThanOrEqual(
-          trendingSuburbs[i + 1].trendingScore
+          trendingSuburbs[i + 1].trendingScore,
         );
       }
 
@@ -806,12 +849,8 @@ describe('Google Places Autocomplete Integration - Integration Tests', () => {
       const trendingSuburbs = await locationAnalyticsService.getTrendingSuburbs(10);
 
       // Find our test suburbs
-      const recentTrending = trendingSuburbs.find(
-        (s: any) => s.id === recentSuburb.id
-      );
-      const oldTrending = trendingSuburbs.find(
-        (s: any) => s.id === oldSuburb.id
-      );
+      const recentTrending = trendingSuburbs.find((s: any) => s.id === recentSuburb.id);
+      const oldTrending = trendingSuburbs.find((s: any) => s.id === oldSuburb.id);
 
       // Recent suburb should have higher trending score despite same search count
       if (recentTrending && oldTrending) {

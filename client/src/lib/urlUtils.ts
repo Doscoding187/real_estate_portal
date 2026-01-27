@@ -1,6 +1,6 @@
 /**
  * URL Utilities for SEO-friendly property search URLs
- * 
+ *
  * Converts between filter objects and URL-friendly slugs
  * Example: { listingType: 'sale', propertyType: 'house', city: 'Johannesburg' }
  *       -> /houses-for-sale/johannesburg/gauteng/123
@@ -18,7 +18,7 @@ export const slugToListingType: Record<string, string> = {
   'for-sale': 'sale',
   'to-rent': 'rent',
   'rent-to-buy': 'rent_to_buy',
-  'auction': 'auction',
+  auction: 'auction',
 };
 
 // Slug mappings for property types (singular to plural for URLs)
@@ -40,20 +40,20 @@ export const propertyTypeToSlug: Record<string, string> = {
 };
 
 export const slugToPropertyType: Record<string, string> = {
-  'apartments': 'apartment',
-  'houses': 'house',
-  'townhouses': 'townhouse',
-  'villas': 'villa',
-  'plots': 'plot',
-  'land': 'land',
-  'commercial': 'commercial',
-  'farms': 'farm',
+  apartments: 'apartment',
+  houses: 'house',
+  townhouses: 'townhouse',
+  villas: 'villa',
+  plots: 'plot',
+  land: 'land',
+  commercial: 'commercial',
+  farms: 'farm',
   'cluster-homes': 'cluster_home',
   'shared-living': 'shared_living',
-  'offices': 'office',
-  'retail': 'retail',
-  'industrial': 'industrial',
-  'warehouses': 'warehouse',
+  offices: 'office',
+  retail: 'retail',
+  industrial: 'industrial',
+  warehouses: 'warehouse',
 };
 
 // Convert text to URL-safe slug
@@ -111,18 +111,24 @@ import { generateIntentUrl, SearchIntent } from './searchIntent';
 
 // Helper to bridge SearchFilters -> SearchIntent for URL generation
 function filtersToIntent(filters: SearchFilters): SearchIntent {
-    return {
-        transactionType: filters.listingType === 'rent' ? 'to-rent' : 'for-sale', // default
-        geography: {
-            level: filters.suburb ? 'locality' : (filters.city ? 'city' : (filters.province ? 'province' : 'country')),
-            province: filters.province,
-            city: filters.city,
-            suburb: filters.suburb,
-            locationId: filters.locationId
-        },
-        filters: filters, // Pass full filters as query params source
-        defaults: { propertyCategory: 'residential', sort: 'relevance' }
-    };
+  return {
+    transactionType: filters.listingType === 'rent' ? 'to-rent' : 'for-sale', // default
+    geography: {
+      level: filters.suburb
+        ? 'locality'
+        : filters.city
+          ? 'city'
+          : filters.province
+            ? 'province'
+            : 'country',
+      province: filters.province,
+      city: filters.city,
+      suburb: filters.suburb,
+      locationId: filters.locationId,
+    },
+    filters: filters, // Pass full filters as query params source
+    defaults: { propertyCategory: 'residential', sort: 'relevance' },
+  };
 }
 
 // Generate SEO-friendly URL from filters
@@ -137,17 +143,17 @@ export function generatePropertyUrl(filters: SearchFilters): string {
  * This should return the "clean" URL without tracking params or transient state.
  */
 export function generateCanonicalUrl(filters: SearchFilters): string {
-    const intent = filtersToIntent(filters);
-    
-    // Canonical URL should be clean, maybe stripped of some filters?
-    // P24 uses clean path + query params.
-    // Spec says: "Any URL with query parameters... NoIndex" implied?
-    // Canonical usually means the "main" URL for this content.
-    // If filtering by price, canonical might be the base search URL or the filtered one depending on strategy.
-    // P24 canonical tags on search pages usually point to the version without sort orders etc., but keep vital filters.
-    // For now, let's return the intent URL exactly as it represents the resource.
-    
-    return `https://propertylistify.com${generateIntentUrl(intent)}`;
+  const intent = filtersToIntent(filters);
+
+  // Canonical URL should be clean, maybe stripped of some filters?
+  // P24 uses clean path + query params.
+  // Spec says: "Any URL with query parameters... NoIndex" implied?
+  // Canonical usually means the "main" URL for this content.
+  // If filtering by price, canonical might be the base search URL or the filtered one depending on strategy.
+  // P24 canonical tags on search pages usually point to the version without sort orders etc., but keep vital filters.
+  // For now, let's return the intent URL exactly as it represents the resource.
+
+  return `https://propertylistify.com${generateIntentUrl(intent)}`;
 }
 
 // Parse URL params back to filters
@@ -158,7 +164,10 @@ export interface ParsedUrlParams {
   suburb?: string;
 }
 
-export function parsePropertyUrl(params: ParsedUrlParams, searchParams?: URLSearchParams): SearchFilters {
+export function parsePropertyUrl(
+  params: ParsedUrlParams,
+  searchParams?: URLSearchParams,
+): SearchFilters {
   // This function is less critical now as we rely on resolveSearchIntent
   // But strictly for backward compatibility or simple parsing:
   const filters: SearchFilters = {};
@@ -256,7 +265,10 @@ export function generateMetaDescription(filters: SearchFilters, resultCount?: nu
     }
   }
 
-  return parts.join(' ') + '. View photos, prices, and features. Contact agents directly on Property Listify.';
+  return (
+    parts.join(' ') +
+    '. View photos, prices, and features. Contact agents directly on Property Listify.'
+  );
 }
 
 // Generate breadcrumb items
@@ -266,65 +278,63 @@ export interface BreadcrumbItem {
 }
 
 export function generateBreadcrumbs(filters: SearchFilters): BreadcrumbItem[] {
-  const breadcrumbs: BreadcrumbItem[] = [
-    { label: 'Home', href: '/' },
-  ];
+  const breadcrumbs: BreadcrumbItem[] = [{ label: 'Home', href: '/' }];
 
   // Breadcrumbs: Property for Sale > Province > City > Suburb
   // But URL structure is Inverted or specific.
   // We must generate HREF for each crumb using GeneratePropertyUrl (which calls generateIntentUrl).
-  
+
   const isRent = filters.listingType === 'rent';
   const rootLabel = isRent ? 'For Rent' : 'For Sale';
   // Root URL: /property-for-sale
   const rootHref = generatePropertyUrl({ listingType: filters.listingType });
-  
+
   breadcrumbs.push({
     label: rootLabel,
-    href: rootHref
+    href: rootHref,
   });
 
   // Province
   if (filters.province) {
-    const provinceHref = generatePropertyUrl({ 
-        listingType: filters.listingType, 
-        province: filters.province 
-        // No locationId for province usually, or maybe we have one?
-        // If we don't have it, logic relies on fallback or slug lookup if intent supports it.
-        // P24 Province pages have IDs too: /property-for-sale/gauteng/1
+    const provinceHref = generatePropertyUrl({
+      listingType: filters.listingType,
+      province: filters.province,
+      // No locationId for province usually, or maybe we have one?
+      // If we don't have it, logic relies on fallback or slug lookup if intent supports it.
+      // P24 Province pages have IDs too: /property-for-sale/gauteng/1
     });
-    
+
     breadcrumbs.push({
       label: filters.province,
-      href: provinceHref
+      href: provinceHref,
     });
 
     // City (Only if Province exists)
     if (filters.city) {
-      const cityHref = generatePropertyUrl({ 
-          listingType: filters.listingType,
-          province: filters.province,
-          city: filters.city 
+      const cityHref = generatePropertyUrl({
+        listingType: filters.listingType,
+        province: filters.province,
+        city: filters.city,
       });
-      
+
       breadcrumbs.push({
         label: filters.city,
-        href: cityHref
+        href: cityHref,
       });
 
       // Suburb (Only if City exists)
       if (filters.suburb) {
-        const suburbHref = generatePropertyUrl({ 
-            listingType: filters.listingType,
-            province: filters.province,
-            city: filters.city,
-            suburb: filters.suburb,
-            locationId: filters.locationId // Pass specific ID for the leaf node
+        const suburbHref = generatePropertyUrl({
+          listingType: filters.listingType,
+          province: filters.province,
+          city: filters.city,
+          suburb: filters.suburb,
+          locationId: filters.locationId, // Pass specific ID for the leaf node
         });
-        
+
         breadcrumbs.push({
           label: filters.suburb,
-          href: suburbHref
+          href: suburbHref,
         });
       }
     }

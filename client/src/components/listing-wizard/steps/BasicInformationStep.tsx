@@ -1,6 +1,6 @@
 /**
  * Step 4: Basic Information
- * 
+ *
  * Dynamic form that adapts based on:
  * - Transaction Type (sell/rent/auction)
  * - Property Type (apartment/house/farm/land/commercial)
@@ -13,12 +13,43 @@ import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
-import { MapPin, DollarSign, Home, Calendar, Info, Check, Award, Store, Building2, Factory, Warehouse, Layers, DoorOpen, GraduationCap, Users, Search, Loader2 } from 'lucide-react';
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@/components/ui/command';
+import {
+  MapPin,
+  DollarSign,
+  Home,
+  Calendar,
+  Info,
+  Check,
+  Award,
+  Store,
+  Building2,
+  Factory,
+  Warehouse,
+  Layers,
+  DoorOpen,
+  GraduationCap,
+  Users,
+  Search,
+  Loader2,
+} from 'lucide-react';
 import type { ListingAction, PropertyType, ListingBadge } from '@/../../shared/listing-types';
 import { BADGE_TEMPLATES } from '@/../../shared/listing-types';
 import { useFieldValidation } from '@/hooks/useFieldValidation';
@@ -64,21 +95,23 @@ const BasicInformationStep: React.FC = () => {
   const debouncedDevelopmentQuery = useDebounce(developmentSearchQuery, 300);
 
   // tRPC queries for autocomplete
-  const { data: developers, isLoading: loadingDevelopers } = trpc.developer.searchDevelopers.useQuery(
-    { query: debouncedDeveloperQuery },
-    { enabled: debouncedDeveloperQuery.length >= 2 }
-  );
+  const { data: developers, isLoading: loadingDevelopers } =
+    trpc.developer.searchDevelopers.useQuery(
+      { query: debouncedDeveloperQuery },
+      { enabled: debouncedDeveloperQuery.length >= 2 },
+    );
 
-  const { data: developments, isLoading: loadingDevelopments } = trpc.developer.searchDevelopments.useQuery(
-    { 
-      query: debouncedDevelopmentQuery,
-      developerId: basicInfo.selectedDeveloperId 
-    },
-    { 
-      // Enable query when: user typed 2+ chars OR a developer is selected (for auto-population)
-      enabled: debouncedDevelopmentQuery.length >= 2 || !!basicInfo.selectedDeveloperId 
-    }
-  );
+  const { data: developments, isLoading: loadingDevelopments } =
+    trpc.developer.searchDevelopments.useQuery(
+      {
+        query: debouncedDevelopmentQuery,
+        developerId: basicInfo.selectedDeveloperId,
+      },
+      {
+        // Enable query when: user typed 2+ chars OR a developer is selected (for auto-population)
+        enabled: debouncedDevelopmentQuery.length >= 2 || !!basicInfo.selectedDeveloperId,
+      },
+    );
 
   // Validation context
   const validationContext = {
@@ -104,8 +137,8 @@ const BasicInformationStep: React.FC = () => {
 
   // Update handlers
   const updateBasicInfo = (field: string, value: any) => {
-    store.setBasicInfo?.({ ...basicInfo, [field]: value }) || 
-    store.updatePropertyDetail?.(field, value);
+    store.setBasicInfo?.({ ...basicInfo, [field]: value }) ||
+      store.updatePropertyDetail?.(field, value);
   };
 
   const updateTitle = (value: string) => {
@@ -135,11 +168,13 @@ const BasicInformationStep: React.FC = () => {
         <div className="space-y-4">
           {/* Property Title */}
           <div>
-            <Label htmlFor="title" className="text-slate-700">Property Title *</Label>
+            <Label htmlFor="title" className="text-slate-700">
+              Property Title *
+            </Label>
             <Input
               id="title"
               value={title}
-              onChange={(e) => updateTitle(e.target.value)}
+              onChange={e => updateTitle(e.target.value)}
               onBlur={titleValidation.onBlur}
               placeholder="Enter property title (minimum 10 characters)"
               className="mt-1"
@@ -148,22 +183,20 @@ const BasicInformationStep: React.FC = () => {
               aria-describedby={titleValidation.error ? 'title-error' : undefined}
             />
             <div className="flex items-center justify-between mt-1">
-              <InlineError
-                error={titleValidation.error}
-                show={!!titleValidation.error}
-                size="sm"
-              />
+              <InlineError error={titleValidation.error} show={!!titleValidation.error} size="sm" />
               <p className="text-xs text-slate-500">{title.length}/255 characters</p>
             </div>
           </div>
 
           {/* Property Description */}
           <div>
-            <Label htmlFor="description" className="text-slate-700">Property Description *</Label>
+            <Label htmlFor="description" className="text-slate-700">
+              Property Description *
+            </Label>
             <Textarea
               id="description"
               value={description}
-              onChange={(e) => updateDescription(e.target.value)}
+              onChange={e => updateDescription(e.target.value)}
               onBlur={descriptionValidation.onBlur}
               placeholder="Describe your property in detail (minimum 50 characters)"
               className="mt-1 min-h-[120px]"
@@ -188,7 +221,11 @@ const BasicInformationStep: React.FC = () => {
         <div className="flex items-center gap-2 mb-4">
           <Home className="w-5 h-5 text-indigo-600" />
           <h3 className="text-lg font-bold text-slate-800">
-            {propertyType === 'farm' ? 'Farm Type' : propertyType === 'land' ? 'Land Type' : 'Property Category'}
+            {propertyType === 'farm'
+              ? 'Farm Type'
+              : propertyType === 'land'
+                ? 'Land Type'
+                : 'Property Category'}
           </h3>
         </div>
 
@@ -196,13 +233,33 @@ const BasicInformationStep: React.FC = () => {
         {propertyType === 'farm' ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {[
-              { value: 'crop_farm', label: 'Crop Farm', description: 'Agricultural crop production' },
-              { value: 'aquaculture', label: 'Aquaculture', description: 'Fish and aquatic farming' },
-              { value: 'livestock_farm', label: 'Livestock Farm', description: 'Animal husbandry and ranching' },
-              { value: 'mixed_farm', label: 'Mixed Farm', description: 'Combined crop and livestock' },
+              {
+                value: 'crop_farm',
+                label: 'Crop Farm',
+                description: 'Agricultural crop production',
+              },
+              {
+                value: 'aquaculture',
+                label: 'Aquaculture',
+                description: 'Fish and aquatic farming',
+              },
+              {
+                value: 'livestock_farm',
+                label: 'Livestock Farm',
+                description: 'Animal husbandry and ranching',
+              },
+              {
+                value: 'mixed_farm',
+                label: 'Mixed Farm',
+                description: 'Combined crop and livestock',
+              },
               { value: 'game_farm', label: 'Game Farm', description: 'Wildlife and game breeding' },
-              { value: 'smallholding', label: 'Smallholding / Lifestyle Farm', description: 'Small-scale or lifestyle farming' },
-            ].map((category) => (
+              {
+                value: 'smallholding',
+                label: 'Smallholding / Lifestyle Farm',
+                description: 'Small-scale or lifestyle farming',
+              },
+            ].map(category => (
               <Card
                 key={category.value}
                 onClick={() => updateBasicInfo('propertyCategory', category.value)}
@@ -213,17 +270,29 @@ const BasicInformationStep: React.FC = () => {
                 }`}
               >
                 <div className="flex flex-col items-center text-center gap-2">
-                  <div className={`p-2 rounded-lg ${
-                    basicInfo.propertyCategory === category.value ? 'bg-blue-100' : 'bg-gray-100'
-                  }`}>
-                    <Home className={`w-6 h-6 ${
-                      basicInfo.propertyCategory === category.value ? 'text-blue-600' : 'text-gray-600'
-                    }`} />
+                  <div
+                    className={`p-2 rounded-lg ${
+                      basicInfo.propertyCategory === category.value ? 'bg-blue-100' : 'bg-gray-100'
+                    }`}
+                  >
+                    <Home
+                      className={`w-6 h-6 ${
+                        basicInfo.propertyCategory === category.value
+                          ? 'text-blue-600'
+                          : 'text-gray-600'
+                      }`}
+                    />
                   </div>
                   <div>
-                    <h4 className={`font-bold ${
-                      basicInfo.propertyCategory === category.value ? 'text-blue-600' : 'text-gray-900'
-                    }`}>{category.label}</h4>
+                    <h4
+                      className={`font-bold ${
+                        basicInfo.propertyCategory === category.value
+                          ? 'text-blue-600'
+                          : 'text-gray-900'
+                      }`}
+                    >
+                      {category.label}
+                    </h4>
                     <p className="text-xs text-gray-600 mt-1">{category.description}</p>
                   </div>
                 </div>
@@ -234,10 +303,22 @@ const BasicInformationStep: React.FC = () => {
           /* Land-specific categories */
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {[
-              { value: 'residential_land', label: 'Residential Land', description: 'Zoned for residential development' },
-              { value: 'estate_plot', label: 'Estate Plot', description: 'Land within a residential estate' },
-              { value: 'industrial_land', label: 'Industrial Land', description: 'Zoned for industrial/commercial use' },
-            ].map((category) => (
+              {
+                value: 'residential_land',
+                label: 'Residential Land',
+                description: 'Zoned for residential development',
+              },
+              {
+                value: 'estate_plot',
+                label: 'Estate Plot',
+                description: 'Land within a residential estate',
+              },
+              {
+                value: 'industrial_land',
+                label: 'Industrial Land',
+                description: 'Zoned for industrial/commercial use',
+              },
+            ].map(category => (
               <Card
                 key={category.value}
                 onClick={() => updateBasicInfo('propertyCategory', category.value)}
@@ -248,17 +329,29 @@ const BasicInformationStep: React.FC = () => {
                 }`}
               >
                 <div className="flex flex-col items-center text-center gap-2">
-                  <div className={`p-2 rounded-lg ${
-                    basicInfo.propertyCategory === category.value ? 'bg-blue-100' : 'bg-gray-100'
-                  }`}>
-                    <Home className={`w-6 h-6 ${
-                      basicInfo.propertyCategory === category.value ? 'text-blue-600' : 'text-gray-600'
-                    }`} />
+                  <div
+                    className={`p-2 rounded-lg ${
+                      basicInfo.propertyCategory === category.value ? 'bg-blue-100' : 'bg-gray-100'
+                    }`}
+                  >
+                    <Home
+                      className={`w-6 h-6 ${
+                        basicInfo.propertyCategory === category.value
+                          ? 'text-blue-600'
+                          : 'text-gray-600'
+                      }`}
+                    />
                   </div>
                   <div>
-                    <h4 className={`font-bold ${
-                      basicInfo.propertyCategory === category.value ? 'text-blue-600' : 'text-gray-900'
-                    }`}>{category.label}</h4>
+                    <h4
+                      className={`font-bold ${
+                        basicInfo.propertyCategory === category.value
+                          ? 'text-blue-600'
+                          : 'text-gray-900'
+                      }`}
+                    >
+                      {category.label}
+                    </h4>
                     <p className="text-xs text-gray-600 mt-1">{category.description}</p>
                   </div>
                 </div>
@@ -269,12 +362,37 @@ const BasicInformationStep: React.FC = () => {
           /* Commercial-specific categories */
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {[
-              { value: 'retail', label: 'Retail', description: 'Shops, malls, and showrooms', icon: Store },
-              { value: 'office', label: 'Office', description: 'Office space and business parks', icon: Building2 },
-              { value: 'industrial', label: 'Industrial', description: 'Factories and manufacturing', icon: Factory },
-              { value: 'warehouse', label: 'Warehouse', description: 'Storage and distribution', icon: Warehouse },
-              { value: 'mixed', label: 'Mixed Use', description: 'Combined commercial/residential', icon: Layers },
-            ].map((category) => (
+              {
+                value: 'retail',
+                label: 'Retail',
+                description: 'Shops, malls, and showrooms',
+                icon: Store,
+              },
+              {
+                value: 'office',
+                label: 'Office',
+                description: 'Office space and business parks',
+                icon: Building2,
+              },
+              {
+                value: 'industrial',
+                label: 'Industrial',
+                description: 'Factories and manufacturing',
+                icon: Factory,
+              },
+              {
+                value: 'warehouse',
+                label: 'Warehouse',
+                description: 'Storage and distribution',
+                icon: Warehouse,
+              },
+              {
+                value: 'mixed',
+                label: 'Mixed Use',
+                description: 'Combined commercial/residential',
+                icon: Layers,
+              },
+            ].map(category => (
               <Card
                 key={category.value}
                 onClick={() => {
@@ -288,17 +406,29 @@ const BasicInformationStep: React.FC = () => {
                 }`}
               >
                 <div className="flex flex-col items-center text-center gap-2">
-                  <div className={`p-2 rounded-lg ${
-                    basicInfo.propertyCategory === category.value ? 'bg-blue-100' : 'bg-gray-100'
-                  }`}>
-                    <category.icon className={`w-6 h-6 ${
-                      basicInfo.propertyCategory === category.value ? 'text-blue-600' : 'text-gray-600'
-                    }`} />
+                  <div
+                    className={`p-2 rounded-lg ${
+                      basicInfo.propertyCategory === category.value ? 'bg-blue-100' : 'bg-gray-100'
+                    }`}
+                  >
+                    <category.icon
+                      className={`w-6 h-6 ${
+                        basicInfo.propertyCategory === category.value
+                          ? 'text-blue-600'
+                          : 'text-gray-600'
+                      }`}
+                    />
                   </div>
                   <div>
-                    <h4 className={`font-bold ${
-                      basicInfo.propertyCategory === category.value ? 'text-blue-600' : 'text-gray-900'
-                    }`}>{category.label}</h4>
+                    <h4
+                      className={`font-bold ${
+                        basicInfo.propertyCategory === category.value
+                          ? 'text-blue-600'
+                          : 'text-gray-900'
+                      }`}
+                    >
+                      {category.label}
+                    </h4>
                     <p className="text-xs text-gray-600 mt-1">{category.description}</p>
                   </div>
                 </div>
@@ -309,11 +439,31 @@ const BasicInformationStep: React.FC = () => {
           /* Shared Living rental categories */
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {[
-              { value: 'room_rental', label: 'Room Rental', description: 'Single room in shared accommodation', icon: DoorOpen },
-              { value: 'cottage', label: 'Cottage/Granny Flat', description: 'Separate unit on property', icon: Home },
-              { value: 'student_accommodation', label: 'Student Accommodation', description: 'Purpose-built student housing', icon: GraduationCap },
-              { value: 'co_living', label: 'Co-Living Space', description: 'Modern shared living arrangement', icon: Users },
-            ].map((category) => (
+              {
+                value: 'room_rental',
+                label: 'Room Rental',
+                description: 'Single room in shared accommodation',
+                icon: DoorOpen,
+              },
+              {
+                value: 'cottage',
+                label: 'Cottage/Granny Flat',
+                description: 'Separate unit on property',
+                icon: Home,
+              },
+              {
+                value: 'student_accommodation',
+                label: 'Student Accommodation',
+                description: 'Purpose-built student housing',
+                icon: GraduationCap,
+              },
+              {
+                value: 'co_living',
+                label: 'Co-Living Space',
+                description: 'Modern shared living arrangement',
+                icon: Users,
+              },
+            ].map(category => (
               <Card
                 key={category.value}
                 onClick={() => updateBasicInfo('propertyCategory', category.value)}
@@ -324,17 +474,29 @@ const BasicInformationStep: React.FC = () => {
                 }`}
               >
                 <div className="flex items-center gap-3">
-                  <div className={`p-2 rounded-lg ${
-                    basicInfo.propertyCategory === category.value ? 'bg-blue-100' : 'bg-gray-100'
-                  }`}>
-                    <category.icon className={`w-6 h-6 ${
-                      basicInfo.propertyCategory === category.value ? 'text-blue-600' : 'text-gray-600'
-                    }`} />
+                  <div
+                    className={`p-2 rounded-lg ${
+                      basicInfo.propertyCategory === category.value ? 'bg-blue-100' : 'bg-gray-100'
+                    }`}
+                  >
+                    <category.icon
+                      className={`w-6 h-6 ${
+                        basicInfo.propertyCategory === category.value
+                          ? 'text-blue-600'
+                          : 'text-gray-600'
+                      }`}
+                    />
                   </div>
                   <div>
-                    <h4 className={`font-bold ${
-                      basicInfo.propertyCategory === category.value ? 'text-blue-600' : 'text-gray-900'
-                    }`}>{category.label}</h4>
+                    <h4
+                      className={`font-bold ${
+                        basicInfo.propertyCategory === category.value
+                          ? 'text-blue-600'
+                          : 'text-gray-900'
+                      }`}
+                    >
+                      {category.label}
+                    </h4>
                     <p className="text-sm text-gray-600">{category.description}</p>
                   </div>
                 </div>
@@ -353,17 +515,25 @@ const BasicInformationStep: React.FC = () => {
               }`}
             >
               <div className="flex items-center gap-3">
-                <div className={`p-2 rounded-lg ${
-                  basicInfo.propertyCategory === 'existing' ? 'bg-blue-100' : 'bg-gray-100'
-                }`}>
-                  <Home className={`w-6 h-6 ${
-                    basicInfo.propertyCategory === 'existing' ? 'text-blue-600' : 'text-gray-600'
-                  }`} />
+                <div
+                  className={`p-2 rounded-lg ${
+                    basicInfo.propertyCategory === 'existing' ? 'bg-blue-100' : 'bg-gray-100'
+                  }`}
+                >
+                  <Home
+                    className={`w-6 h-6 ${
+                      basicInfo.propertyCategory === 'existing' ? 'text-blue-600' : 'text-gray-600'
+                    }`}
+                  />
                 </div>
                 <div>
-                  <h4 className={`font-bold ${
-                    basicInfo.propertyCategory === 'existing' ? 'text-blue-600' : 'text-gray-900'
-                  }`}>Existing Property</h4>
+                  <h4
+                    className={`font-bold ${
+                      basicInfo.propertyCategory === 'existing' ? 'text-blue-600' : 'text-gray-900'
+                    }`}
+                  >
+                    Existing Property
+                  </h4>
                   <p className="text-sm text-gray-600">Previously owned or occupied</p>
                 </div>
               </div>
@@ -378,17 +548,29 @@ const BasicInformationStep: React.FC = () => {
               }`}
             >
               <div className="flex items-center gap-3">
-                <div className={`p-2 rounded-lg ${
-                  basicInfo.propertyCategory === 'new_development' ? 'bg-blue-100' : 'bg-gray-100'
-                }`}>
-                  <Home className={`w-6 h-6 ${
-                    basicInfo.propertyCategory === 'new_development' ? 'text-blue-600' : 'text-gray-600'
-                  }`} />
+                <div
+                  className={`p-2 rounded-lg ${
+                    basicInfo.propertyCategory === 'new_development' ? 'bg-blue-100' : 'bg-gray-100'
+                  }`}
+                >
+                  <Home
+                    className={`w-6 h-6 ${
+                      basicInfo.propertyCategory === 'new_development'
+                        ? 'text-blue-600'
+                        : 'text-gray-600'
+                    }`}
+                  />
                 </div>
                 <div>
-                  <h4 className={`font-bold ${
-                    basicInfo.propertyCategory === 'new_development' ? 'text-blue-600' : 'text-gray-900'
-                  }`}>New Development</h4>
+                  <h4
+                    className={`font-bold ${
+                      basicInfo.propertyCategory === 'new_development'
+                        ? 'text-blue-600'
+                        : 'text-gray-900'
+                    }`}
+                  >
+                    New Development
+                  </h4>
                   <p className="text-sm text-gray-600">New construction or development</p>
                 </div>
               </div>
@@ -399,108 +581,128 @@ const BasicInformationStep: React.FC = () => {
 
       {/* Property Highlights (4 fields per type) */}
       {propertyType !== 'shared_living' && (
-      <Card className="p-6 bg-white/50 backdrop-blur-sm border-slate-200/60 shadow-sm">
-        <div className="flex items-center gap-3 mb-6 pb-4 border-b border-slate-100">
-          <div className="p-2 bg-blue-100 rounded-lg">
-            <Home className="w-5 h-5 text-blue-600" />
+        <Card className="p-6 bg-white/50 backdrop-blur-sm border-slate-200/60 shadow-sm">
+          <div className="flex items-center gap-3 mb-6 pb-4 border-b border-slate-100">
+            <div className="p-2 bg-blue-100 rounded-lg">
+              <Home className="w-5 h-5 text-blue-600" />
+            </div>
+            <h3 className="text-lg font-semibold text-slate-800">Property Details</h3>
           </div>
-          <h3 className="text-lg font-semibold text-slate-800">Property Details</h3>
-        </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Apartment Highlights */}
-          {(propertyType === 'apartment') && (
-            <>
-              <div>
-                <Label htmlFor="bedrooms" className="text-slate-700">Bedrooms *</Label>
-                <Input
-                  id="bedrooms"
-                  type="number"
-                  value={propertyDetails.bedrooms || ''}
-                  onChange={(e) => store.updatePropertyDetail('bedrooms', Number(e.target.value))}
-                  placeholder="Enter number of bedrooms"
-                  className="mt-1"
-                />
-              </div>
-              <div>
-                <Label htmlFor="bathrooms" className="text-slate-700">Bathrooms *</Label>
-                <Input
-                  id="bathrooms"
-                  type="number"
-                  value={propertyDetails.bathrooms || ''}
-                  onChange={(e) => store.updatePropertyDetail('bathrooms', Number(e.target.value))}
-                  placeholder="Enter number of bathrooms"
-                  className="mt-1"
-                />
-              </div>
-              <div>
-                <Label htmlFor="unitSizeM2" className="text-slate-700">Unit Size (m²) *</Label>
-                <Input
-                  id="unitSizeM2"
-                  type="number"
-                  value={propertyDetails.unitSizeM2 || ''}
-                  onChange={(e) => store.updatePropertyDetail('unitSizeM2', Number(e.target.value))}
-                  placeholder="Enter unit size in m²"
-                  className="mt-1"
-                />
-              </div>
-              <div>
-                <Label htmlFor="floorNumber" className="text-slate-700">Floor Number *</Label>
-                <Input
-                  id="floorNumber"
-                  type="number"
-                  value={propertyDetails.floorNumber || ''}
-                  onChange={(e) => store.updatePropertyDetail('floorNumber', Number(e.target.value))}
-                  placeholder="Enter floor number"
-                  className="mt-1"
-                />
-              </div>
-            </>
-          )}
 
-          {/* House Highlights */}
-            {(propertyType === 'house') && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Apartment Highlights */}
+            {propertyType === 'apartment' && (
               <>
                 <div>
-                  <Label htmlFor="bedrooms" className="text-slate-700">Bedrooms *</Label>
+                  <Label htmlFor="bedrooms" className="text-slate-700">
+                    Bedrooms *
+                  </Label>
                   <Input
                     id="bedrooms"
                     type="number"
                     value={propertyDetails.bedrooms || ''}
-                    onChange={(e) => store.updatePropertyDetail('bedrooms', Number(e.target.value))}
+                    onChange={e => store.updatePropertyDetail('bedrooms', Number(e.target.value))}
+                    placeholder="Enter number of bedrooms"
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="bathrooms" className="text-slate-700">
+                    Bathrooms *
+                  </Label>
+                  <Input
+                    id="bathrooms"
+                    type="number"
+                    value={propertyDetails.bathrooms || ''}
+                    onChange={e => store.updatePropertyDetail('bathrooms', Number(e.target.value))}
+                    placeholder="Enter number of bathrooms"
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="unitSizeM2" className="text-slate-700">
+                    Unit Size (m²) *
+                  </Label>
+                  <Input
+                    id="unitSizeM2"
+                    type="number"
+                    value={propertyDetails.unitSizeM2 || ''}
+                    onChange={e => store.updatePropertyDetail('unitSizeM2', Number(e.target.value))}
+                    placeholder="Enter unit size in m²"
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="floorNumber" className="text-slate-700">
+                    Floor Number *
+                  </Label>
+                  <Input
+                    id="floorNumber"
+                    type="number"
+                    value={propertyDetails.floorNumber || ''}
+                    onChange={e =>
+                      store.updatePropertyDetail('floorNumber', Number(e.target.value))
+                    }
+                    placeholder="Enter floor number"
+                    className="mt-1"
+                  />
+                </div>
+              </>
+            )}
+
+            {/* House Highlights */}
+            {propertyType === 'house' && (
+              <>
+                <div>
+                  <Label htmlFor="bedrooms" className="text-slate-700">
+                    Bedrooms *
+                  </Label>
+                  <Input
+                    id="bedrooms"
+                    type="number"
+                    value={propertyDetails.bedrooms || ''}
+                    onChange={e => store.updatePropertyDetail('bedrooms', Number(e.target.value))}
                     placeholder="e.g., 4"
                     className="mt-1"
                   />
                 </div>
                 <div>
-                  <Label htmlFor="bathrooms" className="text-slate-700">Bathrooms *</Label>
+                  <Label htmlFor="bathrooms" className="text-slate-700">
+                    Bathrooms *
+                  </Label>
                   <Input
                     id="bathrooms"
                     type="number"
                     value={propertyDetails.bathrooms || ''}
-                    onChange={(e) => store.updatePropertyDetail('bathrooms', Number(e.target.value))}
+                    onChange={e => store.updatePropertyDetail('bathrooms', Number(e.target.value))}
                     placeholder="e.g., 2.5"
                     className="mt-1"
                   />
                 </div>
                 <div>
-                  <Label htmlFor="houseAreaM2" className="text-slate-700">House Size (m²) *</Label>
+                  <Label htmlFor="houseAreaM2" className="text-slate-700">
+                    House Size (m²) *
+                  </Label>
                   <Input
                     id="houseAreaM2"
                     type="number"
                     value={propertyDetails.houseAreaM2 || ''}
-                    onChange={(e) => store.updatePropertyDetail('houseAreaM2', Number(e.target.value))}
+                    onChange={e =>
+                      store.updatePropertyDetail('houseAreaM2', Number(e.target.value))
+                    }
                     placeholder="e.g., 250"
                     className="mt-1"
                   />
                 </div>
                 <div>
-                  <Label htmlFor="erfSizeM2" className="text-slate-700">Yard Size (m²) *</Label>
+                  <Label htmlFor="erfSizeM2" className="text-slate-700">
+                    Yard Size (m²) *
+                  </Label>
                   <Input
                     id="erfSizeM2"
                     type="number"
                     value={propertyDetails.erfSizeM2 || ''}
-                    onChange={(e) => store.updatePropertyDetail('erfSizeM2', Number(e.target.value))}
+                    onChange={e => store.updatePropertyDetail('erfSizeM2', Number(e.target.value))}
                     placeholder="e.g., 500"
                     className="mt-1"
                   />
@@ -512,19 +714,23 @@ const BasicInformationStep: React.FC = () => {
             {propertyType === 'farm' && (
               <>
                 <div>
-                  <Label htmlFor="landSizeHa" className="text-slate-700">Total Land Size *</Label>
+                  <Label htmlFor="landSizeHa" className="text-slate-700">
+                    Total Land Size *
+                  </Label>
                   <div className="flex gap-2 mt-1">
                     <Input
                       id="landSizeHa"
                       type="number"
                       value={propertyDetails.landSizeHa || ''}
-                      onChange={(e) => store.updatePropertyDetail('landSizeHa', Number(e.target.value))}
+                      onChange={e =>
+                        store.updatePropertyDetail('landSizeHa', Number(e.target.value))
+                      }
                       placeholder="e.g., 50"
                       className="w-48"
                     />
                     <Select
                       value={basicInfo.landSizeUnit || 'hectares'}
-                      onValueChange={(value) => updateBasicInfo('landSizeUnit', value)}
+                      onValueChange={value => updateBasicInfo('landSizeUnit', value)}
                     >
                       <SelectTrigger className="w-32">
                         <SelectValue />
@@ -538,20 +744,24 @@ const BasicInformationStep: React.FC = () => {
                   </div>
                 </div>
                 <div>
-                  <Label htmlFor="zoningAgricultural" className="text-slate-700">Zoning Category *</Label>
+                  <Label htmlFor="zoningAgricultural" className="text-slate-700">
+                    Zoning Category *
+                  </Label>
                   <Input
                     id="zoningAgricultural"
                     value={propertyDetails.zoningAgricultural || ''}
-                    onChange={(e) => store.updatePropertyDetail('zoningAgricultural', e.target.value)}
+                    onChange={e => store.updatePropertyDetail('zoningAgricultural', e.target.value)}
                     placeholder="e.g., Agricultural"
                     className="mt-1"
                   />
                 </div>
                 <div>
-                  <Label htmlFor="waterSource" className="text-slate-700">Water Source *</Label>
+                  <Label htmlFor="waterSource" className="text-slate-700">
+                    Water Source *
+                  </Label>
                   <Select
                     value={propertyDetails.waterSource || ''}
-                    onValueChange={(value) => store.updatePropertyDetail('waterSource', value)}
+                    onValueChange={value => store.updatePropertyDetail('waterSource', value)}
                   >
                     <SelectTrigger className="mt-1">
                       <SelectValue placeholder="Select water source" />
@@ -565,10 +775,12 @@ const BasicInformationStep: React.FC = () => {
                   </Select>
                 </div>
                 <div>
-                  <Label htmlFor="electricitySupply" className="text-slate-700">Electricity Supply *</Label>
+                  <Label htmlFor="electricitySupply" className="text-slate-700">
+                    Electricity Supply *
+                  </Label>
                   <Select
                     value={propertyDetails.electricitySupply || ''}
-                    onValueChange={(value) => store.updatePropertyDetail('electricitySupply', value)}
+                    onValueChange={value => store.updatePropertyDetail('electricitySupply', value)}
                   >
                     <SelectTrigger className="mt-1">
                       <SelectValue placeholder="Select electricity supply" />
@@ -588,19 +800,23 @@ const BasicInformationStep: React.FC = () => {
             {propertyType === 'land' && (
               <>
                 <div>
-                  <Label htmlFor="landSizeM2OrHa" className="text-slate-700">Plot Size *</Label>
+                  <Label htmlFor="landSizeM2OrHa" className="text-slate-700">
+                    Plot Size *
+                  </Label>
                   <div className="flex gap-2 mt-1">
                     <Input
                       id="landSizeM2OrHa"
                       type="number"
                       value={propertyDetails.landSizeM2OrHa || ''}
-                      onChange={(e) => store.updatePropertyDetail('landSizeM2OrHa', Number(e.target.value))}
+                      onChange={e =>
+                        store.updatePropertyDetail('landSizeM2OrHa', Number(e.target.value))
+                      }
                       placeholder="e.g., 1000"
                       className="w-48"
                     />
                     <Select
                       value={basicInfo.landSizeUnit || 'm2'}
-                      onValueChange={(value) => updateBasicInfo('landSizeUnit', value)}
+                      onValueChange={value => updateBasicInfo('landSizeUnit', value)}
                     >
                       <SelectTrigger className="w-32">
                         <SelectValue />
@@ -614,10 +830,12 @@ const BasicInformationStep: React.FC = () => {
                   </div>
                 </div>
                 <div>
-                  <Label htmlFor="zoning" className="text-slate-700">Zoning Type *</Label>
+                  <Label htmlFor="zoning" className="text-slate-700">
+                    Zoning Type *
+                  </Label>
                   <Select
                     value={propertyDetails.zoning || ''}
-                    onValueChange={(value) => store.updatePropertyDetail('zoning', value)}
+                    onValueChange={value => store.updatePropertyDetail('zoning', value)}
                   >
                     <SelectTrigger className="mt-1">
                       <SelectValue placeholder="Select zoning" />
@@ -632,10 +850,12 @@ const BasicInformationStep: React.FC = () => {
                   </Select>
                 </div>
                 <div>
-                  <Label htmlFor="servicedStatus" className="text-slate-700">Serviced Status *</Label>
+                  <Label htmlFor="servicedStatus" className="text-slate-700">
+                    Serviced Status *
+                  </Label>
                   <Select
                     value={propertyDetails.servicedStatus || ''}
-                    onValueChange={(value) => store.updatePropertyDetail('servicedStatus', value)}
+                    onValueChange={value => store.updatePropertyDetail('servicedStatus', value)}
                   >
                     <SelectTrigger className="mt-1">
                       <SelectValue placeholder="Select status" />
@@ -648,10 +868,12 @@ const BasicInformationStep: React.FC = () => {
                   </Select>
                 </div>
                 <div>
-                  <Label htmlFor="roadAccess" className="text-slate-700">Road Access *</Label>
+                  <Label htmlFor="roadAccess" className="text-slate-700">
+                    Road Access *
+                  </Label>
                   <Select
                     value={propertyDetails.roadAccess || ''}
-                    onValueChange={(value) => store.updatePropertyDetail('roadAccess', value)}
+                    onValueChange={value => store.updatePropertyDetail('roadAccess', value)}
                   >
                     <SelectTrigger className="mt-1">
                       <SelectValue placeholder="Select road access" />
@@ -670,33 +892,43 @@ const BasicInformationStep: React.FC = () => {
             {propertyType === 'commercial' && (
               <>
                 <div>
-                  <Label htmlFor="floorAreaM2" className="text-slate-700">Property Size (m²) *</Label>
+                  <Label htmlFor="floorAreaM2" className="text-slate-700">
+                    Property Size (m²) *
+                  </Label>
                   <Input
                     id="floorAreaM2"
                     type="number"
                     value={propertyDetails.floorAreaM2 || ''}
-                    onChange={(e) => store.updatePropertyDetail('floorAreaM2', Number(e.target.value))}
+                    onChange={e =>
+                      store.updatePropertyDetail('floorAreaM2', Number(e.target.value))
+                    }
                     placeholder="e.g., 500"
                     className="mt-1"
                   />
                 </div>
                 <div>
-                  <Label htmlFor="parkingBays" className="text-slate-700">Parking Availability *</Label>
+                  <Label htmlFor="parkingBays" className="text-slate-700">
+                    Parking Availability *
+                  </Label>
                   <Input
                     id="parkingBays"
                     type="number"
                     value={propertyDetails.parkingBays || ''}
-                    onChange={(e) => store.updatePropertyDetail('parkingBays', Number(e.target.value))}
+                    onChange={e =>
+                      store.updatePropertyDetail('parkingBays', Number(e.target.value))
+                    }
                     placeholder="e.g., 10"
                     className="mt-1"
                   />
                 </div>
                 <div>
-                  <Label htmlFor="floorLevel" className="text-slate-700">Floor Level / Unit Number *</Label>
+                  <Label htmlFor="floorLevel" className="text-slate-700">
+                    Floor Level / Unit Number *
+                  </Label>
                   <Input
                     id="floorLevel"
                     value={propertyDetails.floorLevel || ''}
-                    onChange={(e) => store.updatePropertyDetail('floorLevel', e.target.value)}
+                    onChange={e => store.updatePropertyDetail('floorLevel', e.target.value)}
                     placeholder="e.g., Ground Floor or Unit 5"
                     className="mt-1"
                   />
@@ -707,7 +939,6 @@ const BasicInformationStep: React.FC = () => {
         </Card>
       )}
 
-
       {/* Possession Status & Additional Details */}
       {action === 'sell' && (propertyType === 'house' || propertyType === 'apartment') && (
         <Card className="p-6 bg-white/50 backdrop-blur-sm border-slate-200/60 shadow-sm">
@@ -717,15 +948,17 @@ const BasicInformationStep: React.FC = () => {
             </div>
             <h3 className="text-lg font-semibold text-slate-800">Additional Information</h3>
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {basicInfo.propertyCategory === 'resale' && (
               <>
                 <div>
-                  <Label htmlFor="possessionStatus" className="text-slate-700">Possession Status *</Label>
+                  <Label htmlFor="possessionStatus" className="text-slate-700">
+                    Possession Status *
+                  </Label>
                   <Select
                     value={basicInfo.possessionStatus || ''}
-                    onValueChange={(value) => updateBasicInfo('possessionStatus', value)}
+                    onValueChange={value => updateBasicInfo('possessionStatus', value)}
                   >
                     <SelectTrigger className="mt-1">
                       <SelectValue placeholder="Select status" />
@@ -741,23 +974,29 @@ const BasicInformationStep: React.FC = () => {
                 {basicInfo.possessionStatus === 'tenant_occupied' && (
                   <>
                     <div>
-                      <Label htmlFor="currentRentalIncome" className="text-slate-700">Current Rental Income (R/month)</Label>
+                      <Label htmlFor="currentRentalIncome" className="text-slate-700">
+                        Current Rental Income (R/month)
+                      </Label>
                       <Input
                         id="currentRentalIncome"
                         type="number"
                         value={basicInfo.currentRentalIncome || ''}
-                        onChange={(e) => updateBasicInfo('currentRentalIncome', Number(e.target.value))}
+                        onChange={e =>
+                          updateBasicInfo('currentRentalIncome', Number(e.target.value))
+                        }
                         placeholder="e.g., 12000"
                         className="mt-1"
                       />
                     </div>
                     <div>
-                      <Label htmlFor="leaseExpiryDate" className="text-slate-700">Lease Expiry Date</Label>
+                      <Label htmlFor="leaseExpiryDate" className="text-slate-700">
+                        Lease Expiry Date
+                      </Label>
                       <Input
                         id="leaseExpiryDate"
                         type="date"
                         value={basicInfo.leaseExpiryDate || ''}
-                        onChange={(e) => updateBasicInfo('leaseExpiryDate', e.target.value)}
+                        onChange={e => updateBasicInfo('leaseExpiryDate', e.target.value)}
                         className="mt-1"
                       />
                     </div>
@@ -765,23 +1004,27 @@ const BasicInformationStep: React.FC = () => {
                 )}
 
                 <div>
-                  <Label htmlFor="occupancyDate" className="text-slate-700">Available From</Label>
+                  <Label htmlFor="occupancyDate" className="text-slate-700">
+                    Available From
+                  </Label>
                   <Input
                     id="occupancyDate"
                     type="date"
                     value={basicInfo.occupancyDate || ''}
-                    onChange={(e) => updateBasicInfo('occupancyDate', e.target.value)}
+                    onChange={e => updateBasicInfo('occupancyDate', e.target.value)}
                     className="mt-1"
                   />
                 </div>
 
                 <div>
-                  <Label htmlFor="propertyAge" className="text-slate-700">Property Age (years)</Label>
+                  <Label htmlFor="propertyAge" className="text-slate-700">
+                    Property Age (years)
+                  </Label>
                   <Input
                     id="propertyAge"
                     type="number"
                     value={basicInfo.propertyAge || ''}
-                    onChange={(e) => updateBasicInfo('propertyAge', Number(e.target.value))}
+                    onChange={e => updateBasicInfo('propertyAge', Number(e.target.value))}
                     placeholder="e.g., 10"
                     className="mt-1"
                   />
@@ -794,14 +1037,16 @@ const BasicInformationStep: React.FC = () => {
               <>
                 {/* Developer Name Autocomplete */}
                 <div>
-                  <Label htmlFor="developerName" className="text-slate-700">Developer Name *</Label>
+                  <Label htmlFor="developerName" className="text-slate-700">
+                    Developer Name *
+                  </Label>
                   <Popover open={showDeveloperDropdown} onOpenChange={setShowDeveloperDropdown}>
                     <PopoverTrigger asChild>
                       <div className="relative">
                         <Input
                           id="developerName"
                           value={basicInfo.developerName || ''}
-                          onChange={(e) => {
+                          onChange={e => {
                             updateBasicInfo('developerName', e.target.value);
                             setDeveloperSearchQuery(e.target.value);
                             setShowDeveloperDropdown(true);
@@ -823,7 +1068,11 @@ const BasicInformationStep: React.FC = () => {
                         )}
                       </div>
                     </PopoverTrigger>
-                    <PopoverContent className="w-[400px] p-0" align="start" onOpenAutoFocus={(e) => e.preventDefault()}>
+                    <PopoverContent
+                      className="w-[400px] p-0"
+                      align="start"
+                      onOpenAutoFocus={e => e.preventDefault()}
+                    >
                       <Command shouldFilter={false}>
                         <CommandList>
                           {developers && developers.length > 0 ? (
@@ -840,7 +1089,7 @@ const BasicInformationStep: React.FC = () => {
                                       developerName: dev.name,
                                       selectedDeveloperId: dev.id,
                                       developmentName: '',
-                                      selectedDevelopmentId: undefined
+                                      selectedDevelopmentId: undefined,
                                     });
                                     setDeveloperSearchQuery(dev.name);
                                     setDevelopmentSearchQuery(''); // Reset development search
@@ -866,7 +1115,9 @@ const BasicInformationStep: React.FC = () => {
                               ))}
                             </CommandGroup>
                           ) : debouncedDeveloperQuery.length >= 2 && !loadingDevelopers ? (
-                            <CommandEmpty>No developers found. You can still enter a custom name.</CommandEmpty>
+                            <CommandEmpty>
+                              No developers found. You can still enter a custom name.
+                            </CommandEmpty>
                           ) : (
                             <CommandEmpty>Type at least 2 characters to search...</CommandEmpty>
                           )}
@@ -881,14 +1132,16 @@ const BasicInformationStep: React.FC = () => {
 
                 {/* Development Name Autocomplete */}
                 <div>
-                  <Label htmlFor="developmentName" className="text-slate-700">Development Name *</Label>
+                  <Label htmlFor="developmentName" className="text-slate-700">
+                    Development Name *
+                  </Label>
                   <Popover open={showDevelopmentDropdown} onOpenChange={setShowDevelopmentDropdown}>
                     <PopoverTrigger asChild>
                       <div className="relative">
                         <Input
                           id="developmentName"
                           value={basicInfo.developmentName || ''}
-                          onChange={(e) => {
+                          onChange={e => {
                             updateBasicInfo('developmentName', e.target.value);
                             setDevelopmentSearchQuery(e.target.value);
                             setShowDevelopmentDropdown(true);
@@ -902,11 +1155,21 @@ const BasicInformationStep: React.FC = () => {
                         )}
                       </div>
                     </PopoverTrigger>
-                    <PopoverContent className="w-[400px] p-0" align="start" onOpenAutoFocus={(e) => e.preventDefault()}>
+                    <PopoverContent
+                      className="w-[400px] p-0"
+                      align="start"
+                      onOpenAutoFocus={e => e.preventDefault()}
+                    >
                       <Command shouldFilter={false}>
                         <CommandList>
                           {developments && developments.length > 0 ? (
-                            <CommandGroup heading={basicInfo.selectedDeveloperId ? "Developer's Developments" : "Published Developments"}>
+                            <CommandGroup
+                              heading={
+                                basicInfo.selectedDeveloperId
+                                  ? "Developer's Developments"
+                                  : 'Published Developments'
+                              }
+                            >
                               {developments.map((dev: any) => (
                                 <CommandItem
                                   key={dev.id}
@@ -916,7 +1179,7 @@ const BasicInformationStep: React.FC = () => {
                                     store.setBasicInfo({
                                       ...basicInfo,
                                       developmentName: dev.name,
-                                      selectedDevelopmentId: dev.id
+                                      selectedDevelopmentId: dev.id,
                                     });
                                     setDevelopmentSearchQuery(dev.name);
                                     setShowDevelopmentDropdown(false);
@@ -938,14 +1201,18 @@ const BasicInformationStep: React.FC = () => {
                                 </CommandItem>
                               ))}
                             </CommandGroup>
-                          ) : (debouncedDevelopmentQuery.length >= 2 || basicInfo.selectedDeveloperId) && !loadingDevelopments ? (
+                          ) : (debouncedDevelopmentQuery.length >= 2 ||
+                              basicInfo.selectedDeveloperId) &&
+                            !loadingDevelopments ? (
                             <CommandEmpty>
-                              {basicInfo.selectedDeveloperId 
+                              {basicInfo.selectedDeveloperId
                                 ? 'No developments found for this developer. You can still enter a custom name.'
                                 : 'No developments found. You can still enter a custom name.'}
                             </CommandEmpty>
                           ) : basicInfo.selectedDeveloperId ? (
-                            <CommandEmpty>Loading developments for selected developer...</CommandEmpty>
+                            <CommandEmpty>
+                              Loading developments for selected developer...
+                            </CommandEmpty>
                           ) : (
                             <CommandEmpty>Type at least 2 characters to search...</CommandEmpty>
                           )}
@@ -954,8 +1221,8 @@ const BasicInformationStep: React.FC = () => {
                     </PopoverContent>
                   </Popover>
                   <p className="text-xs text-slate-500 mt-1">
-                    {basicInfo.selectedDeveloperId 
-                      ? 'Filtered by selected developer' 
+                    {basicInfo.selectedDeveloperId
+                      ? 'Filtered by selected developer'
                       : 'Search for developments or enter a custom name'}
                   </p>
                 </div>
@@ -980,10 +1247,17 @@ const BasicInformationStep: React.FC = () => {
             {(() => {
               // Filter badges based on property type and category
               let availableBadges: ListingBadge[] = [];
-              
+
               // For farms, show farm-specific badges
               if (propertyType === 'farm') {
-                availableBadges = ['water_rights', 'going_concern', 'game_fenced', 'irrigation', 'organic_certified', 'export_quality'];
+                availableBadges = [
+                  'water_rights',
+                  'going_concern',
+                  'game_fenced',
+                  'irrigation',
+                  'organic_certified',
+                  'export_quality',
+                ];
               }
               // For non-farm properties
               else if (basicInfo.propertyCategory === 'existing') {
@@ -992,7 +1266,7 @@ const BasicInformationStep: React.FC = () => {
                 availableBadges = ['under_construction', 'off_plan'];
               }
 
-              return availableBadges.map((badge) => {
+              return availableBadges.map(badge => {
                 const template = BADGE_TEMPLATES[badge];
                 const isSelected = badges.includes(badge);
 

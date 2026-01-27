@@ -1,9 +1,9 @@
 /**
  * Explore Animations Library
- * 
+ *
  * Framer Motion animation variants for the Explore feature.
  * All animations respect prefers-reduced-motion media query.
- * 
+ *
  * Design Philosophy:
  * - Subtle, not bouncy
  * - Fast and responsive

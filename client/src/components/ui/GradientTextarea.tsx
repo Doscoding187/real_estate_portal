@@ -2,15 +2,14 @@
  * GradientTextarea Component
  * Enhanced textarea with gradient focus states and auto-resize
  * Part of the Soft UI design system
- * 
+ *
  * Requirements: 3.1, 3.3
  */
 
 import * as React from 'react';
 import { cn } from '@/lib/utils';
 
-export interface GradientTextareaProps
-  extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {
+export interface GradientTextareaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {
   /**
    * Label text for the textarea
    */
@@ -37,10 +36,7 @@ export interface GradientTextareaProps
   autoResize?: boolean;
 }
 
-const GradientTextarea = React.forwardRef<
-  HTMLTextAreaElement,
-  GradientTextareaProps
->(
+const GradientTextarea = React.forwardRef<HTMLTextAreaElement, GradientTextareaProps>(
   (
     {
       className,
@@ -54,7 +50,7 @@ const GradientTextarea = React.forwardRef<
       onChange,
       ...props
     },
-    ref
+    ref,
   ) => {
     const textareaId = id || `textarea-${React.useId()}`;
     const hasError = !!error;
@@ -89,17 +85,14 @@ const GradientTextarea = React.forwardRef<
           ref.current = node;
         }
       },
-      [ref]
+      [ref],
     );
 
     return (
       <div className={cn('space-y-2', containerClassName)}>
         {/* Label */}
         {label && (
-          <label
-            htmlFor={textareaId}
-            className="block text-sm font-medium text-gray-700"
-          >
+          <label htmlFor={textareaId} className="block text-sm font-medium text-gray-700">
             {label}
             {required && (
               <span
@@ -142,15 +135,11 @@ const GradientTextarea = React.forwardRef<
               'disabled:bg-gray-50 disabled:text-gray-500 disabled:cursor-not-allowed disabled:opacity-60',
               // Auto-resize
               autoResize && 'overflow-hidden',
-              className
+              className,
             )}
             aria-invalid={hasError}
             aria-describedby={
-              error
-                ? `${textareaId}-error`
-                : helperText
-                  ? `${textareaId}-helper`
-                  : undefined
+              error ? `${textareaId}-error` : helperText ? `${textareaId}-helper` : undefined
             }
             onChange={handleChange}
             {...props}
@@ -162,7 +151,7 @@ const GradientTextarea = React.forwardRef<
               'absolute inset-0 rounded-lg pointer-events-none',
               'bg-gradient-to-r from-blue-500 to-indigo-600',
               'opacity-0 transition-opacity duration-300',
-              '-z-10'
+              '-z-10',
             )}
             aria-hidden="true"
           />
@@ -187,7 +176,7 @@ const GradientTextarea = React.forwardRef<
         )}
       </div>
     );
-  }
+  },
 );
 
 GradientTextarea.displayName = 'GradientTextarea';

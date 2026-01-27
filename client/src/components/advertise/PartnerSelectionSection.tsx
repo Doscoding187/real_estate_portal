@@ -1,21 +1,15 @@
 /**
  * PartnerSelectionSection Component
- * 
+ *
  * Displays five partner type cards with staggered animations.
  * Allows users to self-identify and navigate to relevant content.
- * 
+ *
  * Requirements: 2.1, 2.2, 2.3, 2.4, 2.5
  */
 
 import React from 'react';
 import { motion } from 'framer-motion';
-import { 
-  Home, 
-  Building2, 
-  Landmark, 
-  FileText, 
-  Wrench 
-} from 'lucide-react';
+import { Home, Building2, Landmark, FileText, Wrench } from 'lucide-react';
 import { PartnerTypeCard } from './PartnerTypeCard';
 import { staggerContainer } from '@/lib/animations/advertiseAnimations';
 
@@ -32,21 +26,24 @@ const defaultPartnerTypes: PartnerType[] = [
     id: 'agent',
     icon: Home,
     title: 'Real Estate Agent',
-    benefit: 'Showcase your listings to thousands of verified buyers and renters actively searching for properties.',
+    benefit:
+      'Showcase your listings to thousands of verified buyers and renters actively searching for properties.',
     href: '/advertise/agents',
   },
   {
     id: 'developer',
     icon: Building2,
     title: 'Property Developer',
-    benefit: 'Promote your developments with immersive media, reach qualified buyers, and track leads in real-time.',
+    benefit:
+      'Promote your developments with immersive media, reach qualified buyers, and track leads in real-time.',
     href: '/advertise/developers',
   },
   {
     id: 'bank',
     icon: Landmark,
     title: 'Bank / Financial Institution',
-    benefit: 'Connect with home buyers at the perfect moment and offer tailored financing solutions.',
+    benefit:
+      'Connect with home buyers at the perfect moment and offer tailored financing solutions.',
     href: '/advertise/banks',
   },
   {
@@ -60,7 +57,8 @@ const defaultPartnerTypes: PartnerType[] = [
     id: 'service-provider',
     icon: Wrench,
     title: 'Property Service Provider',
-    benefit: 'Reach homeowners and property managers who need your services, from maintenance to renovations.',
+    benefit:
+      'Reach homeowners and property managers who need your services, from maintenance to renovations.',
     href: '/advertise/service-providers',
   },
 ];
@@ -70,17 +68,17 @@ export interface PartnerSelectionSectionProps {
    * Optional custom partner types
    */
   partnerTypes?: PartnerType[];
-  
+
   /**
    * Optional section title
    */
   title?: string;
-  
+
   /**
    * Optional section subtitle
    */
   subtitle?: string;
-  
+
   /**
    * Optional additional CSS classes
    */
@@ -140,9 +138,6 @@ export const PartnerSelectionSection: React.FC<PartnerSelectionSectionProps> = (
           ))}
         </motion.div>
       </div>
-
-
     </section>
   );
 };
-

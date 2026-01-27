@@ -5,7 +5,7 @@ import { OpenAI } from 'openai';
 
 // Initialize OpenAI client - assumes OPENAI_API_KEY is in env
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY || 'dummy_key_for_build', 
+  apiKey: process.env.OPENAI_API_KEY || 'dummy_key_for_build',
 });
 
 export const locationInsightsService = {
@@ -26,14 +26,14 @@ export const locationInsightsService = {
       return {
         pros: suburb.pros as string[],
         cons: suburb.cons as string[],
-        source: 'cache'
+        source: 'cache',
       };
     }
 
     // 2. Generate new insights if missing
     try {
       console.log(`Generating AI insights for ${suburbName}, ${cityName}...`);
-      
+
       if (!process.env.OPENAI_API_KEY) {
         console.warn('OPENAI_API_KEY not found, returning mock insights');
         return this.getMockInsights();
@@ -42,16 +42,17 @@ export const locationInsightsService = {
       const completion = await openai.chat.completions.create({
         messages: [
           {
-            role: "system",
-            content: "You are a real estate expert in South Africa. You know every suburb's detailed pros and cons."
+            role: 'system',
+            content:
+              "You are a real estate expert in South Africa. You know every suburb's detailed pros and cons.",
           },
           {
-            role: "user",
-            content: `Provide 5 specific "Pros" (Good things) and 4 specific "Cons" (Things to improve) for living in the suburb of ${suburbName} in ${cityName}, South Africa. Return ONLY valid JSON format: { "pros": ["...", "..."], "cons": ["...", "..."] }. Keep punchy, short phrases.`
-          }
+            role: 'user',
+            content: `Provide 5 specific "Pros" (Good things) and 4 specific "Cons" (Things to improve) for living in the suburb of ${suburbName} in ${cityName}, South Africa. Return ONLY valid JSON format: { "pros": ["...", "..."], "cons": ["...", "..."] }. Keep punchy, short phrases.`,
+          },
         ],
-        model: "gpt-3.5-turbo",
-        response_format: { type: "json_object" },
+        model: 'gpt-3.5-turbo',
+        response_format: { type: 'json_object' },
       });
 
       const content = completion.choices[0].message.content;
@@ -60,20 +61,20 @@ export const locationInsightsService = {
       const data = JSON.parse(content);
 
       // Save to database
-      await db.update(suburbs)
+      await db
+        .update(suburbs)
         .set({
           pros: data.pros,
           cons: data.cons,
-          aiGenerationDate: new Date().toISOString()
+          aiGenerationDate: new Date().toISOString(),
         })
         .where(eq(suburbs.id, suburbId));
 
       return {
         pros: data.pros as string[],
         cons: data.cons as string[],
-        source: 'ai'
+        source: 'ai',
       };
-
     } catch (error) {
       console.error('Failed to generate AI insights:', error);
       return this.getMockInsights();
@@ -86,19 +87,19 @@ export const locationInsightsService = {
   getMockInsights() {
     return {
       pros: [
-        "Strong community spirit",
-        "Close to major amenities",
-        "Good investment potential",
-        "Family-friendly atmosphere",
-        "Access to schools"
+        'Strong community spirit',
+        'Close to major amenities',
+        'Good investment potential',
+        'Family-friendly atmosphere',
+        'Access to schools',
       ],
       cons: [
-        "Traffic during peak hours",
-        "Limited nightlife options",
-        "Distance from CBD",
-        "Construction noise in developing areas"
+        'Traffic during peak hours',
+        'Limited nightlife options',
+        'Distance from CBD',
+        'Construction noise in developing areas',
       ],
-      source: 'mock'
+      source: 'mock',
     };
   },
 
@@ -141,12 +142,12 @@ export const locationInsightsService = {
             firstName: true,
             lastName: true,
             // avatar column might not exist properly on user table yet based on standard schema, using default or joining profile
-          }
-        }
+          },
+        },
       },
-      limit: 10
+      limit: 10,
     });
 
     return reviews;
-  }
+  },
 };

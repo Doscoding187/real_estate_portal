@@ -76,7 +76,7 @@ export function usePropertyFilters() {
 
   // Update property type
   const setPropertyType = useCallback((type: PropertyType) => {
-    setFilters((prev) => ({
+    setFilters(prev => ({
       ...prev,
       propertyType: type,
       // Clear type-specific filters when changing type
@@ -88,7 +88,7 @@ export function usePropertyFilters() {
 
   // Update common filters
   const updateCommonFilters = useCallback((updates: Partial<CommonFilters>) => {
-    setFilters((prev) => ({
+    setFilters(prev => ({
       ...prev,
       ...updates,
     }));
@@ -96,7 +96,7 @@ export function usePropertyFilters() {
 
   // Update residential filters
   const updateResidentialFilters = useCallback((updates: Partial<ResidentialFilters>) => {
-    setFilters((prev) => ({
+    setFilters(prev => ({
       ...prev,
       residential: {
         ...prev.residential,
@@ -107,7 +107,7 @@ export function usePropertyFilters() {
 
   // Update development filters
   const updateDevelopmentFilters = useCallback((updates: Partial<DevelopmentFilters>) => {
-    setFilters((prev) => ({
+    setFilters(prev => ({
       ...prev,
       development: {
         ...prev.development,
@@ -118,7 +118,7 @@ export function usePropertyFilters() {
 
   // Update land filters
   const updateLandFilters = useCallback((updates: Partial<LandFilters>) => {
-    setFilters((prev) => ({
+    setFilters(prev => ({
       ...prev,
       land: {
         ...prev.land,
@@ -134,7 +134,7 @@ export function usePropertyFilters() {
 
   // Clear type-specific filters only
   const clearTypeFilters = useCallback(() => {
-    setFilters((prev) => ({
+    setFilters(prev => ({
       ...prev,
       residential: undefined,
       development: undefined,

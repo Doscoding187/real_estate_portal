@@ -1,13 +1,13 @@
 /**
  * Cold Start Infrastructure - Smoke Tests
- * 
+ *
  * These tests verify that the cold start services
  * (LaunchService, ContentQuotaService, FoundingPartnerService, OnboardingService)
  * are properly instantiated and have their core methods available.
- * 
+ *
  * This is a checkpoint test to ensure all cold start infrastructure is working
  * before proceeding to quality scoring and monetization features.
- * 
+ *
  * Task 13: Checkpoint - Ensure cold start tests pass
  */
 

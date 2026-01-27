@@ -1,21 +1,25 @@
 /**
  * Reduced Motion Support Tests
- * 
+ *
  * Tests that all animations respect the prefers-reduced-motion media query
- * 
+ *
  * Requirements: 11.4 - Respect user preferences for reduced motion
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { renderHook } from '@testing-library/react';
-import { useReducedMotion, useAnimationDuration, useAnimationVariants } from '@/hooks/useReducedMotion.advertise';
-import { 
-  createAccessibleVariants, 
+import {
+  useReducedMotion,
+  useAnimationDuration,
+  useAnimationVariants,
+} from '@/hooks/useReducedMotion.advertise';
+import {
+  createAccessibleVariants,
   createAccessibleTransition,
   getAccessibleDuration,
   shouldDisableAnimations,
-  applyReducedMotion
+  applyReducedMotion,
 } from '@/lib/animations/motionUtils';
 import { fadeUp, softLift, staggerContainer } from '@/lib/animations/advertiseAnimations';
 

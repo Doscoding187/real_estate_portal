@@ -1,9 +1,9 @@
 /**
  * Onboarding Service
- * 
+ *
  * Manages first-time user experience and progressive feature revelation for Explore.
  * Implements Requirements 14.1, 14.2, 14.3, 14.4, 16.7, 16.8, 16.9, 16.10, 16.11, 16.12
- * 
+ *
  * Key Features:
  * - Welcome overlay with topic suggestions
  * - Progressive disclosure of features based on engagement
@@ -11,8 +11,8 @@
  * - Engagement tracking for feature unlocking
  */
 
-import { db } from "../db";
-import { eq } from "drizzle-orm";
+import { db } from '../db';
+import { eq } from 'drizzle-orm';
 
 // ============================================================================
 // Types & Interfaces
@@ -97,12 +97,12 @@ export class OnboardingService {
       isFirstSession: result.isFirstSession,
       welcomeOverlayShown: result.welcomeOverlayShown,
       welcomeOverlayDismissed: result.welcomeOverlayDismissed,
-      suggestedTopics: result.suggestedTopics as string[] || [],
-      tooltipsShown: result.tooltipsShown as string[] || [],
+      suggestedTopics: (result.suggestedTopics as string[]) || [],
+      tooltipsShown: (result.tooltipsShown as string[]) || [],
       contentViewCount: result.contentViewCount,
       saveCount: result.saveCount,
       partnerEngagementCount: result.partnerEngagementCount,
-      featuresUnlocked: result.featuresUnlocked as string[] || [],
+      featuresUnlocked: (result.featuresUnlocked as string[]) || [],
       createdAt: result.createdAt,
       updatedAt: result.updatedAt,
     };
@@ -198,7 +198,7 @@ export class OnboardingService {
    */
   async showTooltip(userId: string, tooltipId: string): Promise<void> {
     const state = await this.getOnboardingState(userId);
-    
+
     if (state.tooltipsShown.includes(tooltipId)) {
       return; // Already shown
     }

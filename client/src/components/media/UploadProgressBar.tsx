@@ -1,6 +1,6 @@
 /**
  * Upload Progress Bar Component
- * 
+ *
  * Displays individual upload progress for each file with speed and time remaining
  */
 
@@ -27,22 +27,22 @@ export interface UploadProgressBarProps {
    * Upload progress items
    */
   uploads: UploadProgress[];
-  
+
   /**
    * Callback when cancel button is clicked
    */
   onCancel?: (id: string) => void;
-  
+
   /**
    * Callback when retry button is clicked
    */
   onRetry?: (id: string) => void;
-  
+
   /**
    * Callback when remove completed/error item is clicked
    */
   onRemove?: (id: string) => void;
-  
+
   /**
    * Additional CSS classes
    */
@@ -126,14 +126,12 @@ const UploadProgressItem: React.FC<{
         upload.status === 'uploading' && 'bg-blue-50 border-blue-200',
         upload.status === 'completed' && 'bg-green-50 border-green-200',
         upload.status === 'error' && 'bg-red-50 border-red-200',
-        upload.status === 'cancelled' && 'bg-gray-50 border-gray-200'
+        upload.status === 'cancelled' && 'bg-gray-50 border-gray-200',
       )}
     >
       <div className="flex items-start gap-3">
         {/* File Icon */}
-        <div className="flex-shrink-0 mt-0.5">
-          {getFileIcon()}
-        </div>
+        <div className="flex-shrink-0 mt-0.5">{getFileIcon()}</div>
 
         {/* File Info */}
         <div className="flex-1 min-w-0">
@@ -147,9 +145,7 @@ const UploadProgressItem: React.FC<{
 
           {/* File Size */}
           {upload.file?.size && (
-            <p className="text-xs text-gray-500 mb-2">
-              {formatBytes(upload.file.size)}
-            </p>
+            <p className="text-xs text-gray-500 mb-2">{formatBytes(upload.file.size)}</p>
           )}
 
           {/* Progress Bar */}
@@ -167,12 +163,8 @@ const UploadProgressItem: React.FC<{
               {/* Upload Stats */}
               <div className="flex items-center justify-between text-xs text-gray-600">
                 <span>{upload.progress}%</span>
-                {upload.uploadSpeed && (
-                  <span>{formatBytes(upload.uploadSpeed)}/s</span>
-                )}
-                {upload.timeRemaining && (
-                  <span>{formatTime(upload.timeRemaining)} remaining</span>
-                )}
+                {upload.uploadSpeed && <span>{formatBytes(upload.uploadSpeed)}/s</span>}
+                {upload.timeRemaining && <span>{formatTime(upload.timeRemaining)} remaining</span>}
               </div>
             </div>
           )}
@@ -217,19 +209,22 @@ const UploadProgressItem: React.FC<{
             </Button>
           )}
 
-          {(upload.status === 'completed' || upload.status === 'error' || upload.status === 'cancelled') && onRemove && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                if (autoRemoveTimer) clearTimeout(autoRemoveTimer);
-                onRemove(upload.id);
-              }}
-              className="h-8 w-8 p-0 hover:bg-gray-200"
-            >
-              <X className="w-4 h-4 text-gray-600" />
-            </Button>
-          )}
+          {(upload.status === 'completed' ||
+            upload.status === 'error' ||
+            upload.status === 'cancelled') &&
+            onRemove && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  if (autoRemoveTimer) clearTimeout(autoRemoveTimer);
+                  onRemove(upload.id);
+                }}
+                className="h-8 w-8 p-0 hover:bg-gray-200"
+              >
+                <X className="w-4 h-4 text-gray-600" />
+              </Button>
+            )}
         </div>
       </div>
     </motion.div>
@@ -295,7 +290,7 @@ export const UploadProgressBar: React.FC<UploadProgressBarProps> = ({
             'p-3 rounded-lg border text-sm',
             failedUploads > 0
               ? 'bg-yellow-50 border-yellow-200 text-yellow-900'
-              : 'bg-green-50 border-green-200 text-green-900'
+              : 'bg-green-50 border-green-200 text-green-900',
           )}
         >
           {failedUploads > 0 ? (
@@ -305,7 +300,8 @@ export const UploadProgressBar: React.FC<UploadProgressBarProps> = ({
             </span>
           ) : (
             <span>
-              All {completedUploads} {completedUploads === 1 ? 'file' : 'files'} uploaded successfully
+              All {completedUploads} {completedUploads === 1 ? 'file' : 'files'} uploaded
+              successfully
             </span>
           )}
         </motion.div>

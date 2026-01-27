@@ -73,16 +73,11 @@ class RecommendationEngineService {
     const userProfile = await this.getUserProfile(context.userId);
 
     // Get candidate content
-    let query = db
-      .select()
-      .from(exploreContent)
-      .where(eq(exploreContent.isActive, 1));
+    let query = db.select().from(exploreContent).where(eq(exploreContent.isActive, 1));
 
     // Exclude session history
     if (context.sessionHistory && context.sessionHistory.length > 0) {
-      query = query.where(
-        sql`${exploreContent.id} NOT IN (${context.sessionHistory.join(',')})`
-      );
+      query = query.where(sql`${exploreContent.id} NOT IN (${context.sessionHistory.join(',')})`);
     }
 
     // Order by engagement score and recency
@@ -94,7 +89,7 @@ class RecommendationEngineService {
     const candidates = await query;
 
     // Score and rank candidates
-    const scored = candidates.map((item) => ({
+    const scored = candidates.map(item => ({
       ...item,
       personalizedScore: this.calculatePersonalizedScore(item, userProfile, context),
     }));
@@ -113,7 +108,7 @@ class RecommendationEngineService {
   private calculatePersonalizedScore(
     content: any,
     profile: UserProfile,
-    context: UserContext
+    context: UserContext,
   ): number {
     let score = 0;
 
@@ -126,7 +121,7 @@ class RecommendationEngineService {
         profile.priceRangeMin,
         profile.priceRangeMax,
         content.priceMin,
-        content.priceMax
+        content.priceMax,
       );
       score += priceOverlap * 20;
     }
@@ -134,7 +129,7 @@ class RecommendationEngineService {
     // Lifestyle category match (0-15 points)
     if (content.lifestyleCategories && profile.preferredLifestyleCategories.length > 0) {
       const categoryMatch = content.lifestyleCategories.some((cat: string) =>
-        profile.preferredLifestyleCategories.includes(cat)
+        profile.preferredLifestyleCategories.includes(cat),
       );
       if (categoryMatch) score += 15;
     }
@@ -146,7 +141,7 @@ class RecommendationEngineService {
 
     // Recency bonus (0-10 points)
     const daysSinceCreation = Math.floor(
-      (Date.now() - new Date(content.createdAt).getTime()) / (1000 * 60 * 60 * 24)
+      (Date.now() - new Date(content.createdAt).getTime()) / (1000 * 60 * 60 * 24),
     );
     if (daysSinceCreation <= 7) {
       score += 10 * (1 - daysSinceCreation / 7);
@@ -158,7 +153,7 @@ class RecommendationEngineService {
         context.location.lat,
         context.location.lng,
         content.locationLat,
-        content.locationLng
+        content.locationLng,
       );
       if (distance < 50) {
         // Within 50km
@@ -176,7 +171,7 @@ class RecommendationEngineService {
     userMin: number,
     userMax: number,
     contentMin: number,
-    contentMax: number
+    contentMax: number,
   ): number {
     const overlapMin = Math.max(userMin, contentMin);
     const overlapMax = Math.min(userMax, contentMax);
@@ -223,10 +218,7 @@ class RecommendationEngineService {
       .select()
       .from(exploreBoostCampaigns)
       .where(
-        and(
-          eq(exploreBoostCampaigns.status, 'active'),
-          gte(exploreBoostCampaigns.endDate, now)
-        )
+        and(eq(exploreBoostCampaigns.status, 'active'), gte(exploreBoostCampaigns.endDate, now)),
       )
       .orderBy(desc(exploreBoostCampaigns.budget));
 
@@ -235,7 +227,7 @@ class RecommendationEngineService {
     }
 
     // Get boosted content
-    const boostedContentIds = activeCampaigns.map((c) => c.contentId);
+    const boostedContentIds = activeCampaigns.map(c => c.contentId);
     const boostedContent = await db
       .select()
       .from(exploreContent)
@@ -243,7 +235,7 @@ class RecommendationEngineService {
 
     // Create map of content to campaigns
     const contentCampaignMap = new Map();
-    activeCampaigns.forEach((campaign) => {
+    activeCampaigns.forEach(campaign => {
       contentCampaignMap.set(campaign.contentId, campaign);
     });
 

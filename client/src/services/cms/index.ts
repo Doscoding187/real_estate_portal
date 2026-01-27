@@ -1,6 +1,6 @@
 /**
  * CMS Service Module
- * 
+ *
  * Central export point for all CMS-related functionality.
  */
 
@@ -26,23 +26,13 @@ export type {
 } from './types';
 
 // Client
-export {
-  cmsClient,
-  CMSClientFactory,
-  type ICMSClient,
-  type CMSClientConfig,
-} from './cmsClient';
+export { cmsClient, CMSClientFactory, type ICMSClient, type CMSClientConfig } from './cmsClient';
 
 // Default Content
 export { defaultContent } from './defaultContent';
 
 // Icon Mapper
-export {
-  getIconByName,
-  hasIcon,
-  getAvailableIcons,
-  registerIcon,
-} from './iconMapper';
+export { getIconByName, hasIcon, getAvailableIcons, registerIcon } from './iconMapper';
 
 // Validation
 export {

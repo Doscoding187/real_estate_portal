@@ -1,15 +1,15 @@
 /**
  * Focus Manager
- * 
+ *
  * Manages focus indicators and keyboard/mouse detection.
  * Adds appropriate classes to body element to control focus visibility.
- * 
+ *
  * Requirements: 10.5
  */
 
 /**
  * Initialize focus management
- * 
+ *
  * Detects whether user is navigating with keyboard or mouse
  * and applies appropriate classes to body element.
  */
@@ -116,9 +116,7 @@ export class FocusTrap {
       '[tabindex]:not([tabindex="-1"])',
     ].join(', ');
 
-    this.focusableElements = Array.from(
-      this.element.querySelectorAll(selector)
-    ) as HTMLElement[];
+    this.focusableElements = Array.from(this.element.querySelectorAll(selector)) as HTMLElement[];
   }
 
   /**

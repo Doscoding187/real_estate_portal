@@ -1,7 +1,16 @@
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { TrendingUp, Users, Home, ClipboardList, DollarSign, Eye, Plus, Building2 } from 'lucide-react';
+import {
+  TrendingUp,
+  Users,
+  Home,
+  ClipboardList,
+  DollarSign,
+  Eye,
+  Plus,
+  Building2,
+} from 'lucide-react';
 import { MetricCard } from '@/components/MetricCard';
 import { LeadCard } from '@/components/LeadCard';
 import { TaskCard } from '@/components/TaskCard';
@@ -25,8 +34,16 @@ export default function Overview() {
   const [timeRange, setTimeRange] = useState<'7d' | '30d' | '90d'>('30d');
 
   // Fetch real data from API
-  const { data: developerProfile, isLoading: profileLoading, error: profileError } = trpc.developer.getProfile.useQuery();
-  const { data: developments, isLoading: developmentsLoading, error: developmentsError } = trpc.developer.getDevelopments.useQuery();
+  const {
+    data: developerProfile,
+    isLoading: profileLoading,
+    error: profileError,
+  } = trpc.developer.getProfile.useQuery();
+  const {
+    data: developments,
+    isLoading: developmentsLoading,
+    error: developmentsError,
+  } = trpc.developer.getDevelopments.useQuery();
 
   // Check if this is a new developer with no data
   const isNewDeveloper = !developments || developments.length === 0;
@@ -37,7 +54,7 @@ export default function Overview() {
       <div className="space-y-6">
         <div className="h-24 bg-slate-100 rounded-2xl animate-pulse" />
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {[1, 2, 3, 4, 5, 6].map((i) => (
+          {[1, 2, 3, 4, 5, 6].map(i => (
             <div key={i} className="h-32 bg-slate-100 rounded-2xl animate-pulse" />
           ))}
         </div>
@@ -57,12 +74,12 @@ export default function Overview() {
             <div>
               <h3 className="text-lg font-semibold text-slate-800">Unable to Load Dashboard</h3>
               <p className="text-slate-600">
-                {profileError?.message || developmentsError?.message || 'An error occurred while loading your dashboard'}
+                {profileError?.message ||
+                  developmentsError?.message ||
+                  'An error occurred while loading your dashboard'}
               </p>
             </div>
-            <Button onClick={() => window.location.reload()}>
-              Retry
-            </Button>
+            <Button onClick={() => window.location.reload()}>Retry</Button>
           </div>
         </CardContent>
       </Card>
@@ -80,12 +97,14 @@ export default function Overview() {
               <Building2 className="w-8 h-8 text-blue-600" />
             </div>
             <div>
-              <h3 className="text-lg font-semibold text-slate-800">Complete Your Developer Profile</h3>
+              <h3 className="text-lg font-semibold text-slate-800">
+                Complete Your Developer Profile
+              </h3>
               <p className="text-slate-600">
                 You need to complete your developer profile before accessing the dashboard.
               </p>
             </div>
-            <Button onClick={() => window.location.href = '/developer/setup'}>
+            <Button onClick={() => (window.location.href = '/developer/setup')}>
               Complete Profile Setup
             </Button>
           </div>
@@ -106,20 +125,16 @@ export default function Overview() {
             <div>
               <h3 className="text-lg font-semibold text-slate-800">Profile Under Review</h3>
               <p className="text-slate-600">
-                Your developer profile has been submitted and is currently under review by our admin team. 
-                You'll receive an email notification once your profile is approved.
+                Your developer profile has been submitted and is currently under review by our admin
+                team. You'll receive an email notification once your profile is approved.
               </p>
-              <p className="text-sm text-slate-500 mt-2">
-                This usually takes 1-2 business days.
-              </p>
+              <p className="text-sm text-slate-500 mt-2">This usually takes 1-2 business days.</p>
             </div>
             <div className="flex gap-3 justify-center">
-              <Button variant="outline" onClick={() => window.location.href = '/developer/setup'}>
+              <Button variant="outline" onClick={() => (window.location.href = '/developer/setup')}>
                 Edit Profile
               </Button>
-              <Button onClick={() => window.location.reload()}>
-                Refresh Status
-              </Button>
+              <Button onClick={() => window.location.reload()}>Refresh Status</Button>
             </div>
           </div>
         </CardContent>
@@ -147,7 +162,7 @@ export default function Overview() {
                 </p>
               )}
             </div>
-            <Button onClick={() => window.location.href = '/developer/setup'}>
+            <Button onClick={() => (window.location.href = '/developer/setup')}>
               Update and Resubmit Profile
             </Button>
           </div>
@@ -175,23 +190,24 @@ export default function Overview() {
               Welcome to Your Dashboard!
             </h2>
             <p className="text-slate-600 text-lg md:text-xl leading-relaxed">
-              Get started by creating your first development project. Add units, capture leads, and watch your business grow.
+              Get started by creating your first development project. Add units, capture leads, and
+              watch your business grow.
             </p>
           </div>
         </div>
-        
+
         {/* Action Buttons */}
         <div className="flex flex-col sm:flex-row gap-4">
-          <Button 
-            size="lg" 
+          <Button
+            size="lg"
             className="gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg shadow-blue-500/30 rounded-full px-8 py-6 text-base font-semibold transition-all duration-300 hover:scale-105 hover:shadow-xl hover:shadow-blue-500/40"
-            onClick={() => window.location.href = '/developer/developments/new'}
+            onClick={() => (window.location.href = '/developer/create-development')}
           >
             <Plus className="w-5 h-5" />
             Create Your First Development
           </Button>
-          <Button 
-            size="lg" 
+          <Button
+            size="lg"
             variant="outline"
             className="rounded-full px-8 py-6 text-base font-semibold border-2 border-slate-200 hover:border-blue-300 hover:bg-blue-50 hover:text-blue-600 transition-all duration-300"
             onClick={() => window.open('https://docs.example.com', '_blank')}
@@ -214,39 +230,42 @@ export default function Overview() {
                 {
                   number: 1,
                   title: 'Create a Development',
-                  description: 'Add your property development project with details, location, and images',
-                  gradient: 'from-blue-500 to-blue-600'
+                  description:
+                    'Add your property development project with details, location, and images',
+                  gradient: 'from-blue-500 to-blue-600',
                 },
                 {
                   number: 2,
                   title: 'Add Units',
-                  description: 'Define your available units with pricing, floor plans, and specifications',
-                  gradient: 'from-indigo-500 to-indigo-600'
+                  description:
+                    'Define your available units with pricing, floor plans, and specifications',
+                  gradient: 'from-indigo-500 to-indigo-600',
                 },
                 {
                   number: 3,
                   title: 'Capture Leads',
-                  description: 'Use the affordability calculator to qualify buyers and capture high-quality leads',
-                  gradient: 'from-purple-500 to-purple-600'
+                  description:
+                    'Use the affordability calculator to qualify buyers and capture high-quality leads',
+                  gradient: 'from-purple-500 to-purple-600',
                 },
                 {
                   number: 4,
                   title: 'Track Performance',
                   description: 'Monitor your leads, conversions, and sales analytics in real-time',
-                  gradient: 'from-pink-500 to-pink-600'
-                }
-              ].map((step) => (
+                  gradient: 'from-pink-500 to-pink-600',
+                },
+              ].map(step => (
                 <div key={step.number} className="flex items-start gap-5 group">
-                  <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${step.gradient} flex items-center justify-center font-bold text-white text-lg flex-shrink-0 shadow-lg group-hover:scale-110 transition-transform duration-300`}>
+                  <div
+                    className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${step.gradient} flex items-center justify-center font-bold text-white text-lg flex-shrink-0 shadow-lg group-hover:scale-110 transition-transform duration-300`}
+                  >
                     {step.number}
                   </div>
                   <div className="flex-1 pt-1">
                     <h3 className="font-bold text-lg text-slate-800 mb-1 group-hover:text-blue-600 transition-colors">
                       {step.title}
                     </h3>
-                    <p className="text-slate-600 leading-relaxed">
-                      {step.description}
-                    </p>
+                    <p className="text-slate-600 leading-relaxed">{step.description}</p>
                   </div>
                 </div>
               ))}
@@ -266,7 +285,7 @@ export default function Overview() {
   return (
     <div className="space-y-6">
       {/* Welcome Header with Time Range Selector */}
-      <WelcomeHeader 
+      <WelcomeHeader
         developerName={developerProfile?.name || 'Developer'}
         selectedTimeRange={timeRange}
         onTimeRangeChange={setTimeRange}
@@ -325,8 +344,6 @@ export default function Overview() {
           </Card>
         </div>
       </div>
-
-
     </div>
   );
 }

@@ -26,11 +26,13 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { trpc } from '@/lib/trpc';
+import { useLocation } from 'wouter';
 
 interface MenuItem {
   id: string;
   label: string;
   icon: React.ComponentType<{ className?: string }>;
+  path: string;
   badge?: number;
   badgeColor?: 'blue' | 'green' | 'red' | 'yellow';
 }
@@ -51,21 +53,25 @@ const MENU_SECTIONS: MenuSection[] = [
         id: 'overview',
         label: 'Overview',
         icon: LayoutDashboard,
+        path: '/developer/dashboard',
       },
       {
         id: 'developments',
         label: 'Developments',
         icon: Building2,
+        path: '/developer/developments',
       },
       {
         id: 'drafts',
         label: 'My Drafts',
         icon: FileEdit,
+        path: '/developer/drafts',
       },
       {
         id: 'leads',
         label: 'Leads',
         icon: Users,
+        path: '/developer/leads',
       },
     ],
   },
@@ -78,16 +84,19 @@ const MENU_SECTIONS: MenuSection[] = [
         id: 'messages',
         label: 'Messages',
         icon: MessageSquare,
+        path: '/developer/messages',
       },
       {
         id: 'tasks',
         label: 'Tasks',
         icon: CheckSquare,
+        path: '/developer/tasks',
       },
       {
         id: 'reports',
         label: 'Reports',
         icon: FileText,
+        path: '/developer/reports',
       },
     ],
   },
@@ -100,21 +109,25 @@ const MENU_SECTIONS: MenuSection[] = [
         id: 'analytics',
         label: 'Analytics',
         icon: TrendingUp,
+        path: '/developer/analytics',
       },
       {
         id: 'explore',
         label: 'Explore Analytics',
         icon: Video,
+        path: '/developer/explore',
       },
       {
         id: 'campaigns',
         label: 'Campaigns',
         icon: Megaphone,
+        path: '/developer/campaigns',
       },
       {
         id: 'performance',
         label: 'Performance',
         icon: Target,
+        path: '/developer/performance',
       },
     ],
   },
@@ -126,16 +139,19 @@ const MENU_SECTIONS: MenuSection[] = [
         id: 'team',
         label: 'Team',
         icon: UserPlus,
+        path: '/developer/settings/team',
       },
       {
         id: 'subscription',
         label: 'Subscription',
         icon: BarChart3,
+        path: '/developer/subscription',
       },
       {
         id: 'settings',
         label: 'Settings',
         icon: Settings,
+        path: '/developer/settings',
       },
     ],
   },
@@ -143,12 +159,11 @@ const MENU_SECTIONS: MenuSection[] = [
 
 interface EnhancedSidebarProps {
   className?: string;
-  activeTab: string;
-  onTabChange: (tabId: string) => void;
 }
 
-export function EnhancedSidebar({ className, activeTab, onTabChange }: EnhancedSidebarProps) {
+export function EnhancedSidebar({ className }: EnhancedSidebarProps) {
   const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set());
+  const [location, setLocation] = useLocation();
 
   // Fetch developer profile
   const { data: developerProfile } = trpc.developer.getProfile.useQuery();
@@ -162,7 +177,7 @@ export function EnhancedSidebar({ className, activeTab, onTabChange }: EnhancedS
       onError: () => {
         console.log('Notification count temporarily unavailable');
       },
-    }
+    },
   );
 
   const unreadCount = notificationsData?.count || 0;
@@ -170,7 +185,7 @@ export function EnhancedSidebar({ className, activeTab, onTabChange }: EnhancedS
   const developerInitials = developerName.substring(0, 2).toUpperCase();
 
   const toggleSection = (sectionId: string) => {
-    setCollapsedSections((prev) => {
+    setCollapsedSections(prev => {
       const next = new Set(prev);
       if (next.has(sectionId)) {
         next.delete(sectionId);
@@ -197,9 +212,9 @@ export function EnhancedSidebar({ className, activeTab, onTabChange }: EnhancedS
   };
 
   // Add notification badge to Messages
-  const sectionsWithBadges = MENU_SECTIONS.map((section) => ({
+  const sectionsWithBadges = MENU_SECTIONS.map(section => ({
     ...section,
-    items: section.items.map((item) => {
+    items: section.items.map(item => {
       if (item.id === 'messages' && unreadCount > 0) {
         return { ...item, badge: unreadCount, badgeColor: 'blue' as const };
       }
@@ -207,12 +222,22 @@ export function EnhancedSidebar({ className, activeTab, onTabChange }: EnhancedS
     }),
   }));
 
+  // Determine active item based on current URL location
+  const isItemActive = (path: string) => {
+    if (path === '/developer' || path === '/developer/dashboard') {
+      // handle root path matching
+      return location === '/developer' || location === '/developer/dashboard';
+    }
+    return location.startsWith(path);
+  };
+
+
   return (
     <aside
       className={cn(
         'flex flex-col h-full bg-white border-r border-gray-100',
         'w-64 transition-all duration-300 shadow-soft',
-        className
+        className,
       )}
     >
       {/* Logo/Brand */}
@@ -228,7 +253,7 @@ export function EnhancedSidebar({ className, activeTab, onTabChange }: EnhancedS
 
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto py-4">
-        {sectionsWithBadges.map((section) => {
+        {sectionsWithBadges.map(section => {
           const isCollapsed = collapsedSections.has(section.id);
 
           return (
@@ -257,20 +282,20 @@ export function EnhancedSidebar({ className, activeTab, onTabChange }: EnhancedS
               {/* Menu Items */}
               {!isCollapsed && (
                 <div className="space-y-1 px-3">
-                  {section.items.map((item) => {
-                    const isActive = activeTab === item.id;
+                  {section.items.map(item => {
+                    const isActive = isItemActive(item.path);
                     const Icon = item.icon;
 
                     return (
                       <button
                         key={item.id}
-                        onClick={() => onTabChange(item.id)}
+                        onClick={() => setLocation(item.path)}
                         className={cn(
                           'flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 w-full text-left',
                           'group relative',
                           isActive
                             ? 'bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-600 font-medium shadow-soft'
-                            : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
+                            : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900',
                         )}
                       >
                         {/* Active Indicator */}
@@ -281,7 +306,7 @@ export function EnhancedSidebar({ className, activeTab, onTabChange }: EnhancedS
                         <Icon
                           className={cn(
                             'w-5 h-5 transition-colors',
-                            isActive ? 'text-blue-600' : 'text-gray-400 group-hover:text-gray-600'
+                            isActive ? 'text-blue-600' : 'text-gray-400 group-hover:text-gray-600',
                           )}
                         />
                         <span className="flex-1">{item.label}</span>
@@ -292,7 +317,7 @@ export function EnhancedSidebar({ className, activeTab, onTabChange }: EnhancedS
                             className={cn(
                               'flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-xs font-semibold text-white',
                               getBadgeColor(item.badgeColor),
-                              'animate-pulse'
+                              'animate-pulse',
                             )}
                           >
                             {item.badge > 99 ? '99+' : item.badge}
@@ -311,13 +336,13 @@ export function EnhancedSidebar({ className, activeTab, onTabChange }: EnhancedS
       {/* Notifications Bell (Fixed at bottom) */}
       <div className="border-t border-gray-100 p-4">
         <button
-          onClick={() => onTabChange('notifications')}
+          onClick={() => setLocation('/developer/notifications')}
           className={cn(
             'flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 w-full text-left',
             'hover:bg-gray-50 relative',
-            activeTab === 'notifications'
+            location === '/developer/notifications'
               ? 'bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-600 font-medium shadow-soft'
-              : 'text-gray-700'
+              : 'text-gray-700',
           )}
         >
           <Bell className="w-5 h-5" />

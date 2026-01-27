@@ -1,9 +1,9 @@
 /**
  * Keyboard Shortcuts Guide Component
- * 
+ *
  * Displays available keyboard shortcuts for Explore pages.
  * Requirements: 5.1, 5.6
- * 
+ *
  * Features:
  * - Modal display of shortcuts
  * - Keyboard accessible (Escape to close)
@@ -37,23 +37,27 @@ const shortcuts: KeyboardShortcut[] = [
   { keys: ['Home'], description: 'Go to first item', category: 'Navigation' },
   { keys: ['End'], description: 'Go to last item', category: 'Navigation' },
   { keys: ['Tab'], description: 'Move to next interactive element', category: 'Navigation' },
-  { keys: ['Shift', 'Tab'], description: 'Move to previous interactive element', category: 'Navigation' },
-  
+  {
+    keys: ['Shift', 'Tab'],
+    description: 'Move to previous interactive element',
+    category: 'Navigation',
+  },
+
   // Actions
   { keys: ['Enter'], description: 'Activate selected item', category: 'Actions' },
   { keys: ['Space'], description: 'Activate button or toggle', category: 'Actions' },
   { keys: ['Escape'], description: 'Close modal or panel', category: 'Actions' },
-  
+
   // Filters
   { keys: ['F'], description: 'Open filters panel', category: 'Filters' },
   { keys: ['Ctrl', 'K'], description: 'Focus search', category: 'Filters' },
   { keys: ['Ctrl', 'Shift', 'F'], description: 'Clear all filters', category: 'Filters' },
-  
+
   // View
   { keys: ['V'], description: 'Toggle view mode', category: 'View' },
   { keys: ['M'], description: 'Toggle map view', category: 'View' },
   { keys: ['G'], description: 'Toggle grid/list view', category: 'View' },
-  
+
   // Help
   { keys: ['?'], description: 'Show keyboard shortcuts', category: 'Help' },
 ];
@@ -122,21 +126,18 @@ export function KeyboardShortcutsGuide({ isOpen, onClose }: KeyboardShortcutsGui
                 <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 z-10">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <div 
+                      <div
                         className="p-2 rounded-lg"
-                        style={{ 
+                        style={{
                           background: designTokens.colors.accent.subtle,
                         }}
                       >
-                        <Keyboard 
+                        <Keyboard
                           className="w-6 h-6"
                           style={{ color: designTokens.colors.accent.primary }}
                         />
                       </div>
-                      <h2 
-                        id="shortcuts-title"
-                        className="text-2xl font-bold text-gray-900"
-                      >
+                      <h2 id="shortcuts-title" className="text-2xl font-bold text-gray-900">
                         Keyboard Shortcuts
                       </h2>
                     </div>
@@ -153,22 +154,18 @@ export function KeyboardShortcutsGuide({ isOpen, onClose }: KeyboardShortcutsGui
                 {/* Content */}
                 <div className="overflow-y-auto max-h-[calc(80vh-80px)] px-6 py-6">
                   <div className="space-y-8">
-                    {categories.map((category) => (
+                    {categories.map(category => (
                       <div key={category}>
-                        <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                          {category}
-                        </h3>
+                        <h3 className="text-lg font-semibold text-gray-900 mb-4">{category}</h3>
                         <div className="space-y-3">
                           {shortcuts
-                            .filter((s) => s.category === category)
+                            .filter(s => s.category === category)
                             .map((shortcut, index) => (
                               <div
                                 key={index}
                                 className="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-gray-50 transition-colors"
                               >
-                                <span className="text-gray-700">
-                                  {shortcut.description}
-                                </span>
+                                <span className="text-gray-700">{shortcut.description}</span>
                                 <div className="flex items-center gap-1">
                                   {shortcut.keys.map((key, keyIndex) => (
                                     <span key={keyIndex} className="flex items-center gap-1">
@@ -192,14 +189,18 @@ export function KeyboardShortcutsGuide({ isOpen, onClose }: KeyboardShortcutsGui
                   </div>
 
                   {/* Footer note */}
-                  <div 
+                  <div
                     className="mt-8 p-4 rounded-lg"
-                    style={{ 
+                    style={{
                       background: designTokens.colors.accent.subtle,
                     }}
                   >
                     <p className="text-sm text-gray-700">
-                      <strong>Tip:</strong> Press <kbd className="px-2 py-0.5 text-xs font-semibold bg-white border border-gray-300 rounded">?</kbd> at any time to view this guide.
+                      <strong>Tip:</strong> Press{' '}
+                      <kbd className="px-2 py-0.5 text-xs font-semibold bg-white border border-gray-300 rounded">
+                        ?
+                      </kbd>{' '}
+                      at any time to view this guide.
                     </p>
                   </div>
                 </div>

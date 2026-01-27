@@ -1,15 +1,15 @@
 /**
  * SortControls Component
- * 
+ *
  * Provides sort dropdown and view mode toggle for property results page.
  * Integrates with propertyFiltersStore for state management.
- * 
+ *
  * Features:
  * - Sort dropdown with SA-specific options
  * - View mode toggle (List/Grid/Map)
  * - View mode persisted to localStorage via Zustand store
  * - Responsive design with mobile-friendly touch targets
- * 
+ *
  * Requirements: 2.3, 3.1, 3.4
  */
 
@@ -64,10 +64,10 @@ export interface SortControlsProps {
 
 /**
  * SortControls Component
- * 
+ *
  * Renders sort dropdown and view mode toggle for property results.
  * View mode preference is persisted to localStorage via the store.
- * 
+ *
  * @example
  * ```tsx
  * <SortControls
@@ -88,13 +88,10 @@ export function SortControls({
   className = '',
 }: SortControlsProps) {
   return (
-    <div 
-      className={`flex items-center gap-3 ${className}`}
-      data-testid="sort-controls"
-    >
+    <div className={`flex items-center gap-3 ${className}`} data-testid="sort-controls">
       {/* View Mode Toggle */}
       {showViewModeToggle && (
-        <div 
+        <div
           className="hidden sm:flex items-center bg-gray-100 rounded-lg p-1"
           role="group"
           aria-label="View mode selection"
@@ -106,8 +103,8 @@ export function SortControls({
               variant="ghost"
               size="sm"
               className={`h-8 px-2.5 min-w-[44px] ${
-                viewMode === value 
-                  ? 'bg-white shadow-sm text-slate-900' 
+                viewMode === value
+                  ? 'bg-white shadow-sm text-slate-900'
                   : 'text-slate-500 hover:text-slate-900'
               }`}
               onClick={() => onViewModeChange(value)}
@@ -124,11 +121,8 @@ export function SortControls({
 
       {/* Sort Dropdown */}
       {showSortDropdown && (
-        <Select 
-          value={sortOption} 
-          onValueChange={(val) => onSortChange(val as SortOption)}
-        >
-          <SelectTrigger 
+        <Select value={sortOption} onValueChange={val => onSortChange(val as SortOption)}>
+          <SelectTrigger
             className="w-[180px] h-9 bg-white border-gray-200"
             data-testid="sort-dropdown"
             aria-label="Sort properties by"
@@ -138,11 +132,7 @@ export function SortControls({
           </SelectTrigger>
           <SelectContent>
             {SORT_OPTIONS.map(({ value, label }) => (
-              <SelectItem 
-                key={value} 
-                value={value}
-                data-testid={`sort-option-${value}`}
-              >
+              <SelectItem key={value} value={value} data-testid={`sort-option-${value}`}>
                 {label}
               </SelectItem>
             ))}
@@ -155,7 +145,7 @@ export function SortControls({
 
 /**
  * Mobile View Mode Selector
- * 
+ *
  * A mobile-friendly version of the view mode toggle that appears
  * as a full-width button group.
  */
@@ -165,7 +155,7 @@ export function MobileViewModeSelector({
   className = '',
 }: Pick<SortControlsProps, 'viewMode' | 'onViewModeChange' | 'className'>) {
   return (
-    <div 
+    <div
       className={`flex sm:hidden items-center bg-gray-100 rounded-lg p-1 w-full ${className}`}
       role="group"
       aria-label="View mode selection"
@@ -177,8 +167,8 @@ export function MobileViewModeSelector({
           variant="ghost"
           size="sm"
           className={`flex-1 h-10 min-h-[44px] gap-2 ${
-            viewMode === value 
-              ? 'bg-white shadow-sm text-slate-900' 
+            viewMode === value
+              ? 'bg-white shadow-sm text-slate-900'
               : 'text-slate-500 hover:text-slate-900'
           }`}
           onClick={() => onViewModeChange(value)}
@@ -188,7 +178,9 @@ export function MobileViewModeSelector({
           data-active={viewMode === value}
         >
           <Icon className="h-4 w-4" />
-          <span className="text-xs font-medium">{value.charAt(0).toUpperCase() + value.slice(1)}</span>
+          <span className="text-xs font-medium">
+            {value.charAt(0).toUpperCase() + value.slice(1)}
+          </span>
         </Button>
       ))}
     </div>

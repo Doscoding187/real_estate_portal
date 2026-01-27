@@ -1,6 +1,6 @@
 /**
  * Feed Ranking Service - Usage Examples
- * 
+ *
  * This file demonstrates common usage patterns for the Feed Ranking Service.
  */
 
@@ -22,7 +22,7 @@ async function example1_basicFeedRanking() {
       contentCategory: 'primary',
       partnerId: 'partner-1',
       createdAt: new Date('2024-01-15'),
-      location: { lat: -26.2041, lng: 28.0473 }
+      location: { lat: -26.2041, lng: 28.0473 },
     },
     {
       id: 2,
@@ -30,7 +30,7 @@ async function example1_basicFeedRanking() {
       contentCategory: 'secondary',
       partnerId: 'partner-2',
       createdAt: new Date('2024-01-20'),
-      location: { lat: -26.1076, lng: 28.0567 }
+      location: { lat: -26.1076, lng: 28.0567 },
     },
     {
       id: 3,
@@ -38,8 +38,8 @@ async function example1_basicFeedRanking() {
       contentCategory: 'tertiary',
       partnerId: 'partner-3',
       createdAt: new Date('2024-01-10'),
-      location: { lat: -26.3000, lng: 28.1000 }
-    }
+      location: { lat: -26.3, lng: 28.1 },
+    },
   ];
 
   // User location (Johannesburg)
@@ -50,7 +50,7 @@ async function example1_basicFeedRanking() {
     items,
     'user-123',
     userLocation,
-    'find-your-home'
+    'find-your-home',
   );
 
   console.log('Ranked Items:');
@@ -79,13 +79,15 @@ async function example2_boostRatioEnforcement() {
     { id: 9, rankingScore: 73, isBoosted: false, boostMultiplier: 1.0 },
     { id: 10, rankingScore: 70, isBoosted: false, boostMultiplier: 1.0 },
     { id: 11, rankingScore: 68, isBoosted: true, boostMultiplier: 1.6 },
-    { id: 12, rankingScore: 65, isBoosted: false, boostMultiplier: 1.0 }
+    { id: 12, rankingScore: 65, isBoosted: false, boostMultiplier: 1.0 },
   ];
 
   console.log('Before boost limit enforcement:');
   const boostedCount = rankedItems.filter(i => i.isBoosted).length;
   const organicCount = rankedItems.filter(i => !i.isBoosted).length;
-  console.log(`Boosted: ${boostedCount}, Organic: ${organicCount}, Ratio: ${(boostedCount / organicCount * 100).toFixed(1)}%`);
+  console.log(
+    `Boosted: ${boostedCount}, Organic: ${organicCount}, Ratio: ${((boostedCount / organicCount) * 100).toFixed(1)}%`,
+  );
 
   // Apply boost limit
   const limitedFeed = feedRankingService.ensureBoostLimit(rankedItems);
@@ -93,7 +95,9 @@ async function example2_boostRatioEnforcement() {
   console.log('\nAfter boost limit enforcement:');
   const finalBoostedCount = limitedFeed.filter(i => i.isBoosted).length;
   const finalOrganicCount = limitedFeed.filter(i => !i.isBoosted).length;
-  console.log(`Boosted: ${finalBoostedCount}, Organic: ${finalOrganicCount}, Ratio: ${(finalBoostedCount / finalOrganicCount * 100).toFixed(1)}%`);
+  console.log(
+    `Boosted: ${finalBoostedCount}, Organic: ${finalOrganicCount}, Ratio: ${((finalBoostedCount / finalOrganicCount) * 100).toFixed(1)}%`,
+  );
   console.log('✓ Ratio is within 10% limit');
 }
 
@@ -106,11 +110,11 @@ async function example3_customWeights() {
 
   // Create service with custom weights (emphasize quality and location)
   const customService = new FeedRankingService({
-    userInterest: 0.25,      // Reduce personalization
-    contentQuality: 0.35,    // Increase quality emphasis
-    localRelevance: 0.25,    // Increase location importance
-    recency: 0.10,
-    partnerTrust: 0.05
+    userInterest: 0.25, // Reduce personalization
+    contentQuality: 0.35, // Increase quality emphasis
+    localRelevance: 0.25, // Increase location importance
+    recency: 0.1,
+    partnerTrust: 0.05,
   });
 
   console.log('Custom weights:', customService.getWeights());
@@ -122,7 +126,7 @@ async function example3_customWeights() {
     localRelevanceScore: 95,
     recencyScore: 60,
     trustScore: 80,
-    boostMultiplier: 1.0
+    boostMultiplier: 1.0,
   });
 
   console.log(`Ranking score with custom weights: ${score.toFixed(2)}`);
@@ -152,14 +156,14 @@ function example4_individualFactors() {
     { name: 'Same location', lat: -26.2041, lng: 28.0473 },
     { name: 'Sandton (10km)', lat: -26.1076, lng: 28.0567 },
     { name: 'Pretoria (50km)', lat: -25.7479, lng: 28.2293 },
-    { name: 'Durban (500km)', lat: -29.8587, lng: 31.0218 }
+    { name: 'Durban (500km)', lat: -29.8587, lng: 31.0218 },
   ];
-  
+
   locations.forEach(loc => {
-    const score = feedRankingService.calculateLocalRelevanceScore(
-      userLoc,
-      { lat: loc.lat, lng: loc.lng }
-    );
+    const score = feedRankingService.calculateLocalRelevanceScore(userLoc, {
+      lat: loc.lat,
+      lng: loc.lng,
+    });
     console.log(`  ${loc.name}: ${score.toFixed(2)}`);
   });
 }
@@ -182,14 +186,11 @@ async function example5_hierarchyIntegration() {
     { id: 7, contentCategory: 'secondary', createdAt: new Date(), partnerId: 'p7' },
     { id: 8, contentCategory: 'primary', createdAt: new Date(), partnerId: 'p8' },
     { id: 9, contentCategory: 'primary', createdAt: new Date(), partnerId: 'p9' },
-    { id: 10, contentCategory: 'primary', createdAt: new Date(), partnerId: 'p10' }
+    { id: 10, contentCategory: 'primary', createdAt: new Date(), partnerId: 'p10' },
   ];
 
   console.log('Step 1: Rank content');
-  const ranked = await feedRankingService.rankFeedItems(
-    contentPool,
-    'user-123'
-  );
+  const ranked = await feedRankingService.rankFeedItems(contentPool, 'user-123');
 
   console.log('Step 2: Apply boost limits');
   const boostedLimited = feedRankingService.ensureBoostLimit(ranked);
@@ -217,20 +218,20 @@ function example6_weightValidation() {
   const validWeights = {
     userInterest: 0.35,
     contentQuality: 0.25,
-    localRelevance: 0.20,
-    recency: 0.10,
-    partnerTrust: 0.10
+    localRelevance: 0.2,
+    recency: 0.1,
+    partnerTrust: 0.1,
   };
 
   console.log('Valid weights:', FeedRankingService.validateWeights(validWeights));
 
   // Invalid weights (don't sum to 1.0)
   const invalidWeights = {
-    userInterest: 0.40,
-    contentQuality: 0.30,
-    localRelevance: 0.20,
-    recency: 0.10,
-    partnerTrust: 0.10
+    userInterest: 0.4,
+    contentQuality: 0.3,
+    localRelevance: 0.2,
+    recency: 0.1,
+    partnerTrust: 0.1,
   };
 
   console.log('Invalid weights:', FeedRankingService.validateWeights(invalidWeights));
@@ -255,7 +256,7 @@ function example7_boostMultiplier() {
     { id: '2', budget: 500, status: 'active' },
     { id: '3', budget: 1000, status: 'active' },
     { id: '4', budget: 5000, status: 'active' },
-    { id: '5', budget: 10000, status: 'active' }
+    { id: '5', budget: 10000, status: 'active' },
   ];
 
   console.log('Boost multipliers by budget:');
@@ -300,5 +301,5 @@ export {
   example4_individualFactors,
   example5_hierarchyIntegration,
   example6_weightValidation,
-  example7_boostMultiplier
+  example7_boostMultiplier,
 };

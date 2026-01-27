@@ -28,7 +28,7 @@ const Step8Billing: React.FC<Step8BillingProps> = ({ data, campaignId, onBack })
         campaignId,
         paymentMethodId: 'mock_pm_123',
       });
-      
+
       toast.success('Campaign launched successfully!');
       // Redirect to marketing dashboard
       setLocation('/admin/marketing');
@@ -74,11 +74,15 @@ const Step8Billing: React.FC<Step8BillingProps> = ({ data, campaignId, onBack })
               <span>Estimated Total</span>
               <span>R {estimatedTotal.toFixed(2)}</span>
             </div>
-            
+
             <div className="bg-blue-50 p-4 rounded-lg flex gap-3 text-sm text-blue-700">
               <AlertCircle className="w-5 h-5 shrink-0" />
               <p>
-                You will be billed {data.billingMethod === 'prepaid' ? 'immediately' : 'at the end of each billing cycle'} based on actual performance.
+                You will be billed{' '}
+                {data.billingMethod === 'prepaid'
+                  ? 'immediately'
+                  : 'at the end of each billing cycle'}{' '}
+                based on actual performance.
               </p>
             </div>
           </CardContent>
@@ -90,10 +94,19 @@ const Step8Billing: React.FC<Step8BillingProps> = ({ data, campaignId, onBack })
             <CardTitle>Payment Method</CardTitle>
           </CardHeader>
           <CardContent>
-            <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod} className="space-y-4">
-              <div className={`flex items-center space-x-4 border p-4 rounded-lg cursor-pointer transition-colors ${paymentMethod === 'saved_card' ? 'border-blue-600 bg-blue-50' : 'hover:bg-slate-50'}`}>
+            <RadioGroup
+              value={paymentMethod}
+              onValueChange={setPaymentMethod}
+              className="space-y-4"
+            >
+              <div
+                className={`flex items-center space-x-4 border p-4 rounded-lg cursor-pointer transition-colors ${paymentMethod === 'saved_card' ? 'border-blue-600 bg-blue-50' : 'hover:bg-slate-50'}`}
+              >
                 <RadioGroupItem value="saved_card" id="saved_card" />
-                <Label htmlFor="saved_card" className="flex-1 cursor-pointer flex items-center gap-3">
+                <Label
+                  htmlFor="saved_card"
+                  className="flex-1 cursor-pointer flex items-center gap-3"
+                >
                   <div className="bg-slate-100 p-2 rounded-full">
                     <CreditCard className="w-5 h-5 text-slate-600" />
                   </div>
@@ -104,7 +117,9 @@ const Step8Billing: React.FC<Step8BillingProps> = ({ data, campaignId, onBack })
                 </Label>
               </div>
 
-              <div className={`flex items-center space-x-4 border p-4 rounded-lg cursor-pointer transition-colors ${paymentMethod === 'wallet' ? 'border-blue-600 bg-blue-50' : 'hover:bg-slate-50'}`}>
+              <div
+                className={`flex items-center space-x-4 border p-4 rounded-lg cursor-pointer transition-colors ${paymentMethod === 'wallet' ? 'border-blue-600 bg-blue-50' : 'hover:bg-slate-50'}`}
+              >
                 <RadioGroupItem value="wallet" id="wallet" />
                 <Label htmlFor="wallet" className="flex-1 cursor-pointer flex items-center gap-3">
                   <div className="bg-slate-100 p-2 rounded-full">
@@ -129,10 +144,10 @@ const Step8Billing: React.FC<Step8BillingProps> = ({ data, campaignId, onBack })
         <Button variant="outline" onClick={onBack} disabled={isProcessing}>
           Back
         </Button>
-        <Button 
-            onClick={handleLaunch} 
-            disabled={isProcessing}
-            className="bg-green-600 hover:bg-green-700 text-white min-w-[150px]"
+        <Button
+          onClick={handleLaunch}
+          disabled={isProcessing}
+          className="bg-green-600 hover:bg-green-700 text-white min-w-[150px]"
         >
           {isProcessing ? (
             <>

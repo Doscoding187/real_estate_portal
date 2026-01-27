@@ -1,6 +1,6 @@
 /**
  * Feature Unlock Indicator Component
- * 
+ *
  * Displays progress toward unlocking features.
  * Implements Requirements 14.2, 14.3, 14.4
  */
@@ -34,10 +34,7 @@ const FEATURE_CONFIG = {
   },
 };
 
-export function FeatureUnlockIndicator({
-  feature,
-  compact = false,
-}: FeatureUnlockIndicatorProps) {
+export function FeatureUnlockIndicator({ feature, compact = false }: FeatureUnlockIndicatorProps) {
   const { unlocked, progress, threshold, percentage } = useFeatureUnlockProgress(feature);
   const config = FEATURE_CONFIG[feature];
   const Icon = config.icon;
@@ -77,22 +74,16 @@ export function FeatureUnlockIndicator({
           {/* Content */}
           <div className="flex-1 space-y-2">
             <div className="flex items-center justify-between">
-              <h4 className="font-semibold text-gray-900 dark:text-white">
-                {config.title}
-              </h4>
+              <h4 className="font-semibold text-gray-900 dark:text-white">{config.title}</h4>
               <Lock className="w-4 h-4 text-gray-400" />
             </div>
 
-            <p className="text-sm text-gray-600 dark:text-gray-400">
-              {config.description}
-            </p>
+            <p className="text-sm text-gray-600 dark:text-gray-400">{config.description}</p>
 
             {/* Progress Bar */}
             <div className="space-y-1">
               <div className="flex items-center justify-between text-xs">
-                <span className="text-gray-600 dark:text-gray-400">
-                  Progress
-                </span>
+                <span className="text-gray-600 dark:text-gray-400">Progress</span>
                 <span className="font-medium text-primary">
                   {progress}/{threshold}
                 </span>
@@ -111,10 +102,7 @@ export function FeatureUnlockIndicator({
   );
 }
 
-function getUnlockMessage(
-  feature: string,
-  remaining: number
-): string {
+function getUnlockMessage(feature: string, remaining: number): string {
   switch (feature) {
     case 'filters_save':
       return `View ${remaining} more ${remaining === 1 ? 'item' : 'items'} to unlock`;
@@ -136,10 +124,7 @@ interface FeatureUnlockToastProps {
   onDismiss: () => void;
 }
 
-export function FeatureUnlockToast({
-  feature,
-  onDismiss,
-}: FeatureUnlockToastProps) {
+export function FeatureUnlockToast({ feature, onDismiss }: FeatureUnlockToastProps) {
   const config = FEATURE_CONFIG[feature];
   const Icon = config.icon;
 
@@ -177,12 +162,7 @@ export function FeatureUnlockToast({
             className="p-1 hover:bg-white/20 rounded transition-colors"
             aria-label="Dismiss"
           >
-            <svg
-              className="w-4 h-4"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"

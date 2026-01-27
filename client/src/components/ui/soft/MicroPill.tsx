@@ -1,9 +1,9 @@
 /**
  * MicroPill Component
- * 
+ *
  * A small pill/chip component for categories, tags, and filters.
  * Inspired by Airbnb's filter chips and Instagram's category pills.
- * 
+ *
  * Features:
  * - Selected and unselected states
  * - Smooth selection animations
@@ -39,7 +39,7 @@ const iconSizes = {
   lg: 'w-5 h-5',
 } as const;
 
-export function MicroPill({ 
+export function MicroPill({
   label,
   selected = false,
   onClick,
@@ -57,7 +57,7 @@ export function MicroPill({
         ? 'bg-gradient-to-r from-indigo-500 to-indigo-600 text-white shadow-accent'
         : 'bg-white text-gray-700 border border-gray-200 hover:border-indigo-300';
     }
-    
+
     return selected
       ? 'bg-gray-900 text-white shadow-md'
       : 'bg-white text-gray-700 border border-gray-200 hover:border-gray-300';
@@ -75,7 +75,7 @@ export function MicroPill({
         selected ? 'focus:ring-gray-900' : 'focus:ring-gray-300',
         isInteractive && 'cursor-pointer',
         disabled && 'opacity-50 cursor-not-allowed',
-        className
+        className,
       )}
       onClick={isInteractive ? onClick : undefined}
       whileHover={isInteractive ? { scale: 1.05 } : undefined}

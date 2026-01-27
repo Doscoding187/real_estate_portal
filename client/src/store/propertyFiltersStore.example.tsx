@@ -1,6 +1,6 @@
 /**
  * Example usage of propertyFiltersStore
- * 
+ *
  * This file demonstrates how to use the Property filters store
  * in various scenarios for the property results page.
  */
@@ -10,13 +10,8 @@ import { useEffect } from 'react';
 
 // Example 1: Complete Filter Panel
 export function PropertyFilterPanel() {
-  const {
-    filters,
-    setFilters,
-    updateFilter,
-    resetFilters,
-    getActiveFilterCount,
-  } = usePropertyFiltersStore();
+  const { filters, setFilters, updateFilter, resetFilters, getActiveFilterCount } =
+    usePropertyFiltersStore();
 
   const filterCount = getActiveFilterCount();
 
@@ -36,7 +31,7 @@ export function PropertyFilterPanel() {
         <label className="block text-sm font-medium mb-1">Province</label>
         <select
           value={filters.province || ''}
-          onChange={(e) => updateFilter('province', e.target.value || undefined)}
+          onChange={e => updateFilter('province', e.target.value || undefined)}
           className="w-full p-2 border rounded"
         >
           <option value="">All Provinces</option>
@@ -53,7 +48,7 @@ export function PropertyFilterPanel() {
           <input
             type="number"
             value={filters.minPrice || ''}
-            onChange={(e) =>
+            onChange={e =>
               updateFilter('minPrice', e.target.value ? Number(e.target.value) : undefined)
             }
             placeholder="Min (R)"
@@ -62,7 +57,7 @@ export function PropertyFilterPanel() {
           <input
             type="number"
             value={filters.maxPrice || ''}
-            onChange={(e) =>
+            onChange={e =>
               updateFilter('maxPrice', e.target.value ? Number(e.target.value) : undefined)
             }
             placeholder="Max (R)"
@@ -75,14 +70,11 @@ export function PropertyFilterPanel() {
       <div>
         <label className="block text-sm font-medium mb-1">Bedrooms</label>
         <div className="flex gap-2">
-          {[1, 2, 3, 4, 5].map((count) => (
+          {[1, 2, 3, 4, 5].map(count => (
             <button
               key={count}
               onClick={() =>
-                updateFilter(
-                  'minBedrooms',
-                  filters.minBedrooms === count ? undefined : count
-                )
+                updateFilter('minBedrooms', filters.minBedrooms === count ? undefined : count)
               }
               className={`px-3 py-1 rounded ${
                 filters.minBedrooms === count
@@ -103,7 +95,7 @@ export function PropertyFilterPanel() {
           <input
             type="checkbox"
             checked={filters.securityEstate || false}
-            onChange={(e) => updateFilter('securityEstate', e.target.checked)}
+            onChange={e => updateFilter('securityEstate', e.target.checked)}
           />
           Security Estate
         </label>
@@ -111,7 +103,7 @@ export function PropertyFilterPanel() {
           <input
             type="checkbox"
             checked={filters.petFriendly || false}
-            onChange={(e) => updateFilter('petFriendly', e.target.checked)}
+            onChange={e => updateFilter('petFriendly', e.target.checked)}
           />
           Pet Friendly
         </label>
@@ -119,7 +111,7 @@ export function PropertyFilterPanel() {
           <input
             type="checkbox"
             checked={filters.fibreReady || false}
-            onChange={(e) => updateFilter('fibreReady', e.target.checked)}
+            onChange={e => updateFilter('fibreReady', e.target.checked)}
           />
           Fibre Ready
         </label>
@@ -170,14 +162,12 @@ export function QuickFilters() {
 
   return (
     <div className="flex flex-wrap gap-2">
-      {quickFilters.map((qf) => (
+      {quickFilters.map(qf => (
         <button
           key={qf.label}
           onClick={() => setFilters(qf.active ? {} : qf.filters)}
           className={`px-4 py-2 rounded-full text-sm transition-colors ${
-            qf.active
-              ? 'bg-blue-500 text-white'
-              : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+            qf.active ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
           }`}
         >
           {qf.label}
@@ -189,15 +179,14 @@ export function QuickFilters() {
 
 // Example 3: Sort and View Controls
 export function ResultsControls() {
-  const { sortOption, viewMode, setSortOption, setViewMode } =
-    usePropertyFiltersStore();
+  const { sortOption, viewMode, setSortOption, setViewMode } = usePropertyFiltersStore();
 
   return (
     <div className="flex items-center justify-between">
       {/* Sort Dropdown */}
       <select
         value={sortOption}
-        onChange={(e) => setSortOption(e.target.value as any)}
+        onChange={e => setSortOption(e.target.value as any)}
         className="px-4 py-2 border rounded"
       >
         <option value="date_desc">Newest Listed</option>
@@ -210,25 +199,19 @@ export function ResultsControls() {
       <div className="flex gap-1 bg-gray-200 rounded p-1">
         <button
           onClick={() => setViewMode('list')}
-          className={`px-3 py-1 rounded ${
-            viewMode === 'list' ? 'bg-white shadow' : ''
-          }`}
+          className={`px-3 py-1 rounded ${viewMode === 'list' ? 'bg-white shadow' : ''}`}
         >
           List
         </button>
         <button
           onClick={() => setViewMode('grid')}
-          className={`px-3 py-1 rounded ${
-            viewMode === 'grid' ? 'bg-white shadow' : ''
-          }`}
+          className={`px-3 py-1 rounded ${viewMode === 'grid' ? 'bg-white shadow' : ''}`}
         >
           Grid
         </button>
         <button
           onClick={() => setViewMode('map')}
-          className={`px-3 py-1 rounded ${
-            viewMode === 'map' ? 'bg-white shadow' : ''
-          }`}
+          className={`px-3 py-1 rounded ${viewMode === 'map' ? 'bg-white shadow' : ''}`}
         >
           Map
         </button>
@@ -317,12 +300,7 @@ export function ActiveFilters() {
             className="hover:bg-blue-200 rounded-full p-0.5"
             aria-label={`Remove ${filter.label} filter`}
           >
-            <svg
-              className="w-3 h-3"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
+            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -333,10 +311,7 @@ export function ActiveFilters() {
           </button>
         </div>
       ))}
-      <button
-        onClick={resetFilters}
-        className="text-sm text-blue-600 hover:text-blue-800"
-      >
+      <button onClick={resetFilters} className="text-sm text-blue-600 hover:text-blue-800">
         Clear all
       </button>
     </div>
@@ -405,16 +380,16 @@ export function PropertyResultsPage() {
 // Example 7: Selective Subscription (Performance Optimization)
 export function PriceRangeFilter() {
   // Only re-renders when price filters change
-  const minPrice = usePropertyFiltersStore((state) => state.filters.minPrice);
-  const maxPrice = usePropertyFiltersStore((state) => state.filters.maxPrice);
-  const updateFilter = usePropertyFiltersStore((state) => state.updateFilter);
+  const minPrice = usePropertyFiltersStore(state => state.filters.minPrice);
+  const maxPrice = usePropertyFiltersStore(state => state.filters.maxPrice);
+  const updateFilter = usePropertyFiltersStore(state => state.updateFilter);
 
   return (
     <div className="flex gap-2">
       <input
         type="number"
         value={minPrice || ''}
-        onChange={(e) =>
+        onChange={e =>
           updateFilter('minPrice', e.target.value ? Number(e.target.value) : undefined)
         }
         placeholder="Min Price"
@@ -423,7 +398,7 @@ export function PriceRangeFilter() {
       <input
         type="number"
         value={maxPrice || ''}
-        onChange={(e) =>
+        onChange={e =>
           updateFilter('maxPrice', e.target.value ? Number(e.target.value) : undefined)
         }
         placeholder="Max Price"

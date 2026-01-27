@@ -283,7 +283,9 @@ class AuthService {
       const agentProfile = await db.getAgentByUserId(user.id);
       if (agentProfile) {
         if (agentProfile.status === 'pending') {
-          throw new Error('Your agent application is pending review. You will be notified once approved.');
+          throw new Error(
+            'Your agent application is pending review. You will be notified once approved.',
+          );
         }
         if (agentProfile.status === 'rejected') {
           const reason = agentProfile.rejectionReason || 'No reason provided';
@@ -399,7 +401,9 @@ class AuthService {
             phone: profileData.phone,
             bio: profileData.bio,
             licenseNumber: profileData.licenseNumber,
-            specializations: profileData.specializations ? profileData.specializations.split(',') : undefined,
+            specializations: profileData.specializations
+              ? profileData.specializations.split(',')
+              : undefined,
           });
 
           // Delete pending profile data

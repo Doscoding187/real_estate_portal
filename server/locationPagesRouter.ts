@@ -7,7 +7,7 @@ import { and, eq, lte, gte, or, isNull, inArray } from 'drizzle-orm';
 
 /**
  * Location Pages Router
- * 
+ *
  * Provides endpoints for location page data with Google Places integration.
  * Implements Requirements 24.1-24.5 and 28.1-28.5:
  * - Server-side rendering with static + dynamic content
@@ -19,9 +19,11 @@ export const locationPagesRouter = router({
    * Get province data (legacy method - dynamic only)
    */
   getProvinceData: publicProcedure
-    .input(z.object({
-      provinceSlug: z.string()
-    }))
+    .input(
+      z.object({
+        provinceSlug: z.string(),
+      }),
+    )
     .query(async ({ input }) => {
       return await locationPagesService.getProvinceData(input.provinceSlug);
     }),
@@ -30,10 +32,12 @@ export const locationPagesRouter = router({
    * Get city data (legacy method - dynamic only)
    */
   getCityData: publicProcedure
-    .input(z.object({
-      provinceSlug: z.string(),
-      citySlug: z.string()
-    }))
+    .input(
+      z.object({
+        provinceSlug: z.string(),
+        citySlug: z.string(),
+      }),
+    )
     .query(async ({ input }) => {
       return await locationPagesService.getCityData(input.provinceSlug, input.citySlug);
     }),
@@ -42,27 +46,35 @@ export const locationPagesRouter = router({
    * Get suburb data (legacy method - dynamic only)
    */
   getSuburbData: publicProcedure
-    .input(z.object({
-      provinceSlug: z.string(),
-      citySlug: z.string(),
-      suburbSlug: z.string()
-    }))
+    .input(
+      z.object({
+        provinceSlug: z.string(),
+        citySlug: z.string(),
+        suburbSlug: z.string(),
+      }),
+    )
     .query(async ({ input }) => {
-      return await locationPagesService.getSuburbData(input.provinceSlug, input.citySlug, input.suburbSlug);
+      return await locationPagesService.getSuburbData(
+        input.provinceSlug,
+        input.citySlug,
+        input.suburbSlug,
+      );
     }),
 
   /**
    * Get enhanced province data with Google Places integration
    * Requirements 24.1-24.5, 28.1-28.5: Merge static + dynamic content
-   * 
+   *
    * Returns:
    * - Static SEO content from locations table (80%, cached 24 hours)
    * - Dynamic market statistics from listings (20%, cached 5 minutes)
    */
   getEnhancedProvinceData: publicProcedure
-    .input(z.object({
-      provinceSlug: z.string()
-    }))
+    .input(
+      z.object({
+        provinceSlug: z.string(),
+      }),
+    )
     .query(async ({ input }) => {
       return await locationPagesService.getEnhancedProvinceData(input.provinceSlug);
     }),
@@ -72,10 +84,12 @@ export const locationPagesRouter = router({
    * Requirements 24.1-24.5, 28.1-28.5: Merge static + dynamic content
    */
   getEnhancedCityData: publicProcedure
-    .input(z.object({
-      provinceSlug: z.string(),
-      citySlug: z.string()
-    }))
+    .input(
+      z.object({
+        provinceSlug: z.string(),
+        citySlug: z.string(),
+      }),
+    )
     .query(async ({ input }) => {
       return await locationPagesService.getEnhancedCityData(input.provinceSlug, input.citySlug);
     }),
@@ -85,13 +99,19 @@ export const locationPagesRouter = router({
    * Requirements 24.1-24.5, 28.1-28.5: Merge static + dynamic content
    */
   getEnhancedSuburbData: publicProcedure
-    .input(z.object({
-      provinceSlug: z.string(),
-      citySlug: z.string(),
-      suburbSlug: z.string()
-    }))
+    .input(
+      z.object({
+        provinceSlug: z.string(),
+        citySlug: z.string(),
+        suburbSlug: z.string(),
+      }),
+    )
     .query(async ({ input }) => {
-      return await locationPagesService.getEnhancedSuburbData(input.provinceSlug, input.citySlug, input.suburbSlug);
+      return await locationPagesService.getEnhancedSuburbData(
+        input.provinceSlug,
+        input.citySlug,
+        input.suburbSlug,
+      );
     }),
 
   /**
@@ -99,11 +119,13 @@ export const locationPagesRouter = router({
    * Requirements 24.1, 28.1: Fetch static content from locations table
    */
   getLocationByPath: publicProcedure
-    .input(z.object({
-      province: z.string(),
-      city: z.string().optional(),
-      suburb: z.string().optional()
-    }))
+    .input(
+      z.object({
+        province: z.string(),
+        city: z.string().optional(),
+        suburb: z.string().optional(),
+      }),
+    )
     .query(async ({ input }) => {
       return await locationPagesService.getLocationByPath(input.province, input.city, input.suburb);
     }),
@@ -111,13 +133,15 @@ export const locationPagesRouter = router({
   /**
    * Invalidate location cache
    * Requirements 24.4: Invalidate cached statistics when listings change
-   * 
+   *
    * This should be called when a listing is created, updated, or deleted
    */
   invalidateLocationCache: publicProcedure
-    .input(z.object({
-      locationId: z.number()
-    }))
+    .input(
+      z.object({
+        locationId: z.number(),
+      }),
+    )
     .mutation(async ({ input }) => {
       await locationPagesService.invalidateLocationCache(input.locationId);
       return { success: true };
@@ -126,13 +150,17 @@ export const locationPagesRouter = router({
   /**
    * Get trending suburbs
    * Requirements 21.4-21.5: Display top 10 trending suburbs with statistics
-   * 
+   *
    * Returns suburbs ranked by search activity with market statistics
    */
   getTrendingSuburbs: publicProcedure
-    .input(z.object({
-      limit: z.number().min(1).max(50).default(10)
-    }).optional())
+    .input(
+      z
+        .object({
+          limit: z.number().min(1).max(50).default(10),
+        })
+        .optional(),
+    )
     .query(async ({ input }) => {
       const { locationAnalyticsService } = await import('./services/locationAnalyticsService');
       return await locationAnalyticsService.getTrendingSuburbs(input?.limit || 10);
@@ -141,7 +169,7 @@ export const locationPagesRouter = router({
   /**
    * Get similar locations
    * Requirements 22.1-22.5: Display up to 5 similar locations with statistics
-   * 
+   *
    * Returns locations similar to the target based on:
    * - Price bracket (±20%)
    * - Property type distribution
@@ -149,10 +177,12 @@ export const locationPagesRouter = router({
    * - Proximity (prioritizes same city)
    */
   getSimilarLocations: publicProcedure
-    .input(z.object({
-      locationId: z.number(),
-      limit: z.number().min(1).max(10).default(5)
-    }))
+    .input(
+      z.object({
+        locationId: z.number(),
+        limit: z.number().min(1).max(10).default(5),
+      }),
+    )
     .query(async ({ input }) => {
       const { locationAnalyticsService } = await import('./services/locationAnalyticsService');
       return await locationAnalyticsService.getSimilarLocations(input.locationId, input.limit);
@@ -163,14 +193,16 @@ export const locationPagesRouter = router({
    * Filters by target slug and date range
    */
   getHeroCampaign: publicProcedure
-    .input(z.object({
-      locationSlug: z.string(),
-      fallbacks: z.array(z.string()).optional().default([])
-    }))
+    .input(
+      z.object({
+        locationSlug: z.string(),
+        fallbacks: z.array(z.string()).optional().default([]),
+      }),
+    )
     .query(async ({ input }) => {
       const db = await getDb();
       const today = new Date();
-      
+
       // Combine primary slug with fallbacks to create priority list
       // Priority: Primary -> Fallback 1 -> Fallback 2 -> ...
       const targetSlugs = [input.locationSlug, ...input.fallbacks];
@@ -183,15 +215,9 @@ export const locationPagesRouter = router({
           and(
             inArray(heroCampaigns.targetSlug, targetSlugs),
             eq(heroCampaigns.isActive, 1),
-            or(
-              isNull(heroCampaigns.startDate),
-              lte(heroCampaigns.startDate, today.toISOString())
-            ),
-            or(
-              isNull(heroCampaigns.endDate),
-              gte(heroCampaigns.endDate, today.toISOString())
-            )
-          )
+            or(isNull(heroCampaigns.startDate), lte(heroCampaigns.startDate, today.toISOString())),
+            or(isNull(heroCampaigns.endDate), gte(heroCampaigns.endDate, today.toISOString())),
+          ),
         );
 
       if (campaigns.length === 0) return null;
@@ -210,14 +236,16 @@ export const locationPagesRouter = router({
    * Submit a resident review for a suburb
    */
   submitReview: publicProcedure
-    .input(z.object({
-      suburbId: z.number(),
-      rating: z.number().min(1).max(5),
-      userType: z.enum(['resident', 'tenant', 'landlord', 'visitor']),
-      pros: z.string(),
-      cons: z.string(),
-      comment: z.string()
-    }))
+    .input(
+      z.object({
+        suburbId: z.number(),
+        rating: z.number().min(1).max(5),
+        userType: z.enum(['resident', 'tenant', 'landlord', 'visitor']),
+        pros: z.string(),
+        cons: z.string(),
+        comment: z.string(),
+      }),
+    )
     .mutation(async ({ input }) => {
       const { locationInsightsService } = await import('./services/locationInsightsService');
       return await locationInsightsService.submitReview({
@@ -227,7 +255,7 @@ export const locationPagesRouter = router({
         userType: input.userType as any,
         pros: input.pros,
         cons: input.cons,
-        comment: input.comment
+        comment: input.comment,
       });
-    })
+    }),
 });

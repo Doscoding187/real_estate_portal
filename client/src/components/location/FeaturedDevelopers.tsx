@@ -10,10 +10,14 @@ interface FeaturedDevelopersProps {
   locationName: string;
 }
 
-export function FeaturedDevelopers({ locationType, locationId, locationName }: FeaturedDevelopersProps) {
+export function FeaturedDevelopers({
+  locationType,
+  locationId,
+  locationName,
+}: FeaturedDevelopersProps) {
   const { data: developers, isLoading } = trpc.monetization.getFeaturedDevelopers.useQuery({
     locationType,
-    locationId
+    locationId,
   });
 
   if (isLoading) return null; // or skeleton
@@ -34,13 +38,17 @@ export function FeaturedDevelopers({ locationType, locationId, locationName }: F
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-          {developers.map((dev) => (
+          {developers.map(dev => (
             <Link key={dev.id} href={`/developer/${dev.slug}`}>
               <Card className="hover:shadow-lg transition-all cursor-pointer group h-full border-transparent hover:border-primary/20">
                 <CardContent className="p-6 flex flex-col items-start text-left h-full justify-start">
                   <div className="w-24 h-24 mb-4 rounded-full bg-slate-100 flex items-center justify-center overflow-hidden border border-slate-100 group-hover:border-primary/20 transition-colors">
                     {dev.logo ? (
-                      <img src={dev.logo} alt={dev.name} className="w-full h-full object-contain p-2" />
+                      <img
+                        src={dev.logo}
+                        alt={dev.name}
+                        className="w-full h-full object-contain p-2"
+                      />
                     ) : (
                       <Building2 className="h-10 w-10 text-slate-400" />
                     )}

@@ -2,7 +2,7 @@
  * Wizard Animation Utilities
  * Reusable animation definitions for wizard components
  * Part of the Soft UI design system
- * 
+ *
  * Requirements: 4.1, 4.2, 4.3, 4.4, 9.5
  */
 
@@ -109,7 +109,7 @@ export const prefersReducedMotion = (): boolean => {
  * @param animation - Animation object
  */
 export const withReducedMotion = <T extends Record<string, any>>(
-  animation: T
+  animation: T,
 ): T | { initial: {}; animate: {}; exit: {} } => {
   if (prefersReducedMotion()) {
     return {

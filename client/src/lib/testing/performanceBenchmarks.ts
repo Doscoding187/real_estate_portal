@@ -1,9 +1,9 @@
 /**
  * Performance Benchmarking Suite for Explore Frontend
- * 
+ *
  * This module provides utilities to measure and document performance metrics
  * for the Explore feature refinement project.
- * 
+ *
  * Metrics measured:
  * - Scroll FPS on mid-range devices
  * - Video start time
@@ -35,9 +35,9 @@ export interface BenchmarkResult {
  */
 export async function measureScrollFPS(
   element: HTMLElement,
-  duration: number = 2000
+  duration: number = 2000,
 ): Promise<number> {
-  return new Promise((resolve) => {
+  return new Promise(resolve => {
     const frames: number[] = [];
     let lastTime = performance.now();
     let rafId: number;
@@ -46,11 +46,11 @@ export async function measureScrollFPS(
     const measureFrame = () => {
       const currentTime = performance.now();
       const delta = currentTime - lastTime;
-      
+
       if (delta > 0) {
         frames.push(1000 / delta); // Convert to FPS
       }
-      
+
       lastTime = currentTime;
 
       if (currentTime - startTime < duration) {
@@ -82,9 +82,7 @@ export async function measureScrollFPS(
 /**
  * Measure video start time from load to play
  */
-export async function measureVideoStartTime(
-  videoUrl: string
-): Promise<number> {
+export async function measureVideoStartTime(videoUrl: string): Promise<number> {
   return new Promise((resolve, reject) => {
     const video = document.createElement('video');
     video.src = videoUrl;
@@ -138,7 +136,7 @@ export async function measureVideoStartTime(
  * Measure Time to Interactive using Performance Observer
  */
 export function measureTimeToInteractive(): Promise<number> {
-  return new Promise((resolve) => {
+  return new Promise(resolve => {
     if (!('PerformanceObserver' in window)) {
       console.warn('PerformanceObserver not supported');
       resolve(0);
@@ -146,8 +144,10 @@ export function measureTimeToInteractive(): Promise<number> {
     }
 
     // Use navigation timing as fallback
-    const navigationTiming = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming;
-    
+    const navigationTiming = performance.getEntriesByType(
+      'navigation',
+    )[0] as PerformanceNavigationTiming;
+
     if (navigationTiming) {
       // TTI approximation: domInteractive - fetchStart
       const tti = navigationTiming.domInteractive - navigationTiming.fetchStart;
@@ -162,14 +162,14 @@ export function measureTimeToInteractive(): Promise<number> {
  * Measure First Contentful Paint
  */
 export function measureFirstContentfulPaint(): Promise<number> {
-  return new Promise((resolve) => {
+  return new Promise(resolve => {
     if (!('PerformanceObserver' in window)) {
       console.warn('PerformanceObserver not supported');
       resolve(0);
       return;
     }
 
-    const observer = new PerformanceObserver((list) => {
+    const observer = new PerformanceObserver(list => {
       for (const entry of list.getEntries()) {
         if (entry.name === 'first-contentful-paint') {
           observer.disconnect();
@@ -180,7 +180,7 @@ export function measureFirstContentfulPaint(): Promise<number> {
 
     try {
       observer.observe({ entryTypes: ['paint'] });
-      
+
       // Fallback: check if FCP already happened
       setTimeout(() => {
         const paintEntries = performance.getEntriesByType('paint');
@@ -203,17 +203,14 @@ export function measureFirstContentfulPaint(): Promise<number> {
 /**
  * Measure React Query cache hit rate
  */
-export function measureCacheHitRate(
-  queryClient: any,
-  duration: number = 5000
-): Promise<number> {
-  return new Promise((resolve) => {
+export function measureCacheHitRate(queryClient: any, duration: number = 5000): Promise<number> {
+  return new Promise(resolve => {
     let cacheHits = 0;
     let cacheMisses = 0;
 
     // Monitor query cache
     const cache = queryClient.getQueryCache();
-    
+
     const unsubscribe = cache.subscribe((event: any) => {
       if (event?.type === 'updated') {
         if (event.query.state.dataUpdateCount > 0) {
@@ -241,7 +238,7 @@ export async function runAllBenchmarks(
     scrollElement?: HTMLElement;
     videoUrl?: string;
     queryClient?: any;
-  } = {}
+  } = {},
 ): Promise<PerformanceMetrics> {
   console.log('🚀 Starting performance benchmarks...');
 
@@ -326,9 +323,10 @@ export function evaluateBenchmarks(metrics: PerformanceMetrics): BenchmarkResult
       unit: 'fps',
       target: 55,
       passed: metrics.scrollFPS >= 55,
-      notes: metrics.scrollFPS >= 55 
-        ? 'Excellent performance' 
-        : 'Below target - consider virtualization or optimization',
+      notes:
+        metrics.scrollFPS >= 55
+          ? 'Excellent performance'
+          : 'Below target - consider virtualization or optimization',
     },
     {
       metric: 'Video Start Time',
@@ -336,9 +334,10 @@ export function evaluateBenchmarks(metrics: PerformanceMetrics): BenchmarkResult
       unit: 'ms',
       target: 1000,
       passed: metrics.videoStartTime <= 1000,
-      notes: metrics.videoStartTime <= 1000
-        ? 'Fast video loading'
-        : 'Slow video start - check network or preloading',
+      notes:
+        metrics.videoStartTime <= 1000
+          ? 'Fast video loading'
+          : 'Slow video start - check network or preloading',
     },
     {
       metric: 'Time to Interactive',
@@ -346,9 +345,10 @@ export function evaluateBenchmarks(metrics: PerformanceMetrics): BenchmarkResult
       unit: 'ms',
       target: 3000,
       passed: metrics.timeToInteractive <= 3000,
-      notes: metrics.timeToInteractive <= 3000
-        ? 'Good interactivity'
-        : 'Slow TTI - optimize JavaScript execution',
+      notes:
+        metrics.timeToInteractive <= 3000
+          ? 'Good interactivity'
+          : 'Slow TTI - optimize JavaScript execution',
     },
     {
       metric: 'First Contentful Paint',
@@ -356,9 +356,10 @@ export function evaluateBenchmarks(metrics: PerformanceMetrics): BenchmarkResult
       unit: 'ms',
       target: 1500,
       passed: metrics.firstContentfulPaint <= 1500,
-      notes: metrics.firstContentfulPaint <= 1500
-        ? 'Fast initial render'
-        : 'Slow FCP - optimize critical rendering path',
+      notes:
+        metrics.firstContentfulPaint <= 1500
+          ? 'Fast initial render'
+          : 'Slow FCP - optimize critical rendering path',
     },
     {
       metric: 'Cache Hit Rate',
@@ -366,9 +367,10 @@ export function evaluateBenchmarks(metrics: PerformanceMetrics): BenchmarkResult
       unit: '%',
       target: 70,
       passed: metrics.cacheHitRate >= 70,
-      notes: metrics.cacheHitRate >= 70
-        ? 'Effective caching'
-        : 'Low cache hits - review cache configuration',
+      notes:
+        metrics.cacheHitRate >= 70
+          ? 'Effective caching'
+          : 'Low cache hits - review cache configuration',
     },
   ];
 
@@ -380,7 +382,7 @@ export function evaluateBenchmarks(metrics: PerformanceMetrics): BenchmarkResult
  */
 export function generateMarkdownReport(
   beforeMetrics: PerformanceMetrics,
-  afterMetrics: PerformanceMetrics
+  afterMetrics: PerformanceMetrics,
 ): string {
   const beforeResults = evaluateBenchmarks(beforeMetrics);
   const afterResults = evaluateBenchmarks(afterMetrics);
@@ -394,22 +396,21 @@ export function generateMarkdownReport(
   beforeResults.forEach((before, index) => {
     const after = afterResults[index];
     const change = after.value - before.value;
-    const changePercent = before.value > 0 
-      ? ((change / before.value) * 100).toFixed(1)
-      : 'N/A';
-    
-    const changeStr = before.unit === 'ms' || before.unit === 'fps'
-      ? `${change > 0 ? '+' : ''}${change.toFixed(0)}${before.unit}`
-      : `${change > 0 ? '+' : ''}${change.toFixed(0)}${before.unit}`;
-    
+    const changePercent = before.value > 0 ? ((change / before.value) * 100).toFixed(1) : 'N/A';
+
+    const changeStr =
+      before.unit === 'ms' || before.unit === 'fps'
+        ? `${change > 0 ? '+' : ''}${change.toFixed(0)}${before.unit}`
+        : `${change > 0 ? '+' : ''}${change.toFixed(0)}${before.unit}`;
+
     const status = after.passed ? '✅ Pass' : '❌ Fail';
-    
+
     report += `| ${before.metric} | ${before.value}${before.unit} | ${after.value}${after.unit} | ${after.target}${after.unit} | ${changeStr} (${changePercent}%) | ${status} |\n`;
   });
 
   report += '\n## Detailed Results\n\n';
-  
-  afterResults.forEach((result) => {
+
+  afterResults.forEach(result => {
     report += `### ${result.metric}\n\n`;
     report += `- **Value:** ${result.value}${result.unit}\n`;
     report += `- **Target:** ${result.target}${result.unit}\n`;
@@ -418,12 +419,12 @@ export function generateMarkdownReport(
   });
 
   report += '## Recommendations\n\n';
-  
+
   const failedResults = afterResults.filter(r => !r.passed);
   if (failedResults.length === 0) {
     report += '✨ All performance targets met! No recommendations at this time.\n';
   } else {
-    failedResults.forEach((result) => {
+    failedResults.forEach(result => {
       report += `- **${result.metric}:** ${result.notes}\n`;
     });
   }

@@ -1,15 +1,15 @@
 /**
  * Video Preloading Hook
- * 
+ *
  * Provides intelligent video preloading with network speed detection
  * and adaptive loading strategies.
- * 
+ *
  * Features:
  * - Preload next 2 videos in feed
  * - Network speed detection for adaptive loading
  * - Low-bandwidth mode with poster images
  * - Manual play button for slow connections
- * 
+ *
  * Requirements: 2.2, 2.4
  */
 
@@ -20,17 +20,17 @@ interface NetworkInfo {
    * Effective connection type (4g, 3g, 2g, slow-2g)
    */
   effectiveType: string;
-  
+
   /**
    * Downlink speed in Mbps
    */
   downlink: number;
-  
+
   /**
    * Whether data saver mode is enabled
    */
   saveData: boolean;
-  
+
   /**
    * Round-trip time in milliseconds
    */
@@ -43,17 +43,17 @@ interface UseVideoPreloadOptions {
    * @default 2
    */
   preloadCount?: number;
-  
+
   /**
    * Current video index in feed
    */
   currentIndex: number;
-  
+
   /**
    * Array of video URLs to preload
    */
   videoUrls: string[];
-  
+
   /**
    * Callback when network speed changes
    */
@@ -65,27 +65,27 @@ interface UseVideoPreloadReturn {
    * Whether low-bandwidth mode is active
    */
   isLowBandwidth: boolean;
-  
+
   /**
    * Current network information
    */
   networkInfo: NetworkInfo | null;
-  
+
   /**
    * Set of preloaded video URLs
    */
   preloadedUrls: Set<string>;
-  
+
   /**
    * Whether a specific URL is preloaded
    */
   isPreloaded: (url: string) => boolean;
-  
+
   /**
    * Manually trigger preload for a URL
    */
   preloadUrl: (url: string) => void;
-  
+
   /**
    * Clear all preloaded videos
    */
@@ -98,9 +98,10 @@ interface UseVideoPreloadReturn {
  */
 function getNetworkInfo(): NetworkInfo | null {
   // Check if Network Information API is available
-  const connection = (navigator as any).connection || 
-                     (navigator as any).mozConnection || 
-                     (navigator as any).webkitConnection;
+  const connection =
+    (navigator as any).connection ||
+    (navigator as any).mozConnection ||
+    (navigator as any).webkitConnection;
 
   if (!connection) {
     return null;
@@ -149,7 +150,7 @@ function isLowBandwidthConnection(info: NetworkInfo | null): boolean {
 
 /**
  * Hook for intelligent video preloading with network detection
- * 
+ *
  * @example
  * ```tsx
  * const { isLowBandwidth, preloadedUrls, isPreloaded } = useVideoPreload({
@@ -157,12 +158,12 @@ function isLowBandwidthConnection(info: NetworkInfo | null): boolean {
  *   videoUrls: ['video1.mp4', 'video2.mp4', 'video3.mp4'],
  *   preloadCount: 2,
  * });
- * 
+ *
  * return (
  *   <div>
  *     {isLowBandwidth && <p>Low bandwidth mode active</p>}
  *     {videoUrls.map((url, index) => (
- *       <video 
+ *       <video
  *         key={url}
  *         src={url}
  *         preload={isPreloaded(url) ? 'auto' : 'metadata'}
@@ -172,24 +173,13 @@ function isLowBandwidthConnection(info: NetworkInfo | null): boolean {
  * );
  * ```
  */
-export function useVideoPreload(
-  options: UseVideoPreloadOptions
-): UseVideoPreloadReturn {
-  const {
-    preloadCount = 2,
-    currentIndex,
-    videoUrls,
-    onNetworkChange,
-  } = options;
+export function useVideoPreload(options: UseVideoPreloadOptions): UseVideoPreloadReturn {
+  const { preloadCount = 2, currentIndex, videoUrls, onNetworkChange } = options;
 
-  const [networkInfo, setNetworkInfo] = useState<NetworkInfo | null>(
-    getNetworkInfo()
-  );
-  const [isLowBandwidth, setIsLowBandwidth] = useState(
-    isLowBandwidthConnection(networkInfo)
-  );
+  const [networkInfo, setNetworkInfo] = useState<NetworkInfo | null>(getNetworkInfo());
+  const [isLowBandwidth, setIsLowBandwidth] = useState(isLowBandwidthConnection(networkInfo));
   const [preloadedUrls, setPreloadedUrls] = useState<Set<string>>(new Set());
-  
+
   // Track preload elements to clean up
   const preloadElementsRef = useRef<Map<string, HTMLVideoElement>>(new Map());
 
@@ -200,7 +190,7 @@ export function useVideoPreload(
     const info = getNetworkInfo();
     setNetworkInfo(info);
     setIsLowBandwidth(isLowBandwidthConnection(info));
-    
+
     if (info && onNetworkChange) {
       onNetworkChange(info);
     }
@@ -211,9 +201,10 @@ export function useVideoPreload(
    * Requirement 2.2: Network speed detection for adaptive loading
    */
   useEffect(() => {
-    const connection = (navigator as any).connection || 
-                       (navigator as any).mozConnection || 
-                       (navigator as any).webkitConnection;
+    const connection =
+      (navigator as any).connection ||
+      (navigator as any).mozConnection ||
+      (navigator as any).webkitConnection;
 
     if (!connection) {
       return;
@@ -230,67 +221,67 @@ export function useVideoPreload(
   /**
    * Preload a specific video URL
    */
-  const preloadUrl = useCallback((url: string) => {
-    // Skip if already preloaded
-    if (preloadedUrls.has(url)) {
-      return;
-    }
+  const preloadUrl = useCallback(
+    (url: string) => {
+      // Skip if already preloaded
+      if (preloadedUrls.has(url)) {
+        return;
+      }
 
-    // Skip if in low-bandwidth mode
-    if (isLowBandwidth) {
-      return;
-    }
+      // Skip if in low-bandwidth mode
+      if (isLowBandwidth) {
+        return;
+      }
 
-    // Create hidden video element for preloading
-    const video = document.createElement('video');
-    video.src = url;
-    video.preload = 'auto';
-    video.muted = true;
-    video.playsInline = true;
-    
-    // Hide the element
-    video.style.display = 'none';
-    
-    // Add to DOM to trigger preload
-    document.body.appendChild(video);
-    
-    // Track the element
-    preloadElementsRef.current.set(url, video);
-    
-    // Mark as preloaded once metadata is loaded
-    const handleLoadedMetadata = () => {
-      setPreloadedUrls((prev) => new Set(prev).add(url));
-    };
-    
-    video.addEventListener('loadedmetadata', handleLoadedMetadata);
-    
-    // Clean up on error
-    const handleError = () => {
-      console.warn(`Failed to preload video: ${url}`);
-      video.remove();
-      preloadElementsRef.current.delete(url);
-    };
-    
-    video.addEventListener('error', handleError);
-  }, [isLowBandwidth, preloadedUrls]);
+      // Create hidden video element for preloading
+      const video = document.createElement('video');
+      video.src = url;
+      video.preload = 'auto';
+      video.muted = true;
+      video.playsInline = true;
+
+      // Hide the element
+      video.style.display = 'none';
+
+      // Add to DOM to trigger preload
+      document.body.appendChild(video);
+
+      // Track the element
+      preloadElementsRef.current.set(url, video);
+
+      // Mark as preloaded once metadata is loaded
+      const handleLoadedMetadata = () => {
+        setPreloadedUrls(prev => new Set(prev).add(url));
+      };
+
+      video.addEventListener('loadedmetadata', handleLoadedMetadata);
+
+      // Clean up on error
+      const handleError = () => {
+        console.warn(`Failed to preload video: ${url}`);
+        video.remove();
+        preloadElementsRef.current.delete(url);
+      };
+
+      video.addEventListener('error', handleError);
+    },
+    [isLowBandwidth, preloadedUrls],
+  );
 
   /**
    * Check if a URL is preloaded
    */
-  const isPreloaded = useCallback(
-    (url: string) => preloadedUrls.has(url),
-    [preloadedUrls]
-  );
+  const isPreloaded = useCallback((url: string) => preloadedUrls.has(url), [preloadedUrls]);
 
   /**
    * Clear all preloaded videos
    */
   const clearPreloaded = useCallback(() => {
     // Remove all preload elements from DOM
-    preloadElementsRef.current.forEach((video) => {
+    preloadElementsRef.current.forEach(video => {
       video.remove();
     });
-    
+
     preloadElementsRef.current.clear();
     setPreloadedUrls(new Set());
   }, []);
@@ -315,21 +306,21 @@ export function useVideoPreload(
     }
 
     // Preload each URL
-    urlsToPreload.forEach((url) => {
+    urlsToPreload.forEach(url => {
       preloadUrl(url);
     });
 
     // Clean up old preloaded videos that are too far behind
     const minIndex = Math.max(0, currentIndex - preloadCount);
     const maxIndex = Math.min(videoUrls.length - 1, currentIndex + preloadCount);
-    
+
     preloadElementsRef.current.forEach((video, url) => {
       const urlIndex = videoUrls.indexOf(url);
       if (urlIndex !== -1 && (urlIndex < minIndex || urlIndex > maxIndex)) {
         // Remove videos that are out of range
         video.remove();
         preloadElementsRef.current.delete(url);
-        setPreloadedUrls((prev) => {
+        setPreloadedUrls(prev => {
           const next = new Set(prev);
           next.delete(url);
           return next;

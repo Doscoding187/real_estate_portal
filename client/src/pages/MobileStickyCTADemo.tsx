@@ -1,6 +1,6 @@
 /**
  * MobileStickyCTA Demo Page
- * 
+ *
  * Demonstrates the MobileStickyCTA component with scroll behavior.
  * Best viewed on mobile or with mobile device emulation.
  */
@@ -30,16 +30,10 @@ export default function MobileStickyCTADemo() {
         className="h-screen flex items-center justify-center bg-gradient-to-br from-purple-500 to-pink-500"
       >
         <div className="text-center text-white px-4">
-          <h1 className="text-4xl md:text-6xl font-bold mb-6">
-            Mobile Sticky CTA Demo
-          </h1>
-          <p className="text-xl md:text-2xl mb-8">
-            Scroll down to see the sticky CTA appear
-          </p>
+          <h1 className="text-4xl md:text-6xl font-bold mb-6">Mobile Sticky CTA Demo</h1>
+          <p className="text-xl md:text-2xl mb-8">Scroll down to see the sticky CTA appear</p>
           <div className="inline-block bg-white/20 backdrop-blur-sm rounded-lg p-4">
-            <p className="text-sm">
-              📱 Best viewed on mobile or with device emulation
-            </p>
+            <p className="text-sm">📱 Best viewed on mobile or with device emulation</p>
           </div>
         </div>
       </section>
@@ -47,51 +41,42 @@ export default function MobileStickyCTADemo() {
       {/* Content Sections */}
       <section className="py-20 px-4 bg-gray-50">
         <div className="max-w-4xl mx-auto">
-          <h2 className="text-3xl font-bold mb-6 text-gray-900">
-            Section 1: Value Proposition
-          </h2>
+          <h2 className="text-3xl font-bold mb-6 text-gray-900">Section 1: Value Proposition</h2>
           <p className="text-lg text-gray-600 mb-4">
-            As you scroll past the hero section, the mobile sticky CTA will appear at the bottom of the screen.
-            This provides a persistent conversion opportunity throughout the user's journey.
+            As you scroll past the hero section, the mobile sticky CTA will appear at the bottom of
+            the screen. This provides a persistent conversion opportunity throughout the user's
+            journey.
           </p>
           <p className="text-lg text-gray-600">
-            The sticky CTA is only visible on mobile devices (screens smaller than 768px).
-            On desktop, it's hidden to avoid cluttering the interface.
+            The sticky CTA is only visible on mobile devices (screens smaller than 768px). On
+            desktop, it's hidden to avoid cluttering the interface.
           </p>
         </div>
       </section>
 
       <section className="py-20 px-4 bg-white">
         <div className="max-w-4xl mx-auto">
-          <h2 className="text-3xl font-bold mb-6 text-gray-900">
-            Section 2: Features
-          </h2>
+          <h2 className="text-3xl font-bold mb-6 text-gray-900">Section 2: Features</h2>
           <div className="space-y-6">
             <div className="bg-purple-50 rounded-lg p-6">
-              <h3 className="text-xl font-semibold mb-2 text-purple-900">
-                Scroll-Triggered
-              </h3>
+              <h3 className="text-xl font-semibold mb-2 text-purple-900">Scroll-Triggered</h3>
               <p className="text-gray-700">
-                The CTA appears automatically when you scroll past the hero section,
-                ensuring it's visible when users are engaged with content.
+                The CTA appears automatically when you scroll past the hero section, ensuring it's
+                visible when users are engaged with content.
               </p>
             </div>
             <div className="bg-pink-50 rounded-lg p-6">
-              <h3 className="text-xl font-semibold mb-2 text-pink-900">
-                Dismissible
-              </h3>
+              <h3 className="text-xl font-semibold mb-2 text-pink-900">Dismissible</h3>
               <p className="text-gray-700">
-                Users can dismiss the sticky CTA by clicking the X button.
-                This respects user preference and reduces annoyance.
+                Users can dismiss the sticky CTA by clicking the X button. This respects user
+                preference and reduces annoyance.
               </p>
             </div>
             <div className="bg-blue-50 rounded-lg p-6">
-              <h3 className="text-xl font-semibold mb-2 text-blue-900">
-                Safe Area Support
-              </h3>
+              <h3 className="text-xl font-semibold mb-2 text-blue-900">Safe Area Support</h3>
               <p className="text-gray-700">
-                The component respects iOS safe area insets, ensuring it doesn't
-                overlap with the home indicator on notched devices.
+                The component respects iOS safe area insets, ensuring it doesn't overlap with the
+                home indicator on notched devices.
               </p>
             </div>
           </div>
@@ -100,13 +85,9 @@ export default function MobileStickyCTADemo() {
 
       <section className="py-20 px-4 bg-gray-50">
         <div className="max-w-4xl mx-auto">
-          <h2 className="text-3xl font-bold mb-6 text-gray-900">
-            Section 3: Analytics
-          </h2>
+          <h2 className="text-3xl font-bold mb-6 text-gray-900">Section 3: Analytics</h2>
           <div className="bg-white rounded-lg p-6 shadow-sm">
-            <h3 className="text-xl font-semibold mb-4 text-gray-900">
-              Tracking Events
-            </h3>
+            <h3 className="text-xl font-semibold mb-4 text-gray-900">Tracking Events</h3>
             <ul className="space-y-3 text-gray-700">
               <li className="flex items-start">
                 <span className="text-purple-500 mr-2">•</span>
@@ -135,9 +116,7 @@ export default function MobileStickyCTADemo() {
 
       <section className="py-20 px-4 bg-white">
         <div className="max-w-4xl mx-auto">
-          <h2 className="text-3xl font-bold mb-6 text-gray-900">
-            Section 4: Best Practices
-          </h2>
+          <h2 className="text-3xl font-bold mb-6 text-gray-900">Section 4: Best Practices</h2>
           <div className="prose prose-lg max-w-none">
             <p className="text-gray-700 mb-4">
               When implementing the mobile sticky CTA, consider these best practices:
@@ -155,12 +134,10 @@ export default function MobileStickyCTADemo() {
 
       <section className="py-20 px-4 bg-gray-50">
         <div className="max-w-4xl mx-auto text-center">
-          <h2 className="text-3xl font-bold mb-6 text-gray-900">
-            End of Demo
-          </h2>
+          <h2 className="text-3xl font-bold mb-6 text-gray-900">End of Demo</h2>
           <p className="text-lg text-gray-600 mb-8">
-            The sticky CTA should remain visible as you scroll through all sections.
-            Try dismissing it and scrolling back up to see it reappear.
+            The sticky CTA should remain visible as you scroll through all sections. Try dismissing
+            it and scrolling back up to see it reappear.
           </p>
           <div className="inline-block bg-purple-100 rounded-lg p-6">
             <p className="text-purple-900 font-semibold">
@@ -181,4 +158,3 @@ export default function MobileStickyCTADemo() {
     </div>
   );
 }
-

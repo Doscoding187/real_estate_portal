@@ -109,8 +109,9 @@ export function PropertyInsights() {
   // Auto-select city with most listings on load
   useEffect(() => {
     if (insightsData && !selectedCity) {
-      const topCity = Object.entries(insightsData)
-        .sort(([, a], [, b]) => b.listings - a.listings)[0]?.[0];
+      const topCity = Object.entries(insightsData).sort(
+        ([, a], [, b]) => b.listings - a.listings,
+      )[0]?.[0];
       setSelectedCity(topCity || '');
     }
   }, [insightsData, selectedCity]);
@@ -253,7 +254,10 @@ export function PropertyInsights() {
                         <p className="text-sm text-blue-600 font-medium">Interactive Map View</p>
                       </div>
                     </div>
-                    <Button variant="outline" className="w-full border-blue-200 text-blue-600 hover:bg-blue-50">
+                    <Button
+                      variant="outline"
+                      className="w-full border-blue-200 text-blue-600 hover:bg-blue-50"
+                    >
                       Explore Map
                     </Button>
                   </CardContent>
@@ -272,7 +276,8 @@ export function PropertyInsights() {
                   </CardHeader>
                   <CardContent>
                     <p className="text-sm text-muted-foreground mb-4">
-                      {city} has {data.listings.toLocaleString()} listings with median price of R {(data.medianPrice / 1000000).toFixed(2)}M
+                      {city} has {data.listings.toLocaleString()} listings with median price of R{' '}
+                      {(data.medianPrice / 1000000).toFixed(2)}M
                     </p>
                     <div className="space-y-2 mb-4">
                       {data.priceRanges.map((range, idx) => (
@@ -322,16 +327,22 @@ export function PropertyInsights() {
                           <div className="p-2 rounded-lg bg-emerald-100">
                             <BarChart3 className="h-4 w-4 text-emerald-600" />
                           </div>
-                          <span className="text-sm text-muted-foreground font-medium">Active Listings</span>
+                          <span className="text-sm text-muted-foreground font-medium">
+                            Active Listings
+                          </span>
                         </div>
-                        <span className="font-semibold text-lg">{data.listings.toLocaleString()}</span>
+                        <span className="font-semibold text-lg">
+                          {data.listings.toLocaleString()}
+                        </span>
                       </div>
                       <div className="flex items-center justify-between p-4 bg-white/80 backdrop-blur-sm rounded-xl border border-emerald-100 group-hover:border-emerald-200 transition-colors">
                         <div className="flex items-center gap-3">
                           <div className="p-2 rounded-lg bg-emerald-100">
                             <TrendingUp className="h-4 w-4 text-emerald-600" />
                           </div>
-                          <span className="text-sm text-muted-foreground font-medium">Avg. Price/m²</span>
+                          <span className="text-sm text-muted-foreground font-medium">
+                            Avg. Price/m²
+                          </span>
                         </div>
                         <span className="font-semibold text-lg">
                           R {data.avgPricePerSqm.toLocaleString()}
@@ -342,7 +353,9 @@ export function PropertyInsights() {
                           <div className="p-2 rounded-lg bg-emerald-100">
                             <FileText className="h-4 w-4 text-emerald-600" />
                           </div>
-                          <span className="text-sm text-muted-foreground font-medium">Median Price</span>
+                          <span className="text-sm text-muted-foreground font-medium">
+                            Median Price
+                          </span>
                         </div>
                         <span className="font-semibold text-lg">
                           R {(data.medianPrice / 1000000).toFixed(2)}M
@@ -359,7 +372,9 @@ export function PropertyInsights() {
                       <div className="p-2 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500">
                         <TrendingUp className="h-5 w-5 text-white" />
                       </div>
-                      <CardTitle className="text-lg font-semibold">Micromarket Comparison</CardTitle>
+                      <CardTitle className="text-lg font-semibold">
+                        Micromarket Comparison
+                      </CardTitle>
                     </div>
                     <p className="text-sm text-muted-foreground">in {city}</p>
                   </CardHeader>

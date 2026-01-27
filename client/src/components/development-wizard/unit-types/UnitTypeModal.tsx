@@ -1,10 +1,5 @@
 import { useState } from 'react';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Info, FileText, Settings, Image, Package } from 'lucide-react';
@@ -41,7 +36,7 @@ export function UnitTypeModal({
       availableUnits: 0,
       ownershipType: 'sectional-title',
       structuralType: 'apartment',
-    }
+    },
   );
 
   const handleSave = () => {
@@ -68,7 +63,11 @@ export function UnitTypeModal({
           </DialogTitle>
         </DialogHeader>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col overflow-hidden">
+        <Tabs
+          value={activeTab}
+          onValueChange={setActiveTab}
+          className="flex-1 flex flex-col overflow-hidden"
+        >
           <TabsList className="grid w-full grid-cols-4 mb-4">
             <TabsTrigger value="basic" className="flex items-center gap-2">
               <Info className="h-4 w-4" />
@@ -90,9 +89,9 @@ export function UnitTypeModal({
 
           <div className="flex-1 overflow-y-auto pr-2">
             <TabsContent value="basic" className="mt-0">
-              <BasicInfoTab 
-                formData={formData} 
-                updateFormData={updateFormData} 
+              <BasicInfoTab
+                formData={formData}
+                updateFormData={updateFormData}
                 classification={classification}
               />
             </TabsContent>

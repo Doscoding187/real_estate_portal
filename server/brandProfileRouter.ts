@@ -1,6 +1,6 @@
 /**
  * Brand Profile Router
- * 
+ *
  * Public and admin endpoints for developer brand profiles.
  * Implements the API routes from the implementation plan.
  */
@@ -53,14 +53,16 @@ const updateBrandProfileSchema = z.object({
   }),
 });
 
-const listBrandProfilesSchema = z.object({
-  brandTier: z.enum(['national', 'regional', 'boutique']).optional(),
-  isSubscriber: z.boolean().optional(),
-  isVisible: z.boolean().optional(),
-  search: z.string().optional(),
-  limit: z.number().int().positive().max(100).optional(),
-  offset: z.number().int().min(0).optional(),
-}).optional();
+const listBrandProfilesSchema = z
+  .object({
+    brandTier: z.enum(['national', 'regional', 'boutique']).optional(),
+    isSubscriber: z.boolean().optional(),
+    isVisible: z.boolean().optional(),
+    search: z.string().optional(),
+    limit: z.number().int().positive().max(100).optional(),
+    offset: z.number().int().min(0).optional(),
+  })
+  .optional();
 
 const captureBrandLeadSchema = z.object({
   developerBrandProfileId: z.number().int(),
@@ -93,7 +95,7 @@ export const brandProfileRouter = router({
     .input(z.object({ slug: z.string() }))
     .query(async ({ input }) => {
       const profile = await developerBrandProfileService.getBrandProfileBySlug(input.slug);
-      
+
       if (!profile) {
         throw new TRPCError({
           code: 'NOT_FOUND',
@@ -107,11 +109,9 @@ export const brandProfileRouter = router({
   /**
    * List brand profiles with filters (public)
    */
-  listBrandProfiles: publicProcedure
-    .input(listBrandProfilesSchema)
-    .query(async ({ input }) => {
-      return await developerBrandProfileService.listBrandProfiles(input || {});
-    }),
+  listBrandProfiles: publicProcedure.input(listBrandProfilesSchema).query(async ({ input }) => {
+    return await developerBrandProfileService.listBrandProfiles(input || {});
+  }),
 
   /**
    * Get developments for a brand (public)
@@ -126,20 +126,18 @@ export const brandProfileRouter = router({
    * Capture lead for brand profile (public)
    * This is the main lead capture endpoint
    */
-  captureLead: publicProcedure
-    .input(captureBrandLeadSchema)
-    .mutation(async ({ input }) => {
-      try {
-        const result = await brandLeadService.captureBrandLead(input);
-        return result;
-      } catch (error) {
-        console.error('Lead capture failed:', error);
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Failed to submit enquiry. Please try again.',
-        });
-      }
-    }),
+  captureLead: publicProcedure.input(captureBrandLeadSchema).mutation(async ({ input }) => {
+    try {
+      const result = await brandLeadService.captureBrandLead(input);
+      return result;
+    } catch (error) {
+      console.error('Lead capture failed:', error);
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Failed to submit enquiry. Please try again.',
+      });
+    }
+  }),
 
   // ============================================================================
   // ADMIN ENDPOINTS (Super Admin Only)
@@ -186,10 +184,12 @@ export const brandProfileRouter = router({
    * Toggle profile visibility (admin)
    */
   adminToggleVisibility: protectedProcedure
-    .input(z.object({
-      id: z.number().int(),
-      visible: z.boolean(),
-    }))
+    .input(
+      z.object({
+        id: z.number().int(),
+        visible: z.boolean(),
+      }),
+    )
     .mutation(async ({ input, ctx }) => {
       if (ctx.user.role !== 'super_admin') {
         throw new TRPCError({
@@ -205,10 +205,12 @@ export const brandProfileRouter = router({
    * Attach development to brand (admin)
    */
   adminAttachDevelopment: protectedProcedure
-    .input(z.object({
-      developmentId: z.number().int(),
-      brandProfileId: z.number().int(),
-    }))
+    .input(
+      z.object({
+        developmentId: z.number().int(),
+        brandProfileId: z.number().int(),
+      }),
+    )
     .mutation(async ({ input, ctx }) => {
       if (ctx.user.role !== 'super_admin') {
         throw new TRPCError({
@@ -219,7 +221,7 @@ export const brandProfileRouter = router({
 
       return await developerBrandProfileService.attachDevelopmentToBrand(
         input.developmentId,
-        input.brandProfileId
+        input.brandProfileId,
       );
     }),
 
@@ -227,9 +229,11 @@ export const brandProfileRouter = router({
    * Detach development from brand (admin)
    */
   adminDetachDevelopment: protectedProcedure
-    .input(z.object({
-      developmentId: z.number().int(),
-    }))
+    .input(
+      z.object({
+        developmentId: z.number().int(),
+      }),
+    )
     .mutation(async ({ input, ctx }) => {
       if (ctx.user.role !== 'super_admin') {
         throw new TRPCError({
@@ -282,10 +286,12 @@ export const brandProfileRouter = router({
    * Links brand profile to developer account after claim approval
    */
   adminConvertToSubscriber: protectedProcedure
-    .input(z.object({
-      brandProfileId: z.number().int(),
-      developerAccountId: z.number().int(),
-    }))
+    .input(
+      z.object({
+        brandProfileId: z.number().int(),
+        developerAccountId: z.number().int(),
+      }),
+    )
     .mutation(async ({ input, ctx }) => {
       if (ctx.user.role !== 'super_admin') {
         throw new TRPCError({
@@ -296,7 +302,7 @@ export const brandProfileRouter = router({
 
       return await developerBrandProfileService.convertToSubscriber(
         input.brandProfileId,
-        input.developerAccountId
+        input.developerAccountId,
       );
     }),
 

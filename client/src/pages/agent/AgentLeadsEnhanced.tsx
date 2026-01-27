@@ -33,13 +33,14 @@ export default function AgentLeadsEnhanced() {
   const [searchQuery, setSearchQuery] = useState('');
 
   // Check if agent profile exists
-  const { data: dashboardStats, isLoading: statsLoading, error } = trpc.agent.getDashboardStats.useQuery(
-    undefined,
-    {
-      enabled: isAuthenticated && user?.role === 'agent',
-      retry: false,
-    }
-  );
+  const {
+    data: dashboardStats,
+    isLoading: statsLoading,
+    error,
+  } = trpc.agent.getDashboardStats.useQuery(undefined, {
+    enabled: isAuthenticated && user?.role === 'agent',
+    retry: false,
+  });
 
   // Redirect to setup if no agent profile found
   useEffect(() => {
@@ -106,7 +107,9 @@ export default function AgentLeadsEnhanced() {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-bold text-gray-900">Leads & CRM</h1>
-              <p className="text-gray-500 mt-1">Manage your lead pipeline and client relationships</p>
+              <p className="text-gray-500 mt-1">
+                Manage your lead pipeline and client relationships
+              </p>
             </div>
             <Button
               className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white shadow-soft rounded-xl"
@@ -128,7 +131,7 @@ export default function AgentLeadsEnhanced() {
                   placeholder="Search leads..."
                   className="pl-10 bg-white border-gray-200 rounded-xl"
                   value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onChange={e => setSearchQuery(e.target.value)}
                 />
               </div>
               <Button variant="outline" className="rounded-xl">
@@ -175,12 +178,14 @@ export default function AgentLeadsEnhanced() {
                     Lead Sources
                   </h3>
                   <div className="space-y-4">
-                    {leadSources.map((source) => (
+                    {leadSources.map(source => (
                       <div key={source.source}>
                         <div className="flex items-center justify-between mb-2">
                           <span className="text-sm font-medium text-gray-700">{source.source}</span>
                           <div className="flex items-center gap-2">
-                            <span className="text-sm font-bold text-gray-900">{source.count} leads</span>
+                            <span className="text-sm font-bold text-gray-900">
+                              {source.count} leads
+                            </span>
                             <span className="text-xs text-gray-500">({source.percentage}%)</span>
                           </div>
                         </div>
@@ -210,7 +215,7 @@ export default function AgentLeadsEnhanced() {
                       { stage: 'Viewing', count: 12, width: 40 },
                       { stage: 'Offer', count: 8, width: 27 },
                       { stage: 'Closed', count: 5, width: 17 },
-                    ].map((stage) => (
+                    ].map(stage => (
                       <div key={stage.stage} className="flex items-center gap-4">
                         <div className="w-32 text-sm font-medium text-gray-700">{stage.stage}</div>
                         <div className="flex-1 relative">
@@ -240,7 +245,8 @@ export default function AgentLeadsEnhanced() {
                   </div>
                   <h3 className="text-xl font-semibold text-gray-900 mb-2">Message Center</h3>
                   <p className="text-gray-500 mb-6">
-                    Centralized messaging with all your leads and clients. Chat history, scheduled messages, and more.
+                    Centralized messaging with all your leads and clients. Chat history, scheduled
+                    messages, and more.
                   </p>
                   <Button className="bg-blue-600 hover:bg-blue-700">
                     <MessageSquare className="h-4 w-4 mr-2" />

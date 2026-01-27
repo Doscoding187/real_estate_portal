@@ -8,10 +8,10 @@ import { exploreFeedService } from '../exploreFeedService';
 /**
  * Feature: property-explore-shorts, Property 9: Feed type switching
  * Validates: Requirements 4.1, 4.2, 4.3, 4.4
- * 
+ *
  * Property: For any feed type selection (Recommended, Area, Category, Agent/Developer),
  * the system SHALL load and display properties matching that feed type.
- * 
+ *
  * This test verifies that the feed service correctly generates feeds based on type
  * and returns appropriate results.
  */
@@ -43,7 +43,7 @@ describe('Explore Feed Service', () => {
 
   /**
    * Property-Based Test: Recommended feed returns published shorts
-   * 
+   *
    * For any valid limit and offset, the recommended feed should return
    * published shorts ordered by boost priority and performance score
    */
@@ -84,15 +84,15 @@ describe('Explore Feed Service', () => {
 
           // Clean up
           await db.execute(sql`DELETE FROM explore_shorts WHERE id = ${testShort.insertId}`);
-        }
+        },
       ),
-      { numRuns: 100 }
+      { numRuns: 100 },
     );
   });
 
   /**
    * Property-Based Test: Area feed filters by location
-   * 
+   *
    * For any location string, the area feed should return shorts
    * that match the location in city, suburb, or province
    */
@@ -118,15 +118,15 @@ describe('Explore Feed Service', () => {
           expect(result.metadata).toHaveProperty('location', location);
           expect(Array.isArray(result.shorts)).toBe(true);
           expect(result.shorts.length).toBeLessThanOrEqual(limit);
-        }
+        },
       ),
-      { numRuns: 50 }
+      { numRuns: 50 },
     );
   });
 
   /**
    * Property-Based Test: Category feed filters by category
-   * 
+   *
    * For any valid category, the category feed should return shorts
    * that match the category's highlight tags
    */
@@ -139,7 +139,7 @@ describe('Explore Feed Service', () => {
             'student_rentals',
             'new_developments',
             'move_in_ready',
-            'pet_friendly'
+            'pet_friendly',
           ),
           limit: fc.integer({ min: 1, max: 20 }),
         }),
@@ -158,15 +158,15 @@ describe('Explore Feed Service', () => {
           expect(result.metadata).toHaveProperty('category', category);
           expect(Array.isArray(result.shorts)).toBe(true);
           expect(result.shorts.length).toBeLessThanOrEqual(limit);
-        }
+        },
       ),
-      { numRuns: 50 }
+      { numRuns: 50 },
     );
   });
 
   /**
    * Property-Based Test: Agent feed filters by agent ID
-   * 
+   *
    * For any agent ID, the agent feed should return only shorts
    * associated with that agent
    */
@@ -213,15 +213,15 @@ describe('Explore Feed Service', () => {
 
           // Clean up
           await db.execute(sql`DELETE FROM explore_shorts WHERE id = ${testShort.insertId}`);
-        }
+        },
       ),
-      { numRuns: 50 }
+      { numRuns: 50 },
     );
   });
 
   /**
    * Property-Based Test: Developer feed filters by developer ID
-   * 
+   *
    * For any developer ID, the developer feed should return only shorts
    * associated with that developer
    */
@@ -268,15 +268,15 @@ describe('Explore Feed Service', () => {
 
           // Clean up
           await db.execute(sql`DELETE FROM explore_shorts WHERE id = ${testShort.insertId}`);
-        }
+        },
       ),
-      { numRuns: 50 }
+      { numRuns: 50 },
     );
   });
 
   /**
    * Property-Based Test: Pagination works correctly
-   * 
+   *
    * For any limit and offset, the feed should return the correct number
    * of results and indicate if more results are available
    */
@@ -311,14 +311,14 @@ describe('Explore Feed Service', () => {
           // Verify pagination
           expect(result.shorts.length).toBeLessThanOrEqual(limit);
           expect(result.offset).toBe(offset + result.shorts.length);
-          
+
           // hasMore should be true if we got a full page
           if (result.shorts.length === limit) {
             expect(result.hasMore).toBe(true);
           }
-        }
+        },
       ),
-      { numRuns: 50 }
+      { numRuns: 50 },
     );
 
     // Clean up
@@ -329,7 +329,7 @@ describe('Explore Feed Service', () => {
 
   /**
    * Property-Based Test: Boost priority affects ordering
-   * 
+   *
    * Shorts with higher boost priority should appear before
    * shorts with lower boost priority
    */
@@ -361,8 +361,12 @@ describe('Explore Feed Service', () => {
     });
 
     // Find our test shorts in the results
-    const lowIndex = result.shorts.findIndex((s: any) => s.id === Number(lowPriorityShort.insertId));
-    const highIndex = result.shorts.findIndex((s: any) => s.id === Number(highPriorityShort.insertId));
+    const lowIndex = result.shorts.findIndex(
+      (s: any) => s.id === Number(lowPriorityShort.insertId),
+    );
+    const highIndex = result.shorts.findIndex(
+      (s: any) => s.id === Number(highPriorityShort.insertId),
+    );
 
     // High priority should come before low priority
     if (lowIndex !== -1 && highIndex !== -1) {
@@ -370,12 +374,14 @@ describe('Explore Feed Service', () => {
     }
 
     // Clean up
-    await db.execute(sql`DELETE FROM explore_shorts WHERE id IN (${lowPriorityShort.insertId}, ${highPriorityShort.insertId})`);
+    await db.execute(
+      sql`DELETE FROM explore_shorts WHERE id IN (${lowPriorityShort.insertId}, ${highPriorityShort.insertId})`,
+    );
   });
 
   /**
    * Property-Based Test: Only published shorts are returned
-   * 
+   *
    * Unpublished shorts should never appear in any feed
    */
   it('should only return published shorts', async () => {
@@ -406,10 +412,14 @@ describe('Explore Feed Service', () => {
     });
 
     // Verify unpublished short is not in results
-    const hasUnpublished = result.shorts.some((s: any) => s.id === Number(unpublishedShort.insertId));
+    const hasUnpublished = result.shorts.some(
+      (s: any) => s.id === Number(unpublishedShort.insertId),
+    );
     expect(hasUnpublished).toBe(false);
 
     // Clean up
-    await db.execute(sql`DELETE FROM explore_shorts WHERE id IN (${publishedShort.insertId}, ${unpublishedShort.insertId})`);
+    await db.execute(
+      sql`DELETE FROM explore_shorts WHERE id IN (${publishedShort.insertId}, ${unpublishedShort.insertId})`,
+    );
   });
 });

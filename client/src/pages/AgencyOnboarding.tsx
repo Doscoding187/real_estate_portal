@@ -375,11 +375,7 @@ const BasicInfoStep: React.FC<StepProps> = ({ onNext }) => {
 
           <div className="md:col-span-2">
             <Label htmlFor="address">Physical Address *</Label>
-            <Input
-              id="address"
-              {...register('address')}
-              placeholder="Enter full address"
-            />
+            <Input id="address" {...register('address')} placeholder="Enter full address" />
             {errors.address && <p className="text-sm text-red-600">{errors.address.message}</p>}
           </div>
 

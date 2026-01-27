@@ -12,9 +12,9 @@ import { eq, sql } from 'drizzle-orm';
 
 /**
  * Property-Based Tests for Search Integration
- * 
+ *
  * Feature: google-places-autocomplete-integration
- * 
+ *
  * These tests validate the correctness properties for search integration:
  * - Property 29: Suburb selection redirects to location page
  * - Property 30: Place ID in URL parameters
@@ -29,7 +29,7 @@ describe('Search Integration Property Tests', () => {
 
   beforeAll(async () => {
     console.log('[SearchIntegration PBT] Setting up test database...');
-    
+
     // Initialize database connection
     try {
       db = await getDb();
@@ -93,7 +93,7 @@ describe('Search Integration Property Tests', () => {
       const [propResult] = await db.insert(properties).values({
         title: `Test Property ${i}`,
         description: `Test property description ${i}`,
-        price: 1000000 + (i * 100000),
+        price: 1000000 + i * 100000,
         propertyType: 'house',
         listingType: 'sale',
         bedrooms: 3,
@@ -118,16 +118,14 @@ describe('Search Integration Property Tests', () => {
 
     // Clean up test data
     if (testPropertyIds.length > 0) {
-      await db.delete(properties).where(
-        sql`${properties.id} IN (${testPropertyIds.join(',')})`
-      );
+      await db.delete(properties).where(sql`${properties.id} IN (${testPropertyIds.join(',')})`);
     }
 
     if (testLocationIds.length > 0) {
-      await db.delete(locationSearches).where(
-        sql`${locationSearches.locationId} IN (${testLocationIds.join(',')})`
-      );
-      
+      await db
+        .delete(locationSearches)
+        .where(sql`${locationSearches.locationId} IN (${testLocationIds.join(',')})`);
+
       // Delete in reverse order (suburb -> city -> province)
       for (let i = testLocationIds.length - 1; i >= 0; i--) {
         await db.delete(locations).where(eq(locations.id, testLocationIds[i]));
@@ -137,10 +135,10 @@ describe('Search Integration Property Tests', () => {
 
   /**
    * Property 29: Suburb selection redirects to location page
-   * 
+   *
    * For any suburb selected from search autocomplete, the system should redirect
    * to a URL matching the pattern /south-africa/{province-slug}/{city-slug}/{suburb-slug}
-   * 
+   *
    * Validates: Requirements 19.1
    */
   it('Property 29: Suburb selection should generate correct hierarchical URL', async () => {
@@ -160,9 +158,18 @@ describe('Search Integration Property Tests', () => {
           if (!db) return true;
 
           // Create temporary location hierarchy
-          const provinceSlug = provinceName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-          const citySlug = cityName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-          const suburbSlug = suburbName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+          const provinceSlug = provinceName
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/^-|-$/g, '');
+          const citySlug = cityName
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/^-|-$/g, '');
+          const suburbSlug = suburbName
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/^-|-$/g, '');
 
           // Skip if slugs are empty after sanitization
           if (!provinceSlug || !citySlug || !suburbSlug) {
@@ -215,7 +222,9 @@ describe('Search Integration Property Tests', () => {
               expect(suburbResult.url).toBe(expectedPattern);
 
               // Verify URL structure
-              expect(suburbResult.url).toMatch(/^\/south-africa\/[a-z0-9-]+\/[a-z0-9-]+\/[a-z0-9-]+$/);
+              expect(suburbResult.url).toMatch(
+                /^\/south-africa\/[a-z0-9-]+\/[a-z0-9-]+\/[a-z0-9-]+$/,
+              );
 
               // Verify hierarchy is preserved
               const urlParts = suburbResult.url.split('/').filter(Boolean);
@@ -233,18 +242,18 @@ describe('Search Integration Property Tests', () => {
             await db.delete(locations).where(eq(locations.id, cityId));
             await db.delete(locations).where(eq(locations.id, provId));
           }
-        }
+        },
       ),
-      { numRuns: 20 } // Reduced runs due to database operations
+      { numRuns: 20 }, // Reduced runs due to database operations
     );
   });
 
   /**
    * Property 30: Place ID in URL parameters
-   * 
+   *
    * For any redirection to a location page, the Place ID should be included
    * as a URL query parameter
-   * 
+   *
    * Validates: Requirements 19.4
    */
   it('Property 30: Location results should include Place ID for URL parameters', async () => {
@@ -254,60 +263,57 @@ describe('Search Integration Property Tests', () => {
     }
 
     await fc.assert(
-      fc.asyncProperty(
-        fc.string({ minLength: 10, maxLength: 100 }),
-        async (placeId) => {
-          if (!db) return true;
+      fc.asyncProperty(fc.string({ minLength: 10, maxLength: 100 }), async placeId => {
+        if (!db) return true;
 
-          // Create a temporary location with the Place ID
-          const locationName = `Test Location ${Date.now()}`;
-          const locationSlug = locationName.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+        // Create a temporary location with the Place ID
+        const locationName = `Test Location ${Date.now()}`;
+        const locationSlug = locationName.toLowerCase().replace(/[^a-z0-9]+/g, '-');
 
-          const [result] = await db.insert(locations).values({
-            name: locationName,
-            slug: locationSlug,
-            type: 'suburb',
-            parentId: null,
-            placeId: placeId,
-            propertyCount: 0,
-          });
+        const [result] = await db.insert(locations).values({
+          name: locationName,
+          slug: locationSlug,
+          type: 'suburb',
+          parentId: null,
+          placeId: placeId,
+          propertyCount: 0,
+        });
 
-          const locationId = Number(result.insertId);
+        const locationId = Number(result.insertId);
 
-          try {
-            // Search for the location
-            const results = await searchLocations(locationName, 10);
+        try {
+          // Search for the location
+          const results = await searchLocations(locationName, 10);
 
-            // Find our location in results
-            const locationResult = results.find(r => r.id === locationId);
+          // Find our location in results
+          const locationResult = results.find(r => r.id === locationId);
 
-            if (locationResult) {
-              // Verify Place ID is present in the result
-              expect(locationResult.placeId).toBe(placeId);
+          if (locationResult) {
+            // Verify Place ID is present in the result
+            expect(locationResult.placeId).toBe(placeId);
 
-              // Verify Place ID is not null or empty
-              expect(locationResult.placeId).toBeTruthy();
-              expect(locationResult.placeId).not.toBe('');
-            }
-
-            return true;
-          } finally {
-            // Clean up
-            await db.delete(locations).where(eq(locations.id, locationId));
+            // Verify Place ID is not null or empty
+            expect(locationResult.placeId).toBeTruthy();
+            expect(locationResult.placeId).not.toBe('');
           }
+
+          return true;
+        } finally {
+          // Clean up
+          await db.delete(locations).where(eq(locations.id, locationId));
         }
-      ),
-      { numRuns: 20 }
+      }),
+      { numRuns: 20 },
     );
   });
 
   /**
    * Property 33: Place ID filtering
-   * 
+   *
    * For any location filter applied to listings, the system should match using
    * location_id (which links to Place ID) rather than text comparison on
    * suburb/city/province fields
-   * 
+   *
    * Validates: Requirements 25.2
    */
   it('Property 33: Place ID filtering should use location_id for precise matching', async () => {
@@ -335,7 +341,7 @@ describe('Search Integration Property Tests', () => {
               minPrice,
               maxPrice,
             },
-            50
+            50,
           );
 
           // All results should have the correct location_id or place_id
@@ -354,9 +360,7 @@ describe('Search Integration Property Tests', () => {
 
           // Verify we're using location_id for filtering (not text matching)
           // If location_id is used, all results should have the same location_id
-          const locationIds = results
-            .filter(r => r.locationId !== null)
-            .map(r => r.locationId);
+          const locationIds = results.filter(r => r.locationId !== null).map(r => r.locationId);
 
           if (locationIds.length > 0) {
             const uniqueLocationIds = new Set(locationIds);
@@ -365,9 +369,9 @@ describe('Search Integration Property Tests', () => {
           }
 
           return true;
-        }
+        },
       ),
-      { numRuns: 20 }
+      { numRuns: 20 },
     );
   });
 
@@ -443,7 +447,7 @@ describe('Search Integration Property Tests', () => {
     expect(Array.isArray(results.developments)).toBe(true);
 
     expect(results.totalResults).toBe(
-      results.locations.length + results.listings.length + results.developments.length
+      results.locations.length + results.listings.length + results.developments.length,
     );
   });
 });

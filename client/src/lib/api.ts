@@ -1,13 +1,9 @@
 /**
- * Get the base URL for API calls
- * Uses VITE_API_URL environment variable or falls back to current origin
+ * Get the API URL for a given endpoint
+ * Uses relative path to leverage Vite proxy
  */
 export const getApiUrl = (endpoint: string) => {
-  const base =
-    typeof window !== 'undefined'
-      ? import.meta.env.VITE_API_URL || window.location.origin
-      : import.meta.env.VITE_API_URL || 'http://localhost:3000';
-  return `${base.replace(/\/$/, '')}/api/${endpoint.replace(/^\//, '')}`;
+  return `/api/${endpoint.replace(/^\//, '')}`;
 };
 
 /**

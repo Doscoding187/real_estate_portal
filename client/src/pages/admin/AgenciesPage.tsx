@@ -11,12 +11,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { GlassCard } from '@/components/ui/glass-card';
 import { trpc } from '@/lib/trpc';
@@ -60,7 +55,10 @@ const AgenciesPage: React.FC = () => {
           <h1 className="text-3xl font-bold text-slate-800">Agency Management</h1>
           <p className="text-slate-500">Manage real estate agencies and their listings</p>
         </div>
-        <Button className="bg-primary hover:bg-primary/90 text-white shadow-sm" onClick={() => setLocation('/admin/agencies/new')}>
+        <Button
+          className="bg-primary hover:bg-primary/90 text-white shadow-sm"
+          onClick={() => setLocation('/admin/agencies/new')}
+        >
           <Plus className="h-4 w-4 mr-2" />
           Add Agency
         </Button>
@@ -98,32 +96,55 @@ const AgenciesPage: React.FC = () => {
                     <TableHead className="text-slate-500 font-semibold">Status</TableHead>
                     <TableHead className="text-slate-500 font-semibold">Plan</TableHead>
                     <TableHead className="text-slate-500 font-semibold">Created At</TableHead>
-                    <TableHead className="text-right text-slate-500 font-semibold pr-6">Actions</TableHead>
+                    <TableHead className="text-right text-slate-500 font-semibold pr-6">
+                      Actions
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {data.agencies.map((agency: any) => (
-                    <TableRow key={agency.id} className="border-slate-100 hover:bg-slate-50/50 transition-colors">
+                    <TableRow
+                      key={agency.id}
+                      className="border-slate-100 hover:bg-slate-50/50 transition-colors"
+                    >
                       <TableCell className="font-medium text-slate-700">{agency.name}</TableCell>
                       <TableCell className="text-slate-600">{agency.city || 'N/A'}</TableCell>
                       <TableCell>
-                        <Badge variant={getStatusVariant(agency.status || 'active')} className="capitalize">
+                        <Badge
+                          variant={getStatusVariant(agency.status || 'active')}
+                          className="capitalize"
+                        >
                           {agency.status || 'Active'}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-slate-600 capitalize">{agency.subscriptionPlan || 'Free'}</TableCell>
+                      <TableCell className="text-slate-600 capitalize">
+                        {agency.subscriptionPlan || 'Free'}
+                      </TableCell>
                       <TableCell className="text-slate-600">
                         {new Date(agency.createdAt).toLocaleDateString()}
                       </TableCell>
                       <TableCell className="text-right pr-6">
                         <div className="flex justify-end space-x-2">
-                          <Button variant="outline" size="sm" className="h-8 w-8 p-0 bg-white hover:bg-slate-100" onClick={() => handleViewAgency(agency)}>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-8 w-8 p-0 bg-white hover:bg-slate-100"
+                            onClick={() => handleViewAgency(agency)}
+                          >
                             <Eye className="h-4 w-4 text-slate-500" />
                           </Button>
-                          <Button variant="outline" size="sm" className="h-8 w-8 p-0 bg-white hover:bg-slate-100">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-8 w-8 p-0 bg-white hover:bg-slate-100"
+                          >
                             <Edit className="h-4 w-4 text-slate-500" />
                           </Button>
-                          <Button variant="outline" size="sm" className="h-8 w-8 p-0 bg-white hover:bg-red-50 border-red-100">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-8 w-8 p-0 bg-white hover:bg-red-50 border-red-100"
+                          >
                             <Trash2 className="h-4 w-4 text-red-500" />
                           </Button>
                         </div>
@@ -132,7 +153,7 @@ const AgenciesPage: React.FC = () => {
                   ))}
                 </TableBody>
               </Table>
-              
+
               {/* Pagination */}
               <div className="flex items-center justify-end space-x-2 p-4 border-t border-slate-100">
                 <Button
@@ -166,21 +187,27 @@ const AgenciesPage: React.FC = () => {
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogContent className="max-w-md bg-white/95 backdrop-blur-xl border-white/20">
           <DialogHeader>
-            <DialogTitle className="text-xl font-bold text-slate-800">{selectedAgency?.name}</DialogTitle>
+            <DialogTitle className="text-xl font-bold text-slate-800">
+              {selectedAgency?.name}
+            </DialogTitle>
           </DialogHeader>
           {selectedAgency && (
             <div className="space-y-4 pt-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="p-4 rounded-xl bg-slate-50 space-y-1">
-                  <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Location</p>
+                  <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">
+                    Location
+                  </p>
                   <p className="font-semibold text-slate-800 flex items-center gap-2">
                     <MapPin className="h-3.5 w-3.5 text-primary" />
                     {selectedAgency.city || 'N/A'}
                   </p>
                 </div>
-                
+
                 <div className="p-4 rounded-xl bg-slate-50 space-y-1">
-                  <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Contact</p>
+                  <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">
+                    Contact
+                  </p>
                   <p className="font-semibold text-slate-800 flex items-center gap-2">
                     <Phone className="h-3.5 w-3.5 text-primary" />
                     {selectedAgency.phone || 'N/A'}
@@ -188,36 +215,48 @@ const AgenciesPage: React.FC = () => {
                 </div>
 
                 <div className="p-4 rounded-xl bg-slate-50 space-y-1">
-                  <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Status</p>
+                  <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">
+                    Status
+                  </p>
                   <Badge variant={getStatusVariant(selectedAgency.status || 'active')}>
                     {selectedAgency.status || 'Active'}
                   </Badge>
                 </div>
 
                 <div className="p-4 rounded-xl bg-slate-50 space-y-1">
-                  <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Plan</p>
+                  <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">
+                    Plan
+                  </p>
                   <p className="font-semibold text-slate-800 capitalize">
                     {selectedAgency.subscriptionPlan || 'Free'}
                   </p>
                 </div>
               </div>
-              
+
               <div className="pt-2">
-                <p className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-2">Details</p>
+                <p className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-2">
+                  Details
+                </p>
                 <div className="p-4 rounded-xl bg-slate-50 text-sm text-slate-600">
-                   <div className="grid grid-cols-[100px_1fr] gap-2">
-                     <span className="text-slate-400">Email:</span>
-                     <span>{selectedAgency.email || 'N/A'}</span>
-                     <span className="text-slate-400">Website:</span>
-                     <span>{selectedAgency.website || 'N/A'}</span>
-                     <span className="text-slate-400">Branding:</span>
-                     <span className="truncate">{selectedAgency.brandingColors ? 'Custom colors set' : 'Default'}</span>
-                   </div>
+                  <div className="grid grid-cols-[100px_1fr] gap-2">
+                    <span className="text-slate-400">Email:</span>
+                    <span>{selectedAgency.email || 'N/A'}</span>
+                    <span className="text-slate-400">Website:</span>
+                    <span>{selectedAgency.website || 'N/A'}</span>
+                    <span className="text-slate-400">Branding:</span>
+                    <span className="truncate">
+                      {selectedAgency.brandingColors ? 'Custom colors set' : 'Default'}
+                    </span>
+                  </div>
                 </div>
               </div>
 
               <div className="flex justify-end pt-4">
-                <Button variant="outline" onClick={() => setIsModalOpen(false)} className="bg-white">
+                <Button
+                  variant="outline"
+                  onClick={() => setIsModalOpen(false)}
+                  className="bg-white"
+                >
                   Close
                 </Button>
               </div>

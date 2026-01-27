@@ -2,7 +2,7 @@
  * ReviewField Component
  * Display field with label and value for review sections
  * Part of the Soft UI design system
- * 
+ *
  * Requirements: 9.1, 9.2
  */
 
@@ -78,7 +78,7 @@ export const ReviewField = React.forwardRef<HTMLDivElement, ReviewFieldProps>(
               className={cn(
                 'text-2xl font-bold',
                 'bg-gradient-to-r from-blue-600 to-indigo-600',
-                'bg-clip-text text-transparent'
+                'bg-clip-text text-transparent',
               )}
             >
               {value}
@@ -112,7 +112,7 @@ export const ReviewField = React.forwardRef<HTMLDivElement, ReviewFieldProps>(
           className={cn(
             'text-sm font-medium',
             'bg-gradient-to-r from-gray-600 to-gray-700',
-            'bg-clip-text text-transparent'
+            'bg-clip-text text-transparent',
           )}
         >
           {label}
@@ -122,7 +122,7 @@ export const ReviewField = React.forwardRef<HTMLDivElement, ReviewFieldProps>(
         <dd className="text-base">{renderValue()}</dd>
       </div>
     );
-  }
+  },
 );
 
 ReviewField.displayName = 'ReviewField';

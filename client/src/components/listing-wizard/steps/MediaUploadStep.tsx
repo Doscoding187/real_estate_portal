@@ -12,127 +12,134 @@ import type { MediaItem } from '@/components/media/SortableMediaGrid';
 const MediaUploadStep: React.FC = () => {
   const store = useListingWizardStore();
   const [uploads, setUploads] = useState<UploadProgress[]>([]);
-  
+
   // TRPC mutation for media upload
   const uploadMediaMutation = trpc.listing.uploadMedia.useMutation();
 
   // Handle file upload
-  const handleUpload = useCallback(async (files: File[]) => {
-    if (!files || files.length === 0) return;
-    
-    // Create upload progress entries
-    const newUploads: UploadProgress[] = files.map((file, index) => ({
-      id: `upload-${Date.now()}-${index}`,
-      fileName: file.name,
-      progress: 0,
-      status: 'uploading' as const,
-    }));
-    
-    setUploads(prev => [...prev, ...newUploads]);
-    
-    // Process each file
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
-      const uploadId = newUploads[i].id;
-      const startTime = Date.now();
-      
-      try {
-        // Determine media type
-        const isImage = file.type.startsWith('image/');
-        const mediaType = isImage ? 'image' : 'video';
-        
-        // Update progress: requesting upload URL
-        setUploads(prev => prev.map(u => 
-          u.id === uploadId ? { ...u, progress: 10 } : u
-        ));
-        
-        // Request presigned URL from server
-        const uploadData = await uploadMediaMutation.mutateAsync({
-          type: mediaType,
-          filename: file.name,
-          contentType: file.type,
-        });
-        
-        // Update progress: uploading to S3
-        setUploads(prev => prev.map(u => 
-          u.id === uploadId ? { ...u, progress: 20 } : u
-        ));
-        
-        // Upload file to S3 with progress tracking
-        const xhr = new XMLHttpRequest();
-        
-        await new Promise<void>((resolve, reject) => {
-          xhr.upload.addEventListener('progress', (e) => {
-            if (e.lengthComputable) {
-              const percentComplete = 20 + (e.loaded / e.total) * 70; // 20-90%
-              const elapsed = (Date.now() - startTime) / 1000;
-              const speed = e.loaded / elapsed;
-              const remaining = (e.total - e.loaded) / speed;
-              
-              setUploads(prev => prev.map(u => 
-                u.id === uploadId 
-                  ? { ...u, progress: Math.round(percentComplete), speed, timeRemaining: remaining }
-                  : u
-              ));
-            }
+  const handleUpload = useCallback(
+    async (files: File[]) => {
+      if (!files || files.length === 0) return;
+
+      // Create upload progress entries
+      const newUploads: UploadProgress[] = files.map((file, index) => ({
+        id: `upload-${Date.now()}-${index}`,
+        fileName: file.name,
+        progress: 0,
+        status: 'uploading' as const,
+      }));
+
+      setUploads(prev => [...prev, ...newUploads]);
+
+      // Process each file
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const uploadId = newUploads[i].id;
+        const startTime = Date.now();
+
+        try {
+          // Determine media type
+          const isImage = file.type.startsWith('image/');
+          const mediaType = isImage ? 'image' : 'video';
+
+          // Update progress: requesting upload URL
+          setUploads(prev => prev.map(u => (u.id === uploadId ? { ...u, progress: 10 } : u)));
+
+          // Request presigned URL from server
+          const uploadData = await uploadMediaMutation.mutateAsync({
+            type: mediaType,
+            filename: file.name,
+            contentType: file.type,
           });
-          
-          xhr.addEventListener('load', () => {
-            if (xhr.status >= 200 && xhr.status < 300) {
-              resolve();
-            } else {
-              reject(new Error(`Upload failed with status ${xhr.status}`));
-            }
+
+          // Update progress: uploading to S3
+          setUploads(prev => prev.map(u => (u.id === uploadId ? { ...u, progress: 20 } : u)));
+
+          // Upload file to S3 with progress tracking
+          const xhr = new XMLHttpRequest();
+
+          await new Promise<void>((resolve, reject) => {
+            xhr.upload.addEventListener('progress', e => {
+              if (e.lengthComputable) {
+                const percentComplete = 20 + (e.loaded / e.total) * 70; // 20-90%
+                const elapsed = (Date.now() - startTime) / 1000;
+                const speed = e.loaded / elapsed;
+                const remaining = (e.total - e.loaded) / speed;
+
+                setUploads(prev =>
+                  prev.map(u =>
+                    u.id === uploadId
+                      ? {
+                          ...u,
+                          progress: Math.round(percentComplete),
+                          speed,
+                          timeRemaining: remaining,
+                        }
+                      : u,
+                  ),
+                );
+              }
+            });
+
+            xhr.addEventListener('load', () => {
+              if (xhr.status >= 200 && xhr.status < 300) {
+                resolve();
+              } else {
+                reject(new Error(`Upload failed with status ${xhr.status}`));
+              }
+            });
+
+            xhr.addEventListener('error', () => reject(new Error('Network error')));
+            xhr.addEventListener('abort', () => reject(new Error('Upload cancelled')));
+
+            xhr.open('PUT', uploadData.uploadUrl);
+            xhr.setRequestHeader('Content-Type', file.type);
+            xhr.send(file);
           });
-          
-          xhr.addEventListener('error', () => reject(new Error('Network error')));
-          xhr.addEventListener('abort', () => reject(new Error('Upload cancelled')));
-          
-          xhr.open('PUT', uploadData.uploadUrl);
-          xhr.setRequestHeader('Content-Type', file.type);
-          xhr.send(file);
-        });
-        
-        // Update progress: finalizing
-        setUploads(prev => prev.map(u => 
-          u.id === uploadId ? { ...u, progress: 95 } : u
-        ));
-        
-        // Create media file object
-        const mediaFile: MediaFile = {
-          id: uploadData.mediaId,
-          url: uploadData.publicUrl,
-          type: mediaType,
-          fileName: file.name,
-          fileSize: file.size,
-          displayOrder: store.media.length,
-          isPrimary: store.media.length === 0, // First upload is primary
-          processingStatus: 'completed',
-        };
-        
-        // Add to store
-        store.addMedia(mediaFile);
-        
-        // Set as main media if first upload
-        if (store.media.length === 1) {
-          store.setMainMedia(uploadData.mediaId as any);
+
+          // Update progress: finalizing
+          setUploads(prev => prev.map(u => (u.id === uploadId ? { ...u, progress: 95 } : u)));
+
+          // Create media file object
+          const mediaFile: MediaFile = {
+            id: uploadData.mediaId,
+            url: uploadData.publicUrl,
+            type: mediaType,
+            fileName: file.name,
+            fileSize: file.size,
+            displayOrder: store.media.length,
+            isPrimary: store.media.length === 0, // First upload is primary
+            processingStatus: 'completed',
+          };
+
+          // Add to store
+          store.addMedia(mediaFile);
+
+          // Set as main media if first upload
+          if (store.media.length === 1) {
+            store.setMainMedia(uploadData.mediaId as any);
+          }
+
+          // Mark as completed
+          setUploads(prev =>
+            prev.map(u =>
+              u.id === uploadId ? { ...u, progress: 100, status: 'completed' as const } : u,
+            ),
+          );
+        } catch (error: any) {
+          console.error('Upload error:', error);
+          setUploads(prev =>
+            prev.map(u =>
+              u.id === uploadId
+                ? { ...u, status: 'error' as const, error: error.message || 'Upload failed' }
+                : u,
+            ),
+          );
         }
-        
-        // Mark as completed
-        setUploads(prev => prev.map(u => 
-          u.id === uploadId ? { ...u, progress: 100, status: 'completed' as const } : u
-        ));
-        
-      } catch (error: any) {
-        console.error('Upload error:', error);
-        setUploads(prev => prev.map(u => 
-          u.id === uploadId 
-            ? { ...u, status: 'error' as const, error: error.message || 'Upload failed' }
-            : u
-        ));
       }
-    }
-  }, [store, uploadMediaMutation]);
+    },
+    [store, uploadMediaMutation],
+  );
 
   // Convert store media to MediaItem format
   const mediaItems: MediaItem[] = store.media.map((media, index) => ({
@@ -145,31 +152,42 @@ const MediaUploadStep: React.FC = () => {
   }));
 
   // Handle media reorder - bulk replace all media with new order
-  const handleReorder = useCallback((reorderedMedia: MediaItem[]) => {
-    // Convert MediaItem[] back to MediaFile[] format and update store
-    const updatedMedia = reorderedMedia.map((item, index) => {
-      const original = store.media.find(m => m.id?.toString() === item.id);
-      return {
-        ...original,
-        displayOrder: index,
-      };
-    }).filter(Boolean) as typeof store.media;
-    
-    store.setMedia(updatedMedia);
-  }, [store]);
+  const handleReorder = useCallback(
+    (reorderedMedia: MediaItem[]) => {
+      // Convert MediaItem[] back to MediaFile[] format and update store
+      const updatedMedia = reorderedMedia
+        .map((item, index) => {
+          const original = store.media.find(m => m.id?.toString() === item.id);
+          return {
+            ...original,
+            displayOrder: index,
+          };
+        })
+        .filter(Boolean) as typeof store.media;
+
+      store.setMedia(updatedMedia);
+    },
+    [store],
+  );
 
   // Handle media remove
-  const handleRemove = useCallback((id: string) => {
-    const index = store.media.findIndex(m => m.id?.toString() === id);
-    if (index !== -1) {
-      store.removeMedia(index);
-    }
-  }, [store]);
+  const handleRemove = useCallback(
+    (id: string) => {
+      const index = store.media.findIndex(m => m.id?.toString() === id);
+      if (index !== -1) {
+        store.removeMedia(index);
+      }
+    },
+    [store],
+  );
 
   // Handle set as primary
-  const handleSetPrimary = useCallback((id: string) => {
-    store.setMainMedia(id as any);
-  }, [store]);
+  const handleSetPrimary = useCallback(
+    (id: string) => {
+      store.setMainMedia(id as any);
+    },
+    [store],
+  );
 
   // Handle upload cancel
   const handleCancelUpload = useCallback((id: string) => {
@@ -195,7 +213,8 @@ const MediaUploadStep: React.FC = () => {
         <div>
           <h3 className="text-lg font-semibold mb-2">Upload Media</h3>
           <p className="text-gray-600">
-            Add photos and videos to showcase your property. High-quality images help attract more potential buyers.
+            Add photos and videos to showcase your property. High-quality images help attract more
+            potential buyers.
           </p>
         </div>
 
@@ -227,7 +246,7 @@ const MediaUploadStep: React.FC = () => {
               <h4 className="font-medium">Uploaded Media ({store.media.length})</h4>
               <p className="text-sm text-gray-500">Drag to reorder • Click star to set primary</p>
             </div>
-            
+
             <SortableMediaGrid
               media={mediaItems}
               onReorder={handleReorder}

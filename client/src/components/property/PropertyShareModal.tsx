@@ -46,9 +46,9 @@ export function PropertyShareModal({
   const handleShare = (platform: string) => {
     const encodedUrl = encodeURIComponent(propertyUrl);
     const encodedTitle = encodeURIComponent(propertyTitle);
-    
+
     let shareUrl = '';
-    
+
     switch (platform) {
       case 'facebook':
         shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}`;
@@ -65,7 +65,7 @@ export function PropertyShareModal({
       default:
         return;
     }
-    
+
     window.open(shareUrl, '_blank', 'width=600,height=400');
   };
 
@@ -78,9 +78,7 @@ export function PropertyShareModal({
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle>Share Property</DialogTitle>
-          <DialogDescription>
-            Share this property with friends and family
-          </DialogDescription>
+          <DialogDescription>Share this property with friends and family</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-6 mt-4">
@@ -88,11 +86,7 @@ export function PropertyShareModal({
           <div className="space-y-2">
             <Label>Property Link</Label>
             <div className="flex gap-2">
-              <Input
-                value={propertyUrl}
-                readOnly
-                className="flex-1"
-              />
+              <Input value={propertyUrl} readOnly className="flex-1" />
               <Button
                 onClick={handleCopyLink}
                 variant={copied ? 'default' : 'outline'}
@@ -156,11 +150,7 @@ export function PropertyShareModal({
           <div className="space-y-2">
             <Label>Additional Actions</Label>
             <div className="grid grid-cols-2 gap-3">
-              <Button
-                variant="outline"
-                className="justify-start"
-                onClick={handlePrint}
-              >
+              <Button variant="outline" className="justify-start" onClick={handlePrint}>
                 <Printer className="h-4 w-4 mr-2" />
                 Print
               </Button>
@@ -177,11 +167,7 @@ export function PropertyShareModal({
           </div>
 
           {/* Close Button */}
-          <Button
-            variant="secondary"
-            className="w-full"
-            onClick={onClose}
-          >
+          <Button variant="secondary" className="w-full" onClick={onClose}>
             Close
           </Button>
         </div>

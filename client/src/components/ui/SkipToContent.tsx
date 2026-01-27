@@ -1,9 +1,9 @@
 /**
  * Skip to Content Link
- * 
+ *
  * Allows keyboard users to skip navigation and go directly to main content.
  * Requirements: 5.1, 5.6
- * 
+ *
  * Features:
  * - Hidden until focused
  * - Keyboard accessible
@@ -18,9 +18,9 @@ interface SkipToContentProps {
   label?: string;
 }
 
-export function SkipToContent({ 
+export function SkipToContent({
   targetId = 'main-content',
-  label = 'Skip to main content'
+  label = 'Skip to main content',
 }: SkipToContentProps) {
   const [isVisible, setIsVisible] = useState(false);
 
@@ -61,7 +61,7 @@ export function SkipToContent({
 
 /**
  * Skip Links Container
- * 
+ *
  * Provides multiple skip links for complex pages.
  */
 
@@ -87,16 +87,13 @@ export function SkipLinks({ links }: SkipLinksProps) {
   };
 
   return (
-    <nav 
-      aria-label="Skip links"
-      className="sr-only-focusable"
-    >
+    <nav aria-label="Skip links" className="sr-only-focusable">
       <ul className="flex flex-col gap-2 p-4 bg-white border-b border-gray-200">
         {links.map((link, index) => (
           <li key={link.targetId}>
             <a
               href={`#${link.targetId}`}
-              onClick={(e) => handleClick(e, link.targetId)}
+              onClick={e => handleClick(e, link.targetId)}
               onFocus={() => setFocusedIndex(index)}
               onBlur={() => setFocusedIndex(null)}
               className="skip-link"

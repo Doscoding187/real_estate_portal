@@ -64,7 +64,7 @@ export function PropertyContactModal({
       });
       onClose();
     },
-    onError: (error) => {
+    onError: error => {
       toast.error('Failed to send inquiry. Please try again.');
       console.error('Lead creation error:', error);
     },
@@ -72,7 +72,7 @@ export function PropertyContactModal({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!formData.name || !formData.email || !formData.message) {
       toast.error('Please fill in all required fields');
       return;
@@ -110,7 +110,7 @@ export function PropertyContactModal({
             <Label htmlFor="inquiryType">Inquiry Type</Label>
             <Select
               value={formData.inquiryType}
-              onValueChange={(value) => handleChange('inquiryType', value)}
+              onValueChange={value => handleChange('inquiryType', value)}
             >
               <SelectTrigger id="inquiryType">
                 <SelectValue placeholder="Select inquiry type" />
@@ -133,7 +133,7 @@ export function PropertyContactModal({
               id="name"
               placeholder="John Doe"
               value={formData.name}
-              onChange={(e) => handleChange('name', e.target.value)}
+              onChange={e => handleChange('name', e.target.value)}
               required
             />
           </div>
@@ -148,7 +148,7 @@ export function PropertyContactModal({
               type="email"
               placeholder="john@example.com"
               value={formData.email}
-              onChange={(e) => handleChange('email', e.target.value)}
+              onChange={e => handleChange('email', e.target.value)}
               required
             />
           </div>
@@ -161,7 +161,7 @@ export function PropertyContactModal({
               type="tel"
               placeholder="+27 12 345 6789"
               value={formData.phone}
-              onChange={(e) => handleChange('phone', e.target.value)}
+              onChange={e => handleChange('phone', e.target.value)}
             />
           </div>
 
@@ -174,7 +174,7 @@ export function PropertyContactModal({
               id="message"
               placeholder="I'm interested in this property and would like to know more..."
               value={formData.message}
-              onChange={(e) => handleChange('message', e.target.value)}
+              onChange={e => handleChange('message', e.target.value)}
               rows={4}
               required
             />
@@ -216,11 +216,7 @@ export function PropertyContactModal({
             >
               Cancel
             </Button>
-            <Button
-              type="submit"
-              className="flex-1"
-              disabled={createLeadMutation.isLoading}
-            >
+            <Button type="submit" className="flex-1" disabled={createLeadMutation.isLoading}>
               {createLeadMutation.isLoading ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />

@@ -1,9 +1,9 @@
 /**
  * Simple ARIA Compliance Tests
- * 
+ *
  * Basic tests to verify ARIA attributes are present on components
  * without requiring full component tree or API dependencies.
- * 
+ *
  * Requirements: 5.2
  */
 
@@ -29,26 +29,14 @@ describe('ARIA Compliance - Basic Tests', () => {
     };
 
     it('should have article role', () => {
-      render(
-        <PropertyCard
-          property={mockProperty}
-          onClick={() => {}}
-          onSave={() => {}}
-        />
-      );
+      render(<PropertyCard property={mockProperty} onClick={() => {}} onSave={() => {}} />);
 
       const article = screen.getByRole('article');
       expect(article).toBeInTheDocument();
     });
 
     it('should have descriptive aria-label', () => {
-      render(
-        <PropertyCard
-          property={mockProperty}
-          onClick={() => {}}
-          onSave={() => {}}
-        />
-      );
+      render(<PropertyCard property={mockProperty} onClick={() => {}} onSave={() => {}} />);
 
       const article = screen.getByRole('article');
       const label = article.getAttribute('aria-label');
@@ -57,13 +45,7 @@ describe('ARIA Compliance - Basic Tests', () => {
     });
 
     it('should have list role for features', () => {
-      render(
-        <PropertyCard
-          property={mockProperty}
-          onClick={() => {}}
-          onSave={() => {}}
-        />
-      );
+      render(<PropertyCard property={mockProperty} onClick={() => {}} onSave={() => {}} />);
 
       const list = screen.getByRole('list');
       expect(list).toBeInTheDocument();
@@ -81,26 +63,14 @@ describe('ARIA Compliance - Basic Tests', () => {
     };
 
     it('should have article role', () => {
-      render(
-        <VideoCard
-          video={mockVideo}
-          onClick={() => {}}
-          onSave={() => {}}
-        />
-      );
+      render(<VideoCard video={mockVideo} onClick={() => {}} onSave={() => {}} />);
 
       const article = screen.getByRole('article');
       expect(article).toBeInTheDocument();
     });
 
     it('should have aria-pressed on save button', () => {
-      render(
-        <VideoCard
-          video={mockVideo}
-          onClick={() => {}}
-          onSave={() => {}}
-        />
-      );
+      render(<VideoCard video={mockVideo} onClick={() => {}} onSave={() => {}} />);
 
       const saveButton = screen.getByRole('button', { name: /save video/i });
       expect(saveButton).toHaveAttribute('aria-pressed');
@@ -123,7 +93,7 @@ describe('ARIA Compliance - Basic Tests', () => {
           neighbourhood={mockNeighbourhood}
           onClick={() => {}}
           onFollow={() => {}}
-        />
+        />,
       );
 
       const article = screen.getByRole('article');
@@ -136,7 +106,7 @@ describe('ARIA Compliance - Basic Tests', () => {
           neighbourhood={mockNeighbourhood}
           onClick={() => {}}
           onFollow={() => {}}
-        />
+        />,
       );
 
       const followButton = screen.getByRole('button', { name: /follow/i });
@@ -153,24 +123,14 @@ describe('ARIA Compliance - Basic Tests', () => {
     };
 
     it('should have article role', () => {
-      render(
-        <InsightCard
-          insight={mockInsight}
-          onClick={() => {}}
-        />
-      );
+      render(<InsightCard insight={mockInsight} onClick={() => {}} />);
 
       const article = screen.getByRole('article');
       expect(article).toBeInTheDocument();
     });
 
     it('should have descriptive aria-label', () => {
-      render(
-        <InsightCard
-          insight={mockInsight}
-          onClick={() => {}}
-        />
-      );
+      render(<InsightCard insight={mockInsight} onClick={() => {}} />);
 
       const article = screen.getByRole('article');
       const label = article.getAttribute('aria-label');

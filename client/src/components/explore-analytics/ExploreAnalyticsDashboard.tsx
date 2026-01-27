@@ -8,9 +8,17 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { trpc } from '@/lib/trpc';
-import { 
-  Eye, Clock, TrendingUp, Heart, Share2, MousePointerClick, 
-  Video, Users, BarChart3, Calendar 
+import {
+  Eye,
+  Clock,
+  TrendingUp,
+  Heart,
+  Share2,
+  MousePointerClick,
+  Video,
+  Users,
+  BarChart3,
+  Calendar,
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -32,7 +40,7 @@ export function ExploreAnalyticsDashboard() {
           <div className="h-4 bg-slate-200 rounded w-1/2"></div>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {[1, 2, 3, 4].map((i) => (
+          {[1, 2, 3, 4].map(i => (
             <div key={i} className="h-32 bg-slate-200 rounded animate-pulse"></div>
           ))}
         </div>
@@ -66,10 +74,10 @@ export function ExploreAnalyticsDashboard() {
           <h2 className="text-2xl font-bold text-slate-800">Explore Analytics</h2>
           <p className="text-slate-500">Track your video performance and engagement</p>
         </div>
-        
+
         {/* Period Selector */}
         <div className="flex gap-2">
-          {(['day', 'week', 'month', 'all'] as Period[]).map((p) => (
+          {(['day', 'week', 'month', 'all'] as Period[]).map(p => (
             <Button
               key={p}
               variant={period === p ? 'default' : 'outline'}
@@ -118,9 +126,9 @@ export function ExploreAnalyticsDashboard() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Calendar className="h-5 w-5" />
-            {period === 'day' && 'Today\'s Performance'}
-            {period === 'week' && 'This Week\'s Performance'}
-            {period === 'month' && 'This Month\'s Performance'}
+            {period === 'day' && "Today's Performance"}
+            {period === 'week' && "This Week's Performance"}
+            {period === 'month' && "This Month's Performance"}
             {period === 'all' && 'All-Time Performance'}
           </CardTitle>
         </CardHeader>
@@ -198,7 +206,8 @@ export function ExploreAnalyticsDashboard() {
                     <div>
                       <p className="font-medium text-slate-800">{video.title}</p>
                       <p className="text-sm text-slate-500">
-                        {video.views.toLocaleString()} views • {video.completionRate.toFixed(1)}% completion
+                        {video.views.toLocaleString()} views • {video.completionRate.toFixed(1)}%
+                        completion
                       </p>
                     </div>
                   </div>
@@ -218,7 +227,12 @@ export function ExploreAnalyticsDashboard() {
 }
 
 // Helper Components
-function StatCard({ icon, label, value, color }: {
+function StatCard({
+  icon,
+  label,
+  value,
+  color,
+}: {
   icon: React.ReactNode;
   label: string;
   value: string | number;
@@ -239,16 +253,18 @@ function StatCard({ icon, label, value, color }: {
             <p className="text-sm text-slate-500 mb-1">{label}</p>
             <p className="text-2xl font-bold text-slate-800">{value}</p>
           </div>
-          <div className={`p-3 rounded-lg ${colorClasses[color]}`}>
-            {icon}
-          </div>
+          <div className={`p-3 rounded-lg ${colorClasses[color]}`}>{icon}</div>
         </div>
       </CardContent>
     </Card>
   );
 }
 
-function MetricItem({ label, value, icon }: {
+function MetricItem({
+  label,
+  value,
+  icon,
+}: {
   label: string;
   value: string;
   icon: React.ReactNode;
@@ -264,7 +280,11 @@ function MetricItem({ label, value, icon }: {
   );
 }
 
-function EngagementItem({ icon, label, value }: {
+function EngagementItem({
+  icon,
+  label,
+  value,
+}: {
   icon: React.ReactNode;
   label: string;
   value: string;
@@ -284,7 +304,7 @@ function EngagementItem({ icon, label, value }: {
 function formatWatchTime(seconds: number): string {
   const hours = Math.floor(seconds / 3600);
   const minutes = Math.floor((seconds % 3600) / 60);
-  
+
   if (hours > 0) {
     return `${hours}h ${minutes}m`;
   }

@@ -31,7 +31,9 @@ export function VideoUploadModal({ open, onClose, onSuccess }: VideoUploadModalP
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
-  const [uploadStage, setUploadStage] = useState<'idle' | 'presigning' | 'uploading' | 'saving'>('idle');
+  const [uploadStage, setUploadStage] = useState<'idle' | 'presigning' | 'uploading' | 'saving'>(
+    'idle',
+  );
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -141,7 +143,7 @@ export function VideoUploadModal({ open, onClose, onSuccess }: VideoUploadModalP
       // Step 1: Get presigned URL
       setUploadStage('presigning');
       console.log('Getting presigned URL...');
-      
+
       const presignedData = await getPresignedUrl.mutateAsync({
         fileName: selectedFile.name,
         fileType: selectedFile.type,
@@ -156,12 +158,12 @@ export function VideoUploadModal({ open, onClose, onSuccess }: VideoUploadModalP
 
       // Step 2: Upload to S3
       setUploadStage('uploading');
-      
+
       await new Promise<void>((resolve, reject) => {
         const xhr = new XMLHttpRequest();
 
         // Track upload progress
-        xhr.upload.addEventListener('progress', (e) => {
+        xhr.upload.addEventListener('progress', e => {
           if (e.lengthComputable) {
             const progress = Math.round((e.loaded / e.total) * 100);
             setUploadProgress(progress);
@@ -219,10 +221,10 @@ export function VideoUploadModal({ open, onClose, onSuccess }: VideoUploadModalP
       onSuccess?.();
     } catch (error: any) {
       console.error('Upload failed:', error);
-      
+
       // Provide user-friendly error messages
       let errorMessage = 'Upload failed. Please try again.';
-      
+
       if (error.message?.includes('presigned')) {
         errorMessage = 'Failed to initialize upload. Please check your connection.';
       } else if (error.message?.includes('Network')) {
@@ -232,7 +234,7 @@ export function VideoUploadModal({ open, onClose, onSuccess }: VideoUploadModalP
       } else if (error.message?.includes('database') || uploadStage === 'saving') {
         errorMessage = 'Video uploaded but failed to save. Please contact support.';
       }
-      
+
       setErrors({ upload: errorMessage });
       setUploadProgress(0);
     } finally {
@@ -456,10 +458,7 @@ export function VideoUploadModal({ open, onClose, onSuccess }: VideoUploadModalP
               </Button>
 
               {step === 'upload' ? (
-                <Button
-                  onClick={handleUpload}
-                  disabled={!selectedFile || isUploading}
-                >
+                <Button onClick={handleUpload} disabled={!selectedFile || isUploading}>
                   {isUploading ? (
                     <>
                       <Loader2 className="w-4 h-4 mr-2 animate-spin" />

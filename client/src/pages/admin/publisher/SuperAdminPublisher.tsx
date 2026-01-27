@@ -25,18 +25,26 @@ const PublisherContent: React.FC = () => {
   const utils = trpc.useUtils();
 
   const deleteMutation = trpc.superAdminPublisher.deleteBrandProfile.useMutation({
-    onSuccess: (data) => {
-        toast.success(data.mode === 'soft' ? 'Brand profile archived (soft delete)' : 'Brand profile permanently deleted');
-        utils.superAdminPublisher.listBrandProfiles.invalidate();
-        setSelectedBrandId(null); // Clear context
+    onSuccess: data => {
+      toast.success(
+        data.mode === 'soft'
+          ? 'Brand profile archived (soft delete)'
+          : 'Brand profile permanently deleted',
+      );
+      utils.superAdminPublisher.listBrandProfiles.invalidate();
+      setSelectedBrandId(null); // Clear context
     },
-    onError: (error) => toast.error(error.message || 'Failed to delete profile'),
+    onError: error => toast.error(error.message || 'Failed to delete profile'),
   });
 
   const handleDelete = () => {
     if (!selectedBrand) return;
-    if (confirm(`Are you sure you want to delete "${selectedBrand.brandName}"? This action cannot be undone.`)) {
-        deleteMutation.mutate({ brandProfileId: selectedBrand.id });
+    if (
+      confirm(
+        `Are you sure you want to delete "${selectedBrand.brandName}"? This action cannot be undone.`,
+      )
+    ) {
+      deleteMutation.mutate({ brandProfileId: selectedBrand.id });
     }
   };
 
@@ -49,7 +57,8 @@ const PublisherContent: React.FC = () => {
         <div className="max-w-md space-y-2">
           <h2 className="text-2xl font-bold tracking-tight">Select a Developer Brand</h2>
           <p className="text-muted-foreground">
-            To start emulating workflows, publishing properties, or viewing leads, please select a developer brand profile from the selector above.
+            To start emulating workflows, publishing properties, or viewing leads, please select a
+            developer brand profile from the selector above.
           </p>
         </div>
         <div className="p-4 bg-orange-50 border border-orange-100 rounded-lg max-w-lg text-sm text-orange-800">
@@ -57,7 +66,10 @@ const PublisherContent: React.FC = () => {
             <LockKeyhole className="w-5 h-5 flex-shrink-0 mt-0.5 text-orange-600" />
             <div>
               <p className="font-semibold mb-1">Super Admin Mode Active</p>
-              <p>Actions performed here generate platform-owned data (`ownerType='platform'`). This data is isolated from real subscribers until explicitly transferred/claimed.</p>
+              <p>
+                Actions performed here generate platform-owned data (`ownerType='platform'`). This
+                data is isolated from real subscribers until explicitly transferred/claimed.
+              </p>
             </div>
           </div>
         </div>
@@ -69,51 +81,76 @@ const PublisherContent: React.FC = () => {
     <div className="space-y-6 animate-fade-in">
       {selectedBrand && (
         <>
-          <EditBrandProfileDialog 
-              open={isEditDialogOpen} 
-              setOpen={setIsEditDialogOpen} 
-              brandData={selectedBrand} 
+          <EditBrandProfileDialog
+            open={isEditDialogOpen}
+            setOpen={setIsEditDialogOpen}
+            brandData={selectedBrand}
           />
           <LinkSubscriberDialog
-              open={isLinkDialogOpen}
-              setOpen={setIsLinkDialogOpen}
-              brandProfile={selectedBrand}
-              onSuccess={() => utils.superAdminPublisher.listBrandProfiles.invalidate()}
+            open={isLinkDialogOpen}
+            setOpen={setIsLinkDialogOpen}
+            brandProfile={selectedBrand}
+            onSuccess={() => utils.superAdminPublisher.listBrandProfiles.invalidate()}
           />
         </>
       )}
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <div className="flex items-center justify-between border-b pb-4 mb-6">
-           <TabsList className="bg-muted/50 p-1 h-12">
-            <TabsTrigger value="developments" className="h-10 px-4 gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
+          <TabsList className="bg-muted/50 p-1 h-12">
+            <TabsTrigger
+              value="developments"
+              className="h-10 px-4 gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm"
+            >
               <Building2 className="w-4 h-4" />
               Developments
             </TabsTrigger>
-            <TabsTrigger value="leads" className="h-10 px-4 gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
+            <TabsTrigger
+              value="leads"
+              className="h-10 px-4 gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm"
+            >
               <Users className="w-4 h-4" />
               Leads
             </TabsTrigger>
-            <TabsTrigger value="metrics" className="h-10 px-4 gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
+            <TabsTrigger
+              value="metrics"
+              className="h-10 px-4 gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm"
+            >
               <BarChart3 className="w-4 h-4" />
               Metrics
             </TabsTrigger>
           </TabsList>
-          
+
           <div className="flex items-center gap-2">
             <div className="text-xs text-muted-foreground font-mono bg-muted/30 px-3 py-1.5 rounded mr-2">
-                Context: {selectedBrand?.slug} (ID: {selectedBrand?.id})
+              Context: {selectedBrand?.slug} (ID: {selectedBrand?.id})
             </div>
             {selectedBrand && !selectedBrand.isSubscriber && (
-               <Button variant="outline" size="sm" onClick={() => setIsLinkDialogOpen(true)} className="h-8 gap-2 text-blue-600 border-blue-200 hover:bg-blue-50">
-                  <Users className="w-3.5 h-3.5" /> Link Subscriber
-               </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsLinkDialogOpen(true)}
+                className="h-8 gap-2 text-blue-600 border-blue-200 hover:bg-blue-50"
+              >
+                <Users className="w-3.5 h-3.5" /> Link Subscriber
+              </Button>
             )}
-            <Button variant="outline" size="sm" onClick={() => setIsEditDialogOpen(true)} className="h-8 gap-2">
-                <Edit className="w-3.5 h-3.5" /> Edit
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsEditDialogOpen(true)}
+              className="h-8 gap-2"
+            >
+              <Edit className="w-3.5 h-3.5" /> Edit
             </Button>
-            <Button variant="outline" size="sm" onClick={handleDelete} disabled={deleteMutation.isPending} className="h-8 gap-2 text-red-600 hover:text-red-700 hover:bg-red-50 hover:border-red-200">
-                <Trash2 className="w-3.5 h-3.5" />
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleDelete}
+              disabled={deleteMutation.isPending}
+              className="h-8 gap-2 text-red-600 hover:text-red-700 hover:bg-red-50 hover:border-red-200"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
             </Button>
           </div>
         </div>
@@ -147,7 +184,8 @@ export const SuperAdminPublisher: React.FC = () => {
               </span>
             </h1>
             <p className="text-muted-foreground max-w-3xl">
-              Browse and edit all developments by province, or select a brand profile to emulate developer workflows.
+              Browse and edit all developments by province, or select a brand profile to emulate
+              developer workflows.
             </p>
           </div>
         </div>
@@ -165,10 +203,10 @@ export const SuperAdminPublisher: React.FC = () => {
               Select a brand profile to create new developments, manage leads, and view metrics.
             </p>
           </div>
-          
+
           <div className="grid lg:grid-cols-3 gap-6">
             <div className="lg:col-span-1">
-               <DeveloperContextSelector />
+              <DeveloperContextSelector />
             </div>
           </div>
         </div>

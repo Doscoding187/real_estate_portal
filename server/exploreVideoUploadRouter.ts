@@ -96,7 +96,7 @@ export const exploreVideoUploadRouter = router({
 
       // Trigger video processing pipeline (transcoding, thumbnails, etc.)
       // This runs asynchronously and doesn't block the response
-      processUploadedVideo(result.exploreVideoId, input.videoUrl, input.duration).catch((error) => {
+      processUploadedVideo(result.exploreVideoId, input.videoUrl, input.duration).catch(error => {
         console.error('[ExploreVideoUpload] Video processing failed:', error);
         // In production, this would trigger an alert or retry mechanism
       });
@@ -104,7 +104,8 @@ export const exploreVideoUploadRouter = router({
       return {
         success: true,
         data: result,
-        message: 'Video uploaded successfully and is being processed. It will be available in Explore feed within 5 minutes.',
+        message:
+          'Video uploaded successfully and is being processed. It will be available in Explore feed within 5 minutes.',
       };
     }),
 

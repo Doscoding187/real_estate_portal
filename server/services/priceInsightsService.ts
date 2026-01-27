@@ -4,7 +4,7 @@ import { eq, and, inArray, sql, desc, count, avg } from 'drizzle-orm';
 
 /**
  * Price Insights Service
- * 
+ *
  * Aggregates property listing data to calculate city-level statistics:
  * - Median prices
  * - Price distributions
@@ -57,7 +57,7 @@ class PriceInsightsService {
    */
   async getAllCityInsights(): Promise<Record<string, CityInsights>> {
     const cacheKey = 'all-cities';
-    
+
     // Check cache
     if (this.isCacheValid(cacheKey)) {
       return this.cache.get(cacheKey)!.data;
@@ -65,7 +65,7 @@ class PriceInsightsService {
 
     try {
       const dbInstance = await db;
-      
+
       // Get all cities with at least 10 active listings
       const citiesWithListings = await dbInstance
         .select({
@@ -77,8 +77,8 @@ class PriceInsightsService {
         .where(
           and(
             inArray(properties.status, ACTIVE_STATUSES as any),
-            sql`${properties.cityId} IS NOT NULL`
-          )
+            sql`${properties.cityId} IS NOT NULL`,
+          ),
         )
         .groupBy(properties.cityId, properties.city)
         .having(sql`COUNT(${properties.id}) >= 10`)
@@ -119,10 +119,7 @@ class PriceInsightsService {
         .select()
         .from(properties)
         .where(
-          and(
-            eq(properties.cityId, cityId),
-            inArray(properties.status, ACTIVE_STATUSES as any)
-          )
+          and(eq(properties.cityId, cityId), inArray(properties.status, ACTIVE_STATUSES as any)),
         );
 
       if (cityProperties.length === 0) {
@@ -216,7 +213,7 @@ class PriceInsightsService {
     if (validProperties.length === 0) return 0;
 
     const totalPricePerSqm = validProperties.reduce((sum: number, p: any) => {
-      return sum + (p.price / p.area);
+      return sum + p.price / p.area;
     }, 0);
 
     return Math.round(totalPricePerSqm / validProperties.length);

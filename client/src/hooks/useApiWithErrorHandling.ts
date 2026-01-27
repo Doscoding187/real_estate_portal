@@ -4,7 +4,13 @@
  */
 
 import { useState, useCallback } from 'react';
-import { parseError, getRecoveryStrategy, retryWithBackoff, logError, type AppError } from '@/lib/errors/ErrorRecoveryStrategy';
+import {
+  parseError,
+  getRecoveryStrategy,
+  retryWithBackoff,
+  logError,
+  type AppError,
+} from '@/lib/errors/ErrorRecoveryStrategy';
 
 interface UseApiWithErrorHandlingOptions {
   onSuccess?: () => void;
@@ -21,7 +27,7 @@ interface ApiState {
 
 export function useApiWithErrorHandling<T extends (...args: any[]) => Promise<any>>(
   apiFunction: T,
-  options: UseApiWithErrorHandlingOptions = {}
+  options: UseApiWithErrorHandlingOptions = {},
 ) {
   const [state, setState] = useState<ApiState>({
     isLoading: false,
@@ -39,7 +45,7 @@ export function useApiWithErrorHandling<T extends (...args: any[]) => Promise<an
 
       try {
         const result = await apiFunction(...args);
-        
+
         setState({
           isLoading: false,
           error: null,
@@ -69,7 +75,7 @@ export function useApiWithErrorHandling<T extends (...args: any[]) => Promise<an
         return null;
       }
     },
-    [apiFunction, options]
+    [apiFunction, options],
   );
 
   const retry = useCallback(
@@ -85,7 +91,7 @@ export function useApiWithErrorHandling<T extends (...args: any[]) => Promise<an
         const result = await retryWithBackoff(
           () => apiFunction(...args),
           maxRetries,
-          strategy.retryDelay ?? 2000
+          strategy.retryDelay ?? 2000,
         );
 
         setState({
@@ -110,7 +116,7 @@ export function useApiWithErrorHandling<T extends (...args: any[]) => Promise<an
         return null;
       }
     },
-    [apiFunction, state.error, options]
+    [apiFunction, state.error, options],
   );
 
   return {

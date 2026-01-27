@@ -7,14 +7,13 @@ import { sql, eq, and, desc, gt } from 'drizzle-orm';
  * Based on analytics data (views, inquiries) + recent activity
  */
 export class DemandScoringService {
-  
   /**
    * Run a batch update of demand scores for all active developments
    * Recommended to run this via cron every 1-4 hours
    */
   static async updateAllScores() {
     console.log('[DemandScoring] Starting batch update...');
-    
+
     // 1. Get stats gathered from analytics events in the last 7 days
     const stats = await db
       .select({
@@ -26,8 +25,8 @@ export class DemandScoringService {
       .where(
         and(
           sql`${locationAnalyticsEvents.createdAt} > NOW() - INTERVAL 7 DAY`,
-          sql`${locationAnalyticsEvents.developmentId} IS NOT NULL`
-        )
+          sql`${locationAnalyticsEvents.developmentId} IS NOT NULL`,
+        ),
       )
       .groupBy(locationAnalyticsEvents.developmentId);
 
@@ -61,7 +60,7 @@ export class DemandScoringService {
    * Cap at 100
    */
   private static calculateScore(views: number, inquiries: number): number {
-    const rawScore = (views * 0.5) + (inquiries * 5.0);
+    const rawScore = views * 0.5 + inquiries * 5.0;
     return Math.min(Math.round(rawScore), 100);
   }
 }

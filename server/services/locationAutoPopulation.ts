@@ -1,9 +1,9 @@
 /**
  * Location Auto-Population Service
- * 
+ *
  * Automatically creates city and suburb records from Google Places data
  * when properties are added to the system.
- * 
+ *
  * This eliminates the need to manually seed thousands of locations.
  */
 
@@ -12,10 +12,10 @@ import { provinces, cities, suburbs } from '../../drizzle/schema';
 import { eq, and, sql } from 'drizzle-orm';
 
 interface GooglePlaceComponents {
-  locality?: string;  // City
-  sublocality?: string;  // Suburb/neighborhood
-  administrative_area_level_1?: string;  // Province
-  administrative_area_level_2?: string;  // District/Municipality
+  locality?: string; // City
+  sublocality?: string; // Suburb/neighborhood
+  administrative_area_level_1?: string; // Province
+  administrative_area_level_2?: string; // District/Municipality
   postal_code?: string;
 }
 
@@ -33,7 +33,7 @@ interface LocationData {
  */
 export async function autoCreateLocationHierarchy(locationData: LocationData) {
   console.log('[AutoLocation] Processing:', locationData.formattedAddress);
-  
+
   const db = await getDb();
   const { components, latitude, longitude, placeId } = locationData;
 
@@ -43,13 +43,11 @@ export async function autoCreateLocationHierarchy(locationData: LocationData) {
 
   if (provinceName) {
     console.log('[AutoLocation] Looking for province:', provinceName);
-    
+
     const [existingProvince] = await db
       .select()
       .from(provinces)
-      .where(
-        sql`LOWER(${provinces.name}) LIKE LOWER(${`%${provinceName}%`})`
-      )
+      .where(sql`LOWER(${provinces.name}) LIKE LOWER(${`%${provinceName}%`})`)
       .limit(1);
 
     if (existingProvince) {
@@ -72,10 +70,7 @@ export async function autoCreateLocationHierarchy(locationData: LocationData) {
       .select()
       .from(cities)
       .where(
-        and(
-          eq(cities.provinceId, provinceId),
-          sql`LOWER(${cities.name}) = LOWER(${cityName})`
-        )
+        and(eq(cities.provinceId, provinceId), sql`LOWER(${cities.name}) = LOWER(${cityName})`),
       )
       .limit(1);
 
@@ -85,9 +80,9 @@ export async function autoCreateLocationHierarchy(locationData: LocationData) {
     } else {
       // Auto-create city
       console.log('[AutoLocation] Auto-creating city:', cityName);
-      
+
       const citySlug = cityName.toLowerCase().replace(/\s+/g, '-');
-      
+
       const [result] = await db.insert(cities).values({
         provinceId,
         name: cityName,
@@ -113,12 +108,7 @@ export async function autoCreateLocationHierarchy(locationData: LocationData) {
     const [existingSuburb] = await db
       .select()
       .from(suburbs)
-      .where(
-        and(
-          eq(suburbs.cityId, cityId),
-          sql`LOWER(${suburbs.name}) = LOWER(${suburbName})`
-        )
-      )
+      .where(and(eq(suburbs.cityId, cityId), sql`LOWER(${suburbs.name}) = LOWER(${suburbName})`))
       .limit(1);
 
     if (existingSuburb) {
@@ -127,9 +117,9 @@ export async function autoCreateLocationHierarchy(locationData: LocationData) {
     } else {
       // Auto-create suburb
       console.log('[AutoLocation] Auto-creating suburb:', suburbName);
-      
+
       const suburbSlug = suburbName.toLowerCase().replace(/\s+/g, '-');
-      
+
       const [result] = await db.insert(suburbs).values({
         cityId,
         name: suburbName,
@@ -156,7 +146,9 @@ export async function autoCreateLocationHierarchy(locationData: LocationData) {
 /**
  * Extract components from Google Places address_components array
  */
-export function extractPlaceComponents(addressComponents: google.maps.GeocoderAddressComponent[]): GooglePlaceComponents {
+export function extractPlaceComponents(
+  addressComponents: google.maps.GeocoderAddressComponent[],
+): GooglePlaceComponents {
   const components: GooglePlaceComponents = {};
 
   for (const component of addressComponents) {

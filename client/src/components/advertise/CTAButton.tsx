@@ -1,9 +1,9 @@
 /**
  * CTAButton Component
- * 
+ *
  * Call-to-action button with primary and secondary variants.
  * Includes hover animations with soft lift effect and click tracking.
- * 
+ *
  * Requirements: 1.2, 8.4, 11.2
  */
 
@@ -38,7 +38,7 @@ export const CTAButton: React.FC<CTAButtonProps> = ({
       ctaLocation: 'hero',
       ctaHref: href,
     });
-    
+
     // Call custom onClick if provided
     if (onClick) {
       e.preventDefault();
@@ -94,7 +94,7 @@ export const CTAButton: React.FC<CTAButtonProps> = ({
 
 /**
  * CTAButtonGroup Component
- * 
+ *
  * Groups primary and secondary CTA buttons with proper spacing
  */
 export interface CTAButtonGroupProps {
@@ -117,9 +117,7 @@ export const CTAButtonGroup: React.FC<CTAButtonGroupProps> = ({
   className = '',
 }) => {
   return (
-    <div
-      className={`flex flex-col sm:flex-row gap-4 ${className}`}
-    >
+    <div className={`flex flex-col sm:flex-row gap-4 ${className}`}>
       <CTAButton
         label={primaryCTA.label}
         href={primaryCTA.href}

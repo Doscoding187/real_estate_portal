@@ -1,9 +1,9 @@
 /**
  * Keyboard Accessible Video Card Wrapper
- * 
+ *
  * Enhances VideoCard with keyboard navigation support.
  * Requirements: 5.1, 5.6
- * 
+ *
  * Features:
  * - Space/Enter to play/pause
  * - Arrow keys for navigation
@@ -90,12 +90,8 @@ export function KeyboardAccessibleVideoCard({
       role="article"
       aria-label={`Video: ${video.title || video.propertyTitle}`}
     >
-      <VideoCard
-        video={video}
-        isActive={isActive}
-        onView={onView}
-      />
-      
+      <VideoCard video={video} isActive={isActive} onView={onView} />
+
       {/* Screen reader instructions */}
       <div className="sr-only">
         Press L to like, S to share, C to contact agent. Use arrow keys to navigate between videos.

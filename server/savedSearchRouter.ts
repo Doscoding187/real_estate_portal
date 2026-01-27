@@ -11,12 +11,16 @@ export const savedSearchRouter = router({
       z.object({
         name: z.string().min(1).max(255),
         criteria: z.record(z.any()), // JSON object for filters
-        notificationFrequency: z.string().refine((val) => ['never', 'daily', 'weekly'].includes(val)).default('never'),
-      })
+        notificationFrequency: z
+          .string()
+          .refine(val => ['never', 'daily', 'weekly'].includes(val))
+          .default('never'),
+      }),
     )
     .mutation(async ({ ctx, input }) => {
       const db = await getDb();
-      if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
+      if (!db)
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
 
       await db.insert(savedSearches).values({
         userId: ctx.user.id,
@@ -30,7 +34,8 @@ export const savedSearchRouter = router({
 
   getAll: protectedProcedure.query(async ({ ctx }) => {
     const db = await getDb();
-    if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
+    if (!db)
+      throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
 
     const searches = await db
       .select()
@@ -45,7 +50,8 @@ export const savedSearchRouter = router({
     .input(z.object({ id: z.number() }))
     .mutation(async ({ ctx, input }) => {
       const db = await getDb();
-      if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
+      if (!db)
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
 
       const search = await db
         .select()

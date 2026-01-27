@@ -18,14 +18,9 @@ export const SortableMediaItem: React.FC<SortableMediaItemProps> = ({
   onRemove,
   onSetPrimary,
 }) => {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: media.id || String(index) });
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: media.id || String(index),
+  });
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -69,7 +64,7 @@ export const SortableMediaItem: React.FC<SortableMediaItemProps> = ({
           type="button"
           size="sm"
           variant="destructive"
-          onClick={(e) => {
+          onClick={e => {
             e.stopPropagation();
             onRemove(index);
           }}
@@ -92,7 +87,7 @@ export const SortableMediaItem: React.FC<SortableMediaItemProps> = ({
           type="button"
           size="sm"
           variant="outline"
-          onClick={(e) => {
+          onClick={e => {
             e.stopPropagation();
             media.id && onSetPrimary(media.id);
           }}

@@ -8,7 +8,11 @@ import { z } from 'zod';
 import { router, publicProcedure, protectedProcedure } from './_core/trpc';
 import { TRPCError } from '@trpc/server';
 import * as db from './db';
-import { autoCreateLocationHierarchy, extractPlaceComponents } from './services/locationAutoPopulation';
+import { ENV } from './_core/env';
+import {
+  autoCreateLocationHierarchy,
+  extractPlaceComponents,
+} from './services/locationAutoPopulation';
 import { calculateListingReadiness } from './lib/readiness';
 import { calculateListingQualityScore } from './lib/quality';
 
@@ -56,11 +60,15 @@ const createListingSchema = z.object({
     postalCode: z.string().optional(),
     placeId: z.string().optional(),
     // Google Places address components for auto-population
-    addressComponents: z.array(z.object({
-      long_name: z.string(),
-      short_name: z.string(),
-      types: z.array(z.string()),
-    })).optional(),
+    addressComponents: z
+      .array(
+        z.object({
+          long_name: z.string(),
+          short_name: z.string(),
+          types: z.array(z.string()),
+        }),
+      )
+      .optional(),
   }),
   // Use string IDs only
   mediaIds: z.array(z.string()),
@@ -82,10 +90,11 @@ export const listingRouter = router({
     try {
       // Generate slug from title
       const timestamp = Date.now().toString(36);
-      const slug = input.title
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, '-')
-        .replace(/^-+|-+$/g, '') + `-${timestamp}`;
+      const slug =
+        input.title
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/^-+|-+$/g, '') + `-${timestamp}`;
 
       // Prepare media array from mediaIds (which are S3 keys/URLs)
       const media = input.mediaIds.map((id, index) => {
@@ -114,15 +123,14 @@ export const listingRouter = router({
       let provinceId: number | null = null;
       let cityId: number | null = null;
       let suburbId: number | null = null;
-      let locationId: number | undefined;
 
       if (input.location.placeId && input.location.addressComponents) {
         try {
           console.log('[ListingRouter] Auto-populating location from Google Places...');
-          
+
           // Extract components from Google Places data
           const components = extractPlaceComponents(input.location.addressComponents);
-          
+
           // Auto-create city/suburb if they don't exist
           const locationIds = await autoCreateLocationHierarchy({
             placeId: input.location.placeId,
@@ -146,15 +154,23 @@ export const listingRouter = router({
         }
       }
 
-      // Fallback: Try legacy location resolution
+      // Fallback: Try legacy location resolution (for logging only)
       if (!cityId) {
         try {
-          const { locationPagesServiceEnhanced } = await import('./services/locationPagesServiceEnhanced');
+          const { locationPagesServiceEnhanced } = await import(
+            './services/locationPagesServiceEnhanced'
+          );
           const location = await locationPagesServiceEnhanced.resolveLocation(input.location);
-          locationId = location.id;
-          console.log('[ListingRouter] Fallback: Resolved location:', location.name, `(ID: ${locationId})`);
+          console.log(
+            '[ListingRouter] Fallback: Resolved location:',
+            location.name,
+            `(ID: ${location.id})`,
+          );
         } catch (error) {
-          console.warn('[ListingRouter] Location resolution failed, proceeding without location_id:', error);
+          console.warn(
+            '[ListingRouter] Location resolution failed, proceeding without location reference:',
+            error,
+          );
         }
       }
 
@@ -175,16 +191,16 @@ export const listingRouter = router({
         province: input.location.province,
         postalCode: input.location.postalCode,
         placeId: input.location.placeId,
-        locationId, // Legacy: Link to locations table (if resolved)
+        // locationId removed - column doesn't exist in database
         provinceId, // New: Auto-populated province ID
-        cityId, // New: Auto-populated city ID  
+        cityId, // New: Auto-populated city ID
         suburbId, // New: Auto-populated suburb ID
         slug,
         media,
       });
 
       // Calculate initial readiness
-      const listingData = { ...input, media }; 
+      const listingData = { ...input, media };
       const readiness = calculateListingReadiness(listingData);
       await db.updateListing(listingId, { readinessScore: readiness.score });
 
@@ -205,14 +221,14 @@ export const listingRouter = router({
       if (error instanceof TRPCError) {
         throw error;
       }
-      
+
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       console.error('Detailed error message:', errorMessage);
-      
-      throw new TRPCError({ 
-        code: 'INTERNAL_SERVER_ERROR', 
+
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
         message: `Failed to create listing: ${errorMessage}`,
-        cause: error 
+        cause: error,
       });
     }
   }),
@@ -258,10 +274,10 @@ export const listingRouter = router({
         const readiness = calculateListingReadiness(listingData);
         const quality = calculateListingQualityScore(listingData);
 
-        await db.updateListing(input.id, { 
-            readinessScore: readiness.score,
-            qualityScore: quality.score,
-            qualityBreakdown: quality.breakdown
+        await db.updateListing(input.id, {
+          readinessScore: readiness.score,
+          qualityScore: quality.score,
+          qualityBreakdown: quality.breakdown,
         });
 
         return { success: true };
@@ -273,22 +289,58 @@ export const listingRouter = router({
 
   /**
    * Get listing by ID
+   * Returns data compatible with PropertyDetail page
    */
   getById: publicProcedure.input(z.object({ id: z.number() })).query(async ({ input }) => {
     try {
-      // Fetch listing with media and analytics
+      console.log('[listing.getById] Fetching listing ID:', input.id);
+      // Fetch listing
       const listing = await db.getListingById(input.id);
+      console.log('[listing.getById] Result:', listing ? `Found: ${listing.title}` : 'NOT FOUND');
       if (!listing) {
-        throw new TRPCError({ code: 'NOT_FOUND', message: 'Listing not found' });
+        return null; // Return null instead of throwing for consistency with properties.getById
       }
 
-      const media = await db.getListingMedia(input.id);
-      const analytics = await db.getListingAnalytics(input.id);
+      // Fetch media
+      const rawMedia = await db.getListingMedia(input.id);
+
+      // Transform media to include full URLs
+      // Frontend expects 'url' field, but database has 'originalUrl'
+      const cdnBaseUrl =
+        ENV.cloudFrontUrl || `https://${ENV.s3BucketName}.s3.${ENV.awsRegion}.amazonaws.com`;
+      const media = rawMedia.map(m => ({
+        ...m,
+        url: m.originalUrl.startsWith('http') ? m.originalUrl : `${cdnBaseUrl}/${m.originalUrl}`,
+        thumbnail: m.thumbnailUrl
+          ? m.thumbnailUrl.startsWith('http')
+            ? m.thumbnailUrl
+            : `${cdnBaseUrl}/${m.thumbnailUrl}`
+          : null,
+      }));
+
+      // Fetch agent if assigned
+      let agent = null;
+      if (listing.agentId) {
+        agent = await db.getAgentById(listing.agentId);
+      }
+
+      // Normalize price field for PropertyDetail compatibility
+      // PropertyDetail expects a single 'price' field
+      const price = listing.askingPrice || listing.monthlyRent || listing.startingBid || 0;
+
+      // Map listing fields to property-compatible format
+      const propertyCompatibleListing = {
+        ...listing,
+        price, // Add normalized price field
+        listingType: listing.action, // Map action → listingType for compatibility
+        mainImage: media[0]?.url || null, // Add mainImage for cards/previews
+        area: listing.propertyDetails?.size || listing.propertyDetails?.area || 0, // Fallback area
+      };
 
       return {
-        ...listing,
-        media,
-        analytics,
+        property: propertyCompatibleListing,
+        images: media,
+        agent,
       };
     } catch (error) {
       console.error('Error fetching listing:', error);
@@ -354,7 +406,10 @@ export const listingRouter = router({
         return { success: true };
       } catch (error) {
         console.error('Error archiving listing:', error);
-        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to archive listing' });
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to archive listing',
+        });
       }
     }),
 
@@ -392,18 +447,18 @@ export const listingRouter = router({
         return { success: true };
       } catch (error) {
         console.error('Error deleting listing:', error);
-        
+
         // If it's already a TRPCError, re-throw it
         if (error instanceof TRPCError) {
           throw error;
         }
-        
+
         // Otherwise, wrap it with more details
         const errorMessage = error instanceof Error ? error.message : 'Failed to delete listing';
-        throw new TRPCError({ 
-          code: 'INTERNAL_SERVER_ERROR', 
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
           message: errorMessage,
-          cause: error 
+          cause: error,
         });
       }
     }),
@@ -557,25 +612,30 @@ export const listingRouter = router({
         const media = await db.getListingMedia(input.listingId);
         const readiness = calculateListingReadiness({ ...fullListing, media });
 
-        if (readiness.score < 75) { // Threshold 75%
-             throw new TRPCError({
-                code: 'PRECONDITION_FAILED',
-                message: `Listing is not ready for submission (${readiness.score}%). Please complete missing fields.`,
-            });
+        if (readiness.score < 75) {
+          // Threshold 75%
+          throw new TRPCError({
+            code: 'PRECONDITION_FAILED',
+            message: `Listing is not ready for submission (${readiness.score}%). Please complete missing fields.`,
+          });
         }
 
         // --- Fast-Track Approval Logic (Phase 5) ---
         // Criteria: Readiness 100%, Quality >= 85, Trusted/Verified Agent
         const quality = calculateListingQualityScore({ ...fullListing, media });
         const agent = await db.getAgentByUserId(ctx.user.id);
-        
+
         // Check if agent is verified (assuming isVerified is 1 or true)
         const isTrusted = agent?.isVerified === 1;
 
         if (readiness.score === 100 && quality.score >= 85 && isTrusted) {
-            // Auto-Approve
-            await db.approveListing(input.listingId, ctx.user.id, "Fast-Track Auto Approval (High Quality & Trusted)");
-            return { success: true, status: 'approved', fastTracked: true };
+          // Auto-Approve
+          await db.approveListing(
+            input.listingId,
+            ctx.user.id,
+            'Fast-Track Auto Approval (High Quality & Trusted)',
+          );
+          return { success: true, status: 'approved', fastTracked: true };
         }
 
         // Otherwise, add to manual review queue
@@ -591,51 +651,57 @@ export const listingRouter = router({
         });
       }
     }),
- 
-   /**
-    * Promote/Feature a listing (Soft Monetization Hook)
-    * Requires Quality Score >= 85
-    */
-   promote: protectedProcedure
-     .input(z.object({ 
-         listingId: z.number(),
-         featured: z.boolean() 
-     }))
-     .mutation(async ({ ctx, input }) => {
-       try {
-         // Verify ownership or admin
-         const listing = await db.getListingById(input.listingId);
-         if (!listing) throw new TRPCError({ code: 'NOT_FOUND', message: 'Listing not found' });
-         
-         const isOwner = listing.userId === ctx.user?.id;
-         const isSuperAdmin = ctx.user?.role === 'super_admin';
-         
-         if (!isOwner && !isSuperAdmin) {
-            throw new TRPCError({ code: 'FORBIDDEN', message: 'Not authorized' });
-         }
 
-         // Gate: Quality Score >= 85 for featuring
-         if (input.featured) {
-             const qualityScore = listing.qualityScore || 0; // Assuming it's already calculated on save
-             if (qualityScore < 85 && !isSuperAdmin) { // Admins can override
-                 throw new TRPCError({
-                     code: 'PRECONDITION_FAILED',
-                     message: `Listing Quality Score must be at least 85 to be Featured. Current score: ${qualityScore}.`
-                 });
-             }
-         }
+  /**
+   * Promote/Feature a listing (Soft Monetization Hook)
+   * Requires Quality Score >= 85
+   */
+  promote: protectedProcedure
+    .input(
+      z.object({
+        listingId: z.number(),
+        featured: z.boolean(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      try {
+        // Verify ownership or admin
+        const listing = await db.getListingById(input.listingId);
+        if (!listing) throw new TRPCError({ code: 'NOT_FOUND', message: 'Listing not found' });
 
-         // Update listing
-         // Since db.updateListing takes partial, we can use it.
-         await db.updateListing(input.listingId, { featured: input.featured ? 1 : 0 });
+        const isOwner = listing.userId === ctx.user?.id;
+        const isSuperAdmin = ctx.user?.role === 'super_admin';
 
-         return { success: true };
-       } catch (error) {
-         console.error('Error promoting listing:', error);
-         if (error instanceof TRPCError) throw error;
-         throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to update promotion status' });
-       }
-     }),
+        if (!isOwner && !isSuperAdmin) {
+          throw new TRPCError({ code: 'FORBIDDEN', message: 'Not authorized' });
+        }
+
+        // Gate: Quality Score >= 85 for featuring
+        if (input.featured) {
+          const qualityScore = listing.qualityScore || 0; // Assuming it's already calculated on save
+          if (qualityScore < 85 && !isSuperAdmin) {
+            // Admins can override
+            throw new TRPCError({
+              code: 'PRECONDITION_FAILED',
+              message: `Listing Quality Score must be at least 85 to be Featured. Current score: ${qualityScore}.`,
+            });
+          }
+        }
+
+        // Update listing
+        // Since db.updateListing takes partial, we can use it.
+        await db.updateListing(input.listingId, { featured: input.featured ? 1 : 0 });
+
+        return { success: true };
+      } catch (error) {
+        console.error('Error promoting listing:', error);
+        if (error instanceof TRPCError) throw error;
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to update promotion status',
+        });
+      }
+    }),
 
   /**
    * Approve listing (Super Admin only)
@@ -686,7 +752,13 @@ export const listingRouter = router({
       try {
         // Construct composite reason if legacy reason provided
         // Store structured data
-        await db.rejectListing(input.listingId, ctx.user.id, input.reason || 'See rejection reasons', input.reasons, input.note);
+        await db.rejectListing(
+          input.listingId,
+          ctx.user.id,
+          input.reason || 'See rejection reasons',
+          input.reasons,
+          input.note,
+        );
 
         return { success: true };
       } catch (error) {

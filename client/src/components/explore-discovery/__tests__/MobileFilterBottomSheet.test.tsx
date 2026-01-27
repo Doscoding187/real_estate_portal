@@ -35,37 +35,21 @@ describe('MobileFilterBottomSheet', () => {
   describe('Rendering', () => {
     it('should not render when isOpen is false', () => {
       render(
-        <MobileFilterBottomSheet
-          isOpen={false}
-          onClose={mockOnClose}
-          onApply={mockOnApply}
-        />
+        <MobileFilterBottomSheet isOpen={false} onClose={mockOnClose} onApply={mockOnApply} />,
       );
 
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     });
 
     it('should render when isOpen is true', () => {
-      render(
-        <MobileFilterBottomSheet
-          isOpen={true}
-          onClose={mockOnClose}
-          onApply={mockOnApply}
-        />
-      );
+      render(<MobileFilterBottomSheet isOpen={true} onClose={mockOnClose} onApply={mockOnApply} />);
 
       expect(screen.getByRole('dialog')).toBeInTheDocument();
       expect(screen.getByText('Filters')).toBeInTheDocument();
     });
 
     it('should have proper ARIA attributes', () => {
-      render(
-        <MobileFilterBottomSheet
-          isOpen={true}
-          onClose={mockOnClose}
-          onApply={mockOnApply}
-        />
-      );
+      render(<MobileFilterBottomSheet isOpen={true} onClose={mockOnClose} onApply={mockOnApply} />);
 
       const dialog = screen.getByRole('dialog');
       expect(dialog).toHaveAttribute('aria-modal', 'true');
@@ -73,13 +57,7 @@ describe('MobileFilterBottomSheet', () => {
     });
 
     it('should render all filter sections', () => {
-      render(
-        <MobileFilterBottomSheet
-          isOpen={true}
-          onClose={mockOnClose}
-          onApply={mockOnApply}
-        />
-      );
+      render(<MobileFilterBottomSheet isOpen={true} onClose={mockOnClose} onApply={mockOnApply} />);
 
       expect(screen.getByText('Property Type')).toBeInTheDocument();
       expect(screen.getByText('Price Range')).toBeInTheDocument();
@@ -91,13 +69,7 @@ describe('MobileFilterBottomSheet', () => {
 
   describe('Close Functionality', () => {
     it('should call onClose when close button is clicked', async () => {
-      render(
-        <MobileFilterBottomSheet
-          isOpen={true}
-          onClose={mockOnClose}
-          onApply={mockOnApply}
-        />
-      );
+      render(<MobileFilterBottomSheet isOpen={true} onClose={mockOnClose} onApply={mockOnApply} />);
 
       const closeButton = screen.getByLabelText('Close filters');
       await userEvent.click(closeButton);
@@ -106,13 +78,7 @@ describe('MobileFilterBottomSheet', () => {
     });
 
     it('should call onClose when backdrop is clicked', async () => {
-      render(
-        <MobileFilterBottomSheet
-          isOpen={true}
-          onClose={mockOnClose}
-          onApply={mockOnApply}
-        />
-      );
+      render(<MobileFilterBottomSheet isOpen={true} onClose={mockOnClose} onApply={mockOnApply} />);
 
       const backdrop = screen.getByRole('dialog').previousSibling as HTMLElement;
       await userEvent.click(backdrop);
@@ -121,13 +87,7 @@ describe('MobileFilterBottomSheet', () => {
     });
 
     it('should call onClose when Escape key is pressed', async () => {
-      render(
-        <MobileFilterBottomSheet
-          isOpen={true}
-          onClose={mockOnClose}
-          onApply={mockOnApply}
-        />
-      );
+      render(<MobileFilterBottomSheet isOpen={true} onClose={mockOnClose} onApply={mockOnApply} />);
 
       fireEvent.keyDown(document, { key: 'Escape' });
 
@@ -137,13 +97,7 @@ describe('MobileFilterBottomSheet', () => {
 
   describe('Apply Functionality', () => {
     it('should call onApply and onClose when Apply button is clicked', async () => {
-      render(
-        <MobileFilterBottomSheet
-          isOpen={true}
-          onClose={mockOnClose}
-          onApply={mockOnApply}
-        />
-      );
+      render(<MobileFilterBottomSheet isOpen={true} onClose={mockOnClose} onApply={mockOnApply} />);
 
       const applyButton = screen.getByLabelText('Apply filters');
       await userEvent.click(applyButton);
@@ -153,12 +107,7 @@ describe('MobileFilterBottomSheet', () => {
     });
 
     it('should work without onApply callback', async () => {
-      render(
-        <MobileFilterBottomSheet
-          isOpen={true}
-          onClose={mockOnClose}
-        />
-      );
+      render(<MobileFilterBottomSheet isOpen={true} onClose={mockOnClose} />);
 
       const applyButton = screen.getByLabelText('Apply filters');
       await userEvent.click(applyButton);
@@ -169,13 +118,7 @@ describe('MobileFilterBottomSheet', () => {
 
   describe('Snap Points', () => {
     it('should render snap point indicators', () => {
-      render(
-        <MobileFilterBottomSheet
-          isOpen={true}
-          onClose={mockOnClose}
-          onApply={mockOnApply}
-        />
-      );
+      render(<MobileFilterBottomSheet isOpen={true} onClose={mockOnClose} onApply={mockOnApply} />);
 
       const halfSnapButton = screen.getByLabelText('Snap to half height');
       const fullSnapButton = screen.getByLabelText('Snap to full height');
@@ -185,13 +128,7 @@ describe('MobileFilterBottomSheet', () => {
     });
 
     it('should allow clicking snap point indicators', async () => {
-      render(
-        <MobileFilterBottomSheet
-          isOpen={true}
-          onClose={mockOnClose}
-          onApply={mockOnApply}
-        />
-      );
+      render(<MobileFilterBottomSheet isOpen={true} onClose={mockOnClose} onApply={mockOnApply} />);
 
       const fullSnapButton = screen.getByLabelText('Snap to full height');
       await userEvent.click(fullSnapButton);
@@ -203,30 +140,18 @@ describe('MobileFilterBottomSheet', () => {
 
   describe('Keyboard Navigation', () => {
     it('should trap focus within the sheet', async () => {
-      render(
-        <MobileFilterBottomSheet
-          isOpen={true}
-          onClose={mockOnClose}
-          onApply={mockOnApply}
-        />
-      );
+      render(<MobileFilterBottomSheet isOpen={true} onClose={mockOnClose} onApply={mockOnApply} />);
 
       const dialog = screen.getByRole('dialog');
       const focusableElements = dialog.querySelectorAll(
-        'button, input, [tabindex]:not([tabindex="-1"])'
+        'button, input, [tabindex]:not([tabindex="-1"])',
       );
 
       expect(focusableElements.length).toBeGreaterThan(0);
     });
 
     it('should have proper ARIA labels on all inputs', () => {
-      render(
-        <MobileFilterBottomSheet
-          isOpen={true}
-          onClose={mockOnClose}
-          onApply={mockOnApply}
-        />
-      );
+      render(<MobileFilterBottomSheet isOpen={true} onClose={mockOnClose} onApply={mockOnApply} />);
 
       expect(screen.getByLabelText('Minimum price')).toBeInTheDocument();
       expect(screen.getByLabelText('Maximum price')).toBeInTheDocument();
@@ -234,13 +159,7 @@ describe('MobileFilterBottomSheet', () => {
     });
 
     it('should have role="group" for filter sections', () => {
-      render(
-        <MobileFilterBottomSheet
-          isOpen={true}
-          onClose={mockOnClose}
-          onApply={mockOnApply}
-        />
-      );
+      render(<MobileFilterBottomSheet isOpen={true} onClose={mockOnClose} onApply={mockOnApply} />);
 
       const groups = screen.getAllByRole('group');
       expect(groups.length).toBeGreaterThan(0);
@@ -249,34 +168,20 @@ describe('MobileFilterBottomSheet', () => {
 
   describe('Body Scroll Lock', () => {
     it('should lock body scroll when open', () => {
-      render(
-        <MobileFilterBottomSheet
-          isOpen={true}
-          onClose={mockOnClose}
-          onApply={mockOnApply}
-        />
-      );
+      render(<MobileFilterBottomSheet isOpen={true} onClose={mockOnClose} onApply={mockOnApply} />);
 
       expect(document.body.style.overflow).toBe('hidden');
     });
 
     it('should restore body scroll when closed', () => {
       const { rerender } = render(
-        <MobileFilterBottomSheet
-          isOpen={true}
-          onClose={mockOnClose}
-          onApply={mockOnApply}
-        />
+        <MobileFilterBottomSheet isOpen={true} onClose={mockOnClose} onApply={mockOnApply} />,
       );
 
       expect(document.body.style.overflow).toBe('hidden');
 
       rerender(
-        <MobileFilterBottomSheet
-          isOpen={false}
-          onClose={mockOnClose}
-          onApply={mockOnApply}
-        />
+        <MobileFilterBottomSheet isOpen={false} onClose={mockOnClose} onApply={mockOnApply} />,
       );
 
       expect(document.body.style.overflow).toBe('');
@@ -285,13 +190,7 @@ describe('MobileFilterBottomSheet', () => {
 
   describe('Filter Interactions', () => {
     it('should allow typing in price inputs', async () => {
-      render(
-        <MobileFilterBottomSheet
-          isOpen={true}
-          onClose={mockOnClose}
-          onApply={mockOnApply}
-        />
-      );
+      render(<MobileFilterBottomSheet isOpen={true} onClose={mockOnClose} onApply={mockOnApply} />);
 
       const minPriceInput = screen.getByLabelText('Minimum price');
       await userEvent.type(minPriceInput, '100000');
@@ -300,13 +199,7 @@ describe('MobileFilterBottomSheet', () => {
     });
 
     it('should allow typing in location input', async () => {
-      render(
-        <MobileFilterBottomSheet
-          isOpen={true}
-          onClose={mockOnClose}
-          onApply={mockOnApply}
-        />
-      );
+      render(<MobileFilterBottomSheet isOpen={true} onClose={mockOnClose} onApply={mockOnApply} />);
 
       const locationInput = screen.getByLabelText('Location');
       await userEvent.type(locationInput, 'Sandton');
@@ -315,13 +208,7 @@ describe('MobileFilterBottomSheet', () => {
     });
 
     it('should show reset button when filters are active', () => {
-      render(
-        <MobileFilterBottomSheet
-          isOpen={true}
-          onClose={mockOnClose}
-          onApply={mockOnApply}
-        />
-      );
+      render(<MobileFilterBottomSheet isOpen={true} onClose={mockOnClose} onApply={mockOnApply} />);
 
       // Initially no filters, so no reset button in footer
       const resetButtons = screen.getAllByText(/Reset/i);
@@ -331,13 +218,7 @@ describe('MobileFilterBottomSheet', () => {
 
   describe('Accessibility', () => {
     it('should have descriptive button labels', () => {
-      render(
-        <MobileFilterBottomSheet
-          isOpen={true}
-          onClose={mockOnClose}
-          onApply={mockOnApply}
-        />
-      );
+      render(<MobileFilterBottomSheet isOpen={true} onClose={mockOnClose} onApply={mockOnApply} />);
 
       expect(screen.getByLabelText('Close filters')).toBeInTheDocument();
       expect(screen.getByLabelText('Apply filters')).toBeInTheDocument();
@@ -345,13 +226,7 @@ describe('MobileFilterBottomSheet', () => {
     });
 
     it('should have proper heading structure', () => {
-      render(
-        <MobileFilterBottomSheet
-          isOpen={true}
-          onClose={mockOnClose}
-          onApply={mockOnApply}
-        />
-      );
+      render(<MobileFilterBottomSheet isOpen={true} onClose={mockOnClose} onApply={mockOnApply} />);
 
       const heading = screen.getByRole('heading', { name: 'Filters' });
       expect(heading).toBeInTheDocument();
@@ -359,13 +234,7 @@ describe('MobileFilterBottomSheet', () => {
     });
 
     it('should have aria-hidden on decorative elements', () => {
-      render(
-        <MobileFilterBottomSheet
-          isOpen={true}
-          onClose={mockOnClose}
-          onApply={mockOnApply}
-        />
-      );
+      render(<MobileFilterBottomSheet isOpen={true} onClose={mockOnClose} onApply={mockOnApply} />);
 
       const dialog = screen.getByRole('dialog');
       const dragHandle = dialog.querySelector('[aria-hidden="true"]');
@@ -375,13 +244,7 @@ describe('MobileFilterBottomSheet', () => {
 
   describe('Feature Parity', () => {
     it('should have all filter options from desktop panel', () => {
-      render(
-        <MobileFilterBottomSheet
-          isOpen={true}
-          onClose={mockOnClose}
-          onApply={mockOnApply}
-        />
-      );
+      render(<MobileFilterBottomSheet isOpen={true} onClose={mockOnClose} onApply={mockOnApply} />);
 
       // Property types
       expect(screen.getByText('Residential')).toBeInTheDocument();

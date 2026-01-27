@@ -1,78 +1,91 @@
-import React from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Slider } from '@/components/ui/slider';
-import { 
-  Castle, Scale, FileText, TreePine, Waves, Dumbbell, 
-  ArrowRight, ArrowLeft, Info, Check
-} from 'lucide-react';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Scale, Info, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useDevelopmentWizard } from '@/hooks/useDevelopmentWizard';
-import { toast } from 'sonner';
 
-
-// Estate classification options
-const ESTATE_CLASSIFICATIONS = [
-  { value: 'golf_estate', label: 'Golf Estate' },
-  { value: 'eco_estate', label: 'Eco Estate' },
-  { value: 'lifestyle_estate', label: 'Lifestyle Estate' },
-  { value: 'security_estate', label: 'Security Estate' },
-  { value: 'waterfront_estate', label: 'Waterfront Estate' },
-  { value: 'country_estate', label: 'Country Estate' },
-  { value: 'retirement_estate', label: 'Retirement Estate' },
+// Governance Type Options
+const GOVERNANCE_TYPES = [
+  { value: 'hoa', label: 'Homeowners Association (HOA)' },
+  { value: 'body_corporate', label: 'Body Corporate' },
+  { value: 'property_management', label: 'Property Management Company' },
+  { value: 'other', label: 'Other' },
 ];
 
 export function EstateProfilePhase() {
-  const { 
-    estateProfile, 
-    setEstateProfile, 
-    setIdentity, // Sync global fields
-    setPhase 
-  } = useDevelopmentWizard();
+  const { developmentData, stepData, saveWorkflowStepData } = useDevelopmentWizard();
 
-  const handleClassificationSelect = (classification: string) => {
-    setEstateProfile({ classification });
-  };
+  // Canonical source of truth: Step Data
+  const savedData = stepData?.governance_finances || {};
 
-  const handleHOAToggle = (checked: boolean) => {
-    setEstateProfile({ hasHOA: checked });
+  // Local state for immediate UI responsiveness, hydrated from saved step data
+  const [formData, setFormData] = useState({
+    hasGoverningBody: savedData.hasGoverningBody ?? false,
+    governanceType: savedData.governanceType || '',
+    levyRange: savedData.levyRange || { min: 0, max: 0 },
+    architecturalGuidelines: savedData.architecturalGuidelines ?? false,
+    guidelinesSummary: savedData.guidelinesSummary || '',
+    rightsAndTaxes: savedData.rightsAndTaxes || { min: 0, max: 0 },
+  });
+
+  // Hydrate local state when step data changes (e.g. on mount or nav)
+  useEffect(() => {
+    const saved = stepData?.governance_finances || {};
+    setFormData(prev => ({
+      ...prev,
+      hasGoverningBody: saved.hasGoverningBody ?? prev.hasGoverningBody,
+      governanceType: saved.governanceType || prev.governanceType,
+      levyRange: saved.levyRange || prev.levyRange,
+      architecturalGuidelines: saved.architecturalGuidelines ?? prev.architecturalGuidelines,
+      guidelinesSummary: saved.guidelinesSummary || prev.guidelinesSummary,
+      rightsAndTaxes: saved.rightsAndTaxes || prev.rightsAndTaxes,
+    }));
+  }, [stepData?.governance_finances]);
+
+  // Helper to persist updates to workflow engine
+  const handleUpdate = useCallback(
+    (updates: Partial<typeof formData>) => {
+      setFormData(prev => ({ ...prev, ...updates }));
+
+      // IMPORTANT: Clear dependent fields if governing body is toggled off
+      if ('hasGoverningBody' in updates && updates.hasGoverningBody === false) {
+        saveWorkflowStepData('governance_finances', {
+          ...updates,
+          governanceType: undefined,
+          levyRange: undefined,
+          architecturalGuidelines: undefined,
+          guidelinesSummary: undefined,
+        });
+      } else {
+        saveWorkflowStepData('governance_finances', updates);
+      }
+    },
+    [saveWorkflowStepData],
+  );
+
+  const handleGovernanceTypeSelect = (type: string) => {
+    handleUpdate({ governanceType: type });
   };
 
   const handleLevyChange = (values: number[]) => {
-    setEstateProfile({ 
-      levyRange: { 
-        min: values[0], 
-        max: values[1] 
-      } 
-    });
-    // Sync to global development data for persistence
-    setIdentity({
-      monthlyLevyFrom: values[0],
-      monthlyLevyTo: values[1]
+    handleUpdate({
+      levyRange: { min: values[0], max: values[1] },
     });
   };
 
-  const handleGuidelinesToggle = (checked: boolean) => {
-    setEstateProfile({ architecturalGuidelines: checked });
-  };
-
-  const handleBack = () => {
-    setPhase(4); // Back to Location (will be keyed later)
-  };
-
-  const handleContinue = () => {
-    // Estate profile is optional, but if filled, should have classification
-    if (!estateProfile.classification) {
-      toast.error('Please select an estate classification');
-      return;
-    }
-    
-    setPhase(7); // Forward to Amenities
+  const handleRatesChange = (e: React.ChangeEvent<HTMLInputElement>, field: 'min' | 'max') => {
+    const val = parseInt(e.target.value) || 0;
+    handleUpdate({
+      rightsAndTaxes: {
+        ...formData.rightsAndTaxes,
+        [field]: val,
+      },
+    });
   };
 
   const formatCurrency = (value: number) => {
@@ -85,163 +98,183 @@ export function EstateProfilePhase() {
   };
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 animate-in fade-in duration-500">
       {/* Header */}
       <div className="text-center md:text-left">
         <div className="flex items-center gap-3 mb-2">
-          <div className="p-2 bg-purple-100 rounded-xl">
-            <Castle className="w-6 h-6 text-purple-600" />
+          <div className="p-2 bg-blue-100 rounded-xl">
+            <Scale className="w-6 h-6 text-blue-600" />
           </div>
           <div>
-            <h2 className="text-2xl md:text-3xl font-bold text-slate-900">
-              Development Profile
-            </h2>
+            <h2 className="text-2xl md:text-3xl font-bold text-slate-900">Governance & Finances</h2>
             <p className="text-slate-600">
-              Configure development-level details, rules, and shared amenities.
+              Configure the management structure and financial obligations.
             </p>
           </div>
         </div>
       </div>
 
       {/* Info Banner */}
-      <div className="flex items-start gap-3 p-4 bg-purple-50 border border-purple-100 rounded-xl">
-        <Info className="w-5 h-5 text-purple-600 shrink-0 mt-0.5" />
-        <div className="text-sm text-purple-700">
-          <strong>Estate-level information</strong> describes the overall estate or community 
-          that your development is part of. This is separate from the development's own amenities.
+      <div className="flex items-start gap-3 p-4 bg-blue-50 border border-blue-100 rounded-xl">
+        <Info className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
+        <div className="text-sm text-blue-700">
+          This information clarifies the ongoing costs and rules for potential buyers, increasing
+          transparency and trust.
         </div>
       </div>
 
-      {/* Estate Classification */}
+      {/* Main Configuration Card */}
       <Card className="border-slate-200/60 shadow-sm">
         <CardHeader className="pb-4">
-          <CardTitle className="text-xl text-slate-900">Estate Classification</CardTitle>
-          <CardDescription>How would you classify this estate or community?</CardDescription>
+          <CardTitle className="text-xl text-slate-900">Governing Body</CardTitle>
+          <CardDescription>Is there an entity specific to this development?</CardDescription>
         </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-            {ESTATE_CLASSIFICATIONS.map((option) => {
-              const isSelected = estateProfile.classification === option.value;
-              
-              return (
-                <button
-                  key={option.value}
-                  onClick={() => handleClassificationSelect(option.value)}
-                  className={cn(
-                    "p-4 rounded-xl border-2 text-left transition-all duration-200",
-                    isSelected 
-                      ? "border-purple-500 bg-purple-50 text-purple-900" 
-                      : "border-slate-200 hover:border-purple-300 hover:bg-purple-50/30 text-slate-700"
-                  )}
-                >
-                  <span className="font-medium text-sm flex items-center gap-2">
-                    {isSelected && <Check className="w-4 h-4 text-purple-600" />}
-                    {option.label}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* HOA / Body Corporate */}
-      <Card className="border-slate-200/60 shadow-sm">
-        <CardHeader className="pb-4">
-          <CardTitle className="text-xl text-slate-900 flex items-center gap-2">
-            <Scale className="w-5 h-5 text-blue-600" />
-            Governance & Levies
-          </CardTitle>
-          <CardDescription>Does this estate have a governing body?</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          {/* HOA Toggle */}
-          <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl">
+        <CardContent className="space-y-8">
+          {/* 1. Primary Question */}
+          <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-100">
             <div>
               <Label className="text-base font-medium text-slate-900">
-                HOA / Body Corporate
+                Managed Estate / Body Corporate
               </Label>
               <p className="text-sm text-slate-500 mt-1">
-                Is there a Homeowners Association or Body Corporate?
+                Is this development part of a managed estate, complex, or body corporate?
               </p>
             </div>
-            <Switch 
-              checked={estateProfile.hasHOA} 
-              onCheckedChange={handleHOAToggle}
+            <Switch
+              checked={formData.hasGoverningBody}
+              onCheckedChange={checked => handleUpdate({ hasGoverningBody: checked })}
             />
           </div>
 
-          {/* Levy Range - Only if HOA exists */}
-          {estateProfile.hasHOA && (
-            <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
-              <div>
-                <Label className="text-sm font-medium text-slate-700">
-                  Monthly Levy Range
+          {/* CONDITIONAL: Governance Details */}
+          {formData.hasGoverningBody && (
+            <div className="space-y-6 pt-2 border-t border-slate-100 animate-in fade-in slide-in-from-top-2">
+              {/* 2. Governance Type */}
+              <div className="space-y-3">
+                <Label className="text-base text-slate-900">
+                  Type of Governing Body <span className="text-red-500">*</span>
                 </Label>
-                <p className="text-xs text-slate-500 mt-0.5">
-                  Approximate range for monthly levies
-                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {GOVERNANCE_TYPES.map(type => (
+                    <div
+                      key={type.value}
+                      onClick={() => handleGovernanceTypeSelect(type.value)}
+                      className={cn(
+                        'cursor-pointer p-3 rounded-lg border flex items-center gap-3 transition-all',
+                        formData.governanceType === type.value
+                          ? 'border-blue-500 bg-blue-50 text-blue-900'
+                          : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50',
+                      )}
+                    >
+                      <div
+                        className={cn(
+                          'w-4 h-4 rounded-full border border-slate-400 flex items-center justify-center shrink-0',
+                          formData.governanceType === type.value && 'border-blue-600 bg-blue-600',
+                        )}
+                      >
+                        {formData.governanceType === type.value && (
+                          <div className="w-1.5 h-1.5 bg-white rounded-full" />
+                        )}
+                      </div>
+                      <span className="text-sm font-medium">{type.label}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
-              
-              <div className="px-2">
-                <Slider
-                  value={[estateProfile.levyRange.min, estateProfile.levyRange.max]}
-                  onValueChange={handleLevyChange}
-                  min={0}
-                  max={20000}
-                  step={500}
-                  className="w-full"
+
+              {/* 3. Levies */}
+              <div className="space-y-4 pt-4">
+                <div>
+                  <Label className="text-sm font-medium text-slate-700">
+                    Estimated Monthly Levies
+                  </Label>
+                  <p className="text-xs text-slate-500">Range for units in this development</p>
+                </div>
+                <div className="px-2">
+                  <Slider
+                    value={[formData.levyRange.min, formData.levyRange.max]}
+                    onValueChange={handleLevyChange}
+                    min={0}
+                    max={20000}
+                    step={100}
+                    className="w-full"
+                  />
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-slate-600">
+                    From:{' '}
+                    <strong className="text-slate-900">
+                      {formatCurrency(formData.levyRange.min)}
+                    </strong>
+                  </span>
+                  <span className="text-slate-600">
+                    To:{' '}
+                    <strong className="text-slate-900">
+                      {formatCurrency(formData.levyRange.max)}
+                    </strong>
+                  </span>
+                </div>
+              </div>
+
+              {/* 4. Architectural Guidelines */}
+              <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl">
+                <div>
+                  <Label className="text-sm font-medium text-slate-900">
+                    Architectural Guidelines
+                  </Label>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Are there strict design rules owners must follow?
+                  </p>
+                </div>
+                <Switch
+                  checked={formData.architecturalGuidelines}
+                  onCheckedChange={checked => handleUpdate({ architecturalGuidelines: checked })}
                 />
-              </div>
-              
-              <div className="flex justify-between text-sm">
-                <span className="text-slate-600">
-                  From: <strong className="text-slate-900">{formatCurrency(estateProfile.levyRange.min)}</strong>
-                </span>
-                <span className="text-slate-600">
-                  To: <strong className="text-slate-900">{formatCurrency(estateProfile.levyRange.max)}</strong>
-                </span>
               </div>
             </div>
           )}
+        </CardContent>
+      </Card>
 
-          {/* Architectural Guidelines */}
-          <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl">
-            <div>
-              <Label className="text-base font-medium text-slate-900">
-                Architectural Guidelines
-              </Label>
-              <p className="text-sm text-slate-500 mt-1">
-                Are there enforced building and design guidelines?
-              </p>
+      {/* Rates & Taxes (Always Visible) */}
+      <Card className="border-slate-200/60 shadow-sm">
+        <CardHeader className="pb-4">
+          <CardTitle className="text-lg text-slate-900">Rates & Taxes (Municipal)</CardTitle>
+          <CardDescription>Estimated municipal rates owners can expect to pay.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label className="text-xs text-slate-500">Min Estimate</Label>
+              <div className="relative">
+                <span className="absolute left-3 top-2.5 text-slate-400 text-sm">R</span>
+                <Input
+                  type="number"
+                  className="pl-7"
+                  placeholder="0"
+                  value={formData.rightsAndTaxes?.min || ''}
+                  onChange={e => handleRatesChange(e, 'min')}
+                />
+              </div>
             </div>
-            <Switch 
-              checked={estateProfile.architecturalGuidelines} 
-              onCheckedChange={handleGuidelinesToggle}
-            />
+            <div className="space-y-2">
+              <Label className="text-xs text-slate-500">Max Estimate</Label>
+              <div className="relative">
+                <span className="absolute left-3 top-2.5 text-slate-400 text-sm">R</span>
+                <Input
+                  type="number"
+                  className="pl-7"
+                  placeholder="0"
+                  value={formData.rightsAndTaxes?.max || ''}
+                  onChange={e => handleRatesChange(e, 'max')}
+                />
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Navigation */}
-      <div className="flex justify-between pt-8 border-t border-slate-200">
-        <Button
-          variant="outline"
-          onClick={handleBack}
-          className="px-6 h-11 border-slate-300"
-        >
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Back
-        </Button>
-        <Button
-          onClick={handleContinue}
-          size="lg"
-          className="px-8 h-11 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 shadow-md hover:shadow-lg transition-all duration-300"
-        >
-          Continue to Amenities
-          <ArrowRight className="w-4 h-4 ml-2" />
-        </Button>
-      </div>
+      {/* Navigation managed by WizardEngine */}
     </div>
   );
 }

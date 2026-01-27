@@ -2,7 +2,7 @@
  * SkipLink Component
  * Allows keyboard users to skip to main content
  * Part of accessibility enhancements
- * 
+ *
  * Requirements: 12.1
  */
 
@@ -24,11 +24,7 @@ export interface SkipLinkProps {
   className?: string;
 }
 
-const SkipLink: React.FC<SkipLinkProps> = ({
-  targetId,
-  children,
-  className,
-}) => {
+const SkipLink: React.FC<SkipLinkProps> = ({ targetId, children, className }) => {
   return (
     <a
       href={`#${targetId}`}
@@ -43,7 +39,7 @@ const SkipLink: React.FC<SkipLinkProps> = ({
         'focus:shadow-lg focus:outline-none',
         'focus:ring-4 focus:ring-blue-500/50 focus:ring-offset-2',
         'transition-all duration-200',
-        className
+        className,
       )}
     >
       {children}

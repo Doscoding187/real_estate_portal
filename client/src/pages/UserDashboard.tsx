@@ -37,10 +37,13 @@ export default function UserDashboard() {
   // Fetch user dashboard data
   const { data: favorites, isLoading: favoritesLoading } = trpc.favorites.list.useQuery();
   const { data: savedSearches, isLoading: searchesLoading } = trpc.savedSearch.getAll.useQuery();
-  const { data: allProperties } = trpc.properties.search.useQuery({ status: 'available', limit: 100 });
+  const { data: allProperties } = trpc.properties.search.useQuery({
+    status: 'available',
+    limit: 100,
+  });
 
   // Get comparison properties details
-  const comparisonProperties = allProperties?.filter((p) => comparedProperties.includes(p.id)) || [];
+  const comparisonProperties = allProperties?.filter(p => comparedProperties.includes(p.id)) || [];
 
   const deleteSavedSearchMutation = trpc.savedSearch.delete.useMutation({
     onSuccess: () => {
@@ -78,12 +81,17 @@ export default function UserDashboard() {
         <div className="flex items-center gap-3 mb-8">
           <User className="h-8 w-8 text-emerald-600" />
           <h1 className="text-4xl font-bold text-slate-800">My Dashboard</h1>
-          <Badge className="bg-gradient-to-r from-emerald-100 to-teal-100 text-emerald-700 border-emerald-200">User</Badge>
+          <Badge className="bg-gradient-to-r from-emerald-100 to-teal-100 text-emerald-700 border-emerald-200">
+            User
+          </Badge>
         </div>
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <Card className="bg-white/70 backdrop-blur-sm rounded-[1.5rem] border-white/40 shadow-[0_8px_30px_rgba(8,_112,_184,_0.06)] hover:shadow-[0_12px_40px_rgba(8,_112,_184,_0.1)] transition-all cursor-pointer" onClick={() => document.getElementById('comparison-tab')?.click()}>
+          <Card
+            className="bg-white/70 backdrop-blur-sm rounded-[1.5rem] border-white/40 shadow-[0_8px_30px_rgba(8,_112,_184,_0.06)] hover:shadow-[0_12px_40px_rgba(8,_112,_184,_0.1)] transition-all cursor-pointer"
+            onClick={() => document.getElementById('comparison-tab')?.click()}
+          >
             <CardHeader className="pb-3">
               <CardDescription className="text-slate-500 flex items-center gap-2">
                 <GitCompare className="h-4 w-4" />
@@ -92,7 +100,10 @@ export default function UserDashboard() {
               <CardTitle className="text-3xl text-slate-800">{comparedProperties.length}</CardTitle>
             </CardHeader>
           </Card>
-          <Card className="bg-white/70 backdrop-blur-sm rounded-[1.5rem] border-white/40 shadow-[0_8px_30px_rgba(8,_112,_184,_0.06)] hover:shadow-[0_12px_40px_rgba(8,_112,_184,_0.1)] transition-all cursor-pointer" onClick={() => document.getElementById('favorites-tab')?.click()}>
+          <Card
+            className="bg-white/70 backdrop-blur-sm rounded-[1.5rem] border-white/40 shadow-[0_8px_30px_rgba(8,_112,_184,_0.06)] hover:shadow-[0_12px_40px_rgba(8,_112,_184,_0.1)] transition-all cursor-pointer"
+            onClick={() => document.getElementById('favorites-tab')?.click()}
+          >
             <CardHeader className="pb-3">
               <CardDescription className="text-slate-500 flex items-center gap-2">
                 <Heart className="h-4 w-4" />
@@ -101,13 +112,18 @@ export default function UserDashboard() {
               <CardTitle className="text-3xl text-slate-800">{favorites?.length || 0}</CardTitle>
             </CardHeader>
           </Card>
-          <Card className="bg-white/70 backdrop-blur-sm rounded-[1.5rem] border-white/40 shadow-[0_8px_30px_rgba(8,_112,_184,_0.06)] hover:shadow-[0_12px_40px_rgba(8,_112,_184,_0.1)] transition-all cursor-pointer" onClick={() => document.getElementById('searches-tab')?.click()}>
+          <Card
+            className="bg-white/70 backdrop-blur-sm rounded-[1.5rem] border-white/40 shadow-[0_8px_30px_rgba(8,_112,_184,_0.06)] hover:shadow-[0_12px_40px_rgba(8,_112,_184,_0.1)] transition-all cursor-pointer"
+            onClick={() => document.getElementById('searches-tab')?.click()}
+          >
             <CardHeader className="pb-3">
               <CardDescription className="text-slate-500 flex items-center gap-2">
                 <Search className="h-4 w-4" />
                 Saved Searches
               </CardDescription>
-              <CardTitle className="text-3xl text-slate-800">{savedSearches?.length || 0}</CardTitle>
+              <CardTitle className="text-3xl text-slate-800">
+                {savedSearches?.length || 0}
+              </CardTitle>
             </CardHeader>
           </Card>
           <Card className="bg-white/70 backdrop-blur-sm rounded-[1.5rem] border-white/40 shadow-[0_8px_30px_rgba(8,_112,_184,_0.06)] hover:shadow-[0_12px_40px_rgba(8,_112,_184,_0.1)] transition-all">
@@ -125,9 +141,15 @@ export default function UserDashboard() {
         <Tabs defaultValue="overview" className="w-full">
           <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="comparison" id="comparison-tab">Comparison</TabsTrigger>
-            <TabsTrigger value="favorites" id="favorites-tab">Favorites</TabsTrigger>
-            <TabsTrigger value="searches" id="searches-tab">Searches</TabsTrigger>
+            <TabsTrigger value="comparison" id="comparison-tab">
+              Comparison
+            </TabsTrigger>
+            <TabsTrigger value="favorites" id="favorites-tab">
+              Favorites
+            </TabsTrigger>
+            <TabsTrigger value="searches" id="searches-tab">
+              Searches
+            </TabsTrigger>
             <TabsTrigger value="appointments">Appointments</TabsTrigger>
             <TabsTrigger value="notifications">Notifications</TabsTrigger>
           </TabsList>
@@ -150,14 +172,19 @@ export default function UserDashboard() {
                   ) : (
                     <>
                       <div className="space-y-2 mb-4">
-                        {comparisonProperties.slice(0, 3).map((property) => {
+                        {comparisonProperties.slice(0, 3).map(property => {
                           const normalized = normalizePropertyForUI(property);
                           if (!normalized) return null;
                           return (
-                            <div key={property.id} className="flex items-center justify-between border-b pb-2">
+                            <div
+                              key={property.id}
+                              className="flex items-center justify-between border-b pb-2"
+                            >
                               <div className="flex-1">
                                 <div className="font-medium text-sm">{normalized.title}</div>
-                                <div className="text-xs text-muted-foreground">R {normalized.price.toLocaleString()}</div>
+                                <div className="text-xs text-muted-foreground">
+                                  R {normalized.price.toLocaleString()}
+                                </div>
                               </div>
                             </div>
                           );
@@ -188,14 +215,21 @@ export default function UserDashboard() {
                   ) : (
                     <ul className="space-y-3">
                       {favorites!.slice(0, 5).map((property: any) => (
-                        <li key={property.id} className="flex items-center justify-between border-b pb-2">
+                        <li
+                          key={property.id}
+                          className="flex items-center justify-between border-b pb-2"
+                        >
                           <div className="flex-1">
                             <div className="font-medium">{property.title}</div>
                             <div className="text-sm text-muted-foreground">
                               {property.city}, {property.province}
                             </div>
                           </div>
-                          <Button variant="outline" size="sm" onClick={() => setLocation(`/property/${property.id}`)}>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setLocation(`/property/${property.id}`)}
+                          >
                             View
                           </Button>
                         </li>
@@ -217,7 +251,10 @@ export default function UserDashboard() {
                     <X className="h-4 w-4 mr-2" />
                     Clear All
                   </Button>
-                  <Button onClick={() => setLocation('/compare')} disabled={comparedProperties.length < 2}>
+                  <Button
+                    onClick={() => setLocation('/compare')}
+                    disabled={comparedProperties.length < 2}
+                  >
                     <GitCompare className="h-4 w-4 mr-2" />
                     Compare Now ({comparedProperties.length})
                   </Button>
@@ -229,7 +266,9 @@ export default function UserDashboard() {
               <Card>
                 <CardContent className="py-8 text-center">
                   <GitCompare className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                  <p className="text-muted-foreground mb-2">You haven't saved any properties for comparison yet.</p>
+                  <p className="text-muted-foreground mb-2">
+                    You haven't saved any properties for comparison yet.
+                  </p>
                   <p className="text-sm text-muted-foreground mb-4">
                     Click the + button on property cards to add them to your comparison list.
                   </p>
@@ -238,7 +277,7 @@ export default function UserDashboard() {
               </Card>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {comparisonProperties.map((property) => {
+                {comparisonProperties.map(property => {
                   const normalized = normalizePropertyForUI(property);
                   if (!normalized) return null;
 
@@ -261,7 +300,9 @@ export default function UserDashboard() {
                           </Button>
                         </div>
                         <div className="p-4">
-                          <h3 className="font-semibold text-lg line-clamp-1 mb-2">{normalized.title}</h3>
+                          <h3 className="font-semibold text-lg line-clamp-1 mb-2">
+                            {normalized.title}
+                          </h3>
                           <div className="flex items-center gap-1 text-sm text-muted-foreground mb-2">
                             <MapPin className="h-3 w-3" />
                             {normalized.city}
@@ -397,14 +438,18 @@ export default function UserDashboard() {
                         </Button>
                       </div>
                       <div className="flex flex-wrap gap-2 mb-4">
-                        {search.criteria && Object.entries(search.criteria as any).map(([key, value]: [string, any]) => {
-                          if (!value || (Array.isArray(value) && value.length === 0)) return null;
-                          return (
-                            <Badge key={key} variant="secondary" className="text-xs">
-                              {key}: {Array.isArray(value) ? value.join(', ') : String(value)}
-                            </Badge>
-                          );
-                        })}
+                        {search.criteria &&
+                          Object.entries(search.criteria as any).map(
+                            ([key, value]: [string, any]) => {
+                              if (!value || (Array.isArray(value) && value.length === 0))
+                                return null;
+                              return (
+                                <Badge key={key} variant="secondary" className="text-xs">
+                                  {key}: {Array.isArray(value) ? value.join(', ') : String(value)}
+                                </Badge>
+                              );
+                            },
+                          )}
                       </div>
                       <Button
                         variant="outline"

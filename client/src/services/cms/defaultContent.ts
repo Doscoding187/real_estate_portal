@@ -1,6 +1,6 @@
 /**
  * Default CMS Content
- * 
+ *
  * This file contains the default content for the Advertise With Us page.
  * This content is used as fallback and initial content before CMS is configured.
  */
@@ -10,7 +10,8 @@ import { AdvertisePageContent } from './types';
 export const defaultContent: AdvertisePageContent = {
   hero: {
     headline: 'Reach Thousands of Verified Home Seekers',
-    subheadline: 'Advertise your properties, developments, and services to high-intent buyers and renters across South Africa. AI-powered visibility, verified leads, and full dashboard control.',
+    subheadline:
+      'Advertise your properties, developments, and services to high-intent buyers and renters across South Africa. AI-powered visibility, verified leads, and full dashboard control.',
     primaryCTA: {
       label: 'Get Started',
       href: '/register',
@@ -50,7 +51,8 @@ export const defaultContent: AdvertisePageContent = {
       id: 'agent',
       iconName: 'Home',
       title: 'Real Estate Agent',
-      benefit: 'Showcase your listings to thousands of verified buyers and renters actively searching for properties.',
+      benefit:
+        'Showcase your listings to thousands of verified buyers and renters actively searching for properties.',
       href: '/advertise/agents',
       order: 1,
     },
@@ -58,7 +60,8 @@ export const defaultContent: AdvertisePageContent = {
       id: 'developer',
       iconName: 'Building2',
       title: 'Property Developer',
-      benefit: 'Promote your developments with immersive media, reach qualified buyers, and track leads in real-time.',
+      benefit:
+        'Promote your developments with immersive media, reach qualified buyers, and track leads in real-time.',
       href: '/advertise/developers',
       order: 2,
     },
@@ -66,7 +69,8 @@ export const defaultContent: AdvertisePageContent = {
       id: 'bank',
       iconName: 'Landmark',
       title: 'Bank / Financial Institution',
-      benefit: 'Connect with home buyers at the perfect moment and offer tailored financing solutions.',
+      benefit:
+        'Connect with home buyers at the perfect moment and offer tailored financing solutions.',
       href: '/advertise/banks',
       order: 3,
     },
@@ -74,7 +78,8 @@ export const defaultContent: AdvertisePageContent = {
       id: 'bond-originator',
       iconName: 'FileText',
       title: 'Bond Originator',
-      benefit: 'Capture high-intent leads looking for home loans and grow your origination pipeline.',
+      benefit:
+        'Capture high-intent leads looking for home loans and grow your origination pipeline.',
       href: '/advertise/bond-originators',
       order: 4,
     },
@@ -82,7 +87,8 @@ export const defaultContent: AdvertisePageContent = {
       id: 'service-provider',
       iconName: 'Wrench',
       title: 'Property Service Provider',
-      benefit: 'Reach homeowners and property managers who need your services, from maintenance to renovations.',
+      benefit:
+        'Reach homeowners and property managers who need your services, from maintenance to renovations.',
       href: '/advertise/service-providers',
       order: 5,
     },
@@ -93,28 +99,32 @@ export const defaultContent: AdvertisePageContent = {
       id: 'high-intent',
       iconName: 'Target',
       headline: 'High-Intent Audience',
-      description: 'Reach users actively searching for properties with clear purchase or rental intent, not casual browsers.',
+      description:
+        'Reach users actively searching for properties with clear purchase or rental intent, not casual browsers.',
       order: 1,
     },
     {
       id: 'ai-visibility',
       iconName: 'Sparkles',
       headline: 'AI-Driven Visibility',
-      description: 'Our recommendation engine ensures your properties appear to the right buyers at the right time.',
+      description:
+        'Our recommendation engine ensures your properties appear to the right buyers at the right time.',
       order: 2,
     },
     {
       id: 'verified-leads',
       iconName: 'ShieldCheck',
       headline: 'Verified Leads',
-      description: 'Every inquiry is validated for authenticity, so you spend time on real opportunities, not spam.',
+      description:
+        'Every inquiry is validated for authenticity, so you spend time on real opportunities, not spam.',
       order: 3,
     },
     {
       id: 'dashboard-control',
       iconName: 'LayoutDashboard',
       headline: 'Dashboard Control',
-      description: 'Manage all your listings, track performance, and respond to leads from one powerful dashboard.',
+      description:
+        'Manage all your listings, track performance, and respond to leads from one powerful dashboard.',
       order: 4,
     },
   ],
@@ -125,14 +135,16 @@ export const defaultContent: AdvertisePageContent = {
       stepNumber: 1,
       iconName: 'UserPlus',
       title: 'Create Your Profile',
-      description: 'Sign up and complete your partner profile with your business details and branding.',
+      description:
+        'Sign up and complete your partner profile with your business details and branding.',
     },
     {
       id: 'step-2',
       stepNumber: 2,
       iconName: 'Upload',
       title: 'Add Your Listings',
-      description: 'Upload properties, developments, or services with rich media and detailed information.',
+      description:
+        'Upload properties, developments, or services with rich media and detailed information.',
     },
     {
       id: 'step-3',
@@ -148,14 +160,16 @@ export const defaultContent: AdvertisePageContent = {
       id: 'listing-promotion',
       iconName: 'Megaphone',
       title: 'Listing Promotion',
-      description: 'Showcase your properties with premium placement and enhanced visibility across the platform.',
+      description:
+        'Showcase your properties with premium placement and enhanced visibility across the platform.',
       order: 1,
     },
     {
       id: 'explore-feed',
       iconName: 'Video',
       title: 'Explore Feed Ads',
-      description: 'Reach buyers through short-form video content in our TikTok-style property discovery feed.',
+      description:
+        'Reach buyers through short-form video content in our TikTok-style property discovery feed.',
       order: 2,
     },
     {
@@ -176,14 +190,16 @@ export const defaultContent: AdvertisePageContent = {
       id: 'team-collaboration',
       iconName: 'UsersRound',
       title: 'Team Collaboration',
-      description: 'Invite team members, assign leads, and collaborate seamlessly within your organization.',
+      description:
+        'Invite team members, assign leads, and collaborate seamlessly within your organization.',
       order: 5,
     },
     {
       id: 'media-templates',
       iconName: 'Image',
       title: 'Media Templates',
-      description: 'Create professional property marketing materials with our built-in design templates.',
+      description:
+        'Create professional property marketing materials with our built-in design templates.',
       order: 6,
     },
   ],
@@ -277,7 +293,8 @@ export const defaultContent: AdvertisePageContent = {
 
   finalCTA: {
     headline: 'Ready to Reach More Buyers?',
-    subtext: 'Join hundreds of property professionals already growing their business on our platform.',
+    subtext:
+      'Join hundreds of property professionals already growing their business on our platform.',
     primaryCTA: {
       label: 'Start Advertising Now',
       href: '/register',
@@ -294,49 +311,57 @@ export const defaultContent: AdvertisePageContent = {
     {
       id: 'faq-1',
       question: 'How much does it cost to advertise on the platform?',
-      answer: 'Pricing varies by partner type and plan tier. Agents can start from R499/month, developers from R2,999/month, and banks/service providers have custom enterprise plans. All plans include core features like listing promotion and lead management, with premium tiers offering advanced analytics and priority placement.',
+      answer:
+        'Pricing varies by partner type and plan tier. Agents can start from R499/month, developers from R2,999/month, and banks/service providers have custom enterprise plans. All plans include core features like listing promotion and lead management, with premium tiers offering advanced analytics and priority placement.',
       order: 1,
     },
     {
       id: 'faq-2',
       question: 'What types of advertising opportunities are available?',
-      answer: 'We offer multiple advertising formats including traditional property listings, Explore feed video ads, boost campaigns for increased visibility, featured placements on location pages, and sponsored content in our discovery engine. Each format is designed to reach high-intent property seekers at different stages of their journey.',
+      answer:
+        'We offer multiple advertising formats including traditional property listings, Explore feed video ads, boost campaigns for increased visibility, featured placements on location pages, and sponsored content in our discovery engine. Each format is designed to reach high-intent property seekers at different stages of their journey.',
       order: 2,
     },
     {
       id: 'faq-3',
       question: 'How do I get started with advertising?',
-      answer: 'Getting started is simple: Create your partner profile, add your listings or content, and start receiving leads. Our onboarding team will guide you through the setup process, help optimize your profile, and provide training on our dashboard tools. Most partners are fully set up within 24-48 hours.',
+      answer:
+        'Getting started is simple: Create your partner profile, add your listings or content, and start receiving leads. Our onboarding team will guide you through the setup process, help optimize your profile, and provide training on our dashboard tools. Most partners are fully set up within 24-48 hours.',
       order: 3,
     },
     {
       id: 'faq-4',
       question: 'What makes your platform different from other property portals?',
-      answer: 'We combine AI-driven visibility with verified lead quality. Our recommendation engine ensures your properties reach the right audience, while our verification process filters out low-quality inquiries. Plus, our Explore feed offers unique short-form video advertising that traditional portals don\'t provide.',
+      answer:
+        "We combine AI-driven visibility with verified lead quality. Our recommendation engine ensures your properties reach the right audience, while our verification process filters out low-quality inquiries. Plus, our Explore feed offers unique short-form video advertising that traditional portals don't provide.",
       order: 4,
     },
     {
       id: 'faq-5',
       question: 'How are leads verified and delivered?',
-      answer: 'All leads go through our verification process which checks contact information, filters spam, and assesses intent signals. Verified leads are delivered instantly to your dashboard with full contact details, property interest, and affordability indicators. You can also set up email and SMS notifications for immediate follow-up.',
+      answer:
+        'All leads go through our verification process which checks contact information, filters spam, and assesses intent signals. Verified leads are delivered instantly to your dashboard with full contact details, property interest, and affordability indicators. You can also set up email and SMS notifications for immediate follow-up.',
       order: 5,
     },
     {
       id: 'faq-6',
       question: 'Can I manage multiple properties or developments?',
-      answer: 'Yes! Our platform is built for scale. Agents can manage unlimited listings, developers can showcase multiple developments with unit-level detail, and agencies can collaborate with team members. All plans include bulk upload tools, media management, and centralized lead tracking.',
+      answer:
+        'Yes! Our platform is built for scale. Agents can manage unlimited listings, developers can showcase multiple developments with unit-level detail, and agencies can collaborate with team members. All plans include bulk upload tools, media management, and centralized lead tracking.',
       order: 6,
     },
     {
       id: 'faq-7',
       question: 'What kind of analytics and reporting do you provide?',
-      answer: 'Our dashboard provides comprehensive analytics including views, engagement rates, lead conversion metrics, and ROI tracking. Premium plans include advanced insights like audience demographics, competitor benchmarking, and predictive analytics to optimize your advertising strategy.',
+      answer:
+        'Our dashboard provides comprehensive analytics including views, engagement rates, lead conversion metrics, and ROI tracking. Premium plans include advanced insights like audience demographics, competitor benchmarking, and predictive analytics to optimize your advertising strategy.',
       order: 7,
     },
     {
       id: 'faq-8',
       question: 'Is there a contract or can I cancel anytime?',
-      answer: 'We offer flexible month-to-month plans with no long-term contracts. You can upgrade, downgrade, or cancel anytime. For annual commitments, we provide significant discounts (up to 20% off). Enterprise partners can discuss custom terms with our sales team.',
+      answer:
+        'We offer flexible month-to-month plans with no long-term contracts. You can upgrade, downgrade, or cancel anytime. For annual commitments, we provide significant discounts (up to 20% off). Enterprise partners can discuss custom terms with our sales team.',
       order: 8,
     },
   ],

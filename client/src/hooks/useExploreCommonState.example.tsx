@@ -35,7 +35,7 @@ export function ExploreHomeExample() {
         <div className="max-w-7xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between mb-4">
             <h1 className="text-2xl font-bold">Explore</h1>
-            
+
             {/* View mode toggle */}
             <div className="flex items-center gap-2 bg-gray-100 rounded-full p-1">
               <button
@@ -83,13 +83,11 @@ export function ExploreHomeExample() {
           <DiscoveryCardFeed
             categoryId={selectedCategoryId}
             filters={filters}
-            onItemClick={(item) => console.log('Item clicked:', item)}
+            onItemClick={item => console.log('Item clicked:', item)}
           />
         )}
-        
-        {viewMode === 'videos' && (
-          <ExploreVideoFeed categoryId={selectedCategoryId} />
-        )}
+
+        {viewMode === 'videos' && <ExploreVideoFeed categoryId={selectedCategoryId} />}
       </main>
 
       {/* Filter button */}
@@ -133,16 +131,11 @@ export function ExploreHomeExample() {
  * Example 2: ExploreFeed with feed type management
  */
 export function ExploreFeedExample() {
-  const {
-    feedType,
-    setFeedType,
-    selectedCategoryId,
-    setSelectedCategoryId,
-    filters,
-  } = useExploreCommonState({
-    initialViewMode: 'videos',
-    initialFeedType: 'recommended',
-  });
+  const { feedType, setFeedType, selectedCategoryId, setSelectedCategoryId, filters } =
+    useExploreCommonState({
+      initialViewMode: 'videos',
+      initialFeedType: 'recommended',
+    });
 
   return (
     <div className="h-screen bg-black">
@@ -177,10 +170,7 @@ export function ExploreFeedExample() {
       </div>
 
       {/* Video feed */}
-      <ExploreVideoFeed
-        categoryId={selectedCategoryId}
-        filters={filters}
-      />
+      <ExploreVideoFeed categoryId={selectedCategoryId} filters={filters} />
     </div>
   );
 }
@@ -212,7 +202,7 @@ export function ExploreMapExample() {
               variant="light"
             />
           </div>
-          
+
           {/* Filter button */}
           <button
             onClick={toggleFilters}
@@ -234,7 +224,7 @@ export function ExploreMapExample() {
         <MapHybridView
           categoryId={selectedCategoryId}
           filters={filters}
-          onPropertyClick={(id) => console.log('Property clicked:', id)}
+          onPropertyClick={id => console.log('Property clicked:', id)}
         />
       </div>
 
@@ -266,10 +256,7 @@ export function ExploreMapExample() {
  * Example 4: Minimal usage for ExploreShorts
  */
 export function ExploreShortsExample() {
-  const {
-    feedType,
-    selectedCategoryId,
-  } = useExploreCommonState({
+  const { feedType, selectedCategoryId } = useExploreCommonState({
     initialViewMode: 'shorts',
     initialFeedType: 'recommended',
   });
@@ -290,12 +277,7 @@ export function ExploreShortsExample() {
  * Example 5: Custom filter management
  */
 export function CustomFilterExample() {
-  const {
-    showFilters,
-    setShowFilters,
-    filters,
-    filterActions,
-  } = useExploreCommonState();
+  const { showFilters, setShowFilters, filters, filterActions } = useExploreCommonState();
 
   const handleApplyPriceFilter = () => {
     filterActions.updateCommonFilters({
@@ -331,10 +313,7 @@ export function CustomFilterExample() {
         >
           3 Bedrooms
         </button>
-        <button
-          onClick={handleResetFilters}
-          className="px-4 py-2 bg-gray-500 text-white rounded"
-        >
+        <button onClick={handleResetFilters} className="px-4 py-2 bg-gray-500 text-white rounded">
           Reset
         </button>
       </div>
@@ -343,7 +322,9 @@ export function CustomFilterExample() {
       <div className="mb-4">
         <p>Active Filters: {filterActions.getFilterCount()}</p>
         <p>Property Type: {filters.propertyType || 'All'}</p>
-        <p>Price Range: R{filters.priceMin?.toLocaleString()} - R{filters.priceMax?.toLocaleString()}</p>
+        <p>
+          Price Range: R{filters.priceMin?.toLocaleString()} - R{filters.priceMax?.toLocaleString()}
+        </p>
       </div>
 
       {/* Full filter panel */}

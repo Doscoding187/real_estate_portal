@@ -61,7 +61,11 @@ export default function ListingOversight() {
   const limit = 20;
 
   // Use the listing approval queue endpoint instead of admin.listProperties
-  const { data: allData, isLoading, refetch } = trpc.listing.getApprovalQueue.useQuery({
+  const {
+    data: allData,
+    isLoading,
+    refetch,
+  } = trpc.listing.getApprovalQueue.useQuery({
     status: statusFilter !== 'all' ? (statusFilter as any) : undefined,
   });
 
@@ -177,7 +181,7 @@ export default function ListingOversight() {
             <Button
               size="sm"
               className="bg-blue-600 hover:bg-blue-700 text-white flex-1"
-              onClick={(e) => {
+              onClick={e => {
                 e.stopPropagation();
                 setLocation(`/admin/review/${property.id}`);
               }}
@@ -188,7 +192,7 @@ export default function ListingOversight() {
             <Button
               size="sm"
               variant="destructive"
-              onClick={(e) => {
+              onClick={e => {
                 e.stopPropagation();
                 handleDelete(property);
               }}
@@ -202,7 +206,7 @@ export default function ListingOversight() {
           <Button
             size="sm"
             variant="destructive"
-            onClick={(e) => {
+            onClick={e => {
               e.stopPropagation();
               handleDelete(property);
             }}
@@ -258,7 +262,10 @@ export default function ListingOversight() {
                   <SelectItem value="archived">Archived</SelectItem>
                 </SelectContent>
               </Select>
-              <Button variant="outline" className="flex items-center gap-2 bg-white/50 hover:bg-white">
+              <Button
+                variant="outline"
+                className="flex items-center gap-2 bg-white/50 hover:bg-white"
+              >
                 <Filter className="h-4 w-4" />
                 Advanced Filters
               </Button>
@@ -337,10 +344,15 @@ export default function ListingOversight() {
                   </TableHeader>
                   <TableBody>
                     {data.map((property: any) => (
-                      <TableRow key={property.id} className="hover:bg-white/40 border-slate-100 transition-colors">
+                      <TableRow
+                        key={property.id}
+                        className="hover:bg-white/40 border-slate-100 transition-colors"
+                      >
                         <TableCell>
                           <div>
-                            <div className="font-medium text-slate-700">{property.listingTitle}</div>
+                            <div className="font-medium text-slate-700">
+                              {property.listingTitle}
+                            </div>
                             <div className="text-sm text-muted-foreground">
                               Submitted by User #{property.submittedBy}
                             </div>
@@ -357,7 +369,9 @@ export default function ListingOversight() {
                             {property.status}
                           </Badge>
                         </TableCell>
-                        <TableCell className="text-slate-600">{new Date(property.submittedAt).toLocaleDateString()}</TableCell>
+                        <TableCell className="text-slate-600">
+                          {new Date(property.submittedAt).toLocaleDateString()}
+                        </TableCell>
                         <TableCell>{getActionButton(property)}</TableCell>
                       </TableRow>
                     ))}
@@ -441,7 +455,8 @@ export default function ListingOversight() {
             <DialogHeader>
               <DialogTitle>Delete Property Listing</DialogTitle>
               <DialogDescription>
-                Are you sure you want to delete "{propertyToDelete?.listingTitle}"? This action cannot be undone.
+                Are you sure you want to delete "{propertyToDelete?.listingTitle}"? This action
+                cannot be undone.
               </DialogDescription>
             </DialogHeader>
             <div className="flex justify-end gap-2 mt-4">

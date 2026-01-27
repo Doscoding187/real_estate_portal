@@ -1,6 +1,6 @@
 /**
  * Development Wizard Validation Rules
- * 
+ *
  * Defines all validation rules for the development wizard steps
  */
 
@@ -33,7 +33,7 @@ export const createDevelopmentValidationEngine = (): ValidationEngine => {
     validator: compose(
       required('Development name is required'),
       minLength(5, 'Development name must be at least 5 characters'),
-      maxLength(255, 'Development name must not exceed 255 characters')
+      maxLength(255, 'Development name must not exceed 255 characters'),
     ),
     message: 'Invalid development name',
     trigger: 'blur',
@@ -44,7 +44,7 @@ export const createDevelopmentValidationEngine = (): ValidationEngine => {
     field: 'address',
     validator: compose(
       required('Address is required'),
-      minLength(5, 'Address must be at least 5 characters')
+      minLength(5, 'Address must be at least 5 characters'),
     ),
     message: 'Invalid address',
     trigger: 'blur',
@@ -99,7 +99,7 @@ export const createDevelopmentValidationEngine = (): ValidationEngine => {
     validator: compose(
       required('Number of bedrooms is required'),
       numeric('Bedrooms must be a number'),
-      min(0, 'Bedrooms cannot be negative')
+      min(0, 'Bedrooms cannot be negative'),
     ),
     message: 'Invalid bedrooms',
     trigger: 'blur',
@@ -110,7 +110,7 @@ export const createDevelopmentValidationEngine = (): ValidationEngine => {
     validator: compose(
       required('Price is required'),
       numeric('Price must be a number'),
-      min(1, 'Price must be greater than 0')
+      min(1, 'Price must be greater than 0'),
     ),
     message: 'Invalid price',
     trigger: 'blur',
@@ -121,7 +121,7 @@ export const createDevelopmentValidationEngine = (): ValidationEngine => {
     validator: compose(
       required('Available units is required'),
       numeric('Available units must be a number'),
-      min(0, 'Available units cannot be negative')
+      min(0, 'Available units cannot be negative'),
     ),
     message: 'Invalid available units',
     trigger: 'blur',
@@ -137,7 +137,7 @@ export const createDevelopmentValidationEngine = (): ValidationEngine => {
     validator: compose(
       required('Development description is required'),
       minLength(50, 'Description must be at least 50 characters'),
-      maxLength(5000, 'Description must not exceed 5000 characters')
+      maxLength(5000, 'Description must not exceed 5000 characters'),
     ),
     message: 'Invalid description',
     trigger: 'blur',
@@ -149,7 +149,7 @@ export const createDevelopmentValidationEngine = (): ValidationEngine => {
     validator: compose(
       required('Total units is required'),
       numeric('Total units must be a number'),
-      min(1, 'Total units must be at least 1')
+      min(1, 'Total units must be at least 1'),
     ),
     message: 'Invalid total units',
     trigger: 'blur',
@@ -183,7 +183,7 @@ export const createDevelopmentValidationEngine = (): ValidationEngine => {
     field: 'developerName',
     validator: compose(
       required('Developer name is required'),
-      minLength(2, 'Developer name must be at least 2 characters')
+      minLength(2, 'Developer name must be at least 2 characters'),
     ),
     message: 'Invalid developer name',
     trigger: 'blur',
@@ -194,7 +194,7 @@ export const createDevelopmentValidationEngine = (): ValidationEngine => {
     field: 'contactDetails.name',
     validator: compose(
       required('Contact name is required'),
-      minLength(2, 'Contact name must be at least 2 characters')
+      minLength(2, 'Contact name must be at least 2 characters'),
     ),
     message: 'Invalid contact name',
     trigger: 'blur',
@@ -203,10 +203,7 @@ export const createDevelopmentValidationEngine = (): ValidationEngine => {
   // Contact email validation
   engine.addRule({
     field: 'contactDetails.email',
-    validator: compose(
-      required('Contact email is required'),
-      email('Invalid email format')
-    ),
+    validator: compose(required('Contact email is required'), email('Invalid email format')),
     message: 'Invalid contact email',
     trigger: 'blur',
   });
@@ -214,10 +211,7 @@ export const createDevelopmentValidationEngine = (): ValidationEngine => {
   // Contact phone validation
   engine.addRule({
     field: 'contactDetails.phone',
-    validator: compose(
-      required('Contact phone is required'),
-      phone('Invalid phone number format')
-    ),
+    validator: compose(required('Contact phone is required'), phone('Invalid phone number format')),
     message: 'Invalid contact phone',
     trigger: 'blur',
   });
@@ -231,7 +225,7 @@ export const createDevelopmentValidationEngine = (): ValidationEngine => {
 export const validateDevelopmentStep = async (
   step: number,
   data: any,
-  context?: ValidationContext
+  context?: ValidationContext,
 ): Promise<{ isValid: boolean; errors: Record<string, string> }> => {
   const engine = createDevelopmentValidationEngine();
   const errors: Record<string, string> = {};
@@ -255,7 +249,7 @@ export const validateDevelopmentStep = async (
       : data[field];
 
     const result = await engine.validate(field, value, { ...context, currentStep: step });
-    
+
     if (!result.isValid && result.error) {
       errors[field] = result.error;
     }
@@ -273,7 +267,7 @@ export const validateDevelopmentStep = async (
 export const getDevelopmentFieldError = async (
   field: string,
   value: any,
-  context?: ValidationContext
+  context?: ValidationContext,
 ): Promise<string | undefined> => {
   const engine = createDevelopmentValidationEngine();
   const result = await engine.validate(field, value, context);

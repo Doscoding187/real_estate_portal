@@ -5,7 +5,11 @@ import { EnhancedNavbar } from '@/components/EnhancedNavbar';
 import { EnhancedHero } from '@/components/EnhancedHero';
 import { SimpleDevelopmentCard } from '@/components/SimpleDevelopmentCard';
 import { Button } from '@/components/ui/button';
-import { Building2, Home as HomeIcon, Building, Warehouse, MapPin, Tractor, ArrowRight } from 'lucide-react';
+import {
+  Building2,
+  MapPin,
+  ArrowRight,
+} from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { PropertyInsights } from '@/components/PropertyInsights';
 import { DiscoverProperties } from '@/components/DiscoverProperties';
@@ -29,82 +33,80 @@ export default function Home() {
     'Limpopo',
     'North West',
     'Free State',
-    'Northern Cape'
+    'Northern Cape',
   ];
 
   // Only show top 5 popular provinces in hero for better UX
   const popularProvinces = provinces.slice(0, 5);
 
   const provinceNavItems = popularProvinces.map(p => ({
-      label: p,
-      path: `/${p.toLowerCase().replace(/\s+/g, '-')}`
+    label: p,
+    path: `/${p.toLowerCase().replace(/\s+/g, '-')}`,
   }));
 
   // Helper to parse images
   const parseImages = (imagesVal: any): string[] => {
-      if (!imagesVal) return [];
-      
-      let parsed = imagesVal;
-      if (typeof imagesVal === 'string') {
-          try {
-              parsed = JSON.parse(imagesVal);
-          } catch (e) {
-              return [];
-          }
-      }
+    if (!imagesVal) return [];
 
-      if (Array.isArray(parsed)) {
-          return parsed.map((img: any) => {
-              if (typeof img === 'string') return img;
-              if (typeof img === 'object' && img !== null && 'url' in img) return img.url;
-              return '';
-          }).filter(Boolean);
+    let parsed = imagesVal;
+    if (typeof imagesVal === 'string') {
+      try {
+        parsed = JSON.parse(imagesVal);
+      } catch (e) {
+        return [];
       }
-      
-      return [];
+    }
+
+    if (Array.isArray(parsed)) {
+      return parsed
+        .map((img: any) => {
+          if (typeof img === 'string') return img;
+          if (typeof img === 'object' && img !== null && 'url' in img) return img.url;
+          return '';
+        })
+        .filter(Boolean);
+    }
+
+    return [];
   };
 
+
   // Fetch real developments from database
-  const { data: gautengDevelopments = [], isLoading: gautengLoading } = trpc.developer.getPublishedDevelopments.useQuery({ 
-    province: 'Gauteng', 
-    limit: 8 
-  });
-  const { data: westernCapeDevelopments = [], isLoading: westernCapeLoading } = trpc.developer.getPublishedDevelopments.useQuery({ 
-    province: 'Western Cape', 
-    limit: 8 
-  });
-  const { data: kznDevelopments = [], isLoading: kznLoading } = trpc.developer.getPublishedDevelopments.useQuery({ 
-    province: 'KwaZulu-Natal', 
-    limit: 8 
-  });
+  const { data: gautengDevelopments = [], isLoading: gautengLoading } =
+    trpc.developer.getPublishedDevelopments.useQuery({
+      province: 'Gauteng',
+      limit: 10,
+    });
+  const { data: westernCapeDevelopments = [], isLoading: westernCapeLoading } =
+    trpc.developer.getPublishedDevelopments.useQuery({
+      province: 'Western Cape',
+      limit: 10,
+    });
+  const { data: kznDevelopments = [], isLoading: kznLoading } =
+    trpc.developer.getPublishedDevelopments.useQuery({
+      province: 'KwaZulu-Natal',
+      limit: 10,
+    });
 
   // Group developments by province
   const developmentsByProvince: Record<string, any[]> = {
-    'Gauteng': gautengDevelopments,
+    Gauteng: gautengDevelopments,
     'Western Cape': westernCapeDevelopments,
     'KwaZulu-Natal': kznDevelopments,
     'Eastern Cape': [],
-    'Mpumalanga': [],
-    'Limpopo': [],
+    Mpumalanga: [],
+    Limpopo: [],
     'North West': [],
     'Free State': [],
     'Northern Cape': [],
   };
-
-
-
 
   return (
     <div className="min-h-screen bg-background">
       <EnhancedNavbar />
 
       {/* Enhanced Hero Section */}
-      <EnhancedHero 
-        heroMode="province" 
-        navigationItems={provinceNavItems}
-      />
-
-
+      <EnhancedHero heroMode="province" navigationItems={provinceNavItems} />
 
       {/* Hot Selling Developments Section */}
       <div className="py-fluid-xl bg-gradient-to-b from-slate-50/50 to-white">
@@ -119,12 +121,13 @@ export default function Home() {
             </h2>
             <p className="text-slate-600 max-w-3xl leading-relaxed">
               A handpicked collection of the country's most in-demand residential developments.
-              These properties offer unmatched value in top cities with ideal locations, smart amenities, and trusted builders.
+              These properties offer unmatched value in top cities with ideal locations, smart
+              amenities, and trusted builders.
             </p>
           </div>
 
           <Tabs value={selectedProvince} onValueChange={setSelectedProvince} className="w-full">
-            <div className="flex justify-start mb-10">
+            <div className="flex justify-start mb-10 overflow-x-auto pb-2 scrollbar-hide">
               <TabsList className="inline-flex flex-wrap justify-start gap-2 bg-white/80 backdrop-blur-sm p-2 rounded-2xl shadow-lg border border-slate-200/60 h-auto">
                 {provinces.map(province => (
                   <TabsTrigger
@@ -141,15 +144,30 @@ export default function Home() {
             {provinces.map(province => (
               <TabsContent key={province} value={province} className="mt-0 animate-slide-up">
                 {developmentsByProvince[province] && developmentsByProvince[province].length > 0 ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                  /* Carousel Layout */
+                  <div className="flex gap-4 overflow-x-auto pb-4 snap-x scrollbar-hide -mx-4 px-4 sm:mx-0 sm:px-0">
                     {developmentsByProvince[province].map(development => {
+                      // Backend now returns explicit heroImage. Fallback to parsed images if needed (though backend clears images array now).
                       const images = parseImages(development.images);
+                      const displayImage = development.heroImage || images[0] || '';
+
                       return (
-                        <SimpleDevelopmentCard 
-                          key={development.id} 
-                          {...development} 
-                          image={images[0] || ''}
-                        />
+                        <div key={development.id} className="flex-none w-[280px] sm:w-[300px] snap-center">
+                          <SimpleDevelopmentCard
+                            id={development.id}
+                            title={development.name}
+                            city={development.city}
+                            suburb={development.suburb}
+                            priceRange={{
+                              min: development.priceFrom || 0,
+                              max: development.priceTo || 0,
+                            }}
+                            image={displayImage}
+                            slug={development.slug}
+                            isHotSelling={development.isHotSelling}
+                            isHighDemand={development.isHighDemand}
+                          />
+                        </div>
                       );
                     })}
                   </div>
@@ -165,14 +183,15 @@ export default function Home() {
                       Check back soon for new listings in {province}
                     </p>
                   </div>
-                )}
+                )
+                }
               </TabsContent>
             ))}
           </Tabs>
 
           <div className="text-left mt-10">
-            <Button 
-              size="lg" 
+            <Button
+              size="lg"
               onClick={() => {
                 const provinceSlug = selectedProvince.toLowerCase().replace(/\s+/g, '-');
                 setLocation(`/${provinceSlug}`);
@@ -186,12 +205,9 @@ export default function Home() {
         </div>
       </div>
 
-
-
-
       {/* Property Categories Section (Restored with Location Picker) */}
       <PropertyCategories />
-      
+
       {/* Property Price Insights Section */}
       <PropertyInsights />
 
@@ -200,8 +216,6 @@ export default function Home() {
 
       {/* Top Localities Section */}
       <TopLocalities />
-
-
 
       {/* Top Developers Section (legacy mock data) */}
       <TopDevelopers />
@@ -254,12 +268,16 @@ export default function Home() {
                 className="relative bg-white p-8 rounded-2xl border border-slate-200/60 hover:shadow-2xl transition-all duration-500 hover:-translate-y-1 group"
               >
                 {/* Quote mark decoration */}
-                <div className="absolute top-6 right-6 text-6xl text-[#2774AE]/10 group-hover:text-[#2774AE]/20 transition-colors font-serif leading-none">"</div>
-                
+                <div className="absolute top-6 right-6 text-6xl text-[#2774AE]/10 group-hover:text-[#2774AE]/20 transition-colors font-serif leading-none">
+                  "
+                </div>
+
                 <div className="relative">
                   <div className="flex items-center gap-1 mb-4">
                     {[...Array(testimonial.rating)].map((_, i) => (
-                      <span key={i} className="text-yellow-400 text-xl">★</span>
+                      <span key={i} className="text-yellow-400 text-xl">
+                        ★
+                      </span>
                     ))}
                   </div>
                   <p className="text-slate-700 mb-6 leading-relaxed text-base italic">

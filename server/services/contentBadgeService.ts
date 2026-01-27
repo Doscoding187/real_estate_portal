@@ -1,6 +1,6 @@
-import { db } from "../db";
-import { exploreContent, exploreShorts } from "../../drizzle/schema";
-import { eq } from "drizzle-orm";
+import { db } from '../db';
+import { exploreContent, exploreShorts } from '../../drizzle/schema';
+import { eq } from 'drizzle-orm';
 
 /**
  * Content Badge Types
@@ -34,32 +34,32 @@ export const BADGE_CONFIG: Record<BadgeType, ContentBadge> = {
     type: 'property',
     icon: '🏠',
     color: 'primary',
-    label: 'Property'
+    label: 'Property',
   },
   expert_tip: {
     type: 'expert_tip',
     icon: '💡',
     color: 'amber',
-    label: 'Expert Tip'
+    label: 'Expert Tip',
   },
   service: {
     type: 'service',
     icon: '🛠️',
     color: 'blue',
-    label: 'Service'
+    label: 'Service',
   },
   finance: {
     type: 'finance',
     icon: '💰',
     color: 'green',
-    label: 'Finance'
+    label: 'Finance',
   },
   design: {
     type: 'design',
     icon: '📐',
     color: 'purple',
-    label: 'Design'
-  }
+    label: 'Design',
+  },
 };
 
 /**
@@ -68,37 +68,37 @@ export const BADGE_CONFIG: Record<BadgeType, ContentBadge> = {
  */
 const CONTENT_TYPE_TO_BADGE: Record<string, BadgeType> = {
   // Property-related content (Primary)
-  'property': 'property',
-  'property_tour': 'property',
-  'development_showcase': 'property',
-  'agent_walkthrough': 'property',
-  'listing': 'property',
-  
+  property: 'property',
+  property_tour: 'property',
+  development_showcase: 'property',
+  agent_walkthrough: 'property',
+  listing: 'property',
+
   // Educational content (Secondary)
-  'educational': 'expert_tip',
-  'how_to': 'expert_tip',
-  'market_insight': 'expert_tip',
-  'trend': 'expert_tip',
-  
+  educational: 'expert_tip',
+  how_to: 'expert_tip',
+  market_insight: 'expert_tip',
+  trend: 'expert_tip',
+
   // Service-related content (Secondary)
-  'service': 'service',
-  'showcase': 'service',
-  'renovation': 'service',
-  'home_improvement': 'service',
-  
+  service: 'service',
+  showcase: 'service',
+  renovation: 'service',
+  home_improvement: 'service',
+
   // Finance-related content (Secondary)
-  'finance': 'finance',
-  'investment': 'finance',
-  'bond': 'finance',
-  'mortgage': 'finance',
-  'affordability': 'finance',
-  
+  finance: 'finance',
+  investment: 'finance',
+  bond: 'finance',
+  mortgage: 'finance',
+  affordability: 'finance',
+
   // Design-related content (Tertiary)
-  'design': 'design',
-  'architecture': 'design',
-  'interior': 'design',
-  'inspiration': 'design',
-  'decor': 'design'
+  design: 'design',
+  architecture: 'design',
+  interior: 'design',
+  inspiration: 'design',
+  decor: 'design',
 };
 
 /**
@@ -107,33 +107,33 @@ const CONTENT_TYPE_TO_BADGE: Record<string, BadgeType> = {
  */
 const CONTENT_TYPE_TO_CATEGORY: Record<string, ContentCategory> = {
   // Primary content (Properties & Developments)
-  'property': 'primary',
-  'property_tour': 'primary',
-  'development_showcase': 'primary',
-  'agent_walkthrough': 'primary',
-  'listing': 'primary',
-  
+  property: 'primary',
+  property_tour: 'primary',
+  development_showcase: 'primary',
+  agent_walkthrough: 'primary',
+  listing: 'primary',
+
   // Secondary content (Services, Finance, Education)
-  'educational': 'secondary',
-  'how_to': 'secondary',
-  'market_insight': 'secondary',
-  'service': 'secondary',
-  'showcase': 'secondary',
-  'renovation': 'secondary',
-  'home_improvement': 'secondary',
-  'finance': 'secondary',
-  'investment': 'secondary',
-  'bond': 'secondary',
-  'mortgage': 'secondary',
-  'affordability': 'secondary',
-  
+  educational: 'secondary',
+  how_to: 'secondary',
+  market_insight: 'secondary',
+  service: 'secondary',
+  showcase: 'secondary',
+  renovation: 'secondary',
+  home_improvement: 'secondary',
+  finance: 'secondary',
+  investment: 'secondary',
+  bond: 'secondary',
+  mortgage: 'secondary',
+  affordability: 'secondary',
+
   // Tertiary content (Inspiration, Trends)
-  'design': 'tertiary',
-  'architecture': 'tertiary',
-  'interior': 'tertiary',
-  'inspiration': 'tertiary',
-  'decor': 'tertiary',
-  'trend': 'tertiary'
+  design: 'tertiary',
+  architecture: 'tertiary',
+  interior: 'tertiary',
+  inspiration: 'tertiary',
+  decor: 'tertiary',
+  trend: 'tertiary',
 };
 
 /**
@@ -152,7 +152,7 @@ export interface ExploreContentItem {
 /**
  * Content Badge Service
  * Determines and manages content type badges for the Explore feed
- * 
+ *
  * Requirements: 4.1, 4.2, 4.3, 4.4, 4.5, 4.6, 4.7
  */
 export class ContentBadgeService {
@@ -160,7 +160,7 @@ export class ContentBadgeService {
    * Determine badge type for content based on content type and metadata
    * Requirement 4.1: Map content categories to badge types
    * Requirement 4.7: Handle multi-category content (primary badge only)
-   * 
+   *
    * @param content - The content item to determine badge for
    * @returns The badge type for the content
    */
@@ -172,7 +172,7 @@ export class ContentBadgeService {
 
     // Determine badge from content type
     const contentType = content.contentType?.toLowerCase() || '';
-    
+
     // Direct mapping from content type
     if (CONTENT_TYPE_TO_BADGE[contentType]) {
       return CONTENT_TYPE_TO_BADGE[contentType];
@@ -207,7 +207,7 @@ export class ContentBadgeService {
 
     // Priority order: property > finance > service > design > expert_tip
     // This ensures primary category takes precedence for multi-category content
-    
+
     // Check for property-related tags
     const propertyTags = ['property', 'listing', 'for_sale', 'development', 'estate'];
     if (lowerTags.some(tag => propertyTags.some(pt => tag.includes(pt)))) {
@@ -285,16 +285,17 @@ export class ContentBadgeService {
 
     // Determine category from content type
     const contentType = content.contentType?.toLowerCase() || '';
-    
+
     if (CONTENT_TYPE_TO_CATEGORY[contentType]) {
       return CONTENT_TYPE_TO_CATEGORY[contentType];
     }
 
     // Default to primary for property-related content
     const badgeType = this.determineBadgeType(content);
-    
+
     if (badgeType === 'property') return 'primary';
-    if (badgeType === 'finance' || badgeType === 'service' || badgeType === 'expert_tip') return 'secondary';
+    if (badgeType === 'finance' || badgeType === 'service' || badgeType === 'expert_tip')
+      return 'secondary';
     if (badgeType === 'design') return 'tertiary';
 
     return 'primary';
@@ -303,7 +304,7 @@ export class ContentBadgeService {
   /**
    * Get badge configuration for a specific badge type
    * Requirement 4.2, 4.3, 4.4, 4.5, 4.6: Return badge rendering configuration
-   * 
+   *
    * @param badgeType - The badge type to get configuration for
    * @returns The badge configuration with icon, color, and label
    */
@@ -332,18 +333,14 @@ export class ContentBadgeService {
   /**
    * Update content with badge type and category
    * Updates the badge_type and content_category columns in the database
-   * 
+   *
    * @param contentId - The content ID to update
    * @param isShort - Whether this is a short (video) or regular content
    */
   async updateContentBadge(contentId: string | number, isShort: boolean = false): Promise<void> {
     // Fetch the content
     const table = isShort ? exploreShorts : exploreContent;
-    const content = await db
-      .select()
-      .from(table)
-      .where(eq(table.id, contentId))
-      .limit(1);
+    const content = await db.select().from(table).where(eq(table.id, contentId)).limit(1);
 
     if (content.length === 0) {
       throw new Error(`Content not found: ${contentId}`);
@@ -368,11 +365,14 @@ export class ContentBadgeService {
   /**
    * Batch update badges for multiple content items
    * Useful for backfilling or bulk operations
-   * 
+   *
    * @param contentIds - Array of content IDs to update
    * @param isShort - Whether these are shorts (videos) or regular content
    */
-  async batchUpdateContentBadges(contentIds: (string | number)[], isShort: boolean = false): Promise<void> {
+  async batchUpdateContentBadges(
+    contentIds: (string | number)[],
+    isShort: boolean = false,
+  ): Promise<void> {
     for (const contentId of contentIds) {
       try {
         await this.updateContentBadge(contentId, isShort);

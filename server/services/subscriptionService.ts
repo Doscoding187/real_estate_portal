@@ -104,7 +104,10 @@ export async function getUserSubscriptionWithPlan(userId: number) {
 // TRIAL MANAGEMENT
 // =====================================================
 
-export async function startTrial(userId: number, category: PlanCategory): Promise<UserSubscription> {
+export async function startTrial(
+  userId: number,
+  category: PlanCategory,
+): Promise<UserSubscription> {
   const db = await getDb();
   if (!db) throw new Error('Database not available');
 
@@ -121,7 +124,9 @@ export async function startTrial(userId: number, category: PlanCategory): Promis
   }
 
   const trialStartsAt = new Date();
-  const trialEndsAt = new Date(trialStartsAt.getTime() + trialPlan.trial_days * 24 * 60 * 60 * 1000);
+  const trialEndsAt = new Date(
+    trialStartsAt.getTime() + trialPlan.trial_days * 24 * 60 * 60 * 1000,
+  );
 
   // Create or update subscription
   if (existing) {
@@ -153,7 +158,7 @@ export async function startTrial(userId: number, category: PlanCategory): Promis
 
   const subscription = await getUserSubscription(userId);
   if (!subscription) throw new Error('Failed to create subscription');
-  
+
   return subscription;
 }
 
@@ -277,7 +282,7 @@ export async function checkFeatureAccess(
   permission: keyof PlanPermissions,
 ): Promise<FeatureAccess> {
   const subData = await getUserSubscriptionWithPlan(userId);
-  
+
   if (!subData || !subData.plan) {
     return {
       has_access: false,
@@ -290,8 +295,10 @@ export async function checkFeatureAccess(
   const hasPermission = plan.permissions[permission];
 
   if (!hasPermission) {
-    const upgradePlan = plan.upgrade_to_plan_id ? await getPlanByPlanId(plan.upgrade_to_plan_id) : null;
-    
+    const upgradePlan = plan.upgrade_to_plan_id
+      ? await getPlanByPlanId(plan.upgrade_to_plan_id)
+      : null;
+
     return {
       has_access: false,
       reason: `Feature requires ${upgradePlan?.display_name || 'upgrade'}`,
@@ -309,7 +316,7 @@ export async function checkLimit(
   currentCount: number,
 ): Promise<LimitCheck> {
   const subData = await getUserSubscriptionWithPlan(userId);
-  
+
   if (!subData || !subData.plan) {
     return {
       is_allowed: false,
@@ -321,7 +328,7 @@ export async function checkLimit(
   }
 
   const limit = subData.plan.limits[limitType] || 0;
-  
+
   // -1 means unlimited
   if (limit === -1) {
     return {
@@ -334,7 +341,7 @@ export async function checkLimit(
   }
 
   const remaining = Math.max(0, limit - currentCount);
-  
+
   return {
     is_allowed: currentCount < limit,
     current_count: currentCount,
@@ -348,14 +355,17 @@ export async function checkLimit(
 // UPGRADE PROMPTS
 // =====================================================
 
-export async function getUpgradePrompt(userId: number, blockedFeature: string): Promise<UpgradePrompt | null> {
+export async function getUpgradePrompt(
+  userId: number,
+  blockedFeature: string,
+): Promise<UpgradePrompt | null> {
   const subData = await getUserSubscriptionWithPlan(userId);
-  
+
   if (!subData || !subData.plan) return null;
 
   const { plan } = subData;
   const upgradePlanId = plan.upgrade_to_plan_id;
-  
+
   if (!upgradePlanId) return null;
 
   const upgradePlan = await getPlanByPlanId(upgradePlanId);
@@ -427,7 +437,7 @@ export async function logSubscriptionEvent(
   if (!db) return;
 
   const subscription = await getUserSubscription(userId);
-  
+
   await db.execute(
     `INSERT INTO subscription_events (user_id, subscription_id, event_type, event_data)
      VALUES (?, ?, ?, ?)`,
@@ -447,7 +457,8 @@ function parseSubscriptionPlan(row: any): SubscriptionPlan {
     is_active: Boolean(row.is_active),
     features: typeof row.features === 'string' ? JSON.parse(row.features) : row.features,
     limits: typeof row.limits === 'string' ? JSON.parse(row.limits) : row.limits,
-    permissions: typeof row.permissions === 'string' ? JSON.parse(row.permissions) : row.permissions,
+    permissions:
+      typeof row.permissions === 'string' ? JSON.parse(row.permissions) : row.permissions,
   };
 }
 

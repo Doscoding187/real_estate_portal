@@ -84,12 +84,12 @@ export function GuestActivityProvider({ children }: { children: ReactNode }) {
   }, [activity]);
 
   const addViewedProperty = (propertyId: number) => {
-    setActivity((prev) => {
+    setActivity(prev => {
       // Don't add if already at the top
       if (prev.viewedProperties[0] === propertyId) return prev;
 
       // Remove if exists, then add to front
-      const filtered = prev.viewedProperties.filter((id) => id !== propertyId);
+      const filtered = prev.viewedProperties.filter(id => id !== propertyId);
       const updated = [propertyId, ...filtered].slice(0, MAX_VIEWED);
 
       return { ...prev, viewedProperties: updated };
@@ -97,7 +97,7 @@ export function GuestActivityProvider({ children }: { children: ReactNode }) {
   };
 
   const addGuestFavorite = (propertyId: number) => {
-    setActivity((prev) => {
+    setActivity(prev => {
       if (prev.favoriteProperties.includes(propertyId)) return prev;
       return {
         ...prev,
@@ -107,9 +107,9 @@ export function GuestActivityProvider({ children }: { children: ReactNode }) {
   };
 
   const removeGuestFavorite = (propertyId: number) => {
-    setActivity((prev) => ({
+    setActivity(prev => ({
       ...prev,
-      favoriteProperties: prev.favoriteProperties.filter((id) => id !== propertyId),
+      favoriteProperties: prev.favoriteProperties.filter(id => id !== propertyId),
     }));
   };
 
@@ -118,10 +118,10 @@ export function GuestActivityProvider({ children }: { children: ReactNode }) {
   };
 
   const addGuestSearch = (criteria: SearchCriteria) => {
-    setActivity((prev) => {
+    setActivity(prev => {
       // Check if similar search already exists
       const isDuplicate = prev.recentSearches.some(
-        (search) => JSON.stringify(search) === JSON.stringify(criteria)
+        search => JSON.stringify(search) === JSON.stringify(criteria),
       );
 
       if (isDuplicate) return prev;

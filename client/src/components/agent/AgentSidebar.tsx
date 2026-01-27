@@ -80,10 +80,10 @@ export function AgentSidebar() {
                 key={action.name}
                 variant={action.variant}
                 className={cn(
-                  "w-full justify-start h-auto py-2.5 px-4 rounded-xl transition-all duration-200",
-                  action.variant === 'default' 
-                    ? "bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 shadow-soft hover:shadow-hover text-white" 
-                    : "bg-gray-50 hover:bg-gray-100 border border-gray-100 text-gray-700 hover:text-blue-600 shadow-sm"
+                  'w-full justify-start h-auto py-2.5 px-4 rounded-xl transition-all duration-200',
+                  action.variant === 'default'
+                    ? 'bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 shadow-soft hover:shadow-hover text-white'
+                    : 'bg-gray-50 hover:bg-gray-100 border border-gray-100 text-gray-700 hover:text-blue-600 shadow-sm',
                 )}
                 size="sm"
                 onClick={() => {
@@ -100,7 +100,12 @@ export function AgentSidebar() {
                   }
                 }}
               >
-                <action.icon className={cn("mr-2.5 h-4 w-4 flex-shrink-0", action.variant === 'secondary' && "text-blue-500")} />
+                <action.icon
+                  className={cn(
+                    'mr-2.5 h-4 w-4 flex-shrink-0',
+                    action.variant === 'secondary' && 'text-blue-500',
+                  )}
+                />
                 <span className="text-sm font-medium">{action.name}</span>
               </Button>
             ))}
@@ -118,15 +123,19 @@ export function AgentSidebar() {
               href={item.href}
               className={cn(
                 'flex items-center px-4 py-3 text-sm font-medium rounded-xl transition-all duration-200 group',
-                window.location.pathname === item.href 
-                  ? 'bg-blue-50 text-blue-700 shadow-sm' 
-                  : 'text-gray-700 hover:bg-gray-50 hover:text-blue-600'
+                window.location.pathname === item.href
+                  ? 'bg-blue-50 text-blue-700 shadow-sm'
+                  : 'text-gray-700 hover:bg-gray-50 hover:text-blue-600',
               )}
             >
-              <item.icon className={cn(
-                "mr-3 h-5 w-5 flex-shrink-0 transition-colors duration-200",
-                window.location.pathname === item.href ? "text-blue-600" : "text-gray-400 group-hover:text-blue-500"
-              )} />
+              <item.icon
+                className={cn(
+                  'mr-3 h-5 w-5 flex-shrink-0 transition-colors duration-200',
+                  window.location.pathname === item.href
+                    ? 'text-blue-600'
+                    : 'text-gray-400 group-hover:text-blue-500',
+                )}
+              />
               {item.name}
             </a>
           ))}
@@ -141,7 +150,9 @@ export function AgentSidebar() {
               </div>
             </div>
             <div className="ml-3">
-              <p className="text-sm font-semibold text-gray-900 group-hover:text-blue-700 transition-colors">{user?.name || 'Agent'}</p>
+              <p className="text-sm font-semibold text-gray-900 group-hover:text-blue-700 transition-colors">
+                {user?.name || 'Agent'}
+              </p>
               <p className="text-xs text-gray-500">Real Estate Agent</p>
             </div>
             <Settings className="ml-auto h-4 w-4 text-gray-400 group-hover:text-blue-500 transition-colors" />

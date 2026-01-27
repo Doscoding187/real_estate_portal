@@ -47,9 +47,7 @@ export function AgencyExploreOverview() {
           <p className="text-sm text-muted-foreground mb-4">
             Encourage your agents to upload videos to Explore to start tracking performance.
           </p>
-          <Button onClick={() => setLocation('/explore/upload')}>
-            Upload to Explore
-          </Button>
+          <Button onClick={() => setLocation('/explore/upload')}>Upload to Explore</Button>
         </CardContent>
       </Card>
     );
@@ -99,16 +97,18 @@ export function AgencyExploreOverview() {
   );
 }
 
-function MetricCard({ icon, label, value }: {
+function MetricCard({
+  icon,
+  label,
+  value,
+}: {
   icon: React.ReactNode;
   label: string;
   value: string;
 }) {
   return (
     <div className="flex items-center gap-3">
-      <div className="p-2 rounded-lg bg-slate-50">
-        {icon}
-      </div>
+      <div className="p-2 rounded-lg bg-slate-50">{icon}</div>
       <div>
         <p className="text-xs text-slate-500">{label}</p>
         <p className="text-lg font-semibold text-slate-800">{value}</p>

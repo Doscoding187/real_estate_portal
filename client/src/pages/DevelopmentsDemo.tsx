@@ -11,9 +11,11 @@ import { generateCanonicalUrl } from '@/lib/urlUtils';
 
 export default function DevelopmentsDemo() {
   const [filters, setFilters] = useState<SearchFilters>({});
-  
+
   // Fetch real developments
-  const { data: developments, isLoading } = trpc.developer.listPublicDevelopments.useQuery({ limit: 20 });
+  const { data: developments, isLoading } = trpc.developer.listPublicDevelopments.useQuery({
+    limit: 20,
+  });
 
   const handleFilterChange = (newFilters: SearchFilters) => {
     setFilters(newFilters);
@@ -23,26 +25,28 @@ export default function DevelopmentsDemo() {
 
   // Safe JSON parse helper
   const parseImages = (imagesVal: any): string[] => {
-      if (!imagesVal) return [];
-      
-      let parsed = imagesVal;
-      if (typeof imagesVal === 'string') {
-          try {
-              parsed = JSON.parse(imagesVal);
-          } catch (e) {
-              return [];
-          }
-      }
+    if (!imagesVal) return [];
 
-      if (Array.isArray(parsed)) {
-          return parsed.map((img: any) => {
-              if (typeof img === 'string') return img;
-              if (typeof img === 'object' && img !== null && 'url' in img) return img.url;
-              return '';
-          }).filter(Boolean);
+    let parsed = imagesVal;
+    if (typeof imagesVal === 'string') {
+      try {
+        parsed = JSON.parse(imagesVal);
+      } catch (e) {
+        return [];
       }
-      
-      return [];
+    }
+
+    if (Array.isArray(parsed)) {
+      return parsed
+        .map((img: any) => {
+          if (typeof img === 'string') return img;
+          if (typeof img === 'object' && img !== null && 'url' in img) return img.url;
+          return '';
+        })
+        .filter(Boolean);
+    }
+
+    return [];
   };
 
   return (
@@ -70,7 +74,7 @@ export default function DevelopmentsDemo() {
                   Discover the latest residential developments and off-plan properties
                 </p>
               </div>
-              
+
               <div className="flex items-center gap-3">
                 {/* Mobile Filter Toggle */}
                 <Button variant="outline" className="lg:hidden border-slate-200 text-slate-600">
@@ -88,48 +92,44 @@ export default function DevelopmentsDemo() {
 
             {/* Developments Grid */}
             {isLoading ? (
-                <div className="flex justify-center items-center py-20">
-                    <Loader2 className="w-8 h-8 animate-spin text-primary" />
-                </div>
+              <div className="flex justify-center items-center py-20">
+                <Loader2 className="w-8 h-8 animate-spin text-primary" />
+              </div>
             ) : developments && developments.length > 0 ? (
               <div className="flex flex-col gap-6">
-                {developments.map((dev) => {
-                    const images = parseImages(dev.images);
-                    return (
-                      <DevelopmentCard 
-                        key={dev.id} 
-                        id={dev.slug || String(dev.id)}
-                        title={dev.name}
-                        rating={Number(dev.rating) || 0}
-                        location={`${dev.suburb ? dev.suburb + ', ' : ''}${dev.city}`}
-                        description={dev.description || ''}
-                        image={images[0] || ''}
-                        unitTypes={dev.unitTypes}
-                        highlights={(dev.highlights as string[]) || []}
-                        developer={{
-                            name: dev.developerName || 'Unknown Developer',
-                            isFeatured: !!dev.developerIsFeatured
-                        }}
-                        imageCount={images.length}
-                        isFeatured={!!dev.isFeatured}
-                        isNewBooking={false} // Default for now
-                      />
-                    );
+                {developments.map(dev => {
+                  const images = parseImages(dev.images);
+                  return (
+                    <DevelopmentCard
+                      key={dev.id}
+                      id={dev.slug || String(dev.id)}
+                      title={dev.name}
+                      rating={Number(dev.rating) || 0}
+                      location={`${dev.suburb ? dev.suburb + ', ' : ''}${dev.city}`}
+                      description={dev.description || ''}
+                      image={images[0] || ''}
+                      unitTypes={dev.unitTypes}
+                      highlights={(dev.highlights as string[]) || []}
+                      developer={{
+                        name: dev.developerName || 'Unknown Developer',
+                        isFeatured: !!dev.developerIsFeatured,
+                      }}
+                      imageCount={images.length}
+                      isFeatured={!!dev.isFeatured}
+                      isNewBooking={false} // Default for now
+                    />
+                  );
                 })}
               </div>
             ) : (
               <div className="flex flex-col items-center justify-center py-20 text-center">
                 <Building2 className="h-16 w-16 text-slate-300 mb-4" />
-                <h3 className="text-lg font-semibold text-slate-700 mb-2">
-                  No developments found
-                </h3>
+                <h3 className="text-lg font-semibold text-slate-700 mb-2">No developments found</h3>
                 <p className="text-slate-500 max-w-md">
                   Try adjusting your filters or search criteria to find more developments.
                 </p>
               </div>
             )}
-            
-
           </div>
         </div>
       </div>

@@ -1,6 +1,6 @@
 /**
  * Partner Dashboard Demo Page
- * 
+ *
  * Demonstrates the Partner Dashboard with mock data for development and testing.
  * This shows all the features including analytics, content management, and lead tracking.
  */
@@ -193,7 +193,7 @@ const mockApiResponses = {
 const originalFetch = window.fetch;
 window.fetch = async (url: string | URL | Request, options?: RequestInit) => {
   const urlString = url.toString();
-  
+
   // Check if this is a mock API call
   for (const [mockUrl, mockResponse] of Object.entries(mockApiResponses)) {
     if (urlString.includes(mockUrl.split('?')[0])) {
@@ -203,7 +203,7 @@ window.fetch = async (url: string | URL | Request, options?: RequestInit) => {
       });
     }
   }
-  
+
   // Fall back to original fetch for other requests
   return originalFetch(url, options);
 };

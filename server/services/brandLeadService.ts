@@ -1,10 +1,10 @@
 /**
  * Brand Lead Service
- * 
+ *
  * Handles lead capture and routing for developer brand profiles.
  * Implements Refinement #3: Async counter increments
  * Implements Refinement #4: Non-subscribers MUST NOT see leads in dashboard
- * 
+ *
  * Lead Flow:
  * 1. User submits lead on property/development
  * 2. Lead is captured with developerBrandProfileId
@@ -53,12 +53,10 @@ export interface LeadRoutingResult {
  * Capture a lead and associate with brand profile
  * This is the main entry point for brand lead capture
  */
-async function captureBrandLead(
-  input: CaptureBrandLeadInput
-): Promise<LeadRoutingResult> {
+async function captureBrandLead(input: CaptureBrandLeadInput): Promise<LeadRoutingResult> {
   // Get brand profile to determine routing
   const brandProfile = await developerBrandProfileService.getBrandProfileById(
-    input.developerBrandProfileId
+    input.developerBrandProfileId,
   );
 
   if (!brandProfile) {
@@ -119,11 +117,9 @@ async function captureBrandLead(
       if (deliveryMethod === 'email' && brandProfile.publicContactEmail) {
         await routeLeadToEmail(leadId, brandProfile, input);
       }
-      
+
       // Increment counters asynchronously (Refinement #3)
-      await developerBrandProfileService.incrementLeadCountAsync(
-        input.developerBrandProfileId
-      );
+      await developerBrandProfileService.incrementLeadCountAsync(input.developerBrandProfileId);
     } catch (error) {
       console.error('Error in async lead processing:', error);
     }
@@ -163,12 +159,12 @@ function getLeadCaptureMessage(status: string): string {
  */
 async function routeLeadToEmail(
   leadId: number,
-  brandProfile: { 
-    brandName: string; 
+  brandProfile: {
+    brandName: string;
     publicContactEmail: string | null;
     isContactVerified: number;
   },
-  leadData: CaptureBrandLeadInput
+  leadData: CaptureBrandLeadInput,
 ): Promise<boolean> {
   if (!brandProfile.publicContactEmail) {
     console.warn(`No email for brand profile, cannot route lead ${leadId}`);
@@ -188,7 +184,7 @@ async function routeLeadToEmail(
         message: leadData.message || 'No message',
         developmentId: leadData.developmentId,
         propertyId: leadData.propertyId,
-      }
+      },
     );
 
     // Update lead delivery status
@@ -214,7 +210,7 @@ async function routeLeadToEmail(
  */
 async function canViewDashboardLeads(brandProfileId: number): Promise<boolean> {
   const profile = await developerBrandProfileService.getBrandProfileById(brandProfileId);
-  
+
   if (!profile) {
     return false;
   }
@@ -233,11 +229,11 @@ async function getBrandLeads(
     status?: string;
     limit?: number;
     offset?: number;
-  } = {}
+  } = {},
 ) {
   // Check subscription status first
   const canView = await canViewDashboardLeads(brandProfileId);
-  
+
   if (!canView) {
     // Non-subscribers cannot see leads
     return {
@@ -251,7 +247,7 @@ async function getBrandLeads(
   const conditions = [eq(leads.developerBrandProfileId, brandProfileId)];
 
   if (filters.status) {
-    conditions.push(eq(leads.status, filters.status as typeof leads.status.enumValues[number]));
+    conditions.push(eq(leads.status, filters.status as (typeof leads.status.enumValues)[number]));
   }
 
   const leadResults = await db
@@ -279,7 +275,7 @@ async function getBrandLeads(
  */
 async function getSalesPitchStats(brandProfileId: number) {
   const profile = await developerBrandProfileService.getBrandProfileById(brandProfileId);
-  
+
   if (!profile) {
     return null;
   }
@@ -290,8 +286,8 @@ async function getSalesPitchStats(brandProfileId: number) {
     lastLeadDate: profile.lastLeadDate,
     unclaimedLeadCount: profile.unclaimedLeadCount,
     isSubscriber: profile.isSubscriber === 1,
-    message: profile.isSubscriber 
-      ? null 
+    message: profile.isSubscriber
+      ? null
       : `Your developments on Property Listify have received ${profile.totalLeadsReceived} buyer enquiries. Subscribe to view leads in real time, contact buyers directly, and access analytics.`,
   };
 }
@@ -303,14 +299,14 @@ async function getSalesPitchStats(brandProfileId: number) {
 export const brandLeadService = {
   // Lead capture
   captureBrandLead,
-  
+
   // Lead routing
   routeLeadToEmail,
-  
+
   // Lead visibility (Refinement #4)
   canViewDashboardLeads,
   getBrandLeads,
-  
+
   // Sales stats
   getSalesPitchStats,
 };

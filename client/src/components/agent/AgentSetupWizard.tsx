@@ -6,7 +6,16 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Upload, User, Phone, FileText, Award, Briefcase, ArrowRight, ArrowLeft } from 'lucide-react';
+import {
+  Upload,
+  User,
+  Phone,
+  FileText,
+  Award,
+  Briefcase,
+  ArrowRight,
+  ArrowLeft,
+} from 'lucide-react';
 
 const SPECIALIZATION_OPTIONS = [
   'Residential Sales',
@@ -35,7 +44,7 @@ export function AgentSetupWizard() {
     onSuccess: () => {
       setLocation('/agent/dashboard');
     },
-    onError: (error) => {
+    onError: error => {
       alert('Failed to create profile: ' + error.message);
     },
   });
@@ -83,7 +92,7 @@ export function AgentSetupWizard() {
                   id="displayName"
                   placeholder="e.g., John Smith"
                   value={formData.displayName}
-                  onChange={(e) => setFormData({ ...formData, displayName: e.target.value })}
+                  onChange={e => setFormData({ ...formData, displayName: e.target.value })}
                   className="text-base"
                 />
               </div>
@@ -98,7 +107,7 @@ export function AgentSetupWizard() {
                   type="tel"
                   placeholder="e.g., +27 12 345 6789"
                   value={formData.phoneNumber}
-                  onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
+                  onChange={e => setFormData({ ...formData, phoneNumber: e.target.value })}
                   className="text-base"
                 />
               </div>
@@ -112,7 +121,7 @@ export function AgentSetupWizard() {
                   id="licenseNumber"
                   placeholder="e.g., FFC1234567"
                   value={formData.licenseNumber}
-                  onChange={(e) => setFormData({ ...formData, licenseNumber: e.target.value })}
+                  onChange={e => setFormData({ ...formData, licenseNumber: e.target.value })}
                   className="text-base"
                 />
               </div>
@@ -131,7 +140,7 @@ export function AgentSetupWizard() {
                   id="bio"
                   placeholder="Tell us about your experience and expertise..."
                   value={formData.bio}
-                  onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
+                  onChange={e => setFormData({ ...formData, bio: e.target.value })}
                   rows={5}
                   className="text-base resize-none"
                   maxLength={1000}
@@ -147,7 +156,7 @@ export function AgentSetupWizard() {
                   Specializations (Optional)
                 </Label>
                 <div className="grid grid-cols-2 gap-2">
-                  {SPECIALIZATION_OPTIONS.map((spec) => (
+                  {SPECIALIZATION_OPTIONS.map(spec => (
                     <button
                       key={spec}
                       type="button"
@@ -176,9 +185,7 @@ export function AgentSetupWizard() {
                 </Label>
                 <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-gray-400 transition-colors">
                   <Upload className="h-12 w-12 mx-auto text-gray-400 mb-3" />
-                  <p className="text-sm text-gray-600 mb-2">
-                    Photo upload coming soon
-                  </p>
+                  <p className="text-sm text-gray-600 mb-2">Photo upload coming soon</p>
                   <p className="text-xs text-gray-500">
                     For now, you can skip this step and add a photo later
                   </p>
@@ -188,7 +195,8 @@ export function AgentSetupWizard() {
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                 <h4 className="font-semibold text-blue-900 mb-2">Ready to get started!</h4>
                 <p className="text-sm text-blue-700">
-                  Click "Complete Setup" to finish creating your agent profile and access your dashboard.
+                  Click "Complete Setup" to finish creating your agent profile and access your
+                  dashboard.
                 </p>
               </div>
             </div>
@@ -197,16 +205,12 @@ export function AgentSetupWizard() {
           {/* Navigation Buttons */}
           <div className="flex justify-between pt-4 border-t">
             {step > 1 && (
-              <Button
-                variant="outline"
-                onClick={() => setStep(step - 1)}
-                className="gap-2"
-              >
+              <Button variant="outline" onClick={() => setStep(step - 1)} className="gap-2">
                 <ArrowLeft className="h-4 w-4" />
                 Back
               </Button>
             )}
-            
+
             {step < 3 ? (
               <Button
                 onClick={() => setStep(step + 1)}

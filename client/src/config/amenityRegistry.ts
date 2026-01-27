@@ -1,4 +1,9 @@
-export type AmenityCategory = 'security' | 'lifestyle' | 'sustainability' | 'convenience' | 'family';
+export type AmenityCategory =
+  | 'security'
+  | 'lifestyle'
+  | 'sustainability'
+  | 'convenience'
+  | 'family';
 
 export interface AmenityItem {
   key: string;
@@ -7,30 +12,30 @@ export interface AmenityItem {
 }
 
 export const AMENITY_CATEGORIES: { key: AmenityCategory; label: string; description: string }[] = [
-  { 
-    key: 'security', 
-    label: 'Security & Access', 
-    description: 'Safety and access control features' 
+  {
+    key: 'security',
+    label: 'Security & Access',
+    description: 'Safety and access control features',
   },
-  { 
-    key: 'lifestyle', 
-    label: 'Lifestyle & Recreation', 
-    description: 'Fitness, sports, and leisure facilities' 
+  {
+    key: 'lifestyle',
+    label: 'Lifestyle & Recreation',
+    description: 'Fitness, sports, and leisure facilities',
   },
-  { 
-    key: 'sustainability', 
-    label: 'Sustainability', 
-    description: 'Eco-friendly and energy-efficient features' 
+  {
+    key: 'sustainability',
+    label: 'Sustainability',
+    description: 'Eco-friendly and energy-efficient features',
   },
-  { 
-    key: 'convenience', 
-    label: 'Services & Convenience', 
-    description: 'Daily comforts and utilities' 
+  {
+    key: 'convenience',
+    label: 'Services & Convenience',
+    description: 'Daily comforts and utilities',
   },
-  { 
-    key: 'family', 
-    label: 'Family & Kids', 
-    description: 'Child-friendly amenities' 
+  {
+    key: 'family',
+    label: 'Family & Kids',
+    description: 'Child-friendly amenities',
   },
 ];
 
@@ -83,13 +88,21 @@ export const AMENITY_REGISTRY: AmenityItem[] = [
   { key: 'solar_power', label: 'Solar Power / Solar-Ready', category: 'sustainability' },
   { key: 'rainwater_harvesting', label: 'Rainwater Harvesting', category: 'sustainability' },
   { key: 'grey_water_system', label: 'Grey Water System', category: 'sustainability' },
-  { key: 'energy_efficient_lighting', label: 'Energy-Efficient Lighting', category: 'sustainability' },
+  {
+    key: 'energy_efficient_lighting',
+    label: 'Energy-Efficient Lighting',
+    category: 'sustainability',
+  },
   { key: 'recycling_facilities', label: 'Recycling Facilities', category: 'sustainability' },
   { key: 'ev_charging', label: 'EV Charging Stations', category: 'sustainability' },
   { key: 'water_wise_gardens', label: 'Water-Wise Gardens', category: 'sustainability' },
   { key: 'green_building', label: 'Green Building Certification', category: 'sustainability' },
   { key: 'composting', label: 'Composting Facilities', category: 'sustainability' },
-  { key: 'sustainable_materials', label: 'Sustainable Building Materials', category: 'sustainability' },
+  {
+    key: 'sustainable_materials',
+    label: 'Sustainable Building Materials',
+    category: 'sustainability',
+  },
 
   // Convenience
   { key: 'fibre_ready', label: 'Fibre-Ready / High-Speed Internet', category: 'convenience' },
@@ -130,7 +143,7 @@ export const COMMON_PICK_AMENITIES = [
   'fibre_ready',
   'parking',
   'swimming_pool',
-  'pet_friendly_area'
+  'pet_friendly_area',
 ];
 
 export const getAmenitiesByCategory = (category: AmenityCategory) => {

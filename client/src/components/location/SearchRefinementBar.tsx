@@ -3,7 +3,13 @@ import { Search } from 'lucide-react';
 import { useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
 import { Label } from '@/components/ui/label';
 
@@ -23,7 +29,11 @@ interface SearchRefinementBarProps {
   placeId?: string; // Google Places ID for precise filtering
 }
 
-export function SearchRefinementBar({ onSearch, defaultLocation, placeId }: SearchRefinementBarProps) {
+export function SearchRefinementBar({
+  onSearch,
+  defaultLocation,
+  placeId,
+}: SearchRefinementBarProps) {
   const [, navigate] = useLocation();
   const [filters, setFilters] = useState<SearchFilters>({
     location: defaultLocation,
@@ -38,7 +48,7 @@ export function SearchRefinementBar({ onSearch, defaultLocation, placeId }: Sear
   const handlePriceRangeChange = (value: string) => {
     let min = 0;
     let max = 10000000;
-    
+
     switch (value) {
       case '1m':
         max = 1000000;
@@ -55,9 +65,13 @@ export function SearchRefinementBar({ onSearch, defaultLocation, placeId }: Sear
         min = 5000000;
         break;
     }
-    
+
     setPriceRange([min, max]);
-    setFilters(prev => ({ ...prev, minPrice: min > 0 ? min : undefined, maxPrice: max < 10000000 ? max : undefined }));
+    setFilters(prev => ({
+      ...prev,
+      minPrice: min > 0 ? min : undefined,
+      maxPrice: max < 10000000 ? max : undefined,
+    }));
   };
 
   const handleBedroomsChange = (value: string) => {
@@ -71,7 +85,7 @@ export function SearchRefinementBar({ onSearch, defaultLocation, placeId }: Sear
   const handleSearch = () => {
     // Build search URL with filters
     const params = new URLSearchParams();
-    
+
     if (filters.location) params.append('location', filters.location);
     if (filters.placeId) params.append('placeId', filters.placeId);
     if (filters.propertyType) params.append('propertyType', filters.propertyType);
@@ -81,7 +95,7 @@ export function SearchRefinementBar({ onSearch, defaultLocation, placeId }: Sear
     if (filters.bathrooms) params.append('bathrooms', filters.bathrooms.toString());
 
     const searchUrl = `/properties?${params.toString()}`;
-    
+
     if (onSearch) {
       onSearch(filters);
     } else {
@@ -97,14 +111,14 @@ export function SearchRefinementBar({ onSearch, defaultLocation, placeId }: Sear
           <div className="flex flex-col md:flex-row gap-4 items-center">
             <div className="relative flex-1 w-full">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input 
-                placeholder={`Search properties in ${defaultLocation || 'this area'}...`} 
+              <Input
+                placeholder={`Search properties in ${defaultLocation || 'this area'}...`}
                 className="pl-9 bg-slate-50 border-slate-200 focus-visible:ring-primary"
                 value={filters.location || ''}
-                onChange={(e) => setFilters(prev => ({ ...prev, location: e.target.value }))}
+                onChange={e => setFilters(prev => ({ ...prev, location: e.target.value }))}
               />
             </div>
-            
+
             <div className="grid grid-cols-2 md:grid-cols-5 gap-2 w-full md:w-auto">
               <Select onValueChange={handlePropertyTypeChange}>
                 <SelectTrigger className="w-full md:w-[140px]">
@@ -159,7 +173,7 @@ export function SearchRefinementBar({ onSearch, defaultLocation, placeId }: Sear
                 </SelectContent>
               </Select>
 
-              <Button 
+              <Button
                 className="w-full md:w-auto bg-primary hover:bg-primary/90"
                 onClick={handleSearch}
               >
@@ -176,12 +190,12 @@ export function SearchRefinementBar({ onSearch, defaultLocation, placeId }: Sear
               </Label>
               <Slider
                 value={priceRange}
-                onValueChange={(value) => {
+                onValueChange={value => {
                   setPriceRange(value as [number, number]);
-                  setFilters(prev => ({ 
-                    ...prev, 
+                  setFilters(prev => ({
+                    ...prev,
                     minPrice: value[0] > 0 ? value[0] : undefined,
-                    maxPrice: value[1] < 10000000 ? value[1] : undefined
+                    maxPrice: value[1] < 10000000 ? value[1] : undefined,
                   }));
                 }}
                 min={0}

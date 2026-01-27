@@ -1,16 +1,7 @@
 import { Link } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import {
-  Facebook,
-  Twitter,
-  Instagram,
-  Linkedin,
-  Mail,
-  Phone,
-  MapPin,
-  Send,
-} from 'lucide-react';
+import { Facebook, Twitter, Instagram, Linkedin, Mail, Phone, MapPin, Send } from 'lucide-react';
 
 export function Footer() {
   return (
@@ -26,19 +17,32 @@ export function Footer() {
               <span className="text-2xl font-bold text-white">RealEstate</span>
             </div>
             <p className="text-slate-400 leading-relaxed">
-              South Africa's fastest growing real estate platform. We make buying, selling, and renting properties simple and transparent.
+              South Africa's fastest growing real estate platform. We make buying, selling, and
+              renting properties simple and transparent.
             </p>
             <div className="flex gap-4">
-              <a href="#" className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center hover:bg-blue-600 hover:text-white transition-all">
+              <a
+                href="#"
+                className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center hover:bg-blue-600 hover:text-white transition-all"
+              >
                 <Facebook className="h-5 w-5" />
               </a>
-              <a href="#" className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center hover:bg-blue-400 hover:text-white transition-all">
+              <a
+                href="#"
+                className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center hover:bg-blue-400 hover:text-white transition-all"
+              >
                 <Twitter className="h-5 w-5" />
               </a>
-              <a href="#" className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center hover:bg-pink-600 hover:text-white transition-all">
+              <a
+                href="#"
+                className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center hover:bg-pink-600 hover:text-white transition-all"
+              >
                 <Instagram className="h-5 w-5" />
               </a>
-              <a href="#" className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center hover:bg-blue-700 hover:text-white transition-all">
+              <a
+                href="#"
+                className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center hover:bg-blue-700 hover:text-white transition-all"
+              >
                 <Linkedin className="h-5 w-5" />
               </a>
             </div>
@@ -49,25 +53,37 @@ export function Footer() {
             <h3 className="text-white font-bold text-lg mb-6">Quick Links</h3>
             <ul className="space-y-4">
               <li>
-                <Link href="/" className="hover:text-white transition-colors flex items-center gap-2">
+                <Link
+                  href="/"
+                  className="hover:text-white transition-colors flex items-center gap-2"
+                >
                   <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
                   Home
                 </Link>
               </li>
               <li>
-                <Link href="/properties" className="hover:text-white transition-colors flex items-center gap-2">
+                <Link
+                  href="/properties"
+                  className="hover:text-white transition-colors flex items-center gap-2"
+                >
                   <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
                   Search Properties
                 </Link>
               </li>
               <li>
-                <Link href="/developments" className="hover:text-white transition-colors flex items-center gap-2">
+                <Link
+                  href="/developments"
+                  className="hover:text-white transition-colors flex items-center gap-2"
+                >
                   <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
                   New Developments
                 </Link>
               </li>
               <li>
-                <Link href="/list-property" className="hover:text-white transition-colors flex items-center gap-2">
+                <Link
+                  href="/list-property"
+                  className="hover:text-white transition-colors flex items-center gap-2"
+                >
                   <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
                   List Your Property
                 </Link>
@@ -80,19 +96,32 @@ export function Footer() {
             <h3 className="text-white font-bold text-lg mb-6">Popular Locations</h3>
             <ul className="space-y-4">
               <li>
-                <Link href="/gauteng/johannesburg" className="hover:text-white transition-colors">Johannesburg</Link>
+                <Link href="/gauteng/johannesburg" className="hover:text-white transition-colors">
+                  Johannesburg
+                </Link>
               </li>
               <li>
-                <Link href="/western-cape/cape-town" className="hover:text-white transition-colors">Cape Town</Link>
+                <Link href="/western-cape/cape-town" className="hover:text-white transition-colors">
+                  Cape Town
+                </Link>
               </li>
               <li>
-                <Link href="/kwazulu-natal/durban" className="hover:text-white transition-colors">Durban</Link>
+                <Link href="/kwazulu-natal/durban" className="hover:text-white transition-colors">
+                  Durban
+                </Link>
               </li>
               <li>
-                <Link href="/gauteng/pretoria" className="hover:text-white transition-colors">Pretoria</Link>
+                <Link href="/gauteng/pretoria" className="hover:text-white transition-colors">
+                  Pretoria
+                </Link>
               </li>
               <li>
-                <Link href="/gauteng/johannesburg/sandton" className="hover:text-white transition-colors">Sandton</Link>
+                <Link
+                  href="/gauteng/johannesburg/sandton"
+                  className="hover:text-white transition-colors"
+                >
+                  Sandton
+                </Link>
               </li>
             </ul>
           </div>
@@ -114,11 +143,11 @@ export function Footer() {
                 <span>hello@realestate.co.za</span>
               </li>
             </ul>
-            
+
             <h4 className="text-white font-semibold mb-3">Subscribe to our newsletter</h4>
             <div className="flex gap-2">
-              <Input 
-                placeholder="Enter your email" 
+              <Input
+                placeholder="Enter your email"
                 className="bg-slate-800 border-slate-700 text-white placeholder:text-slate-500 focus-visible:ring-blue-500"
               />
               <Button size="icon" className="bg-blue-600 hover:bg-blue-700 shrink-0">
@@ -131,9 +160,15 @@ export function Footer() {
         <div className="pt-8 border-t border-slate-800 text-center md:text-left flex flex-col md:flex-row justify-between items-center gap-4">
           <p>© 2025 Real Estate Portal. All rights reserved.</p>
           <div className="flex gap-6 text-sm">
-            <a href="#" className="hover:text-white transition-colors">Privacy Policy</a>
-            <a href="#" className="hover:text-white transition-colors">Terms of Service</a>
-            <a href="#" className="hover:text-white transition-colors">Cookie Policy</a>
+            <a href="#" className="hover:text-white transition-colors">
+              Privacy Policy
+            </a>
+            <a href="#" className="hover:text-white transition-colors">
+              Terms of Service
+            </a>
+            <a href="#" className="hover:text-white transition-colors">
+              Cookie Policy
+            </a>
           </div>
         </div>
       </div>

@@ -71,9 +71,7 @@ const BadgesStep: React.FC = () => {
                 {/* Badge Preview */}
                 <Badge
                   variant="secondary"
-                  className={`text-sm font-medium ${
-                    isSelected ? 'bg-blue-100 text-blue-700' : ''
-                  }`}
+                  className={`text-sm font-medium ${isSelected ? 'bg-blue-100 text-blue-700' : ''}`}
                 >
                   {template.label}
                 </Badge>
@@ -102,9 +100,7 @@ const BadgesStep: React.FC = () => {
             <Check className="w-5 h-5" />
             Selected Badge: {BADGE_TEMPLATES[badges[0]].label}
           </h4>
-          <p className="text-green-800 text-sm mt-1">
-            {BADGE_TEMPLATES[badges[0]].description}
-          </p>
+          <p className="text-green-800 text-sm mt-1">{BADGE_TEMPLATES[badges[0]].description}</p>
         </div>
       )}
     </div>

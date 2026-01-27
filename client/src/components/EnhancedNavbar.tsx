@@ -1,7 +1,21 @@
 import { Link, useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Heart, User, ChevronDown, MapPin, Home, Briefcase, MapPinned, TrendingUp, Calculator, Megaphone, Key, Building2, Lightbulb } from 'lucide-react';
+import {
+  Heart,
+  User,
+  ChevronDown,
+  MapPin,
+  Home,
+  Briefcase,
+  MapPinned,
+  TrendingUp,
+  Calculator,
+  Megaphone,
+  Key,
+  Building2,
+  Lightbulb,
+} from 'lucide-react';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { getLoginUrl } from '@/const';
 import {
@@ -45,26 +59,107 @@ function CityDropdownContent() {
 
   // Suburbs for each city
   const citySuburbs: Record<string, string[]> = {
-    'Johannesburg': ['Sandton', 'Rosebank', 'Midrand', 'Fourways', 'Sunninghill', 'Lonehill', 'Parkmore', 'Linden'],
-    'Capetown': ['Sea Point', 'Camps Bay', 'Constantia', 'Gardens', 'Waterfront', 'Claremont', 'Newlands', 'Rondebosch'],
-    'Kimberley': ['Beaconsfield', 'Hadison Park', 'Kimberley CBD', 'Monument Heights', 'Albertynshof', 'Royldene', 'New Park', 'De Beers'],
-    'Durban': ['Umhlanga', 'Ballito', 'Morningside', 'Berea', 'Westville', 'Glenwood', 'Musgrave', 'Durban North'],
-    'Gqeberha': ['Summerstrand', 'Walmer', 'Newton Park', 'Humewood', 'Mill Park', 'Lorraine', 'Framesby', 'Sunridge Park'],
-    'Bloemfontein': ['Westdene', 'Universitas', 'Willows', 'Bayswater', 'Arboretum', 'Fichardtpark', 'Dan Pienaar', 'Naval Hill'],
-    'Polokwane': ['Bendor', 'Nirvana', 'Welgelegen', 'Ivy Park', 'Westenburg', 'Flora Park', 'Sterpark', 'Fauna Park'],
-   'Mbombela': ['Sonheuwel', 'Nelspruit CBD', 'West Acres', 'Riverside Park', 'Steiltes', 'Loerie Park', 'Kiaat', 'Pienaar'],
-    'Mahikeng': ['Mahikeng CBD', 'Unit 1', 'Unit 2', 'Danville', 'Montshioa', 'Riviera Park', 'Mmabatho', 'Imperial Reserve'],
+    Johannesburg: [
+      'Sandton',
+      'Rosebank',
+      'Midrand',
+      'Fourways',
+      'Sunninghill',
+      'Lonehill',
+      'Parkmore',
+      'Linden',
+    ],
+    Capetown: [
+      'Sea Point',
+      'Camps Bay',
+      'Constantia',
+      'Gardens',
+      'Waterfront',
+      'Claremont',
+      'Newlands',
+      'Rondebosch',
+    ],
+    Kimberley: [
+      'Beaconsfield',
+      'Hadison Park',
+      'Kimberley CBD',
+      'Monument Heights',
+      'Albertynshof',
+      'Royldene',
+      'New Park',
+      'De Beers',
+    ],
+    Durban: [
+      'Umhlanga',
+      'Ballito',
+      'Morningside',
+      'Berea',
+      'Westville',
+      'Glenwood',
+      'Musgrave',
+      'Durban North',
+    ],
+    Gqeberha: [
+      'Summerstrand',
+      'Walmer',
+      'Newton Park',
+      'Humewood',
+      'Mill Park',
+      'Lorraine',
+      'Framesby',
+      'Sunridge Park',
+    ],
+    Bloemfontein: [
+      'Westdene',
+      'Universitas',
+      'Willows',
+      'Bayswater',
+      'Arboretum',
+      'Fichardtpark',
+      'Dan Pienaar',
+      'Naval Hill',
+    ],
+    Polokwane: [
+      'Bendor',
+      'Nirvana',
+      'Welgelegen',
+      'Ivy Park',
+      'Westenburg',
+      'Flora Park',
+      'Sterpark',
+      'Fauna Park',
+    ],
+    Mbombela: [
+      'Sonheuwel',
+      'Nelspruit CBD',
+      'West Acres',
+      'Riverside Park',
+      'Steiltes',
+      'Loerie Park',
+      'Kiaat',
+      'Pienaar',
+    ],
+    Mahikeng: [
+      'Mahikeng CBD',
+      'Unit 1',
+      'Unit 2',
+      'Danville',
+      'Montshioa',
+      'Riviera Park',
+      'Mmabatho',
+      'Imperial Reserve',
+    ],
   };
 
   const suburbs = citySuburbs[hoveredCity] || [];
 
   // Filter cities and suburbs based on search
   const filteredCities = topCities.filter(city =>
-    city.name.toLowerCase().includes(searchQuery.toLowerCase())
+    city.name.toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
   const filteredSuburbs = suburbs.filter(suburb =>
-    suburb.toLowerCase().includes(searchQuery.toLowerCase())
+    suburb.toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
   return (
@@ -73,15 +168,17 @@ function CityDropdownContent() {
       <div className="mb-6">
         <LocationAutosuggest
           placeholder="Search location"
-          onSelect={(location) => {
+          onSelect={location => {
             // Save location to database
-            trpc.location.saveGooglePlaceLocation.mutate({
-              placeId: location.placeId,
-              name: location.name,
-              fullAddress: location.fullAddress,
-              types: location.types,
-            }).catch(err => console.error('Failed to save location:', err));
-            
+            trpc.location.saveGooglePlaceLocation
+              .mutate({
+                placeId: location.placeId,
+                name: location.name,
+                fullAddress: location.fullAddress,
+                types: location.types,
+              })
+              .catch(err => console.error('Failed to save location:', err));
+
             // Navigate to location page
             window.location.href = `/search?location=${encodeURIComponent(location.name)}`;
           }}
@@ -103,7 +200,9 @@ function CityDropdownContent() {
                 <div className="w-12 h-12 rounded-full bg-blue-50 group-hover:bg-blue-100 flex items-center justify-center transition-colors border border-blue-100">
                   <MapPin className="h-5 w-5 text-blue-600" />
                 </div>
-                <span className="text-sm font-medium text-slate-700 group-hover:text-blue-700">{city.name}</span>
+                <span className="text-sm font-medium text-slate-700 group-hover:text-blue-700">
+                  {city.name}
+                </span>
               </div>
             </Link>
           ))}
@@ -118,14 +217,18 @@ function CityDropdownContent() {
             {filteredSuburbs.map((suburb, index) => {
               const citySlug = hoveredCity.toLowerCase().replace(/\s+/g, '-');
               // Helper to find province of hovered city
-              const provinceSlug = topCities.find(c => c.name === hoveredCity)?.provinceSlug || 'gauteng';
-              
+              const provinceSlug =
+                topCities.find(c => c.name === hoveredCity)?.provinceSlug || 'gauteng';
+
               return (
-              <Link key={index} href={`/property-for-sale/${provinceSlug}/${citySlug}/${suburb.toLowerCase().replace(/\s+/g, '-')}`}>
-                <span className="text-sm text-slate-600 hover:text-blue-600 cursor-pointer block py-1">
-                  {suburb}
-                </span>
-              </Link>
+                <Link
+                  key={index}
+                  href={`/property-for-sale/${provinceSlug}/${citySlug}/${suburb.toLowerCase().replace(/\s+/g, '-')}`}
+                >
+                  <span className="text-sm text-slate-600 hover:text-blue-600 cursor-pointer block py-1">
+                    {suburb}
+                  </span>
+                </Link>
               );
             })}
           </div>
@@ -138,7 +241,7 @@ function CityDropdownContent() {
 export function EnhancedNavbar() {
   const { user, logout } = useAuth();
   const [location, setLocation] = useLocation();
-  
+
   // Check if current route is advertise page
   const isAdvertisePage = location === '/advertise';
   const [showLocationModal, setShowLocationModal] = useState(false);
@@ -165,19 +268,22 @@ export function EnhancedNavbar() {
     return null;
   };
 
-
   // Handle property link clicks
-  const handlePropertyClick = (e: React.MouseEvent, propertyType: string, listingType: 'sale' | 'rent') => {
+  const handlePropertyClick = (
+    e: React.MouseEvent,
+    propertyType: string,
+    listingType: 'sale' | 'rent',
+  ) => {
     e.preventDefault();
     const lastLocation = getLastSearchLocation();
-    
+
     if (lastLocation) {
       // Navigate with saved location using new URL structure
       const url = generatePropertyUrl({
         listingType,
         propertyType,
         city: lastLocation.city,
-        suburb: lastLocation.suburb
+        suburb: lastLocation.suburb,
       });
       setLocation(url);
     } else {
@@ -194,14 +300,14 @@ export function EnhancedNavbar() {
         listingType: pendingNavigation.listingType,
         propertyType: pendingNavigation.propertyType,
         city,
-        suburb
+        suburb,
       });
       setLocation(url);
       setPendingNavigation(null);
     }
   };
 
-  // ... 
+  // ...
 
   const buyOptions = [
     { label: 'Buy Properties', href: '/property-for-sale' },
@@ -300,10 +406,37 @@ export function EnhancedNavbar() {
                           <Home className="h-4 w-4 text-blue-600" /> Residential
                         </h4>
                         <ul className="space-y-2 text-sm">
-                          <li><span onClick={(e) => handlePropertyClick(e, 'house', 'sale')} className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1">Houses for Sale</span></li>
-                          <li><span onClick={(e) => handlePropertyClick(e, 'apartment', 'sale')} className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1">Apartments / Flats</span></li>
-                          <li><span onClick={(e) => handlePropertyClick(e, 'townhouse', 'sale')} className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1">Townhouses</span></li>
-                          <li><Link href="/new-developments"><span className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1">New Developments</span></Link></li>
+                          <li>
+                            <span
+                              onClick={e => handlePropertyClick(e, 'house', 'sale')}
+                              className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1"
+                            >
+                              Houses for Sale
+                            </span>
+                          </li>
+                          <li>
+                            <span
+                              onClick={e => handlePropertyClick(e, 'apartment', 'sale')}
+                              className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1"
+                            >
+                              Apartments / Flats
+                            </span>
+                          </li>
+                          <li>
+                            <span
+                              onClick={e => handlePropertyClick(e, 'townhouse', 'sale')}
+                              className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1"
+                            >
+                              Townhouses
+                            </span>
+                          </li>
+                          <li>
+                            <Link href="/new-developments">
+                              <span className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1">
+                                New Developments
+                              </span>
+                            </Link>
+                          </li>
                         </ul>
                       </div>
 
@@ -313,9 +446,30 @@ export function EnhancedNavbar() {
                           <Briefcase className="h-4 w-4 text-blue-600" /> Commercial
                         </h4>
                         <ul className="space-y-2 text-sm">
-                          <li><span onClick={(e) => handlePropertyClick(e, 'office', 'sale')} className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1">Office Spaces</span></li>
-                          <li><span onClick={(e) => handlePropertyClick(e, 'retail', 'sale')} className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1">Retail Shops</span></li>
-                          <li><span onClick={(e) => handlePropertyClick(e, 'industrial', 'sale')} className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1">Industrial / Warehouse</span></li>
+                          <li>
+                            <span
+                              onClick={e => handlePropertyClick(e, 'office', 'sale')}
+                              className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1"
+                            >
+                              Office Spaces
+                            </span>
+                          </li>
+                          <li>
+                            <span
+                              onClick={e => handlePropertyClick(e, 'retail', 'sale')}
+                              className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1"
+                            >
+                              Retail Shops
+                            </span>
+                          </li>
+                          <li>
+                            <span
+                              onClick={e => handlePropertyClick(e, 'industrial', 'sale')}
+                              className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1"
+                            >
+                              Industrial / Warehouse
+                            </span>
+                          </li>
                         </ul>
                       </div>
 
@@ -325,9 +479,30 @@ export function EnhancedNavbar() {
                           <MapPinned className="h-4 w-4 text-blue-600" /> Land
                         </h4>
                         <ul className="space-y-2 text-sm">
-                          <li><span onClick={(e) => handlePropertyClick(e, 'land', 'sale')} className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1">Residential Land</span></li>
-                          <li><span onClick={(e) => handlePropertyClick(e, 'commercial-land', 'sale')} className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1">Commercial Land</span></li>
-                          <li><span onClick={(e) => handlePropertyClick(e, 'farm', 'sale')} className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1">Farms</span></li>
+                          <li>
+                            <span
+                              onClick={e => handlePropertyClick(e, 'land', 'sale')}
+                              className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1"
+                            >
+                              Residential Land
+                            </span>
+                          </li>
+                          <li>
+                            <span
+                              onClick={e => handlePropertyClick(e, 'commercial-land', 'sale')}
+                              className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1"
+                            >
+                              Commercial Land
+                            </span>
+                          </li>
+                          <li>
+                            <span
+                              onClick={e => handlePropertyClick(e, 'farm', 'sale')}
+                              className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1"
+                            >
+                              Farms
+                            </span>
+                          </li>
                         </ul>
                       </div>
                     </div>
@@ -339,8 +514,14 @@ export function EnhancedNavbar() {
                           <TrendingUp className="h-5 w-5 text-blue-600" />
                         </div>
                         <h5 className="font-bold text-slate-800 mb-1">Market Insights</h5>
-                        <p className="text-xs text-slate-500 mb-3">Read our latest analysis on property trends in South Africa.</p>
-                        <Button variant="outline" size="sm" className="w-full text-xs h-8 border-blue-200 text-blue-600 hover:bg-blue-50">
+                        <p className="text-xs text-slate-500 mb-3">
+                          Read our latest analysis on property trends in South Africa.
+                        </p>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="w-full text-xs h-8 border-blue-200 text-blue-600 hover:bg-blue-50"
+                        >
                           Read More
                         </Button>
                       </div>
@@ -364,10 +545,38 @@ export function EnhancedNavbar() {
                           <Home className="h-4 w-4 text-blue-600" /> Residential
                         </h4>
                         <ul className="space-y-2 text-sm">
-                          <li><span onClick={(e) => handlePropertyClick(e, 'apartment', 'rent')} className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1">Apartments for Rent</span></li>
-                          <li><span onClick={(e) => handlePropertyClick(e, 'house', 'rent')} className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1">Houses for Rent</span></li>
-                          <li><span onClick={(e) => handlePropertyClick(e, 'student', 'rent')} className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1">Student Accommodation</span></li>
-                          <li><span onClick={(e) => handlePropertyClick(e, 'room', 'rent')} className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1">Rooms / Flatshares</span></li>
+                          <li>
+                            <span
+                              onClick={e => handlePropertyClick(e, 'apartment', 'rent')}
+                              className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1"
+                            >
+                              Apartments for Rent
+                            </span>
+                          </li>
+                          <li>
+                            <span
+                              onClick={e => handlePropertyClick(e, 'house', 'rent')}
+                              className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1"
+                            >
+                              Houses for Rent
+                            </span>
+                          </li>
+                          <li>
+                            <span
+                              onClick={e => handlePropertyClick(e, 'student', 'rent')}
+                              className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1"
+                            >
+                              Student Accommodation
+                            </span>
+                          </li>
+                          <li>
+                            <span
+                              onClick={e => handlePropertyClick(e, 'room', 'rent')}
+                              className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1"
+                            >
+                              Rooms / Flatshares
+                            </span>
+                          </li>
                         </ul>
                       </div>
 
@@ -377,9 +586,30 @@ export function EnhancedNavbar() {
                           <Briefcase className="h-4 w-4 text-blue-600" /> Commercial
                         </h4>
                         <ul className="space-y-2 text-sm">
-                          <li><span onClick={(e) => handlePropertyClick(e, 'office', 'rent')} className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1">Offices to Let</span></li>
-                          <li><span onClick={(e) => handlePropertyClick(e, 'retail', 'rent')} className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1">Retail Space</span></li>
-                          <li><span onClick={(e) => handlePropertyClick(e, 'industrial', 'rent')} className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1">Industrial Space</span></li>
+                          <li>
+                            <span
+                              onClick={e => handlePropertyClick(e, 'office', 'rent')}
+                              className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1"
+                            >
+                              Offices to Let
+                            </span>
+                          </li>
+                          <li>
+                            <span
+                              onClick={e => handlePropertyClick(e, 'retail', 'rent')}
+                              className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1"
+                            >
+                              Retail Space
+                            </span>
+                          </li>
+                          <li>
+                            <span
+                              onClick={e => handlePropertyClick(e, 'industrial', 'rent')}
+                              className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1"
+                            >
+                              Industrial Space
+                            </span>
+                          </li>
                         </ul>
                       </div>
 
@@ -389,9 +619,27 @@ export function EnhancedNavbar() {
                           <MapPin className="h-4 w-4 text-blue-600" /> Popular Cities
                         </h4>
                         <ul className="space-y-2 text-sm">
-                          <li><Link href="/property-to-rent/gauteng/johannesburg"><span className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1">Rent in Johannesburg</span></Link></li>
-                          <li><Link href="/property-to-rent/western-cape/cape-town"><span className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1">Rent in Cape Town</span></Link></li>
-                          <li><Link href="/property-to-rent/kwazulu-natal/durban"><span className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1">Rent in Durban</span></Link></li>
+                          <li>
+                            <Link href="/property-to-rent/gauteng/johannesburg">
+                              <span className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1">
+                                Rent in Johannesburg
+                              </span>
+                            </Link>
+                          </li>
+                          <li>
+                            <Link href="/property-to-rent/western-cape/cape-town">
+                              <span className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1">
+                                Rent in Cape Town
+                              </span>
+                            </Link>
+                          </li>
+                          <li>
+                            <Link href="/property-to-rent/kwazulu-natal/durban">
+                              <span className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1">
+                                Rent in Durban
+                              </span>
+                            </Link>
+                          </li>
                         </ul>
                       </div>
                     </div>
@@ -403,8 +651,14 @@ export function EnhancedNavbar() {
                           <Calculator className="h-5 w-5 text-blue-600" />
                         </div>
                         <h5 className="font-bold text-slate-800 mb-1">Affordability Calc</h5>
-                        <p className="text-xs text-slate-500 mb-3">Calculate how much rent you can afford based on your income.</p>
-                        <Button variant="outline" size="sm" className="w-full text-xs h-8 border-blue-200 text-blue-600 hover:bg-blue-50">
+                        <p className="text-xs text-slate-500 mb-3">
+                          Calculate how much rent you can afford based on your income.
+                        </p>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="w-full text-xs h-8 border-blue-200 text-blue-600 hover:bg-blue-50"
+                        >
                           Calculate Now
                         </Button>
                       </div>
@@ -431,9 +685,27 @@ export function EnhancedNavbar() {
                           Find Professionals
                         </h4>
                         <ul className="space-y-3 text-sm pl-1">
-                          <li><Link href="/agents"><span className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1.5">Find Estate Agents</span></Link></li>
-                          <li><Link href="/agencies"><span className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1.5">Find Agencies</span></Link></li>
-                          <li><Link href="/developments"><span className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1.5">Property Developers</span></Link></li>
+                          <li>
+                            <Link href="/agents">
+                              <span className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1.5">
+                                Find Estate Agents
+                              </span>
+                            </Link>
+                          </li>
+                          <li>
+                            <Link href="/agencies">
+                              <span className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1.5">
+                                Find Agencies
+                              </span>
+                            </Link>
+                          </li>
+                          <li>
+                            <Link href="/developments">
+                              <span className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1.5">
+                                Property Developers
+                              </span>
+                            </Link>
+                          </li>
                         </ul>
                       </div>
 
@@ -446,9 +718,27 @@ export function EnhancedNavbar() {
                           Sell Your Property
                         </h4>
                         <ul className="space-y-3 text-sm pl-1">
-                          <li><Link href="/advertise"><span className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1.5">Post For Sale by Owner</span></Link></li>
-                          <li><Link href="/advertise"><span className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1.5">List Privately</span></Link></li>
-                          <li><Link href="/dashboard"><span className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1.5">My Dashboard</span></Link></li>
+                          <li>
+                            <Link href="/advertise">
+                              <span className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1.5">
+                                Post For Sale by Owner
+                              </span>
+                            </Link>
+                          </li>
+                          <li>
+                            <Link href="/advertise">
+                              <span className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1.5">
+                                List Privately
+                              </span>
+                            </Link>
+                          </li>
+                          <li>
+                            <Link href="/dashboard">
+                              <span className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1.5">
+                                My Dashboard
+                              </span>
+                            </Link>
+                          </li>
                         </ul>
                       </div>
 
@@ -461,10 +751,34 @@ export function EnhancedNavbar() {
                           Selling Tools
                         </h4>
                         <ul className="space-y-3 text-sm pl-1">
-                          <li><Link href="#"><span className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1.5">Property Valuation</span></Link></li>
-                          <li><Link href="#"><span className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1.5">Sold House Prices</span></Link></li>
-                          <li><Link href="#"><span className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1.5">Seller Guide</span></Link></li>
-                          <li><Link href="#"><span className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1.5">Market Trends</span></Link></li>
+                          <li>
+                            <Link href="#">
+                              <span className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1.5">
+                                Property Valuation
+                              </span>
+                            </Link>
+                          </li>
+                          <li>
+                            <Link href="#">
+                              <span className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1.5">
+                                Sold House Prices
+                              </span>
+                            </Link>
+                          </li>
+                          <li>
+                            <Link href="#">
+                              <span className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1.5">
+                                Seller Guide
+                              </span>
+                            </Link>
+                          </li>
+                          <li>
+                            <Link href="#">
+                              <span className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1.5">
+                                Market Trends
+                              </span>
+                            </Link>
+                          </li>
                         </ul>
                       </div>
                     </div>
@@ -476,9 +790,15 @@ export function EnhancedNavbar() {
                           <Building2 className="h-6 w-6 text-blue-600" />
                         </div>
                         <h5 className="font-bold text-slate-800 mb-2">For Developers</h5>
-                        <p className="text-sm text-slate-500 mb-4">List your development and reach thousands of buyers.</p>
+                        <p className="text-sm text-slate-500 mb-4">
+                          List your development and reach thousands of buyers.
+                        </p>
                         <Link href="/developer">
-                          <Button variant="outline" size="sm" className="w-full text-sm h-9 border-blue-200 text-blue-600 hover:bg-blue-50">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="w-full text-sm h-9 border-blue-200 text-blue-600 hover:bg-blue-50"
+                          >
                             Developer Portal
                           </Button>
                         </Link>
@@ -497,7 +817,7 @@ export function EnhancedNavbar() {
                   <div className="w-[250px] p-2">
                     {insightsOptions.map(option => (
                       <NavigationMenuLink key={option.label} asChild>
-                        <a 
+                        <a
                           href={option.href}
                           className="block p-3 hover:bg-blue-50 hover:text-blue-600 rounded-md transition-colors"
                         >
@@ -534,9 +854,10 @@ export function EnhancedNavbar() {
               <Button
                 size="sm"
                 className={`
-                  ${isAdvertisePage 
-                    ? 'bg-gradient-to-r from-blue-800 to-blue-900 ring-2 ring-blue-400 ring-offset-2' 
-                    : 'bg-gradient-to-r from-blue-700 to-blue-800 hover:from-blue-800 hover:to-blue-900'
+                  ${
+                    isAdvertisePage
+                      ? 'bg-gradient-to-r from-blue-800 to-blue-900 ring-2 ring-blue-400 ring-offset-2'
+                      : 'bg-gradient-to-r from-blue-700 to-blue-800 hover:from-blue-800 hover:to-blue-900'
                   }
                   text-white shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-200 font-bold border border-blue-600
                 `}
@@ -550,14 +871,18 @@ export function EnhancedNavbar() {
             {/* Favorites */}
             {!!user && (
               <Link href="/favorites">
-                <Button variant="ghost" size="icon" className="text-foreground hover:bg-blue-50 hover:text-blue-600">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="text-foreground hover:bg-blue-50 hover:text-blue-600"
+                >
                   <Heart className="h-5 w-5" />
                 </Button>
               </Link>
             )}
 
             {/* User Menu */}
-            {!!user ? (
+            {user ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button

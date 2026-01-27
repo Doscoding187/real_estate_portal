@@ -1,6 +1,6 @@
 /**
  * FinalCTASection Demo Page
- * 
+ *
  * Demonstrates the FinalCTASection component with example content.
  */
 
@@ -26,9 +26,7 @@ export default function FinalCTADemo() {
           <h1 className="text-4xl font-bold text-gray-900 mb-4">
             Scroll Down to See Final CTA Section
           </h1>
-          <p className="text-lg text-gray-600">
-            This simulates the end of the landing page
-          </p>
+          <p className="text-lg text-gray-600">This simulates the end of the landing page</p>
         </div>
       </div>
 
@@ -37,13 +35,13 @@ export default function FinalCTADemo() {
         headline="Ready to Reach High-Intent Property Buyers?"
         subtext="Join thousands of successful partners who are growing their business with our platform. Get started today or schedule a demo to learn more."
         primaryCTA={{
-          label: "Get Started",
-          href: "/register",
+          label: 'Get Started',
+          href: '/register',
           onClick: handlePrimaryCTA,
         }}
         secondaryCTA={{
-          label: "Request a Demo",
-          href: "/contact",
+          label: 'Request a Demo',
+          href: '/contact',
           onClick: handleSecondaryCTA,
         }}
       />
@@ -56,13 +54,13 @@ export default function FinalCTADemo() {
         headline="Start Advertising Today"
         subtext="No credit card required. Set up your profile in minutes and start reaching verified property seekers across South Africa."
         primaryCTA={{
-          label: "Create Free Account",
-          href: "/register",
+          label: 'Create Free Account',
+          href: '/register',
           onClick: handlePrimaryCTA,
         }}
         secondaryCTA={{
-          label: "View Pricing",
-          href: "/pricing",
+          label: 'View Pricing',
+          href: '/pricing',
           onClick: handleSecondaryCTA,
         }}
       />
@@ -75,13 +73,13 @@ export default function FinalCTADemo() {
         headline="Don't Miss Out on Qualified Leads"
         subtext="Over 10,000 verified property seekers use our platform daily. Start capturing leads and growing your business today."
         primaryCTA={{
-          label: "Get Started Now",
-          href: "/register",
+          label: 'Get Started Now',
+          href: '/register',
           onClick: handlePrimaryCTA,
         }}
         secondaryCTA={{
-          label: "Learn More",
-          href: "/about",
+          label: 'Learn More',
+          href: '/about',
           onClick: handleSecondaryCTA,
         }}
       />
@@ -91,4 +89,3 @@ export default function FinalCTADemo() {
     </div>
   );
 }
-

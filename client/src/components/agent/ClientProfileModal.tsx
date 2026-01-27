@@ -1,10 +1,5 @@
 import { useState } from 'react';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
@@ -219,7 +214,7 @@ export function ClientProfileModal({ lead, isOpen, onClose }: ClientProfileModal
                     <p className="text-lg font-bold text-gray-900">
                       {Math.floor(
                         (new Date().getTime() - new Date(lead.createdAt).getTime()) /
-                          (1000 * 60 * 60 * 24)
+                          (1000 * 60 * 60 * 24),
                       )}
                     </p>
                   </div>
@@ -342,7 +337,7 @@ export function ClientProfileModal({ lead, isOpen, onClose }: ClientProfileModal
                     <div className="mt-4 pt-4 border-t border-gray-100">
                       <label className="text-sm font-medium text-gray-700 mb-2 block">Tags</label>
                       <div className="flex flex-wrap gap-2">
-                        {lead.tags.map((tag) => (
+                        {lead.tags.map(tag => (
                           <Badge key={tag} variant="outline" className="bg-white">
                             {tag}
                             {isEditing && (
@@ -367,7 +362,9 @@ export function ClientProfileModal({ lead, isOpen, onClose }: ClientProfileModal
               {lead.property && (
                 <Card className="shadow-soft">
                   <CardContent className="p-6">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Interested Property</h3>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                      Interested Property
+                    </h3>
                     <div className="p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl">
                       <div className="flex items-start gap-4">
                         <div className="p-3 bg-white rounded-lg">
@@ -376,8 +373,7 @@ export function ClientProfileModal({ lead, isOpen, onClose }: ClientProfileModal
                         <div className="flex-1">
                           <h4 className="font-semibold text-gray-900">{lead.property.title}</h4>
                           <p className="text-sm text-gray-600 mt-1">
-                            {lead.property.city} • R{' '}
-                            {(lead.property.price / 1000000).toFixed(1)}M
+                            {lead.property.city} • R {(lead.property.price / 1000000).toFixed(1)}M
                           </p>
                           <Button variant="outline" size="sm" className="mt-3">
                             View Property Details
@@ -406,7 +402,7 @@ export function ClientProfileModal({ lead, isOpen, onClose }: ClientProfileModal
                             <div
                               className={cn(
                                 'p-3 rounded-full flex-shrink-0 h-12 w-12 flex items-center justify-center',
-                                getTypeColor(interaction.type)
+                                getTypeColor(interaction.type),
                               )}
                             >
                               <Icon className="h-5 w-5" />
@@ -425,7 +421,9 @@ export function ClientProfileModal({ lead, isOpen, onClose }: ClientProfileModal
                                   {interaction.type}
                                 </Badge>
                               </div>
-                              <p className="text-sm text-gray-600 mb-2">{interaction.description}</p>
+                              <p className="text-sm text-gray-600 mb-2">
+                                {interaction.description}
+                              </p>
                               {interaction.outcome && (
                                 <div className="mt-2 p-2 bg-green-50 rounded-lg">
                                   <p className="text-xs font-medium text-green-700">
@@ -450,7 +448,7 @@ export function ClientProfileModal({ lead, isOpen, onClose }: ClientProfileModal
                   <Textarea
                     placeholder="Add a new note..."
                     value={newNote}
-                    onChange={(e) => setNewNote(e.target.value)}
+                    onChange={e => setNewNote(e.target.value)}
                     className="mb-3 rounded-lg"
                     rows={3}
                   />
@@ -462,7 +460,7 @@ export function ClientProfileModal({ lead, isOpen, onClose }: ClientProfileModal
               </Card>
 
               <div className="space-y-3">
-                {notes.map((note) => (
+                {notes.map(note => (
                   <Card key={note.id} className="shadow-soft">
                     <CardContent className="p-4">
                       <div className="flex justify-between items-start mb-2">
@@ -484,7 +482,9 @@ export function ClientProfileModal({ lead, isOpen, onClose }: ClientProfileModal
             <TabsContent value="properties">
               <Card className="shadow-soft">
                 <CardContent className="p-6 text-center">
-                  <p className="text-sm text-gray-500">Property history and preferences will appear here</p>
+                  <p className="text-sm text-gray-500">
+                    Property history and preferences will appear here
+                  </p>
                 </CardContent>
               </Card>
             </TabsContent>

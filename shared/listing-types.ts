@@ -261,17 +261,17 @@ export interface BasicInformation {
   city: string;
   suburb?: string;
   streetAddress: string;
-  
+
   // Transaction-specific fields (already in pricing, but some additional ones)
   availabilityStatus?: string;
   leaseTerm?: string;
   occupationDate?: Date;
   depositAmount?: number;
   auctionVenue?: string;
-  
+
   // Property highlights (4 per type) - stored in propertyDetails
   // These are defined in the property-specific interfaces above
-  
+
   // Status-specific fields (based on badge)
   noticePeriod?: string;
   currentRentalIncome?: number;
@@ -294,7 +294,13 @@ export type PetPolicy = 'allowed' | 'cats_only' | 'no_pets' | 'by_arrangement';
 export type RoofType = 'tile' | 'metal' | 'slate' | 'thatch' | 'concrete' | 'other';
 export type WallType = 'brick' | 'plaster' | 'wood' | 'stone' | 'concrete' | 'other';
 export type WindowType = 'steel' | 'aluminium' | 'wood' | 'pvc' | 'other';
-export type SecurityFeature = 'alarm' | 'electric_fence' | 'beams' | 'cctv' | '24hr_guard' | 'access_control';
+export type SecurityFeature =
+  | 'alarm'
+  | 'electric_fence'
+  | 'beams'
+  | 'cctv'
+  | '24hr_guard'
+  | 'access_control';
 export type OutdoorFeature = 'pool' | 'garden' | 'braai_area' | 'patio' | 'balcony' | 'deck';
 
 export type CommercialGrade = 'a_grade' | 'b_grade' | 'c_grade' | 'premium';
@@ -307,7 +313,12 @@ export type FarmWaterSource = 'borehole' | 'river' | 'dam' | 'municipal' | 'rain
 export type FarmFencing = 'game' | 'cattle' | 'electric' | 'barbed_wire' | 'mesh' | 'none';
 export type FarmTopography = 'flat' | 'sloped' | 'hilly' | 'mountainous' | 'mixed';
 
-export type HouseRule = 'no_smoking' | 'no_overnight_guests' | 'quiet_hours' | 'no_parties' | 'clean_up_after_self';
+export type HouseRule =
+  | 'no_smoking'
+  | 'no_overnight_guests'
+  | 'quiet_hours'
+  | 'no_parties'
+  | 'clean_up_after_self';
 export type BillIncluded = 'water' | 'electricity' | 'wifi' | 'cleaning' | 'gas';
 
 export interface AdditionalInformation {
@@ -341,11 +352,10 @@ export interface AdditionalInformation {
   houseRules?: HouseRule[];
   billsIncluded?: BillIncluded[];
   minimumStayMonths?: number;
-  
+
   // Legacy / Other (Keep generic if needed or remove if fully replacing)
   amenitiesFeatures?: string[];
 }
-
 
 // Step 4: Location
 export interface LocationData {

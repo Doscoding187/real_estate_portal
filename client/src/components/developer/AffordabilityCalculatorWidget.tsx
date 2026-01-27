@@ -1,16 +1,16 @@
 /**
  * Affordability Calculator Widget - Gamified Buyability Calculator
- * 
+ *
  * A Zillow-inspired, SA-first affordability tool that guides buyers through
  * their property journey with progressive disclosure and real-time feedback.
- * 
+ *
  * Features:
  * - Start with ONE question (monthly income)
  * - Gamified accuracy progression
  * - Real-time unit matching
  * - Affordability grades (A-E)
  * - Actionable insights and recommendations
- * 
+ *
  * Validates: Requirements 4.1, 4.2, 4.3
  */
 
@@ -54,14 +54,14 @@ export function AffordabilityCalculatorWidget({
   const [savingsDeposit, setSavingsDeposit] = useState<number | ''>('');
   const [dependents, setDependents] = useState<number | ''>('');
   const [creditScore, setCreditScore] = useState<number | ''>('');
-  
+
   // UI state
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [result, setResult] = useState<any>(null);
 
   // TRPC mutation
   const calculateMutation = trpc.developer.calculateAffordability.useMutation({
-    onSuccess: (data) => {
+    onSuccess: data => {
       setResult(data);
       if (onAffordabilityCalculated) {
         onAffordabilityCalculated(data);
@@ -71,7 +71,7 @@ export function AffordabilityCalculatorWidget({
 
   const handleCalculate = () => {
     const financialData: any = {};
-    
+
     if (income) financialData.income = Number(income) * 100; // Convert to cents
     if (combinedIncome) financialData.combinedIncome = Number(combinedIncome) * 100;
     if (monthlyExpenses) financialData.monthlyExpenses = Number(monthlyExpenses) * 100;
@@ -85,22 +85,33 @@ export function AffordabilityCalculatorWidget({
 
   const getGradeColor = (grade: string) => {
     switch (grade) {
-      case 'A': return 'bg-green-500';
-      case 'B': return 'bg-blue-500';
-      case 'C': return 'bg-yellow-500';
-      case 'D': return 'bg-orange-500';
-      case 'E': return 'bg-red-500';
-      default: return 'bg-gray-500';
+      case 'A':
+        return 'bg-green-500';
+      case 'B':
+        return 'bg-blue-500';
+      case 'C':
+        return 'bg-yellow-500';
+      case 'D':
+        return 'bg-orange-500';
+      case 'E':
+        return 'bg-red-500';
+      default:
+        return 'bg-gray-500';
     }
   };
 
   const getInsightIcon = (type: string) => {
     switch (type) {
-      case 'positive': return <CheckCircle2 className="h-4 w-4 text-green-600" />;
-      case 'warning': return <AlertCircle className="h-4 w-4 text-orange-600" />;
-      case 'tip': return <Lightbulb className="h-4 w-4 text-blue-600" />;
-      case 'action': return <Zap className="h-4 w-4 text-purple-600" />;
-      default: return null;
+      case 'positive':
+        return <CheckCircle2 className="h-4 w-4 text-green-600" />;
+      case 'warning':
+        return <AlertCircle className="h-4 w-4 text-orange-600" />;
+      case 'tip':
+        return <Lightbulb className="h-4 w-4 text-blue-600" />;
+      case 'action':
+        return <Zap className="h-4 w-4 text-purple-600" />;
+      default:
+        return null;
     }
   };
 
@@ -112,7 +123,7 @@ export function AffordabilityCalculatorWidget({
             <Calculator className="h-5 w-5 text-green-600" />
             <h4 className="font-semibold">Check Your Affordability</h4>
           </div>
-          
+
           <div className="space-y-2">
             <Label htmlFor="income-compact">Monthly Income (R)</Label>
             <Input
@@ -120,11 +131,11 @@ export function AffordabilityCalculatorWidget({
               type="number"
               placeholder="e.g., 25000"
               value={income}
-              onChange={(e) => setIncome(e.target.value ? Number(e.target.value) : '')}
+              onChange={e => setIncome(e.target.value ? Number(e.target.value) : '')}
             />
           </div>
 
-          <Button 
+          <Button
             onClick={handleCalculate}
             disabled={!income || calculateMutation.isPending}
             className="w-full"
@@ -150,9 +161,11 @@ export function AffordabilityCalculatorWidget({
               <p className="text-sm text-gray-600">Discover what you can afford</p>
             </div>
           </div>
-          
+
           {result && (
-            <Badge className={`${getGradeColor(result.affordabilityGrade.grade)} text-white text-lg px-4 py-2`}>
+            <Badge
+              className={`${getGradeColor(result.affordabilityGrade.grade)} text-white text-lg px-4 py-2`}
+            >
               Grade {result.affordabilityGrade.grade}
             </Badge>
           )}
@@ -185,9 +198,7 @@ export function AffordabilityCalculatorWidget({
                 <div className="text-2xl font-bold text-green-600">
                   {formatSARandShort(result.affordabilityMax / 100)}
                 </div>
-                <p className="text-xs text-gray-600 mt-1">
-                  Maximum property price
-                </p>
+                <p className="text-xs text-gray-600 mt-1">Maximum property price</p>
               </div>
 
               <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
@@ -198,14 +209,14 @@ export function AffordabilityCalculatorWidget({
                 <div className="text-2xl font-bold text-blue-600">
                   {formatSARandShort(result.monthlyPaymentCapacity / 100)}
                 </div>
-                <p className="text-xs text-gray-600 mt-1">
-                  Estimated repayment
-                </p>
+                <p className="text-xs text-gray-600 mt-1">Estimated repayment</p>
               </div>
             </div>
 
             {/* Grade Description */}
-            <div className={`rounded-lg p-4 border-2 ${result.affordabilityGrade.color === 'green' ? 'bg-green-50 border-green-200' : result.affordabilityGrade.color === 'blue' ? 'bg-blue-50 border-blue-200' : result.affordabilityGrade.color === 'yellow' ? 'bg-yellow-50 border-yellow-200' : result.affordabilityGrade.color === 'orange' ? 'bg-orange-50 border-orange-200' : 'bg-red-50 border-red-200'}`}>
+            <div
+              className={`rounded-lg p-4 border-2 ${result.affordabilityGrade.color === 'green' ? 'bg-green-50 border-green-200' : result.affordabilityGrade.color === 'blue' ? 'bg-blue-50 border-blue-200' : result.affordabilityGrade.color === 'yellow' ? 'bg-yellow-50 border-yellow-200' : result.affordabilityGrade.color === 'orange' ? 'bg-orange-50 border-orange-200' : 'bg-red-50 border-red-200'}`}
+            >
               <h4 className="font-semibold mb-1">{result.affordabilityGrade.label}</h4>
               <p className="text-sm text-gray-700">{result.affordabilityGrade.description}</p>
             </div>
@@ -223,16 +234,12 @@ export function AffordabilityCalculatorWidget({
               type="number"
               placeholder="e.g., 25000"
               value={income}
-              onChange={(e) => setIncome(e.target.value ? Number(e.target.value) : '')}
+              onChange={e => setIncome(e.target.value ? Number(e.target.value) : '')}
             />
           </div>
 
           {!showAdvanced && (
-            <Button
-              variant="outline"
-              onClick={() => setShowAdvanced(true)}
-              className="w-full"
-            >
+            <Button variant="outline" onClick={() => setShowAdvanced(true)} className="w-full">
               <Sparkles className="h-4 w-4 mr-2" />
               Add More Details for Better Accuracy
             </Button>
@@ -247,7 +254,7 @@ export function AffordabilityCalculatorWidget({
                   type="number"
                   placeholder="e.g., 20000"
                   value={combinedIncome}
-                  onChange={(e) => setCombinedIncome(e.target.value ? Number(e.target.value) : '')}
+                  onChange={e => setCombinedIncome(e.target.value ? Number(e.target.value) : '')}
                 />
               </div>
 
@@ -258,7 +265,7 @@ export function AffordabilityCalculatorWidget({
                   type="number"
                   placeholder="e.g., 8000"
                   value={monthlyExpenses}
-                  onChange={(e) => setMonthlyExpenses(e.target.value ? Number(e.target.value) : '')}
+                  onChange={e => setMonthlyExpenses(e.target.value ? Number(e.target.value) : '')}
                 />
               </div>
 
@@ -269,7 +276,7 @@ export function AffordabilityCalculatorWidget({
                   type="number"
                   placeholder="e.g., 3000"
                   value={monthlyDebts}
-                  onChange={(e) => setMonthlyDebts(e.target.value ? Number(e.target.value) : '')}
+                  onChange={e => setMonthlyDebts(e.target.value ? Number(e.target.value) : '')}
                 />
               </div>
 
@@ -280,7 +287,7 @@ export function AffordabilityCalculatorWidget({
                   type="number"
                   placeholder="e.g., 100000"
                   value={savingsDeposit}
-                  onChange={(e) => setSavingsDeposit(e.target.value ? Number(e.target.value) : '')}
+                  onChange={e => setSavingsDeposit(e.target.value ? Number(e.target.value) : '')}
                 />
               </div>
 
@@ -292,7 +299,7 @@ export function AffordabilityCalculatorWidget({
                     type="number"
                     placeholder="0"
                     value={dependents}
-                    onChange={(e) => setDependents(e.target.value ? Number(e.target.value) : '')}
+                    onChange={e => setDependents(e.target.value ? Number(e.target.value) : '')}
                   />
                 </div>
 
@@ -303,7 +310,7 @@ export function AffordabilityCalculatorWidget({
                     type="number"
                     placeholder="650"
                     value={creditScore}
-                    onChange={(e) => setCreditScore(e.target.value ? Number(e.target.value) : '')}
+                    onChange={e => setCreditScore(e.target.value ? Number(e.target.value) : '')}
                   />
                 </div>
               </div>
@@ -311,13 +318,17 @@ export function AffordabilityCalculatorWidget({
           )}
         </div>
 
-        <Button 
+        <Button
           onClick={handleCalculate}
           disabled={!income || calculateMutation.isPending}
           className="w-full bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600"
           size="lg"
         >
-          {calculateMutation.isPending ? 'Calculating...' : result ? 'Recalculate' : 'Calculate Affordability'}
+          {calculateMutation.isPending
+            ? 'Calculating...'
+            : result
+              ? 'Recalculate'
+              : 'Calculate Affordability'}
         </Button>
 
         {/* Accuracy Boosters */}
@@ -331,7 +342,10 @@ export function AffordabilityCalculatorWidget({
               </h4>
               <div className="space-y-2">
                 {result.accuracyBoosters.slice(0, 3).map((booster: any) => (
-                  <div key={booster.id} className="flex items-center justify-between p-3 bg-purple-50 rounded-lg border border-purple-200">
+                  <div
+                    key={booster.id}
+                    className="flex items-center justify-between p-3 bg-purple-50 rounded-lg border border-purple-200"
+                  >
                     <div className="flex items-center gap-2">
                       <span className="text-xl">{booster.icon}</span>
                       <div>
@@ -383,7 +397,10 @@ export function AffordabilityCalculatorWidget({
               </h4>
               <div className="space-y-2">
                 {result.quickWins.map((win: string, index: number) => (
-                  <div key={index} className="flex items-center gap-2 p-2 bg-yellow-50 rounded-lg border border-yellow-200">
+                  <div
+                    key={index}
+                    className="flex items-center gap-2 p-2 bg-yellow-50 rounded-lg border border-yellow-200"
+                  >
                     <CheckCircle2 className="h-4 w-4 text-yellow-600 flex-shrink-0" />
                     <p className="text-sm">{win}</p>
                   </div>

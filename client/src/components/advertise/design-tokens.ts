@@ -1,8 +1,8 @@
 /**
  * Soft-UI Design Tokens for Advertise With Us Landing Page
- * 
+ *
  * Inspired by: Zillow Partners, 99Acres, SquareYards
- * 
+ *
  * Design Philosophy:
  * - Pastel gradients with soft color transitions
  * - Soft shadows (not harsh, not flat)
@@ -79,36 +79,36 @@ export const softUITokens = {
   },
 
   spacing: {
-    xs: '0.25rem',    // 4px
-    sm: '0.5rem',     // 8px
-    md: '1rem',       // 16px
-    lg: '1.5rem',     // 24px
-    xl: '2rem',       // 32px
-    '2xl': '3rem',    // 48px
-    '3xl': '4rem',    // 64px
-    '4xl': '5rem',    // 80px
-    '5xl': '6rem',    // 96px
+    xs: '0.25rem', // 4px
+    sm: '0.5rem', // 8px
+    md: '1rem', // 16px
+    lg: '1.5rem', // 24px
+    xl: '2rem', // 32px
+    '2xl': '3rem', // 48px
+    '3xl': '4rem', // 64px
+    '4xl': '5rem', // 80px
+    '5xl': '6rem', // 96px
   },
 
   // Layout tokens for consistent section structure
   layout: {
     // Standard container wrapper
     containerClass: 'max-w-7xl mx-auto px-4 sm:px-6 lg:px-8',
-    
+
     // Section padding
     sectionPadding: 'py-20 md:py-28',
     sectionPaddingTop: 'pt-20 md:pt-28',
     sectionPaddingBottom: 'pb-20 md:pb-28',
-    
+
     // Block spacing
     blockGap: 'mt-10 md:mt-16',
     blockGapLarge: 'mt-16 md:mt-24',
-    
+
     // Grid patterns
     grid4Col: 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8',
     grid3Col: 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-10',
     grid2Col: 'grid grid-cols-1 lg:grid-cols-2 gap-12',
-    
+
     // Flex patterns
     flexRow: 'flex flex-col md:flex-row items-center justify-between gap-10',
   },
@@ -119,12 +119,12 @@ export const softUITokens = {
     h2: 'text-3xl md:text-4xl font-semibold',
     h3: 'text-2xl font-semibold',
     h4: 'text-xl font-semibold',
-    
+
     // Line heights
     h1LineHeight: 'leading-tight',
     h2LineHeight: 'leading-tight',
     h3LineHeight: 'leading-snug',
-    
+
     // Subheadings
     subheading: 'text-lg md:text-xl text-gray-600',
   },
@@ -135,16 +135,16 @@ export const softUITokens = {
       display: '"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
     },
     fontSize: {
-      xs: '0.75rem',      // 12px
-      sm: '0.875rem',     // 14px
-      base: '1rem',       // 16px
-      lg: '1.125rem',     // 18px
-      xl: '1.25rem',      // 20px
-      '2xl': '1.5rem',    // 24px
-      '3xl': '1.875rem',  // 30px
-      '4xl': '2.25rem',   // 36px
-      '5xl': '3rem',      // 48px
-      '6xl': '3.75rem',   // 60px
+      xs: '0.75rem', // 12px
+      sm: '0.875rem', // 14px
+      base: '1rem', // 16px
+      lg: '1.125rem', // 18px
+      xl: '1.25rem', // 20px
+      '2xl': '1.5rem', // 24px
+      '3xl': '1.875rem', // 30px
+      '4xl': '2.25rem', // 36px
+      '5xl': '3rem', // 48px
+      '6xl': '3.75rem', // 60px
     },
     fontWeight: {
       normal: '400',

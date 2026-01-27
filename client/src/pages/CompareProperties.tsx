@@ -20,7 +20,7 @@ export default function CompareProperties() {
     },
     {
       enabled: comparedProperties.length > 0,
-    }
+    },
   );
 
   if (comparedProperties.length === 0) {
@@ -31,7 +31,8 @@ export default function CompareProperties() {
           <div className="max-w-2xl mx-auto text-center">
             <h1 className="text-3xl font-bold text-slate-900 mb-4">Compare Properties</h1>
             <p className="text-slate-600 mb-8">
-              You haven't selected any properties to compare yet. Add properties from the listings page to get started.
+              You haven't selected any properties to compare yet. Add properties from the listings
+              page to get started.
             </p>
             <Button onClick={() => setLocation('/properties')} variant="default">
               <ArrowLeft className="mr-2 h-4 w-4" />
@@ -44,8 +45,8 @@ export default function CompareProperties() {
   }
 
   // Filter properties by selected IDs
-  const selectedProperties = properties?.filter((p) => comparedProperties.includes(p.id)) || [];
-  const normalized = selectedProperties.map(normalizePropertyForUI).filter((p) => p !== null);
+  const selectedProperties = properties?.filter(p => comparedProperties.includes(p.id)) || [];
+  const normalized = selectedProperties.map(normalizePropertyForUI).filter(p => p !== null);
 
   if (isLoading) {
     return (
@@ -75,7 +76,7 @@ export default function CompareProperties() {
   return (
     <div className="min-h-screen bg-slate-50">
       <ListingNavbar />
-      
+
       <div className="container mx-auto px-4 py-8">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
@@ -100,7 +101,7 @@ export default function CompareProperties() {
                   <th className="text-left p-4 font-medium text-slate-700 sticky left-0 bg-slate-50 z-10">
                     Property
                   </th>
-                  {normalized.map((property) => (
+                  {normalized.map(property => (
                     <th key={property.id} className="p-4 min-w-[280px]">
                       <div className="space-y-3">
                         <div className="relative h-48 rounded-lg overflow-hidden">
@@ -117,7 +118,9 @@ export default function CompareProperties() {
                           </button>
                         </div>
                         <div>
-                          <h3 className="font-semibold text-slate-900 line-clamp-2">{property.title}</h3>
+                          <h3 className="font-semibold text-slate-900 line-clamp-2">
+                            {property.title}
+                          </h3>
                           <p className="text-2xl font-bold text-blue-600 mt-2">
                             R {property.price.toLocaleString()}
                           </p>
@@ -138,7 +141,7 @@ export default function CompareProperties() {
                 {comparisonRows.map((row, idx) => {
                   // Check if all values are the same
                   const values = normalized.map((p: any) => p[row.key]);
-                  const allSame = values.every((v) => v === values[0]);
+                  const allSame = values.every(v => v === values[0]);
 
                   return (
                     <tr

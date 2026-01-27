@@ -1,7 +1,7 @@
 /**
  * Partnership System Enums & Permission Presets
  * Single source of truth for partnership types, visibility, and permissions
- * 
+ *
  * LOCKED: 2026-01-13
  * Version: 1.0
  */
@@ -12,39 +12,39 @@
 
 export const PARTNER_TYPES = [
   'co_developer',
-  'joint_venture', 
+  'joint_venture',
   'investor',
   'builder',
   'marketing_agency',
   'selling_agency',
 ] as const;
 
-export type PartnerType = typeof PARTNER_TYPES[number];
+export type PartnerType = (typeof PARTNER_TYPES)[number];
 
 // ============================================
 // VISIBILITY SCOPES
 // ============================================
 
 export const VISIBILITY_SCOPES = [
-  'profile_public',   // Appears on their public profile page
-  'internal_only',    // Internal dashboard only (analytics, etc.)
-  'marketing_only',   // Landing pages, ads, campaigns only
+  'profile_public', // Appears on their public profile page
+  'internal_only', // Internal dashboard only (analytics, etc.)
+  'marketing_only', // Landing pages, ads, campaigns only
 ] as const;
 
-export type VisibilityScope = typeof VISIBILITY_SCOPES[number];
+export type VisibilityScope = (typeof VISIBILITY_SCOPES)[number];
 
 // ============================================
 // LEAD SOURCE TYPES
 // ============================================
 
 export const LEAD_SOURCE_TYPES = [
-  'developer_profile',   // Lead came from developer's profile page
-  'agency_profile',      // Lead came from agency's profile page
-  'development_page',    // Lead came from development landing page
-  'campaign',            // Lead came from tracked campaign/ad
+  'developer_profile', // Lead came from developer's profile page
+  'agency_profile', // Lead came from agency's profile page
+  'development_page', // Lead came from development landing page
+  'campaign', // Lead came from tracked campaign/ad
 ] as const;
 
-export type LeadSourceType = typeof LEAD_SOURCE_TYPES[number];
+export type LeadSourceType = (typeof LEAD_SOURCE_TYPES)[number];
 
 // ============================================
 // PERMISSION STRUCTURE

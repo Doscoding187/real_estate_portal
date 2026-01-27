@@ -22,21 +22,17 @@ router.get('/:partnerId/summary', async (req, res) => {
     const start = startDate ? new Date(startDate as string) : undefined;
     const end = endDate ? new Date(endDate as string) : undefined;
 
-    const summary = await partnerAnalyticsService.getPartnerAnalyticsSummary(
-      partnerId,
-      start,
-      end
-    );
+    const summary = await partnerAnalyticsService.getPartnerAnalyticsSummary(partnerId, start, end);
 
     res.json({
       success: true,
-      data: summary
+      data: summary,
     });
   } catch (error) {
     console.error('Error fetching partner analytics summary:', error);
     res.status(500).json({
       success: false,
-      error: 'Failed to fetch analytics summary'
+      error: 'Failed to fetch analytics summary',
     });
   }
 });
@@ -54,14 +50,14 @@ router.get('/:partnerId/trends', async (req, res) => {
     if (!startDate || !endDate) {
       return res.status(400).json({
         success: false,
-        error: 'startDate and endDate are required'
+        error: 'startDate and endDate are required',
       });
     }
 
     if (!['daily', 'weekly', 'monthly'].includes(period as string)) {
       return res.status(400).json({
         success: false,
-        error: 'period must be daily, weekly, or monthly'
+        error: 'period must be daily, weekly, or monthly',
       });
     }
 
@@ -69,18 +65,18 @@ router.get('/:partnerId/trends', async (req, res) => {
       partnerId,
       period as 'daily' | 'weekly' | 'monthly',
       new Date(startDate as string),
-      new Date(endDate as string)
+      new Date(endDate as string),
     );
 
     res.json({
       success: true,
-      data: trends
+      data: trends,
     });
   } catch (error) {
     console.error('Error fetching performance trends:', error);
     res.status(500).json({
       success: false,
-      error: 'Failed to fetch performance trends'
+      error: 'Failed to fetch performance trends',
     });
   }
 });
@@ -97,18 +93,18 @@ router.get('/:partnerId/top-content', async (req, res) => {
 
     const topContent = await partnerAnalyticsService.getContentRankedByPerformance(
       partnerId,
-      parseInt(limit as string, 10)
+      parseInt(limit as string, 10),
     );
 
     res.json({
       success: true,
-      data: topContent
+      data: topContent,
     });
   } catch (error) {
     console.error('Error fetching top content:', error);
     res.status(500).json({
       success: false,
-      error: 'Failed to fetch top content'
+      error: 'Failed to fetch top content',
     });
   }
 });
@@ -126,21 +122,17 @@ router.get('/:partnerId/funnel', async (req, res) => {
     const start = startDate ? new Date(startDate as string) : undefined;
     const end = endDate ? new Date(endDate as string) : undefined;
 
-    const funnel = await partnerAnalyticsService.getConversionFunnel(
-      partnerId,
-      start,
-      end
-    );
+    const funnel = await partnerAnalyticsService.getConversionFunnel(partnerId, start, end);
 
     res.json({
       success: true,
-      data: funnel
+      data: funnel,
     });
   } catch (error) {
     console.error('Error fetching conversion funnel:', error);
     res.status(500).json({
       success: false,
-      error: 'Failed to fetch conversion funnel'
+      error: 'Failed to fetch conversion funnel',
     });
   }
 });
@@ -156,13 +148,13 @@ router.get('/benchmarks', async (req, res) => {
 
     res.json({
       success: true,
-      data: benchmarks
+      data: benchmarks,
     });
   } catch (error) {
     console.error('Error fetching tier benchmarks:', error);
     res.status(500).json({
       success: false,
-      error: 'Failed to fetch tier benchmarks'
+      error: 'Failed to fetch tier benchmarks',
     });
   }
 });
@@ -180,13 +172,13 @@ router.get('/:partnerId/boost-roi', async (req, res) => {
 
     res.json({
       success: true,
-      data: roiData
+      data: roiData,
     });
   } catch (error) {
     console.error('Error fetching boost ROI:', error);
     res.status(500).json({
       success: false,
-      error: 'Failed to fetch boost ROI'
+      error: 'Failed to fetch boost ROI',
     });
   }
 });
@@ -207,18 +199,18 @@ router.get('/:partnerId/dashboard', async (req, res) => {
     // Fetch all analytics in parallel
     const [summary, trends, topContent, funnel, benchmarks, boostROI] = await Promise.all([
       partnerAnalyticsService.getPartnerAnalyticsSummary(partnerId, start, end),
-      start && end 
+      start && end
         ? partnerAnalyticsService.getPerformanceTrends(
             partnerId,
             period as 'daily' | 'weekly' | 'monthly',
             start,
-            end
+            end,
           )
         : Promise.resolve([]),
       partnerAnalyticsService.getContentRankedByPerformance(partnerId, 5),
       partnerAnalyticsService.getConversionFunnel(partnerId, start, end),
       partnerAnalyticsService.getTierBenchmarks(),
-      partnerAnalyticsService.getBoostCampaignROI(partnerId)
+      partnerAnalyticsService.getBoostCampaignROI(partnerId),
     ]);
 
     res.json({
@@ -229,14 +221,14 @@ router.get('/:partnerId/dashboard', async (req, res) => {
         topContent,
         funnel,
         benchmarks,
-        boostROI
-      }
+        boostROI,
+      },
     });
   } catch (error) {
     console.error('Error fetching analytics dashboard:', error);
     res.status(500).json({
       success: false,
-      error: 'Failed to fetch analytics dashboard'
+      error: 'Failed to fetch analytics dashboard',
     });
   }
 });

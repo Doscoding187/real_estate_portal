@@ -31,7 +31,10 @@ export function DevelopmentHeader({
           </Badge>
         )}
         {completionDate && (
-          <Badge variant="outline" className="rounded-pill border-slate-200 text-slate-600 px-3 py-1.5 text-xs font-semibold bg-white shadow-sm">
+          <Badge
+            variant="outline"
+            className="rounded-pill border-slate-200 text-slate-600 px-3 py-1.5 text-xs font-semibold bg-white shadow-sm"
+          >
             Completion in {completionDate}
           </Badge>
         )}
@@ -71,7 +74,7 @@ export function DevelopmentHeader({
           </div>
 
           {/* Primary CTA */}
-          <Button 
+          <Button
             onClick={onContact}
             className="rounded-pill bg-orange-500 hover:bg-orange-600 text-white px-6 h-10 text-sm font-semibold shadow-sm transition-all"
           >

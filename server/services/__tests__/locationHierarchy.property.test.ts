@@ -1,17 +1,17 @@
 /**
  * Property-Based Tests for Location Hierarchy
  * Feature: google-places-autocomplete-integration
- * 
+ *
  * These tests verify universal properties that should hold across all location data
  */
 
-import { describe, it, expect, beforeAll, afterAll } from "vitest";
-import fc from "fast-check";
-import { getDb } from "../../db";
-import { locations } from "../../../drizzle/schema";
-import { eq, and, isNotNull } from "drizzle-orm";
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import fc from 'fast-check';
+import { getDb } from '../../db';
+import { locations } from '../../../drizzle/schema';
+import { eq, and, isNotNull } from 'drizzle-orm';
 
-describe("Location Hierarchy Property Tests", () => {
+describe('Location Hierarchy Property Tests', () => {
   let db: Awaited<ReturnType<typeof getDb>> | null = null;
   let skipTests = false;
 
@@ -33,10 +33,10 @@ describe("Location Hierarchy Property Tests", () => {
   /**
    * Property 20: Hierarchical integrity
    * Validates: Requirements 16.5
-   * 
+   *
    * For any location record with a parent_id, the parent location should exist in the locations table
    */
-  it("should maintain hierarchical integrity - all parent_ids reference existing locations", async () => {
+  it('should maintain hierarchical integrity - all parent_ids reference existing locations', async () => {
     if (skipTests || !db) {
       console.log('⏭️  Skipping test - database not available');
       return;
@@ -47,21 +47,25 @@ describe("Location Hierarchy Property Tests", () => {
         fc.record({
           // Generate random location data
           name: fc.string({ minLength: 1, maxLength: 100 }),
-          slug: fc.string({ minLength: 1, maxLength: 100 }).map(s => 
-            s.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '')
+          slug: fc.string({ minLength: 1, maxLength: 100 }).map(s =>
+            s
+              .toLowerCase()
+              .replace(/[^a-z0-9]/g, '-')
+              .replace(/-+/g, '-')
+              .replace(/^-|-$/g, ''),
           ),
           type: fc.constantFrom('province', 'city', 'suburb', 'neighborhood'),
           description: fc.option(fc.string({ maxLength: 500 }), { nil: null }),
           latitude: fc.option(
             fc.double({ min: -35, max: -22 }).map(n => n.toFixed(6)),
-            { nil: null }
+            { nil: null },
           ),
           longitude: fc.option(
             fc.double({ min: 16, max: 33 }).map(n => n.toFixed(6)),
-            { nil: null }
+            { nil: null },
           ),
         }),
-        async (locationData) => {
+        async locationData => {
           // Create a parent location first
           const parentResult = await db.insert(locations).values({
             name: `Parent-${locationData.name}`,
@@ -124,9 +128,9 @@ describe("Location Hierarchy Property Tests", () => {
             await db.delete(locations).where(eq(locations.id, childId));
             await db.delete(locations).where(eq(locations.id, parentId));
           }
-        }
+        },
       ),
-      { numRuns: 100 } // Run 100 iterations as specified in design doc
+      { numRuns: 100 }, // Run 100 iterations as specified in design doc
     );
   });
 
@@ -134,7 +138,7 @@ describe("Location Hierarchy Property Tests", () => {
    * Additional property test: Verify no orphaned locations exist in the database
    * This tests the current state of the database rather than generating new data
    */
-  it("should have no orphaned locations - all existing parent_ids reference valid locations", async () => {
+  it('should have no orphaned locations - all existing parent_ids reference valid locations', async () => {
     if (skipTests || !db) {
       console.log('⏭️  Skipping test - database not available');
       return;
@@ -167,7 +171,7 @@ describe("Location Hierarchy Property Tests", () => {
    * Property test: Verify hierarchical type ordering
    * Province -> City -> Suburb -> Neighborhood
    */
-  it("should maintain proper hierarchical type ordering", async () => {
+  it('should maintain proper hierarchical type ordering', async () => {
     if (skipTests || !db) {
       console.log('⏭️  Skipping test - database not available');
       return;
@@ -180,7 +184,7 @@ describe("Location Hierarchy Property Tests", () => {
           cityName: fc.string({ minLength: 1, maxLength: 50 }),
           suburbName: fc.string({ minLength: 1, maxLength: 50 }),
         }),
-        async (data) => {
+        async data => {
           // Create province (no parent)
           const provinceResult = await db.insert(locations).values({
             name: data.provinceName,
@@ -216,11 +220,7 @@ describe("Location Hierarchy Property Tests", () => {
               .where(eq(locations.id, suburbId))
               .limit(1);
 
-            const city = await db
-              .select()
-              .from(locations)
-              .where(eq(locations.id, cityId))
-              .limit(1);
+            const city = await db.select().from(locations).where(eq(locations.id, cityId)).limit(1);
 
             const province = await db
               .select()
@@ -244,9 +244,9 @@ describe("Location Hierarchy Property Tests", () => {
             await db.delete(locations).where(eq(locations.id, cityId));
             await db.delete(locations).where(eq(locations.id, provinceId));
           }
-        }
+        },
       ),
-      { numRuns: 50 }
+      { numRuns: 50 },
     );
   });
 });

@@ -2,11 +2,11 @@ import { useEffect, useRef, useState } from 'react';
 
 /**
  * Throttle hook that limits how often a value can update
- * 
+ *
  * @param value - The value to throttle
  * @param delay - Delay in milliseconds (default: 250ms)
  * @returns The throttled value
- * 
+ *
  * @example
  * const throttledSearchTerm = useThrottle(searchTerm, 250);
  */

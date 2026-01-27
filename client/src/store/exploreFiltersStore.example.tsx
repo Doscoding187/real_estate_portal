@@ -1,6 +1,6 @@
 /**
  * Example usage of exploreFiltersStore
- * 
+ *
  * This file demonstrates how to use the Explore filters store
  * in various scenarios.
  */
@@ -41,7 +41,7 @@ export function BasicFilterPanel() {
         <label className="block text-sm font-medium mb-1">Property Type</label>
         <select
           value={propertyType || ''}
-          onChange={(e) => setPropertyType(e.target.value || null)}
+          onChange={e => setPropertyType(e.target.value || null)}
           className="w-full p-2 border rounded"
         >
           <option value="">All Types</option>
@@ -58,11 +58,8 @@ export function BasicFilterPanel() {
           <input
             type="number"
             value={priceMin || ''}
-            onChange={(e) =>
-              setPriceRange(
-                e.target.value ? parseInt(e.target.value) : null,
-                priceMax
-              )
+            onChange={e =>
+              setPriceRange(e.target.value ? parseInt(e.target.value) : null, priceMax)
             }
             placeholder="Min"
             className="w-1/2 p-2 border rounded"
@@ -70,11 +67,8 @@ export function BasicFilterPanel() {
           <input
             type="number"
             value={priceMax || ''}
-            onChange={(e) =>
-              setPriceRange(
-                priceMin,
-                e.target.value ? parseInt(e.target.value) : null
-              )
+            onChange={e =>
+              setPriceRange(priceMin, e.target.value ? parseInt(e.target.value) : null)
             }
             placeholder="Max"
             className="w-1/2 p-2 border rounded"
@@ -88,9 +82,7 @@ export function BasicFilterPanel() {
         <input
           type="number"
           value={bedrooms || ''}
-          onChange={(e) =>
-            setBedrooms(e.target.value ? parseInt(e.target.value) : null)
-          }
+          onChange={e => setBedrooms(e.target.value ? parseInt(e.target.value) : null)}
           placeholder="Any"
           className="w-full p-2 border rounded"
         />
@@ -102,9 +94,7 @@ export function BasicFilterPanel() {
         <input
           type="number"
           value={bathrooms || ''}
-          onChange={(e) =>
-            setBathrooms(e.target.value ? parseInt(e.target.value) : null)
-          }
+          onChange={e => setBathrooms(e.target.value ? parseInt(e.target.value) : null)}
           placeholder="Any"
           className="w-full p-2 border rounded"
         />
@@ -112,10 +102,7 @@ export function BasicFilterPanel() {
 
       {/* Actions */}
       <div className="flex gap-2">
-        <button
-          onClick={clearFilters}
-          className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300"
-        >
+        <button onClick={clearFilters} className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300">
           Clear All
         </button>
       </div>
@@ -125,7 +112,7 @@ export function BasicFilterPanel() {
 
 // Example 2: Filter Badge (shows active filter count)
 export function FilterBadge() {
-  const getFilterCount = useExploreFiltersStore((state) => state.getFilterCount);
+  const getFilterCount = useExploreFiltersStore(state => state.getFilterCount);
   const count = getFilterCount();
 
   if (count === 0) return null;
@@ -139,8 +126,7 @@ export function FilterBadge() {
 
 // Example 3: Quick Filter Chips
 export function QuickFilterChips() {
-  const { propertyType, bedrooms, setPropertyType, setBedrooms } =
-    useExploreFiltersStore();
+  const { propertyType, bedrooms, setPropertyType, setBedrooms } = useExploreFiltersStore();
 
   const propertyTypes = [
     { value: 'residential', label: 'Residential' },
@@ -156,14 +142,10 @@ export function QuickFilterChips() {
       <div>
         <p className="text-sm font-medium mb-2">Property Type</p>
         <div className="flex flex-wrap gap-2">
-          {propertyTypes.map((type) => (
+          {propertyTypes.map(type => (
             <button
               key={type.value}
-              onClick={() =>
-                setPropertyType(
-                  propertyType === type.value ? null : type.value
-                )
-              }
+              onClick={() => setPropertyType(propertyType === type.value ? null : type.value)}
               className={`px-3 py-1 rounded-full text-sm transition-colors ${
                 propertyType === type.value
                   ? 'bg-blue-500 text-white'
@@ -180,7 +162,7 @@ export function QuickFilterChips() {
       <div>
         <p className="text-sm font-medium mb-2">Bedrooms</p>
         <div className="flex flex-wrap gap-2">
-          {bedroomOptions.map((count) => (
+          {bedroomOptions.map(count => (
             <button
               key={count}
               onClick={() => setBedrooms(bedrooms === count ? null : count)}
@@ -219,9 +201,7 @@ export function ActiveFiltersDisplay() {
   const filterCount = getFilterCount();
 
   if (filterCount === 0) {
-    return (
-      <div className="text-sm text-gray-500">No active filters</div>
-    );
+    return <div className="text-sm text-gray-500">No active filters</div>;
   }
 
   const removeFilter = (filterName: string) => {
@@ -250,10 +230,7 @@ export function ActiveFiltersDisplay() {
   return (
     <div className="flex flex-wrap gap-2">
       {propertyType && (
-        <FilterChip
-          label={`Type: ${propertyType}`}
-          onRemove={() => removeFilter('propertyType')}
-        />
+        <FilterChip label={`Type: ${propertyType}`} onRemove={() => removeFilter('propertyType')} />
       )}
       {priceMin && (
         <FilterChip
@@ -268,23 +245,12 @@ export function ActiveFiltersDisplay() {
         />
       )}
       {bedrooms && (
-        <FilterChip
-          label={`${bedrooms} beds`}
-          onRemove={() => removeFilter('bedrooms')}
-        />
+        <FilterChip label={`${bedrooms} beds`} onRemove={() => removeFilter('bedrooms')} />
       )}
       {bathrooms && (
-        <FilterChip
-          label={`${bathrooms} baths`}
-          onRemove={() => removeFilter('bathrooms')}
-        />
+        <FilterChip label={`${bathrooms} baths`} onRemove={() => removeFilter('bathrooms')} />
       )}
-      {location && (
-        <FilterChip
-          label={location}
-          onRemove={() => removeFilter('location')}
-        />
-      )}
+      {location && <FilterChip label={location} onRemove={() => removeFilter('location')} />}
     </div>
   );
 }
@@ -299,12 +265,7 @@ function FilterChip({ label, onRemove }: { label: string; onRemove: () => void }
         className="hover:bg-blue-200 rounded-full p-0.5"
         aria-label={`Remove ${label} filter`}
       >
-        <svg
-          className="w-3 h-3"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
+        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -320,14 +281,11 @@ function FilterChip({ label, onRemove }: { label: string; onRemove: () => void }
 // Example 5: Selective Subscription (Performance Optimization)
 export function PropertyTypeFilter() {
   // Only re-renders when propertyType changes
-  const propertyType = useExploreFiltersStore((state) => state.propertyType);
-  const setPropertyType = useExploreFiltersStore((state) => state.setPropertyType);
+  const propertyType = useExploreFiltersStore(state => state.propertyType);
+  const setPropertyType = useExploreFiltersStore(state => state.setPropertyType);
 
   return (
-    <select
-      value={propertyType || ''}
-      onChange={(e) => setPropertyType(e.target.value || null)}
-    >
+    <select value={propertyType || ''} onChange={e => setPropertyType(e.target.value || null)}>
       <option value="">All Types</option>
       <option value="residential">Residential</option>
       <option value="development">Development</option>
@@ -352,7 +310,7 @@ export function useFilteredProperties() {
 
   // Remove null values for cleaner API calls
   const cleanParams = Object.fromEntries(
-    Object.entries(queryParams).filter(([_, value]) => value !== null)
+    Object.entries(queryParams).filter(([_, value]) => value !== null),
   );
 
   return cleanParams;

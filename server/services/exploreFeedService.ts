@@ -1,20 +1,19 @@
-import { db } from "../db";
+import { db } from '../db';
 import {
   exploreShorts,
   exploreUserPreferences,
   exploreCategories,
   exploreTopics,
-  exploreNeighbourhoodStories,
   listings,
   developments,
-} from "../../drizzle/schema";
-import { eq, and, desc, sql, or } from "drizzle-orm";
-import type { FeedType } from "../../shared/types";
-import { cache, CacheKeys, CacheTTL } from "../lib/cache";
+} from '../../drizzle/schema';
+import { eq, and, desc, sql, or } from 'drizzle-orm';
+import type { FeedType } from '../../shared/types';
+import { cache, CacheKeys, CacheTTL } from '../lib/cache';
 
 /**
  * Explore Feed Service
- * 
+ *
  * Handles feed generation logic for the Property Explore Shorts feature.
  * Implements basic recommendation algorithms and feed filtering.
  */
@@ -43,10 +42,8 @@ export interface FeedResult {
  * Transform explore short to include computed fields
  */
 function transformShort(short: any) {
-  const mediaIds = typeof short.mediaIds === 'string' 
-    ? JSON.parse(short.mediaIds) 
-    : short.mediaIds;
-  
+  const mediaIds = typeof short.mediaIds === 'string' ? JSON.parse(short.mediaIds) : short.mediaIds;
+
   return {
     ...short,
     primaryMediaUrl: Array.isArray(mediaIds) && mediaIds.length > 0 ? mediaIds[0] : null,
@@ -77,7 +74,7 @@ export class ExploreFeedService {
           // Check cache for user preferences
           const prefsCacheKey = CacheKeys.userPreferences(userId);
           userPrefs = await cache.get(prefsCacheKey);
-          
+
           if (!userPrefs) {
             const prefs = await db
               .select()
@@ -85,7 +82,7 @@ export class ExploreFeedService {
               .where(eq(exploreUserPreferences.userId, userId))
               .limit(1);
             userPrefs = prefs[0] || null;
-            
+
             // Cache user preferences
             if (userPrefs) {
               await cache.set(prefsCacheKey, userPrefs, CacheTTL.USER_PREFERENCES);
@@ -101,8 +98,8 @@ export class ExploreFeedService {
       // Build query with JOIN to get quality score
       let query = db
         .select({
-            short: exploreShorts,
-            qualityScore: listings.qualityScore
+          short: exploreShorts,
+          qualityScore: listings.qualityScore,
         })
         .from(exploreShorts)
         .leftJoin(listings, eq(exploreShorts.listingId, listings.id))
@@ -119,7 +116,7 @@ export class ExploreFeedService {
         .orderBy(
           desc(exploreShorts.boostPriority),
           sql`(${exploreShorts.performanceScore} * (1 + COALESCE(${listings.qualityScore}, 30) / 100)) DESC`, // Use 30 as baseline for non-listings (e.g. developments) or nulls
-          desc(exploreShorts.publishedAt)
+          desc(exploreShorts.publishedAt),
         )
         .limit(limit)
         .offset(offset);
@@ -141,7 +138,7 @@ export class ExploreFeedService {
 
       return result;
     } catch (error) {
-      console.error("Error generating recommended feed:", error);
+      console.error('Error generating recommended feed:', error);
       throw error;
     }
   }
@@ -154,7 +151,7 @@ export class ExploreFeedService {
     const { location, limit = 20, offset = 0 } = options;
 
     if (!location) {
-      throw new Error("Location parameter required for area feed");
+      throw new Error('Location parameter required for area feed');
     }
 
     try {
@@ -198,7 +195,7 @@ export class ExploreFeedService {
 
       return feedResult;
     } catch (error) {
-      console.error("Error generating area feed:", error);
+      console.error('Error generating area feed:', error);
       throw error;
     }
   }
@@ -211,30 +208,27 @@ export class ExploreFeedService {
     const { category, limit = 20, offset = 0 } = options;
 
     if (!category) {
-      throw new Error("Category parameter required for category feed");
+      throw new Error('Category parameter required for category feed');
     }
 
     try {
       // Category to highlight tag mapping
       const categoryMap: Record<string, string[]> = {
-        'luxury_homes': ['luxury', 'high_end', 'premium', 'modern_finishes'],
-        'student_rentals': ['student', 'university', 'close_to_schools'],
-        'apartments_under_1m': ['affordable', 'budget', 'negotiable'],
-        'large_yard_homes': ['large_yard', 'garden', 'pool'],
-        'new_developments': ['new_development', 'under_construction'],
-        'move_in_ready': ['ready_to_move', 'move_in_ready'],
-        'pet_friendly': ['pet_friendly'],
-        'secure_estate': ['secure_estate'],
-        'off_grid': ['off_grid_ready'],
+        luxury_homes: ['luxury', 'high_end', 'premium', 'modern_finishes'],
+        student_rentals: ['student', 'university', 'close_to_schools'],
+        apartments_under_1m: ['affordable', 'budget', 'negotiable'],
+        large_yard_homes: ['large_yard', 'garden', 'pool'],
+        new_developments: ['new_development', 'under_construction'],
+        move_in_ready: ['ready_to_move', 'move_in_ready'],
+        pet_friendly: ['pet_friendly'],
+        secure_estate: ['secure_estate'],
+        off_grid: ['off_grid_ready'],
       };
 
       const tags = categoryMap[category] || [];
 
       // Query shorts matching category tags
-      let query = db
-        .select()
-        .from(exploreShorts)
-        .where(eq(exploreShorts.isPublished, 1));
+      let query = db.select().from(exploreShorts).where(eq(exploreShorts.isPublished, 1));
 
       // Filter by highlights if tags exist
       if (tags.length > 0) {
@@ -246,7 +240,7 @@ export class ExploreFeedService {
           AND (
             ${sql.join(
               tags.map(tag => sql`JSON_CONTAINS(highlights, JSON_QUOTE(${tag}))`),
-              sql` OR `
+              sql` OR `,
             )}
           )
           ORDER BY boost_priority DESC, (performance_score * (1 + COALESCE((SELECT quality_score FROM listings WHERE id = listing_id), 30) / 100)) DESC, published_at DESC
@@ -271,11 +265,11 @@ export class ExploreFeedService {
         .orderBy(
           desc(exploreShorts.boostPriority),
           sql`(${exploreShorts.performanceScore} * (1 + COALESCE(${listings.qualityScore}, 30) / 100)) DESC`,
-          desc(exploreShorts.publishedAt)
+          desc(exploreShorts.publishedAt),
         )
         .limit(limit)
         .offset(offset);
-        
+
       const shorts = rows.map(r => r.explore_shorts); // Drizzle returns joined object { explore_shorts: ..., listings: ... }
 
       return {
@@ -288,7 +282,7 @@ export class ExploreFeedService {
         },
       };
     } catch (error) {
-      console.error("Error generating category feed:", error);
+      console.error('Error generating category feed:', error);
       throw error;
     }
   }
@@ -301,23 +295,15 @@ export class ExploreFeedService {
     const { agentId, limit = 20, offset = 0 } = options;
 
     if (!agentId) {
-      throw new Error("Agent ID required for agent feed");
+      throw new Error('Agent ID required for agent feed');
     }
 
     try {
       const shorts = await db
         .select()
         .from(exploreShorts)
-        .where(
-          and(
-            eq(exploreShorts.agentId, agentId),
-            eq(exploreShorts.isPublished, 1)
-          )
-        )
-        .orderBy(
-          desc(exploreShorts.isFeatured),
-          desc(exploreShorts.publishedAt)
-        )
+        .where(and(eq(exploreShorts.agentId, agentId), eq(exploreShorts.isPublished, 1)))
+        .orderBy(desc(exploreShorts.isFeatured), desc(exploreShorts.publishedAt))
         .limit(limit)
         .offset(offset);
 
@@ -331,7 +317,7 @@ export class ExploreFeedService {
         },
       };
     } catch (error) {
-      console.error("Error generating agent feed:", error);
+      console.error('Error generating agent feed:', error);
       throw error;
     }
   }
@@ -344,23 +330,15 @@ export class ExploreFeedService {
     const { developerId, limit = 20, offset = 0 } = options;
 
     if (!developerId) {
-      throw new Error("Developer ID required for developer feed");
+      throw new Error('Developer ID required for developer feed');
     }
 
     try {
       const shorts = await db
         .select()
         .from(exploreShorts)
-        .where(
-          and(
-            eq(exploreShorts.developerId, developerId),
-            eq(exploreShorts.isPublished, 1)
-          )
-        )
-        .orderBy(
-          desc(exploreShorts.isFeatured),
-          desc(exploreShorts.publishedAt)
-        )
+        .where(and(eq(exploreShorts.developerId, developerId), eq(exploreShorts.isPublished, 1)))
+        .orderBy(desc(exploreShorts.isFeatured), desc(exploreShorts.publishedAt))
         .limit(limit)
         .offset(offset);
 
@@ -374,7 +352,7 @@ export class ExploreFeedService {
         },
       };
     } catch (error) {
-      console.error("Error generating developer feed:", error);
+      console.error('Error generating developer feed:', error);
       throw error;
     }
   }
@@ -388,7 +366,7 @@ export class ExploreFeedService {
     const { agencyId, limit = 20, offset = 0, includeAgentContent = true } = options;
 
     if (!agencyId) {
-      throw new Error("Agency ID required for agency feed");
+      throw new Error('Agency ID required for agency feed');
     }
 
     try {
@@ -401,10 +379,7 @@ export class ExploreFeedService {
 
       // Build query for agency content
       // Requirement 2.1: Return all published content attributed to agency
-      let query = db
-        .select()
-        .from(exploreShorts)
-        .where(eq(exploreShorts.isPublished, 1));
+      let query = db.select().from(exploreShorts).where(eq(exploreShorts.isPublished, 1));
 
       // Query agency content with optional agent content inclusion
       // Requirement 2.1: Support includeAgentContent option
@@ -443,16 +418,8 @@ export class ExploreFeedService {
         const shorts = await db
           .select()
           .from(exploreShorts)
-          .where(
-            and(
-              eq(exploreShorts.agencyId, agencyId),
-              eq(exploreShorts.isPublished, 1)
-            )
-          )
-          .orderBy(
-            desc(exploreShorts.isFeatured),
-            desc(exploreShorts.publishedAt)
-          )
+          .where(and(eq(exploreShorts.agencyId, agencyId), eq(exploreShorts.isPublished, 1)))
+          .orderBy(desc(exploreShorts.isFeatured), desc(exploreShorts.publishedAt))
           .limit(limit)
           .offset(offset);
 
@@ -473,7 +440,7 @@ export class ExploreFeedService {
         return feedResult;
       }
     } catch (error) {
-      console.error("Error generating agency feed:", error);
+      console.error('Error generating agency feed:', error);
       throw error;
     }
   }
@@ -499,7 +466,7 @@ export class ExploreFeedService {
         // Requirement 2.3: Add 'agency' case to getFeed routing
         // Requirement 8.1: Validate agencyId when feedType is 'agency'
         if (!options.agencyId) {
-          throw new Error("Agency ID required for agency feed");
+          throw new Error('Agency ID required for agency feed');
         }
         return this.getAgencyFeed(options);
       default:
@@ -521,10 +488,7 @@ export class ExploreFeedService {
    * Get all active topics for Deep Dive zone
    */
   async getTopics() {
-    return await db
-      .select()
-      .from(exploreTopics)
-      .where(eq(exploreTopics.isActive, 1));
+    return await db.select().from(exploreTopics).where(eq(exploreTopics.isActive, 1));
   }
 }
 

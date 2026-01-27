@@ -1,9 +1,9 @@
 /**
  * PropertyCard Component
- * 
+ *
  * Modern property card with subtle shadows and smooth animations.
  * Uses ModernCard as base for consistent design system integration.
- * 
+ *
  * Features:
  * - Hover lift animation (2px translateY) - Requirements 9.1
  * - Press state animation (scale 0.98) - Requirements 9.2
@@ -69,13 +69,9 @@ export function PropertyCard({ property, onClick, onSave }: PropertyCardProps) {
       {/* Image */}
       <div className="relative aspect-[4/3] overflow-hidden bg-gray-100">
         {/* Content Badge - Requirements 4.1, 4.2, 4.7 */}
-        {property.badgeType && (
-          <ContentBadgeOverlay type={property.badgeType} size="sm" />
-        )}
+        {property.badgeType && <ContentBadgeOverlay type={property.badgeType} size="sm" />}
 
-        {!imageLoaded && (
-          <div className="absolute inset-0 animate-pulse bg-gray-200" />
-        )}
+        {!imageLoaded && <div className="absolute inset-0 animate-pulse bg-gray-200" />}
         <img
           src={property.imageUrl}
           alt={property.title}
@@ -85,7 +81,7 @@ export function PropertyCard({ property, onClick, onSave }: PropertyCardProps) {
           onLoad={() => setImageLoaded(true)}
           loading="lazy"
         />
-        
+
         {/* Save button - Requirements 14.1, 14.2 */}
         <div className="absolute top-3 right-3 z-10">
           <SaveButton
@@ -98,7 +94,7 @@ export function PropertyCard({ property, onClick, onSave }: PropertyCardProps) {
         </div>
 
         {/* Property type badge */}
-        <div 
+        <div
           className="absolute top-3 left-3 px-3 py-1 bg-black/70 backdrop-blur-sm rounded-full text-white text-xs font-medium"
           role="status"
           aria-label={`Property type: ${property.propertyType}`}
@@ -110,15 +106,12 @@ export function PropertyCard({ property, onClick, onSave }: PropertyCardProps) {
       {/* Content */}
       <div className="p-4">
         {/* Price - High contrast for readability */}
-        <div 
-          className="text-xl font-bold mb-2"
-          style={{ color: designTokens.colors.text.primary }}
-        >
+        <div className="text-xl font-bold mb-2" style={{ color: designTokens.colors.text.primary }}>
           {formatPrice()}
         </div>
 
         {/* Title - High contrast with hover effect */}
-        <h3 
+        <h3
           className="text-base font-semibold mb-2 line-clamp-2 group-hover:text-indigo-600 transition-colors duration-200"
           style={{ color: designTokens.colors.text.primary }}
         >
@@ -126,7 +119,7 @@ export function PropertyCard({ property, onClick, onSave }: PropertyCardProps) {
         </h3>
 
         {/* Location - Good contrast for secondary text */}
-        <div 
+        <div
           className="flex items-center text-sm mb-3"
           style={{ color: designTokens.colors.text.secondary }}
         >
@@ -135,7 +128,7 @@ export function PropertyCard({ property, onClick, onSave }: PropertyCardProps) {
         </div>
 
         {/* Features - Clear, readable icons and text */}
-        <div 
+        <div
           className="flex items-center gap-4 text-sm"
           style={{ color: designTokens.colors.text.primary }}
           role="list"

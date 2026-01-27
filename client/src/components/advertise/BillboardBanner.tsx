@@ -1,9 +1,9 @@
 /**
  * BillboardBanner Component
- * 
+ *
  * Static, clickable banner showcasing a featured development.
  * Designed for hero section to maximize conversion with focused messaging.
- * 
+ *
  * Requirements: 1.3, 11.1, 11.2
  */
 
@@ -78,9 +78,7 @@ export const BillboardBanner: React.FC<BillboardBannerProps> = ({
         />
 
         {/* Gradient overlay for text readability */}
-        <div
-          className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent"
-        />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
 
         {/* Content overlay */}
         <div className="absolute inset-0 flex flex-col justify-end p-6 sm:p-8 lg:p-10">
@@ -123,12 +121,7 @@ export const BillboardBanner: React.FC<BillboardBannerProps> = ({
               viewBox="0 0 24 24"
               aria-hidden="true"
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M9 5l7 7-7 7"
-              />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
             </svg>
           </motion.div>
         </div>

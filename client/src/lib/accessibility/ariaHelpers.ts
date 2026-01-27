@@ -1,9 +1,9 @@
 /**
  * ARIA Helpers
- * 
+ *
  * Utility functions for generating consistent ARIA attributes
  * across the Advertise With Us landing page components.
- * 
+ *
  * Requirements: 10.5
  */
 
@@ -13,9 +13,7 @@
 export function generateAriaId(prefix: string, suffix?: string): string {
   const timestamp = Date.now();
   const random = Math.random().toString(36).substring(2, 9);
-  return suffix 
-    ? `${prefix}-${suffix}-${random}` 
-    : `${prefix}-${timestamp}-${random}`;
+  return suffix ? `${prefix}-${suffix}-${random}` : `${prefix}-${timestamp}-${random}`;
 }
 
 /**
@@ -24,7 +22,7 @@ export function generateAriaId(prefix: string, suffix?: string): string {
 export function createCardAriaLabel(
   title: string,
   description: string,
-  actionText: string = 'Learn more'
+  actionText: string = 'Learn more',
 ): string {
   return `${title}. ${description}. ${actionText}`;
 }
@@ -32,20 +30,14 @@ export function createCardAriaLabel(
 /**
  * Create ARIA label for CTA buttons with context
  */
-export function createCTAAriaLabel(
-  label: string,
-  context?: string
-): string {
+export function createCTAAriaLabel(label: string, context?: string): string {
   return context ? `${label} - ${context}` : label;
 }
 
 /**
  * Create ARIA description for sections
  */
-export function createSectionAriaDescription(
-  sectionName: string,
-  itemCount?: number
-): string {
+export function createSectionAriaDescription(sectionName: string, itemCount?: number): string {
   if (itemCount !== undefined) {
     return `${sectionName} section with ${itemCount} items`;
   }
@@ -56,7 +48,7 @@ export function createSectionAriaDescription(
  * Get ARIA live region politeness level based on urgency
  */
 export function getAriaLiveLevel(
-  urgency: 'low' | 'medium' | 'high'
+  urgency: 'low' | 'medium' | 'high',
 ): 'off' | 'polite' | 'assertive' {
   switch (urgency) {
     case 'high':
@@ -74,7 +66,7 @@ export function getAriaLiveLevel(
  */
 export function createLandmarkLabel(
   landmarkType: 'navigation' | 'main' | 'complementary' | 'contentinfo',
-  specificLabel?: string
+  specificLabel?: string,
 ): string {
   const baseLabels = {
     navigation: 'Main navigation',
@@ -82,7 +74,7 @@ export function createLandmarkLabel(
     complementary: 'Complementary content',
     contentinfo: 'Footer information',
   };
-  
+
   return specificLabel || baseLabels[landmarkType];
 }
 
@@ -104,11 +96,11 @@ export interface AccordionAriaAttributes {
 
 export function createAccordionAriaAttributes(
   itemId: string,
-  isExpanded: boolean
+  isExpanded: boolean,
 ): AccordionAriaAttributes {
   const buttonId = `accordion-button-${itemId}`;
   const panelId = `accordion-panel-${itemId}`;
-  
+
   return {
     button: {
       'aria-expanded': isExpanded,
@@ -149,11 +141,11 @@ export interface TabAriaAttributes {
 export function createTabAriaAttributes(
   tabId: string,
   label: string,
-  isSelected: boolean
+  isSelected: boolean,
 ): Omit<TabAriaAttributes, 'tablist'> {
   const tabElementId = `tab-${tabId}`;
   const panelId = `tabpanel-${tabId}`;
-  
+
   return {
     tab: {
       role: 'tab',
@@ -177,7 +169,7 @@ export function createTabAriaAttributes(
 export function createMetricAriaLabel(
   value: string | number,
   label: string,
-  context?: string
+  context?: string,
 ): string {
   const baseLabel = `${value} ${label}`;
   return context ? `${baseLabel} - ${context}` : baseLabel;
@@ -194,7 +186,7 @@ export interface LoadingAriaAttributes {
 
 export function createLoadingAriaAttributes(
   isLoading: boolean,
-  loadingText: string = 'Loading content'
+  loadingText: string = 'Loading content',
 ): LoadingAriaAttributes {
   return {
     'aria-busy': isLoading,

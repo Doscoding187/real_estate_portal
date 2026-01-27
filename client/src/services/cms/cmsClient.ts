@@ -1,6 +1,6 @@
 /**
  * CMS Client
- * 
+ *
  * Abstract CMS client that can be implemented with different providers.
  * Currently uses a local/mock implementation but can be swapped for:
  * - Contentful
@@ -30,13 +30,15 @@ export interface CMSClientConfig {
  */
 export interface ICMSClient {
   getPageContent(): Promise<CMSResponse<AdvertisePageContent>>;
-  updatePageContent(content: Partial<AdvertisePageContent>): Promise<CMSResponse<AdvertisePageContent>>;
+  updatePageContent(
+    content: Partial<AdvertisePageContent>,
+  ): Promise<CMSResponse<AdvertisePageContent>>;
   clearCache(): void;
 }
 
 /**
  * Local/Mock CMS Client
- * 
+ *
  * This implementation stores content in localStorage and provides
  * a simple API for content management. In production, this would be
  * replaced with a real CMS client.
@@ -67,7 +69,7 @@ class LocalCMSClient implements ICMSClient {
     try {
       // Try to load from localStorage
       const stored = localStorage.getItem(this.cacheKey);
-      
+
       if (stored) {
         const parsed = JSON.parse(stored) as CMSResponse<AdvertisePageContent>;
         this.updateCache(parsed);
@@ -85,7 +87,7 @@ class LocalCMSClient implements ICMSClient {
       return response;
     } catch (error) {
       console.error('Error loading CMS content:', error);
-      
+
       // Return default content on error
       const response: CMSResponse<AdvertisePageContent> = {
         data: defaultContent,
@@ -101,12 +103,12 @@ class LocalCMSClient implements ICMSClient {
    * Update page content in localStorage
    */
   async updatePageContent(
-    updates: Partial<AdvertisePageContent>
+    updates: Partial<AdvertisePageContent>,
   ): Promise<CMSResponse<AdvertisePageContent>> {
     try {
       // Get current content
       const current = await this.getPageContent();
-      
+
       // Merge updates
       const updated: AdvertisePageContent = {
         ...current.data,
@@ -115,7 +117,7 @@ class LocalCMSClient implements ICMSClient {
 
       // Validate content before saving
       const validationResult = validatePageContent(updated);
-      
+
       if (!validationResult.isValid) {
         const summary = getValidationSummary(validationResult);
         console.error('Content validation failed:', summary);
@@ -160,10 +162,10 @@ class LocalCMSClient implements ICMSClient {
    */
   private isCacheValid(): boolean {
     if (!this.cache) return false;
-    
+
     const now = Date.now();
     const elapsed = now - this.cacheTimestamp;
-    
+
     return elapsed < (this.config.cacheTTL || 0);
   }
 
@@ -220,7 +222,7 @@ class PayloadCMSClient implements ICMSClient {
       }
 
       const data = await response.json();
-      
+
       const cmsResponse: CMSResponse<AdvertisePageContent> = {
         data: data.doc || data,
         lastModified: data.updatedAt || new Date().toISOString(),
@@ -236,12 +238,12 @@ class PayloadCMSClient implements ICMSClient {
   }
 
   async updatePageContent(
-    updates: Partial<AdvertisePageContent>
+    updates: Partial<AdvertisePageContent>,
   ): Promise<CMSResponse<AdvertisePageContent>> {
     try {
       // Get current content
       const current = await this.getPageContent();
-      
+
       // Merge updates
       const updated: AdvertisePageContent = {
         ...current.data,
@@ -250,7 +252,7 @@ class PayloadCMSClient implements ICMSClient {
 
       // Validate content before saving
       const validationResult = validatePageContent(updated);
-      
+
       if (!validationResult.isValid) {
         const summary = getValidationSummary(validationResult);
         throw new Error(`Content validation failed:\n${summary}`);
@@ -297,10 +299,10 @@ class PayloadCMSClient implements ICMSClient {
 
   private isCacheValid(): boolean {
     if (!this.cache) return false;
-    
+
     const now = Date.now();
     const elapsed = now - this.cacheTimestamp;
-    
+
     return elapsed < (this.config.cacheTTL || 0);
   }
 
@@ -326,7 +328,7 @@ class ContentfulCMSClient implements ICMSClient {
   }
 
   async updatePageContent(
-    updates: Partial<AdvertisePageContent>
+    updates: Partial<AdvertisePageContent>,
   ): Promise<CMSResponse<AdvertisePageContent>> {
     // TODO: Implement Contentful API integration
     throw new Error('Contentful client not implemented yet');
@@ -348,7 +350,7 @@ export class CMSClientFactory {
    */
   static getClient(
     provider: 'local' | 'contentful' | 'payload' = 'local',
-    config?: CMSClientConfig
+    config?: CMSClientConfig,
   ): ICMSClient {
     if (!this.instance) {
       switch (provider) {

@@ -120,7 +120,8 @@ export const subscriptionRouter = router({
     .input(createSubscriptionSchema)
     .mutation(async ({ ctx, input }) => {
       const db = await getDb();
-      if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database unavailable' });
+      if (!db)
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database unavailable' });
 
       const plan = await subscriptionService.getPlanByPlanId(input.plan_id);
       if (!plan) {
@@ -146,14 +147,30 @@ export const subscriptionRouter = router({
            SET plan_id = ?, status = 'active_paid', amount_zar = ?, billing_interval = ?,
                current_period_start = ?, current_period_end = ?, next_billing_date = ?, updated_at = NOW()
            WHERE user_id = ?`,
-          [input.plan_id, plan.price_zar, input.billing_interval, now, periodEnd, periodEnd, ctx.user.id],
+          [
+            input.plan_id,
+            plan.price_zar,
+            input.billing_interval,
+            now,
+            periodEnd,
+            periodEnd,
+            ctx.user.id,
+          ],
         );
       } else {
         await db.execute(
           `INSERT INTO user_subscriptions 
            (user_id, plan_id, status, amount_zar, billing_interval, current_period_start, current_period_end, next_billing_date)
            VALUES (?, ?, 'active_paid', ?, ?, ?, ?, ?)`,
-          [ctx.user.id, input.plan_id, plan.price_zar, input.billing_interval, now, periodEnd, periodEnd],
+          [
+            ctx.user.id,
+            input.plan_id,
+            plan.price_zar,
+            input.billing_interval,
+            now,
+            periodEnd,
+            periodEnd,
+          ],
         );
       }
 
@@ -171,7 +188,11 @@ export const subscriptionRouter = router({
    */
   upgrade: protectedProcedure.input(upgradeSchema).mutation(async ({ ctx, input }) => {
     try {
-      await subscriptionService.upgradeSubscription(ctx.user.id, input.new_plan_id, input.immediate);
+      await subscriptionService.upgradeSubscription(
+        ctx.user.id,
+        input.new_plan_id,
+        input.immediate,
+      );
       const updated = await subscriptionService.getUserSubscriptionWithPlan(ctx.user.id);
       return updated;
     } catch (error: any) {
@@ -187,7 +208,11 @@ export const subscriptionRouter = router({
    */
   downgrade: protectedProcedure.input(downgradeSchema).mutation(async ({ ctx, input }) => {
     try {
-      await subscriptionService.downgradeSubscription(ctx.user.id, input.new_plan_id, input.immediate);
+      await subscriptionService.downgradeSubscription(
+        ctx.user.id,
+        input.new_plan_id,
+        input.immediate,
+      );
       const updated = await subscriptionService.getUserSubscriptionWithPlan(ctx.user.id);
       return updated;
     } catch (error: any) {
@@ -205,7 +230,8 @@ export const subscriptionRouter = router({
     .input(z.object({ immediate: z.boolean().default(false) }))
     .mutation(async ({ ctx, input }) => {
       const db = await getDb();
-      if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database unavailable' });
+      if (!db)
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database unavailable' });
 
       const subscription = await subscriptionService.getUserSubscription(ctx.user.id);
       if (!subscription) {
@@ -238,7 +264,10 @@ export const subscriptionRouter = router({
    * Check feature access
    */
   checkFeature: protectedProcedure.input(checkFeatureSchema).query(async ({ ctx, input }) => {
-    const access = await subscriptionService.checkFeatureAccess(ctx.user.id, input.permission as any);
+    const access = await subscriptionService.checkFeatureAccess(
+      ctx.user.id,
+      input.permission as any,
+    );
     return access;
   }),
 
@@ -273,7 +302,8 @@ export const subscriptionRouter = router({
    */
   getUsage: protectedProcedure.query(async ({ ctx }) => {
     const db = await getDb();
-    if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database unavailable' });
+    if (!db)
+      throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database unavailable' });
 
     const subscription = await subscriptionService.getUserSubscription(ctx.user.id);
     if (!subscription) return null;
@@ -307,7 +337,8 @@ export const subscriptionRouter = router({
     )
     .query(async ({ input }) => {
       const db = await getDb();
-      if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database unavailable' });
+      if (!db)
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database unavailable' });
 
       let query = `
         SELECT us.*, sp.name as plan_name, sp.category, u.email, u.name as user_name
@@ -340,7 +371,8 @@ export const subscriptionRouter = router({
    */
   getAnalytics: superAdminProcedure.query(async () => {
     const db = await getDb();
-    if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database unavailable' });
+    if (!db)
+      throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database unavailable' });
 
     // Total subscriptions by status
     const [statusStats] = await db.execute(`

@@ -1,9 +1,9 @@
 /**
  * Advertise Responsive Demo Page
- * 
+ *
  * Demonstrates responsive layouts across all breakpoints.
  * Use browser dev tools to test different viewport sizes.
- * 
+ *
  * Requirements: 10.1, 10.2, 10.3, 10.4
  */
 
@@ -33,7 +33,7 @@ const SectionLoader: React.FC = () => (
         <div className="h-12 bg-gray-200 rounded-lg w-3/4 mx-auto" />
         <div className="h-6 bg-gray-200 rounded-lg w-1/2 mx-auto" />
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {[1, 2, 3].map((i) => (
+          {[1, 2, 3].map(i => (
             <div key={i} className="h-48 bg-gray-200 rounded-xl" />
           ))}
         </div>
@@ -53,7 +53,7 @@ const ViewportIndicator: React.FC = () => {
     const updateViewport = () => {
       const w = window.innerWidth;
       setWidth(w);
-      
+
       if (w < 768) {
         setViewport('mobile');
       } else if (w < 1024) {
@@ -70,9 +70,12 @@ const ViewportIndicator: React.FC = () => {
 
   const getColor = () => {
     switch (viewport) {
-      case 'mobile': return '#10b981';
-      case 'tablet': return '#f59e0b';
-      case 'desktop': return '#3b82f6';
+      case 'mobile':
+        return '#10b981';
+      case 'tablet':
+        return '#f59e0b';
+      case 'desktop':
+        return '#3b82f6';
     }
   };
 
@@ -94,9 +97,7 @@ const ViewportIndicator: React.FC = () => {
       }}
     >
       <div>{viewport.toUpperCase()}</div>
-      <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '0.25rem' }}>
-        {width}px
-      </div>
+      <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '0.25rem' }}>{width}px</div>
     </div>
   );
 };
@@ -110,7 +111,8 @@ export default function AdvertiseResponsiveDemo() {
   // Sample data
   const heroData = {
     headline: 'Reach Thousands of Verified Home Seekers',
-    subheadline: 'Join South Africa\'s fastest-growing property platform and connect with high-intent buyers actively searching for their dream homes.',
+    subheadline:
+      "Join South Africa's fastest-growing property platform and connect with high-intent buyers actively searching for their dream homes.",
     primaryCTA: {
       label: 'Get Started',
       href: '/register',
@@ -136,7 +138,12 @@ export default function AdvertiseResponsiveDemo() {
   };
 
   const socialProofMetrics = [
-    { value: '5,000+', label: 'Verified Leads Generated', icon: TrendingUp, iconColor: 'green' as const },
+    {
+      value: '5,000+',
+      label: 'Verified Leads Generated',
+      icon: TrendingUp,
+      iconColor: 'green' as const,
+    },
     { value: '10,000+', label: 'Properties Promoted', icon: Award, iconColor: 'blue' as const },
     { value: '95%', label: 'Partner Satisfaction', icon: Star, iconColor: 'yellow' as const },
     { value: '500+', label: 'Active Partners', icon: Users, iconColor: 'purple' as const },
@@ -215,8 +222,15 @@ export default function AdvertiseResponsiveDemo() {
           <h2 style={{ fontSize: '2rem', fontWeight: 'bold', marginBottom: '1rem' }}>
             Responsive Testing Instructions
           </h2>
-          
-          <div style={{ background: 'white', padding: '2rem', borderRadius: '12px', marginBottom: '2rem' }}>
+
+          <div
+            style={{
+              background: 'white',
+              padding: '2rem',
+              borderRadius: '12px',
+              marginBottom: '2rem',
+            }}
+          >
             <h3 style={{ fontSize: '1.25rem', fontWeight: '600', marginBottom: '1rem' }}>
               Mobile (&lt; 768px)
             </h3>
@@ -229,7 +243,14 @@ export default function AdvertiseResponsiveDemo() {
             </ul>
           </div>
 
-          <div style={{ background: 'white', padding: '2rem', borderRadius: '12px', marginBottom: '2rem' }}>
+          <div
+            style={{
+              background: 'white',
+              padding: '2rem',
+              borderRadius: '12px',
+              marginBottom: '2rem',
+            }}
+          >
             <h3 style={{ fontSize: '1.25rem', fontWeight: '600', marginBottom: '1rem' }}>
               Tablet (768px - 1024px)
             </h3>
@@ -253,9 +274,16 @@ export default function AdvertiseResponsiveDemo() {
             </ul>
           </div>
 
-          <div style={{ marginTop: '2rem', padding: '1rem', background: '#dbeafe', borderRadius: '8px' }}>
+          <div
+            style={{
+              marginTop: '2rem',
+              padding: '1rem',
+              background: '#dbeafe',
+              borderRadius: '8px',
+            }}
+          >
             <p style={{ fontSize: '0.875rem', color: '#1e40af' }}>
-              <strong>Tip:</strong> Use browser dev tools (F12) to test different viewport sizes. 
+              <strong>Tip:</strong> Use browser dev tools (F12) to test different viewport sizes.
               The viewport indicator in the top-right shows the current breakpoint.
             </p>
           </div>

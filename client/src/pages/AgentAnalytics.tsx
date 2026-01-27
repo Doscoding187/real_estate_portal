@@ -51,7 +51,7 @@ function MetricCard({ title, value, change, icon: Icon, className }: MetricCardP
                 <span
                   className={cn(
                     'text-sm font-medium',
-                    change.positive ? 'text-green-600' : 'text-red-600'
+                    change.positive ? 'text-green-600' : 'text-red-600',
                   )}
                 >
                   {change.value}
@@ -84,9 +84,7 @@ export default function AgentAnalytics() {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-2xl font-bold text-gray-900">Analytics Dashboard</h1>
-              <p className="text-sm text-gray-500 mt-1">
-                Track your performance and insights
-              </p>
+              <p className="text-sm text-gray-500 mt-1">Track your performance and insights</p>
             </div>
             <div className="flex items-center gap-3">
               {/* Time Range Selector */}
@@ -104,7 +102,7 @@ export default function AgentAnalytics() {
                       'px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200',
                       timeRange === range.value
                         ? 'bg-white text-blue-600 shadow-sm'
-                        : 'text-gray-600 hover:text-gray-900'
+                        : 'text-gray-600 hover:text-gray-900',
                     )}
                   >
                     {range.label}
@@ -238,11 +236,21 @@ export default function AgentAnalytics() {
                   <table className="w-full">
                     <thead>
                       <tr className="border-b border-gray-100">
-                        <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Property</th>
-                        <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Views</th>
-                        <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Leads</th>
-                        <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Conversion</th>
-                        <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Status</th>
+                        <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">
+                          Property
+                        </th>
+                        <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">
+                          Views
+                        </th>
+                        <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">
+                          Leads
+                        </th>
+                        <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">
+                          Conversion
+                        </th>
+                        <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">
+                          Status
+                        </th>
                       </tr>
                     </thead>
                     <tbody>
@@ -269,17 +277,27 @@ export default function AgentAnalytics() {
                           status: 'Active',
                         },
                       ].map((listing, i) => (
-                        <tr key={i} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
+                        <tr
+                          key={i}
+                          className="border-b border-gray-50 hover:bg-gray-50 transition-colors"
+                        >
                           <td className="py-3 px-4">
                             <p className="font-medium text-gray-900 text-sm">{listing.name}</p>
                           </td>
-                          <td className="py-3 px-4 text-sm text-gray-600">{listing.views.toLocaleString()}</td>
+                          <td className="py-3 px-4 text-sm text-gray-600">
+                            {listing.views.toLocaleString()}
+                          </td>
                           <td className="py-3 px-4 text-sm text-gray-600">{listing.leads}</td>
                           <td className="py-3 px-4">
-                            <span className="text-sm font-medium text-green-600">{listing.conversion}</span>
+                            <span className="text-sm font-medium text-green-600">
+                              {listing.conversion}
+                            </span>
                           </td>
                           <td className="py-3 px-4">
-                            <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                            <Badge
+                              variant="outline"
+                              className="bg-green-50 text-green-700 border-green-200"
+                            >
                               {listing.status}
                             </Badge>
                           </td>

@@ -116,6 +116,8 @@ export class RedisCacheManager {
     if (!process.env.REDIS_HOST) {
       console.warn('REDIS_HOST not configured, skipping Redis initialization');
       this.fallbackMode = true;
+      this.redis = null; // Explicitly set to null
+      this.isConnected = false;
       return;
     }
 

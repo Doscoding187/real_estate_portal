@@ -1,37 +1,46 @@
 
 import 'dotenv/config';
-import { sql } from 'drizzle-orm';
-import { getDb } from '../server/db';
-import { listings, users } from '../drizzle/schema';
+import { getDb } from '../server/db-connection';
+import { developments, developers } from '../drizzle/schema';
 import { eq } from 'drizzle-orm';
 
-async function main() {
+async function debugInsert() {
   const db = await getDb();
-  if (!db) {
-    console.error('Failed to connect to DB');
-    return;
-  }
+  if (!db) process.exit(1);
 
-  console.log('--- CHECKING USER 90001 ---');
-  try {
-    // Assuming users table is plain, or use raw sql if unsure
-    const result = await db.execute(sql`SELECT * FROM users WHERE id = 90001`);
-    console.log('User 90001:', result[0]);
-  } catch (e) {
-    console.error('Error checking user:', e);
+  // Find Developer
+  const [dev] = await db.select().from(developers).limit(1);
+  if (!dev) {
+    console.error('No developer found');
+    process.exit(1);
   }
+  console.log('Using Developer:', dev.id);
 
-  console.log('\n--- LISTINGS SCHEMA ---');
   try {
-    const result = await db.execute(sql`SHOW CREATE TABLE listings`);
-    // Result is usually [[{ 'Create Table': ... }]]
-    // @ts-ignore
-    console.log(result[0][0]['Create Table']);
-  } catch (e) {
-    console.error('Error checking schema:', e);
+    console.log('Attempting Raw Insert...');
+    await db.insert(developments).values({
+      developerId: dev.id,
+      name: `Debug Dev ${Date.now()}`,
+      slug: `debug-dev-${Date.now()}`,
+      shortCode: `DBG-${Math.floor(Math.random() * 1000)}`,
+      status: 'draft',
+      // Required fields based on previous payload
+      tagline: 'Debug Tagline',
+      description: 'Debug Desc',
+      websiteUrl: 'https://example.com',
+      developmentType: 'residential',
+      floors: 'double-storey', // Testing the new field specifically
+      ownershipType: 'sectional-title'
+    });
+    console.log('✅ Insert Success!');
+  } catch (e: any) {
+    console.error('❌ Insert Failed Raw:', e);
+    console.error('Message:', e.message);
+    console.error('Code:', e.code);
+    console.error('Keys:', Object.keys(e));
+    if (e.cause) console.error('Cause:', e.cause);
   }
-  
   process.exit(0);
 }
 
-main();
+debugInsert();

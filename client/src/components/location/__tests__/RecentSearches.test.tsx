@@ -1,6 +1,6 @@
 /**
  * Unit Tests for Recent Searches Feature
- * 
+ *
  * Tests verify the recent searches functionality in LocationAutocomplete component
  * according to Requirements 14.1-14.5
  */
@@ -24,7 +24,7 @@ const mockSessionToken = {};
 beforeEach(() => {
   // Clear localStorage before each test
   localStorage.clear();
-  
+
   // Mock Google Maps API
   (global as any).google = {
     maps: {
@@ -53,7 +53,7 @@ describe('Recent Searches Feature', () => {
    */
   it('should store selected location in recent searches', async () => {
     const onChange = vi.fn();
-    
+
     const mockPrediction = {
       place_id: 'test-place-1',
       description: 'Sandton, Johannesburg',
@@ -88,19 +88,13 @@ describe('Recent Searches Feature', () => {
       callback(mockPlaceDetails, 'OK');
     });
 
-    render(
-      <LocationAutocomplete
-        value=""
-        onChange={onChange}
-        placeholder="Search location"
-      />
-    );
+    render(<LocationAutocomplete value="" onChange={onChange} placeholder="Search location" />);
 
     const input = screen.getByRole('combobox');
-    
+
     // Type to trigger autocomplete
     await userEvent.type(input, 'Sandton');
-    
+
     // Wait for suggestions
     await waitFor(() => {
       expect(mockAutocompleteService.getPlacePredictions).toHaveBeenCalled();
@@ -118,7 +112,7 @@ describe('Recent Searches Feature', () => {
     // Check localStorage
     const stored = localStorage.getItem('recentLocationSearches');
     expect(stored).not.toBeNull();
-    
+
     const recentSearches = JSON.parse(stored!);
     expect(recentSearches).toHaveLength(1);
     expect(recentSearches[0].place_id).toBe('test-place-1');
@@ -141,14 +135,8 @@ describe('Recent Searches Feature', () => {
     localStorage.setItem('recentLocationSearches', JSON.stringify(existingSearches));
 
     const onChange = vi.fn();
-    
-    render(
-      <LocationAutocomplete
-        value=""
-        onChange={onChange}
-        placeholder="Search location"
-      />
-    );
+
+    render(<LocationAutocomplete value="" onChange={onChange} placeholder="Search location" />);
 
     // Verify only 5 items are loaded
     const stored = localStorage.getItem('recentLocationSearches');
@@ -175,17 +163,11 @@ describe('Recent Searches Feature', () => {
     localStorage.setItem('recentLocationSearches', JSON.stringify(recentSearches));
 
     const onChange = vi.fn();
-    
-    render(
-      <LocationAutocomplete
-        value=""
-        onChange={onChange}
-        placeholder="Search location"
-      />
-    );
+
+    render(<LocationAutocomplete value="" onChange={onChange} placeholder="Search location" />);
 
     const input = screen.getByRole('combobox');
-    
+
     // Focus the input
     await userEvent.click(input);
 
@@ -214,17 +196,11 @@ describe('Recent Searches Feature', () => {
     localStorage.setItem('recentLocationSearches', JSON.stringify(recentSearches));
 
     const onChange = vi.fn();
-    
-    render(
-      <LocationAutocomplete
-        value=""
-        onChange={onChange}
-        placeholder="Search location"
-      />
-    );
+
+    render(<LocationAutocomplete value="" onChange={onChange} placeholder="Search location" />);
 
     const input = screen.getByRole('combobox');
-    
+
     // Focus the input
     await userEvent.click(input);
 
@@ -261,17 +237,11 @@ describe('Recent Searches Feature', () => {
     localStorage.setItem('recentLocationSearches', JSON.stringify(recentSearches));
 
     const onChange = vi.fn();
-    
-    render(
-      <LocationAutocomplete
-        value=""
-        onChange={onChange}
-        placeholder="Search location"
-      />
-    );
+
+    render(<LocationAutocomplete value="" onChange={onChange} placeholder="Search location" />);
 
     const input = screen.getByRole('combobox');
-    
+
     // Focus the input to show recent searches
     await userEvent.click(input);
 
@@ -310,20 +280,14 @@ describe('Recent Searches Feature', () => {
     localStorage.setItem('recentLocationSearches', JSON.stringify(recentSearches));
 
     const onChange = vi.fn();
-    
+
     // Render component
-    render(
-      <LocationAutocomplete
-        value=""
-        onChange={onChange}
-        placeholder="Search location"
-      />
-    );
+    render(<LocationAutocomplete value="" onChange={onChange} placeholder="Search location" />);
 
     // Verify localStorage still contains the data
     const stored = localStorage.getItem('recentLocationSearches');
     expect(stored).not.toBeNull();
-    
+
     const parsed = JSON.parse(stored!);
     expect(parsed).toHaveLength(1);
     expect(parsed[0].place_id).toBe('place-1');
@@ -334,7 +298,7 @@ describe('Recent Searches Feature', () => {
    */
   it('should not show duplicate locations in recent searches', async () => {
     const onChange = vi.fn();
-    
+
     const mockPrediction = {
       place_id: 'test-place-1',
       description: 'Sandton, Johannesburg',
@@ -372,19 +336,13 @@ describe('Recent Searches Feature', () => {
       callback(mockPlaceDetails, 'OK');
     });
 
-    render(
-      <LocationAutocomplete
-        value=""
-        onChange={onChange}
-        placeholder="Search location"
-      />
-    );
+    render(<LocationAutocomplete value="" onChange={onChange} placeholder="Search location" />);
 
     const input = screen.getByRole('combobox');
-    
+
     // Type to trigger autocomplete
     await userEvent.type(input, 'Sandton');
-    
+
     // Wait for suggestions
     await waitFor(() => {
       expect(mockAutocompleteService.getPlacePredictions).toHaveBeenCalled();

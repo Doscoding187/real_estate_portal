@@ -1,6 +1,6 @@
 /**
  * Draft Manager Component
- * 
+ *
  * Displays a dialog to resume or discard a draft listing/development
  */
 
@@ -32,27 +32,27 @@ export interface DraftManagerProps {
    * Whether the dialog is open
    */
   open: boolean;
-  
+
   /**
    * Callback when dialog open state changes
    */
   onOpenChange?: (open: boolean) => void;
-  
+
   /**
    * Callback when user chooses to resume draft
    */
   onResume: () => void;
-  
+
   /**
    * Callback when user chooses to start fresh
    */
   onStartFresh: () => void;
-  
+
   /**
    * Draft data to display
    */
   draftData: DraftData;
-  
+
   /**
    * Type of wizard (listing or development)
    */
@@ -67,15 +67,8 @@ export const DraftManager: React.FC<DraftManagerProps> = ({
   draftData,
   wizardType = 'listing',
 }) => {
-  const {
-    currentStep,
-    totalSteps,
-    action,
-    propertyType,
-    developmentName,
-    address,
-    lastModified,
-  } = draftData;
+  const { currentStep, totalSteps, action, propertyType, developmentName, address, lastModified } =
+    draftData;
 
   // Calculate progress percentage
   const progressPercentage = Math.round((currentStep / totalSteps) * 100);
@@ -100,8 +93,8 @@ export const DraftManager: React.FC<DraftManagerProps> = ({
             Resume Draft {capitalize(wizardType)}?
           </DialogTitle>
           <DialogDescription className="text-base pt-2">
-            You have an unfinished {wizardType} saved {lastModifiedText}. Would you like to
-            continue where you left off or start a new {wizardType}?
+            You have an unfinished {wizardType} saved {lastModifiedText}. Would you like to continue
+            where you left off or start a new {wizardType}?
           </DialogDescription>
         </DialogHeader>
 
@@ -130,7 +123,7 @@ export const DraftManager: React.FC<DraftManagerProps> = ({
           {/* Details Card */}
           <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 space-y-2">
             <p className="font-medium text-slate-800 text-sm mb-2">Draft Details</p>
-            
+
             {wizardType === 'listing' && (
               <>
                 {action && (

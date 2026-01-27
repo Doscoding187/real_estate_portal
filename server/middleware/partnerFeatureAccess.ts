@@ -1,11 +1,11 @@
 /**
  * Partner Feature Access Middleware
- * 
+ *
  * Provides middleware and utilities for checking partner subscription
  * feature access throughout the application.
- * 
+ *
  * Requirements: 7.1, 7.2, 7.3
- * 
+ *
  * @module partnerFeatureAccess
  */
 
@@ -24,10 +24,10 @@ import {
 
 /**
  * Middleware to check if partner has access to a specific feature
- * 
+ *
  * Usage:
  * ```typescript
- * router.post('/content', 
+ * router.post('/content',
  *   requirePartnerFeature('max_monthly_content'),
  *   async (req, res) => { ... }
  * );
@@ -69,17 +69,17 @@ export function requirePartnerFeature(feature: keyof SubscriptionFeatures) {
 
 /**
  * Middleware to check if partner can perform a specific action
- * 
+ *
  * Usage:
  * ```typescript
- * router.post('/content', 
+ * router.post('/content',
  *   requirePartnerAction('create_content'),
  *   async (req, res) => { ... }
  * );
  * ```
  */
 export function requirePartnerAction(
-  action: 'create_content' | 'boost_content' | 'view_analytics' | 'contact_support'
+  action: 'create_content' | 'boost_content' | 'view_analytics' | 'contact_support',
 ) {
   return async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -111,10 +111,10 @@ export function requirePartnerAction(
 
 /**
  * Middleware to attach partner subscription info to request
- * 
+ *
  * Usage:
  * ```typescript
- * router.get('/dashboard', 
+ * router.get('/dashboard',
  *   attachPartnerSubscription,
  *   async (req, res) => {
  *     const subscription = req.partnerSubscription;
@@ -123,11 +123,7 @@ export function requirePartnerAction(
  * );
  * ```
  */
-export async function attachPartnerSubscription(
-  req: Request,
-  res: Response,
-  next: NextFunction
-) {
+export async function attachPartnerSubscription(req: Request, res: Response, next: NextFunction) {
   try {
     const partnerId = req.body.partner_id || req.params.partnerId || req.query.partnerId;
 
@@ -154,7 +150,7 @@ export async function attachPartnerSubscription(
  */
 export async function checkFeatureAccessWithDetails(
   partnerId: string,
-  feature: keyof SubscriptionFeatures
+  feature: keyof SubscriptionFeatures,
 ): Promise<{
   allowed: boolean;
   current_tier: string;
@@ -217,7 +213,7 @@ export async function getPartnerFeatureAccess(partnerId: string): Promise<{
  */
 export function validateTierTransition(
   currentTier: string,
-  newTier: string
+  newTier: string,
 ): { valid: boolean; reason?: string } {
   const validTiers = ['free', 'basic', 'premium', 'featured'];
 

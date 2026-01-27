@@ -12,7 +12,7 @@ import { useState } from 'react';
  */
 export function BasicVirtualizedFeedExample() {
   const { contentBlocks, recordEngagement } = useDiscoveryFeed();
-  
+
   // Flatten content blocks into a single array for virtualization
   const allItems = contentBlocks.flatMap(block => block.items);
 
@@ -28,11 +28,7 @@ export function BasicVirtualizedFeedExample() {
 
   return (
     <div className="h-screen w-full">
-      <VirtualizedFeed
-        items={allItems}
-        onItemClick={handleItemClick}
-        onItemSave={handleItemSave}
-      />
+      <VirtualizedFeed items={allItems} onItemClick={handleItemClick} onItemSave={handleItemSave} />
     </div>
   );
 }
@@ -50,7 +46,7 @@ export function CustomHeightExample() {
       <VirtualizedFeed
         items={allItems}
         itemHeight={320} // Taller cards
-        onItemClick={(item) => console.log(item)}
+        onItemClick={item => console.log(item)}
       />
     </div>
   );
@@ -69,7 +65,7 @@ export function CustomOverscanExample() {
       <VirtualizedFeed
         items={allItems}
         overscanCount={5} // Render 5 items above/below viewport
-        onItemClick={(item) => console.log(item)}
+        onItemClick={item => console.log(item)}
       />
     </div>
   );
@@ -109,10 +105,7 @@ export function FilteredVirtualizedFeedExample() {
 
       {/* Virtualized feed */}
       <div className="flex-1">
-        <VirtualizedFeed
-          items={allItems}
-          onItemClick={(item) => console.log(item)}
-        />
+        <VirtualizedFeed items={allItems} onItemClick={item => console.log(item)} />
       </div>
     </div>
   );
@@ -139,10 +132,7 @@ export function LoadingStateExample() {
 
   return (
     <div className="h-screen w-full">
-      <VirtualizedFeed
-        items={allItems}
-        onItemClick={(item) => console.log(item)}
-      />
+      <VirtualizedFeed items={allItems} onItemClick={item => console.log(item)} />
     </div>
   );
 }
@@ -169,10 +159,7 @@ export function EmptyStateExample() {
 
   return (
     <div className="h-screen w-full">
-      <VirtualizedFeed
-        items={allItems}
-        onItemClick={(item) => console.log(item)}
-      />
+      <VirtualizedFeed items={allItems} onItemClick={item => console.log(item)} />
     </div>
   );
 }
@@ -198,16 +185,11 @@ export function InfiniteScrollExample() {
 
   return (
     <div className="h-screen w-full" onScroll={handleScroll}>
-      <VirtualizedFeed
-        items={allItems}
-        onItemClick={(item) => console.log(item)}
-      />
-      
+      <VirtualizedFeed items={allItems} onItemClick={item => console.log(item)} />
+
       {isLoading && (
         <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2">
-          <div className="bg-white px-4 py-2 rounded-full shadow-lg">
-            Loading more...
-          </div>
+          <div className="bg-white px-4 py-2 rounded-full shadow-lg">Loading more...</div>
         </div>
       )}
     </div>
@@ -231,7 +213,7 @@ export function PerformanceComparisonExample() {
           <input
             type="checkbox"
             checked={useVirtualization}
-            onChange={(e) => setUseVirtualization(e.target.checked)}
+            onChange={e => setUseVirtualization(e.target.checked)}
             className="w-4 h-4"
           />
           <span>Use Virtualization</span>
@@ -246,13 +228,10 @@ export function PerformanceComparisonExample() {
       {/* Feed */}
       <div className="flex-1">
         {useVirtualization ? (
-          <VirtualizedFeed
-            items={allItems}
-            onItemClick={(item) => console.log(item)}
-          />
+          <VirtualizedFeed items={allItems} onItemClick={item => console.log(item)} />
         ) : (
           <div className="overflow-y-auto h-full">
-            {allItems.map((item) => (
+            {allItems.map(item => (
               <div key={item.id} className="p-4">
                 {/* Render cards normally */}
               </div>

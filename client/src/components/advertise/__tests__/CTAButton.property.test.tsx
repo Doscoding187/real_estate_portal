@@ -1,10 +1,10 @@
 /**
  * Property-Based Tests for CTA Button Navigation
- * 
+ *
  * Feature: advertise-with-us-landing, Property 13: Primary CTA navigation
  * Validates: Requirements 8.4
- * 
- * Property: For any primary CTA button on the page, clicking the button should 
+ *
+ * Property: For any primary CTA button on the page, clicking the button should
  * navigate to either the partner registration page or the contact form
  */
 
@@ -27,7 +27,7 @@ describe('Property 13: Primary CTA navigation', () => {
           '/contact',
           '/contact-us',
           '/get-started',
-          '/request-demo'
+          '/request-demo',
         ),
         (label, href) => {
           // Track if navigation was attempted
@@ -35,12 +35,7 @@ describe('Property 13: Primary CTA navigation', () => {
 
           // Render the primary CTA button
           const { container } = render(
-            <CTAButton
-              label={label}
-              href={href}
-              variant="primary"
-              onClick={mockOnClick}
-            />
+            <CTAButton label={label} href={href} variant="primary" onClick={mockOnClick} />,
           );
 
           // Find the button element
@@ -56,7 +51,7 @@ describe('Property 13: Primary CTA navigation', () => {
             '/contact',
             '/contact-us',
             '/get-started',
-            '/request-demo'
+            '/request-demo',
           ]).toContain(href);
 
           // Simulate click
@@ -66,9 +61,9 @@ describe('Property 13: Primary CTA navigation', () => {
 
           // Verify onClick was called (navigation was attempted)
           expect(mockOnClick).toHaveBeenCalled();
-        }
+        },
       ),
-      { numRuns: 100 } // Run 100 iterations as specified in design doc
+      { numRuns: 100 }, // Run 100 iterations as specified in design doc
     );
   });
 
@@ -76,23 +71,13 @@ describe('Property 13: Primary CTA navigation', () => {
     fc.assert(
       fc.property(
         fc.string({ minLength: 5, maxLength: 30 }),
-        fc.constantFrom(
-          '/partner-registration',
-          '/register',
-          '/contact'
-        ),
+        fc.constantFrom('/partner-registration', '/register', '/contact'),
         (label, href) => {
           // Mock gtag for analytics tracking
           const mockGtag = vi.fn();
           (window as any).gtag = mockGtag;
 
-          const { container } = render(
-            <CTAButton
-              label={label}
-              href={href}
-              variant="primary"
-            />
-          );
+          const { container } = render(<CTAButton label={label} href={href} variant="primary" />);
 
           const button = container.querySelector('a');
           if (button) {
@@ -107,14 +92,14 @@ describe('Property 13: Primary CTA navigation', () => {
               label,
               location: 'hero',
               href,
-            })
+            }),
           );
 
           // Cleanup
           delete (window as any).gtag;
-        }
+        },
       ),
-      { numRuns: 100 }
+      { numRuns: 100 },
     );
   });
 
@@ -124,26 +109,20 @@ describe('Property 13: Primary CTA navigation', () => {
         fc.string({ minLength: 5, maxLength: 30 }),
         fc.string({ minLength: 5, maxLength: 50 }),
         (label, href) => {
-          const { container } = render(
-            <CTAButton
-              label={label}
-              href={href}
-              variant="primary"
-            />
-          );
+          const { container } = render(<CTAButton label={label} href={href} variant="primary" />);
 
           const button = container.querySelector('a');
           expect(button).toBeTruthy();
-          
+
           // Verify primary variant class is applied
           expect(button?.className).toContain('cta-button--primary');
-          
+
           // Verify button has gradient background (check inline styles)
           const style = button?.getAttribute('style');
           expect(style).toContain('gradient');
-        }
+        },
       ),
-      { numRuns: 100 }
+      { numRuns: 100 },
     );
   });
 
@@ -153,25 +132,19 @@ describe('Property 13: Primary CTA navigation', () => {
         fc.string({ minLength: 5, maxLength: 30 }),
         fc.string({ minLength: 5, maxLength: 50 }),
         (label, href) => {
-          const { container } = render(
-            <CTAButton
-              label={label}
-              href={href}
-              variant="primary"
-            />
-          );
+          const { container } = render(<CTAButton label={label} href={href} variant="primary" />);
 
           const button = container.querySelector('a');
           expect(button).toBeTruthy();
-          
+
           // Verify aria-label is present
           expect(button?.getAttribute('aria-label')).toBe(label);
-          
+
           // Verify it's a focusable element (anchor tag)
           expect(button?.tagName).toBe('A');
-        }
+        },
       ),
-      { numRuns: 100 }
+      { numRuns: 100 },
     );
   });
 });

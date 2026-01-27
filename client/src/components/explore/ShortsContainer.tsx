@@ -1,16 +1,16 @@
 /**
  * ShortsContainer - Refactored
- * 
+ *
  * Container for vertical video feed with TikTok-inspired interactions
  * and enhanced video playback.
- * 
+ *
  * Features:
  * - Smooth swipe gestures for navigation
  * - Enhanced video components with viewport detection
  * - Modern glass overlay UI
  * - Keyboard navigation support
  * - Loading and error states with modern design
- * 
+ *
  * Requirements: 2.1, 2.5, 9.4
  */
 
@@ -31,16 +31,8 @@ interface ShortsContainerProps {
 }
 
 export function ShortsContainer({ feedType, feedId, category }: ShortsContainerProps) {
-  const {
-    cards,
-    currentIndex,
-    currentCard,
-    isLoading,
-    error,
-    goToNext,
-    goToPrevious,
-    refresh,
-  } = useShortsFeed({ feedType, feedId, category });
+  const { cards, currentIndex, currentCard, isLoading, error, goToNext, goToPrevious, refresh } =
+    useShortsFeed({ feedType, feedId, category });
 
   const containerRef = useRef<HTMLDivElement>(null);
   const [currentMediaIndex, setCurrentMediaIndex] = useState(0);
@@ -88,17 +80,10 @@ export function ShortsContainer({ feedType, feedId, category }: ShortsContainerP
             boxShadow: designTokens.shadows.glass,
           }}
         >
-          <Loader2 
-            className="w-16 h-16 text-white animate-spin" 
-            strokeWidth={2}
-          />
+          <Loader2 className="w-16 h-16 text-white animate-spin" strokeWidth={2} />
           <div className="text-center">
-            <p className="text-white text-xl font-semibold mb-1">
-              Loading Shorts
-            </p>
-            <p className="text-gray-300 text-sm">
-              Preparing your personalized feed...
-            </p>
+            <p className="text-white text-xl font-semibold mb-1">Loading Shorts</p>
+            <p className="text-gray-300 text-sm">Preparing your personalized feed...</p>
           </div>
         </motion.div>
       </motion.div>
@@ -130,12 +115,8 @@ export function ShortsContainer({ feedType, feedId, category }: ShortsContainerP
             <RefreshCw className="w-10 h-10 text-red-400" />
           </div>
           <div>
-            <h3 className="text-white text-2xl font-bold mb-2">
-              Oops! Something went wrong
-            </h3>
-            <p className="text-gray-300 text-base leading-relaxed">
-              {error}
-            </p>
+            <h3 className="text-white text-2xl font-bold mb-2">Oops! Something went wrong</h3>
+            <p className="text-gray-300 text-base leading-relaxed">{error}</p>
           </div>
           <motion.button
             onClick={refresh}
@@ -144,7 +125,8 @@ export function ShortsContainer({ feedType, feedId, category }: ShortsContainerP
             whileTap="tap"
             className="px-8 py-4 rounded-xl text-white font-semibold text-lg flex items-center gap-3 shadow-xl"
             style={{
-              background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.9) 0%, rgba(79, 70, 229, 0.9) 100%)',
+              background:
+                'linear-gradient(135deg, rgba(99, 102, 241, 0.9) 0%, rgba(79, 70, 229, 0.9) 100%)',
               backdropFilter: designTokens.colors.glass.backdrop,
               border: `1px solid ${designTokens.colors.glass.border}`,
             }}
@@ -182,11 +164,10 @@ export function ShortsContainer({ feedType, feedId, category }: ShortsContainerP
             <Home className="w-12 h-12 text-gray-400" />
           </div>
           <div>
-            <h3 className="text-white text-2xl font-bold mb-2">
-              No Properties Found
-            </h3>
+            <h3 className="text-white text-2xl font-bold mb-2">No Properties Found</h3>
             <p className="text-gray-300 text-base leading-relaxed">
-              We couldn't find any properties matching your criteria. Try adjusting your filters or check back later.
+              We couldn't find any properties matching your criteria. Try adjusting your filters or
+              check back later.
             </p>
           </div>
         </motion.div>
@@ -209,17 +190,13 @@ export function ShortsContainer({ feedType, feedId, category }: ShortsContainerP
         onTapLeft={() => {
           // Navigate to previous photo
           if (currentCard?.media && currentCard.media.length > 1) {
-            setCurrentMediaIndex((prev) => 
-              prev > 0 ? prev - 1 : currentCard.media.length - 1
-            );
+            setCurrentMediaIndex(prev => (prev > 0 ? prev - 1 : currentCard.media.length - 1));
           }
         }}
         onTapRight={() => {
           // Navigate to next photo
           if (currentCard?.media && currentCard.media.length > 1) {
-            setCurrentMediaIndex((prev) => 
-              prev < currentCard.media.length - 1 ? prev + 1 : 0
-            );
+            setCurrentMediaIndex(prev => (prev < currentCard.media.length - 1 ? prev + 1 : 0));
           }
         }}
         onDoubleTap={() => {
@@ -238,7 +215,7 @@ export function ShortsContainer({ feedType, feedId, category }: ShortsContainerP
             <motion.div
               key={card.id}
               initial={{ opacity: 0 }}
-              animate={{ 
+              animate={{
                 opacity: index === currentIndex ? 1 : 0,
                 scale: index === currentIndex ? 1 : 0.95,
               }}
@@ -285,9 +262,10 @@ export function ShortsContainer({ feedType, feedId, category }: ShortsContainerP
                 key={actualIndex}
                 animate={{
                   width: actualIndex === currentIndex ? 32 : 4,
-                  backgroundColor: actualIndex === currentIndex 
-                    ? 'rgba(255, 255, 255, 1)' 
-                    : 'rgba(156, 163, 175, 0.5)',
+                  backgroundColor:
+                    actualIndex === currentIndex
+                      ? 'rgba(255, 255, 255, 1)'
+                      : 'rgba(156, 163, 175, 0.5)',
                 }}
                 transition={{ duration: 0.3, ease: 'easeOut' }}
                 className="h-1 rounded-full"

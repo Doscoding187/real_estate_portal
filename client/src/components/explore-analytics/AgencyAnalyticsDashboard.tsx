@@ -54,7 +54,7 @@ export function AgencyAnalyticsDashboard({ agencyId }: AgencyAnalyticsDashboardP
           <div className="h-4 bg-slate-200 rounded w-1/2"></div>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {[1, 2, 3, 4].map((i) => (
+          {[1, 2, 3, 4].map(i => (
             <div key={i} className="h-32 bg-slate-200 rounded animate-pulse"></div>
           ))}
         </div>
@@ -107,7 +107,7 @@ export function AgencyAnalyticsDashboard({ agencyId }: AgencyAnalyticsDashboardP
         <div className="flex items-center gap-2">
           <Calendar className="h-4 w-4 text-slate-500" />
           <div className="flex gap-2">
-            {(['7d', '30d', '90d', 'all'] as TimeRange[]).map((range) => (
+            {(['7d', '30d', '90d', 'all'] as TimeRange[]).map(range => (
               <Button
                 key={range}
                 variant={timeRange === range ? 'default' : 'outline'}

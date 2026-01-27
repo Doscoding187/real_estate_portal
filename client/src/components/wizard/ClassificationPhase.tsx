@@ -3,12 +3,7 @@ import { useDevelopmentWizard } from '@/hooks/useDevelopmentWizard';
 import { Building2, Home, Trees, Briefcase } from 'lucide-react';
 
 export const ClassificationPhase: React.FC = () => {
-  const { 
-    classification, 
-    setClassification, 
-    validatePhase, 
-    setPhase 
-  } = useDevelopmentWizard();
+  const { classification, setClassification, validatePhase, setPhase } = useDevelopmentWizard();
 
   const [errors, setErrors] = useState<string[]>([]);
 
@@ -24,8 +19,18 @@ export const ClassificationPhase: React.FC = () => {
 
   const types = [
     { id: 'residential', label: 'Residential', icon: Home, desc: 'Apartments, Estates, Housing' },
-    { id: 'commercial', label: 'Commercial', icon: Briefcase, desc: 'Office Parks, Retail, Industrial' },
-    { id: 'mixed', label: 'Mixed Use', icon: Building2, desc: 'Combination of residential & commercial' },
+    {
+      id: 'commercial',
+      label: 'Commercial',
+      icon: Briefcase,
+      desc: 'Office Parks, Retail, Industrial',
+    },
+    {
+      id: 'mixed',
+      label: 'Mixed Use',
+      icon: Building2,
+      desc: 'Combination of residential & commercial',
+    },
     { id: 'land', label: 'Vacant Land', icon: Trees, desc: 'Undeveloped plots or farm land' },
   ] as const;
 
@@ -44,7 +49,7 @@ export const ClassificationPhase: React.FC = () => {
 
       {/* Type Selection */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {types.map((t) => {
+        {types.map(t => {
           const Icon = t.icon;
           const isSelected = classification.type === t.id;
           return (
@@ -53,17 +58,22 @@ export const ClassificationPhase: React.FC = () => {
               onClick={() => setClassification({ type: t.id as any })}
               className={`
                 flex items-start gap-4 p-6 rounded-xl border-2 text-left transition-all
-                ${isSelected 
-                  ? 'border-blue-600 bg-blue-50 ring-1 ring-blue-600' 
-                  : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                ${
+                  isSelected
+                    ? 'border-blue-600 bg-blue-50 ring-1 ring-blue-600'
+                    : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
                 }
               `}
             >
-              <div className={`p-3 rounded-lg ${isSelected ? 'bg-blue-200 text-blue-700' : 'bg-gray-100 text-gray-600'}`}>
+              <div
+                className={`p-3 rounded-lg ${isSelected ? 'bg-blue-200 text-blue-700' : 'bg-gray-100 text-gray-600'}`}
+              >
                 <Icon className="w-6 h-6" />
               </div>
               <div>
-                <h3 className={`font-semibold ${isSelected ? 'text-blue-900' : 'text-gray-900'}`}>{t.label}</h3>
+                <h3 className={`font-semibold ${isSelected ? 'text-blue-900' : 'text-gray-900'}`}>
+                  {t.label}
+                </h3>
                 <p className="text-sm text-gray-500 mt-1">{t.desc}</p>
               </div>
             </button>
@@ -78,7 +88,7 @@ export const ClassificationPhase: React.FC = () => {
             <label className="text-sm font-medium text-gray-900">Ownership Type</label>
             <select
               value={classification.ownership}
-              onChange={(e) => setClassification({ ownership: e.target.value as any })}
+              onChange={e => setClassification({ ownership: e.target.value as any })}
               className="w-full p-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none bg-white"
             >
               <option value="">Select Ownership...</option>
@@ -94,7 +104,7 @@ export const ClassificationPhase: React.FC = () => {
             <input
               type="text"
               value={classification.subType}
-              onChange={(e) => setClassification({ subType: e.target.value })}
+              onChange={e => setClassification({ subType: e.target.value })}
               placeholder="e.g. Security Estate, High-Rise"
               className="w-full p-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none"
             />

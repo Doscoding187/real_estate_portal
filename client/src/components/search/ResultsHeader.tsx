@@ -34,7 +34,12 @@ interface ResultsHeaderProps {
 }
 
 // Generate human-readable results title
-function generateResultsTitle(filters: SearchFilters, count: number, isLoading?: boolean, locationContext?: ResultsHeaderProps['locationContext']): string {
+function generateResultsTitle(
+  filters: SearchFilters,
+  count: number,
+  isLoading?: boolean,
+  locationContext?: ResultsHeaderProps['locationContext'],
+): string {
   const parts: string[] = [];
 
   // Count
@@ -88,32 +93,34 @@ export function ResultsHeader({
   const title = generateResultsTitle(filters, resultCount, isLoading, locationContext);
 
   // Generate hierarchy breadcrumbs if context exists
-  const locationHierarchy = locationContext?.hierarchy ? [
-    locationContext.hierarchy.suburb,
-    locationContext.hierarchy.city,
-    locationContext.hierarchy.province,
-  ].filter(Boolean).join(' · ') : null;
+  const locationHierarchy = locationContext?.hierarchy
+    ? [
+        locationContext.hierarchy.suburb,
+        locationContext.hierarchy.city,
+        locationContext.hierarchy.province,
+      ]
+        .filter(Boolean)
+        .join(' · ')
+    : null;
 
   return (
     <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 pb-6 border-b border-gray-100">
       {/* Title & Market Pulse */}
       <div>
-        <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
-          {title}
-        </h1>
+        <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">{title}</h1>
         {locationHierarchy && (
           <div className="text-sm text-slate-500 font-medium mt-1">
             Searching in: <span className="text-slate-700">{locationHierarchy}</span>
           </div>
         )}
         {resultCount > 0 && (
-            <div className="flex items-center gap-2 mt-2 text-sm text-slate-500">
-                <span className="flex h-2 w-2 relative">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
-                </span>
-                Live Market Updates
-            </div>
+          <div className="flex items-center gap-2 mt-2 text-sm text-slate-500">
+            <span className="flex h-2 w-2 relative">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+            </span>
+            Live Market Updates
+          </div>
         )}
       </div>
 
@@ -137,8 +144,8 @@ export function ResultsHeader({
           <button
             onClick={() => onViewModeChange('list')}
             className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
-              viewMode === 'list' 
-                ? 'bg-white text-slate-900 shadow-sm' 
+              viewMode === 'list'
+                ? 'bg-white text-slate-900 shadow-sm'
                 : 'text-slate-500 hover:text-slate-700'
             }`}
           >
@@ -148,8 +155,8 @@ export function ResultsHeader({
           <button
             onClick={() => onViewModeChange('grid')}
             className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
-              viewMode === 'grid' 
-                ? 'bg-white text-slate-900 shadow-sm' 
+              viewMode === 'grid'
+                ? 'bg-white text-slate-900 shadow-sm'
                 : 'text-slate-500 hover:text-slate-700'
             }`}
           >
@@ -159,8 +166,8 @@ export function ResultsHeader({
           <button
             onClick={() => onViewModeChange('map')}
             className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
-              viewMode === 'map' 
-                ? 'bg-white text-slate-900 shadow-sm' 
+              viewMode === 'map'
+                ? 'bg-white text-slate-900 shadow-sm'
                 : 'text-slate-500 hover:text-slate-700'
             }`}
           >
@@ -171,19 +178,19 @@ export function ResultsHeader({
 
         {/* Sort Dropdown */}
         <div className="flex items-center gap-2">
-            <span className="text-sm text-slate-500 font-medium hidden sm:inline">Sort by:</span>
-            <Select value={sortBy} onValueChange={(val) => onSortChange(val as SortOption)}>
-              <SelectTrigger className="w-[140px] sm:w-[180px] h-10 bg-white border-gray-200 font-medium text-slate-700">
-                <SelectValue placeholder="Sort by" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="relevance">Relevance</SelectItem>
-                <SelectItem value="price_asc">Lowest Price</SelectItem>
-                <SelectItem value="price_desc">Highest Price</SelectItem>
-                <SelectItem value="date_desc">Newest Listed</SelectItem>
-                <SelectItem value="date_asc">Oldest Listed</SelectItem>
-              </SelectContent>
-            </Select>
+          <span className="text-sm text-slate-500 font-medium hidden sm:inline">Sort by:</span>
+          <Select value={sortBy} onValueChange={val => onSortChange(val as SortOption)}>
+            <SelectTrigger className="w-[140px] sm:w-[180px] h-10 bg-white border-gray-200 font-medium text-slate-700">
+              <SelectValue placeholder="Sort by" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="relevance">Relevance</SelectItem>
+              <SelectItem value="price_asc">Lowest Price</SelectItem>
+              <SelectItem value="price_desc">Highest Price</SelectItem>
+              <SelectItem value="date_desc">Newest Listed</SelectItem>
+              <SelectItem value="date_asc">Oldest Listed</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       </div>
     </div>

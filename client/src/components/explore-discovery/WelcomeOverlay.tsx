@@ -1,9 +1,9 @@
 /**
  * Welcome Overlay Component
- * 
+ *
  * Displays on first session to introduce Explore and suggest topics.
  * Implements Requirements 16.7, 16.8, 16.9
- * 
+ *
  * Features:
  * - Welcome message explaining Explore
  * - 3 suggested topics based on user profile
@@ -171,18 +171,10 @@ export function WelcomeOverlay({
 
                 {/* Actions */}
                 <div className="flex gap-3 justify-center pt-4">
-                  <Button
-                    variant="outline"
-                    onClick={handleSkip}
-                    className="px-6"
-                  >
+                  <Button variant="outline" onClick={handleSkip} className="px-6">
                     Skip for now
                   </Button>
-                  <Button
-                    onClick={handleContinue}
-                    disabled={!selectedTopic}
-                    className="px-6"
-                  >
+                  <Button onClick={handleContinue} disabled={!selectedTopic} className="px-6">
                     {selectedTopic ? 'Continue' : 'Select a topic'}
                   </Button>
                 </div>

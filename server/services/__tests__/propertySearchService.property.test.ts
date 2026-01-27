@@ -1,6 +1,6 @@
 /**
  * Property-Based Tests for Property Search Service
- * 
+ *
  * Tests correctness properties for:
  * - Property 2: Sort order correctness (Requirements 2.3)
  * - Property 16: Result count accuracy (Requirements 7.1)
@@ -18,7 +18,7 @@ import type { SortOption, PropertyFilters } from '../../../shared/types';
 describe('PropertySearchService - Property-Based Tests', () => {
   let db: any;
   let skipTests = false;
-  
+
   // Test data setup
   const testProperties = [
     {
@@ -144,7 +144,7 @@ describe('PropertySearchService - Property-Based Tests', () => {
         skipTests = true;
         return;
       }
-      
+
       // Insert test properties
       for (const prop of testProperties) {
         const result = await db.insert(properties).values(prop);
@@ -161,9 +161,7 @@ describe('PropertySearchService - Property-Based Tests', () => {
     // Clean up test data
     if (db && insertedPropertyIds.length > 0) {
       try {
-        await db.delete(properties).where(
-          inArray(properties.id, insertedPropertyIds)
-        );
+        await db.delete(properties).where(inArray(properties.id, insertedPropertyIds));
       } catch (error) {
         console.warn('Failed to clean up test data:', error);
       }
@@ -181,7 +179,7 @@ describe('PropertySearchService - Property-Based Tests', () => {
         console.log('Skipping test: DATABASE_URL not configured');
         return;
       }
-      
+
       await fc.assert(
         fc.asyncProperty(
           fc.record({
@@ -189,12 +187,12 @@ describe('PropertySearchService - Property-Based Tests', () => {
             minPrice: fc.option(fc.integer({ min: 0, max: 5000000 }), { nil: undefined }),
             maxPrice: fc.option(fc.integer({ min: 5000000, max: 10000000 }), { nil: undefined }),
           }),
-          async (filters) => {
+          async filters => {
             const results = await propertySearchService.searchProperties(
               filters,
               'price_asc',
               1,
-              10
+              10,
             );
 
             // Verify sort order: each property should have price >= previous
@@ -203,26 +201,26 @@ describe('PropertySearchService - Property-Based Tests', () => {
               const currPrice = results.properties[i].price;
               expect(currPrice).toBeGreaterThanOrEqual(prevPrice);
             }
-          }
+          },
         ),
-        { numRuns: 20 }
+        { numRuns: 20 },
       );
     });
 
     it('should correctly sort properties by price descending', async () => {
       if (skipTests) return;
-      
+
       await fc.assert(
         fc.asyncProperty(
           fc.record({
             province: fc.constantFrom('Gauteng', 'Western Cape', 'KwaZulu-Natal'),
           }),
-          async (filters) => {
+          async filters => {
             const results = await propertySearchService.searchProperties(
               filters,
               'price_desc',
               1,
-              10
+              10,
             );
 
             // Verify sort order: each property should have price <= previous
@@ -231,26 +229,26 @@ describe('PropertySearchService - Property-Based Tests', () => {
               const currPrice = results.properties[i].price;
               expect(currPrice).toBeLessThanOrEqual(prevPrice);
             }
-          }
+          },
         ),
-        { numRuns: 20 }
+        { numRuns: 20 },
       );
     });
 
     it('should correctly sort properties by date descending (newest first)', async () => {
       if (skipTests) return;
-      
+
       await fc.assert(
         fc.asyncProperty(
           fc.record({
             city: fc.constantFrom('Johannesburg', 'Cape Town', 'Durban', 'Pretoria'),
           }),
-          async (filters) => {
+          async filters => {
             const results = await propertySearchService.searchProperties(
               filters,
               'date_desc',
               1,
-              10
+              10,
             );
 
             // Verify sort order: each property should have date <= previous
@@ -259,26 +257,26 @@ describe('PropertySearchService - Property-Based Tests', () => {
               const currDate = results.properties[i].listedDate.getTime();
               expect(currDate).toBeLessThanOrEqual(prevDate);
             }
-          }
+          },
         ),
-        { numRuns: 20 }
+        { numRuns: 20 },
       );
     });
 
     it('should correctly sort properties by date ascending (oldest first)', async () => {
       if (skipTests) return;
-      
+
       await fc.assert(
         fc.asyncProperty(
           fc.record({
             propertyType: fc.constantFrom('house', 'apartment', 'townhouse'),
           }),
-          async (filters) => {
+          async filters => {
             const results = await propertySearchService.searchProperties(
               filters as PropertyFilters,
               'date_asc',
               1,
-              10
+              10,
             );
 
             // Verify sort order: each property should have date >= previous
@@ -287,26 +285,26 @@ describe('PropertySearchService - Property-Based Tests', () => {
               const currDate = results.properties[i].listedDate.getTime();
               expect(currDate).toBeGreaterThanOrEqual(prevDate);
             }
-          }
+          },
         ),
-        { numRuns: 20 }
+        { numRuns: 20 },
       );
     });
 
     it('should correctly sort properties by suburb alphabetically', async () => {
       if (skipTests) return;
-      
+
       await fc.assert(
         fc.asyncProperty(
           fc.record({
             province: fc.constantFrom('Gauteng', 'Western Cape'),
           }),
-          async (filters) => {
+          async filters => {
             const results = await propertySearchService.searchProperties(
               filters,
               'suburb_asc',
               1,
-              10
+              10,
             );
 
             // Verify sort order: suburbs should be in alphabetical order
@@ -315,9 +313,9 @@ describe('PropertySearchService - Property-Based Tests', () => {
               const currSuburb = results.properties[i].suburb.toLowerCase();
               expect(currSuburb.localeCompare(prevSuburb)).toBeGreaterThanOrEqual(0);
             }
-          }
+          },
         ),
-        { numRuns: 20 }
+        { numRuns: 20 },
       );
     });
   });
@@ -330,26 +328,33 @@ describe('PropertySearchService - Property-Based Tests', () => {
   describe('Property 16: Result count accuracy', () => {
     it('should return accurate total count for any filter combination', async () => {
       if (skipTests) return;
-      
+
       await fc.assert(
         fc.asyncProperty(
           fc.record({
-            province: fc.option(fc.constantFrom('Gauteng', 'Western Cape', 'KwaZulu-Natal'), { nil: undefined }),
-            city: fc.option(fc.constantFrom('Johannesburg', 'Cape Town', 'Durban', 'Pretoria'), { nil: undefined }),
+            province: fc.option(fc.constantFrom('Gauteng', 'Western Cape', 'KwaZulu-Natal'), {
+              nil: undefined,
+            }),
+            city: fc.option(fc.constantFrom('Johannesburg', 'Cape Town', 'Durban', 'Pretoria'), {
+              nil: undefined,
+            }),
             minPrice: fc.option(fc.integer({ min: 0, max: 3000000 }), { nil: undefined }),
             maxPrice: fc.option(fc.integer({ min: 3000000, max: 10000000 }), { nil: undefined }),
             minBedrooms: fc.option(fc.integer({ min: 1, max: 3 }), { nil: undefined }),
             propertyType: fc.option(
-              fc.array(fc.constantFrom('house', 'apartment', 'townhouse'), { minLength: 1, maxLength: 2 }),
-              { nil: undefined }
+              fc.array(fc.constantFrom('house', 'apartment', 'townhouse'), {
+                minLength: 1,
+                maxLength: 2,
+              }),
+              { nil: undefined },
             ),
           }),
-          async (filters) => {
+          async filters => {
             const results = await propertySearchService.searchProperties(
               filters as PropertyFilters,
               'date_desc',
               1,
-              100 // Large page size to get all results
+              100, // Large page size to get all results
             );
 
             // The total count should match the number of properties returned
@@ -368,43 +373,33 @@ describe('PropertySearchService - Property-Based Tests', () => {
             if (results.properties.length > 0) {
               expect(results.total).toBeGreaterThan(0);
             }
-          }
+          },
         ),
-        { numRuns: 30 }
+        { numRuns: 30 },
       );
     });
 
     it('should maintain consistent count across multiple page requests', async () => {
       if (skipTests) return;
-      
+
       await fc.assert(
         fc.asyncProperty(
           fc.record({
             province: fc.constantFrom('Gauteng', 'Western Cape'),
             minPrice: fc.integer({ min: 1000000, max: 3000000 }),
           }),
-          async (filters) => {
+          async filters => {
             // Get first page
-            const page1 = await propertySearchService.searchProperties(
-              filters,
-              'price_asc',
-              1,
-              2
-            );
+            const page1 = await propertySearchService.searchProperties(filters, 'price_asc', 1, 2);
 
             // Get second page
-            const page2 = await propertySearchService.searchProperties(
-              filters,
-              'price_asc',
-              2,
-              2
-            );
+            const page2 = await propertySearchService.searchProperties(filters, 'price_asc', 2, 2);
 
             // Total count should be the same across pages
             expect(page1.total).toBe(page2.total);
-          }
+          },
         ),
-        { numRuns: 20 }
+        { numRuns: 20 },
       );
     });
   });
@@ -417,7 +412,7 @@ describe('PropertySearchService - Property-Based Tests', () => {
   describe('Property 14: Pagination info accuracy', () => {
     it('should return accurate pagination information', async () => {
       if (skipTests) return;
-      
+
       await fc.assert(
         fc.asyncProperty(
           fc.record({
@@ -430,7 +425,7 @@ describe('PropertySearchService - Property-Based Tests', () => {
               { province },
               'date_desc',
               page,
-              pageSize
+              pageSize,
             );
 
             // Page number should match requested page
@@ -443,7 +438,7 @@ describe('PropertySearchService - Property-Based Tests', () => {
             expect(results.properties.length).toBeLessThanOrEqual(pageSize);
 
             // Calculate expected hasMore
-            const expectedHasMore = (page * pageSize) < results.total;
+            const expectedHasMore = page * pageSize < results.total;
             expect(results.hasMore).toBe(expectedHasMore);
 
             // If not on last page, should have hasMore = true
@@ -455,15 +450,15 @@ describe('PropertySearchService - Property-Based Tests', () => {
             if (page * pageSize >= results.total) {
               expect(results.hasMore).toBe(false);
             }
-          }
+          },
         ),
-        { numRuns: 30 }
+        { numRuns: 30 },
       );
     });
 
     it('should handle edge cases for pagination', async () => {
       if (skipTests) return;
-      
+
       await fc.assert(
         fc.asyncProperty(
           fc.record({
@@ -475,7 +470,7 @@ describe('PropertySearchService - Property-Based Tests', () => {
               { province: 'Gauteng' },
               'price_asc',
               1,
-              pageSize
+              pageSize,
             );
 
             // If there are results
@@ -492,7 +487,7 @@ describe('PropertySearchService - Property-Based Tests', () => {
                 { province: 'Gauteng' },
                 'price_asc',
                 lastPage,
-                pageSize
+                pageSize,
               );
 
               // Last page should not have hasMore
@@ -506,22 +501,22 @@ describe('PropertySearchService - Property-Based Tests', () => {
                 { province: 'Gauteng' },
                 'price_asc',
                 lastPage + 1,
-                pageSize
+                pageSize,
               );
 
               // Beyond last page should have no properties
               expect(beyondLastPage.properties.length).toBe(0);
               expect(beyondLastPage.hasMore).toBe(false);
             }
-          }
+          },
         ),
-        { numRuns: 20 }
+        { numRuns: 20 },
       );
     });
 
     it('should correctly calculate total pages', async () => {
       if (skipTests) return;
-      
+
       await fc.assert(
         fc.asyncProperty(
           fc.record({
@@ -533,7 +528,7 @@ describe('PropertySearchService - Property-Based Tests', () => {
               { province },
               'date_desc',
               1,
-              pageSize
+              pageSize,
             );
 
             // Calculate expected total pages
@@ -545,7 +540,7 @@ describe('PropertySearchService - Property-Based Tests', () => {
                 { province },
                 'date_desc',
                 expectedTotalPages,
-                pageSize
+                pageSize,
               );
 
               // Last page should exist and have properties
@@ -557,14 +552,14 @@ describe('PropertySearchService - Property-Based Tests', () => {
                 { province },
                 'date_desc',
                 expectedTotalPages + 1,
-                pageSize
+                pageSize,
               );
 
               expect(beyondLast.properties.length).toBe(0);
             }
-          }
+          },
         ),
-        { numRuns: 20 }
+        { numRuns: 20 },
       );
     });
   });

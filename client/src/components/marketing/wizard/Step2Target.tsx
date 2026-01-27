@@ -42,14 +42,21 @@ const Step2Target: React.FC<Step2Props> = ({ data, updateData, onNext, onBack, c
       </div>
 
       <div className="space-y-6">
-        <RadioGroup value={targetType} onValueChange={(val) => {
-          setTargetType(val);
-          updateData({ targetType: val });
-        }}>
+        <RadioGroup
+          value={targetType}
+          onValueChange={val => {
+            setTargetType(val);
+            updateData({ targetType: val });
+          }}
+        >
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <label className={`cursor-pointer border rounded-xl p-4 transition-all hover:border-blue-500 ${
-              targetType === 'listing' ? 'border-blue-600 bg-blue-50 ring-1 ring-blue-600' : 'border-slate-200'
-            }`}>
+            <label
+              className={`cursor-pointer border rounded-xl p-4 transition-all hover:border-blue-500 ${
+                targetType === 'listing'
+                  ? 'border-blue-600 bg-blue-50 ring-1 ring-blue-600'
+                  : 'border-slate-200'
+              }`}
+            >
               <div className="flex items-start gap-3">
                 <RadioGroupItem value="listing" id="listing" className="mt-1" />
                 <div className="flex-1">
@@ -57,14 +64,20 @@ const Step2Target: React.FC<Step2Props> = ({ data, updateData, onNext, onBack, c
                     <Home className="w-5 h-5 text-blue-600" />
                     <span className="font-medium text-slate-900">Property Listing</span>
                   </div>
-                  <p className="text-sm text-slate-500">Promote a specific property for sale or rent</p>
+                  <p className="text-sm text-slate-500">
+                    Promote a specific property for sale or rent
+                  </p>
                 </div>
               </div>
             </label>
 
-            <label className={`cursor-pointer border rounded-xl p-4 transition-all hover:border-blue-500 ${
-              targetType === 'development' ? 'border-blue-600 bg-blue-50 ring-1 ring-blue-600' : 'border-slate-200'
-            }`}>
+            <label
+              className={`cursor-pointer border rounded-xl p-4 transition-all hover:border-blue-500 ${
+                targetType === 'development'
+                  ? 'border-blue-600 bg-blue-50 ring-1 ring-blue-600'
+                  : 'border-slate-200'
+              }`}
+            >
               <div className="flex items-start gap-3">
                 <RadioGroupItem value="development" id="development" className="mt-1" />
                 <div className="flex-1">
@@ -77,9 +90,13 @@ const Step2Target: React.FC<Step2Props> = ({ data, updateData, onNext, onBack, c
               </div>
             </label>
 
-            <label className={`cursor-pointer border rounded-xl p-4 transition-all hover:border-blue-500 ${
-              targetType === 'agent_profile' ? 'border-blue-600 bg-blue-50 ring-1 ring-blue-600' : 'border-slate-200'
-            }`}>
+            <label
+              className={`cursor-pointer border rounded-xl p-4 transition-all hover:border-blue-500 ${
+                targetType === 'agent_profile'
+                  ? 'border-blue-600 bg-blue-50 ring-1 ring-blue-600'
+                  : 'border-slate-200'
+              }`}
+            >
               <div className="flex items-start gap-3">
                 <RadioGroupItem value="agent_profile" id="agent_profile" className="mt-1" />
                 <div className="flex-1">
@@ -92,9 +109,13 @@ const Step2Target: React.FC<Step2Props> = ({ data, updateData, onNext, onBack, c
               </div>
             </label>
 
-            <label className={`cursor-pointer border rounded-xl p-4 transition-all hover:border-blue-500 ${
-              targetType === 'agency_page' ? 'border-blue-600 bg-blue-50 ring-1 ring-blue-600' : 'border-slate-200'
-            }`}>
+            <label
+              className={`cursor-pointer border rounded-xl p-4 transition-all hover:border-blue-500 ${
+                targetType === 'agency_page'
+                  ? 'border-blue-600 bg-blue-50 ring-1 ring-blue-600'
+                  : 'border-slate-200'
+              }`}
+            >
               <div className="flex items-start gap-3">
                 <RadioGroupItem value="agency_page" id="agency_page" className="mt-1" />
                 <div className="flex-1">
@@ -117,19 +138,22 @@ const Step2Target: React.FC<Step2Props> = ({ data, updateData, onNext, onBack, c
               <Input
                 placeholder={`Search ${targetType.replace('_', ' ')}...`}
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={e => setSearchQuery(e.target.value)}
                 className="pl-9"
               />
             </div>
             <p className="text-sm text-slate-500">
-              Note: Full search integration coming soon. For now, you can proceed to configure your campaign.
+              Note: Full search integration coming soon. For now, you can proceed to configure your
+              campaign.
             </p>
           </div>
         )}
       </div>
 
       <div className="flex justify-between pt-6">
-        <Button variant="outline" onClick={onBack}>Back</Button>
+        <Button variant="outline" onClick={onBack}>
+          Back
+        </Button>
         <Button onClick={handleNext} className="bg-blue-600 hover:bg-blue-700 min-w-[120px]">
           Next Step
         </Button>

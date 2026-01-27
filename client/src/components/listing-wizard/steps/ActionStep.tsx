@@ -76,9 +76,15 @@ const ActionStep: React.FC = () => {
             >
               {/* Selection Indicator */}
               {isSelected && (
-                <div className={`absolute top-4 right-4 rounded-full p-1 shadow-lg ${
-                  option.color === 'blue' ? 'bg-blue-500' : option.color === 'green' ? 'bg-green-500' : 'bg-purple-500'
-                }`}>
+                <div
+                  className={`absolute top-4 right-4 rounded-full p-1 shadow-lg ${
+                    option.color === 'blue'
+                      ? 'bg-blue-500'
+                      : option.color === 'green'
+                        ? 'bg-green-500'
+                        : 'bg-purple-500'
+                  }`}
+                >
                   <Check className="w-5 h-5 text-white" />
                 </div>
               )}
@@ -88,7 +94,11 @@ const ActionStep: React.FC = () => {
                 <div
                   className={`p-4 rounded-full transition-all shadow-md ${
                     isSelected
-                      ? option.color === 'blue' ? 'bg-blue-100 text-blue-600' : option.color === 'green' ? 'bg-green-100 text-green-600' : 'bg-purple-100 text-purple-600'
+                      ? option.color === 'blue'
+                        ? 'bg-blue-100 text-blue-600'
+                        : option.color === 'green'
+                          ? 'bg-green-100 text-green-600'
+                          : 'bg-purple-100 text-purple-600'
                       : 'bg-gray-100 text-gray-600'
                   }`}
                 >
@@ -98,7 +108,13 @@ const ActionStep: React.FC = () => {
                 {/* Label */}
                 <h3
                   className={`text-2xl font-bold transition-colors ${
-                    isSelected ? option.color === 'blue' ? 'text-blue-600' : option.color === 'green' ? 'text-green-600' : 'text-purple-600' : 'text-gray-900'
+                    isSelected
+                      ? option.color === 'blue'
+                        ? 'text-blue-600'
+                        : option.color === 'green'
+                          ? 'text-green-600'
+                          : 'text-purple-600'
+                      : 'text-gray-900'
                   }`}
                 >
                   {option.label}
@@ -115,10 +131,7 @@ const ActionStep: React.FC = () => {
       {/* Validation Error */}
       {actionValidation.error && (
         <div className="mt-6">
-          <InlineError
-            error={actionValidation.error}
-            show={!!actionValidation.error}
-          />
+          <InlineError error={actionValidation.error} show={!!actionValidation.error} />
         </div>
       )}
 

@@ -1,6 +1,6 @@
 /**
  * Developer Directory Page
- * 
+ *
  * Lists all visible developer brand profiles with filters.
  * SEO-friendly page for brand discovery.
  */
@@ -30,7 +30,8 @@ export default function DeveloperDirectoryPage() {
   // Fetch brand profiles
   const { data: profiles, isLoading } = trpc.brandProfile.listBrandProfiles.useQuery({
     search: searchQuery || undefined,
-    brandTier: tierFilter !== 'all' ? tierFilter as 'national' | 'regional' | 'boutique' : undefined,
+    brandTier:
+      tierFilter !== 'all' ? (tierFilter as 'national' | 'regional' | 'boutique') : undefined,
     isVisible: true,
     limit: 50,
   });
@@ -55,12 +56,10 @@ export default function DeveloperDirectoryPage() {
       <div className="bg-gradient-to-b from-indigo-900 to-indigo-800 text-white pt-24 pb-12">
         <div className="container">
           <div className="max-w-3xl mx-auto text-center">
-            <h1 className="text-4xl font-bold mb-4">
-              Recognised Developers
-            </h1>
+            <h1 className="text-4xl font-bold mb-4">Recognised Developers</h1>
             <p className="text-indigo-200 text-lg mb-8">
-              Discover trusted property developers across South Africa. 
-              Browse developments, view track records, and find your next investment.
+              Discover trusted property developers across South Africa. Browse developments, view
+              track records, and find your next investment.
             </p>
 
             {/* Search Bar */}
@@ -70,7 +69,7 @@ export default function DeveloperDirectoryPage() {
                 <Input
                   placeholder="Search developers..."
                   value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onChange={e => setSearchQuery(e.target.value)}
                   className="pl-10 h-12 bg-white/10 border-white/20 text-white placeholder:text-indigo-200 focus:bg-white focus:text-slate-900 focus:placeholder:text-slate-400"
                 />
               </div>
@@ -100,14 +99,15 @@ export default function DeveloperDirectoryPage() {
           <>
             <div className="flex items-center justify-between mb-6">
               <p className="text-slate-600">
-                Showing <span className="font-semibold text-slate-900">{profiles.length}</span> developers
+                Showing <span className="font-semibold text-slate-900">{profiles.length}</span>{' '}
+                developers
               </p>
             </div>
 
             {/* Developer Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {profiles.map((profile) => (
-                <Card 
+              {profiles.map(profile => (
+                <Card
                   key={profile.id}
                   className="group border-slate-200 hover:border-indigo-300 hover:shadow-lg transition-all cursor-pointer"
                   onClick={() => setLocation(`/developer/${profile.slug}`)}
@@ -118,10 +118,10 @@ export default function DeveloperDirectoryPage() {
                       {/* Logo */}
                       <div className="w-14 h-14 rounded-xl bg-slate-100 overflow-hidden border border-slate-200 shrink-0 group-hover:border-indigo-300 transition-colors">
                         {profile.logoUrl ? (
-                          <img 
-                            src={profile.logoUrl} 
-                            alt={profile.brandName} 
-                            className="w-full h-full object-cover" 
+                          <img
+                            src={profile.logoUrl}
+                            alt={profile.brandName}
+                            className="w-full h-full object-cover"
                           />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center bg-indigo-600 text-white text-xl font-bold">
@@ -135,9 +135,11 @@ export default function DeveloperDirectoryPage() {
                         <h3 className="font-bold text-slate-900 group-hover:text-indigo-600 transition-colors truncate">
                           {profile.brandName}
                         </h3>
-                        
+
                         {profile.brandTier && (
-                          <Badge className={`mt-1 border-0 text-xs ${tierBadgeColor[profile.brandTier] || 'bg-slate-100 text-slate-700'}`}>
+                          <Badge
+                            className={`mt-1 border-0 text-xs ${tierBadgeColor[profile.brandTier] || 'bg-slate-100 text-slate-700'}`}
+                          >
                             {tierLabel[profile.brandTier] || profile.brandTier}
                           </Badge>
                         )}
@@ -154,16 +156,14 @@ export default function DeveloperDirectoryPage() {
 
                     {/* About */}
                     {profile.about && (
-                      <p className="text-sm text-slate-600 line-clamp-2 mb-4">
-                        {profile.about}
-                      </p>
+                      <p className="text-sm text-slate-600 line-clamp-2 mb-4">{profile.about}</p>
                     )}
 
                     {/* Property Focus Tags */}
                     {profile.propertyFocus && profile.propertyFocus.length > 0 && (
                       <div className="flex flex-wrap gap-1.5 mb-4">
                         {profile.propertyFocus.slice(0, 3).map((focus: string) => (
-                          <Badge 
+                          <Badge
                             key={focus}
                             variant="secondary"
                             className="bg-slate-100 text-slate-600 border-0 text-xs capitalize"
@@ -172,7 +172,7 @@ export default function DeveloperDirectoryPage() {
                           </Badge>
                         ))}
                         {profile.propertyFocus.length > 3 && (
-                          <Badge 
+                          <Badge
                             variant="secondary"
                             className="bg-slate-100 text-slate-600 border-0 text-xs"
                           >
@@ -192,10 +192,10 @@ export default function DeveloperDirectoryPage() {
                       ) : (
                         <div />
                       )}
-                      
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
+
+                      <Button
+                        variant="ghost"
+                        size="sm"
                         className="text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 -mr-2"
                       >
                         View Profile
@@ -212,10 +212,9 @@ export default function DeveloperDirectoryPage() {
             <Building2 className="h-16 w-16 text-slate-300 mx-auto mb-4" />
             <h3 className="text-xl font-semibold text-slate-900 mb-2">No Developers Found</h3>
             <p className="text-slate-500 mb-6">
-              {searchQuery 
+              {searchQuery
                 ? `No developers match "${searchQuery}". Try a different search.`
-                : 'No developers are currently listed in the directory.'
-              }
+                : 'No developers are currently listed in the directory.'}
             </p>
             <Button
               variant="outline"
@@ -234,8 +233,9 @@ export default function DeveloperDirectoryPage() {
       <div className="bg-slate-100 py-8">
         <div className="container">
           <p className="text-center text-sm text-slate-500 max-w-2xl mx-auto">
-            Developer names and logos are used for identification purposes only and do not imply partnership or endorsement. 
-            Information is provided for reference and may not reflect current status.
+            Developer names and logos are used for identification purposes only and do not imply
+            partnership or endorsement. Information is provided for reference and may not reflect
+            current status.
           </p>
         </div>
       </div>

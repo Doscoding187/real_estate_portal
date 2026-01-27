@@ -70,7 +70,11 @@ export default function PlanEditor() {
   const [createNewVersion, setCreateNewVersion] = useState(true);
 
   // Queries
-  const { data: plans, isLoading, refetch } = trpc.subscription.getPlans.useQuery({
+  const {
+    data: plans,
+    isLoading,
+    refetch,
+  } = trpc.subscription.getPlans.useQuery({
     includeInactive,
   });
 
@@ -81,7 +85,7 @@ export default function PlanEditor() {
       setIsDrawerOpen(false);
       refetch();
     },
-    onError: (err) => toast.error(err.message),
+    onError: err => toast.error(err.message),
   });
 
   const updateMutation = trpc.subscription.updatePlan.useMutation({
@@ -90,7 +94,7 @@ export default function PlanEditor() {
       setIsDrawerOpen(false);
       refetch();
     },
-    onError: (err) => toast.error(err.message),
+    onError: err => toast.error(err.message),
   });
 
   const toggleStatusMutation = trpc.subscription.togglePlanStatus.useMutation({
@@ -194,13 +198,13 @@ export default function PlanEditor() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-            <Button variant="ghost" size="icon" onClick={() => setLocation('/admin/dashboard')}>
-                <ArrowLeft className="h-4 w-4" />
-            </Button>
-            <div>
+          <Button variant="ghost" size="icon" onClick={() => setLocation('/admin/dashboard')}>
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <div>
             <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Plan Editor</h1>
             <p className="text-slate-500">Manage subscription plans and pricing versions</p>
-            </div>
+          </div>
         </div>
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2 mr-4">
@@ -326,7 +330,7 @@ export default function PlanEditor() {
                 <Label>Display Name</Label>
                 <Input
                   value={formData.displayName}
-                  onChange={(e) => setFormData({ ...formData, displayName: e.target.value })}
+                  onChange={e => setFormData({ ...formData, displayName: e.target.value })}
                   placeholder="e.g. Pro Agency"
                 />
               </div>
@@ -334,7 +338,7 @@ export default function PlanEditor() {
                 <Label>Internal Slug</Label>
                 <Input
                   value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  onChange={e => setFormData({ ...formData, name: e.target.value })}
                   placeholder="e.g. pro-agency-v1"
                   disabled={!!editingPlan} // Slug is immutable after create (for now)
                 />
@@ -347,14 +351,14 @@ export default function PlanEditor() {
                 <Input
                   type="number"
                   value={formData.price}
-                  onChange={(e) => setFormData({ ...formData, price: Number(e.target.value) })}
+                  onChange={e => setFormData({ ...formData, price: Number(e.target.value) })}
                 />
               </div>
               <div className="space-y-2">
                 <Label>Currency</Label>
                 <Select
                   value={formData.currency}
-                  onValueChange={(val) => setFormData({ ...formData, currency: val })}
+                  onValueChange={val => setFormData({ ...formData, currency: val })}
                 >
                   <SelectTrigger>
                     <SelectValue />
@@ -369,7 +373,7 @@ export default function PlanEditor() {
                 <Label>Interval</Label>
                 <Select
                   value={formData.interval}
-                  onValueChange={(val) => setFormData({ ...formData, interval: val })}
+                  onValueChange={val => setFormData({ ...formData, interval: val })}
                 >
                   <SelectTrigger>
                     <SelectValue />
@@ -386,7 +390,7 @@ export default function PlanEditor() {
               <Label>Revenue Category</Label>
               <Select
                 value={formData.revenueCategory}
-                onValueChange={(val) => setFormData({ ...formData, revenueCategory: val })}
+                onValueChange={val => setFormData({ ...formData, revenueCategory: val })}
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -407,7 +411,7 @@ export default function PlanEditor() {
               <Label>Description</Label>
               <Textarea
                 value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                onChange={e => setFormData({ ...formData, description: e.target.value })}
                 placeholder="Plan description visible to users..."
               />
             </div>
@@ -417,9 +421,9 @@ export default function PlanEditor() {
               <div className="flex gap-2">
                 <Input
                   value={featureInput}
-                  onChange={(e) => setFeatureInput(e.target.value)}
+                  onChange={e => setFeatureInput(e.target.value)}
                   placeholder="Add a feature..."
-                  onKeyDown={(e) => e.key === 'Enter' && addFeature()}
+                  onKeyDown={e => e.key === 'Enter' && addFeature()}
                 />
                 <Button type="button" onClick={addFeature} variant="secondary">
                   Add
@@ -427,7 +431,10 @@ export default function PlanEditor() {
               </div>
               <div className="space-y-2 mt-2">
                 {formData.features.map((feature, idx) => (
-                  <div key={idx} className="flex items-center justify-between bg-slate-50 p-2 rounded text-sm">
+                  <div
+                    key={idx}
+                    className="flex items-center justify-between bg-slate-50 p-2 rounded text-sm"
+                  >
                     <span>{feature}</span>
                     <Button
                       variant="ghost"
@@ -446,7 +453,7 @@ export default function PlanEditor() {
               <div className="flex items-center gap-2">
                 <Switch
                   checked={formData.isPopular}
-                  onCheckedChange={(checked) => setFormData({ ...formData, isPopular: checked })}
+                  onCheckedChange={checked => setFormData({ ...formData, isPopular: checked })}
                   id="is-popular"
                 />
                 <Label htmlFor="is-popular">Mark as Popular</Label>
@@ -457,7 +464,7 @@ export default function PlanEditor() {
                   type="number"
                   className="w-20"
                   value={formData.sortOrder}
-                  onChange={(e) => setFormData({ ...formData, sortOrder: Number(e.target.value) })}
+                  onChange={e => setFormData({ ...formData, sortOrder: Number(e.target.value) })}
                 />
               </div>
             </div>
@@ -469,8 +476,8 @@ export default function PlanEditor() {
                   <div>
                     <h4 className="font-medium text-amber-900">Versioning Control</h4>
                     <p className="text-sm text-amber-700 mt-1">
-                      By default, saving changes will create a new version of this plan and archive the
-                      old one. This preserves history for existing subscribers.
+                      By default, saving changes will create a new version of this plan and archive
+                      the old one. This preserves history for existing subscribers.
                     </p>
                   </div>
                 </div>
@@ -485,9 +492,10 @@ export default function PlanEditor() {
                   </Label>
                 </div>
                 {!createNewVersion && (
-                    <p className="text-xs text-red-600 pl-8">
-                        Warning: In-place updates are only allowed for cosmetic changes or if no active subscriptions exist.
-                    </p>
+                  <p className="text-xs text-red-600 pl-8">
+                    Warning: In-place updates are only allowed for cosmetic changes or if no active
+                    subscriptions exist.
+                  </p>
                 )}
               </div>
             )}
@@ -497,7 +505,10 @@ export default function PlanEditor() {
             <Button variant="outline" onClick={() => setIsDrawerOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleSave} disabled={createMutation.isLoading || updateMutation.isLoading}>
+            <Button
+              onClick={handleSave}
+              disabled={createMutation.isLoading || updateMutation.isLoading}
+            >
               {createMutation.isLoading || updateMutation.isLoading ? 'Saving...' : 'Save Plan'}
             </Button>
           </DialogFooter>

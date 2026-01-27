@@ -195,7 +195,7 @@ export async function getActivities(params: GetActivitiesParams): Promise<Activi
     .limit(limit)
     .offset(offset);
 
-  return results.map((activity) => ({
+  return results.map(activity => ({
     ...activity,
     createdAt: new Date(activity.createdAt),
     metadata: activity.metadata ? JSON.parse(activity.metadata as string) : undefined,
@@ -219,7 +219,7 @@ export async function getActivityFeed(developerId: number): Promise<Activity[]> 
 export async function getActivitiesByType(
   developerId: number,
   activityTypes: ActivityType[],
-  limit: number = 20
+  limit: number = 20,
 ): Promise<Activity[]> {
   return getActivities({
     developerId,
@@ -235,7 +235,7 @@ export async function getActivitiesForEntity(
   developerId: number,
   entityType: RelatedEntityType,
   entityId: number,
-  limit: number = 20
+  limit: number = 20,
 ): Promise<Activity[]> {
   return getActivities({
     developerId,
@@ -251,7 +251,7 @@ export async function getActivitiesForEntity(
 export async function getActivityCountByType(
   developerId: number,
   startDate?: Date,
-  endDate?: Date
+  endDate?: Date,
 ): Promise<Record<ActivityType, number>> {
   const conditions = [eq(activities.developerId, developerId)];
 
@@ -273,7 +273,7 @@ export async function getActivityCountByType(
     .groupBy(activities.activityType);
 
   const counts: Record<string, number> = {};
-  results.forEach((result) => {
+  results.forEach(result => {
     counts[result.activityType] = Number(result.count);
   });
 
@@ -285,7 +285,7 @@ export async function getActivityCountByType(
  */
 export async function deleteOldActivities(
   developerId: number,
-  olderThanDays: number = 90
+  olderThanDays: number = 90,
 ): Promise<number> {
   const cutoffDate = new Date();
   cutoffDate.setDate(cutoffDate.getDate() - olderThanDays);
@@ -295,8 +295,8 @@ export async function deleteOldActivities(
     .where(
       and(
         eq(activities.developerId, developerId),
-        lte(activities.createdAt, cutoffDate.toISOString())
-      )
+        lte(activities.createdAt, cutoffDate.toISOString()),
+      ),
     );
 
   return result.rowsAffected || 0;
@@ -309,7 +309,7 @@ export async function logLeadActivity(
   leadId: number,
   activityType: 'lead_new' | 'lead_qualified' | 'lead_unqualified',
   leadName: string,
-  userId?: number
+  userId?: number,
 ): Promise<Activity> {
   const titles = {
     lead_new: `New lead: ${leadName}`,
@@ -334,7 +334,7 @@ export async function logUnitActivity(
   activityType: 'unit_sold' | 'unit_reserved',
   unitNumber: string,
   price: number,
-  userId?: number
+  userId?: number,
 ): Promise<Activity> {
   const titles = {
     unit_sold: `Unit ${unitNumber} sold for R${price.toLocaleString()}`,
@@ -357,7 +357,7 @@ export async function logDevelopmentActivity(
   developmentId: number,
   activityType: 'development_created' | 'development_updated',
   developmentName: string,
-  userId?: number
+  userId?: number,
 ): Promise<Activity> {
   const titles = {
     development_created: `New development created: ${developmentName}`,
@@ -380,7 +380,7 @@ export async function logMediaActivity(
   developmentId: number,
   mediaCount: number,
   mediaType: 'image' | 'video',
-  userId?: number
+  userId?: number,
 ): Promise<Activity> {
   return logActivity({
     developerId,
@@ -399,7 +399,7 @@ export async function logPriceActivity(
   oldPrice: number,
   newPrice: number,
   unitNumber: string,
-  userId?: number
+  userId?: number,
 ): Promise<Activity> {
   const change = newPrice - oldPrice;
   const changePercent = ((change / oldPrice) * 100).toFixed(1);

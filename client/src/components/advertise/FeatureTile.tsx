@@ -1,11 +1,11 @@
 /**
  * FeatureTile Component
- * 
+ *
  * Displays a specific advertising feature with soft-UI card styling,
  * icon, title, and description. Includes hover lift animation.
- * 
+ *
  * Requirements: 5.2, 5.3, 11.2
- * 
+ *
  * REFACTORED: Layout via Tailwind, visual tokens via inline styles only
  */
 
@@ -19,17 +19,17 @@ export interface FeatureTileProps {
    * Icon component from lucide-react
    */
   icon: LucideIcon;
-  
+
   /**
    * Feature title
    */
   title: string;
-  
+
   /**
    * Feature description text
    */
   description: string;
-  
+
   /**
    * Optional additional CSS classes
    */
@@ -104,24 +104,17 @@ export const FeatureTile: React.FC<FeatureTileProps> = ({
             },
           }}
         >
-          <Icon
-            size={28}
-            aria-hidden="true"
-          />
+          <Icon size={28} aria-hidden="true" />
         </motion.div>
       </motion.div>
 
       {/* Text Content */}
       <div>
         {/* Title */}
-        <h3 className="text-xl font-semibold text-gray-900 mb-2 leading-snug">
-          {title}
-        </h3>
+        <h3 className="text-xl font-semibold text-gray-900 mb-2 leading-snug">{title}</h3>
 
         {/* Description */}
-        <p className="text-base text-gray-600 leading-relaxed">
-          {description}
-        </p>
+        <p className="text-base text-gray-600 leading-relaxed">{description}</p>
       </div>
     </motion.div>
   );

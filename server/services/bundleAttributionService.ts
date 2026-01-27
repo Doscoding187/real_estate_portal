@@ -1,16 +1,16 @@
 /**
  * Bundle Attribution Service
- * 
+ *
  * Tracks user engagements with bundle partners to measure bundle effectiveness
  * and attribute conversions back to the bundle that introduced the partner.
- * 
+ *
  * Key Features:
  * - Track bundle views and partner clicks
  * - Track partner profile views from bundles
  * - Track lead generation from bundle partners
  * - Calculate bundle conversion metrics
  * - Generate attribution reports
- * 
+ *
  * Requirements: 12.3
  */
 
@@ -92,29 +92,24 @@ export class BundleAttributionService {
    */
   async trackBundleView(input: TrackBundleViewInput): Promise<void> {
     const id = uuidv4();
-    
+
     await db.execute(
       `INSERT INTO bundle_attributions 
        (id, bundle_id, user_id, event_type, metadata, created_at)
        VALUES (?, ?, ?, 'bundle_view', ?, NOW())`,
-      [
-        id,
-        input.bundleId,
-        input.userId,
-        input.metadata ? JSON.stringify(input.metadata) : null
-      ]
+      [id, input.bundleId, input.userId, input.metadata ? JSON.stringify(input.metadata) : null],
     );
   }
 
   /**
    * Track partner engagement from bundle
    * Records when a user clicks on a partner or views their profile from a bundle
-   * 
+   *
    * Validates: Requirements 12.3
    */
   async trackPartnerEngagement(input: TrackPartnerEngagementInput): Promise<void> {
     const id = uuidv4();
-    
+
     await db.execute(
       `INSERT INTO bundle_attributions 
        (id, bundle_id, partner_id, user_id, event_type, content_id, metadata, created_at)
@@ -126,8 +121,8 @@ export class BundleAttributionService {
         input.userId,
         input.eventType,
         input.contentId || null,
-        input.metadata ? JSON.stringify(input.metadata) : null
-      ]
+        input.metadata ? JSON.stringify(input.metadata) : null,
+      ],
     );
   }
 
@@ -137,7 +132,7 @@ export class BundleAttributionService {
    */
   async trackLeadAttribution(input: TrackLeadAttributionInput): Promise<void> {
     const id = uuidv4();
-    
+
     await db.execute(
       `INSERT INTO bundle_attributions 
        (id, bundle_id, partner_id, user_id, event_type, lead_id, metadata, created_at)
@@ -149,8 +144,8 @@ export class BundleAttributionService {
         input.userId,
         input.eventType,
         input.leadId,
-        input.metadata ? JSON.stringify(input.metadata) : null
-      ]
+        input.metadata ? JSON.stringify(input.metadata) : null,
+      ],
     );
   }
 
@@ -160,10 +155,9 @@ export class BundleAttributionService {
    */
   async getBundleMetrics(bundleId: string): Promise<BundleAttributionMetrics | null> {
     // Get bundle info
-    const bundleResult = await db.execute(
-      `SELECT id, name FROM marketplace_bundles WHERE id = ?`,
-      [bundleId]
-    );
+    const bundleResult = await db.execute(`SELECT id, name FROM marketplace_bundles WHERE id = ?`, [
+      bundleId,
+    ]);
 
     if ((bundleResult.rows as any[]).length === 0) {
       return null;
@@ -182,15 +176,14 @@ export class BundleAttributionService {
          COUNT(CASE WHEN event_type = 'lead_converted' THEN 1 END) as leadsConverted
        FROM bundle_attributions
        WHERE bundle_id = ?`,
-      [bundleId]
+      [bundleId],
     );
 
     const metrics = (metricsResult.rows as any[])[0];
 
     // Calculate conversion rate
-    const conversionRate = metrics.leadsGenerated > 0
-      ? (metrics.leadsConverted / metrics.leadsGenerated) * 100
-      : 0;
+    const conversionRate =
+      metrics.leadsGenerated > 0 ? (metrics.leadsConverted / metrics.leadsGenerated) * 100 : 0;
 
     // Get partner breakdown
     const partnerBreakdown = await this.getPartnerBreakdown(bundleId);
@@ -205,7 +198,7 @@ export class BundleAttributionService {
       leadsGenerated: parseInt(metrics.leadsGenerated) || 0,
       leadsConverted: parseInt(metrics.leadsConverted) || 0,
       conversionRate: parseFloat(conversionRate.toFixed(2)),
-      partnerBreakdown
+      partnerBreakdown,
     };
   }
 
@@ -228,15 +221,13 @@ export class BundleAttributionService {
        WHERE ba.bundle_id = ? AND ba.partner_id IS NOT NULL
        GROUP BY ba.partner_id, p.company_name, bp.category
        ORDER BY clicks DESC`,
-      [bundleId]
+      [bundleId],
     );
 
     return (result.rows as any[]).map(row => {
       const leadsGenerated = parseInt(row.leadsGenerated) || 0;
       const leadsConverted = parseInt(row.leadsConverted) || 0;
-      const conversionRate = leadsGenerated > 0
-        ? (leadsConverted / leadsGenerated) * 100
-        : 0;
+      const conversionRate = leadsGenerated > 0 ? (leadsConverted / leadsGenerated) * 100 : 0;
 
       return {
         partnerId: row.partnerId,
@@ -246,7 +237,7 @@ export class BundleAttributionService {
         profileViews: parseInt(row.profileViews) || 0,
         leadsGenerated,
         leadsConverted,
-        conversionRate: parseFloat(conversionRate.toFixed(2))
+        conversionRate: parseFloat(conversionRate.toFixed(2)),
       };
     });
   }
@@ -278,15 +269,13 @@ export class BundleAttributionService {
          COUNT(CASE WHEN event_type = 'lead_converted' THEN 1 END) as totalLeadsConverted
        FROM bundle_attributions
        WHERE partner_id = ?`,
-      [partnerId]
+      [partnerId],
     );
 
     const metrics = (metricsResult.rows as any[])[0];
     const leadsGenerated = parseInt(metrics.totalLeadsGenerated) || 0;
     const leadsConverted = parseInt(metrics.totalLeadsConverted) || 0;
-    const conversionRate = leadsGenerated > 0
-      ? (leadsConverted / leadsGenerated) * 100
-      : 0;
+    const conversionRate = leadsGenerated > 0 ? (leadsConverted / leadsGenerated) * 100 : 0;
 
     // Get bundle breakdown
     const bundleResult = await db.execute(
@@ -300,14 +289,14 @@ export class BundleAttributionService {
        WHERE ba.partner_id = ?
        GROUP BY ba.bundle_id, mb.name
        ORDER BY clicks DESC`,
-      [partnerId]
+      [partnerId],
     );
 
     const bundleBreakdown = (bundleResult.rows as any[]).map(row => ({
       bundleId: row.bundleId,
       bundleName: row.bundleName,
       clicks: parseInt(row.clicks) || 0,
-      leadsGenerated: parseInt(row.leadsGenerated) || 0
+      leadsGenerated: parseInt(row.leadsGenerated) || 0,
     }));
 
     return {
@@ -317,20 +306,22 @@ export class BundleAttributionService {
       totalLeadsGenerated: leadsGenerated,
       totalLeadsConverted: leadsConverted,
       conversionRate: parseFloat(conversionRate.toFixed(2)),
-      bundleBreakdown
+      bundleBreakdown,
     };
   }
 
   /**
    * Get user's bundle engagement history
    */
-  async getUserBundleHistory(userId: string): Promise<Array<{
-    bundleId: string;
-    bundleName: string;
-    viewedAt: Date;
-    partnersEngaged: number;
-    leadsGenerated: number;
-  }>> {
+  async getUserBundleHistory(userId: string): Promise<
+    Array<{
+      bundleId: string;
+      bundleName: string;
+      viewedAt: Date;
+      partnersEngaged: number;
+      leadsGenerated: number;
+    }>
+  > {
     const result = await db.execute(
       `SELECT 
          ba.bundle_id as bundleId,
@@ -343,7 +334,7 @@ export class BundleAttributionService {
        WHERE ba.user_id = ?
        GROUP BY ba.bundle_id, mb.name
        ORDER BY viewedAt DESC`,
-      [userId]
+      [userId],
     );
 
     return (result.rows as any[]).map(row => ({
@@ -351,21 +342,23 @@ export class BundleAttributionService {
       bundleName: row.bundleName,
       viewedAt: new Date(row.viewedAt),
       partnersEngaged: parseInt(row.partnersEngaged) || 0,
-      leadsGenerated: parseInt(row.leadsGenerated) || 0
+      leadsGenerated: parseInt(row.leadsGenerated) || 0,
     }));
   }
 
   /**
    * Get top performing bundles by conversion rate
    */
-  async getTopPerformingBundles(limit: number = 10): Promise<Array<{
-    bundleId: string;
-    bundleName: string;
-    views: number;
-    leadsGenerated: number;
-    leadsConverted: number;
-    conversionRate: number;
-  }>> {
+  async getTopPerformingBundles(limit: number = 10): Promise<
+    Array<{
+      bundleId: string;
+      bundleName: string;
+      views: number;
+      leadsGenerated: number;
+      leadsConverted: number;
+      conversionRate: number;
+    }>
+  > {
     const result = await db.execute(
       `SELECT 
          ba.bundle_id as bundleId,
@@ -379,15 +372,13 @@ export class BundleAttributionService {
        HAVING leadsGenerated > 0
        ORDER BY (leadsConverted / leadsGenerated) DESC
        LIMIT ?`,
-      [limit]
+      [limit],
     );
 
     return (result.rows as any[]).map(row => {
       const leadsGenerated = parseInt(row.leadsGenerated) || 0;
       const leadsConverted = parseInt(row.leadsConverted) || 0;
-      const conversionRate = leadsGenerated > 0
-        ? (leadsConverted / leadsGenerated) * 100
-        : 0;
+      const conversionRate = leadsGenerated > 0 ? (leadsConverted / leadsGenerated) * 100 : 0;
 
       return {
         bundleId: row.bundleId,
@@ -395,7 +386,7 @@ export class BundleAttributionService {
         views: parseInt(row.views) || 0,
         leadsGenerated,
         leadsConverted,
-        conversionRate: parseFloat(conversionRate.toFixed(2))
+        conversionRate: parseFloat(conversionRate.toFixed(2)),
       };
     });
   }
@@ -405,10 +396,7 @@ export class BundleAttributionService {
    * Used when a bundle is deleted
    */
   async deleteBundleAttributions(bundleId: string): Promise<void> {
-    await db.execute(
-      `DELETE FROM bundle_attributions WHERE bundle_id = ?`,
-      [bundleId]
-    );
+    await db.execute(`DELETE FROM bundle_attributions WHERE bundle_id = ?`, [bundleId]);
   }
 
   /**
@@ -416,10 +404,7 @@ export class BundleAttributionService {
    * Used when a partner is removed from the system
    */
   async deletePartnerAttributions(partnerId: string): Promise<void> {
-    await db.execute(
-      `DELETE FROM bundle_attributions WHERE partner_id = ?`,
-      [partnerId]
-    );
+    await db.execute(`DELETE FROM bundle_attributions WHERE partner_id = ?`, [partnerId]);
   }
 }
 

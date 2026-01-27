@@ -37,7 +37,7 @@ export function PersonalizedContentBlock({
           </div>
         </div>
         <div className="flex gap-4 overflow-x-auto px-4 pb-4 scrollbar-hide">
-          {[1, 2, 3, 4].map((i) => (
+          {[1, 2, 3, 4].map(i => (
             <div key={i} className="flex-shrink-0 w-72 h-96 bg-gray-200 rounded-xl animate-pulse" />
           ))}
         </div>
@@ -71,7 +71,7 @@ export function PersonalizedContentBlock({
 
       {/* Horizontal Scroll Container */}
       <div className="flex gap-4 overflow-x-auto px-4 pb-4 scrollbar-hide snap-x snap-mandatory">
-        {items.map((item) => (
+        {items.map(item => (
           <div
             key={item.id}
             className="flex-shrink-0 w-72 snap-start"
@@ -85,11 +85,7 @@ export function PersonalizedContentBlock({
               />
             )}
             {item.type === 'video' && (
-              <VideoCard
-                video={item.data}
-                onClick={() => onItemClick(item)}
-                variant="compact"
-              />
+              <VideoCard video={item.data} onClick={() => onItemClick(item)} variant="compact" />
             )}
             {item.type === 'neighbourhood' && (
               <NeighbourhoodCard

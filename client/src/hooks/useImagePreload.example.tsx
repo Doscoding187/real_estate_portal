@@ -4,7 +4,11 @@
  */
 
 import React, { useState } from 'react';
-import { useImagePreload, useFeedImagePreload, useProgressiveImagePreload } from './useImagePreload';
+import {
+  useImagePreload,
+  useFeedImagePreload,
+  useProgressiveImagePreload,
+} from './useImagePreload';
 import { ProgressiveImage } from '@/components/ui/ProgressiveImage';
 
 // Example 1: Basic Image Preloading
@@ -20,7 +24,7 @@ export function BasicPreloadExample() {
   const { loadedImages, isImageLoaded, isImageLoading } = useImagePreload(imageUrls, {
     preloadCount: 5,
     priority: 'low',
-    onImageLoaded: (url) => console.log('Loaded:', url),
+    onImageLoaded: url => console.log('Loaded:', url),
     onImageError: (url, error) => console.error('Failed:', url, error),
   });
 
@@ -30,7 +34,7 @@ export function BasicPreloadExample() {
       <div className="text-sm text-gray-600">
         Loaded: {loadedImages.size} / {imageUrls.length}
       </div>
-      
+
       <div className="grid grid-cols-2 gap-4">
         {imageUrls.map((url, index) => (
           <div key={url} className="relative">
@@ -52,7 +56,7 @@ export function BasicPreloadExample() {
 // Example 2: Feed Image Preloading
 export function FeedPreloadExample() {
   const [currentIndex, setCurrentIndex] = useState(0);
-  
+
   const feedItems = [
     { id: 1, data: { imageUrl: 'https://example.com/feed1.jpg', title: 'Property 1' } },
     { id: 2, data: { thumbnailUrl: 'https://example.com/feed2.jpg', title: 'Property 2' } },
@@ -72,7 +76,7 @@ export function FeedPreloadExample() {
   return (
     <div className="space-y-4">
       <h2 className="text-xl font-bold">Feed Image Preloading</h2>
-      
+
       <div className="flex items-center gap-4">
         <button
           onClick={() => setCurrentIndex(Math.max(0, currentIndex - 1))}
@@ -93,9 +97,7 @@ export function FeedPreloadExample() {
         </button>
       </div>
 
-      <div className="text-sm text-gray-600">
-        Preloaded: {loadedImages.size} images
-      </div>
+      <div className="text-sm text-gray-600">Preloaded: {loadedImages.size} images</div>
 
       <div className="space-y-2">
         {feedItems.map((item, index) => {
@@ -111,8 +113,8 @@ export function FeedPreloadExample() {
                 isCurrent
                   ? 'border-blue-500 bg-blue-50'
                   : isUpcoming
-                  ? 'border-green-500 bg-green-50'
-                  : 'border-gray-200'
+                    ? 'border-green-500 bg-green-50'
+                    : 'border-gray-200'
               }`}
             >
               <div className="flex items-center gap-4">
@@ -129,9 +131,7 @@ export function FeedPreloadExample() {
                     {!isCurrent && !isUpcoming && '⏸ Not preloaded'}
                   </div>
                 </div>
-                <div className="text-sm">
-                  {isPreloaded ? '✓ Ready' : '⏳ Pending'}
-                </div>
+                <div className="text-sm">{isPreloaded ? '✓ Ready' : '⏳ Pending'}</div>
               </div>
             </div>
           );
@@ -149,14 +149,14 @@ export function ProgressivePreloadExample() {
     selectedImage,
     {
       priority: 'high',
-      onImageLoaded: (url) => console.log('Progressive load complete:', url),
-    }
+      onImageLoaded: url => console.log('Progressive load complete:', url),
+    },
   );
 
   return (
     <div className="space-y-4">
       <h2 className="text-xl font-bold">Progressive Image Preloading</h2>
-      
+
       <div className="space-y-2">
         <div className="text-sm">
           <span className={lowQualityLoaded ? 'text-green-600' : 'text-gray-400'}>
@@ -213,19 +213,19 @@ export function ProgressiveImageIntegrationExample() {
   ];
 
   const { isImageLoaded } = useImagePreload(
-    images.map((img) => img.url),
+    images.map(img => img.url),
     {
       preloadCount: 4,
       priority: 'low',
-    }
+    },
   );
 
   return (
     <div className="space-y-4">
       <h2 className="text-xl font-bold">ProgressiveImage Integration</h2>
-      
+
       <div className="grid grid-cols-2 gap-4">
-        {images.map((image) => (
+        {images.map(image => (
           <div key={image.id} className="space-y-2">
             <ProgressiveImage
               src={image.url}
@@ -246,9 +246,10 @@ export function ProgressiveImageIntegrationExample() {
 // Example 5: Network-Aware Preloading
 export function NetworkAwarePreloadExample() {
   const [respectSlowConnection, setRespectSlowConnection] = useState(true);
-  
-  const imageUrls = Array.from({ length: 10 }, (_, i) => 
-    `https://example.com/property${i + 1}.jpg`
+
+  const imageUrls = Array.from(
+    { length: 10 },
+    (_, i) => `https://example.com/property${i + 1}.jpg`,
   );
 
   const { loadedImages, loadingImages } = useImagePreload(imageUrls, {
@@ -265,7 +266,7 @@ export function NetworkAwarePreloadExample() {
   return (
     <div className="space-y-4">
       <h2 className="text-xl font-bold">Network-Aware Preloading</h2>
-      
+
       <div className="p-4 bg-gray-100 rounded-lg space-y-2">
         <div className="text-sm">
           <strong>Connection Type:</strong> {effectiveType}
@@ -285,7 +286,7 @@ export function NetworkAwarePreloadExample() {
         <input
           type="checkbox"
           checked={respectSlowConnection}
-          onChange={(e) => setRespectSlowConnection(e.target.checked)}
+          onChange={e => setRespectSlowConnection(e.target.checked)}
           className="w-4 h-4"
         />
         <span className="text-sm">Respect slow connections (skip preload on 2G)</span>
@@ -293,7 +294,10 @@ export function NetworkAwarePreloadExample() {
 
       <div className="grid grid-cols-5 gap-2">
         {imageUrls.map((url, index) => (
-          <div key={url} className="aspect-square bg-gray-200 rounded flex items-center justify-center text-xs">
+          <div
+            key={url}
+            className="aspect-square bg-gray-200 rounded flex items-center justify-center text-xs"
+          >
             {loadedImages.has(url) ? '✓' : loadingImages.has(url) ? '⏳' : index + 1}
           </div>
         ))}
@@ -309,22 +313,23 @@ export function ImagePreloadDemoPage() {
       <div>
         <h1 className="text-3xl font-bold mb-2">Image Preloading Hook Examples</h1>
         <p className="text-gray-600">
-          Demonstrations of the useImagePreload hook for optimizing image loading in the Explore feed
+          Demonstrations of the useImagePreload hook for optimizing image loading in the Explore
+          feed
         </p>
       </div>
 
       <BasicPreloadExample />
       <hr />
-      
+
       <FeedPreloadExample />
       <hr />
-      
+
       <ProgressivePreloadExample />
       <hr />
-      
+
       <ProgressiveImageIntegrationExample />
       <hr />
-      
+
       <NetworkAwarePreloadExample />
     </div>
   );

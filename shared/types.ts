@@ -1,3 +1,5 @@
+import { OWNERSHIP_TYPES, STRUCTURAL_TYPES, FLOOR_TYPES } from './db-enums';
+
 export type SubscriptionStatus =
   | 'incomplete'
   | 'incomplete_expired'
@@ -163,7 +165,6 @@ export interface PlanLimits {
   [key: string]: any;
 }
 
-
 // Developer Subscription Types
 export type SubscriptionTier = 'free_trial' | 'basic' | 'premium';
 export type DeveloperSubscriptionStatus = 'active' | 'cancelled' | 'expired';
@@ -214,7 +215,7 @@ export interface DeveloperSubscriptionWithDetails extends DeveloperSubscription 
 }
 
 // Notification types for the mission control dashboard
-export type NotificationType = 
+export type NotificationType =
   | 'lead_new'
   | 'lead_qualified'
   | 'lead_unqualified'
@@ -281,7 +282,10 @@ export interface DeveloperKPICache {
 }
 
 // Tier configuration constants
-export const SUBSCRIPTION_TIER_LIMITS: Record<SubscriptionTier, Omit<DeveloperSubscriptionLimits, 'id' | 'subscriptionId' | 'createdAt' | 'updatedAt'>> = {
+export const SUBSCRIPTION_TIER_LIMITS: Record<
+  SubscriptionTier,
+  Omit<DeveloperSubscriptionLimits, 'id' | 'subscriptionId' | 'createdAt' | 'updatedAt'>
+> = {
   free_trial: {
     maxDevelopments: 1,
     maxLeadsPerMonth: 50,
@@ -310,7 +314,6 @@ export const SUBSCRIPTION_TIER_LIMITS: Record<SubscriptionTier, Omit<DeveloperSu
     bondIntegrationEnabled: true,
   },
 };
-
 
 // Development Types
 export type DevelopmentType = 'residential' | 'commercial' | 'mixed_use' | 'estate' | 'complex';
@@ -422,9 +425,16 @@ export interface UpdateDevelopmentInput {
   showHouseAddress?: boolean;
 }
 
-
 // Unit Types
-export type UnitType = 'studio' | '1bed' | '2bed' | '3bed' | '4bed+' | 'penthouse' | 'townhouse' | 'house';
+export type UnitType =
+  | 'studio'
+  | '1bed'
+  | '2bed'
+  | '3bed'
+  | '4bed+'
+  | 'penthouse'
+  | 'townhouse'
+  | 'house';
 export type UnitStatus = 'available' | 'reserved' | 'sold';
 
 export interface DevelopmentUnit {
@@ -483,7 +493,6 @@ export interface BulkCreateUnitsInput {
   phaseId?: number;
   units: Omit<CreateUnitInput, 'developmentId' | 'phaseId'>[];
 }
-
 
 // Explore Shorts Types
 export type InteractionType =
@@ -707,7 +716,6 @@ export interface FeedQuery {
   agencyId?: number;
 }
 
-
 // ============================================================================
 // Property Results Page Optimization Types
 // ============================================================================
@@ -726,7 +734,7 @@ export interface Property {
   bathrooms?: number;
   erfSize?: number; // in m²
   floorSize?: number; // in m²
-  
+
   // SA-specific fields
   titleType: 'freehold' | 'sectional';
   levy?: number; // monthly levy for sectional title
@@ -734,18 +742,18 @@ export interface Property {
   securityEstate: boolean;
   petFriendly: boolean;
   fibreReady: boolean;
-  
+
   // Load-shedding solutions
   loadSheddingSolutions: Array<'solar' | 'generator' | 'inverter' | 'none'>;
-  
+
   // Media
   images: ImageUrls[];
   videoCount: number;
-  
+
   // Status
   status: 'available' | 'under_offer' | 'sold' | 'let';
   listedDate: Date;
-  
+
   // Agent info
   agent: {
     id: string;
@@ -756,11 +764,11 @@ export interface Property {
     email: string;
     image?: string;
   };
-  
+
   // Location
   latitude: number;
   longitude: number;
-  
+
   // Highlights
   highlights: string[];
 }
@@ -778,7 +786,7 @@ export interface PropertyFilters {
   city?: string;
   suburb?: string[];
   locations?: string[];
-  
+
   // Basic filters
   propertyType?: Property['propertyType'][];
   listingType?: Property['listingType'];
@@ -787,24 +795,27 @@ export interface PropertyFilters {
   minBedrooms?: number;
   maxBedrooms?: number;
   minBathrooms?: number;
-  
+
   // Size filters
   minErfSize?: number;
   maxErfSize?: number;
   minFloorSize?: number;
   maxFloorSize?: number;
-  
+
   // SA-specific filters
   titleType?: Property['titleType'][];
+  ownershipType?: (typeof OWNERSHIP_TYPES)[number][];
+  structuralType?: (typeof STRUCTURAL_TYPES)[number][];
+  floors?: (typeof FLOOR_TYPES)[number][];
   maxLevy?: number;
   securityEstate?: boolean;
   petFriendly?: boolean;
   fibreReady?: boolean;
   loadSheddingSolutions?: Property['loadSheddingSolutions'];
-  
+
   // Status
   status?: Property['status'][];
-  
+
   // Map bounds
   bounds?: {
     north: number;
@@ -815,7 +826,7 @@ export interface PropertyFilters {
 }
 
 // Sort options
-export type SortOption = 
+export type SortOption =
   | 'price_asc'
   | 'price_desc'
   | 'date_desc'
@@ -987,7 +998,7 @@ export interface PropertySearchError {
 }
 
 // Loading states
-export type PropertyLoadingState = 
+export type PropertyLoadingState =
   | 'idle'
   | 'loading'
   | 'filtering'

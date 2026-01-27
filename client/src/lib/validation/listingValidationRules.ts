@@ -1,6 +1,6 @@
 /**
  * Listing Wizard Validation Rules
- * 
+ *
  * Defines all validation rules for the listing wizard steps
  */
 
@@ -49,14 +49,14 @@ export const createListingValidationEngine = (): ValidationEngine => {
   // ============================================================================
   // Step 3: Basic Information
   // ============================================================================
-  
+
   // Title validation
   engine.addRule({
     field: 'title',
     validator: compose(
       required('Property title is required'),
       minLength(10, 'Title must be at least 10 characters'),
-      maxLength(255, 'Title must not exceed 255 characters')
+      maxLength(255, 'Title must not exceed 255 characters'),
     ),
     message: 'Invalid title',
     trigger: 'blur',
@@ -68,7 +68,7 @@ export const createListingValidationEngine = (): ValidationEngine => {
     validator: compose(
       required('Property description is required'),
       minLength(50, 'Description must be at least 50 characters'),
-      maxLength(5000, 'Description must not exceed 5000 characters')
+      maxLength(5000, 'Description must not exceed 5000 characters'),
     ),
     message: 'Invalid description',
     trigger: 'blur',
@@ -84,7 +84,7 @@ export const createListingValidationEngine = (): ValidationEngine => {
     validator: compose(
       required('Asking price is required'),
       numeric('Price must be a number'),
-      min(1, 'Price must be greater than 0')
+      min(1, 'Price must be greater than 0'),
     ),
     message: 'Invalid asking price',
     trigger: 'blur',
@@ -97,7 +97,7 @@ export const createListingValidationEngine = (): ValidationEngine => {
     validator: compose(
       required('Monthly rent is required'),
       numeric('Rent must be a number'),
-      min(1, 'Rent must be greater than 0')
+      min(1, 'Rent must be greater than 0'),
     ),
     message: 'Invalid monthly rent',
     trigger: 'blur',
@@ -107,10 +107,7 @@ export const createListingValidationEngine = (): ValidationEngine => {
   // Deposit (for rent)
   engine.addRule({
     field: 'deposit',
-    validator: compose(
-      numeric('Deposit must be a number'),
-      min(0, 'Deposit cannot be negative')
-    ),
+    validator: compose(numeric('Deposit must be a number'), min(0, 'Deposit cannot be negative')),
     message: 'Invalid deposit',
     trigger: 'blur',
     condition: (context?: ValidationContext) => context?.action === 'rent',
@@ -122,7 +119,7 @@ export const createListingValidationEngine = (): ValidationEngine => {
     validator: compose(
       required('Starting bid is required'),
       numeric('Starting bid must be a number'),
-      min(1, 'Starting bid must be greater than 0')
+      min(1, 'Starting bid must be greater than 0'),
     ),
     message: 'Invalid starting bid',
     trigger: 'blur',
@@ -134,7 +131,7 @@ export const createListingValidationEngine = (): ValidationEngine => {
     field: 'reservePrice',
     validator: compose(
       numeric('Reserve price must be a number'),
-      min(0, 'Reserve price cannot be negative')
+      min(0, 'Reserve price cannot be negative'),
     ),
     message: 'Invalid reserve price',
     trigger: 'blur',
@@ -150,7 +147,7 @@ export const createListingValidationEngine = (): ValidationEngine => {
     field: 'address',
     validator: compose(
       required('Address is required'),
-      minLength(5, 'Address must be at least 5 characters')
+      minLength(5, 'Address must be at least 5 characters'),
     ),
     message: 'Invalid address',
     trigger: 'blur',
@@ -177,7 +174,7 @@ export const createListingValidationEngine = (): ValidationEngine => {
     field: 'latitude',
     validator: compose(
       required('Location coordinates are required'),
-      numeric('Latitude must be a number')
+      numeric('Latitude must be a number'),
     ),
     message: 'Invalid latitude',
     trigger: 'submit',
@@ -188,7 +185,7 @@ export const createListingValidationEngine = (): ValidationEngine => {
     field: 'longitude',
     validator: compose(
       required('Location coordinates are required'),
-      numeric('Longitude must be a number')
+      numeric('Longitude must be a number'),
     ),
     message: 'Invalid longitude',
     trigger: 'submit',
@@ -220,7 +217,7 @@ export const createListingValidationEngine = (): ValidationEngine => {
       const mediaArray = Array.isArray(context?.media) ? context.media : [];
       const hasMainMedia = value !== null && value !== undefined;
       const hasMedia = mediaArray.length > 0;
-      
+
       return {
         isValid: !hasMedia || hasMainMedia,
         error: hasMedia && !hasMainMedia ? 'Please select a primary image' : undefined,
@@ -241,11 +238,11 @@ export const createListingValidationEngine = (): ValidationEngine => {
       required('Number of bedrooms is required'),
       numeric('Bedrooms must be a number'),
       min(0, 'Bedrooms cannot be negative'),
-      max(50, 'Bedrooms seems too high')
+      max(50, 'Bedrooms seems too high'),
     ),
     message: 'Invalid bedrooms',
     trigger: 'blur',
-    condition: (context?: ValidationContext) => 
+    condition: (context?: ValidationContext) =>
       ['apartment', 'house'].includes(context?.propertyType || ''),
   });
 
@@ -256,11 +253,11 @@ export const createListingValidationEngine = (): ValidationEngine => {
       required('Number of bathrooms is required'),
       numeric('Bathrooms must be a number'),
       min(0, 'Bathrooms cannot be negative'),
-      max(20, 'Bathrooms seems too high')
+      max(20, 'Bathrooms seems too high'),
     ),
     message: 'Invalid bathrooms',
     trigger: 'blur',
-    condition: (context?: ValidationContext) => 
+    condition: (context?: ValidationContext) =>
       ['apartment', 'house'].includes(context?.propertyType || ''),
   });
 
@@ -270,7 +267,7 @@ export const createListingValidationEngine = (): ValidationEngine => {
     validator: compose(
       required('Unit size is required'),
       numeric('Size must be a number'),
-      min(1, 'Size must be greater than 0')
+      min(1, 'Size must be greater than 0'),
     ),
     message: 'Invalid unit size',
     trigger: 'blur',
@@ -282,7 +279,7 @@ export const createListingValidationEngine = (): ValidationEngine => {
     validator: compose(
       required('House size is required'),
       numeric('Size must be a number'),
-      min(1, 'Size must be greater than 0')
+      min(1, 'Size must be greater than 0'),
     ),
     message: 'Invalid house size',
     trigger: 'blur',
@@ -294,7 +291,7 @@ export const createListingValidationEngine = (): ValidationEngine => {
     validator: compose(
       required('Yard size is required'),
       numeric('Size must be a number'),
-      min(1, 'Size must be greater than 0')
+      min(1, 'Size must be greater than 0'),
     ),
     message: 'Invalid yard size',
     trigger: 'blur',
@@ -310,7 +307,7 @@ export const createListingValidationEngine = (): ValidationEngine => {
 export const validateListingStep = async (
   step: number,
   data: any,
-  context?: ValidationContext
+  context?: ValidationContext,
 ): Promise<{ isValid: boolean; errors: Record<string, string> }> => {
   const engine = createListingValidationEngine();
   const errors: Record<string, string> = {};
@@ -332,7 +329,7 @@ export const validateListingStep = async (
   for (const field of fieldsToValidate) {
     const value = data[field];
     const result = await engine.validate(field, value, { ...context, currentStep: step });
-    
+
     if (!result.isValid && result.error) {
       errors[field] = result.error;
     }
@@ -350,7 +347,7 @@ export const validateListingStep = async (
 export const getFieldError = async (
   field: string,
   value: any,
-  context?: ValidationContext
+  context?: ValidationContext,
 ): Promise<string | undefined> => {
   const engine = createListingValidationEngine();
   const result = await engine.validate(field, value, context);

@@ -1,9 +1,9 @@
 /**
  * TrendingVideosSection Component
- * 
+ *
  * Displays a horizontal scrollable section of trending videos.
  * First content section after the header in the Explore Home page.
- * 
+ *
  * Requirements: 1.1, 1.2, 2.4, 2.5, 3.2, 3.3, 4.2
  */
 
@@ -21,10 +21,10 @@ interface TrendingVideosSectionProps {
   onSeeAll: () => void;
 }
 
-export function TrendingVideosSection({ 
-  categoryId, 
-  onVideoClick, 
-  onSeeAll 
+export function TrendingVideosSection({
+  categoryId,
+  onVideoClick,
+  onSeeAll,
 }: TrendingVideosSectionProps) {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const { videos, isLoading, isEmpty } = useTrendingVideos({ categoryId, limit: 12 });
@@ -66,21 +66,18 @@ export function TrendingVideosSection({
             <Play className="w-4 h-4 text-white ml-0.5" fill="currentColor" />
           </motion.div>
           <div>
-            <h2 
+            <h2
               className="text-lg font-semibold"
               style={{ color: designTokens.colors.text.primary }}
             >
               Trending Now
             </h2>
-            <p 
-              className="text-xs"
-              style={{ color: designTokens.colors.text.secondary }}
-            >
+            <p className="text-xs" style={{ color: designTokens.colors.text.secondary }}>
               Popular videos this week
             </p>
           </div>
         </div>
-        
+
         <motion.button
           onClick={onSeeAll}
           className="flex items-center gap-1 px-3 py-1.5 rounded-full text-sm font-medium transition-colors"
@@ -88,7 +85,7 @@ export function TrendingVideosSection({
             color: designTokens.colors.accent.primary,
             backgroundColor: `${designTokens.colors.accent.primary}10`,
           }}
-          whileHover={{ 
+          whileHover={{
             backgroundColor: `${designTokens.colors.accent.primary}20`,
             scale: 1.02,
           }}
@@ -163,9 +160,9 @@ function SkeletonCard({ index }: { index: number }) {
       animate={{ opacity: 1 }}
       transition={{ delay: index * 0.05 }}
     >
-      <div 
+      <div
         className="rounded-xl overflow-hidden"
-        style={{ 
+        style={{
           aspectRatio: '9/16',
           backgroundColor: designTokens.colors.bg.tertiary,
         }}
@@ -184,16 +181,16 @@ function SkeletonCard({ index }: { index: number }) {
         />
       </div>
       <div className="mt-2 px-1 space-y-2">
-        <div 
+        <div
           className="h-3 rounded"
-          style={{ 
+          style={{
             backgroundColor: designTokens.colors.bg.tertiary,
             width: '90%',
           }}
         />
-        <div 
+        <div
           className="h-3 rounded"
-          style={{ 
+          style={{
             backgroundColor: designTokens.colors.bg.tertiary,
             width: '60%',
           }}
@@ -219,15 +216,9 @@ function EmptyCategoryState({ onViewAll }: { onViewAll: () => void }) {
         animate={{ scale: 1 }}
         transition={{ delay: 0.1 }}
       >
-        <Video 
-          className="w-6 h-6" 
-          style={{ color: designTokens.colors.text.tertiary }}
-        />
+        <Video className="w-6 h-6" style={{ color: designTokens.colors.text.tertiary }} />
       </motion.div>
-      <p 
-        className="text-sm mb-2"
-        style={{ color: designTokens.colors.text.secondary }}
-      >
+      <p className="text-sm mb-2" style={{ color: designTokens.colors.text.secondary }}>
         No trending videos in this category
       </p>
       <motion.button

@@ -44,10 +44,10 @@ async function createBackup(): Promise<string> {
     // TiDB Serverless: Use smaller batches to avoid timeout
     console.log('   Fetching developments...');
     const developments = await conn.execute('SELECT * FROM developments');
-    
+
     console.log('   Fetching unit types...');
     const unitTypes = await conn.execute('SELECT * FROM unit_types');
-    
+
     const backup = {
       timestamp: new Date().toISOString(),
       database: 'tidb-serverless',
@@ -60,7 +60,7 @@ async function createBackup(): Promise<string> {
     // Save to file
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
     const backupDir = path.join(process.cwd(), 'backups');
-    
+
     if (!fs.existsSync(backupDir)) {
       fs.mkdirSync(backupDir, { recursive: true });
     }
@@ -94,10 +94,10 @@ async function removeOrphanedUnits(): Promise<number> {
       LEFT JOIN developments d ON ut.development_id = d.id
       WHERE d.id IS NULL
     `;
-    
+
     const result = await conn.execute(orphanedQuery);
     const orphaned = result as any[];
-    
+
     console.log(`   Found ${orphaned.length} orphaned unit types`);
 
     if (orphaned.length > 0) {
@@ -108,18 +108,18 @@ async function removeOrphanedUnits(): Promise<number> {
       for (let i = 0; i < orphaned.length; i += batchSize) {
         const batch = orphaned.slice(i, i + batchSize);
         const ids = batch.map(u => `'${u.id}'`).join(',');
-        
+
         await conn.execute(`DELETE FROM unit_types WHERE id IN (${ids})`);
         deleted += batch.length;
-        
+
         console.log(`   Progress: ${deleted}/${orphaned.length} deleted`);
-        
+
         // Rate limiting for serverless
         if (i + batchSize < orphaned.length) {
           await sleep(100);
         }
       }
-      
+
       console.log(`   ✅ Deleted ${deleted} orphaned units\n`);
       return deleted;
     }
@@ -147,10 +147,10 @@ async function deduplicateUnits(): Promise<number> {
       GROUP BY id
       HAVING count > 1
     `;
-    
+
     const result = await conn.execute(duplicateQuery);
     const duplicates = result as any[];
-    
+
     console.log(`   Found ${duplicates.length} duplicate IDs`);
 
     if (duplicates.length > 0) {
@@ -160,22 +160,22 @@ async function deduplicateUnits(): Promise<number> {
         // Get all instances of this ID
         const instances = await conn.execute(
           'SELECT * FROM unit_types WHERE id = ? ORDER BY created_at DESC',
-          [dup.id]
+          [dup.id],
         );
-        
+
         const rows = instances as any[];
-        
+
         // Keep the first (newest), delete the rest
         for (let i = 1; i < rows.length; i++) {
-          await conn.execute(
-            'DELETE FROM unit_types WHERE id = ? AND created_at = ?',
-            [rows[i].id, rows[i].created_at]
-          );
+          await conn.execute('DELETE FROM unit_types WHERE id = ? AND created_at = ?', [
+            rows[i].id,
+            rows[i].created_at,
+          ]);
           fixed++;
         }
-        
+
         console.log(`   Fixed duplicate: ${dup.id} (removed ${rows.length - 1} copies)`);
-        
+
         // Rate limiting
         await sleep(50);
       }
@@ -205,17 +205,27 @@ async function fixJsonFields(): Promise<number> {
     // Get all developments in batches (serverless optimization)
     const allDevs = await conn.execute('SELECT * FROM developments');
     const developments = allDevs as any[];
-    
+
     console.log(`   Processing ${developments.length} developments...`);
 
     const jsonFields = [
-      'images', 'videos', 'floorPlans', 'brochures',
-      'amenities', 'highlights', 'features', 'estateSpecs',
-      'property_types', 'rejection_reasons'
+      'images',
+      'videos',
+      'floorPlans',
+      'brochures',
+      'amenities',
+      'highlights',
+      'features',
+      'estateSpecs',
+      'property_types',
+      'rejection_reasons',
     ];
 
     const defaults: any = {
-      images: [], videos: [], floorPlans: [], brochures: [],
+      images: [],
+      videos: [],
+      floorPlans: [],
+      brochures: [],
       amenities: { standard: [], additional: [] },
       highlights: [],
       features: [],
@@ -242,7 +252,7 @@ async function fixJsonFields(): Promise<number> {
           } else if (typeof value === 'string') {
             try {
               const parsed = JSON.parse(value);
-              
+
               // Check for double-stringification
               if (typeof parsed === 'string') {
                 const doubleParsed = JSON.parse(parsed);
@@ -262,17 +272,16 @@ async function fixJsonFields(): Promise<number> {
 
         if (updates.length > 0) {
           values.push(dev.id);
-          await conn.execute(
-            `UPDATE developments SET ${updates.join(', ')} WHERE id = ?`,
-            values
-          );
+          await conn.execute(`UPDATE developments SET ${updates.join(', ')} WHERE id = ?`, values);
           fixed++;
         }
       }
 
       // Progress indicator
-      console.log(`   Progress: ${Math.min(i + batchSize, developments.length)}/${developments.length} developments`);
-      
+      console.log(
+        `   Progress: ${Math.min(i + batchSize, developments.length)}/${developments.length} developments`,
+      );
+
       // Rate limiting
       await sleep(100);
     }
@@ -280,7 +289,7 @@ async function fixJsonFields(): Promise<number> {
     // Fix unit types
     const allUnits = await conn.execute('SELECT * FROM unit_types');
     const unitTypes = allUnits as any[];
-    
+
     console.log(`   Processing ${unitTypes.length} unit types...`);
 
     const unitDefaults: any = {
@@ -302,8 +311,14 @@ async function fixJsonFields(): Promise<number> {
         const values: any[] = [];
 
         const unitJsonFields = [
-          'extras', 'specifications', 'amenities', 'base_media', 
-          'base_features', 'base_finishes', 'spec_overrides', 'features'
+          'extras',
+          'specifications',
+          'amenities',
+          'base_media',
+          'base_features',
+          'base_finishes',
+          'spec_overrides',
+          'features',
         ];
 
         for (const field of unitJsonFields) {
@@ -331,15 +346,14 @@ async function fixJsonFields(): Promise<number> {
 
         if (updates.length > 0) {
           values.push(unit.id);
-          await conn.execute(
-            `UPDATE unit_types SET ${updates.join(', ')} WHERE id = ?`,
-            values
-          );
+          await conn.execute(`UPDATE unit_types SET ${updates.join(', ')} WHERE id = ?`, values);
           fixed++;
         }
       }
 
-      console.log(`   Progress: ${Math.min(i + batchSize, unitTypes.length)}/${unitTypes.length} unit types`);
+      console.log(
+        `   Progress: ${Math.min(i + batchSize, unitTypes.length)}/${unitTypes.length} unit types`,
+      );
       await sleep(100);
     }
 
@@ -419,8 +433,8 @@ async function verifyIntegrity(): Promise<void> {
     // Check 3: Invalid JSON
     const allDevs = await conn.execute('SELECT images, amenities FROM developments');
     let invalidJson = 0;
-    
-    for (const dev of (allDevs as any[])) {
+
+    for (const dev of allDevs as any[]) {
       try {
         if (dev.images) JSON.parse(dev.images);
         if (dev.amenities) JSON.parse(dev.amenities);
@@ -433,7 +447,7 @@ async function verifyIntegrity(): Promise<void> {
     console.log(`   - Orphaned units: ${orphanCount}`);
     console.log(`   - Duplicate IDs: ${dupCount}`);
     console.log(`   - Invalid JSON: ${invalidJson}`);
-    
+
     if (orphanCount === 0 && dupCount === 0 && invalidJson === 0) {
       console.log('\n   ✅ Data integrity verified - All checks passed!\n');
     } else {

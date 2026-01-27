@@ -1,8 +1,8 @@
 /**
  * Analytics Tracking for Advertise With Us Landing Page
- * 
+ *
  * Provides tracking utilities for CTA clicks, scroll depth, and user engagement.
- * 
+ *
  * Requirements: 8.4, 8.5
  */
 
@@ -22,7 +22,7 @@ export type DeviceType = 'mobile' | 'tablet' | 'desktop';
 
 export const getDeviceType = (): DeviceType => {
   if (typeof window === 'undefined') return 'desktop';
-  
+
   const width = window.innerWidth;
   if (width < 768) return 'mobile';
   if (width < 1024) return 'tablet';
@@ -34,7 +34,7 @@ let sessionId: string | null = null;
 
 export const getSessionId = (): string => {
   if (sessionId) return sessionId;
-  
+
   // Try to get from sessionStorage
   if (typeof window !== 'undefined' && window.sessionStorage) {
     const stored = sessionStorage.getItem('advertise_session_id');
@@ -43,22 +43,22 @@ export const getSessionId = (): string => {
       return sessionId;
     }
   }
-  
+
   // Generate new session ID
   sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-  
+
   // Store in sessionStorage
   if (typeof window !== 'undefined' && window.sessionStorage) {
     sessionStorage.setItem('advertise_session_id', sessionId);
   }
-  
+
   return sessionId;
 };
 
 // User ID (if authenticated)
 export const getUserId = (): string | undefined => {
   if (typeof window === 'undefined') return undefined;
-  
+
   // Try to get from localStorage or auth context
   try {
     const stored = localStorage.getItem('user_id');
@@ -104,7 +104,7 @@ export const trackCTAClick = (metadata: CTAClickMetadata): void => {
     ...getBaseMetadata(),
     ...metadata,
   };
-  
+
   // Send to Google Analytics
   if (typeof window !== 'undefined' && (window as any).gtag) {
     (window as any).gtag('event', 'cta_click', {
@@ -115,10 +115,10 @@ export const trackCTAClick = (metadata: CTAClickMetadata): void => {
       ...getBaseMetadata(),
     });
   }
-  
+
   // Send to custom analytics endpoint (if available)
   sendToAnalytics(event);
-  
+
   // Console log for development
   if (process.env.NODE_ENV === 'development') {
     console.log('📊 CTA Click:', event);
@@ -139,15 +139,15 @@ export const trackScrollDepth = (metadata: ScrollDepthMetadata): void => {
   if (trackedScrollDepths.has(metadata.percentage)) {
     return;
   }
-  
+
   trackedScrollDepths.add(metadata.percentage);
-  
+
   const event = {
     eventType: 'scroll_depth' as const,
     ...getBaseMetadata(),
     ...metadata,
   };
-  
+
   // Send to Google Analytics
   if (typeof window !== 'undefined' && (window as any).gtag) {
     (window as any).gtag('event', 'scroll_depth', {
@@ -158,10 +158,10 @@ export const trackScrollDepth = (metadata: ScrollDepthMetadata): void => {
       ...getBaseMetadata(),
     });
   }
-  
+
   // Send to custom analytics endpoint
   sendToAnalytics(event);
-  
+
   // Console log for development
   if (process.env.NODE_ENV === 'development') {
     console.log('📊 Scroll Depth:', event);
@@ -185,7 +185,7 @@ export const trackPartnerTypeClick = (metadata: PartnerTypeClickMetadata): void 
     ...getBaseMetadata(),
     ...metadata,
   };
-  
+
   if (typeof window !== 'undefined' && (window as any).gtag) {
     (window as any).gtag('event', 'partner_type_click', {
       event_category: 'engagement',
@@ -193,9 +193,9 @@ export const trackPartnerTypeClick = (metadata: PartnerTypeClickMetadata): void 
       ...getBaseMetadata(),
     });
   }
-  
+
   sendToAnalytics(event);
-  
+
   if (process.env.NODE_ENV === 'development') {
     console.log('📊 Partner Type Click:', event);
   }
@@ -213,7 +213,7 @@ export const trackFAQExpand = (metadata: FAQExpandMetadata): void => {
     ...getBaseMetadata(),
     ...metadata,
   };
-  
+
   if (typeof window !== 'undefined' && (window as any).gtag) {
     (window as any).gtag('event', 'faq_expand', {
       event_category: 'engagement',
@@ -222,9 +222,9 @@ export const trackFAQExpand = (metadata: FAQExpandMetadata): void => {
       ...getBaseMetadata(),
     });
   }
-  
+
   sendToAnalytics(event);
-  
+
   if (process.env.NODE_ENV === 'development') {
     console.log('📊 FAQ Expand:', event);
   }
@@ -238,7 +238,7 @@ export const trackPageView = (): void => {
     page: window.location.pathname,
     title: document.title,
   };
-  
+
   if (typeof window !== 'undefined' && (window as any).gtag) {
     (window as any).gtag('event', 'page_view', {
       page_path: window.location.pathname,
@@ -246,9 +246,9 @@ export const trackPageView = (): void => {
       ...getBaseMetadata(),
     });
   }
-  
+
   sendToAnalytics(event);
-  
+
   if (process.env.NODE_ENV === 'development') {
     console.log('📊 Page View:', event);
   }
@@ -261,9 +261,9 @@ const sendToAnalytics = async (event: any): Promise<void> => {
     if (process.env.NODE_ENV !== 'production') {
       return;
     }
-    
+
     const endpoint = '/api/analytics/track';
-    
+
     await fetch(endpoint, {
       method: 'POST',
       headers: {
@@ -282,16 +282,14 @@ const sendToAnalytics = async (event: any): Promise<void> => {
 // Hook for scroll depth tracking
 export const useScrollDepthTracking = () => {
   if (typeof window === 'undefined') return;
-  
+
   const handleScroll = () => {
     const windowHeight = window.innerHeight;
     const documentHeight = document.documentElement.scrollHeight;
     const scrollTop = window.scrollY || document.documentElement.scrollTop;
-    
-    const scrollPercentage = Math.round(
-      ((scrollTop + windowHeight) / documentHeight) * 100
-    );
-    
+
+    const scrollPercentage = Math.round(((scrollTop + windowHeight) / documentHeight) * 100);
+
     // Track each threshold
     scrollDepthThresholds.forEach(threshold => {
       if (scrollPercentage >= threshold && !trackedScrollDepths.has(threshold)) {
@@ -299,7 +297,7 @@ export const useScrollDepthTracking = () => {
       }
     });
   };
-  
+
   // Throttle scroll events
   let ticking = false;
   const throttledHandleScroll = () => {
@@ -311,11 +309,10 @@ export const useScrollDepthTracking = () => {
       ticking = true;
     }
   };
-  
+
   window.addEventListener('scroll', throttledHandleScroll, { passive: true });
-  
+
   return () => {
     window.removeEventListener('scroll', throttledHandleScroll);
   };
 };
-

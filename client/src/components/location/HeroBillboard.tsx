@@ -24,15 +24,15 @@ export function HeroBillboard({
   defaultImage,
   breadcrumbs,
   stats,
-  placeId
+  placeId,
 }: HeroBillboardProps) {
   // Fetch active ad
   const { data: ad, isLoading } = trpc.monetization.getHeroAd.useQuery(
     { locationType, locationId },
-    { 
+    {
       staleTime: 1000 * 60 * 5, // Cache for 5 mins
-      refetchOnWindowFocus: false 
-    }
+      refetchOnWindowFocus: false,
+    },
   );
 
   const impressionLogged = useRef(false);
@@ -42,7 +42,7 @@ export function HeroBillboard({
       trackEvent('hero_ad_impression', {
         adId: ad.id,
         locationId,
-        locationType
+        locationType,
       });
       impressionLogged.current = true;
     }
@@ -53,13 +53,13 @@ export function HeroBillboard({
       trackEvent('hero_ad_click', {
         adId: ad.id,
         locationId,
-        locationType
+        locationType,
       });
-      
+
       // Navigate to ad destination
       const metadata = ad.metadata as any;
       if (metadata?.ctaUrl) {
-         window.open(metadata.ctaUrl, '_blank');
+        window.open(metadata.ctaUrl, '_blank');
       }
     }
   };
@@ -86,16 +86,16 @@ export function HeroBillboard({
         stats={stats}
         placeId={placeId}
       />
-      
+
       {/* Ad Overlay Elements (Badge & CTA) */}
       {ad && (
         <div className="absolute top-24 right-4 md:right-10 z-20 flex flex-col gap-2 items-end">
           <span className="bg-white/90 text-xs font-bold px-2 py-1 rounded text-gray-500 shadow-sm uppercase tracking-wider">
             Sponsored
           </span>
-          
+
           {ctaText && (
-            <Button 
+            <Button
               onClick={handleAdClick}
               className="mt-4 bg-primary-600 hover:bg-primary-700 text-white shadow-lg animate-in fade-in zoom-in duration-500"
               size="lg"

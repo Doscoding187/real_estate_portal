@@ -1,9 +1,9 @@
 /**
  * Design Tokens for Explore Feature
  * Hybrid Modern + Soft UI Design System
- * 
+ *
  * Inspired by: Airbnb, Instagram Explore, Google Discover, Zillow, TikTok
- * 
+ *
  * Design Philosophy:
  * - Clean, modern layouts with high readability
  * - Subtle shadows (1-4px, not heavy neumorphism)
@@ -25,8 +25,8 @@ export const designTokens = {
     // Soft accent colors (WCAG AA compliant)
     accent: {
       primary: '#4f46e5', // Darker for better contrast (was #6366f1)
-      hover: '#4338ca',   // Even darker for hover state
-      light: '#6366f1',   // Lighter shade for backgrounds
+      hover: '#4338ca', // Even darker for hover state
+      light: '#6366f1', // Lighter shade for backgrounds
       subtle: '#e0e7ff',
       gradient: 'linear-gradient(135deg, #4f46e5 0%, #4338ca 100%)',
     },
@@ -50,26 +50,26 @@ export const designTokens = {
     status: {
       success: '#047857', // Darker green for 4.5:1 contrast (was #10b981)
       warning: '#b45309', // Darker orange for 4.5:1 contrast (was #f59e0b)
-      error: '#dc2626',   // Darker red for better contrast (was #ef4444)
-      info: '#2563eb',    // Darker blue for better contrast (was #3b82f6)
+      error: '#dc2626', // Darker red for better contrast (was #ef4444)
+      info: '#2563eb', // Darker blue for better contrast (was #3b82f6)
     },
   },
 
   spacing: {
-    xs: '0.25rem',    // 4px
-    sm: '0.5rem',     // 8px
-    md: '1rem',       // 16px
-    lg: '1.5rem',     // 24px
-    xl: '2rem',       // 32px
-    '2xl': '3rem',    // 48px
-    '3xl': '4rem',    // 64px
+    xs: '0.25rem', // 4px
+    sm: '0.5rem', // 8px
+    md: '1rem', // 16px
+    lg: '1.5rem', // 24px
+    xl: '2rem', // 32px
+    '2xl': '3rem', // 48px
+    '3xl': '4rem', // 64px
   },
 
   borderRadius: {
-    sm: '0.5rem',     // 8px
-    md: '0.75rem',    // 12px
-    lg: '1rem',       // 16px
-    xl: '1.5rem',     // 24px
+    sm: '0.5rem', // 8px
+    md: '0.75rem', // 12px
+    lg: '1rem', // 16px
+    xl: '1.5rem', // 24px
     pill: '9999px',
   },
 
@@ -102,14 +102,14 @@ export const designTokens = {
       mono: 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace',
     },
     fontSize: {
-      xs: '0.75rem',      // 12px
-      sm: '0.875rem',     // 14px
-      base: '1rem',       // 16px
-      lg: '1.125rem',     // 18px
-      xl: '1.25rem',      // 20px
-      '2xl': '1.5rem',    // 24px
-      '3xl': '1.875rem',  // 30px
-      '4xl': '2.25rem',   // 36px
+      xs: '0.75rem', // 12px
+      sm: '0.875rem', // 14px
+      base: '1rem', // 16px
+      lg: '1.125rem', // 18px
+      xl: '1.25rem', // 20px
+      '2xl': '1.5rem', // 24px
+      '3xl': '1.875rem', // 30px
+      '4xl': '2.25rem', // 36px
     },
     fontWeight: {
       normal: '400',

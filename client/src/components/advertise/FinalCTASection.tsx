@@ -1,9 +1,9 @@
 /**
  * FinalCTASection Component
- * 
+ *
  * Clean, minimal CTA section at the end of the landing page.
  * Displays compelling headline, subtext, and primary/secondary CTAs.
- * 
+ *
  * Requirements: 8.1, 8.2
  */
 
@@ -38,7 +38,12 @@ export const FinalCTASection: React.FC<FinalCTASectionProps> = ({
 }) => {
   // Defensive checks: ensure required props are defined
   if (!headline || !subtext || !primaryCTA || !secondaryCTA) {
-    console.warn('FinalCTASection: missing required props', { headline, subtext, primaryCTA, secondaryCTA });
+    console.warn('FinalCTASection: missing required props', {
+      headline,
+      subtext,
+      primaryCTA,
+      secondaryCTA,
+    });
     return (
       <section
         className={`final-cta-section py-20 md:py-28 bg-gray-50 ${className}`}
@@ -120,6 +125,5 @@ export const FinalCTASection: React.FC<FinalCTASectionProps> = ({
     </section>
   );
 };
-
 
 export default FinalCTASection;

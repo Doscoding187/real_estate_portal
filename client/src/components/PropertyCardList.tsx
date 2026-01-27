@@ -1,6 +1,18 @@
 import React from 'react';
 import { Button } from './ui/button';
-import { Heart, MapPin, Bed, Bath, Square, Building2, Image as ImageIcon, PlayCircle, Plus, Check, Home } from 'lucide-react';
+import {
+  Heart,
+  MapPin,
+  Bed,
+  Bath,
+  Square,
+  Building2,
+  Image as ImageIcon,
+  PlayCircle,
+  Plus,
+  Check,
+  Home,
+} from 'lucide-react';
 import { useComparison } from '@/contexts/ComparisonContext';
 import { formatCurrency } from '@/lib/utils';
 import { OptimizedImageCard } from './OptimizedImage';
@@ -58,9 +70,9 @@ const PropertyCardList: React.FC<PropertyCardListProps> = ({
   yardSize, // Yard/land size
   propertyType,
   listingType,
-  status = "Ready to Move",
+  status = 'Ready to Move',
   floor,
-  transactionType = "New Booking",
+  transactionType = 'New Booking',
   onFavoriteClick,
   agent,
   badges,
@@ -104,7 +116,7 @@ const PropertyCardList: React.FC<PropertyCardListProps> = ({
   };
 
   return (
-    <div 
+    <div
       className="group relative bg-white rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-all overflow-hidden flex flex-col md:flex-row h-auto max-w-[840px] cursor-pointer"
       onClick={() => setLocation(`/property/${id}`)}
     >
@@ -122,7 +134,7 @@ const PropertyCardList: React.FC<PropertyCardListProps> = ({
             src={image as string}
             alt={title}
             loading="lazy"
-            onError={(e) => {
+            onError={e => {
               const target = e.target as HTMLImageElement;
               target.onerror = null;
               target.src = 'https://placehold.co/600x400/e2e8f0/64748b?text=No+Image';
@@ -130,7 +142,7 @@ const PropertyCardList: React.FC<PropertyCardListProps> = ({
             className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
           />
         )}
-        
+
         {/* Badges */}
         <div className="absolute top-3 left-3 flex flex-col gap-2">
           {/* Property Type Badge */}
@@ -139,10 +151,13 @@ const PropertyCardList: React.FC<PropertyCardListProps> = ({
               {propertyType}
             </Badge>
           )}
-          
+
           {/* Dynamic Badges */}
           {badges?.map((badge, index) => (
-            <Badge key={index} className="bg-blue-600/90 backdrop-blur-sm hover:bg-blue-600 text-white border-0">
+            <Badge
+              key={index}
+              className="bg-blue-600/90 backdrop-blur-sm hover:bg-blue-600 text-white border-0"
+            >
               {badge}
             </Badge>
           ))}
@@ -163,11 +178,7 @@ const PropertyCardList: React.FC<PropertyCardListProps> = ({
             disabled={!inComparison && !canAddMore}
             title={inComparison ? 'Remove from comparison' : 'Add to comparison'}
           >
-            {inComparison ? (
-              <Check className="h-5 w-5" />
-            ) : (
-              <Plus className="h-5 w-5" />
-            )}
+            {inComparison ? <Check className="h-5 w-5" /> : <Plus className="h-5 w-5" />}
           </Button>
 
           {/* Favorite Button */}
@@ -176,7 +187,7 @@ const PropertyCardList: React.FC<PropertyCardListProps> = ({
               variant="ghost"
               size="icon"
               className="rounded-full bg-black/30 hover:bg-black/50 text-white backdrop-blur-sm h-9 w-9 border border-white/20"
-              onClick={(e) => {
+              onClick={e => {
                 e.stopPropagation();
                 onFavoriteClick();
               }}
@@ -185,7 +196,7 @@ const PropertyCardList: React.FC<PropertyCardListProps> = ({
             </Button>
           )}
         </div>
-        
+
         {/* Media Count Overlay */}
         <div className="absolute bottom-4 right-4 flex gap-2">
           {imageCount > 0 && (
@@ -209,9 +220,7 @@ const PropertyCardList: React.FC<PropertyCardListProps> = ({
           {/* Header: Title → Location → Price */}
           {/* Header: Title → Location → Price */}
           <div className="mb-4">
-            <h3 
-              className="text-lg font-bold text-slate-900 group-hover:text-blue-600 transition-colors mb-1 line-clamp-2"
-            >
+            <h3 className="text-lg font-bold text-slate-900 group-hover:text-blue-600 transition-colors mb-1 line-clamp-2">
               {title}
             </h3>
 
@@ -219,10 +228,8 @@ const PropertyCardList: React.FC<PropertyCardListProps> = ({
               <MapPin className="h-4 w-4 text-slate-400" />
               <span>{location}</span>
             </div>
-            
-            <div className="text-xl font-bold text-[#1e1b4b]">
-              {formatCurrency(price)}
-            </div>
+
+            <div className="text-xl font-bold text-[#1e1b4b]">{formatCurrency(price)}</div>
           </div>
 
           {/* Specs */}
@@ -272,18 +279,20 @@ const PropertyCardList: React.FC<PropertyCardListProps> = ({
               {description}
             </p>
           )}
-
-
         </div>
 
         {/* Footer Actions */}
         <div className="flex items-center justify-between pt-4 border-t border-slate-100 mt-auto">
           <div className="flex items-center gap-3">
             {agent ? (
-               <>
+              <>
                 <div className="h-8 w-8 rounded-full bg-slate-100 overflow-hidden border border-slate-200">
                   {agent.image ? (
-                    <img src={agent.image} alt={agent.name} className="h-full w-full object-cover" />
+                    <img
+                      src={agent.image}
+                      alt={agent.name}
+                      className="h-full w-full object-cover"
+                    />
                   ) : (
                     <div className="h-full w-full flex items-center justify-center bg-slate-200 text-slate-500 text-xs font-bold">
                       {agent.name.charAt(0)}
@@ -294,11 +303,15 @@ const PropertyCardList: React.FC<PropertyCardListProps> = ({
                   <div className="text-xs font-medium text-slate-900">{agent.name}</div>
                   <div className="text-[10px] text-slate-500">Featured Agent</div>
                 </div>
-               </>
+              </>
             ) : (
               <>
                 <div className="h-8 w-8 rounded-full bg-slate-100 overflow-hidden border border-slate-200">
-                  <img src="/assets/agent-placeholder.jpg" alt="Dealer" className="h-full w-full object-cover" />
+                  <img
+                    src="/assets/agent-placeholder.jpg"
+                    alt="Dealer"
+                    className="h-full w-full object-cover"
+                  />
                 </div>
                 <div>
                   <div className="text-xs font-medium text-slate-900">Luxury Estates</div>
@@ -309,9 +322,9 @@ const PropertyCardList: React.FC<PropertyCardListProps> = ({
           </div>
 
           <div className="flex gap-2">
-            <Button 
+            <Button
               className="bg-blue-600 hover:bg-blue-700 text-white h-9 px-4 text-sm font-medium shadow-sm hover:shadow transition-all"
-              onClick={(e) => {
+              onClick={e => {
                 e.stopPropagation();
                 // Contact logic
               }}

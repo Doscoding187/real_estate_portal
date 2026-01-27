@@ -42,7 +42,7 @@ export const videoRouter = router({
 
       const bucketName = process.env.AWS_S3_BUCKET || 'listify-properties-sa';
       const region = process.env.AWS_REGION || 'eu-north-1';
-      
+
       // Generate unique key with timestamp
       const timestamp = Date.now();
       const sanitizedFileName = input.fileName.replace(/[^a-zA-Z0-9.-]/g, '_');
@@ -107,19 +107,25 @@ export const videoRouter = router({
         throw new Error('Listing videos must be linked to a property or development');
       }
 
-      const [newVideo] = await (ctx as any).db
-        .insert(videos)
-        .values({
-          agentId: agent[0].id,
-          propertyId: input.propertyId,
-          developmentId: input.developmentId,
-          videoUrl: input.videoUrl,
-          caption: input.caption,
-          type: input.type,
-          duration: input.duration,
-        });
+      const [newVideo] = await (ctx as any).db.insert(videos).values({
+        agentId: agent[0].id,
+        propertyId: input.propertyId,
+        developmentId: input.developmentId,
+        videoUrl: input.videoUrl,
+        caption: input.caption,
+        type: input.type,
+        duration: input.duration,
+      });
 
-      return { ...input, id: newVideo.insertId as number, agentId: agent[0].id, views: 0, likes: 0, shares: 0, createdAt: new Date() };
+      return {
+        ...input,
+        id: newVideo.insertId as number,
+        agentId: agent[0].id,
+        views: 0,
+        likes: 0,
+        shares: 0,
+        createdAt: new Date(),
+      };
     }),
 
   // Get all videos for the explore feed
@@ -298,7 +304,11 @@ export const videoRouter = router({
     )
     .mutation(async ({ ctx, input }) => {
       // Get agent details
-      const agent = await (ctx as any).db.select().from(agents).where(eq(agents.id, input.agentId)).limit(1);
+      const agent = await (ctx as any).db
+        .select()
+        .from(agents)
+        .where(eq(agents.id, input.agentId))
+        .limit(1);
 
       if (!agent[0]) {
         throw new Error('Agent not found');
@@ -392,7 +402,11 @@ export const videoRouter = router({
     .input(z.object({ videoId: z.number() }))
     .mutation(async ({ ctx, input }) => {
       // Verify video belongs to current user's agent profile
-      const video = await (ctx as any).db.select().from(videos).where(eq(videos.id, input.videoId)).limit(1);
+      const video = await (ctx as any).db
+        .select()
+        .from(videos)
+        .where(eq(videos.id, input.videoId))
+        .limit(1);
 
       if (!video[0]) {
         throw new Error('Video not found');

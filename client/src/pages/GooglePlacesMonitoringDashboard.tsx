@@ -1,6 +1,6 @@
 /**
  * Google Places API Monitoring Dashboard
- * 
+ *
  * Requirements:
  * - 26.4: Create monitoring dashboard
  * - 26.5: Display alerts for usage thresholds
@@ -11,15 +11,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { 
-  Activity, 
-  AlertTriangle, 
-  CheckCircle2, 
-  DollarSign, 
-  TrendingUp, 
+import {
+  Activity,
+  AlertTriangle,
+  CheckCircle2,
+  DollarSign,
+  TrendingUp,
   Clock,
   XCircle,
-  Info
+  Info,
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -95,7 +95,11 @@ export default function GooglePlacesMonitoringDashboard() {
   });
 
   // Fetch active alerts
-  const { data: alerts, isLoading: alertsLoading, refetch: refetchAlerts } = useQuery<AlertData[]>({
+  const {
+    data: alerts,
+    isLoading: alertsLoading,
+    refetch: refetchAlerts,
+  } = useQuery<AlertData[]>({
     queryKey: ['google-places-alerts'],
     queryFn: async () => {
       const response = await fetch('/api/google-places-monitoring/alerts');
@@ -162,9 +166,8 @@ export default function GooglePlacesMonitoringDashboard() {
     );
   }
 
-  const usagePercentage = config && statistics
-    ? (statistics.today.totalRequests / config.dailyRequestLimit) * 100
-    : 0;
+  const usagePercentage =
+    config && statistics ? (statistics.today.totalRequests / config.dailyRequestLimit) * 100 : 0;
 
   return (
     <div className="container mx-auto p-6 space-y-6">
@@ -172,9 +175,7 @@ export default function GooglePlacesMonitoringDashboard() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Google Places API Monitoring</h1>
-          <p className="text-muted-foreground">
-            Real-time monitoring and usage statistics
-          </p>
+          <p className="text-muted-foreground">Real-time monitoring and usage statistics</p>
         </div>
         <div className="flex items-center gap-2">
           <Badge variant={usagePercentage < 80 ? 'default' : 'destructive'}>
@@ -187,7 +188,7 @@ export default function GooglePlacesMonitoringDashboard() {
       {alerts && alerts.length > 0 && (
         <div className="space-y-2">
           <h2 className="text-xl font-semibold">Active Alerts</h2>
-          {alerts.map((alert) => (
+          {alerts.map(alert => (
             <Alert key={alert.id} variant={getSeverityColor(alert.severity) as any}>
               <div className="flex items-start justify-between">
                 <div className="flex items-start gap-2">
@@ -200,11 +201,7 @@ export default function GooglePlacesMonitoringDashboard() {
                     </p>
                   </div>
                 </div>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => handleResolveAlert(alert.id)}
-                >
+                <Button size="sm" variant="outline" onClick={() => handleResolveAlert(alert.id)}>
                   Resolve
                 </Button>
               </div>
@@ -222,12 +219,8 @@ export default function GooglePlacesMonitoringDashboard() {
               <Activity className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">
-                {statistics.currentHour.totalRequests}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                requests in the last hour
-              </p>
+              <div className="text-2xl font-bold">{statistics.currentHour.totalRequests}</div>
+              <p className="text-xs text-muted-foreground">requests in the last hour</p>
             </CardContent>
           </Card>
 
@@ -240,9 +233,7 @@ export default function GooglePlacesMonitoringDashboard() {
               <div className="text-2xl font-bold">
                 {statistics.currentHour.successRate.toFixed(1)}%
               </div>
-              <p className="text-xs text-muted-foreground">
-                in the last hour
-              </p>
+              <p className="text-xs text-muted-foreground">in the last hour</p>
             </CardContent>
           </Card>
 
@@ -255,9 +246,7 @@ export default function GooglePlacesMonitoringDashboard() {
               <div className="text-2xl font-bold">
                 {statistics.currentHour.averageResponseTime.toFixed(0)}ms
               </div>
-              <p className="text-xs text-muted-foreground">
-                in the last hour
-              </p>
+              <p className="text-xs text-muted-foreground">in the last hour</p>
             </CardContent>
           </Card>
         </div>
@@ -274,7 +263,8 @@ export default function GooglePlacesMonitoringDashboard() {
             <CardContent>
               <div className="text-2xl font-bold">{statistics.today.totalRequests}</div>
               <p className="text-xs text-muted-foreground">
-                {statistics.today.successfulRequests} successful, {statistics.today.failedRequests} failed
+                {statistics.today.successfulRequests} successful, {statistics.today.failedRequests}{' '}
+                failed
               </p>
               <div className="mt-2 text-xs">
                 <div>Autocomplete: {statistics.today.autocompleteRequests}</div>
@@ -290,9 +280,7 @@ export default function GooglePlacesMonitoringDashboard() {
               <DollarSign className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">
-                ${statistics.today.totalCost.toFixed(2)}
-              </div>
+              <div className="text-2xl font-bold">${statistics.today.totalCost.toFixed(2)}</div>
               <p className="text-xs text-muted-foreground">
                 Projected daily: ${statistics.costProjection.dailyProjected.toFixed(2)}
               </p>
@@ -379,11 +367,15 @@ export default function GooglePlacesMonitoringDashboard() {
               </div>
               <div>
                 <p className="text-sm font-medium">Usage Alert Threshold</p>
-                <p className="text-2xl font-bold">{(config.usageAlertThreshold * 100).toFixed(0)}%</p>
+                <p className="text-2xl font-bold">
+                  {(config.usageAlertThreshold * 100).toFixed(0)}%
+                </p>
               </div>
               <div>
                 <p className="text-sm font-medium">Error Rate Threshold</p>
-                <p className="text-2xl font-bold">{(config.errorRateThreshold * 100).toFixed(0)}%</p>
+                <p className="text-2xl font-bold">
+                  {(config.errorRateThreshold * 100).toFixed(0)}%
+                </p>
               </div>
               <div>
                 <p className="text-sm font-medium">Response Time Threshold</p>

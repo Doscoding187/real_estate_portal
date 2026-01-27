@@ -1,9 +1,9 @@
 /**
  * useOptimizedAnimation Hook
- * 
+ *
  * Provides optimized animation configuration based on device capabilities
  * and user preferences.
- * 
+ *
  * Requirements: 11.2, 11.5 - Optimize animation performance, maintain 60fps
  */
 
@@ -22,27 +22,27 @@ interface OptimizedAnimationConfig {
    * Whether animations should be enabled
    */
   shouldAnimate: boolean;
-  
+
   /**
    * Optimized animation duration
    */
   duration: number;
-  
+
   /**
    * Optimized stagger delay
    */
   stagger: number;
-  
+
   /**
    * Animation complexity level
    */
   complexity: 'full' | 'reduced' | 'minimal';
-  
+
   /**
    * Whether device is low-end
    */
   isLowEnd: boolean;
-  
+
   /**
    * Whether user prefers reduced motion
    */
@@ -51,15 +51,15 @@ interface OptimizedAnimationConfig {
 
 /**
  * Hook to get optimized animation configuration
- * 
+ *
  * @param baseDuration - Base animation duration in seconds
  * @param baseStagger - Base stagger delay in seconds
  * @returns Optimized animation configuration
- * 
+ *
  * @example
  * ```tsx
  * const { shouldAnimate, duration, stagger } = useOptimizedAnimation(0.4, 0.1);
- * 
+ *
  * return (
  *   <motion.div
  *     animate={shouldAnimate ? "animate" : "initial"}
@@ -72,7 +72,7 @@ interface OptimizedAnimationConfig {
  */
 export function useOptimizedAnimation(
   baseDuration: number = 0.4,
-  baseStagger: number = 0.1
+  baseStagger: number = 0.1,
 ): OptimizedAnimationConfig {
   const prefersReducedMotion = useReducedMotion();
   const [complexity, setComplexity] = useState<'full' | 'reduced' | 'minimal'>('full');
@@ -104,19 +104,19 @@ export function useOptimizedAnimation(
 
 /**
  * Hook to get optimized animation variants
- * 
+ *
  * @param variants - Base animation variants
  * @returns Optimized variants based on device capabilities
- * 
+ *
  * @example
  * ```tsx
  * const fadeUp = {
  *   initial: { opacity: 0, y: 20 },
  *   animate: { opacity: 1, y: 0 }
  * };
- * 
+ *
  * const optimizedVariants = useOptimizedVariants(fadeUp);
- * 
+ *
  * return <motion.div variants={optimizedVariants}>Content</motion.div>;
  * ```
  */
@@ -133,13 +133,13 @@ export function useOptimizedVariants(variants: Variants): Variants {
 
 /**
  * Hook to monitor animation performance
- * 
+ *
  * @returns Performance metrics
- * 
+ *
  * @example
  * ```tsx
  * const { fps, isAcceptable } = useAnimationPerformance();
- * 
+ *
  * if (!isAcceptable) {
  *   console.warn('Animation performance is below 60fps');
  * }
@@ -164,7 +164,7 @@ export function useAnimationPerformance() {
         const currentFPS = (frameCount * 1000) / delta;
         setFps(Math.round(currentFPS));
         setIsAcceptable(currentFPS >= 55); // Allow 5fps margin
-        
+
         frameCount = 0;
         lastTime = currentTime;
       }
@@ -187,13 +187,13 @@ export function useAnimationPerformance() {
 
 /**
  * Hook to get GPU-accelerated animation props
- * 
+ *
  * @returns Object with GPU-accelerated properties
- * 
+ *
  * @example
  * ```tsx
  * const gpuProps = useGPUAcceleration();
- * 
+ *
  * return (
  *   <motion.div
  *     style={gpuProps}

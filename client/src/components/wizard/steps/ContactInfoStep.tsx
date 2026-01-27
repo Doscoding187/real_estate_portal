@@ -2,7 +2,7 @@
  * ContactInfoStep Component
  * Second step of the developer registration wizard
  * Collects contact information and logo upload
- * 
+ *
  * Requirements: 1.7, 1.8, 8.1, 8.2, 8.3, 8.4, 8.5
  */
 
@@ -65,105 +65,81 @@ export const ContactInfoStep = React.forwardRef<HTMLDivElement, ContactInfoStepP
           <h2 className="text-2xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
             Contact Information
           </h2>
-          <p className="text-gray-600">
-            How can clients and partners reach you?
-          </p>
+          <p className="text-gray-600">How can clients and partners reach you?</p>
         </div>
 
         <div className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
-              <label className="block text-sm font-medium text-gray-700">
-                Business Email *
-              </label>
+              <label className="block text-sm font-medium text-gray-700">Business Email *</label>
               <GradientInput
                 type="email"
                 placeholder="contact@yourcompany.com"
                 value={data.email}
-                onChange={(e) => handleChange('email', e.target.value)}
+                onChange={e => handleChange('email', e.target.value)}
                 error={errors?.email}
               />
-              {errors?.email && (
-                <p className="text-sm text-red-600">{errors.email}</p>
-              )}
+              {errors?.email && <p className="text-sm text-red-600">{errors.email}</p>}
             </div>
 
             <div className="space-y-2">
-              <label className="block text-sm font-medium text-gray-700">
-                Phone Number *
-              </label>
+              <label className="block text-sm font-medium text-gray-700">Phone Number *</label>
               <GradientInput
                 type="tel"
                 placeholder="+27 11 123 4567"
                 value={data.phone}
-                onChange={(e) => handleChange('phone', e.target.value)}
+                onChange={e => handleChange('phone', e.target.value)}
                 error={errors?.phone}
               />
-              {errors?.phone && (
-                <p className="text-sm text-red-600">{errors.phone}</p>
-              )}
+              {errors?.phone && <p className="text-sm text-red-600">{errors.phone}</p>}
             </div>
           </div>
 
           <div className="space-y-2">
-            <label className="block text-sm font-medium text-gray-700">
-              Business Address
-            </label>
+            <label className="block text-sm font-medium text-gray-700">Business Address</label>
             <GradientInput
               type="text"
               placeholder="123 Business Street, Business Park"
               value={data.address}
-              onChange={(e) => handleChange('address', e.target.value)}
+              onChange={e => handleChange('address', e.target.value)}
               error={errors?.address}
             />
-            {errors?.address && (
-              <p className="text-sm text-red-600">{errors.address}</p>
-            )}
+            {errors?.address && <p className="text-sm text-red-600">{errors.address}</p>}
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
-              <label className="block text-sm font-medium text-gray-700">
-                City *
-              </label>
+              <label className="block text-sm font-medium text-gray-700">City *</label>
               <GradientInput
                 type="text"
                 placeholder="Cape Town"
                 value={data.city}
-                onChange={(e) => handleChange('city', e.target.value)}
+                onChange={e => handleChange('city', e.target.value)}
                 error={errors?.city}
               />
-              {errors?.city && (
-                <p className="text-sm text-red-600">{errors.city}</p>
-              )}
+              {errors?.city && <p className="text-sm text-red-600">{errors.city}</p>}
             </div>
 
             <div className="space-y-2">
-              <label className="block text-sm font-medium text-gray-700">
-                Province *
-              </label>
+              <label className="block text-sm font-medium text-gray-700">Province *</label>
               <GradientSelect
                 placeholder="Select province"
                 value={data.province}
-                onValueChange={(value) => handleChange('province', value)}
+                onValueChange={value => handleChange('province', value)}
                 error={errors?.province}
               >
-                {provinceOptions.map((option) => (
+                {provinceOptions.map(option => (
                   <GradientSelectItem key={option.value} value={option.value}>
                     {option.label}
                   </GradientSelectItem>
                 ))}
               </GradientSelect>
-              {errors?.province && (
-                <p className="text-sm text-red-600">{errors.province}</p>
-              )}
+              {errors?.province && <p className="text-sm text-red-600">{errors.province}</p>}
             </div>
           </div>
 
           <div className="space-y-2">
-            <label className="block text-sm font-medium text-gray-700">
-              Company Logo
-            </label>
+            <label className="block text-sm font-medium text-gray-700">Company Logo</label>
             <LogoUploadZone
               value={data.logo}
               onChange={handleLogoChange}
@@ -173,20 +149,19 @@ export const ContactInfoStep = React.forwardRef<HTMLDivElement, ContactInfoStepP
               maxSizeMB={2}
               acceptedTypes={['image/svg+xml', 'image/png', 'image/jpeg']}
             />
-            {errors?.logo && (
-              <p className="text-sm text-red-600">{errors.logo}</p>
-            )}
+            {errors?.logo && <p className="text-sm text-red-600">{errors.logo}</p>}
           </div>
         </div>
 
         <div className="bg-green-50 border border-green-200 rounded-lg p-4">
           <p className="text-sm text-green-700">
-            <strong>Privacy:</strong> Your contact information will only be visible to verified clients and partners.
+            <strong>Privacy:</strong> Your contact information will only be visible to verified
+            clients and partners.
           </p>
         </div>
       </div>
     );
-  }
+  },
 );
 
 ContactInfoStep.displayName = 'ContactInfoStep';

@@ -1,7 +1,7 @@
 /**
  * Color Contrast Audit Utility
  * WCAG AA Compliance Checker
- * 
+ *
  * WCAG AA Requirements:
  * - Normal text (< 18pt or < 14pt bold): 4.5:1 contrast ratio
  * - Large text (≥ 18pt or ≥ 14pt bold): 3:1 contrast ratio
@@ -35,7 +35,7 @@ function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
  * https://www.w3.org/TR/WCAG20-TECHS/G17.html
  */
 function getLuminance(r: number, g: number, b: number): number {
-  const [rs, gs, bs] = [r, g, b].map((c) => {
+  const [rs, gs, bs] = [r, g, b].map(c => {
     const sRGB = c / 255;
     return sRGB <= 0.03928 ? sRGB / 12.92 : Math.pow((sRGB + 0.055) / 1.055, 2.4);
   });
@@ -69,7 +69,7 @@ export function getContrastRatio(color1: string, color2: string): number {
 export function meetsWCAGAA(
   foreground: string,
   background: string,
-  textSize: 'normal' | 'large' = 'normal'
+  textSize: 'normal' | 'large' = 'normal',
 ): { passes: boolean; ratio: number; required: number } {
   const ratio = getContrastRatio(foreground, background);
   const required = textSize === 'normal' ? 4.5 : 3.0;
@@ -243,7 +243,7 @@ export function auditColorContrast(): {
   const passed: ColorPair[] = [];
   const failed: ColorPair[] = [];
 
-  colorCombinations.forEach((pair) => {
+  colorCombinations.forEach(pair => {
     const result = meetsWCAGAA(pair.foreground, pair.background, pair.textSize);
     if (result.passes) {
       passed.push(pair);
@@ -279,7 +279,7 @@ export function generateAuditReport(): string {
 
   if (audit.failed.length > 0) {
     report += `## ⚠️ Failed Combinations\n\n`;
-    audit.failed.forEach((pair) => {
+    audit.failed.forEach(pair => {
       const result = meetsWCAGAA(pair.foreground, pair.background, pair.textSize);
       report += `### ${pair.usage}\n`;
       report += `- Foreground: ${pair.foreground}\n`;
@@ -291,7 +291,7 @@ export function generateAuditReport(): string {
   }
 
   report += `## ✓ Passed Combinations\n\n`;
-  audit.passed.forEach((pair) => {
+  audit.passed.forEach(pair => {
     const result = meetsWCAGAA(pair.foreground, pair.background, pair.textSize);
     report += `### ${pair.usage}\n`;
     report += `- Foreground: ${pair.foreground}\n`;

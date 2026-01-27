@@ -1,7 +1,7 @@
 /**
  * Hook for managing agency analytics state
  * Requirements: 3.1, 3.4
- * 
+ *
  * Fetches and manages agency analytics data including:
  * - Total content count and views
  * - Engagement metrics

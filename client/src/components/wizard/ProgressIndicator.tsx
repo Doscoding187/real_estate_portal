@@ -1,6 +1,6 @@
 /**
  * Enhanced Progress Indicator Component
- * 
+ *
  * Displays wizard progress with clickable steps, completion tracking, and tooltips
  */
 
@@ -8,44 +8,39 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 export interface Step {
   /**
    * Step number (1-indexed)
    */
   number: number;
-  
+
   /**
    * Step title/label
    */
   title: string;
-  
+
   /**
    * Whether this step is completed
    */
   isComplete: boolean;
-  
+
   /**
    * Whether this is the current step
    */
   isCurrent: boolean;
-  
+
   /**
    * Whether this step can be clicked/accessed
    */
   isAccessible: boolean;
-  
+
   /**
    * Whether this step has validation errors
    */
   hasError?: boolean;
-  
+
   /**
    * Number of errors in this step
    */
@@ -57,17 +52,17 @@ export interface ProgressIndicatorProps {
    * Array of steps to display
    */
   steps: Step[];
-  
+
   /**
    * Callback when a step is clicked
    */
   onStepClick?: (stepNumber: number) => void;
-  
+
   /**
    * Additional CSS classes
    */
   className?: string;
-  
+
   /**
    * Compact mode (smaller size)
    */
@@ -102,7 +97,7 @@ export const ProgressIndicator: React.FC<ProgressIndicatorProps> = ({
                     whileTap={step.isAccessible ? { scale: 0.95 } : {}}
                     className={cn(
                       'flex flex-col items-center transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 rounded-lg p-1',
-                      step.isAccessible ? 'cursor-pointer' : 'cursor-not-allowed opacity-50'
+                      step.isAccessible ? 'cursor-pointer' : 'cursor-not-allowed opacity-50',
                     )}
                   >
                     {/* Circle */}
@@ -117,10 +112,22 @@ export const ProgressIndicator: React.FC<ProgressIndicatorProps> = ({
                         step.hasError && 'ring-2 ring-red-500',
                         step.isComplete && !step.hasError && 'bg-green-500 text-white shadow-md',
                         step.isComplete && step.hasError && 'bg-red-500 text-white shadow-md',
-                        step.isCurrent && !step.isComplete && !step.hasError && 'bg-blue-600 text-white ring-4 ring-blue-100 shadow-lg',
-                        step.isCurrent && !step.isComplete && step.hasError && 'bg-red-600 text-white ring-4 ring-red-100 shadow-lg',
-                        !step.isComplete && !step.isCurrent && !step.hasError && 'bg-gray-200 text-gray-500',
-                        !step.isComplete && !step.isCurrent && step.hasError && 'bg-red-100 text-red-600 border-2 border-red-500'
+                        step.isCurrent &&
+                          !step.isComplete &&
+                          !step.hasError &&
+                          'bg-blue-600 text-white ring-4 ring-blue-100 shadow-lg',
+                        step.isCurrent &&
+                          !step.isComplete &&
+                          step.hasError &&
+                          'bg-red-600 text-white ring-4 ring-red-100 shadow-lg',
+                        !step.isComplete &&
+                          !step.isCurrent &&
+                          !step.hasError &&
+                          'bg-gray-200 text-gray-500',
+                        !step.isComplete &&
+                          !step.isCurrent &&
+                          step.hasError &&
+                          'bg-red-100 text-red-600 border-2 border-red-500',
                       )}
                     >
                       {step.isComplete ? (
@@ -134,7 +141,7 @@ export const ProgressIndicator: React.FC<ProgressIndicatorProps> = ({
                       ) : (
                         step.number
                       )}
-                      
+
                       {/* Error Badge */}
                       {step.hasError && step.errorCount && step.errorCount > 0 && (
                         <motion.div
@@ -153,14 +160,14 @@ export const ProgressIndicator: React.FC<ProgressIndicatorProps> = ({
                         'text-center max-w-[80px] transition-all mt-2',
                         compact ? 'text-[10px]' : 'text-xs',
                         step.isCurrent && 'font-semibold text-gray-900',
-                        !step.isCurrent && 'text-gray-500'
+                        !step.isCurrent && 'text-gray-500',
                       )}
                     >
                       {step.title}
                     </span>
                   </motion.button>
                 </TooltipTrigger>
-                
+
                 {/* Tooltip */}
                 <TooltipContent>
                   {step.hasError && step.errorCount && (
@@ -192,10 +199,12 @@ export const ProgressIndicator: React.FC<ProgressIndicatorProps> = ({
               {/* Connector Line */}
               {index < steps.length - 1 && (
                 <div className="flex-1 mx-2 relative">
-                  <div className={cn(
-                    'h-0.5 w-full transition-all duration-300',
-                    step.isComplete ? 'bg-green-500' : 'bg-gray-200'
-                  )} />
+                  <div
+                    className={cn(
+                      'h-0.5 w-full transition-all duration-300',
+                      step.isComplete ? 'bg-green-500' : 'bg-gray-200',
+                    )}
+                  />
                 </div>
               )}
             </React.Fragment>
@@ -213,7 +222,7 @@ export const generateSteps = (
   stepTitles: string[],
   currentStep: number,
   completedSteps: number[],
-  errorSteps?: number[]
+  errorSteps?: number[],
 ): Step[] => {
   return stepTitles.map((title, index) => {
     const stepNumber = index + 1;
@@ -237,10 +246,7 @@ export const generateSteps = (
 /**
  * Helper function to update steps with error counts
  */
-export const updateStepsWithErrors = (
-  steps: Step[],
-  errorsByStep: Map<number, number>
-): Step[] => {
+export const updateStepsWithErrors = (steps: Step[], errorsByStep: Map<number, number>): Step[] => {
   return steps.map(step => ({
     ...step,
     hasError: errorsByStep.has(step.number),

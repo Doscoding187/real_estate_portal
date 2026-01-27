@@ -12,11 +12,7 @@ import { ResponsiveFilterPanel } from '@/components/explore-discovery/Responsive
 import { ModernCard } from '@/components/ui/soft/ModernCard';
 import { designTokens } from '@/lib/design-tokens';
 import { PLACEHOLDER_VIDEOS as CENTRALIZED_PLACEHOLDER_VIDEOS } from '@/data/explorePlaceholderData';
-import { 
-  pageVariants, 
-  buttonVariants,
-  getVariants 
-} from '@/lib/animations/exploreAnimations';
+import { pageVariants, buttonVariants, getVariants } from '@/lib/animations/exploreAnimations';
 
 // Placeholder videos for design purposes - using centralized data with additional fields
 const PLACEHOLDER_VIDEOS = CENTRALIZED_PLACEHOLDER_VIDEOS.map(v => ({
@@ -47,17 +43,11 @@ export default function ExploreFeed() {
   const [searchQuery, setSearchQuery] = useState('');
 
   // Use common state hook for shared logic
-  const {
-    feedType,
-    setFeedType,
-    showFilters,
-    setShowFilters,
-    toggleFilters,
-    filterActions,
-  } = useExploreCommonState({ 
-    initialViewMode: 'shorts',
-    initialFeedType: 'recommended' 
-  });
+  const { feedType, setFeedType, showFilters, setShowFilters, toggleFilters, filterActions } =
+    useExploreCommonState({
+      initialViewMode: 'shorts',
+      initialFeedType: 'recommended',
+    });
 
   // Fetch explore shorts feed
   const { data: feedData, isLoading } = trpc.explore.getFeed.useQuery({
@@ -104,7 +94,7 @@ export default function ExploreFeed() {
 
   if (isLoading) {
     return (
-      <motion.div 
+      <motion.div
         className="flex items-center justify-center h-screen"
         style={{ backgroundColor: designTokens.colors.bg.dark }}
         initial={{ opacity: 0 }}
@@ -112,7 +102,10 @@ export default function ExploreFeed() {
         exit={{ opacity: 0 }}
       >
         <div className="flex flex-col items-center gap-4">
-          <Loader2 className="animate-spin h-8 w-8" style={{ color: designTokens.colors.text.inverse }} />
+          <Loader2
+            className="animate-spin h-8 w-8"
+            style={{ color: designTokens.colors.text.inverse }}
+          />
           <p style={{ color: designTokens.colors.text.inverse }} className="text-sm">
             Loading amazing properties...
           </p>
@@ -122,10 +115,10 @@ export default function ExploreFeed() {
   }
 
   return (
-    <motion.div 
+    <motion.div
       className="h-screen relative overflow-hidden"
-      style={{ 
-        background: 'linear-gradient(135deg, #0f172a 0%, #1e3a8a 50%, #312e81 100%)'
+      style={{
+        background: 'linear-gradient(135deg, #0f172a 0%, #1e3a8a 50%, #312e81 100%)',
       }}
       initial="initial"
       animate="animate"
@@ -138,7 +131,7 @@ export default function ExploreFeed() {
       {/* Desktop Layout */}
       <div className="hidden lg:flex h-full">
         {/* Left Sidebar - Modern Design */}
-        <motion.aside 
+        <motion.aside
           className="w-80 backdrop-blur-xl border-r overflow-y-auto"
           style={{
             backgroundColor: designTokens.colors.glass.bgDark,
@@ -151,9 +144,9 @@ export default function ExploreFeed() {
           <div className="p-6">
             {/* Header */}
             <div className="flex items-center justify-between mb-6">
-              <h2 
+              <h2
                 className="text-xl font-bold"
-                style={{ 
+                style={{
                   color: designTokens.colors.text.inverse,
                   fontWeight: designTokens.typography.fontWeight.bold,
                 }}
@@ -186,9 +179,9 @@ export default function ExploreFeed() {
 
             {/* Feed Type Tabs - Modern vertical design */}
             <div className="mb-6">
-              <label 
+              <label
                 className="text-sm font-medium mb-3 block"
-                style={{ 
+                style={{
                   color: 'rgba(255, 255, 255, 0.7)',
                   fontWeight: designTokens.typography.fontWeight.medium,
                 }}
@@ -196,7 +189,8 @@ export default function ExploreFeed() {
                 Feed Type
               </label>
               <Tabs value={feedType} onValueChange={value => setFeedType(value as any)}>
-                <TabsList className="backdrop-blur-xl border rounded-xl shadow-lg w-full flex-col h-auto space-y-2 p-2"
+                <TabsList
+                  className="backdrop-blur-xl border rounded-xl shadow-lg w-full flex-col h-auto space-y-2 p-2"
                   style={{
                     backgroundColor: designTokens.colors.glass.bgDark,
                     borderColor: designTokens.colors.glass.borderDark,
@@ -206,9 +200,10 @@ export default function ExploreFeed() {
                     value="recommended"
                     className="w-full text-white rounded-lg transition-all duration-300 flex items-center justify-center gap-2"
                     style={{
-                      background: feedType === 'recommended' 
-                        ? designTokens.colors.accent.gradient 
-                        : 'transparent',
+                      background:
+                        feedType === 'recommended'
+                          ? designTokens.colors.accent.gradient
+                          : 'transparent',
                     }}
                   >
                     <Sparkles className="h-4 w-4" />
@@ -218,9 +213,8 @@ export default function ExploreFeed() {
                     value="area"
                     className="w-full text-white rounded-lg transition-all duration-300 flex items-center justify-center gap-2"
                     style={{
-                      background: feedType === 'area' 
-                        ? designTokens.colors.accent.gradient 
-                        : 'transparent',
+                      background:
+                        feedType === 'area' ? designTokens.colors.accent.gradient : 'transparent',
                     }}
                   >
                     <MapPin className="h-4 w-4" />
@@ -230,9 +224,10 @@ export default function ExploreFeed() {
                     value="category"
                     className="w-full text-white rounded-lg transition-all duration-300 flex items-center justify-center gap-2"
                     style={{
-                      background: feedType === 'category' 
-                        ? designTokens.colors.accent.gradient 
-                        : 'transparent',
+                      background:
+                        feedType === 'category'
+                          ? designTokens.colors.accent.gradient
+                          : 'transparent',
                     }}
                   >
                     <Grid3x3 className="h-4 w-4" />
@@ -247,8 +242,8 @@ export default function ExploreFeed() {
               onClick={toggleFilters}
               className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg mb-6"
               style={{
-                backgroundColor: showFilters 
-                  ? designTokens.colors.accent.primary 
+                backgroundColor: showFilters
+                  ? designTokens.colors.accent.primary
                   : designTokens.colors.glass.bgDark,
                 color: designTokens.colors.text.inverse,
                 border: `1px solid ${designTokens.colors.glass.borderDark}`,
@@ -258,11 +253,9 @@ export default function ExploreFeed() {
               whileTap="tap"
             >
               <SlidersHorizontal className="w-5 h-5" />
-              <span className="font-medium">
-                {showFilters ? 'Hide' : 'Show'} Advanced Filters
-              </span>
+              <span className="font-medium">{showFilters ? 'Hide' : 'Show'} Advanced Filters</span>
               {filterActions.getFilterCount() > 0 && (
-                <span 
+                <span
                   className="ml-auto px-2 py-0.5 rounded-full text-xs font-bold"
                   style={{
                     backgroundColor: designTokens.colors.accent.light,
@@ -276,15 +269,12 @@ export default function ExploreFeed() {
 
             {/* Quick Stats - Modern card design */}
             <ModernCard variant="glass" className="p-4">
-              <p 
-                className="text-xs mb-1"
-                style={{ color: 'rgba(255, 255, 255, 0.7)' }}
-              >
+              <p className="text-xs mb-1" style={{ color: 'rgba(255, 255, 255, 0.7)' }}>
                 Total Properties
               </p>
-              <p 
+              <p
                 className="text-2xl font-bold"
-                style={{ 
+                style={{
                   color: designTokens.colors.text.inverse,
                   fontWeight: designTokens.typography.fontWeight.bold,
                 }}
@@ -313,7 +303,7 @@ export default function ExploreFeed() {
               aria-label="Upload content"
             >
               <Upload className="w-5 h-5" />
-              <span 
+              <span
                 className="font-semibold"
                 style={{ fontWeight: designTokens.typography.fontWeight.semibold }}
               >
@@ -382,10 +372,11 @@ export default function ExploreFeed() {
       {/* Mobile Layout - Improved header */}
       <div className="lg:hidden h-full relative">
         {/* Mobile Header - Modern design */}
-        <motion.header 
+        <motion.header
           className="absolute top-0 left-0 right-0 z-50 pb-6"
           style={{
-            background: 'linear-gradient(to bottom, rgba(0, 0, 0, 0.9) 0%, rgba(0, 0, 0, 0.7) 70%, transparent 100%)',
+            background:
+              'linear-gradient(to bottom, rgba(0, 0, 0, 0.9) 0%, rgba(0, 0, 0, 0.7) 70%, transparent 100%)',
           }}
           initial={{ y: -100, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
@@ -393,8 +384,12 @@ export default function ExploreFeed() {
         >
           <div className="p-4 flex justify-between items-center gap-3">
             {/* Feed Type Tabs - Compact mobile design */}
-            <Tabs value={feedType} onValueChange={value => setFeedType(value as any)} className="flex-1">
-              <TabsList 
+            <Tabs
+              value={feedType}
+              onValueChange={value => setFeedType(value as any)}
+              className="flex-1"
+            >
+              <TabsList
                 className="backdrop-blur-xl border rounded-full shadow-lg w-full"
                 style={{
                   backgroundColor: designTokens.colors.glass.bgDark,
@@ -405,9 +400,10 @@ export default function ExploreFeed() {
                   value="recommended"
                   className="text-white rounded-full transition-all duration-300 flex items-center gap-1.5 text-xs sm:text-sm"
                   style={{
-                    background: feedType === 'recommended' 
-                      ? designTokens.colors.accent.gradient 
-                      : 'transparent',
+                    background:
+                      feedType === 'recommended'
+                        ? designTokens.colors.accent.gradient
+                        : 'transparent',
                   }}
                 >
                   <Sparkles className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
@@ -417,9 +413,8 @@ export default function ExploreFeed() {
                   value="area"
                   className="text-white rounded-full transition-all duration-300 flex items-center gap-1.5 text-xs sm:text-sm"
                   style={{
-                    background: feedType === 'area' 
-                      ? designTokens.colors.accent.gradient 
-                      : 'transparent',
+                    background:
+                      feedType === 'area' ? designTokens.colors.accent.gradient : 'transparent',
                   }}
                 >
                   <MapPin className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
@@ -429,9 +424,8 @@ export default function ExploreFeed() {
                   value="category"
                   className="text-white rounded-full transition-all duration-300 flex items-center gap-1.5 text-xs sm:text-sm"
                   style={{
-                    background: feedType === 'category' 
-                      ? designTokens.colors.accent.gradient 
-                      : 'transparent',
+                    background:
+                      feedType === 'category' ? designTokens.colors.accent.gradient : 'transparent',
                   }}
                 >
                   <Grid3x3 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
@@ -447,8 +441,8 @@ export default function ExploreFeed() {
                 onClick={toggleFilters}
                 className="flex items-center justify-center p-2 rounded-full border"
                 style={{
-                  backgroundColor: showFilters 
-                    ? designTokens.colors.accent.primary 
+                  backgroundColor: showFilters
+                    ? designTokens.colors.accent.primary
                     : designTokens.colors.glass.bgDark,
                   borderColor: designTokens.colors.glass.borderDark,
                 }}
@@ -459,7 +453,7 @@ export default function ExploreFeed() {
               >
                 <SlidersHorizontal className="w-4 h-4 text-white" />
                 {filterActions.getFilterCount() > 0 && (
-                  <span 
+                  <span
                     className="absolute -top-1 -right-1 w-5 h-5 rounded-full text-xs font-bold flex items-center justify-center"
                     style={{
                       backgroundColor: designTokens.colors.status.error,

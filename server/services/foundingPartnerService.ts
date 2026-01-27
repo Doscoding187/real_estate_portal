@@ -1,12 +1,12 @@
-import { db } from "../db";
-import { eq, and, count } from "drizzle-orm";
+import { db } from '../db';
+import { eq, and, count } from 'drizzle-orm';
 
 /**
  * Founding Partner Service
- * 
+ *
  * Manages the Early Partner Program with special benefits for founding partners.
  * Tracks enrollment, content commitments, and benefit eligibility.
- * 
+ *
  * Requirements: 16.25, 16.26, 16.28, 16.29, 16.30
  */
 
@@ -66,23 +66,23 @@ class FoundingPartnerService {
   async enrollFoundingPartner(partnerId: string): Promise<EnrollmentResult> {
     // Check if enrollment is still open
     const isOpen = await this.checkEnrollmentOpen();
-    
+
     if (!isOpen) {
       return {
         success: false,
-        message: 'Founding Partner Program enrollment is closed. Maximum of 15 partners reached.'
+        message: 'Founding Partner Program enrollment is closed. Maximum of 15 partners reached.',
       };
     }
 
     // Check if partner already enrolled
     const existing = await db.query.foundingPartners.findFirst({
-      where: (fp, { eq }) => eq(fp.partnerId, partnerId)
+      where: (fp, { eq }) => eq(fp.partnerId, partnerId),
     });
 
     if (existing) {
       return {
         success: false,
-        message: 'Partner is already enrolled in the Founding Partner Program.'
+        message: 'Partner is already enrolled in the Founding Partner Program.',
       };
     }
 
@@ -99,7 +99,7 @@ class FoundingPartnerService {
       preLaunchContentDelivered: 0,
       weeklyContentDelivered: JSON.stringify([]),
       warningCount: 0,
-      status: 'active'
+      status: 'active',
     });
 
     const foundingPartner = await this.getFoundingPartnerStatus(partnerId);
@@ -107,8 +107,9 @@ class FoundingPartnerService {
     return {
       success: true,
       partnerId,
-      message: 'Successfully enrolled in Founding Partner Program with 3 months Featured tier access.',
-      foundingPartner: foundingPartner || undefined
+      message:
+        'Successfully enrolled in Founding Partner Program with 3 months Featured tier access.',
+      foundingPartner: foundingPartner || undefined,
     };
   }
 
@@ -117,9 +118,7 @@ class FoundingPartnerService {
    * Requirements: 16.29
    */
   async checkEnrollmentOpen(): Promise<boolean> {
-    const result = await db
-      .select({ count: count() })
-      .from(db.schema.foundingPartners);
+    const result = await db.select({ count: count() }).from(db.schema.foundingPartners);
 
     const currentCount = result[0]?.count || 0;
     return currentCount < MAX_FOUNDING_PARTNERS;
@@ -131,7 +130,7 @@ class FoundingPartnerService {
    */
   async getFoundingPartnerStatus(partnerId: string): Promise<FoundingPartner | null> {
     const result = await db.query.foundingPartners.findFirst({
-      where: (fp, { eq }) => eq(fp.partnerId, partnerId)
+      where: (fp, { eq }) => eq(fp.partnerId, partnerId),
     });
 
     if (!result) return null;
@@ -151,7 +150,7 @@ class FoundingPartnerService {
       weeklyContentDelivered,
       warningCount: result.warningCount,
       status: result.status as FoundingPartner['status'],
-      createdAt: result.createdAt
+      createdAt: result.createdAt,
     };
   }
 
@@ -173,7 +172,7 @@ class FoundingPartnerService {
       featuredTierMonths: FEATURED_TIER_MONTHS,
       foundingBadge: true,
       coMarketingEligible: true,
-      fastTrackReview: true // 24hr vs 48hr
+      fastTrackReview: true, // 24hr vs 48hr
     };
   }
 
@@ -183,7 +182,7 @@ class FoundingPartnerService {
    */
   async areBenefitsActive(partnerId: string): Promise<boolean> {
     const status = await this.getFoundingPartnerStatus(partnerId);
-    
+
     if (!status || status.status !== 'active') {
       return false;
     }
@@ -204,13 +203,16 @@ class FoundingPartnerService {
     }
 
     const preLaunchMet = status.preLaunchContentDelivered >= PRE_LAUNCH_COMMITMENT_MIN;
-    
+
     // Calculate weekly commitment (average 2 per week)
     const weeksActive = Math.floor(
-      (Date.now() - status.enrollmentDate.getTime()) / (7 * 24 * 60 * 60 * 1000)
+      (Date.now() - status.enrollmentDate.getTime()) / (7 * 24 * 60 * 60 * 1000),
     );
     const requiredWeeklyTotal = Math.max(0, weeksActive * WEEKLY_COMMITMENT);
-    const deliveredWeeklyTotal = status.weeklyContentDelivered.reduce((sum, count) => sum + count, 0);
+    const deliveredWeeklyTotal = status.weeklyContentDelivered.reduce(
+      (sum, count) => sum + count,
+      0,
+    );
     const weeklyMet = deliveredWeeklyTotal >= requiredWeeklyTotal;
 
     return {
@@ -220,14 +222,14 @@ class FoundingPartnerService {
       weeklyMet,
       preLaunchProgress: {
         required: PRE_LAUNCH_COMMITMENT_MIN,
-        delivered: status.preLaunchContentDelivered
+        delivered: status.preLaunchContentDelivered,
       },
       weeklyProgress: {
         required: requiredWeeklyTotal,
-        delivered: deliveredWeeklyTotal
+        delivered: deliveredWeeklyTotal,
       },
       warningCount: status.warningCount,
-      nextWarningThreshold: MAX_WARNINGS - status.warningCount
+      nextWarningThreshold: MAX_WARNINGS - status.warningCount,
     };
   }
 
@@ -242,9 +244,10 @@ class FoundingPartnerService {
       throw new Error('Partner is not enrolled in Founding Partner Program');
     }
 
-    await db.update(db.schema.foundingPartners)
+    await db
+      .update(db.schema.foundingPartners)
       .set({
-        preLaunchContentDelivered: status.preLaunchContentDelivered + 1
+        preLaunchContentDelivered: status.preLaunchContentDelivered + 1,
       })
       .where(eq(db.schema.foundingPartners.partnerId, partnerId));
   }
@@ -261,7 +264,7 @@ class FoundingPartnerService {
     }
 
     const weeklyContent = [...status.weeklyContentDelivered];
-    
+
     // Ensure array is large enough
     while (weeklyContent.length <= weekIndex) {
       weeklyContent.push(0);
@@ -269,9 +272,10 @@ class FoundingPartnerService {
 
     weeklyContent[weekIndex] = (weeklyContent[weekIndex] || 0) + 1;
 
-    await db.update(db.schema.foundingPartners)
+    await db
+      .update(db.schema.foundingPartners)
       .set({
-        weeklyContentDelivered: JSON.stringify(weeklyContent)
+        weeklyContentDelivered: JSON.stringify(weeklyContent),
       })
       .where(eq(db.schema.foundingPartners.partnerId, partnerId));
   }
@@ -290,10 +294,11 @@ class FoundingPartnerService {
     const newWarningCount = status.warningCount + 1;
     const newStatus = newWarningCount >= MAX_WARNINGS ? 'revoked' : 'warning';
 
-    await db.update(db.schema.foundingPartners)
+    await db
+      .update(db.schema.foundingPartners)
       .set({
         warningCount: newWarningCount,
-        status: newStatus
+        status: newStatus,
       })
       .where(eq(db.schema.foundingPartners.partnerId, partnerId));
 
@@ -301,7 +306,9 @@ class FoundingPartnerService {
     console.log(`Warning count: ${newWarningCount}/${MAX_WARNINGS}`);
 
     if (newStatus === 'revoked') {
-      console.log(`Founding Partner status REVOKED for ${partnerId} after ${MAX_WARNINGS} warnings`);
+      console.log(
+        `Founding Partner status REVOKED for ${partnerId} after ${MAX_WARNINGS} warnings`,
+      );
       await this.revokeFoundingStatus(partnerId);
     }
   }
@@ -311,14 +318,15 @@ class FoundingPartnerService {
    * Requirements: 16.30
    */
   async revokeFoundingStatus(partnerId: string): Promise<void> {
-    await db.update(db.schema.foundingPartners)
+    await db
+      .update(db.schema.foundingPartners)
       .set({
-        status: 'revoked'
+        status: 'revoked',
       })
       .where(eq(db.schema.foundingPartners.partnerId, partnerId));
 
     console.log(`Founding Partner status revoked for ${partnerId}`);
-    
+
     // TODO: Remove Featured tier subscription
     // TODO: Remove founding badge
     // TODO: Notify partner of revocation
@@ -330,7 +338,7 @@ class FoundingPartnerService {
    */
   async getActiveFoundingPartners(): Promise<FoundingPartner[]> {
     const results = await db.query.foundingPartners.findMany({
-      where: (fp, { eq }) => eq(fp.status, 'active')
+      where: (fp, { eq }) => eq(fp.status, 'active'),
     });
 
     return results.map(r => {
@@ -349,7 +357,7 @@ class FoundingPartnerService {
         weeklyContentDelivered,
         warningCount: r.warningCount,
         status: r.status as FoundingPartner['status'],
-        createdAt: r.createdAt
+        createdAt: r.createdAt,
       };
     });
   }
@@ -359,9 +367,7 @@ class FoundingPartnerService {
    * Requirements: 16.29
    */
   async getFoundingPartnersCount(): Promise<number> {
-    const result = await db
-      .select({ count: count() })
-      .from(db.schema.foundingPartners);
+    const result = await db.select({ count: count() }).from(db.schema.foundingPartners);
 
     return result[0]?.count || 0;
   }
@@ -379,16 +385,16 @@ class FoundingPartnerService {
 
       if (!commitment.isCompliant) {
         const reasons: string[] = [];
-        
+
         if (!commitment.preLaunchMet) {
           reasons.push(
-            `Pre-launch commitment not met: ${commitment.preLaunchProgress.delivered}/${commitment.preLaunchProgress.required}`
+            `Pre-launch commitment not met: ${commitment.preLaunchProgress.delivered}/${commitment.preLaunchProgress.required}`,
           );
         }
 
         if (!commitment.weeklyMet) {
           reasons.push(
-            `Weekly commitment not met: ${commitment.weeklyProgress.delivered}/${commitment.weeklyProgress.required}`
+            `Weekly commitment not met: ${commitment.weeklyProgress.delivered}/${commitment.weeklyProgress.required}`,
           );
         }
 
@@ -418,12 +424,12 @@ class FoundingPartnerService {
     return {
       preLaunch: {
         required: PRE_LAUNCH_COMMITMENT_MIN,
-        delivered: 0
+        delivered: 0,
       },
       weekly: {
         required: WEEKLY_COMMITMENT,
-        delivered: 0
-      }
+        delivered: 0,
+      },
     };
   }
 }

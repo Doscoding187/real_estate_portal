@@ -129,7 +129,7 @@ export default function AgentPublicProfile() {
                 <Button
                   size="lg"
                   className="bg-white text-blue-600 hover:bg-blue-50 shadow-lg"
-                  onClick={() => window.location.href = `tel:${agent.phone}`}
+                  onClick={() => (window.location.href = `tel:${agent.phone}`)}
                 >
                   <Phone className="h-5 w-5 mr-2" />
                   Call Now
@@ -138,7 +138,7 @@ export default function AgentPublicProfile() {
                   size="lg"
                   variant="outline"
                   className="border-2 border-white text-white hover:bg-white/10"
-                  onClick={() => window.location.href = `mailto:${agent.email}`}
+                  onClick={() => (window.location.href = `mailto:${agent.email}`)}
                 >
                   <Mail className="h-5 w-5 mr-2" />
                   Email Me
@@ -196,7 +196,10 @@ export default function AgentPublicProfile() {
                 <h2 className="text-2xl font-bold text-gray-900 mb-4">Achievements</h2>
                 <div className="space-y-3">
                   {agent.achievements.map((achievement, index) => (
-                    <div key={index} className="flex items-center gap-3 p-3 bg-gradient-to-r from-yellow-50 to-orange-50 rounded-lg border border-yellow-200">
+                    <div
+                      key={index}
+                      className="flex items-center gap-3 p-3 bg-gradient-to-r from-yellow-50 to-orange-50 rounded-lg border border-yellow-200"
+                    >
                       <Award className="h-6 w-6 text-yellow-600 flex-shrink-0" />
                       <span className="font-medium text-gray-900">{achievement}</span>
                     </div>
@@ -217,9 +220,7 @@ export default function AgentPublicProfile() {
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 text-center">
                   <Building2 className="h-12 w-12 text-blue-600 mx-auto mb-3" />
                   <p className="text-gray-700 mb-4">Browse my current property listings</p>
-                  <Button className="bg-blue-600 hover:bg-blue-700">
-                    View All Listings
-                  </Button>
+                  <Button className="bg-blue-600 hover:bg-blue-700">View All Listings</Button>
                 </div>
               </CardContent>
             </Card>

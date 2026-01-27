@@ -34,7 +34,12 @@ const AMENITIES = [
   'Wi-Fi',
 ];
 
-export function SidebarFilters({ filters, locationContext, onFilterChange, onSaveSearch }: SidebarFiltersProps) {
+export function SidebarFilters({
+  filters,
+  locationContext,
+  onFilterChange,
+  onSaveSearch,
+}: SidebarFiltersProps) {
   // Local state for sliders to avoid excessive re-renders/fetches while dragging
   const [priceRange, setPriceRange] = useState<[number, number]>([
     filters.minPrice || 0,
@@ -96,7 +101,7 @@ export function SidebarFilters({ filters, locationContext, onFilterChange, onSav
   const handleCheckboxFilterChange = (
     category: 'amenities' | 'postedBy' | 'possessionStatus',
     value: string,
-    checked: boolean
+    checked: boolean,
   ) => {
     const currentValues = filters[category] || [];
     let newValues: string[];
@@ -104,7 +109,7 @@ export function SidebarFilters({ filters, locationContext, onFilterChange, onSav
     if (checked) {
       newValues = [...currentValues, value];
     } else {
-      newValues = currentValues.filter((v) => v !== value);
+      newValues = currentValues.filter(v => v !== value);
     }
 
     onFilterChange({
@@ -122,12 +127,7 @@ export function SidebarFilters({ filters, locationContext, onFilterChange, onSav
         <h3 className="font-bold text-lg text-slate-800">Filters</h3>
         <div className="flex gap-2">
           {onSaveSearch && (
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-8 text-xs"
-              onClick={onSaveSearch}
-            >
+            <Button variant="outline" size="sm" className="h-8 text-xs" onClick={onSaveSearch}>
               Save
             </Button>
           )}
@@ -175,12 +175,12 @@ export function SidebarFilters({ filters, locationContext, onFilterChange, onSav
           </AccordionTrigger>
           <AccordionContent>
             <div className="space-y-3 pt-2">
-              {['Apartment', 'House', 'Villa', 'Office', 'Plot'].map((type) => (
+              {['Apartment', 'House', 'Villa', 'Office', 'Plot'].map(type => (
                 <div key={type} className="flex items-center space-x-2">
                   <Checkbox
                     id={`type-${type}`}
                     checked={filters.propertyType === type.toLowerCase()}
-                    onCheckedChange={(checked) => 
+                    onCheckedChange={checked =>
                       handlePropertyTypeChange(type.toLowerCase(), checked as boolean)
                     }
                   />
@@ -203,19 +203,20 @@ export function SidebarFilters({ filters, locationContext, onFilterChange, onSav
           </AccordionTrigger>
           <AccordionContent>
             <div className="flex flex-wrap gap-2 pt-2">
-              {[1, 2, 3, 4, 5].map((num) => (
+              {[1, 2, 3, 4, 5].map(num => (
                 <Button
                   key={num}
-                  variant={filters.minBedrooms === num ? "default" : "outline"}
+                  variant={filters.minBedrooms === num ? 'default' : 'outline'}
                   size="sm"
                   className={`rounded-full w-10 h-10 p-0 ${
-                    filters.minBedrooms === num 
-                      ? "bg-blue-600 hover:bg-blue-700 text-white border-blue-600" 
-                      : "text-slate-600 border-slate-200 hover:border-blue-400 hover:text-blue-600"
+                    filters.minBedrooms === num
+                      ? 'bg-blue-600 hover:bg-blue-700 text-white border-blue-600'
+                      : 'text-slate-600 border-slate-200 hover:border-blue-400 hover:text-blue-600'
                   }`}
                   onClick={() => handleBedroomChange(num)}
                 >
-                  {num}{num === 5 ? '+' : ''}
+                  {num}
+                  {num === 5 ? '+' : ''}
                 </Button>
               ))}
             </div>
@@ -229,12 +230,12 @@ export function SidebarFilters({ filters, locationContext, onFilterChange, onSav
           </AccordionTrigger>
           <AccordionContent>
             <div className="space-y-3 pt-2">
-              {['Ready to move', 'Under construction'].map((status) => (
+              {['Ready to move', 'Under construction'].map(status => (
                 <div key={status} className="flex items-center space-x-2">
                   <Checkbox
                     id={`status-${status}`}
                     checked={filters.possessionStatus?.includes(status)}
-                    onCheckedChange={(checked) =>
+                    onCheckedChange={checked =>
                       handleCheckboxFilterChange('possessionStatus', status, checked as boolean)
                     }
                   />
@@ -257,12 +258,12 @@ export function SidebarFilters({ filters, locationContext, onFilterChange, onSav
           </AccordionTrigger>
           <AccordionContent>
             <div className="space-y-3 pt-2">
-              {['Owner', 'Dealer', 'Builder'].map((poster) => (
+              {['Owner', 'Dealer', 'Builder'].map(poster => (
                 <div key={poster} className="flex items-center space-x-2">
                   <Checkbox
                     id={`poster-${poster}`}
                     checked={filters.postedBy?.includes(poster)}
-                    onCheckedChange={(checked) =>
+                    onCheckedChange={checked =>
                       handleCheckboxFilterChange('postedBy', poster, checked as boolean)
                     }
                   />
@@ -285,12 +286,12 @@ export function SidebarFilters({ filters, locationContext, onFilterChange, onSav
           </AccordionTrigger>
           <AccordionContent>
             <div className="space-y-3 pt-2">
-              {AMENITIES.map((amenity) => (
+              {AMENITIES.map(amenity => (
                 <div key={amenity} className="flex items-center space-x-2">
                   <Checkbox
                     id={`amenity-${amenity}`}
                     checked={filters.amenities?.includes(amenity)}
-                    onCheckedChange={(checked) =>
+                    onCheckedChange={checked =>
                       handleCheckboxFilterChange('amenities', amenity, checked as boolean)
                     }
                   />

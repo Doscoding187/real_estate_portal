@@ -1,9 +1,9 @@
 /**
  * Property-Based Tests for ProcessStep Component
- * 
+ *
  * Feature: advertise-with-us-landing, Property 8: Process step structure
  * Validates: Requirements 4.2
- * 
+ *
  * Tests that any process step contains exactly three elements:
  * an icon, a step title, and a brief description
  */
@@ -37,14 +37,14 @@ describe('ProcessStep Property Tests', () => {
         fc.constantFrom(UserPlus, FileText, TrendingUp),
         (stepNumber, title, description, Icon) => {
           cleanup(); // Clean up before each render
-          
+
           const { container } = render(
             <ProcessStep
               stepNumber={stepNumber}
               icon={Icon}
               title={title}
               description={description}
-            />
+            />,
           );
 
           // Check that the step number is displayed
@@ -53,13 +53,17 @@ describe('ProcessStep Property Tests', () => {
 
           // Check that the title is displayed
           const h3Elements = container.querySelectorAll('h3');
-          const titleElement = Array.from(h3Elements).find(el => el.textContent?.trim() === title.trim());
+          const titleElement = Array.from(h3Elements).find(
+            el => el.textContent?.trim() === title.trim(),
+          );
           expect(titleElement).toBeTruthy();
           expect(titleElement?.tagName).toBe('H3');
 
           // Check that the description is displayed
           const pElements = container.querySelectorAll('p');
-          const descriptionElement = Array.from(pElements).find(el => el.textContent?.trim() === description.trim());
+          const descriptionElement = Array.from(pElements).find(
+            el => el.textContent?.trim() === description.trim(),
+          );
           expect(descriptionElement).toBeTruthy();
           expect(descriptionElement?.tagName).toBe('P');
 
@@ -74,70 +78,64 @@ describe('ProcessStep Property Tests', () => {
           const hasIcon = svgElements.length > 0;
 
           expect(hasNumberBadge && hasTitle && hasDescription && hasIcon).toBe(true);
-        }
+        },
       ),
-      { numRuns: 100 }
+      { numRuns: 100 },
     );
   });
 
   it('should maintain structure with different step numbers', () => {
     fc.assert(
-      fc.property(
-        fc.integer({ min: 1, max: 100 }),
-        (stepNumber) => {
-          cleanup(); // Clean up before each render
-          
-          render(
-            <ProcessStep
-              stepNumber={stepNumber}
-              icon={UserPlus}
-              title="Test Step"
-              description="Test description for the step"
-            />
-          );
+      fc.property(fc.integer({ min: 1, max: 100 }), stepNumber => {
+        cleanup(); // Clean up before each render
 
-          // Verify step number is displayed
-          const numberElements = screen.queryAllByText(stepNumber.toString());
-          expect(numberElements.length).toBeGreaterThan(0);
+        render(
+          <ProcessStep
+            stepNumber={stepNumber}
+            icon={UserPlus}
+            title="Test Step"
+            description="Test description for the step"
+          />,
+        );
 
-          // Verify other elements are still present
-          expect(screen.getByText('Test Step')).toBeTruthy();
-          expect(screen.getByText('Test description for the step')).toBeTruthy();
-        }
-      ),
-      { numRuns: 50 }
+        // Verify step number is displayed
+        const numberElements = screen.queryAllByText(stepNumber.toString());
+        expect(numberElements.length).toBeGreaterThan(0);
+
+        // Verify other elements are still present
+        expect(screen.getByText('Test Step')).toBeTruthy();
+        expect(screen.getByText('Test description for the step')).toBeTruthy();
+      }),
+      { numRuns: 50 },
     );
   });
 
   it('should render with gradient background on number badge', () => {
     fc.assert(
-      fc.property(
-        fc.integer({ min: 1, max: 10 }),
-        (stepNumber) => {
-          cleanup(); // Clean up before each render
-          
-          const { container } = render(
-            <ProcessStep
-              stepNumber={stepNumber}
-              icon={UserPlus}
-              title="Create Profile"
-              description="Set up your account"
-            />
-          );
+      fc.property(fc.integer({ min: 1, max: 10 }), stepNumber => {
+        cleanup(); // Clean up before each render
 
-          // Find the number badge container
-          const numberBadges = screen.queryAllByText(stepNumber.toString());
-          expect(numberBadges.length).toBeGreaterThan(0);
-          
-          const badgeContainer = numberBadges[0].parentElement;
-          expect(badgeContainer).toBeTruthy();
-          
-          // Check for gradient background (inline style)
-          const style = badgeContainer?.getAttribute('style');
-          expect(style).toContain('gradient');
-        }
-      ),
-      { numRuns: 50 }
+        const { container } = render(
+          <ProcessStep
+            stepNumber={stepNumber}
+            icon={UserPlus}
+            title="Create Profile"
+            description="Set up your account"
+          />,
+        );
+
+        // Find the number badge container
+        const numberBadges = screen.queryAllByText(stepNumber.toString());
+        expect(numberBadges.length).toBeGreaterThan(0);
+
+        const badgeContainer = numberBadges[0].parentElement;
+        expect(badgeContainer).toBeTruthy();
+
+        // Check for gradient background (inline style)
+        const style = badgeContainer?.getAttribute('style');
+        expect(style).toContain('gradient');
+      }),
+      { numRuns: 50 },
     );
   });
 
@@ -151,14 +149,14 @@ describe('ProcessStep Property Tests', () => {
         icon={UserPlus}
         title={longTitle}
         description={longDescription}
-      />
+      />,
     );
 
     // Verify all elements are still rendered
     expect(screen.getByText(longTitle)).toBeTruthy();
     expect(screen.getByText(longDescription)).toBeTruthy();
     expect(screen.getByText('1')).toBeTruthy();
-    
+
     const svgElements = container.querySelectorAll('svg');
     expect(svgElements.length).toBeGreaterThan(0);
   });
@@ -171,7 +169,7 @@ describe('ProcessStep Property Tests', () => {
         title="Step One"
         description="First step description"
         showConnector={true}
-      />
+      />,
     );
 
     // Check for connector line element
@@ -187,7 +185,7 @@ describe('ProcessStep Property Tests', () => {
         title="Step One"
         description="First step description"
         showConnector={false}
-      />
+      />,
     );
 
     // Check that connector line is not present

@@ -1,12 +1,12 @@
 /**
  * Mobile Filter Bottom Sheet Component
- * 
+ *
  * Slide-up bottom sheet for mobile filter experience with:
  * - Smooth animation
  * - Drag-to-close functionality
  * - Focus trap for accessibility
  * - All SA-specific filters
- * 
+ *
  * Requirements: 2.1, 8.1, 16.5
  */
 
@@ -19,17 +19,17 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { formatCurrency } from '@/lib/utils';
 import type { PropertyFilters } from '../../../../shared/types';
-import { 
-  Home, 
-  Building2, 
-  Shield, 
-  Heart, 
-  Wifi, 
-  Sun, 
-  Zap, 
+import {
+  Home,
+  Building2,
+  Shield,
+  Heart,
+  Wifi,
+  Sun,
+  Zap,
   Battery,
   Ruler,
-  DollarSign
+  DollarSign,
 } from 'lucide-react';
 
 export interface MobileFilterBottomSheetProps {
@@ -78,7 +78,7 @@ const SNAP_POINTS = {
 
 /**
  * MobileFilterBottomSheet Component
- * 
+ *
  * Mobile-optimized filter panel with slide-up animation and drag-to-close.
  * Includes all SA-specific filters in a scrollable bottom sheet.
  */
@@ -93,18 +93,18 @@ export function MobileFilterBottomSheet({
   const sheetRef = useRef<HTMLDivElement>(null);
   const [snapPoint, setSnapPoint] = useState<SnapPoint>('half');
   const [isDragging, setIsDragging] = useState(false);
-  
+
   // Local state for sliders
   const [priceRange, setPriceRange] = useState<[number, number]>([
     filters.minPrice ?? DEFAULT_PRICE_RANGE[0],
     filters.maxPrice ?? DEFAULT_PRICE_RANGE[1],
   ]);
-  
+
   const [levyRange, setLevyRange] = useState<[number, number]>([
     0,
     filters.maxLevy ?? DEFAULT_LEVY_RANGE[1],
   ]);
-  
+
   const [erfSizeRange, setErfSizeRange] = useState<[number, number]>([
     filters.minErfSize ?? DEFAULT_ERF_SIZE_RANGE[0],
     filters.maxErfSize ?? DEFAULT_ERF_SIZE_RANGE[1],
@@ -148,7 +148,7 @@ export function MobileFilterBottomSheet({
         setSnapPoint('full');
       }
     },
-    [snapPoint, onClose]
+    [snapPoint, onClose],
   );
 
   // Focus trap implementation
@@ -157,7 +157,7 @@ export function MobileFilterBottomSheet({
 
     const sheet = sheetRef.current;
     const focusableElements = sheet.querySelectorAll<HTMLElement>(
-      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
     );
     const firstElement = focusableElements[0];
     const lastElement = focusableElements[focusableElements.length - 1];
@@ -211,98 +211,126 @@ export function MobileFilterBottomSheet({
   }, [isOpen]);
 
   // Filter handlers
-  const handlePropertyTypeChange = useCallback((type: string, checked: boolean) => {
-    const currentTypes = filters.propertyType || [];
-    let newTypes: string[];
-    
-    if (checked) {
-      newTypes = [...currentTypes, type];
-    } else {
-      newTypes = currentTypes.filter((t: string) => t !== type);
-    }
-    
-    onFilterChange({
-      ...filters,
-      propertyType: newTypes.length > 0 ? newTypes as any : undefined,
-    });
-  }, [filters, onFilterChange]);
+  const handlePropertyTypeChange = useCallback(
+    (type: string, checked: boolean) => {
+      const currentTypes = filters.propertyType || [];
+      let newTypes: string[];
 
-  const handleTitleTypeChange = useCallback((type: 'freehold' | 'sectional', checked: boolean) => {
-    const currentTypes = filters.titleType || [];
-    let newTypes: ('freehold' | 'sectional')[];
-    
-    if (checked) {
-      newTypes = [...currentTypes, type];
-    } else {
-      newTypes = currentTypes.filter((t: 'freehold' | 'sectional') => t !== type);
-    }
-    
-    onFilterChange({
-      ...filters,
-      titleType: newTypes.length > 0 ? newTypes : undefined,
-    });
-  }, [filters, onFilterChange]);
+      if (checked) {
+        newTypes = [...currentTypes, type];
+      } else {
+        newTypes = currentTypes.filter((t: string) => t !== type);
+      }
 
-  const handleBedroomChange = useCallback((beds: number) => {
-    if (filters.minBedrooms === beds) {
-      const { minBedrooms, ...rest } = filters;
-      onFilterChange(rest);
-    } else {
-      onFilterChange({ ...filters, minBedrooms: beds });
-    }
-  }, [filters, onFilterChange]);
+      onFilterChange({
+        ...filters,
+        propertyType: newTypes.length > 0 ? (newTypes as any) : undefined,
+      });
+    },
+    [filters, onFilterChange],
+  );
 
-  const handleBooleanFilterChange = useCallback((
-    key: 'securityEstate' | 'petFriendly' | 'fibreReady',
-    checked: boolean
-  ) => {
-    if (checked) {
-      onFilterChange({ ...filters, [key]: true });
-    } else {
-      const newFilters = { ...filters };
-      delete newFilters[key];
-      onFilterChange(newFilters);
-    }
-  }, [filters, onFilterChange]);
+  const handleTitleTypeChange = useCallback(
+    (type: 'freehold' | 'sectional', checked: boolean) => {
+      const currentTypes = filters.titleType || [];
+      let newTypes: ('freehold' | 'sectional')[];
 
-  const handleLoadSheddingChange = useCallback((solution: 'solar' | 'generator' | 'inverter', checked: boolean) => {
-    const currentSolutions = filters.loadSheddingSolutions || [];
-    let newSolutions: ('solar' | 'generator' | 'inverter' | 'none')[];
-    
-    if (checked) {
-      newSolutions = [...currentSolutions.filter((s: 'solar' | 'generator' | 'inverter' | 'none') => s !== 'none'), solution];
-    } else {
-      newSolutions = currentSolutions.filter((s: 'solar' | 'generator' | 'inverter' | 'none') => s !== solution);
-    }
-    
-    onFilterChange({
-      ...filters,
-      loadSheddingSolutions: newSolutions.length > 0 ? newSolutions : undefined,
-    });
-  }, [filters, onFilterChange]);
+      if (checked) {
+        newTypes = [...currentTypes, type];
+      } else {
+        newTypes = currentTypes.filter((t: 'freehold' | 'sectional') => t !== type);
+      }
 
-  const handlePriceCommit = useCallback((value: number[]) => {
-    onFilterChange({
-      ...filters,
-      minPrice: value[0] > 0 ? value[0] : undefined,
-      maxPrice: value[1] < DEFAULT_PRICE_RANGE[1] ? value[1] : undefined,
-    });
-  }, [filters, onFilterChange]);
+      onFilterChange({
+        ...filters,
+        titleType: newTypes.length > 0 ? newTypes : undefined,
+      });
+    },
+    [filters, onFilterChange],
+  );
 
-  const handleLevyCommit = useCallback((value: number[]) => {
-    onFilterChange({
-      ...filters,
-      maxLevy: value[1] < DEFAULT_LEVY_RANGE[1] ? value[1] : undefined,
-    });
-  }, [filters, onFilterChange]);
+  const handleBedroomChange = useCallback(
+    (beds: number) => {
+      if (filters.minBedrooms === beds) {
+        const { minBedrooms, ...rest } = filters;
+        onFilterChange(rest);
+      } else {
+        onFilterChange({ ...filters, minBedrooms: beds });
+      }
+    },
+    [filters, onFilterChange],
+  );
 
-  const handleErfSizeCommit = useCallback((value: number[]) => {
-    onFilterChange({
-      ...filters,
-      minErfSize: value[0] > 0 ? value[0] : undefined,
-      maxErfSize: value[1] < DEFAULT_ERF_SIZE_RANGE[1] ? value[1] : undefined,
-    });
-  }, [filters, onFilterChange]);
+  const handleBooleanFilterChange = useCallback(
+    (key: 'securityEstate' | 'petFriendly' | 'fibreReady', checked: boolean) => {
+      if (checked) {
+        onFilterChange({ ...filters, [key]: true });
+      } else {
+        const newFilters = { ...filters };
+        delete newFilters[key];
+        onFilterChange(newFilters);
+      }
+    },
+    [filters, onFilterChange],
+  );
+
+  const handleLoadSheddingChange = useCallback(
+    (solution: 'solar' | 'generator' | 'inverter', checked: boolean) => {
+      const currentSolutions = filters.loadSheddingSolutions || [];
+      let newSolutions: ('solar' | 'generator' | 'inverter' | 'none')[];
+
+      if (checked) {
+        newSolutions = [
+          ...currentSolutions.filter(
+            (s: 'solar' | 'generator' | 'inverter' | 'none') => s !== 'none',
+          ),
+          solution,
+        ];
+      } else {
+        newSolutions = currentSolutions.filter(
+          (s: 'solar' | 'generator' | 'inverter' | 'none') => s !== solution,
+        );
+      }
+
+      onFilterChange({
+        ...filters,
+        loadSheddingSolutions: newSolutions.length > 0 ? newSolutions : undefined,
+      });
+    },
+    [filters, onFilterChange],
+  );
+
+  const handlePriceCommit = useCallback(
+    (value: number[]) => {
+      onFilterChange({
+        ...filters,
+        minPrice: value[0] > 0 ? value[0] : undefined,
+        maxPrice: value[1] < DEFAULT_PRICE_RANGE[1] ? value[1] : undefined,
+      });
+    },
+    [filters, onFilterChange],
+  );
+
+  const handleLevyCommit = useCallback(
+    (value: number[]) => {
+      onFilterChange({
+        ...filters,
+        maxLevy: value[1] < DEFAULT_LEVY_RANGE[1] ? value[1] : undefined,
+      });
+    },
+    [filters, onFilterChange],
+  );
+
+  const handleErfSizeCommit = useCallback(
+    (value: number[]) => {
+      onFilterChange({
+        ...filters,
+        minErfSize: value[0] > 0 ? value[0] : undefined,
+        maxErfSize: value[1] < DEFAULT_ERF_SIZE_RANGE[1] ? value[1] : undefined,
+      });
+    },
+    [filters, onFilterChange],
+  );
 
   const handleResetFilters = useCallback(() => {
     onFilterChange({});
@@ -353,7 +381,7 @@ export function MobileFilterBottomSheet({
           <motion.div
             ref={sheetRef}
             initial={{ y: '100%' }}
-            animate={{ 
+            animate={{
               y: snapPoint === 'closed' ? '100%' : 0,
               height: getSheetHeight(),
             }}
@@ -371,10 +399,7 @@ export function MobileFilterBottomSheet({
           >
             {/* Drag Handle */}
             <div className="flex justify-center pt-3 pb-2 cursor-grab active:cursor-grabbing touch-none">
-              <div 
-                className="w-12 h-1.5 bg-gray-300 rounded-full"
-                aria-hidden="true"
-              />
+              <div className="w-12 h-1.5 bg-gray-300 rounded-full" aria-hidden="true" />
             </div>
 
             {/* Header */}
@@ -382,10 +407,7 @@ export function MobileFilterBottomSheet({
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <SlidersHorizontal className="w-5 h-5 text-gray-700" />
-                  <h2 
-                    id="mobile-filter-title"
-                    className="text-lg font-bold text-gray-900"
-                  >
+                  <h2 id="mobile-filter-title" className="text-lg font-bold text-gray-900">
                     Filters
                   </h2>
                   {activeFilterCount > 0 && (
@@ -402,7 +424,7 @@ export function MobileFilterBottomSheet({
                   <X className="w-5 h-5 text-gray-500" />
                 </button>
               </div>
-              
+
               {resultCount !== undefined && (
                 <p className="text-sm text-gray-600 mt-1">
                   {resultCount.toLocaleString()} properties found
@@ -441,7 +463,7 @@ export function MobileFilterBottomSheet({
                   max={DEFAULT_PRICE_RANGE[1]}
                   step={100000}
                   min={0}
-                  onValueChange={(value) => setPriceRange([value[0], value[1]])}
+                  onValueChange={value => setPriceRange([value[0], value[1]])}
                   onValueCommit={handlePriceCommit}
                   className="mb-2"
                 />
@@ -457,13 +479,15 @@ export function MobileFilterBottomSheet({
                   Property Type
                 </label>
                 <div className="flex flex-wrap gap-2">
-                  {PROPERTY_TYPES.map((type) => (
+                  {PROPERTY_TYPES.map(type => (
                     <button
                       key={type.value}
-                      onClick={() => handlePropertyTypeChange(
-                        type.value, 
-                        !filters.propertyType?.includes(type.value as any)
-                      )}
+                      onClick={() =>
+                        handlePropertyTypeChange(
+                          type.value,
+                          !filters.propertyType?.includes(type.value as any),
+                        )
+                      }
                       className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
                         filters.propertyType?.includes(type.value as any)
                           ? 'bg-blue-600 text-white'
@@ -483,15 +507,17 @@ export function MobileFilterBottomSheet({
                   <label className="text-sm font-semibold text-gray-900">Title Type</label>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  {TITLE_TYPES.map((type) => {
+                  {TITLE_TYPES.map(type => {
                     const Icon = type.icon;
                     return (
                       <button
                         key={type.value}
-                        onClick={() => handleTitleTypeChange(
-                          type.value as 'freehold' | 'sectional',
-                          !filters.titleType?.includes(type.value as any)
-                        )}
+                        onClick={() =>
+                          handleTitleTypeChange(
+                            type.value as 'freehold' | 'sectional',
+                            !filters.titleType?.includes(type.value as any),
+                          )
+                        }
                         className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
                           filters.titleType?.includes(type.value as any)
                             ? 'bg-blue-600 text-white'
@@ -517,25 +543,25 @@ export function MobileFilterBottomSheet({
                   max={DEFAULT_LEVY_RANGE[1]}
                   step={500}
                   min={0}
-                  onValueChange={(value) => setLevyRange([0, value[0]])}
-                  onValueCommit={(value) => handleLevyCommit([0, value[0]])}
+                  onValueChange={value => setLevyRange([0, value[0]])}
+                  onValueCommit={value => handleLevyCommit([0, value[0]])}
                   className="mb-2"
                 />
                 <div className="flex items-center justify-between text-xs text-gray-500">
                   <span>R0</span>
                   <span className="font-medium">
-                    {levyRange[1] >= DEFAULT_LEVY_RANGE[1] ? 'No limit' : `R${levyRange[1].toLocaleString()}/month`}
+                    {levyRange[1] >= DEFAULT_LEVY_RANGE[1]
+                      ? 'No limit'
+                      : `R${levyRange[1].toLocaleString()}/month`}
                   </span>
                 </div>
               </div>
 
               {/* Bedrooms */}
               <div>
-                <label className="text-sm font-semibold text-gray-900 mb-3 block">
-                  Bedrooms
-                </label>
+                <label className="text-sm font-semibold text-gray-900 mb-3 block">Bedrooms</label>
                 <div className="flex gap-2">
-                  {[1, 2, 3, 4, 5].map((num) => (
+                  {[1, 2, 3, 4, 5].map(num => (
                     <button
                       key={num}
                       onClick={() => handleBedroomChange(num)}
@@ -545,7 +571,8 @@ export function MobileFilterBottomSheet({
                           : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                       }`}
                     >
-                      {num}{num === 5 ? '+' : ''}
+                      {num}
+                      {num === 5 ? '+' : ''}
                     </button>
                   ))}
                 </div>
@@ -562,7 +589,7 @@ export function MobileFilterBottomSheet({
                     <Checkbox
                       id="mobile-security-estate"
                       checked={filters.securityEstate || false}
-                      onCheckedChange={(checked) =>
+                      onCheckedChange={checked =>
                         handleBooleanFilterChange('securityEstate', checked as boolean)
                       }
                       className="h-5 w-5"
@@ -579,7 +606,7 @@ export function MobileFilterBottomSheet({
                     <Checkbox
                       id="mobile-pet-friendly"
                       checked={filters.petFriendly || false}
-                      onCheckedChange={(checked) =>
+                      onCheckedChange={checked =>
                         handleBooleanFilterChange('petFriendly', checked as boolean)
                       }
                       className="h-5 w-5"
@@ -596,7 +623,7 @@ export function MobileFilterBottomSheet({
                     <Checkbox
                       id="mobile-fibre-ready"
                       checked={filters.fibreReady || false}
-                      onCheckedChange={(checked) =>
+                      onCheckedChange={checked =>
                         handleBooleanFilterChange('fibreReady', checked as boolean)
                       }
                       className="h-5 w-5"
@@ -616,18 +643,22 @@ export function MobileFilterBottomSheet({
               <div>
                 <div className="flex items-center gap-2 mb-3">
                   <Zap className="h-4 w-4 text-gray-600" />
-                  <label className="text-sm font-semibold text-gray-900">Load-Shedding Solutions</label>
+                  <label className="text-sm font-semibold text-gray-900">
+                    Load-Shedding Solutions
+                  </label>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  {LOAD_SHEDDING_SOLUTIONS.map((solution) => {
+                  {LOAD_SHEDDING_SOLUTIONS.map(solution => {
                     const Icon = solution.icon;
                     return (
                       <button
                         key={solution.value}
-                        onClick={() => handleLoadSheddingChange(
-                          solution.value as 'solar' | 'generator' | 'inverter',
-                          !filters.loadSheddingSolutions?.includes(solution.value as any)
-                        )}
+                        onClick={() =>
+                          handleLoadSheddingChange(
+                            solution.value as 'solar' | 'generator' | 'inverter',
+                            !filters.loadSheddingSolutions?.includes(solution.value as any),
+                          )
+                        }
                         className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
                           filters.loadSheddingSolutions?.includes(solution.value as any)
                             ? 'bg-amber-500 text-white'
@@ -653,13 +684,17 @@ export function MobileFilterBottomSheet({
                   max={DEFAULT_ERF_SIZE_RANGE[1]}
                   step={100}
                   min={0}
-                  onValueChange={(value) => setErfSizeRange([value[0], value[1]])}
+                  onValueChange={value => setErfSizeRange([value[0], value[1]])}
                   onValueCommit={handleErfSizeCommit}
                   className="mb-2"
                 />
                 <div className="flex items-center justify-between text-xs text-gray-500">
                   <span>{erfSizeRange[0].toLocaleString()} m²</span>
-                  <span>{erfSizeRange[1] >= DEFAULT_ERF_SIZE_RANGE[1] ? '5,000+ m²' : `${erfSizeRange[1].toLocaleString()} m²`}</span>
+                  <span>
+                    {erfSizeRange[1] >= DEFAULT_ERF_SIZE_RANGE[1]
+                      ? '5,000+ m²'
+                      : `${erfSizeRange[1].toLocaleString()} m²`}
+                  </span>
                 </div>
               </div>
             </div>
@@ -674,19 +709,12 @@ export function MobileFilterBottomSheet({
                 <Check className="w-4 h-4 mr-2" />
                 Apply Filters
                 {resultCount !== undefined && (
-                  <span className="ml-2 text-blue-200">
-                    ({resultCount.toLocaleString()})
-                  </span>
+                  <span className="ml-2 text-blue-200">({resultCount.toLocaleString()})</span>
                 )}
               </Button>
-              
+
               {activeFilterCount > 0 && (
-                <Button
-                  onClick={handleResetFilters}
-                  variant="outline"
-                  className="w-full"
-                  size="lg"
-                >
+                <Button onClick={handleResetFilters} variant="outline" className="w-full" size="lg">
                   <RotateCcw className="w-4 h-4 mr-2" />
                   Reset All Filters
                 </Button>

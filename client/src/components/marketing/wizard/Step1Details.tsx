@@ -73,23 +73,27 @@ const Step1Details: React.FC<Step1Props> = ({ data, updateData, onNext, isLoadin
             id="name"
             placeholder="e.g. Summer Sale Promotion"
             value={data.campaignName || ''}
-            onChange={(e) => handleChange('campaignName', e.target.value)}
+            onChange={e => handleChange('campaignName', e.target.value)}
           />
         </div>
 
         <div className="space-y-2">
           <Label>Campaign Goal</Label>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {CAMPAIGN_TYPES.map((type) => (
+            {CAMPAIGN_TYPES.map(type => (
               <div
                 key={type.id}
                 className={`cursor-pointer border rounded-xl p-4 transition-all hover:border-blue-500 hover:bg-blue-50 ${
-                  data.campaignType === type.id ? 'border-blue-600 bg-blue-50 ring-1 ring-blue-600' : 'border-slate-200'
+                  data.campaignType === type.id
+                    ? 'border-blue-600 bg-blue-50 ring-1 ring-blue-600'
+                    : 'border-slate-200'
                 }`}
                 onClick={() => handleChange('campaignType', type.id)}
               >
                 <div className="flex items-start gap-3">
-                  <div className={`p-2 rounded-lg ${data.campaignType === type.id ? 'bg-blue-100 text-blue-600' : 'bg-slate-100 text-slate-600'}`}>
+                  <div
+                    className={`p-2 rounded-lg ${data.campaignType === type.id ? 'bg-blue-100 text-blue-600' : 'bg-slate-100 text-slate-600'}`}
+                  >
                     <type.icon className="w-5 h-5" />
                   </div>
                   <div>
@@ -108,13 +112,17 @@ const Step1Details: React.FC<Step1Props> = ({ data, updateData, onNext, isLoadin
             id="description"
             placeholder="Internal notes about this campaign..."
             value={data.description || ''}
-            onChange={(e) => handleChange('description', e.target.value)}
+            onChange={e => handleChange('description', e.target.value)}
           />
         </div>
       </div>
 
       <div className="flex justify-end pt-6">
-        <Button onClick={onNext} disabled={!isValid || isLoading} className="bg-blue-600 hover:bg-blue-700 min-w-[120px]">
+        <Button
+          onClick={onNext}
+          disabled={!isValid || isLoading}
+          className="bg-blue-600 hover:bg-blue-700 min-w-[120px]"
+        >
           {isLoading ? 'Creating...' : 'Next Step'}
         </Button>
       </div>

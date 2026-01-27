@@ -16,7 +16,7 @@ export default function ExploreDiscovery() {
   const { selectedCategoryId, setSelectedCategoryId } = useCategoryFilter();
   const [showFilters, setShowFilters] = useState(false);
   const [showFilterPanel, setShowFilterPanel] = useState(false);
-  
+
   const {
     filters,
     setPropertyType,
@@ -34,7 +34,7 @@ export default function ExploreDiscovery() {
       <div className="absolute top-0 left-0 right-0 z-30 bg-gradient-to-b from-black/80 to-transparent">
         <div className="flex items-center justify-between px-4 py-4">
           <h1 className="text-white text-2xl font-bold">Explore</h1>
-          
+
           <div className="flex items-center gap-2">
             {/* Category filter toggle */}
             <button

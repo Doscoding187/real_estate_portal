@@ -39,11 +39,11 @@ export async function getPublicDevelopment(id: number) {
     .from(developments)
     .innerJoin(developers, eq(developments.developerId, developers.id))
     .where(
-       and(
-         eq(developments.id, id),
-         eq(developments.isPublished, 1),
-         eq(developments.approvalStatus, 'approved')
-       )
+      and(
+        eq(developments.id, id),
+        eq(developments.isPublished, 1),
+        eq(developments.approvalStatus, 'approved'),
+      ),
     )
     .limit(1)
     .then(res => res[0]);
@@ -51,13 +51,10 @@ export async function getPublicDevelopment(id: number) {
   if (!dev) return null;
 
   // 2. Fetch Unit Types
-  const unitTypesRes = await db
-    .select()
-    .from(unitTypes)
-    .where(eq(unitTypes.developmentId, id));
+  const unitTypesRes = await db.select().from(unitTypes).where(eq(unitTypes.developmentId, id));
 
   return {
     ...dev,
-    unitTypes: unitTypesRes || []
+    unitTypes: unitTypesRes || [],
   };
 }

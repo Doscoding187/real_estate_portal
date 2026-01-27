@@ -28,17 +28,17 @@ const MarketingCampaignsPage: React.FC = () => {
   const { user } = useAuth();
   const [, setLocation] = useLocation();
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  
+
   // Determine owner type and ID based on user role
   const isSuperAdmin = user?.role === 'admin' || user?.role === 'super_admin';
-  
-  const ownerType = !isSuperAdmin 
-    ? (user?.role === 'agency_admin' ? 'agency' : 'agent') 
+
+  const ownerType = !isSuperAdmin
+    ? user?.role === 'agency_admin'
+      ? 'agency'
+      : 'agent'
     : undefined;
-    
-  const ownerId = !isSuperAdmin 
-    ? (user?.agencyId || user?.id || 0) 
-    : undefined;
+
+  const ownerId = !isSuperAdmin ? user?.agencyId || user?.id || 0 : undefined;
 
   const { data: campaigns, isLoading } = trpc.marketing.listCampaigns.useQuery({
     ownerType: ownerType as any,
@@ -51,11 +51,23 @@ const MarketingCampaignsPage: React.FC = () => {
       case 'active':
         return <Badge className="bg-emerald-500">Active</Badge>;
       case 'paused':
-        return <Badge variant="secondary" className="bg-amber-500 text-white">Paused</Badge>;
+        return (
+          <Badge variant="secondary" className="bg-amber-500 text-white">
+            Paused
+          </Badge>
+        );
       case 'completed':
-        return <Badge variant="secondary" className="bg-slate-500 text-white">Completed</Badge>;
+        return (
+          <Badge variant="secondary" className="bg-slate-500 text-white">
+            Completed
+          </Badge>
+        );
       case 'scheduled':
-        return <Badge variant="outline" className="border-blue-500 text-blue-500">Scheduled</Badge>;
+        return (
+          <Badge variant="outline" className="border-blue-500 text-blue-500">
+            Scheduled
+          </Badge>
+        );
       default:
         return <Badge variant="outline">Draft</Badge>;
     }
@@ -68,7 +80,10 @@ const MarketingCampaignsPage: React.FC = () => {
           <h1 className="text-2xl font-bold text-slate-900">Marketing Campaigns</h1>
           <p className="text-slate-500">Manage your internal promotions and boosts</p>
         </div>
-        <Button onClick={() => setLocation('/admin/marketing/create')} className="bg-blue-600 hover:bg-blue-700">
+        <Button
+          onClick={() => setLocation('/admin/marketing/create')}
+          className="bg-blue-600 hover:bg-blue-700"
+        >
           <Plus className="w-4 h-4 mr-2" />
           Create Campaign
         </Button>
@@ -177,8 +192,12 @@ const MarketingCampaignsPage: React.FC = () => {
                   </TableCell>
                 </TableRow>
               ) : (
-                campaigns?.map((campaign) => (
-                  <TableRow key={campaign.id} className="cursor-pointer hover:bg-slate-50" onClick={() => setLocation(`/admin/marketing/${campaign.id}`)}>
+                campaigns?.map(campaign => (
+                  <TableRow
+                    key={campaign.id}
+                    className="cursor-pointer hover:bg-slate-50"
+                    onClick={() => setLocation(`/admin/marketing/${campaign.id}`)}
+                  >
                     <TableCell className="font-medium">{campaign.name}</TableCell>
                     {isSuperAdmin && <TableCell>{campaign.ownerType}</TableCell>}
                     <TableCell>{campaign.type}</TableCell>
@@ -186,7 +205,9 @@ const MarketingCampaignsPage: React.FC = () => {
                     <TableCell>{getStatusBadge(campaign.status)}</TableCell>
                     <TableCell>{format(new Date(campaign.createdAt), 'MMM dd, yyyy')}</TableCell>
                     <TableCell className="text-right">
-                      <Button variant="ghost" size="sm">View</Button>
+                      <Button variant="ghost" size="sm">
+                        View
+                      </Button>
                     </TableCell>
                   </TableRow>
                 ))

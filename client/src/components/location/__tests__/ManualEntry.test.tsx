@@ -1,6 +1,6 @@
 /**
  * Manual Entry Fallback Tests
- * 
+ *
  * Tests for the manual address entry functionality in LocationAutocomplete
  * Requirements: 7.1-7.5, 11.1-11.5
  */
@@ -20,20 +20,14 @@ describe('LocationAutocomplete - Manual Entry Fallback', () => {
   describe('Requirement 7.1: Manual Text Entry Mode', () => {
     it('should allow manual text entry without forcing selection', () => {
       const mockOnChange = vi.fn();
-      
-      render(
-        <LocationAutocomplete
-          value=""
-          onChange={mockOnChange}
-          allowManualEntry={true}
-        />
-      );
+
+      render(<LocationAutocomplete value="" onChange={mockOnChange} allowManualEntry={true} />);
 
       const input = screen.getByRole('combobox');
-      
+
       // User can type freely
       fireEvent.change(input, { target: { value: '123 Main Street, Sandton' } });
-      
+
       expect(input).toHaveValue('123 Main Street, Sandton');
       // onChange should not be called yet (no selection made)
       expect(mockOnChange).not.toHaveBeenCalled();
@@ -43,17 +37,11 @@ describe('LocationAutocomplete - Manual Entry Fallback', () => {
   describe('Requirement 7.2: "Use this address" Confirmation Button', () => {
     it('should show "Use this address" button in manual mode', async () => {
       const mockOnChange = vi.fn();
-      
+
       // Mock Google Maps API not being available
       (window as any).google = undefined;
-      
-      render(
-        <LocationAutocomplete
-          value=""
-          onChange={mockOnChange}
-          allowManualEntry={true}
-        />
-      );
+
+      render(<LocationAutocomplete value="" onChange={mockOnChange} allowManualEntry={true} />);
 
       const input = screen.getByRole('combobox');
       fireEvent.change(input, { target: { value: '123 Main Street' } });
@@ -91,13 +79,7 @@ describe('LocationAutocomplete - Manual Entry Fallback', () => {
       // Mock Google Maps API not being available
       (window as any).google = undefined;
 
-      render(
-        <LocationAutocomplete
-          value=""
-          onChange={mockOnChange}
-          allowManualEntry={true}
-        />
-      );
+      render(<LocationAutocomplete value="" onChange={mockOnChange} allowManualEntry={true} />);
 
       const input = screen.getByRole('combobox');
       fireEvent.change(input, { target: { value: '123 Main Street' } });
@@ -145,13 +127,7 @@ describe('LocationAutocomplete - Manual Entry Fallback', () => {
       // Mock Google Maps API not being available
       (window as any).google = undefined;
 
-      render(
-        <LocationAutocomplete
-          value=""
-          onChange={mockOnChange}
-          allowManualEntry={true}
-        />
-      );
+      render(<LocationAutocomplete value="" onChange={mockOnChange} allowManualEntry={true} />);
 
       const input = screen.getByRole('combobox');
       fireEvent.change(input, { target: { value: '123 Main Street, Sandton' } });
@@ -163,7 +139,7 @@ describe('LocationAutocomplete - Manual Entry Fallback', () => {
 
       await waitFor(() => {
         expect(global.fetch).toHaveBeenCalledWith(
-          expect.stringContaining('/api/trpc/location.geocodeAddress')
+          expect.stringContaining('/api/trpc/location.geocodeAddress'),
         );
       });
     });
@@ -196,13 +172,7 @@ describe('LocationAutocomplete - Manual Entry Fallback', () => {
       // Mock Google Maps API not being available
       (window as any).google = undefined;
 
-      render(
-        <LocationAutocomplete
-          value=""
-          onChange={mockOnChange}
-          allowManualEntry={true}
-        />
-      );
+      render(<LocationAutocomplete value="" onChange={mockOnChange} allowManualEntry={true} />);
 
       const input = screen.getByRole('combobox');
       fireEvent.change(input, { target: { value: '123 Main Street' } });
@@ -216,7 +186,7 @@ describe('LocationAutocomplete - Manual Entry Fallback', () => {
         expect(mockOnChange).toHaveBeenCalledWith(
           expect.objectContaining({
             gps_accuracy: 'manual',
-          })
+          }),
         );
       });
     });
@@ -242,13 +212,7 @@ describe('LocationAutocomplete - Manual Entry Fallback', () => {
       // Mock Google Maps API not being available
       (window as any).google = undefined;
 
-      render(
-        <LocationAutocomplete
-          value=""
-          onChange={mockOnChange}
-          allowManualEntry={true}
-        />
-      );
+      render(<LocationAutocomplete value="" onChange={mockOnChange} allowManualEntry={true} />);
 
       const input = screen.getByRole('combobox');
       fireEvent.change(input, { target: { value: '123 Main Street' } });
@@ -265,26 +229,20 @@ describe('LocationAutocomplete - Manual Entry Fallback', () => {
             gps_accuracy: 'manual',
             latitude: 0,
             longitude: 0,
-          })
+          }),
         );
       });
     });
 
     it('should show error message when geocoding fails', async () => {
       const mockOnChange = vi.fn();
-      
+
       (global.fetch as any).mockRejectedValueOnce(new Error('Network error'));
 
       // Mock Google Maps API not being available
       (window as any).google = undefined;
 
-      render(
-        <LocationAutocomplete
-          value=""
-          onChange={mockOnChange}
-          allowManualEntry={true}
-        />
-      );
+      render(<LocationAutocomplete value="" onChange={mockOnChange} allowManualEntry={true} />);
 
       const input = screen.getByRole('combobox');
       fireEvent.change(input, { target: { value: '123 Main Street' } });
@@ -304,37 +262,27 @@ describe('LocationAutocomplete - Manual Entry Fallback', () => {
   describe('Requirement 11.1: API Unavailable Fallback', () => {
     it('should enable manual mode when Google Maps API is not loaded', () => {
       const mockOnChange = vi.fn();
-      
+
       // Mock Google Maps API not being available
       (window as any).google = undefined;
 
-      render(
-        <LocationAutocomplete
-          value=""
-          onChange={mockOnChange}
-          allowManualEntry={true}
-        />
-      );
+      render(<LocationAutocomplete value="" onChange={mockOnChange} allowManualEntry={true} />);
 
       // Should show error message about API unavailability
-      expect(screen.getByText(/location autocomplete temporarily unavailable/i)).toBeInTheDocument();
+      expect(
+        screen.getByText(/location autocomplete temporarily unavailable/i),
+      ).toBeInTheDocument();
     });
   });
 
   describe('Edge Cases', () => {
     it('should not show "Use this address" button when input is empty', async () => {
       const mockOnChange = vi.fn();
-      
+
       // Mock Google Maps API not being available
       (window as any).google = undefined;
 
-      render(
-        <LocationAutocomplete
-          value=""
-          onChange={mockOnChange}
-          allowManualEntry={true}
-        />
-      );
+      render(<LocationAutocomplete value="" onChange={mockOnChange} allowManualEntry={true} />);
 
       // Button should not appear with empty input
       const button = screen.queryByText(/use this address/i);
@@ -343,37 +291,38 @@ describe('LocationAutocomplete - Manual Entry Fallback', () => {
 
     it('should disable input during geocoding', async () => {
       const mockOnChange = vi.fn();
-      
+
       // Mock slow geocoding response
-      (global.fetch as any).mockImplementationOnce(() => 
-        new Promise(resolve => setTimeout(() => resolve({
-          ok: true,
-          json: async () => ({
-            result: {
-              data: {
-                success: true,
-                result: {
-                  placeId: 'test',
-                  formattedAddress: 'Test Address',
-                  geometry: { location: { lat: 0, lng: 0 } },
-                  addressComponents: [],
-                },
-              },
-            },
-          }),
-        }), 100))
+      (global.fetch as any).mockImplementationOnce(
+        () =>
+          new Promise(resolve =>
+            setTimeout(
+              () =>
+                resolve({
+                  ok: true,
+                  json: async () => ({
+                    result: {
+                      data: {
+                        success: true,
+                        result: {
+                          placeId: 'test',
+                          formattedAddress: 'Test Address',
+                          geometry: { location: { lat: 0, lng: 0 } },
+                          addressComponents: [],
+                        },
+                      },
+                    },
+                  }),
+                }),
+              100,
+            ),
+          ),
       );
 
       // Mock Google Maps API not being available
       (window as any).google = undefined;
 
-      render(
-        <LocationAutocomplete
-          value=""
-          onChange={mockOnChange}
-          allowManualEntry={true}
-        />
-      );
+      render(<LocationAutocomplete value="" onChange={mockOnChange} allowManualEntry={true} />);
 
       const input = screen.getByRole('combobox');
       fireEvent.change(input, { target: { value: '123 Main Street' } });

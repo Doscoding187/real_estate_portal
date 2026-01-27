@@ -1,9 +1,9 @@
 /**
  * Property-Based Tests for MetricCard Component
- * 
+ *
  * **Feature: advertise-with-us-landing, Property 11: Metric structure**
  * **Validates: Requirements 6.3**
- * 
+ *
  * Property: For any metric displayed in the social proof section,
  * the metric should contain both a numeric value and a descriptive label
  */
@@ -17,7 +17,7 @@ import { TrendingUp, Users, Star, Award } from 'lucide-react';
 describe('MetricCard - Property 11: Metric structure', () => {
   /**
    * Property Test: Metric completeness
-   * 
+   *
    * For any metric data (value and label), the rendered MetricCard
    * should contain both the value and the label in the DOM
    */
@@ -27,7 +27,7 @@ describe('MetricCard - Property 11: Metric structure', () => {
         // Generate random metric values (numbers or formatted strings)
         fc.oneof(
           fc.integer({ min: 0, max: 1000000 }),
-          fc.constantFrom('10K+', '95%', '5M+', '99.9%', '24/7', '100+')
+          fc.constantFrom('10K+', '95%', '5M+', '99.9%', '24/7', '100+'),
         ),
         // Generate random labels with alphanumeric characters
         fc.string({ minLength: 5, maxLength: 50 }).filter(s => {
@@ -40,7 +40,7 @@ describe('MetricCard - Property 11: Metric structure', () => {
               value={value}
               label={label}
               enableCountUp={false} // Disable animation for testing
-            />
+            />,
           );
 
           try {
@@ -56,15 +56,15 @@ describe('MetricCard - Property 11: Metric structure', () => {
           } finally {
             cleanup();
           }
-        }
+        },
       ),
-      { numRuns: 100 }
+      { numRuns: 100 },
     );
   });
 
   /**
    * Property Test: Value display
-   * 
+   *
    * For any numeric or string value, the MetricCard should display
    * the value in a large, prominent format
    */
@@ -73,34 +73,30 @@ describe('MetricCard - Property 11: Metric structure', () => {
       fc.property(
         fc.oneof(
           fc.integer({ min: 0, max: 1000000 }),
-          fc.constantFrom('10K+', '95%', '5M+', '99.9%')
+          fc.constantFrom('10K+', '95%', '5M+', '99.9%'),
         ),
         fc.string({ minLength: 5, maxLength: 30 }),
         (value, label) => {
           const { container } = render(
-            <MetricCard
-              value={value}
-              label={label}
-              enableCountUp={false}
-            />
+            <MetricCard value={value} label={label} enableCountUp={false} />,
           );
 
           // Value should be in a large text element
           const valueElement = container.querySelector('[class*="text-5xl"]');
           expect(valueElement).toBeTruthy();
-          
+
           // Value should have gradient styling
           const hasGradient = valueElement?.getAttribute('style')?.includes('gradient');
           expect(hasGradient).toBe(true);
-        }
+        },
       ),
-      { numRuns: 100 }
+      { numRuns: 100 },
     );
   });
 
   /**
    * Property Test: Label display
-   * 
+   *
    * For any label text, the MetricCard should display the label
    * in a readable format below the value
    */
@@ -114,36 +110,32 @@ describe('MetricCard - Property 11: Metric structure', () => {
         }),
         (value, label) => {
           const { container } = render(
-            <MetricCard
-              value={value}
-              label={label}
-              enableCountUp={false}
-            />
+            <MetricCard value={value} label={label} enableCountUp={false} />,
           );
 
           try {
             const labelElement = container.querySelector('p');
             expect(labelElement).toBeTruthy();
             expect(labelElement?.textContent).toBe(label);
-            
+
             // Label should be in a paragraph element
             expect(labelElement?.tagName).toBe('P');
-            
+
             // Label should have appropriate text styling
             const hasTextStyling = labelElement?.className.includes('text-');
             expect(hasTextStyling).toBe(true);
           } finally {
             cleanup();
           }
-        }
+        },
       ),
-      { numRuns: 100 }
+      { numRuns: 100 },
     );
   });
 
   /**
    * Property Test: Optional icon display
-   * 
+   *
    * When an icon is provided, the MetricCard should display it
    * above the value
    */
@@ -155,26 +147,21 @@ describe('MetricCard - Property 11: Metric structure', () => {
         fc.constantFrom(TrendingUp, Users, Star, Award),
         (value, label, Icon) => {
           const { container } = render(
-            <MetricCard
-              value={value}
-              label={label}
-              icon={Icon}
-              enableCountUp={false}
-            />
+            <MetricCard value={value} label={label} icon={Icon} enableCountUp={false} />,
           );
 
           // Icon should be present (SVG element)
           const svgElement = container.querySelector('svg');
           expect(svgElement).toBeTruthy();
-        }
+        },
       ),
-      { numRuns: 50 }
+      { numRuns: 50 },
     );
   });
 
   /**
    * Property Test: Icon color variants
-   * 
+   *
    * For any icon color variant, the icon should be rendered
    * with the appropriate color styling
    */
@@ -183,7 +170,14 @@ describe('MetricCard - Property 11: Metric structure', () => {
       fc.property(
         fc.integer({ min: 0, max: 10000 }),
         fc.string({ minLength: 5, maxLength: 30 }),
-        fc.constantFrom('primary', 'secondary', 'blue', 'green', 'yellow', 'purple') as fc.Arbitrary<'primary' | 'secondary' | 'blue' | 'green' | 'yellow' | 'purple'>,
+        fc.constantFrom(
+          'primary',
+          'secondary',
+          'blue',
+          'green',
+          'yellow',
+          'purple',
+        ) as fc.Arbitrary<'primary' | 'secondary' | 'blue' | 'green' | 'yellow' | 'purple'>,
         (value, label, iconColor) => {
           const { container } = render(
             <MetricCard
@@ -192,24 +186,24 @@ describe('MetricCard - Property 11: Metric structure', () => {
               icon={TrendingUp}
               iconColor={iconColor}
               enableCountUp={false}
-            />
+            />,
           );
 
           const svgElement = container.querySelector('svg');
           expect(svgElement).toBeTruthy();
-          
+
           // Icon should have color styling
           const hasColorStyle = svgElement?.getAttribute('style')?.includes('color');
           expect(hasColorStyle).toBe(true);
-        }
+        },
       ),
-      { numRuns: 50 }
+      { numRuns: 50 },
     );
   });
 
   /**
    * Property Test: Responsive layout
-   * 
+   *
    * For any metric data, the MetricCard should have responsive
    * classes for different screen sizes
    */
@@ -223,11 +217,7 @@ describe('MetricCard - Property 11: Metric structure', () => {
         }),
         (value, label) => {
           const { container } = render(
-            <MetricCard
-              value={value}
-              label={label}
-              enableCountUp={false}
-            />
+            <MetricCard value={value} label={label} enableCountUp={false} />,
           );
 
           try {
@@ -241,15 +231,15 @@ describe('MetricCard - Property 11: Metric structure', () => {
           } finally {
             cleanup();
           }
-        }
+        },
       ),
-      { numRuns: 100 }
+      { numRuns: 100 },
     );
   });
 
   /**
    * Property Test: Accessibility
-   * 
+   *
    * For any metric, the component should be accessible with
    * proper semantic HTML structure
    */
@@ -263,11 +253,7 @@ describe('MetricCard - Property 11: Metric structure', () => {
         }),
         (value, label) => {
           const { container } = render(
-            <MetricCard
-              value={value}
-              label={label}
-              enableCountUp={false}
-            />
+            <MetricCard value={value} label={label} enableCountUp={false} />,
           );
 
           try {
@@ -281,9 +267,9 @@ describe('MetricCard - Property 11: Metric structure', () => {
           } finally {
             cleanup();
           }
-        }
+        },
       ),
-      { numRuns: 100 }
+      { numRuns: 100 },
     );
   });
 });

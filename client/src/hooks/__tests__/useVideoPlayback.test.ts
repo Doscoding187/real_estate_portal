@@ -1,12 +1,12 @@
 /**
  * Unit Tests for useVideoPlayback hook
- * 
+ *
  * Tests cover:
  * - Auto-play on viewport entry
  * - Auto-pause on viewport exit
  * - Error handling and retry logic
  * - Preloading behavior
- * 
+ *
  * Requirements: 10.1 (Unit testing for video playback logic)
  */
 
@@ -29,8 +29,8 @@ describe('useVideoPlayback', () => {
     mockObserve = vi.fn();
     mockUnobserve = vi.fn();
     mockDisconnect = vi.fn();
-    
-    global.IntersectionObserver = vi.fn().mockImplementation((callback) => {
+
+    global.IntersectionObserver = vi.fn().mockImplementation(callback => {
       intersectionObserverCallback = callback;
       return {
         observe: mockObserve,
@@ -59,7 +59,7 @@ describe('useVideoPlayback', () => {
     vi.restoreAllMocks();
     vi.useRealTimers();
   });
-  
+
   // Helper function to simulate intersection
   const simulateIntersection = (isIntersecting: boolean) => {
     if (intersectionObserverCallback) {
@@ -75,7 +75,7 @@ describe('useVideoPlayback', () => {
             time: Date.now(),
           },
         ],
-        {} as IntersectionObserver
+        {} as IntersectionObserver,
       );
     }
   };
@@ -289,7 +289,8 @@ describe('useVideoPlayback', () => {
     });
 
     it('should allow manual retry after error', async () => {
-      mockVideoElement.play = vi.fn()
+      mockVideoElement.play = vi
+        .fn()
         .mockRejectedValueOnce(new Error('First error'))
         .mockResolvedValueOnce(undefined);
 
@@ -311,9 +312,12 @@ describe('useVideoPlayback', () => {
         await Promise.resolve();
       });
 
-      await waitFor(() => {
-        expect(result.current.error).toBeTruthy();
-      }, { timeout: 1000 });
+      await waitFor(
+        () => {
+          expect(result.current.error).toBeTruthy();
+        },
+        { timeout: 1000 },
+      );
 
       // Manual retry
       await act(async () => {
@@ -321,10 +325,13 @@ describe('useVideoPlayback', () => {
         await Promise.resolve();
       });
 
-      await waitFor(() => {
-        expect(result.current.error).toBe(null);
-        expect(result.current.isPlaying).toBe(true);
-      }, { timeout: 1000 });
+      await waitFor(
+        () => {
+          expect(result.current.error).toBe(null);
+          expect(result.current.isPlaying).toBe(true);
+        },
+        { timeout: 1000 },
+      );
     });
 
     it('should reset retry count on successful play', async () => {
@@ -429,9 +436,18 @@ describe('useVideoPlayback', () => {
       });
 
       // Verify event listeners were added
-      expect(mockVideoElement.addEventListener).toHaveBeenCalledWith('waiting', expect.any(Function));
-      expect(mockVideoElement.addEventListener).toHaveBeenCalledWith('playing', expect.any(Function));
-      expect(mockVideoElement.addEventListener).toHaveBeenCalledWith('canplay', expect.any(Function));
+      expect(mockVideoElement.addEventListener).toHaveBeenCalledWith(
+        'waiting',
+        expect.any(Function),
+      );
+      expect(mockVideoElement.addEventListener).toHaveBeenCalledWith(
+        'playing',
+        expect.any(Function),
+      );
+      expect(mockVideoElement.addEventListener).toHaveBeenCalledWith(
+        'canplay',
+        expect.any(Function),
+      );
     });
 
     it('should detect buffering state', () => {
@@ -447,7 +463,7 @@ describe('useVideoPlayback', () => {
 
       // Get the 'waiting' event handler
       const waitingCall = (mockVideoElement.addEventListener as any).mock.calls.find(
-        (call: any[]) => call[0] === 'waiting'
+        (call: any[]) => call[0] === 'waiting',
       );
       const waitingHandler = waitingCall?.[1];
 
@@ -474,10 +490,10 @@ describe('useVideoPlayback', () => {
 
       // Get event handlers
       const waitingCall = (mockVideoElement.addEventListener as any).mock.calls.find(
-        (call: any[]) => call[0] === 'waiting'
+        (call: any[]) => call[0] === 'waiting',
       );
       const playingCall = (mockVideoElement.addEventListener as any).mock.calls.find(
-        (call: any[]) => call[0] === 'playing'
+        (call: any[]) => call[0] === 'playing',
       );
       const waitingHandler = waitingCall?.[1];
       const playingHandler = playingCall?.[1];
@@ -509,10 +525,10 @@ describe('useVideoPlayback', () => {
       });
 
       const waitingCall = (mockVideoElement.addEventListener as any).mock.calls.find(
-        (call: any[]) => call[0] === 'waiting'
+        (call: any[]) => call[0] === 'waiting',
       );
       const canPlayCall = (mockVideoElement.addEventListener as any).mock.calls.find(
-        (call: any[]) => call[0] === 'canplay'
+        (call: any[]) => call[0] === 'canplay',
       );
       const waitingHandler = waitingCall?.[1];
       const canPlayHandler = canPlayCall?.[1];

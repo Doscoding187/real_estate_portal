@@ -1,6 +1,6 @@
 /**
  * SocialProofSection Demo Page
- * 
+ *
  * Demonstrates the SocialProofSection component with sample data
  */
 
@@ -50,9 +50,7 @@ export default function SocialProofDemo() {
       <div className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white py-12 px-4">
         <div className="max-w-7xl mx-auto">
           <h1 className="text-4xl font-bold mb-4">Social Proof Section Demo</h1>
-          <p className="text-xl opacity-90">
-            Showcasing trust signals and key metrics
-          </p>
+          <p className="text-xl opacity-90">Showcasing trust signals and key metrics</p>
         </div>
       </div>
 
@@ -70,11 +68,7 @@ export default function SocialProofDemo() {
         <div className="max-w-7xl mx-auto px-4">
           <h2 className="text-2xl font-bold mb-4 text-center">Variant: Metrics Only</h2>
         </div>
-        <SocialProofSection
-          heading="Our Impact in Numbers"
-          metrics={metrics}
-          showLogos={false}
-        />
+        <SocialProofSection heading="Our Impact in Numbers" metrics={metrics} showLogos={false} />
       </div>
 
       {/* Variant: With Count-up Animation */}

@@ -13,7 +13,7 @@ interface RecommendedAgentsProps {
 export function RecommendedAgents({ locationType, locationId }: RecommendedAgentsProps) {
   const { data: agents, isLoading } = trpc.monetization.getRecommendedAgents.useQuery({
     locationType,
-    locationId
+    locationId,
   });
 
   if (isLoading) return null;
@@ -34,21 +34,23 @@ export function RecommendedAgents({ locationType, locationId }: RecommendedAgent
             </p>
           </div>
           <Link href="/agents">
-            <Button variant="outline" size="sm">View All Agents</Button>
+            <Button variant="outline" size="sm">
+              View All Agents
+            </Button>
           </Link>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-          {agents.map((agent) => (
+          {agents.map(agent => (
             <Link key={agent.id} href={`/agent/${agent.id}`}>
               <Card className="hover:shadow-lg transition-all cursor-pointer group border-slate-200">
                 <CardContent className="p-0">
                   <div className="relative h-48 bg-slate-100 overflow-hidden rounded-t-xl">
                     {agent.profileImage ? (
-                      <img 
-                        src={agent.profileImage} 
-                        alt={`${agent.firstName} ${agent.lastName}`} 
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
+                      <img
+                        src={agent.profileImage}
+                        alt={`${agent.firstName} ${agent.lastName}`}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                       />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center bg-slate-100">
@@ -63,34 +65,46 @@ export function RecommendedAgents({ locationType, locationId }: RecommendedAgent
                     </div>
                     {agent.agency?.logo && (
                       <div className="absolute bottom-3 right-3 bg-white p-1 rounded shadow-sm opacity-90">
-                         <img src={agent.agency.logo} alt={agent.agency.name} className="h-6 w-auto object-contain" />
+                        <img
+                          src={agent.agency.logo}
+                          alt={agent.agency.name}
+                          className="h-6 w-auto object-contain"
+                        />
                       </div>
                     )}
                   </div>
-                  
+
                   <div className="p-5">
                     <div className="flex items-start justify-between mb-2">
-                       <div>
-                         <h3 className="font-bold text-lg text-slate-900 flex items-center gap-2 group-hover:text-primary transition-colors">
-                           {agent.firstName} {agent.lastName}
-                           <Verified className="h-4 w-4 text-blue-500" />
-                         </h3>
-                         <p className="text-sm text-slate-500">{agent.agency?.name || 'Independent Agent'}</p>
-                       </div>
+                      <div>
+                        <h3 className="font-bold text-lg text-slate-900 flex items-center gap-2 group-hover:text-primary transition-colors">
+                          {agent.firstName} {agent.lastName}
+                          <Verified className="h-4 w-4 text-blue-500" />
+                        </h3>
+                        <p className="text-sm text-slate-500">
+                          {agent.agency?.name || 'Independent Agent'}
+                        </p>
+                      </div>
                     </div>
-                    
+
                     <div className="flex items-center gap-4 text-sm text-slate-600 mt-4 pt-4 border-t border-slate-100">
                       <div>
-                        <span className="font-semibold text-slate-900 block">{agent.totalSales || 0}</span>
+                        <span className="font-semibold text-slate-900 block">
+                          {agent.totalSales || 0}
+                        </span>
                         <span className="text-xs">Sold</span>
                       </div>
                       <div className="h-8 w-px bg-slate-100" />
-                       <div>
+                      <div>
                         <span className="font-semibold text-slate-900 block">Verified</span>
                         <span className="text-xs">Status</span>
                       </div>
                       <div className="ml-auto">
-                        <Button size="icon" variant="ghost" className="h-8 w-8 rounded-full bg-primary/10 text-primary hover:bg-primary/20">
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-8 w-8 rounded-full bg-primary/10 text-primary hover:bg-primary/20"
+                        >
                           <Phone className="h-4 w-4" />
                         </Button>
                       </div>

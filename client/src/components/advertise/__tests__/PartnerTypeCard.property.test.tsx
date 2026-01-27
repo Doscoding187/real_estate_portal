@@ -1,11 +1,11 @@
 /**
  * Property-Based Tests for PartnerTypeCard Component
- * 
+ *
  * Feature: advertise-with-us-landing, Property 2: Partner card completeness
  * Validates: Requirements 2.2
- * 
- * Property: For any partner type card rendered on the page, the card should 
- * contain exactly four elements: an icon, a title, a benefit description, 
+ *
+ * Property: For any partner type card rendered on the page, the card should
+ * contain exactly four elements: an icon, a title, a benefit description,
  * and a "Learn More" CTA
  */
 
@@ -32,7 +32,7 @@ const partnerTypeArbitrary = fc.record({
 describe('PartnerTypeCard - Property 2: Partner card completeness', () => {
   it('should contain exactly four required elements: icon, title, benefit, and CTA', () => {
     fc.assert(
-      fc.property(partnerTypeArbitrary, (partnerData) => {
+      fc.property(partnerTypeArbitrary, partnerData => {
         const { container } = render(
           <PartnerTypeCard
             icon={partnerData.icon}
@@ -40,7 +40,7 @@ describe('PartnerTypeCard - Property 2: Partner card completeness', () => {
             benefit={partnerData.benefit}
             href={partnerData.href}
             index={partnerData.index}
-          />
+          />,
         );
 
         // Use within to scope queries to this specific container
@@ -73,17 +73,17 @@ describe('PartnerTypeCard - Property 2: Partner card completeness', () => {
 
         // Verify accessibility
         expect(linkElement?.getAttribute('aria-label')).toContain(partnerData.title);
-        
+
         // Clean up after this property test iteration
         cleanup();
       }),
-      { numRuns: 100 }
+      { numRuns: 100 },
     );
   });
 
   it('should render all four elements with proper semantic HTML structure', () => {
     fc.assert(
-      fc.property(partnerTypeArbitrary, (partnerData) => {
+      fc.property(partnerTypeArbitrary, partnerData => {
         const { container } = render(
           <PartnerTypeCard
             icon={partnerData.icon}
@@ -91,7 +91,7 @@ describe('PartnerTypeCard - Property 2: Partner card completeness', () => {
             benefit={partnerData.benefit}
             href={partnerData.href}
             index={partnerData.index}
-          />
+          />,
         );
 
         const card = within(container);
@@ -117,10 +117,10 @@ describe('PartnerTypeCard - Property 2: Partner card completeness', () => {
         // CTA should contain "Learn More" text
         const cta = card.getByText('Learn More');
         expect(cta).toBeTruthy();
-        
+
         cleanup();
       }),
-      { numRuns: 100 }
+      { numRuns: 100 },
     );
   });
 
@@ -134,7 +134,7 @@ describe('PartnerTypeCard - Property 2: Partner card completeness', () => {
           href: fc.webUrl(),
           index: fc.integer({ min: 0, max: 20 }),
         }),
-        (partnerData) => {
+        partnerData => {
           const { container } = render(
             <PartnerTypeCard
               icon={partnerData.icon}
@@ -142,7 +142,7 @@ describe('PartnerTypeCard - Property 2: Partner card completeness', () => {
               benefit={partnerData.benefit}
               href={partnerData.href}
               index={partnerData.index}
-            />
+            />,
           );
 
           const card = within(container);
@@ -154,17 +154,17 @@ describe('PartnerTypeCard - Property 2: Partner card completeness', () => {
           const hasCTA = card.queryByText('Learn More') !== null;
 
           expect(hasIcon && hasTitle && hasBenefit && hasCTA).toBe(true);
-          
+
           cleanup();
-        }
+        },
       ),
-      { numRuns: 100 }
+      { numRuns: 100 },
     );
   });
 
   it('should render exactly one of each required element (no duplicates)', () => {
     fc.assert(
-      fc.property(partnerTypeArbitrary, (partnerData) => {
+      fc.property(partnerTypeArbitrary, partnerData => {
         const { container } = render(
           <PartnerTypeCard
             icon={partnerData.icon}
@@ -172,7 +172,7 @@ describe('PartnerTypeCard - Property 2: Partner card completeness', () => {
             benefit={partnerData.benefit}
             href={partnerData.href}
             index={partnerData.index}
-          />
+          />,
         );
 
         const card = within(container);
@@ -192,27 +192,25 @@ describe('PartnerTypeCard - Property 2: Partner card completeness', () => {
         // Should have "Learn More" text exactly once
         const learnMoreElements = card.getAllByText('Learn More');
         expect(learnMoreElements.length).toBe(1);
-        
+
         cleanup();
       }),
-      { numRuns: 100 }
+      { numRuns: 100 },
     );
   });
 });
 
-
-
 /**
  * Property 3: Partner card navigation
  * Validates: Requirements 2.3
- * 
- * Property: For any partner type card, clicking the card should navigate to a URL 
+ *
+ * Property: For any partner type card, clicking the card should navigate to a URL
  * that corresponds to that partner type's sub-landing page
  */
 describe('PartnerTypeCard - Property 3: Partner card navigation', () => {
   it('should navigate to the correct URL when clicked', () => {
     fc.assert(
-      fc.property(partnerTypeArbitrary, (partnerData) => {
+      fc.property(partnerTypeArbitrary, partnerData => {
         const { container } = render(
           <PartnerTypeCard
             icon={partnerData.icon}
@@ -220,7 +218,7 @@ describe('PartnerTypeCard - Property 3: Partner card navigation', () => {
             benefit={partnerData.benefit}
             href={partnerData.href}
             index={partnerData.index}
-          />
+          />,
         );
 
         // Find the link element
@@ -233,16 +231,16 @@ describe('PartnerTypeCard - Property 3: Partner card navigation', () => {
 
         // Verify it's a valid link element
         expect(linkElement?.tagName.toLowerCase()).toBe('a');
-        
+
         cleanup();
       }),
-      { numRuns: 100 }
+      { numRuns: 100 },
     );
   });
 
   it('should have proper accessibility attributes for navigation', () => {
     fc.assert(
-      fc.property(partnerTypeArbitrary, (partnerData) => {
+      fc.property(partnerTypeArbitrary, partnerData => {
         const { container } = render(
           <PartnerTypeCard
             icon={partnerData.icon}
@@ -250,7 +248,7 @@ describe('PartnerTypeCard - Property 3: Partner card navigation', () => {
             benefit={partnerData.benefit}
             href={partnerData.href}
             index={partnerData.index}
-          />
+          />,
         );
 
         const linkElement = container.querySelector('a');
@@ -260,26 +258,25 @@ describe('PartnerTypeCard - Property 3: Partner card navigation', () => {
         const ariaLabel = linkElement?.getAttribute('aria-label');
         expect(ariaLabel).toBeTruthy();
         expect(ariaLabel?.toLowerCase()).toContain(partnerData.title.trim().toLowerCase());
-        
+
         cleanup();
       }),
-      { numRuns: 100 }
+      { numRuns: 100 },
     );
   });
 });
 
-
 /**
  * Property 4: Partner card hover interaction
  * Validates: Requirements 2.4
- * 
- * Property: For any partner type card, hovering over the card should apply CSS 
+ *
+ * Property: For any partner type card, hovering over the card should apply CSS
  * transform and box-shadow changes that create a lift effect
  */
 describe('PartnerTypeCard - Property 4: Partner card hover interaction', () => {
   it('should have hover-capable styling attributes', () => {
     fc.assert(
-      fc.property(partnerTypeArbitrary, (partnerData) => {
+      fc.property(partnerTypeArbitrary, partnerData => {
         const { container } = render(
           <PartnerTypeCard
             icon={partnerData.icon}
@@ -287,7 +284,7 @@ describe('PartnerTypeCard - Property 4: Partner card hover interaction', () => {
             benefit={partnerData.benefit}
             href={partnerData.href}
             index={partnerData.index}
-          />
+          />,
         );
 
         const linkElement = container.querySelector('a');
@@ -303,16 +300,16 @@ describe('PartnerTypeCard - Property 4: Partner card hover interaction', () => {
 
         // Verify cursor is pointer (indicating interactivity)
         expect(style).toContain('cursor: pointer');
-        
+
         cleanup();
       }),
-      { numRuns: 100 }
+      { numRuns: 100 },
     );
   });
 
   it('should be a motion component with hover variants', () => {
     fc.assert(
-      fc.property(partnerTypeArbitrary, (partnerData) => {
+      fc.property(partnerTypeArbitrary, partnerData => {
         const { container } = render(
           <PartnerTypeCard
             icon={partnerData.icon}
@@ -320,7 +317,7 @@ describe('PartnerTypeCard - Property 4: Partner card hover interaction', () => {
             benefit={partnerData.benefit}
             href={partnerData.href}
             index={partnerData.index}
-          />
+          />,
         );
 
         const linkElement = container.querySelector('a');
@@ -333,10 +330,10 @@ describe('PartnerTypeCard - Property 4: Partner card hover interaction', () => {
         // Verify the element has the partner-type-card class
         const className = linkElement?.getAttribute('class');
         expect(className).toContain('partner-type-card');
-        
+
         cleanup();
       }),
-      { numRuns: 100 }
+      { numRuns: 100 },
     );
   });
 });

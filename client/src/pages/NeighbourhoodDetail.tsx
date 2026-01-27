@@ -18,15 +18,8 @@ export default function NeighbourhoodDetail() {
   const navigate = useNavigate();
   const neighbourhoodId = parseInt(id || '0', 10);
 
-  const {
-    neighbourhood,
-    videos,
-    isLoading,
-    error,
-    isFollowing,
-    toggleFollow,
-    isTogglingFollow,
-  } = useNeighbourhoodDetail(neighbourhoodId);
+  const { neighbourhood, videos, isLoading, error, isFollowing, toggleFollow, isTogglingFollow } =
+    useNeighbourhoodDetail(neighbourhoodId);
 
   if (isLoading) {
     return (
@@ -179,12 +172,10 @@ export default function NeighbourhoodDetail() {
           <div className="mb-8">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-2xl font-bold text-gray-900">Video Tours</h2>
-              <button className="text-blue-600 hover:text-blue-700 font-medium">
-                See All
-              </button>
+              <button className="text-blue-600 hover:text-blue-700 font-medium">See All</button>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {videos.map((video) => (
+              {videos.map(video => (
                 <VideoCard
                   key={video.id}
                   video={{
@@ -208,9 +199,7 @@ export default function NeighbourhoodDetail() {
         <div>
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-2xl font-bold text-gray-900">Available Properties</h2>
-            <button className="text-blue-600 hover:text-blue-700 font-medium">
-              See All
-            </button>
+            <button className="text-blue-600 hover:text-blue-700 font-medium">See All</button>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {/* TODO: Load actual properties */}

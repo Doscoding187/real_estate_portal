@@ -48,7 +48,11 @@ export function useExploreVideoFeed(options: UseExploreVideoFeedOptions = {}) {
   const recordEngagementMutation = trpc.recommendationEngine.recordEngagement.useMutation();
 
   // Fetch video feed
-  const { data: videoData, isLoading: isFetching, refetch } = trpc.exploreApi.getVideoFeed.useQuery({
+  const {
+    data: videoData,
+    isLoading: isFetching,
+    refetch,
+  } = trpc.exploreApi.getVideoFeed.useQuery({
     sessionHistory,
     categoryId: options.categoryId,
     limit: options.limit || 10,
@@ -125,14 +129,14 @@ export function useExploreVideoFeed(options: UseExploreVideoFeedOptions = {}) {
   const goToNext = useCallback(() => {
     if (currentIndex < videos.length - 1) {
       const currentVideo = videos[currentIndex];
-      
+
       // Record skip if video wasn't completed
       if (currentVideo) {
         recordEngagement(currentVideo.id, 'skip', false);
       }
 
-      setCurrentIndex((prev) => prev + 1);
-      setSessionHistory((prev) => [...prev, currentVideo.id]);
+      setCurrentIndex(prev => prev + 1);
+      setSessionHistory(prev => [...prev, currentVideo.id]);
       startWatchTime();
 
       // Preload more videos if near the end
@@ -145,7 +149,7 @@ export function useExploreVideoFeed(options: UseExploreVideoFeedOptions = {}) {
   // Navigate to previous video
   const goToPrevious = useCallback(() => {
     if (currentIndex > 0) {
-      setCurrentIndex((prev) => prev - 1);
+      setCurrentIndex(prev => prev - 1);
       startWatchTime();
     }
   }, [currentIndex, startWatchTime]);

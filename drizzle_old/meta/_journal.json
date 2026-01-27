@@ -1,0 +1,111 @@
+{
+  "version": "7",
+  "dialect": "mysql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "5",
+      "when": 1765981334730,
+      "tag": "0000_new_marvel_zombies",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "5",
+      "when": 1765981384064,
+      "tag": "0001_petite_tattoo",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1765984304502,
+      "tag": "0002_stormy_kate_bishop",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "5",
+      "when": 1765984662335,
+      "tag": "0003_slippery_marvel_zombies",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "5",
+      "when": 1766456785591,
+      "tag": "0004_abandoned_lady_bullseye",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "5",
+      "when": 1767100383215,
+      "tag": "0005_colorful_toxin",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "5",
+      "when": 1767192278671,
+      "tag": "0006_aspiring_shaman",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "5",
+      "when": 1767739800986,
+      "tag": "0007_parched_sister_grimm",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "5",
+      "when": 1767809001355,
+      "tag": "0008_add_wizard_fields",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "5",
+      "when": 1767960643072,
+      "tag": "0009_hesitant_rachel_grey",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "5",
+      "when": 1768214723705,
+      "tag": "0010_melodic_mordo",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "5",
+      "when": 1768321547185,
+      "tag": "0011_cold_bill_hollister",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "5",
+      "when": 1768426762936,
+      "tag": "0012_crazy_yellow_claw",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "5",
+      "when": 1768481720457,
+      "tag": "0013_fine_lily_hollister",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "5",
+      "when": 1768492059013,
+      "tag": "0014_lame_supreme_intelligence",
+      "breakpoints": true
+    }
+  ]
+}

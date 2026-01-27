@@ -29,10 +29,10 @@ const DEFAULT_CONFIG: SwipeConfig = {
 export function useSwipeGestures(
   elementRef: React.RefObject<HTMLElement>,
   callbacks: SwipeCallbacks,
-  config: Partial<SwipeConfig> = {}
+  config: Partial<SwipeConfig> = {},
 ) {
   const fullConfig = { ...DEFAULT_CONFIG, ...config };
-  
+
   const touchStartRef = useRef<{ x: number; y: number; time: number } | null>(null);
   const lastTapRef = useRef<number>(0);
   const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -66,7 +66,7 @@ export function useSwipeGestures(
         }
       }, fullConfig.longPressDelay);
     },
-    [callbacks, fullConfig.longPressDelay, clearLongPressTimer]
+    [callbacks, fullConfig.longPressDelay, clearLongPressTimer],
   );
 
   const handleTouchMove = useCallback(
@@ -85,7 +85,7 @@ export function useSwipeGestures(
         clearLongPressTimer();
       }
     },
-    [clearLongPressTimer]
+    [clearLongPressTimer],
   );
 
   const handleTouchEnd = useCallback(
@@ -153,7 +153,7 @@ export function useSwipeGestures(
       touchStartRef.current = null;
       isDraggingRef.current = false;
     },
-    [callbacks, fullConfig, elementRef, clearLongPressTimer]
+    [callbacks, fullConfig, elementRef, clearLongPressTimer],
   );
 
   useEffect(() => {

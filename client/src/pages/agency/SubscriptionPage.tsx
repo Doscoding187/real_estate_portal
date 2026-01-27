@@ -26,17 +26,23 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { 
-  CreditCard, 
-  CheckCircle, 
-  AlertCircle, 
-  Download, 
-  FileText, 
-  Upload, 
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  CreditCard,
+  CheckCircle,
+  AlertCircle,
+  Download,
+  FileText,
+  Upload,
   Calendar,
   Shield,
-  ArrowLeft
+  ArrowLeft,
 } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -46,7 +52,7 @@ export default function AgencySubscriptionPage() {
   const [activeTab, setActiveTab] = useState('overview');
   const [isUpgradeDialogOpen, setIsUpgradeDialogOpen] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<any>(null);
-  
+
   // Payment Proof Form State
   const [paymentAmount, setPaymentAmount] = useState('');
   const [paymentReference, setPaymentReference] = useState('');
@@ -55,12 +61,14 @@ export default function AgencySubscriptionPage() {
   const [isSubmittingProof, setIsSubmittingProof] = useState(false);
 
   // Queries
-  const { data: subscription, isLoading: isLoadingSub } = trpc.subscription.getCurrentSubscription.useQuery();
+  const { data: subscription, isLoading: isLoadingSub } =
+    trpc.subscription.getCurrentSubscription.useQuery();
   const { data: plans, isLoading: isLoadingPlans } = trpc.subscription.getAvailablePlans.useQuery();
-  const { data: invoicesData, isLoading: isLoadingInvoices } = trpc.subscription.getMyInvoices.useQuery({
-    page: 1,
-    limit: 10
-  });
+  const { data: invoicesData, isLoading: isLoadingInvoices } =
+    trpc.subscription.getMyInvoices.useQuery({
+      page: 1,
+      limit: 10,
+    });
   const { data: bankingDetails } = trpc.subscription.getBankingDetails.useQuery();
 
   // Mutations
@@ -72,10 +80,10 @@ export default function AgencySubscriptionPage() {
       setPaymentNotes('');
       setIsSubmittingProof(false);
     },
-    onError: (error) => {
+    onError: error => {
       toast.error(`Failed to submit proof: ${error.message}`);
       setIsSubmittingProof(false);
-    }
+    },
   });
 
   const upgradeMutation = trpc.subscription.upgradeSubscription.useMutation({
@@ -84,15 +92,15 @@ export default function AgencySubscriptionPage() {
       setIsUpgradeDialogOpen(false);
       window.location.reload(); // Refresh to show new status
     },
-    onError: (error) => {
+    onError: error => {
       toast.error(`Upgrade failed: ${error.message}`);
-    }
+    },
   });
 
   const handleSubmitProof = (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmittingProof(true);
-    
+
     submitProofMutation.mutate({
       amount: Math.round(parseFloat(paymentAmount) * 100), // Convert to cents
       paymentMethod: 'eft',
@@ -100,7 +108,7 @@ export default function AgencySubscriptionPage() {
       paymentDate: paymentDate,
       notes: paymentNotes,
       // In a real app, we would upload the file first and get a URL
-      proofOfPaymentUrl: 'https://example.com/mock-proof.pdf' 
+      proofOfPaymentUrl: 'https://example.com/mock-proof.pdf',
     });
   };
 
@@ -117,13 +125,29 @@ export default function AgencySubscriptionPage() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'active':
-        return <Badge className="bg-green-500/10 text-green-600 hover:bg-green-500/20 border-green-200">Active</Badge>;
+        return (
+          <Badge className="bg-green-500/10 text-green-600 hover:bg-green-500/20 border-green-200">
+            Active
+          </Badge>
+        );
       case 'trialing':
-        return <Badge className="bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 border-blue-200">Trial</Badge>;
+        return (
+          <Badge className="bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 border-blue-200">
+            Trial
+          </Badge>
+        );
       case 'past_due':
-        return <Badge className="bg-orange-500/10 text-orange-600 hover:bg-orange-500/20 border-orange-200">Past Due</Badge>;
+        return (
+          <Badge className="bg-orange-500/10 text-orange-600 hover:bg-orange-500/20 border-orange-200">
+            Past Due
+          </Badge>
+        );
       case 'canceled':
-        return <Badge className="bg-red-500/10 text-red-600 hover:bg-red-500/20 border-red-200">Canceled</Badge>;
+        return (
+          <Badge className="bg-red-500/10 text-red-600 hover:bg-red-500/20 border-red-200">
+            Canceled
+          </Badge>
+        );
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
@@ -143,7 +167,12 @@ export default function AgencySubscriptionPage() {
           </div>
         </div>
 
-        <Tabs defaultValue="overview" value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+        <Tabs
+          defaultValue="overview"
+          value={activeTab}
+          onValueChange={setActiveTab}
+          className="space-y-6"
+        >
           <TabsList className="bg-white p-1 rounded-xl border border-slate-200">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="plans">Available Plans</TabsTrigger>
@@ -166,8 +195,13 @@ export default function AgencySubscriptionPage() {
                     <div className="space-y-6">
                       <div className="flex justify-between items-start">
                         <div>
-                          <h3 className="text-2xl font-bold text-slate-900">{subscription.plan?.displayName}</h3>
-                          <p className="text-slate-500">{formatCurrency(subscription.plan?.price)} / {subscription.plan?.interval}</p>
+                          <h3 className="text-2xl font-bold text-slate-900">
+                            {subscription.plan?.displayName}
+                          </h3>
+                          <p className="text-slate-500">
+                            {formatCurrency(subscription.plan?.price)} /{' '}
+                            {subscription.plan?.interval}
+                          </p>
                         </div>
                         {getStatusBadge(subscription.status)}
                       </div>
@@ -176,13 +210,17 @@ export default function AgencySubscriptionPage() {
                         <div>
                           <p className="text-sm text-slate-500 mb-1">Start Date</p>
                           <p className="font-medium">
-                            {subscription.currentPeriodStart ? new Date(subscription.currentPeriodStart).toLocaleDateString() : '-'}
+                            {subscription.currentPeriodStart
+                              ? new Date(subscription.currentPeriodStart).toLocaleDateString()
+                              : '-'}
                           </p>
                         </div>
                         <div>
                           <p className="text-sm text-slate-500 mb-1">Renewal Date</p>
                           <p className="font-medium">
-                            {subscription.currentPeriodEnd ? new Date(subscription.currentPeriodEnd).toLocaleDateString() : '-'}
+                            {subscription.currentPeriodEnd
+                              ? new Date(subscription.currentPeriodEnd).toLocaleDateString()
+                              : '-'}
                           </p>
                         </div>
                       </div>
@@ -192,7 +230,8 @@ export default function AgencySubscriptionPage() {
                         <div>
                           <p className="text-sm font-medium text-blue-900">Pro Features Active</p>
                           <p className="text-xs text-blue-700 mt-1">
-                            You have access to all features included in the {subscription.plan?.displayName} plan.
+                            You have access to all features included in the{' '}
+                            {subscription.plan?.displayName} plan.
                           </p>
                         </div>
                       </div>
@@ -251,8 +290,11 @@ export default function AgencySubscriptionPage() {
               {isLoadingPlans ? (
                 <div className="col-span-3 text-center py-12 text-slate-500">Loading plans...</div>
               ) : (
-                plans?.map((plan) => (
-                  <Card key={plan.id} className={`relative overflow-hidden transition-all hover:shadow-lg ${subscription?.planId === plan.id ? 'border-blue-500 ring-1 ring-blue-500' : ''}`}>
+                plans?.map(plan => (
+                  <Card
+                    key={plan.id}
+                    className={`relative overflow-hidden transition-all hover:shadow-lg ${subscription?.planId === plan.id ? 'border-blue-500 ring-1 ring-blue-500' : ''}`}
+                  >
                     {plan.isPopular && (
                       <div className="absolute top-0 right-0 bg-blue-600 text-white text-xs px-3 py-1 rounded-bl-xl font-medium">
                         Most Popular
@@ -264,10 +306,12 @@ export default function AgencySubscriptionPage() {
                     </CardHeader>
                     <CardContent>
                       <div className="mb-6">
-                        <span className="text-3xl font-bold text-slate-900">{formatCurrency(plan.price)}</span>
+                        <span className="text-3xl font-bold text-slate-900">
+                          {formatCurrency(plan.price)}
+                        </span>
                         <span className="text-slate-500">/{plan.interval}</span>
                       </div>
-                      
+
                       <div className="space-y-3 mb-8">
                         {plan.features.map((feature: string, i: number) => (
                           <div key={i} className="flex items-start gap-2 text-sm text-slate-600">
@@ -277,9 +321,9 @@ export default function AgencySubscriptionPage() {
                         ))}
                       </div>
 
-                      <Button 
-                        className="w-full" 
-                        variant={subscription?.planId === plan.id ? "outline" : "default"}
+                      <Button
+                        className="w-full"
+                        variant={subscription?.planId === plan.id ? 'outline' : 'default'}
                         disabled={subscription?.planId === plan.id}
                         onClick={() => handleUpgrade(plan)}
                       >
@@ -314,19 +358,28 @@ export default function AgencySubscriptionPage() {
                     <TableBody>
                       {isLoadingInvoices ? (
                         <TableRow>
-                          <TableCell colSpan={4} className="text-center py-8 text-slate-500">Loading invoices...</TableCell>
+                          <TableCell colSpan={4} className="text-center py-8 text-slate-500">
+                            Loading invoices...
+                          </TableCell>
                         </TableRow>
                       ) : invoicesData?.invoices.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={4} className="text-center py-8 text-slate-500">No invoices found.</TableCell>
+                          <TableCell colSpan={4} className="text-center py-8 text-slate-500">
+                            No invoices found.
+                          </TableCell>
                         </TableRow>
                       ) : (
-                        invoicesData?.invoices.map((invoice) => (
+                        invoicesData?.invoices.map(invoice => (
                           <TableRow key={invoice.id}>
-                            <TableCell>{new Date(invoice.createdAt).toLocaleDateString()}</TableCell>
+                            <TableCell>
+                              {new Date(invoice.createdAt).toLocaleDateString()}
+                            </TableCell>
                             <TableCell>{formatCurrency(invoice.amount)}</TableCell>
                             <TableCell>
-                              <Badge variant={invoice.status === 'paid' ? 'default' : 'secondary'} className="capitalize">
+                              <Badge
+                                variant={invoice.status === 'paid' ? 'default' : 'secondary'}
+                                className="capitalize"
+                              >
                                 {invoice.status}
                               </Badge>
                             </TableCell>
@@ -371,7 +424,8 @@ export default function AgencySubscriptionPage() {
                     <div className="flex justify-between py-2">
                       <span className="text-slate-500">Reference</span>
                       <span className="font-medium bg-yellow-100 px-2 py-0.5 rounded text-yellow-800">
-                        {bankingDetails?.referencePrefix}{subscription?.agencyId || '...'}
+                        {bankingDetails?.referencePrefix}
+                        {subscription?.agencyId || '...'}
                       </span>
                     </div>
                   </CardContent>
@@ -386,33 +440,33 @@ export default function AgencySubscriptionPage() {
                     <form onSubmit={handleSubmitProof} className="space-y-4">
                       <div className="space-y-2">
                         <Label htmlFor="amount">Amount Paid (R)</Label>
-                        <Input 
-                          id="amount" 
-                          type="number" 
-                          placeholder="0.00" 
+                        <Input
+                          id="amount"
+                          type="number"
+                          placeholder="0.00"
                           step="0.01"
                           value={paymentAmount}
-                          onChange={(e) => setPaymentAmount(e.target.value)}
+                          onChange={e => setPaymentAmount(e.target.value)}
                           required
                         />
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="reference">Reference Used</Label>
-                        <Input 
-                          id="reference" 
-                          placeholder="e.g. SUB-123" 
+                        <Input
+                          id="reference"
+                          placeholder="e.g. SUB-123"
                           value={paymentReference}
-                          onChange={(e) => setPaymentReference(e.target.value)}
+                          onChange={e => setPaymentReference(e.target.value)}
                           required
                         />
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="date">Payment Date</Label>
-                        <Input 
-                          id="date" 
+                        <Input
+                          id="date"
                           type="date"
                           value={paymentDate}
-                          onChange={(e) => setPaymentDate(e.target.value)}
+                          onChange={e => setPaymentDate(e.target.value)}
                           required
                         />
                       </div>
@@ -440,19 +494,23 @@ export default function AgencySubscriptionPage() {
             <DialogHeader>
               <DialogTitle>Confirm Plan Change</DialogTitle>
               <DialogDescription>
-                Are you sure you want to switch to the <strong>{selectedPlan?.displayName}</strong> plan?
+                Are you sure you want to switch to the <strong>{selectedPlan?.displayName}</strong>{' '}
+                plan?
               </DialogDescription>
             </DialogHeader>
             <div className="py-4">
               <div className="bg-blue-50 p-4 rounded-lg flex gap-3 text-sm text-blue-700">
                 <AlertCircle className="w-5 h-5 shrink-0" />
                 <p>
-                  Your new billing cycle will start immediately. A pro-rated invoice will be generated for the remainder of the current period.
+                  Your new billing cycle will start immediately. A pro-rated invoice will be
+                  generated for the remainder of the current period.
                 </p>
               </div>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setIsUpgradeDialogOpen(false)}>Cancel</Button>
+              <Button variant="outline" onClick={() => setIsUpgradeDialogOpen(false)}>
+                Cancel
+              </Button>
               <Button onClick={confirmUpgrade}>Confirm & Upgrade</Button>
             </DialogFooter>
           </DialogContent>

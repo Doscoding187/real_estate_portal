@@ -83,7 +83,7 @@ const Step4Budget: React.FC<Step4Props> = ({ data, updateData, onNext, onBack, c
           </Label>
           <RadioGroup
             value={budget.budgetType}
-            onValueChange={(value) => setBudget({ ...budget, budgetType: value })}
+            onValueChange={value => setBudget({ ...budget, budgetType: value })}
           >
             <div className="grid grid-cols-2 gap-4">
               <label
@@ -128,7 +128,7 @@ const Step4Budget: React.FC<Step4Props> = ({ data, updateData, onNext, onBack, c
             type="number"
             placeholder="e.g. 5000"
             value={budget.budgetAmount}
-            onChange={(e) => setBudget({ ...budget, budgetAmount: e.target.value })}
+            onChange={e => setBudget({ ...budget, budgetAmount: e.target.value })}
           />
         </div>
 
@@ -140,7 +140,7 @@ const Step4Budget: React.FC<Step4Props> = ({ data, updateData, onNext, onBack, c
           </Label>
           <Select
             value={budget.billingMethod}
-            onValueChange={(value) => setBudget({ ...budget, billingMethod: value })}
+            onValueChange={value => setBudget({ ...budget, billingMethod: value })}
           >
             <SelectTrigger>
               <SelectValue />
@@ -175,7 +175,7 @@ const Step4Budget: React.FC<Step4Props> = ({ data, updateData, onNext, onBack, c
                   <Calendar
                     mode="single"
                     selected={budget.startDate}
-                    onSelect={(date) => setBudget({ ...budget, startDate: date || new Date() })}
+                    onSelect={date => setBudget({ ...budget, startDate: date || new Date() })}
                     initialFocus
                   />
                 </PopoverContent>
@@ -195,7 +195,7 @@ const Step4Budget: React.FC<Step4Props> = ({ data, updateData, onNext, onBack, c
                   <Calendar
                     mode="single"
                     selected={budget.endDate}
-                    onSelect={(date) => setBudget({ ...budget, endDate: date })}
+                    onSelect={date => setBudget({ ...budget, endDate: date })}
                     initialFocus
                   />
                 </PopoverContent>

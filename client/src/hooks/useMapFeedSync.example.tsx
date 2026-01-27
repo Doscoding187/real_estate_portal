@@ -1,9 +1,9 @@
 /**
  * Example usage of useMapFeedSync hook
- * 
+ *
  * This file demonstrates how to integrate the useMapFeedSync hook
  * with Google Maps and a property feed.
- * 
+ *
  * NOTE: This is an example file for documentation purposes.
  * It may not compile without additional setup.
  */
@@ -43,10 +43,10 @@ export function MapFeedExample() {
     registerPropertyRef,
     fitBoundsToProperties,
   } = useMapFeedSync({
-    onBoundsChange: (bounds) => {
+    onBoundsChange: bounds => {
       console.log('Fetching properties for bounds:', bounds);
     },
-    onPropertySelect: (propertyId) => {
+    onPropertySelect: propertyId => {
       console.log('Property selected:', propertyId);
     },
   });
@@ -56,14 +56,14 @@ export function MapFeedExample() {
     queryKey: ['properties', mapBounds],
     queryFn: async () => {
       if (!mapBounds) return [];
-      
+
       // Simulate API call
       const response = await fetch('/api/properties', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ bounds: mapBounds }),
       });
-      
+
       return response.json();
     },
     enabled: !!mapBounds,
@@ -74,7 +74,7 @@ export function MapFeedExample() {
   React.useEffect(() => {
     if (properties.length > 0) {
       fitBoundsToProperties(
-        properties.map((p: Property) => ({ lat: p.latitude, lng: p.longitude }))
+        properties.map((p: Property) => ({ lat: p.latitude, lng: p.longitude })),
       );
     }
   }, [properties, fitBoundsToProperties]);
@@ -96,7 +96,7 @@ export function MapFeedExample() {
               if (bounds) {
                 const ne = bounds.getNorthEast();
                 const sw = bounds.getSouthWest();
-                
+
                 handleMapPan({
                   north: ne.lat(),
                   south: sw.lat(),
@@ -114,7 +114,7 @@ export function MapFeedExample() {
               if (bounds) {
                 const ne = bounds.getNorthEast();
                 const sw = bounds.getSouthWest();
-                
+
                 handleMapPan({
                   north: ne.lat(),
                   south: sw.lat(),
@@ -125,7 +125,7 @@ export function MapFeedExample() {
             }
           }}
         >
-          {properties.map((property) => (
+          {properties.map(property => (
             <Marker
               key={property.id}
               position={{ lat: property.latitude, lng: property.longitude }}
@@ -133,7 +133,9 @@ export function MapFeedExample() {
               icon={
                 selectedPropertyId === property.id || hoveredPropertyId === property.id
                   ? {
-                      url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
+                      url:
+                        'data:image/svg+xml;charset=UTF-8,' +
+                        encodeURIComponent(`
                         <svg width="40" height="40" xmlns="http://www.w3.org/2000/svg">
                           <circle cx="20" cy="20" r="18" fill="#2563eb" stroke="white" stroke-width="3"/>
                         </svg>
@@ -156,18 +158,13 @@ export function MapFeedExample() {
       </div>
 
       {/* Feed View */}
-      <div
-        ref={feedScrollRef}
-        className="w-1/2 overflow-y-auto bg-gray-50 p-4 space-y-4"
-      >
+      <div ref={feedScrollRef} className="w-1/2 overflow-y-auto bg-gray-50 p-4 space-y-4">
         {properties.map((property: Property) => (
           <div
             key={property.id}
-            ref={(el) => registerPropertyRef(property.id, el)}
+            ref={el => registerPropertyRef(property.id, el)}
             className={`transition-all ${
-              selectedPropertyId === property.id
-                ? 'ring-2 ring-blue-500 rounded-2xl'
-                : ''
+              selectedPropertyId === property.id ? 'ring-2 ring-blue-500 rounded-2xl' : ''
             }`}
             onMouseEnter={() => handlePropertyHover(property.id)}
             onMouseLeave={() => handlePropertyHover(null)}
@@ -178,11 +175,7 @@ export function MapFeedExample() {
               })
             }
           >
-            <PropertyCard 
-              property={property as any} 
-              onClick={() => {}}
-              onSave={() => {}}
-            />
+            <PropertyCard property={property as any} onClick={() => {}} onSave={() => {}} />
           </div>
         ))}
 
@@ -201,8 +194,8 @@ export function MapFeedExample() {
  */
 export function MapFeedWithCustomDelays() {
   const sync = useMapFeedSync({
-    throttleDelay: 200,  // Faster throttle for more responsive UI
-    debounceDelay: 500,  // Longer debounce to reduce API calls
+    throttleDelay: 200, // Faster throttle for more responsive UI
+    debounceDelay: 500, // Longer debounce to reduce API calls
     initialCenter: { lat: -33.9249, lng: 18.4241 }, // Cape Town
   });
 
@@ -215,13 +208,13 @@ export function MapFeedWithCustomDelays() {
 export function MapFeedWithAnalytics() {
   // Assume analytics is available globally or imported
   const analytics = (window as any).analytics || { track: () => {} };
-  
+
   const sync = useMapFeedSync({
-    onBoundsChange: (bounds) => {
+    onBoundsChange: bounds => {
       // Track map movement
       analytics.track('map_bounds_changed', { bounds });
     },
-    onPropertySelect: (propertyId) => {
+    onPropertySelect: propertyId => {
       // Track property views
       analytics.track('property_viewed', { propertyId });
     },
@@ -235,7 +228,7 @@ export function MapFeedWithAnalytics() {
  */
 export function MapFeedWithSearchButton() {
   const queryClient = useQueryClient();
-  
+
   const {
     mapBounds,
     handleMapPan,
@@ -252,9 +245,7 @@ export function MapFeedWithSearchButton() {
   return (
     <div className="relative">
       {/* Map */}
-      <GoogleMap>
-        {/* ... markers */}
-      </GoogleMap>
+      <GoogleMap>{/* ... markers */}</GoogleMap>
 
       {/* Search in area button */}
       <button

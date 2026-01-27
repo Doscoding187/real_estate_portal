@@ -43,7 +43,7 @@ export function PropertyOverlay({
           role="button"
           aria-label={isExpanded ? 'Collapse details' : 'Expand details'}
           tabIndex={0}
-          onKeyDown={(e) => {
+          onKeyDown={e => {
             if (e.key === 'Enter' || e.key === ' ') {
               e.preventDefault();
               onToggleExpand();
@@ -56,13 +56,9 @@ export function PropertyOverlay({
         {/* Collapsed Content */}
         {!isExpanded && (
           <div className="px-6 pb-6">
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">
-              {property.title}
-            </h2>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">{property.title}</h2>
             {property.caption && (
-              <p className="text-gray-600 text-sm line-clamp-2 mb-4">
-                {property.caption}
-              </p>
+              <p className="text-gray-600 text-sm line-clamp-2 mb-4">{property.caption}</p>
             )}
 
             {/* CTA Buttons */}
@@ -97,18 +93,14 @@ export function PropertyOverlay({
           <div className="px-6 pb-6 h-full overflow-y-auto">
             {/* Header */}
             <div className="mb-6">
-              <h2 className="text-3xl font-bold text-gray-900 mb-2">
-                {property.title}
-              </h2>
+              <h2 className="text-3xl font-bold text-gray-900 mb-2">{property.title}</h2>
               {property.property?.price && (
                 <div className="text-2xl font-bold text-blue-600 mb-3">
                   R{property.property.price.toLocaleString()}
                 </div>
               )}
               {property.caption && (
-                <p className="text-gray-600 text-base leading-relaxed">
-                  {property.caption}
-                </p>
+                <p className="text-gray-600 text-base leading-relaxed">{property.caption}</p>
               )}
             </div>
 
@@ -123,7 +115,8 @@ export function PropertyOverlay({
                   <p className="text-gray-900 text-lg">
                     {property.property.location.suburb && `${property.property.location.suburb}, `}
                     {property.property.location.city}
-                    {property.property.location.province && `, ${property.property.location.province}`}
+                    {property.property.location.province &&
+                      `, ${property.property.location.province}`}
                   </p>
                 </div>
               )}
@@ -170,7 +163,7 @@ export function PropertyOverlay({
                     Highlights
                   </h3>
                   <div className="flex flex-wrap gap-2">
-                    {property.highlightTags.map((tag) => (
+                    {property.highlightTags.map(tag => (
                       <span
                         key={tag.id}
                         className="px-4 py-2 bg-blue-50 text-blue-700 rounded-lg text-sm font-medium"
@@ -207,9 +200,7 @@ export function PropertyOverlay({
                       </div>
                       <div className="text-sm text-gray-600">Property Agent</div>
                       {property.agent.phone && (
-                        <div className="text-sm text-gray-500 mt-1">
-                          {property.agent.phone}
-                        </div>
+                        <div className="text-sm text-gray-500 mt-1">{property.agent.phone}</div>
                       )}
                     </div>
                   </div>

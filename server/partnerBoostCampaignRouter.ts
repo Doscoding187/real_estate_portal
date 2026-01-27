@@ -1,7 +1,7 @@
 /**
  * Partner Boost Campaign Router
  * API endpoints for managing partner boost campaigns
- * 
+ *
  * Requirements:
  * - 8.1: Require topic selection for targeting
  * - 8.2: Display "Sponsored" label on boosted content
@@ -22,7 +22,8 @@ const router = Router();
  */
 router.post('/', async (req, res) => {
   try {
-    const { partnerId, contentId, topicId, budget, startDate, endDate, costPerImpression } = req.body;
+    const { partnerId, contentId, topicId, budget, startDate, endDate, costPerImpression } =
+      req.body;
 
     // Validate required fields
     if (!partnerId || !contentId || !topicId || !budget || !startDate) {

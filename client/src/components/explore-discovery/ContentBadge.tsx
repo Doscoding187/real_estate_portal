@@ -21,42 +21,45 @@ export interface ContentBadgeProps {
  * Badge Configuration
  * Requirement 4.2, 4.3, 4.4, 4.5, 4.6: Define icons, colors, labels for each badge type
  */
-const BADGE_CONFIG: Record<BadgeType, { icon: string; color: string; label: string; bgColor: string; textColor: string }> = {
+const BADGE_CONFIG: Record<
+  BadgeType,
+  { icon: string; color: string; label: string; bgColor: string; textColor: string }
+> = {
   property: {
     icon: '🏠',
     color: 'primary',
     label: 'Property',
     bgColor: 'bg-primary',
-    textColor: 'text-primary-foreground'
+    textColor: 'text-primary-foreground',
   },
   expert_tip: {
     icon: '💡',
     color: 'amber',
     label: 'Expert Tip',
     bgColor: 'bg-amber-500',
-    textColor: 'text-white'
+    textColor: 'text-white',
   },
   service: {
     icon: '🛠️',
     color: 'blue',
     label: 'Service',
     bgColor: 'bg-blue-500',
-    textColor: 'text-white'
+    textColor: 'text-white',
   },
   finance: {
     icon: '💰',
     color: 'green',
     label: 'Finance',
     bgColor: 'bg-green-500',
-    textColor: 'text-white'
+    textColor: 'text-white',
   },
   design: {
     icon: '📐',
     color: 'purple',
     label: 'Design',
     bgColor: 'bg-purple-500',
-    textColor: 'text-white'
-  }
+    textColor: 'text-white',
+  },
 };
 
 /**
@@ -66,26 +69,26 @@ const SIZE_CONFIG = {
   sm: {
     container: 'px-1.5 py-0.5 text-[10px] gap-0.5',
     icon: 'text-xs',
-    rounded: 'rounded'
+    rounded: 'rounded',
   },
   md: {
     container: 'px-2 py-1 text-xs gap-1',
     icon: 'text-sm',
-    rounded: 'rounded-md'
+    rounded: 'rounded-md',
   },
   lg: {
     container: 'px-2.5 py-1.5 text-sm gap-1.5',
     icon: 'text-base',
-    rounded: 'rounded-lg'
-  }
+    rounded: 'rounded-lg',
+  },
 };
 
 /**
  * Content Badge Component
- * 
+ *
  * Displays a badge in the top-left corner of content cards/videos
  * to indicate content type (Property, Expert Tip, Service, Finance, Design)
- * 
+ *
  * Requirements:
  * - 4.1: Display badge on all content cards and videos
  * - 4.2: Property badge (🏠, primary color)
@@ -94,7 +97,7 @@ const SIZE_CONFIG = {
  * - 4.5: Finance badge (💰, green)
  * - 4.6: Design badge (📐, purple)
  * - 4.7: Display primary category badge only for multi-category content
- * 
+ *
  * @example
  * ```tsx
  * <ContentBadge type="property" />
@@ -106,7 +109,7 @@ export const ContentBadge: React.FC<ContentBadgeProps> = ({
   type,
   className,
   size = 'md',
-  showLabel = false
+  showLabel = false,
 }) => {
   const config = BADGE_CONFIG[type];
   const sizeConfig = SIZE_CONFIG[size];
@@ -130,7 +133,7 @@ export const ContentBadge: React.FC<ContentBadgeProps> = ({
         config.bgColor,
         config.textColor,
         // Custom className
-        className
+        className,
       )}
       role="img"
       aria-label={`${config.label} content`}
@@ -140,9 +143,7 @@ export const ContentBadge: React.FC<ContentBadgeProps> = ({
         {config.icon}
       </span>
       {showLabel && (
-        <span className="font-semibold leading-none whitespace-nowrap">
-          {config.label}
-        </span>
+        <span className="font-semibold leading-none whitespace-nowrap">{config.label}</span>
       )}
     </div>
   );
@@ -150,12 +151,12 @@ export const ContentBadge: React.FC<ContentBadgeProps> = ({
 
 /**
  * Content Badge Overlay Component
- * 
+ *
  * Positions the badge in the top-left corner of a container
  * Typically used on video cards and content cards
- * 
+ *
  * Requirement 4.1: Render badge in top-left corner
- * 
+ *
  * @example
  * ```tsx
  * <div className="relative">
@@ -164,7 +165,7 @@ export const ContentBadge: React.FC<ContentBadgeProps> = ({
  * </div>
  * ```
  */
-export const ContentBadgeOverlay: React.FC<ContentBadgeProps> = (props) => {
+export const ContentBadgeOverlay: React.FC<ContentBadgeProps> = props => {
   return (
     <div className="absolute top-2 left-2 z-10">
       <ContentBadge {...props} />

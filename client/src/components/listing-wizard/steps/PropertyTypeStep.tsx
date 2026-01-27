@@ -91,9 +91,7 @@ const PropertyTypeStep: React.FC = () => {
                     const IconComponent = ICON_MAP[template.icon];
                     return IconComponent ? (
                       <IconComponent
-                        className={`w-8 h-8 ${
-                          isSelected ? 'text-blue-600' : 'text-gray-600'
-                        }`}
+                        className={`w-8 h-8 ${isSelected ? 'text-blue-600' : 'text-gray-600'}`}
                       />
                     ) : null;
                   })()}
@@ -119,10 +117,7 @@ const PropertyTypeStep: React.FC = () => {
       {/* Validation Error */}
       {propertyTypeValidation.error && (
         <div className="mt-6">
-          <InlineError
-            error={propertyTypeValidation.error}
-            show={!!propertyTypeValidation.error}
-          />
+          <InlineError error={propertyTypeValidation.error} show={!!propertyTypeValidation.error} />
         </div>
       )}
 

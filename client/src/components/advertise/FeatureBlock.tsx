@@ -1,9 +1,9 @@
 /**
  * FeatureBlock Component
- * 
+ *
  * Displays a value proposition feature with soft-UI icon, headline, and description.
  * Includes scroll-triggered fade-up animation and icon pulse on hover.
- * 
+ *
  * Requirements: 3.2, 3.3, 11.1
  */
 
@@ -19,22 +19,22 @@ export interface FeatureBlockProps {
    * Icon component from lucide-react
    */
   icon: LucideIcon;
-  
+
   /**
    * Feature headline
    */
   headline: string;
-  
+
   /**
    * Feature description text
    */
   description: string;
-  
+
   /**
    * Index for staggered animation timing
    */
   index: number;
-  
+
   /**
    * Optional additional CSS classes
    */
@@ -59,7 +59,7 @@ export const FeatureBlock: React.FC<FeatureBlockProps> = ({
       className={`feature-block ${className}`}
       variants={fadeUp}
       initial="initial"
-      animate={isVisible ? "animate" : "initial"}
+      animate={isVisible ? 'animate' : 'initial'}
       transition={{
         duration: 0.4,
         delay: index * 0.1, // Staggered animation
@@ -115,9 +115,7 @@ export const FeatureBlock: React.FC<FeatureBlockProps> = ({
         </h3>
 
         {/* Description */}
-        <p className="text-base text-gray-600 leading-relaxed">
-          {description}
-        </p>
+        <p className="text-base text-gray-600 leading-relaxed">{description}</p>
       </div>
     </motion.div>
   );

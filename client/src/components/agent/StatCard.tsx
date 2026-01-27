@@ -15,14 +15,18 @@ interface StatCardProps {
 
 export function StatCard({ title, value, icon: Icon, trend, className }: StatCardProps) {
   return (
-    <Card className={cn(
-      'bg-white/60 backdrop-blur-xl border-white/20 shadow-sm hover:shadow-lg transition-all duration-300 rounded-2xl group',
-      className
-    )}>
+    <Card
+      className={cn(
+        'bg-white/60 backdrop-blur-xl border-white/20 shadow-sm hover:shadow-lg transition-all duration-300 rounded-2xl group',
+        className,
+      )}
+    >
       <CardContent className="p-6">
         <div className="flex items-center justify-between">
           <div className="flex-1">
-            <p className="text-sm font-medium text-slate-500 mb-1 group-hover:text-emerald-600 transition-colors">{title}</p>
+            <p className="text-sm font-medium text-slate-500 mb-1 group-hover:text-emerald-600 transition-colors">
+              {title}
+            </p>
             <p className="text-3xl font-bold text-slate-800 tracking-tight">{value}</p>
             {trend && (
               <p

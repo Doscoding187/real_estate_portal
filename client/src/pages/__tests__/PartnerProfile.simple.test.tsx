@@ -14,12 +14,12 @@ vi.mock('wouter', () => ({
 }));
 
 // Mock fetch to prevent network calls
-global.fetch = vi.fn(() => 
+global.fetch = vi.fn(() =>
   Promise.resolve({
     ok: false,
     status: 404,
-    json: () => Promise.resolve({})
-  })
+    json: () => Promise.resolve({}),
+  }),
 ) as any;
 
 describe('PartnerProfile - Smoke Test', () => {
@@ -35,7 +35,7 @@ describe('PartnerProfile - Smoke Test', () => {
     const { container } = render(
       <QueryClientProvider client={queryClient}>
         <PartnerProfile />
-      </QueryClientProvider>
+      </QueryClientProvider>,
     );
 
     expect(container).toBeTruthy();

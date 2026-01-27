@@ -142,7 +142,8 @@ export default function AgentTraining() {
     },
     {
       title: 'Digital Marketing for Agents',
-      description: 'Learn how to market properties effectively using social media and online platforms',
+      description:
+        'Learn how to market properties effectively using social media and online platforms',
       duration: '6h 15m',
       progress: 45,
       status: 'in-progress' as const,
@@ -180,9 +181,7 @@ export default function AgentTraining() {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-2xl font-bold text-gray-900">Training & Development</h1>
-              <p className="text-sm text-gray-500 mt-1">
-                Enhance your skills and grow your career
-              </p>
+              <p className="text-sm text-gray-500 mt-1">Enhance your skills and grow your career</p>
             </div>
             <Button variant="outline">
               <Award className="h-4 w-4 mr-2" />

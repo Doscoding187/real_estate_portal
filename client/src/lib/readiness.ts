@@ -1,4 +1,3 @@
-
 export type ReadinessResult = {
   score: number;
   missing: Record<string, string[]>;
@@ -24,7 +23,10 @@ export const calculateListingReadiness = (listing: any): ReadinessResult => {
   }
 
   // 2. Pricing (20%)
-  if ((listing.askingPrice && Number(listing.askingPrice) > 0) || (listing.monthlyRent && Number(listing.monthlyRent) > 0)) {
+  if (
+    (listing.askingPrice && Number(listing.askingPrice) > 0) ||
+    (listing.monthlyRent && Number(listing.monthlyRent) > 0)
+  ) {
     score += 20;
   } else {
     missing.pricing.push('Price');
@@ -33,10 +35,10 @@ export const calculateListingReadiness = (listing: any): ReadinessResult => {
   // 3. Media (25%)
   let imageCount = 0;
   if (Array.isArray(listing.images)) {
-      imageCount = listing.images.length;
+    imageCount = listing.images.length;
   } else if (Array.isArray(listing.media)) {
-      // Handle the shape returned by getById (media array of objects)
-      imageCount = listing.media.length;
+    // Handle the shape returned by getById (media array of objects)
+    imageCount = listing.media.length;
   }
 
   if (imageCount >= 5) {
@@ -49,31 +51,38 @@ export const calculateListingReadiness = (listing: any): ReadinessResult => {
   if (listing.description && listing.description.length >= 100) {
     score += 15;
   } else {
-     if (!listing.description) missing.description.push('Description');
-     else if (listing.description.length < 100) missing.description.push('Description too short (<100 chars)');
+    if (!listing.description) missing.description.push('Description');
+    else if (listing.description.length < 100)
+      missing.description.push('Description too short (<100 chars)');
   }
 
   // 5. Specs (20%)
   if (listing.propertyType) {
-      let details: any = listing.propertyDetails || {};
-      if (typeof details === 'string') {
-           try { details = JSON.parse(details); } catch(e) {}
-      }
-      
-      if (details.bedrooms || listing.propertyType === 'land' || listing.propertyType === 'commercial') {
-           score += 20;
-      } else {
-          missing.specs.push('Bedrooms');
-      }
+    let details: any = listing.propertyDetails || {};
+    if (typeof details === 'string') {
+      try {
+        details = JSON.parse(details);
+      } catch (e) {}
+    }
+
+    if (
+      details.bedrooms ||
+      listing.propertyType === 'land' ||
+      listing.propertyType === 'commercial'
+    ) {
+      score += 20;
+    } else {
+      missing.specs.push('Bedrooms');
+    }
   } else {
-      missing.specs.push('Property Type');
+    missing.specs.push('Property Type');
   }
 
   return { score, missing };
 };
 
 export const calculateDevelopmentReadiness = (dev: any): ReadinessResult => {
-   const missing: Record<string, string[]> = {
+  const missing: Record<string, string[]> = {
     basic: [],
     location: [],
     media: [],
@@ -84,14 +93,15 @@ export const calculateDevelopmentReadiness = (dev: any): ReadinessResult => {
 
   // 1. Basic Info (20%)
   if (dev.name && dev.description && dev.description.length > 50) {
-      score += 20;
+    score += 20;
   } else {
-      if (!dev.name) missing.basic.push('Name');
-      if (!dev.description || dev.description.length <= 50) missing.basic.push('Description (min 50 chars)');
+    if (!dev.name) missing.basic.push('Name');
+    if (!dev.description || dev.description.length <= 50)
+      missing.basic.push('Description (min 50 chars)');
   }
 
   // 2. Location (20%)
-   if (dev.address && dev.latitude && dev.longitude) {
+  if (dev.address && dev.latitude && dev.longitude) {
     score += 20;
   } else {
     if (!dev.address) missing.location.push('Address');
@@ -100,43 +110,43 @@ export const calculateDevelopmentReadiness = (dev: any): ReadinessResult => {
 
   // 3. Media (20%)
   let imageCount = 0;
-   if (Array.isArray(dev.images)) {
-      imageCount = dev.images.length;
+  if (Array.isArray(dev.images)) {
+    imageCount = dev.images.length;
   } else if (typeof dev.images === 'string') {
-      try {
-          const parsed = JSON.parse(dev.images);
-          if (Array.isArray(parsed)) imageCount = parsed.length;
-      } catch (e) {}
+    try {
+      const parsed = JSON.parse(dev.images);
+      if (Array.isArray(parsed)) imageCount = parsed.length;
+    } catch (e) {}
   }
 
   if (imageCount >= 1) {
-       score += 20;
+    score += 20;
   } else {
-      missing.media.push('Main Image');
+    missing.media.push('Main Image');
   }
 
   // 4. Amenities (20%) - NEW: Require at least 3 amenities
   let amenityCount = 0;
   if (Array.isArray(dev.amenities)) {
-      amenityCount = dev.amenities.length;
+    amenityCount = dev.amenities.length;
   } else if (typeof dev.amenities === 'string') {
-      try {
-          const parsed = JSON.parse(dev.amenities);
-          if (Array.isArray(parsed)) amenityCount = parsed.length;
-      } catch (e) {}
+    try {
+      const parsed = JSON.parse(dev.amenities);
+      if (Array.isArray(parsed)) amenityCount = parsed.length;
+    } catch (e) {}
   }
 
   if (amenityCount >= 3) {
-      score += 20;
+    score += 20;
   } else {
-      missing.amenities.push(`Select at least 3 amenities (Current: ${amenityCount})`);
+    missing.amenities.push(`Select at least 3 amenities (Current: ${amenityCount})`);
   }
 
   // 5. Units/Specs (20%)
   if (dev.priceFrom && Number(dev.priceFrom) > 0) {
-      score += 20;
+    score += 20;
   } else {
-      missing.specs.push('Price From (Units)');
+    missing.specs.push('Price From (Units)');
   }
 
   return { score, missing };

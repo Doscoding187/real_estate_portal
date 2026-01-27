@@ -2,7 +2,7 @@
  * NavigationButtons Component
  * Navigation controls for wizard with gradient buttons
  * Part of the Soft UI design system
- * 
+ *
  * Requirements: 5.1, 5.2, 5.3, 5.4, 5.5
  */
 
@@ -58,10 +58,7 @@ export interface NavigationButtonsProps {
   className?: string;
 }
 
-export const NavigationButtons = React.forwardRef<
-  HTMLDivElement,
-  NavigationButtonsProps
->(
+export const NavigationButtons = React.forwardRef<HTMLDivElement, NavigationButtonsProps>(
   (
     {
       showBack = true,
@@ -76,7 +73,7 @@ export const NavigationButtons = React.forwardRef<
       backLabel,
       className,
     },
-    ref
+    ref,
   ) => {
     const getNextLabel = () => {
       if (nextLabel) return nextLabel;
@@ -97,7 +94,7 @@ export const NavigationButtons = React.forwardRef<
           'px-6 py-6 md:px-8',
           'border-t border-gray-200',
           'bg-gray-50/50',
-          className
+          className,
         )}
       >
         {/* Back Button */}
@@ -132,7 +129,7 @@ export const NavigationButtons = React.forwardRef<
         )}
       </div>
     );
-  }
+  },
 );
 
 NavigationButtons.displayName = 'NavigationButtons';

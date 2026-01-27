@@ -2,7 +2,7 @@
  * Image Preloading Hook
  * Task 16: Add image preloading
  * Requirements: 6.4
- * 
+ *
  * Preloads images for next 5 items in feed to improve perceived performance.
  * Integrates with ProgressiveImage component for seamless loading experience.
  */
@@ -15,24 +15,24 @@ interface PreloadOptions {
    * @default 5
    */
   preloadCount?: number;
-  
+
   /**
    * Priority for preloading (higher = more important)
    * @default 'low'
    */
   priority?: 'high' | 'low';
-  
+
   /**
    * Whether to preload on slow connections
    * @default false
    */
   preloadOnSlowConnection?: boolean;
-  
+
   /**
    * Callback when an image is successfully preloaded
    */
   onImageLoaded?: (url: string) => void;
-  
+
   /**
    * Callback when an image fails to preload
    */
@@ -47,11 +47,11 @@ interface PreloadState {
 
 /**
  * Hook to preload images for upcoming feed items
- * 
+ *
  * @param urls - Array of image URLs to preload
  * @param options - Preload configuration options
  * @returns Object containing loaded, failed, and loading image sets
- * 
+ *
  * @example
  * ```tsx
  * const { loadedImages, isImageLoaded } = useImagePreload(imageUrls, {
@@ -62,7 +62,7 @@ interface PreloadState {
  */
 export function useImagePreload(
   urls: string[],
-  options: PreloadOptions = {}
+  options: PreloadOptions = {},
 ): PreloadState & {
   isImageLoaded: (url: string) => boolean;
   isImageLoading: (url: string) => boolean;
@@ -91,7 +91,7 @@ export function useImagePreload(
    */
   const isSlowConnection = useCallback((): boolean => {
     if (!('connection' in navigator)) return false;
-    
+
     const connection = (navigator as any).connection;
     if (!connection) return false;
 
@@ -128,14 +128,14 @@ export function useImagePreload(
         }
 
         // Mark as loading
-        setState((prev) => ({
+        setState(prev => ({
           ...prev,
           loadingImages: new Set(prev.loadingImages).add(url),
         }));
 
         // Create image element
         const img = new Image();
-        
+
         // Set priority hint if supported
         if ('fetchPriority' in img) {
           (img as any).fetchPriority = priority;
@@ -146,10 +146,10 @@ export function useImagePreload(
         abortControllersRef.current.set(url, abortController);
 
         img.onload = () => {
-          setState((prev) => {
+          setState(prev => {
             const newLoadingImages = new Set(prev.loadingImages);
             newLoadingImages.delete(url);
-            
+
             return {
               ...prev,
               loadedImages: new Set(prev.loadedImages).add(url),
@@ -163,13 +163,13 @@ export function useImagePreload(
           resolve();
         };
 
-        img.onerror = (event) => {
+        img.onerror = event => {
           const error = new Error(`Failed to preload image: ${url}`);
-          
-          setState((prev) => {
+
+          setState(prev => {
             const newLoadingImages = new Set(prev.loadingImages);
             newLoadingImages.delete(url);
-            
+
             return {
               ...prev,
               failedImages: new Set(prev.failedImages).add(url),
@@ -195,7 +195,7 @@ export function useImagePreload(
       isSlowConnection,
       onImageLoaded,
       onImageError,
-    ]
+    ],
   );
 
   /**
@@ -209,13 +209,13 @@ export function useImagePreload(
     const preloadSequence = async () => {
       for (let i = 0; i < urlsToPreload.length; i++) {
         const url = urlsToPreload[i];
-        
+
         try {
           await preloadImage(url);
-          
+
           // Add small delay between preloads to avoid blocking main thread
           if (i < urlsToPreload.length - 1) {
-            await new Promise((resolve) => setTimeout(resolve, 50));
+            await new Promise(resolve => setTimeout(resolve, 50));
           }
         } catch (error) {
           // Continue with next image even if one fails
@@ -229,7 +229,7 @@ export function useImagePreload(
     // Cleanup function
     return () => {
       // Abort any ongoing preloads
-      abortControllersRef.current.forEach((controller) => {
+      abortControllersRef.current.forEach(controller => {
         controller.abort();
       });
       abortControllersRef.current.clear();
@@ -241,17 +241,17 @@ export function useImagePreload(
    */
   const isImageLoaded = useCallback(
     (url: string) => state.loadedImages.has(url),
-    [state.loadedImages]
+    [state.loadedImages],
   );
 
   const isImageLoading = useCallback(
     (url: string) => state.loadingImages.has(url),
-    [state.loadingImages]
+    [state.loadingImages],
   );
 
   const isImageFailed = useCallback(
     (url: string) => state.failedImages.has(url),
-    [state.failedImages]
+    [state.failedImages],
   );
 
   return {
@@ -266,11 +266,11 @@ export function useImagePreload(
 /**
  * Hook to preload images for feed items based on scroll position
  * Automatically extracts image URLs from feed items and preloads upcoming images
- * 
+ *
  * @param items - Array of feed items
  * @param currentIndex - Current visible item index
  * @param options - Preload configuration options
- * 
+ *
  * @example
  * ```tsx
  * const { loadedImages } = useFeedImagePreload(feedItems, currentIndex, {
@@ -281,16 +281,16 @@ export function useImagePreload(
 export function useFeedImagePreload<T extends { data: any }>(
   items: T[],
   currentIndex: number,
-  options: PreloadOptions = {}
+  options: PreloadOptions = {},
 ) {
   /**
    * Extract image URLs from feed items
    */
   const extractImageUrls = useCallback((items: T[]): string[] => {
     return items
-      .map((item) => {
+      .map(item => {
         const data = item.data;
-        
+
         // Try common image URL properties
         return (
           data.thumbnailUrl ||
@@ -305,7 +305,10 @@ export function useFeedImagePreload<T extends { data: any }>(
   }, []);
 
   // Get upcoming image URLs starting from current index
-  const upcomingItems = items.slice(currentIndex + 1, currentIndex + 1 + (options.preloadCount || 5));
+  const upcomingItems = items.slice(
+    currentIndex + 1,
+    currentIndex + 1 + (options.preloadCount || 5),
+  );
   const upcomingImageUrls = extractImageUrls(upcomingItems);
 
   return useImagePreload(upcomingImageUrls, options);
@@ -314,19 +317,16 @@ export function useFeedImagePreload<T extends { data: any }>(
 /**
  * Hook to preload images with progressive quality
  * Loads low-quality placeholder first, then high-quality version
- * 
+ *
  * @param url - Image URL to preload
  * @param options - Preload configuration options
- * 
+ *
  * @example
  * ```tsx
  * const { lowQualityLoaded, highQualityLoaded } = useProgressiveImagePreload(imageUrl);
  * ```
  */
-export function useProgressiveImagePreload(
-  url: string,
-  options: PreloadOptions = {}
-) {
+export function useProgressiveImagePreload(url: string, options: PreloadOptions = {}) {
   const [lowQualityLoaded, setLowQualityLoaded] = useState(false);
   const [highQualityLoaded, setHighQualityLoaded] = useState(false);
 
@@ -353,14 +353,11 @@ export function useProgressiveImagePreload(
   });
 
   // Preload high quality after low quality loads
-  const { isImageLoaded: isHighQualityLoaded } = useImagePreload(
-    lowQualityLoaded ? [url] : [],
-    {
-      ...options,
-      priority: 'low',
-      onImageLoaded: () => setHighQualityLoaded(true),
-    }
-  );
+  const { isImageLoaded: isHighQualityLoaded } = useImagePreload(lowQualityLoaded ? [url] : [], {
+    ...options,
+    priority: 'low',
+    onImageLoaded: () => setHighQualityLoaded(true),
+  });
 
   return {
     lowQualityLoaded: isLowQualityLoaded(lowQualityUrl),

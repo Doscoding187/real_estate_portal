@@ -21,12 +21,12 @@ interface NearbySuburbsProps {
   maxDisplay?: number;
 }
 
-export function NearbySuburbs({ 
-  title = "Nearby Suburbs", 
-  suburbs, 
+export function NearbySuburbs({
+  title = 'Nearby Suburbs',
+  suburbs,
   parentSlug,
   currentSuburbName,
-  maxDisplay = 6
+  maxDisplay = 6,
 }: NearbySuburbsProps) {
   const formatPrice = (price?: number) => {
     if (!price) return 'N/A';
@@ -58,13 +58,11 @@ export function NearbySuburbs({
       <div className="container">
         <div className="mb-8">
           <h2 className="text-2xl font-bold text-slate-900 mb-2">{title}</h2>
-          <p className="text-slate-600">
-            Explore neighborhoods near {currentSuburbName}
-          </p>
+          <p className="text-slate-600">Explore neighborhoods near {currentSuburbName}</p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {displaySuburbs.map((suburb) => (
+          {displaySuburbs.map(suburb => (
             <Link key={suburb.id} href={getUrl(suburb)}>
               <Card className="hover:shadow-lg transition-all cursor-pointer border-slate-200 group h-full hover:border-primary/50">
                 <CardContent className="p-5 flex flex-col h-full justify-between">
@@ -75,7 +73,7 @@ export function NearbySuburbs({
                       </h3>
                       <ArrowRight className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity text-primary flex-shrink-0 ml-2" />
                     </div>
-                    
+
                     <div className="flex items-center gap-2 mb-3">
                       <div className="flex items-center gap-1 text-xs text-slate-500">
                         <MapPin className="h-3 w-3" />
@@ -89,7 +87,7 @@ export function NearbySuburbs({
                       )}
                     </div>
                   </div>
-                  
+
                   <div className="mt-auto space-y-2 pt-3 border-t border-slate-100">
                     <div className="flex justify-between items-center text-sm">
                       <span className="text-slate-500">Listings</span>
@@ -98,7 +96,9 @@ export function NearbySuburbs({
                     {suburb.avgPrice && (
                       <div className="flex justify-between items-center text-sm">
                         <span className="text-slate-500">Avg Price</span>
-                        <span className="font-semibold text-slate-700">{formatPrice(suburb.avgPrice)}</span>
+                        <span className="font-semibold text-slate-700">
+                          {formatPrice(suburb.avgPrice)}
+                        </span>
                       </div>
                     )}
                   </div>

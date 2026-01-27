@@ -1,11 +1,11 @@
 /**
  * TrendingSuburbs Component
- * 
+ *
  * Displays trending suburbs based on search activity
- * 
+ *
  * Requirements:
  * - 21.4-21.5: Display top 10 trending suburbs with statistics
- * 
+ *
  * Features:
  * - Shows trending indicators (↑)
  * - Displays quick stats (listing count, avg price)
@@ -64,7 +64,9 @@ export const TrendingSuburbs: React.FC<TrendingSuburbsProps> = ({
     return 'text-green-600';
   };
 
-  const getTrendingBadgeVariant = (score: number): 'default' | 'secondary' | 'destructive' | 'outline' => {
+  const getTrendingBadgeVariant = (
+    score: number,
+  ): 'default' | 'secondary' | 'destructive' | 'outline' => {
     if (score >= 75) return 'destructive';
     if (score >= 50) return 'default';
     return 'secondary';
@@ -100,9 +102,7 @@ export const TrendingSuburbs: React.FC<TrendingSuburbsProps> = ({
                       {/* Suburb Info */}
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1">
-                          <h3 className="font-semibold text-gray-900 truncate">
-                            {suburb.name}
-                          </h3>
+                          <h3 className="font-semibold text-gray-900 truncate">{suburb.name}</h3>
                           <Badge variant={getTrendingBadgeVariant(suburb.trendingScore)}>
                             <TrendingUp className="h-3 w-3 mr-1" />
                             {suburb.trendingScore}

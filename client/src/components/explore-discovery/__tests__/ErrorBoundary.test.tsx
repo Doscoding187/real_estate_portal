@@ -5,11 +5,7 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
-import { 
-  ExploreErrorBoundary, 
-  NetworkError, 
-  InlineError 
-} from '../ErrorBoundary';
+import { ExploreErrorBoundary, NetworkError, InlineError } from '../ErrorBoundary';
 
 // Mock Framer Motion to avoid animation issues in tests
 vi.mock('framer-motion', () => ({
@@ -49,7 +45,7 @@ describe('ExploreErrorBoundary', () => {
       render(
         <ExploreErrorBoundary>
           <ThrowError />
-        </ExploreErrorBoundary>
+        </ExploreErrorBoundary>,
       );
 
       expect(screen.getByText(/Something Went Wrong/i)).toBeInTheDocument();
@@ -60,7 +56,7 @@ describe('ExploreErrorBoundary', () => {
       render(
         <ExploreErrorBoundary>
           <div>Test content</div>
-        </ExploreErrorBoundary>
+        </ExploreErrorBoundary>,
       );
 
       expect(screen.getByText('Test content')).toBeInTheDocument();
@@ -71,7 +67,7 @@ describe('ExploreErrorBoundary', () => {
       render(
         <ExploreErrorBoundary>
           <ThrowNetworkError />
-        </ExploreErrorBoundary>
+        </ExploreErrorBoundary>,
       );
 
       expect(screen.getByText(/Connection Error/i)).toBeInTheDocument();
@@ -85,7 +81,7 @@ describe('ExploreErrorBoundary', () => {
       render(
         <ExploreErrorBoundary onError={onError}>
           <ThrowError />
-        </ExploreErrorBoundary>
+        </ExploreErrorBoundary>,
       );
 
       expect(onError).toHaveBeenCalledTimes(1);
@@ -93,7 +89,7 @@ describe('ExploreErrorBoundary', () => {
         expect.any(Error),
         expect.objectContaining({
           componentStack: expect.any(String),
-        })
+        }),
       );
     });
 
@@ -102,7 +98,7 @@ describe('ExploreErrorBoundary', () => {
         render(
           <ExploreErrorBoundary>
             <ThrowError />
-          </ExploreErrorBoundary>
+          </ExploreErrorBoundary>,
         );
       }).not.toThrow();
     });
@@ -115,7 +111,7 @@ describe('ExploreErrorBoundary', () => {
       render(
         <ExploreErrorBoundary fallback={customFallback}>
           <ThrowError />
-        </ExploreErrorBoundary>
+        </ExploreErrorBoundary>,
       );
 
       expect(screen.getByText('Custom error UI')).toBeInTheDocument();
@@ -128,7 +124,7 @@ describe('ExploreErrorBoundary', () => {
       const { rerender } = render(
         <ExploreErrorBoundary>
           <ThrowError shouldThrow={true} />
-        </ExploreErrorBoundary>
+        </ExploreErrorBoundary>,
       );
 
       expect(screen.getByText(/Something Went Wrong/i)).toBeInTheDocument();
@@ -141,7 +137,7 @@ describe('ExploreErrorBoundary', () => {
       rerender(
         <ExploreErrorBoundary>
           <ThrowError shouldThrow={false} />
-        </ExploreErrorBoundary>
+        </ExploreErrorBoundary>,
       );
 
       expect(screen.queryByText(/Something Went Wrong/i)).not.toBeInTheDocument();
@@ -159,38 +155,21 @@ describe('NetworkError', () => {
 
   describe('Rendering', () => {
     it('should render network error UI', () => {
-      render(
-        <NetworkError
-          error={mockError}
-          onRetry={mockOnRetry}
-          isNetworkError={true}
-        />
-      );
+      render(<NetworkError error={mockError} onRetry={mockOnRetry} isNetworkError={true} />);
 
       expect(screen.getByText(/Connection Error/i)).toBeInTheDocument();
       expect(screen.getByText(/check your internet connection/i)).toBeInTheDocument();
     });
 
     it('should render general error UI', () => {
-      render(
-        <NetworkError
-          error={mockError}
-          onRetry={mockOnRetry}
-          isNetworkError={false}
-        />
-      );
+      render(<NetworkError error={mockError} onRetry={mockOnRetry} isNetworkError={false} />);
 
       expect(screen.getByText(/Something Went Wrong/i)).toBeInTheDocument();
       expect(screen.getByText(/unexpected error occurred/i)).toBeInTheDocument();
     });
 
     it('should display retry button', () => {
-      render(
-        <NetworkError
-          error={mockError}
-          onRetry={mockOnRetry}
-        />
-      );
+      render(<NetworkError error={mockError} onRetry={mockOnRetry} />);
 
       const retryButton = screen.getByRole('button', { name: /Try Again/i });
       expect(retryButton).toBeInTheDocument();
@@ -199,12 +178,7 @@ describe('NetworkError', () => {
 
   describe('Retry Functionality', () => {
     it('should call onRetry when retry button is clicked', () => {
-      render(
-        <NetworkError
-          error={mockError}
-          onRetry={mockOnRetry}
-        />
-      );
+      render(<NetworkError error={mockError} onRetry={mockOnRetry} />);
 
       const retryButton = screen.getByRole('button', { name: /Try Again/i });
       fireEvent.click(retryButton);
@@ -213,12 +187,7 @@ describe('NetworkError', () => {
     });
 
     it('should have proper ARIA label on retry button', () => {
-      render(
-        <NetworkError
-          error={mockError}
-          onRetry={mockOnRetry}
-        />
-      );
+      render(<NetworkError error={mockError} onRetry={mockOnRetry} />);
 
       const retryButton = screen.getByLabelText('Retry loading content');
       expect(retryButton).toBeInTheDocument();
@@ -237,23 +206,13 @@ describe('NetworkError', () => {
     });
 
     it('should show error details in development mode', () => {
-      render(
-        <NetworkError
-          error={mockError}
-          onRetry={mockOnRetry}
-        />
-      );
+      render(<NetworkError error={mockError} onRetry={mockOnRetry} />);
 
       expect(screen.getByText(/Error Details/i)).toBeInTheDocument();
     });
 
     it('should display error message in details', () => {
-      render(
-        <NetworkError
-          error={mockError}
-          onRetry={mockOnRetry}
-        />
-      );
+      render(<NetworkError error={mockError} onRetry={mockOnRetry} />);
 
       expect(screen.getByText(/Test error message/i)).toBeInTheDocument();
     });
@@ -261,28 +220,18 @@ describe('NetworkError', () => {
 
   describe('Accessibility', () => {
     it('should have proper button role', () => {
-      render(
-        <NetworkError
-          error={mockError}
-          onRetry={mockOnRetry}
-        />
-      );
+      render(<NetworkError error={mockError} onRetry={mockOnRetry} />);
 
       const retryButton = screen.getByRole('button');
       expect(retryButton).toBeInTheDocument();
     });
 
     it('should be keyboard accessible', () => {
-      render(
-        <NetworkError
-          error={mockError}
-          onRetry={mockOnRetry}
-        />
-      );
+      render(<NetworkError error={mockError} onRetry={mockOnRetry} />);
 
       const retryButton = screen.getByRole('button', { name: /Try Again/i });
       retryButton.focus();
-      
+
       expect(retryButton).toHaveFocus();
 
       fireEvent.keyDown(retryButton, { key: 'Enter' });
@@ -293,11 +242,7 @@ describe('NetworkError', () => {
   describe('Custom Styling', () => {
     it('should accept custom className', () => {
       const { container } = render(
-        <NetworkError
-          error={mockError}
-          onRetry={mockOnRetry}
-          className="custom-class"
-        />
+        <NetworkError error={mockError} onRetry={mockOnRetry} className="custom-class" />,
       );
 
       const wrapper = container.firstChild;
@@ -327,12 +272,7 @@ describe('InlineError', () => {
     });
 
     it('should render with retry button when onRetry is provided', () => {
-      render(
-        <InlineError
-          message="Test error message"
-          onRetry={mockOnRetry}
-        />
-      );
+      render(<InlineError message="Test error message" onRetry={mockOnRetry} />);
 
       expect(screen.getByText(/Retry/i)).toBeInTheDocument();
     });
@@ -347,12 +287,7 @@ describe('InlineError', () => {
 
   describe('Retry Functionality', () => {
     it('should call onRetry when retry button is clicked', () => {
-      render(
-        <InlineError
-          message="Test error message"
-          onRetry={mockOnRetry}
-        />
-      );
+      render(<InlineError message="Test error message" onRetry={mockOnRetry} />);
 
       const retryButton = screen.getByText(/Retry/i);
       fireEvent.click(retryButton);
@@ -361,12 +296,7 @@ describe('InlineError', () => {
     });
 
     it('should have proper ARIA label on retry button', () => {
-      render(
-        <InlineError
-          message="Test error message"
-          onRetry={mockOnRetry}
-        />
-      );
+      render(<InlineError message="Test error message" onRetry={mockOnRetry} />);
 
       const retryButton = screen.getByLabelText('Retry');
       expect(retryButton).toBeInTheDocument();
@@ -375,16 +305,11 @@ describe('InlineError', () => {
 
   describe('Accessibility', () => {
     it('should be keyboard accessible', () => {
-      render(
-        <InlineError
-          message="Test error message"
-          onRetry={mockOnRetry}
-        />
-      );
+      render(<InlineError message="Test error message" onRetry={mockOnRetry} />);
 
       const retryButton = screen.getByText(/Retry/i);
       retryButton.focus();
-      
+
       expect(retryButton).toHaveFocus();
 
       fireEvent.keyDown(retryButton, { key: 'Enter' });
@@ -401,12 +326,7 @@ describe('InlineError', () => {
 
   describe('Custom Styling', () => {
     it('should accept custom className', () => {
-      const { container } = render(
-        <InlineError
-          message="Test error"
-          className="custom-class"
-        />
-      );
+      const { container } = render(<InlineError message="Test error" className="custom-class" />);
 
       const wrapper = container.firstChild;
       expect(wrapper).toHaveClass('custom-class');

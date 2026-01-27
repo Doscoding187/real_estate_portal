@@ -1,8 +1,8 @@
 import { trpc } from './trpc';
 
-type EventName = 
+type EventName =
   | 'location_view'
-  | 'development_view' 
+  | 'development_view'
   | 'listing_view'
   | 'hero_ad_click'
   | 'hero_ad_impression'
@@ -25,9 +25,9 @@ interface EventProperties {
 export const trackEvent = (eventName: EventName, properties: EventProperties) => {
   // Fire and forget - don't await response to avoid blocking UI
   try {
-     // We will implement this mutation in the backend next
-     // analytics.track.mutate({ event: eventName, ...properties });
-     console.log(`[Analytics] ${eventName}`, properties);
+    // We will implement this mutation in the backend next
+    // analytics.track.mutate({ event: eventName, ...properties });
+    console.log(`[Analytics] ${eventName}`, properties);
   } catch (error) {
     console.error('Failed to track event:', error);
   }

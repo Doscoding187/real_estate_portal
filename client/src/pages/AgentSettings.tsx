@@ -66,9 +66,7 @@ export default function AgentSettings() {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
-              <p className="text-sm text-gray-500 mt-1">
-                Manage your account and preferences
-              </p>
+              <p className="text-sm text-gray-500 mt-1">Manage your account and preferences</p>
             </div>
           </div>
         </div>
@@ -213,18 +211,33 @@ export default function AgentSettings() {
                   </h3>
                   <div className="space-y-4">
                     {[
-                      { key: 'emailLeads', label: 'New Leads', description: 'Get notified when you receive new leads' },
-                      { key: 'emailShowings', label: 'Showing Requests', description: 'Notifications for new showing requests' },
-                      { key: 'emailCommissions', label: 'Commission Updates', description: 'Updates on commission status changes' },
+                      {
+                        key: 'emailLeads',
+                        label: 'New Leads',
+                        description: 'Get notified when you receive new leads',
+                      },
+                      {
+                        key: 'emailShowings',
+                        label: 'Showing Requests',
+                        description: 'Notifications for new showing requests',
+                      },
+                      {
+                        key: 'emailCommissions',
+                        label: 'Commission Updates',
+                        description: 'Updates on commission status changes',
+                      },
                     ].map(item => (
-                      <div key={item.key} className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
+                      <div
+                        key={item.key}
+                        className="flex items-center justify-between p-4 bg-gray-50 rounded-xl"
+                      >
                         <div>
                           <p className="font-medium text-gray-900">{item.label}</p>
                           <p className="text-sm text-gray-500">{item.description}</p>
                         </div>
                         <Switch
                           checked={notifications[item.key as keyof typeof notifications] as boolean}
-                          onCheckedChange={(checked) =>
+                          onCheckedChange={checked =>
                             setNotifications({ ...notifications, [item.key]: checked })
                           }
                         />
@@ -241,18 +254,33 @@ export default function AgentSettings() {
                   </h3>
                   <div className="space-y-4">
                     {[
-                      { key: 'pushLeads', label: 'New Leads', description: 'Real-time lead notifications' },
-                      { key: 'pushShowings', label: 'Showing Reminders', description: '15 min before scheduled showings' },
-                      { key: 'pushCommissions', label: 'Commission Alerts', description: 'Payment and approval notifications' },
+                      {
+                        key: 'pushLeads',
+                        label: 'New Leads',
+                        description: 'Real-time lead notifications',
+                      },
+                      {
+                        key: 'pushShowings',
+                        label: 'Showing Reminders',
+                        description: '15 min before scheduled showings',
+                      },
+                      {
+                        key: 'pushCommissions',
+                        label: 'Commission Alerts',
+                        description: 'Payment and approval notifications',
+                      },
                     ].map(item => (
-                      <div key={item.key} className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
+                      <div
+                        key={item.key}
+                        className="flex items-center justify-between p-4 bg-gray-50 rounded-xl"
+                      >
                         <div>
                           <p className="font-medium text-gray-900">{item.label}</p>
                           <p className="text-sm text-gray-500">{item.description}</p>
                         </div>
                         <Switch
                           checked={notifications[item.key as keyof typeof notifications] as boolean}
-                          onCheckedChange={(checked) =>
+                          onCheckedChange={checked =>
                             setNotifications({ ...notifications, [item.key]: checked })
                           }
                         />
@@ -302,7 +330,11 @@ export default function AgentSettings() {
                           onClick={() => setShowPassword(!showPassword)}
                           className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
                         >
-                          {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                          {showPassword ? (
+                            <EyeOff className="h-4 w-4" />
+                          ) : (
+                            <Eye className="h-4 w-4" />
+                          )}
                         </button>
                       </div>
                     </div>
@@ -378,8 +410,16 @@ export default function AgentSettings() {
               <CardContent>
                 <div className="space-y-4">
                   {[
-                    { name: 'Google Calendar', description: 'Sync your showings and appointments', connected: true },
-                    { name: 'WhatsApp Business', description: 'Send automated messages to clients', connected: false },
+                    {
+                      name: 'Google Calendar',
+                      description: 'Sync your showings and appointments',
+                      connected: true,
+                    },
+                    {
+                      name: 'WhatsApp Business',
+                      description: 'Send automated messages to clients',
+                      connected: false,
+                    },
                     { name: 'Zapier', description: 'Connect to 1000+ apps', connected: false },
                   ].map(integration => (
                     <div

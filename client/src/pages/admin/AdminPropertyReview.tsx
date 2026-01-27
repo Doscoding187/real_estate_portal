@@ -25,10 +25,10 @@ export default function AdminPropertyReview() {
   const [isApproveDialogOpen, setIsApproveDialogOpen] = useState(false);
   const [feedback, setFeedback] = useState('');
 
-  // Fetch property status to show current state
-  const { data: propertyData, refetch } = trpc.properties.getById.useQuery(
+  // Fetch listing status to show current state
+  const { data: propertyData, refetch } = trpc.listing.getById.useQuery(
     { id: propertyId },
-    { enabled: propertyId > 0 }
+    { enabled: propertyId > 0 },
   );
 
   const approveMutation = trpc.listing.approve.useMutation({
@@ -39,7 +39,7 @@ export default function AdminPropertyReview() {
       // Optional: redirect back to oversight after delay
       setTimeout(() => setLocation('/admin/listing-approvals'), 1500);
     },
-    onError: (error) => {
+    onError: error => {
       toast.error(error.message || 'Failed to approve property');
     },
   });
@@ -51,7 +51,7 @@ export default function AdminPropertyReview() {
       refetch();
       setTimeout(() => setLocation('/admin/listing-approvals'), 1500);
     },
-    onError: (error) => {
+    onError: error => {
       toast.error(error.message || 'Failed to reject property');
     },
   });
@@ -83,9 +83,9 @@ export default function AdminPropertyReview() {
       {/* Top Banner */}
       <div className="bg-slate-900 text-white px-4 py-3 sticky top-0 z-50 shadow-md flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <Button 
-            variant="ghost" 
-            size="sm" 
+          <Button
+            variant="ghost"
+            size="sm"
             className="text-slate-300 hover:text-white hover:bg-slate-800"
             onClick={() => setLocation('/admin/listing-approvals')}
           >
@@ -99,9 +99,7 @@ export default function AdminPropertyReview() {
             </span>
           </div>
         </div>
-        <div className="text-sm text-slate-400">
-          Viewing as Super Admin
-        </div>
+        <div className="text-sm text-slate-400">Viewing as Super Admin</div>
       </div>
 
       {/* Main Property Content */}
@@ -117,12 +115,16 @@ export default function AdminPropertyReview() {
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 p-4 shadow-lg z-50 flex items-center justify-between px-8">
         <div className="flex items-center gap-4">
           <div className="text-sm text-slate-500">
-            Current Status: 
-            <span className={`ml-2 font-bold uppercase ${
-              propertyData?.property?.status === 'published' || propertyData?.property?.status === 'approved' ? 'text-green-600' :
-              propertyData?.property?.status === 'rejected' ? 'text-red-600' :
-              'text-orange-500'
-            }`}>
+            Current Status:
+            <span
+              className={`ml-2 font-bold uppercase ${propertyData?.property?.status === 'published' ||
+                propertyData?.property?.status === 'approved'
+                ? 'text-green-600'
+                : propertyData?.property?.status === 'rejected'
+                  ? 'text-red-600'
+                  : 'text-orange-500'
+                }`}
+            >
               {propertyData?.property?.status || 'Loading...'}
             </span>
           </div>
@@ -140,23 +142,27 @@ export default function AdminPropertyReview() {
               <DialogHeader>
                 <DialogTitle>Reject Listing</DialogTitle>
                 <DialogDescription>
-                  Please provide feedback to the agent explaining why this listing is being rejected.
-                  This will be sent to them directly.
+                  Please provide feedback to the agent explaining why this listing is being
+                  rejected. This will be sent to them directly.
                 </DialogDescription>
               </DialogHeader>
               <div className="py-4">
-                <label className="text-sm font-medium mb-2 block">Rejection Reason / Feedback</label>
-                <Textarea 
-                  placeholder="e.g., Photos are blurry, Description contains prohibited content..." 
+                <label className="text-sm font-medium mb-2 block">
+                  Rejection Reason / Feedback
+                </label>
+                <Textarea
+                  placeholder="e.g., Photos are blurry, Description contains prohibited content..."
                   className="min-h-[120px]"
                   value={feedback}
-                  onChange={(e) => setFeedback(e.target.value)}
+                  onChange={e => setFeedback(e.target.value)}
                 />
               </div>
               <DialogFooter>
-                <Button variant="outline" onClick={() => setIsRejectDialogOpen(false)}>Cancel</Button>
-                <Button 
-                  variant="destructive" 
+                <Button variant="outline" onClick={() => setIsRejectDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button
+                  variant="destructive"
                   onClick={handleReject}
                   disabled={rejectMutation.isPending}
                 >
@@ -182,15 +188,17 @@ export default function AdminPropertyReview() {
               </DialogHeader>
               <div className="py-4">
                 <label className="text-sm font-medium mb-2 block">Internal Notes (Optional)</label>
-                <Textarea 
-                  placeholder="Any internal notes about this approval..." 
+                <Textarea
+                  placeholder="Any internal notes about this approval..."
                   value={feedback}
-                  onChange={(e) => setFeedback(e.target.value)}
+                  onChange={e => setFeedback(e.target.value)}
                 />
               </div>
               <DialogFooter>
-                <Button variant="outline" onClick={() => setIsApproveDialogOpen(false)}>Cancel</Button>
-                <Button 
+                <Button variant="outline" onClick={() => setIsApproveDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button
                   className="bg-green-600 hover:bg-green-700 text-white"
                   onClick={handleApprove}
                   disabled={approveMutation.isPending}
