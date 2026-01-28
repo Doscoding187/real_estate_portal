@@ -51,7 +51,9 @@ queryClient.getMutationCache().subscribe(event => {
 const trpcClient = trpc.createClient({
   links: [
     httpBatchLink({
-      url: '/api/trpc', // Relative URL - uses Vite proxy to forward to backend
+      url: import.meta.env.VITE_API_BASE_URL
+        ? `${import.meta.env.VITE_API_BASE_URL}/trpc`
+        : '/api/trpc', // Fallback to relative URL in dev
       transformer: superjson,
       async fetch(input, init) {
         // Execute fetch with credentials
