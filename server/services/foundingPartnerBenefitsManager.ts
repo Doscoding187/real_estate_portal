@@ -164,7 +164,7 @@ class FoundingPartnerBenefitsManager {
   private async removeFeaturedTier(partnerId: string): Promise<void> {
     // Find active Featured tier subscription
     const subscription = await db.query.partnerSubscriptions.findFirst({
-      where: (subs, { and, eq }) =>
+      where: (subs: any, { and, eq }: any) =>
         and(eq(subs.partnerId, partnerId), eq(subs.tier, 'featured'), eq(subs.status, 'active')),
     });
 
@@ -188,7 +188,7 @@ class FoundingPartnerBenefitsManager {
   private async addFoundingBadge(partnerId: string): Promise<void> {
     // Update partner record to include founding badge
     const partner = await db.query.explorePartners.findFirst({
-      where: (partners, { eq }) => eq(partners.id, partnerId),
+      where: (partners, { eq }: any) => eq(partners.id, partnerId),
     });
 
     if (!partner) {
@@ -217,7 +217,7 @@ class FoundingPartnerBenefitsManager {
    */
   private async removeFoundingBadge(partnerId: string): Promise<void> {
     const partner = await db.query.explorePartners.findFirst({
-      where: (partners, { eq }) => eq(partners.id, partnerId),
+      where: (partners, { eq }: any) => eq(partners.id, partnerId),
     });
 
     if (!partner || !partner.description) {

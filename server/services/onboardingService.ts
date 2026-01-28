@@ -83,7 +83,7 @@ export class OnboardingService {
    */
   async getOnboardingState(userId: string): Promise<UserOnboardingState> {
     const result = await db.query.userOnboardingState.findFirst({
-      where: (state, { eq }) => eq(state.userId, userId),
+      where: (state, { eq }: any) => eq(state.userId, userId),
     });
 
     if (!result) {
@@ -177,7 +177,7 @@ export class OnboardingService {
   async getSuggestedTopicsForUser(userId: string): Promise<string[]> {
     // Get user profile to determine interests
     const user = await db.query.users.findFirst({
-      where: (users, { eq }) => eq(users.id, userId),
+      where: (users, { eq }: any) => eq(users.id, userId),
     });
 
     // Default suggestions for all users

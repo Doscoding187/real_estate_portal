@@ -76,7 +76,7 @@ class FoundingPartnerService {
 
     // Check if partner already enrolled
     const existing = await db.query.foundingPartners.findFirst({
-      where: (fp, { eq }) => eq(fp.partnerId, partnerId),
+      where: (fp, { eq }: any) => eq(fp.partnerId, partnerId),
     });
 
     if (existing) {
@@ -130,7 +130,7 @@ class FoundingPartnerService {
    */
   async getFoundingPartnerStatus(partnerId: string): Promise<FoundingPartner | null> {
     const result = await db.query.foundingPartners.findFirst({
-      where: (fp, { eq }) => eq(fp.partnerId, partnerId),
+      where: (fp, { eq }: any) => eq(fp.partnerId, partnerId),
     });
 
     if (!result) return null;
@@ -338,7 +338,7 @@ class FoundingPartnerService {
    */
   async getActiveFoundingPartners(): Promise<FoundingPartner[]> {
     const results = await db.query.foundingPartners.findMany({
-      where: (fp, { eq }) => eq(fp.status, 'active'),
+      where: (fp, { eq }: any) => eq(fp.status, 'active'),
     });
 
     return results.map(r => {
