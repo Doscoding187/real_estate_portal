@@ -166,9 +166,7 @@ function normalizeAmenities(amenities: unknown): string[] {
   }
 
   if (amenities && typeof amenities === 'object') {
-    const standard = Array.isArray((amenities as any).standard)
-      ? (amenities as any).standard
-      : [];
+    const standard = Array.isArray((amenities as any).standard) ? (amenities as any).standard : [];
     const additional = Array.isArray((amenities as any).additional)
       ? (amenities as any).additional
       : [];
@@ -265,9 +263,7 @@ function sanitizeEnum<T extends string>(
   return defaultValue;
 }
 
-function normalizeTransactionType(
-  value: unknown,
-): 'for_sale' | 'for_rent' | 'auction' {
+function normalizeTransactionType(value: unknown): 'for_sale' | 'for_rent' | 'auction' {
   const normalized = String(value ?? '')
     .trim()
     .toLowerCase();
@@ -416,8 +412,6 @@ function stringifyJsonValue(value: unknown, fallback: unknown): string {
     return JSON.stringify(fallback);
   }
 }
-
-
 
 function requireEnum<T extends string>(value: unknown, allowed: T[], fieldName: string): T {
   const sanitized = sanitizeEnum(value, allowed, null);
@@ -1018,9 +1012,7 @@ export async function createDevelopment(
   const rentRange =
     normalizedTransactionType === 'for_rent' ? computeRentRangeFromUnits(unitTypesData) : null;
   const auctionRange =
-    normalizedTransactionType === 'auction'
-      ? computeAuctionRangeFromUnits(unitTypesData)
-      : null;
+    normalizedTransactionType === 'auction' ? computeAuctionRangeFromUnits(unitTypesData) : null;
 
   const insertPayload: Record<string, any> = {
     developerId: developerProfileId,
@@ -1081,28 +1073,20 @@ export async function createDevelopment(
     priceTo: sanitizeInt((developmentData as any).priceTo),
     monthlyRentFrom:
       normalizedTransactionType === 'for_rent'
-        ? rentRange?.monthlyRentFrom ?? null
+        ? (rentRange?.monthlyRentFrom ?? null)
         : sanitizeDecimal((developmentData as any).monthlyRentFrom),
     monthlyRentTo:
       normalizedTransactionType === 'for_rent'
-        ? rentRange?.monthlyRentTo ?? null
+        ? (rentRange?.monthlyRentTo ?? null)
         : sanitizeDecimal((developmentData as any).monthlyRentTo),
     auctionStartDate:
-      normalizedTransactionType === 'auction'
-        ? auctionRange?.auctionStartDate ?? null
-        : null,
+      normalizedTransactionType === 'auction' ? (auctionRange?.auctionStartDate ?? null) : null,
     auctionEndDate:
-      normalizedTransactionType === 'auction'
-        ? auctionRange?.auctionEndDate ?? null
-        : null,
+      normalizedTransactionType === 'auction' ? (auctionRange?.auctionEndDate ?? null) : null,
     startingBidFrom:
-      normalizedTransactionType === 'auction'
-        ? auctionRange?.startingBidFrom ?? null
-        : null,
+      normalizedTransactionType === 'auction' ? (auctionRange?.startingBidFrom ?? null) : null,
     reservePriceFrom:
-      normalizedTransactionType === 'auction'
-        ? auctionRange?.reservePriceFrom ?? null
-        : null,
+      normalizedTransactionType === 'auction' ? (auctionRange?.reservePriceFrom ?? null) : null,
     totalUnits: sanitizeInt((developmentData as any).totalUnits),
     availableUnits: sanitizeInt((developmentData as any).availableUnits),
     totalDevelopmentArea: sanitizeInt((developmentData as any).totalDevelopmentArea),
@@ -2326,7 +2310,11 @@ async function rejectDevelopment(id: number, adminId: number, reason: string) {
 
   await db
     .update(developments)
-    .set({ status: 'rejected', isPublished: false as any, rejectionReason: reason })
+    .set({
+      isPublished: 0,
+      approvalStatus: 'rejected' as any,
+      rejectionReason: reason,
+    })
     .where(eq(developments.id, id));
 }
 
