@@ -2324,7 +2324,11 @@ async function requestChanges(id: number, adminId: number, notes: string) {
 
   await db
     .update(developments)
-    .set({ status: 'pending_changes', isPublished: false as any, changeRequestNotes: notes })
+    .set({
+      isPublished: 0,
+      approvalStatus: 'pending_changes' as any,
+      changeRequestNotes: notes,
+    })
     .where(eq(developments.id, id));
 }
 
