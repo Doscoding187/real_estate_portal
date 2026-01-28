@@ -1,15 +1,11 @@
 /**
  * ErrorBoundary Component Examples
- * 
+ *
  * Demonstrates various usage patterns for the ExploreErrorBoundary component
  */
 
 import { useState } from 'react';
-import { 
-  ExploreErrorBoundary, 
-  NetworkError, 
-  InlineError 
-} from './ErrorBoundary';
+import { ExploreErrorBoundary, NetworkError, InlineError } from './ErrorBoundary';
 import { ModernCard } from '@/components/ui/soft/ModernCard';
 import { useQuery } from '@tanstack/react-query';
 
@@ -88,9 +84,7 @@ export function ErrorBoundaryWithLogging() {
  * Example 4: Standalone NetworkError Component
  */
 export function StandaloneNetworkErrorExample() {
-  const [error, setError] = useState<Error | null>(
-    new Error('Failed to fetch data from server')
-  );
+  const [error, setError] = useState<Error | null>(new Error('Failed to fetch data from server'));
 
   const handleRetry = () => {
     console.log('Retrying...');
@@ -102,13 +96,7 @@ export function StandaloneNetworkErrorExample() {
   };
 
   if (error) {
-    return (
-      <NetworkError
-        error={error}
-        onRetry={handleRetry}
-        isNetworkError={true}
-      />
-    );
+    return <NetworkError error={error} onRetry={handleRetry} isNetworkError={true} />;
   }
 
   return (
@@ -128,7 +116,7 @@ export function InlineErrorExample() {
   return (
     <div className="space-y-4 p-8">
       <h2 className="text-2xl font-bold">Inline Error Demo</h2>
-      
+
       {hasError && (
         <InlineError
           message="Failed to load user preferences. Using default settings."
@@ -199,7 +187,7 @@ export function NestedErrorBoundariesExample() {
   return (
     <div className="p-8 space-y-4">
       <h2 className="text-2xl font-bold mb-4">Nested Error Boundaries</h2>
-      
+
       <ExploreErrorBoundary>
         <ModernCard className="p-6">
           <h3 className="text-lg font-semibold mb-2">Section 1</h3>
@@ -217,9 +205,7 @@ export function NestedErrorBoundariesExample() {
       <ExploreErrorBoundary>
         <ModernCard className="p-6">
           <h3 className="text-lg font-semibold mb-2">Section 3</h3>
-          <p className="text-gray-600">
-            This section remains unaffected by errors in Section 2.
-          </p>
+          <p className="text-gray-600">This section remains unaffected by errors in Section 2.</p>
         </ModernCard>
       </ExploreErrorBoundary>
     </div>
@@ -258,14 +244,15 @@ export function CustomFallbackExample() {
 export function ErrorTypeDetectionExample() {
   const [errorType, setErrorType] = useState<'network' | 'general'>('network');
 
-  const error = errorType === 'network'
-    ? new Error('Failed to fetch data from server')
-    : new Error('Invalid data format received');
+  const error =
+    errorType === 'network'
+      ? new Error('Failed to fetch data from server')
+      : new Error('Invalid data format received');
 
   return (
     <div className="p-8 space-y-4">
       <h2 className="text-2xl font-bold mb-4">Error Type Detection</h2>
-      
+
       <div className="flex gap-4 mb-4">
         <button
           onClick={() => setErrorType('network')}

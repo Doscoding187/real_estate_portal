@@ -19,11 +19,7 @@ export function formatCurrency(
   },
 ): string {
   if (options?.compact) {
-    if (amount >= 1000000) {
-      return `R${(amount / 1000000).toFixed(1)}M`;
-    } else if (amount >= 1000) {
-      return `R${(amount / 1000).toFixed(0)}k`;
-    }
+    return formatZARCompact(amount);
   }
 
   return new Intl.NumberFormat('en-ZA', {
@@ -32,4 +28,46 @@ export function formatCurrency(
     minimumFractionDigits: options?.minimumFractionDigits ?? 0,
     maximumFractionDigits: options?.maximumFractionDigits ?? 0,
   }).format(amount);
+}
+
+/**
+ * SquareYards-style compact ZAR formatter
+ * - Shows M for ≥ 1,000,000
+ * - Shows k for ≥ 1,000
+ * - Keeps 1 decimal only when needed (875000 → R875k, 1,250,000 → R1.3M)
+ * - Strips trailing .0 (2.0M → R2M)
+ */
+export function formatZARCompact(value?: number | string | null): string {
+  if (value === null || value === undefined) return 'R—';
+
+  const n = typeof value === 'string' ? Number(value) : value;
+  if (!Number.isFinite(n) || n <= 0) return 'R—';
+
+  const abs = Math.abs(n);
+
+  const fmt = (num: number, suffix: string) => {
+    const oneDec = Math.round(num * 10) / 10; // 1 decimal
+    const str = oneDec % 1 === 0 ? String(Math.trunc(oneDec)) : String(oneDec);
+    return `R${str}${suffix}`;
+  };
+
+  if (abs >= 1_000_000) return fmt(n / 1_000_000, 'M');
+  if (abs >= 1_000) return fmt(n / 1_000, 'k');
+  return `R${Math.round(n)}`;
+}
+
+/**
+ * Format a price range in compact SquareYards style
+ */
+export function formatPriceRangeCompact(
+  from?: number | string | null,
+  to?: number | string | null,
+): string {
+  const f = formatZARCompact(from);
+  const t = formatZARCompact(to);
+
+  // If either side is missing, just show the one that exists
+  if (f === 'R—' && t === 'R—') return 'Price on request';
+  if (f !== 'R—' && (t === 'R—' || to === from)) return `From ${f}`;
+  return `${f} to ${t}`;
 }

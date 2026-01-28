@@ -1,6 +1,6 @@
 /**
  * Media Upload Zone Component
- * 
+ *
  * Drag-and-drop file upload zone with validation and visual feedback
  */
 
@@ -15,43 +15,43 @@ export interface MediaUploadZoneProps {
    * Callback when files are uploaded
    */
   onUpload: (files: File[]) => void;
-  
+
   /**
    * Maximum number of files allowed
    * @default 30
    */
   maxFiles?: number;
-  
+
   /**
    * Maximum file size in MB
    * @default 5
    */
   maxSizeMB?: number;
-  
+
   /**
    * Maximum video size in MB
    * @default 50
    */
   maxVideoSizeMB?: number;
-  
+
   /**
    * Accepted file types
    * @default ['image/*', 'video/*']
    */
   acceptedTypes?: string[];
-  
+
   /**
    * Number of existing media files
    * @default 0
    */
   existingMediaCount?: number;
-  
+
   /**
    * Whether upload is disabled
    * @default false
    */
   disabled?: boolean;
-  
+
   /**
    * Additional CSS classes
    */
@@ -138,39 +138,45 @@ export const MediaUploadZone: React.FC<MediaUploadZoneProps> = ({
   };
 
   // Handle file selection
-  const handleFiles = useCallback((files: FileList | null) => {
-    if (!files || files.length === 0) return;
+  const handleFiles = useCallback(
+    (files: FileList | null) => {
+      if (!files || files.length === 0) return;
 
-    const fileArray = Array.from(files);
-    const { valid, errors } = validateFiles(fileArray);
+      const fileArray = Array.from(files);
+      const { valid, errors } = validateFiles(fileArray);
 
-    setValidationErrors(errors);
+      setValidationErrors(errors);
 
-    if (errors.length > 0) {
-      // Show first error as toast
-      toast.error(errors[0].reason);
-    }
+      if (errors.length > 0) {
+        // Show first error as toast
+        toast.error(errors[0].reason);
+      }
 
-    if (valid.length > 0) {
-      onUpload(valid);
-      // Clear validation errors after successful upload
-      setTimeout(() => setValidationErrors([]), 3000);
-    }
+      if (valid.length > 0) {
+        onUpload(valid);
+        // Clear validation errors after successful upload
+        setTimeout(() => setValidationErrors([]), 3000);
+      }
 
-    // Reset file input
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
-  }, [onUpload, existingMediaCount, maxFiles, maxSizeMB, maxVideoSizeMB]);
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    },
+    [onUpload, existingMediaCount, maxFiles, maxSizeMB, maxVideoSizeMB],
+  );
 
   // Handle drag events
-  const handleDragEnter = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (!disabled) {
-      setIsDragging(true);
-    }
-  }, [disabled]);
+  const handleDragEnter = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (!disabled) {
+        setIsDragging(true);
+      }
+    },
+    [disabled],
+  );
 
   const handleDragLeave = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -186,16 +192,19 @@ export const MediaUploadZone: React.FC<MediaUploadZoneProps> = ({
     e.stopPropagation();
   }, []);
 
-  const handleDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragging(false);
+  const handleDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setIsDragging(false);
 
-    if (disabled) return;
+      if (disabled) return;
 
-    const files = e.dataTransfer.files;
-    handleFiles(files);
-  }, [disabled, handleFiles]);
+      const files = e.dataTransfer.files;
+      handleFiles(files);
+    },
+    [disabled, handleFiles],
+  );
 
   // Handle click to browse
   const handleClick = () => {
@@ -233,7 +242,7 @@ export const MediaUploadZone: React.FC<MediaUploadZoneProps> = ({
           isDragging && 'border-blue-500 bg-blue-50 scale-[1.02]',
           !isDragging && 'border-gray-300 bg-white',
           disabled && 'opacity-50 cursor-not-allowed hover:border-gray-300 hover:bg-white',
-          className
+          className,
         )}
       >
         {/* Upload Icon */}
@@ -244,27 +253,28 @@ export const MediaUploadZone: React.FC<MediaUploadZoneProps> = ({
           <Upload
             className={cn(
               'w-12 h-12 mx-auto mb-4 transition-colors',
-              isDragging ? 'text-blue-600' : 'text-gray-400'
+              isDragging ? 'text-blue-600' : 'text-gray-400',
             )}
           />
         </motion.div>
 
         {/* Text */}
         <div className="space-y-2">
-          <p className={cn(
-            'text-lg font-medium transition-colors',
-            isDragging ? 'text-blue-600' : 'text-gray-700'
-          )}>
+          <p
+            className={cn(
+              'text-lg font-medium transition-colors',
+              isDragging ? 'text-blue-600' : 'text-gray-700',
+            )}
+          >
             {isDragging ? 'Drop files here' : 'Drag & drop files here'}
           </p>
-          <p className="text-sm text-gray-500">
-            or click to browse
-          </p>
+          <p className="text-sm text-gray-500">or click to browse</p>
           <p className="text-xs text-gray-400 mt-2">
             Max {maxFiles} files • {maxSizeMB}MB per image • {maxVideoSizeMB}MB per video
           </p>
           <p className="text-xs text-gray-400">
-            {existingMediaCount > 0 && `${existingMediaCount} file${existingMediaCount > 1 ? 's' : ''} uploaded • `}
+            {existingMediaCount > 0 &&
+              `${existingMediaCount} file${existingMediaCount > 1 ? 's' : ''} uploaded • `}
             {maxFiles - existingMediaCount} remaining
           </p>
         </div>

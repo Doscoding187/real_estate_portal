@@ -1,6 +1,6 @@
 /**
  * Error Recovery Strategy
- * 
+ *
  * Defines error types and recovery strategies for the application
  */
 
@@ -11,32 +11,32 @@ export interface AppError {
    * Error type
    */
   type: ErrorType;
-  
+
   /**
    * Error message
    */
   message: string;
-  
+
   /**
    * Original error object
    */
   originalError?: Error | unknown;
-  
+
   /**
    * Whether this error is recoverable
    */
   isRecoverable: boolean;
-  
+
   /**
    * Field name (for validation errors)
    */
   field?: string;
-  
+
   /**
    * HTTP status code (for server errors)
    */
   statusCode?: number;
-  
+
   /**
    * Additional context
    */
@@ -48,27 +48,27 @@ export interface ErrorRecoveryStrategy {
    * Error type this strategy handles
    */
   type: ErrorType;
-  
+
   /**
    * User-friendly error message
    */
   message: string;
-  
+
   /**
    * Whether the error is recoverable
    */
   retryable: boolean;
-  
+
   /**
    * Recovery action function
    */
   recoveryAction?: () => void | Promise<void>;
-  
+
   /**
    * Maximum retry attempts
    */
   maxRetries?: number;
-  
+
   /**
    * Retry delay in milliseconds
    */
@@ -93,7 +93,7 @@ export function parseError(error: unknown, context?: Record<string, unknown>): A
   // HTTP errors
   if (typeof error === 'object' && error !== null && 'status' in error) {
     const statusCode = (error as any).status;
-    
+
     // Session expired
     if (statusCode === 401) {
       return {
@@ -105,7 +105,7 @@ export function parseError(error: unknown, context?: Record<string, unknown>): A
         context,
       };
     }
-    
+
     // Validation errors
     if (statusCode === 400 || statusCode === 422) {
       return {
@@ -117,7 +117,7 @@ export function parseError(error: unknown, context?: Record<string, unknown>): A
         context,
       };
     }
-    
+
     // Server errors
     if (statusCode >= 500) {
       return {
@@ -135,7 +135,7 @@ export function parseError(error: unknown, context?: Record<string, unknown>): A
   if (context?.type === 'upload') {
     return {
       type: 'upload',
-      message: context.message as string || 'File upload failed.',
+      message: (context.message as string) || 'File upload failed.',
       originalError: error,
       isRecoverable: true,
       context,
@@ -171,7 +171,8 @@ export function getRecoveryStrategy(error: AppError): ErrorRecoveryStrategy {
     case 'network':
       return {
         type: 'network',
-        message: 'Connection lost. Your draft has been saved. Please check your internet connection and try again.',
+        message:
+          'Connection lost. Your draft has been saved. Please check your internet connection and try again.',
         retryable: true,
         maxRetries: 3,
         retryDelay: 2000, // 2 seconds
@@ -224,7 +225,7 @@ export function getRecoveryStrategy(error: AppError): ErrorRecoveryStrategy {
 export async function retryWithBackoff<T>(
   fn: () => Promise<T>,
   maxRetries: number = 3,
-  baseDelay: number = 1000
+  baseDelay: number = 1000,
 ): Promise<T> {
   let lastError: Error | unknown;
 
@@ -241,10 +242,10 @@ export async function retryWithBackoff<T>(
 
       // Calculate exponential backoff delay
       const delay = baseDelay * Math.pow(2, attempt);
-      
+
       // Add jitter to prevent thundering herd
       const jitter = Math.random() * 1000;
-      
+
       await new Promise(resolve => setTimeout(resolve, delay + jitter));
     }
   }

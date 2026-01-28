@@ -18,10 +18,9 @@ describe('useThrottle', () => {
   });
 
   it('should throttle rapid value changes', () => {
-    const { result, rerender } = renderHook(
-      ({ value }) => useThrottle(value, 250),
-      { initialProps: { value: 'first' } }
-    );
+    const { result, rerender } = renderHook(({ value }) => useThrottle(value, 250), {
+      initialProps: { value: 'first' },
+    });
 
     expect(result.current).toBe('first');
 
@@ -70,10 +69,9 @@ describe('useDebounce', () => {
   });
 
   it('should debounce rapid value changes', () => {
-    const { result, rerender } = renderHook(
-      ({ value }) => useDebounce(value, 300),
-      { initialProps: { value: 'first' } }
-    );
+    const { result, rerender } = renderHook(({ value }) => useDebounce(value, 300), {
+      initialProps: { value: 'first' },
+    });
 
     expect(result.current).toBe('first');
 
@@ -103,13 +101,12 @@ describe('useDebounce', () => {
   });
 
   it('should reset timer on each value change', () => {
-    const { result, rerender } = renderHook(
-      ({ value }) => useDebounce(value, 300),
-      { initialProps: { value: 'first' } }
-    );
+    const { result, rerender } = renderHook(({ value }) => useDebounce(value, 300), {
+      initialProps: { value: 'first' },
+    });
 
     rerender({ value: 'second' });
-    
+
     act(() => {
       vi.advanceTimersByTime(200);
     });

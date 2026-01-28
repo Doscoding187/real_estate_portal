@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { getSessionCookieOptions } from './_core/cookies';
 import { COOKIE_NAME } from '../shared/const';
+import { OWNERSHIP_TYPES, STRUCTURAL_TYPES, FLOOR_TYPES } from '../shared/db-enums';
 import { systemRouter } from './_core/systemRouter';
 import { protectedProcedure, publicProcedure, router } from './_core/trpc';
 import * as db from './db';
@@ -9,6 +10,7 @@ import { agencyRouter } from './agencyRouter';
 import { userRouter } from './userRouter';
 import { invitationRouter } from './invitationRouter';
 import { agentRouter } from './agentRouter';
+import { aiAgentRouter } from './routers/aiAgentRouter';
 import { videoRouter } from './videoRouter';
 import { billingRouter } from './billingRouter';
 import { locationRouter } from './locationRouter';
@@ -21,6 +23,7 @@ import { uploadRouter } from './uploadRouter';
 import { savedSearchRouter } from './savedSearchRouter';
 import { guestMigrationRouter } from './guestMigrationRouter';
 import { settingsRouter } from './settingsRouter';
+import { ENV } from './_core/env';
 import { marketingRouter } from './marketingRouter';
 import { subscriptionRouter } from './subscriptionRouter';
 import { developerRouter } from './developerRouter';
@@ -52,6 +55,7 @@ export const appRouter = router({
   user: userRouter,
   invitation: invitationRouter,
   agent: agentRouter,
+  aiAgent: aiAgentRouter,
   video: videoRouter,
   billing: billingRouter,
   location: locationRouter,
@@ -70,7 +74,7 @@ export const appRouter = router({
   explore: exploreRouter,
   exploreVideoUpload: exploreVideoUploadRouter,
   // recommendationEngine: recommendationEngineRouter, // TODO: Fix syntax errors in this file
-  // exploreApi: exploreApiRouter, // TODO: Fix syntax errors in this file  
+  // exploreApi: exploreApiRouter, // TODO: Fix syntax errors in this file
   // boostCampaign: boostCampaignRouter, // TODO: Fix syntax errors in this file
   exploreAnalytics: exploreAnalyticsRouter,
   similarProperties: similarPropertiesRouter,
@@ -124,6 +128,9 @@ export const appRouter = router({
           minArea: z.number().optional(),
           maxArea: z.number().optional(),
           status: z.enum(['available', 'sold', 'rented', 'pending']).optional(),
+          ownershipType: z.array(z.enum(OWNERSHIP_TYPES)).optional(),
+          structuralType: z.array(z.enum(STRUCTURAL_TYPES)).optional(),
+          floors: z.array(z.enum(FLOOR_TYPES)).optional(),
           amenities: z.array(z.string()).optional(),
           postedBy: z.array(z.string()).optional(),
           minLat: z.number().optional(),
@@ -132,19 +139,14 @@ export const appRouter = router({
           maxLng: z.number().optional(),
           limit: z.number().default(20),
           offset: z.number().default(0),
-          sortOption: z.enum([
-            'price_asc',
-            'price_desc',
-            'date_desc',
-            'date_asc',
-            'suburb_asc',
-            'suburb_desc',
-          ]).optional(), // Added sort option support
+          sortOption: z
+            .enum(['price_asc', 'price_desc', 'date_desc', 'date_asc', 'suburb_asc', 'suburb_desc'])
+            .optional(), // Added sort option support
         }),
       )
       .query(async ({ input }) => {
         const { propertySearchService } = await import('./services/propertySearchService');
-        
+
         // Map input to PropertyFilters
         const filters: any = {
           city: input.city,
@@ -163,23 +165,26 @@ export const appRouter = router({
           status: input.status ? [input.status as any] : undefined, // Service expects array
           amenities: input.amenities, // Note: Service might need update if it processes amenities differently, but looks okay
           // postedBy handling might differ or need explicit mapping if service supports it
-          bounds: (input.minLat && input.maxLat && input.minLng && input.maxLng) ? {
-            south: input.minLat,
-            north: input.maxLat,
-            west: input.minLng,
-            east: input.maxLng
-          } : undefined
+          bounds:
+            input.minLat && input.maxLat && input.minLng && input.maxLng
+              ? {
+                  south: input.minLat,
+                  north: input.maxLat,
+                  west: input.minLng,
+                  east: input.maxLng,
+                }
+              : undefined,
         };
 
         const page = Math.floor(input.offset / input.limit) + 1;
-        
+
         // Use the service
         // We defaults/fallbacks are handled inside service or here
         return await propertySearchService.searchProperties(
           filters,
           (input.sortOption as any) || 'date_desc',
           page,
-          input.limit
+          input.limit,
         );
       }),
 
@@ -197,17 +202,19 @@ export const appRouter = router({
     getFilterCounts: publicProcedure
       .input(
         z.object({
-          filters: z.object({
-            city: z.string().optional(),
-            province: z.string().optional(),
-            suburb: z.array(z.string()).optional(),
-            propertyType: z.string().optional(),
-            listingType: z.string().optional(),
-            minPrice: z.number().optional(),
-            maxPrice: z.number().optional(),
-            minBedrooms: z.number().optional(),
-            maxBedrooms: z.number().optional(),
-          }).optional(),
+          filters: z
+            .object({
+              city: z.string().optional(),
+              province: z.string().optional(),
+              suburb: z.array(z.string()).optional(),
+              propertyType: z.string().optional(),
+              listingType: z.string().optional(),
+              minPrice: z.number().optional(),
+              maxPrice: z.number().optional(),
+              minBedrooms: z.number().optional(),
+              maxBedrooms: z.number().optional(),
+            })
+            .optional(),
         }),
       )
       .query(async ({ input }) => {
@@ -247,22 +254,23 @@ export const appRouter = router({
       )
       .query(async ({ input }) => {
         await db.incrementPropertyViews(input.id);
-        
+
         // Try listings table first (new)
         const listing = await db.getListingById(input.id);
         if (listing) {
           const rawImages = await db.getListingMedia(input.id);
-          
+
           // Transform images to include imageUrl for PropertyImageGallery compatibility
           // S3 bucket configuration
           const bucketName = process.env.S3_BUCKET_NAME || 'listify-properties-sa';
           const awsRegion = process.env.AWS_REGION || 'af-south-1';
-          const cdnUrl = process.env.CLOUDFRONT_URL || `https://${bucketName}.s3.${awsRegion}.amazonaws.com`;
-          
+          const cdnUrl =
+            process.env.CLOUDFRONT_URL || `https://${bucketName}.s3.${awsRegion}.amazonaws.com`;
+
           const images = rawImages.map(img => {
             // If originalUrl is already a full URL, use it; otherwise construct from bucket
-            const imageUrl = img.originalUrl.startsWith('http') 
-              ? img.originalUrl 
+            const imageUrl = img.originalUrl.startsWith('http')
+              ? img.originalUrl
               : `${cdnUrl}/${img.originalUrl}`;
             return {
               id: img.id,
@@ -271,9 +279,9 @@ export const appRouter = router({
               displayOrder: img.displayOrder,
             };
           });
-          
+
           // Transform listing to match property structure for backward compatibility
-          const propertyDetails = listing.propertyDetails as any || {};
+          const propertyDetails = (listing.propertyDetails as any) || {};
           const transformedProperty = {
             ...listing,
             // Map pricing fields
@@ -283,8 +291,14 @@ export const appRouter = router({
             // Extract property details from JSON
             bedrooms: propertyDetails.bedrooms || 0,
             bathrooms: propertyDetails.bathrooms || 0,
-            area: propertyDetails.erfSizeM2 || propertyDetails.unitSizeM2 || propertyDetails.landSizeM2OrHa || propertyDetails.houseAreaM2 || 0,
-            amenities: propertyDetails.amenitiesFeatures || propertyDetails.propertyHighlights || [],
+            area:
+              propertyDetails.erfSizeM2 ||
+              propertyDetails.unitSizeM2 ||
+              propertyDetails.landSizeM2OrHa ||
+              propertyDetails.houseAreaM2 ||
+              0,
+            amenities:
+              propertyDetails.amenitiesFeatures || propertyDetails.propertyHighlights || [],
             features: propertyDetails.propertyHighlights || propertyDetails.amenitiesFeatures || [],
             // Map property settings for specs display
             propertySettings: {
@@ -304,14 +318,61 @@ export const appRouter = router({
             // Keep original fields
             ownerId: listing.ownerId,
           };
-          
+
           return { property: transformedProperty, images };
         }
-        
+
         // Fallback to properties table (old)
         const property = await db.getPropertyById(input.id);
-        const images = await db.getPropertyImages(input.id);
-        return { property, images };
+        const rawImages = await db.getPropertyImages(input.id);
+
+        // Transform legacy images with CloudFront URL
+        const bucketName = ENV.s3BucketName || 'listify-properties-sa';
+        const awsRegion = ENV.awsRegion || 'eu-north-1';
+        const cdnUrl = ENV.cloudFrontUrl || `https://${bucketName}.s3.${awsRegion}.amazonaws.com`;
+
+        const images = rawImages.map(img => ({
+          ...img,
+          imageUrl: img.imageUrl.startsWith('http') ? img.imageUrl : `${cdnUrl}/${img.imageUrl}`,
+          // Alias for components expecting 'url'
+          url: img.imageUrl.startsWith('http') ? img.imageUrl : `${cdnUrl}/${img.imageUrl}`,
+        }));
+
+        // Parse propertySettings to get amenities
+        let amenities: string[] = [];
+        try {
+          // Add existing amenities if it's a valid string (not JSON)
+          if (typeof property.amenities === 'string' && !property.amenities.startsWith('[')) {
+            amenities.push(property.amenities);
+          } else if (typeof property.amenities === 'string') {
+            amenities = [...amenities, ...JSON.parse(property.amenities)];
+          }
+
+          if (property.propertySettings) {
+            const settings =
+              typeof property.propertySettings === 'string'
+                ? JSON.parse(property.propertySettings)
+                : property.propertySettings;
+
+            if (settings.propertyHighlights && Array.isArray(settings.propertyHighlights)) {
+              amenities = [...amenities, ...settings.propertyHighlights];
+            }
+            // securityFeatures and additionalRooms are handled separately by frontend via propertySettings
+          }
+        } catch (e) {
+          console.error('Failed to parse legacy amenities', e);
+        }
+
+        // Deduplicate
+        const uniqueAmenities = [...new Set(amenities)];
+
+        return {
+          property: {
+            ...property,
+            amenities: uniqueAmenities,
+          },
+          images,
+        };
       }),
 
     getImages: publicProcedure

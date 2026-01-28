@@ -1,11 +1,11 @@
 /**
  * Property-Based Tests for Viewport Animation
- * 
+ *
  * Feature: advertise-with-us-landing, Property 18: Viewport animation
  * Validates: Requirements 11.1
- * 
+ *
  * Property 18: Viewport animation
- * For any page element with scroll-triggered animation, when the element enters 
+ * For any page element with scroll-triggered animation, when the element enters
  * the viewport, it should apply a fade-up animation with appropriate timing
  */
 
@@ -40,7 +40,7 @@ class MockIntersectionObserver {
 
   // Helper to trigger intersection
   triggerIntersection(isIntersecting: boolean) {
-    const entries: IntersectionObserverEntry[] = Array.from(this.elements).map((element) => ({
+    const entries: IntersectionObserverEntry[] = Array.from(this.elements).map(element => ({
       target: element,
       isIntersecting,
       intersectionRatio: isIntersecting ? 1 : 0,
@@ -59,13 +59,13 @@ let mockObserver: MockIntersectionObserver | null = null;
 describe('Property 18: Viewport Animation', () => {
   beforeEach(() => {
     // Setup IntersectionObserver mock
-    global.IntersectionObserver = vi.fn((callback) => {
+    global.IntersectionObserver = vi.fn(callback => {
       mockObserver = new MockIntersectionObserver(callback);
       return mockObserver as any;
     }) as any;
 
     // Mock matchMedia for reduced motion
-    global.matchMedia = vi.fn((query) => ({
+    global.matchMedia = vi.fn(query => ({
       matches: false,
       media: query,
       onchange: null,
@@ -83,12 +83,12 @@ describe('Property 18: Viewport Animation', () => {
   });
 
   // Test component that uses scroll animation
-  const TestComponent = ({ 
-    threshold = 0.1, 
+  const TestComponent = ({
+    threshold = 0.1,
     rootMargin = '0px',
-    testId = 'animated-element'
-  }: { 
-    threshold?: number; 
+    testId = 'animated-element',
+  }: {
+    threshold?: number;
     rootMargin?: string;
     testId?: string;
   }) => {
@@ -99,7 +99,7 @@ describe('Property 18: Viewport Animation', () => {
         ref={ref}
         data-testid={testId}
         initial="initial"
-        animate={isVisible ? "animate" : "initial"}
+        animate={isVisible ? 'animate' : 'initial'}
         variants={fadeUp}
       >
         Test Content
@@ -116,7 +116,7 @@ describe('Property 18: Viewport Animation', () => {
         (threshold, rootMargin, uniqueId) => {
           const testId = `animated-element-${uniqueId}`;
           const { container } = render(
-            <TestComponent threshold={threshold} rootMargin={rootMargin} testId={testId} />
+            <TestComponent threshold={threshold} rootMargin={rootMargin} testId={testId} />,
           );
 
           const element = screen.getByTestId(testId);
@@ -132,12 +132,12 @@ describe('Property 18: Viewport Animation', () => {
           // After intersection, element should be visible
           // Note: In real implementation, Framer Motion would apply the animation
           // We're testing that the hook triggers correctly
-          
+
           cleanup();
           return true;
-        }
+        },
       ),
-      { numRuns: 100 }
+      { numRuns: 100 },
     );
   });
 
@@ -145,10 +145,10 @@ describe('Property 18: Viewport Animation', () => {
     fc.assert(
       fc.property(
         fc.integer({ min: 1, max: 10 }), // number of elements
-        (numElements) => {
+        numElements => {
           // Test that fadeUp variant has correct timing
           const animateVariant = fadeUp.animate;
-          
+
           if (typeof animateVariant === 'object' && 'transition' in animateVariant) {
             const transition = animateVariant.transition as any;
             const duration = transition.duration;
@@ -159,9 +159,9 @@ describe('Property 18: Viewport Animation', () => {
           }
 
           return true;
-        }
+        },
       ),
-      { numRuns: 100 }
+      { numRuns: 100 },
     );
   });
 
@@ -169,7 +169,7 @@ describe('Property 18: Viewport Animation', () => {
     fc.assert(
       fc.property(
         fc.string({ minLength: 1, maxLength: 50 }), // content
-        (content) => {
+        content => {
           // Verify fadeUp variant structure
           expect(fadeUp.initial).toHaveProperty('opacity');
           expect(fadeUp.initial).toHaveProperty('y');
@@ -185,9 +185,9 @@ describe('Property 18: Viewport Animation', () => {
           expect((fadeUp.animate as any).y).toBe(0);
 
           return true;
-        }
+        },
       ),
-      { numRuns: 100 }
+      { numRuns: 100 },
     );
   });
 
@@ -195,7 +195,7 @@ describe('Property 18: Viewport Animation', () => {
     fc.assert(
       fc.property(
         fc.double({ min: 0, max: 1 }), // threshold
-        (threshold) => {
+        threshold => {
           render(<TestComponent threshold={threshold} />);
 
           // Verify IntersectionObserver was created
@@ -206,9 +206,9 @@ describe('Property 18: Viewport Animation', () => {
           expect(calls.length).toBeGreaterThan(0);
 
           return true;
-        }
+        },
       ),
-      { numRuns: 100 }
+      { numRuns: 100 },
     );
   });
 
@@ -216,7 +216,7 @@ describe('Property 18: Viewport Animation', () => {
     fc.assert(
       fc.property(
         fc.double({ min: 0, max: 1 }), // threshold
-        (threshold) => {
+        threshold => {
           render(<TestComponent threshold={threshold} />);
 
           // Get the IntersectionObserver options
@@ -226,9 +226,9 @@ describe('Property 18: Viewport Animation', () => {
           // Note: In the actual implementation, options might be passed differently
           // This test verifies the hook accepts threshold parameter
           return true;
-        }
+        },
       ),
-      { numRuns: 100 }
+      { numRuns: 100 },
     );
   });
 
@@ -236,20 +236,23 @@ describe('Property 18: Viewport Animation', () => {
     fc.assert(
       fc.property(
         fc.integer({ min: 2, max: 5 }), // number of elements
-        (numElements) => {
+        numElements => {
           // Generate unique test IDs
-          const testIds = Array.from({ length: numElements }, (_, i) => `element-${Date.now()}-${i}`);
-          
+          const testIds = Array.from(
+            { length: numElements },
+            (_, i) => `element-${Date.now()}-${i}`,
+          );
+
           const { container } = render(
             <>
               {testIds.map((id, index) => (
                 <TestComponent key={index} testId={id} />
               ))}
-            </>
+            </>,
           );
 
           // Each element should be rendered
-          testIds.forEach((id) => {
+          testIds.forEach(id => {
             const element = screen.getByTestId(id);
             expect(element).toBeInTheDocument();
           });
@@ -259,9 +262,9 @@ describe('Property 18: Viewport Animation', () => {
 
           cleanup();
           return true;
-        }
+        },
       ),
-      { numRuns: 50 }
+      { numRuns: 50 },
     );
   });
 
@@ -271,7 +274,7 @@ describe('Property 18: Viewport Animation', () => {
         fc.constant(null), // No random input needed
         () => {
           const animateVariant = fadeUp.animate;
-          
+
           if (typeof animateVariant === 'object' && 'transition' in animateVariant) {
             const transition = animateVariant.transition as any;
             const ease = transition.ease;
@@ -279,11 +282,11 @@ describe('Property 18: Viewport Animation', () => {
             // Should use cubic-bezier easing
             expect(ease).toBeDefined();
             expect(Array.isArray(ease)).toBe(true);
-            
+
             if (Array.isArray(ease)) {
               // Should have 4 values for cubic-bezier
               expect(ease.length).toBe(4);
-              
+
               // Values should be in valid range [0, 1] for most cases
               ease.forEach((value: number) => {
                 expect(typeof value).toBe('number');
@@ -292,44 +295,41 @@ describe('Property 18: Viewport Animation', () => {
           }
 
           return true;
-        }
+        },
       ),
-      { numRuns: 100 }
+      { numRuns: 100 },
     );
   });
 
   it('Property 18.8: Animation should cleanup observers on unmount', () => {
     fc.assert(
-      fc.property(
-        fc.string({ minLength: 1, maxLength: 20 }),
-        (testId) => {
-          const { unmount } = render(<TestComponent testId={testId} />);
+      fc.property(fc.string({ minLength: 1, maxLength: 20 }), testId => {
+        const { unmount } = render(<TestComponent testId={testId} />);
 
-          // Verify observer was created
-          expect(mockObserver).not.toBeNull();
+        // Verify observer was created
+        expect(mockObserver).not.toBeNull();
 
-          // Unmount component
-          unmount();
+        // Unmount component
+        unmount();
 
-          // Observer should be disconnected
-          // Note: We can't directly test this without more complex mocking,
-          // but we verify the component unmounts cleanly
-          return true;
-        }
-      ),
-      { numRuns: 50 }
+        // Observer should be disconnected
+        // Note: We can't directly test this without more complex mocking,
+        // but we verify the component unmounts cleanly
+        return true;
+      }),
+      { numRuns: 50 },
     );
   });
 });
 
 describe('Property 18: Viewport Animation - Edge Cases', () => {
   beforeEach(() => {
-    global.IntersectionObserver = vi.fn((callback) => {
+    global.IntersectionObserver = vi.fn(callback => {
       mockObserver = new MockIntersectionObserver(callback);
       return mockObserver as any;
     }) as any;
 
-    global.matchMedia = vi.fn((query) => ({
+    global.matchMedia = vi.fn(query => ({
       matches: false,
       media: query,
       onchange: null,
@@ -353,7 +353,7 @@ describe('Property 18: Viewport Animation - Edge Cases', () => {
         ref={ref}
         data-testid={testId}
         initial="initial"
-        animate={isVisible ? "animate" : "initial"}
+        animate={isVisible ? 'animate' : 'initial'}
         variants={fadeUp}
       >
         Test Content
@@ -384,7 +384,7 @@ describe('Property 18: Viewport Animation - Edge Cases', () => {
           ref={ref}
           data-testid="animated-element"
           initial="initial"
-          animate={isVisible ? "animate" : "initial"}
+          animate={isVisible ? 'animate' : 'initial'}
           variants={fadeUp}
         >
           Test Content
@@ -404,7 +404,7 @@ describe('Property 18: Viewport Animation - Edge Cases', () => {
           ref={ref}
           data-testid="animated-element"
           initial="initial"
-          animate={isVisible ? "animate" : "initial"}
+          animate={isVisible ? 'animate' : 'initial'}
           variants={fadeUp}
         >
           Test Content

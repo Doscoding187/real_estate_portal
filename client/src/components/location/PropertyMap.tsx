@@ -113,7 +113,17 @@ export function PropertyMap({
         shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
       });
 
-      const map = L.map(mapRef.current!).setView([center.lat, center.lng], zoom);
+      // Restrict to South Africa
+      const southAfricaBounds = L.latLngBounds(
+        L.latLng(-35.0, 16.0), // South-West
+        L.latLng(-22.0, 33.0), // North-East
+      );
+
+      const map = L.map(mapRef.current!, {
+        minZoom: 5,
+        maxBounds: southAfricaBounds,
+        maxBoundsViscosity: 1.0,
+      }).setView([center.lat, center.lng], zoom);
 
       // Add tile layer (OpenStreetMap)
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {

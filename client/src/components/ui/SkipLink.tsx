@@ -1,6 +1,6 @@
 /**
  * Skip Link Component for Keyboard Navigation
- * 
+ *
  * Provides skip links for keyboard users to bypass navigation
  * and jump directly to main content areas.
  */
@@ -51,7 +51,7 @@ export function SkipLinks({ links }: SkipLinksProps) {
 
   return (
     <nav aria-label="Skip links" className="skip-links">
-      {skipLinks.map((link) => (
+      {skipLinks.map(link => (
         <SkipLink key={link.targetId} targetId={link.targetId}>
           {link.label}
         </SkipLink>

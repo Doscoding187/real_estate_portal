@@ -1,17 +1,21 @@
 /**
  * useFocusManagement Hook
- * 
+ *
  * React hook for managing focus indicators and keyboard navigation.
- * 
+ *
  * Requirements: 10.5
  */
 
 import { useEffect, useRef } from 'react';
-import { initializeFocusManager, createFocusTrap, FocusTrap } from '@/lib/accessibility/focusManager';
+import {
+  initializeFocusManager,
+  createFocusTrap,
+  FocusTrap,
+} from '@/lib/accessibility/focusManager';
 
 /**
  * Initialize global focus management
- * 
+ *
  * Should be called once at the app level to set up keyboard/mouse detection.
  */
 export function useFocusManager(): void {
@@ -23,13 +27,11 @@ export function useFocusManager(): void {
 
 /**
  * Create a focus trap for a modal or overlay
- * 
+ *
  * @param isActive - Whether the focus trap should be active
  * @returns Ref to attach to the container element
  */
-export function useFocusTrap<T extends HTMLElement>(
-  isActive: boolean
-): React.RefObject<T> {
+export function useFocusTrap<T extends HTMLElement>(isActive: boolean): React.RefObject<T> {
   const ref = useRef<T>(null);
   const focusTrapRef = useRef<FocusTrap | null>(null);
 
@@ -54,14 +56,14 @@ export function useFocusTrap<T extends HTMLElement>(
 
 /**
  * Auto-focus an element when it mounts
- * 
+ *
  * @param shouldFocus - Whether to focus the element
  * @param delay - Optional delay before focusing (in ms)
  * @returns Ref to attach to the element
  */
 export function useAutoFocus<T extends HTMLElement>(
   shouldFocus: boolean = true,
-  delay: number = 0
+  delay: number = 0,
 ): React.RefObject<T> {
   const ref = useRef<T>(null);
 
@@ -80,10 +82,10 @@ export function useAutoFocus<T extends HTMLElement>(
 
 /**
  * Restore focus to a previous element
- * 
+ *
  * Useful for modals and overlays that need to return focus
  * to the trigger element when closed.
- * 
+ *
  * @returns Object with methods to save and restore focus
  */
 export function useFocusRestore() {
@@ -105,7 +107,7 @@ export function useFocusRestore() {
 
 /**
  * Track focus within a container
- * 
+ *
  * @returns Object with ref and boolean indicating if focus is within
  */
 export function useFocusWithin<T extends HTMLElement>(): {
@@ -141,10 +143,10 @@ export function useFocusWithin<T extends HTMLElement>(): {
 
 /**
  * Handle focus visible state
- * 
+ *
  * Provides a way to style elements differently when focused via keyboard
  * vs mouse/touch.
- * 
+ *
  * @returns Object with ref and boolean indicating if focus is visible
  */
 export function useFocusVisible<T extends HTMLElement>(): {

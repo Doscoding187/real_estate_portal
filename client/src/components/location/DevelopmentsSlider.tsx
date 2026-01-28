@@ -25,9 +25,13 @@ export function DevelopmentsSlider({ developments, locationName }: DevelopmentsS
           <div>
             <div className="flex items-center gap-2 mb-2 text-orange-600">
               <Building2 className="h-5 w-5" />
-              <span className="font-semibold uppercase tracking-wider text-sm">Trending Projects</span>
+              <span className="font-semibold uppercase tracking-wider text-sm">
+                Trending Projects
+              </span>
             </div>
-            <h2 className="text-3xl font-bold text-slate-900">High-Demand Developments in {locationName}</h2>
+            <h2 className="text-3xl font-bold text-slate-900">
+              High-Demand Developments in {locationName}
+            </h2>
             <p className="text-slate-500 mt-2 max-w-2xl">
               Projects buyers are actively viewing in this area
             </p>
@@ -43,42 +47,45 @@ export function DevelopmentsSlider({ developments, locationName }: DevelopmentsS
         <div className="relative">
           <Carousel className="w-full">
             <CarouselContent className="-ml-4">
-              {developments.map((dev) => {
-                 // Handle image parsing safely
-                 // Handle image parsing safely
-                 let mainImage = '';
-                 let imagesArr: any[] = [];
-                 
-                 if (Array.isArray(dev.images)) {
-                   imagesArr = dev.images;
-                 } else if (typeof dev.images === 'string') {
-                    try {
-                       imagesArr = JSON.parse(dev.images);
-                       if (!Array.isArray(imagesArr)) imagesArr = [imagesArr];
-                    } catch {
-                       imagesArr = [dev.images];
-                    }
-                 }
-    
-                 if (imagesArr.length > 0) {
-                     const first = imagesArr[0];
-                     if (typeof first === 'string') mainImage = first;
-                     else if (typeof first === 'object' && first !== null && 'url' in first) mainImage = first.url;
-                 }
+              {developments.map(dev => {
+                // Handle image parsing safely
+                // Handle image parsing safely
+                let mainImage = '';
+                let imagesArr: any[] = [];
 
-                 return (
+                if (Array.isArray(dev.images)) {
+                  imagesArr = dev.images;
+                } else if (typeof dev.images === 'string') {
+                  try {
+                    imagesArr = JSON.parse(dev.images);
+                    if (!Array.isArray(imagesArr)) imagesArr = [imagesArr];
+                  } catch {
+                    imagesArr = [dev.images];
+                  }
+                }
+
+                if (imagesArr.length > 0) {
+                  const first = imagesArr[0];
+                  if (typeof first === 'string') mainImage = first;
+                  else if (typeof first === 'object' && first !== null && 'url' in first)
+                    mainImage = first.url;
+                }
+
+                return (
                   <CarouselItem key={dev.id} className="pl-4 basis-full md:basis-1/2 lg:basis-1/3">
                     <Link href={`/development/${dev.id}`}>
                       <div className="cursor-pointer group h-full">
-                        <SimpleDevelopmentCard 
+                        <SimpleDevelopmentCard
                           id={dev.id.toString()}
                           title={dev.name}
                           city={dev.city}
                           priceRange={{
-                            min: dev.minPrice || (dev.price || 0), // Handle both potential field names
-                            max: 0
+                            min: dev.minPrice || dev.price || 0, // Handle both potential field names
+                            max: 0,
                           }}
-                          image={mainImage || 'https://placehold.co/600x400/e2e8f0/64748b?text=No+Image'}
+                          image={
+                            mainImage || 'https://placehold.co/600x400/e2e8f0/64748b?text=No+Image'
+                          }
                           isHotSelling={!!dev.isHotSelling}
                           isHighDemand={!!dev.isHighDemand}
                         />

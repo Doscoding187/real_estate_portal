@@ -35,7 +35,7 @@ export function ComparisonBar() {
 
           <div className="flex items-center gap-3">
             <div className="flex gap-2 overflow-x-auto max-w-md">
-              {comparedProperties.map((propertyId) => (
+              {comparedProperties.map(propertyId => (
                 <div
                   key={propertyId}
                   className="flex items-center gap-1 bg-slate-100 rounded-md px-2 py-1 text-sm"

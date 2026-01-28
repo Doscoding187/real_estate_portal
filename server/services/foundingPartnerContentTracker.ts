@@ -1,13 +1,13 @@
-import { foundingPartnerService } from "./foundingPartnerService";
-import { launchService } from "./launchService";
-import { contentQuotaService } from "./contentQuotaService";
+import { foundingPartnerService } from './foundingPartnerService';
+import { launchService } from './launchService';
+import { contentQuotaService } from './contentQuotaService';
 
 /**
  * Founding Partner Content Tracker
- * 
+ *
  * Integrates with content approval service to automatically track
  * founding partner content commitments and update quotas.
- * 
+ *
  * Requirements: 16.30
  */
 
@@ -30,7 +30,7 @@ class FoundingPartnerContentTracker {
   async trackContentApproval(
     partnerId: string,
     contentId: string,
-    contentType: string
+    contentType: string,
   ): Promise<ContentTrackingResult> {
     // Check if partner is a founding partner
     const isFoundingPartner = await foundingPartnerService.isFoundingPartner(partnerId);
@@ -40,7 +40,7 @@ class FoundingPartnerContentTracker {
         tracked: false,
         isFoundingPartner: false,
         isPreLaunch: false,
-        quotaUpdated: false
+        quotaUpdated: false,
       };
     }
 
@@ -56,7 +56,7 @@ class FoundingPartnerContentTracker {
         tracked: false,
         isFoundingPartner: true,
         isPreLaunch,
-        quotaUpdated: false
+        quotaUpdated: false,
       };
     }
 
@@ -69,22 +69,22 @@ class FoundingPartnerContentTracker {
       // Track pre-launch content
       await foundingPartnerService.trackPreLaunchContent(partnerId);
       preLaunchCount = status.preLaunchContentDelivered + 1;
-      
+
       console.log(
         `Tracked pre-launch content for founding partner ${partnerId}: ` +
-        `${preLaunchCount}/5-10 pieces`
+          `${preLaunchCount}/5-10 pieces`,
       );
     } else {
       // Track weekly content
       weekIndex = foundingPartnerService.getCurrentWeekIndex(status.enrollmentDate);
       await foundingPartnerService.trackWeeklyContent(partnerId, weekIndex);
-      
+
       const updatedStatus = await foundingPartnerService.getFoundingPartnerStatus(partnerId);
       weeklyCount = updatedStatus?.weeklyContentDelivered[weekIndex] || 0;
-      
+
       console.log(
         `Tracked weekly content for founding partner ${partnerId}: ` +
-        `Week ${weekIndex}, Count: ${weeklyCount}`
+          `Week ${weekIndex}, Count: ${weeklyCount}`,
       );
     }
 
@@ -104,7 +104,7 @@ class FoundingPartnerContentTracker {
       preLaunchCount,
       weeklyCount,
       weekIndex,
-      quotaUpdated
+      quotaUpdated,
     };
   }
 
@@ -131,25 +131,24 @@ class FoundingPartnerContentTracker {
 
         if (!commitment.preLaunchMet) {
           reasons.push(
-            `Pre-launch commitment not met: ${commitment.preLaunchProgress.delivered}/${commitment.preLaunchProgress.required}`
+            `Pre-launch commitment not met: ${commitment.preLaunchProgress.delivered}/${commitment.preLaunchProgress.required}`,
           );
         }
 
         if (!commitment.weeklyMet) {
           reasons.push(
-            `Weekly commitment not met: ${commitment.weeklyProgress.delivered}/${commitment.weeklyProgress.required}`
+            `Weekly commitment not met: ${commitment.weeklyProgress.delivered}/${commitment.weeklyProgress.required}`,
           );
         }
 
         if (reasons.length > 0) {
-          await foundingPartnerService.issueWarning(
-            partner.partnerId,
-            reasons.join('; ')
-          );
+          await foundingPartnerService.issueWarning(partner.partnerId, reasons.join('; '));
           warned++;
 
           // Check if this warning caused revocation
-          const updatedStatus = await foundingPartnerService.getFoundingPartnerStatus(partner.partnerId);
+          const updatedStatus = await foundingPartnerService.getFoundingPartnerStatus(
+            partner.partnerId,
+          );
           if (updatedStatus?.status === 'revoked') {
             revoked++;
           }
@@ -160,7 +159,7 @@ class FoundingPartnerContentTracker {
     return {
       checked: activePartners.length,
       warned,
-      revoked
+      revoked,
     };
   }
 
@@ -206,10 +205,13 @@ class FoundingPartnerContentTracker {
     }
 
     const weeksActive = Math.floor(
-      (Date.now() - status.enrollmentDate.getTime()) / (7 * 24 * 60 * 60 * 1000)
+      (Date.now() - status.enrollmentDate.getTime()) / (7 * 24 * 60 * 60 * 1000),
     );
 
-    const totalWeeklyDelivered = status.weeklyContentDelivered.reduce((sum, count) => sum + count, 0);
+    const totalWeeklyDelivered = status.weeklyContentDelivered.reduce(
+      (sum, count) => sum + count,
+      0,
+    );
     const averagePerWeek = weeksActive > 0 ? totalWeeklyDelivered / weeksActive : 0;
 
     return {
@@ -219,24 +221,26 @@ class FoundingPartnerContentTracker {
           required: commitmentStatus.preLaunchProgress.required,
           delivered: commitmentStatus.preLaunchProgress.delivered,
           percentComplete: Math.round(
-            (commitmentStatus.preLaunchProgress.delivered / commitmentStatus.preLaunchProgress.required) * 100
+            (commitmentStatus.preLaunchProgress.delivered /
+              commitmentStatus.preLaunchProgress.required) *
+              100,
           ),
-          isMet: commitmentStatus.preLaunchMet
+          isMet: commitmentStatus.preLaunchMet,
         },
         weekly: {
           requiredPerWeek: 2,
           totalRequired: commitmentStatus.weeklyProgress.required,
           totalDelivered: commitmentStatus.weeklyProgress.delivered,
           averagePerWeek: Math.round(averagePerWeek * 10) / 10,
-          isMet: commitmentStatus.weeklyMet
+          isMet: commitmentStatus.weeklyMet,
         },
         overall: {
           isCompliant: commitmentStatus.isCompliant,
           warningCount: commitmentStatus.warningCount,
           maxWarnings: 2,
-          status: status.status
-        }
-      }
+          status: status.status,
+        },
+      },
     };
   }
 
@@ -265,7 +269,7 @@ class FoundingPartnerContentTracker {
 
     for (let i = 0; i <= currentWeekIndex; i++) {
       const weekStart = new Date(status.enrollmentDate);
-      weekStart.setDate(weekStart.getDate() + (i * 7));
+      weekStart.setDate(weekStart.getDate() + i * 7);
 
       const weekEnd = new Date(weekStart);
       weekEnd.setDate(weekEnd.getDate() + 6);
@@ -278,7 +282,7 @@ class FoundingPartnerContentTracker {
         endDate: weekEnd,
         contentDelivered,
         required: 2,
-        isMet: contentDelivered >= 2
+        isMet: contentDelivered >= 2,
       });
     }
 
@@ -304,8 +308,12 @@ class FoundingPartnerContentTracker {
         if (progress.commitment && !progress.commitment.overall.isCompliant) {
           // TODO: Send email reminder
           console.log(`Reminder sent to founding partner ${partner.partnerId}`);
-          console.log(`Pre-launch: ${progress.commitment.preLaunch.delivered}/${progress.commitment.preLaunch.required}`);
-          console.log(`Weekly: ${progress.commitment.weekly.totalDelivered}/${progress.commitment.weekly.totalRequired}`);
+          console.log(
+            `Pre-launch: ${progress.commitment.preLaunch.delivered}/${progress.commitment.preLaunch.required}`,
+          );
+          console.log(
+            `Weekly: ${progress.commitment.weekly.totalDelivered}/${progress.commitment.weekly.totalRequired}`,
+          );
           sent++;
         }
       } catch (error) {
@@ -321,12 +329,14 @@ class FoundingPartnerContentTracker {
    * Get all founding partners with commitment issues
    * Requirements: 16.30
    */
-  async getPartnersWithCommitmentIssues(): Promise<{
-    partnerId: string;
-    issues: string[];
-    warningCount: number;
-    status: string;
-  }[]> {
+  async getPartnersWithCommitmentIssues(): Promise<
+    {
+      partnerId: string;
+      issues: string[];
+      warningCount: number;
+      status: string;
+    }[]
+  > {
     const activePartners = await foundingPartnerService.getActiveFoundingPartners();
     const partnersWithIssues = [];
 
@@ -338,13 +348,13 @@ class FoundingPartnerContentTracker {
 
         if (!commitment.preLaunchMet) {
           issues.push(
-            `Pre-launch: ${commitment.preLaunchProgress.delivered}/${commitment.preLaunchProgress.required}`
+            `Pre-launch: ${commitment.preLaunchProgress.delivered}/${commitment.preLaunchProgress.required}`,
           );
         }
 
         if (!commitment.weeklyMet) {
           issues.push(
-            `Weekly: ${commitment.weeklyProgress.delivered}/${commitment.weeklyProgress.required}`
+            `Weekly: ${commitment.weeklyProgress.delivered}/${commitment.weeklyProgress.required}`,
           );
         }
 
@@ -352,7 +362,7 @@ class FoundingPartnerContentTracker {
           partnerId: partner.partnerId,
           issues,
           warningCount: partner.warningCount,
-          status: partner.status
+          status: partner.status,
         });
       }
     }

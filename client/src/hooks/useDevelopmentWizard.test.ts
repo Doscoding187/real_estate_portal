@@ -14,7 +14,7 @@ describe('useDevelopmentWizard Validation Logic', () => {
   describe('Phase 1: Identity Validation', () => {
     it('should fail validation if name or address is missing', () => {
       const { result } = renderHook(() => useDevelopmentWizard());
-      
+
       // Initial state is empty
       const validation = result.current.validatePhase(1);
       expect(validation.isValid).toBe(false);
@@ -28,7 +28,13 @@ describe('useDevelopmentWizard Validation Logic', () => {
       act(() => {
         result.current.setIdentity({
           name: 'Test Development',
-          location: { address: '123 Test St', city: 'Test City', province: 'Test', latitude: '0', longitude: '0' }
+          location: {
+            address: '123 Test St',
+            city: 'Test City',
+            province: 'Test',
+            latitude: '0',
+            longitude: '0',
+          },
         });
       });
 
@@ -47,7 +53,7 @@ describe('useDevelopmentWizard Validation Logic', () => {
 
     it('should fail if type is somehow cleared', () => {
       const { result } = renderHook(() => useDevelopmentWizard());
-      
+
       act(() => {
         // @ts-ignore - forcing invalid state for test
         result.current.setClassification({ type: '' });
@@ -62,11 +68,11 @@ describe('useDevelopmentWizard Validation Logic', () => {
   describe('Phase 3: Overview Validation', () => {
     it('should fail if highlights are fewer than 3 or description is too short', () => {
       const { result } = renderHook(() => useDevelopmentWizard());
-      
+
       act(() => {
         result.current.setOverview({
           highlights: ['One', 'Two'], // Need 3
-          description: 'Too short' // Need 50 chars
+          description: 'Too short', // Need 50 chars
         });
       });
 
@@ -78,11 +84,12 @@ describe('useDevelopmentWizard Validation Logic', () => {
 
     it('should pass with valid highlights and description', () => {
       const { result } = renderHook(() => useDevelopmentWizard());
-      
+
       act(() => {
         result.current.setOverview({
           highlights: ['One', 'Two', 'Three'],
-          description: 'This is a long enough description that should pass the validation check of fifty characters easily.'
+          description:
+            'This is a long enough description that should pass the validation check of fifty characters easily.',
         });
       });
 
@@ -94,7 +101,7 @@ describe('useDevelopmentWizard Validation Logic', () => {
   describe('Phase 4: Unit Types Validation', () => {
     it('should require at least one unit type for residential developments', () => {
       const { result } = renderHook(() => useDevelopmentWizard());
-      
+
       // Ensure type is residential
       act(() => {
         result.current.setClassification({ type: 'residential' });
@@ -107,7 +114,7 @@ describe('useDevelopmentWizard Validation Logic', () => {
 
     it('should NOT require unit types for Land developments', () => {
       const { result } = renderHook(() => useDevelopmentWizard());
-      
+
       act(() => {
         result.current.setClassification({ type: 'land' });
       });
@@ -118,7 +125,7 @@ describe('useDevelopmentWizard Validation Logic', () => {
 
     it('should pass if a unit type is added', () => {
       const { result } = renderHook(() => useDevelopmentWizard());
-      
+
       act(() => {
         result.current.addUnitType({
           name: 'Test Unit',
@@ -127,13 +134,17 @@ describe('useDevelopmentWizard Validation Logic', () => {
           parking: '1',
           basePriceFrom: 1000000,
           amenities: { standard: [], additional: [] },
-          specifications: { builtInFeatures: { builtInWardrobes: true, tiledFlooring: true, graniteCounters: true }, finishes: {}, electrical: { prepaidElectricity: true } },
+          specifications: {
+            builtInFeatures: { builtInWardrobes: true, tiledFlooring: true, graniteCounters: true },
+            finishes: {},
+            electrical: { prepaidElectricity: true },
+          },
           baseMedia: { gallery: [], floorPlans: [], renders: [] },
           specs: [],
           displayOrder: 0,
           isActive: true,
           createdAt: new Date(),
-          updatedAt: new Date()
+          updatedAt: new Date(),
         });
       });
 
@@ -145,12 +156,42 @@ describe('useDevelopmentWizard Validation Logic', () => {
   describe('Final Publish Validation', () => {
     it('should validate media requirements', () => {
       const { result } = renderHook(() => useDevelopmentWizard());
-      
+
       // Setup valid state for everything EXCEPT media
       act(() => {
-        result.current.setIdentity({ name: 'Valid Name', location: { address: 'Valid Address', city: '', province: '', latitude: '', longitude: '' } });
-        result.current.setOverview({ highlights: ['1','2','3'], description: 'Long enough description for validation purposes -------------------' });
-        result.current.addUnitType({ name: 'Unit', bedrooms: 1, bathrooms: 1, parking: '1', basePriceFrom: 100, amenities: { standard: [], additional: [] }, specifications: { builtInFeatures: { builtInWardrobes: true, tiledFlooring: true, graniteCounters: true }, finishes: {}, electrical: { prepaidElectricity: true } }, baseMedia: { gallery: [], floorPlans: [], renders: [] }, specs: [], displayOrder: 0, isActive: true, createdAt: new Date(), updatedAt: new Date() });
+        result.current.setIdentity({
+          name: 'Valid Name',
+          location: {
+            address: 'Valid Address',
+            city: '',
+            province: '',
+            latitude: '',
+            longitude: '',
+          },
+        });
+        result.current.setOverview({
+          highlights: ['1', '2', '3'],
+          description: 'Long enough description for validation purposes -------------------',
+        });
+        result.current.addUnitType({
+          name: 'Unit',
+          bedrooms: 1,
+          bathrooms: 1,
+          parking: '1',
+          basePriceFrom: 100,
+          amenities: { standard: [], additional: [] },
+          specifications: {
+            builtInFeatures: { builtInWardrobes: true, tiledFlooring: true, graniteCounters: true },
+            finishes: {},
+            electrical: { prepaidElectricity: true },
+          },
+          baseMedia: { gallery: [], floorPlans: [], renders: [] },
+          specs: [],
+          displayOrder: 0,
+          isActive: true,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        });
       });
 
       const validation = result.current.validateForPublish();
@@ -160,23 +201,27 @@ describe('useDevelopmentWizard Validation Logic', () => {
 
     it('should validate unit prices', () => {
       const { result } = renderHook(() => useDevelopmentWizard());
-      
+
       act(() => {
         // Add unit with 0 price
-        result.current.addUnitType({ 
-          name: 'Free Unit', 
-          bedrooms: 1, 
-          bathrooms: 1, 
-          parking: '1', 
+        result.current.addUnitType({
+          name: 'Free Unit',
+          bedrooms: 1,
+          bathrooms: 1,
+          parking: '1',
           basePriceFrom: 0, // Invalid
-          amenities: { standard: [], additional: [] }, 
-          specifications: { builtInFeatures: { builtInWardrobes: true, tiledFlooring: true, graniteCounters: true }, finishes: {}, electrical: { prepaidElectricity: true } }, 
-          baseMedia: { gallery: [], floorPlans: [], renders: [] }, 
-          specs: [], 
-          displayOrder: 0, 
-          isActive: true, 
-          createdAt: new Date(), 
-          updatedAt: new Date() 
+          amenities: { standard: [], additional: [] },
+          specifications: {
+            builtInFeatures: { builtInWardrobes: true, tiledFlooring: true, graniteCounters: true },
+            finishes: {},
+            electrical: { prepaidElectricity: true },
+          },
+          baseMedia: { gallery: [], floorPlans: [], renders: [] },
+          specs: [],
+          displayOrder: 0,
+          isActive: true,
+          createdAt: new Date(),
+          updatedAt: new Date(),
         });
         // Set type to residential so units are checked
         result.current.setClassification({ type: 'residential' });

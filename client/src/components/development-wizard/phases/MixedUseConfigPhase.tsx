@@ -4,12 +4,19 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import { Checkbox } from '@/components/ui/checkbox';
-import { 
-  Building2, Store, Home, Layers, ArrowLeft, ArrowRight, 
-  Shield, Users, Fence
+import {
+  Building2,
+  Store,
+  Home,
+  Layers,
+  ArrowLeft,
+  ArrowRight,
+  Shield,
+  Users,
+  Fence,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { 
+import {
   RESIDENTIAL_TYPE_OPTIONS,
   COMMERCIAL_TYPE_OPTIONS,
   COMMUNITY_TYPE_OPTIONS,
@@ -21,12 +28,12 @@ import { useDevelopmentWizard } from '@/hooks/useDevelopmentWizard';
 import { toast } from 'sonner';
 
 export function MixedUseConfigPhase() {
-  const { 
-    residentialConfig, 
+  const {
+    residentialConfig,
     setResidentialConfig,
     commercialConfig,
     setCommercialConfig,
-    setPhase 
+    setPhase,
   } = useDevelopmentWizard();
 
   // Mixed-use specific state
@@ -35,18 +42,14 @@ export function MixedUseConfigPhase() {
   const [selectedCommercialTypes, setSelectedCommercialTypes] = useState<CommercialType[]>([]);
 
   const handleResidentialTypeToggle = (type: ResidentialType) => {
-    setSelectedResidentialTypes(prev => 
-      prev.includes(type) 
-        ? prev.filter(t => t !== type)
-        : [...prev, type]
+    setSelectedResidentialTypes(prev =>
+      prev.includes(type) ? prev.filter(t => t !== type) : [...prev, type],
     );
   };
 
   const handleCommercialTypeToggle = (type: CommercialType) => {
-    setSelectedCommercialTypes(prev => 
-      prev.includes(type) 
-        ? prev.filter(t => t !== type)
-        : [...prev, type]
+    setSelectedCommercialTypes(prev =>
+      prev.includes(type) ? prev.filter(t => t !== type) : [...prev, type],
     );
   };
 
@@ -59,8 +62,6 @@ export function MixedUseConfigPhase() {
     }
   };
 
-
-
   const handleContinue = () => {
     if (selectedResidentialTypes.length === 0) {
       toast.error('Please select at least one residential type');
@@ -70,15 +71,15 @@ export function MixedUseConfigPhase() {
       toast.error('Please select at least one commercial type');
       return;
     }
-    
+
     // Store the first selected type as primary (for compatibility)
-    setResidentialConfig({ 
-      residentialType: selectedResidentialTypes[0] 
+    setResidentialConfig({
+      residentialType: selectedResidentialTypes[0],
     });
-    setCommercialConfig({ 
-      commercialType: selectedCommercialTypes[0]
+    setCommercialConfig({
+      commercialType: selectedCommercialTypes[0],
     });
-    
+
     setPhase(4); // Identity
   };
 
@@ -150,16 +151,16 @@ export function MixedUseConfigPhase() {
               Select the types of residential units in this development.
             </p>
             <div className="space-y-3">
-              {RESIDENTIAL_TYPE_OPTIONS.slice(0, 4).map((option) => {
+              {RESIDENTIAL_TYPE_OPTIONS.slice(0, 4).map(option => {
                 const isSelected = selectedResidentialTypes.includes(option.value);
                 return (
                   <label
                     key={option.value}
                     className={cn(
-                      "flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all",
-                      isSelected 
-                        ? "border-blue-500 bg-blue-50" 
-                        : "border-slate-200 hover:border-blue-300"
+                      'flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all',
+                      isSelected
+                        ? 'border-blue-500 bg-blue-50'
+                        : 'border-slate-200 hover:border-blue-300',
                     )}
                   >
                     <Checkbox
@@ -189,16 +190,16 @@ export function MixedUseConfigPhase() {
               Select the types of commercial spaces in this development.
             </p>
             <div className="space-y-3">
-              {COMMERCIAL_TYPE_OPTIONS.slice(0, 4).map((option) => {
+              {COMMERCIAL_TYPE_OPTIONS.slice(0, 4).map(option => {
                 const isSelected = selectedCommercialTypes.includes(option.value);
                 return (
                   <label
                     key={option.value}
                     className={cn(
-                      "flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all",
-                      isSelected 
-                        ? "border-orange-500 bg-orange-50" 
-                        : "border-slate-200 hover:border-orange-300"
+                      'flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all',
+                      isSelected
+                        ? 'border-orange-500 bg-orange-50'
+                        : 'border-slate-200 hover:border-orange-300',
                     )}
                   >
                     <Checkbox
@@ -226,16 +227,16 @@ export function MixedUseConfigPhase() {
             Community Type
           </h3>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            {COMMUNITY_TYPE_OPTIONS.slice(0, 4).map((option) => {
+            {COMMUNITY_TYPE_OPTIONS.slice(0, 4).map(option => {
               const isSelected = residentialConfig.communityTypes?.includes(option.value);
               return (
                 <label
                   key={option.value}
                   className={cn(
-                    "flex items-center gap-2 p-3 rounded-lg border cursor-pointer transition-all text-sm",
-                    isSelected 
-                      ? "border-purple-500 bg-purple-50" 
-                      : "border-slate-200 hover:border-purple-300"
+                    'flex items-center gap-2 p-3 rounded-lg border cursor-pointer transition-all text-sm',
+                    isSelected
+                      ? 'border-purple-500 bg-purple-50'
+                      : 'border-slate-200 hover:border-purple-300',
                   )}
                 >
                   <Checkbox
@@ -251,19 +252,13 @@ export function MixedUseConfigPhase() {
         </CardContent>
       </Card>
 
-
-
       {/* Navigation */}
       <div className="flex justify-between pt-6 border-t border-slate-200">
-        <Button 
-          variant="outline" 
-          onClick={handleBack}
-          className="px-6 h-11"
-        >
+        <Button variant="outline" onClick={handleBack} className="px-6 h-11">
           <ArrowLeft className="w-4 h-4 mr-2" />
           Back
         </Button>
-        <Button 
+        <Button
           onClick={handleContinue}
           size="lg"
           className="px-8 h-11 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"

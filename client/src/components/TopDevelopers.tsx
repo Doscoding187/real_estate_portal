@@ -30,13 +30,14 @@ export function TopDevelopers() {
       <div className="container">
         {/* Section Header */}
         <div className="mb-8">
-           <h2 className="text-fluid-h2 font-bold mb-3 bg-gradient-to-r from-slate-900 via-[#2774AE] to-slate-900 bg-clip-text text-transparent">
+          <h2 className="text-fluid-h2 font-bold mb-3 bg-gradient-to-r from-slate-900 via-[#2774AE] to-slate-900 bg-clip-text text-transparent">
             Top Developers in South Africa
           </h2>
-          <p className="text-slate-600 text-fluid-h4 max-w-4xl">
-            In real estate, the builder you choose makes a genuine difference. Our list of top developers 
-            features names that are industry leaders in customer satisfaction, design, and timely delivery. 
-            These brands have shaped the skyline with thoughtful living spaces. Know who's building your future before you invest.
+          <p className="text-slate-600 text-lg max-w-3xl leading-relaxed">
+            In real estate, the builder you choose makes a genuine difference. Our list of top
+            developers features names that are industry leaders in customer satisfaction, design,
+            and timely delivery. These brands have shaped the skyline with thoughtful living spaces.
+            Know who's building your future before you invest.
           </p>
         </div>
 
@@ -48,15 +49,15 @@ export function TopDevelopers() {
                   <div className="flex gap-4 mb-4">
                     <Skeleton className="w-20 h-20 rounded-xl" />
                     <div className="flex-1 space-y-2">
-                       <Skeleton className="h-5 w-3/4" />
-                       <Skeleton className="h-4 w-1/2" />
+                      <Skeleton className="h-5 w-3/4" />
+                      <Skeleton className="h-4 w-1/2" />
                     </div>
                   </div>
                   <Skeleton className="h-20 w-full mb-4" />
                   <div className="space-y-2">
-                     <Skeleton className="h-10 w-full" />
-                     <Skeleton className="h-10 w-full" />
-                     <Skeleton className="h-10 w-full" />
+                    <Skeleton className="h-10 w-full" />
+                    <Skeleton className="h-10 w-full" />
+                    <Skeleton className="h-10 w-full" />
                   </div>
                 </CardContent>
               </Card>
@@ -68,20 +69,18 @@ export function TopDevelopers() {
             <Carousel
               opts={{
                 align: 'start',
-                loop: false, 
+                loop: false,
               }}
               className="w-full"
             >
               <CarouselContent className="-ml-6">
                 {developers?.map((developer: any) => (
-                  <CarouselItem key={developer.id} className="pl-6 md:basis-1/2 lg:basis-1/3">
-                    <Card 
-                      className="h-full border border-slate-200 hover:border-slate-300 transition-colors bg-white rounded-xl shadow-sm hover:shadow-md"
-                    >
-                      <CardContent className="p-6">
+                  <CarouselItem key={developer.id} className="pl-6 md:basis-1/2 lg:basis-1/4">
+                    <Card className="h-full border border-slate-200 hover:border-slate-300 transition-colors bg-white rounded-xl shadow-sm hover:shadow-md">
+                      <CardContent className="p-4">
                         {/* Header: Logo & Identity */}
-                        <div className="flex gap-4 mb-6">
-                          <div className="w-20 h-20 flex-shrink-0 bg-white border border-slate-100 rounded-lg p-2 flex items-center justify-center">
+                        <div className="flex gap-4 mb-4">
+                          <div className="w-14 h-14 flex-shrink-0 bg-white border border-slate-100 rounded-lg p-2 flex items-center justify-center">
                             {developer.logoUrl ? (
                               <img
                                 src={developer.logoUrl}
@@ -89,70 +88,78 @@ export function TopDevelopers() {
                                 className="max-w-full max-h-full object-contain"
                               />
                             ) : (
-                               <Building2 className="h-8 w-8 text-slate-300" />
+                              <Building2 className="h-6 w-6 text-slate-300" />
                             )}
                           </div>
-                          <div className="flex flex-col justify-center">
-                            <h3 className="text-xl font-bold text-slate-900 leading-tight mb-1">
+                          <div className="flex flex-col justify-center min-w-0">
+                            <h3 className="text-lg font-bold text-slate-900 leading-tight mb-0.5 truncate">
                               {developer.brandName}
                             </h3>
-                            <p className="text-sm text-slate-500 font-medium">
+                            <p className="text-xs text-slate-500 font-medium truncate">
                               {developer.headOfficeLocation || 'South Africa'}
                             </p>
-                           {/*  Optional: Add "Add Prestige to your life" tagline if available in future schemas */}
                           </div>
                         </div>
 
                         {/* Stats Row */}
-                        <div className="flex items-center justify-between mb-6 px-2">
-                             <div className="flex flex-col">
-                                 <span className="text-2xl font-bold text-slate-900">
-                                     {developer.stats?.totalProjects || 0}
-                                 </span>
-                                 <span className="text-xs text-slate-500 font-medium uppercase tracking-wide">
-                                     Total Projects
-                                 </span>
-                             </div>
-                             
-                             {/* Vertical Divider could go here if needed */}
-                             
-                             <div className="flex flex-col text-right">
-                                 <span className="text-2xl font-bold text-slate-900">
-                                     {developer.stats?.experience || 0}
-                                 </span>
-                                 <span className="text-xs text-slate-500 font-medium uppercase tracking-wide">
-                                     Experience
-                                 </span>
-                             </div>
+                        <div className="flex items-center justify-between mb-4 px-1">
+                          <div className="flex flex-col">
+                            <span className="text-xl font-bold text-slate-900">
+                              {developer.stats?.totalProjects || 0}
+                            </span>
+                            <span className="text-[10px] text-slate-500 font-medium uppercase tracking-wide">
+                              Projects
+                            </span>
+                          </div>
+
+                          <div className="flex flex-col text-right">
+                            <span className="text-xl font-bold text-slate-900">
+                              {developer.stats?.experience || 0}
+                            </span>
+                            <span className="text-[10px] text-slate-500 font-medium uppercase tracking-wide">
+                              Experience
+                            </span>
+                          </div>
                         </div>
 
                         {/* Status Links (Interactive Rows) */}
-                        <div className="space-y-3">
-                            <button 
-                                className="w-full flex items-center justify-between p-3 rounded-lg border border-slate-100 hover:bg-slate-50 group transition-colors"
-                                onClick={() => setLocation(`/developer/${developer.slug}?status=ready-to-move`)}
-                            >
-                                <span className="text-slate-700 font-medium">Ready to Move ({developer.stats?.readyToMove || 0})</span>
-                                <ChevronRight className="h-4 w-4 text-slate-400 group-hover:text-slate-600" />
-                            </button>
+                        <div className="space-y-2">
+                          <button
+                            className="w-full flex items-center justify-between p-2 rounded-lg border border-slate-100 hover:bg-slate-50 group transition-colors"
+                            onClick={() =>
+                              setLocation(`/developer/${developer.slug}?status=ready-to-move`)
+                            }
+                          >
+                            <span className="text-xs text-slate-700 font-medium truncate">
+                              Ready to Move ({developer.stats?.readyToMove || 0})
+                            </span>
+                            <ChevronRight className="h-3 w-3 text-slate-400 group-hover:text-slate-600 flex-shrink-0" />
+                          </button>
 
-                            <button 
-                                className="w-full flex items-center justify-between p-3 rounded-lg border border-slate-100 hover:bg-slate-50 group transition-colors"
-                                onClick={() => setLocation(`/developer/${developer.slug}?status=under-construction`)}
-                            >
-                                <span className="text-slate-700 font-medium">Under Construction ({developer.stats?.underConstruction || 0})</span>
-                                <ChevronRight className="h-4 w-4 text-slate-400 group-hover:text-slate-600" />
-                            </button>
+                          <button
+                            className="w-full flex items-center justify-between p-2 rounded-lg border border-slate-100 hover:bg-slate-50 group transition-colors"
+                            onClick={() =>
+                              setLocation(`/developer/${developer.slug}?status=under-construction`)
+                            }
+                          >
+                            <span className="text-xs text-slate-700 font-medium truncate">
+                              Under Const. ({developer.stats?.underConstruction || 0})
+                            </span>
+                            <ChevronRight className="h-3 w-3 text-slate-400 group-hover:text-slate-600 flex-shrink-0" />
+                          </button>
 
-                             <button 
-                                className="w-full flex items-center justify-between p-3 rounded-lg border border-slate-100 hover:bg-slate-50 group transition-colors"
-                                onClick={() => setLocation(`/developer/${developer.slug}?status=new-launch`)}
-                            >
-                                <span className="text-slate-700 font-medium">New Launch ({developer.stats?.newLaunch || 0})</span>
-                                <ChevronRight className="h-4 w-4 text-slate-400 group-hover:text-slate-600" />
-                            </button>
+                          <button
+                            className="w-full flex items-center justify-between p-2 rounded-lg border border-slate-100 hover:bg-slate-50 group transition-colors"
+                            onClick={() =>
+                              setLocation(`/developer/${developer.slug}?status=new-launch`)
+                            }
+                          >
+                            <span className="text-xs text-slate-700 font-medium truncate">
+                              New Launch ({developer.stats?.newLaunch || 0})
+                            </span>
+                            <ChevronRight className="h-3 w-3 text-slate-400 group-hover:text-slate-600 flex-shrink-0" />
+                          </button>
                         </div>
-
                       </CardContent>
                     </Card>
                   </CarouselItem>
@@ -166,13 +173,12 @@ export function TopDevelopers() {
 
         {/* View All Footer */}
         <div className="mt-8">
-          <Button 
-            variant="link" 
+          <Button
             onClick={() => setLocation('/developers')}
-            className="text-slate-900 font-bold hover:no-underline p-0 flex items-center gap-2 text-base"
+            className="inline-flex items-center justify-center whitespace-nowrap text-sm font-medium outline-none text-white rounded-md gap-2 h-12 px-8 bg-gradient-to-r from-[#2774AE] to-[#2D68C4] hover:from-[#2D68C4] hover:to-[#2774AE] shadow-lg hover:shadow-xl transition-all duration-300 group"
           >
-            View All Developers in South Africa
-            <ArrowRight className="h-5 w-5" />
+            Explore All Developers
+            <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
           </Button>
         </div>
       </div>

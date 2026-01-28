@@ -1,6 +1,9 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { calculateAffordabilityCompanion, matchUnitsToAffordability } from '../services/affordabilityCompanion';
+import {
+  calculateAffordabilityCompanion,
+  matchUnitsToAffordability,
+} from '../services/affordabilityCompanion';
 import { db } from '../db';
 import { units } from '../../drizzle/schema';
 import { eq } from 'drizzle-orm';
@@ -26,9 +29,9 @@ const affordabilityInputSchema = z.object({
 router.post('/calculate', async (req, res) => {
   try {
     const financialData = affordabilityInputSchema.parse(req.body);
-    
+
     const result = calculateAffordabilityCompanion(financialData);
-    
+
     res.json({
       success: true,
       data: result,
@@ -44,7 +47,7 @@ router.post('/calculate', async (req, res) => {
         },
       });
     }
-    
+
     console.error('Affordability calculation error:', error);
     res.status(500).json({
       error: {
@@ -68,9 +71,11 @@ router.post('/match-units', async (req, res) => {
       monthlyPaymentCapacity: z.number().min(0),
       deposit: z.number().min(0).default(0),
     });
-    
-    const { developmentId, affordabilityMax, monthlyPaymentCapacity, deposit } = schema.parse(req.body);
-    
+
+    const { developmentId, affordabilityMax, monthlyPaymentCapacity, deposit } = schema.parse(
+      req.body,
+    );
+
     // Fetch units for the development
     const developmentUnits = await db
       .select({
@@ -85,15 +90,15 @@ router.post('/match-units', async (req, res) => {
       })
       .from(units)
       .where(eq(units.developmentId, developmentId));
-    
+
     // Match units to affordability
     const matchedUnits = matchUnitsToAffordability(
       developmentUnits.map(u => ({ id: u.id, price: u.price, unitType: u.unitType })),
       affordabilityMax,
       monthlyPaymentCapacity,
-      deposit
+      deposit,
     );
-    
+
     // Combine unit details with match results
     const results = developmentUnits.map(unit => {
       const match = matchedUnits.find(m => m.unitId === unit.id);
@@ -102,14 +107,14 @@ router.post('/match-units', async (req, res) => {
         match: match || null,
       };
     });
-    
+
     // Sort by match level (perfect > good > stretch > out_of_reach)
     const matchOrder = { perfect: 0, good: 1, stretch: 2, out_of_reach: 3 };
     results.sort((a, b) => {
       if (!a.match || !b.match) return 0;
       return matchOrder[a.match.matchLevel] - matchOrder[b.match.matchLevel];
     });
-    
+
     res.json({
       success: true,
       data: {
@@ -134,7 +139,7 @@ router.post('/match-units', async (req, res) => {
         },
       });
     }
-    
+
     console.error('Unit matching error:', error);
     res.status(500).json({
       error: {

@@ -1,0 +1,378 @@
+[
+  {
+    "Field": "id",
+    "Type": "varchar(36)",
+    "Null": "NO",
+    "Key": "PRI",
+    "Default": null,
+    "Extra": ""
+  },
+  {
+    "Field": "development_id",
+    "Type": "int(11)",
+    "Null": "NO",
+    "Key": "MUL",
+    "Default": null,
+    "Extra": ""
+  },
+  {
+    "Field": "name",
+    "Type": "varchar(255)",
+    "Null": "NO",
+    "Key": "",
+    "Default": null,
+    "Extra": ""
+  },
+  {
+    "Field": "bedrooms",
+    "Type": "int(11)",
+    "Null": "NO",
+    "Key": "MUL",
+    "Default": null,
+    "Extra": ""
+  },
+  {
+    "Field": "bathrooms",
+    "Type": "decimal(3,1)",
+    "Null": "NO",
+    "Key": "",
+    "Default": null,
+    "Extra": ""
+  },
+  {
+    "Field": "parking",
+    "Type": "enum('none','1','2','carport','garage')",
+    "Null": "YES",
+    "Key": "",
+    "Default": "none",
+    "Extra": ""
+  },
+  {
+    "Field": "unit_size",
+    "Type": "int(11)",
+    "Null": "YES",
+    "Key": "",
+    "Default": null,
+    "Extra": ""
+  },
+  {
+    "Field": "yard_size",
+    "Type": "int(11)",
+    "Null": "YES",
+    "Key": "",
+    "Default": null,
+    "Extra": ""
+  },
+  {
+    "Field": "base_price_from",
+    "Type": "decimal(15,2)",
+    "Null": "NO",
+    "Key": "MUL",
+    "Default": null,
+    "Extra": ""
+  },
+  {
+    "Field": "base_price_to",
+    "Type": "decimal(15,2)",
+    "Null": "YES",
+    "Key": "",
+    "Default": null,
+    "Extra": ""
+  },
+  {
+    "Field": "base_features",
+    "Type": "json",
+    "Null": "YES",
+    "Key": "",
+    "Default": null,
+    "Extra": ""
+  },
+  {
+    "Field": "base_finishes",
+    "Type": "json",
+    "Null": "YES",
+    "Key": "",
+    "Default": null,
+    "Extra": ""
+  },
+  {
+    "Field": "base_media",
+    "Type": "json",
+    "Null": "YES",
+    "Key": "",
+    "Default": null,
+    "Extra": ""
+  },
+  {
+    "Field": "display_order",
+    "Type": "int(11)",
+    "Null": "YES",
+    "Key": "MUL",
+    "Default": "0",
+    "Extra": ""
+  },
+  {
+    "Field": "is_active",
+    "Type": "tinyint(4)",
+    "Null": "YES",
+    "Key": "",
+    "Default": "1",
+    "Extra": ""
+  },
+  {
+    "Field": "created_at",
+    "Type": "timestamp",
+    "Null": "NO",
+    "Key": "",
+    "Default": "CURRENT_TIMESTAMP",
+    "Extra": ""
+  },
+  {
+    "Field": "updated_at",
+    "Type": "timestamp",
+    "Null": "NO",
+    "Key": "",
+    "Default": "CURRENT_TIMESTAMP",
+    "Extra": "DEFAULT_GENERATED on update CURRENT_TIMESTAMP"
+  },
+  {
+    "Field": "total_units",
+    "Type": "int(11)",
+    "Null": "NO",
+    "Key": "",
+    "Default": "0",
+    "Extra": ""
+  },
+  {
+    "Field": "available_units",
+    "Type": "int(11)",
+    "Null": "NO",
+    "Key": "",
+    "Default": "0",
+    "Extra": ""
+  },
+  {
+    "Field": "reserved_units",
+    "Type": "int(11)",
+    "Null": "YES",
+    "Key": "",
+    "Default": "0",
+    "Extra": ""
+  },
+  {
+    "Field": "transfer_costs_included",
+    "Type": "tinyint(4)",
+    "Null": "YES",
+    "Key": "",
+    "Default": "0",
+    "Extra": ""
+  },
+  {
+    "Field": "monthly_levy",
+    "Type": "int(11)",
+    "Null": "YES",
+    "Key": "",
+    "Default": null,
+    "Extra": ""
+  },
+  {
+    "Field": "monthly_levy_to",
+    "Type": "int(11)",
+    "Null": "YES",
+    "Key": "",
+    "Default": null,
+    "Extra": ""
+  },
+  {
+    "Field": "rates_and_taxes_to",
+    "Type": "int(11)",
+    "Null": "YES",
+    "Key": "",
+    "Default": null,
+    "Extra": ""
+  },
+  {
+    "Field": "monthly_levy_from",
+    "Type": "int(11)",
+    "Null": "YES",
+    "Key": "",
+    "Default": null,
+    "Extra": ""
+  },
+  {
+    "Field": "rates_and_taxes_from",
+    "Type": "int(11)",
+    "Null": "YES",
+    "Key": "",
+    "Default": null,
+    "Extra": ""
+  },
+  {
+    "Field": "extras",
+    "Type": "json",
+    "Null": "YES",
+    "Key": "",
+    "Default": null,
+    "Extra": ""
+  },
+  {
+    "Field": "label",
+    "Type": "varchar(255)",
+    "Null": "YES",
+    "Key": "",
+    "Default": null,
+    "Extra": ""
+  },
+  {
+    "Field": "ownership_type",
+    "Type": "enum('full-title','sectional-title','leasehold','life-rights')",
+    "Null": "YES",
+    "Key": "",
+    "Default": "sectional-title",
+    "Extra": ""
+  },
+  {
+    "Field": "structural_type",
+    "Type": "enum('apartment','freestanding-house','simplex','duplex','penthouse','plot-and-plan','townhouse','studio')",
+    "Null": "YES",
+    "Key": "",
+    "Default": "apartment",
+    "Extra": ""
+  },
+  {
+    "Field": "floors",
+    "Type": "enum('single-storey','double-storey','triplex')",
+    "Null": "YES",
+    "Key": "",
+    "Default": null,
+    "Extra": ""
+  },
+  {
+    "Field": "size_from",
+    "Type": "int(11)",
+    "Null": "YES",
+    "Key": "",
+    "Default": null,
+    "Extra": ""
+  },
+  {
+    "Field": "size_to",
+    "Type": "int(11)",
+    "Null": "YES",
+    "Key": "",
+    "Default": null,
+    "Extra": ""
+  },
+  {
+    "Field": "price_from",
+    "Type": "decimal(15,2)",
+    "Null": "YES",
+    "Key": "",
+    "Default": null,
+    "Extra": ""
+  },
+  {
+    "Field": "price_to",
+    "Type": "decimal(15,2)",
+    "Null": "YES",
+    "Key": "",
+    "Default": null,
+    "Extra": ""
+  },
+  {
+    "Field": "deposit_required",
+    "Type": "decimal(15,2)",
+    "Null": "YES",
+    "Key": "",
+    "Default": null,
+    "Extra": ""
+  },
+  {
+    "Field": "completion_date",
+    "Type": "date",
+    "Null": "YES",
+    "Key": "",
+    "Default": null,
+    "Extra": ""
+  },
+  {
+    "Field": "config_description",
+    "Type": "text",
+    "Null": "YES",
+    "Key": "",
+    "Default": null,
+    "Extra": ""
+  },
+  {
+    "Field": "description",
+    "Type": "text",
+    "Null": "YES",
+    "Key": "",
+    "Default": null,
+    "Extra": ""
+  },
+  {
+    "Field": "virtual_tour_link",
+    "Type": "varchar(500)",
+    "Null": "YES",
+    "Key": "",
+    "Default": null,
+    "Extra": ""
+  },
+  {
+    "Field": "spec_overrides",
+    "Type": "json",
+    "Null": "YES",
+    "Key": "",
+    "Default": null,
+    "Extra": ""
+  },
+  {
+    "Field": "specifications",
+    "Type": "json",
+    "Null": "YES",
+    "Key": "",
+    "Default": null,
+    "Extra": ""
+  },
+  {
+    "Field": "amenities",
+    "Type": "json",
+    "Null": "YES",
+    "Key": "",
+    "Default": null,
+    "Extra": ""
+  },
+  {
+    "Field": "features",
+    "Type": "json",
+    "Null": "YES",
+    "Key": "",
+    "Default": null,
+    "Extra": ""
+  },
+  {
+    "Field": "parking_type",
+    "Type": "varchar(50)",
+    "Null": "YES",
+    "Key": "",
+    "Default": null,
+    "Extra": ""
+  },
+  {
+    "Field": "parking_bays",
+    "Type": "int(11)",
+    "Null": "YES",
+    "Key": "",
+    "Default": "0",
+    "Extra": ""
+  },
+  {
+    "Field": "internal_notes",
+    "Type": "text",
+    "Null": "YES",
+    "Key": "",
+    "Default": null,
+    "Extra": ""
+  }
+]

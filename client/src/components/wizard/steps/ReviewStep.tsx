@@ -2,7 +2,7 @@
  * ReviewStep Component
  * Final step of the developer registration wizard
  * Displays all collected information for review and submission
- * 
+ *
  * Requirements: 9.1, 9.2, 9.3, 9.4, 9.5
  */
 
@@ -45,12 +45,12 @@ const formatCategory = (category: string): string => {
 const formatProvince = (province: string): string => {
   const provinceMap: Record<string, string> = {
     'western-cape': 'Western Cape',
-    'gauteng': 'Gauteng',
+    gauteng: 'Gauteng',
     'kwazulu-natal': 'KwaZulu-Natal',
     'eastern-cape': 'Eastern Cape',
     'free-state': 'Free State',
-    'limpopo': 'Limpopo',
-    'mpumalanga': 'Mpumalanga',
+    limpopo: 'Limpopo',
+    mpumalanga: 'Mpumalanga',
     'north-west': 'North West',
     'northern-cape': 'Northern Cape',
   };
@@ -72,9 +72,7 @@ export const ReviewStep = React.forwardRef<HTMLDivElement, ReviewStepProps>(
           <h2 className="text-2xl font-bold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">
             Review & Submit
           </h2>
-          <p className="text-gray-600">
-            Please review your information before submitting
-          </p>
+          <p className="text-gray-600">Please review your information before submitting</p>
         </div>
 
         <div className="space-y-4">
@@ -84,32 +82,16 @@ export const ReviewStep = React.forwardRef<HTMLDivElement, ReviewStepProps>(
             defaultCollapsed={false}
           >
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <ReviewField
-                label="Company Name"
-                value={basicInfo.name}
-                type="text"
-              />
+              <ReviewField label="Company Name" value={basicInfo.name} type="text" />
               <ReviewField
                 label="Primary Category"
                 value={formatCategory(basicInfo.category)}
                 type="text"
               />
-              <ReviewField
-                label="Established Year"
-                value={basicInfo.establishedYear}
-                type="text"
-              />
-              <ReviewField
-                label="Website"
-                value={basicInfo.website}
-                type="text"
-              />
+              <ReviewField label="Established Year" value={basicInfo.establishedYear} type="text" />
+              <ReviewField label="Website" value={basicInfo.website} type="text" />
             </div>
-            <ReviewField
-              label="Description"
-              value={basicInfo.description}
-              type="text"
-            />
+            <ReviewField label="Description" value={basicInfo.description} type="text" />
           </ReviewSection>
 
           <ReviewSection
@@ -118,32 +100,16 @@ export const ReviewStep = React.forwardRef<HTMLDivElement, ReviewStepProps>(
             defaultCollapsed={false}
           >
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <ReviewField
-                label="Business Email"
-                value={contactInfo.email}
-                type="text"
-              />
-              <ReviewField
-                label="Phone Number"
-                value={contactInfo.phone}
-                type="text"
-              />
-              <ReviewField
-                label="City"
-                value={contactInfo.city}
-                type="text"
-              />
+              <ReviewField label="Business Email" value={contactInfo.email} type="text" />
+              <ReviewField label="Phone Number" value={contactInfo.phone} type="text" />
+              <ReviewField label="City" value={contactInfo.city} type="text" />
               <ReviewField
                 label="Province"
                 value={formatProvince(contactInfo.province)}
                 type="text"
               />
             </div>
-            <ReviewField
-              label="Business Address"
-              value={contactInfo.address}
-              type="text"
-            />
+            <ReviewField label="Business Address" value={contactInfo.address} type="text" />
             {contactInfo.logo && (
               <div className="space-y-2">
                 <h4 className="text-sm font-medium text-gray-700">Company Logo</h4>
@@ -198,9 +164,7 @@ export const ReviewStep = React.forwardRef<HTMLDivElement, ReviewStepProps>(
         <div className="space-y-4">
           <div className="border-2 border-gray-200 rounded-xl p-6 bg-gray-50">
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-gray-900">
-                Terms and Conditions
-              </h3>
+              <h3 className="text-lg font-semibold text-gray-900">Terms and Conditions</h3>
               <div className="text-sm text-gray-600 space-y-2">
                 <p>By submitting this application, you agree to:</p>
                 <ul className="list-disc list-inside space-y-1 ml-4">
@@ -211,7 +175,7 @@ export const ReviewStep = React.forwardRef<HTMLDivElement, ReviewStepProps>(
                   <li>Keep your profile information up to date</li>
                 </ul>
               </div>
-              
+
               <div className="flex items-start gap-3">
                 <GradientCheckbox
                   id="terms"
@@ -220,13 +184,12 @@ export const ReviewStep = React.forwardRef<HTMLDivElement, ReviewStepProps>(
                   disabled={submitting}
                 />
                 <label htmlFor="terms" className="text-sm text-gray-700 cursor-pointer">
-                  I agree to the terms and conditions and confirm that all information provided is accurate *
+                  I agree to the terms and conditions and confirm that all information provided is
+                  accurate *
                 </label>
               </div>
-              
-              {errors?.terms && (
-                <p className="text-sm text-red-600">{errors.terms}</p>
-              )}
+
+              {errors?.terms && <p className="text-sm text-red-600">{errors.terms}</p>}
             </div>
           </div>
         </div>
@@ -235,21 +198,20 @@ export const ReviewStep = React.forwardRef<HTMLDivElement, ReviewStepProps>(
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
             <div className="flex items-center gap-3">
               <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
-              <p className="text-sm text-blue-700">
-                Submitting your application... Please wait.
-              </p>
+              <p className="text-sm text-blue-700">Submitting your application... Please wait.</p>
             </div>
           </div>
         )}
 
         <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4">
           <p className="text-sm text-emerald-700">
-            <strong>What happens next?</strong> After submission, our team will review your application within 2-3 business days.
+            <strong>What happens next?</strong> After submission, our team will review your
+            application within 2-3 business days.
           </p>
         </div>
       </div>
     );
-  }
+  },
 );
 
 ReviewStep.displayName = 'ReviewStep';

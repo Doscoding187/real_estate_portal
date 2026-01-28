@@ -46,8 +46,8 @@ export function BondCalculator({
 }: BondCalculatorProps) {
   // Fetch SARB Prime Rate from database
   const { data: sarbData } = trpc.settings.getSARBPrimeRate.useQuery();
-  const SARB_PRIME_RATE = sarbData?.rate || 10.50; // Fallback to 10.50 if not loaded
-  
+  const SARB_PRIME_RATE = sarbData?.rate || 10.5; // Fallback to 10.50 if not loaded
+
   const [depositPercentage, setDepositPercentage] = useState(0); // Default to 0% for 100% bond
   const [termYears, setTermYears] = useState<BondTerm>(20);
   const [customRate, setCustomRate] = useState<number | null>(null);
@@ -140,7 +140,9 @@ export function BondCalculator({
               }}
               placeholder="Custom rate (optional)"
             />
-            <p className="text-xs text-gray-500">Current SA Prime Rate: 10.50% p.a. (SARB Repo: 7.00%)</p>
+            <p className="text-xs text-gray-500">
+              Current SA Prime Rate: 10.50% p.a. (SARB Repo: 7.00%)
+            </p>
           </div>
 
           {/* Deposit Percentage */}
@@ -202,9 +204,7 @@ export function BondCalculator({
             <div className="text-xl font-bold text-blue-600">
               {formatSARandShort(calculation.loanAmount)}
             </div>
-            <p className="text-[10px] text-gray-600 mt-0.5">
-              {depositPercentage}% deposit
-            </p>
+            <p className="text-[10px] text-gray-600 mt-0.5">{depositPercentage}% deposit</p>
           </div>
 
           {/* Monthly Repayment */}
@@ -230,9 +230,7 @@ export function BondCalculator({
             <div className="text-xl font-bold text-orange-600">
               {formatSARandShort(requiredGrossIncome)}
             </div>
-            <p className="text-[10px] text-gray-600 mt-0.5">
-              Per month (30% ratio)
-            </p>
+            <p className="text-[10px] text-gray-600 mt-0.5">Per month (30% ratio)</p>
           </div>
 
           {/* Estimated Transfer Costs */}
@@ -245,9 +243,7 @@ export function BondCalculator({
               <div className="text-xl font-bold text-purple-600">
                 {formatSARandShort(transferCosts.total)}
               </div>
-              <p className="text-[10px] text-gray-600 mt-0.5">
-                Incl. duty & fees
-              </p>
+              <p className="text-[10px] text-gray-600 mt-0.5">Incl. duty & fees</p>
             </div>
           )}
         </div>
@@ -257,16 +253,31 @@ export function BondCalculator({
         <div className="bg-gradient-to-br from-orange-50 to-blue-50 rounded-lg p-4 border-2 border-orange-200">
           <div className="text-center mb-3">
             <h4 className="text-base font-bold text-slate-900 mb-1">Ready to Buy?</h4>
-            <p className="text-xs text-slate-600">Check your bond qualification with our trusted partners</p>
+            <p className="text-xs text-slate-600">
+              Check your bond qualification with our trusted partners
+            </p>
           </div>
           <Button className="w-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-semibold py-6 text-base shadow-lg hover:shadow-xl transition-all">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2">
-              <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-              <polyline points="9 22 9 12 15 12 15 22"/>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="mr-2"
+            >
+              <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+              <polyline points="9 22 9 12 15 12 15 22" />
             </svg>
             Check Bond Qualification
           </Button>
-          <p className="text-[10px] text-slate-500 text-center mt-2">Free pre-qualification with our bond originator partners</p>
+          <p className="text-[10px] text-slate-500 text-center mt-2">
+            Free pre-qualification with our bond originator partners
+          </p>
         </div>
       </div>
     </Card>

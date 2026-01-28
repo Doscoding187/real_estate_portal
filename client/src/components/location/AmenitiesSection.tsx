@@ -9,9 +9,9 @@ interface AmenitiesSectionProps {
 
 export function AmenitiesSection({ location }: AmenitiesSectionProps) {
   // If no location provided, we can either return null or show the old static services.
-  // For now, let's keep the static services as a fallback or "Service Directory" 
+  // For now, let's keep the static services as a fallback or "Service Directory"
   // and show the map if location is available.
-  
+
   const services = [
     { icon: '💰', title: 'Home Loan' },
     { icon: '🛋️', title: 'Home Interiors' },
@@ -27,12 +27,12 @@ export function AmenitiesSection({ location }: AmenitiesSectionProps) {
         {/* Dynamic Map Section */}
         {location && location.latitude && location.longitude && (
           <div>
-             <h2 className="text-2xl font-bold mb-6 text-left">Lifestyle & Amenities</h2>
-             <NearbyAmenitiesMap 
-               center={[Number(location.latitude), Number(location.longitude)]}
-               radius={2}
-               className="w-full"
-             />
+            <h2 className="text-2xl font-bold mb-6 text-left">Lifestyle & Amenities</h2>
+            <NearbyAmenitiesMap
+              center={[Number(location.latitude), Number(location.longitude)]}
+              radius={2}
+              className="w-full"
+            />
           </div>
         )}
 

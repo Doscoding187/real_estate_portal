@@ -1,9 +1,9 @@
 /**
  * KeyboardNavigationGuide Component
- * 
+ *
  * Displays keyboard shortcuts and navigation instructions for the landing page.
  * Can be toggled with a keyboard shortcut (Shift + ?).
- * 
+ *
  * Requirements: 10.5
  */
 
@@ -45,7 +45,7 @@ const keyboardShortcuts: KeyboardShortcut[] = [
     description: 'Jump to last item in a list',
     category: 'navigation',
   },
-  
+
   // Interaction
   {
     keys: ['Enter'],
@@ -62,7 +62,7 @@ const keyboardShortcuts: KeyboardShortcut[] = [
     description: 'Close modals and overlays',
     category: 'interaction',
   },
-  
+
   // General
   {
     keys: ['Shift', '?'],
@@ -79,9 +79,9 @@ export const KeyboardNavigationGuide: React.FC = () => {
       // Toggle guide with Shift + ?
       if (e.shiftKey && e.key === '?') {
         e.preventDefault();
-        setIsOpen((prev) => !prev);
+        setIsOpen(prev => !prev);
       }
-      
+
       // Close with Escape
       if (e.key === 'Escape' && isOpen) {
         setIsOpen(false);
@@ -93,9 +93,9 @@ export const KeyboardNavigationGuide: React.FC = () => {
   }, [isOpen]);
 
   const groupedShortcuts = {
-    navigation: keyboardShortcuts.filter((s) => s.category === 'navigation'),
-    interaction: keyboardShortcuts.filter((s) => s.category === 'interaction'),
-    general: keyboardShortcuts.filter((s) => s.category === 'general'),
+    navigation: keyboardShortcuts.filter(s => s.category === 'navigation'),
+    interaction: keyboardShortcuts.filter(s => s.category === 'interaction'),
+    general: keyboardShortcuts.filter(s => s.category === 'general'),
   };
 
   return (
@@ -153,10 +153,7 @@ export const KeyboardNavigationGuide: React.FC = () => {
                 >
                   <div className="flex items-center gap-3">
                     <Keyboard size={28} color={softUITokens.colors.primary.base} />
-                    <h2
-                      id="keyboard-guide-title"
-                      className="text-2xl font-bold text-gray-900"
-                    >
+                    <h2 id="keyboard-guide-title" className="text-2xl font-bold text-gray-900">
                       Keyboard Navigation
                     </h2>
                   </div>
@@ -173,9 +170,7 @@ export const KeyboardNavigationGuide: React.FC = () => {
                 <div className="p-6 space-y-6">
                   {/* Navigation Shortcuts */}
                   <section>
-                    <h3 className="text-lg font-semibold text-gray-900 mb-3">
-                      Navigation
-                    </h3>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-3">Navigation</h3>
                     <div className="space-y-2">
                       {groupedShortcuts.navigation.map((shortcut, index) => (
                         <ShortcutRow key={index} shortcut={shortcut} />
@@ -185,9 +180,7 @@ export const KeyboardNavigationGuide: React.FC = () => {
 
                   {/* Interaction Shortcuts */}
                   <section>
-                    <h3 className="text-lg font-semibold text-gray-900 mb-3">
-                      Interaction
-                    </h3>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-3">Interaction</h3>
                     <div className="space-y-2">
                       {groupedShortcuts.interaction.map((shortcut, index) => (
                         <ShortcutRow key={index} shortcut={shortcut} />
@@ -197,9 +190,7 @@ export const KeyboardNavigationGuide: React.FC = () => {
 
                   {/* General Shortcuts */}
                   <section>
-                    <h3 className="text-lg font-semibold text-gray-900 mb-3">
-                      General
-                    </h3>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-3">General</h3>
                     <div className="space-y-2">
                       {groupedShortcuts.general.map((shortcut, index) => (
                         <ShortcutRow key={index} shortcut={shortcut} />
@@ -216,9 +207,9 @@ export const KeyboardNavigationGuide: React.FC = () => {
                     }}
                   >
                     <p className="text-sm text-gray-700">
-                      <strong>Accessibility Tip:</strong> This page is fully keyboard
-                      accessible. All interactive elements can be reached and activated
-                      using only your keyboard.
+                      <strong>Accessibility Tip:</strong> This page is fully keyboard accessible.
+                      All interactive elements can be reached and activated using only your
+                      keyboard.
                     </p>
                   </div>
                 </div>
@@ -233,7 +224,7 @@ export const KeyboardNavigationGuide: React.FC = () => {
 
 /**
  * ShortcutRow Component
- * 
+ *
  * Displays a single keyboard shortcut with keys and description
  */
 const ShortcutRow: React.FC<{ shortcut: KeyboardShortcut }> = ({ shortcut }) => {

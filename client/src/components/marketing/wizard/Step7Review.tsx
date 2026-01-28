@@ -28,7 +28,9 @@ const Step7Review: React.FC<Step7Props> = ({ data, campaignId, onBack, onNext })
           <Check className="w-8 h-8 text-emerald-600" />
         </div>
         <h2 className="text-2xl font-bold text-slate-900">Review Campaign</h2>
-        <p className="text-slate-500">Review your campaign settings before proceeding to payment.</p>
+        <p className="text-slate-500">
+          Review your campaign settings before proceeding to payment.
+        </p>
       </div>
 
       <div className="space-y-4">
@@ -37,10 +39,16 @@ const Step7Review: React.FC<Step7Props> = ({ data, campaignId, onBack, onNext })
           <CardContent className="p-6 space-y-4">
             <div className="flex justify-between items-start">
               <div>
-                <h3 className="font-semibold text-lg">{data.campaignName || 'Untitled Campaign'}</h3>
-                <p className="text-slate-500 capitalize">{data.campaignType?.replace('_', ' ') || 'Not set'}</p>
+                <h3 className="font-semibold text-lg">
+                  {data.campaignName || 'Untitled Campaign'}
+                </h3>
+                <p className="text-slate-500 capitalize">
+                  {data.campaignType?.replace('_', ' ') || 'Not set'}
+                </p>
               </div>
-              <Badge variant="outline" className="capitalize">{data.status || 'Draft'}</Badge>
+              <Badge variant="outline" className="capitalize">
+                {data.status || 'Draft'}
+              </Badge>
             </div>
             <p className="text-sm text-slate-600">{data.description}</p>
           </CardContent>
@@ -53,11 +61,15 @@ const Step7Review: React.FC<Step7Props> = ({ data, campaignId, onBack, onNext })
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
                 <span className="text-slate-500 block">Locations</span>
-                <span className="font-medium">{data.targeting?.locationTargeting?.join(', ') || 'All Locations'}</span>
+                <span className="font-medium">
+                  {data.targeting?.locationTargeting?.join(', ') || 'All Locations'}
+                </span>
               </div>
               <div>
                 <span className="text-slate-500 block">Property Types</span>
-                <span className="font-medium">{data.targeting?.propertyType?.join(', ') || 'All Types'}</span>
+                <span className="font-medium">
+                  {data.targeting?.propertyType?.join(', ') || 'All Types'}
+                </span>
               </div>
             </div>
           </CardContent>
@@ -70,13 +82,19 @@ const Step7Review: React.FC<Step7Props> = ({ data, campaignId, onBack, onNext })
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
                 <span className="text-slate-500 block">Budget</span>
-                <span className="font-medium">R {data.budget?.budgetAmount || '0.00'} ({data.budget?.budgetType || 'Daily'})</span>
+                <span className="font-medium">
+                  R {data.budget?.budgetAmount || '0.00'} ({data.budget?.budgetType || 'Daily'})
+                </span>
               </div>
               <div>
                 <span className="text-slate-500 block">Schedule</span>
                 <span className="font-medium">
-                  {data.schedule?.startDate ? new Date(data.schedule.startDate).toLocaleDateString() : 'Not set'} 
-                  {data.schedule?.endDate ? ` - ${new Date(data.schedule.endDate).toLocaleDateString()}` : ' (Ongoing)'}
+                  {data.schedule?.startDate
+                    ? new Date(data.schedule.startDate).toLocaleDateString()
+                    : 'Not set'}
+                  {data.schedule?.endDate
+                    ? ` - ${new Date(data.schedule.endDate).toLocaleDateString()}`
+                    : ' (Ongoing)'}
                 </span>
               </div>
             </div>
@@ -88,15 +106,17 @@ const Step7Review: React.FC<Step7Props> = ({ data, campaignId, onBack, onNext })
           <CardContent className="p-6 space-y-4">
             <h3 className="font-semibold">Channels</h3>
             <div className="flex flex-wrap gap-2">
-                {data.channels?.filter((c: any) => c.enabled).length > 0 ? (
-                  data.channels.filter((c: any) => c.enabled).map((channel: any) => (
+              {data.channels?.filter((c: any) => c.enabled).length > 0 ? (
+                data.channels
+                  .filter((c: any) => c.enabled)
+                  .map((channel: any) => (
                     <Badge key={channel.type} className="bg-blue-100 text-blue-700 capitalize">
                       {channel.type}
                     </Badge>
                   ))
-                ) : (
-                  <span className="text-sm text-slate-500">No channels selected</span>
-                )}
+              ) : (
+                <span className="text-sm text-slate-500">No channels selected</span>
+              )}
             </div>
           </CardContent>
         </Card>

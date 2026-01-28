@@ -2,7 +2,7 @@
  * LogoUploadZone Component
  * Drag-and-drop logo upload with gradient styling and preview
  * Part of the Soft UI design system
- * 
+ *
  * Requirements: 8.1, 8.2, 8.3, 8.4, 8.5
  */
 
@@ -65,7 +65,7 @@ export const LogoUploadZone = React.forwardRef<HTMLDivElement, LogoUploadZonePro
       acceptedTypes = DEFAULT_ACCEPTED_TYPES,
       className,
     },
-    ref
+    ref,
   ) => {
     const [isDragging, setIsDragging] = React.useState(false);
     const [preview, setPreview] = React.useState<string | null>(value || null);
@@ -179,22 +179,20 @@ export const LogoUploadZone = React.forwardRef<HTMLDivElement, LogoUploadZonePro
             'transition-all duration-300 ease-in-out',
             'cursor-pointer',
             // Default state
-            !isDragging && !displayError && [
-              'border-gray-300 bg-gray-50',
-              'hover:border-blue-400 hover:bg-blue-50/50',
-            ],
+            !isDragging &&
+              !displayError && [
+                'border-gray-300 bg-gray-50',
+                'hover:border-blue-400 hover:bg-blue-50/50',
+              ],
             // Dragging state
             isDragging && [
               'border-blue-500 bg-gradient-to-br from-blue-50 to-indigo-50',
               'scale-[1.02]',
             ],
             // Error state
-            displayError && [
-              'border-red-300 bg-red-50/50',
-              'hover:border-red-400',
-            ],
+            displayError && ['border-red-300 bg-red-50/50', 'hover:border-red-400'],
             // Disabled when uploading
-            uploading && 'pointer-events-none opacity-75'
+            uploading && 'pointer-events-none opacity-75',
           )}
           role="button"
           tabIndex={0}
@@ -216,7 +214,7 @@ export const LogoUploadZone = React.forwardRef<HTMLDivElement, LogoUploadZonePro
                 className={cn(
                   'w-32 h-32 rounded-full overflow-hidden',
                   'border-4 border-white shadow-lg',
-                  'bg-gradient-to-br from-blue-100 to-indigo-100'
+                  'bg-gradient-to-br from-blue-100 to-indigo-100',
                 )}
               >
                 <img
@@ -237,7 +235,7 @@ export const LogoUploadZone = React.forwardRef<HTMLDivElement, LogoUploadZonePro
                     'hover:bg-red-600',
                     'transition-colors duration-200',
                     'shadow-md hover:shadow-lg',
-                    'focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2'
+                    'focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2',
                   )}
                   aria-label="Remove logo"
                 >
@@ -253,7 +251,7 @@ export const LogoUploadZone = React.forwardRef<HTMLDivElement, LogoUploadZonePro
                   'w-16 h-16 rounded-full',
                   'bg-gradient-to-br from-blue-500 to-indigo-600',
                   'transition-transform duration-300',
-                  isDragging && 'scale-110'
+                  isDragging && 'scale-110',
                 )}
               >
                 {uploading ? (
@@ -266,11 +264,10 @@ export const LogoUploadZone = React.forwardRef<HTMLDivElement, LogoUploadZonePro
                 <p className="text-sm font-medium text-gray-700">
                   {isDragging ? 'Drop your logo here' : 'Upload company logo'}
                 </p>
-                <p className="text-xs text-gray-500 mt-1">
-                  Drag & drop or click to browse
-                </p>
+                <p className="text-xs text-gray-500 mt-1">Drag & drop or click to browse</p>
                 <p className="text-xs text-gray-400 mt-1">
-                  {acceptedTypes.map(t => t.split('/')[1].toUpperCase()).join(', ')} • Max {maxSizeMB}MB
+                  {acceptedTypes.map(t => t.split('/')[1].toUpperCase()).join(', ')} • Max{' '}
+                  {maxSizeMB}MB
                 </p>
               </div>
             </div>
@@ -298,7 +295,7 @@ export const LogoUploadZone = React.forwardRef<HTMLDivElement, LogoUploadZonePro
               'flex items-start gap-2 p-3 rounded-lg',
               'bg-red-50 border border-red-200',
               'text-sm text-red-700',
-              'animate-in fade-in slide-in-from-top-2'
+              'animate-in fade-in slide-in-from-top-2',
             )}
             role="alert"
           >
@@ -308,7 +305,7 @@ export const LogoUploadZone = React.forwardRef<HTMLDivElement, LogoUploadZonePro
         )}
       </div>
     );
-  }
+  },
 );
 
 LogoUploadZone.displayName = 'LogoUploadZone';

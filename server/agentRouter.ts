@@ -17,6 +17,7 @@ import {
 import { eq, and, desc, gte, lte, sql, count, inArray, like, or } from 'drizzle-orm';
 import { EmailService } from './_core/emailService';
 import { ENV } from './_core/env';
+import { nowAsDbTimestamp } from './utils/dbTypeUtils';
 
 // Pipeline stages for Kanban board
 const PIPELINE_STAGES = ['new', 'contacted', 'viewing', 'offer', 'closed'] as const;
@@ -38,77 +39,92 @@ export const agentRouter = router({
   /**
    * Get agent's dashboard KPIs
    */
-  getDashboardStats: agentProcedure.query(async ({ ctx }) => {
-    const db = await getDb();
+  getDashboardStats: agentProcedure.query(
+    async ({
+      ctx,
+    }): Promise<{
+      activeListings: number;
+      newLeadsThisWeek: number;
+      showingsToday: number;
+      offersInProgress: number;
+      commissionsPending: number;
+    }> => {
+      const db = await getDb();
 
-    // Get agent record from user
-    const [agentRecord] = await db
-      .select()
-      .from(agents)
-      .where(eq(agents.userId, ctx.user.id))
-      .limit(1);
+      // Get agent record from user
+      const [agentRecord] = await db
+        .select()
+        .from(agents)
+        .where(eq(agents.userId, ctx.user.id))
+        .limit(1);
 
-    if (!agentRecord) {
-      // Return empty stats if no agent profile found
+      if (!agentRecord) {
+        // Return empty stats if no agent profile found
+        return {
+          activeListings: 0,
+          newLeadsThisWeek: 0,
+          showingsToday: 0,
+          offersInProgress: 0,
+          commissionsPending: 0,
+        };
+      }
+
+      const agentId = agentRecord.id;
+      // Date calculations
+      const todayDate = new Date();
+      todayDate.setHours(0, 0, 0, 0);
+      const tomorrowDate = new Date(todayDate);
+      tomorrowDate.setDate(tomorrowDate.getDate() + 1);
+
+      const today = todayDate.toISOString();
+      const tomorrow = tomorrowDate.toISOString();
+      const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+
+      // Active listings count
+      const [activeListingsResult] = await db
+        .select({ count: count() })
+        .from(properties)
+        .where(and(eq(properties.agentId, agentId), eq(properties.status, 'available')));
+
+      // New leads this week
+      const [newLeadsResult] = await db
+        .select({ count: count() })
+        .from(leads)
+        .where(and(eq(leads.agentId, agentId), gte(leads.createdAt, weekAgo)));
+
+      // Showings today
+      const [showingsTodayResult] = await db
+        .select({ count: count() })
+        .from(showings)
+        .where(
+          and(
+            eq(showings.agentId, agentId),
+            gte(showings.scheduledAt, today),
+            lte(showings.scheduledAt, tomorrow),
+          ),
+        );
+
+      // Offers in progress
+      const [offersInProgressResult] = await db
+        .select({ count: count() })
+        .from(offers)
+        .where(and(eq(offers.agentId, agentId), eq(offers.status, 'pending')));
+
+      // Pending commissions sum
+      const [pendingCommissionsResult] = await db
+        .select({ total: sql<number>`SUM(${commissions.amount})` })
+        .from(commissions)
+        .where(and(eq(commissions.agentId, agentId), eq(commissions.status, 'pending')));
+
       return {
-        activeListings: 0,
-        newLeadsThisWeek: 0,
-        showingsToday: 0,
-        offersInProgress: 0,
-        commissionsPending: 0,
+        activeListings: activeListingsResult?.count || 0,
+        newLeadsThisWeek: newLeadsResult?.count || 0,
+        showingsToday: showingsTodayResult?.count || 0,
+        offersInProgress: offersInProgressResult?.count || 0,
+        commissionsPending: Number(pendingCommissionsResult?.total || 0),
       };
-    }
-
-    const agentId = agentRecord.id;
-    const now = new Date();
-    const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-    const today = new Date(now.setHours(0, 0, 0, 0));
-    const tomorrow = new Date(today.getTime() + 24 * 60 * 60 * 1000);
-
-    // Active listings count
-    const [activeListingsResult] = await db
-      .select({ count: count() })
-      .from(properties)
-      .where(and(eq(properties.agentId, agentId), eq(properties.status, 'available')));
-
-    // New leads this week
-    const [newLeadsResult] = await db
-      .select({ count: count() })
-      .from(leads)
-      .where(and(eq(leads.agentId, agentId), gte(leads.createdAt, weekAgo)));
-
-    // Showings today
-    const [showingsTodayResult] = await db
-      .select({ count: count() })
-      .from(showings)
-      .where(
-        and(
-          eq(showings.agentId, agentId),
-          gte(showings.scheduledAt, today),
-          lte(showings.scheduledAt, tomorrow),
-        ),
-      );
-
-    // Offers in progress
-    const [offersInProgressResult] = await db
-      .select({ count: count() })
-      .from(offers)
-      .where(and(eq(offers.agentId, agentId), eq(offers.status, 'pending')));
-
-    // Pending commissions sum
-    const [pendingCommissionsResult] = await db
-      .select({ total: sql<number>`SUM(${commissions.amount})` })
-      .from(commissions)
-      .where(and(eq(commissions.agentId, agentId), eq(commissions.status, 'pending')));
-
-    return {
-      activeListings: activeListingsResult?.count || 0,
-      newLeadsThisWeek: newLeadsResult?.count || 0,
-      showingsToday: showingsTodayResult?.count || 0,
-      offersInProgress: offersInProgressResult?.count || 0,
-      commissionsPending: pendingCommissionsResult?.total || 0,
-    };
-  }),
+    },
+  ),
 
   /**
    * Get leads pipeline for Kanban board
@@ -156,11 +172,13 @@ export const agentRouter = router({
       }
 
       if (input.filters?.dateRange?.start) {
-        conditions.push(gte(leads.createdAt, new Date(input.filters.dateRange.start)));
+        conditions.push(
+          gte(leads.createdAt, new Date(input.filters.dateRange.start).toISOString()),
+        );
       }
 
       if (input.filters?.dateRange?.end) {
-        conditions.push(lte(leads.createdAt, new Date(input.filters.dateRange.end)));
+        conditions.push(lte(leads.createdAt, new Date(input.filters.dateRange.end).toISOString()));
       }
 
       // Get all leads for this agent
@@ -174,8 +192,26 @@ export const agentRouter = router({
         .where(and(...conditions))
         .orderBy(leads.createdAt);
 
+      // Define Output Type
+      interface LeadPipelineItem {
+        id: number;
+        name: string;
+        email: string;
+        phone: string;
+        status: string;
+        source: string;
+        notes: string | null;
+        createdAt: string | Date;
+        property: {
+          id: number;
+          title: string;
+          city: string;
+          price: number;
+        } | null;
+      }
+
       // Group by pipeline stage
-      const pipeline: Record<PipelineStage, any[]> = {
+      const pipeline: Record<PipelineStage, LeadPipelineItem[]> = {
         new: [],
         contacted: [],
         viewing: [],
@@ -183,7 +219,7 @@ export const agentRouter = router({
         closed: [],
       };
 
-      leadsList.forEach(({ lead, property }: { lead: any; property: any }) => {
+      leadsList.forEach(({ lead, property }) => {
         // Map lead status to pipeline stage
         let stage: PipelineStage = 'new';
         switch (lead.status) {
@@ -209,13 +245,20 @@ export const agentRouter = router({
         }
 
         pipeline[stage].push({
-          ...lead,
+          id: lead.id,
+          name: lead.name,
+          email: lead.email,
+          phone: lead.phone,
+          status: lead.status,
+          source: lead.source,
+          notes: lead.notes,
+          createdAt: lead.createdAt || new Date(),
           property: property
             ? {
                 id: property.id,
                 title: property.title,
                 city: property.city,
-                price: property.price,
+                price: Number(property.price),
               }
             : null,
         });
@@ -235,7 +278,7 @@ export const agentRouter = router({
         notes: z.string().optional(),
       }),
     )
-    .mutation(async ({ ctx, input }) => {
+    .mutation(async ({ ctx, input }): Promise<{ success: boolean }> => {
       const db = await getDb();
 
       // Get agent record
@@ -281,7 +324,7 @@ export const agentRouter = router({
         .update(leads)
         .set({
           status: newStatus,
-          updatedAt: new Date(),
+          updatedAt: nowAsDbTimestamp(),
         })
         .where(eq(leads.id, input.leadId));
 
@@ -328,14 +371,11 @@ export const agentRouter = router({
 
       // Build conditions - use agentId if profile exists, otherwise use ownerId
       const conditions = [];
-      
+
       if (agentRecord) {
         // User has agent profile - query by agentId OR ownerId
         conditions.push(
-          or(
-            eq(properties.agentId, agentRecord.id),
-            eq(properties.ownerId, ctx.user.id)
-          )
+          or(eq(properties.agentId, agentRecord.id), eq(properties.ownerId, ctx.user.id)),
         );
       } else {
         // No agent profile - query by ownerId only
@@ -355,7 +395,7 @@ export const agentRouter = router({
 
       // Fetch primary images
       const listingsWithImages = await Promise.all(
-        listings.map(async (property) => {
+        listings.map(async property => {
           const images = await db
             .select()
             .from(propertyImages)
@@ -363,10 +403,14 @@ export const agentRouter = router({
             .orderBy(propertyImages.displayOrder)
             .limit(1);
 
-          const cdnUrl = ENV.cloudFrontUrl || `https://${ENV.s3BucketName}.s3.${ENV.awsRegion}.amazonaws.com`;
-          const primaryImage = images.length > 0 
-            ? (images[0].imageUrl.startsWith('http') ? images[0].imageUrl : `${cdnUrl}/${images[0].imageUrl}`)
-            : null;
+          const cdnUrl =
+            ENV.cloudFrontUrl || `https://${ENV.s3BucketName}.s3.${ENV.awsRegion}.amazonaws.com`;
+          const primaryImage =
+            images.length > 0
+              ? images[0].imageUrl.startsWith('http')
+                ? images[0].imageUrl
+                : `${cdnUrl}/${images[0].imageUrl}`
+              : null;
 
           return {
             ...property,
@@ -374,7 +418,7 @@ export const agentRouter = router({
             imageCount: 0, // TODO: Get actual count
             enquiries: property.enquiries || 0,
           };
-        })
+        }),
       );
 
       return listingsWithImages;
@@ -385,9 +429,9 @@ export const agentRouter = router({
    */
   archiveProperty: agentProcedure
     .input(z.object({ id: z.number() }))
-    .mutation(async ({ ctx, input }) => {
+    .mutation(async ({ ctx, input }): Promise<{ success: boolean }> => {
       const db = await getDb();
-      
+
       // Verify ownership - check both ownerId and agentId
       const [property] = await db
         .select()
@@ -401,7 +445,7 @@ export const agentRouter = router({
 
       // Check if user owns this property (either as owner or as agent)
       const isOwner = property.ownerId === ctx.user.id;
-      
+
       let isAgent = false;
       if (property.agentId) {
         const [agentRecord] = await db
@@ -425,9 +469,9 @@ export const agentRouter = router({
    */
   deleteProperty: agentProcedure
     .input(z.object({ id: z.number() }))
-    .mutation(async ({ ctx, input }) => {
+    .mutation(async ({ ctx, input }): Promise<{ success: boolean }> => {
       const db = await getDb();
-      
+
       // Verify ownership - check both ownerId and agentId
       const [property] = await db
         .select()
@@ -441,7 +485,7 @@ export const agentRouter = router({
 
       // Check if user owns this property (either as owner or as agent)
       const isOwner = property.ownerId === ctx.user.id;
-      
+
       let isAgent = false;
       if (property.agentId) {
         const [agentRecord] = await db
@@ -467,14 +511,14 @@ export const agentRouter = router({
     .input(
       z.object({
         displayName: z.string().min(2).max(100),
-        phoneNumber: z.string().min(10).max(20),
+        phone: z.string().min(10).max(20),
         bio: z.string().max(1000).optional(),
         profilePhoto: z.string().optional(),
         licenseNumber: z.string().optional(),
         specializations: z.array(z.string()).optional(),
       }),
     )
-    .mutation(async ({ ctx, input }) => {
+    .mutation(async ({ ctx, input }): Promise<{ success: boolean; agentId: number }> => {
       const db = await getDb();
 
       // Check if agent profile already exists
@@ -491,7 +535,12 @@ export const agentRouter = router({
       // Create agent profile
       const agentId = await db.createAgentProfile({
         userId: ctx.user.id,
-        ...input,
+        displayName: input.displayName,
+        phone: input.phone,
+        bio: input.bio,
+        profilePhoto: input.profilePhoto,
+        licenseNumber: input.licenseNumber,
+        specializations: input.specializations,
       });
 
       return { success: true, agentId };
@@ -551,14 +600,14 @@ export const agentRouter = router({
         .orderBy(desc(leads.createdAt))
         .limit(input.limit);
 
-      return leadsList.map(({ lead, property }: { lead: any; property: any }) => ({
+      return leadsList.map(({ lead, property }) => ({
         ...lead,
         property: property
           ? {
               id: property.id,
               title: property.title,
               city: property.city,
-              price: property.price,
+              price: Number(property.price),
             }
           : null,
       }));
@@ -584,7 +633,7 @@ export const agentRouter = router({
         notes: z.string().optional(),
       }),
     )
-    .mutation(async ({ ctx, input }) => {
+    .mutation(async ({ ctx, input }): Promise<{ success: boolean }> => {
       const db = await getDb();
 
       // Get agent record
@@ -610,7 +659,7 @@ export const agentRouter = router({
         .update(leads)
         .set({
           status: input.status,
-          updatedAt: new Date(),
+          updatedAt: nowAsDbTimestamp(),
         })
         .where(eq(leads.id, input.leadId));
 
@@ -645,7 +694,7 @@ export const agentRouter = router({
         metadata: z.string().optional(),
       }),
     )
-    .mutation(async ({ ctx, input }) => {
+    .mutation(async ({ ctx, input }): Promise<{ success: boolean }> => {
       const db = await getDb();
 
       // Get agent record
@@ -676,7 +725,10 @@ export const agentRouter = router({
       });
 
       // Update lead's updatedAt
-      await db.update(leads).set({ updatedAt: new Date() }).where(eq(leads.id, input.leadId));
+      await db
+        .update(leads)
+        .set({ updatedAt: nowAsDbTimestamp() })
+        .where(eq(leads.id, input.leadId));
 
       return { success: true };
     }),
@@ -690,7 +742,7 @@ export const agentRouter = router({
         leadId: z.number(),
       }),
     )
-    .query(async ({ ctx, input }) => {
+    .query(async ({ ctx, input }): Promise<(typeof leadActivities.$inferSelect)[]> => {
       const db = await getDb();
 
       const activities = await db
@@ -731,10 +783,10 @@ export const agentRouter = router({
       const conditions = [eq(showings.agentId, agentRecord.id)];
 
       if (input.startDate) {
-        conditions.push(gte(showings.scheduledAt, new Date(input.startDate)));
+        conditions.push(gte(showings.scheduledAt, new Date(input.startDate).toISOString()));
       }
       if (input.endDate) {
-        conditions.push(lte(showings.scheduledAt, new Date(input.endDate)));
+        conditions.push(lte(showings.scheduledAt, new Date(input.endDate).toISOString()));
       }
       if (input.status && input.status !== 'all') {
         conditions.push(eq(showings.status, input.status as any));
@@ -753,26 +805,24 @@ export const agentRouter = router({
         .where(and(...conditions))
         .orderBy(showings.scheduledAt);
 
-      return showingsList.map(
-        ({ showing, property, lead }: { showing: any; property: any; lead: any }) => ({
-          ...showing,
-          property: property
-            ? {
-                id: property.id,
-                title: property.title,
-                address: property.address,
-                city: property.city,
-              }
-            : null,
-          client: lead
-            ? {
-                name: lead.name,
-                email: lead.email,
-                phone: lead.phone,
-              }
-            : null,
-        }),
-      );
+      return showingsList.map(({ showing, property, lead }) => ({
+        ...showing,
+        property: property
+          ? {
+              id: property.id,
+              title: property.title,
+              address: property.address,
+              city: property.city,
+            }
+          : null,
+        client: lead
+          ? {
+              name: lead.name,
+              email: lead.email,
+              phone: lead.phone,
+            }
+          : null,
+      }));
     }),
 
   /**
@@ -786,7 +836,7 @@ export const agentRouter = router({
         notes: z.string().optional(),
       }),
     )
-    .mutation(async ({ ctx, input }) => {
+    .mutation(async ({ ctx, input }): Promise<{ success: boolean }> => {
       const db = await getDb();
 
       // Get agent record
@@ -806,7 +856,7 @@ export const agentRouter = router({
         .set({
           status: input.status,
           notes: input.notes || showings.notes,
-          updatedAt: new Date(),
+          updatedAt: nowAsDbTimestamp(),
         })
         .where(and(eq(showings.id, input.showingId), eq(showings.agentId, agentRecord.id)));
 
@@ -903,7 +953,7 @@ export const agentRouter = router({
         quarter: 90,
         year: 365,
       }[input.period];
-      const startDate = new Date(now.getTime() - periodDays * 24 * 60 * 60 * 1000);
+      const startDate = new Date(now.getTime() - periodDays * 24 * 60 * 60 * 1000).toISOString();
 
       // Leads contacted
       const [leadsContactedResult] = await db
@@ -1149,7 +1199,7 @@ export const agentRouter = router({
       }
 
       // Update property
-      const updateData: any = { ...input.updates, updatedAt: new Date() };
+      const updateData: any = { ...input.updates, updatedAt: nowAsDbTimestamp() };
       if (input.updates.featured !== undefined) {
         updateData.featured = input.updates.featured ? 1 : 0;
       }

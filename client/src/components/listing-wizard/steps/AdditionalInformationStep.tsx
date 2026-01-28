@@ -11,12 +11,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { 
-  Home, 
-  Building2, 
+import {
+  Home,
+  Building2,
   Zap,
-  Wifi, 
-  Shield, 
+  Wifi,
+  Shield,
   Droplets,
   Coins,
   Trees,
@@ -31,7 +31,7 @@ import {
   Plus,
   Flame,
   Layers,
-  Car
+  Car,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -48,7 +48,7 @@ export function AdditionalInformationStep() {
   const toggleArrayItem = (field: string, item: string) => {
     const currentItems = (additionalInfo[field as keyof typeof additionalInfo] as string[]) || [];
     const newItems = currentItems.includes(item)
-      ? currentItems.filter((i) => i !== item)
+      ? currentItems.filter(i => i !== item)
       : [...currentItems, item];
     updateAdditionalInfo(field, newItems);
   };
@@ -83,26 +83,29 @@ export function AdditionalInformationStep() {
   };
 
   const renderSelect = (
-    field: string, 
-    label: string, 
-    options: { value: string; label: string }[], 
+    field: string,
+    label: string,
+    options: { value: string; label: string }[],
     placeholder: string,
-    icon?: React.ElementType
+    icon?: React.ElementType,
   ) => (
     <div className="space-y-2">
       <Label htmlFor={field} className="text-slate-700 font-medium flex items-center gap-2">
-        {icon && React.createElement(icon, { className: "w-4 h-4 text-emerald-600" })}
+        {icon && React.createElement(icon, { className: 'w-4 h-4 text-emerald-600' })}
         {label}
       </Label>
       <Select
         value={(additionalInfo[field as keyof typeof additionalInfo] as string) || ''}
-        onValueChange={(value) => updateAdditionalInfo(field, value)}
+        onValueChange={value => updateAdditionalInfo(field, value)}
       >
-        <SelectTrigger id={field} className="bg-white border-slate-200 focus:ring-emerald-500 rounded-xl">
+        <SelectTrigger
+          id={field}
+          className="bg-white border-slate-200 focus:ring-emerald-500 rounded-xl"
+        >
           <SelectValue placeholder={placeholder} />
         </SelectTrigger>
         <SelectContent>
-          {options.map((opt) => (
+          {options.map(opt => (
             <SelectItem key={opt.value} value={opt.value}>
               {opt.label}
             </SelectItem>
@@ -115,10 +118,10 @@ export function AdditionalInformationStep() {
   const renderMultiSelect = (
     field: string,
     label: string,
-    options: { value: string; label: string; icon?: React.ElementType }[]
+    options: { value: string; label: string; icon?: React.ElementType }[],
   ) => {
     const selectedItems = (additionalInfo[field as keyof typeof additionalInfo] as string[]) || [];
-    
+
     return (
       <div className="space-y-3 col-span-full">
         <Label className="text-slate-700 font-medium text-base flex items-center gap-2">
@@ -128,7 +131,7 @@ export function AdditionalInformationStep() {
           </span>
         </Label>
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-          {options.map((opt) => {
+          {options.map(opt => {
             const isSelected = selectedItems.includes(opt.value);
             const Icon = opt.icon;
             return (
@@ -136,20 +139,24 @@ export function AdditionalInformationStep() {
                 key={opt.value}
                 onClick={() => toggleArrayItem(field, opt.value)}
                 className={cn(
-                  "cursor-pointer rounded-xl border p-3 transition-all duration-200 flex items-center gap-3 group relative overflow-hidden",
+                  'cursor-pointer rounded-xl border p-3 transition-all duration-200 flex items-center gap-3 group relative overflow-hidden',
                   isSelected
-                    ? "bg-emerald-50 border-emerald-500 text-emerald-700 shadow-sm"
-                    : "bg-white border-slate-200 hover:border-emerald-300 hover:bg-slate-50 text-slate-600"
+                    ? 'bg-emerald-50 border-emerald-500 text-emerald-700 shadow-sm'
+                    : 'bg-white border-slate-200 hover:border-emerald-300 hover:bg-slate-50 text-slate-600',
                 )}
               >
                 {isSelected && (
                   <div className="absolute top-0 right-0 w-0 h-0 border-t-[16px] border-r-[16px] border-t-emerald-500 border-r-transparent rotate-90" />
                 )}
                 {Icon && (
-                  <div className={cn(
-                    "p-2 rounded-lg transition-colors",
-                    isSelected ? "bg-emerald-100 text-emerald-600" : "bg-slate-100 text-slate-500 group-hover:text-emerald-500"
-                  )}>
+                  <div
+                    className={cn(
+                      'p-2 rounded-lg transition-colors',
+                      isSelected
+                        ? 'bg-emerald-100 text-emerald-600'
+                        : 'bg-slate-100 text-slate-500 group-hover:text-emerald-500',
+                    )}
+                  >
                     <Icon className="w-4 h-4" />
                   </div>
                 )}
@@ -163,37 +170,40 @@ export function AdditionalInformationStep() {
   };
 
   const renderHybridInput = (
-    field: string, 
-    label: string, 
-    placeholder: string, 
+    field: string,
+    label: string,
+    placeholder: string,
     icon: React.ElementType | undefined,
-    options: { value: string; label: string; icon?: React.ElementType }[]
+    options: { value: string; label: string; icon?: React.ElementType }[],
   ) => {
     const currentTags = (additionalInfo[field as keyof typeof additionalInfo] as string[]) || [];
-    
+
     // Separate tags into "Predefined" (in options) and "Custom" (not in options)
     const predefinedValues = options.map(o => o.value);
     const customTags = currentTags.filter(tag => !predefinedValues.includes(tag));
 
     return (
       <div className="space-y-4 col-span-full">
-        <Label htmlFor={field} className="text-slate-700 font-medium text-base flex items-center gap-2">
-          {icon && React.createElement(icon, { className: "w-4 h-4 text-emerald-600" })}
+        <Label
+          htmlFor={field}
+          className="text-slate-700 font-medium text-base flex items-center gap-2"
+        >
+          {icon && React.createElement(icon, { className: 'w-4 h-4 text-emerald-600' })}
           {label}
         </Label>
-        
+
         {/* Input for Custom Tags */}
         <div className="flex gap-2">
           <Input
             id={field}
             value={tagInputs[field] || ''}
-            onChange={(e) => handleTagInputChange(field, e.target.value)}
-            onKeyDown={(e) => handleKeyDown(field, e)}
+            onChange={e => handleTagInputChange(field, e.target.value)}
+            onKeyDown={e => handleKeyDown(field, e)}
             placeholder={placeholder}
             className="bg-white border-slate-200 focus:ring-emerald-500 rounded-xl"
           />
-          <Button 
-            type="button" 
+          <Button
+            type="button"
             onClick={() => addTag(field)}
             className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl px-4"
           >
@@ -205,7 +215,7 @@ export function AdditionalInformationStep() {
         {customTags.length > 0 && (
           <div className="flex flex-wrap gap-2">
             {customTags.map((tag, index) => (
-              <div 
+              <div
                 key={`custom-${tag}-${index}`}
                 className="flex items-center gap-1 bg-emerald-100 text-emerald-800 border border-emerald-200 px-3 py-1.5 rounded-full text-sm font-medium animate-in fade-in zoom-in duration-200"
               >
@@ -224,9 +234,11 @@ export function AdditionalInformationStep() {
 
         {/* Predefined Options Grid */}
         <div className="space-y-2">
-          <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Common Features</p>
+          <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+            Common Features
+          </p>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-            {options.map((opt) => {
+            {options.map(opt => {
               const isSelected = currentTags.includes(opt.value);
               const Icon = opt.icon;
               return (
@@ -234,20 +246,24 @@ export function AdditionalInformationStep() {
                   key={opt.value}
                   onClick={() => toggleArrayItem(field, opt.value)}
                   className={cn(
-                    "cursor-pointer rounded-xl border p-3 transition-all duration-200 flex items-center gap-3 group relative overflow-hidden",
+                    'cursor-pointer rounded-xl border p-3 transition-all duration-200 flex items-center gap-3 group relative overflow-hidden',
                     isSelected
-                      ? "bg-emerald-50 border-emerald-500 text-emerald-700 shadow-sm"
-                      : "bg-white border-slate-200 hover:border-emerald-300 hover:bg-slate-50 text-slate-600"
+                      ? 'bg-emerald-50 border-emerald-500 text-emerald-700 shadow-sm'
+                      : 'bg-white border-slate-200 hover:border-emerald-300 hover:bg-slate-50 text-slate-600',
                   )}
                 >
                   {isSelected && (
                     <div className="absolute top-0 right-0 w-0 h-0 border-t-[16px] border-r-[16px] border-t-emerald-500 border-r-transparent rotate-90" />
                   )}
                   {Icon && (
-                    <div className={cn(
-                      "p-2 rounded-lg transition-colors",
-                      isSelected ? "bg-emerald-100 text-emerald-600" : "bg-slate-100 text-slate-500 group-hover:text-emerald-500"
-                    )}>
+                    <div
+                      className={cn(
+                        'p-2 rounded-lg transition-colors',
+                        isSelected
+                          ? 'bg-emerald-100 text-emerald-600'
+                          : 'bg-slate-100 text-slate-500 group-hover:text-emerald-500',
+                      )}
+                    >
                       <Icon className="w-4 h-4" />
                     </div>
                   )}
@@ -261,10 +277,16 @@ export function AdditionalInformationStep() {
     );
   };
 
-  const renderNumberInput = (field: string, label: string, placeholder: string, suffix?: string, icon?: React.ElementType) => (
+  const renderNumberInput = (
+    field: string,
+    label: string,
+    placeholder: string,
+    suffix?: string,
+    icon?: React.ElementType,
+  ) => (
     <div className="space-y-2">
       <Label htmlFor={field} className="text-slate-700 font-medium flex items-center gap-2">
-        {icon && React.createElement(icon, { className: "w-4 h-4 text-emerald-600" })}
+        {icon && React.createElement(icon, { className: 'w-4 h-4 text-emerald-600' })}
         {label}
       </Label>
       <div className="relative">
@@ -274,7 +296,7 @@ export function AdditionalInformationStep() {
           min="0"
           placeholder={placeholder}
           value={additionalInfo[field as keyof typeof additionalInfo] || ''}
-          onChange={(e) => updateAdditionalInfo(field, Number(e.target.value))}
+          onChange={e => updateAdditionalInfo(field, Number(e.target.value))}
           className="bg-white border-slate-200 focus:ring-emerald-500 pr-12 rounded-xl"
         />
         {suffix && (
@@ -299,9 +321,9 @@ export function AdditionalInformationStep() {
       {/* 1. Property Highlights */}
       <Card className="p-6 bg-white/60 backdrop-blur-xl border-slate-200/60 shadow-sm rounded-2xl space-y-6">
         {renderHybridInput(
-          'propertyHighlights', 
-          'Property Highlights', 
-          'Add custom highlight...', 
+          'propertyHighlights',
+          'Property Highlights',
+          'Add custom highlight...',
           Maximize,
           [
             { value: 'High Ceilings', label: 'High Ceilings', icon: Maximize },
@@ -312,16 +334,16 @@ export function AdditionalInformationStep() {
             { value: 'Pet Friendly', label: 'Pet Friendly', icon: Trees },
             { value: 'Secure', label: 'Secure', icon: Shield },
             { value: 'Scenic View', label: 'Scenic View', icon: Mountain },
-          ]
+          ],
         )}
       </Card>
 
       {/* 2. Additional Rooms */}
       <Card className="p-6 bg-white/60 backdrop-blur-xl border-slate-200/60 shadow-sm rounded-2xl space-y-6">
         {renderHybridInput(
-          'additionalRooms', 
-          'Additional Rooms & Specs', 
-          'Add custom room...', 
+          'additionalRooms',
+          'Additional Rooms & Specs',
+          'Add custom room...',
           Sofa,
           [
             { value: 'Study / Office', label: 'Study / Office', icon: Sofa },
@@ -332,7 +354,7 @@ export function AdditionalInformationStep() {
             { value: 'Storage Room', label: 'Storage Room', icon: Warehouse },
             { value: 'Gym', label: 'Gym', icon: Maximize },
             { value: 'Entertainment Area', label: 'Entertainment Area', icon: Sofa },
-          ]
+          ],
         )}
       </Card>
 
@@ -344,57 +366,100 @@ export function AdditionalInformationStep() {
           </div>
           <h3 className="text-lg font-semibold text-slate-800">Setting & Utilities</h3>
         </div>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {renderSelect('propertySetting', 'Property Setting', [
-            { value: 'gated_community', label: 'Gated Community' },
-            { value: 'standalone', label: 'Standalone' },
-            { value: 'complex', label: 'Complex' },
-            { value: 'estate_living', label: 'Estate Living' },
-          ], 'Select setting', Building2)}
+          {renderSelect(
+            'propertySetting',
+            'Property Setting',
+            [
+              { value: 'gated_community', label: 'Gated Community' },
+              { value: 'standalone', label: 'Standalone' },
+              { value: 'complex', label: 'Complex' },
+              { value: 'estate_living', label: 'Estate Living' },
+            ],
+            'Select setting',
+            Building2,
+          )}
 
-          {additionalInfo.propertySetting === 'estate_living' && renderSelect('estateType', 'Estate Type', [
-            { value: 'security_estate', label: 'Security Estate' },
-            { value: 'golf_estate', label: 'Golf Estate' },
-            { value: 'equestrian_estate', label: 'Equestrian Estate' },
-            { value: 'country_estate', label: 'Country Estate' },
-            { value: 'nature_estate', label: 'Nature Estate' },
-            { value: 'eco_estate', label: 'Eco Estate' },
-          ], 'Select estate type', Trees)}
+          {additionalInfo.propertySetting === 'estate_living' &&
+            renderSelect(
+              'estateType',
+              'Estate Type',
+              [
+                { value: 'security_estate', label: 'Security Estate' },
+                { value: 'golf_estate', label: 'Golf Estate' },
+                { value: 'equestrian_estate', label: 'Equestrian Estate' },
+                { value: 'country_estate', label: 'Country Estate' },
+                { value: 'nature_estate', label: 'Nature Estate' },
+                { value: 'eco_estate', label: 'Eco Estate' },
+              ],
+              'Select estate type',
+              Trees,
+            )}
 
-          {renderSelect('powerBackup', 'Power Backup', [
-            { value: 'none', label: 'None' },
-            { value: 'generator', label: 'Generator' },
-            { value: 'inverter', label: 'Inverter' },
-            { value: 'solar', label: 'Solar' },
-            { value: 'ups', label: 'UPS' },
-          ], 'Select backup', Zap)}
+          {renderSelect(
+            'powerBackup',
+            'Power Backup',
+            [
+              { value: 'none', label: 'None' },
+              { value: 'generator', label: 'Generator' },
+              { value: 'inverter', label: 'Inverter' },
+              { value: 'solar', label: 'Solar' },
+              { value: 'ups', label: 'UPS' },
+            ],
+            'Select backup',
+            Zap,
+          )}
 
-          {renderSelect('electricitySupply', 'Electricity Supply', [
-            { value: 'prepaid', label: 'Prepaid' },
-            { value: 'municipality', label: 'Municipality' },
-            { value: 'eskom', label: 'Eskom' },
-            { value: 'off_grid', label: 'Off-grid' },
-          ], 'Select supply', Lightbulb)}
+          {renderSelect(
+            'electricitySupply',
+            'Electricity Supply',
+            [
+              { value: 'prepaid', label: 'Prepaid' },
+              { value: 'municipality', label: 'Municipality' },
+              { value: 'eskom', label: 'Eskom' },
+              { value: 'off_grid', label: 'Off-grid' },
+            ],
+            'Select supply',
+            Lightbulb,
+          )}
 
-          {renderSelect('waterSupply', 'Water Supply', [
-            { value: 'prepaid', label: 'Prepaid' },
-            { value: 'municipality', label: 'Municipality' },
-            { value: 'borehole', label: 'Borehole' },
-          ], 'Select water', Droplets)}
+          {renderSelect(
+            'waterSupply',
+            'Water Supply',
+            [
+              { value: 'prepaid', label: 'Prepaid' },
+              { value: 'municipality', label: 'Municipality' },
+              { value: 'borehole', label: 'Borehole' },
+            ],
+            'Select water',
+            Droplets,
+          )}
 
-          {renderSelect('waterHeating', 'Water Heating', [
-            { value: 'electric_geyser', label: 'Electric Geyser' },
-            { value: 'solar_geyser', label: 'Solar Geyser' },
-            { value: 'hybrid', label: 'Hybrid' },
-          ], 'Select heating', Flame)}
+          {renderSelect(
+            'waterHeating',
+            'Water Heating',
+            [
+              { value: 'electric_geyser', label: 'Electric Geyser' },
+              { value: 'solar_geyser', label: 'Solar Geyser' },
+              { value: 'hybrid', label: 'Hybrid' },
+            ],
+            'Select heating',
+            Flame,
+          )}
 
-          {renderSelect('internetAccess', 'Internet Access', [
-            { value: 'fibre', label: 'Fibre' },
-            { value: 'adsl', label: 'ADSL' },
-            { value: 'satellite', label: 'Satellite' },
-            { value: 'none', label: 'None' },
-          ], 'Select internet', Wifi)}
+          {renderSelect(
+            'internetAccess',
+            'Internet Access',
+            [
+              { value: 'fibre', label: 'Fibre' },
+              { value: 'adsl', label: 'ADSL' },
+              { value: 'satellite', label: 'Satellite' },
+              { value: 'none', label: 'None' },
+            ],
+            'Select internet',
+            Wifi,
+          )}
         </div>
       </Card>
 
@@ -408,38 +473,62 @@ export function AdditionalInformationStep() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {renderSelect('ownershipType', 'Ownership Type', [
-            { value: 'freehold', label: 'Freehold' },
-            { value: 'sectional_title', label: 'Sectional Title' },
-            { value: 'leasehold', label: 'Leasehold' },
-            { value: 'fractional', label: 'Fractional Ownership' },
-            { value: 'share_block', label: 'Share Block' },
-          ], 'Select ownership', Home)}
+          {renderSelect(
+            'ownershipType',
+            'Ownership Type',
+            [
+              { value: 'freehold', label: 'Freehold' },
+              { value: 'sectional_title', label: 'Sectional Title' },
+              { value: 'leasehold', label: 'Leasehold' },
+              { value: 'fractional', label: 'Fractional Ownership' },
+              { value: 'share_block', label: 'Share Block' },
+            ],
+            'Select ownership',
+            Home,
+          )}
 
-          {renderSelect('flooring', 'Flooring', [
-             { value: 'tiled', label: 'Tiled' },
-             { value: 'laminated', label: 'Laminated' },
-             { value: 'carpets', label: 'Carpets' },
-             { value: 'wood', label: 'Solid Wood' },
-             { value: 'concrete', label: 'Polished Concrete' },
-             { value: 'vinyl', label: 'Vinyl' },
-          ], 'Select flooring', Layers)}
+          {renderSelect(
+            'flooring',
+            'Flooring',
+            [
+              { value: 'tiled', label: 'Tiled' },
+              { value: 'laminated', label: 'Laminated' },
+              { value: 'carpets', label: 'Carpets' },
+              { value: 'wood', label: 'Solid Wood' },
+              { value: 'concrete', label: 'Polished Concrete' },
+              { value: 'vinyl', label: 'Vinyl' },
+            ],
+            'Select flooring',
+            Layers,
+          )}
 
-          {renderSelect('parkingType', 'Parking Type', [
-            { value: 'garage', label: 'Garage' },
-            { value: 'covered_carport', label: 'Covered Carport' },
-            { value: 'open_parking', label: 'Open Parking' },
-            { value: 'street', label: 'Street Parking' },
-            { value: 'none', label: 'None' },
-          ], 'Select parking', Car)}
+          {renderSelect(
+            'parkingType',
+            'Parking Type',
+            [
+              { value: 'garage', label: 'Garage' },
+              { value: 'covered_carport', label: 'Covered Carport' },
+              { value: 'open_parking', label: 'Open Parking' },
+              { value: 'street', label: 'Street Parking' },
+              { value: 'none', label: 'None' },
+            ],
+            'Select parking',
+            Car,
+          )}
 
-          {renderSelect('petFriendly', 'Pet Friendly', [
-            { value: 'yes', label: 'Yes' },
-            { value: 'no', label: 'No' },
-            { value: 'cats_only', label: 'Cats Only' },
-            { value: 'dogs_only', label: 'Dogs Only' },
-            { value: 'with_permission', label: 'With Permission' },
-          ], 'Select policy', CheckCircle2)}
+          {renderSelect(
+            'petFriendly',
+            'Pet Friendly',
+            [
+              { value: 'yes', label: 'Yes' },
+              { value: 'no', label: 'No' },
+              { value: 'cats_only', label: 'Cats Only' },
+              { value: 'dogs_only', label: 'Dogs Only' },
+              { value: 'with_permission', label: 'With Permission' },
+            ],
+            'Select policy',
+            CheckCircle2,
+          )}
         </div>
       </Card>
 

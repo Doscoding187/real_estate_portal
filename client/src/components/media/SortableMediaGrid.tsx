@@ -1,6 +1,6 @@
 /**
  * Sortable Media Grid Component
- * 
+ *
  * BARE-BONES VERSION: Maximum reliability, minimal features
  * - No DragOverlay (uses default browser drag image)
  * - No custom modifiers
@@ -26,15 +26,7 @@ import {
   useSortable,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import {
-  GripVertical,
-  X,
-  Star,
-  Image as ImageIcon,
-  Video,
-  FileText,
-  Eye,
-} from 'lucide-react';
+import { GripVertical, X, Star, Image as ImageIcon, Video, FileText, Eye } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 
@@ -42,7 +34,16 @@ export interface MediaItem {
   id: string;
   url: string;
   type: 'image' | 'video' | 'floorplan' | 'pdf';
-  category?: 'featured' | 'general' | 'amenities' | 'outdoors' | 'videos' | 'photo' | 'floorplan' | 'render' | 'document';
+  category?:
+    | 'featured'
+    | 'general'
+    | 'amenities'
+    | 'outdoors'
+    | 'videos'
+    | 'photo'
+    | 'floorplan'
+    | 'render'
+    | 'document';
   fileName?: string;
   isPrimary?: boolean;
   displayOrder: number;
@@ -73,14 +74,9 @@ const SortableMediaItem: React.FC<SortableMediaItemProps> = ({
   onSetPrimary,
   onPreview,
 }) => {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: item.id });
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: item.id,
+  });
 
   const style: React.CSSProperties = {
     transform: CSS.Transform.toString(transform),
@@ -106,7 +102,7 @@ const SortableMediaItem: React.FC<SortableMediaItemProps> = ({
       className={cn(
         'relative group aspect-square rounded-lg overflow-hidden bg-gray-100 border-2',
         isDragging ? 'opacity-50 border-blue-500 z-50' : 'border-transparent hover:border-gray-200',
-        item.isPrimary && 'ring-2 ring-blue-500 ring-offset-2'
+        item.isPrimary && 'ring-2 ring-blue-500 ring-offset-2',
       )}
     >
       {/* Media Preview */}
@@ -118,11 +114,7 @@ const SortableMediaItem: React.FC<SortableMediaItemProps> = ({
           draggable={false}
         />
       ) : item.type === 'video' ? (
-        <video
-          src={item.url}
-          className="w-full h-full object-cover"
-          muted
-        />
+        <video src={item.url} className="w-full h-full object-cover" muted />
       ) : (
         <div className="w-full h-full flex items-center justify-center bg-gray-200">
           <FileText className="w-12 h-12 text-gray-400" />
@@ -130,10 +122,12 @@ const SortableMediaItem: React.FC<SortableMediaItemProps> = ({
       )}
 
       {/* Overlay with actions */}
-      <div className={cn(
-        'absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent',
-        'opacity-0 group-hover:opacity-100 transition-opacity'
-      )}>
+      <div
+        className={cn(
+          'absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent',
+          'opacity-0 group-hover:opacity-100 transition-opacity',
+        )}
+      >
         {/* Drag Handle - THIS is where drag starts */}
         <div
           {...attributes}
@@ -181,7 +175,7 @@ const SortableMediaItem: React.FC<SortableMediaItemProps> = ({
                 'h-8 px-2 text-xs font-medium',
                 item.isPrimary
                   ? 'bg-blue-600 text-white hover:bg-blue-700'
-                  : 'bg-white/90 text-gray-700 hover:bg-white'
+                  : 'bg-white/90 text-gray-700 hover:bg-white',
               )}
             >
               <Star className={cn('w-3 h-3 mr-1', item.isPrimary && 'fill-current')} />
@@ -217,7 +211,7 @@ export const SortableMediaGrid: React.FC<SortableMediaGridProps> = ({
     useSensor(PointerSensor),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
-    })
+    }),
   );
 
   const handleDragEnd = (event: DragEndEvent) => {
@@ -246,11 +240,7 @@ export const SortableMediaGrid: React.FC<SortableMediaGridProps> = ({
   }
 
   return (
-    <DndContext
-      sensors={sensors}
-      collisionDetection={closestCenter}
-      onDragEnd={handleDragEnd}
-    >
+    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
       <SortableContext items={media.map(item => item.id)} strategy={rectSortingStrategy}>
         <div className={cn('grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4', className)}>
           {media.map(item => (

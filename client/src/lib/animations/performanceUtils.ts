@@ -1,17 +1,17 @@
 /**
  * Animation Performance Utilities
- * 
+ *
  * Provides utilities for optimizing animation performance
  * - GPU-accelerated properties (transform, opacity)
  * - Device capability detection
  * - Frame rate monitoring
- * 
+ *
  * Requirements: 11.2, 11.5 - Optimize animation performance, maintain 60fps
  */
 
 /**
  * Check if device is low-end based on hardware capabilities
- * 
+ *
  * @returns boolean indicating if device is low-end
  */
 export function isLowEndDevice(): boolean {
@@ -49,7 +49,7 @@ export function isLowEndDevice(): boolean {
 
 /**
  * Get recommended animation complexity based on device capabilities
- * 
+ *
  * @returns 'full' | 'reduced' | 'minimal'
  */
 export function getAnimationComplexity(): 'full' | 'reduced' | 'minimal' {
@@ -75,11 +75,7 @@ export function getAnimationComplexity(): 'full' | 'reduced' | 'minimal' {
  * GPU-accelerated animation properties
  * These properties trigger GPU acceleration for better performance
  */
-export const gpuAcceleratedProps = [
-  'transform',
-  'opacity',
-  'filter',
-] as const;
+export const gpuAcceleratedProps = ['transform', 'opacity', 'filter'] as const;
 
 /**
  * Properties that should be avoided in animations (cause layout reflow)
@@ -97,7 +93,7 @@ export const layoutProps = [
 
 /**
  * Check if a property is GPU-accelerated
- * 
+ *
  * @param property - CSS property name
  * @returns boolean indicating if property is GPU-accelerated
  */
@@ -107,7 +103,7 @@ export function isGPUAccelerated(property: string): boolean {
 
 /**
  * Check if a property causes layout reflow
- * 
+ *
  * @param property - CSS property name
  * @returns boolean indicating if property causes layout reflow
  */
@@ -144,19 +140,19 @@ export class FrameRateMonitor {
 
   /**
    * Get average frame rate
-   * 
+   *
    * @returns Average FPS
    */
   getAverageFPS(): number {
     if (this.frames.length === 0) return 0;
-    
+
     const sum = this.frames.reduce((a, b) => a + b, 0);
     return sum / this.frames.length;
   }
 
   /**
    * Get minimum frame rate
-   * 
+   *
    * @returns Minimum FPS
    */
   getMinFPS(): number {
@@ -166,7 +162,7 @@ export class FrameRateMonitor {
 
   /**
    * Check if frame rate is acceptable (>= 60fps)
-   * 
+   *
    * @returns boolean indicating if frame rate is acceptable
    */
   isAcceptable(): boolean {
@@ -176,14 +172,14 @@ export class FrameRateMonitor {
   private tick(time: number): void {
     const delta = time - this.lastTime;
     const fps = 1000 / delta;
-    
+
     this.frames.push(fps);
-    
+
     // Keep only last 60 frames (1 second at 60fps)
     if (this.frames.length > 60) {
       this.frames.shift();
     }
-    
+
     this.lastTime = time;
     this.rafId = requestAnimationFrame(this.tick.bind(this));
   }
@@ -191,7 +187,7 @@ export class FrameRateMonitor {
 
 /**
  * Optimize animation config based on device capabilities
- * 
+ *
  * @param config - Animation configuration
  * @returns Optimized animation configuration
  */
@@ -205,7 +201,7 @@ export function optimizeAnimationConfig(config: {
   shouldAnimate: boolean;
 } {
   const complexity = config.complexity || getAnimationComplexity();
-  
+
   switch (complexity) {
     case 'minimal':
       return {
@@ -213,14 +209,14 @@ export function optimizeAnimationConfig(config: {
         stagger: 0,
         shouldAnimate: false,
       };
-    
+
     case 'reduced':
       return {
         duration: config.duration * 0.5, // Half duration
         stagger: (config.stagger || 0.1) * 0.5, // Half stagger
         shouldAnimate: true,
       };
-    
+
     case 'full':
     default:
       return {
@@ -233,13 +229,13 @@ export function optimizeAnimationConfig(config: {
 
 /**
  * Create optimized animation variants based on device capabilities
- * 
+ *
  * @param variants - Original animation variants
  * @returns Optimized variants
  */
 export function optimizeVariants(variants: any): any {
   const complexity = getAnimationComplexity();
-  
+
   if (complexity === 'minimal') {
     // Return opacity-only variants
     return {
@@ -248,12 +244,12 @@ export function optimizeVariants(variants: any): any {
       exit: { opacity: 0, transition: { duration: 0.01 } },
     };
   }
-  
+
   if (complexity === 'reduced') {
     // Reduce animation distances and durations
     const optimized: any = {};
-    
-    Object.keys(variants).forEach((key) => {
+
+    Object.keys(variants).forEach(key => {
       const variant = variants[key];
       if (typeof variant === 'object' && variant !== null) {
         optimized[key] = {
@@ -262,62 +258,64 @@ export function optimizeVariants(variants: any): any {
           y: variant.y ? variant.y * 0.5 : undefined,
           x: variant.x ? variant.x * 0.5 : undefined,
           // Reduce durations by half
-          transition: variant.transition ? {
-            ...variant.transition,
-            duration: (variant.transition.duration || 0.3) * 0.5,
-          } : undefined,
+          transition: variant.transition
+            ? {
+                ...variant.transition,
+                duration: (variant.transition.duration || 0.3) * 0.5,
+              }
+            : undefined,
         };
       } else {
         optimized[key] = variant;
       }
     });
-    
+
     return optimized;
   }
-  
+
   return variants;
 }
 
 /**
  * Debounce function for performance optimization
- * 
+ *
  * @param func - Function to debounce
  * @param wait - Wait time in milliseconds
  * @returns Debounced function
  */
 export function debounce<T extends (...args: any[]) => any>(
   func: T,
-  wait: number
+  wait: number,
 ): (...args: Parameters<T>) => void {
   let timeout: NodeJS.Timeout | null = null;
-  
+
   return function executedFunction(...args: Parameters<T>) {
     const later = () => {
       timeout = null;
       func(...args);
     };
-    
+
     if (timeout !== null) {
       clearTimeout(timeout);
     }
-    
+
     timeout = setTimeout(later, wait);
   };
 }
 
 /**
  * Throttle function for performance optimization
- * 
+ *
  * @param func - Function to throttle
  * @param limit - Time limit in milliseconds
  * @returns Throttled function
  */
 export function throttle<T extends (...args: any[]) => any>(
   func: T,
-  limit: number
+  limit: number,
 ): (...args: Parameters<T>) => void {
   let inThrottle: boolean = false;
-  
+
   return function executedFunction(...args: Parameters<T>) {
     if (!inThrottle) {
       func(...args);
@@ -331,25 +329,22 @@ export function throttle<T extends (...args: any[]) => any>(
 
 /**
  * Request idle callback wrapper with fallback
- * 
+ *
  * @param callback - Callback to execute during idle time
  * @param options - Options for idle callback
  */
-export function requestIdleCallback(
-  callback: () => void,
-  options?: { timeout?: number }
-): number {
+export function requestIdleCallback(callback: () => void, options?: { timeout?: number }): number {
   if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
     return window.requestIdleCallback(callback, options);
   }
-  
+
   // Fallback to setTimeout
   return setTimeout(callback, 1) as any;
 }
 
 /**
  * Cancel idle callback wrapper with fallback
- * 
+ *
  * @param id - ID returned from requestIdleCallback
  */
 export function cancelIdleCallback(id: number): void {

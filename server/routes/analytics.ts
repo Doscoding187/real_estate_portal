@@ -14,14 +14,14 @@ const router = Router();
 router.post('/track', async (req, res) => {
   try {
     const event = req.body;
-    
+
     // Log the event (in production, you'd send this to your analytics service)
     console.log('[Analytics]', event.eventType, {
       page: event.page,
       deviceType: event.deviceType,
       timestamp: event.timestamp,
     });
-    
+
     // Return success
     res.status(200).json({ success: true });
   } catch (error) {

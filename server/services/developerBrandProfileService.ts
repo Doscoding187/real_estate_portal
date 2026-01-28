@@ -1,10 +1,10 @@
 /**
  * Developer Brand Profile Service
- * 
+ *
  * Handles platform-owned brand profile CRUD operations.
  * IMPORTANT: This service manages developerBrandProfiles (platform-owned brands),
  * NOT the developers table (subscriber accounts).
- * 
+ *
  * Ownership Semantics:
  * - ownerType='platform' = seeded or unmanaged listing
  * - ownerType='developer' = subscriber-managed with dashboard access
@@ -92,7 +92,7 @@ function generateSlug(brandName: string): string {
  */
 async function createBrandProfile(input: CreateBrandProfileInput) {
   const slug = input.slug || generateSlug(input.brandName);
-  
+
   const [result] = await db.insert(developerBrandProfiles).values({
     brandName: input.brandName,
     slug,
@@ -141,12 +141,7 @@ async function getBrandProfileBySlug(slug: string) {
   const [profile] = await db
     .select()
     .from(developerBrandProfiles)
-    .where(
-      and(
-        eq(developerBrandProfiles.slug, slug),
-        eq(developerBrandProfiles.isVisible, 1)
-      )
-    )
+    .where(and(eq(developerBrandProfiles.slug, slug), eq(developerBrandProfiles.isVisible, 1)))
     .limit(1);
 
   return profile || null;
@@ -179,8 +174,8 @@ async function listBrandProfiles(filters: BrandProfileFilters = {}) {
     conditions.push(
       or(
         like(developerBrandProfiles.brandName, `%${filters.search}%`),
-        like(developerBrandProfiles.headOfficeLocation, `%${filters.search}%`)
-      )
+        like(developerBrandProfiles.headOfficeLocation, `%${filters.search}%`),
+      ),
     );
   }
 
@@ -212,23 +207,27 @@ async function listBrandProfiles(filters: BrandProfileFilters = {}) {
 
   // Enrich profiles with stats
   const enrichedProfiles = profiles.map((profile: any) => {
-    const profileDevs = brandDevelopments.filter((d: any) => d.developerBrandProfileId === profile.id);
+    const profileDevs = brandDevelopments.filter(
+      (d: any) => d.developerBrandProfileId === profile.id,
+    );
     const totalProjects = profileDevs.length;
-    
-    const readyToMove = profileDevs.filter((d: any) => 
-      ['ready-to-move', 'completed', 'phase-completed'].includes(d.status)
+
+    const readyToMove = profileDevs.filter((d: any) =>
+      ['ready-to-move', 'completed', 'phase-completed'].includes(d.status),
     ).length;
 
-    const underConstruction = profileDevs.filter((d: any) => 
-      ['under-construction'].includes(d.status)
+    const underConstruction = profileDevs.filter((d: any) =>
+      ['under-construction'].includes(d.status),
     ).length;
 
-    const newLaunch = profileDevs.filter((d: any) => 
-      ['launching-soon', 'now-selling', 'new-phase-launching', 'coming_soon', 'planning'].includes(d.status)
+    const newLaunch = profileDevs.filter((d: any) =>
+      ['launching-soon', 'now-selling', 'new-phase-launching', 'coming_soon', 'planning'].includes(
+        d.status,
+      ),
     ).length;
 
     const currentYear = new Date().getFullYear();
-    const experience = profile.foundedYear ? (currentYear - profile.foundedYear) : 0;
+    const experience = profile.foundedYear ? currentYear - profile.foundedYear : 0;
 
     return {
       ...profile,
@@ -237,8 +236,8 @@ async function listBrandProfiles(filters: BrandProfileFilters = {}) {
         readyToMove,
         underConstruction,
         newLaunch,
-        experience
-      }
+        experience,
+      },
     };
   });
 
@@ -256,11 +255,14 @@ async function updateBrandProfile(id: number, input: UpdateBrandProfileInput) {
   if (input.logoUrl !== undefined) updateData.logoUrl = input.logoUrl;
   if (input.about !== undefined) updateData.about = input.about;
   if (input.foundedYear !== undefined) updateData.foundedYear = input.foundedYear;
-  if (input.headOfficeLocation !== undefined) updateData.headOfficeLocation = input.headOfficeLocation;
-  if (input.operatingProvinces !== undefined) updateData.operatingProvinces = input.operatingProvinces;
+  if (input.headOfficeLocation !== undefined)
+    updateData.headOfficeLocation = input.headOfficeLocation;
+  if (input.operatingProvinces !== undefined)
+    updateData.operatingProvinces = input.operatingProvinces;
   if (input.propertyFocus !== undefined) updateData.propertyFocus = input.propertyFocus;
   if (input.websiteUrl !== undefined) updateData.websiteUrl = input.websiteUrl;
-  if (input.publicContactEmail !== undefined) updateData.publicContactEmail = input.publicContactEmail;
+  if (input.publicContactEmail !== undefined)
+    updateData.publicContactEmail = input.publicContactEmail;
   if (input.brandTier !== undefined) updateData.brandTier = input.brandTier;
   if (input.identityType !== undefined) updateData.identityType = input.identityType;
   if (input.sourceAttribution !== undefined) updateData.sourceAttribution = input.sourceAttribution;
@@ -268,8 +270,10 @@ async function updateBrandProfile(id: number, input: UpdateBrandProfileInput) {
   if (input.isSubscriber !== undefined) updateData.isSubscriber = input.isSubscriber ? 1 : 0;
   if (input.isClaimable !== undefined) updateData.isClaimable = input.isClaimable ? 1 : 0;
   if (input.isVisible !== undefined) updateData.isVisible = input.isVisible ? 1 : 0;
-  if (input.isContactVerified !== undefined) updateData.isContactVerified = input.isContactVerified ? 1 : 0;
-  if (input.linkedDeveloperAccountId !== undefined) updateData.linkedDeveloperAccountId = input.linkedDeveloperAccountId;
+  if (input.isContactVerified !== undefined)
+    updateData.isContactVerified = input.isContactVerified ? 1 : 0;
+  if (input.linkedDeveloperAccountId !== undefined)
+    updateData.linkedDeveloperAccountId = input.linkedDeveloperAccountId;
   if (input.ownerType !== undefined) updateData.ownerType = input.ownerType;
   if (input.claimRequestedAt !== undefined) updateData.claimRequestedAt = input.claimRequestedAt;
 
@@ -277,10 +281,7 @@ async function updateBrandProfile(id: number, input: UpdateBrandProfileInput) {
     return { success: false, message: 'No fields to update' };
   }
 
-  await db
-    .update(developerBrandProfiles)
-    .set(updateData)
-    .where(eq(developerBrandProfiles.id, id));
+  await db.update(developerBrandProfiles).set(updateData).where(eq(developerBrandProfiles.id, id));
 
   return { success: true };
 }
@@ -380,10 +381,7 @@ async function requestClaim(brandProfileId: number) {
  * Convert brand profile to subscriber (after claim approval)
  * Links brand profile to developer account
  */
-async function convertToSubscriber(
-  brandProfileId: number,
-  developerAccountId: number
-) {
+async function convertToSubscriber(brandProfileId: number, developerAccountId: number) {
   await db
     .update(developerBrandProfiles)
     .set({
@@ -495,16 +493,14 @@ async function deleteBrandProfile(id: number) {
       .set({
         isVisible: 0,
         brandName: `${current?.brandName} (Deleted ${new Date().toISOString().split('T')[0]})`,
-        slug: `deleted-${id}-${Date.now()}` // Free up the slug
+        slug: `deleted-${id}-${Date.now()}`, // Free up the slug
       })
       .where(eq(developerBrandProfiles.id, id));
 
     return { success: true, mode: 'soft' };
   } else {
     // Hard Delete
-    await db
-      .delete(developerBrandProfiles)
-      .where(eq(developerBrandProfiles.id, id));
+    await db.delete(developerBrandProfiles).where(eq(developerBrandProfiles.id, id));
 
     return { success: true, mode: 'hard' };
   }
@@ -519,17 +515,17 @@ export const developerBrandProfileService = {
   updateBrandProfile,
   deleteBrandProfile, // Added
   toggleVisibility,
-  
+
   // Development linking
   attachDevelopmentToBrand,
   detachDevelopmentFromBrand,
   getBrandDevelopments,
   getBrandProfileWithStats,
-  
+
   // Claim flow
   requestClaim,
   convertToSubscriber,
-  
+
   // Lead metrics
   incrementLeadCountAsync,
   getBrandLeadStats,

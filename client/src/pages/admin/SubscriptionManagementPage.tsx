@@ -30,18 +30,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { 
-  CreditCard, 
-  Search, 
-  Filter, 
-  Plus, 
-  MoreHorizontal, 
-  CheckCircle, 
-  XCircle, 
+import {
+  CreditCard,
+  Search,
+  Filter,
+  Plus,
+  MoreHorizontal,
+  CheckCircle,
+  XCircle,
   AlertCircle,
   FileText,
   Download,
-  ExternalLink
+  ExternalLink,
 } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -53,28 +53,40 @@ export default function SubscriptionManagementPage() {
   const [page, setPage] = useState(1);
 
   // Queries
-  const { data: subscriptionsData, isLoading: isLoadingSubs, refetch: refetchSubs } = 
-    trpc.subscription.getAllSubscriptions.useQuery({
+  const {
+    data: subscriptionsData,
+    isLoading: isLoadingSubs,
+    refetch: refetchSubs,
+  } = trpc.subscription.getAllSubscriptions.useQuery(
+    {
       page,
       limit: 10,
-      status: statusFilter === 'all' ? undefined : statusFilter as any,
-    }, {
+      status: statusFilter === 'all' ? undefined : (statusFilter as any),
+    },
+    {
       enabled: activeTab === 'subscriptions',
-    });
+    },
+  );
 
-  const { data: plansData, isLoading: isLoadingPlans } = 
+  const { data: plansData, isLoading: isLoadingPlans } =
     trpc.subscription.getAvailablePlans.useQuery(undefined, {
       enabled: activeTab === 'plans',
     });
 
-  const { data: proofsData, isLoading: isLoadingProofs, refetch: refetchProofs } = 
-    trpc.subscription.getPaymentProofs.useQuery({
+  const {
+    data: proofsData,
+    isLoading: isLoadingProofs,
+    refetch: refetchProofs,
+  } = trpc.subscription.getPaymentProofs.useQuery(
+    {
       page,
       limit: 10,
       status: 'pending',
-    }, {
+    },
+    {
       enabled: activeTab === 'verification',
-    });
+    },
+  );
 
   // Mutations
   const verifyPaymentMutation = trpc.subscription.verifyPayment.useMutation({
@@ -82,7 +94,7 @@ export default function SubscriptionManagementPage() {
       toast.success('Payment verified successfully');
       refetchProofs();
     },
-    onError: (error) => {
+    onError: error => {
       toast.error(`Verification failed: ${error.message}`);
     },
   });
@@ -98,16 +110,36 @@ export default function SubscriptionManagementPage() {
     switch (status) {
       case 'active':
       case 'verified':
-        return <Badge className="bg-green-500/10 text-green-600 hover:bg-green-500/20 border-green-200">Active</Badge>;
+        return (
+          <Badge className="bg-green-500/10 text-green-600 hover:bg-green-500/20 border-green-200">
+            Active
+          </Badge>
+        );
       case 'trialing':
-        return <Badge className="bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 border-blue-200">Trial</Badge>;
+        return (
+          <Badge className="bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 border-blue-200">
+            Trial
+          </Badge>
+        );
       case 'past_due':
-        return <Badge className="bg-orange-500/10 text-orange-600 hover:bg-orange-500/20 border-orange-200">Past Due</Badge>;
+        return (
+          <Badge className="bg-orange-500/10 text-orange-600 hover:bg-orange-500/20 border-orange-200">
+            Past Due
+          </Badge>
+        );
       case 'canceled':
       case 'rejected':
-        return <Badge className="bg-red-500/10 text-red-600 hover:bg-red-500/20 border-red-200">Canceled</Badge>;
+        return (
+          <Badge className="bg-red-500/10 text-red-600 hover:bg-red-500/20 border-red-200">
+            Canceled
+          </Badge>
+        );
       case 'pending':
-        return <Badge className="bg-yellow-500/10 text-yellow-600 hover:bg-yellow-500/20 border-yellow-200">Pending</Badge>;
+        return (
+          <Badge className="bg-yellow-500/10 text-yellow-600 hover:bg-yellow-500/20 border-yellow-200">
+            Pending
+          </Badge>
+        );
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
@@ -117,8 +149,12 @@ export default function SubscriptionManagementPage() {
     <div className="space-y-6 p-6 pb-20">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Subscription Management</h1>
-          <p className="text-slate-500 mt-1">Manage plans, subscriptions, and payment verifications.</p>
+          <h1 className="text-3xl font-bold text-slate-900 tracking-tight">
+            Subscription Management
+          </h1>
+          <p className="text-slate-500 mt-1">
+            Manage plans, subscriptions, and payment verifications.
+          </p>
         </div>
         <div className="flex gap-2">
           <Button className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-600/20">
@@ -128,11 +164,29 @@ export default function SubscriptionManagementPage() {
         </div>
       </div>
 
-      <Tabs defaultValue="subscriptions" value={activeTab} onValueChange={setActiveTab} className="w-full">
+      <Tabs
+        defaultValue="subscriptions"
+        value={activeTab}
+        onValueChange={setActiveTab}
+        className="w-full"
+      >
         <TabsList className="bg-white/50 backdrop-blur-sm border border-white/40 p-1 rounded-xl mb-6">
-          <TabsTrigger value="subscriptions" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">Subscriptions</TabsTrigger>
-          <TabsTrigger value="plans" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">Plans</TabsTrigger>
-          <TabsTrigger value="verification" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">
+          <TabsTrigger
+            value="subscriptions"
+            className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm"
+          >
+            Subscriptions
+          </TabsTrigger>
+          <TabsTrigger
+            value="plans"
+            className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm"
+          >
+            Plans
+          </TabsTrigger>
+          <TabsTrigger
+            value="verification"
+            className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm"
+          >
             Payment Verification
             {proofsData?.pagination?.total ? (
               <span className="ml-2 bg-red-100 text-red-600 text-xs px-1.5 py-0.5 rounded-full font-medium">
@@ -148,11 +202,11 @@ export default function SubscriptionManagementPage() {
             <div className="flex flex-col md:flex-row gap-4 mb-6 justify-between">
               <div className="relative w-full md:w-96">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                <Input 
-                  placeholder="Search subscriptions..." 
+                <Input
+                  placeholder="Search subscriptions..."
                   className="pl-10 bg-white/50 border-slate-200"
                   value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onChange={e => setSearchTerm(e.target.value)}
                 />
               </div>
               <div className="flex gap-2">
@@ -205,7 +259,7 @@ export default function SubscriptionManagementPage() {
                       </TableCell>
                     </TableRow>
                   ) : (
-                    subscriptionsData?.subscriptions.map((sub) => (
+                    subscriptionsData?.subscriptions.map(sub => (
                       <TableRow key={sub.id} className="hover:bg-slate-50/50 transition-colors">
                         <TableCell className="font-medium">
                           <div className="flex flex-col">
@@ -219,16 +273,16 @@ export default function SubscriptionManagementPage() {
                           </Badge>
                         </TableCell>
                         <TableCell>{getStatusBadge(sub.status)}</TableCell>
-                        <TableCell className="capitalize">{sub.plan?.interval || 'Monthly'}</TableCell>
+                        <TableCell className="capitalize">
+                          {sub.plan?.interval || 'Monthly'}
+                        </TableCell>
                         <TableCell>
-                          {sub.currentPeriodEnd 
-                            ? new Date(sub.currentPeriodEnd).toLocaleDateString() 
+                          {sub.currentPeriodEnd
+                            ? new Date(sub.currentPeriodEnd).toLocaleDateString()
                             : '-'}
                         </TableCell>
                         <TableCell>
-                          {sub.plan?.price 
-                            ? formatCurrency(Number(sub.plan.price) / 100) 
-                            : '-'}
+                          {sub.plan?.price ? formatCurrency(Number(sub.plan.price) / 100) : '-'}
                         </TableCell>
                         <TableCell className="text-right">
                           <Button variant="ghost" size="sm">
@@ -250,8 +304,11 @@ export default function SubscriptionManagementPage() {
             {isLoadingPlans ? (
               <div className="col-span-3 text-center py-12 text-slate-500">Loading plans...</div>
             ) : (
-              plansData?.map((plan) => (
-                <GlassCard key={plan.id} className="p-6 relative overflow-hidden group hover:shadow-xl transition-all duration-300">
+              plansData?.map(plan => (
+                <GlassCard
+                  key={plan.id}
+                  className="p-6 relative overflow-hidden group hover:shadow-xl transition-all duration-300"
+                >
                   {plan.isPopular && (
                     <div className="absolute top-0 right-0 bg-blue-600 text-white text-xs px-3 py-1 rounded-bl-xl font-medium">
                       Most Popular
@@ -262,7 +319,9 @@ export default function SubscriptionManagementPage() {
                     <p className="text-slate-500 text-sm mt-1">{plan.description}</p>
                   </div>
                   <div className="mb-6">
-                    <span className="text-3xl font-bold text-slate-900">{formatCurrency(plan.price)}</span>
+                    <span className="text-3xl font-bold text-slate-900">
+                      {formatCurrency(plan.price)}
+                    </span>
                     <span className="text-slate-500">/{plan.interval}</span>
                   </div>
                   <div className="space-y-3 mb-8">
@@ -279,15 +338,21 @@ export default function SubscriptionManagementPage() {
                     )}
                   </div>
                   <div className="flex gap-2">
-                    <Button variant="outline" className="w-full border-slate-200">Edit</Button>
-                    <Button variant="ghost" size="icon" className="text-red-500 hover:text-red-600 hover:bg-red-50">
+                    <Button variant="outline" className="w-full border-slate-200">
+                      Edit
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="text-red-500 hover:text-red-600 hover:bg-red-50"
+                    >
                       <XCircle className="w-4 h-4" />
                     </Button>
                   </div>
                 </GlassCard>
               ))
             )}
-            
+
             {/* Add New Plan Card */}
             <button className="flex flex-col items-center justify-center p-6 rounded-[2rem] border-2 border-dashed border-slate-200 hover:border-blue-400 hover:bg-blue-50/50 transition-all group h-full min-h-[300px]">
               <div className="w-12 h-12 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
@@ -343,14 +408,14 @@ export default function SubscriptionManagementPage() {
                       </TableCell>
                     </TableRow>
                   ) : (
-                    proofsData?.proofs.map((proof) => (
+                    proofsData?.proofs.map(proof => (
                       <TableRow key={proof.id} className="hover:bg-slate-50/50 transition-colors">
-                        <TableCell>
-                          {new Date(proof.paymentDate).toLocaleDateString()}
-                        </TableCell>
+                        <TableCell>{new Date(proof.paymentDate).toLocaleDateString()}</TableCell>
                         <TableCell>
                           <div className="flex flex-col">
-                            <span className="font-medium">{proof.agencyName || 'Unknown Agency'}</span>
+                            <span className="font-medium">
+                              {proof.agencyName || 'Unknown Agency'}
+                            </span>
                             <span className="text-xs text-slate-500">{proof.submittedBy}</span>
                           </div>
                         </TableCell>
@@ -364,9 +429,9 @@ export default function SubscriptionManagementPage() {
                         </TableCell>
                         <TableCell>
                           {proof.proofOfPaymentUrl ? (
-                            <a 
-                              href={proof.proofOfPaymentUrl} 
-                              target="_blank" 
+                            <a
+                              href={proof.proofOfPaymentUrl}
+                              target="_blank"
                               rel="noopener noreferrer"
                               className="flex items-center text-blue-600 hover:underline text-sm"
                             >
@@ -380,18 +445,18 @@ export default function SubscriptionManagementPage() {
                         <TableCell>{getStatusBadge(proof.status)}</TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-2">
-                            <Button 
-                              size="sm" 
-                              variant="outline" 
+                            <Button
+                              size="sm"
+                              variant="outline"
                               className="text-green-600 hover:bg-green-50 border-green-200"
                               onClick={() => handleVerifyPayment(proof.id, 'verified')}
                             >
                               <CheckCircle className="w-4 h-4 mr-1" />
                               Approve
                             </Button>
-                            <Button 
-                              size="sm" 
-                              variant="outline" 
+                            <Button
+                              size="sm"
+                              variant="outline"
                               className="text-red-600 hover:bg-red-50 border-red-200"
                               onClick={() => handleVerifyPayment(proof.id, 'rejected')}
                             >

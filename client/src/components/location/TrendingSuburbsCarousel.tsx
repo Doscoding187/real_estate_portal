@@ -18,7 +18,11 @@ interface TrendingSuburbsCarouselProps {
   provinceSlug: string;
 }
 
-export function TrendingSuburbsCarousel({ suburbs, provinceName, provinceSlug }: TrendingSuburbsCarouselProps) {
+export function TrendingSuburbsCarousel({
+  suburbs,
+  provinceName,
+  provinceSlug,
+}: TrendingSuburbsCarouselProps) {
   const [emblaRef, emblaApi] = useEmblaCarousel({
     align: 'start',
     slidesToScroll: 2,
@@ -64,7 +68,7 @@ export function TrendingSuburbsCarousel({ suburbs, provinceName, provinceSlug }:
       <div className="relative group/carousel">
         <div className="overflow-hidden" ref={emblaRef}>
           <div className="flex gap-4">
-            {suburbs.map((suburb) => (
+            {suburbs.map(suburb => (
               <div
                 key={suburb.id}
                 className="flex-[0_0_85%] min-w-0 sm:flex-[0_0_45%] md:flex-[0_0_30%] lg:flex-[0_0_20%] xl:flex-[0_0_16.666%]"
@@ -88,7 +92,9 @@ export function TrendingSuburbsCarousel({ suburbs, provinceName, provinceSlug }:
                     </div>
 
                     <div className="mt-auto pt-4 border-t border-slate-50 flex justify-between items-center text-sm">
-                      <span className="text-slate-500 text-xs uppercase tracking-wide font-medium">Listings</span>
+                      <span className="text-slate-500 text-xs uppercase tracking-wide font-medium">
+                        Listings
+                      </span>
                       <span className="font-bold text-slate-700 bg-slate-50 px-2 py-0.5 rounded-md group-hover:bg-blue-50 group-hover:text-blue-700 transition-colors">
                         {suburb.listingCount || 0}
                       </span>

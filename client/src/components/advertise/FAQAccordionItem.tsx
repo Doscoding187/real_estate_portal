@@ -15,17 +15,17 @@ export interface FAQAccordionItemProps {
 
 /**
  * FAQAccordionItem Component
- * 
+ *
  * A single FAQ item with smooth expand/collapse animation.
  * Follows soft-UI design principles with rounded corners and subtle shadows.
- * 
+ *
  * Features:
  * - Smooth expand/collapse animation
  * - Keyboard accessible (Enter/Space to toggle)
  * - ARIA attributes for screen readers
  * - Hover states with soft elevation
  * - Auto-scrolls into view when opened
- * 
+ *
  * @example
  * ```tsx
  * <FAQAccordionItem
@@ -65,7 +65,7 @@ export function FAQAccordionItem({
       e.preventDefault();
       handleToggle();
     }
-    
+
     // Pass through to parent for navigation
     if (onKeyDownProp) {
       onKeyDownProp(e);
@@ -91,9 +91,7 @@ export function FAQAccordionItem({
         aria-expanded={isOpen}
         aria-controls={safeId}
       >
-        <span className="text-lg font-semibold text-gray-900 pr-4">
-          {question}
-        </span>
+        <span className="text-lg font-semibold text-gray-900 pr-4">{question}</span>
         <motion.div
           animate={{ rotate: isOpen ? 180 : 0 }}
           transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
@@ -117,9 +115,7 @@ export function FAQAccordionItem({
             className="overflow-hidden"
           >
             <div className="px-6 pb-5 pt-2">
-              <p className="text-base text-gray-600 leading-relaxed">
-                {answer}
-              </p>
+              <p className="text-base text-gray-600 leading-relaxed">{answer}</p>
             </div>
           </motion.div>
         )}

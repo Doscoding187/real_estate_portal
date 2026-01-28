@@ -1,9 +1,9 @@
 /**
  * Onboarding Tooltip Component
- * 
+ *
  * Displays contextual tooltips for feature education.
  * Implements Requirements 16.10, 16.11, 16.12
- * 
+ *
  * Tooltips:
  * - topic_navigation: After 5 items scrolled
  * - partner_content: On first partner content encounter
@@ -50,7 +50,7 @@ export function OnboardingTooltip({
   useEffect(() => {
     if (targetRef?.current && isVisible) {
       const rect = targetRef.current.getBoundingClientRect();
-      
+
       let top = 0;
       let left = 0;
 
@@ -157,11 +157,7 @@ interface FloatingTooltipProps {
   onDismiss: () => void;
 }
 
-export function FloatingTooltip({
-  tooltipId,
-  isVisible,
-  onDismiss,
-}: FloatingTooltipProps) {
+export function FloatingTooltip({ tooltipId, isVisible, onDismiss }: FloatingTooltipProps) {
   const config = TOOLTIP_CONFIG[tooltipId];
 
   return (

@@ -93,9 +93,7 @@ export function PropertyCard({
           className="p-3 bg-black/50 backdrop-blur-sm rounded-full text-white hover:bg-black/70 transition-all"
           aria-label={isSaved ? 'Remove from favorites' : 'Save to favorites'}
         >
-          <Heart
-            className={`w-6 h-6 ${isSaved ? 'fill-red-500 text-red-500' : ''}`}
-          />
+          <Heart className={`w-6 h-6 ${isSaved ? 'fill-red-500 text-red-500' : ''}`} />
         </button>
         <button
           onClick={handleShare}
@@ -118,7 +116,7 @@ export function PropertyCard({
         {/* Highlight Tags */}
         {property.highlightTags && property.highlightTags.length > 0 && (
           <div className="flex flex-wrap gap-2 mb-4">
-            {property.highlightTags.slice(0, 4).map((tag) => (
+            {property.highlightTags.slice(0, 4).map(tag => (
               <span
                 key={tag.id}
                 className="px-3 py-1 bg-white/20 backdrop-blur-sm rounded-full text-white text-sm font-medium"
@@ -188,9 +186,7 @@ export function PropertyCard({
               </div>
             )}
             <div className="flex-1">
-              <div className="text-white text-sm font-medium">
-                {property.agent.name}
-              </div>
+              <div className="text-white text-sm font-medium">{property.agent.name}</div>
               <div className="text-white/60 text-xs">Property Agent</div>
             </div>
           </div>

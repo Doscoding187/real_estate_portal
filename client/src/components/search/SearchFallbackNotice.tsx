@@ -29,8 +29,8 @@ export const SearchFallbackNotice: React.FC<SearchFallbackNoticeProps> = ({ loca
         Expanded Search Area
       </AlertTitle>
       <AlertDescription className="text-amber-700 mt-1">
-        We couldn't find any properties in <strong>{originalIntent}</strong>, so we're showing you results in{' '}
-        <strong>{name}</strong> ({type}) instead.
+        We couldn't find any properties in <strong>{originalIntent}</strong>, so we're showing you
+        results in <strong>{name}</strong> ({type}) instead.
       </AlertDescription>
     </Alert>
   );

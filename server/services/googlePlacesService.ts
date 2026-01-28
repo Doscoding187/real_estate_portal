@@ -1,7 +1,7 @@
 /**
  * Google Places Service
  * Wrapper for Google Places API with optimization and error handling
- * 
+ *
  * Requirements:
  * - 1.1: Initialize Google Places Autocomplete with South Africa as primary region
  * - 2.1: Set country restriction to "ZA" (South Africa)
@@ -145,11 +145,11 @@ class SimpleCache<T> {
   // Clean up expired entries
   cleanup(): void {
     const now = new Date();
-    for (const [key, entry] of this.cache.entries()) {
+    Array.from(this.cache.entries()).forEach(([key, entry]) => {
       if (entry.expiresAt < now) {
         this.cache.delete(key);
       }
-    }
+    });
   }
 }
 
@@ -168,15 +168,20 @@ export class GooglePlacesService {
   constructor() {
     // Validate API key
     if (!GOOGLE_PLACES_API_KEY) {
-      console.warn('⚠️  GOOGLE_PLACES_API_KEY not configured. Google Places features will not work.');
+      console.warn(
+        '⚠️  GOOGLE_PLACES_API_KEY not configured. Google Places features will not work.',
+      );
     }
 
     // Start cache cleanup interval (every 5 minutes)
-    this.cleanupInterval = setInterval(() => {
-      this.autocompleteCache.cleanup();
-      this.placeDetailsCache.cleanup();
-      this.cleanupExpiredSessions();
-    }, 5 * 60 * 1000);
+    this.cleanupInterval = setInterval(
+      () => {
+        this.autocompleteCache.cleanup();
+        this.placeDetailsCache.cleanup();
+        this.cleanupExpiredSessions();
+      },
+      5 * 60 * 1000,
+    );
   }
 
   /**
@@ -213,11 +218,11 @@ export class GooglePlacesService {
    */
   private cleanupExpiredSessions(): void {
     const threeMinutesAgo = new Date(Date.now() - 3 * 60 * 1000);
-    for (const [token, session] of this.activeSessions.entries()) {
+    Array.from(this.activeSessions.entries()).forEach(([token, session]) => {
       if (session.createdAt < threeMinutesAgo || session.terminated) {
         this.activeSessions.delete(token);
       }
-    }
+    });
   }
 
   /**
@@ -229,7 +234,7 @@ export class GooglePlacesService {
   async getAutocompleteSuggestions(
     input: string,
     sessionToken: string,
-    options?: Partial<AutocompleteOptions>
+    options?: Partial<AutocompleteOptions>,
   ): Promise<PlacePrediction[]> {
     // Validate input length (minimum 3 characters)
     if (input.length < 3) {
@@ -238,13 +243,13 @@ export class GooglePlacesService {
 
     // Check Redis cache first, then in-memory cache
     const cacheKey = `places:autocomplete:${input}:${COUNTRY_RESTRICTION}`;
-    
+
     // Try Redis first
     const redisCached = await redisCache.get<PlacePrediction[]>(cacheKey);
     if (redisCached) {
       return redisCached;
     }
-    
+
     // Fallback to in-memory cache
     const memoryCached = this.autocompleteCache.get(cacheKey);
     if (memoryCached) {
@@ -266,7 +271,7 @@ export class GooglePlacesService {
 
       const response = await this.makeRequestWithRetry(
         () => axios.get(AUTOCOMPLETE_API, { params, timeout: 5000 }),
-        'autocomplete'
+        'autocomplete',
       );
 
       const predictions: PlacePrediction[] = (response.data.predictions || []).map((pred: any) => ({
@@ -306,13 +311,13 @@ export class GooglePlacesService {
   async getPlaceDetails(placeId: string, sessionToken: string): Promise<PlaceDetails | null> {
     // Check Redis cache first, then in-memory cache
     const cacheKey = `places:details:${placeId}`;
-    
+
     // Try Redis first
     const redisCached = await redisCache.get<PlaceDetails>(cacheKey);
     if (redisCached) {
       return redisCached;
     }
-    
+
     // Fallback to in-memory cache
     const memoryCached = this.placeDetailsCache.get(placeId);
     if (memoryCached) {
@@ -331,7 +336,7 @@ export class GooglePlacesService {
 
       const response = await this.makeRequestWithRetry(
         () => axios.get(PLACE_DETAILS_API, { params, timeout: 5000 }),
-        'place_details'
+        'place_details',
       );
 
       if (response.data.status !== 'OK') {
@@ -352,16 +357,18 @@ export class GooglePlacesService {
             lat: result.geometry.location.lat,
             lng: result.geometry.location.lng,
           },
-          viewport: result.geometry.viewport ? {
-            northeast: {
-              lat: result.geometry.viewport.northeast.lat,
-              lng: result.geometry.viewport.northeast.lng,
-            },
-            southwest: {
-              lat: result.geometry.viewport.southwest.lat,
-              lng: result.geometry.viewport.southwest.lng,
-            },
-          } : undefined,
+          viewport: result.geometry.viewport
+            ? {
+                northeast: {
+                  lat: result.geometry.viewport.northeast.lat,
+                  lng: result.geometry.viewport.northeast.lng,
+                },
+                southwest: {
+                  lat: result.geometry.viewport.southwest.lat,
+                  lng: result.geometry.viewport.southwest.lng,
+                },
+              }
+            : undefined,
         },
         name: result.name,
         types: result.types || [],
@@ -404,7 +411,7 @@ export class GooglePlacesService {
 
       const response = await this.makeRequestWithRetry(
         () => axios.get(GEOCODE_API, { params, timeout: 5000 }),
-        'geocode'
+        'geocode',
       );
 
       if (response.data.status !== 'OK' || !response.data.results.length) {
@@ -425,16 +432,18 @@ export class GooglePlacesService {
             lat: result.geometry.location.lat,
             lng: result.geometry.location.lng,
           },
-          viewport: result.geometry.viewport ? {
-            northeast: {
-              lat: result.geometry.viewport.northeast.lat,
-              lng: result.geometry.viewport.northeast.lng,
-            },
-            southwest: {
-              lat: result.geometry.viewport.southwest.lat,
-              lng: result.geometry.viewport.southwest.lng,
-            },
-          } : undefined,
+          viewport: result.geometry.viewport
+            ? {
+                northeast: {
+                  lat: result.geometry.viewport.northeast.lat,
+                  lng: result.geometry.viewport.northeast.lng,
+                },
+                southwest: {
+                  lat: result.geometry.viewport.southwest.lat,
+                  lng: result.geometry.viewport.southwest.lng,
+                },
+              }
+            : undefined,
         },
       };
 
@@ -469,7 +478,7 @@ export class GooglePlacesService {
 
       const response = await this.makeRequestWithRetry(
         () => axios.get(GEOCODE_API, { params, timeout: 5000 }),
-        'reverse_geocode'
+        'reverse_geocode',
       );
 
       if (response.data.status !== 'OK' || !response.data.results.length) {
@@ -490,16 +499,18 @@ export class GooglePlacesService {
             lat: result.geometry.location.lat,
             lng: result.geometry.location.lng,
           },
-          viewport: result.geometry.viewport ? {
-            northeast: {
-              lat: result.geometry.viewport.northeast.lat,
-              lng: result.geometry.viewport.northeast.lng,
-            },
-            southwest: {
-              lat: result.geometry.viewport.southwest.lat,
-              lng: result.geometry.viewport.southwest.lng,
-            },
-          } : undefined,
+          viewport: result.geometry.viewport
+            ? {
+                northeast: {
+                  lat: result.geometry.viewport.northeast.lat,
+                  lng: result.geometry.viewport.northeast.lng,
+                },
+                southwest: {
+                  lat: result.geometry.viewport.southwest.lat,
+                  lng: result.geometry.viewport.southwest.lng,
+                },
+              }
+            : undefined,
         },
         name: result.formatted_address,
         types: result.types || [],
@@ -526,7 +537,7 @@ export class GooglePlacesService {
    */
   private async makeRequestWithRetry<T>(
     requestFn: () => Promise<T>,
-    requestType: string
+    requestType: string,
   ): Promise<T> {
     try {
       return await requestFn();
@@ -534,10 +545,10 @@ export class GooglePlacesService {
       // Only retry on network errors (not API errors like 403, 429, etc.)
       if (this.isNetworkError(error)) {
         console.log(`⚠️  Network error for ${requestType}, retrying once...`);
-        
+
         // Wait 2 seconds before retry
         await new Promise(resolve => setTimeout(resolve, 2000));
-        
+
         try {
           return await requestFn();
         } catch (retryError) {
@@ -545,7 +556,7 @@ export class GooglePlacesService {
           throw retryError;
         }
       }
-      
+
       // For non-network errors, throw immediately
       throw error;
     }
@@ -561,17 +572,17 @@ export class GooglePlacesService {
     }
 
     const axiosError = error as AxiosError;
-    
+
     // Network errors have no response (timeout, connection refused, etc.)
     if (!axiosError.response && axiosError.request) {
       return true;
     }
-    
+
     // Also consider 5xx server errors as retryable
     if (axiosError.response && axiosError.response.status >= 500) {
       return true;
     }
-    
+
     return false;
   }
 
@@ -583,18 +594,18 @@ export class GooglePlacesService {
     error: unknown,
     requestType: APIUsageLog['requestType'],
     sessionToken: string | undefined,
-    startTime: number
+    startTime: number,
   ): void {
     let errorMessage = 'Unknown error';
 
     if (axios.isAxiosError(error)) {
       const axiosError = error as AxiosError;
-      
+
       if (axiosError.response) {
         // API returned an error response
         const status = axiosError.response.status;
         const data = axiosError.response.data as any;
-        
+
         if (status === 403) {
           errorMessage = 'Invalid API key';
           console.error('❌ Google Places API: Invalid API key');
@@ -657,7 +668,7 @@ export class GooglePlacesService {
     if (process.env.NODE_ENV === 'development') {
       const status = log.success ? '✅' : '❌';
       console.log(
-        `${status} Google Places API [${log.requestType}] ${log.responseTime}ms ${log.error ? `- ${log.error}` : ''}`
+        `${status} Google Places API [${log.requestType}] ${log.responseTime}ms ${log.error ? `- ${log.error}` : ''}`,
       );
     }
   }
@@ -694,7 +705,7 @@ export class GooglePlacesService {
     // Count by request type
     for (const log of relevantLogs) {
       stats.requestsByType[log.requestType] = (stats.requestsByType[log.requestType] || 0) + 1;
-      
+
       if (!log.success && log.error) {
         stats.errorsByType[log.error] = (stats.errorsByType[log.error] || 0) + 1;
       }
@@ -712,7 +723,7 @@ export class GooglePlacesService {
     lat: number,
     lng: number,
     radius: number, // in meters
-    type: string
+    type: string,
   ): Promise<any[]> {
     // Check Redis cache first, then in-memory cache
     const cacheKey = `places:nearby:${lat.toFixed(4)},${lng.toFixed(4)}:${radius}:${type}`;
@@ -727,7 +738,7 @@ export class GooglePlacesService {
     } catch (e) {
       console.warn('Redis cache failed for nearby search', e);
     }
-    
+
     // Fallback to in-memory cache
     const memoryCached = this.nearbySearchCache.get(cacheKey);
     if (memoryCached) {
@@ -746,7 +757,7 @@ export class GooglePlacesService {
 
       const response = await this.makeRequestWithRetry(
         () => axios.get(NEARBY_SEARCH_API, { params, timeout: 5000 }),
-        'nearby_search'
+        'nearby_search',
       );
 
       if (response.data.status !== 'OK' && response.data.status !== 'ZERO_RESULTS') {
@@ -762,7 +773,7 @@ export class GooglePlacesService {
         longitude: place.geometry.location.lng,
         rating: place.rating,
         user_ratings_total: place.user_ratings_total,
-        place_id: place.place_id
+        place_id: place.place_id,
       }));
 
       // Cache: Redis (1h) and Memory (1h)
@@ -831,60 +842,52 @@ export interface LocationHierarchy {
  * Extract location hierarchy from Google Place Details
  * Requirements 3.1-3.5: Extract address components
  * Requirements 4.1-4.5: Extract and validate coordinates
- * 
+ *
  * @param placeDetails - Place details from Google Places API
  * @returns LocationHierarchy with extracted components
  */
 export function extractHierarchy(placeDetails: PlaceDetails): LocationHierarchy {
   const components = placeDetails.addressComponents;
-  
+
   // Extract province from administrative_area_level_1
   // Requirements 3.2: Extract province
-  const provinceComponent = components.find(comp => 
-    comp.types.includes('administrative_area_level_1')
+  const provinceComponent = components.find(comp =>
+    comp.types.includes('administrative_area_level_1'),
   );
   const province = provinceComponent?.longName || null;
-  
+
   // Extract city from locality with fallback to administrative_area_level_2
   // Requirements 3.3: Extract city with fallback
-  const localityComponent = components.find(comp => 
-    comp.types.includes('locality')
-  );
-  const adminLevel2Component = components.find(comp => 
-    comp.types.includes('administrative_area_level_2')
+  const localityComponent = components.find(comp => comp.types.includes('locality'));
+  const adminLevel2Component = components.find(comp =>
+    comp.types.includes('administrative_area_level_2'),
   );
   const city = localityComponent?.longName || adminLevel2Component?.longName || null;
-  
+
   // Extract suburb from sublocality_level_1 with fallback to neighborhood
   // Requirements 3.4: Extract suburb with fallback
-  const sublocalityComponent = components.find(comp => 
-    comp.types.includes('sublocality_level_1') || comp.types.includes('sublocality')
+  const sublocalityComponent = components.find(
+    comp => comp.types.includes('sublocality_level_1') || comp.types.includes('sublocality'),
   );
-  const neighborhoodComponent = components.find(comp => 
-    comp.types.includes('neighborhood')
-  );
+  const neighborhoodComponent = components.find(comp => comp.types.includes('neighborhood'));
   const suburb = sublocalityComponent?.longName || neighborhoodComponent?.longName || null;
-  
+
   // Extract street address from street_number and route
   // Requirements 3.5: Extract street address
-  const streetNumberComponent = components.find(comp => 
-    comp.types.includes('street_number')
-  );
-  const routeComponent = components.find(comp => 
-    comp.types.includes('route')
-  );
-  
+  const streetNumberComponent = components.find(comp => comp.types.includes('street_number'));
+  const routeComponent = components.find(comp => comp.types.includes('route'));
+
   let streetAddress: string | null = null;
   if (streetNumberComponent && routeComponent) {
     streetAddress = `${streetNumberComponent.longName} ${routeComponent.longName}`;
   } else if (routeComponent) {
     streetAddress = routeComponent.longName;
   }
-  
+
   // Extract and validate coordinates
   // Requirements 4.1: Extract coordinates
   const { lat, lng } = placeDetails.geometry.location;
-  
+
   // Calculate precision (number of decimal places)
   // Requirements 4.2: Store with at least 6 decimal places
   const latStr = lat.toString();
@@ -892,14 +895,12 @@ export function extractHierarchy(placeDetails: PlaceDetails): LocationHierarchy 
   const latPrecision = latStr.includes('.') ? latStr.split('.')[1].length : 0;
   const lngPrecision = lngStr.includes('.') ? lngStr.split('.')[1].length : 0;
   const precision = Math.min(latPrecision, lngPrecision);
-  
+
   // Validate South Africa boundaries
   // Requirements 4.5: Validate coordinates fall within South Africa
   // South Africa bounds: latitude -35 to -22, longitude 16 to 33
-  const isWithinSouthAfrica = 
-    lat >= -35 && lat <= -22 && 
-    lng >= 16 && lng <= 33;
-  
+  const isWithinSouthAfrica = lat >= -35 && lat <= -22 && lng >= 16 && lng <= 33;
+
   return {
     province,
     city,
@@ -918,7 +919,7 @@ export function extractHierarchy(placeDetails: PlaceDetails): LocationHierarchy 
 /**
  * Validate that coordinates have sufficient precision
  * Requirements 4.2: At least 6 decimal places of precision
- * 
+ *
  * @param lat - Latitude
  * @param lng - Longitude
  * @returns true if coordinates have at least 6 decimal places
@@ -926,17 +927,17 @@ export function extractHierarchy(placeDetails: PlaceDetails): LocationHierarchy 
 export function validateCoordinatePrecision(lat: number, lng: number): boolean {
   const latStr = lat.toString();
   const lngStr = lng.toString();
-  
+
   const latPrecision = latStr.includes('.') ? latStr.split('.')[1].length : 0;
   const lngPrecision = lngStr.includes('.') ? lngStr.split('.')[1].length : 0;
-  
+
   return latPrecision >= 6 && lngPrecision >= 6;
 }
 
 /**
  * Validate that coordinates are within South Africa boundaries
  * Requirements 4.5: South Africa boundary validation
- * 
+ *
  * @param lat - Latitude
  * @param lng - Longitude
  * @returns true if coordinates are within South Africa

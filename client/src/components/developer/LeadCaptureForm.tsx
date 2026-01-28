@@ -1,6 +1,6 @@
 /**
  * Lead Capture Form Component
- * 
+ *
  * Public-facing form for capturing leads with affordability integration
  * Validates: Requirements 5.1, 5.2, 5.3, 5.4, 14.1, 14.2, 14.3
  */
@@ -12,14 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import {
-  CheckCircle2,
-  Mail,
-  Phone,
-  User,
-  MessageSquare,
-  TrendingUp,
-} from 'lucide-react';
+import { CheckCircle2, Mail, Phone, User, MessageSquare, TrendingUp } from 'lucide-react';
 import { trpc } from '@/lib/trpc';
 
 interface LeadCaptureFormProps {
@@ -103,7 +96,8 @@ export function LeadCaptureForm({
         </div>
         <h3 className="text-2xl font-bold mb-2">Thank You!</h3>
         <p className="text-gray-600 mb-4">
-          Your inquiry has been submitted successfully. A member of our team will contact you shortly.
+          Your inquiry has been submitted successfully. A member of our team will contact you
+          shortly.
         </p>
         {affordabilityData && (
           <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
@@ -137,7 +131,8 @@ export function LeadCaptureForm({
               <Badge className="bg-green-500 text-white">High Priority</Badge>
             </div>
             <p className="text-sm text-gray-700">
-              Your affordability has been assessed. You'll receive priority attention from our sales team!
+              Your affordability has been assessed. You'll receive priority attention from our sales
+              team!
             </p>
           </div>
         )}
@@ -154,7 +149,7 @@ export function LeadCaptureForm({
               type="text"
               placeholder="John Doe"
               value={name}
-              onChange={(e) => setName(e.target.value)}
+              onChange={e => setName(e.target.value)}
               required
               className="pl-10"
             />
@@ -173,7 +168,7 @@ export function LeadCaptureForm({
               type="email"
               placeholder="john@example.com"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={e => setEmail(e.target.value)}
               required
               className="pl-10"
             />
@@ -190,7 +185,7 @@ export function LeadCaptureForm({
               type="tel"
               placeholder="+27 12 345 6789"
               value={phone}
-              onChange={(e) => setPhone(e.target.value)}
+              onChange={e => setPhone(e.target.value)}
               className="pl-10"
             />
           </div>
@@ -205,7 +200,7 @@ export function LeadCaptureForm({
               id="message"
               placeholder="Tell us about your requirements..."
               value={message}
-              onChange={(e) => setMessage(e.target.value)}
+              onChange={e => setMessage(e.target.value)}
               rows={4}
               className="pl-10"
             />
@@ -224,16 +219,14 @@ export function LeadCaptureForm({
 
         {/* Privacy Notice */}
         <p className="text-xs text-gray-500 text-center">
-          By submitting this form, you agree to be contacted about this property.
-          Your information will be kept confidential.
+          By submitting this form, you agree to be contacted about this property. Your information
+          will be kept confidential.
         </p>
 
         {/* Error Message */}
         {createLeadMutation.error && (
           <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-            <p className="text-sm text-red-800">
-              Failed to submit inquiry. Please try again.
-            </p>
+            <p className="text-sm text-red-800">Failed to submit inquiry. Please try again.</p>
           </div>
         )}
       </form>

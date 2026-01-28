@@ -30,9 +30,7 @@ export function SpecificationsTab({
   updateFormData,
   masterSpecs,
 }: SpecificationsTabProps) {
-  const [customSpecs, setCustomSpecs] = useState<CustomSpec[]>(
-    formData.customSpecs || []
-  );
+  const [customSpecs, setCustomSpecs] = useState<CustomSpec[]>(formData.customSpecs || []);
 
   // Specification override toggles
   const [overrides, setOverrides] = useState<Record<string, boolean>>({
@@ -299,8 +297,8 @@ export function SpecificationsTab({
 
         <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
           <p className="text-xs text-blue-900">
-            <strong>Examples:</strong> "Smart Home Automation" → "Optional", "Geyser Size" →
-            "200L Solar-Electric Hybrid", "Vanity Type" → "900mm Floating Gloss White"
+            <strong>Examples:</strong> "Smart Home Automation" → "Optional", "Geyser Size" → "200L
+            Solar-Electric Hybrid", "Vanity Type" → "900mm Floating Gloss White"
           </p>
         </div>
       </Card>

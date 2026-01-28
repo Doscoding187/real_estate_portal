@@ -13,15 +13,8 @@ interface DiscoveryCardFeedProps {
 }
 
 export function DiscoveryCardFeed({ categoryId, filters, onItemClick }: DiscoveryCardFeedProps) {
-  const {
-    contentBlocks,
-    isLoading,
-    error,
-    hasMore,
-    recordEngagement,
-    setupObserver,
-    refetch,
-  } = useDiscoveryFeed({ categoryId, filters });
+  const { contentBlocks, isLoading, error, hasMore, recordEngagement, setupObserver, refetch } =
+    useDiscoveryFeed({ categoryId, filters });
 
   const loadMoreRef = useRef<HTMLDivElement>(null);
 
@@ -131,12 +124,15 @@ export function DiscoveryCardFeed({ categoryId, filters, onItemClick }: Discover
 
   if (error) {
     return (
-      <div 
+      <div
         className="flex flex-col items-center justify-center py-16 px-4"
         role="alert"
         aria-live="assertive"
       >
-        <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mb-4" aria-hidden="true">
+        <div
+          className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mb-4"
+          aria-hidden="true"
+        >
           <span className="text-2xl">⚠️</span>
         </div>
         <h3 className="text-lg font-semibold text-gray-900 mb-2">Failed to load content</h3>
@@ -156,7 +152,7 @@ export function DiscoveryCardFeed({ categoryId, filters, onItemClick }: Discover
 
   if (isLoading && contentBlocks.length === 0) {
     return (
-      <div 
+      <div
         className="flex items-center justify-center py-16"
         role="status"
         aria-live="polite"
@@ -170,44 +166,39 @@ export function DiscoveryCardFeed({ categoryId, filters, onItemClick }: Discover
 
   if (contentBlocks.length === 0) {
     return (
-      <div 
+      <div
         className="flex flex-col items-center justify-center py-16 px-4"
         role="status"
         aria-live="polite"
       >
-        <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4" aria-hidden="true">
+        <div
+          className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4"
+          aria-hidden="true"
+        >
           <span className="text-2xl">🏠</span>
         </div>
         <h3 className="text-lg font-semibold text-gray-900 mb-2">No content found</h3>
         <p className="text-sm text-gray-600 text-center max-w-md">
-          We couldn't find any properties or content matching your preferences. Try adjusting your filters.
+          We couldn't find any properties or content matching your preferences. Try adjusting your
+          filters.
         </p>
       </div>
     );
   }
 
   return (
-    <div 
-      className="w-full"
-      role="feed"
-      aria-label="Discovery feed"
-      aria-busy={isLoading}
-    >
+    <div className="w-full" role="feed" aria-label="Discovery feed" aria-busy={isLoading}>
       {/* Content blocks */}
       <div className="space-y-8">
-        {contentBlocks.map((block) => (
-          <ContentBlockSection
-            key={block.id}
-            block={block}
-            renderCard={renderCard}
-          />
+        {contentBlocks.map(block => (
+          <ContentBlockSection key={block.id} block={block} renderCard={renderCard} />
         ))}
       </div>
 
       {/* Load more trigger */}
       {hasMore && (
-        <div 
-          ref={loadMoreRef} 
+        <div
+          ref={loadMoreRef}
           className="flex items-center justify-center py-8"
           role="status"
           aria-live="polite"
@@ -223,11 +214,7 @@ export function DiscoveryCardFeed({ categoryId, filters, onItemClick }: Discover
 
       {/* End of feed */}
       {!hasMore && contentBlocks.length > 0 && (
-        <div 
-          className="text-center py-8 text-gray-500 text-sm"
-          role="status"
-          aria-live="polite"
-        >
+        <div className="text-center py-8 text-gray-500 text-sm" role="status" aria-live="polite">
           You've reached the end of the feed
         </div>
       )}
@@ -258,17 +245,10 @@ function ContentBlockSection({ block, renderCard }: ContentBlockSectionProps) {
   };
 
   return (
-    <div 
-      className="w-full"
-      role="region"
-      aria-labelledby={headingId}
-    >
+    <div className="w-full" role="region" aria-labelledby={headingId}>
       {/* Section header */}
       <div className="flex items-center justify-between mb-4 px-4">
-        <h2 
-          id={headingId}
-          className="text-xl font-bold text-gray-900"
-        >
+        <h2 id={headingId} className="text-xl font-bold text-gray-900">
           {block.title}
         </h2>
         <button
@@ -307,12 +287,8 @@ function ContentBlockSection({ block, renderCard }: ContentBlockSectionProps) {
           role="list"
           aria-label={`${block.title} items`}
         >
-          {block.items.map((item) => (
-            <div
-              key={item.id}
-              className="flex-shrink-0 w-72 snap-start"
-              role="listitem"
-            >
+          {block.items.map(item => (
+            <div key={item.id} className="flex-shrink-0 w-72 snap-start" role="listitem">
               {renderCard(item)}
             </div>
           ))}

@@ -1,22 +1,22 @@
 /**
  * Partner Dashboard Page
- * 
+ *
  * Comprehensive dashboard for partners showing:
  * - Analytics overview with key metrics
  * - Performance trends and charts
  * - Content list with performance data
  * - Lead management interface
  * - Boost campaign ROI metrics
- * 
+ *
  * Requirements: 13.1, 13.2, 13.3, 13.4, 13.5, 13.6
  */
 
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { 
-  TrendingUp, 
-  Eye, 
-  Users, 
+import {
+  TrendingUp,
+  Eye,
+  Users,
   DollarSign,
   Calendar,
   Filter,
@@ -32,26 +32,22 @@ import {
   CheckCircle,
   Clock,
   AlertCircle,
-  XCircle
+  XCircle,
 } from 'lucide-react';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
-} from '@/components/ui/table';
 import {
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-} from '@/components/ui/chart';
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import {
   LineChart,
   Line,
@@ -70,7 +66,13 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 // Types from the analytics service
 interface PartnerAnalyticsSummary {
@@ -135,17 +137,17 @@ interface DashboardData {
 // Mock partner ID - in real app this would come from auth context
 const PARTNER_ID = 'partner-123';
 
-function MetricCard({ 
-  title, 
-  value, 
-  change, 
-  icon: Icon, 
-  trend 
-}: { 
-  title: string; 
-  value: string; 
-  change?: string; 
-  icon: React.ElementType; 
+function MetricCard({
+  title,
+  value,
+  change,
+  icon: Icon,
+  trend,
+}: {
+  title: string;
+  value: string;
+  change?: string;
+  icon: React.ElementType;
   trend?: 'up' | 'down' | 'neutral';
 }) {
   return (
@@ -222,9 +224,7 @@ function AnalyticsOverview({ data }: { data: DashboardData }) {
       <Card>
         <CardHeader>
           <CardTitle>Performance Trends</CardTitle>
-          <CardDescription>
-            Your content performance over the last 30 days
-          </CardDescription>
+          <CardDescription>Your content performance over the last 30 days</CardDescription>
         </CardHeader>
         <CardContent>
           <ChartContainer config={chartConfig} className="h-[300px]">
@@ -233,24 +233,14 @@ function AnalyticsOverview({ data }: { data: DashboardData }) {
               <XAxis dataKey="date" />
               <YAxis />
               <ChartTooltip content={<ChartTooltipContent />} />
-              <Line 
-                type="monotone" 
-                dataKey="views" 
-                stroke="var(--color-views)" 
+              <Line type="monotone" dataKey="views" stroke="var(--color-views)" strokeWidth={2} />
+              <Line
+                type="monotone"
+                dataKey="engagements"
+                stroke="var(--color-engagements)"
                 strokeWidth={2}
               />
-              <Line 
-                type="monotone" 
-                dataKey="engagements" 
-                stroke="var(--color-engagements)" 
-                strokeWidth={2}
-              />
-              <Line 
-                type="monotone" 
-                dataKey="leads" 
-                stroke="var(--color-leads)" 
-                strokeWidth={2}
-              />
+              <Line type="monotone" dataKey="leads" stroke="var(--color-leads)" strokeWidth={2} />
             </LineChart>
           </ChartContainer>
         </CardContent>
@@ -269,7 +259,7 @@ function AnalyticsOverview({ data }: { data: DashboardData }) {
                 {data.summary.averageQualityScore.toFixed(0)}
               </div>
               <div className="flex">
-                {[1, 2, 3, 4, 5].map((star) => (
+                {[1, 2, 3, 4, 5].map(star => (
                   <Star
                     key={star}
                     className={`h-5 w-5 ${
@@ -294,9 +284,7 @@ function AnalyticsOverview({ data }: { data: DashboardData }) {
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold">{data.summary.totalContent}</div>
-            <p className="text-sm text-muted-foreground mt-2">
-              Across videos, cards, and shorts
-            </p>
+            <p className="text-sm text-muted-foreground mt-2">Across videos, cards, and shorts</p>
           </CardContent>
         </Card>
       </div>
@@ -307,15 +295,24 @@ function AnalyticsOverview({ data }: { data: DashboardData }) {
 function ContentList({ data }: { data: ContentPerformance[] }) {
   const getContentTypeIcon = (type: string) => {
     switch (type) {
-      case 'video': return '🎥';
-      case 'short': return '📱';
-      case 'card': return '📄';
-      default: return '📄';
+      case 'video':
+        return '🎥';
+      case 'short':
+        return '📱';
+      case 'card':
+        return '📄';
+      default:
+        return '📄';
     }
   };
 
   const getQualityBadge = (score: number) => {
-    if (score >= 80) return <Badge variant="default" className="bg-green-500">Excellent</Badge>;
+    if (score >= 80)
+      return (
+        <Badge variant="default" className="bg-green-500">
+          Excellent
+        </Badge>
+      );
     if (score >= 60) return <Badge variant="secondary">Good</Badge>;
     if (score >= 40) return <Badge variant="outline">Fair</Badge>;
     return <Badge variant="destructive">Needs Improvement</Badge>;
@@ -349,7 +346,7 @@ function ContentList({ data }: { data: ContentPerformance[] }) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {data.map((content) => (
+            {data.map(content => (
               <TableRow key={content.contentId}>
                 <TableCell>
                   <div className="font-medium">{content.title}</div>
@@ -363,9 +360,7 @@ function ContentList({ data }: { data: ContentPerformance[] }) {
                 <TableCell>{content.views.toLocaleString()}</TableCell>
                 <TableCell>{content.engagementRate.toFixed(1)}%</TableCell>
                 <TableCell>{getQualityBadge(content.qualityScore)}</TableCell>
-                <TableCell>
-                  {new Date(content.createdAt).toLocaleDateString()}
-                </TableCell>
+                <TableCell>{new Date(content.createdAt).toLocaleDateString()}</TableCell>
                 <TableCell>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
@@ -400,7 +395,7 @@ function LeadManagement() {
       const params = new URLSearchParams();
       if (statusFilter !== 'all') params.append('status', statusFilter);
       if (typeFilter !== 'all') params.append('type', typeFilter);
-      
+
       const response = await fetch(`/api/partner-leads/partner/${PARTNER_ID}?${params}`);
       if (!response.ok) throw new Error('Failed to fetch leads');
       const result = await response.json();
@@ -410,32 +405,52 @@ function LeadManagement() {
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'new': return <Clock className="h-4 w-4 text-blue-500" />;
-      case 'contacted': return <MessageSquare className="h-4 w-4 text-yellow-500" />;
-      case 'converted': return <CheckCircle className="h-4 w-4 text-green-500" />;
-      case 'disputed': return <AlertCircle className="h-4 w-4 text-orange-500" />;
-      case 'refunded': return <XCircle className="h-4 w-4 text-red-500" />;
-      default: return <Clock className="h-4 w-4 text-gray-500" />;
+      case 'new':
+        return <Clock className="h-4 w-4 text-blue-500" />;
+      case 'contacted':
+        return <MessageSquare className="h-4 w-4 text-yellow-500" />;
+      case 'converted':
+        return <CheckCircle className="h-4 w-4 text-green-500" />;
+      case 'disputed':
+        return <AlertCircle className="h-4 w-4 text-orange-500" />;
+      case 'refunded':
+        return <XCircle className="h-4 w-4 text-red-500" />;
+      default:
+        return <Clock className="h-4 w-4 text-gray-500" />;
     }
   };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case 'new': return <Badge variant="secondary">New</Badge>;
-      case 'contacted': return <Badge variant="outline">Contacted</Badge>;
-      case 'converted': return <Badge variant="default" className="bg-green-500">Converted</Badge>;
-      case 'disputed': return <Badge variant="destructive">Disputed</Badge>;
-      case 'refunded': return <Badge variant="destructive">Refunded</Badge>;
-      default: return <Badge variant="secondary">{status}</Badge>;
+      case 'new':
+        return <Badge variant="secondary">New</Badge>;
+      case 'contacted':
+        return <Badge variant="outline">Contacted</Badge>;
+      case 'converted':
+        return (
+          <Badge variant="default" className="bg-green-500">
+            Converted
+          </Badge>
+        );
+      case 'disputed':
+        return <Badge variant="destructive">Disputed</Badge>;
+      case 'refunded':
+        return <Badge variant="destructive">Refunded</Badge>;
+      default:
+        return <Badge variant="secondary">{status}</Badge>;
     }
   };
 
   const getLeadTypeLabel = (type: string) => {
     switch (type) {
-      case 'quote_request': return 'Quote Request';
-      case 'consultation': return 'Consultation';
-      case 'eligibility_check': return 'Eligibility Check';
-      default: return type;
+      case 'quote_request':
+        return 'Quote Request';
+      case 'consultation':
+        return 'Consultation';
+      case 'eligibility_check':
+        return 'Eligibility Check';
+      default:
+        return type;
     }
   };
 
@@ -446,9 +461,9 @@ function LeadManagement() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: newStatus }),
       });
-      
+
       if (!response.ok) throw new Error('Failed to update lead status');
-      
+
       // Refetch leads
       window.location.reload(); // Simple refresh for now
     } catch (error) {
@@ -511,7 +526,7 @@ function LeadManagement() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {leads.map((lead) => (
+              {leads.map(lead => (
                 <TableRow key={lead.id}>
                   <TableCell>
                     <div>
@@ -534,9 +549,7 @@ function LeadManagement() {
                     </div>
                   </TableCell>
                   <TableCell>R{lead.price.toFixed(0)}</TableCell>
-                  <TableCell>
-                    {new Date(lead.createdAt).toLocaleDateString()}
-                  </TableCell>
+                  <TableCell>{new Date(lead.createdAt).toLocaleDateString()}</TableCell>
                   <TableCell>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -546,25 +559,19 @@ function LeadManagement() {
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         {lead.status === 'new' && (
-                          <DropdownMenuItem 
-                            onClick={() => updateLeadStatus(lead.id, 'contacted')}
-                          >
+                          <DropdownMenuItem onClick={() => updateLeadStatus(lead.id, 'contacted')}>
                             Mark as Contacted
                           </DropdownMenuItem>
                         )}
                         {lead.status === 'contacted' && (
-                          <DropdownMenuItem 
-                            onClick={() => updateLeadStatus(lead.id, 'converted')}
-                          >
+                          <DropdownMenuItem onClick={() => updateLeadStatus(lead.id, 'converted')}>
                             Mark as Converted
                           </DropdownMenuItem>
                         )}
                         <DropdownMenuItem>View Details</DropdownMenuItem>
                         <DropdownMenuItem>Contact Customer</DropdownMenuItem>
                         {['new', 'contacted'].includes(lead.status) && (
-                          <DropdownMenuItem className="text-red-600">
-                            Dispute Lead
-                          </DropdownMenuItem>
+                          <DropdownMenuItem className="text-red-600">Dispute Lead</DropdownMenuItem>
                         )}
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -613,7 +620,7 @@ function BoostCampaigns({ data }: { data: BoostROI[] }) {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {data.map((campaign) => (
+              {data.map(campaign => (
                 <TableRow key={campaign.campaignId}>
                   <TableCell>
                     <div className="font-medium">{campaign.campaignName}</div>
@@ -624,9 +631,11 @@ function BoostCampaigns({ data }: { data: BoostROI[] }) {
                   <TableCell>{campaign.clicks.toLocaleString()}</TableCell>
                   <TableCell>{campaign.leads}</TableCell>
                   <TableCell>
-                    <div className={`flex items-center gap-1 ${
-                      campaign.roi >= 0 ? 'text-green-600' : 'text-red-600'
-                    }`}>
+                    <div
+                      className={`flex items-center gap-1 ${
+                        campaign.roi >= 0 ? 'text-green-600' : 'text-red-600'
+                      }`}
+                    >
                       {campaign.roi >= 0 ? (
                         <ArrowUpRight className="h-3 w-3" />
                       ) : (
@@ -652,7 +661,7 @@ export default function PartnerDashboard() {
   const getDateRange = () => {
     const end = new Date();
     const start = new Date();
-    
+
     switch (dateRange) {
       case '7d':
         start.setDate(end.getDate() - 7);
@@ -666,7 +675,7 @@ export default function PartnerDashboard() {
       default:
         start.setDate(end.getDate() - 30);
     }
-    
+
     return { start, end };
   };
 
@@ -681,7 +690,7 @@ export default function PartnerDashboard() {
         startDate: start.toISOString(),
         endDate: end.toISOString(),
       });
-      
+
       const response = await fetch(`/api/partner-analytics/${PARTNER_ID}/dashboard?${params}`);
       if (!response.ok) throw new Error('Failed to fetch dashboard data');
       const result = await response.json();
@@ -713,9 +722,7 @@ export default function PartnerDashboard() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Partner Dashboard</h1>
-          <p className="text-muted-foreground">
-            Monitor your content performance and manage leads
-          </p>
+          <p className="text-muted-foreground">Monitor your content performance and manage leads</p>
         </div>
         <div className="flex items-center gap-2">
           <Select value={dateRange} onValueChange={setDateRange}>

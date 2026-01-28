@@ -1,7 +1,7 @@
 /**
  * useWizardAccessibility Hook
  * Manages accessibility features for wizard components
- * 
+ *
  * Requirements: 12.1
  */
 
@@ -42,7 +42,7 @@ export function useWizardAccessibility({
       const message = stepTitle
         ? `Step ${currentStep} of ${totalSteps}: ${stepTitle}`
         : `Step ${currentStep} of ${totalSteps}`;
-      
+
       announceToScreenReader(message, 'polite');
       previousStepRef.current = currentStep;
     }

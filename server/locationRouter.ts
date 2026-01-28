@@ -273,7 +273,7 @@ export const locationRouter = router({
         radius: z.number(),
         types: z.array(z.string()),
         limit: z.number().optional(),
-      })
+      }),
     )
     .query(async ({ input }) => {
       const { googlePlacesService } = await import('./services/googlePlacesService');
@@ -282,8 +282,8 @@ export const locationRouter = router({
       try {
         // Fetch specific place types in parallel (Google Places API 'type' parameter takes one type mostly for strict filtering or keyword)
         // We will fetch for each type requested to ensure good coverage
-        const promises = types.map(type => 
-          googlePlacesService.getNearbyPlaces(latitude, longitude, radius, type)
+        const promises = types.map(type =>
+          googlePlacesService.getNearbyPlaces(latitude, longitude, radius, type),
         );
 
         const results = await Promise.all(promises);
@@ -666,7 +666,7 @@ export const locationRouter = router({
         types: z.array(z.string()),
         latitude: z.number().optional(),
         longitude: z.number().optional(),
-      })
+      }),
     )
     .mutation(async ({ input }) => {
       const db = await getDb();
@@ -703,7 +703,7 @@ export const locationRouter = router({
                 updated_at = CURRENT_TIMESTAMP
             WHERE place_id = ${input.placeId}
           `);
-          
+
           return {
             success: true,
             locationId: locationId,
@@ -737,7 +737,7 @@ export const locationRouter = router({
     .input(
       z.object({
         address: z.string().min(1).max(500),
-      })
+      }),
     )
     .query(async ({ input }) => {
       const { googlePlacesService } = await import('./services/googlePlacesService');

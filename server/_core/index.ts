@@ -1,10 +1,18 @@
-import 'dotenv/config';
+import dotenv from 'dotenv';
+import path from 'path';
+
+// Load .env first
+dotenv.config();
+// Load .env.local (overrides .env) - critical for secrets
+dotenv.config({ path: path.resolve(process.cwd(), '.env.local'), override: true });
+
 import { sql } from 'drizzle-orm';
 import express from 'express';
 import cors from 'cors';
 import rateLimit from 'express-rate-limit';
 import { createServer } from 'http';
 import net from 'net';
+import superjson from 'superjson';
 import { createExpressMiddleware } from '@trpc/server/adapters/express';
 import { registerAuthRoutes } from './authRoutes';
 import { appRouter } from '../routers';
@@ -34,6 +42,7 @@ async function findAvailablePort(startPort: number = 3000): Promise<number> {
 }
 
 async function startServer() {
+  console.log('[Server] startServer() called');
   // Check for critical environment variables
   if (!process.env.JWT_SECRET) {
     console.error('\n❌ CRITICAL ERROR: JWT_SECRET is not defined in environment variables.');
@@ -41,8 +50,10 @@ async function startServer() {
     console.error('   Please set JWT_SECRET in your .env file or deployment configuration.\n');
   }
 
+  console.log('[Server] Initializing cache...');
   // Initialize Cache Services (Redis)
   await initializeCache();
+  console.log('[Server] Cache initialized');
 
   const app = express();
   const server = createServer(app);
@@ -70,6 +81,7 @@ async function startServer() {
     'https://realestateportal-production-9bb8.up.railway.app', // Railway backend (current)
     'https://www.propertylistifysa.co.za', // Production Domain
     'https://propertylistifysa.co.za', // Production Domain (non-www)
+    'http://localhost:3009', // Vite dev (Correct Port)
   ];
 
   app.use(
@@ -112,18 +124,18 @@ async function startServer() {
       // Try to connect to DB
       const { db } = await import('../db');
       await db.execute(sql`SELECT 1`);
-      res.json({ 
-        message: 'Backend is running!', 
-        database: 'Connected', 
-        timestamp: new Date().toISOString() 
+      res.json({
+        message: 'Backend is running!',
+        database: 'Connected',
+        timestamp: new Date().toISOString(),
       });
     } catch (error: any) {
       console.error('DB Check Failed:', error);
-      res.status(500).json({ 
-        message: 'Backend is running but Database is unavailable', 
-        database: 'Error', 
+      res.status(500).json({
+        message: 'Backend is running but Database is unavailable',
+        database: 'Error',
         error: error.message,
-        timestamp: new Date().toISOString() 
+        timestamp: new Date().toISOString(),
       });
     }
   });
@@ -137,6 +149,17 @@ async function startServer() {
     createExpressMiddleware({
       router: appRouter,
       createContext,
+      transformer: superjson,
+      onError({ error, path, type }) {
+        console.error('❌ tRPC Error:', {
+          path,
+          type,
+          code: error.code,
+          message: error.message,
+          stack: error.stack,
+          cause: (error as any).cause,
+        });
+      },
     }),
   );
 
@@ -175,10 +198,10 @@ async function startServer() {
   // Skip static file serving if SKIP_FRONTEND env var is set (for Railway backend-only deployment)
   console.log('[Server] NODE_ENV:', process.env.NODE_ENV);
   console.log('[Server] SKIP_FRONTEND:', process.env.SKIP_FRONTEND);
-  if (process.env.NODE_ENV === 'development' && !process.env.SKIP_FRONTEND) {
+  if (process.env.NODE_ENV === 'development' && process.env.SKIP_FRONTEND !== 'true') {
     console.log('[Server] Using Vite development server');
     await setupVite(app, server);
-  } else if (process.env.NODE_ENV !== 'development' && !process.env.SKIP_FRONTEND) {
+  } else if (process.env.NODE_ENV !== 'development' && process.env.SKIP_FRONTEND !== 'true') {
     console.log('[Server] Serving static files');
     serveStatic(app);
   } else {
@@ -193,7 +216,7 @@ async function startServer() {
 
   server.listen(port, '0.0.0.0', () => {
     console.log(`Backend running on http://localhost:${port}`);
-    console.log(`tRPC endpoint: http://localhost:${port}/trpc`);
+    console.log(`tRPC endpoint: http://localhost:${port}/api/trpc`);
     console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
   });
 }

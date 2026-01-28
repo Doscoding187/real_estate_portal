@@ -1,6 +1,6 @@
 /**
  * Structured Data Component
- * 
+ *
  * Provides Schema.org JSON-LD structured data for the Advertise With Us page:
  * - WebPage markup
  * - Service markup for advertising platform
@@ -8,7 +8,7 @@
  * - BreadcrumbList markup
  */
 
-import { Helmet } from 'react-helmet';
+import { Helmet } from 'react-helmet-async';
 
 interface StructuredDataProps {
   pageUrl?: string;
@@ -30,7 +30,8 @@ export function StructuredData({
     '@id': `${pageUrl}#webpage`,
     url: pageUrl,
     name: 'Advertise With Us',
-    description: 'Advertising opportunities for property professionals on South Africa\'s leading property platform',
+    description:
+      "Advertising opportunities for property professionals on South Africa's leading property platform",
     inLanguage: 'en-ZA',
     isPartOf: {
       '@type': 'WebSite',
@@ -53,7 +54,8 @@ export function StructuredData({
     '@type': 'Service',
     '@id': `${pageUrl}#service`,
     name: 'Property Advertising Platform',
-    description: 'Comprehensive advertising solutions for property developers, estate agents, banks, bond originators, and service providers',
+    description:
+      'Comprehensive advertising solutions for property developers, estate agents, banks, bond originators, and service providers',
     provider: {
       '@type': 'Organization',
       '@id': `${organizationUrl}#organization`,
@@ -116,7 +118,8 @@ export function StructuredData({
       width: 250,
       height: 60,
     },
-    description: 'South Africa\'s leading property platform connecting buyers, sellers, and property professionals',
+    description:
+      "South Africa's leading property platform connecting buyers, sellers, and property professionals",
     address: {
       '@type': 'PostalAddress',
       addressCountry: 'ZA',
@@ -152,24 +155,16 @@ export function StructuredData({
   return (
     <Helmet>
       {/* WebPage Schema */}
-      <script type="application/ld+json">
-        {JSON.stringify(webPageSchema)}
-      </script>
-      
+      <script type="application/ld+json">{JSON.stringify(webPageSchema)}</script>
+
       {/* Service Schema */}
-      <script type="application/ld+json">
-        {JSON.stringify(serviceSchema)}
-      </script>
-      
+      <script type="application/ld+json">{JSON.stringify(serviceSchema)}</script>
+
       {/* Organization Schema */}
-      <script type="application/ld+json">
-        {JSON.stringify(organizationSchema)}
-      </script>
-      
+      <script type="application/ld+json">{JSON.stringify(organizationSchema)}</script>
+
       {/* BreadcrumbList Schema */}
-      <script type="application/ld+json">
-        {JSON.stringify(breadcrumbSchema)}
-      </script>
+      <script type="application/ld+json">{JSON.stringify(breadcrumbSchema)}</script>
     </Helmet>
   );
 }

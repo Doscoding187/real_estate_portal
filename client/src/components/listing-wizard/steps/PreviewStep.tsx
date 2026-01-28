@@ -49,7 +49,7 @@ const PreviewStep: React.FC = () => {
 
   // Get primary media
   const primaryMedia = state.media.find((m: any) => m.isPrimary) || state.media[0];
-  
+
   // Get media counts
   const imageCount = state.media.filter((m: any) => m.type === 'image').length;
   const videoCount = state.media.filter((m: any) => m.type === 'video').length;
@@ -83,7 +83,7 @@ const PreviewStep: React.FC = () => {
   // Get yard/land size separately (for houses)
   const getYardSize = () => {
     if (!state.propertyDetails) return undefined;
-    
+
     if (state.propertyType === 'house') {
       return Number((state.propertyDetails as any).erfSizeM2) || undefined;
     }
@@ -100,19 +100,19 @@ const PreviewStep: React.FC = () => {
 
   // Calculate Quality Score
   const quality = calculateListingQualityScore({
-     ...state,
-     images: state.media.filter((m: any) => m.type === 'image'),
-     videos: state.media.filter((m: any) => m.type === 'video'),
-     features: amenitiesList,
-     // Map specific fields for simple readiness/quality object if needed, 
-     // usually the state is close enough or we spread it.
-     // Let's ensure top level fields match what calculateListingQualityScore expects
-     price: getPrice(),
-     askingPrice: getPrice(), // fallback
-     monthlyRent: getPrice(), // fallback
-     latitude: state.location?.latitude,
-     longitude: state.location?.longitude,
-     floorSize: getPropertyArea(),
+    ...state,
+    images: state.media.filter((m: any) => m.type === 'image'),
+    videos: state.media.filter((m: any) => m.type === 'video'),
+    features: amenitiesList,
+    // Map specific fields for simple readiness/quality object if needed,
+    // usually the state is close enough or we spread it.
+    // Let's ensure top level fields match what calculateListingQualityScore expects
+    price: getPrice(),
+    askingPrice: getPrice(), // fallback
+    monthlyRent: getPrice(), // fallback
+    latitude: state.location?.latitude,
+    longitude: state.location?.longitude,
+    floorSize: getPropertyArea(),
   });
 
   return (
@@ -136,11 +136,15 @@ const PreviewStep: React.FC = () => {
           bathrooms={Number((state.propertyDetails as any)?.bathrooms) || 0}
           area={getPropertyArea()}
           yardSize={getYardSize()}
-          propertyType={state.propertyType ? state.propertyType.charAt(0).toUpperCase() + state.propertyType.slice(1) : 'Property'}
+          propertyType={
+            state.propertyType
+              ? state.propertyType.charAt(0).toUpperCase() + state.propertyType.slice(1)
+              : 'Property'
+          }
           listingType={state.action}
           agent={{
             name: user?.name || 'Current User',
-            image: user?.avatar || undefined
+            image: user?.avatar || undefined,
           }}
           badges={state.badges?.map(b => b.label)}
           imageCount={imageCount}
@@ -156,8 +160,10 @@ const PreviewStep: React.FC = () => {
           <div>
             <h4 className="font-medium text-slate-700 mb-2">Location</h4>
             <p className="text-slate-600">
-              {state.location?.address}<br />
-              {state.location?.city}, {state.location?.province}<br />
+              {state.location?.address}
+              <br />
+              {state.location?.city}, {state.location?.province}
+              <br />
               {state.location?.postalCode}
             </p>
           </div>
@@ -165,23 +171,29 @@ const PreviewStep: React.FC = () => {
             <h4 className="font-medium text-slate-700 mb-2">Features</h4>
             <div className="flex flex-wrap gap-2">
               {amenitiesList.map((amenity: string, index: number) => (
-                <Badge key={index} variant="secondary" className="bg-emerald-100 text-emerald-800 border-emerald-200">
+                <Badge
+                  key={index}
+                  variant="secondary"
+                  className="bg-emerald-100 text-emerald-800 border-emerald-200"
+                >
                   {amenity}
                 </Badge>
               ))}
-              {amenitiesList.length === 0 && <span className="text-slate-500 italic">No amenities selected</span>}
+              {amenitiesList.length === 0 && (
+                <span className="text-slate-500 italic">No amenities selected</span>
+              )}
             </div>
           </div>
         </div>
       </div>
 
-       {/* Quality Score Feedback */}
+      {/* Quality Score Feedback */}
       <div className="max-w-4xl mx-auto mt-8">
-          <QualityScoreCard 
-            qualityScore={quality.score} 
-            qualityBreakdown={quality.breakdown} 
-            tips={quality.tips} 
-          />
+        <QualityScoreCard
+          qualityScore={quality.score}
+          qualityBreakdown={quality.breakdown}
+          tips={quality.tips}
+        />
       </div>
     </div>
   );

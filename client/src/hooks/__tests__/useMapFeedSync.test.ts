@@ -24,9 +24,7 @@ describe('useMapFeedSync', () => {
 
     it('should initialize with custom center', () => {
       const customCenter = { lat: -33.9249, lng: 18.4241 };
-      const { result } = renderHook(() => 
-        useMapFeedSync({ initialCenter: customCenter })
-      );
+      const { result } = renderHook(() => useMapFeedSync({ initialCenter: customCenter }));
 
       expect(result.current.mapCenter).toEqual(customCenter);
     });
@@ -121,9 +119,7 @@ describe('useMapFeedSync', () => {
   describe('Feed Update Debouncing', () => {
     it('should debounce feed updates to 300ms after throttle', async () => {
       const onBoundsChange = vi.fn();
-      const { result } = renderHook(() => 
-        useMapFeedSync({ onBoundsChange })
-      );
+      const { result } = renderHook(() => useMapFeedSync({ onBoundsChange }));
 
       const bounds = { north: 1, south: 0, east: 1, west: 0 };
 
@@ -152,9 +148,7 @@ describe('useMapFeedSync', () => {
 
     it('should reset debounce timer on new updates', async () => {
       const onBoundsChange = vi.fn();
-      const { result } = renderHook(() => 
-        useMapFeedSync({ onBoundsChange })
-      );
+      const { result } = renderHook(() => useMapFeedSync({ onBoundsChange }));
 
       const bounds1 = { north: 1, south: 0, east: 1, west: 0 };
       const bounds2 = { north: 2, south: 1, east: 2, west: 1 };
@@ -188,9 +182,7 @@ describe('useMapFeedSync', () => {
   describe('Callbacks', () => {
     it('should call onPropertySelect when property is selected', () => {
       const onPropertySelect = vi.fn();
-      const { result } = renderHook(() => 
-        useMapFeedSync({ onPropertySelect })
-      );
+      const { result } = renderHook(() => useMapFeedSync({ onPropertySelect }));
 
       act(() => {
         result.current.handleFeedItemSelect(123, { lat: -26.2, lng: 28.0 });
@@ -201,9 +193,7 @@ describe('useMapFeedSync', () => {
 
     it('should call onPropertySelect when marker is clicked', () => {
       const onPropertySelect = vi.fn();
-      const { result } = renderHook(() => 
-        useMapFeedSync({ onPropertySelect })
-      );
+      const { result } = renderHook(() => useMapFeedSync({ onPropertySelect }));
 
       act(() => {
         result.current.handleMarkerClick(456);
@@ -214,9 +204,7 @@ describe('useMapFeedSync', () => {
 
     it('should call onBoundsChange with debounced bounds', async () => {
       const onBoundsChange = vi.fn();
-      const { result } = renderHook(() => 
-        useMapFeedSync({ onBoundsChange })
-      );
+      const { result } = renderHook(() => useMapFeedSync({ onBoundsChange }));
 
       const bounds = { north: 1, south: 0, east: 1, west: 0 };
 
@@ -240,7 +228,7 @@ describe('useMapFeedSync', () => {
       const { result } = renderHook(() => useMapFeedSync());
 
       const element = document.createElement('div');
-      
+
       act(() => {
         result.current.registerPropertyRef(123, element);
       });
@@ -256,7 +244,7 @@ describe('useMapFeedSync', () => {
       const { result } = renderHook(() => useMapFeedSync());
 
       const element = document.createElement('div');
-      
+
       act(() => {
         result.current.registerPropertyRef(123, element);
       });
@@ -274,9 +262,7 @@ describe('useMapFeedSync', () => {
 
   describe('Custom Delays', () => {
     it('should respect custom throttle delay', async () => {
-      const { result } = renderHook(() => 
-        useMapFeedSync({ throttleDelay: 100 })
-      );
+      const { result } = renderHook(() => useMapFeedSync({ throttleDelay: 100 }));
 
       const bounds = { north: 1, south: 0, east: 1, west: 0 };
 
@@ -296,12 +282,12 @@ describe('useMapFeedSync', () => {
 
     it('should respect custom debounce delay', async () => {
       const onBoundsChange = vi.fn();
-      const { result } = renderHook(() => 
-        useMapFeedSync({ 
+      const { result } = renderHook(() =>
+        useMapFeedSync({
           throttleDelay: 100,
           debounceDelay: 200,
-          onBoundsChange 
-        })
+          onBoundsChange,
+        }),
       );
 
       const bounds = { north: 1, south: 0, east: 1, west: 0 };
@@ -348,9 +334,7 @@ describe('useMapFeedSync', () => {
   describe('Performance Requirements', () => {
     it('should meet 400ms total latency requirement (3.1)', async () => {
       const onBoundsChange = vi.fn();
-      const { result } = renderHook(() => 
-        useMapFeedSync({ onBoundsChange })
-      );
+      const { result } = renderHook(() => useMapFeedSync({ onBoundsChange }));
 
       const startTime = Date.now();
       const bounds = { north: 1, south: 0, east: 1, west: 0 };

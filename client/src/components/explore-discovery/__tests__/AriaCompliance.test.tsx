@@ -1,9 +1,9 @@
 /**
  * ARIA Compliance Tests for Explore Components
- * 
+ *
  * Tests ARIA labels, roles, and live regions across all Explore components
  * to ensure WCAG AA compliance and excellent screen reader support.
- * 
+ *
  * Requirements: 5.2
  */
 
@@ -41,26 +41,14 @@ describe('ARIA Compliance - Card Components', () => {
     };
 
     it('should have proper article role', () => {
-      render(
-        <PropertyCard
-          property={mockProperty}
-          onClick={() => {}}
-          onSave={() => {}}
-        />
-      );
+      render(<PropertyCard property={mockProperty} onClick={() => {}} onSave={() => {}} />);
 
       const article = screen.getByRole('article');
       expect(article).toBeInTheDocument();
     });
 
     it('should have descriptive aria-label', () => {
-      render(
-        <PropertyCard
-          property={mockProperty}
-          onClick={() => {}}
-          onSave={() => {}}
-        />
-      );
+      render(<PropertyCard property={mockProperty} onClick={() => {}} onSave={() => {}} />);
 
       const article = screen.getByRole('article');
       expect(article).toHaveAttribute('aria-label');
@@ -70,26 +58,14 @@ describe('ARIA Compliance - Card Components', () => {
     });
 
     it('should have list role for features', () => {
-      render(
-        <PropertyCard
-          property={mockProperty}
-          onClick={() => {}}
-          onSave={() => {}}
-        />
-      );
+      render(<PropertyCard property={mockProperty} onClick={() => {}} onSave={() => {}} />);
 
       const featuresList = screen.getByRole('list', { name: /property features/i });
       expect(featuresList).toBeInTheDocument();
     });
 
     it('should have screen reader text for feature icons', () => {
-      render(
-        <PropertyCard
-          property={mockProperty}
-          onClick={() => {}}
-          onSave={() => {}}
-        />
-      );
+      render(<PropertyCard property={mockProperty} onClick={() => {}} onSave={() => {}} />);
 
       // Check for screen reader only text
       const bedroomsLabel = screen.getByText(/bedrooms:/i, { selector: '.sr-only' });
@@ -109,26 +85,14 @@ describe('ARIA Compliance - Card Components', () => {
     };
 
     it('should have proper article role', () => {
-      render(
-        <VideoCard
-          video={mockVideo}
-          onClick={() => {}}
-          onSave={() => {}}
-        />
-      );
+      render(<VideoCard video={mockVideo} onClick={() => {}} onSave={() => {}} />);
 
       const article = screen.getByRole('article');
       expect(article).toBeInTheDocument();
     });
 
     it('should have descriptive aria-label', () => {
-      render(
-        <VideoCard
-          video={mockVideo}
-          onClick={() => {}}
-          onSave={() => {}}
-        />
-      );
+      render(<VideoCard video={mockVideo} onClick={() => {}} onSave={() => {}} />);
 
       const article = screen.getByRole('article');
       const label = article.getAttribute('aria-label');
@@ -138,26 +102,14 @@ describe('ARIA Compliance - Card Components', () => {
     });
 
     it('should have aria-pressed for save button', () => {
-      render(
-        <VideoCard
-          video={mockVideo}
-          onClick={() => {}}
-          onSave={() => {}}
-        />
-      );
+      render(<VideoCard video={mockVideo} onClick={() => {}} onSave={() => {}} />);
 
       const saveButton = screen.getByRole('button', { name: /save video/i });
       expect(saveButton).toHaveAttribute('aria-pressed');
     });
 
     it('should have status role for duration badge', () => {
-      render(
-        <VideoCard
-          video={mockVideo}
-          onClick={() => {}}
-          onSave={() => {}}
-        />
-      );
+      render(<VideoCard video={mockVideo} onClick={() => {}} onSave={() => {}} />);
 
       const durationStatus = screen.getByRole('status', { name: /video duration/i });
       expect(durationStatus).toBeInTheDocument();
@@ -183,7 +135,7 @@ describe('ARIA Compliance - Card Components', () => {
           neighbourhood={mockNeighbourhood}
           onClick={() => {}}
           onFollow={() => {}}
-        />
+        />,
       );
 
       const article = screen.getByRole('article');
@@ -196,7 +148,7 @@ describe('ARIA Compliance - Card Components', () => {
           neighbourhood={mockNeighbourhood}
           onClick={() => {}}
           onFollow={() => {}}
-        />
+        />,
       );
 
       const followButton = screen.getByRole('button', { name: /follow neighbourhood/i });
@@ -209,7 +161,7 @@ describe('ARIA Compliance - Card Components', () => {
           neighbourhood={mockNeighbourhood}
           onClick={() => {}}
           onFollow={() => {}}
-        />
+        />,
       );
 
       const statsList = screen.getByRole('list', { name: /neighbourhood statistics/i });
@@ -231,24 +183,14 @@ describe('ARIA Compliance - Card Components', () => {
     };
 
     it('should have proper article role', () => {
-      render(
-        <InsightCard
-          insight={mockInsight}
-          onClick={() => {}}
-        />
-      );
+      render(<InsightCard insight={mockInsight} onClick={() => {}} />);
 
       const article = screen.getByRole('article');
       expect(article).toBeInTheDocument();
     });
 
     it('should have descriptive aria-label', () => {
-      render(
-        <InsightCard
-          insight={mockInsight}
-          onClick={() => {}}
-        />
-      );
+      render(<InsightCard insight={mockInsight} onClick={() => {}} />);
 
       const article = screen.getByRole('article');
       const label = article.getAttribute('aria-label');
@@ -257,12 +199,7 @@ describe('ARIA Compliance - Card Components', () => {
     });
 
     it('should have status role for badge', () => {
-      render(
-        <InsightCard
-          insight={mockInsight}
-          onClick={() => {}}
-        />
-      );
+      render(<InsightCard insight={mockInsight} onClick={() => {}} />);
 
       const badge = screen.getByRole('status', { name: /content type/i });
       expect(badge).toBeInTheDocument();
@@ -273,14 +210,7 @@ describe('ARIA Compliance - Card Components', () => {
 describe('ARIA Compliance - Feed Components', () => {
   describe('DiscoveryCardFeed', () => {
     it('should have feed role for main container', () => {
-      render(
-        <DiscoveryCardFeed
-          categoryId={1}
-          filters={{}}
-          onItemClick={() => {}}
-        />,
-        { wrapper }
-      );
+      render(<DiscoveryCardFeed categoryId={1} filters={{}} onItemClick={() => {}} />, { wrapper });
 
       // Wait for loading state
       const feed = screen.getByRole('feed', { name: /discovery feed/i });
@@ -288,14 +218,7 @@ describe('ARIA Compliance - Feed Components', () => {
     });
 
     it('should have aria-busy during loading', () => {
-      render(
-        <DiscoveryCardFeed
-          categoryId={1}
-          filters={{}}
-          onItemClick={() => {}}
-        />,
-        { wrapper }
-      );
+      render(<DiscoveryCardFeed categoryId={1} filters={{}} onItemClick={() => {}} />, { wrapper });
 
       const loadingStatus = screen.getByRole('status', { name: /loading/i });
       expect(loadingStatus).toBeInTheDocument();
@@ -308,14 +231,7 @@ describe('ARIA Compliance - Feed Components', () => {
         throw new Error('Failed to load');
       });
 
-      render(
-        <DiscoveryCardFeed
-          categoryId={1}
-          filters={{}}
-          onItemClick={() => {}}
-        />,
-        { wrapper }
-      );
+      render(<DiscoveryCardFeed categoryId={1} filters={{}} onItemClick={() => {}} />, { wrapper });
 
       // Check for error alert
       const alert = await screen.findByRole('alert');
@@ -336,13 +252,7 @@ describe('ARIA Compliance - Interactive Elements', () => {
       propertyType: 'House',
     };
 
-    render(
-      <PropertyCard
-        property={mockProperty}
-        onClick={() => {}}
-        onSave={() => {}}
-      />
-    );
+    render(<PropertyCard property={mockProperty} onClick={() => {}} onSave={() => {}} />);
 
     // Save button should have aria-label
     const saveButton = screen.getByLabelText(/save property/i);
@@ -361,11 +271,7 @@ describe('ARIA Compliance - Interactive Elements', () => {
     };
 
     const { container } = render(
-      <PropertyCard
-        property={mockProperty}
-        onClick={() => {}}
-        onSave={() => {}}
-      />
+      <PropertyCard property={mockProperty} onClick={() => {}} onSave={() => {}} />,
     );
 
     // Icons in feature list should be aria-hidden
@@ -376,14 +282,7 @@ describe('ARIA Compliance - Interactive Elements', () => {
 
 describe('ARIA Compliance - Live Regions', () => {
   it('should use aria-live="polite" for non-critical updates', () => {
-    render(
-      <DiscoveryCardFeed
-        categoryId={1}
-        filters={{}}
-        onItemClick={() => {}}
-      />,
-      { wrapper }
-    );
+    render(<DiscoveryCardFeed categoryId={1} filters={{}} onItemClick={() => {}} />, { wrapper });
 
     const loadingStatus = screen.getByRole('status');
     expect(loadingStatus).toHaveAttribute('aria-live', 'polite');
@@ -395,14 +294,7 @@ describe('ARIA Compliance - Live Regions', () => {
       throw new Error('Failed to load');
     });
 
-    render(
-      <DiscoveryCardFeed
-        categoryId={1}
-        filters={{}}
-        onItemClick={() => {}}
-      />,
-      { wrapper }
-    );
+    render(<DiscoveryCardFeed categoryId={1} filters={{}} onItemClick={() => {}} />, { wrapper });
 
     const alert = await screen.findByRole('alert');
     expect(alert).toHaveAttribute('aria-live', 'assertive');
@@ -421,11 +313,7 @@ describe('ARIA Compliance - Semantic Structure', () => {
     };
 
     const { container } = render(
-      <PropertyCard
-        property={mockProperty}
-        onClick={() => {}}
-        onSave={() => {}}
-      />
+      <PropertyCard property={mockProperty} onClick={() => {}} onSave={() => {}} />,
     );
 
     // Property title should be h3
@@ -447,13 +335,7 @@ describe('ARIA Compliance - Semantic Structure', () => {
       propertyType: 'House',
     };
 
-    render(
-      <PropertyCard
-        property={mockProperty}
-        onClick={() => {}}
-        onSave={() => {}}
-      />
-    );
+    render(<PropertyCard property={mockProperty} onClick={() => {}} onSave={() => {}} />);
 
     const list = screen.getByRole('list', { name: /property features/i });
     expect(list).toBeInTheDocument();

@@ -1,16 +1,11 @@
 /**
  * EmptyState Component Examples
- * 
+ *
  * Demonstrates all variants and use cases of the EmptyState component
  */
 
 import { useState } from 'react';
-import { 
-  EmptyState, 
-  EmptyStateCard, 
-  InlineEmptyState,
-  EmptyStateType 
-} from './EmptyState';
+import { EmptyState, EmptyStateCard, InlineEmptyState, EmptyStateType } from './EmptyState';
 import { ModernCard } from '@/components/ui/soft/ModernCard';
 import { Search, Heart } from 'lucide-react';
 
@@ -33,7 +28,7 @@ export function AllEmptyStateTypesExample() {
   return (
     <div className="space-y-6 p-6">
       <div className="flex flex-wrap gap-2">
-        {types.map((type) => (
+        {types.map(type => (
           <button
             key={type}
             onClick={() => setSelectedType(type)}
@@ -88,7 +83,7 @@ export function NoSearchResultsExample() {
         />
       ) : (
         <div className="grid grid-cols-3 gap-4">
-          {[1, 2, 3, 4, 5, 6].map((i) => (
+          {[1, 2, 3, 4, 5, 6].map(i => (
             <ModernCard key={i} className="h-48 flex items-center justify-center">
               Property {i}
             </ModernCard>
@@ -123,12 +118,8 @@ export function LocationPermissionExample() {
         />
       ) : (
         <ModernCard className="p-8 text-center">
-          <p className="text-lg font-semibold text-green-600">
-            ✓ Location access granted!
-          </p>
-          <p className="text-gray-600 mt-2">
-            Showing properties near you...
-          </p>
+          <p className="text-lg font-semibold text-green-600">✓ Location access granted!</p>
+          <p className="text-gray-600 mt-2">Showing properties near you...</p>
         </ModernCard>
       )}
     </div>
@@ -163,9 +154,7 @@ export function OfflineStateExample() {
         />
       ) : (
         <ModernCard className="p-8 text-center">
-          <p className="text-lg font-semibold text-green-600">
-            ✓ Connected!
-          </p>
+          <p className="text-lg font-semibold text-green-600">✓ Connected!</p>
         </ModernCard>
       )}
     </div>
@@ -241,19 +230,12 @@ export function CompactModeExample() {
     <div className="p-6 space-y-8">
       <div>
         <h3 className="text-lg font-semibold mb-4">Regular Size</h3>
-        <EmptyState
-          type="noResults"
-          onAction={() => console.log('Action clicked')}
-        />
+        <EmptyState type="noResults" onAction={() => console.log('Action clicked')} />
       </div>
 
       <div>
         <h3 className="text-lg font-semibold mb-4">Compact Size</h3>
-        <EmptyState
-          type="noResults"
-          compact
-          onAction={() => console.log('Action clicked')}
-        />
+        <EmptyState type="noResults" compact onAction={() => console.log('Action clicked')} />
       </div>
     </div>
   );
@@ -266,7 +248,7 @@ export function EmptyStateCardExample() {
   return (
     <div className="p-6 space-y-6">
       <h3 className="text-lg font-semibold">Card Variant</h3>
-      
+
       <div className="grid grid-cols-2 gap-6">
         <EmptyStateCard
           type="noSavedProperties"
@@ -378,7 +360,7 @@ export function FilterBasedEmptyStateExample() {
         />
       ) : (
         <div className="grid grid-cols-3 gap-4">
-          {[1, 2, 3, 4, 5, 6].map((i) => (
+          {[1, 2, 3, 4, 5, 6].map(i => (
             <ModernCard key={i} className="h-48 flex items-center justify-center">
               Property {i}
             </ModernCard>

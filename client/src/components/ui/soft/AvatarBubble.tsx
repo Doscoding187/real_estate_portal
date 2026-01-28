@@ -1,9 +1,9 @@
 /**
  * AvatarBubble Component
- * 
+ *
  * A modern avatar component with soft shadows and optional status indicators.
  * Supports images, initials, and placeholder states.
- * 
+ *
  * Features:
  * - Image loading with fallback
  * - Initials generation
@@ -58,7 +58,7 @@ function getInitials(name: string): string {
   return name.slice(0, 2).toUpperCase();
 }
 
-export function AvatarBubble({ 
+export function AvatarBubble({
   src,
   alt,
   name,
@@ -106,7 +106,7 @@ export function AvatarBubble({
         'rounded-full overflow-hidden shadow-md',
         'relative flex-shrink-0',
         isInteractive && 'cursor-pointer',
-        className
+        className,
       )}
       onClick={onClick}
       whileHover={isInteractive ? { scale: 1.05 } : undefined}
@@ -115,15 +115,19 @@ export function AvatarBubble({
       role={isInteractive ? 'button' : undefined}
       aria-label={isInteractive ? `View ${displayName}'s profile` : displayName}
       tabIndex={isInteractive ? 0 : undefined}
-      onKeyDown={isInteractive ? (e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          onClick?.();
-        }
-      } : undefined}
+      onKeyDown={
+        isInteractive
+          ? e => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                onClick?.();
+              }
+            }
+          : undefined
+      }
     >
       {renderContent()}
-      
+
       {status && (
         <div
           className={cn(
@@ -131,7 +135,7 @@ export function AvatarBubble({
             statusColors[status],
             'absolute bottom-0 right-0',
             'rounded-full border-2 border-white',
-            'shadow-sm'
+            'shadow-sm',
           )}
           aria-label={`Status: ${status}`}
         />

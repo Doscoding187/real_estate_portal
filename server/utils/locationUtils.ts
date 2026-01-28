@@ -10,23 +10,23 @@
  */
 export function slugifyLocation(locationName: string | null | undefined): string | null {
   if (!locationName) return null;
-  
+
   return locationName
     .toLowerCase()
     .trim()
-    .replace(/\s+/g, '-')     // Replace spaces with hyphens
+    .replace(/\s+/g, '-') // Replace spaces with hyphens
     .replace(/[^a-z0-9-]/g, '') // Remove special characters
-    .replace(/-+/g, '-')        // Replace multiple hyphens with single
-    .replace(/^-|-$/g, '');     // Remove leading/trailing hyphens
+    .replace(/-+/g, '-') // Replace multiple hyphens with single
+    .replace(/^-|-$/g, ''); // Remove leading/trailing hyphens
 }
 
 /**
  * Normalize location fields for a property
  * Converts province, city, suburb to lowercase slugs for consistent querying
  */
-export function normalizeLocationFields<T extends { province?: string | null; city?: string | null; suburb?: string | null }>(
-  data: T
-): T {
+export function normalizeLocationFields<
+  T extends { province?: string | null; city?: string | null; suburb?: string | null },
+>(data: T): T {
   return {
     ...data,
     province: data.province ? data.province.toLowerCase().trim() : data.province,
@@ -39,10 +39,10 @@ export function normalizeLocationFields<T extends { province?: string | null; ci
  * Validate that required location fields are present
  * Returns an error message if validation fails, null if valid
  */
-export function validateLocationForPublish(data: { 
-  province?: string | null; 
-  city?: string | null; 
-  status?: string 
+export function validateLocationForPublish(data: {
+  province?: string | null;
+  city?: string | null;
+  status?: string;
 }): string | null {
   // Only validate if publishing (available, published)
   const publishingStatuses = ['available', 'published'];

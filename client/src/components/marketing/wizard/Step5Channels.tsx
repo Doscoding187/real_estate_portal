@@ -74,15 +74,13 @@ const CHANNELS = [
 
 const Step5Channels: React.FC<Step5Props> = ({ data, updateData, onNext, onBack, campaignId }) => {
   const [channels, setChannels] = useState<any[]>(
-    data.channels || CHANNELS.map(c => ({ type: c.id, enabled: false }))
+    data.channels || CHANNELS.map(c => ({ type: c.id, enabled: false })),
   );
 
   const updateChannelsMutation = trpc.marketing.updateChannels.useMutation();
 
   const toggleChannel = (channelId: string) => {
-    setChannels(prev => 
-      prev.map(c => c.type === channelId ? { ...c, enabled: !c.enabled } : c)
-    );
+    setChannels(prev => prev.map(c => (c.type === channelId ? { ...c, enabled: !c.enabled } : c)));
   };
 
   const handleNext = async () => {
@@ -115,15 +113,15 @@ const Step5Channels: React.FC<Step5Props> = ({ data, updateData, onNext, onBack,
       </div>
 
       <div className="grid grid-cols-1 gap-4">
-        {CHANNELS.map((channel) => {
+        {CHANNELS.map(channel => {
           const isEnabled = channels.find(c => c.type === channel.id)?.enabled;
-          
+
           return (
             <div
               key={channel.id}
               className={`flex items-center justify-between p-4 rounded-xl border transition-all ${
-                isEnabled 
-                  ? 'border-blue-600 bg-blue-50 ring-1 ring-blue-600' 
+                isEnabled
+                  ? 'border-blue-600 bg-blue-50 ring-1 ring-blue-600'
                   : 'border-slate-200 hover:border-blue-300'
               }`}
             >
@@ -136,10 +134,7 @@ const Step5Channels: React.FC<Step5Props> = ({ data, updateData, onNext, onBack,
                   <p className="text-sm text-slate-500">{channel.description}</p>
                 </div>
               </div>
-              <Switch
-                checked={isEnabled}
-                onCheckedChange={() => toggleChannel(channel.id)}
-              />
+              <Switch checked={isEnabled} onCheckedChange={() => toggleChannel(channel.id)} />
             </div>
           );
         })}

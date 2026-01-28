@@ -1,7 +1,7 @@
 /**
  * Lead Generation Service
  * Handles lead creation, tracking, and monetization for partners
- * 
+ *
  * TODO: Implement full lead generation functionality
  */
 
@@ -85,15 +85,15 @@ export const leadGenerationService = {
   async calculateLeadPrice(leadType: string, partnerId: string): Promise<number> {
     // TODO: Implement pricing logic based on lead type and partner subscription tier
     console.log('[leadGenerationService] calculateLeadPrice called:', leadType, partnerId);
-    
+
     // Default pricing (placeholder)
     const basePrices: Record<string, number> = {
-      'quote_request': 25,
-      'consultation': 50,
-      'eligibility_check': 15,
-      'general_inquiry': 10,
+      quote_request: 25,
+      consultation: 50,
+      eligibility_check: 15,
+      general_inquiry: 10,
     };
-    
+
     return basePrices[leadType] || 10;
   },
 
@@ -116,7 +116,10 @@ export const leadGenerationService = {
   /**
    * Process a dispute decision
    */
-  async processDispute(leadId: string, decision: 'refund' | 'reject' | 'partial_refund'): Promise<void> {
+  async processDispute(
+    leadId: string,
+    decision: 'refund' | 'reject' | 'partial_refund',
+  ): Promise<void> {
     // TODO: Implement dispute resolution
     console.log('[leadGenerationService] processDispute called:', leadId, decision);
   },

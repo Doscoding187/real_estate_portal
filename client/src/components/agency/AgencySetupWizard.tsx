@@ -2,7 +2,7 @@
  * Agency Setup Wizard
  * Multi-step registration form for real estate agencies
  * Uses the same gradient UI components as developer wizard
- * 
+ *
  * Similar to DeveloperSetupWizardEnhanced but adapted for agencies
  */
 
@@ -112,7 +112,11 @@ export default function AgencySetupWizard() {
   }, [formValues.name, formValues.slug, setValue]);
 
   // Auto-save hook
-  const { lastSaved, isSaving: isAutoSaving, error: autoSaveError } = useAutoSave(
+  const {
+    lastSaved,
+    isSaving: isAutoSaving,
+    error: autoSaveError,
+  } = useAutoSave(
     {
       step,
       completedSteps,
@@ -122,26 +126,23 @@ export default function AgencySetupWizard() {
       storageKey: 'agency-registration-draft',
       debounceMs: 2000,
       enabled: step > 1 && !createAgency.isPending,
-      onError: (error) => {
+      onError: error => {
         console.error('Auto-save error:', error);
         toast.error('Failed to auto-save draft');
       },
-    }
+    },
   );
 
   // Check for draft on mount
   useEffect(() => {
     const savedDraft = localStorage.getItem('agency-registration-draft');
-    
+
     if (savedDraft) {
       try {
         const draft = JSON.parse(savedDraft);
-        
-        const hasMeaningfulProgress = 
-          draft.step > 1 || 
-          draft.name || 
-          draft.email;
-        
+
+        const hasMeaningfulProgress = draft.step > 1 || draft.name || draft.email;
+
         if (hasMeaningfulProgress) {
           setShowResumeDraftDialog(true);
         }
@@ -161,12 +162,12 @@ export default function AgencySetupWizard() {
 
   const handleResumeDraft = () => {
     setShowResumeDraftDialog(false);
-    
+
     const savedDraft = localStorage.getItem('agency-registration-draft');
     if (savedDraft) {
       try {
         const draft = JSON.parse(savedDraft);
-        
+
         reset({
           name: draft.name || '',
           slug: draft.slug || '',
@@ -180,10 +181,10 @@ export default function AgencySetupWizard() {
           logo: draft.logo || null,
           termsAccepted: false,
         });
-        
+
         setStep(draft.step || 1);
         setCompletedSteps(draft.completedSteps || []);
-        
+
         toast.success('Draft restored successfully!');
       } catch (error) {
         console.error('Error restoring draft:', error);
@@ -303,9 +304,10 @@ export default function AgencySetupWizard() {
           currentStep: step,
           totalSteps: 3,
           developmentName: formValues.name,
-          address: formValues.city && formValues.province 
-            ? `${formValues.city}, ${formValues.province}` 
-            : undefined,
+          address:
+            formValues.city && formValues.province
+              ? `${formValues.city}, ${formValues.province}`
+              : undefined,
           lastModified: lastSaved || undefined,
         }}
       />
@@ -316,10 +318,8 @@ export default function AgencySetupWizard() {
           <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent mb-2">
             Agency Registration
           </h1>
-          <p className="text-gray-600">
-            Join our platform as a verified real estate agency
-          </p>
-          
+          <p className="text-gray-600">Join our platform as a verified real estate agency</p>
+
           {/* Auto-save status */}
           {step > 1 && (
             <div className="absolute top-0 right-0">
@@ -350,12 +350,8 @@ export default function AgencySetupWizard() {
             {step === 1 && (
               <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
                 <div>
-                  <h2 className="text-2xl font-semibold text-gray-900 mb-2">
-                    Agency Information
-                  </h2>
-                  <p className="text-gray-600">
-                    Tell us about your real estate agency
-                  </p>
+                  <h2 className="text-2xl font-semibold text-gray-900 mb-2">Agency Information</h2>
+                  <p className="text-gray-600">Tell us about your real estate agency</p>
                 </div>
 
                 <GradientInput
@@ -398,12 +394,8 @@ export default function AgencySetupWizard() {
             {step === 2 && (
               <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
                 <div>
-                  <h2 className="text-2xl font-semibold text-gray-900 mb-2">
-                    Contact Details
-                  </h2>
-                  <p className="text-gray-600">
-                    How can clients reach your agency?
-                  </p>
+                  <h2 className="text-2xl font-semibold text-gray-900 mb-2">Contact Details</h2>
+                  <p className="text-gray-600">How can clients reach your agency?</p>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -444,10 +436,10 @@ export default function AgencySetupWizard() {
                     placeholder="Select province"
                     required
                     value={formValues.province}
-                    onValueChange={(value) => setValue('province', value)}
+                    onValueChange={value => setValue('province', value)}
                     error={errors.province?.message}
                   >
-                    {SA_PROVINCES.map((province) => (
+                    {SA_PROVINCES.map(province => (
                       <GradientSelectItem key={province} value={province}>
                         {province}
                       </GradientSelectItem>
@@ -461,12 +453,8 @@ export default function AgencySetupWizard() {
             {step === 3 && (
               <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
                 <div>
-                  <h2 className="text-2xl font-semibold text-gray-900 mb-2">
-                    Review & Submit
-                  </h2>
-                  <p className="text-gray-600">
-                    Please review your information before submitting
-                  </p>
+                  <h2 className="text-2xl font-semibold text-gray-900 mb-2">Review & Submit</h2>
+                  <p className="text-gray-600">Please review your information before submitting</p>
                 </div>
 
                 <div className="space-y-4">
@@ -526,9 +514,7 @@ export default function AgencySetupWizard() {
                   label="I accept the Terms and Conditions"
                   description="By checking this box, you agree to our Agency Terms of Service and Privacy Policy."
                   checked={formValues.termsAccepted}
-                  onCheckedChange={(checked) =>
-                    setValue('termsAccepted', checked as boolean)
-                  }
+                  onCheckedChange={checked => setValue('termsAccepted', checked as boolean)}
                   error={
                     !formValues.termsAccepted && step === 3
                       ? 'You must accept the terms to continue'

@@ -7,7 +7,12 @@ import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import crypto from 'crypto';
 import { db } from '../db';
-import { exploreContent, exploreDiscoveryVideos, properties, developments } from '../../drizzle/schema';
+import {
+  exploreContent,
+  exploreDiscoveryVideos,
+  properties,
+  developments,
+} from '../../drizzle/schema';
 import { eq } from 'drizzle-orm';
 
 // Initialize S3 client
@@ -21,7 +26,8 @@ const s3Client = new S3Client({
 
 const S3_BUCKET_NAME = process.env.AWS_S3_BUCKET || 'listify-properties-sa';
 const AWS_REGION = process.env.AWS_REGION || 'eu-north-1';
-const CDN_URL = process.env.CLOUDFRONT_URL || `https://${S3_BUCKET_NAME}.s3.${AWS_REGION}.amazonaws.com`;
+const CDN_URL =
+  process.env.CLOUDFRONT_URL || `https://${S3_BUCKET_NAME}.s3.${AWS_REGION}.amazonaws.com`;
 
 export interface VideoMetadata {
   propertyId?: number;
@@ -55,7 +61,10 @@ export interface ProcessedVideo {
  * Validate video metadata according to requirements
  * Requirements 8.1: Must include property metadata (price, location, property type, tags)
  */
-export function validateVideoMetadata(metadata: VideoMetadata): { valid: boolean; errors: string[] } {
+export function validateVideoMetadata(metadata: VideoMetadata): {
+  valid: boolean;
+  errors: string[];
+} {
   const errors: string[] = [];
 
   // Required fields
@@ -115,7 +124,7 @@ export async function generateVideoUploadUrls(
   const timestamp = Date.now();
   const fileId = crypto.randomUUID();
   const sanitizedFilename = filename.replace(/[^a-zA-Z0-9.-]/g, '_');
-  
+
   const videoKey = `explore/videos/${creatorId}/${timestamp}-${fileId}-${sanitizedFilename}`;
   const thumbnailKey = `explore/thumbnails/${creatorId}/${timestamp}-${fileId}.jpg`;
 
@@ -164,7 +173,7 @@ export async function generateVideoUploadUrls(
  */
 async function validateAgencyAttribution(
   agentId: number | null,
-  agencyId: number | null
+  agencyId: number | null,
 ): Promise<{ valid: boolean; error?: string }> {
   // If no agency attribution, validation passes
   if (!agencyId) {
@@ -222,7 +231,9 @@ async function validateAgencyAttribution(
     };
   }
 
-  console.log(`[ExploreVideo] Agency attribution validated: agent ${agentId} belongs to agency ${agencyId}`);
+  console.log(
+    `[ExploreVideo] Agency attribution validated: agent ${agentId} belongs to agency ${agencyId}`,
+  );
 
   return { valid: true };
 }
@@ -237,7 +248,7 @@ async function detectAgencyAffiliation(creatorId: number): Promise<{
   creatorType: 'user' | 'agent' | 'developer' | 'agency';
 }> {
   const { agents, users } = await import('../../drizzle/schema');
-  
+
   // Check if creator is an agent
   const agentRecord = await db
     .select({
@@ -252,9 +263,11 @@ async function detectAgencyAffiliation(creatorId: number): Promise<{
   if (agentRecord[0]) {
     const agencyId = agentRecord[0].agencyId;
     const agentId = agentRecord[0].id;
-    
-    console.log(`[ExploreVideo] Detected agent ${agentId} with agency ${agencyId || 'none'} for user ${creatorId}`);
-    
+
+    console.log(
+      `[ExploreVideo] Detected agent ${agentId} with agency ${agencyId || 'none'} for user ${creatorId}`,
+    );
+
     return {
       agencyId,
       agentId,
@@ -274,7 +287,7 @@ async function detectAgencyAffiliation(creatorId: number): Promise<{
 
   if (developerRecord[0]) {
     console.log(`[ExploreVideo] Detected developer ${developerRecord[0].id} for user ${creatorId}`);
-    
+
     return {
       agencyId: null,
       agentId: null,
@@ -284,7 +297,7 @@ async function detectAgencyAffiliation(creatorId: number): Promise<{
 
   // Default to regular user
   console.log(`[ExploreVideo] User ${creatorId} is a regular user (not agent or developer)`);
-  
+
   return {
     agencyId: null,
     agentId: null,
@@ -318,18 +331,18 @@ export async function createExploreVideo(
 
   // Detect agency affiliation
   const affiliation = await detectAgencyAffiliation(creatorId);
-  
+
   // Validate agency attribution
   // Requirements 10.5, 4.4: Prevent invalid agency attribution
   const attributionValidation = await validateAgencyAttribution(
     affiliation.agentId,
-    affiliation.agencyId
+    affiliation.agencyId,
   );
-  
+
   if (!attributionValidation.valid) {
     throw new Error(`Invalid agency attribution: ${attributionValidation.error}`);
   }
-  
+
   console.log(`[ExploreVideo] Agency attribution decision:`, {
     creatorId,
     agencyId: affiliation.agencyId,
@@ -428,7 +441,9 @@ export async function createExploreVideo(
 
     const exploreVideoId = Number(videoResult.insertId);
 
-    console.log(`[ExploreVideo] Created video record: content=${exploreContentId}, video=${exploreVideoId}`);
+    console.log(
+      `[ExploreVideo] Created video record: content=${exploreContentId}, video=${exploreVideoId}`,
+    );
 
     return {
       exploreContentId,

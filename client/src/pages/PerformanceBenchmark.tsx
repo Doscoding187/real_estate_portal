@@ -35,7 +35,8 @@ export default function PerformanceBenchmark() {
     try {
       const metrics = await runAllBenchmarks({
         scrollElement: scrollRef.current || undefined,
-        videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
+        videoUrl:
+          'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
         queryClient,
       });
 
@@ -95,11 +96,7 @@ export default function PerformanceBenchmark() {
           </CardDescription>
         </CardHeader>
         <CardContent className="flex gap-4">
-          <Button
-            onClick={runBenchmarks}
-            disabled={isRunning}
-            className="flex items-center gap-2"
-          >
+          <Button onClick={runBenchmarks} disabled={isRunning} className="flex items-center gap-2">
             {isRunning ? (
               <>
                 <Loader2 className="w-4 h-4 animate-spin" />
@@ -134,11 +131,7 @@ export default function PerformanceBenchmark() {
                 </Button>
               )}
 
-              <Button
-                onClick={resetBaseline}
-                variant="ghost"
-                className="flex items-center gap-2"
-              >
+              <Button onClick={resetBaseline} variant="ghost" className="flex items-center gap-2">
                 <RefreshCw className="w-4 h-4" />
                 Reset Baseline
               </Button>
@@ -150,7 +143,7 @@ export default function PerformanceBenchmark() {
       {/* Results Grid */}
       {results.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-          {results.map((result) => (
+          {results.map(result => (
             <Card key={result.metric}>
               <CardHeader>
                 <div className="flex items-center justify-between">
@@ -193,9 +186,7 @@ export default function PerformanceBenchmark() {
         <Card className="mb-6">
           <CardHeader>
             <CardTitle>Before/After Comparison</CardTitle>
-            <CardDescription>
-              Compare baseline metrics with current performance
-            </CardDescription>
+            <CardDescription>Compare baseline metrics with current performance</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="overflow-x-auto">
@@ -213,9 +204,8 @@ export default function PerformanceBenchmark() {
                   {results.map((result, index) => {
                     const beforeValue = evaluateBenchmarks(beforeMetrics)[index].value;
                     const change = result.value - beforeValue;
-                    const changePercent = beforeValue > 0
-                      ? ((change / beforeValue) * 100).toFixed(1)
-                      : 'N/A';
+                    const changePercent =
+                      beforeValue > 0 ? ((change / beforeValue) * 100).toFixed(1) : 'N/A';
 
                     return (
                       <tr key={result.metric} className="border-b">
@@ -236,8 +226,8 @@ export default function PerformanceBenchmark() {
                                   ? 'text-green-600'
                                   : 'text-red-600'
                                 : result.unit === 'fps' || result.unit === '%'
-                                ? 'text-red-600'
-                                : 'text-green-600'
+                                  ? 'text-red-600'
+                                  : 'text-green-600'
                             }
                           >
                             {change > 0 ? '+' : ''}
@@ -245,9 +235,7 @@ export default function PerformanceBenchmark() {
                             {result.unit} ({changePercent}%)
                           </span>
                         </td>
-                        <td className="text-right p-2">
-                          {result.passed ? '✅' : '❌'}
-                        </td>
+                        <td className="text-right p-2">{result.passed ? '✅' : '❌'}</td>
                       </tr>
                     );
                   })}
@@ -262,15 +250,10 @@ export default function PerformanceBenchmark() {
       <Card>
         <CardHeader>
           <CardTitle>Test Scroll Area</CardTitle>
-          <CardDescription>
-            This area is used for scroll FPS measurement
-          </CardDescription>
+          <CardDescription>This area is used for scroll FPS measurement</CardDescription>
         </CardHeader>
         <CardContent>
-          <div
-            ref={scrollRef}
-            className="h-96 overflow-y-auto border rounded-lg p-4"
-          >
+          <div ref={scrollRef} className="h-96 overflow-y-auto border rounded-lg p-4">
             {Array.from({ length: 100 }).map((_, i) => (
               <div
                 key={i}

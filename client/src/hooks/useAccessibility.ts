@@ -1,6 +1,6 @@
 /**
  * Accessibility Hooks for Explore Discovery Engine
- * 
+ *
  * Provides hooks for:
  * - Reduced motion preferences
  * - Keyboard navigation
@@ -21,7 +21,7 @@ export function useReducedMotion(): boolean {
 
   useEffect(() => {
     const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
-    
+
     const handleChange = (event: MediaQueryListEvent) => {
       setPrefersReducedMotion(event.matches);
     };
@@ -31,7 +31,7 @@ export function useReducedMotion(): boolean {
       mediaQuery.addEventListener('change', handleChange);
       return () => mediaQuery.removeEventListener('change', handleChange);
     }
-    
+
     // Legacy browsers
     mediaQuery.addListener(handleChange);
     return () => mediaQuery.removeListener(handleChange);
@@ -51,87 +51,80 @@ export function useKeyboardNavigation<T extends HTMLElement>(
     loop?: boolean;
     onSelect?: (index: number) => void;
     onEscape?: () => void;
-  } = {}
+  } = {},
 ) {
-  const {
-    orientation = 'vertical',
-    columns = 1,
-    loop = true,
-    onSelect,
-    onEscape,
-  } = options;
+  const { orientation = 'vertical', columns = 1, loop = true, onSelect, onEscape } = options;
 
   const [focusedIndex, setFocusedIndex] = useState(0);
   const containerRef = useRef<T>(null);
 
-  const handleKeyDown = useCallback((event: KeyboardEvent) => {
-    if (itemCount === 0) return;
+  const handleKeyDown = useCallback(
+    (event: KeyboardEvent) => {
+      if (itemCount === 0) return;
 
-    let newIndex = focusedIndex;
-    let handled = false;
+      let newIndex = focusedIndex;
+      let handled = false;
 
-    switch (event.key) {
-      case 'ArrowUp':
-        if (orientation === 'vertical' || orientation === 'grid') {
-          newIndex = orientation === 'grid' 
-            ? focusedIndex - columns 
-            : focusedIndex - 1;
+      switch (event.key) {
+        case 'ArrowUp':
+          if (orientation === 'vertical' || orientation === 'grid') {
+            newIndex = orientation === 'grid' ? focusedIndex - columns : focusedIndex - 1;
+            handled = true;
+          }
+          break;
+        case 'ArrowDown':
+          if (orientation === 'vertical' || orientation === 'grid') {
+            newIndex = orientation === 'grid' ? focusedIndex + columns : focusedIndex + 1;
+            handled = true;
+          }
+          break;
+        case 'ArrowLeft':
+          if (orientation === 'horizontal' || orientation === 'grid') {
+            newIndex = focusedIndex - 1;
+            handled = true;
+          }
+          break;
+        case 'ArrowRight':
+          if (orientation === 'horizontal' || orientation === 'grid') {
+            newIndex = focusedIndex + 1;
+            handled = true;
+          }
+          break;
+        case 'Home':
+          newIndex = 0;
           handled = true;
-        }
-        break;
-      case 'ArrowDown':
-        if (orientation === 'vertical' || orientation === 'grid') {
-          newIndex = orientation === 'grid' 
-            ? focusedIndex + columns 
-            : focusedIndex + 1;
+          break;
+        case 'End':
+          newIndex = itemCount - 1;
           handled = true;
-        }
-        break;
-      case 'ArrowLeft':
-        if (orientation === 'horizontal' || orientation === 'grid') {
-          newIndex = focusedIndex - 1;
+          break;
+        case 'Enter':
+        case ' ':
+          onSelect?.(focusedIndex);
           handled = true;
-        }
-        break;
-      case 'ArrowRight':
-        if (orientation === 'horizontal' || orientation === 'grid') {
-          newIndex = focusedIndex + 1;
+          break;
+        case 'Escape':
+          onEscape?.();
           handled = true;
-        }
-        break;
-      case 'Home':
-        newIndex = 0;
-        handled = true;
-        break;
-      case 'End':
-        newIndex = itemCount - 1;
-        handled = true;
-        break;
-      case 'Enter':
-      case ' ':
-        onSelect?.(focusedIndex);
-        handled = true;
-        break;
-      case 'Escape':
-        onEscape?.();
-        handled = true;
-        break;
-    }
-
-    if (handled) {
-      event.preventDefault();
-      
-      // Handle bounds
-      if (loop) {
-        if (newIndex < 0) newIndex = itemCount - 1;
-        if (newIndex >= itemCount) newIndex = 0;
-      } else {
-        newIndex = Math.max(0, Math.min(itemCount - 1, newIndex));
+          break;
       }
-      
-      setFocusedIndex(newIndex);
-    }
-  }, [focusedIndex, itemCount, orientation, columns, loop, onSelect, onEscape]);
+
+      if (handled) {
+        event.preventDefault();
+
+        // Handle bounds
+        if (loop) {
+          if (newIndex < 0) newIndex = itemCount - 1;
+          if (newIndex >= itemCount) newIndex = 0;
+        } else {
+          newIndex = Math.max(0, Math.min(itemCount - 1, newIndex));
+        }
+
+        setFocusedIndex(newIndex);
+      }
+    },
+    [focusedIndex, itemCount, orientation, columns, loop, onSelect, onEscape],
+  );
 
   useEffect(() => {
     const container = containerRef.current;
@@ -164,9 +157,9 @@ export function useAnnounce() {
     announcement.setAttribute('aria-atomic', 'true');
     announcement.className = 'sr-only';
     announcement.textContent = message;
-    
+
     document.body.appendChild(announcement);
-    
+
     // Remove after announcement is read
     setTimeout(() => {
       document.body.removeChild(announcement);
@@ -195,7 +188,7 @@ export function useFocusTrap<T extends HTMLElement>(isActive: boolean) {
     // Get focusable elements
     const getFocusableElements = () => {
       return container.querySelectorAll<HTMLElement>(
-        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
       );
     };
 
@@ -316,48 +309,54 @@ export function useVideoAccessibility(videoRef: React.RefObject<HTMLVideoElement
     }
   }, [videoRef, announce]);
 
-  const seek = useCallback((seconds: number) => {
-    const video = videoRef.current;
-    if (!video) return;
+  const seek = useCallback(
+    (seconds: number) => {
+      const video = videoRef.current;
+      if (!video) return;
 
-    video.currentTime = Math.max(0, Math.min(video.duration, video.currentTime + seconds));
-    announce(`Seeked ${seconds > 0 ? 'forward' : 'backward'} ${Math.abs(seconds)} seconds`);
-  }, [videoRef, announce]);
+      video.currentTime = Math.max(0, Math.min(video.duration, video.currentTime + seconds));
+      announce(`Seeked ${seconds > 0 ? 'forward' : 'backward'} ${Math.abs(seconds)} seconds`);
+    },
+    [videoRef, announce],
+  );
 
   // Keyboard controls
-  const handleKeyDown = useCallback((event: React.KeyboardEvent) => {
-    switch (event.key) {
-      case ' ':
-      case 'k':
-        event.preventDefault();
-        togglePlay();
-        break;
-      case 'm':
-        event.preventDefault();
-        toggleMute();
-        break;
-      case 'c':
-        event.preventDefault();
-        toggleCaptions();
-        break;
-      case 'ArrowLeft':
-        event.preventDefault();
-        seek(-5);
-        break;
-      case 'ArrowRight':
-        event.preventDefault();
-        seek(5);
-        break;
-      case 'j':
-        event.preventDefault();
-        seek(-10);
-        break;
-      case 'l':
-        event.preventDefault();
-        seek(10);
-        break;
-    }
-  }, [togglePlay, toggleMute, toggleCaptions, seek]);
+  const handleKeyDown = useCallback(
+    (event: React.KeyboardEvent) => {
+      switch (event.key) {
+        case ' ':
+        case 'k':
+          event.preventDefault();
+          togglePlay();
+          break;
+        case 'm':
+          event.preventDefault();
+          toggleMute();
+          break;
+        case 'c':
+          event.preventDefault();
+          toggleCaptions();
+          break;
+        case 'ArrowLeft':
+          event.preventDefault();
+          seek(-5);
+          break;
+        case 'ArrowRight':
+          event.preventDefault();
+          seek(5);
+          break;
+        case 'j':
+          event.preventDefault();
+          seek(-10);
+          break;
+        case 'l':
+          event.preventDefault();
+          seek(10);
+          break;
+      }
+    },
+    [togglePlay, toggleMute, toggleCaptions, seek],
+  );
 
   // Update time
   useEffect(() => {

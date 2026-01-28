@@ -1,6 +1,6 @@
 /**
  * useScrollAnimation Hook
- * 
+ *
  * Detects when elements enter the viewport and triggers animations.
  * Uses Intersection Observer API for performance.
  */
@@ -15,19 +15,19 @@ interface UseScrollAnimationOptions {
    * @default 0.1
    */
   threshold?: number;
-  
+
   /**
    * Root margin for early/late triggering
    * @default '0px'
    */
   rootMargin?: string;
-  
+
   /**
    * Whether to trigger animation only once
    * @default true
    */
   triggerOnce?: boolean;
-  
+
   /**
    * Whether animation is enabled
    * Respects prefers-reduced-motion
@@ -41,12 +41,12 @@ interface UseScrollAnimationReturn {
    * Ref to attach to the element to observe
    */
   ref: RefObject<HTMLElement>;
-  
+
   /**
    * Whether the element is currently visible
    */
   isVisible: boolean;
-  
+
   /**
    * Whether the element has been visible at least once
    */
@@ -55,11 +55,11 @@ interface UseScrollAnimationReturn {
 
 /**
  * Hook to detect when an element enters the viewport
- * 
+ *
  * @example
  * ```tsx
  * const { ref, isVisible } = useScrollAnimation({ threshold: 0.2 });
- * 
+ *
  * return (
  *   <motion.div
  *     ref={ref}
@@ -73,23 +73,17 @@ interface UseScrollAnimationReturn {
  * ```
  */
 export function useScrollAnimation(
-  options: UseScrollAnimationOptions = {}
+  options: UseScrollAnimationOptions = {},
 ): UseScrollAnimationReturn {
-  const {
-    threshold = 0.1,
-    rootMargin = '0px',
-    triggerOnce = true,
-    enabled = true,
-  } = options;
+  const { threshold = 0.1, rootMargin = '0px', triggerOnce = true, enabled = true } = options;
 
   const ref = useRef<HTMLElement>(null);
   const [isVisible, setIsVisible] = useState(false);
   const [hasBeenVisible, setHasBeenVisible] = useState(false);
 
   // Check for prefers-reduced-motion
-  const prefersReducedMotion = 
-    typeof window !== 'undefined' &&
-    window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const prefersReducedMotion =
+    typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   useEffect(() => {
     // If animations are disabled or user prefers reduced motion, show immediately
@@ -109,15 +103,15 @@ export function useScrollAnimation(
 
     // Create intersection observer
     const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
+      entries => {
+        entries.forEach(entry => {
           const isIntersecting = entry.isIntersecting;
-          
+
           setIsVisible(isIntersecting);
-          
+
           if (isIntersecting) {
             setHasBeenVisible(true);
-            
+
             // If triggerOnce, disconnect after first intersection
             if (triggerOnce) {
               observer.disconnect();
@@ -128,7 +122,7 @@ export function useScrollAnimation(
       {
         threshold,
         rootMargin,
-      }
+      },
     );
 
     observer.observe(element);
@@ -147,11 +141,11 @@ export function useScrollAnimation(
 
 /**
  * Hook variant that returns multiple refs for observing multiple elements
- * 
+ *
  * @example
  * ```tsx
  * const { refs, visibilityMap } = useMultipleScrollAnimations(3);
- * 
+ *
  * return (
  *   <>
  *     {items.map((item, index) => (
@@ -169,24 +163,16 @@ export function useScrollAnimation(
  */
 export function useMultipleScrollAnimations(
   count: number,
-  options: UseScrollAnimationOptions = {}
+  options: UseScrollAnimationOptions = {},
 ) {
   const refs = useRef<(HTMLElement | null)[]>(Array(count).fill(null));
-  const [visibilityMap, setVisibilityMap] = useState<boolean[]>(
-    Array(count).fill(false)
-  );
+  const [visibilityMap, setVisibilityMap] = useState<boolean[]>(Array(count).fill(false));
 
-  const {
-    threshold = 0.1,
-    rootMargin = '0px',
-    triggerOnce = true,
-    enabled = true,
-  } = options;
+  const { threshold = 0.1, rootMargin = '0px', triggerOnce = true, enabled = true } = options;
 
   // Check for prefers-reduced-motion
-  const prefersReducedMotion = 
-    typeof window !== 'undefined' &&
-    window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const prefersReducedMotion =
+    typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   useEffect(() => {
     // If animations are disabled or user prefers reduced motion, show all immediately
@@ -201,10 +187,10 @@ export function useMultipleScrollAnimations(
       if (!element) return;
 
       const observer = new IntersectionObserver(
-        (entries) => {
-          entries.forEach((entry) => {
+        entries => {
+          entries.forEach(entry => {
             if (entry.isIntersecting) {
-              setVisibilityMap((prev) => {
+              setVisibilityMap(prev => {
                 const newMap = [...prev];
                 newMap[index] = true;
                 return newMap;
@@ -214,7 +200,7 @@ export function useMultipleScrollAnimations(
                 observer.disconnect();
               }
             } else if (!triggerOnce) {
-              setVisibilityMap((prev) => {
+              setVisibilityMap(prev => {
                 const newMap = [...prev];
                 newMap[index] = false;
                 return newMap;
@@ -225,7 +211,7 @@ export function useMultipleScrollAnimations(
         {
           threshold,
           rootMargin,
-        }
+        },
       );
 
       observer.observe(element);
@@ -233,7 +219,7 @@ export function useMultipleScrollAnimations(
     });
 
     return () => {
-      observers.forEach((observer) => observer.disconnect());
+      observers.forEach(observer => observer.disconnect());
     };
   }, [count, threshold, rootMargin, triggerOnce, enabled, prefersReducedMotion]);
 

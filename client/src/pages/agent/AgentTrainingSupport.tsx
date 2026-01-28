@@ -113,25 +113,29 @@ export default function AgentTrainingSupport() {
       id: 1,
       category: 'Listings',
       question: 'How do I create a new listing?',
-      answer: 'Navigate to the Listings page and click "Add New Listing". Follow the wizard to enter property details, upload photos, and publish.',
+      answer:
+        'Navigate to the Listings page and click "Add New Listing". Follow the wizard to enter property details, upload photos, and publish.',
     },
     {
       id: 2,
       category: 'Commissions',
       question: 'When will I receive my commission?',
-      answer: 'Commissions are typically paid 7-10 business days after the deal closes and all paperwork is completed.',
+      answer:
+        'Commissions are typically paid 7-10 business days after the deal closes and all paperwork is completed.',
     },
     {
       id: 3,
       category: 'Marketing',
       question: 'How do I upload videos to Explore?',
-      answer: 'Go to Marketing Hub > Explore Feed and click "Upload New Video". You can upload vertical videos up to 60 seconds.',
+      answer:
+        'Go to Marketing Hub > Explore Feed and click "Upload New Video". You can upload vertical videos up to 60 seconds.',
     },
     {
       id: 4,
       category: 'Account',
       question: 'How do I update my profile information?',
-      answer: 'Visit Settings > Profile to update your personal information, profile photo, and contact details.',
+      answer:
+        'Visit Settings > Profile to update your personal information, profile photo, and contact details.',
     },
   ];
 
@@ -172,8 +176,8 @@ export default function AgentTrainingSupport() {
     return null;
   }
 
-  const coursesCompleted = courses.filter((c) => c.status === 'completed').length;
-  const certificationsEarned = certifications.filter((c) => c.earned).length;
+  const coursesCompleted = courses.filter(c => c.status === 'completed').length;
+  const certificationsEarned = certifications.filter(c => c.earned).length;
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -236,7 +240,9 @@ export default function AgentTrainingSupport() {
                   <div>
                     <p className="text-sm font-medium text-gray-500 mb-1">Courses Completed</p>
                     <p className="text-2xl font-bold text-gray-900">{coursesCompleted}</p>
-                    <p className="text-xs text-blue-600 font-medium mt-2">of {courses.length} total</p>
+                    <p className="text-xs text-blue-600 font-medium mt-2">
+                      of {courses.length} total
+                    </p>
                   </div>
                   <div className="p-3 bg-blue-50 rounded-xl">
                     <BookOpen className="h-6 w-6 text-blue-600" />
@@ -280,7 +286,9 @@ export default function AgentTrainingSupport() {
                 <div className="flex items-start justify-between">
                   <div>
                     <p className="text-sm font-medium text-gray-500 mb-1">Support Tickets</p>
-                    <p className="text-2xl font-bold text-gray-900">{supportTickets.filter((t) => t.status !== 'resolved').length}</p>
+                    <p className="text-2xl font-bold text-gray-900">
+                      {supportTickets.filter(t => t.status !== 'resolved').length}
+                    </p>
                     <p className="text-xs text-green-600 font-medium mt-2">Active</p>
                   </div>
                   <div className="p-3 bg-green-50 rounded-xl">
@@ -294,16 +302,28 @@ export default function AgentTrainingSupport() {
           {/* Tabs */}
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="grid w-full max-w-3xl grid-cols-4 p-1 bg-white rounded-xl shadow-soft">
-              <TabsTrigger value="academy" className="rounded-lg data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700">
+              <TabsTrigger
+                value="academy"
+                className="rounded-lg data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700"
+              >
                 Academy
               </TabsTrigger>
-              <TabsTrigger value="certifications" className="rounded-lg data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700">
+              <TabsTrigger
+                value="certifications"
+                className="rounded-lg data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700"
+              >
                 Certifications
               </TabsTrigger>
-              <TabsTrigger value="help" className="rounded-lg data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700">
+              <TabsTrigger
+                value="help"
+                className="rounded-lg data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700"
+              >
                 Help Center
               </TabsTrigger>
-              <TabsTrigger value="support" className="rounded-lg data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700">
+              <TabsTrigger
+                value="support"
+                className="rounded-lg data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700"
+              >
                 Support
               </TabsTrigger>
             </TabsList>
@@ -323,18 +343,23 @@ export default function AgentTrainingSupport() {
                         placeholder="Search courses..."
                         className="pl-10 w-64 rounded-xl"
                         value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
+                        onChange={e => setSearchQuery(e.target.value)}
                       />
                     </div>
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  {courses.map((course) => (
-                    <div key={course.id} className="p-5 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors cursor-pointer">
+                  {courses.map(course => (
+                    <div
+                      key={course.id}
+                      className="p-5 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors cursor-pointer"
+                    >
                       <div className="flex items-start justify-between mb-3">
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-2">
-                            <Badge className="bg-blue-100 text-blue-700 text-xs">{course.category}</Badge>
+                            <Badge className="bg-blue-100 text-blue-700 text-xs">
+                              {course.category}
+                            </Badge>
                             <Badge className={cn('text-xs', getStatusColor(course.status))}>
                               {course.status.replace('-', ' ')}
                             </Badge>
@@ -387,7 +412,7 @@ export default function AgentTrainingSupport() {
                                 'h-2 rounded-full transition-all',
                                 course.progress === 100
                                   ? 'bg-gradient-to-r from-green-500 to-green-600'
-                                  : 'bg-gradient-to-r from-blue-500 to-blue-600'
+                                  : 'bg-gradient-to-r from-blue-500 to-blue-600',
                               )}
                               style={{ width: `${course.progress}%` }}
                             ></div>
@@ -410,12 +435,12 @@ export default function AgentTrainingSupport() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  {certifications.map((cert) => (
+                  {certifications.map(cert => (
                     <div
                       key={cert.id}
                       className={cn(
                         'p-5 rounded-xl',
-                        cert.earned ? 'bg-gradient-to-r from-yellow-50 to-orange-50' : 'bg-gray-50'
+                        cert.earned ? 'bg-gradient-to-r from-yellow-50 to-orange-50' : 'bg-gray-50',
                       )}
                     >
                       <div className="flex items-start justify-between">
@@ -435,14 +460,17 @@ export default function AgentTrainingSupport() {
                             ) : (
                               <>
                                 <p className="text-sm text-gray-600 mb-3">
-                                  Complete {cert.requiredCourses} required courses to earn this certification
+                                  Complete {cert.requiredCourses} required courses to earn this
+                                  certification
                                 </p>
                                 <div className="mb-2">
                                   <div className="flex justify-between text-xs mb-1">
                                     <span className="text-gray-600">
                                       {cert.completedCourses} of {cert.requiredCourses} courses
                                     </span>
-                                    <span className="font-semibold text-gray-900">{cert.progress}%</span>
+                                    <span className="font-semibold text-gray-900">
+                                      {cert.progress}%
+                                    </span>
                                   </div>
                                   <div className="w-full bg-gray-200 rounded-full h-2">
                                     <div
@@ -478,7 +506,7 @@ export default function AgentTrainingSupport() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  {faqs.map((faq) => (
+                  {faqs.map(faq => (
                     <div key={faq.id} className="p-4 bg-gray-50 rounded-xl">
                       <div className="flex items-start gap-3">
                         <div className="p-2 bg-blue-100 rounded-lg flex-shrink-0">
@@ -486,7 +514,9 @@ export default function AgentTrainingSupport() {
                         </div>
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-2">
-                            <Badge className="bg-blue-100 text-blue-700 text-xs">{faq.category}</Badge>
+                            <Badge className="bg-blue-100 text-blue-700 text-xs">
+                              {faq.category}
+                            </Badge>
                           </div>
                           <h4 className="font-semibold text-gray-900 mb-2">{faq.question}</h4>
                           <p className="text-sm text-gray-600">{faq.answer}</p>
@@ -511,8 +541,11 @@ export default function AgentTrainingSupport() {
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  {supportTickets.map((ticket) => (
-                    <div key={ticket.id} className="p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors cursor-pointer">
+                  {supportTickets.map(ticket => (
+                    <div
+                      key={ticket.id}
+                      className="p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors cursor-pointer"
+                    >
                       <div className="flex items-start justify-between mb-2">
                         <div className="flex-1">
                           <h4 className="font-semibold text-gray-900 mb-1">{ticket.subject}</h4>

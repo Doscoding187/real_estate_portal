@@ -31,21 +31,21 @@ interface HeroLocationProps {
 import { useEffect } from 'react';
 import { trackEvent } from '@/lib/analytics';
 
-export function HeroLocation({ 
-  title, 
-  subtitle, 
-  breadcrumbs, 
-  backgroundImage, 
+export function HeroLocation({
+  title,
+  subtitle,
+  breadcrumbs,
+  backgroundImage,
   stats,
   placeId,
   coordinates,
-  viewport
+  viewport,
 }: HeroLocationProps) {
   useEffect(() => {
     trackEvent('location_view', {
       locationName: title,
       placeId: placeId,
-      source: 'hero_location'
+      source: 'hero_location',
     });
   }, [title, placeId]);
 
@@ -55,9 +55,9 @@ export function HeroLocation({
       <div className="absolute inset-0 z-0">
         <div className="absolute inset-0 bg-gradient-to-r from-navy-900 via-navy-900/90 to-navy-900/70 z-10" />
         {backgroundImage && (
-          <img 
-            src={backgroundImage} 
-            alt={title} 
+          <img
+            src={backgroundImage}
+            alt={title}
             className="w-full h-full object-cover opacity-50"
           />
         )}
@@ -80,9 +80,7 @@ export function HeroLocation({
               {title}
             </h1>
             {subtitle && (
-              <p className="text-lg text-white/80 max-w-2xl leading-relaxed">
-                {subtitle}
-              </p>
+              <p className="text-lg text-white/80 max-w-2xl leading-relaxed">{subtitle}</p>
             )}
           </div>
 

@@ -1,6 +1,6 @@
 /**
  * Onboarding Tooltip Hook
- * 
+ *
  * Manages tooltip display logic and triggers.
  * Implements Requirements 16.10, 16.11, 16.12
  */
@@ -80,7 +80,7 @@ export function useOnboardingTooltip(tooltipId: TooltipId) {
 
   // Increment scroll count
   const incrementScrollCount = () => {
-    setScrollCount((prev) => prev + 1);
+    setScrollCount(prev => prev + 1);
   };
 
   // Show tooltip manually (for first_encounter type)

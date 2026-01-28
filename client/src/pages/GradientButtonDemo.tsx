@@ -96,24 +96,15 @@ export default function GradientButtonDemo() {
 
         {/* Interactive Demo */}
         <section className="bg-white rounded-2xl p-8 shadow-lg">
-          <h2 className="text-2xl font-semibold mb-6 text-gray-900">
-            Interactive Demo
-          </h2>
+          <h2 className="text-2xl font-semibold mb-6 text-gray-900">Interactive Demo</h2>
           <p className="text-gray-600 mb-4">
             Hover over buttons to see scale and shadow effects. Click to see press animation.
           </p>
           <div className="flex flex-wrap gap-4">
-            <GradientButton
-              onClick={() => alert('Primary clicked!')}
-              icon={Home}
-            >
+            <GradientButton onClick={() => alert('Primary clicked!')} icon={Home}>
               Click Me
             </GradientButton>
-            <GradientButton
-              variant="success"
-              onClick={() => alert('Success clicked!')}
-              icon={Save}
-            >
+            <GradientButton variant="success" onClick={() => alert('Success clicked!')} icon={Save}>
               Save Changes
             </GradientButton>
             <GradientButton
@@ -128,9 +119,7 @@ export default function GradientButtonDemo() {
 
         {/* Real-world Examples */}
         <section className="bg-white rounded-2xl p-8 shadow-lg">
-          <h2 className="text-2xl font-semibold mb-6 text-gray-900">
-            Real-world Examples
-          </h2>
+          <h2 className="text-2xl font-semibold mb-6 text-gray-900">Real-world Examples</h2>
           <div className="space-y-6">
             {/* Form Actions */}
             <div>
@@ -151,9 +140,7 @@ export default function GradientButtonDemo() {
               <h3 className="text-sm font-medium text-gray-700 mb-3">Card Actions</h3>
               <div className="border rounded-lg p-4 bg-gray-50">
                 <h4 className="font-semibold mb-2">Property Development</h4>
-                <p className="text-sm text-gray-600 mb-4">
-                  Luxury apartments in Sandton
-                </p>
+                <p className="text-sm text-gray-600 mb-4">Luxury apartments in Sandton</p>
                 <div className="flex gap-2">
                   <GradientButton size="sm" variant="outline">
                     View Details

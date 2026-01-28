@@ -83,9 +83,7 @@ export function GuestUserBanner() {
 
         {/* CTA */}
         <div className="bg-blue-50 rounded-lg p-3 mb-3">
-          <p className="text-sm font-medium text-blue-900 mb-1">
-            Save your activity permanently!
-          </p>
+          <p className="text-sm font-medium text-blue-900 mb-1">Save your activity permanently!</p>
           <p className="text-xs text-blue-700">
             Login or register to access your activities across all devices.
           </p>

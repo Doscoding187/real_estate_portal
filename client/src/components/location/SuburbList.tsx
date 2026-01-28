@@ -31,12 +31,7 @@ interface SuburbListProps {
 
 type SortOption = 'name' | 'price-asc' | 'price-desc' | 'listings' | 'popularity';
 
-export function SuburbList({ 
-  title, 
-  suburbs, 
-  parentSlug,
-  showFilters = true 
-}: SuburbListProps) {
+export function SuburbList({ title, suburbs, parentSlug, showFilters = true }: SuburbListProps) {
   const [sortBy, setSortBy] = useState<SortOption>('popularity');
   const [minListings, setMinListings] = useState<number>(0);
 
@@ -79,10 +74,10 @@ export function SuburbList({
       <div className="container">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8 gap-4">
           <h2 className="text-2xl font-bold text-slate-900">{title}</h2>
-          
+
           {showFilters && (
             <div className="flex flex-wrap gap-3">
-              <Select value={sortBy} onValueChange={(value) => setSortBy(value as SortOption)}>
+              <Select value={sortBy} onValueChange={value => setSortBy(value as SortOption)}>
                 <SelectTrigger className="w-[180px]">
                   <SelectValue placeholder="Sort by" />
                 </SelectTrigger>
@@ -95,9 +90,9 @@ export function SuburbList({
                 </SelectContent>
               </Select>
 
-              <Select 
-                value={minListings.toString()} 
-                onValueChange={(value) => setMinListings(parseInt(value))}
+              <Select
+                value={minListings.toString()}
+                onValueChange={value => setMinListings(parseInt(value))}
               >
                 <SelectTrigger className="w-[180px]">
                   <SelectValue placeholder="Min listings" />
@@ -114,7 +109,7 @@ export function SuburbList({
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {sortedAndFilteredSuburbs.map((suburb) => (
+          {sortedAndFilteredSuburbs.map(suburb => (
             <Link key={suburb.id} href={getUrl(suburb)}>
               <Card className="hover:shadow-lg transition-all cursor-pointer border-slate-200 group h-full hover:border-primary/50">
                 <CardContent className="p-5 flex flex-col h-full justify-between">
@@ -125,15 +120,15 @@ export function SuburbList({
                       </h3>
                       <ArrowRight className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity text-primary flex-shrink-0 ml-2" />
                     </div>
-                    
+
                     <div className="flex items-center gap-1 text-xs text-slate-500 mb-3">
                       <MapPin className="h-3 w-3" />
                       <span>Suburb</span>
                     </div>
 
                     {suburb.priceChange !== undefined && suburb.priceChange !== 0 && (
-                      <Badge 
-                        variant={suburb.priceChange > 0 ? "default" : "secondary"}
+                      <Badge
+                        variant={suburb.priceChange > 0 ? 'default' : 'secondary'}
                         className="mb-3"
                       >
                         {suburb.priceChange > 0 ? (
@@ -145,7 +140,7 @@ export function SuburbList({
                       </Badge>
                     )}
                   </div>
-                  
+
                   <div className="mt-auto space-y-2 pt-3 border-t border-slate-100">
                     <div className="flex justify-between items-center text-sm">
                       <span className="text-slate-500">Listings</span>
@@ -154,7 +149,9 @@ export function SuburbList({
                     {suburb.avgPrice && (
                       <div className="flex justify-between items-center text-sm">
                         <span className="text-slate-500">Avg Price</span>
-                        <span className="font-semibold text-slate-700">{formatPrice(suburb.avgPrice)}</span>
+                        <span className="font-semibold text-slate-700">
+                          {formatPrice(suburb.avgPrice)}
+                        </span>
                       </div>
                     )}
                   </div>
@@ -166,7 +163,9 @@ export function SuburbList({
 
         {sortedAndFilteredSuburbs.length === 0 && (
           <div className="text-center py-12">
-            <p className="text-slate-500">No suburbs match your filters. Try adjusting your criteria.</p>
+            <p className="text-slate-500">
+              No suburbs match your filters. Try adjusting your criteria.
+            </p>
           </div>
         )}
 

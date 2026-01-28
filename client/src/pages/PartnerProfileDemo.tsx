@@ -26,11 +26,11 @@ export default function PartnerProfileDemo() {
         <div className="mb-8">
           <h1 className="text-3xl font-bold mb-2">Partner Profile Demo</h1>
           <p className="text-gray-600">
-            This page demonstrates the Partner Profile component. In a real application, 
-            this would be accessed via a route like <code>/partner/123</code>.
+            This page demonstrates the Partner Profile component. In a real application, this would
+            be accessed via a route like <code>/partner/123</code>.
           </p>
         </div>
-        
+
         <QueryClientProvider client={demoQueryClient}>
           <PartnerProfile />
         </QueryClientProvider>

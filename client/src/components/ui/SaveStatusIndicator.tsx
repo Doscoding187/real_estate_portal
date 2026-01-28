@@ -1,6 +1,6 @@
 /**
  * Save Status Indicator Component
- * 
+ *
  * Displays the current save status with icon and timestamp.
  * Shows status only when actively saving or on error.
  * Auto-hides after save completes to avoid "saved X ago" noise.
@@ -17,34 +17,34 @@ export interface SaveStatusIndicatorProps {
    * Timestamp of last successful save
    */
   lastSaved: Date | null;
-  
+
   /**
    * Whether a save is currently in progress
    */
   isSaving: boolean;
-  
+
   /**
    * Error that occurred during save
    */
   error?: Error | null;
-  
+
   /**
    * Additional CSS classes
    */
   className?: string;
-  
+
   /**
    * Show full text or compact version
    * @default 'full'
    */
   variant?: 'full' | 'compact';
-  
+
   /**
    * How long to show the "saved" status before hiding (ms)
    * @default 3000
    */
   hideAfterMs?: number;
-  
+
   /**
    * Always show status (disables auto-hide)
    * @default false
@@ -62,7 +62,7 @@ export const SaveStatusIndicator: React.FC<SaveStatusIndicatorProps> = ({
   alwaysShow = false,
 }) => {
   const [showSaved, setShowSaved] = useState(false);
-  
+
   // Show "Saved" briefly after save completes, then hide
   useEffect(() => {
     if (lastSaved && !isSaving && !error) {
@@ -83,7 +83,7 @@ export const SaveStatusIndicator: React.FC<SaveStatusIndicatorProps> = ({
   };
 
   const status = getStatus();
-  
+
   // Don't render anything when idle (unless alwaysShow is true)
   if (status === 'idle' && !alwaysShow) {
     return null;
@@ -132,12 +132,10 @@ export const SaveStatusIndicator: React.FC<SaveStatusIndicatorProps> = ({
             'flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium',
             config.color,
             config.bgColor,
-            className
+            className,
           )}
         >
-          <Icon
-            className={cn('w-3 h-3', status === 'saving' && 'animate-spin')}
-          />
+          <Icon className={cn('w-3 h-3', status === 'saving' && 'animate-spin')} />
           <span className="hidden sm:inline">{config.text}</span>
         </motion.div>
       </AnimatePresence>
@@ -156,21 +154,14 @@ export const SaveStatusIndicator: React.FC<SaveStatusIndicatorProps> = ({
           'flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium',
           config.color,
           config.bgColor,
-          className
+          className,
         )}
       >
-        <Icon
-          className={cn('w-4 h-4', status === 'saving' && 'animate-spin')}
-        />
+        <Icon className={cn('w-4 h-4', status === 'saving' && 'animate-spin')} />
         <span>{config.text}</span>
-        
-        {error && (
-          <span className="text-xs text-red-500 ml-1">
-            ({error.message})
-          </span>
-        )}
+
+        {error && <span className="text-xs text-red-500 ml-1">({error.message})</span>}
       </motion.div>
     </AnimatePresence>
   );
 };
-

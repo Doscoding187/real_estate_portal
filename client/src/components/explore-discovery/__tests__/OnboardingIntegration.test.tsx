@@ -1,6 +1,6 @@
 /**
  * Onboarding Integration Tests
- * 
+ *
  * Tests the integration of welcome overlay and tooltips.
  * Validates Requirements 16.7, 16.8, 16.10, 16.11
  */
@@ -35,20 +35,17 @@ const mockTopics = [
   },
 ];
 
-const createTestQueryClient = () => new QueryClient({
-  defaultOptions: {
-    queries: { retry: false },
-    mutations: { retry: false },
-  },
-});
+const createTestQueryClient = () =>
+  new QueryClient({
+    defaultOptions: {
+      queries: { retry: false },
+      mutations: { retry: false },
+    },
+  });
 
 const TestWrapper = ({ children }: { children: React.ReactNode }) => {
   const queryClient = createTestQueryClient();
-  return (
-    <QueryClientProvider client={queryClient}>
-      {children}
-    </QueryClientProvider>
-  );
+  return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
 };
 
 describe('WelcomeOverlay', () => {
@@ -64,12 +61,14 @@ describe('WelcomeOverlay', () => {
           onTopicSelect={mockOnTopicSelect}
           onDismiss={mockOnDismiss}
         />
-      </TestWrapper>
+      </TestWrapper>,
     );
 
     // Check welcome message
     expect(screen.getByText('Welcome to Explore')).toBeInTheDocument();
-    expect(screen.getByText('Discover properties, ideas, and insights—all in one place')).toBeInTheDocument();
+    expect(
+      screen.getByText('Discover properties, ideas, and insights—all in one place'),
+    ).toBeInTheDocument();
 
     // Check suggested topics
     expect(screen.getByText('Find Your Home')).toBeInTheDocument();
@@ -89,7 +88,7 @@ describe('WelcomeOverlay', () => {
           onTopicSelect={mockOnTopicSelect}
           onDismiss={mockOnDismiss}
         />
-      </TestWrapper>
+      </TestWrapper>,
     );
 
     // Click on a topic
@@ -98,7 +97,7 @@ describe('WelcomeOverlay', () => {
     // Click continue button
     const continueButton = screen.getByText('Continue');
     expect(continueButton).not.toBeDisabled();
-    
+
     fireEvent.click(continueButton);
 
     await waitFor(() => {
@@ -118,7 +117,7 @@ describe('WelcomeOverlay', () => {
           onTopicSelect={mockOnTopicSelect}
           onDismiss={mockOnDismiss}
         />
-      </TestWrapper>
+      </TestWrapper>,
     );
 
     // Click skip button
@@ -141,7 +140,7 @@ describe('WelcomeOverlay', () => {
           onTopicSelect={mockOnTopicSelect}
           onDismiss={mockOnDismiss}
         />
-      </TestWrapper>
+      </TestWrapper>,
     );
 
     expect(screen.queryByText('Welcome to Explore')).not.toBeInTheDocument();
@@ -153,11 +152,7 @@ describe('OnboardingTooltip', () => {
     const mockOnDismiss = jest.fn();
 
     render(
-      <OnboardingTooltip
-        tooltipId="topic_navigation"
-        isVisible={true}
-        onDismiss={mockOnDismiss}
-      />
+      <OnboardingTooltip tooltipId="topic_navigation" isVisible={true} onDismiss={mockOnDismiss} />,
     );
 
     expect(screen.getByText('Explore Topics')).toBeInTheDocument();
@@ -168,26 +163,20 @@ describe('OnboardingTooltip', () => {
     const mockOnDismiss = jest.fn();
 
     render(
-      <OnboardingTooltip
-        tooltipId="partner_content"
-        isVisible={true}
-        onDismiss={mockOnDismiss}
-      />
+      <OnboardingTooltip tooltipId="partner_content" isVisible={true} onDismiss={mockOnDismiss} />,
     );
 
     expect(screen.getByText('Partner Content')).toBeInTheDocument();
-    expect(screen.getByText('This is educational content from a verified partner')).toBeInTheDocument();
+    expect(
+      screen.getByText('This is educational content from a verified partner'),
+    ).toBeInTheDocument();
   });
 
   it('handles dismiss action', async () => {
     const mockOnDismiss = jest.fn();
 
     render(
-      <OnboardingTooltip
-        tooltipId="topic_navigation"
-        isVisible={true}
-        onDismiss={mockOnDismiss}
-      />
+      <OnboardingTooltip tooltipId="topic_navigation" isVisible={true} onDismiss={mockOnDismiss} />,
     );
 
     // Click Got it button
@@ -206,7 +195,7 @@ describe('OnboardingTooltip', () => {
         tooltipId="topic_navigation"
         isVisible={false}
         onDismiss={mockOnDismiss}
-      />
+      />,
     );
 
     expect(screen.queryByText('Explore Topics')).not.toBeInTheDocument();
@@ -232,7 +221,7 @@ describe('Onboarding Integration', () => {
           isVisible={false}
           onDismiss={mockOnTooltipDismiss}
         />
-      </TestWrapper>
+      </TestWrapper>,
     );
 
     // Welcome overlay should be visible
@@ -256,7 +245,7 @@ describe('Onboarding Integration', () => {
           isVisible={true}
           onDismiss={mockOnTooltipDismiss}
         />
-      </TestWrapper>
+      </TestWrapper>,
     );
 
     // Tooltip should now be visible

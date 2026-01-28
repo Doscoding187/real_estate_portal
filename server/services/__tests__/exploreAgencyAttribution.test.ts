@@ -1,14 +1,14 @@
 /**
  * Unit Tests for Explore Agency Content Attribution
  * Task 9: Write unit tests
- * 
+ *
  * Tests:
  * - getAgencyFeed with valid agency ID
  * - getAgencyFeed with invalid agency ID
  * - getAgencyMetrics aggregation
  * - Creator type validation
  * - Foreign key constraints
- * 
+ *
  * Requirements: All
  */
 
@@ -37,7 +37,7 @@ describe('Explore Agency Content Attribution - Unit Tests', () => {
     // Initialize database connection
     try {
       db = await getDb();
-      
+
       if (!db) {
         console.warn('⚠️  Database connection not available. Skipping integration tests.');
         return;
@@ -62,7 +62,7 @@ describe('Explore Agency Content Attribution - Unit Tests', () => {
     await db.execute(sql`DELETE FROM agents WHERE first_name = 'TEST' AND last_name LIKE 'UNIT%'`);
     await db.execute(sql`DELETE FROM agencies WHERE name LIKE 'TEST:UNIT:%'`);
     await db.execute(sql`DELETE FROM users WHERE username LIKE 'test_unit_%'`);
-    
+
     testAgentIds = [];
     testShortIds = [];
     testUserIds = [];
@@ -82,7 +82,7 @@ describe('Explore Agency Content Attribution - Unit Tests', () => {
   /**
    * Test 1: getAgencyFeed with valid agency ID
    * Requirements: 2.1, 2.2, 2.3, 8.1, 8.2
-   * 
+   *
    * Should return all published content attributed to the agency
    * Should order by featured status then recency
    * Should support pagination
@@ -229,7 +229,7 @@ describe('Explore Agency Content Attribution - Unit Tests', () => {
 
       // Should include agent content
       const hasAgentContent = resultWithAgents.shorts.some(
-        (s: any) => s.agent_id === testAgentIds[0]
+        (s: any) => s.agent_id === testAgentIds[0],
       );
       expect(hasAgentContent).toBe(true);
 
@@ -243,7 +243,7 @@ describe('Explore Agency Content Attribution - Unit Tests', () => {
 
       // Should not include agent content (only directly attributed)
       const hasAgentContentExcluded = resultWithoutAgents.shorts.some(
-        (s: any) => s.agent_id === testAgentIds[0] && !s.agency_id
+        (s: any) => s.agent_id === testAgentIds[0] && !s.agency_id,
       );
       expect(hasAgentContentExcluded).toBe(false);
 
@@ -330,7 +330,7 @@ describe('Explore Agency Content Attribution - Unit Tests', () => {
   /**
    * Test 2: getAgencyFeed with invalid agency ID
    * Requirements: 8.3, Error Handling
-   * 
+   *
    * Should handle invalid agency IDs gracefully
    * Should return empty results for non-existent agencies
    */
@@ -372,7 +372,7 @@ describe('Explore Agency Content Attribution - Unit Tests', () => {
   /**
    * Test 3: getAgencyMetrics aggregation
    * Requirements: 3.1, 3.2, 3.3, 3.4
-   * 
+   *
    * Should aggregate metrics across all agency content
    * Should calculate engagement rates correctly
    * Should return agent breakdown
@@ -431,7 +431,7 @@ describe('Explore Agency Content Attribution - Unit Tests', () => {
       expect(metrics.totalViews).toBe(300); // 200 + 100
       expect(metrics.totalEngagements).toBe(45); // 20+10+10+5
       expect(metrics.averageEngagementRate).toBeGreaterThan(0);
-      
+
       // Verify structure
       expect(metrics).toHaveProperty('topPerformingContent');
       expect(metrics).toHaveProperty('agentBreakdown');
@@ -628,7 +628,7 @@ describe('Explore Agency Content Attribution - Unit Tests', () => {
       // Should be sorted by performance score (descending)
       for (let i = 0; i < topContent.length - 1; i++) {
         expect(topContent[i].performanceScore).toBeGreaterThanOrEqual(
-          topContent[i + 1].performanceScore
+          topContent[i + 1].performanceScore,
         );
       }
 
@@ -643,7 +643,7 @@ describe('Explore Agency Content Attribution - Unit Tests', () => {
   /**
    * Test 4: Creator type validation
    * Requirements: 6.1, 6.2, 6.5
-   * 
+   *
    * Should validate creator type matches creator ID
    * Should handle different creator types correctly
    */
@@ -679,7 +679,7 @@ describe('Explore Agency Content Attribution - Unit Tests', () => {
 
       // Verify short was created successfully
       const result = await db.execute(
-        sql`SELECT * FROM explore_shorts WHERE id = ${short.insertId}`
+        sql`SELECT * FROM explore_shorts WHERE id = ${short.insertId}`,
       );
 
       expect(result.rows.length).toBe(1);
@@ -712,7 +712,7 @@ describe('Explore Agency Content Attribution - Unit Tests', () => {
 
       // Verify short was created successfully
       const result = await db.execute(
-        sql`SELECT * FROM explore_shorts WHERE id = ${short.insertId}`
+        sql`SELECT * FROM explore_shorts WHERE id = ${short.insertId}`,
       );
 
       expect(result.rows.length).toBe(1);
@@ -726,7 +726,7 @@ describe('Explore Agency Content Attribution - Unit Tests', () => {
   /**
    * Test 5: Foreign key constraints
    * Requirements: 4.4, 10.5, Data Integrity
-   * 
+   *
    * Should enforce foreign key constraints
    * Should prevent invalid agency references
    * Should handle cascade operations correctly
@@ -763,7 +763,7 @@ describe('Explore Agency Content Attribution - Unit Tests', () => {
 
       // Verify short was created successfully
       const result = await db.execute(
-        sql`SELECT * FROM explore_shorts WHERE id = ${short.insertId}`
+        sql`SELECT * FROM explore_shorts WHERE id = ${short.insertId}`,
       );
 
       expect(result.rows.length).toBe(1);
@@ -843,7 +843,7 @@ describe('Explore Agency Content Attribution - Unit Tests', () => {
 
       // Verify short still exists but agency_id is NULL
       const result = await db.execute(
-        sql`SELECT * FROM explore_shorts WHERE id = ${short.insertId}`
+        sql`SELECT * FROM explore_shorts WHERE id = ${short.insertId}`,
       );
 
       expect(result.rows.length).toBe(1);
@@ -858,7 +858,7 @@ describe('Explore Agency Content Attribution - Unit Tests', () => {
   /**
    * Test 6: Feed type routing
    * Requirements: 2.1, 8.1
-   * 
+   *
    * Should route to agency feed when feedType is 'agency'
    * Should validate required parameters
    */
@@ -923,7 +923,7 @@ describe('Explore Agency Content Attribution - Unit Tests', () => {
   /**
    * Test 7: Backward compatibility
    * Requirements: 7.1, 7.2, 7.4
-   * 
+   *
    * Should handle existing content without agency attribution
    * Should not break existing feed types
    */
@@ -977,7 +977,7 @@ describe('Explore Agency Content Attribution - Unit Tests', () => {
 
       for (const { type, options } of feedTypes) {
         const result = await exploreFeedService.getFeed(type, options);
-        
+
         // Verify basic structure
         expect(result).toHaveProperty('shorts');
         expect(result).toHaveProperty('feedType', type);

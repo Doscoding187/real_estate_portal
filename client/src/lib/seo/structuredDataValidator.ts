@@ -1,6 +1,6 @@
 /**
  * Structured Data Validator
- * 
+ *
  * Validates structured data against Schema.org specifications.
  * Requirements 23.5, 30.5: Validate structured data against Schema.org
  */
@@ -84,7 +84,7 @@ export function validatePlaceSchema(schema: any): ValidationResult {
   return {
     isValid: errors.length === 0,
     errors,
-    warnings
+    warnings,
   };
 }
 
@@ -143,7 +143,7 @@ export function validateBreadcrumbSchema(schema: any): ValidationResult {
   return {
     isValid: errors.length === 0,
     errors,
-    warnings
+    warnings,
   };
 }
 
@@ -153,7 +153,7 @@ export function validateBreadcrumbSchema(schema: any): ValidationResult {
  */
 export function validateLocationStructuredData(
   placeSchema: any,
-  breadcrumbSchema: any
+  breadcrumbSchema: any,
 ): ValidationResult {
   const placeResult = validatePlaceSchema(placeSchema);
   const breadcrumbResult = validateBreadcrumbSchema(breadcrumbSchema);
@@ -161,7 +161,7 @@ export function validateLocationStructuredData(
   return {
     isValid: placeResult.isValid && breadcrumbResult.isValid,
     errors: [...placeResult.errors, ...breadcrumbResult.errors],
-    warnings: [...placeResult.warnings, ...breadcrumbResult.warnings]
+    warnings: [...placeResult.warnings, ...breadcrumbResult.warnings],
   };
 }
 
@@ -185,12 +185,12 @@ export function logValidationResults(result: ValidationResult, context: string):
     console.error(`[Structured Data Validation] ${context} - FAILED`);
     result.errors.forEach(error => console.error(`  ❌ ${error}`));
   }
-  
+
   if (result.warnings.length > 0) {
     console.warn(`[Structured Data Validation] ${context} - Warnings:`);
     result.warnings.forEach(warning => console.warn(`  ⚠️  ${warning}`));
   }
-  
+
   if (result.isValid && result.warnings.length === 0) {
     console.log(`[Structured Data Validation] ${context} - ✅ PASSED`);
   }

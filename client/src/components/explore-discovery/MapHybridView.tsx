@@ -21,7 +21,7 @@ interface MapHybridViewProps {
   onPropertyClick?: (propertyId: number) => void;
 }
 
-const libraries: ("places")[] = ['places'];
+const libraries: 'places'[] = ['places'];
 
 export function MapHybridView({ categoryId, filters, onPropertyClick }: MapHybridViewProps) {
   const { isLoaded } = useJsApiLoader({
@@ -32,11 +32,7 @@ export function MapHybridView({ categoryId, filters, onPropertyClick }: MapHybri
 
   const [viewMode, setViewMode] = useState<ViewMode>('split');
 
-  const {
-    properties,
-    isLoading,
-    searchInArea,
-  } = useMapHybridView({ categoryId, filters });
+  const { properties, isLoading, searchInArea } = useMapHybridView({ categoryId, filters });
 
   // Use the new map/feed sync hook
   const {
@@ -52,27 +48,33 @@ export function MapHybridView({ categoryId, filters, onPropertyClick }: MapHybri
     fitBoundsToProperties,
     feedScrollRef,
   } = useMapFeedSync({
-    onBoundsChange: (bounds) => {
+    onBoundsChange: bounds => {
       // Trigger property refetch with new bounds
       console.log('Map bounds changed:', bounds);
     },
-    onPropertySelect: (propertyId) => {
+    onPropertySelect: propertyId => {
       onPropertyClick?.(propertyId);
     },
   });
 
   // Handle marker click with sync
-  const onMarkerClick = useCallback((property: PropertyMapItem) => {
-    handleMarkerClick(property.id);
-  }, [handleMarkerClick]);
+  const onMarkerClick = useCallback(
+    (property: PropertyMapItem) => {
+      handleMarkerClick(property.id);
+    },
+    [handleMarkerClick],
+  );
 
   // Handle property click from feed with sync
-  const onCardClick = useCallback((property: PropertyMapItem) => {
-    handleFeedItemSelect(property.id, {
-      lat: property.latitude,
-      lng: property.longitude,
-    });
-  }, [handleFeedItemSelect]);
+  const onCardClick = useCallback(
+    (property: PropertyMapItem) => {
+      handleFeedItemSelect(property.id, {
+        lat: property.latitude,
+        lng: property.longitude,
+      });
+    },
+    [handleFeedItemSelect],
+  );
 
   // Handle map bounds change
   const onBoundsChanged = useCallback(() => {
@@ -82,7 +84,7 @@ export function MapHybridView({ categoryId, filters, onPropertyClick }: MapHybri
       if (bounds) {
         const ne = bounds.getNorthEast();
         const sw = bounds.getSouthWest();
-        
+
         handleMapPan({
           north: ne.lat(),
           south: sw.lat(),
@@ -121,7 +123,7 @@ export function MapHybridView({ categoryId, filters, onPropertyClick }: MapHybri
       {/* Header with view mode toggle - Modern design */}
       <div className="bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between z-10">
         <h2 className="text-lg font-bold text-gray-900">Map View</h2>
-        
+
         {/* View mode toggle - Modern pill design */}
         <div className="flex items-center gap-1 bg-gray-100 rounded-full p-1">
           <motion.button
@@ -183,7 +185,7 @@ export function MapHybridView({ categoryId, filters, onPropertyClick }: MapHybri
               mapContainerStyle={mapContainerStyle}
               center={properties.length > 0 ? undefined : { lat: -26.2041, lng: 28.0473 }}
               zoom={10}
-              onLoad={(map) => {
+              onLoad={map => {
                 handleMapLoad(map);
                 (window as any).googleMapInstance = map;
               }}
@@ -206,14 +208,15 @@ export function MapHybridView({ categoryId, filters, onPropertyClick }: MapHybri
               {/* Marker clusterer for dense areas */}
               <MarkerClusterer
                 options={{
-                  imagePath: 'https://developers.google.com/maps/documentation/javascript/examples/markerclusterer/m',
+                  imagePath:
+                    'https://developers.google.com/maps/documentation/javascript/examples/markerclusterer/m',
                   gridSize: 60,
                   maxZoom: 15,
                 }}
               >
-                {(clusterer) => (
+                {clusterer => (
                   <>
-                    {properties.map((property) => {
+                    {properties.map(property => {
                       const isSelected = selectedPropertyId === property.id;
                       const isHovered = hoveredPropertyId === property.id;
                       const isHighlighted = isSelected || isHovered;
@@ -227,7 +230,9 @@ export function MapHybridView({ categoryId, filters, onPropertyClick }: MapHybri
                           icon={
                             isHighlighted
                               ? {
-                                  url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
+                                  url:
+                                    'data:image/svg+xml;charset=UTF-8,' +
+                                    encodeURIComponent(`
                                     <svg width="48" height="48" xmlns="http://www.w3.org/2000/svg">
                                       <defs>
                                         <filter id="shadow" x="-50%" y="-50%" width="200%" height="200%">
@@ -250,7 +255,9 @@ export function MapHybridView({ categoryId, filters, onPropertyClick }: MapHybri
                                   anchor: new google.maps.Point(24, 24),
                                 }
                               : {
-                                  url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
+                                  url:
+                                    'data:image/svg+xml;charset=UTF-8,' +
+                                    encodeURIComponent(`
                                     <svg width="32" height="32" xmlns="http://www.w3.org/2000/svg">
                                       <circle cx="16" cy="16" r="12" fill="#3b82f6" stroke="white" stroke-width="2"/>
                                     </svg>
@@ -269,7 +276,7 @@ export function MapHybridView({ categoryId, filters, onPropertyClick }: MapHybri
             </GoogleMap>
 
             {/* Search in area button - Modern glass design */}
-            <motion.div 
+            <motion.div
               className="absolute top-4 left-1/2 transform -translate-x-1/2 z-10"
               initial={{ y: -20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
@@ -288,7 +295,7 @@ export function MapHybridView({ categoryId, filters, onPropertyClick }: MapHybri
 
             {/* Fit bounds button - Modern design */}
             {properties.length > 0 && (
-              <motion.div 
+              <motion.div
                 className="absolute bottom-4 right-4 z-10"
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
@@ -321,11 +328,11 @@ export function MapHybridView({ categoryId, filters, onPropertyClick }: MapHybri
                     >
                       <X className="w-4 h-4 text-gray-600" />
                     </button>
-                    
+
                     {(() => {
                       const property = properties.find(p => p.id === selectedPropertyId);
                       if (!property) return null;
-                      
+
                       return (
                         <div className="space-y-3">
                           <img
@@ -334,7 +341,9 @@ export function MapHybridView({ categoryId, filters, onPropertyClick }: MapHybri
                             className="w-full h-40 object-cover rounded-lg"
                           />
                           <div>
-                            <h3 className="font-bold text-base mb-1 text-gray-900">{property.title}</h3>
+                            <h3 className="font-bold text-base mb-1 text-gray-900">
+                              {property.title}
+                            </h3>
                             <p className="text-indigo-600 font-bold text-lg mb-2">
                               {new Intl.NumberFormat('en-ZA', {
                                 style: 'currency',
@@ -385,7 +394,7 @@ export function MapHybridView({ categoryId, filters, onPropertyClick }: MapHybri
 
         {/* Property feed with modern design */}
         {(viewMode === 'feed' || viewMode === 'split') && (
-          <div 
+          <div
             ref={feedScrollRef}
             className={`bg-gray-50 overflow-y-auto ${viewMode === 'split' ? 'w-1/2' : 'w-full'}`}
           >
@@ -409,11 +418,11 @@ export function MapHybridView({ categoryId, filters, onPropertyClick }: MapHybri
               {properties.map((property, index) => {
                 const isSelected = selectedPropertyId === property.id;
                 const isHovered = hoveredPropertyId === property.id;
-                
+
                 return (
                   <motion.div
                     key={property.id}
-                    ref={(el) => registerPropertyRef(property.id, el)}
+                    ref={el => registerPropertyRef(property.id, el)}
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: index * 0.05 }}

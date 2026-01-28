@@ -26,11 +26,17 @@ export interface ListingQualityBreakdown {
  */
 export function calculateListingQualityScore(listing: any): ListingQualityBreakdown {
   // --- 1. Scoring Inputs ---
-  const images = listing.images || listing.media?.filter((m: any) => m.type === 'image' || m.mediaType === 'image') || [];
-  const videos = listing.videos || listing.media?.filter((m: any) => m.type === 'video' || m.mediaType === 'video') || [];
-  
+  const images =
+    listing.images ||
+    listing.media?.filter((m: any) => m.type === 'image' || m.mediaType === 'image') ||
+    [];
+  const videos =
+    listing.videos ||
+    listing.media?.filter((m: any) => m.type === 'video' || m.mediaType === 'video') ||
+    [];
+
   // Handle description: it might be empty string or null
-  const description = listing.description || "";
+  const description = listing.description || '';
   const descLength = description.length;
 
   // Handle features/highlights: expect array or empty
@@ -40,15 +46,16 @@ export function calculateListingQualityScore(listing: any): ListingQualityBreakd
   // Attributes / Completeness
   const hasFloorSize = !!(listing.floorSize || listing.propertySize || listing.erfSize);
   // Price clarity: true if price is set and > 0 (assuming no PHA/POA for quality score bonus, or check specific flags)
-  const priceClarity = (listing.price > 0 || listing.askingPrice > 0 || listing.monthlyRent > 0);
-  
+  const priceClarity = listing.price > 0 || listing.askingPrice > 0 || listing.monthlyRent > 0;
+
   // Geo accuracy: has lat/long
   const locationAccuracy = !!(listing.latitude && listing.longitude);
 
   // Trust signals (Mocked placeholders until User/Agency verification is fully integrated in this context)
   // Trust signals (Mocked placeholders until User/Agency verification is fully integrated in this context)
   // Check commonly used properties or explicit flags passed from the calculator caller
-  const isVerifiedAgent = listing.isVerifiedAgent === true || listing.agent?.verificationStatus === 'verified';
+  const isVerifiedAgent =
+    listing.isVerifiedAgent === true || listing.agent?.verificationStatus === 'verified';
   const isExclusive = listing.isExclusive === true || listing.mandateType === 'exclusive';
 
   // Check for virtual tour (often a url field or specific media type)
@@ -64,9 +71,11 @@ export function calculateListingQualityScore(listing: any): ListingQualityBreakd
   // Baselines
   if (imageCount >= 5) score += 15;
   if (imageCount >= 10) score += 10; // Cumulative: 25 pts for 10+ images
-  
-  if (imageCount < 5) tips.push(`Add ${5 - imageCount} more photos to reach the minimum recommended standard.`);
-  else if (imageCount < 10) tips.push(`Add ${10 - imageCount} more photos to improve your gallery score.`);
+
+  if (imageCount < 5)
+    tips.push(`Add ${5 - imageCount} more photos to reach the minimum recommended standard.`);
+  else if (imageCount < 10)
+    tips.push(`Add ${10 - imageCount} more photos to improve your gallery score.`);
 
   // Mix (Interior/Exterior) - Hard to detect without AI, using simpleheuristic: if > 5 images assume mix for now
   // Real implementation would look at image tags if available.
@@ -77,31 +86,32 @@ export function calculateListingQualityScore(listing: any): ListingQualityBreakd
   if (hasVideo || hasVirtualTour) {
     score += 5;
   } else {
-    tips.push("Add a video or virtual tour to engage more buyers.");
+    tips.push('Add a video or virtual tour to engage more buyers.');
   }
 
   // B. Content Quality (Max 25)
   if (descLength >= 300) score += 10;
   if (descLength >= 500) score += 10; // Cumulative: 20 pts for 500+ chars
 
-  if (descLength < 300) tips.push("Expand your description to at least 300 characters.");
-  else if (descLength < 500) tips.push("Add more detail to your description (500+ characters recommended).");
+  if (descLength < 300) tips.push('Expand your description to at least 300 characters.');
+  else if (descLength < 500)
+    tips.push('Add more detail to your description (500+ characters recommended).');
 
   if (featureCount >= 5) {
     score += 5;
   } else {
-    tips.push("List at least 5 key features or amenities.");
+    tips.push('List at least 5 key features or amenities.');
   }
 
   // C. Completeness Signals (Max 20)
   if (hasFloorSize) score += 5;
-  else tips.push("Add property floor size or erf size.");
+  else tips.push('Add property floor size or erf size.');
 
-  if (priceClarity) score += 10; 
-  else tips.push("Ensure price is clearly listed.");
+  if (priceClarity) score += 10;
+  else tips.push('Ensure price is clearly listed.');
 
   if (locationAccuracy) score += 5;
-  else tips.push("Pinpoint exact location on the map.");
+  else tips.push('Pinpoint exact location on the map.');
 
   // D. Trust Signals (Max 15)
   if (isVerifiedAgent) score += 5;
@@ -131,8 +141,8 @@ export function calculateListingQualityScore(listing: any): ListingQualityBreakd
 
   // Trust signals array
   const trustSignals: string[] = [];
-  if (isVerifiedAgent) trustSignals.push("Verified Agent");
-  if (isExclusive) trustSignals.push("Exclusive Mandate");
+  if (isVerifiedAgent) trustSignals.push('Verified Agent');
+  if (isExclusive) trustSignals.push('Exclusive Mandate');
 
   // Cap at 100
   score = Math.min(100, score);
@@ -148,8 +158,8 @@ export function calculateListingQualityScore(listing: any): ListingQualityBreakd
       trustSignals,
       priceClarity,
       locationAccuracy,
-      floorSizePresent: hasFloorSize
+      floorSizePresent: hasFloorSize,
     },
-    tips
+    tips,
   };
 }

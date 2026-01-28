@@ -1,10 +1,10 @@
 /**
  * PreviewCarousel Component - Elevated Card Stack
- * 
+ *
  * Premium billboard-style carousel with layered card stack effect.
  * Features auto-rotation, swipe gestures, and smooth spring animations.
  * Inspired by Vercel, Linear, and Apple marketing pages.
- * 
+ *
  * Requirements: 1.3, 11.1, 11.4
  */
 
@@ -35,12 +35,12 @@ export const PreviewCarousel: React.FC<PreviewCarouselProps> = ({
 
   const nextSlide = useCallback(() => {
     setDirection(1);
-    setCurrentIndex((prev) => (prev + 1) % slides.length);
+    setCurrentIndex(prev => (prev + 1) % slides.length);
   }, [slides.length]);
 
   const prevSlide = useCallback(() => {
     setDirection(-1);
-    setCurrentIndex((prev) => (prev - 1 + slides.length) % slides.length);
+    setCurrentIndex(prev => (prev - 1 + slides.length) % slides.length);
   }, [slides.length]);
 
   const goToSlide = (index: number) => {
@@ -240,10 +240,7 @@ export const PreviewCarousel: React.FC<PreviewCarouselProps> = ({
                   currentIndex === index
                     ? softUITokens.colors.primary.gradient
                     : softUITokens.colors.neutral.gray300,
-                boxShadow:
-                  currentIndex === index
-                    ? softUITokens.shadows.soft
-                    : 'none',
+                boxShadow: currentIndex === index ? softUITokens.shadows.soft : 'none',
               }}
             />
           ))}

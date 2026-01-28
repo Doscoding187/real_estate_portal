@@ -1,9 +1,9 @@
 /**
  * Skeleton Loaders for Advertise Landing Page
- * 
+ *
  * Provides loading states for all major sections while content is being fetched.
  * Implements progressive loading with skeleton screens.
- * 
+ *
  * Requirements: 10.1
  */
 
@@ -14,8 +14,8 @@ import { softUITokens } from './design-tokens';
 /**
  * Base skeleton component with shimmer animation
  */
-const SkeletonBase: React.FC<{ 
-  className?: string; 
+const SkeletonBase: React.FC<{
+  className?: string;
   style?: React.CSSProperties;
   'aria-label'?: string;
 }> = ({ className = '', style = {}, 'aria-label': ariaLabel }) => (
@@ -120,8 +120,8 @@ export const HeroSectionSkeleton: React.FC = () => {
           {/* Right Column: Billboard skeleton */}
           <div>
             <SkeletonBase
-              style={{ 
-                height: '400px', 
+              style={{
+                height: '400px',
                 width: '100%',
                 borderRadius: softUITokens.borderRadius.softLarge,
               }}
@@ -166,7 +166,7 @@ export const PartnerSelectionSkeleton: React.FC = () => {
           {[...Array(5)].map((_, index) => (
             <div key={index} className="space-y-4">
               <SkeletonBase
-                style={{ 
+                style={{
                   height: '200px',
                   borderRadius: softUITokens.borderRadius.softLarge,
                 }}
@@ -459,13 +459,10 @@ export const FAQSectionSkeleton: React.FC = () => {
  * Generic Section Loader
  * Used as a fallback for lazy-loaded sections
  */
-export const SectionLoader: React.FC<{ 
+export const SectionLoader: React.FC<{
   minHeight?: string;
   message?: string;
-}> = ({ 
-  minHeight = '400px',
-  message = 'Loading content...'
-}) => {
+}> = ({ minHeight = '400px', message = 'Loading content...' }) => {
   return (
     <div
       className="section-loader"

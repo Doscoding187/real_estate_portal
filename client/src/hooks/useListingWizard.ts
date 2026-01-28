@@ -230,7 +230,7 @@ export const useListingWizardStore = create<ListingWizardStore>()(
         set({ media: reorderedMedia });
       },
 
-      setMedia: (media) => {
+      setMedia: media => {
         set({ media });
       },
 

@@ -1,16 +1,16 @@
-import { foundingPartnerService } from "./foundingPartnerService";
-import { db } from "../db";
-import { eq } from "drizzle-orm";
+import { foundingPartnerService } from './foundingPartnerService';
+import { db } from '../db';
+import { eq } from 'drizzle-orm';
 
 /**
  * Founding Partner Benefits Manager
- * 
+ *
  * Manages the application and removal of founding partner benefits:
  * - 3 months Featured tier subscription
  * - Founding badge display
  * - Fast-track review (24hr vs 48hr)
  * - Co-marketing eligibility
- * 
+ *
  * Requirements: 16.26, 16.28
  */
 
@@ -71,7 +71,7 @@ class FoundingPartnerBenefitsManager {
     return {
       success: errors.length === 0,
       benefitsApplied,
-      errors
+      errors,
     };
   }
 
@@ -118,7 +118,7 @@ class FoundingPartnerBenefitsManager {
     return {
       success: errors.length === 0,
       benefitsApplied,
-      errors
+      errors,
     };
   }
 
@@ -148,11 +148,13 @@ class FoundingPartnerBenefitsManager {
         organicReachMultiplier: 2.0,
         maxMonthlyContent: 100,
         boostDiscountPercent: 20,
-        foundingPartnerBenefit: true
-      })
+        foundingPartnerBenefit: true,
+      }),
     });
 
-    console.log(`Granted Featured tier to founding partner ${partnerId} until ${endDate.toISOString()}`);
+    console.log(
+      `Granted Featured tier to founding partner ${partnerId} until ${endDate.toISOString()}`,
+    );
   }
 
   /**
@@ -162,19 +164,16 @@ class FoundingPartnerBenefitsManager {
   private async removeFeaturedTier(partnerId: string): Promise<void> {
     // Find active Featured tier subscription
     const subscription = await db.query.partnerSubscriptions.findFirst({
-      where: (subs, { and, eq }) => 
-        and(
-          eq(subs.partnerId, partnerId),
-          eq(subs.tier, 'featured'),
-          eq(subs.status, 'active')
-        )
+      where: (subs: any, { and, eq }: any) =>
+        and(eq(subs.partnerId, partnerId), eq(subs.tier, 'featured'), eq(subs.status, 'active')),
     });
 
     if (subscription) {
-      await db.update(db.schema.partnerSubscriptions)
+      await db
+        .update(db.schema.partnerSubscriptions)
         .set({
           status: 'cancelled',
-          endDate: new Date()
+          endDate: new Date(),
         })
         .where(eq(db.schema.partnerSubscriptions.id, subscription.id));
 
@@ -189,7 +188,7 @@ class FoundingPartnerBenefitsManager {
   private async addFoundingBadge(partnerId: string): Promise<void> {
     // Update partner record to include founding badge
     const partner = await db.query.explorePartners.findFirst({
-      where: (partners, { eq }) => eq(partners.id, partnerId)
+      where: (partners, { eq }: any) => eq(partners.id, partnerId),
     });
 
     if (!partner) {
@@ -198,13 +197,14 @@ class FoundingPartnerBenefitsManager {
 
     // Add founding_partner badge to partner metadata
     // This would be displayed on their profile and content
-    await db.update(db.schema.explorePartners)
+    await db
+      .update(db.schema.explorePartners)
       .set({
         // Note: This assumes a badges field exists or will be added
         // For now, we'll use a custom field in the partner record
-        description: partner.description 
+        description: partner.description
           ? `${partner.description}\n\n🏆 Founding Partner`
-          : '🏆 Founding Partner'
+          : '🏆 Founding Partner',
       })
       .where(eq(db.schema.explorePartners.id, partnerId));
 
@@ -217,7 +217,7 @@ class FoundingPartnerBenefitsManager {
    */
   private async removeFoundingBadge(partnerId: string): Promise<void> {
     const partner = await db.query.explorePartners.findFirst({
-      where: (partners, { eq }) => eq(partners.id, partnerId)
+      where: (partners, { eq }: any) => eq(partners.id, partnerId),
     });
 
     if (!partner || !partner.description) {
@@ -230,9 +230,10 @@ class FoundingPartnerBenefitsManager {
       .replace(/🏆 Founding Partner/g, '')
       .trim();
 
-    await db.update(db.schema.explorePartners)
+    await db
+      .update(db.schema.explorePartners)
       .set({
-        description: updatedDescription || null
+        description: updatedDescription || null,
       })
       .where(eq(db.schema.explorePartners.id, partnerId));
 
@@ -283,14 +284,14 @@ class FoundingPartnerBenefitsManager {
     const isFounding = await foundingPartnerService.isFoundingPartner(partnerId);
     const now = new Date();
 
-    const standardDeadline = new Date(now.getTime() + (48 * 60 * 60 * 1000)); // 48 hours
-    const fastTrackDeadline = new Date(now.getTime() + (24 * 60 * 60 * 1000)); // 24 hours
+    const standardDeadline = new Date(now.getTime() + 48 * 60 * 60 * 1000); // 48 hours
+    const fastTrackDeadline = new Date(now.getTime() + 24 * 60 * 60 * 1000); // 24 hours
 
     return {
       standard: standardDeadline,
       fastTrack: fastTrackDeadline,
       deadline: isFounding ? fastTrackDeadline : standardDeadline,
-      isFastTrack: isFounding
+      isFastTrack: isFounding,
     };
   }
 
@@ -313,12 +314,12 @@ class FoundingPartnerBenefitsManager {
     expiryDate?: Date;
   }> {
     const isFounding = await foundingPartnerService.isFoundingPartner(partnerId);
-    
+
     if (!isFounding) {
       return {
         isFoundingPartner: false,
         benefitsActive: false,
-        benefits: []
+        benefits: [],
       };
     }
 
@@ -326,7 +327,7 @@ class FoundingPartnerBenefitsManager {
     const benefitsActive = await foundingPartnerService.areBenefitsActive(partnerId);
 
     const benefits: string[] = [];
-    
+
     if (benefitsActive) {
       benefits.push('Featured tier subscription (free)');
       benefits.push('Founding Partner badge');
@@ -339,7 +340,7 @@ class FoundingPartnerBenefitsManager {
       isFoundingPartner: true,
       benefitsActive,
       benefits,
-      expiryDate: status?.benefitsEndDate
+      expiryDate: status?.benefitsEndDate,
     };
   }
 
@@ -355,10 +356,10 @@ class FoundingPartnerBenefitsManager {
 
       if (!benefitsActive) {
         console.log(`Benefits expired for founding partner ${partner.partnerId}`);
-        
+
         // Remove Featured tier (will downgrade to their chosen tier)
         await this.removeFeaturedTier(partner.partnerId);
-        
+
         // Note: Keep founding badge even after benefits expire
         // This is a permanent recognition of their early support
       }

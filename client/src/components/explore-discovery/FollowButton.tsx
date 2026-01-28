@@ -78,7 +78,7 @@ export function FollowButton({
 
   return (
     <button
-      onClick={(e) => {
+      onClick={e => {
         e.preventDefault();
         e.stopPropagation();
         toggleFollow();

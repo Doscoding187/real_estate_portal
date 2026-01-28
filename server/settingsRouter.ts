@@ -56,7 +56,7 @@ export const settingsRouter = router({
   getSARBPrimeRate: publicProcedure.query(async () => {
     const db = await getDb();
     if (!db) {
-      return { rate: 10.50, lastUpdated: null };
+      return { rate: 10.5, lastUpdated: null };
     }
 
     try {
@@ -73,10 +73,10 @@ export const settingsRouter = router({
         };
       }
 
-      return { rate: 10.50, lastUpdated: null };
+      return { rate: 10.5, lastUpdated: null };
     } catch (error) {
       console.error('[Settings] Error fetching SARB prime rate:', error);
-      return { rate: 10.50, lastUpdated: null };
+      return { rate: 10.5, lastUpdated: null };
     }
   }),
 });

@@ -158,7 +158,10 @@ export default function PropertiesPage() {
                   <SelectItem value="archived">Archived</SelectItem>
                 </SelectContent>
               </Select>
-              <Button variant="outline" className="flex items-center gap-2 bg-white/50 hover:bg-white">
+              <Button
+                variant="outline"
+                className="flex items-center gap-2 bg-white/50 hover:bg-white"
+              >
                 <Filter className="h-4 w-4" />
                 Advanced Filters
               </Button>
@@ -193,30 +196,41 @@ export default function PropertiesPage() {
                   </TableHeader>
                   <TableBody>
                     {data?.properties?.map((property: Property) => (
-                      <TableRow key={property.id} className="hover:bg-white/40 border-slate-100 transition-colors">
+                      <TableRow
+                        key={property.id}
+                        className="hover:bg-white/40 border-slate-100 transition-colors"
+                      >
                         <TableCell className="font-medium text-slate-700">
                           {property.title || 'Untitled'}
                           {/* Quality Score Badge - Phase 6 */}
                           {(property as any).qualityScore > 0 && (
                             <div className="flex items-center gap-1 mt-1">
-                                <Badge variant="outline" className={`h-5 text-[10px] px-1 border-0 ${
-                                    (property as any).qualityScore >= 90 ? 'bg-purple-100 text-purple-700' :
-                                    (property as any).qualityScore >= 75 ? 'bg-blue-100 text-blue-700' :
-                                    (property as any).qualityScore >= 50 ? 'bg-slate-100 text-slate-700' :
-                                    'bg-red-50 text-red-600'
-                                }`}>
-                                    Quality: {(property as any).qualityScore}
-                                </Badge>
+                              <Badge
+                                variant="outline"
+                                className={`h-5 text-[10px] px-1 border-0 ${
+                                  (property as any).qualityScore >= 90
+                                    ? 'bg-purple-100 text-purple-700'
+                                    : (property as any).qualityScore >= 75
+                                      ? 'bg-blue-100 text-blue-700'
+                                      : (property as any).qualityScore >= 50
+                                        ? 'bg-slate-100 text-slate-700'
+                                        : 'bg-red-50 text-red-600'
+                                }`}
+                              >
+                                Quality: {(property as any).qualityScore}
+                              </Badge>
                             </div>
                           )}
                         </TableCell>
                         <TableCell>
-                          <Badge variant="outline">
-                            {property.propertyType || 'N/A'}
-                          </Badge>
+                          <Badge variant="outline">{property.propertyType || 'N/A'}</Badge>
                         </TableCell>
-                        <TableCell className="text-slate-600">{property.city || 'Unknown'}</TableCell>
-                        <TableCell className="text-slate-600">{formatPrice(property.price)}</TableCell>
+                        <TableCell className="text-slate-600">
+                          {property.city || 'Unknown'}
+                        </TableCell>
+                        <TableCell className="text-slate-600">
+                          {formatPrice(property.price)}
+                        </TableCell>
                         <TableCell>
                           <Badge variant={getStatusBadgeVariant(property.status || 'unknown')}>
                             {property.status || 'Unknown'}
@@ -235,7 +249,7 @@ export default function PropertiesPage() {
                             <Button
                               size="sm"
                               className="bg-blue-600 hover:bg-blue-700 text-white shadow-sm hover:shadow-md transition-all"
-                              onClick={(e) => {
+                              onClick={e => {
                                 e.stopPropagation();
                                 setLocation(`/admin/review/${property.id}`);
                               }}
@@ -246,7 +260,7 @@ export default function PropertiesPage() {
                             <Button
                               size="sm"
                               variant="destructive"
-                              onClick={(e) => {
+                              onClick={e => {
                                 e.stopPropagation();
                                 handleDelete(property);
                               }}
@@ -290,21 +304,22 @@ export default function PropertiesPage() {
         </Card>
 
         {/* Delete Confirmation Dialog */}
-        <Dialog 
-          open={isDeleteDialogOpen} 
-          onOpenChange={(open) => {
+        <Dialog
+          open={isDeleteDialogOpen}
+          onOpenChange={open => {
             console.log('Dialog onOpenChange:', open);
             setIsDeleteDialogOpen(open);
           }}
         >
-          <DialogContent 
-            onEscapeKeyDown={(e) => e.preventDefault()}
-            onPointerDownOutside={(e) => e.preventDefault()}
+          <DialogContent
+            onEscapeKeyDown={e => e.preventDefault()}
+            onPointerDownOutside={e => e.preventDefault()}
           >
             <DialogHeader>
               <DialogTitle>Delete Property Listing</DialogTitle>
               <DialogDescription>
-                Are you sure you want to delete "{propertyToDelete?.title}"? This action cannot be undone.
+                Are you sure you want to delete "{propertyToDelete?.title}"? This action cannot be
+                undone.
               </DialogDescription>
             </DialogHeader>
             <div className="flex justify-end gap-2 mt-4">

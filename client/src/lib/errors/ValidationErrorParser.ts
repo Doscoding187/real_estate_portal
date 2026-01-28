@@ -20,14 +20,14 @@ export interface ValidationErrorResult {
 const LISTING_FIELD_TO_STEP_MAP: Record<string, number> = {
   // Step 1: Action
   action: 1,
-  
+
   // Step 2: Property Type
   propertyType: 2,
-  
+
   // Step 3: Basic Information
   title: 3,
   description: 3,
-  
+
   // Step 4: Additional Information
   bedrooms: 4,
   bathrooms: 4,
@@ -35,7 +35,7 @@ const LISTING_FIELD_TO_STEP_MAP: Record<string, number> = {
   floorSize: 4,
   erfSize: 4,
   features: 4,
-  
+
   // Step 5: Pricing
   askingPrice: 5,
   monthlyRent: 5,
@@ -48,7 +48,7 @@ const LISTING_FIELD_TO_STEP_MAP: Record<string, number> = {
   utilitiesIncluded: 5,
   auctionDateTime: 5,
   negotiable: 5,
-  
+
   // Step 6: Location
   address: 6,
   city: 6,
@@ -57,7 +57,7 @@ const LISTING_FIELD_TO_STEP_MAP: Record<string, number> = {
   postalCode: 6,
   latitude: 6,
   longitude: 6,
-  
+
   // Step 7: Media
   media: 7,
   mediaIds: 7,
@@ -74,19 +74,19 @@ const DEVELOPMENT_FIELD_TO_STEP_MAP: Record<string, number> = {
   postalCode: 0,
   latitude: 0,
   longitude: 0,
-  
+
   // Step 2: Unit Types
   unitTypes: 1,
-  
+
   // Step 3: Highlights
   description: 2,
   amenities: 2,
   highlights: 2,
   completionDate: 2,
-  
+
   // Step 4: Media
   media: 3,
-  
+
   // Step 5: Developer Info
   developerName: 4,
   contactDetails: 4,
@@ -97,22 +97,21 @@ const DEVELOPMENT_FIELD_TO_STEP_MAP: Record<string, number> = {
  */
 export function parseServerValidationErrors(
   error: any,
-  wizardType: 'listing' | 'development' = 'listing'
+  wizardType: 'listing' | 'development' = 'listing',
 ): ValidationErrorResult {
   const fieldErrors: FieldError[] = [];
   const generalErrors: string[] = [];
   const affectedSteps = new Set<number>();
-  
-  const fieldMap = wizardType === 'listing' 
-    ? LISTING_FIELD_TO_STEP_MAP 
-    : DEVELOPMENT_FIELD_TO_STEP_MAP;
+
+  const fieldMap =
+    wizardType === 'listing' ? LISTING_FIELD_TO_STEP_MAP : DEVELOPMENT_FIELD_TO_STEP_MAP;
 
   // Handle different error response formats
-  
+
   // Format 1: tRPC error with data.zodError
   if (error?.data?.zodError?.fieldErrors) {
     const zodErrors = error.data.zodError.fieldErrors;
-    
+
     Object.entries(zodErrors).forEach(([field, messages]) => {
       const messageArray = Array.isArray(messages) ? messages : [messages];
       messageArray.forEach((message: any) => {
@@ -128,11 +127,11 @@ export function parseServerValidationErrors(
       });
     });
   }
-  
+
   // Format 2: tRPC error with data.validationErrors
   else if (error?.data?.validationErrors) {
     const validationErrors = error.data.validationErrors;
-    
+
     if (Array.isArray(validationErrors)) {
       validationErrors.forEach((err: any) => {
         if (err.field) {
@@ -163,7 +162,7 @@ export function parseServerValidationErrors(
       });
     }
   }
-  
+
   // Format 3: Standard error with errors array
   else if (error?.errors && Array.isArray(error.errors)) {
     error.errors.forEach((err: any) => {
@@ -183,7 +182,7 @@ export function parseServerValidationErrors(
       }
     });
   }
-  
+
   // Format 4: Simple field errors object
   else if (error?.fieldErrors && typeof error.fieldErrors === 'object') {
     Object.entries(error.fieldErrors).forEach(([field, message]) => {
@@ -198,7 +197,7 @@ export function parseServerValidationErrors(
       }
     });
   }
-  
+
   // Format 5: Generic message
   else if (error?.message) {
     generalErrors.push(error.message);
@@ -221,7 +220,7 @@ export function getFieldDisplayName(field: string): string {
     propertyType: 'Property Type',
     title: 'Title',
     description: 'Description',
-    
+
     // Property details
     bedrooms: 'Bedrooms',
     bathrooms: 'Bathrooms',
@@ -229,7 +228,7 @@ export function getFieldDisplayName(field: string): string {
     floorSize: 'Floor Size',
     erfSize: 'Erf Size',
     features: 'Features',
-    
+
     // Pricing
     askingPrice: 'Asking Price',
     monthlyRent: 'Monthly Rent',
@@ -242,7 +241,7 @@ export function getFieldDisplayName(field: string): string {
     utilitiesIncluded: 'Utilities Included',
     auctionDateTime: 'Auction Date & Time',
     negotiable: 'Negotiable',
-    
+
     // Location
     address: 'Address',
     city: 'City',
@@ -251,12 +250,12 @@ export function getFieldDisplayName(field: string): string {
     postalCode: 'Postal Code',
     latitude: 'Latitude',
     longitude: 'Longitude',
-    
+
     // Media
     media: 'Media',
     mediaIds: 'Media',
     mainMediaId: 'Primary Media',
-    
+
     // Development fields
     developmentName: 'Development Name',
     unitTypes: 'Unit Types',
@@ -266,7 +265,7 @@ export function getFieldDisplayName(field: string): string {
     developerName: 'Developer Name',
     contactDetails: 'Contact Details',
   };
-  
+
   return displayNames[field] || field.replace(/([A-Z])/g, ' $1').trim();
 }
 
@@ -275,16 +274,16 @@ export function getFieldDisplayName(field: string): string {
  */
 export function formatValidationErrors(result: ValidationErrorResult): string[] {
   const messages: string[] = [];
-  
+
   // Add field-specific errors
   result.fieldErrors.forEach(({ field, message }) => {
     const displayName = getFieldDisplayName(field);
     messages.push(`${displayName}: ${message}`);
   });
-  
+
   // Add general errors
   messages.push(...result.generalErrors);
-  
+
   return messages;
 }
 
@@ -295,15 +294,15 @@ export function getValidationErrorSummary(result: ValidationErrorResult): string
   const fieldCount = result.fieldErrors.length;
   const generalCount = result.generalErrors.length;
   const totalCount = fieldCount + generalCount;
-  
+
   if (totalCount === 0) {
     return 'Validation failed';
   }
-  
+
   if (totalCount === 1) {
     return result.fieldErrors[0]?.message || result.generalErrors[0] || 'Validation failed';
   }
-  
+
   const parts: string[] = [];
   if (fieldCount > 0) {
     parts.push(`${fieldCount} field${fieldCount > 1 ? 's' : ''}`);
@@ -311,6 +310,6 @@ export function getValidationErrorSummary(result: ValidationErrorResult): string
   if (generalCount > 0) {
     parts.push(`${generalCount} error${generalCount > 1 ? 's' : ''}`);
   }
-  
+
   return `Please fix ${parts.join(' and ')}`;
 }

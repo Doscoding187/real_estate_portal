@@ -492,10 +492,7 @@ export class EmailService {
 
   // Developer Workflow Emails
 
-  static async sendDeveloperRegistrationEmail(
-    email: string,
-    name: string
-  ): Promise<boolean> {
+  static async sendDeveloperRegistrationEmail(email: string, name: string): Promise<boolean> {
     const html = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <h1>Application Received</h1>
@@ -513,10 +510,7 @@ export class EmailService {
     });
   }
 
-  static async sendDeveloperApprovalEmail(
-    email: string,
-    name: string
-  ): Promise<boolean> {
+  static async sendDeveloperApprovalEmail(email: string, name: string): Promise<boolean> {
     const html = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <h1>Application Approved!</h1>
@@ -538,7 +532,7 @@ export class EmailService {
   static async sendDeveloperRejectionEmail(
     email: string,
     name: string,
-    reason: string
+    reason: string,
   ): Promise<boolean> {
     const html = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -573,7 +567,7 @@ export class EmailService {
       message: string;
       developmentId?: number;
       propertyId?: number;
-    }
+    },
   ): Promise<boolean> {
     const html = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #f8fafc; padding: 20px;">

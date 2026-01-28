@@ -1,6 +1,6 @@
 /**
  * Error Handling Demo Page
- * 
+ *
  * Demonstrates all error handling components and patterns
  * for the Advertise With Us landing page.
  */
@@ -53,7 +53,7 @@ export default function ErrorHandlingDemo() {
   React.useEffect(() => {
     if (activeDemo === 'progressive') {
       const interval = setInterval(() => {
-        setProgress((prev) => {
+        setProgress(prev => {
           if (prev >= 100) {
             clearInterval(interval);
             return 100;
@@ -147,9 +147,7 @@ export default function ErrorHandlingDemo() {
                       ? softUITokens.colors.neutral.white
                       : softUITokens.colors.neutral.gray700,
                   border: `2px solid ${
-                    activeDemo === key
-                      ? 'transparent'
-                      : softUITokens.colors.neutral.gray300
+                    activeDemo === key ? 'transparent' : softUITokens.colors.neutral.gray300
                   }`,
                   borderRadius: softUITokens.borderRadius.soft,
                   fontSize: softUITokens.typography.fontSize.base,
@@ -438,9 +436,7 @@ export default function ErrorHandlingDemo() {
                 onClick={() => setShowError(!showError)}
                 style={{
                   padding: `${softUITokens.spacing.sm} ${softUITokens.spacing.lg}`,
-                  background: showError
-                    ? '#ef4444'
-                    : softUITokens.colors.primary.gradient,
+                  background: showError ? '#ef4444' : softUITokens.colors.primary.gradient,
                   color: softUITokens.colors.neutral.white,
                   border: 'none',
                   borderRadius: softUITokens.borderRadius.soft,
@@ -486,10 +482,7 @@ export default function ErrorHandlingDemo() {
               >
                 Progressive Loading Indicator
               </h2>
-              <ProgressiveLoadingIndicator
-                progress={progress}
-                message="Loading content..."
-              />
+              <ProgressiveLoadingIndicator progress={progress} message="Loading content..." />
               <button
                 onClick={() => setProgress(0)}
                 style={{

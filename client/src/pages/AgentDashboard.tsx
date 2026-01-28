@@ -18,13 +18,13 @@ export default function AgentDashboard() {
     {
       enabled: isAuthenticated && user?.role === 'agent',
       retry: false,
-      onError: (error) => {
+      onError: error => {
         // If agent profile not found, redirect to setup
         if (error.message.includes('Agent profile not found')) {
           setLocation('/agent/setup');
         }
       },
-    }
+    },
   );
 
   // Show loading spinner while auth is being checked

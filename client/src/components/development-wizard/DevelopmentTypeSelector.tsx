@@ -9,7 +9,10 @@ interface DevelopmentTypeSelectorProps {
   initialSelection?: 'master' | 'phase' | null;
 }
 
-export function DevelopmentTypeSelector({ onSelect, initialSelection = null }: DevelopmentTypeSelectorProps) {
+export function DevelopmentTypeSelector({
+  onSelect,
+  initialSelection = null,
+}: DevelopmentTypeSelectorProps) {
   const [selectedType, setSelectedType] = useState<'master' | 'phase' | null>(initialSelection);
 
   const handleSelect = (type: 'master' | 'phase') => {
@@ -39,10 +42,10 @@ export function DevelopmentTypeSelector({ onSelect, initialSelection = null }: D
         {/* New Development Card */}
         <Card
           className={cn(
-            "relative p-8 cursor-pointer transition-all duration-300 hover:shadow-2xl border-2",
+            'relative p-8 cursor-pointer transition-all duration-300 hover:shadow-2xl border-2',
             selectedType === 'master'
-              ? "border-blue-500 bg-blue-50/50 shadow-xl scale-105"
-              : "border-slate-200 hover:border-blue-300 hover:bg-slate-50"
+              ? 'border-blue-500 bg-blue-50/50 shadow-xl scale-105'
+              : 'border-slate-200 hover:border-blue-300 hover:bg-slate-50',
           )}
           onClick={() => handleSelect('master')}
         >
@@ -54,21 +57,22 @@ export function DevelopmentTypeSelector({ onSelect, initialSelection = null }: D
           )}
 
           {/* Icon */}
-          <div className={cn(
-            "w-16 h-16 rounded-2xl flex items-center justify-center mb-6 transition-colors",
-            selectedType === 'master'
-              ? "bg-blue-600"
-              : "bg-gradient-to-br from-blue-500 to-indigo-600"
-          )}>
+          <div
+            className={cn(
+              'w-16 h-16 rounded-2xl flex items-center justify-center mb-6 transition-colors',
+              selectedType === 'master'
+                ? 'bg-blue-600'
+                : 'bg-gradient-to-br from-blue-500 to-indigo-600',
+            )}
+          >
             <Building2 className="w-8 h-8 text-white" />
           </div>
 
           {/* Content */}
-          <h3 className="text-2xl font-bold text-slate-800 mb-3">
-            New Development
-          </h3>
+          <h3 className="text-2xl font-bold text-slate-800 mb-3">New Development</h3>
           <p className="text-slate-600 mb-4 leading-relaxed">
-            Create a brand new master development from scratch. Perfect for launching a new residential project, estate, or complex.
+            Create a brand new master development from scratch. Perfect for launching a new
+            residential project, estate, or complex.
           </p>
 
           {/* Features List */}
@@ -91,10 +95,10 @@ export function DevelopmentTypeSelector({ onSelect, initialSelection = null }: D
         {/* New Phase Card */}
         <Card
           className={cn(
-            "relative p-8 cursor-pointer transition-all duration-300 hover:shadow-2xl border-2",
+            'relative p-8 cursor-pointer transition-all duration-300 hover:shadow-2xl border-2',
             selectedType === 'phase'
-              ? "border-purple-500 bg-purple-50/50 shadow-xl scale-105"
-              : "border-slate-200 hover:border-purple-300 hover:bg-slate-50"
+              ? 'border-purple-500 bg-purple-50/50 shadow-xl scale-105'
+              : 'border-slate-200 hover:border-purple-300 hover:bg-slate-50',
           )}
           onClick={() => handleSelect('phase')}
         >
@@ -106,21 +110,22 @@ export function DevelopmentTypeSelector({ onSelect, initialSelection = null }: D
           )}
 
           {/* Icon */}
-          <div className={cn(
-            "w-16 h-16 rounded-2xl flex items-center justify-center mb-6 transition-colors",
-            selectedType === 'phase'
-              ? "bg-purple-600"
-              : "bg-gradient-to-br from-purple-500 to-pink-600"
-          )}>
+          <div
+            className={cn(
+              'w-16 h-16 rounded-2xl flex items-center justify-center mb-6 transition-colors',
+              selectedType === 'phase'
+                ? 'bg-purple-600'
+                : 'bg-gradient-to-br from-purple-500 to-pink-600',
+            )}
+          >
             <Layers className="w-8 h-8 text-white" />
           </div>
 
           {/* Content */}
-          <h3 className="text-2xl font-bold text-slate-800 mb-3">
-            New Phase / Extension
-          </h3>
+          <h3 className="text-2xl font-bold text-slate-800 mb-3">New Phase / Extension</h3>
           <p className="text-slate-600 mb-4 leading-relaxed">
-            Add a new phase or extension to an existing development. Ideal for expanding your project with additional units or blocks.
+            Add a new phase or extension to an existing development. Ideal for expanding your
+            project with additional units or blocks.
           </p>
 
           {/* Features List */}
@@ -148,10 +153,12 @@ export function DevelopmentTypeSelector({ onSelect, initialSelection = null }: D
           disabled={!selectedType}
           size="lg"
           className={cn(
-            "px-8 py-6 text-lg font-semibold shadow-lg transition-all duration-300",
-            selectedType === 'master' && "bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700",
-            selectedType === 'phase' && "bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700",
-            !selectedType && "bg-slate-300"
+            'px-8 py-6 text-lg font-semibold shadow-lg transition-all duration-300',
+            selectedType === 'master' &&
+              'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700',
+            selectedType === 'phase' &&
+              'bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700',
+            !selectedType && 'bg-slate-300',
           )}
         >
           Continue

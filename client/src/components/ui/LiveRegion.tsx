@@ -1,7 +1,7 @@
 /**
  * LiveRegion Component
  * ARIA live region for announcing dynamic content changes to screen readers
- * 
+ *
  * Requirements: 12.3, 12.5
  */
 
@@ -26,7 +26,17 @@ export interface LiveRegionProps {
   /**
    * Whether the region is relevant (visible to screen readers)
    */
-  relevant?: 'additions' | 'removals' | 'text' | 'all' | 'additions text' | 'additions removals' | 'removals additions' | 'removals text' | 'text additions' | 'text removals';
+  relevant?:
+    | 'additions'
+    | 'removals'
+    | 'text'
+    | 'all'
+    | 'additions text'
+    | 'additions removals'
+    | 'removals additions'
+    | 'removals text'
+    | 'text additions'
+    | 'text removals';
   /**
    * Additional className
    */
@@ -68,12 +78,12 @@ export function useLiveRegion() {
 
   const announce = React.useCallback((text: string, duration = 1000) => {
     setMessage(text);
-    
+
     // Clear message after duration to allow re-announcing the same message
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
     }
-    
+
     timeoutRef.current = setTimeout(() => {
       setMessage('');
     }, duration);

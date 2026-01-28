@@ -1,12 +1,12 @@
 /**
  * Error States for Advertise Landing Page
- * 
+ *
  * Provides error handling UI for various failure scenarios:
  * - Partner types loading failure
  * - Metrics loading failure
  * - FAQ loading failure
  * - Pricing data loading failure
- * 
+ *
  * Requirements: 10.1
  */
 
@@ -21,22 +21,22 @@ export interface ErrorStateProps {
    * Error message to display
    */
   message?: string;
-  
+
   /**
    * Optional retry callback
    */
   onRetry?: () => void;
-  
+
   /**
    * Whether to show retry button
    */
   showRetry?: boolean;
-  
+
   /**
    * Error type for styling
    */
   type?: 'error' | 'warning' | 'network';
-  
+
   /**
    * Additional CSS classes
    */
@@ -102,7 +102,7 @@ export const ErrorState: React.FC<ErrorStateProps> = ({
       >
         {getIcon()}
       </div>
-      
+
       <h3
         style={{
           fontSize: softUITokens.typography.fontSize['2xl'],
@@ -113,7 +113,7 @@ export const ErrorState: React.FC<ErrorStateProps> = ({
       >
         {type === 'network' ? 'Connection Issue' : 'Oops!'}
       </h3>
-      
+
       <p
         style={{
           fontSize: softUITokens.typography.fontSize.lg,
@@ -124,7 +124,7 @@ export const ErrorState: React.FC<ErrorStateProps> = ({
       >
         {message}
       </p>
-      
+
       {showRetry && onRetry && (
         <button
           onClick={onRetry}
@@ -143,11 +143,11 @@ export const ErrorState: React.FC<ErrorStateProps> = ({
             transition: `all ${softUITokens.transitions.base}`,
             boxShadow: softUITokens.shadows.soft,
           }}
-          onMouseEnter={(e) => {
+          onMouseEnter={e => {
             e.currentTarget.style.transform = 'translateY(-2px)';
             e.currentTarget.style.boxShadow = softUITokens.shadows.softHover;
           }}
-          onMouseLeave={(e) => {
+          onMouseLeave={e => {
             e.currentTarget.style.transform = 'translateY(0)';
             e.currentTarget.style.boxShadow = softUITokens.shadows.soft;
           }}
@@ -344,7 +344,7 @@ export const PricingFallbackCTA: React.FC = () => {
           >
             Flexible Pricing for Every Partner
           </h2>
-          
+
           <p
             style={{
               fontSize: softUITokens.typography.fontSize.xl,
@@ -354,9 +354,10 @@ export const PricingFallbackCTA: React.FC = () => {
               margin: `0 auto ${softUITokens.spacing.xl}`,
             }}
           >
-            We offer customized advertising solutions for agents, developers, banks, and service providers.
+            We offer customized advertising solutions for agents, developers, banks, and service
+            providers.
           </p>
-          
+
           <div
             style={{
               display: 'flex',
@@ -380,18 +381,18 @@ export const PricingFallbackCTA: React.FC = () => {
                 transition: `all ${softUITokens.transitions.base}`,
                 boxShadow: softUITokens.shadows.soft,
               }}
-              onMouseEnter={(e) => {
+              onMouseEnter={e => {
                 e.currentTarget.style.transform = 'translateY(-2px)';
                 e.currentTarget.style.boxShadow = softUITokens.shadows.softHover;
               }}
-              onMouseLeave={(e) => {
+              onMouseLeave={e => {
                 e.currentTarget.style.transform = 'translateY(0)';
                 e.currentTarget.style.boxShadow = softUITokens.shadows.soft;
               }}
             >
               View Pricing
             </a>
-            
+
             <a
               href="/contact"
               style={{
@@ -407,17 +408,17 @@ export const PricingFallbackCTA: React.FC = () => {
                 fontWeight: softUITokens.typography.fontWeight.medium,
                 transition: `all ${softUITokens.transitions.base}`,
               }}
-              onMouseEnter={(e) => {
+              onMouseEnter={e => {
                 e.currentTarget.style.background = softUITokens.colors.primary.light;
               }}
-              onMouseLeave={(e) => {
+              onMouseLeave={e => {
                 e.currentTarget.style.background = softUITokens.colors.neutral.white;
               }}
             >
               Contact Sales
             </a>
           </div>
-          
+
           {/* Info note */}
           <div
             style={{
@@ -439,7 +440,8 @@ export const PricingFallbackCTA: React.FC = () => {
                 size={16}
                 style={{ display: 'inline', marginRight: '0.5rem', verticalAlign: 'middle' }}
               />
-              Detailed pricing information is temporarily unavailable. Please contact us for current rates.
+              Detailed pricing information is temporarily unavailable. Please contact us for current
+              rates.
             </p>
           </div>
         </motion.div>
@@ -482,7 +484,7 @@ export const InlineError: React.FC<{
           {message}
         </span>
       </div>
-      
+
       {onRetry && (
         <button
           onClick={onRetry}

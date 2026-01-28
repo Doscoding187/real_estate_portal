@@ -6,16 +6,7 @@
 
 import { useState } from 'react';
 import { useLocation } from 'wouter';
-import {
-  Building2,
-  Home,
-  Image,
-  Megaphone,
-  UserPlus,
-  Plus,
-  Zap,
-  Lock,
-} from 'lucide-react';
+import { Building2, Home, Image, Megaphone, UserPlus, Plus, Zap, Lock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { trpc } from '@/lib/trpc';
 
@@ -37,7 +28,7 @@ const QUICK_ACTIONS: QuickAction[] = [
     label: 'Add Development',
     description: 'Create a new development project',
     icon: Building2,
-    path: '/developer/developments/new',
+    path: '/developer/create-development',
     gradientFrom: 'from-blue-500',
     gradientTo: 'to-indigo-600',
   },
@@ -131,7 +122,7 @@ export function QuickActions({ className }: QuickActionsProps) {
 
       {/* Actions Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
-        {QUICK_ACTIONS.map((action) => {
+        {QUICK_ACTIONS.map(action => {
           const Icon = action.icon;
           const disabled = isActionDisabled(action);
           const isHovered = hoveredAction === action.id;
@@ -148,7 +139,7 @@ export function QuickActions({ className }: QuickActionsProps) {
                 'text-left',
                 disabled
                   ? 'border-gray-100 bg-gray-50 cursor-not-allowed opacity-60'
-                  : 'border-gray-100 hover:border-transparent hover:shadow-hover hover:scale-105 cursor-pointer'
+                  : 'border-gray-100 hover:border-transparent hover:shadow-hover hover:scale-105 cursor-pointer',
               )}
               title={disabled ? getDisabledReason(action) : action.description}
             >
@@ -158,7 +149,7 @@ export function QuickActions({ className }: QuickActionsProps) {
                   className={cn(
                     'absolute inset-0 rounded-xl bg-gradient-to-br opacity-0 group-hover:opacity-100 transition-opacity duration-200',
                     action.gradientFrom,
-                    action.gradientTo
+                    action.gradientTo,
                   )}
                 />
               )}
@@ -175,28 +166,24 @@ export function QuickActions({ className }: QuickActionsProps) {
                           'bg-gradient-to-br',
                           action.gradientFrom,
                           action.gradientTo,
-                          'group-hover:bg-white/20'
-                        )
+                          'group-hover:bg-white/20',
+                        ),
                   )}
                 >
                   <Icon
                     className={cn(
                       'w-6 h-6 transition-colors duration-300',
-                      disabled ? 'text-gray-400' : 'text-white'
+                      disabled ? 'text-gray-400' : 'text-white',
                     )}
                   />
-                  {disabled && (
-                    <Lock className="absolute -top-1 -right-1 w-4 h-4 text-gray-500" />
-                  )}
+                  {disabled && <Lock className="absolute -top-1 -right-1 w-4 h-4 text-gray-500" />}
                 </div>
 
                 {/* Text */}
                 <h3
                   className={cn(
                     'font-semibold mb-1 transition-colors duration-300',
-                    disabled
-                      ? 'text-gray-500'
-                      : 'text-gray-900 group-hover:text-white'
+                    disabled ? 'text-gray-500' : 'text-gray-900 group-hover:text-white',
                   )}
                 >
                   {action.label}
@@ -204,9 +191,7 @@ export function QuickActions({ className }: QuickActionsProps) {
                 <p
                   className={cn(
                     'text-sm transition-colors duration-300',
-                    disabled
-                      ? 'text-gray-400'
-                      : 'text-gray-600 group-hover:text-white/90'
+                    disabled ? 'text-gray-400' : 'text-gray-600 group-hover:text-white/90',
                   )}
                 >
                   {action.description}

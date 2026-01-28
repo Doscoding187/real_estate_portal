@@ -1,0 +1,13 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /dashboard
+Disallow: /api/
+Disallow: /auth/
+
+# Sitemap
+Sitemap: https://propertylistifysa.co.za/sitemap.xml
+
+# Crawl-delay for bots
+User-agent: *
+Crawl-delay: 1

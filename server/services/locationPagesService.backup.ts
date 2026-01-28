@@ -1,13 +1,13 @@
 import { getDb } from '../db';
-import { 
-  provinces, 
-  cities, 
-  suburbs, 
-  properties, 
+import {
+  provinces,
+  cities,
+  suburbs,
+  properties,
   developments,
   priceAnalytics,
   suburbPriceAnalytics,
-  amenities
+  amenities,
 } from '../../drizzle/schema';
 import { eq, and, desc, sql, like, inArray } from 'drizzle-orm';
 
@@ -16,13 +16,12 @@ import { eq, and, desc, sql, like, inArray } from 'drizzle-orm';
  * Supporting 3 hierarchical levels: Province -> City -> Suburb
  */
 export const locationPagesService = {
-  
   /**
    * Get data for Province Page (Level 1)
    */
   async getProvinceData(provinceSlug: string) {
     const db = await getDb();
-    
+
     // 1. Get Province Details
     const [province] = await db
       .select()
@@ -40,7 +39,7 @@ export const locationPagesService = {
         name: cities.name,
         isMetro: cities.isMetro,
         listingCount: sql<number>`(SELECT COUNT(*) FROM ${properties} WHERE ${properties.cityId} = ${cities.id} AND ${properties.status} = 'published')`,
-        avgPrice: sql<number>`(SELECT AVG(${properties.price}) FROM ${properties} WHERE ${properties.cityId} = ${cities.id} AND ${properties.status} = 'published')`
+        avgPrice: sql<number>`(SELECT AVG(${properties.price}) FROM ${properties} WHERE ${properties.cityId} = ${cities.id} AND ${properties.status} = 'published')`,
       })
       .from(cities)
       .where(eq(cities.provinceId, province.id))
@@ -51,10 +50,7 @@ export const locationPagesService = {
     const featuredDevelopments = await db
       .select()
       .from(developments)
-      .where(and(
-        eq(developments.province, province.name),
-        eq(developments.status, 'now-selling')
-      ))
+      .where(and(eq(developments.province, province.name), eq(developments.status, 'now-selling')))
       .limit(6);
 
     // 4. Trending Suburbs (Top 10 by search volume or price growth - using listing count as proxy for now if analytics missing)
@@ -63,7 +59,7 @@ export const locationPagesService = {
         id: suburbs.id,
         name: suburbs.name,
         cityName: cities.name,
-        listingCount: sql<number>`(SELECT COUNT(*) FROM ${properties} WHERE ${properties.suburbId} = ${suburbs.id} AND ${properties.status} = 'published')`
+        listingCount: sql<number>`(SELECT COUNT(*) FROM ${properties} WHERE ${properties.suburbId} = ${suburbs.id} AND ${properties.status} = 'published')`,
       })
       .from(suburbs)
       .leftJoin(cities, eq(suburbs.cityId, cities.id))
@@ -75,13 +71,10 @@ export const locationPagesService = {
     const [stats] = await db
       .select({
         totalListings: sql<number>`count(*)`,
-        avgPrice: sql<number>`avg(${properties.price})`
+        avgPrice: sql<number>`avg(${properties.price})`,
       })
       .from(properties)
-      .where(and(
-        eq(properties.provinceId, province.id),
-        eq(properties.status, 'published')
-      ));
+      .where(and(eq(properties.provinceId, province.id), eq(properties.status, 'published')));
 
     return {
       province,
@@ -90,8 +83,8 @@ export const locationPagesService = {
       trendingSuburbs,
       stats: {
         totalListings: Number(stats?.totalListings || 0),
-        avgPrice: Math.round(Number(stats?.avgPrice || 0))
-      }
+        avgPrice: Math.round(Number(stats?.avgPrice || 0)),
+      },
     };
   },
 
@@ -102,8 +95,10 @@ export const locationPagesService = {
     try {
       const db = await getDb();
       const cleanCityName = citySlug.replace(/-/g, ' ');
-      
-      console.log(`[LocationService] getCityData called with: provinceSlug=${provinceSlug}, citySlug=${citySlug}, cleanCityName=${cleanCityName}`);
+
+      console.log(
+        `[LocationService] getCityData called with: provinceSlug=${provinceSlug}, citySlug=${citySlug}, cleanCityName=${cleanCityName}`,
+      );
 
       // 1. Get City Details
       const [city] = await db
@@ -114,7 +109,7 @@ export const locationPagesService = {
           provinceName: provinces.name,
           isMetro: cities.isMetro,
           latitude: cities.latitude,
-          longitude: cities.longitude
+          longitude: cities.longitude,
         })
         .from(cities)
         .leftJoin(provinces, eq(cities.provinceId, provinces.id))
@@ -124,48 +119,47 @@ export const locationPagesService = {
       console.log(`[LocationService] City query result:`, city);
 
       if (!city) {
-          console.log(`[LocationService] City not found for ${cleanCityName}`);
-          return null;
+        console.log(`[LocationService] City not found for ${cleanCityName}`);
+        return null;
       }
 
       // 2. Popular Suburbs in City
       console.log(`[LocationService] Fetching suburbs for cityId: ${city.id}`);
-      
+
       const listingCountSql = sql<number>`(SELECT COUNT(*) FROM ${properties} WHERE ${properties.suburbId} = ${suburbs.id} AND ${properties.status} = 'published')`;
-      
+
       const suburbList = await db
         .select({
           id: suburbs.id,
           name: suburbs.name,
           listingCount: listingCountSql,
-          avgPrice: sql<number>`(SELECT AVG(${properties.price}) FROM ${properties} WHERE ${properties.suburbId} = ${suburbs.id} AND ${properties.status} = 'published')`
+          avgPrice: sql<number>`(SELECT AVG(${properties.price}) FROM ${properties} WHERE ${properties.suburbId} = ${suburbs.id} AND ${properties.status} = 'published')`,
         })
         .from(suburbs)
         .where(eq(suburbs.cityId, city.id))
         .orderBy(desc(listingCountSql))
         .limit(12);
-      
+
       console.log(`[LocationService] Suburb list fetched: ${suburbList?.length} items`);
 
       // 3. Featured Properties in City
       const featuredProperties = await db
         .select()
         .from(properties)
-        .where(and(
-          eq(properties.cityId, city.id),
-          eq(properties.status, 'published' as any),
-          eq(properties.featured, 1)
-        ))
+        .where(
+          and(
+            eq(properties.cityId, city.id),
+            eq(properties.status, 'published' as any),
+            eq(properties.featured, 1),
+          ),
+        )
         .limit(6);
 
       // 4. Developments in City
       const cityDevelopments = await db
         .select()
         .from(developments)
-        .where(and(
-          eq(developments.city, city.name),
-          eq(developments.isPublished, 1)
-        ))
+        .where(and(eq(developments.city, city.name), eq(developments.isPublished, 1)))
         .limit(4);
 
       // 5. Aggregate Stats
@@ -173,23 +167,23 @@ export const locationPagesService = {
       const [stats] = await db
         .select({
           totalListings: sql<number>`count(*)`,
-          avgPrice: sql<number>`avg(${properties.price})`
+          avgPrice: sql<number>`avg(${properties.price})`,
         })
         .from(properties)
-        .where(and(
-          eq(properties.cityId, city.id), 
-          eq(properties.status, 'published' as any)
-        ));
+        .where(and(eq(properties.cityId, city.id), eq(properties.status, 'published' as any)));
 
       return {
         city,
         suburbs: suburbList,
-        featuredProperties: featuredProperties.map(p => ({...p, images: typeof p.images === 'string' ? JSON.parse(p.images) : p.images})),
+        featuredProperties: featuredProperties.map(p => ({
+          ...p,
+          images: typeof p.images === 'string' ? JSON.parse(p.images) : p.images,
+        })),
         developments: cityDevelopments,
         stats: {
           totalListings: Number(stats?.totalListings || 0),
-          avgPrice: Number(stats?.avgPrice || 0)
-        }
+          avgPrice: Number(stats?.avgPrice || 0),
+        },
       };
     } catch (error) {
       console.error('[LocationService] Error in getCityData:', error);
@@ -213,7 +207,7 @@ export const locationPagesService = {
         cityName: cities.name,
         provinceName: provinces.name,
         latitude: suburbs.latitude,
-        longitude: suburbs.longitude
+        longitude: suburbs.longitude,
       })
       .from(suburbs)
       .leftJoin(cities, eq(suburbs.cityId, cities.id))
@@ -229,22 +223,16 @@ export const locationPagesService = {
         totalListings: sql<number>`count(*)`,
         avgPrice: sql<number>`avg(${properties.price})`,
         rentalCount: sql<number>`count(CASE WHEN ${properties.listingType} = 'rent' THEN 1 END)`,
-        saleCount: sql<number>`count(CASE WHEN ${properties.listingType} = 'sale' THEN 1 END)`
+        saleCount: sql<number>`count(CASE WHEN ${properties.listingType} = 'sale' THEN 1 END)`,
       })
       .from(properties)
-      .where(and(
-        eq(properties.suburbId, suburb.id),
-        eq(properties.status, 'published')
-      ));
+      .where(and(eq(properties.suburbId, suburb.id), eq(properties.status, 'published')));
 
     // 3. Featured Properties in Suburb
     const localProperties = await db
       .select()
       .from(properties)
-      .where(and(
-        eq(properties.suburbId, suburb.id),
-        eq(properties.status, 'published')
-      ))
+      .where(and(eq(properties.suburbId, suburb.id), eq(properties.status, 'published')))
       .orderBy(desc(properties.createdAt))
       .limit(12);
 
@@ -258,17 +246,20 @@ export const locationPagesService = {
 
     // 5. Nearby Schools/Amenities (if we have an amenities table linked to location or coords via geo-query)
     // Placeholder for now as amenities table structure is simple
-    
+
     return {
       suburb,
       stats: {
         totalListings: Number(stats?.totalListings || 0),
         avgPrice: Math.round(Number(stats?.avgPrice || 0)),
         rentalCount: Number(stats?.rentalCount || 0),
-        saleCount: Number(stats?.saleCount || 0)
+        saleCount: Number(stats?.saleCount || 0),
       },
-      listings: localProperties.map(p => ({...p, images: typeof p.images === 'string' ? JSON.parse(p.images) : p.images})),
-      analytics: analytics || null
+      listings: localProperties.map(p => ({
+        ...p,
+        images: typeof p.images === 'string' ? JSON.parse(p.images) : p.images,
+      })),
+      analytics: analytics || null,
     };
-  }
+  },
 };

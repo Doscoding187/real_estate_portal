@@ -1,10 +1,10 @@
 /**
  * Content Badge Demo Page
- * 
+ *
  * Demonstrates the ContentBadge component integrated with all card types.
  * Shows all badge types (property, expert_tip, service, finance, design)
  * on different card components.
- * 
+ *
  * Requirements: 4.1, 4.2, 4.3, 4.4, 4.5, 4.6, 4.7
  */
 
@@ -56,7 +56,8 @@ export default function ContentBadgeDemo() {
   const sampleInsight = {
     id: 1,
     title: 'Property Market Trends Q1 2024',
-    description: 'Discover the latest trends in the South African property market with insights from industry experts.',
+    description:
+      'Discover the latest trends in the South African property market with insights from industry experts.',
     insightType: 'market-trend' as const,
     badgeType: 'finance' as const,
     data: {
@@ -86,9 +87,7 @@ export default function ContentBadgeDemo() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="mb-12">
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">
-            Content Badge Component Demo
-          </h1>
+          <h1 className="text-4xl font-bold text-gray-900 mb-4">Content Badge Component Demo</h1>
           <p className="text-lg text-gray-600">
             Demonstrating content badges on all card types with different badge types.
           </p>
@@ -98,12 +97,10 @@ export default function ContentBadgeDemo() {
         <div className="mb-12 bg-white rounded-lg shadow-sm p-6">
           <h2 className="text-2xl font-bold text-gray-900 mb-4">Badge Types</h2>
           <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-            {getAllBadgeTypes().map((type) => (
+            {getAllBadgeTypes().map(type => (
               <div key={type} className="flex flex-col items-center gap-2">
                 <ContentBadge type={type} showLabel size="lg" />
-                <span className="text-sm text-gray-600 capitalize">
-                  {type.replace('_', ' ')}
-                </span>
+                <span className="text-sm text-gray-600 capitalize">{type.replace('_', ' ')}</span>
               </div>
             ))}
           </div>
@@ -205,9 +202,7 @@ export default function ContentBadgeDemo() {
 
         {/* Requirements Validation */}
         <section className="bg-white rounded-lg shadow-sm p-6">
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">
-            Requirements Validation
-          </h2>
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">Requirements Validation</h2>
           <ul className="space-y-2 text-gray-700">
             <li className="flex items-start gap-2">
               <span className="text-green-600 font-bold">✓</span>

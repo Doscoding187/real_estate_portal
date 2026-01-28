@@ -1,6 +1,6 @@
 /**
  * Advertise CMS Admin Panel
- * 
+ *
  * Simple admin interface for managing Advertise With Us page content.
  * This is a basic implementation that can be extended with more features.
  */
@@ -31,7 +31,9 @@ export function AdvertiseCMSAdmin() {
       const summary = getValidationSummary(result);
       setValidationMessage(summary);
     } catch (err) {
-      setValidationMessage(`JSON Parse Error: ${err instanceof Error ? err.message : 'Invalid JSON'}`);
+      setValidationMessage(
+        `JSON Parse Error: ${err instanceof Error ? err.message : 'Invalid JSON'}`,
+      );
     }
   };
 
@@ -42,7 +44,7 @@ export function AdvertiseCMSAdmin() {
       setValidationMessage('');
 
       const parsed = JSON.parse(editedContent);
-      
+
       // Validate before saving
       const result = validatePageContent(parsed);
       if (!result.isValid) {
@@ -54,7 +56,7 @@ export function AdvertiseCMSAdmin() {
       await updateContent(parsed);
       setSaveSuccess(true);
       setValidationMessage('✓ Content saved successfully!');
-      
+
       setTimeout(() => setSaveSuccess(false), 3000);
     } catch (err) {
       setValidationMessage(`Error: ${err instanceof Error ? err.message : 'Failed to save'}`);
@@ -87,7 +89,9 @@ export function AdvertiseCMSAdmin() {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="bg-white p-8 rounded-lg shadow-lg max-w-md">
           <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
-          <h2 className="text-xl font-bold text-gray-900 mb-2 text-center">Error Loading Content</h2>
+          <h2 className="text-xl font-bold text-gray-900 mb-2 text-center">
+            Error Loading Content
+          </h2>
           <p className="text-gray-600 text-center">{error.message}</p>
         </div>
       </div>
@@ -150,7 +154,7 @@ export function AdvertiseCMSAdmin() {
             <div className="p-4">
               <textarea
                 value={editedContent}
-                onChange={(e) => setEditedContent(e.target.value)}
+                onChange={e => setEditedContent(e.target.value)}
                 className="w-full h-[600px] font-mono text-sm p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent resize-none"
                 spellCheck={false}
               />
@@ -161,12 +165,18 @@ export function AdvertiseCMSAdmin() {
           <div className="space-y-6">
             {/* Validation Results */}
             {validationMessage && (
-              <div className={`bg-white rounded-lg shadow-sm border overflow-hidden ${
-                validationMessage.includes('✓') ? 'border-green-200' : 'border-red-200'
-              }`}>
-                <div className={`px-4 py-3 border-b ${
-                  validationMessage.includes('✓') ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'
-                }`}>
+              <div
+                className={`bg-white rounded-lg shadow-sm border overflow-hidden ${
+                  validationMessage.includes('✓') ? 'border-green-200' : 'border-red-200'
+                }`}
+              >
+                <div
+                  className={`px-4 py-3 border-b ${
+                    validationMessage.includes('✓')
+                      ? 'bg-green-50 border-green-200'
+                      : 'bg-red-50 border-red-200'
+                  }`}
+                >
                   <h2 className="text-lg font-semibold flex items-center gap-2">
                     {validationMessage.includes('✓') ? (
                       <>

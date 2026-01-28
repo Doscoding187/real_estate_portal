@@ -1,15 +1,15 @@
 /**
  * LocationAutocomplete Component
- * 
+ *
  * A Google Places autocomplete component with South Africa bias, debouncing,
  * keyboard navigation, and mobile responsiveness.
- * 
+ *
  * Requirements:
  * - 1.1-1.5: Google Places autocomplete with South Africa bias
  * - 5.1: Debounced input handling (300ms)
  * - 8.1-8.5: Mobile responsiveness (44px touch targets)
  * - 13.1-13.5: Keyboard navigation support
- * 
+ *
  * Features:
  * - Real-time autocomplete suggestions from Google Places API
  * - Debounced input (300ms delay)
@@ -101,7 +101,9 @@ export function LocationAutocomplete({
     if (!window.google?.maps?.places) {
       // Requirement 11.1: Fall back to manual entry when API unavailable
       if (allowManualEntry) {
-        setError('Location autocomplete temporarily unavailable. You can enter the address manually.');
+        setError(
+          'Location autocomplete temporarily unavailable. You can enter the address manually.',
+        );
         setIsManualMode(true);
       } else {
         setError('Google Maps API not loaded');
@@ -163,41 +165,38 @@ export function LocationAutocomplete({
       sessionToken: sessionTokenRef.current,
     };
 
-    autocompleteServiceRef.current.getPlacePredictions(
-      request,
-      (predictions, status) => {
-        setIsLoading(false);
+    autocompleteServiceRef.current.getPlacePredictions(request, (predictions, status) => {
+      setIsLoading(false);
 
-        if (status === google.maps.places.PlacesServiceStatus.OK && predictions) {
-          // Limit to MAX_SUGGESTIONS (requirement 1.3)
-          setSuggestions(predictions.slice(0, MAX_SUGGESTIONS));
-          setIsOpen(true);
-          setSelectedIndex(-1);
-        } else if (status === google.maps.places.PlacesServiceStatus.ZERO_RESULTS) {
-          setSuggestions([]);
-          setIsOpen(false);
+      if (status === google.maps.places.PlacesServiceStatus.OK && predictions) {
+        // Limit to MAX_SUGGESTIONS (requirement 1.3)
+        setSuggestions(predictions.slice(0, MAX_SUGGESTIONS));
+        setIsOpen(true);
+        setSelectedIndex(-1);
+      } else if (status === google.maps.places.PlacesServiceStatus.ZERO_RESULTS) {
+        setSuggestions([]);
+        setIsOpen(false);
+      } else {
+        console.error('Autocomplete error:', status);
+
+        // Requirement 11.1-11.3: Handle API errors with fallback to manual entry
+        if (status === google.maps.places.PlacesServiceStatus.REQUEST_DENIED) {
+          setError('API key invalid. Please enter location manually.');
+        } else if (status === google.maps.places.PlacesServiceStatus.OVER_QUERY_LIMIT) {
+          setError('Too many requests. Please enter location manually.');
         } else {
-          console.error('Autocomplete error:', status);
-          
-          // Requirement 11.1-11.3: Handle API errors with fallback to manual entry
-          if (status === google.maps.places.PlacesServiceStatus.REQUEST_DENIED) {
-            setError('API key invalid. Please enter location manually.');
-          } else if (status === google.maps.places.PlacesServiceStatus.OVER_QUERY_LIMIT) {
-            setError('Too many requests. Please enter location manually.');
-          } else {
-            setError('Failed to fetch suggestions. You can enter the address manually.');
-          }
-          
-          setSuggestions([]);
-          setIsOpen(false);
-          
-          // Enable manual mode if allowed
-          if (allowManualEntry) {
-            setIsManualMode(true);
-          }
+          setError('Failed to fetch suggestions. You can enter the address manually.');
+        }
+
+        setSuggestions([]);
+        setIsOpen(false);
+
+        // Enable manual mode if allowed
+        if (allowManualEntry) {
+          setIsManualMode(true);
         }
       }
-    );
+    });
   }, []);
 
   // Handle input change with debouncing (requirement 5.1)
@@ -262,13 +261,7 @@ export function LocationAutocomplete({
 
     const request: google.maps.places.PlaceDetailsRequest = {
       placeId: prediction.place_id,
-      fields: [
-        'place_id',
-        'name',
-        'formatted_address',
-        'geometry',
-        'address_components',
-      ],
+      fields: ['place_id', 'name', 'formatted_address', 'geometry', 'address_components'],
       sessionToken: sessionTokenRef.current!,
     };
 
@@ -318,9 +311,7 @@ export function LocationAutocomplete({
   };
 
   // Extract address components from Google Places response
-  const extractAddressComponents = (
-    components: google.maps.GeocoderAddressComponent[]
-  ) => {
+  const extractAddressComponents = (components: google.maps.GeocoderAddressComponent[]) => {
     const result: {
       province?: string;
       city?: string;
@@ -391,8 +382,11 @@ export function LocationAutocomplete({
 
     try {
       // Call backend geocoding service using tRPC
-      const response = await fetch('/api/trpc/location.geocodeAddress?input=' + encodeURIComponent(JSON.stringify({ address: inputValue })));
-      
+      const response = await fetch(
+        '/api/trpc/location.geocodeAddress?input=' +
+          encodeURIComponent(JSON.stringify({ address: inputValue })),
+      );
+
       if (!response.ok) {
         throw new Error('Geocoding failed');
       }
@@ -402,7 +396,9 @@ export function LocationAutocomplete({
 
       if (result?.success && result.result) {
         // Extract address components from geocoding result
-        const addressComponents = extractAddressComponentsFromGeocode(result.result.addressComponents);
+        const addressComponents = extractAddressComponentsFromGeocode(
+          result.result.addressComponents,
+        );
 
         const locationData: LocationData = {
           place_id: result.result.placeId,
@@ -411,12 +407,14 @@ export function LocationAutocomplete({
           latitude: result.result.geometry.location.lat,
           longitude: result.result.geometry.location.lng,
           address_components: addressComponents,
-          viewport: result.result.geometry.viewport ? {
-            ne_lat: result.result.geometry.viewport.northeast.lat,
-            ne_lng: result.result.geometry.viewport.northeast.lng,
-            sw_lat: result.result.geometry.viewport.southwest.lat,
-            sw_lng: result.result.geometry.viewport.southwest.lng,
-          } : undefined,
+          viewport: result.result.geometry.viewport
+            ? {
+                ne_lat: result.result.geometry.viewport.northeast.lat,
+                ne_lng: result.result.geometry.viewport.northeast.lng,
+                sw_lat: result.result.geometry.viewport.southwest.lat,
+                sw_lng: result.result.geometry.viewport.southwest.lng,
+              }
+            : undefined,
           gps_accuracy: 'manual', // Requirement 7.5: Mark as manual entry
         };
 
@@ -429,8 +427,10 @@ export function LocationAutocomplete({
         onChange(locationData);
       } else {
         // Requirement 7.5: Allow user to proceed with manual entry even if geocoding fails
-        setError('Could not find exact coordinates for this address. You can still proceed with manual entry.');
-        
+        setError(
+          'Could not find exact coordinates for this address. You can still proceed with manual entry.',
+        );
+
         // Create a basic location data object without coordinates
         const locationData: LocationData = {
           place_id: '', // No place ID for failed geocoding
@@ -450,7 +450,7 @@ export function LocationAutocomplete({
       console.error('Geocoding error:', err);
       // Requirement 7.5: Handle geocoding failures gracefully
       setError('Unable to geocode address. You can still proceed with manual entry.');
-      
+
       // Allow user to proceed even with geocoding failure
       const locationData: LocationData = {
         place_id: '',
@@ -547,7 +547,7 @@ export function LocationAutocomplete({
     };
   }, []);
 
-  const displayItems = suggestions.length > 0 ? suggestions : (isOpen ? recentSearches : []);
+  const displayItems = suggestions.length > 0 ? suggestions : isOpen ? recentSearches : [];
   const showRecentLabel = suggestions.length === 0 && recentSearches.length > 0 && isOpen;
 
   return (
@@ -636,7 +636,7 @@ export function LocationAutocomplete({
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={(e) => {
+                  onClick={e => {
                     e.stopPropagation();
                     clearRecentSearches();
                   }}

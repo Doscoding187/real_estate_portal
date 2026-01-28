@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import { fc, it } from '@fast-check/vitest';
 import '@testing-library/jest-dom';
 import { vi } from 'vitest';

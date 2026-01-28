@@ -24,9 +24,9 @@ export default function RegistrationSuccess({ role = 'developer' }: Registration
       gradient: 'from-blue-600 to-indigo-600',
       nextSteps: [
         'Our team will review your application within 2-3 business days',
-        'You\'ll receive an email notification once approved',
+        "You'll receive an email notification once approved",
         'Meanwhile, you can explore the platform and set up your profile',
-        'Start preparing your development listings for when you\'re approved',
+        "Start preparing your development listings for when you're approved",
       ],
     },
     agency: {
@@ -66,26 +66,26 @@ export default function RegistrationSuccess({ role = 'developer' }: Registration
         <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-2xl border-2 border-white p-8 md:p-12">
           {/* Success Icon */}
           <div className="flex justify-center mb-6">
-            <div className={`w-24 h-24 rounded-full bg-gradient-to-br ${config.gradient} flex items-center justify-center animate-in zoom-in duration-500`}>
+            <div
+              className={`w-24 h-24 rounded-full bg-gradient-to-br ${config.gradient} flex items-center justify-center animate-in zoom-in duration-500`}
+            >
               <CheckCircle className="w-12 h-12 text-white" />
             </div>
           </div>
 
           {/* Title */}
           <div className="text-center mb-8">
-            <h1 className={`text-3xl md:text-4xl font-bold bg-gradient-to-r ${config.gradient} bg-clip-text text-transparent mb-3`}>
+            <h1
+              className={`text-3xl md:text-4xl font-bold bg-gradient-to-r ${config.gradient} bg-clip-text text-transparent mb-3`}
+            >
               {config.title}
             </h1>
-            <p className="text-xl text-gray-600">
-              {config.subtitle}
-            </p>
+            <p className="text-xl text-gray-600">{config.subtitle}</p>
           </div>
 
           {/* Next Steps */}
           <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-6 mb-8">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">
-              What happens next?
-            </h2>
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">What happens next?</h2>
             <ul className="space-y-3">
               {config.nextSteps.map((step, index) => (
                 <li key={index} className="flex items-start gap-3">
@@ -120,7 +120,10 @@ export default function RegistrationSuccess({ role = 'developer' }: Registration
           <div className="mt-8 text-center">
             <p className="text-sm text-gray-600">
               Need help? Contact our support team at{' '}
-              <a href="mailto:support@example.com" className="text-blue-600 hover:text-blue-700 font-medium">
+              <a
+                href="mailto:support@example.com"
+                className="text-blue-600 hover:text-blue-700 font-medium"
+              >
                 support@example.com
               </a>
             </p>

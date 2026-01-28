@@ -1,6 +1,6 @@
 /**
  * Property-Based Tests for Structured Data and SEO Metadata
- * 
+ *
  * These tests validate that location pages include proper structured data
  * and SEO metadata as specified in Requirements 23.1-23.5, 30.1-30.5
  */
@@ -12,14 +12,16 @@ import { validatePlaceSchema, validateBreadcrumbSchema } from '../structuredData
 /**
  * Arbitrary for generating valid location names
  */
-const locationNameArbitrary = fc.string({ minLength: 1, maxLength: 50 })
+const locationNameArbitrary = fc
+  .string({ minLength: 1, maxLength: 50 })
   .filter(name => name.trim().length > 0)
   .map(name => name.trim());
 
 /**
  * Arbitrary for generating valid slugs (kebab-case)
  */
-const slugArbitrary = fc.string({ minLength: 1, maxLength: 50 })
+const slugArbitrary = fc
+  .string({ minLength: 1, maxLength: 50 })
   .filter(str => /^[a-z0-9-]+$/.test(str) && !str.startsWith('-') && !str.endsWith('-'))
   .map(str => str.toLowerCase());
 
@@ -29,7 +31,7 @@ const slugArbitrary = fc.string({ minLength: 1, maxLength: 50 })
  */
 const southAfricaCoordinatesArbitrary = fc.record({
   latitude: fc.double({ min: -35, max: -22, noNaN: true }),
-  longitude: fc.double({ min: 16, max: 33, noNaN: true })
+  longitude: fc.double({ min: 16, max: 33, noNaN: true }),
 });
 
 /**
@@ -40,23 +42,25 @@ const locationTypeArbitrary = fc.constantFrom('Province', 'City', 'Suburb', 'Pla
 /**
  * Arbitrary for generating valid URLs
  */
-const urlArbitrary = fc.tuple(
-  slugArbitrary,
-  fc.option(slugArbitrary, { nil: undefined }),
-  fc.option(slugArbitrary, { nil: undefined })
-).map(([province, city, suburb]) => {
-  let url = `/south-africa/${province}`;
-  if (city) url += `/${city}`;
-  if (suburb) url += `/${suburb}`;
-  return url;
-});
+const urlArbitrary = fc
+  .tuple(
+    slugArbitrary,
+    fc.option(slugArbitrary, { nil: undefined }),
+    fc.option(slugArbitrary, { nil: undefined }),
+  )
+  .map(([province, city, suburb]) => {
+    let url = `/south-africa/${province}`;
+    if (city) url += `/${city}`;
+    if (suburb) url += `/${suburb}`;
+    return url;
+  });
 
 /**
  * Arbitrary for generating breadcrumb items
  */
 const breadcrumbItemArbitrary = fc.record({
   name: locationNameArbitrary,
-  url: urlArbitrary
+  url: urlArbitrary,
 });
 
 /**
@@ -68,9 +72,9 @@ describe('Structured Data Property Tests', () => {
   describe('Property 40: Structured data presence', () => {
     /**
      * **Feature: google-places-autocomplete-integration, Property 40: Structured data presence**
-     * 
+     *
      * For any location page rendered, the HTML should contain JSON-LD structured data with @type "Place"
-     * 
+     *
      * **Validates: Requirements 30.1**
      */
     it('should include Place schema with @type "Place" for any location', () => {
@@ -84,11 +88,15 @@ describe('Structured Data Property Tests', () => {
             // Create a minimal Place schema
             const placeSchema = {
               '@context': 'https://schema.org',
-              '@type': locationType === 'City' ? 'City' : 
-                       locationType === 'Province' ? 'AdministrativeArea' : 'Place',
+              '@type':
+                locationType === 'City'
+                  ? 'City'
+                  : locationType === 'Province'
+                    ? 'AdministrativeArea'
+                    : 'Place',
               name: name,
               description: description,
-              url: `https://propertylistify.com${url}`
+              url: `https://propertylistify.com${url}`,
             };
 
             // Verify @context is present
@@ -102,7 +110,7 @@ describe('Structured Data Property Tests', () => {
             // Verify required fields are present
             expect(placeSchema.name).toBeDefined();
             expect(placeSchema.name.length).toBeGreaterThan(0);
-            
+
             expect(placeSchema.url).toBeDefined();
             expect(placeSchema.url).toContain('https://propertylistify.com');
 
@@ -110,48 +118,45 @@ describe('Structured Data Property Tests', () => {
             const validation = validatePlaceSchema(placeSchema);
             expect(validation.isValid).toBe(true);
             expect(validation.errors).toHaveLength(0);
-          }
+          },
         ),
-        { numRuns: 100 }
+        { numRuns: 100 },
       );
     });
 
     it('should include BreadcrumbList schema for any location page', () => {
       fc.assert(
-        fc.property(
-          breadcrumbListArbitrary,
-          (breadcrumbs) => {
-            // Create BreadcrumbList schema
-            const breadcrumbSchema = {
-              '@context': 'https://schema.org',
-              '@type': 'BreadcrumbList',
-              itemListElement: breadcrumbs.map((crumb, index) => ({
-                '@type': 'ListItem',
-                position: index + 1,
-                name: crumb.name,
-                item: `https://propertylistify.com${crumb.url}`
-              }))
-            };
+        fc.property(breadcrumbListArbitrary, breadcrumbs => {
+          // Create BreadcrumbList schema
+          const breadcrumbSchema = {
+            '@context': 'https://schema.org',
+            '@type': 'BreadcrumbList',
+            itemListElement: breadcrumbs.map((crumb, index) => ({
+              '@type': 'ListItem',
+              position: index + 1,
+              name: crumb.name,
+              item: `https://propertylistify.com${crumb.url}`,
+            })),
+          };
 
-            // Verify @context is present
-            expect(breadcrumbSchema['@context']).toBeDefined();
-            expect(breadcrumbSchema['@context']).toBe('https://schema.org');
+          // Verify @context is present
+          expect(breadcrumbSchema['@context']).toBeDefined();
+          expect(breadcrumbSchema['@context']).toBe('https://schema.org');
 
-            // Verify @type is BreadcrumbList
-            expect(breadcrumbSchema['@type']).toBe('BreadcrumbList');
+          // Verify @type is BreadcrumbList
+          expect(breadcrumbSchema['@type']).toBe('BreadcrumbList');
 
-            // Verify itemListElement is present and is an array
-            expect(breadcrumbSchema.itemListElement).toBeDefined();
-            expect(Array.isArray(breadcrumbSchema.itemListElement)).toBe(true);
-            expect(breadcrumbSchema.itemListElement.length).toBeGreaterThan(0);
+          // Verify itemListElement is present and is an array
+          expect(breadcrumbSchema.itemListElement).toBeDefined();
+          expect(Array.isArray(breadcrumbSchema.itemListElement)).toBe(true);
+          expect(breadcrumbSchema.itemListElement.length).toBeGreaterThan(0);
 
-            // Validate using the validator
-            const validation = validateBreadcrumbSchema(breadcrumbSchema);
-            expect(validation.isValid).toBe(true);
-            expect(validation.errors).toHaveLength(0);
-          }
-        ),
-        { numRuns: 100 }
+          // Validate using the validator
+          const validation = validateBreadcrumbSchema(breadcrumbSchema);
+          expect(validation.isValid).toBe(true);
+          expect(validation.errors).toHaveLength(0);
+        }),
+        { numRuns: 100 },
       );
     });
   });
@@ -159,10 +164,10 @@ describe('Structured Data Property Tests', () => {
   describe('Property 41: Structured data completeness', () => {
     /**
      * **Feature: google-places-autocomplete-integration, Property 41: Structured data completeness**
-     * 
-     * For any location page's structured data, it should include name, geo coordinates, 
+     *
+     * For any location page's structured data, it should include name, geo coordinates,
      * address, and url properties
-     * 
+     *
      * **Validates: Requirements 30.2**
      */
     it('should include all required fields: name, coordinates, address, and URL', () => {
@@ -179,22 +184,26 @@ describe('Structured Data Property Tests', () => {
             // Create a complete Place schema with all required fields
             const placeSchema = {
               '@context': 'https://schema.org',
-              '@type': locationType === 'City' ? 'City' : 
-                       locationType === 'Province' ? 'AdministrativeArea' : 'Place',
+              '@type':
+                locationType === 'City'
+                  ? 'City'
+                  : locationType === 'Province'
+                    ? 'AdministrativeArea'
+                    : 'Place',
               name: name,
               description: description,
               url: `https://propertylistify.com${url}`,
               geo: {
                 '@type': 'GeoCoordinates',
                 latitude: coordinates.latitude,
-                longitude: coordinates.longitude
+                longitude: coordinates.longitude,
               },
               address: {
                 '@type': 'PostalAddress',
                 addressLocality: locality,
                 addressRegion: region,
-                addressCountry: 'ZA'
-              }
+                addressCountry: 'ZA',
+              },
             };
 
             // Verify name is present
@@ -219,7 +228,9 @@ describe('Structured Data Property Tests', () => {
             // Verify address is present
             expect(placeSchema.address).toBeDefined();
             expect(placeSchema.address['@type']).toBe('PostalAddress');
-            expect(placeSchema.address.addressLocality || placeSchema.address.addressRegion).toBeDefined();
+            expect(
+              placeSchema.address.addressLocality || placeSchema.address.addressRegion,
+            ).toBeDefined();
             expect(placeSchema.address.addressCountry).toBe('ZA');
 
             // Verify URL is present and valid
@@ -231,9 +242,9 @@ describe('Structured Data Property Tests', () => {
             const validation = validatePlaceSchema(placeSchema);
             expect(validation.isValid).toBe(true);
             expect(validation.errors).toHaveLength(0);
-          }
+          },
         ),
-        { numRuns: 100 }
+        { numRuns: 100 },
       );
     });
 
@@ -250,29 +261,33 @@ describe('Structured Data Property Tests', () => {
             // Create Place schema with statistics
             const placeSchema = {
               '@context': 'https://schema.org',
-              '@type': locationType === 'City' ? 'City' : 
-                       locationType === 'Province' ? 'AdministrativeArea' : 'Place',
+              '@type':
+                locationType === 'City'
+                  ? 'City'
+                  : locationType === 'Province'
+                    ? 'AdministrativeArea'
+                    : 'Place',
               name: name,
               url: `https://propertylistify.com${url}`,
               additionalProperty: [
                 {
                   '@type': 'PropertyValue',
                   name: 'Total Listings',
-                  value: totalListings
+                  value: totalListings,
                 },
                 {
                   '@type': 'PropertyValue',
                   name: 'Average Sale Price',
                   value: avgPrice,
-                  unitCode: 'ZAR'
+                  unitCode: 'ZAR',
                 },
                 {
                   '@type': 'PropertyValue',
                   name: 'Average Rental Price',
                   value: avgRentalPrice,
-                  unitCode: 'ZAR'
-                }
-              ]
+                  unitCode: 'ZAR',
+                },
+              ],
             };
 
             // Verify additionalProperty is present and is an array
@@ -290,15 +305,13 @@ describe('Structured Data Property Tests', () => {
             });
 
             // Verify price properties have currency unit
-            const priceProps = placeSchema.additionalProperty.filter(
-              p => p.name.includes('Price')
-            );
+            const priceProps = placeSchema.additionalProperty.filter(p => p.name.includes('Price'));
             priceProps.forEach(prop => {
               expect(prop.unitCode).toBe('ZAR');
             });
-          }
+          },
         ),
-        { numRuns: 100 }
+        { numRuns: 100 },
       );
     });
   });
@@ -309,67 +322,61 @@ describe('Structured Data Property Tests', () => {
      */
     it('should have sequential positions starting from 1', () => {
       fc.assert(
-        fc.property(
-          breadcrumbListArbitrary,
-          (breadcrumbs) => {
-            const breadcrumbSchema = {
-              '@context': 'https://schema.org',
-              '@type': 'BreadcrumbList',
-              itemListElement: breadcrumbs.map((crumb, index) => ({
-                '@type': 'ListItem',
-                position: index + 1,
-                name: crumb.name,
-                item: `https://propertylistify.com${crumb.url}`
-              }))
-            };
+        fc.property(breadcrumbListArbitrary, breadcrumbs => {
+          const breadcrumbSchema = {
+            '@context': 'https://schema.org',
+            '@type': 'BreadcrumbList',
+            itemListElement: breadcrumbs.map((crumb, index) => ({
+              '@type': 'ListItem',
+              position: index + 1,
+              name: crumb.name,
+              item: `https://propertylistify.com${crumb.url}`,
+            })),
+          };
 
-            // Verify positions are sequential
-            breadcrumbSchema.itemListElement.forEach((item, index) => {
-              expect(item.position).toBe(index + 1);
-            });
+          // Verify positions are sequential
+          breadcrumbSchema.itemListElement.forEach((item, index) => {
+            expect(item.position).toBe(index + 1);
+          });
 
-            // Verify first position is 1
-            expect(breadcrumbSchema.itemListElement[0].position).toBe(1);
+          // Verify first position is 1
+          expect(breadcrumbSchema.itemListElement[0].position).toBe(1);
 
-            // Verify last position equals array length
-            const lastIndex = breadcrumbSchema.itemListElement.length - 1;
-            expect(breadcrumbSchema.itemListElement[lastIndex].position).toBe(
-              breadcrumbSchema.itemListElement.length
-            );
-          }
-        ),
-        { numRuns: 100 }
+          // Verify last position equals array length
+          const lastIndex = breadcrumbSchema.itemListElement.length - 1;
+          expect(breadcrumbSchema.itemListElement[lastIndex].position).toBe(
+            breadcrumbSchema.itemListElement.length,
+          );
+        }),
+        { numRuns: 100 },
       );
     });
 
     it('should have valid URLs for all breadcrumb items', () => {
       fc.assert(
-        fc.property(
-          breadcrumbListArbitrary,
-          (breadcrumbs) => {
-            const breadcrumbSchema = {
-              '@context': 'https://schema.org',
-              '@type': 'BreadcrumbList',
-              itemListElement: breadcrumbs.map((crumb, index) => ({
-                '@type': 'ListItem',
-                position: index + 1,
-                name: crumb.name,
-                item: `https://propertylistify.com${crumb.url}`
-              }))
-            };
+        fc.property(breadcrumbListArbitrary, breadcrumbs => {
+          const breadcrumbSchema = {
+            '@context': 'https://schema.org',
+            '@type': 'BreadcrumbList',
+            itemListElement: breadcrumbs.map((crumb, index) => ({
+              '@type': 'ListItem',
+              position: index + 1,
+              name: crumb.name,
+              item: `https://propertylistify.com${crumb.url}`,
+            })),
+          };
 
-            // Verify all items have valid URLs
-            breadcrumbSchema.itemListElement.forEach(item => {
-              expect(item.item).toBeDefined();
-              expect(typeof item.item).toBe('string');
-              expect(item.item).toContain('https://propertylistify.com');
-              
-              // Verify URL is valid
-              expect(() => new URL(item.item)).not.toThrow();
-            });
-          }
-        ),
-        { numRuns: 100 }
+          // Verify all items have valid URLs
+          breadcrumbSchema.itemListElement.forEach(item => {
+            expect(item.item).toBeDefined();
+            expect(typeof item.item).toBe('string');
+            expect(item.item).toContain('https://propertylistify.com');
+
+            // Verify URL is valid
+            expect(() => new URL(item.item)).not.toThrow();
+          });
+        }),
+        { numRuns: 100 },
       );
     });
   });
@@ -404,9 +411,9 @@ describe('Structured Data Property Tests', () => {
             // Verify title length is reasonable (< 60 characters is ideal for SEO)
             // We allow up to 100 for property-rich titles
             expect(metaTitle.length).toBeLessThan(150);
-          }
+          },
         ),
-        { numRuns: 100 }
+        { numRuns: 100 },
       );
     });
 
@@ -438,9 +445,9 @@ describe('Structured Data Property Tests', () => {
 
             // Verify description is descriptive
             expect(metaDescription.toLowerCase()).toMatch(/explore|browse|properties|real estate/);
-          }
+          },
         ),
-        { numRuns: 100 }
+        { numRuns: 100 },
       );
     });
   });

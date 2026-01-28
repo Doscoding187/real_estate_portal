@@ -1,9 +1,9 @@
 /**
  * NeighbourhoodCard Component
- * 
+ *
  * Modern neighbourhood card with subtle shadows and smooth animations.
  * Uses ModernCard as base for consistent design system integration.
- * 
+ *
  * Features:
  * - Hover lift animation (2px translateY) - Requirements 9.1
  * - Press state animation (scale 0.98) - Requirements 9.2
@@ -72,9 +72,7 @@ export function NeighbourhoodCard({ neighbourhood, onClick, onFollow }: Neighbou
           <ContentBadgeOverlay type={neighbourhood.badgeType} size="sm" />
         )}
 
-        {!imageLoaded && (
-          <div className="absolute inset-0 animate-pulse bg-gray-200" />
-        )}
+        {!imageLoaded && <div className="absolute inset-0 animate-pulse bg-gray-200" />}
         <img
           src={neighbourhood.imageUrl}
           alt={neighbourhood.name}
@@ -107,15 +105,15 @@ export function NeighbourhoodCard({ neighbourhood, onClick, onFollow }: Neighbou
         </motion.button>
 
         {/* Content overlay */}
-        <div 
+        <div
           className="absolute bottom-0 left-0 right-0"
           style={{ padding: designTokens.spacing.md }}
         >
-          <h3 
+          <h3
             className="text-xl font-bold text-white mb-1 group-hover:text-indigo-300 transition-colors duration-200"
-            style={{ 
+            style={{
               fontWeight: designTokens.typography.fontWeight.bold,
-              fontSize: designTokens.typography.fontSize.xl 
+              fontSize: designTokens.typography.fontSize.xl,
             }}
           >
             {neighbourhood.name}
@@ -130,35 +128,34 @@ export function NeighbourhoodCard({ neighbourhood, onClick, onFollow }: Neighbou
       {/* Stats - Using consistent spacing tokens */}
       <div style={{ padding: designTokens.spacing.md }}>
         {/* Price info - High contrast for readability */}
-        <div 
+        <div
           className="flex items-center justify-between"
           style={{ marginBottom: designTokens.spacing.sm }}
         >
           <div>
-            <div 
-              className="text-xs mb-1"
-              style={{ color: designTokens.colors.text.secondary }}
-            >
+            <div className="text-xs mb-1" style={{ color: designTokens.colors.text.secondary }}>
               Avg. Price
             </div>
-            <div 
+            <div
               className="text-lg font-bold"
-              style={{ 
+              style={{
                 color: designTokens.colors.text.primary,
-                fontWeight: designTokens.typography.fontWeight.bold 
+                fontWeight: designTokens.typography.fontWeight.bold,
               }}
             >
               {formatPrice(neighbourhood.avgPrice)}
             </div>
           </div>
           {neighbourhood.priceChange !== undefined && (
-            <div 
+            <div
               className={`flex items-center gap-1 text-sm font-medium ${
                 neighbourhood.priceChange >= 0 ? 'text-green-600' : 'text-red-600'
               }`}
               style={{ fontWeight: designTokens.typography.fontWeight.medium }}
             >
-              <TrendingUp className={`w-4 h-4 ${neighbourhood.priceChange < 0 ? 'rotate-180' : ''}`} />
+              <TrendingUp
+                className={`w-4 h-4 ${neighbourhood.priceChange < 0 ? 'rotate-180' : ''}`}
+              />
               <span>{Math.abs(neighbourhood.priceChange)}%</span>
             </div>
           )}
@@ -166,10 +163,7 @@ export function NeighbourhoodCard({ neighbourhood, onClick, onFollow }: Neighbou
 
         {/* Highlights - Modern pill design */}
         {neighbourhood.highlights && neighbourhood.highlights.length > 0 && (
-          <div 
-            className="flex flex-wrap gap-2"
-            style={{ marginBottom: designTokens.spacing.sm }}
-          >
+          <div className="flex flex-wrap gap-2" style={{ marginBottom: designTokens.spacing.sm }}>
             {neighbourhood.highlights.slice(0, 2).map((highlight, index) => (
               <span
                 key={index}
@@ -188,7 +182,7 @@ export function NeighbourhoodCard({ neighbourhood, onClick, onFollow }: Neighbou
         )}
 
         {/* Meta info - Clear, readable text */}
-        <div 
+        <div
           className="flex items-center gap-4 text-xs"
           style={{ color: designTokens.colors.text.secondary }}
           role="list"

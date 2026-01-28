@@ -16,11 +16,7 @@ interface ActivityFeedProps {
   className?: string;
 }
 
-export function ActivityFeed({
-  limit = 20,
-  showHeader = true,
-  className,
-}: ActivityFeedProps) {
+export function ActivityFeed({ limit = 20, showHeader = true, className }: ActivityFeedProps) {
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const {
@@ -35,7 +31,7 @@ export function ActivityFeed({
     },
     {
       refetchInterval: 60000, // Refetch every minute
-    }
+    },
   );
 
   const handleRefresh = async () => {
@@ -80,7 +76,7 @@ export function ActivityFeed({
             disabled={isRefreshing}
             className={cn(
               'p-2 rounded-lg hover:bg-gray-100 transition-colors',
-              isRefreshing && 'animate-spin'
+              isRefreshing && 'animate-spin',
             )}
             title="Refresh activities"
           >
@@ -107,7 +103,7 @@ export function ActivityFeed({
         ) : activities && activities.length > 0 ? (
           // Activities
           <div className="max-h-[600px] overflow-y-auto">
-            {activities.map((activity) => (
+            {activities.map(activity => (
               <ActivityItem
                 key={activity.id}
                 activityType={activity.activityType}
@@ -118,7 +114,11 @@ export function ActivityFeed({
                   // Navigate to related entity if available
                   if (activity.relatedEntityType && activity.relatedEntityId) {
                     // TODO: Implement navigation based on entity type
-                    console.log('Navigate to:', activity.relatedEntityType, activity.relatedEntityId);
+                    console.log(
+                      'Navigate to:',
+                      activity.relatedEntityType,
+                      activity.relatedEntityId,
+                    );
                   }
                 }}
               />
@@ -131,9 +131,7 @@ export function ActivityFeed({
               <Activity className="w-8 h-8 text-gray-400" />
             </div>
             <h3 className="text-sm font-medium text-gray-900 mb-1">No activities yet</h3>
-            <p className="text-sm text-gray-500">
-              Your recent activities will appear here
-            </p>
+            <p className="text-sm text-gray-500">Your recent activities will appear here</p>
           </div>
         )}
       </div>

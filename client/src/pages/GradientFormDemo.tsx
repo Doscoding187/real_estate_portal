@@ -25,7 +25,7 @@ export default function GradientFormDemo() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Simple validation
     const newErrors: Record<string, string> = {};
     if (!formData.name) newErrors.name = 'Name is required';
@@ -59,7 +59,7 @@ export default function GradientFormDemo() {
           {/* Input Examples */}
           <section className="bg-white rounded-2xl p-6 shadow-lg space-y-6">
             <h2 className="text-2xl font-semibold text-gray-900">Input Fields</h2>
-            
+
             <GradientInput
               label="Full Name"
               placeholder="John Doe"
@@ -98,7 +98,7 @@ export default function GradientFormDemo() {
           {/* Textarea Examples */}
           <section className="bg-white rounded-2xl p-6 shadow-lg space-y-6">
             <h2 className="text-2xl font-semibold text-gray-900">Textarea</h2>
-            
+
             <GradientTextarea
               label="Message"
               placeholder="Type your message here..."
@@ -124,7 +124,7 @@ export default function GradientFormDemo() {
           {/* Select Examples */}
           <section className="bg-white rounded-2xl p-6 shadow-lg space-y-6">
             <h2 className="text-2xl font-semibold text-gray-900">Select Dropdown</h2>
-            
+
             <GradientSelect
               label="Country"
               placeholder="Select a country"
@@ -138,10 +138,7 @@ export default function GradientFormDemo() {
               <GradientSelectItem value="za">South Africa</GradientSelectItem>
             </GradientSelect>
 
-            <GradientSelect
-              label="Subscription Plan"
-              placeholder="Choose a plan"
-            >
+            <GradientSelect label="Subscription Plan" placeholder="Choose a plan">
               <GradientSelectItem value="free">Free Trial</GradientSelectItem>
               <GradientSelectItem value="basic">Basic - $9/mo</GradientSelectItem>
               <GradientSelectItem value="premium">Premium - $29/mo</GradientSelectItem>
@@ -160,7 +157,7 @@ export default function GradientFormDemo() {
           {/* Checkbox Examples */}
           <section className="bg-white rounded-2xl p-6 shadow-lg space-y-6">
             <h2 className="text-2xl font-semibold text-gray-900">Checkboxes</h2>
-            
+
             <GradientCheckbox
               label="Accept Terms and Conditions"
               description="I agree to the terms of service and privacy policy"
@@ -193,10 +190,8 @@ export default function GradientFormDemo() {
 
         {/* Complete Form Example */}
         <section className="bg-white rounded-2xl p-8 shadow-lg">
-          <h2 className="text-2xl font-semibold text-gray-900 mb-6">
-            Complete Form Example
-          </h2>
-          
+          <h2 className="text-2xl font-semibold text-gray-900 mb-6">Complete Form Example</h2>
+
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="grid md:grid-cols-2 gap-6">
               <GradientInput
@@ -204,7 +199,7 @@ export default function GradientFormDemo() {
                 placeholder="John Doe"
                 required
                 value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                onChange={e => setFormData({ ...formData, name: e.target.value })}
                 error={errors.name}
               />
 
@@ -214,7 +209,7 @@ export default function GradientFormDemo() {
                 placeholder="john@example.com"
                 required
                 value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                onChange={e => setFormData({ ...formData, email: e.target.value })}
                 error={errors.email}
               />
             </div>
@@ -224,7 +219,7 @@ export default function GradientFormDemo() {
               placeholder="Select your country"
               required
               value={formData.country}
-              onValueChange={(value) => setFormData({ ...formData, country: value })}
+              onValueChange={value => setFormData({ ...formData, country: value })}
               error={errors.country}
             >
               <GradientSelectItem value="us">United States</GradientSelectItem>
@@ -239,7 +234,7 @@ export default function GradientFormDemo() {
               placeholder="Tell us about yourself..."
               rows={4}
               value={formData.message}
-              onChange={(e) => setFormData({ ...formData, message: e.target.value })}
+              onChange={e => setFormData({ ...formData, message: e.target.value })}
               helperText="Optional: Share any additional information"
             />
 
@@ -248,9 +243,7 @@ export default function GradientFormDemo() {
                 label="I accept the Terms and Conditions"
                 description="By checking this box, you agree to our terms of service"
                 checked={formData.terms}
-                onCheckedChange={(checked) => 
-                  setFormData({ ...formData, terms: checked as boolean })
-                }
+                onCheckedChange={checked => setFormData({ ...formData, terms: checked as boolean })}
                 error={errors.terms}
               />
 
@@ -258,7 +251,7 @@ export default function GradientFormDemo() {
                 label="Subscribe to newsletter"
                 description="Receive updates and special offers"
                 checked={formData.newsletter}
-                onCheckedChange={(checked) => 
+                onCheckedChange={checked =>
                   setFormData({ ...formData, newsletter: checked as boolean })
                 }
               />
@@ -282,20 +275,12 @@ export default function GradientFormDemo() {
               >
                 Reset
               </GradientButton>
-              
-              <GradientButton
-                type="button"
-                variant="primary"
-                icon={Save}
-              >
+
+              <GradientButton type="button" variant="primary" icon={Save}>
                 Save Draft
               </GradientButton>
-              
-              <GradientButton
-                type="submit"
-                variant="success"
-                icon={Send}
-              >
+
+              <GradientButton type="submit" variant="success" icon={Send}>
                 Submit Form
               </GradientButton>
             </div>
@@ -304,10 +289,8 @@ export default function GradientFormDemo() {
 
         {/* States Demo */}
         <section className="bg-white rounded-2xl p-8 shadow-lg">
-          <h2 className="text-2xl font-semibold text-gray-900 mb-6">
-            Interactive States
-          </h2>
-          
+          <h2 className="text-2xl font-semibold text-gray-900 mb-6">Interactive States</h2>
+
           <div className="space-y-6">
             <div>
               <h3 className="text-sm font-medium text-gray-700 mb-3">Focus States</h3>
@@ -329,14 +312,8 @@ export default function GradientFormDemo() {
                 Error states show gradient error messages and shake animation
               </p>
               <div className="grid md:grid-cols-2 gap-4">
-                <GradientInput 
-                  placeholder="Input with error" 
-                  error="This field is required"
-                />
-                <GradientCheckbox 
-                  label="Checkbox with error"
-                  error="You must accept this"
-                />
+                <GradientInput placeholder="Input with error" error="This field is required" />
+                <GradientCheckbox label="Checkbox with error" error="You must accept this" />
               </div>
             </div>
           </div>

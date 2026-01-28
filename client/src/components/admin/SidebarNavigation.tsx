@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useLocation } from 'wouter';
 import {
@@ -24,7 +23,7 @@ import {
   Activity,
   Layers,
   Lock,
-  Globe
+  Globe,
 } from 'lucide-react';
 import {
   Accordion,
@@ -44,22 +43,18 @@ const SidebarNavigation: React.FC = () => {
     else if (location.startsWith('/admin/properties')) setActiveSection('core');
     else if (location.startsWith('/admin/development')) setActiveSection('core');
     else if (location.startsWith('/admin/approvals')) setActiveSection('core');
-    
     else if (location.startsWith('/admin/ecosystem')) setActiveSection('ecosystem');
     else if (location.startsWith('/admin/agencies')) setActiveSection('ecosystem');
     else if (location.startsWith('/admin/agents')) setActiveSection('ecosystem');
     else if (location.startsWith('/admin/agents')) setActiveSection('ecosystem');
     else if (location.startsWith('/admin/developers')) setActiveSection('ecosystem');
     else if (location.startsWith('/admin/publisher')) setActiveSection('ecosystem');
-    
     else if (location.startsWith('/admin/revenue')) setActiveSection('revenue');
     else if (location.startsWith('/admin/subscriptions')) setActiveSection('revenue');
     else if (location.startsWith('/admin/marketing')) setActiveSection('revenue');
     else if (location.startsWith('/admin/monetization')) setActiveSection('revenue');
     else if (location.startsWith('/admin/partners')) setActiveSection('revenue');
-
     else if (location.startsWith('/admin/analytics')) setActiveSection('insights');
-    
     else if (location.startsWith('/admin/users')) setActiveSection('system');
     else if (location.startsWith('/admin/settings')) setActiveSection('system');
   }, [location]);
@@ -127,14 +122,14 @@ const SidebarNavigation: React.FC = () => {
 
   return (
     <div className="flex flex-col h-full bg-white/60 backdrop-blur-xl border-r border-white/40 w-full pt-4">
-       <Accordion 
-        type="single" 
-        collapsible 
-        value={activeSection} 
+      <Accordion
+        type="single"
+        collapsible
+        value={activeSection}
         onValueChange={setActiveSection}
         className="px-4 space-y-2"
       >
-        {groups.map((group) => (
+        {groups.map(group => (
           <AccordionItem key={group.id} value={group.id} className="border-none">
             <AccordionTrigger className="hover:no-underline py-2 px-3 rounded-lg hover:bg-primary/5 text-primary/70 font-medium data-[state=open]:bg-primary/10 data-[state=open]:text-primary mb-1">
               <div className="flex items-center gap-3">
@@ -144,28 +139,28 @@ const SidebarNavigation: React.FC = () => {
             </AccordionTrigger>
             <AccordionContent className="pt-1 pb-2">
               <div className="flex flex-col gap-1 ml-4 border-l border-primary/20 pl-4 mt-1">
-                {group.items.map((item) => {
-                   const isActive = location === item.path;
-                   return (
+                {group.items.map(item => {
+                  const isActive = location === item.path;
+                  return (
                     <button
                       key={item.name}
                       onClick={() => setLocation(item.path)}
                       className={cn(
-                        "text-sm text-left py-2 px-3 rounded-md transition-colors",
-                         isActive 
-                           ? "bg-primary text-primary-foreground font-medium shadow-sm" 
-                           : "text-primary/60 hover:text-primary hover:bg-primary/5"
+                        'text-sm text-left py-2 px-3 rounded-md transition-colors',
+                        isActive
+                          ? 'bg-primary text-primary-foreground font-medium shadow-sm'
+                          : 'text-primary/60 hover:text-primary hover:bg-primary/5',
                       )}
                     >
                       {item.name}
                     </button>
-                   );
+                  );
                 })}
               </div>
             </AccordionContent>
           </AccordionItem>
         ))}
-       </Accordion>
+      </Accordion>
     </div>
   );
 };

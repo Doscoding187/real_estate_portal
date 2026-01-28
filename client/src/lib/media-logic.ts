@@ -44,7 +44,9 @@ export function getDevelopmentCardImage(media: DevelopmentMedia): ImageMedia | u
  * The main hero slot on the Details page.
  * Logic: Video > Featured Image.
  */
-export function getDevelopmentHeroMedia(media: DevelopmentMedia): { type: 'video', video: VideoMedia } | { type: 'image', image: ImageMedia | undefined } {
+export function getDevelopmentHeroMedia(
+  media: DevelopmentMedia,
+): { type: 'video'; video: VideoMedia } | { type: 'image'; image: ImageMedia | undefined } {
   if (media.videos.length > 0) {
     return {
       type: 'video',
@@ -65,20 +67,20 @@ export function getDevelopmentHeroMedia(media: DevelopmentMedia): { type: 'video
  */
 export function buildDevelopmentGalleryImages(media: DevelopmentMedia): ImageMedia[] {
   const featured = media.featuredImage ? [media.featuredImage] : [];
-  
+
   // Exclude featured from the rest to prevent duplication
-  const rest = media.images.filter(img => 
-    !media.featuredImage || img.url !== media.featuredImage.url
+  const rest = media.images.filter(
+    img => !media.featuredImage || img.url !== media.featuredImage.url,
   );
 
   // Approximate category grouping (stable sort)
   const categoryPriority: Record<string, number> = {
-    'interior': 1,
-    'general': 1,
-    'amenities': 2,
-    'outdoors': 3,
-    'photo': 4,
-    'render': 5
+    interior: 1,
+    general: 1,
+    amenities: 2,
+    outdoors: 3,
+    photo: 4,
+    render: 5,
   };
 
   const sortedRest = [...rest].sort((a, b) => {
@@ -95,10 +97,10 @@ export function buildDevelopmentGalleryImages(media: DevelopmentMedia): ImageMed
  */
 export function getGalleryStartIndex(gallery: ImageMedia[], category: ImageCategory): number {
   if (!gallery.length) return 0;
-  
+
   if (category === 'interior') {
-      const idx = gallery.findIndex(img => img.category === 'interior' || img.category === 'general');
-      return idx !== -1 ? idx : 0;
+    const idx = gallery.findIndex(img => img.category === 'interior' || img.category === 'general');
+    return idx !== -1 ? idx : 0;
   }
 
   const index = gallery.findIndex(img => img.category === category);
@@ -108,11 +110,15 @@ export function getGalleryStartIndex(gallery: ImageMedia[], category: ImageCateg
 /**
  * Logic for the "View Gallery" tile (usually bottom right or large tile).
  */
-export function getDevelopmentViewGalleryTileImage(media: DevelopmentMedia): ImageMedia | undefined {
+export function getDevelopmentViewGalleryTileImage(
+  media: DevelopmentMedia,
+): ImageMedia | undefined {
   if (media.videos.length > 0) {
     return media.featuredImage || media.images[0];
   }
-  const interior = media.images.find(img => img.category === 'interior' || img.category === 'general');
+  const interior = media.images.find(
+    img => img.category === 'interior' || img.category === 'general',
+  );
   return interior ?? media.images[0] ?? media.featuredImage;
 }
 
@@ -120,10 +126,7 @@ export function getDevelopmentViewGalleryTileImage(media: DevelopmentMedia): Ima
  * Amenities Tile
  */
 export function getDevelopmentAmenityTileImage(media: DevelopmentMedia): ImageMedia | undefined {
-  return (
-    media.images.find(img => img.category === 'amenities') ??
-    media.images[0]
-  );
+  return media.images.find(img => img.category === 'amenities') ?? media.images[0];
 }
 
 /**
@@ -131,9 +134,7 @@ export function getDevelopmentAmenityTileImage(media: DevelopmentMedia): ImageMe
  */
 export function getDevelopmentOutdoorsTileImage(media: DevelopmentMedia): ImageMedia | undefined {
   return (
-    media.images.find(img => img.category === 'outdoors') ??
-    media.images[1] ?? 
-    media.images[0]
+    media.images.find(img => img.category === 'outdoors') ?? media.images[1] ?? media.images[0]
   );
 }
 
@@ -157,10 +158,7 @@ export type UnitTypeMedia = {
  */
 export function getUnitTypeCardImage(media: UnitTypeMedia): UnitImage | undefined {
   if (!media || !media.images) return undefined;
-  return (
-    media.images.find(img => img.isPrimary) ??
-    media.images[0]
-  );
+  return media.images.find(img => img.isPrimary) ?? media.images[0];
 }
 
 // =============================================================================

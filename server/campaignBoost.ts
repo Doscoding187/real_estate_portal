@@ -30,8 +30,8 @@ export async function calculateListingBoostScore(listingId: number): Promise<num
         and(
           eq(marketingCampaigns.targetType, 'listing'),
           eq(marketingCampaigns.targetId, listingId),
-          eq(marketingCampaigns.status, 'active')
-        )
+          eq(marketingCampaigns.status, 'active'),
+        ),
       );
 
     if (activeCampaigns.length === 0) return 0;
@@ -40,11 +40,11 @@ export async function calculateListingBoostScore(listingId: number): Promise<num
     let totalBoost = 0;
     for (const campaign of activeCampaigns) {
       const budget = parseFloat(campaign.budgetAmount || '0');
-      
+
       // Higher budget = higher boost
       // Daily budgets get a multiplier
       const multiplier = campaign.budgetType === 'daily' ? 1.5 : 1.0;
-      
+
       // Logarithmic scaling to prevent excessive dominance
       const boost = Math.log10(budget + 1) * multiplier;
       totalBoost += boost;
@@ -63,7 +63,7 @@ export async function calculateListingBoostScore(listingId: number): Promise<num
  */
 export async function getBoostedListingsForChannel(
   channel: 'feed' | 'search' | 'carousel' | 'showcase',
-  limit: number = 10
+  limit: number = 10,
 ): Promise<number[]> {
   const db = await getDb();
   if (!db) return [];
@@ -84,21 +84,23 @@ export async function getBoostedListingsForChannel(
           eq(marketingCampaigns.targetType, 'listing'),
           eq(marketingCampaigns.status, 'active'),
           eq(campaignChannels.type, channel),
-          eq(campaignChannels.enabled, true)
-        )
+          eq(campaignChannels.enabled, true),
+        ),
       );
 
     // Calculate scores and sort
-    const scoredListings = boostedListings.map((item: { listingId: number; budgetAmount: string | null; budgetType: string | null }) => {
-      const budget = parseFloat(item.budgetAmount || '0');
-      const multiplier = item.budgetType === 'daily' ? 1.5 : 1.0;
-      const score = Math.log10(budget + 1) * multiplier;
-      
-      return {
-        listingId: item.listingId,
-        score,
-      };
-    });
+    const scoredListings = boostedListings.map(
+      (item: { listingId: number; budgetAmount: string | null; budgetType: string | null }) => {
+        const budget = parseFloat(item.budgetAmount || '0');
+        const multiplier = item.budgetType === 'daily' ? 1.5 : 1.0;
+        const score = Math.log10(budget + 1) * multiplier;
+
+        return {
+          listingId: item.listingId,
+          score,
+        };
+      },
+    );
 
     // Sort by score descending and return top N
     return scoredListings
@@ -161,7 +163,7 @@ export async function getActiveCampaignForListing(listingId: number): Promise<nu
       where: and(
         eq(marketingCampaigns.targetType, 'listing'),
         eq(marketingCampaigns.targetId, listingId),
-        eq(marketingCampaigns.status, 'active')
+        eq(marketingCampaigns.status, 'active'),
       ),
     });
 

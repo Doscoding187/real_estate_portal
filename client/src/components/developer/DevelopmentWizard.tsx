@@ -72,10 +72,10 @@ const DevelopmentWizard: React.FC = () => {
         return (
           <div className="space-y-4">
             <h3 className="typ-h3">Location Details</h3>
-            
+
             {/* Interactive Map with Pin Drop */}
             <LocationPicker
-              onLocationChange={(location) => {
+              onLocationChange={location => {
                 console.log('Location selected:', location);
                 // TODO: Save location to form state
               }}
@@ -89,23 +89,25 @@ const DevelopmentWizard: React.FC = () => {
                 <span className="text-sm text-gray-500">Or enter address manually (optional)</span>
                 <div className="h-px flex-1 bg-gray-200"></div>
               </div>
-              
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Street Address (Optional)
                   </label>
-                  <input 
-                    type="text" 
-                    className="input w-full" 
-                    placeholder="e.g. 123 Main Street (if available)" 
+                  <input
+                    type="text"
+                    className="input w-full"
+                    placeholder="e.g. 123 Main Street (if available)"
                   />
                   <p className="text-xs text-gray-500 mt-1">
                     Leave blank if street address hasn't been assigned yet
                   </p>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Suburb/Area</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Suburb/Area
+                  </label>
                   <input type="text" className="input w-full" placeholder="e.g. Sandton" />
                 </div>
                 <div>
@@ -113,7 +115,9 @@ const DevelopmentWizard: React.FC = () => {
                   <input type="text" className="input w-full" placeholder="e.g. Johannesburg" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Postal Code</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Postal Code
+                  </label>
                   <input type="text" className="input w-full" placeholder="e.g. 2196" />
                 </div>
                 <div className="md:col-span-2">
@@ -136,13 +140,27 @@ const DevelopmentWizard: React.FC = () => {
             {/* Show House Location Note */}
             <div className="mt-4 p-4 bg-blue-50 rounded-xl border border-blue-100">
               <div className="flex gap-3">
-                <svg className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                <svg
+                  className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
                 </svg>
                 <div>
-                  <p className="text-sm font-medium text-blue-900">Tip: Pin the Show House Location</p>
+                  <p className="text-sm font-medium text-blue-900">
+                    Tip: Pin the Show House Location
+                  </p>
                   <p className="text-sm text-blue-700 mt-1">
-                    For new developments without assigned street addresses, drag the pin to mark where your show houses or sales office is located. This helps buyers find you accurately.
+                    For new developments without assigned street addresses, drag the pin to mark
+                    where your show houses or sales office is located. This helps buyers find you
+                    accurately.
                   </p>
                 </div>
               </div>

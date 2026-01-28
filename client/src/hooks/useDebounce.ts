@@ -2,11 +2,11 @@ import { useEffect, useState } from 'react';
 
 /**
  * Debounce hook that delays updating a value until after a specified delay
- * 
+ *
  * @param value - The value to debounce
  * @param delay - Delay in milliseconds (default: 300ms)
  * @returns The debounced value
- * 
+ *
  * @example
  * const debouncedSearchTerm = useDebounce(searchTerm, 300);
  */

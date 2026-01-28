@@ -2,7 +2,7 @@
  * MetricCard Component (Wizard-specific)
  * Card for displaying portfolio metrics with gradient styling
  * Part of the Soft UI design system
- * 
+ *
  * Requirements: 6.1, 6.2, 6.3, 6.4, 6.5
  */
 
@@ -66,15 +66,8 @@ const variantStyles = {
 
 export const MetricCard = React.forwardRef<HTMLDivElement, MetricCardProps>(
   (
-    {
-      label,
-      value,
-      icon: Icon,
-      variant = 'blue',
-      emptyMessage = 'Start your journey',
-      className,
-    },
-    ref
+    { label, value, icon: Icon, variant = 'blue', emptyMessage = 'Start your journey', className },
+    ref,
   ) => {
     const styles = variantStyles[variant];
     const isZero = value === 0;
@@ -90,7 +83,7 @@ export const MetricCard = React.forwardRef<HTMLDivElement, MetricCardProps>(
           'transition-all duration-300 ease-in-out',
           'hover:shadow-lg hover:-translate-y-1',
           styles.border,
-          className
+          className,
         )}
       >
         {/* Icon with gradient background */}
@@ -100,7 +93,7 @@ export const MetricCard = React.forwardRef<HTMLDivElement, MetricCardProps>(
               'flex items-center justify-center',
               'w-12 h-12 rounded-full',
               'bg-gradient-to-br',
-              styles.gradient
+              styles.gradient,
             )}
           >
             <Icon className="w-6 h-6 text-white" aria-hidden="true" />
@@ -114,7 +107,7 @@ export const MetricCard = React.forwardRef<HTMLDivElement, MetricCardProps>(
             className={cn(
               'text-4xl font-bold',
               'bg-gradient-to-r bg-clip-text text-transparent',
-              styles.gradient
+              styles.gradient,
             )}
           >
             {value}
@@ -129,13 +122,13 @@ export const MetricCard = React.forwardRef<HTMLDivElement, MetricCardProps>(
           className={cn(
             'absolute bottom-0 left-0 right-0 h-1 rounded-b-xl',
             'bg-gradient-to-r opacity-50',
-            styles.gradient
+            styles.gradient,
           )}
           aria-hidden="true"
         />
       </div>
     );
-  }
+  },
 );
 
 MetricCard.displayName = 'MetricCard';

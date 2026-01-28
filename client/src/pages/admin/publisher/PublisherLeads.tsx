@@ -21,21 +21,23 @@ const PublisherLeads: React.FC = () => {
 
   const { data: leads, isLoading } = trpc.superAdminPublisher.getBrandLeads.useQuery(
     { brandProfileId: selectedBrandId!, limit: 100 },
-    { enabled: !!selectedBrandId }
+    { enabled: !!selectedBrandId },
   );
 
-  const filteredLeads = leads?.filter(lead => 
-    lead.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    lead.email.toLowerCase().includes(searchTerm.toLowerCase())
-  ) || [];
+  const filteredLeads =
+    leads?.filter(
+      lead =>
+        lead.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        lead.email.toLowerCase().includes(searchTerm.toLowerCase()),
+    ) || [];
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-         <h3 className="text-xl font-semibold">Leads Dashboard</h3>
-         <Badge variant="outline" className="text-xs">
-           Read Only View
-         </Badge>
+        <h3 className="text-xl font-semibold">Leads Dashboard</h3>
+        <Badge variant="outline" className="text-xs">
+          Read Only View
+        </Badge>
       </div>
 
       <Card>
@@ -84,31 +86,45 @@ const PublisherLeads: React.FC = () => {
                           {lead.name}
                         </span>
                         <div className="text-xs text-muted-foreground flex gap-3 mt-0.5">
-                           <span className="flex items-center gap-1"><Mail className="w-3 h-3" /> {lead.email}</span>
-                           {lead.phone && <span className="flex items-center gap-1"><Phone className="w-3 h-3" /> {lead.phone}</span>}
+                          <span className="flex items-center gap-1">
+                            <Mail className="w-3 h-3" /> {lead.email}
+                          </span>
+                          {lead.phone && (
+                            <span className="flex items-center gap-1">
+                              <Phone className="w-3 h-3" /> {lead.phone}
+                            </span>
+                          )}
                         </div>
                       </div>
                     </TableCell>
                     <TableCell>
                       <div className="text-sm">
-                         {lead.developmentId ? (
-                           <Badge variant="secondary" className="font-normal">Development Inquiry</Badge>
-                         ) : (
-                           <Badge variant="outline" className="font-normal">Property Inquiry</Badge>
-                         )}
+                        {lead.developmentId ? (
+                          <Badge variant="secondary" className="font-normal">
+                            Development Inquiry
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="font-normal">
+                            Property Inquiry
+                          </Badge>
+                        )}
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Badge className={
-                        lead.brandLeadStatus === 'captured' ? 'bg-blue-100 text-blue-700 hover:bg-blue-200 border-blue-200' :
-                        lead.brandLeadStatus === 'claimed' ? 'bg-green-100 text-green-700 hover:bg-green-200 border-green-200' :
-                        'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                      }>
+                      <Badge
+                        className={
+                          lead.brandLeadStatus === 'captured'
+                            ? 'bg-blue-100 text-blue-700 hover:bg-blue-200 border-blue-200'
+                            : lead.brandLeadStatus === 'claimed'
+                              ? 'bg-green-100 text-green-700 hover:bg-green-200 border-green-200'
+                              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        }
+                      >
                         {lead.brandLeadStatus}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right text-xs text-muted-foreground">
-                       {lead.leadSource || 'Direct'}
+                      {lead.leadSource || 'Direct'}
                     </TableCell>
                   </TableRow>
                 ))

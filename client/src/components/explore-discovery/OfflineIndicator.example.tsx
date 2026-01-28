@@ -4,7 +4,7 @@ import { ModernCard } from '@/components/ui/soft/ModernCard';
 
 /**
  * OfflineIndicator Examples
- * 
+ *
  * Demonstrates the OfflineIndicator component in various scenarios.
  * Use browser DevTools to simulate offline/online states.
  */
@@ -16,20 +16,16 @@ export function OfflineIndicatorExamples() {
       <div className="max-w-4xl mx-auto space-y-8">
         {/* Header */}
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            OfflineIndicator Component
-          </h1>
-          <p className="text-gray-600">
-            Provides visual feedback about network connection status
-          </p>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">OfflineIndicator Component</h1>
+          <p className="text-gray-600">Provides visual feedback about network connection status</p>
         </div>
 
         {/* Live Demo */}
         <ModernCard>
           <h2 className="text-xl font-semibold mb-4">Live Demo</h2>
           <p className="text-gray-600 mb-4">
-            The indicator is active at the top of this page. Use browser DevTools
-            to simulate offline mode:
+            The indicator is active at the top of this page. Use browser DevTools to simulate
+            offline mode:
           </p>
           <ol className="list-decimal list-inside space-y-2 text-gray-700 mb-4">
             <li>Open DevTools (F12)</li>
@@ -38,7 +34,7 @@ export function OfflineIndicatorExamples() {
             <li>Watch the banner appear</li>
             <li>Set back to "Online" to see reconnection message</li>
           </ol>
-          
+
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
             <p className="text-sm text-blue-800">
               <strong>Note:</strong> The reconnection message auto-dismisses after 3 seconds.
@@ -104,7 +100,8 @@ function ExploreFeed() {
             <li className="flex items-start gap-2">
               <span className="text-green-500 mt-1">✓</span>
               <span>
-                <strong>Live regions:</strong> Offline uses aria-live="assertive", reconnection uses "polite"
+                <strong>Live regions:</strong> Offline uses aria-live="assertive", reconnection uses
+                "polite"
               </span>
             </li>
             <li className="flex items-start gap-2">
@@ -153,15 +150,13 @@ function ExploreFeed() {
           <div className="space-y-4">
             <div className="border-l-4 border-amber-500 pl-4">
               <h3 className="font-medium text-gray-900 mb-1">Offline State</h3>
-              <p className="text-gray-600 text-sm mb-2">
-                Shown when navigator.onLine is false
-              </p>
+              <p className="text-gray-600 text-sm mb-2">Shown when navigator.onLine is false</p>
               <div className="bg-amber-500 text-white px-4 py-2 rounded-lg flex items-center gap-2">
                 <span>📡</span>
                 <span className="text-sm">You're offline. Showing cached content.</span>
               </div>
             </div>
-            
+
             <div className="border-l-4 border-green-500 pl-4">
               <h3 className="font-medium text-gray-900 mb-1">Reconnection State</h3>
               <p className="text-gray-600 text-sm mb-2">
@@ -191,7 +186,7 @@ function ExploreFeed() {
                 <li>Wait 3 seconds and verify banner dismisses</li>
               </ol>
             </div>
-            
+
             <div>
               <h3 className="font-medium text-gray-900 mb-2">Automated Testing</h3>
               <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto text-sm">

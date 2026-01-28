@@ -1,9 +1,9 @@
 /**
  * SkipLinks Component
- * 
+ *
  * Provides skip navigation links for keyboard users to jump to main content sections.
  * Links are visually hidden but become visible when focused.
- * 
+ *
  * Requirements: 10.5
  */
 
@@ -45,13 +45,11 @@ const defaultSkipLinks: SkipLink[] = [
 
 /**
  * SkipLinks Component
- * 
+ *
  * Renders a list of skip navigation links that are visually hidden
  * until focused via keyboard navigation.
  */
-export const SkipLinks: React.FC<SkipLinksProps> = ({
-  links = defaultSkipLinks,
-}) => {
+export const SkipLinks: React.FC<SkipLinksProps> = ({ links = defaultSkipLinks }) => {
   const handleSkipClick = (e: React.MouseEvent<HTMLAnchorElement>, targetId: string) => {
     e.preventDefault();
     const target = document.getElementById(targetId);
@@ -78,11 +76,11 @@ export const SkipLinks: React.FC<SkipLinksProps> = ({
           padding: 0,
         }}
       >
-        {links.map((link) => (
+        {links.map(link => (
           <li key={link.id}>
             <a
               href={`#${link.targetId}`}
-              onClick={(e) => handleSkipClick(e, link.targetId)}
+              onClick={e => handleSkipClick(e, link.targetId)}
               className="skip-link"
               style={{
                 position: 'absolute',

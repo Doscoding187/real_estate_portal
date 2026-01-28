@@ -1,9 +1,9 @@
 /**
  * IconButton Component
- * 
+ *
  * A modern icon button with multiple variants and smooth animations.
  * Supports default, glass, and accent styles.
- * 
+ *
  * Features:
  * - Accessible with proper ARIA labels
  * - Smooth hover and press animations
@@ -44,10 +44,10 @@ const variantClasses = {
   accent: 'accent-btn text-white',
 } as const;
 
-export function IconButton({ 
-  icon: Icon, 
-  onClick, 
-  label, 
+export function IconButton({
+  icon: Icon,
+  onClick,
+  label,
   size = 'md',
   variant = 'default',
   className = '',
@@ -63,7 +63,7 @@ export function IconButton({
         'focus:outline-none focus:ring-2 focus:ring-offset-2',
         variant === 'accent' ? 'focus:ring-indigo-500' : 'focus:ring-gray-300',
         disabled && 'opacity-50 cursor-not-allowed',
-        className
+        className,
       )}
       onClick={onClick}
       whileHover={!disabled ? { scale: 1.05 } : undefined}

@@ -1,15 +1,15 @@
 /**
  * Partner Subscription Service
- * 
+ *
  * Manages partner subscription tiers, feature access control, and state transitions
  * for the Explore Partner Marketplace system.
- * 
+ *
  * Subscription Tiers:
  * - Free: Limited features, reduced visibility
  * - Basic (R500/month): Standard profile, basic analytics, organic reach
  * - Premium (R2000/month): Enhanced profile, detailed analytics, priority support, increased reach
  * - Featured (R5000/month): Premium placement, advanced analytics, dedicated support, maximum reach
- * 
+ *
  * @module partnerSubscriptionService
  */
 
@@ -137,7 +137,7 @@ export function getTierPricing(tier: SubscriptionTier): SubscriptionTierPricing 
  * Get partner's current subscription
  */
 export async function getPartnerSubscription(
-  partnerId: string
+  partnerId: string,
 ): Promise<PartnerSubscription | null> {
   const db = await getDb();
   if (!db) throw new Error('Database not available');
@@ -146,7 +146,7 @@ export async function getPartnerSubscription(
     `SELECT * FROM partner_subscriptions 
      WHERE partner_id = ? AND status = 'active'
      ORDER BY created_at DESC LIMIT 1`,
-    [partnerId]
+    [partnerId],
   );
 
   const subscriptions = rows as any[];
@@ -159,7 +159,7 @@ export async function getPartnerSubscription(
  * Get all subscriptions for a partner (including historical)
  */
 export async function getPartnerSubscriptionHistory(
-  partnerId: string
+  partnerId: string,
 ): Promise<PartnerSubscription[]> {
   const db = await getDb();
   if (!db) throw new Error('Database not available');
@@ -168,7 +168,7 @@ export async function getPartnerSubscriptionHistory(
     `SELECT * FROM partner_subscriptions 
      WHERE partner_id = ?
      ORDER BY created_at DESC`,
-    [partnerId]
+    [partnerId],
   );
 
   return (rows as any[]).map(parseSubscription);
@@ -180,12 +180,12 @@ export async function getPartnerSubscriptionHistory(
 
 /**
  * Create a new subscription for a partner
- * 
+ *
  * Requirements: 7.1, 7.2, 7.3, 7.6
  */
 export async function createSubscription(
   partnerId: string,
-  tier: SubscriptionTier
+  tier: SubscriptionTier,
 ): Promise<PartnerSubscription> {
   const db = await getDb();
   if (!db) throw new Error('Database not available');
@@ -203,14 +203,7 @@ export async function createSubscription(
     `INSERT INTO partner_subscriptions 
      (id, partner_id, tier, price_monthly, start_date, status, features)
      VALUES (?, ?, ?, ?, ?, 'active', ?)`,
-    [
-      id,
-      partnerId,
-      tier,
-      pricing.price_monthly,
-      startDate,
-      JSON.stringify(pricing.features),
-    ]
+    [id, partnerId, tier, pricing.price_monthly, startDate, JSON.stringify(pricing.features)],
   );
 
   const subscription = await getPartnerSubscription(partnerId);
@@ -227,12 +220,12 @@ export async function createSubscription(
 
 /**
  * Upgrade partner subscription with immediate benefit application
- * 
+ *
  * Requirements: 7.4
  */
 export async function upgradeSubscription(
   subscriptionId: string,
-  newTier: SubscriptionTier
+  newTier: SubscriptionTier,
 ): Promise<void> {
   const db = await getDb();
   if (!db) throw new Error('Database not available');
@@ -252,13 +245,13 @@ export async function upgradeSubscription(
          features = ?,
          updated_at = CURRENT_TIMESTAMP
      WHERE id = ? AND status = 'active'`,
-    [newTier, pricing.price_monthly, JSON.stringify(pricing.features), subscriptionId]
+    [newTier, pricing.price_monthly, JSON.stringify(pricing.features), subscriptionId],
   );
 }
 
 /**
  * Cancel subscription and downgrade to basic tier
- * 
+ *
  * Requirements: 7.5
  */
 export async function cancelSubscription(subscriptionId: string): Promise<void> {
@@ -266,10 +259,9 @@ export async function cancelSubscription(subscriptionId: string): Promise<void> 
   if (!db) throw new Error('Database not available');
 
   // Get current subscription
-  const [rows] = await db.execute(
-    `SELECT partner_id FROM partner_subscriptions WHERE id = ?`,
-    [subscriptionId]
-  );
+  const [rows] = await db.execute(`SELECT partner_id FROM partner_subscriptions WHERE id = ?`, [
+    subscriptionId,
+  ]);
 
   const subscriptions = rows as any[];
   if (subscriptions.length === 0) {
@@ -285,7 +277,7 @@ export async function cancelSubscription(subscriptionId: string): Promise<void> 
          end_date = CURRENT_DATE,
          updated_at = CURRENT_TIMESTAMP
      WHERE id = ?`,
-    [subscriptionId]
+    [subscriptionId],
   );
 
   // Create new basic tier subscription (downgrade)
@@ -294,7 +286,7 @@ export async function cancelSubscription(subscriptionId: string): Promise<void> 
 
 /**
  * Handle subscription expiration and downgrade to basic
- * 
+ *
  * Requirements: 7.4, 7.5
  */
 export async function handleExpiredSubscription(subscriptionId: string): Promise<void> {
@@ -302,10 +294,9 @@ export async function handleExpiredSubscription(subscriptionId: string): Promise
   if (!db) throw new Error('Database not available');
 
   // Get current subscription
-  const [rows] = await db.execute(
-    `SELECT partner_id FROM partner_subscriptions WHERE id = ?`,
-    [subscriptionId]
-  );
+  const [rows] = await db.execute(`SELECT partner_id FROM partner_subscriptions WHERE id = ?`, [
+    subscriptionId,
+  ]);
 
   const subscriptions = rows as any[];
   if (subscriptions.length === 0) {
@@ -320,7 +311,7 @@ export async function handleExpiredSubscription(subscriptionId: string): Promise
      SET status = 'expired',
          updated_at = CURRENT_TIMESTAMP
      WHERE id = ?`,
-    [subscriptionId]
+    [subscriptionId],
   );
 
   // Downgrade to basic tier
@@ -339,7 +330,7 @@ export async function processExpiredSubscriptions(): Promise<void> {
     `SELECT id FROM partner_subscriptions 
      WHERE status = 'active' 
      AND end_date IS NOT NULL 
-     AND end_date < CURRENT_DATE`
+     AND end_date < CURRENT_DATE`,
   );
 
   const expiredSubscriptions = rows as any[];
@@ -359,12 +350,12 @@ export async function processExpiredSubscriptions(): Promise<void> {
 
 /**
  * Check if partner has access to a specific feature
- * 
+ *
  * Requirements: 7.1, 7.2, 7.3
  */
 export async function checkFeatureAccess(
   partnerId: string,
-  feature: keyof SubscriptionFeatures
+  feature: keyof SubscriptionFeatures,
 ): Promise<boolean> {
   const subscription = await getPartnerSubscription(partnerId);
 
@@ -382,7 +373,7 @@ export async function checkFeatureAccess(
  */
 export async function getFeatureValue<K extends keyof SubscriptionFeatures>(
   partnerId: string,
-  feature: K
+  feature: K,
 ): Promise<SubscriptionFeatures[K]> {
   const subscription = await getPartnerSubscription(partnerId);
 
@@ -399,7 +390,7 @@ export async function getFeatureValue<K extends keyof SubscriptionFeatures>(
  */
 export async function canPerformAction(
   partnerId: string,
-  action: 'create_content' | 'boost_content' | 'view_analytics' | 'contact_support'
+  action: 'create_content' | 'boost_content' | 'view_analytics' | 'contact_support',
 ): Promise<{ allowed: boolean; reason?: string }> {
   const subscription = await getPartnerSubscription(partnerId);
   const tier = subscription?.tier || 'free';
@@ -453,7 +444,7 @@ async function getMonthlyContentCount(partnerId: string): Promise<number> {
      WHERE partner_id = ? 
      AND MONTH(created_at) = MONTH(CURRENT_DATE)
      AND YEAR(created_at) = YEAR(CURRENT_DATE)`,
-    [partnerId]
+    [partnerId],
   );
 
   const result = rows as any[];
@@ -511,25 +502,25 @@ export const partnerSubscriptionService = {
   cancelSubscription,
   handleExpiredSubscription,
   processExpiredSubscriptions,
-  
+
   // Feature access
   checkFeatureAccess,
   getFeatureValue,
   canPerformAction,
-  
+
   // Subscription queries
   getPartnerSubscription,
   getPartnerSubscriptionHistory,
   getActiveSubscription: getPartnerSubscription, // Alias for consistency
-  
+
   // Pricing
   getSubscriptionTierPricing,
   getTierPricing,
-  
+
   // Utilities
   getTierHierarchy,
   isHigherTier,
-  
+
   // Alias for expired subscriptions handler
   handleExpiredSubscriptions: processExpiredSubscriptions,
 };

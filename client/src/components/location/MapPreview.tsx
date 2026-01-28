@@ -1,13 +1,13 @@
 /**
  * MapPreview Component
- * 
+ *
  * Requirements: 12.1-12.5
  * - 12.1: Display small map preview on place selection
  * - 12.2: Center map on selected coordinates with appropriate zoom
  * - 12.3: Expand to larger interactive map on click
  * - 12.4: Allow marker position adjustment by dragging
  * - 12.5: Update coordinates and perform reverse geocoding when marker is moved
- * 
+ *
  * Features:
  * - Small preview mode (200px height)
  * - Expandable to full-screen mode
@@ -23,7 +23,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
-const libraries: ("places" | "geometry")[] = ['places'];
+const libraries: ('places' | 'geometry')[] = ['places'];
 
 interface MapPreviewProps {
   center: {
@@ -101,7 +101,7 @@ export function MapPreview({
           const addressComponents = result.results[0].address_components || [];
 
           const getComponent = (type: string): string | undefined => {
-            const component = addressComponents.find((c) => c.types.includes(type));
+            const component = addressComponents.find(c => c.types.includes(type));
             return component?.long_name;
           };
 
@@ -130,7 +130,7 @@ export function MapPreview({
         setIsGeocoding(false);
       }
     },
-    [onLocationChange]
+    [onLocationChange],
   );
 
   const handleMarkerDragEnd = useCallback(
@@ -143,7 +143,7 @@ export function MapPreview({
       setMarkerPosition({ lat, lng });
       await performReverseGeocoding(lat, lng);
     },
-    [performReverseGeocoding]
+    [performReverseGeocoding],
   );
 
   const onLoad = useCallback((map: google.maps.Map) => {
@@ -155,7 +155,7 @@ export function MapPreview({
   }, []);
 
   const toggleExpanded = useCallback(() => {
-    setIsExpanded((prev) => !prev);
+    setIsExpanded(prev => !prev);
   }, []);
 
   if (loadError) {
@@ -198,12 +198,7 @@ export function MapPreview({
                     <span>Updating address...</span>
                   </div>
                 )}
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={toggleExpanded}
-                  className="h-8 w-8 p-0"
-                >
+                <Button variant="ghost" size="sm" onClick={toggleExpanded} className="h-8 w-8 p-0">
                   <X className="h-4 w-4" />
                 </Button>
               </div>
@@ -218,11 +213,7 @@ export function MapPreview({
               onUnmount={onUnmount}
               options={defaultMapOptions}
             >
-              <Marker
-                position={markerPosition}
-                draggable={true}
-                onDragEnd={handleMarkerDragEnd}
-              />
+              <Marker position={markerPosition} draggable={true} onDragEnd={handleMarkerDragEnd} />
             </GoogleMap>
 
             {/* Instructions */}

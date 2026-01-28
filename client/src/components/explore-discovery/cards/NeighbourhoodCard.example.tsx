@@ -1,6 +1,6 @@
 /**
  * NeighbourhoodCard Example Usage
- * 
+ *
  * Demonstrates various use cases and configurations of the NeighbourhoodCard component.
  */
 
@@ -11,42 +11,42 @@ import { useState } from 'react';
 const sampleNeighbourhoods = [
   {
     id: 1,
-    name: "Sandton",
-    city: "Johannesburg",
-    imageUrl: "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=800",
+    name: 'Sandton',
+    city: 'Johannesburg',
+    imageUrl: 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=800',
     propertyCount: 245,
     avgPrice: 3500000,
     priceChange: 5.2,
     followerCount: 1234,
-    highlights: ["Luxury Living", "Business Hub"],
+    highlights: ['Luxury Living', 'Business Hub'],
   },
   {
     id: 2,
-    name: "Camps Bay",
-    city: "Cape Town",
-    imageUrl: "https://images.unsplash.com/photo-1580060839134-75a5edca2e99?w=800",
+    name: 'Camps Bay',
+    city: 'Cape Town',
+    imageUrl: 'https://images.unsplash.com/photo-1580060839134-75a5edca2e99?w=800',
     propertyCount: 156,
     avgPrice: 8500000,
     priceChange: 8.7,
     followerCount: 2456,
-    highlights: ["Beachfront", "Mountain Views"],
+    highlights: ['Beachfront', 'Mountain Views'],
   },
   {
     id: 3,
-    name: "Umhlanga",
-    city: "Durban",
-    imageUrl: "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=800",
+    name: 'Umhlanga',
+    city: 'Durban',
+    imageUrl: 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=800',
     propertyCount: 189,
     avgPrice: 2800000,
     priceChange: -2.3,
     followerCount: 876,
-    highlights: ["Coastal Living", "Modern"],
+    highlights: ['Coastal Living', 'Modern'],
   },
   {
     id: 4,
-    name: "Rosebank",
-    city: "Johannesburg",
-    imageUrl: "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=800",
+    name: 'Rosebank',
+    city: 'Johannesburg',
+    imageUrl: 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=800',
     propertyCount: 312,
     avgPrice: 2200000,
     followerCount: 654,
@@ -147,9 +147,7 @@ export function NeighbourhoodCardExamples() {
         {/* Example 5: Grid Layout */}
         <section className="mb-12">
           <h2 className="text-2xl font-semibold mb-4">Grid Layout</h2>
-          <p className="text-gray-600 mb-4">
-            Multiple cards in a responsive grid
-          </p>
+          <p className="text-gray-600 mb-4">Multiple cards in a responsive grid</p>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {sampleNeighbourhoods.map(neighbourhood => (
               <NeighbourhoodCard
@@ -165,9 +163,7 @@ export function NeighbourhoodCardExamples() {
         {/* Example 6: Single Column Layout */}
         <section className="mb-12">
           <h2 className="text-2xl font-semibold mb-4">Single Column Layout</h2>
-          <p className="text-gray-600 mb-4">
-            Cards stacked vertically with spacing
-          </p>
+          <p className="text-gray-600 mb-4">Cards stacked vertically with spacing</p>
           <div className="max-w-md mx-auto space-y-6">
             {sampleNeighbourhoods.slice(0, 2).map(neighbourhood => (
               <NeighbourhoodCard
@@ -184,7 +180,8 @@ export function NeighbourhoodCardExamples() {
         <section className="mb-12">
           <h2 className="text-2xl font-semibold mb-4">Interactive Follow State</h2>
           <p className="text-gray-600 mb-4">
-            Click follow buttons to see state changes. Followed IDs: {Array.from(followedIds).join(', ') || 'None'}
+            Click follow buttons to see state changes. Followed IDs:{' '}
+            {Array.from(followedIds).join(', ') || 'None'}
           </p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-3xl">
             {sampleNeighbourhoods.slice(0, 2).map(neighbourhood => (
@@ -201,9 +198,7 @@ export function NeighbourhoodCardExamples() {
         {/* Example 8: Animation Showcase */}
         <section className="mb-12">
           <h2 className="text-2xl font-semibold mb-4">Animation Showcase</h2>
-          <p className="text-gray-600 mb-4">
-            Hover and click to see animations:
-          </p>
+          <p className="text-gray-600 mb-4">Hover and click to see animations:</p>
           <ul className="text-sm text-gray-600 mb-4 space-y-1">
             <li>• Hover card → 2px lift + subtle scale</li>
             <li>• Click card → Scale down to 0.98</li>
@@ -223,9 +218,7 @@ export function NeighbourhoodCardExamples() {
         {/* Example 9: Accessibility Features */}
         <section className="mb-12">
           <h2 className="text-2xl font-semibold mb-4">Accessibility Features</h2>
-          <p className="text-gray-600 mb-4">
-            Try these accessibility features:
-          </p>
+          <p className="text-gray-600 mb-4">Try these accessibility features:</p>
           <ul className="text-sm text-gray-600 mb-4 space-y-1">
             <li>• Tab to focus on card</li>
             <li>• Press Enter or Space to activate</li>
@@ -245,9 +238,7 @@ export function NeighbourhoodCardExamples() {
         {/* Example 10: Design System Integration */}
         <section className="mb-12">
           <h2 className="text-2xl font-semibold mb-4">Design System Integration</h2>
-          <p className="text-gray-600 mb-4">
-            This card uses design tokens for:
-          </p>
+          <p className="text-gray-600 mb-4">This card uses design tokens for:</p>
           <ul className="text-sm text-gray-600 mb-4 space-y-1">
             <li>• Spacing: designTokens.spacing.md (16px), .sm (8px)</li>
             <li>• Colors: designTokens.colors.text.primary, .secondary</li>

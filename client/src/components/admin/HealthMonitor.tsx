@@ -3,11 +3,13 @@ import { Card, CardContent } from '@/components/ui/card';
 import { TrendingUp, Home, Clock, AlertCircle } from 'lucide-react';
 
 interface HealthMonitorProps {
-  stats: {
-    totalInventoryValue: number;
-    newListingsToday: number;
-    pendingApprovals: number;
-  } | undefined;
+  stats:
+    | {
+        totalInventoryValue: number;
+        newListingsToday: number;
+        pendingApprovals: number;
+      }
+    | undefined;
   isLoading: boolean;
 }
 
@@ -19,7 +21,11 @@ export const HealthMonitor: React.FC<HealthMonitorProps> = ({ stats, isLoading }
     if (value >= 1000000) {
       return `R${(value / 1000000).toFixed(1)}M`;
     }
-    return new Intl.NumberFormat('en-ZA', { style: 'currency', currency: 'ZAR', maximumFractionDigits: 0 }).format(value);
+    return new Intl.NumberFormat('en-ZA', {
+      style: 'currency',
+      currency: 'ZAR',
+      maximumFractionDigits: 0,
+    }).format(value);
   };
 
   return (

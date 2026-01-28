@@ -1,4 +1,4 @@
-import { Helmet } from 'react-helmet';
+import { Helmet } from 'react-helmet-async';
 import { useLocation } from 'wouter';
 
 interface MetaControlProps {
@@ -15,23 +15,23 @@ export function MetaControl({ canonicalUrl, forceNoIndex = false }: MetaControlP
 
     if (typeof window !== 'undefined') {
       const searchParams = new URLSearchParams(window.location.search);
-      
+
       // ALLOWED params (Routing/Canonical-friendly)
       // These are params that essentially define the page content and are part of the canonical structure logic.
       const allowedParams = [
-        'city', 
-        'suburb', 
-        'province', 
-        'locationId', 
-        'listingType', 
-        'propertyType' // propertyType maps to /houses-for-sale/, so it's canonical-safe usually
+        'city',
+        'suburb',
+        'province',
+        'locationId',
+        'listingType',
+        'propertyType', // propertyType maps to /houses-for-sale/, so it's canonical-safe usually
       ];
 
       // If we have ANY param that is NOT in the allowed list, we NoIndex.
       // This covers price, beds, sort, pagination, amenities, etc.
       for (const key of searchParams.keys()) {
         if (!allowedParams.includes(key)) {
-            return true;
+          return true;
         }
       }
     }
@@ -40,12 +40,15 @@ export function MetaControl({ canonicalUrl, forceNoIndex = false }: MetaControlP
   };
 
   const isNoIndex = shouldNoIndex();
-  
+
   // Construct default canonical if not provided
   // This assumes the current clean path is the canonical unless we are on a shortcut.
   // Ideally, the parent page passes the correct authoritative canonical.
-  const currentCanonical = canonicalUrl ? canonicalUrl : 
-    (typeof window !== 'undefined' ? `${window.location.origin}${location}` : '');
+  const currentCanonical = canonicalUrl
+    ? canonicalUrl
+    : typeof window !== 'undefined'
+      ? `${window.location.origin}${location}`
+      : '';
 
   return (
     <Helmet>

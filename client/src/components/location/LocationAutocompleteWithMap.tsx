@@ -1,11 +1,11 @@
 /**
  * LocationAutocompleteWithMap Component
- * 
+ *
  * Combines LocationAutocomplete with MapPreview to provide:
  * - Google Places autocomplete
  * - Map preview on selection
  * - Draggable marker for fine-tuning
- * 
+ *
  * Requirements: 1.1-1.5, 12.1-12.5
  */
 
@@ -71,7 +71,8 @@ export function LocationAutocompleteWithMap({
         longitude: lng,
         suburb: location.type === 'suburb' ? location.name : undefined,
         city: location.cityName || (location.type === 'city' ? location.name : undefined),
-        province: location.provinceName || (location.type === 'province' ? location.name : undefined),
+        province:
+          location.provinceName || (location.type === 'province' ? location.name : undefined),
         postalCode: location.postalCode,
       };
 
@@ -81,7 +82,7 @@ export function LocationAutocompleteWithMap({
         onLocationSelect(locationData);
       }
     },
-    [onLocationSelect]
+    [onLocationSelect],
   );
 
   const handleMapLocationChange = useCallback(
@@ -111,7 +112,7 @@ export function LocationAutocompleteWithMap({
         onLocationSelect(updatedLocation);
       }
     },
-    [selectedLocation, onLocationSelect]
+    [selectedLocation, onLocationSelect],
   );
 
   return (
@@ -127,26 +128,29 @@ export function LocationAutocompleteWithMap({
         />
       </div>
 
-      {showMapPreview && selectedLocation && selectedLocation.latitude && selectedLocation.longitude && (
-        <div className="space-y-2">
-          <Label className="text-sm text-slate-600">
-            Map Preview - Click to expand and adjust location
-          </Label>
-          <MapPreview
-            center={{
-              lat: selectedLocation.latitude,
-              lng: selectedLocation.longitude,
-            }}
-            onLocationChange={handleMapLocationChange}
-            showExpandButton={true}
-          />
-          {selectedLocation.address && (
-            <p className="text-sm text-slate-600 mt-2">
-              <span className="font-medium">Selected:</span> {selectedLocation.address}
-            </p>
-          )}
-        </div>
-      )}
+      {showMapPreview &&
+        selectedLocation &&
+        selectedLocation.latitude &&
+        selectedLocation.longitude && (
+          <div className="space-y-2">
+            <Label className="text-sm text-slate-600">
+              Map Preview - Click to expand and adjust location
+            </Label>
+            <MapPreview
+              center={{
+                lat: selectedLocation.latitude,
+                lng: selectedLocation.longitude,
+              }}
+              onLocationChange={handleMapLocationChange}
+              showExpandButton={true}
+            />
+            {selectedLocation.address && (
+              <p className="text-sm text-slate-600 mt-2">
+                <span className="font-medium">Selected:</span> {selectedLocation.address}
+              </p>
+            )}
+          </div>
+        )}
     </div>
   );
 }

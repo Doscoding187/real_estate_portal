@@ -1,12 +1,12 @@
 /**
  * Property-Based Tests for PropertyCard Component
- * 
+ *
  * Tests for Tasks 9.1, 9.2, 9.3:
  * - Property 10: Required field display (Requirements 5.1)
  * - Property 11: Feature badge mapping (Requirements 5.2)
  * - Property 45: Security estate badge (Requirements 16.3)
  * - Property 46: Load-shedding solution badges (Requirements 16.4)
- * 
+ *
  * These tests verify the existing PropertyCard implementation.
  */
 
@@ -27,10 +27,17 @@ const bathroomsArb = fc.integer({ min: 1, max: 6 });
 const areaArb = fc.integer({ min: 20, max: 5000 });
 // Use alphanumeric strings to avoid whitespace-only values and avoid "R" followed by digits (which looks like price)
 const locationArb = fc.stringMatching(/^[A-Za-z][a-z]{2,20}, [A-Z][a-z]{2,20}$/);
-const titleArb = fc.stringMatching(/^[A-Z][a-z]+ [A-Z][a-z]+ Property$/);  // e.g., "Beautiful Modern Property"
+const titleArb = fc.stringMatching(/^[A-Z][a-z]+ [A-Z][a-z]+ Property$/); // e.g., "Beautiful Modern Property"
 
 // Property type arbitrary
-const propertyTypeArb = fc.constantFrom('House', 'Apartment', 'Townhouse', 'Commercial', 'Plot', 'Farm');
+const propertyTypeArb = fc.constantFrom(
+  'House',
+  'Apartment',
+  'Townhouse',
+  'Commercial',
+  'Plot',
+  'Farm',
+);
 
 // Badge arbitrary
 const badgeArb = fc.constantFrom(
@@ -45,7 +52,7 @@ const badgeArb = fc.constantFrom(
   'Pet-Friendly',
   'Security Estate',
   'Generator',
-  'Inverter'
+  'Inverter',
 );
 
 // Highlight arbitrary
@@ -60,7 +67,7 @@ const highlightArb = fc.constantFrom(
   'Solar Panels',
   'Borehole',
   'Pet Friendly',
-  'Security Estate'
+  'Security Estate',
 );
 
 // Generate valid PropertyCardProps
@@ -88,56 +95,50 @@ describe('PropertyCard - Property-Based Tests', () => {
 
   /**
    * Property Test 10: Required field display
-   * 
+   *
    * For any valid property, the card SHALL display price, location,
    * bedrooms, bathrooms, and area prominently.
-   * 
+   *
    * **Feature: property-results-optimization, Property 10: Required field display**
    * **Validates: Requirements 5.1**
    */
   describe('Property 10: Required field display', () => {
     it('should always display price in Rands format', () => {
       fc.assert(
-        fc.property(
-          propertyCardPropsArb,
-          (props) => {
-            cleanup();
-            render(<PropertyCard {...props} />);
-            
-            // Price should be displayed - look for the specific price container
-            const priceElements = screen.queryAllByText((content) => {
-              // Match the exact format "R X,XXX,XXX" or "R XXX XXX"
-              return /^R\s[\d\s,]+$/.test(content);
-            });
-            
-            expect(priceElements.length).toBeGreaterThan(0);
-            return true;
-          }
-        ),
-        { numRuns: 50, verbose: false }
+        fc.property(propertyCardPropsArb, props => {
+          cleanup();
+          render(<PropertyCard {...props} />);
+
+          // Price should be displayed - look for the specific price container
+          const priceElements = screen.queryAllByText(content => {
+            // Match the exact format "R X,XXX,XXX" or "R XXX XXX"
+            return /^R\s[\d\s,]+$/.test(content);
+          });
+
+          expect(priceElements.length).toBeGreaterThan(0);
+          return true;
+        }),
+        { numRuns: 50, verbose: false },
       );
     });
 
     it('should always display location', () => {
       fc.assert(
-        fc.property(
-          propertyCardPropsArb,
-          (props) => {
-            cleanup();
-            render(<PropertyCard {...props} />);
-            
-            // Location should be displayed - use a function matcher to handle whitespace normalization
-            const locationElement = screen.getByText((content, element) => {
-              // Normalize both strings for comparison
-              const normalizedContent = content.replace(/\s+/g, ' ').trim();
-              const normalizedLocation = props.location.replace(/\s+/g, ' ').trim();
-              return normalizedContent === normalizedLocation;
-            });
-            expect(locationElement).toBeDefined();
-            return true;
-          }
-        ),
-        { numRuns: 50, verbose: false }
+        fc.property(propertyCardPropsArb, props => {
+          cleanup();
+          render(<PropertyCard {...props} />);
+
+          // Location should be displayed - use a function matcher to handle whitespace normalization
+          const locationElement = screen.getByText((content, element) => {
+            // Normalize both strings for comparison
+            const normalizedContent = content.replace(/\s+/g, ' ').trim();
+            const normalizedLocation = props.location.replace(/\s+/g, ' ').trim();
+            return normalizedContent === normalizedLocation;
+          });
+          expect(locationElement).toBeDefined();
+          return true;
+        }),
+        { numRuns: 50, verbose: false },
       );
     });
 
@@ -145,20 +146,20 @@ describe('PropertyCard - Property-Based Tests', () => {
       fc.assert(
         fc.property(
           propertyCardPropsArb.filter(p => p.bedrooms !== undefined),
-          (props) => {
+          props => {
             cleanup();
             render(<PropertyCard {...props} />);
-            
+
             // Bedrooms should be displayed with "Bed" text
-            const bedroomText = screen.getByText((content) => {
+            const bedroomText = screen.getByText(content => {
               return content.includes('Bed') && content.includes(String(props.bedrooms));
             });
-            
+
             expect(bedroomText).toBeDefined();
             return true;
-          }
+          },
         ),
-        { numRuns: 30, verbose: false }
+        { numRuns: 30, verbose: false },
       );
     });
 
@@ -166,20 +167,20 @@ describe('PropertyCard - Property-Based Tests', () => {
       fc.assert(
         fc.property(
           propertyCardPropsArb.filter(p => p.bathrooms !== undefined),
-          (props) => {
+          props => {
             cleanup();
             render(<PropertyCard {...props} />);
-            
+
             // Bathrooms should be displayed with "Bath" text
-            const bathroomText = screen.getByText((content) => {
+            const bathroomText = screen.getByText(content => {
               return content.includes('Bath') && content.includes(String(props.bathrooms));
             });
-            
+
             expect(bathroomText).toBeDefined();
             return true;
-          }
+          },
         ),
-        { numRuns: 30, verbose: false }
+        { numRuns: 30, verbose: false },
       );
     });
 
@@ -187,49 +188,46 @@ describe('PropertyCard - Property-Based Tests', () => {
       fc.assert(
         fc.property(
           propertyCardPropsArb.filter(p => p.area !== undefined),
-          (props) => {
+          props => {
             cleanup();
             render(<PropertyCard {...props} />);
-            
+
             // Area should be displayed with "m²" text
-            const areaText = screen.getByText((content) => {
+            const areaText = screen.getByText(content => {
               return content.includes('m²') && content.includes('Size');
             });
-            
+
             expect(areaText).toBeDefined();
             return true;
-          }
+          },
         ),
-        { numRuns: 30, verbose: false }
+        { numRuns: 30, verbose: false },
       );
     });
 
     it('should always display title', () => {
       fc.assert(
-        fc.property(
-          propertyCardPropsArb,
-          (props) => {
-            cleanup();
-            render(<PropertyCard {...props} />);
-            
-            // Title should be displayed (may be truncated)
-            const titleElement = screen.getByRole('heading', { level: 3 });
-            expect(titleElement).toBeDefined();
-            expect(titleElement.textContent).toBeTruthy();
-            return true;
-          }
-        ),
-        { numRuns: 50, verbose: false }
+        fc.property(propertyCardPropsArb, props => {
+          cleanup();
+          render(<PropertyCard {...props} />);
+
+          // Title should be displayed (may be truncated)
+          const titleElement = screen.getByRole('heading', { level: 3 });
+          expect(titleElement).toBeDefined();
+          expect(titleElement.textContent).toBeTruthy();
+          return true;
+        }),
+        { numRuns: 50, verbose: false },
       );
     });
   });
 
   /**
    * Property Test 11: Feature badge mapping
-   * 
+   *
    * For any property with special features, the card SHALL display
    * highlight badges like "Fibre", "Solar", "Borehole", "Pet-Friendly".
-   * 
+   *
    * **Feature: property-results-optimization, Property 11: Feature badge mapping**
    * **Validates: Requirements 5.2**
    */
@@ -238,19 +236,19 @@ describe('PropertyCard - Property-Based Tests', () => {
       fc.assert(
         fc.property(
           propertyCardPropsArb.filter(p => p.badges && p.badges.length > 0),
-          (props) => {
+          props => {
             cleanup();
             render(<PropertyCard {...props} />);
-            
+
             // Each badge should be displayed - use queryAllByText since badges may appear multiple times
             for (const badge of props.badges || []) {
               const badgeElements = screen.queryAllByText(badge);
               expect(badgeElements.length).toBeGreaterThan(0);
             }
             return true;
-          }
+          },
         ),
-        { numRuns: 30, verbose: false }
+        { numRuns: 30, verbose: false },
       );
     });
 
@@ -258,17 +256,17 @@ describe('PropertyCard - Property-Based Tests', () => {
       fc.assert(
         fc.property(
           propertyCardPropsArb.filter(p => p.propertyType !== undefined),
-          (props) => {
+          props => {
             cleanup();
             render(<PropertyCard {...props} />);
-            
+
             // Property type should be displayed as a badge - use queryAllByText
             const propertyTypeBadges = screen.queryAllByText(props.propertyType!);
             expect(propertyTypeBadges.length).toBeGreaterThan(0);
             return true;
-          }
+          },
         ),
-        { numRuns: 30, verbose: false }
+        { numRuns: 30, verbose: false },
       );
     });
 
@@ -276,22 +274,20 @@ describe('PropertyCard - Property-Based Tests', () => {
       fc.assert(
         fc.property(
           // Filter to ensure imageCount is unique (not equal to videoCount)
-          propertyCardPropsArb.filter(p => 
-            p.imageCount !== undefined && 
-            p.imageCount > 0 && 
-            p.imageCount !== p.videoCount
+          propertyCardPropsArb.filter(
+            p => p.imageCount !== undefined && p.imageCount > 0 && p.imageCount !== p.videoCount,
           ),
-          (props) => {
+          props => {
             cleanup();
             render(<PropertyCard {...props} />);
-            
+
             // Image count should be displayed - use queryAllByText since count may appear multiple times
             const imageCountElements = screen.queryAllByText(String(props.imageCount));
             expect(imageCountElements.length).toBeGreaterThan(0);
             return true;
-          }
+          },
         ),
-        { numRuns: 30, verbose: false }
+        { numRuns: 30, verbose: false },
       );
     });
 
@@ -299,32 +295,30 @@ describe('PropertyCard - Property-Based Tests', () => {
       fc.assert(
         fc.property(
           // Filter to ensure videoCount is unique (not equal to imageCount)
-          propertyCardPropsArb.filter(p => 
-            p.videoCount !== undefined && 
-            p.videoCount > 0 && 
-            p.videoCount !== p.imageCount
+          propertyCardPropsArb.filter(
+            p => p.videoCount !== undefined && p.videoCount > 0 && p.videoCount !== p.imageCount,
           ),
-          (props) => {
+          props => {
             cleanup();
             render(<PropertyCard {...props} />);
-            
+
             // Video count should be displayed - use queryAllByText since count may appear multiple times
             const videoCountElements = screen.queryAllByText(String(props.videoCount));
             expect(videoCountElements.length).toBeGreaterThan(0);
             return true;
-          }
+          },
         ),
-        { numRuns: 30, verbose: false }
+        { numRuns: 30, verbose: false },
       );
     });
   });
 
   /**
    * Property Test 45 & 46: SA-specific badges
-   * 
+   *
    * Tests for security estate and load-shedding solution badges.
    * These are passed via the badges prop in the current implementation.
-   * 
+   *
    * **Feature: property-results-optimization, Property 45: Security estate badge**
    * **Feature: property-results-optimization, Property 46: Load-shedding solution badges**
    * **Validates: Requirements 16.3, 16.4**
@@ -341,7 +335,7 @@ describe('PropertyCard - Property-Based Tests', () => {
       };
 
       render(<PropertyCard {...propsWithSecurityEstate} />);
-      
+
       const securityBadge = screen.queryByText('Security Estate');
       expect(securityBadge).not.toBeNull();
     });
@@ -357,7 +351,7 @@ describe('PropertyCard - Property-Based Tests', () => {
       };
 
       render(<PropertyCard {...propsWithSolar} />);
-      
+
       const solarBadge = screen.queryByText('Solar');
       expect(solarBadge).not.toBeNull();
     });
@@ -374,7 +368,7 @@ describe('PropertyCard - Property-Based Tests', () => {
       };
 
       render(<PropertyCard {...propsWithGenerator} />);
-      
+
       const generatorBadge = screen.queryByText('Generator');
       expect(generatorBadge).not.toBeNull();
     });
@@ -391,7 +385,7 @@ describe('PropertyCard - Property-Based Tests', () => {
       };
 
       render(<PropertyCard {...propsWithInverter} />);
-      
+
       const inverterBadge = screen.queryByText('Inverter');
       expect(inverterBadge).not.toBeNull();
     });
@@ -408,7 +402,7 @@ describe('PropertyCard - Property-Based Tests', () => {
       };
 
       render(<PropertyCard {...propsWithMultipleSolutions} />);
-      
+
       expect(screen.queryByText('Solar')).not.toBeNull();
       expect(screen.queryByText('Generator')).not.toBeNull();
       expect(screen.queryByText('Inverter')).not.toBeNull();
@@ -426,7 +420,7 @@ describe('PropertyCard - Property-Based Tests', () => {
       };
 
       render(<PropertyCard {...propsWithPetFriendly} />);
-      
+
       const petFriendlyBadge = screen.queryByText('Pet-Friendly');
       expect(petFriendlyBadge).not.toBeNull();
     });
@@ -443,14 +437,14 @@ describe('PropertyCard - Property-Based Tests', () => {
       };
 
       render(<PropertyCard {...propsWithFibre} />);
-      
+
       const fibreBadge = screen.queryByText('Fibre');
       expect(fibreBadge).not.toBeNull();
     });
 
     it('should display status badges (New Listing, Price Drop, Under Offer, Sold, Let)', () => {
       const statusBadges = ['New Listing', 'Price Drop', 'Under Offer', 'Sold', 'Let'];
-      
+
       for (const status of statusBadges) {
         cleanup();
         const props = {
@@ -463,7 +457,7 @@ describe('PropertyCard - Property-Based Tests', () => {
         };
 
         render(<PropertyCard {...props} />);
-        
+
         const statusBadge = screen.queryByText(status);
         expect(statusBadge).not.toBeNull();
       }
@@ -472,22 +466,19 @@ describe('PropertyCard - Property-Based Tests', () => {
 
   /**
    * Property Test: Card renders without crashing for any valid props
-   * 
+   *
    * The component should handle any combination of valid props without errors.
    */
   describe('Robustness', () => {
     it('should render without crashing for any valid props combination', () => {
       fc.assert(
-        fc.property(
-          propertyCardPropsArb,
-          (props) => {
-            cleanup();
-            // Should not throw
-            expect(() => render(<PropertyCard {...props} />)).not.toThrow();
-            return true;
-          }
-        ),
-        { numRuns: 100, verbose: false }
+        fc.property(propertyCardPropsArb, props => {
+          cleanup();
+          // Should not throw
+          expect(() => render(<PropertyCard {...props} />)).not.toThrow();
+          return true;
+        }),
+        { numRuns: 100, verbose: false },
       );
     });
 
@@ -501,7 +492,7 @@ describe('PropertyCard - Property-Based Tests', () => {
       };
 
       expect(() => render(<PropertyCard {...minimalProps} />)).not.toThrow();
-      
+
       // Core fields should still be displayed
       expect(screen.getByText('Minimal Property')).toBeDefined();
       expect(screen.getByText('Test Location')).toBeDefined();

@@ -1,4 +1,3 @@
-
 import { describe, it, expect } from 'vitest';
 import { generateSEOContent } from '../seoGenerator';
 
@@ -10,22 +9,22 @@ describe('seoGenerator', () => {
     saleCount: 100,
     minPrice: 500000,
     maxPrice: 15000000,
-    avgRentalPrice: 15000
+    avgRentalPrice: 15000,
   };
 
   it('generates content for a province', () => {
     const content = generateSEOContent({
       type: 'province',
       name: 'Gauteng',
-      stats: mockStats
+      stats: mockStats,
     });
 
-    const expectedPrice = new Intl.NumberFormat('en-ZA', { 
-      style: 'currency', 
+    const expectedPrice = new Intl.NumberFormat('en-ZA', {
+      style: 'currency',
       currency: 'ZAR',
-      maximumFractionDigits: 0 
+      maximumFractionDigits: 0,
     }).format(2500000);
-    
+
     expect(content).toContain('Gauteng');
     expect(content).toContain('150 properties');
     expect(content).toContain(expectedPrice); // Check formatting dynamically
@@ -37,7 +36,7 @@ describe('seoGenerator', () => {
       type: 'city',
       name: 'Cape Town',
       parentName: 'Western Cape',
-      stats: mockStats
+      stats: mockStats,
     });
 
     expect(content).toContain('Cape Town');
@@ -50,7 +49,7 @@ describe('seoGenerator', () => {
       type: 'suburb',
       name: 'Sandton',
       parentName: 'Johannesburg',
-      stats: mockStats
+      stats: mockStats,
     });
 
     expect(content).toContain('Sandton');
@@ -61,13 +60,13 @@ describe('seoGenerator', () => {
   it('handles missing optional stats gracefully', () => {
     const minimalStats = {
       totalListings: 10,
-      avgPrice: 1000000
+      avgPrice: 1000000,
     };
 
     const content = generateSEOContent({
       type: 'province',
       name: 'Test Province',
-      stats: minimalStats
+      stats: minimalStats,
     });
 
     expect(content).toContain('Test Province');

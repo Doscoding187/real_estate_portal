@@ -23,6 +23,7 @@ CREATE TABLE IF NOT EXISTS development_phases (
   custom_spec_type VARCHAR(100),
   finishing_differences JSON,
   phase_highlights JSON,
+  -- Latitude/Longitude added (ensure they exist)
   latitude VARCHAR(50),
   longitude VARCHAR(50),
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,

@@ -1,9 +1,9 @@
 /**
  * PricingPreviewSection Component
- * 
+ *
  * Displays 3 pricing tiers (Starter, Professional, Enterprise) with feature lists.
  * Highlights the "Professional" tier as most popular.
- * 
+ *
  * Requirements: 7.1, 7.2, 7.3, 7.4, 7.5 (Updated to 3 tiers)
  */
 
@@ -40,7 +40,7 @@ const defaultPricingTiers: PricingTier[] = [
       'Basic Listing Promotion',
       'Standard Email Support',
       'Basic Performance Analytics',
-      'Mobile App Access'
+      'Mobile App Access',
     ],
     ctaLabel: 'Get Started',
     ctaHref: '/register?plan=starter',
@@ -56,7 +56,7 @@ const defaultPricingTiers: PricingTier[] = [
       'Verified Agent Badge',
       'Advanced Lead Analytics',
       'WhatsApp Lead Integration',
-      'Team Management (up to 5)'
+      'Team Management (up to 5)',
     ],
     ctaLabel: 'Start Free Trial',
     ctaHref: '/register?plan=professional',
@@ -73,11 +73,11 @@ const defaultPricingTiers: PricingTier[] = [
       'Custom Branding Options',
       'Multi-Office Management',
       'Custom Reporting & Exports',
-      'SLA & Priority Support'
+      'SLA & Priority Support',
     ],
     ctaLabel: 'Contact Sales',
     ctaHref: '/contact/enterprise',
-  }
+  },
 ];
 
 export const PricingPreviewSection: React.FC<PricingPreviewSectionProps> = ({
@@ -104,9 +104,7 @@ export const PricingPreviewSection: React.FC<PricingPreviewSectionProps> = ({
           >
             {title}
           </h2>
-          <p className="text-lg md:text-xl text-gray-600 max-w-2xl mx-auto">
-            {subtitle}
-          </p>
+          <p className="text-lg md:text-xl text-gray-600 max-w-2xl mx-auto">{subtitle}</p>
         </motion.div>
 
         {/* Pricing Tiers Grid */}
@@ -121,8 +119,9 @@ export const PricingPreviewSection: React.FC<PricingPreviewSectionProps> = ({
             <motion.div
               key={tier.name}
               variants={staggerItem}
-              className={`relative flex flex-col bg-white rounded-2xl shadow-lg overflow-hidden border-2 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl ${tier.isPopular ? 'border-blue-500 ring-4 ring-blue-500/10' : 'border-transparent'
-                }`}
+              className={`relative flex flex-col bg-white rounded-2xl shadow-lg overflow-hidden border-2 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl ${
+                tier.isPopular ? 'border-blue-500 ring-4 ring-blue-500/10' : 'border-transparent'
+              }`}
             >
               {tier.isPopular && (
                 <div className="absolute top-0 right-0 bg-blue-500 text-white text-xs font-bold px-3 py-1 rounded-bl-lg flex items-center gap-1">
@@ -137,9 +136,7 @@ export const PricingPreviewSection: React.FC<PricingPreviewSectionProps> = ({
                   <span className="text-4xl font-extrabold text-gray-900">{tier.price}</span>
                   {tier.period && <span className="text-gray-500 ml-1">{tier.period}</span>}
                 </div>
-                <p className="text-gray-600 mb-6 text-sm leading-relaxed">
-                  {tier.description}
-                </p>
+                <p className="text-gray-600 mb-6 text-sm leading-relaxed">{tier.description}</p>
 
                 <ul className="space-y-4 mb-8">
                   {tier.features.map((feature, idx) => (

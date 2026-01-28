@@ -1,0 +1,22 @@
+CREATE TABLE IF NOT EXISTS `agent_tasks` (
+	`id` INT AUTO_INCREMENT PRIMARY KEY NOT NULL,
+	`task_id` VARCHAR(100) NOT NULL UNIQUE,
+	`session_id` VARCHAR(100),
+	`user_id` INT,
+	`task_type` VARCHAR(50) NOT NULL,
+	`status` ENUM('pending', 'running', 'completed', 'failed') NOT NULL DEFAULT 'pending',
+	`priority` INT NOT NULL DEFAULT 0,
+	`input_data` JSON,
+	`output_data` JSON,
+	`error_message` TEXT,
+	`started_at` TIMESTAMP,
+	`completed_at` TIMESTAMP,
+	`created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	`updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+	FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE SET NULL,
+	INDEX `idx_agent_tasks_status` (`status`),
+	INDEX `idx_agent_tasks_type` (`task_type`),
+	INDEX `idx_agent_tasks_user` (`user_id`),
+	INDEX `idx_agent_tasks_session` (`session_id`),
+	INDEX `idx_agent_tasks_created` (`created_at`)
+);

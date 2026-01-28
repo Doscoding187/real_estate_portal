@@ -38,7 +38,15 @@ interface CampaignCardProps {
   platform: string[];
 }
 
-function CampaignCard({ title, status, reach, clicks, leads, startDate, platform }: CampaignCardProps) {
+function CampaignCard({
+  title,
+  status,
+  reach,
+  clicks,
+  leads,
+  startDate,
+  platform,
+}: CampaignCardProps) {
   const statusColors = {
     active: 'bg-green-50 text-green-700 border-green-200',
     draft: 'bg-gray-50 text-gray-700 border-gray-200',
@@ -286,7 +294,10 @@ export default function AgentMarketing() {
                         <span className="font-medium text-gray-900">{platform.name}</span>
                       </div>
                       {platform.connected ? (
-                        <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                        <Badge
+                          variant="outline"
+                          className="bg-green-50 text-green-700 border-green-200"
+                        >
                           Connected
                         </Badge>
                       ) : (

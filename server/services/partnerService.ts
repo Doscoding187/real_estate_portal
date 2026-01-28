@@ -1,7 +1,14 @@
-import { db } from "../db";
-import { explorePartners, partnerTiers, users, contentQualityScores, exploreContent, exploreShorts } from "../../drizzle/schema";
-import { eq, and, desc, sql } from "drizzle-orm";
-import { randomUUID } from "crypto";
+import { db } from '../db';
+import {
+  explorePartners,
+  partnerTiers,
+  users,
+  contentQualityScores,
+  exploreContent,
+  exploreShorts,
+} from '../../drizzle/schema';
+import { eq, and, desc, sql } from 'drizzle-orm';
+import { randomUUID } from 'crypto';
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -62,7 +69,7 @@ export class PartnerService {
   async registerPartner(data: PartnerRegistration): Promise<any> {
     // Validate tier exists
     const tier = await db.query.partnerTiers.findFirst({
-      where: eq(partnerTiers.id, data.tierId)
+      where: eq(partnerTiers.id, data.tierId),
     });
 
     if (!tier) {
@@ -71,7 +78,7 @@ export class PartnerService {
 
     // Check if user already has a partner account
     const existingPartner = await db.query.explorePartners.findFirst({
-      where: eq(explorePartners.userId, data.userId)
+      where: eq(explorePartners.userId, data.userId),
     });
 
     if (existingPartner) {
@@ -103,7 +110,7 @@ export class PartnerService {
   async assignTier(partnerId: string, tierId: number): Promise<void> {
     // Validate tier exists
     const tier = await db.query.partnerTiers.findFirst({
-      where: eq(partnerTiers.id, tierId)
+      where: eq(partnerTiers.id, tierId),
     });
 
     if (!tier) {
@@ -112,7 +119,7 @@ export class PartnerService {
 
     // Validate partner exists
     const partner = await db.query.explorePartners.findFirst({
-      where: eq(explorePartners.id, partnerId)
+      where: eq(explorePartners.id, partnerId),
     });
 
     if (!partner) {
@@ -120,10 +127,11 @@ export class PartnerService {
     }
 
     // Update partner tier
-    await db.update(explorePartners)
-      .set({ 
+    await db
+      .update(explorePartners)
+      .set({
         tierId,
-        updatedAt: sql`CURRENT_TIMESTAMP`
+        updatedAt: sql`CURRENT_TIMESTAMP`,
       })
       .where(eq(explorePartners.id, partnerId));
   }
@@ -134,7 +142,7 @@ export class PartnerService {
    */
   async updateProfile(partnerId: string, data: PartnerProfileUpdate): Promise<any> {
     const updateData: any = {
-      updatedAt: sql`CURRENT_TIMESTAMP`
+      updatedAt: sql`CURRENT_TIMESTAMP`,
     };
 
     if (data.companyName !== undefined) updateData.companyName = data.companyName;
@@ -144,7 +152,8 @@ export class PartnerService {
       updateData.serviceLocations = data.serviceLocations;
     }
 
-    const [updated] = await db.update(explorePartners)
+    const [updated] = await db
+      .update(explorePartners)
       .set(updateData)
       .where(eq(explorePartners.id, partnerId));
 
@@ -159,8 +168,8 @@ export class PartnerService {
     const partner = await db.query.explorePartners.findFirst({
       where: eq(explorePartners.id, partnerId),
       with: {
-        tier: true
-      }
+        tier: true,
+      },
     });
 
     if (!partner) {
@@ -170,9 +179,10 @@ export class PartnerService {
     // Parse service locations from JSON
     let serviceLocations: string[] = [];
     try {
-      serviceLocations = typeof partner.serviceLocations === 'string' 
-        ? JSON.parse(partner.serviceLocations)
-        : partner.serviceLocations || [];
+      serviceLocations =
+        typeof partner.serviceLocations === 'string'
+          ? JSON.parse(partner.serviceLocations)
+          : partner.serviceLocations || [];
     } catch (e) {
       serviceLocations = [];
     }
@@ -183,12 +193,14 @@ export class PartnerService {
       tier: {
         id: partner.tier.id,
         name: partner.tier.name,
-        allowedContentTypes: typeof partner.tier.allowedContentTypes === 'string'
-          ? JSON.parse(partner.tier.allowedContentTypes)
-          : partner.tier.allowedContentTypes,
-        allowedCTAs: typeof partner.tier.allowedCTAs === 'string'
-          ? JSON.parse(partner.tier.allowedCTAs)
-          : partner.tier.allowedCTAs,
+        allowedContentTypes:
+          typeof partner.tier.allowedContentTypes === 'string'
+            ? JSON.parse(partner.tier.allowedContentTypes)
+            : partner.tier.allowedContentTypes,
+        allowedCTAs:
+          typeof partner.tier.allowedCTAs === 'string'
+            ? JSON.parse(partner.tier.allowedCTAs)
+            : partner.tier.allowedCTAs,
       },
       companyName: partner.companyName,
       description: partner.description,
@@ -206,14 +218,14 @@ export class PartnerService {
   /**
    * Verify partner with credential validation
    * Requirement 5.5, 5.6
-   * 
+   *
    * This method marks a partner as verified and propagates the verification
    * badge to all their content automatically via the partner_id relationship.
    */
   async verifyPartner(partnerId: string, credentials: VerificationData): Promise<void> {
     // Validate partner exists
     const partner = await db.query.explorePartners.findFirst({
-      where: eq(explorePartners.id, partnerId)
+      where: eq(explorePartners.id, partnerId),
     });
 
     if (!partner) {
@@ -222,11 +234,12 @@ export class PartnerService {
 
     // In a real implementation, this would validate credentials against external systems
     // For now, we'll mark as verified
-    
-    await db.update(explorePartners)
+
+    await db
+      .update(explorePartners)
       .set({
         verificationStatus: 'verified',
-        updatedAt: sql`CURRENT_TIMESTAMP`
+        updatedAt: sql`CURRENT_TIMESTAMP`,
       })
       .where(eq(explorePartners.id, partnerId));
 
@@ -241,7 +254,7 @@ export class PartnerService {
   /**
    * Calculate and update partner trust score
    * Requirement 10.5
-   * 
+   *
    * Trust score is calculated based on:
    * - Verification status (30%)
    * - Content quality average (30%)
@@ -250,7 +263,7 @@ export class PartnerService {
    */
   async calculateTrustScore(partnerId: string): Promise<number> {
     const partner = await db.query.explorePartners.findFirst({
-      where: eq(explorePartners.id, partnerId)
+      where: eq(explorePartners.id, partnerId),
     });
 
     if (!partner) {
@@ -271,13 +284,10 @@ export class PartnerService {
     // Query average quality score for partner's content
     const contentQualityResult = await db
       .select({
-        avgQuality: sql<number>`AVG(${contentQualityScores.overallScore})`
+        avgQuality: sql<number>`AVG(${contentQualityScores.overallScore})`,
       })
       .from(contentQualityScores)
-      .innerJoin(
-        exploreContent,
-        eq(exploreContent.id, contentQualityScores.contentId)
-      )
+      .innerJoin(exploreContent, eq(exploreContent.id, contentQualityScores.contentId))
       .where(eq(exploreContent.partnerId, partnerId))
       .limit(1);
 
@@ -300,10 +310,11 @@ export class PartnerService {
     const finalScore = Math.round(score * 100) / 100;
 
     // Update trust score
-    await db.update(explorePartners)
+    await db
+      .update(explorePartners)
       .set({
         trustScore: finalScore.toString(),
-        updatedAt: sql`CURRENT_TIMESTAMP`
+        updatedAt: sql`CURRENT_TIMESTAMP`,
       })
       .where(eq(explorePartners.id, partnerId));
 
@@ -316,7 +327,7 @@ export class PartnerService {
   async getPartnersByTier(tierId: number): Promise<any[]> {
     return await db.query.explorePartners.findMany({
       where: eq(explorePartners.tierId, tierId),
-      orderBy: [desc(explorePartners.trustScore)]
+      orderBy: [desc(explorePartners.trustScore)],
     });
   }
 
@@ -326,17 +337,18 @@ export class PartnerService {
    */
   async incrementApprovedContentCount(partnerId: string): Promise<void> {
     const partner = await db.query.explorePartners.findFirst({
-      where: eq(explorePartners.id, partnerId)
+      where: eq(explorePartners.id, partnerId),
     });
 
     if (!partner) {
       throw new Error('Partner not found');
     }
 
-    await db.update(explorePartners)
+    await db
+      .update(explorePartners)
       .set({
         approvedContentCount: partner.approvedContentCount + 1,
-        updatedAt: sql`CURRENT_TIMESTAMP`
+        updatedAt: sql`CURRENT_TIMESTAMP`,
       })
       .where(eq(explorePartners.id, partnerId));
   }
@@ -347,7 +359,7 @@ export class PartnerService {
    */
   async isEligibleForAutoApproval(partnerId: string): Promise<boolean> {
     const partner = await db.query.explorePartners.findFirst({
-      where: eq(explorePartners.id, partnerId)
+      where: eq(explorePartners.id, partnerId),
     });
 
     if (!partner) {

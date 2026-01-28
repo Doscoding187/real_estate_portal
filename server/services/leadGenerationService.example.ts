@@ -1,6 +1,6 @@
 /**
  * Lead Generation Service - Example Usage
- * 
+ *
  * This file demonstrates how to use the Lead Generation Service
  * in various scenarios.
  */
@@ -23,9 +23,10 @@ async function createQuoteRequestLead() {
       name: 'Sarah Johnson',
       email: 'sarah.johnson@example.com',
       phone: '+27821234567',
-      preferredContactMethod: 'email'
+      preferredContactMethod: 'email',
     },
-    intentDetails: 'Looking for a quote to renovate my kitchen. Interested in modern finishes and smart appliances.'
+    intentDetails:
+      'Looking for a quote to renovate my kitchen. Interested in modern finishes and smart appliances.',
   };
 
   try {
@@ -58,9 +59,9 @@ async function createConsultationLead() {
       name: 'Michael Chen',
       email: 'michael.chen@example.com',
       phone: '+27823456789',
-      preferredContactMethod: 'phone'
+      preferredContactMethod: 'phone',
     },
-    intentDetails: 'First-time home buyer. Need advice on bond applications and affordability.'
+    intentDetails: 'First-time home buyer. Need advice on bond applications and affordability.',
   };
 
   try {
@@ -90,9 +91,10 @@ async function createEligibilityCheckLead() {
       name: 'Thandi Mthembu',
       email: 'thandi.m@example.com',
       phone: '+27824567890',
-      preferredContactMethod: 'whatsapp'
+      preferredContactMethod: 'whatsapp',
     },
-    intentDetails: 'Want to check if I qualify for a home loan. Monthly income: R45,000. No existing debt.'
+    intentDetails:
+      'Want to check if I qualify for a home loan. Monthly income: R45,000. No existing debt.',
   };
 
   try {
@@ -119,21 +121,21 @@ async function getPartnerLeadsExample() {
   // Get all new leads
   const newLeads = await leadGenerationService.getPartnerLeads(partnerId, {
     status: 'new',
-    limit: 10
+    limit: 10,
   });
   console.log(`New leads: ${newLeads.length}`);
 
   // Get consultation leads
   const consultationLeads = await leadGenerationService.getPartnerLeads(partnerId, {
     type: 'consultation',
-    limit: 20
+    limit: 20,
   });
   console.log(`Consultation leads: ${consultationLeads.length}`);
 
   // Get all leads with pagination
   const allLeads = await leadGenerationService.getPartnerLeads(partnerId, {
     limit: 50,
-    offset: 0
+    offset: 0,
   });
   console.log(`Total leads (page 1): ${allLeads.length}`);
 
@@ -153,10 +155,16 @@ async function calculatePricingExample() {
   const quotePrice = await leadGenerationService.calculateLeadPrice('quote_request', partnerId);
   console.log(`Quote Request: R${quotePrice} (R50-R200 range)`);
 
-  const consultationPrice = await leadGenerationService.calculateLeadPrice('consultation', partnerId);
+  const consultationPrice = await leadGenerationService.calculateLeadPrice(
+    'consultation',
+    partnerId,
+  );
   console.log(`Consultation: R${consultationPrice} (R100-R300 range)`);
 
-  const eligibilityPrice = await leadGenerationService.calculateLeadPrice('eligibility_check', partnerId);
+  const eligibilityPrice = await leadGenerationService.calculateLeadPrice(
+    'eligibility_check',
+    partnerId,
+  );
   console.log(`Eligibility Check: R${eligibilityPrice} (R500-R1000 range)`);
 
   console.log('\nPricing factors:');
@@ -203,7 +211,7 @@ async function disputeHandlingExample() {
   console.log('\n1. Partner disputes lead...');
   await leadGenerationService.disputeLead(
     lead.id,
-    'User did not respond to 3 contact attempts over 5 days. Phone number appears to be incorrect.'
+    'User did not respond to 3 contact attempts over 5 days. Phone number appears to be incorrect.',
   );
   console.log('   Dispute submitted ✓');
   console.log('   Admin team will review within 48 hours');
@@ -230,7 +238,9 @@ async function conversionFunnelExample() {
 
   console.log('Lead Conversion Funnel:');
   console.log(`  Total Leads: ${funnel.totalLeads}`);
-  console.log(`  Contacted: ${funnel.contacted} (${((funnel.contacted / funnel.totalLeads) * 100).toFixed(1)}%)`);
+  console.log(
+    `  Contacted: ${funnel.contacted} (${((funnel.contacted / funnel.totalLeads) * 100).toFixed(1)}%)`,
+  );
   console.log(`  Converted: ${funnel.converted} (${funnel.conversionRate.toFixed(1)}%)`);
   console.log(`  Disputed: ${funnel.disputed}`);
   console.log(`  Refunded: ${funnel.refunded}`);
@@ -242,7 +252,9 @@ async function conversionFunnelExample() {
 
   console.log('\nPerformance Metrics:');
   console.log(`  Contact Rate: ${contactRate.toFixed(1)}% ${contactRate > 80 ? '✓' : '⚠️'}`);
-  console.log(`  Conversion Rate: ${funnel.conversionRate.toFixed(1)}% ${funnel.conversionRate > 30 ? '✓' : '⚠️'}`);
+  console.log(
+    `  Conversion Rate: ${funnel.conversionRate.toFixed(1)}% ${funnel.conversionRate > 30 ? '✓' : '⚠️'}`,
+  );
   console.log(`  Dispute Rate: ${disputeRate.toFixed(1)}% ${disputeRate < 10 ? '✓' : '⚠️'}`);
 
   return funnel;
@@ -259,13 +271,14 @@ async function bulkLeadProcessingExample() {
 
   // Get all new leads
   const newLeads = await leadGenerationService.getPartnerLeads(partnerId, {
-    status: 'new'
+    status: 'new',
   });
 
   console.log(`Processing ${newLeads.length} new leads...`);
 
   // Simulate partner processing leads
-  for (const lead of newLeads.slice(0, 5)) { // Process first 5 for demo
+  for (const lead of newLeads.slice(0, 5)) {
+    // Process first 5 for demo
     console.log(`\nLead ${lead.id}:`);
     console.log(`  Type: ${lead.type}`);
     console.log(`  Contact: ${lead.contactInfo.name}`);
@@ -295,8 +308,8 @@ async function errorHandlingExample() {
       contactInfo: {
         name: 'Test User',
         email: 'test@example.com',
-        phone: '+27821234567'
-      }
+        phone: '+27821234567',
+      },
     });
   } catch (error: any) {
     console.log('✓ Caught invalid lead type error');
@@ -320,8 +333,8 @@ async function errorHandlingExample() {
       contactInfo: {
         name: '',
         email: '',
-        phone: ''
-      }
+        phone: '',
+      },
     });
   } catch (error: any) {
     console.log('✓ Caught missing required fields error');
@@ -369,7 +382,7 @@ export {
   conversionFunnelExample,
   bulkLeadProcessingExample,
   errorHandlingExample,
-  runAllExamples
+  runAllExamples,
 };
 
 // Run if executed directly

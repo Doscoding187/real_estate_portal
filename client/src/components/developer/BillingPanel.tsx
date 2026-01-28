@@ -13,9 +13,19 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { 
-  Crown, Zap, Gift, Building2, Users, TrendingUp, 
-  Check, X, ArrowUpRight, Clock, RefreshCw, Sparkles
+import {
+  Crown,
+  Zap,
+  Gift,
+  Building2,
+  Users,
+  TrendingUp,
+  Check,
+  X,
+  ArrowUpRight,
+  Clock,
+  RefreshCw,
+  Sparkles,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -43,12 +53,13 @@ const TIER_CONFIG = {
 
 export default function BillingPanel() {
   const [, setLocation] = useLocation();
-  
+
   // Fetch subscription data
-  const { data: subscriptionData, isLoading, refetch } = trpc.developer.getSubscription.useQuery(
-    undefined,
-    { staleTime: 0, refetchOnMount: true }
-  );
+  const {
+    data: subscriptionData,
+    isLoading,
+    refetch,
+  } = trpc.developer.getSubscription.useQuery(undefined, { staleTime: 0, refetchOnMount: true });
 
   const subscription = subscriptionData?.subscription;
   const limits = subscription?.limits;
@@ -91,7 +102,10 @@ export default function BillingPanel() {
             <Gift className="w-12 h-12 mx-auto text-slate-400 mb-4" />
             <h3 className="text-lg font-semibold mb-2">No Active Subscription</h3>
             <p className="text-slate-600 mb-4">Start your free trial to access all features</p>
-            <Button onClick={() => setLocation('/subscription-plans')} className="bg-blue-600 hover:bg-blue-700">
+            <Button
+              onClick={() => setLocation('/subscription-plans')}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
               <Sparkles className="w-4 h-4 mr-2" />
               Start Free Trial
             </Button>
@@ -112,13 +126,13 @@ export default function BillingPanel() {
         <CardHeader className="pb-4">
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-3">
-              <div className={cn("p-3 rounded-xl", tierConfig.color)}>
+              <div className={cn('p-3 rounded-xl', tierConfig.color)}>
                 <TierIcon className="w-6 h-6" />
               </div>
               <div>
                 <CardTitle className="text-2xl flex items-center gap-2">
                   {tierConfig.label}
-                  <Badge variant="outline" className={cn("ml-2", tierConfig.color)}>
+                  <Badge variant="outline" className={cn('ml-2', tierConfig.color)}>
                     {subscription.status === 'active' ? 'Active' : subscription.status}
                   </Badge>
                 </CardTitle>
@@ -135,18 +149,13 @@ export default function BillingPanel() {
               </div>
             </div>
             <div className="flex gap-2">
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={() => refetch()}
-                className="gap-2"
-              >
+              <Button variant="outline" size="sm" onClick={() => refetch()} className="gap-2">
                 <RefreshCw className="w-4 h-4" />
                 Refresh
               </Button>
               {subscription.tier !== 'premium' && (
-                <Button 
-                  onClick={() => setLocation('/developer/plans')} 
+                <Button
+                  onClick={() => setLocation('/developer/plans')}
                   className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
                 >
                   Upgrade
@@ -172,17 +181,20 @@ export default function BillingPanel() {
                     Developments
                   </span>
                   <span className="text-sm font-semibold">
-                    {usage?.developmentsCount || 0} / {isUnlimited(limits?.maxDevelopments || 1) ? '∞' : limits?.maxDevelopments}
+                    {usage?.developmentsCount || 0} /{' '}
+                    {isUnlimited(limits?.maxDevelopments || 1) ? '∞' : limits?.maxDevelopments}
                   </span>
                 </div>
-                <Progress 
-                  value={getUsagePercent(usage?.developmentsCount || 0, limits?.maxDevelopments || 1)} 
-                  className="h-2" 
+                <Progress
+                  value={getUsagePercent(
+                    usage?.developmentsCount || 0,
+                    limits?.maxDevelopments || 1,
+                  )}
+                  className="h-2"
                 />
-                {!isUnlimited(limits?.maxDevelopments || 1) && 
-                  getUsagePercent(usage?.developmentsCount || 0, limits?.maxDevelopments || 1) >= 80 && (
-                  <p className="text-xs text-orange-600 mt-1">Approaching limit</p>
-                )}
+                {!isUnlimited(limits?.maxDevelopments || 1) &&
+                  getUsagePercent(usage?.developmentsCount || 0, limits?.maxDevelopments || 1) >=
+                    80 && <p className="text-xs text-orange-600 mt-1">Approaching limit</p>}
               </div>
 
               {/* Leads This Month */}
@@ -193,11 +205,15 @@ export default function BillingPanel() {
                     Leads This Month
                   </span>
                   <span className="text-sm font-semibold">
-                    {usage?.leadsThisMonth || 0} / {isUnlimited(limits?.maxLeadsPerMonth || 50) ? '∞' : limits?.maxLeadsPerMonth}
+                    {usage?.leadsThisMonth || 0} /{' '}
+                    {isUnlimited(limits?.maxLeadsPerMonth || 50) ? '∞' : limits?.maxLeadsPerMonth}
                   </span>
                 </div>
-                <Progress 
-                  value={getUsagePercent(usage?.leadsThisMonth || 0, limits?.maxLeadsPerMonth || 50)} 
+                <Progress
+                  value={getUsagePercent(
+                    usage?.leadsThisMonth || 0,
+                    limits?.maxLeadsPerMonth || 50,
+                  )}
                   className="h-2"
                 />
               </div>
@@ -210,11 +226,12 @@ export default function BillingPanel() {
                     Team Members
                   </span>
                   <span className="text-sm font-semibold">
-                    {usage?.teamMembersCount || 0} / {isUnlimited(limits?.maxTeamMembers || 1) ? '∞' : limits?.maxTeamMembers}
+                    {usage?.teamMembersCount || 0} /{' '}
+                    {isUnlimited(limits?.maxTeamMembers || 1) ? '∞' : limits?.maxTeamMembers}
                   </span>
                 </div>
-                <Progress 
-                  value={getUsagePercent(usage?.teamMembersCount || 0, limits?.maxTeamMembers || 1)} 
+                <Progress
+                  value={getUsagePercent(usage?.teamMembersCount || 0, limits?.maxTeamMembers || 1)}
                   className="h-2"
                 />
               </div>
@@ -225,21 +242,21 @@ export default function BillingPanel() {
           <div className="space-y-4">
             <h4 className="font-semibold text-slate-900">Features</h4>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              <FeatureBadge 
-                label="CRM Integration" 
-                enabled={limits?.crmIntegrationEnabled || false} 
+              <FeatureBadge
+                label="CRM Integration"
+                enabled={limits?.crmIntegrationEnabled || false}
               />
-              <FeatureBadge 
-                label="Advanced Analytics" 
-                enabled={limits?.advancedAnalyticsEnabled || false} 
+              <FeatureBadge
+                label="Advanced Analytics"
+                enabled={limits?.advancedAnalyticsEnabled || false}
               />
-              <FeatureBadge 
-                label="Bond Integration" 
-                enabled={limits?.bondIntegrationEnabled || false} 
+              <FeatureBadge
+                label="Bond Integration"
+                enabled={limits?.bondIntegrationEnabled || false}
               />
-              <FeatureBadge 
-                label={`${limits?.analyticsRetentionDays || 30} Days Analytics`} 
-                enabled={true} 
+              <FeatureBadge
+                label={`${limits?.analyticsRetentionDays || 30} Days Analytics`}
+                enabled={true}
               />
             </div>
           </div>
@@ -285,9 +302,10 @@ export default function BillingPanel() {
               <div className="flex-1">
                 <h3 className="font-semibold text-slate-900 mb-1">Ready to grow?</h3>
                 <p className="text-sm text-slate-600 mb-4">
-                  Upgrade to Basic or Premium to unlock more developments, leads, and premium features.
+                  Upgrade to Basic or Premium to unlock more developments, leads, and premium
+                  features.
                 </p>
-                <Button 
+                <Button
                   onClick={() => setLocation('/developer/plans')}
                   className="bg-blue-600 hover:bg-blue-700"
                 >
@@ -306,12 +324,14 @@ export default function BillingPanel() {
 // Feature badge component
 function FeatureBadge({ label, enabled }: { label: string; enabled: boolean }) {
   return (
-    <div className={cn(
-      "flex items-center gap-2 p-3 rounded-lg text-sm font-medium transition-colors",
-      enabled 
-        ? "bg-green-50 text-green-700 border border-green-200" 
-        : "bg-slate-100 text-slate-500 border border-slate-200"
-    )}>
+    <div
+      className={cn(
+        'flex items-center gap-2 p-3 rounded-lg text-sm font-medium transition-colors',
+        enabled
+          ? 'bg-green-50 text-green-700 border border-green-200'
+          : 'bg-slate-100 text-slate-500 border border-slate-200',
+      )}
+    >
       {enabled ? (
         <Check className="w-4 h-4 text-green-600" />
       ) : (

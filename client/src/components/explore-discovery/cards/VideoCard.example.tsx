@@ -1,6 +1,6 @@
 /**
  * VideoCard Component Examples
- * 
+ *
  * This file demonstrates various usage patterns for the refactored VideoCard component.
  */
 
@@ -22,12 +22,12 @@ export function BasicVideoCardExample() {
       <VideoCard
         video={{
           id: 1,
-          title: "Stunning 3BR Apartment with City Views",
-          thumbnailUrl: "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=400",
+          title: 'Stunning 3BR Apartment with City Views',
+          thumbnailUrl: 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=400',
           duration: 125,
           views: 15420,
-          creatorName: "John Smith",
-          creatorAvatar: "https://i.pravatar.cc/150?img=1",
+          creatorName: 'John Smith',
+          creatorAvatar: 'https://i.pravatar.cc/150?img=1',
           isSaved: false,
         }}
         onClick={handleClick}
@@ -42,36 +42,36 @@ export function VideoCardGridExample() {
   const videos = [
     {
       id: 1,
-      title: "Modern Penthouse in Sandton",
-      thumbnailUrl: "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=400",
+      title: 'Modern Penthouse in Sandton',
+      thumbnailUrl: 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=400',
       duration: 95,
       views: 12500,
-      creatorName: "Sarah Johnson",
-      creatorAvatar: "https://i.pravatar.cc/150?img=5",
+      creatorName: 'Sarah Johnson',
+      creatorAvatar: 'https://i.pravatar.cc/150?img=5',
     },
     {
       id: 2,
-      title: "Luxury Villa with Pool",
-      thumbnailUrl: "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=400",
+      title: 'Luxury Villa with Pool',
+      thumbnailUrl: 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=400',
       duration: 180,
       views: 28900,
-      creatorName: "Mike Davis",
-      creatorAvatar: "https://i.pravatar.cc/150?img=12",
+      creatorName: 'Mike Davis',
+      creatorAvatar: 'https://i.pravatar.cc/150?img=12',
     },
     {
       id: 3,
-      title: "Cozy Studio in Rosebank",
-      thumbnailUrl: "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=400",
+      title: 'Cozy Studio in Rosebank',
+      thumbnailUrl: 'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=400',
       duration: 65,
       views: 8200,
-      creatorName: "Emma Wilson",
-      creatorAvatar: "https://i.pravatar.cc/150?img=9",
+      creatorName: 'Emma Wilson',
+      creatorAvatar: 'https://i.pravatar.cc/150?img=9',
     },
   ];
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-4">
-      {videos.map((video) => (
+      {videos.map(video => (
         <VideoCard
           key={video.id}
           video={video}
@@ -90,26 +90,26 @@ export function VideoCardWithStateExample() {
   const videos = [
     {
       id: 1,
-      title: "Beachfront Property Tour",
-      thumbnailUrl: "https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=400",
+      title: 'Beachfront Property Tour',
+      thumbnailUrl: 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=400',
       duration: 145,
       views: 45200,
-      creatorName: "Alex Turner",
-      creatorAvatar: "https://i.pravatar.cc/150?img=3",
+      creatorName: 'Alex Turner',
+      creatorAvatar: 'https://i.pravatar.cc/150?img=3',
     },
     {
       id: 2,
-      title: "Downtown Loft Walkthrough",
-      thumbnailUrl: "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=400",
+      title: 'Downtown Loft Walkthrough',
+      thumbnailUrl: 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=400',
       duration: 98,
       views: 19800,
-      creatorName: "Lisa Chen",
-      creatorAvatar: "https://i.pravatar.cc/150?img=7",
+      creatorName: 'Lisa Chen',
+      creatorAvatar: 'https://i.pravatar.cc/150?img=7',
     },
   ];
 
   const toggleSave = (videoId: number) => {
-    setSavedVideos((prev) => {
+    setSavedVideos(prev => {
       const next = new Set(prev);
       if (next.has(videoId)) {
         next.delete(videoId);
@@ -124,12 +124,10 @@ export function VideoCardWithStateExample() {
     <div className="space-y-4 p-4">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-2xl font-bold">Property Videos</h2>
-        <span className="text-sm text-gray-600">
-          {savedVideos.size} saved
-        </span>
+        <span className="text-sm text-gray-600">{savedVideos.size} saved</span>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {videos.map((video) => (
+        {videos.map(video => (
           <VideoCard
             key={video.id}
             video={{
@@ -160,7 +158,7 @@ export function VideoCardHorizontalScrollExample() {
     <div className="p-4">
       <h2 className="text-2xl font-bold mb-4">Featured Videos</h2>
       <div className="flex gap-4 overflow-x-auto pb-4 snap-x snap-mandatory">
-        {videos.map((video) => (
+        {videos.map(video => (
           <div key={video.id} className="flex-shrink-0 w-64 snap-start">
             <VideoCard
               video={video}
@@ -181,11 +179,11 @@ export function VideoCardNoAvatarExample() {
       <VideoCard
         video={{
           id: 1,
-          title: "Garden Apartment with Patio",
-          thumbnailUrl: "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=400",
+          title: 'Garden Apartment with Patio',
+          thumbnailUrl: 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=400',
           duration: 110,
           views: 7500,
-          creatorName: "Property Agent",
+          creatorName: 'Property Agent',
           // No creatorAvatar - will show initial
         }}
         onClick={() => console.log('Video clicked')}
@@ -202,12 +200,12 @@ export function VideoCardHighViewsExample() {
       <VideoCard
         video={{
           id: 1,
-          title: "Viral Property Tour - Must See!",
-          thumbnailUrl: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=400",
+          title: 'Viral Property Tour - Must See!',
+          thumbnailUrl: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=400',
           duration: 240,
           views: 1250000, // 1.25M views
-          creatorName: "Top Agent",
-          creatorAvatar: "https://i.pravatar.cc/150?img=15",
+          creatorName: 'Top Agent',
+          creatorAvatar: 'https://i.pravatar.cc/150?img=15',
           isSaved: true,
         }}
         onClick={() => console.log('Video clicked')}

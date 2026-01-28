@@ -29,7 +29,9 @@ const TopNavigationBar: React.FC = () => {
             <Shield className="h-8 w-8 text-blue-600" />
             <span className="ml-2 text-xl font-bold text-slate-800">Super Admin</span>
           </div>
-          <span className="text-lg font-medium text-slate-600 hidden md:block">HomeFind.za Portal</span>
+          <span className="text-lg font-medium text-slate-600 hidden md:block">
+            HomeFind.za Portal
+          </span>
         </div>
 
         <div className="flex items-center space-x-4">

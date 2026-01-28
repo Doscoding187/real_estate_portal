@@ -1,0 +1,89 @@
+{
+  "version": "1.0.0",
+  "classifications": {
+    "hero": {
+      "description": "Primary hero image for developments and properties",
+      "maxCount": 1,
+      "required": true,
+      "allowedFormats": ["jpg", "jpeg", "png", "webp"],
+      "minDimensions": {
+        "width": 1920,
+        "height": 1080
+      },
+      "aspectRatio": "16:9",
+      "fields": ["heroImageUrl", "heroImage"]
+    },
+    "gallery": {
+      "description": "Gallery images for showcasing multiple views",
+      "maxCount": 50,
+      "required": false,
+      "allowedFormats": ["jpg", "jpeg", "png", "webp"],
+      "minDimensions": {
+        "width": 1200,
+        "height": 800
+      },
+      "fields": ["galleryImages", "images"]
+    },
+    "floor_plan": {
+      "description": "Floor plan diagrams and layouts",
+      "maxCount": 20,
+      "required": false,
+      "allowedFormats": ["jpg", "jpeg", "png", "pdf"],
+      "minDimensions": {
+        "width": 1000,
+        "height": 1000
+      },
+      "fields": ["floorPlans"]
+    },
+    "logo": {
+      "description": "Developer or agency logo",
+      "maxCount": 1,
+      "required": false,
+      "allowedFormats": ["png", "svg"],
+      "minDimensions": {
+        "width": 200,
+        "height": 200
+      },
+      "fields": ["logoUrl", "logo"]
+    },
+    "document": {
+      "description": "Supporting documents and PDFs",
+      "maxCount": 10,
+      "required": false,
+      "allowedFormats": ["pdf", "doc", "docx"],
+      "fields": ["documents"]
+    }
+  },
+  "entityTypes": {
+    "development": {
+      "allowedClassifications": ["hero", "gallery", "floor_plan", "logo", "document"],
+      "requiredClassifications": ["hero"]
+    },
+    "property": {
+      "allowedClassifications": ["hero", "gallery", "floor_plan"],
+      "requiredClassifications": ["hero"]
+    },
+    "developer": {
+      "allowedClassifications": ["logo"],
+      "requiredClassifications": []
+    },
+    "agency": {
+      "allowedClassifications": ["logo"],
+      "requiredClassifications": []
+    }
+  },
+  "validationRules": {
+    "noMediaBleed": {
+      "description": "Media should not leak between entities",
+      "enabled": true
+    },
+    "explicitHeroField": {
+      "description": "Hero images must use explicit hero fields",
+      "enabled": true
+    },
+    "maxFileSize": {
+      "image": "10MB",
+      "document": "25MB"
+    }
+  }
+}

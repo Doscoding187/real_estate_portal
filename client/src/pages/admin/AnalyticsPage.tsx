@@ -35,12 +35,7 @@ interface StatCardProps {
   color?: string;
 }
 
-const StatCard: React.FC<StatCardProps> = ({
-  icon,
-  value,
-  label,
-  color = 'bg-muted',
-}) => {
+const StatCard: React.FC<StatCardProps> = ({ icon, value, label, color = 'bg-muted' }) => {
   return (
     <Card className="border-slate-200 shadow-sm hover:shadow-md transition-all py-6 bg-white">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -62,24 +57,50 @@ const AnalyticsPage: React.FC = () => {
   const { data: analytics, isLoading } = trpc.admin.getGeneralAnalytics.useQuery();
 
   // Prepare chart data
-  const userDistribution = analytics ? [
-    { name: 'Agents', value: analytics.counts.agents },
-    { name: 'Agencies', value: analytics.counts.agencies },
-    { name: 'End Users', value: analytics.counts.users - analytics.counts.agents - analytics.counts.agencies },
-  ] : [];
+  const userDistribution = analytics
+    ? [
+        { name: 'Agents', value: analytics.counts.agents },
+        { name: 'Agencies', value: analytics.counts.agencies },
+        {
+          name: 'End Users',
+          value: analytics.counts.users - analytics.counts.agents - analytics.counts.agencies,
+        },
+      ]
+    : [];
 
-  const listingStats = analytics ? [
-    { name: 'Active', value: analytics.counts.activeListings },
-    { name: 'Inactive', value: analytics.counts.listings - analytics.counts.activeListings },
-  ] : [];
+  const listingStats = analytics
+    ? [
+        { name: 'Active', value: analytics.counts.activeListings },
+        { name: 'Inactive', value: analytics.counts.listings - analytics.counts.activeListings },
+      ]
+    : [];
 
   const { data: propStats } = trpc.admin.getPropertiesStats.useQuery();
-  
-  const qualityData = propStats ? [
-    { name: 'Featured', value: (propStats as any).qualityMetrics?.featuredCount || 0, color: '#8b5cf6' }, // Purple
-    { name: 'Optimized', value: (propStats as any).qualityMetrics?.optimizedCount || 0, color: '#3b82f6' }, // Blue
-    { name: 'Standard', value: Math.max(0, (analytics?.counts?.listings || 0) - ((propStats as any).qualityMetrics?.featuredCount || 0) - ((propStats as any).qualityMetrics?.optimizedCount || 0)), color: '#94a3b8' } // Slate
-  ] : [];
+
+  const qualityData = propStats
+    ? [
+        {
+          name: 'Featured',
+          value: (propStats as any).qualityMetrics?.featuredCount || 0,
+          color: '#8b5cf6',
+        }, // Purple
+        {
+          name: 'Optimized',
+          value: (propStats as any).qualityMetrics?.optimizedCount || 0,
+          color: '#3b82f6',
+        }, // Blue
+        {
+          name: 'Standard',
+          value: Math.max(
+            0,
+            (analytics?.counts?.listings || 0) -
+              ((propStats as any).qualityMetrics?.featuredCount || 0) -
+              ((propStats as any).qualityMetrics?.optimizedCount || 0),
+          ),
+          color: '#94a3b8',
+        }, // Slate
+      ]
+    : [];
 
   if (isLoading) {
     return (
@@ -232,17 +253,24 @@ const AnalyticsPage: React.FC = () => {
           <CardContent>
             <div className="space-y-4">
               {analytics?.recentActivity.users.map((user: any) => (
-                <div key={user.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-100">
+                <div
+                  key={user.id}
+                  className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-100"
+                >
                   <div className="flex items-center gap-3">
                     <div className="w-8 h-8 rounded-full bg-white border border-slate-200 flex items-center justify-center text-slate-600 font-medium">
                       {user.firstName?.[0] || 'U'}
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-slate-900">{user.firstName} {user.lastName}</p>
+                      <p className="text-sm font-medium text-slate-900">
+                        {user.firstName} {user.lastName}
+                      </p>
                       <p className="text-xs text-slate-500">{user.email}</p>
                     </div>
                   </div>
-                  <Badge variant="outline" className="capitalize">{user.role}</Badge>
+                  <Badge variant="outline" className="capitalize">
+                    {user.role}
+                  </Badge>
                 </div>
               ))}
             </div>
@@ -259,17 +287,25 @@ const AnalyticsPage: React.FC = () => {
           <CardContent>
             <div className="space-y-4">
               {analytics?.recentActivity.listings.map((listing: any) => (
-                <div key={listing.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-100">
+                <div
+                  key={listing.id}
+                  className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-100"
+                >
                   <div className="flex items-center gap-3">
                     <div className="w-8 h-8 rounded-lg bg-white border border-slate-200 flex items-center justify-center">
                       <Home className="h-4 w-4 text-slate-400" />
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-slate-900 truncate max-w-[200px]">{listing.title}</p>
+                      <p className="text-sm font-medium text-slate-900 truncate max-w-[200px]">
+                        {listing.title}
+                      </p>
                       <p className="text-xs text-slate-500 capitalize">{listing.propertyType}</p>
                     </div>
                   </div>
-                  <Badge variant={listing.status === 'active' ? 'default' : 'secondary'} className="capitalize">
+                  <Badge
+                    variant={listing.status === 'active' ? 'default' : 'secondary'}
+                    className="capitalize"
+                  >
                     {listing.status}
                   </Badge>
                 </div>

@@ -1,6 +1,6 @@
 /**
  * useAdvertiseCMS Hook
- * 
+ *
  * React hook for accessing and managing CMS content for the Advertise With Us page.
  * Provides loading states, error handling, and content updates.
  */
@@ -20,15 +20,15 @@ export interface UseAdvertiseCMSResult {
 
 /**
  * Hook for accessing CMS content
- * 
+ *
  * @example
  * ```tsx
  * function MyComponent() {
  *   const { content, isLoading, error } = useAdvertiseCMS();
- *   
+ *
  *   if (isLoading) return <div>Loading...</div>;
  *   if (error) return <div>Error: {error.message}</div>;
- *   
+ *
  *   return <div>{content.hero.headline}</div>;
  * }
  * ```
@@ -48,7 +48,7 @@ export function useAdvertiseCMS(): UseAdvertiseCMSResult {
       setError(null);
 
       const response = await cmsClient.getPageContent();
-      
+
       setContent(response.data);
       setLastModified(response.lastModified);
     } catch (err) {
@@ -72,7 +72,7 @@ export function useAdvertiseCMS(): UseAdvertiseCMSResult {
       setError(null);
 
       const response = await cmsClient.updatePageContent(updates);
-      
+
       setContent(response.data);
       setLastModified(response.lastModified);
     } catch (err) {
@@ -111,20 +111,20 @@ export function useAdvertiseCMS(): UseAdvertiseCMSResult {
 
 /**
  * Hook for accessing specific section content
- * 
+ *
  * @example
  * ```tsx
  * function HeroComponent() {
  *   const { content, isLoading } = useAdvertiseCMSSection('hero');
- *   
+ *
  *   if (isLoading || !content) return <div>Loading...</div>;
- *   
+ *
  *   return <h1>{content.headline}</h1>;
  * }
  * ```
  */
 export function useAdvertiseCMSSection<K extends keyof AdvertisePageContent>(
-  section: K
+  section: K,
 ): {
   content: AdvertisePageContent[K] | null;
   isLoading: boolean;

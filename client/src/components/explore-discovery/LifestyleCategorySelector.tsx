@@ -34,19 +34,49 @@ export function LifestyleCategorySelector({
       // TODO: Replace with actual tRPC call
       // const response = await apiClient.exploreApi.getCategories.query();
       // return response;
-      
+
       // Mock data for now
       return [
-        { id: 1, name: 'Secure Estates', icon: '🔒', description: 'Gated communities with 24/7 security' },
-        { id: 2, name: 'Luxury', icon: '💎', description: 'High-end properties with premium finishes' },
-        { id: 3, name: 'Family Living', icon: '👨‍👩‍👧‍👦', description: 'Family-friendly homes near schools' },
-        { id: 4, name: 'Student Living', icon: '🎓', description: 'Accommodation near universities' },
-        { id: 5, name: 'Urban Living', icon: '🏙️', description: 'City center apartments and lofts' },
+        {
+          id: 1,
+          name: 'Secure Estates',
+          icon: '🔒',
+          description: 'Gated communities with 24/7 security',
+        },
+        {
+          id: 2,
+          name: 'Luxury',
+          icon: '💎',
+          description: 'High-end properties with premium finishes',
+        },
+        {
+          id: 3,
+          name: 'Family Living',
+          icon: '👨‍👩‍👧‍👦',
+          description: 'Family-friendly homes near schools',
+        },
+        {
+          id: 4,
+          name: 'Student Living',
+          icon: '🎓',
+          description: 'Accommodation near universities',
+        },
+        {
+          id: 5,
+          name: 'Urban Living',
+          icon: '🏙️',
+          description: 'City center apartments and lofts',
+        },
         { id: 6, name: 'Pet-Friendly', icon: '🐕', description: 'Properties that welcome pets' },
         { id: 7, name: 'Retirement', icon: '🌅', description: 'Peaceful retirement communities' },
         { id: 8, name: 'Investment', icon: '📈', description: 'High-yield investment properties' },
         { id: 9, name: 'Eco-Friendly', icon: '🌱', description: 'Sustainable and green homes' },
-        { id: 10, name: 'Beach Living', icon: '🏖️', description: 'Coastal properties with ocean views' },
+        {
+          id: 10,
+          name: 'Beach Living',
+          icon: '🏖️',
+          description: 'Coastal properties with ocean views',
+        },
       ];
     },
     staleTime: 1000 * 60 * 60, // 1 hour
@@ -87,10 +117,7 @@ export function LifestyleCategorySelector({
     return (
       <div className={`flex gap-2 overflow-x-auto scrollbar-hide ${className}`}>
         {[...Array(5)].map((_, i) => (
-          <div
-            key={i}
-            className="h-10 w-32 bg-gray-200 rounded-full animate-pulse"
-          />
+          <div key={i} className="h-10 w-32 bg-gray-200 rounded-full animate-pulse" />
         ))}
       </div>
     );
@@ -109,8 +136,8 @@ export function LifestyleCategorySelector({
               ? 'bg-white text-black shadow-md'
               : 'bg-blue-600 text-white shadow-md'
             : isDark
-            ? 'bg-white/20 text-white hover:bg-white/30 backdrop-blur-sm'
-            : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-200'
+              ? 'bg-white/20 text-white hover:bg-white/30 backdrop-blur-sm'
+              : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-200'
         }`}
         aria-label="Show all categories"
         aria-pressed={selectedCategoryId === undefined}
@@ -120,7 +147,7 @@ export function LifestyleCategorySelector({
       </button>
 
       {/* Category buttons */}
-      {categories?.map((category) => (
+      {categories?.map(category => (
         <button
           key={category.id}
           onClick={() => handleCategoryClick(category.id)}
@@ -130,8 +157,8 @@ export function LifestyleCategorySelector({
                 ? 'bg-white text-black shadow-md'
                 : 'bg-blue-600 text-white shadow-md'
               : isDark
-              ? 'bg-white/20 text-white hover:bg-white/30 backdrop-blur-sm'
-              : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-200'
+                ? 'bg-white/20 text-white hover:bg-white/30 backdrop-blur-sm'
+                : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-200'
           }`}
           aria-label={`Filter by ${category.name}`}
           aria-pressed={selectedCategoryId === category.id}
@@ -140,11 +167,7 @@ export function LifestyleCategorySelector({
           <span>{category.icon}</span>
           <span>{category.name}</span>
           {selectedCategoryId === category.id && (
-            <X
-              className="w-4 h-4 ml-1"
-              onClick={handleClearCategory}
-              aria-label="Clear filter"
-            />
+            <X className="w-4 h-4 ml-1" onClick={handleClearCategory} aria-label="Clear filter" />
           )}
         </button>
       ))}

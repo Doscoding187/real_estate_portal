@@ -1,16 +1,16 @@
 /**
  * Property-Based Tests for Property Results Optimization Database Schema
- * 
+ *
  * Feature: property-results-optimization, Properties 43 & 44
- * 
+ *
  * Property 43: Title type display
  * For any property, the title type (Freehold or Sectional Title) should be displayed
  * Validates: Requirements 16.1
- * 
+ *
  * Property 44: Levy display
  * For any property with a levy > 0, the monthly levy amount should be displayed
  * Validates: Requirements 16.2
- * 
+ *
  * These tests verify that the database schema correctly stores and retrieves
  * SA-specific property fields including title_type and levy.
  */
@@ -47,7 +47,7 @@ describe('Property Results Optimization - Database Schema', () => {
 
   /**
    * Property Test 43: Title type display
-   * 
+   *
    * For any property with a title_type value, when stored and retrieved,
    * the title_type should be preserved exactly.
    */
@@ -76,7 +76,7 @@ describe('Property Results Optimization - Database Schema', () => {
           enquiries: fc.integer({ min: 0, max: 100 }),
           ownerId: fc.constant(1), // Assuming user ID 1 exists
         }),
-        async (propertyData) => {
+        async propertyData => {
           try {
             // Insert property with title_type
             const [insertedProperty] = await db.insert(properties).values({
@@ -114,7 +114,7 @@ describe('Property Results Optimization - Database Schema', () => {
             // Property 43: Title type should be preserved
             expect(retrievedProperty).toBeDefined();
             expect(retrievedProperty.titleType).toBe(propertyData.titleType);
-            
+
             // Verify it's one of the valid values
             expect(['freehold', 'sectional']).toContain(retrievedProperty.titleType);
 
@@ -123,18 +123,18 @@ describe('Property Results Optimization - Database Schema', () => {
             console.error('Test iteration failed:', error.message);
             throw error;
           }
-        }
+        },
       ),
       {
         numRuns: 100, // Run 100 iterations as per spec requirements
         verbose: false,
-      }
+      },
     );
   });
 
   /**
    * Property Test 44: Levy display
-   * 
+   *
    * For any property with a levy > 0, when stored and retrieved,
    * the levy amount should be preserved exactly.
    */
@@ -157,14 +157,16 @@ describe('Property Results Optimization - Database Schema', () => {
           province: fc.constantFrom('Gauteng', 'Western Cape', 'KwaZulu-Natal'),
           suburb: fc.constantFrom('Sandton', 'Camps Bay', 'Umhlanga', 'Hatfield'),
           titleType: fc.constant('sectional'), // Sectional title properties have levies
-          levy: fc.double({ min: 500, max: 10000, noNaN: true }).map(v => Math.round(v * 100) / 100), // Round to 2 decimals
+          levy: fc
+            .double({ min: 500, max: 10000, noNaN: true })
+            .map(v => Math.round(v * 100) / 100), // Round to 2 decimals
           status: fc.constantFrom('available', 'sold', 'rented'),
           featured: fc.boolean(),
           views: fc.integer({ min: 0, max: 1000 }),
           enquiries: fc.integer({ min: 0, max: 100 }),
           ownerId: fc.constant(1),
         }),
-        async (propertyData) => {
+        async propertyData => {
           try {
             // Insert property with levy
             const [insertedProperty] = await db.insert(properties).values({
@@ -203,14 +205,14 @@ describe('Property Results Optimization - Database Schema', () => {
             // Property 44: Levy should be preserved
             expect(retrievedProperty).toBeDefined();
             expect(retrievedProperty.levy).toBeDefined();
-            
+
             // Convert to numbers for comparison (database may return string)
             const storedLevy = parseFloat(retrievedProperty.levy);
             const expectedLevy = propertyData.levy;
-            
+
             // Allow small floating point differences
             expect(Math.abs(storedLevy - expectedLevy)).toBeLessThan(0.01);
-            
+
             // Verify levy is positive
             expect(storedLevy).toBeGreaterThan(0);
 
@@ -219,18 +221,18 @@ describe('Property Results Optimization - Database Schema', () => {
             console.error('Test iteration failed:', error.message);
             throw error;
           }
-        }
+        },
       ),
       {
         numRuns: 100,
         verbose: false,
-      }
+      },
     );
   });
 
   /**
    * Property Test: SA-specific fields round-trip
-   * 
+   *
    * For any property with all SA-specific fields populated,
    * all fields should be preserved when stored and retrieved.
    */
@@ -252,21 +254,36 @@ describe('Property Results Optimization - Database Schema', () => {
           province: fc.constantFrom('Gauteng', 'Western Cape', 'KwaZulu-Natal'),
           suburb: fc.constantFrom('Sandton', 'Camps Bay', 'Umhlanga'),
           titleType: fc.constantFrom('freehold', 'sectional'),
-          levy: fc.option(fc.double({ min: 500, max: 10000, noNaN: true }).map(v => Math.round(v * 100) / 100), { nil: null }),
-          ratesEstimate: fc.option(fc.double({ min: 200, max: 5000, noNaN: true }).map(v => Math.round(v * 100) / 100), { nil: null }),
+          levy: fc.option(
+            fc.double({ min: 500, max: 10000, noNaN: true }).map(v => Math.round(v * 100) / 100),
+            { nil: null },
+          ),
+          ratesEstimate: fc.option(
+            fc.double({ min: 200, max: 5000, noNaN: true }).map(v => Math.round(v * 100) / 100),
+            { nil: null },
+          ),
           securityEstate: fc.boolean(),
           petFriendly: fc.boolean(),
           fibreReady: fc.boolean(),
-          loadSheddingSolutions: fc.array(fc.constantFrom('solar', 'generator', 'inverter'), { minLength: 0, maxLength: 3 }),
-          erfSize: fc.option(fc.double({ min: 100, max: 10000, noNaN: true }).map(v => Math.round(v * 100) / 100), { nil: null }),
-          floorSize: fc.option(fc.double({ min: 50, max: 1000, noNaN: true }).map(v => Math.round(v * 100) / 100), { nil: null }),
+          loadSheddingSolutions: fc.array(fc.constantFrom('solar', 'generator', 'inverter'), {
+            minLength: 0,
+            maxLength: 3,
+          }),
+          erfSize: fc.option(
+            fc.double({ min: 100, max: 10000, noNaN: true }).map(v => Math.round(v * 100) / 100),
+            { nil: null },
+          ),
+          floorSize: fc.option(
+            fc.double({ min: 50, max: 1000, noNaN: true }).map(v => Math.round(v * 100) / 100),
+            { nil: null },
+          ),
           status: fc.constantFrom('available', 'sold', 'rented'),
           featured: fc.boolean(),
           views: fc.integer({ min: 0, max: 1000 }),
           enquiries: fc.integer({ min: 0, max: 100 }),
           ownerId: fc.constant(1),
         }),
-        async (propertyData) => {
+        async propertyData => {
           try {
             // Insert property with all SA-specific fields
             const [insertedProperty] = await db.insert(properties).values({
@@ -315,28 +332,28 @@ describe('Property Results Optimization - Database Schema', () => {
             expect(retrievedProperty.securityEstate).toBe(propertyData.securityEstate ? 1 : 0);
             expect(retrievedProperty.petFriendly).toBe(propertyData.petFriendly ? 1 : 0);
             expect(retrievedProperty.fibreReady).toBe(propertyData.fibreReady ? 1 : 0);
-            
+
             // Check numeric fields with tolerance
             if (propertyData.levy !== null) {
               const storedLevy = parseFloat(retrievedProperty.levy);
               expect(Math.abs(storedLevy - propertyData.levy)).toBeLessThan(0.01);
             }
-            
+
             if (propertyData.ratesEstimate !== null) {
               const storedRates = parseFloat(retrievedProperty.ratesEstimate);
               expect(Math.abs(storedRates - propertyData.ratesEstimate)).toBeLessThan(0.01);
             }
-            
+
             if (propertyData.erfSize !== null) {
               const storedErf = parseFloat(retrievedProperty.erfSize);
               expect(Math.abs(storedErf - propertyData.erfSize)).toBeLessThan(0.01);
             }
-            
+
             if (propertyData.floorSize !== null) {
               const storedFloor = parseFloat(retrievedProperty.floorSize);
               expect(Math.abs(storedFloor - propertyData.floorSize)).toBeLessThan(0.01);
             }
-            
+
             // Check JSON field
             const storedSolutions = JSON.parse(retrievedProperty.loadSheddingSolutions || '[]');
             expect(storedSolutions).toEqual(propertyData.loadSheddingSolutions);
@@ -346,12 +363,12 @@ describe('Property Results Optimization - Database Schema', () => {
             console.error('Test iteration failed:', error.message);
             throw error;
           }
-        }
+        },
       ),
       {
         numRuns: 100,
         verbose: false,
-      }
+      },
     );
   });
 });

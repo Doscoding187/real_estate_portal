@@ -5,11 +5,7 @@
  */
 
 import { db } from '../db';
-import { 
-  exploreBoostCampaigns, 
-  exploreContent,
-  exploreEngagements 
-} from '../../drizzle/schema';
+import { exploreBoostCampaigns, exploreContent, exploreEngagements } from '../../drizzle/schema';
 import { eq, and, gte, lte, sql } from 'drizzle-orm';
 
 export interface BoostConfig {
@@ -67,14 +63,11 @@ export class BoostCampaignService {
     creatorId: number,
     contentId: number,
     campaignName: string,
-    config: BoostConfig
+    config: BoostConfig,
   ): Promise<BoostCampaign> {
     // Verify content exists and belongs to creator
     const content = await db.query.exploreContent.findFirst({
-      where: and(
-        eq(exploreContent.id, contentId),
-        eq(exploreContent.creatorId, creatorId)
-      ),
+      where: and(eq(exploreContent.id, contentId), eq(exploreContent.creatorId, creatorId)),
     });
 
     if (!content) {
@@ -129,14 +122,18 @@ export class BoostCampaignService {
     // Calculate metrics
     const costPerClick = campaign.clicks > 0 ? campaign.spent / campaign.clicks : 0;
     const costPerImpression = campaign.impressions > 0 ? campaign.spent / campaign.impressions : 0;
-    const clickThroughRate = campaign.impressions > 0 ? (campaign.clicks / campaign.impressions) * 100 : 0;
+    const clickThroughRate =
+      campaign.impressions > 0 ? (campaign.clicks / campaign.impressions) * 100 : 0;
     const conversionRate = campaign.clicks > 0 ? (campaign.conversions / campaign.clicks) * 100 : 0;
     const remainingBudget = campaign.budget - campaign.spent;
 
     // Calculate days remaining
     const now = new Date();
     const endDate = new Date(campaign.endDate);
-    const daysRemaining = Math.max(0, Math.ceil((endDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)));
+    const daysRemaining = Math.max(
+      0,
+      Math.ceil((endDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)),
+    );
 
     return {
       campaignId: campaign.id,
@@ -162,7 +159,7 @@ export class BoostCampaignService {
     const campaign = await db.query.exploreBoostCampaigns.findFirst({
       where: and(
         eq(exploreBoostCampaigns.id, campaignId),
-        eq(exploreBoostCampaigns.creatorId, creatorId)
+        eq(exploreBoostCampaigns.creatorId, creatorId),
       ),
     });
 
@@ -170,10 +167,11 @@ export class BoostCampaignService {
       throw new Error('Campaign not found or does not belong to creator');
     }
 
-    await db.update(exploreBoostCampaigns)
-      .set({ 
+    await db
+      .update(exploreBoostCampaigns)
+      .set({
         status: 'paused',
-        updatedAt: new Date()
+        updatedAt: new Date(),
       })
       .where(eq(exploreBoostCampaigns.id, campaignId));
   }
@@ -185,7 +183,7 @@ export class BoostCampaignService {
     const campaign = await db.query.exploreBoostCampaigns.findFirst({
       where: and(
         eq(exploreBoostCampaigns.id, campaignId),
-        eq(exploreBoostCampaigns.creatorId, creatorId)
+        eq(exploreBoostCampaigns.creatorId, creatorId),
       ),
     });
 
@@ -205,10 +203,11 @@ export class BoostCampaignService {
       throw new Error('Cannot reactivate campaign: campaign has expired');
     }
 
-    await db.update(exploreBoostCampaigns)
-      .set({ 
+    await db
+      .update(exploreBoostCampaigns)
+      .set({
         status: 'active',
-        updatedAt: new Date()
+        updatedAt: new Date(),
       })
       .where(eq(exploreBoostCampaigns.id, campaignId));
   }
@@ -231,13 +230,13 @@ export class BoostCampaignService {
    */
   async getActiveCampaigns(): Promise<BoostCampaign[]> {
     const now = new Date();
-    
+
     const campaigns = await db.query.exploreBoostCampaigns.findMany({
       where: and(
         eq(exploreBoostCampaigns.status, 'active'),
         lte(exploreBoostCampaigns.startDate, now),
         gte(exploreBoostCampaigns.endDate, now),
-        sql`${exploreBoostCampaigns.spent} < ${exploreBoostCampaigns.budget}`
+        sql`${exploreBoostCampaigns.spent} < ${exploreBoostCampaigns.budget}`,
       ),
     });
 
@@ -264,7 +263,8 @@ export class BoostCampaignService {
     // Check if budget will be depleted
     const shouldPause = newSpent >= campaign.budget;
 
-    await db.update(exploreBoostCampaigns)
+    await db
+      .update(exploreBoostCampaigns)
       .set({
         impressions: newImpressions,
         spent: newSpent,
@@ -282,7 +282,7 @@ export class BoostCampaignService {
   /**
    * Record click for a boosted content
    */
-  async recordClick(campaignId: number, cost: number = 0.10): Promise<void> {
+  async recordClick(campaignId: number, cost: number = 0.1): Promise<void> {
     const campaign = await db.query.exploreBoostCampaigns.findFirst({
       where: eq(exploreBoostCampaigns.id, campaignId),
     });
@@ -298,7 +298,8 @@ export class BoostCampaignService {
     // Check if budget will be depleted
     const shouldPause = newSpent >= campaign.budget;
 
-    await db.update(exploreBoostCampaigns)
+    await db
+      .update(exploreBoostCampaigns)
       .set({
         clicks: newClicks,
         spent: newSpent,
@@ -317,7 +318,8 @@ export class BoostCampaignService {
    * Record conversion for a boosted content
    */
   async recordConversion(campaignId: number): Promise<void> {
-    await db.update(exploreBoostCampaigns)
+    await db
+      .update(exploreBoostCampaigns)
       .set({
         conversions: sql`${exploreBoostCampaigns.conversions} + 1`,
         updatedAt: new Date(),
@@ -331,16 +333,16 @@ export class BoostCampaignService {
    */
   async updateExpiredCampaigns(): Promise<number> {
     const now = new Date();
-    
-    const result = await db.update(exploreBoostCampaigns)
-      .set({ 
+
+    const result = await db
+      .update(exploreBoostCampaigns)
+      .set({
         status: 'completed',
-        updatedAt: now
+        updatedAt: now,
       })
-      .where(and(
-        eq(exploreBoostCampaigns.status, 'active'),
-        lte(exploreBoostCampaigns.endDate, now)
-      ));
+      .where(
+        and(eq(exploreBoostCampaigns.status, 'active'), lte(exploreBoostCampaigns.endDate, now)),
+      );
 
     return result.rowsAffected || 0;
   }

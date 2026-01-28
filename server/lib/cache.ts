@@ -1,6 +1,6 @@
 /**
  * Simple in-memory cache with TTL support
- * 
+ *
  * This provides a basic caching layer for the Explore Shorts feature.
  * Can be replaced with Redis in production for distributed caching.
  */
@@ -26,7 +26,7 @@ class SimpleCache {
    */
   async get<T>(key: string): Promise<T | null> {
     const entry = this.cache.get(key);
-    
+
     if (!entry) {
       return null;
     }
@@ -44,7 +44,7 @@ class SimpleCache {
    * Set value in cache with TTL (in seconds)
    */
   async set<T>(key: string, value: T, ttlSeconds: number = 300): Promise<void> {
-    const expiresAt = Date.now() + (ttlSeconds * 1000);
+    const expiresAt = Date.now() + ttlSeconds * 1000;
     this.cache.set(key, { value, expiresAt });
   }
 
@@ -102,27 +102,29 @@ export const cache = new SimpleCache();
 export const CacheKeys = {
   recommendedFeed: (userId: number | undefined, limit: number, offset: number) =>
     `feed:recommended:${userId || 'guest'}:${limit}:${offset}`,
-  
+
   areaFeed: (location: string, limit: number, offset: number) =>
     `feed:area:${location}:${limit}:${offset}`,
-  
+
   categoryFeed: (category: string, limit: number, offset: number) =>
     `feed:category:${category}:${limit}:${offset}`,
-  
+
   agentFeed: (agentId: number, limit: number, offset: number) =>
     `feed:agent:${agentId}:${limit}:${offset}`,
-  
+
   developerFeed: (developerId: number, limit: number, offset: number) =>
     `feed:developer:${developerId}:${limit}:${offset}`,
-  
-  agencyFeed: (agencyId: number, limit: number, offset: number, includeAgentContent: boolean = true) =>
-    `feed:agency:${agencyId}:${limit}:${offset}:${includeAgentContent}`,
-  
-  performanceScore: (shortId: number) =>
-    `score:${shortId}`,
-  
-  userPreferences: (userId: number) =>
-    `prefs:${userId}`,
+
+  agencyFeed: (
+    agencyId: number,
+    limit: number,
+    offset: number,
+    includeAgentContent: boolean = true,
+  ) => `feed:agency:${agencyId}:${limit}:${offset}:${includeAgentContent}`,
+
+  performanceScore: (shortId: number) => `score:${shortId}`,
+
+  userPreferences: (userId: number) => `prefs:${userId}`,
 };
 
 /**

@@ -13,7 +13,6 @@ import { ExploreCities } from '@/components/ExploreCities';
 import { PropertyCategories } from '@/components/PropertyCategories';
 // EnhancedHero not needed - using LocationHeroSection for location pages
 
-
 // Legacy components to be adapted or routed
 import { LocationGrid } from '@/components/location/LocationGrid';
 // import { DevelopmentsSlider } from '@/components/location/DevelopmentsSlider'; // Removed
@@ -37,7 +36,11 @@ import { LocationTopLocalities } from '@/components/location/LocationTopLocaliti
 
 import SearchResults from './SearchResults';
 
-export default function CityPage({ params }: { params: { province: string; city: string; action?: string; locationId?: string } }) {
+export default function CityPage({
+  params,
+}: {
+  params: { province: string; city: string; action?: string; locationId?: string };
+}) {
   const [location, navigate] = useLocation();
   const { province: provinceSlug, city: citySlug, action, locationId } = params;
 
@@ -53,7 +56,7 @@ export default function CityPage({ params }: { params: { province: string; city:
 
     // Listen to popstate (back/forward buttons)
     window.addEventListener('popstate', handleLocationChange);
-    
+
     // Check for URL changes on every render
     if (window.location.search !== searchString) {
       setSearchString(window.location.search);
@@ -66,28 +69,28 @@ export default function CityPage({ params }: { params: { province: string; city:
 
   // 2025 Architecture: Controller Logic (Transaction Mode)
   const searchParams = new URLSearchParams(searchString);
-  const hasSearchFilters = 
-    searchParams.has('propertyType') || 
-    searchParams.has('minPrice') || 
-    searchParams.has('maxPrice') || 
+  const hasSearchFilters =
+    searchParams.has('propertyType') ||
+    searchParams.has('minPrice') ||
+    searchParams.has('maxPrice') ||
     searchParams.has('bedrooms');
 
   const isTransactionMode = searchParams.get('view') === 'list' || hasSearchFilters;
 
   if (isTransactionMode) {
-      return <SearchResults province={provinceSlug} city={citySlug} locationId={locationId} />;
+    return <SearchResults province={provinceSlug} city={citySlug} locationId={locationId} />;
   }
 
   // Restore data fetching
   const { data, isLoading, error } = trpc.locationPages.getCityData.useQuery({
     provinceSlug,
-    citySlug
+    citySlug,
   });
 
   // Fetch campaign for banner
-  const { data: heroCampaign } = trpc.locationPages.getHeroCampaign.useQuery({ 
+  const { data: heroCampaign } = trpc.locationPages.getHeroCampaign.useQuery({
     locationSlug: `${provinceSlug}/${citySlug}`,
-    fallbacks: [provinceSlug] 
+    fallbacks: [provinceSlug],
   });
 
   if (isLoading) {
@@ -96,11 +99,11 @@ export default function CityPage({ params }: { params: { province: string; city:
 
   if (error || !data) {
     if (error) {
-      console.error("[CityPage] Error loading data:", error);
+      console.error('[CityPage] Error loading data:', error);
     } else {
-      console.warn("[CityPage] No data returned for:", { provinceSlug, citySlug });
+      console.warn('[CityPage] No data returned for:', { provinceSlug, citySlug });
     }
-    
+
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-left">
@@ -113,28 +116,36 @@ export default function CityPage({ params }: { params: { province: string; city:
   }
 
   // Defensively destructure with fallbacks
-  const { 
-    city, 
-    suburbs = [], 
-    featuredProperties = [], 
-    developments = [], 
-    stats = { totalListings: 0, avgPrice: 0, minPrice: 0, maxPrice: 0, rentalCount: 0, saleCount: 0 },
+  const {
+    city,
+    suburbs = [],
+    featuredProperties = [],
+    developments = [],
+    stats = {
+      totalListings: 0,
+      avgPrice: 0,
+      minPrice: 0,
+      maxPrice: 0,
+      rentalCount: 0,
+      saleCount: 0,
+    },
     propertyTypes = [],
     topLocalities = [],
     topDevelopers = [],
     investmentProjects = [],
     recommendedAgencies = [],
-
   } = data || {};
 
   // Additional validation - city must exist
   if (!city || !city.name) {
-    console.error("[CityPage] City data is incomplete:", data);
+    console.error('[CityPage] City data is incomplete:', data);
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-left">
           <h1 className="text-fluid-h3 font-bold mb-2">City Data Unavailable</h1>
-          <p className="text-slate-500">The city data is temporarily unavailable. Please try again later.</p>
+          <p className="text-slate-500">
+            The city data is temporarily unavailable. Please try again later.
+          </p>
         </div>
       </div>
     );
@@ -143,7 +154,7 @@ export default function CityPage({ params }: { params: { province: string; city:
   return (
     <>
       <MetaControl />
-      <LocationSchema 
+      <LocationSchema
         type="City"
         name={city.name}
         description={`Properties for sale in ${city.name}`}
@@ -151,11 +162,11 @@ export default function CityPage({ params }: { params: { province: string; city:
         breadcrumbs={[
           { name: 'Home', url: '/' },
           { name: city.provinceName || provinceSlug, url: `/${provinceSlug}` },
-          { name: city.name, url: `/${provinceSlug}/${citySlug}` }
+          { name: city.name, url: `/${provinceSlug}/${citySlug}` },
         ]}
         geo={{
           latitude: Number(city.latitude),
-          longitude: Number(city.longitude)
+          longitude: Number(city.longitude),
         }}
         stats={stats}
         image="https://images.unsplash.com/photo-1449824913935-59a10b8d2000?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80"
@@ -164,7 +175,6 @@ export default function CityPage({ params }: { params: { province: string; city:
       <LocationPageLayout
         locationName={city.name}
         locationSlug={`${provinceSlug}/${citySlug}`}
-        
         banner={
           <LocationHeroSection
             locationName={city.name}
@@ -174,57 +184,54 @@ export default function CityPage({ params }: { params: { province: string; city:
             backgroundImage="https://images.unsplash.com/photo-1449824913935-59a10b8d2000?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80"
             listingCount={stats.totalListings}
             campaign={heroCampaign}
-            quickLinks={suburbs?.slice(0, 10).map((suburb: any) => ({
-              label: suburb.name,
-              slug: suburb.slug,
-            })) || []}
+            quickLinks={
+              suburbs?.slice(0, 10).map((suburb: any) => ({
+                label: suburb.name,
+                slug: suburb.slug,
+              })) || []
+            }
           />
         }
-
         searchStage={null}
-
         featuredProperties={
-          <FeaturedPropertiesCarousel 
-            locationId={city.id} 
-            locationName={city.name} 
-            locationScope="city" 
+          <FeaturedPropertiesCarousel
+            locationId={city.id}
+            locationName={city.name}
+            locationScope="city"
           />
         }
-
         // Section 6: Property Type Explorer
         // Section 6: Property Type Explorer
-        propertyTypeExplorer={<PropertyCategories preselectedLocation={{
-            name: city.name,
-            slug: citySlug,
-            provinceSlug: provinceSlug,
-            type: 'city'
-        }} />}
-
+        propertyTypeExplorer={
+          <PropertyCategories
+            preselectedLocation={{
+              name: city.name,
+              slug: citySlug,
+              provinceSlug: provinceSlug,
+              type: 'city',
+            }}
+          />
+        }
         // Section 7: Top Localities / Market Insights
         topLocalities={
-             <LocationTopLocalities 
-                locationName={city.name} 
-                localities={(topLocalities as any[]).map(l => ({...l, imageUrl: null}))}
-                parentSlug={`${provinceSlug}/${citySlug}`}
-             />
+          <LocationTopLocalities
+            locationName={city.name}
+            localities={(topLocalities as any[]).map(l => ({ ...l, imageUrl: null }))}
+            parentSlug={`${provinceSlug}/${citySlug}`}
+          />
         }
-
         topLocalitiesShowcase={
-           topLocalities && topLocalities.length > 0 ? (
-             <LocationTopLocalities 
-               localities={topLocalities} 
-               locationName={city.name} 
-             />
-           ) : undefined
+          topLocalities && topLocalities.length > 0 ? (
+            <LocationTopLocalities localities={topLocalities} locationName={city.name} />
+          ) : undefined
         }
-
         highDemandDevelopments={
           developments && developments.length > 0 && suburbs && suburbs.length > 0 ? (
             <TabbedListingSection
               title={`Hot Selling Developments in ${city.name}`}
               description={`Discover popular residential developments across top suburbs in ${city.name}.`}
               // Section 6: Removed filtering tabs to prevent discovery-layer filtering
-              // Showing all developments or using a simpler carousel would be better, 
+              // Showing all developments or using a simpler carousel would be better,
               // but for now keeping layout but strictly linking to SRPs
               tabs={suburbs.map((suburb: any) => ({ label: suburb.name, value: suburb.name }))}
               items={developments}
@@ -233,100 +240,85 @@ export default function CityPage({ params }: { params: { province: string; city:
                   id={dev.id.toString()}
                   title={dev.title || dev.name}
                   city={dev.suburb || city.name}
-                  priceRange={{ 
-                    min: Number(dev.priceFrom), 
-                    max: Number(dev.priceTo) || Number(dev.priceFrom) 
+                  priceRange={{
+                    min: Number(dev.priceFrom),
+                    max: Number(dev.priceTo) || Number(dev.priceFrom),
                   }}
-                  image={dev.image || dev.images?.[0] || dev.mainImage || "https://placehold.co/600x400/e2e8f0/64748b?text=Development"}
+                  image={
+                    dev.image ||
+                    dev.images?.[0] ||
+                    dev.mainImage ||
+                    'https://placehold.co/600x400/e2e8f0/64748b?text=Development'
+                  }
                   isHotSelling={true}
                 />
               )}
               filterItem={(dev: any, suburbName: string) => dev.suburb === suburbName}
               // CRITICAL: Suburb Link -> SRP (Transaction Mode)
-              viewAllLink={(suburbName) => `/property-for-sale/${provinceSlug}/${citySlug}/${suburbs.find((s:any) => s.name === suburbName)?.slug || ''}?view=list`}
+              viewAllLink={suburbName =>
+                `/property-for-sale/${provinceSlug}/${citySlug}/${suburbs.find((s: any) => s.name === suburbName)?.slug || ''}?view=list`
+              }
               viewAllText="View properties in"
               emptyMessage="No featured developments in this suburb right now."
             />
           ) : undefined
         }
-
         popularLocations={
-            <ExploreCities 
-                // CRITICAL: Suburb Link -> SRP
-                // Override Base Path to point to Transaction Root
-                basePath="/property-for-sale"
-                queryParams="?view=list"
-                customLocations={suburbs.map((suburb: any) => ({
-                    name: suburb.name,
-                    province: city.name,
-                    slug: suburb.slug,
-                    provinceSlug: `${provinceSlug}/${citySlug}`, 
-                    propertyCount: suburb.listingCount ? `${suburb.listingCount.toLocaleString()}+ Properties` : undefined,
-                }))}
-                title={`Popular Suburbs in ${city.name}`}
-                description={`Explore top-rated suburbs in ${city.name}, offering a mix of investment opportunities and dream homes.`}
-            />
+          <ExploreCities
+            // CRITICAL: Suburb Link -> SRP
+            // Override Base Path to point to Transaction Root
+            basePath="/property-for-sale"
+            queryParams="?view=list"
+            customLocations={suburbs.map((suburb: any) => ({
+              name: suburb.name,
+              province: city.name,
+              slug: suburb.slug,
+              provinceSlug: `${provinceSlug}/${citySlug}`,
+              propertyCount: suburb.listingCount
+                ? `${suburb.listingCount.toLocaleString()}+ Properties`
+                : undefined,
+            }))}
+            title={`Popular Suburbs in ${city.name}`}
+            description={`Explore top-rated suburbs in ${city.name}, offering a mix of investment opportunities and dream homes.`}
+          />
         }
-
-        recommendedAgents={
-            <RecommendedAgents 
-                locationType="city" 
-                locationId={city.id} 
-            />
-        }
-
+        recommendedAgents={<RecommendedAgents locationType="city" locationId={city.id} />}
         developerShowcase={
           topDevelopers && topDevelopers.length > 0 ? (
-            <TopDevelopersCarousel 
-              developers={topDevelopers} 
-              locationName={city.name} 
-            />
+            <TopDevelopersCarousel developers={topDevelopers} locationName={city.name} />
           ) : (
-            <FeaturedDevelopers 
-                locationType="city" 
-                locationId={city.id} 
-                locationName={city.name} 
-            />
+            <FeaturedDevelopers locationType="city" locationId={city.id} locationName={city.name} />
           )
         }
-
         investmentShowcase={
           investmentProjects && investmentProjects.length > 0 ? (
-            <HighDemandProjectsCarousel 
-              projects={investmentProjects} 
-              locationName={city.name} 
-            />
+            <HighDemandProjectsCarousel projects={investmentProjects} locationName={city.name} />
           ) : undefined
         }
-
         agencyShowcase={
           recommendedAgencies && recommendedAgencies.length > 0 ? (
-            <RecommendedAgenciesCarousel 
-              agencies={recommendedAgencies} 
-              locationName={city.name} 
-            />
+            <RecommendedAgenciesCarousel agencies={recommendedAgencies} locationName={city.name} />
           ) : undefined
         }
-
         exploreMore={
-            <DiscoverProperties 
-                initialCity={city.name} 
-                availableCities={[city.name, ...suburbs.map((s: any) => s.name)]}
-                locationName={city.name}
-            />
+          <DiscoverProperties
+            initialCity={city.name}
+            availableCities={[city.name, ...suburbs.map((s: any) => s.name)]}
+            locationName={city.name}
+          />
         }
-
         buyerCTA={
-            // Temporary simple CTA until Phase 3 specific component
-            <div className="py-8 text-left bg-blue-50 rounded-lg mx-4 md:mx-0">
-                <h3 className="text-fluid-h4 font-bold mb-2">Looking for a new home in {city.name}?</h3>
-                <p className="mb-4 text-slate-600">Get alerts for new properties matching your criteria.</p>
-                <button className="px-6 py-2 bg-blue-600 text-white rounded font-medium hover:bg-blue-700">
-                    Set Property Alert
-                </button>
-            </div>
+          // Temporary simple CTA until Phase 3 specific component
+          <div className="py-8 text-left bg-blue-50 rounded-lg mx-4 md:mx-0">
+            <h3 className="text-fluid-h4 font-bold mb-2">Looking for a new home in {city.name}?</h3>
+            <p className="mb-4 text-slate-600">
+              Get alerts for new properties matching your criteria.
+            </p>
+            <button className="px-6 py-2 bg-blue-600 text-white rounded font-medium hover:bg-blue-700">
+              Set Property Alert
+            </button>
+          </div>
         }
-
         listingsFeed={
           <div className="space-y-12">
             {/* Popular Suburbs Grid - Moved to popularLocations for full width */}
@@ -335,22 +327,21 @@ export default function CityPage({ params }: { params: { province: string; city:
             <SimilarLocationsSection locationId={city.id} currentLocationName={city.name} />
           </div>
         }
-
-
-
         sellerCTA={
-          <FinalCTA 
-            locationName={city.name}
-            provinceSlug={provinceSlug}
-            citySlug={citySlug}
-          />
+          <FinalCTA locationName={city.name} provinceSlug={provinceSlug} citySlug={citySlug} />
         }
       />
     </>
   );
 }
 
-function SimilarLocationsSection({ locationId, currentLocationName }: { locationId: number; currentLocationName: string }) {
+function SimilarLocationsSection({
+  locationId,
+  currentLocationName,
+}: {
+  locationId: number;
+  currentLocationName: string;
+}) {
   const { data: similarLocations, isLoading } = useSimilarLocations({ locationId, limit: 5 });
 
   return (

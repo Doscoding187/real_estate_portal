@@ -1,10 +1,10 @@
 /**
  * Property-Based Tests for FAQ Accordion Components
- * 
+ *
  * Feature: advertise-with-us-landing, Property 14: FAQ accordion behavior
  * Validates: Requirements 9.2
- * 
- * Property: For any FAQ item, clicking the item should expand that item and 
+ *
+ * Property: For any FAQ item, clicking the item should expand that item and
  * collapse all other currently expanded FAQ items
  */
 
@@ -40,7 +40,7 @@ const faqArrayArbitrary = fc.array(faqArbitrary, { minLength: 2, maxLength: 10 }
 describe('FAQSection - Property 14: FAQ accordion behavior', () => {
   it('should expand clicked item and collapse all others', () => {
     fc.assert(
-      fc.property(faqArrayArbitrary, (faqs) => {
+      fc.property(faqArrayArbitrary, faqs => {
         // Need at least 2 FAQs to test the behavior
         if (faqs.length < 2) return true;
 
@@ -78,19 +78,19 @@ describe('FAQSection - Property 14: FAQ accordion behavior', () => {
         cleanup();
         return true;
       }),
-      { numRuns: 50 }
+      { numRuns: 50 },
     );
   });
 
   it('should toggle item closed when clicking an already open item', () => {
     fc.assert(
-      fc.property(faqArrayArbitrary, (faqs) => {
+      fc.property(faqArrayArbitrary, faqs => {
         if (faqs.length < 1) return true;
 
         const { container } = render(<FAQSection faqs={faqs} />);
 
         const buttons = container.querySelectorAll('button[aria-expanded]');
-        
+
         // Click first FAQ to open it
         fireEvent.click(buttons[0]);
         expect(buttons[0].getAttribute('aria-expanded')).toBe('true');
@@ -107,7 +107,7 @@ describe('FAQSection - Property 14: FAQ accordion behavior', () => {
         cleanup();
         return true;
       }),
-      { numRuns: 50 }
+      { numRuns: 50 },
     );
   });
 
@@ -142,15 +142,15 @@ describe('FAQSection - Property 14: FAQ accordion behavior', () => {
 
           cleanup();
           return true;
-        }
+        },
       ),
-      { numRuns: 50 }
+      { numRuns: 50 },
     );
   });
 
   it('should show answer content only when expanded', () => {
     fc.assert(
-      fc.property(faqArrayArbitrary, (faqs) => {
+      fc.property(faqArrayArbitrary, faqs => {
         if (faqs.length < 1) return true;
 
         const { container } = render(<FAQSection faqs={faqs} />);
@@ -181,13 +181,13 @@ describe('FAQSection - Property 14: FAQ accordion behavior', () => {
         cleanup();
         return true;
       }),
-      { numRuns: 50 }
+      { numRuns: 50 },
     );
   });
 
   it('should have proper ARIA attributes for accessibility', () => {
     fc.assert(
-      fc.property(faqArrayArbitrary, (faqs) => {
+      fc.property(faqArrayArbitrary, faqs => {
         if (faqs.length < 1) return true;
 
         const { container } = render(<FAQSection faqs={faqs} />);
@@ -209,7 +209,7 @@ describe('FAQSection - Property 14: FAQ accordion behavior', () => {
         cleanup();
         return true;
       }),
-      { numRuns: 50 }
+      { numRuns: 50 },
     );
   });
 });
@@ -217,7 +217,7 @@ describe('FAQSection - Property 14: FAQ accordion behavior', () => {
 describe('FAQAccordionItem - Individual component behavior', () => {
   it('should call onToggle when clicked', () => {
     fc.assert(
-      fc.property(faqArbitrary, (faq) => {
+      fc.property(faqArbitrary, faq => {
         let toggleCalled = false;
         const handleToggle = () => {
           toggleCalled = true;
@@ -229,7 +229,7 @@ describe('FAQAccordionItem - Individual component behavior', () => {
             answer={faq.answer}
             isOpen={false}
             onToggle={handleToggle}
-          />
+          />,
         );
 
         const button = container.querySelector('button');
@@ -241,13 +241,13 @@ describe('FAQAccordionItem - Individual component behavior', () => {
         cleanup();
         return true;
       }),
-      { numRuns: 100 }
+      { numRuns: 100 },
     );
   });
 
   it('should support keyboard navigation (Enter and Space)', () => {
     fc.assert(
-      fc.property(faqArbitrary, (faq) => {
+      fc.property(faqArbitrary, faq => {
         let toggleCount = 0;
         const handleToggle = () => {
           toggleCount++;
@@ -259,7 +259,7 @@ describe('FAQAccordionItem - Individual component behavior', () => {
             answer={faq.answer}
             isOpen={false}
             onToggle={handleToggle}
-          />
+          />,
         );
 
         const button = container.querySelector('button');
@@ -280,20 +280,20 @@ describe('FAQAccordionItem - Individual component behavior', () => {
         cleanup();
         return true;
       }),
-      { numRuns: 100 }
+      { numRuns: 100 },
     );
   });
 
   it('should display question text in button', () => {
     fc.assert(
-      fc.property(faqArbitrary, (faq) => {
+      fc.property(faqArbitrary, faq => {
         const { container } = render(
           <FAQAccordionItem
             question={faq.question}
             answer={faq.answer}
             isOpen={false}
             onToggle={() => {}}
-          />
+          />,
         );
 
         const button = container.querySelector('button');
@@ -303,13 +303,13 @@ describe('FAQAccordionItem - Individual component behavior', () => {
         cleanup();
         return true;
       }),
-      { numRuns: 100 }
+      { numRuns: 100 },
     );
   });
 
   it('should show answer only when isOpen is true', () => {
     fc.assert(
-      fc.property(faqArbitrary, (faq) => {
+      fc.property(faqArbitrary, faq => {
         // Test closed state
         const { container: closedContainer } = render(
           <FAQAccordionItem
@@ -317,7 +317,7 @@ describe('FAQAccordionItem - Individual component behavior', () => {
             answer={faq.answer}
             isOpen={false}
             onToggle={() => {}}
-          />
+          />,
         );
 
         const closedButton = closedContainer.querySelector('button[aria-expanded]');
@@ -337,7 +337,7 @@ describe('FAQAccordionItem - Individual component behavior', () => {
             answer={faq.answer}
             isOpen={true}
             onToggle={() => {}}
-          />
+          />,
         );
 
         const openButton = openContainer.querySelector('button[aria-expanded]');
@@ -351,13 +351,13 @@ describe('FAQAccordionItem - Individual component behavior', () => {
         cleanup();
         return true;
       }),
-      { numRuns: 100 }
+      { numRuns: 100 },
     );
   });
 
   it('should have chevron icon that rotates based on open state', () => {
     fc.assert(
-      fc.property(faqArbitrary, (faq) => {
+      fc.property(faqArbitrary, faq => {
         // Test closed state
         const { container: closedContainer } = render(
           <FAQAccordionItem
@@ -365,7 +365,7 @@ describe('FAQAccordionItem - Individual component behavior', () => {
             answer={faq.answer}
             isOpen={false}
             onToggle={() => {}}
-          />
+          />,
         );
 
         // Should have an SVG icon (ChevronDown)
@@ -381,7 +381,7 @@ describe('FAQAccordionItem - Individual component behavior', () => {
             answer={faq.answer}
             isOpen={true}
             onToggle={() => {}}
-          />
+          />,
         );
 
         const openIcon = openContainer.querySelector('svg');
@@ -390,7 +390,7 @@ describe('FAQAccordionItem - Individual component behavior', () => {
         cleanup();
         return true;
       }),
-      { numRuns: 100 }
+      { numRuns: 100 },
     );
   });
 });
@@ -398,7 +398,7 @@ describe('FAQAccordionItem - Individual component behavior', () => {
 describe('FAQSection - Content and structure validation', () => {
   it('should render all provided FAQs in order', () => {
     fc.assert(
-      fc.property(faqArrayArbitrary, (faqs) => {
+      fc.property(faqArrayArbitrary, faqs => {
         const { container } = render(<FAQSection faqs={faqs} />);
 
         const buttons = container.querySelectorAll('button[aria-expanded]');
@@ -413,13 +413,13 @@ describe('FAQSection - Content and structure validation', () => {
         cleanup();
         return true;
       }),
-      { numRuns: 50 }
+      { numRuns: 50 },
     );
   });
 
   it('should have section heading and description', () => {
     fc.assert(
-      fc.property(faqArrayArbitrary, (faqs) => {
+      fc.property(faqArrayArbitrary, faqs => {
         const { container } = render(<FAQSection faqs={faqs} />);
 
         // Should have main heading
@@ -434,13 +434,13 @@ describe('FAQSection - Content and structure validation', () => {
         cleanup();
         return true;
       }),
-      { numRuns: 50 }
+      { numRuns: 50 },
     );
   });
 
   it('should have contact CTA at the bottom', () => {
     fc.assert(
-      fc.property(faqArrayArbitrary, (faqs) => {
+      fc.property(faqArrayArbitrary, faqs => {
         const { container } = render(<FAQSection faqs={faqs} />);
 
         // Should have "Contact Our Team" link
@@ -451,7 +451,7 @@ describe('FAQSection - Content and structure validation', () => {
         cleanup();
         return true;
       }),
-      { numRuns: 50 }
+      { numRuns: 50 },
     );
   });
 });

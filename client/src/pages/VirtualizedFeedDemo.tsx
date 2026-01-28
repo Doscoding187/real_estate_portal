@@ -60,7 +60,7 @@ export default function VirtualizedFeedDemo() {
                   <input
                     type="checkbox"
                     checked={useVirtualization}
-                    onChange={(e) => setUseVirtualization(e.target.checked)}
+                    onChange={e => setUseVirtualization(e.target.checked)}
                     className="sr-only peer"
                   />
                   <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
@@ -72,9 +72,7 @@ export default function VirtualizedFeedDemo() {
 
               {/* Stats */}
               <div className="text-right">
-                <div className="text-sm font-semibold text-gray-900">
-                  {allItems.length} items
-                </div>
+                <div className="text-sm font-semibold text-gray-900">{allItems.length} items</div>
                 <div className="text-xs text-gray-500">
                   {useVirtualization ? '✅ Fast rendering' : '⚠️ Slow with 50+ items'}
                 </div>
@@ -85,15 +83,15 @@ export default function VirtualizedFeedDemo() {
       </div>
 
       {/* Performance Info Banner */}
-      <div className={`${useVirtualization ? 'bg-green-50 border-green-200' : 'bg-yellow-50 border-yellow-200'} border-b px-4 py-3`}>
+      <div
+        className={`${useVirtualization ? 'bg-green-50 border-green-200' : 'bg-yellow-50 border-yellow-200'} border-b px-4 py-3`}
+      >
         <div className="max-w-7xl mx-auto flex items-center gap-3">
           {useVirtualization ? (
             <>
               <Zap className="w-5 h-5 text-green-600" />
               <div className="flex-1">
-                <p className="text-sm font-medium text-green-900">
-                  Virtualization Enabled
-                </p>
+                <p className="text-sm font-medium text-green-900">Virtualization Enabled</p>
                 <p className="text-xs text-green-700">
                   Only rendering visible items. Expect 55-60 FPS scrolling even with 1000+ items.
                 </p>
@@ -103,9 +101,7 @@ export default function VirtualizedFeedDemo() {
             <>
               <ListIcon className="w-5 h-5 text-yellow-600" />
               <div className="flex-1">
-                <p className="text-sm font-medium text-yellow-900">
-                  Standard Rendering
-                </p>
+                <p className="text-sm font-medium text-yellow-900">Standard Rendering</p>
                 <p className="text-xs text-yellow-700">
                   Rendering all items. Performance may degrade with 50+ items (20-30 FPS).
                 </p>
@@ -150,7 +146,7 @@ export default function VirtualizedFeedDemo() {
           ) : (
             <div className="h-full overflow-y-auto">
               <div className="max-w-7xl mx-auto px-4 py-4 space-y-4">
-                {allItems.map((item) => (
+                {allItems.map(item => (
                   <div key={item.id} className="h-[280px]">
                     {/* Non-virtualized rendering would go here */}
                     <div className="bg-white rounded-lg shadow p-4 h-full flex items-center justify-center">
@@ -176,9 +172,7 @@ export default function VirtualizedFeedDemo() {
                 <span className="font-semibold">Standard:</span> Renders all {allItems.length} items
               </div>
             </div>
-            <div className="text-gray-500">
-              Scroll to see the difference in performance
-            </div>
+            <div className="text-gray-500">Scroll to see the difference in performance</div>
           </div>
         </div>
       </div>

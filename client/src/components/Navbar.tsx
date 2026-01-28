@@ -44,12 +44,16 @@ export function Navbar() {
   };
 
   const dashboardRoute = getDashboardRoute(user?.role);
-  const showDashboardLink = user?.role && ['admin', 'super_admin', 'property_developer', 'agency_admin', 'agent'].includes(user.role);
+  const showDashboardLink =
+    user?.role &&
+    ['admin', 'super_admin', 'property_developer', 'agency_admin', 'agent'].includes(user.role);
 
   const navLinks = [
     { href: '/', label: 'Home', icon: Home },
     // Add Dashboard link for specialized roles
-    ...(showDashboardLink ? [{ href: dashboardRoute, label: 'Dashboard', icon: LayoutDashboard }] : []),
+    ...(showDashboardLink
+      ? [{ href: dashboardRoute, label: 'Dashboard', icon: LayoutDashboard }]
+      : []),
     { href: '/properties', label: 'Properties' },
     { href: '/explore', label: 'Explore', icon: Play },
     { href: '/agents', label: 'Agents' },
@@ -80,7 +84,9 @@ export function Navbar() {
                   key={link.href}
                   href={link.href}
                   className={`flex items-center gap-2 hover:text-blue-200 transition-colors font-medium ${
-                    location === link.href ? 'text-blue-200 font-semibold border-b-2 border-blue-200 pb-1' : 'text-white'
+                    location === link.href
+                      ? 'text-blue-200 font-semibold border-b-2 border-blue-200 pb-1'
+                      : 'text-white'
                   }`}
                 >
                   {link.icon && <link.icon className="h-4 w-4" />}

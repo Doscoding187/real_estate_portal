@@ -1,6 +1,6 @@
 /**
  * ValuePropositionDemo Page
- * 
+ *
  * Demo page to showcase the ValuePropositionSection component
  * with all four feature blocks.
  */

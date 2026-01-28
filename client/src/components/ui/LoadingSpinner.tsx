@@ -2,7 +2,7 @@
  * LoadingSpinner Component
  * Spinner with gradient colors
  * Part of the Soft UI design system
- * 
+ *
  * Requirements: 11.2
  */
 
@@ -54,11 +54,7 @@ export const LoadingSpinner = React.forwardRef<HTMLDivElement, LoadingSpinnerPro
         {/* Spinner with gradient */}
         <div className="relative">
           <Loader2
-            className={cn(
-              'animate-spin',
-              sizeStyles[size],
-              variantStyles[variant]
-            )}
+            className={cn('animate-spin', sizeStyles[size], variantStyles[variant])}
             aria-hidden="true"
           />
           {/* Gradient glow effect */}
@@ -66,7 +62,7 @@ export const LoadingSpinner = React.forwardRef<HTMLDivElement, LoadingSpinnerPro
             className={cn(
               'absolute inset-0 blur-md opacity-50',
               'animate-spin',
-              variantStyles[variant]
+              variantStyles[variant],
             )}
             aria-hidden="true"
           >
@@ -75,16 +71,12 @@ export const LoadingSpinner = React.forwardRef<HTMLDivElement, LoadingSpinnerPro
         </div>
 
         {/* Optional label */}
-        {label && (
-          <p className="text-sm font-medium text-gray-600">
-            {label}
-          </p>
-        )}
+        {label && <p className="text-sm font-medium text-gray-600">{label}</p>}
 
         <span className="sr-only">{label || 'Loading...'}</span>
       </div>
     );
-  }
+  },
 );
 
 LoadingSpinner.displayName = 'LoadingSpinner';

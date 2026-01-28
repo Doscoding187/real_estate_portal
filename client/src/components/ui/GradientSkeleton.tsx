@@ -2,7 +2,7 @@
  * GradientSkeleton Component
  * Loading skeleton with gradient shimmer animation
  * Part of the Soft UI design system
- * 
+ *
  * Requirements: 11.1
  */
 
@@ -71,7 +71,7 @@ export const GradientSkeleton = React.forwardRef<HTMLDivElement, GradientSkeleto
           // Shimmer animation
           'animate-shimmer',
           getShapeStyles(),
-          className
+          className,
         )}
         style={style}
         role="status"
@@ -80,7 +80,7 @@ export const GradientSkeleton = React.forwardRef<HTMLDivElement, GradientSkeleto
         <span className="sr-only">Loading...</span>
       </div>
     );
-  }
+  },
 );
 
 GradientSkeleton.displayName = 'GradientSkeleton';

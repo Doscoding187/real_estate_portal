@@ -2,7 +2,7 @@
  * Enhanced Developer Setup Wizard
  * Multi-step registration form with Soft UI gradient components
  * Integrated with new modular step components
- * 
+ *
  * Requirements: All Section 10 & 11 tasks
  */
 
@@ -36,9 +36,11 @@ import { SkipLink } from '@/components/wizard/SkipLink';
 import { LiveRegion } from '@/components/ui/LiveRegion';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 
-type FormValues = BasicInfoData & ContactInfoData & PortfolioData & {
-  termsAccepted: boolean;
-};
+type FormValues = BasicInfoData &
+  ContactInfoData &
+  PortfolioData & {
+    termsAccepted: boolean;
+  };
 
 const STEPS = [
   { id: 1, title: 'Company Info', icon: Building2 },
@@ -55,7 +57,7 @@ export default function DeveloperSetupWizardEnhanced() {
   const [isSavingDraft, setIsSavingDraft] = useState(false);
   const [draftSaved, setDraftSaved] = useState(false);
   const [stepAnnouncement, setStepAnnouncement] = useState<string>('');
-  
+
   // Detect reduced motion preference
   const prefersReducedMotion = useReducedMotion();
 
@@ -99,7 +101,7 @@ export default function DeveloperSetupWizardEnhanced() {
   const { data: user } = trpc.auth.me.useQuery();
 
   const formValues = watch();
-  
+
   // Handlers for step data changes
   const handleBasicInfoChange = (data: Partial<BasicInfoData>) => {
     Object.entries(data).forEach(([key, value]) => {
@@ -139,7 +141,11 @@ export default function DeveloperSetupWizardEnhanced() {
   };
 
   // Auto-save hook - saves draft to localStorage automatically
-  const { lastSaved, isSaving: isAutoSaving, error: autoSaveError } = useAutoSave(
+  const {
+    lastSaved,
+    isSaving: isAutoSaving,
+    error: autoSaveError,
+  } = useAutoSave(
     {
       step,
       completedSteps,
@@ -149,27 +155,25 @@ export default function DeveloperSetupWizardEnhanced() {
       storageKey: 'developer-registration-draft',
       debounceMs: 2000,
       enabled: step > 1 && !createProfile.isPending, // Only auto-save after first step
-      onError: (error) => {
+      onError: error => {
         console.error('Auto-save error:', error);
         toast.error('Failed to auto-save draft');
       },
-    }
+    },
   );
 
   // Check for draft on mount and show resume dialog
   useEffect(() => {
     const savedDraft = localStorage.getItem('developer-registration-draft');
-    
+
     if (savedDraft) {
       try {
         const draft = JSON.parse(savedDraft);
-        
+
         // Check if there's meaningful progress (beyond step 1 or has data)
-        const hasMeaningfulProgress = 
-          draft.step > 1 || 
-          draft.name || 
-          draft.specializations?.length > 0;
-        
+        const hasMeaningfulProgress =
+          draft.step > 1 || draft.name || draft.specializations?.length > 0;
+
         if (hasMeaningfulProgress) {
           setShowResumeDraftDialog(true);
         }
@@ -183,12 +187,12 @@ export default function DeveloperSetupWizardEnhanced() {
   // Handle resume draft decision
   const handleResumeDraft = () => {
     setShowResumeDraftDialog(false);
-    
+
     const savedDraft = localStorage.getItem('developer-registration-draft');
     if (savedDraft) {
       try {
         const draft = JSON.parse(savedDraft);
-        
+
         // Restore form values
         reset({
           name: draft.name || '',
@@ -208,11 +212,11 @@ export default function DeveloperSetupWizardEnhanced() {
           specializations: draft.specializations || [],
           termsAccepted: false,
         });
-        
+
         // Restore wizard state
         setStep(draft.step || 1);
         setCompletedSteps(draft.completedSteps || []);
-        
+
         toast.success('Draft restored successfully!');
       } catch (error) {
         console.error('Error restoring draft:', error);
@@ -259,7 +263,7 @@ export default function DeveloperSetupWizardEnhanced() {
 
       setDraftSaved(true);
       toast.success('Draft saved successfully!');
-      
+
       setTimeout(() => setDraftSaved(false), 2000);
     } catch (error) {
       console.error('Error saving draft:', error);
@@ -370,10 +374,10 @@ export default function DeveloperSetupWizardEnhanced() {
       });
 
       toast.success('Profile submitted for review successfully!');
-      
+
       // Clear the draft from localStorage
       localStorage.removeItem('developer-registration-draft');
-      
+
       setLocation('/developer/success');
     } catch (error: any) {
       console.error(error);
@@ -397,14 +401,10 @@ export default function DeveloperSetupWizardEnhanced() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 py-12 px-4 sm:px-6 lg:px-8">
       {/* Skip Link for Keyboard Navigation */}
-      <SkipLink targetId="wizard-form-content">
-        Skip to registration form
-      </SkipLink>
+      <SkipLink targetId="wizard-form-content">Skip to registration form</SkipLink>
 
       {/* Live Region for Screen Reader Announcements */}
-      <LiveRegion priority="polite">
-        {stepAnnouncement}
-      </LiveRegion>
+      <LiveRegion priority="polite">{stepAnnouncement}</LiveRegion>
 
       {/* Resume Draft Dialog */}
       <DraftManager
@@ -417,9 +417,10 @@ export default function DeveloperSetupWizardEnhanced() {
           currentStep: step,
           totalSteps: 4,
           developmentName: formValues.name,
-          address: formValues.city && formValues.province 
-            ? `${formValues.city}, ${formValues.province}` 
-            : undefined,
+          address:
+            formValues.city && formValues.province
+              ? `${formValues.city}, ${formValues.province}`
+              : undefined,
           lastModified: lastSaved || undefined,
         }}
       />
@@ -430,10 +431,8 @@ export default function DeveloperSetupWizardEnhanced() {
           <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent mb-2">
             Developer Registration
           </h1>
-          <p className="text-gray-600">
-            Join our platform as a verified property developer
-          </p>
-          
+          <p className="text-gray-600">Join our platform as a verified property developer</p>
+
           {/* Auto-save status indicator */}
           {step > 1 && (
             <div className="absolute top-0 right-0">
@@ -458,7 +457,7 @@ export default function DeveloperSetupWizardEnhanced() {
         </div>
 
         {/* Form Card */}
-        <div 
+        <div
           id="wizard-form-content"
           className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border-2 border-white p-8"
           role="main"
@@ -467,7 +466,13 @@ export default function DeveloperSetupWizardEnhanced() {
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
             {/* Step 1: Basic Info */}
             {step === 1 && (
-              <div className={prefersReducedMotion ? '' : 'animate-in fade-in slide-in-from-right-4 duration-300'}>
+              <div
+                className={
+                  prefersReducedMotion
+                    ? ''
+                    : 'animate-in fade-in slide-in-from-right-4 duration-300'
+                }
+              >
                 <BasicInfoStep
                   data={{
                     name: formValues.name,
@@ -484,7 +489,13 @@ export default function DeveloperSetupWizardEnhanced() {
 
             {/* Step 2: Contact Info */}
             {step === 2 && (
-              <div className={prefersReducedMotion ? '' : 'animate-in fade-in slide-in-from-right-4 duration-300'}>
+              <div
+                className={
+                  prefersReducedMotion
+                    ? ''
+                    : 'animate-in fade-in slide-in-from-right-4 duration-300'
+                }
+              >
                 <ContactInfoStep
                   data={{
                     email: formValues.email,
@@ -502,7 +513,13 @@ export default function DeveloperSetupWizardEnhanced() {
 
             {/* Step 3: Portfolio */}
             {step === 3 && (
-              <div className={prefersReducedMotion ? '' : 'animate-in fade-in slide-in-from-right-4 duration-300'}>
+              <div
+                className={
+                  prefersReducedMotion
+                    ? ''
+                    : 'animate-in fade-in slide-in-from-right-4 duration-300'
+                }
+              >
                 <PortfolioStep
                   data={{
                     completedProjects: formValues.completedProjects,
@@ -518,7 +535,13 @@ export default function DeveloperSetupWizardEnhanced() {
 
             {/* Step 4: Review */}
             {step === 4 && (
-              <div className={prefersReducedMotion ? '' : 'animate-in fade-in slide-in-from-right-4 duration-300'}>
+              <div
+                className={
+                  prefersReducedMotion
+                    ? ''
+                    : 'animate-in fade-in slide-in-from-right-4 duration-300'
+                }
+              >
                 <ReviewStep
                   data={{
                     basicInfo: {

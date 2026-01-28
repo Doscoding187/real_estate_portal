@@ -70,21 +70,27 @@ export default function AgencyDashboard() {
               <h1 className="text-4xl font-bold text-slate-800">Agency Dashboard</h1>
               <p className="text-slate-500">Monitor performance and manage your team</p>
             </div>
-            <Badge className="bg-gradient-to-r from-emerald-100 to-teal-100 text-emerald-700 border-emerald-200">Agency Admin</Badge>
+            <Badge className="bg-gradient-to-r from-emerald-100 to-teal-100 text-emerald-700 border-emerald-200">
+              Agency Admin
+            </Badge>
           </div>
 
           <div className="flex gap-2">
-            <Button variant="outline" onClick={() => setLocation('/explore/upload')} className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200 text-blue-700 hover:from-blue-100 hover:to-indigo-100">
-                <Building2 className="mr-2 h-4 w-4" />
-                Upload to Explore
+            <Button
+              variant="outline"
+              onClick={() => setLocation('/explore/upload')}
+              className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200 text-blue-700 hover:from-blue-100 hover:to-indigo-100"
+            >
+              <Building2 className="mr-2 h-4 w-4" />
+              Upload to Explore
             </Button>
             <Button variant="outline" onClick={() => setLocation('/agency/subscription')}>
-                <CreditCard className="mr-2 h-4 w-4" />
-                Subscription
+              <CreditCard className="mr-2 h-4 w-4" />
+              Subscription
             </Button>
             <Button onClick={() => setLocation('/agency/agents')}>
-                <Settings className="mr-2 h-4 w-4" />
-                Manage Team
+              <Settings className="mr-2 h-4 w-4" />
+              Manage Team
             </Button>
           </div>
         </div>

@@ -75,15 +75,15 @@ describe('Color Contrast Audit', () => {
 
     it('should categorize passed and failed combinations correctly', () => {
       const audit = auditColorContrast();
-      
+
       // Check that all passed combinations actually pass
-      audit.passed.forEach((pair) => {
+      audit.passed.forEach(pair => {
         const result = meetsWCAGAA(pair.foreground, pair.background, pair.textSize);
         expect(result.passes).toBe(true);
       });
 
       // Check that all failed combinations actually fail
-      audit.failed.forEach((pair) => {
+      audit.failed.forEach(pair => {
         const result = meetsWCAGAA(pair.foreground, pair.background, pair.textSize);
         expect(result.passes).toBe(false);
       });

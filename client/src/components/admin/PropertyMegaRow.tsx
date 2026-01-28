@@ -58,7 +58,7 @@ export const PropertyMegaRow: React.FC<PropertyMegaRowProps> = ({
   };
 
   return (
-    <div 
+    <div
       className="group relative flex items-center gap-4 p-4 bg-white border border-slate-200 rounded-xl hover:shadow-md transition-all duration-200 mb-3 cursor-pointer"
       onClick={() => onView(property)}
     >
@@ -86,11 +86,13 @@ export const PropertyMegaRow: React.FC<PropertyMegaRowProps> = ({
 
       {/* Main Content */}
       <div className="flex-1 min-w-0 grid grid-cols-12 gap-4 items-center">
-        
         {/* Info Column */}
         <div className="col-span-5">
           <div className="flex items-center gap-2 mb-1">
-            <Badge variant="outline" className={cn("capitalize font-medium", getStatusColor(property.status))}>
+            <Badge
+              variant="outline"
+              className={cn('capitalize font-medium', getStatusColor(property.status))}
+            >
               {property.status.replace('_', ' ')}
             </Badge>
             <span className="text-xs text-slate-400 font-mono">ID: {property.id}</span>
@@ -106,23 +108,37 @@ export const PropertyMegaRow: React.FC<PropertyMegaRowProps> = ({
         {/* Price & Vibe Column */}
         <div className="col-span-3">
           <div className="font-bold text-slate-900 text-lg">
-            {new Intl.NumberFormat('en-ZA', { style: 'currency', currency: 'ZAR', maximumFractionDigits: 0 }).format(property.price)}
+            {new Intl.NumberFormat('en-ZA', {
+              style: 'currency',
+              currency: 'ZAR',
+              maximumFractionDigits: 0,
+            }).format(property.price)}
           </div>
           {pricePerSqm && (
             <div className="text-xs text-slate-500 font-medium">
-              {new Intl.NumberFormat('en-ZA', { style: 'currency', currency: 'ZAR', maximumFractionDigits: 0 }).format(pricePerSqm)} / m²
+              {new Intl.NumberFormat('en-ZA', {
+                style: 'currency',
+                currency: 'ZAR',
+                maximumFractionDigits: 0,
+              }).format(pricePerSqm)}{' '}
+              / m²
             </div>
           )}
-          
+
           {/* Vibe Score */}
           <div className="mt-2 flex items-center gap-2">
             <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-              <div 
-                className={cn("h-full rounded-full", getVibeScoreColor(property.vibeScore))} 
+              <div
+                className={cn('h-full rounded-full', getVibeScoreColor(property.vibeScore))}
                 style={{ width: `${property.vibeScore}%` }}
               />
             </div>
-            <span className={cn("text-xs font-bold", getVibeScoreColor(property.vibeScore).replace('bg-', 'text-'))}>
+            <span
+              className={cn(
+                'text-xs font-bold',
+                getVibeScoreColor(property.vibeScore).replace('bg-', 'text-'),
+              )}
+            >
               {property.vibeScore}
             </span>
           </div>
@@ -151,19 +167,22 @@ export const PropertyMegaRow: React.FC<PropertyMegaRowProps> = ({
         </div>
 
         {/* Actions Column */}
-        <div className="col-span-2 flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
+        <div
+          className="col-span-2 flex items-center justify-end gap-2"
+          onClick={e => e.stopPropagation()}
+        >
           {property.approvalStatus === 'pending' ? (
             <>
-              <Button 
-                size="sm" 
+              <Button
+                size="sm"
                 className="h-8 bg-green-600 hover:bg-green-700 text-white"
                 onClick={() => onApprove(property)}
               >
                 Approve
               </Button>
-              <Button 
-                size="sm" 
-                variant="outline" 
+              <Button
+                size="sm"
+                variant="outline"
                 className="h-8 border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
                 onClick={() => onReject(property)}
               >
@@ -172,7 +191,12 @@ export const PropertyMegaRow: React.FC<PropertyMegaRowProps> = ({
             </>
           ) : (
             <div className="flex items-center gap-1">
-              <Button size="icon" variant="ghost" className="h-8 w-8 text-slate-500 hover:text-blue-600" onClick={() => onView(property)}>
+              <Button
+                size="icon"
+                variant="ghost"
+                className="h-8 w-8 text-slate-500 hover:text-blue-600"
+                onClick={() => onView(property)}
+              >
                 <Eye className="h-4 w-4" />
               </Button>
               <DropdownMenu>

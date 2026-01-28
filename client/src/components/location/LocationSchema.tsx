@@ -1,14 +1,14 @@
-import { Helmet } from 'react-helmet';
+import { Helmet } from 'react-helmet-async';
 
 /**
  * LocationSchema Component
- * 
+ *
  * Generates JSON-LD structured data and SEO metadata for location pages.
- * 
+ *
  * Requirements:
  * - 23.1-23.5: SEO-optimized URLs and metadata
  * - 30.1-30.5: Structured data markup with @type "Place"
- * 
+ *
  * Features:
  * - JSON-LD structured data with @type "Place"
  * - Breadcrumb structured data
@@ -44,20 +44,20 @@ interface LocationSchemaProps {
   };
 }
 
-export function LocationSchema({ 
-  type, 
-  name, 
-  description, 
-  url, 
-  image, 
-  breadcrumbs, 
+export function LocationSchema({
+  type,
+  name,
+  description,
+  url,
+  image,
+  breadcrumbs,
   geo,
   address,
   aggregateRating,
-  stats
+  stats,
 }: LocationSchemaProps) {
   const fullUrl = `https://propertylistify.com${url}`;
-  
+
   // BreadcrumbList Schema
   // Requirements 30.4: Include breadcrumb structured data showing location hierarchy
   const breadcrumbSchema = {
@@ -93,7 +93,7 @@ export function LocationSchema({
     placeSchema.geo = {
       '@type': 'GeoCoordinates',
       latitude: geo.latitude,
-      longitude: geo.longitude
+      longitude: geo.longitude,
     };
   }
 
@@ -106,7 +106,7 @@ export function LocationSchema({
       addressLocality: address.addressLocality || name,
       addressRegion: address.addressRegion,
       postalCode: address.postalCode,
-      addressCountry: address.addressCountry || 'ZA'
+      addressCountry: address.addressCountry || 'ZA',
     };
   }
 
@@ -115,7 +115,7 @@ export function LocationSchema({
     placeSchema.aggregateRating = {
       '@type': 'AggregateRating',
       ratingValue: aggregateRating.ratingValue,
-      reviewCount: aggregateRating.reviewCount
+      reviewCount: aggregateRating.reviewCount,
     };
   }
 
@@ -123,30 +123,30 @@ export function LocationSchema({
   // Requirements 30.3: Include aggregate statistics as additional properties
   if (stats) {
     placeSchema.additionalProperty = [];
-    
+
     if (stats.totalListings !== undefined) {
       placeSchema.additionalProperty.push({
         '@type': 'PropertyValue',
         name: 'Total Listings',
-        value: stats.totalListings
+        value: stats.totalListings,
       });
     }
-    
+
     if (stats.avgPrice !== undefined) {
       placeSchema.additionalProperty.push({
         '@type': 'PropertyValue',
         name: 'Average Sale Price',
         value: stats.avgPrice,
-        unitCode: 'ZAR'
+        unitCode: 'ZAR',
       });
     }
-    
+
     if (stats.avgRentalPrice !== undefined) {
       placeSchema.additionalProperty.push({
         '@type': 'PropertyValue',
         name: 'Average Rental Price',
         value: stats.avgRentalPrice,
-        unitCode: 'ZAR'
+        unitCode: 'ZAR',
       });
     }
   }
@@ -154,7 +154,7 @@ export function LocationSchema({
   // Generate dynamic meta tags
   // Requirements 23.2: Include location name, listing count, and average price in title tag
   const metaTitle = generateMetaTitle(type, name, stats);
-  
+
   // Requirements 23.3: Create description with key statistics and property types
   const metaDescription = generateMetaDescription(type, name, description, stats);
 
@@ -190,12 +190,8 @@ export function LocationSchema({
       )}
 
       {/* Structured Data */}
-      <script type="application/ld+json">
-        {JSON.stringify(breadcrumbSchema)}
-      </script>
-      <script type="application/ld+json">
-        {JSON.stringify(placeSchema)}
-      </script>
+      <script type="application/ld+json">{JSON.stringify(breadcrumbSchema)}</script>
+      <script type="application/ld+json">{JSON.stringify(placeSchema)}</script>
     </Helmet>
   );
 }
@@ -207,10 +203,10 @@ export function LocationSchema({
 function generateMetaTitle(
   type: 'Province' | 'City' | 'Suburb',
   name: string,
-  stats?: { totalListings?: number; avgPrice?: number }
+  stats?: { totalListings?: number; avgPrice?: number },
 ): string {
   const baseTitle = `${name} Real Estate`;
-  
+
   if (stats?.totalListings && stats?.avgPrice) {
     const formattedPrice = formatPrice(stats.avgPrice);
     return `${baseTitle} - ${stats.totalListings} Properties from ${formattedPrice} | Property Listify`;
@@ -229,35 +225,35 @@ function generateMetaDescription(
   type: 'Province' | 'City' | 'Suburb',
   name: string,
   description: string,
-  stats?: { totalListings?: number; avgPrice?: number; avgRentalPrice?: number }
+  stats?: { totalListings?: number; avgPrice?: number; avgRentalPrice?: number },
 ): string {
   let desc = `Explore real estate in ${name}. `;
-  
+
   if (stats?.totalListings) {
     desc += `Browse ${stats.totalListings} properties for sale and rent. `;
   }
-  
+
   if (stats?.avgPrice) {
     const formattedPrice = formatPrice(stats.avgPrice);
     desc += `Average sale price: ${formattedPrice}. `;
   }
-  
+
   if (stats?.avgRentalPrice) {
     const formattedRental = formatPrice(stats.avgRentalPrice);
     desc += `Average rental: ${formattedRental}/month. `;
   }
-  
+
   // Add a snippet of the location description if available
   if (description) {
     const snippet = description.substring(0, 100).trim();
     desc += snippet.endsWith('.') ? snippet : `${snippet}...`;
   }
-  
+
   // Ensure description doesn't exceed 160 characters (SEO best practice)
   if (desc.length > 160) {
     desc = desc.substring(0, 157) + '...';
   }
-  
+
   return desc;
 }
 

@@ -11,6 +11,11 @@ import { MicroPill } from '@/components/ui/soft/MicroPill';
 import { IconButton } from '@/components/ui/soft/IconButton';
 import { AgencySelector } from '@/components/explore-discovery/AgencySelector';
 import { designTokens } from '@/lib/design-tokens';
+import {
+  OWNERSHIP_TYPE_OPTIONS,
+  STRUCTURAL_TYPE_OPTIONS,
+  FLOOR_TYPE_OPTIONS,
+} from '@/types/wizardTypes';
 
 interface FilterPanelProps {
   isOpen: boolean;
@@ -18,11 +23,7 @@ interface FilterPanelProps {
   onApply?: () => void;
 }
 
-export function FilterPanel({
-  isOpen,
-  onClose,
-  onApply,
-}: FilterPanelProps) {
+export function FilterPanel({ isOpen, onClose, onApply }: FilterPanelProps) {
   // Get filter state from Zustand store
   const {
     propertyType,
@@ -42,6 +43,13 @@ export function FilterPanel({
     setAgencyId,
     clearFilters,
     getFilterCount,
+    // New filters
+    ownershipType,
+    structuralType,
+    floors,
+    setOwnershipType,
+    setStructuralType,
+    setFloors,
   } = useExploreFiltersStore();
 
   const filterCount = getFilterCount();
@@ -102,7 +110,7 @@ export function FilterPanel({
                   variant="default"
                 />
               </div>
-              
+
               {filterCount > 0 && (
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-gray-600">
@@ -127,12 +135,73 @@ export function FilterPanel({
                   Property Type
                 </label>
                 <div className="flex flex-wrap gap-2">
-                  {propertyTypes.map((type) => (
+                  {propertyTypes.map(type => (
                     <MicroPill
                       key={type.value}
                       label={type.label}
                       selected={propertyType === type.value}
-                      onClick={() => setPropertyType(propertyType === type.value ? null : type.value)}
+                      onClick={() =>
+                        setPropertyType(propertyType === type.value ? null : type.value)
+                      }
+                      size="md"
+                      variant="default"
+                    />
+                  ))}
+                </div>
+              </div>
+
+              {/* Ownership Type */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-900 mb-3">
+                  Ownership Type
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {OWNERSHIP_TYPE_OPTIONS.map(opt => (
+                    <MicroPill
+                      key={opt.value}
+                      label={opt.label}
+                      selected={ownershipType === opt.value}
+                      onClick={() =>
+                        setOwnershipType(ownershipType === opt.value ? null : opt.value)
+                      }
+                      size="md"
+                      variant="default"
+                    />
+                  ))}
+                </div>
+              </div>
+
+              {/* Structural Type */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-900 mb-3">
+                  Structure Type
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {STRUCTURAL_TYPE_OPTIONS.map(opt => (
+                    <MicroPill
+                      key={opt.value}
+                      label={opt.label}
+                      selected={structuralType === opt.value}
+                      onClick={() =>
+                        setStructuralType(structuralType === opt.value ? null : opt.value)
+                      }
+                      size="md"
+                      variant="default"
+                    />
+                  ))}
+                </div>
+              </div>
+
+              {/* Floors */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-900 mb-3">Floors</label>
+                <div className="flex flex-wrap gap-2">
+                  {FLOOR_TYPE_OPTIONS.map(opt => (
+                    <MicroPill
+                      key={opt.value}
+                      label={opt.label}
+                      selected={floors === opt.value}
+                      onClick={() => setFloors(floors === opt.value ? null : opt.value)}
                       size="md"
                       variant="default"
                     />
@@ -151,7 +220,9 @@ export function FilterPanel({
                     <input
                       type="number"
                       value={priceMin || ''}
-                      onChange={(e) => setPriceRange(e.target.value ? Number(e.target.value) : null, priceMax)}
+                      onChange={e =>
+                        setPriceRange(e.target.value ? Number(e.target.value) : null, priceMax)
+                      }
                       placeholder="No min"
                       className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
                       style={{ boxShadow: designTokens.shadows.sm }}
@@ -162,7 +233,9 @@ export function FilterPanel({
                     <input
                       type="number"
                       value={priceMax || ''}
-                      onChange={(e) => setPriceRange(priceMin, e.target.value ? Number(e.target.value) : null)}
+                      onChange={e =>
+                        setPriceRange(priceMin, e.target.value ? Number(e.target.value) : null)
+                      }
                       placeholder="No max"
                       className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
                       style={{ boxShadow: designTokens.shadows.sm }}
@@ -173,11 +246,9 @@ export function FilterPanel({
 
               {/* Bedrooms */}
               <div>
-                <label className="block text-sm font-semibold text-gray-900 mb-3">
-                  Bedrooms
-                </label>
+                <label className="block text-sm font-semibold text-gray-900 mb-3">Bedrooms</label>
                 <div className="flex flex-wrap gap-2">
-                  {bedroomOptions.map((num) => (
+                  {bedroomOptions.map(num => (
                     <MicroPill
                       key={num}
                       label={`${num}+`}
@@ -192,11 +263,9 @@ export function FilterPanel({
 
               {/* Bathrooms */}
               <div>
-                <label className="block text-sm font-semibold text-gray-900 mb-3">
-                  Bathrooms
-                </label>
+                <label className="block text-sm font-semibold text-gray-900 mb-3">Bathrooms</label>
                 <div className="flex flex-wrap gap-2">
-                  {bathroomOptions.map((num) => (
+                  {bathroomOptions.map(num => (
                     <MicroPill
                       key={num}
                       label={`${num}+`}
@@ -211,13 +280,11 @@ export function FilterPanel({
 
               {/* Location */}
               <div>
-                <label className="block text-sm font-semibold text-gray-900 mb-3">
-                  Location
-                </label>
+                <label className="block text-sm font-semibold text-gray-900 mb-3">Location</label>
                 <input
                   type="text"
                   value={location || ''}
-                  onChange={(e) => setLocation(e.target.value || null)}
+                  onChange={e => setLocation(e.target.value || null)}
                   placeholder="Enter location..."
                   className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
                   style={{ boxShadow: designTokens.shadows.sm }}
@@ -226,13 +293,8 @@ export function FilterPanel({
 
               {/* Agency Filter */}
               <div>
-                <label className="block text-sm font-semibold text-gray-900 mb-3">
-                  Agency
-                </label>
-                <AgencySelector
-                  selectedAgencyId={agencyId}
-                  onAgencyChange={setAgencyId}
-                />
+                <label className="block text-sm font-semibold text-gray-900 mb-3">Agency</label>
+                <AgencySelector selectedAgencyId={agencyId} onAgencyChange={setAgencyId} />
               </div>
             </div>
 
@@ -245,7 +307,7 @@ export function FilterPanel({
                   background: designTokens.colors.accent.gradient,
                   boxShadow: designTokens.shadows.accent,
                 }}
-                whileHover={{ 
+                whileHover={{
                   scale: 1.02,
                   boxShadow: designTokens.shadows.accentHover,
                 }}
@@ -257,7 +319,7 @@ export function FilterPanel({
                   <span>Apply Filters</span>
                 </div>
               </motion.button>
-              
+
               {filterCount > 0 && (
                 <motion.button
                   onClick={handleReset}
@@ -277,4 +339,3 @@ export function FilterPanel({
     </AnimatePresence>
   );
 }
-

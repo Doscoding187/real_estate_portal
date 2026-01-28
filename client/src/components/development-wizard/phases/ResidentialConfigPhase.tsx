@@ -1,16 +1,23 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
-import { 
-  Building2, Home, Castle, TreePine, Waves, GraduationCap, Users,
-  Shield, Check, ArrowRight, ArrowLeft, Info
+import {
+  Building2,
+  Home,
+  Castle,
+  TreePine,
+  Waves,
+  GraduationCap,
+  Users,
+  Shield,
+  Check,
+  Info,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { 
-  RESIDENTIAL_TYPE_OPTIONS, 
+import {
+  RESIDENTIAL_TYPE_OPTIONS,
   COMMUNITY_TYPE_OPTIONS,
   getApplicableCommunityTypes,
   type ResidentialType,
@@ -29,54 +36,34 @@ const RESIDENTIAL_ICONS: Record<ResidentialType, typeof Building2> = {
 };
 
 export function ResidentialConfigPhase() {
-  const { 
-    residentialConfig, 
-    setResidentialConfig, 
-    setPhase 
-  } = useDevelopmentWizard();
+  const { residentialConfig, setResidentialConfig } = useDevelopmentWizard();
 
   const handleResidentialTypeSelect = (type: ResidentialType) => {
     // Clear community types when residential type changes since options differ
-    setResidentialConfig({ 
+    setResidentialConfig({
       residentialType: type,
-      communityTypes: []
+      communityTypes: [],
     });
   };
 
   const handleCommunityTypeToggle = (type: CommunityType) => {
     const current = residentialConfig.communityTypes || [];
-    
+
     // Special case: if selecting 'non_estate', clear all estate types
     if (type === 'non_estate') {
       setResidentialConfig({ communityTypes: ['non_estate'] });
       return;
     }
-    
+
     // If selecting an estate type, remove 'non_estate' if present
     const filtered = current.filter(t => t !== 'non_estate');
-    
+
     if (filtered.includes(type)) {
       setResidentialConfig({ communityTypes: filtered.filter(t => t !== type) });
     } else {
       setResidentialConfig({ communityTypes: [...filtered, type] });
     }
   };
-
-
-  const handleBack = () => {
-    setPhase(2); // Back to Development Type
-  };
-
-  const handleContinue = () => {
-    if (!residentialConfig.residentialType) {
-      toast.error('Please select a residential development type');
-      return;
-    }
-    
-    setPhase(4); // Basic Details (Identity)
-  };
-
-
 
   return (
     <div className="space-y-8">
@@ -98,50 +85,66 @@ export function ResidentialConfigPhase() {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {RESIDENTIAL_TYPE_OPTIONS.map((option) => {
+            {RESIDENTIAL_TYPE_OPTIONS.map(option => {
               const Icon = RESIDENTIAL_ICONS[option.value];
               const isSelected = residentialConfig.residentialType === option.value;
               const isDisabled = option.disabled;
-              
+
               return (
                 <Card
                   key={option.value}
                   className={cn(
-                    "relative overflow-hidden group transition-all duration-300",
-                    isDisabled 
-                       ? "cursor-not-allowed border-slate-200 bg-slate-50/50 opacity-60" 
-                       : "cursor-pointer hover:scale-[1.02] border-slate-200 hover:border-blue-300 hover:shadow-sm",
-                    isSelected && "border-blue-500 bg-gradient-to-br from-blue-50 to-purple-50 ring-2 ring-blue-500 shadow-md"
+                    'relative overflow-hidden group transition-all duration-300',
+                    isDisabled
+                      ? 'cursor-not-allowed border-slate-200 bg-slate-50/50 opacity-60'
+                      : 'cursor-pointer hover:scale-[1.02] border-slate-200 hover:border-blue-300 hover:shadow-sm',
+                    isSelected &&
+                      'border-blue-500 bg-gradient-to-br from-blue-50 to-purple-50 ring-2 ring-blue-500 shadow-md',
                   )}
                   onClick={() => !isDisabled && handleResidentialTypeSelect(option.value)}
                 >
                   <CardContent className="p-5 flex items-start gap-4">
-                    <div className={cn(
-                      "p-3 rounded-xl transition-all duration-300 shrink-0",
-                      isSelected 
-                        ? "bg-gradient-to-br from-blue-500 to-purple-500 text-white" 
-                        : isDisabled
-                          ? "bg-slate-100 text-slate-400"
-                          : "bg-slate-100 text-slate-500 group-hover:bg-blue-100 group-hover:text-blue-600"
-                    )}>
+                    <div
+                      className={cn(
+                        'p-3 rounded-xl transition-all duration-300 shrink-0',
+                        isSelected
+                          ? 'bg-gradient-to-br from-blue-500 to-purple-500 text-white'
+                          : isDisabled
+                            ? 'bg-slate-100 text-slate-400'
+                            : 'bg-slate-100 text-slate-500 group-hover:bg-blue-100 group-hover:text-blue-600',
+                      )}
+                    >
                       {Icon && <Icon className="w-6 h-6" />}
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <h4 className={cn(
-                          "font-semibold text-sm truncate",
-                          isSelected ? "text-blue-900" : isDisabled ? "text-slate-400" : "text-slate-900"
-                        )}>
+                        <h4
+                          className={cn(
+                            'font-semibold text-sm truncate',
+                            isSelected
+                              ? 'text-blue-900'
+                              : isDisabled
+                                ? 'text-slate-400'
+                                : 'text-slate-900',
+                          )}
+                        >
                           {option.label}
                         </h4>
                         {isDisabled && (
-                           <Badge variant="outline" className="text-[10px] h-5 px-1 bg-slate-100 text-slate-500">Soon</Badge>
+                          <Badge
+                            variant="outline"
+                            className="text-[10px] h-5 px-1 bg-slate-100 text-slate-500"
+                          >
+                            Soon
+                          </Badge>
                         )}
                       </div>
-                      <p className={cn(
-                        "text-xs mt-1 line-clamp-2",
-                        isDisabled ? "text-slate-400" : "text-slate-500"
-                      )}>
+                      <p
+                        className={cn(
+                          'text-xs mt-1 line-clamp-2',
+                          isDisabled ? 'text-slate-400' : 'text-slate-500',
+                        )}
+                      >
                         {option.description}
                       </p>
                     </div>
@@ -167,88 +170,76 @@ export function ResidentialConfigPhase() {
             <CardTitle className="text-xl text-slate-900 flex items-center gap-2">
               <Castle className="w-5 h-5 text-purple-600" />
               Property Sub-Type
-              <Badge variant="secondary" className="ml-2 text-xs">Required</Badge>
+              <Badge variant="secondary" className="ml-2 text-xs">
+                Required
+              </Badge>
             </CardTitle>
             <CardDescription>
-              What specific type of {RESIDENTIAL_TYPE_OPTIONS.find(o => o.value === residentialConfig.residentialType)?.label.toLowerCase() || 'development'} is this?
+              What specific type of{' '}
+              {RESIDENTIAL_TYPE_OPTIONS.find(
+                o => o.value === residentialConfig.residentialType,
+              )?.label.toLowerCase() || 'development'}{' '}
+              is this?
             </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {getApplicableCommunityTypes(residentialConfig.residentialType || null).map((option) => {
-                const isSelected = residentialConfig.communityTypes?.includes(option.value);
-                
-                return (
-                  <label
-                    key={option.value}
-                    className={cn(
-                      "flex items-center gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all duration-200",
-                      isSelected 
-                        ? "border-purple-500 bg-purple-50" 
-                        : "border-slate-200 hover:border-purple-300 hover:bg-purple-50/30"
-                    )}
-                  >
-                    <Checkbox
-                      checked={isSelected}
-                      onCheckedChange={() => handleCommunityTypeToggle(option.value)}
-                      className="data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600"
-                    />
-                    <div className="flex-1 min-w-0">
-                      <span className={cn(
-                        "font-medium text-sm",
-                        isSelected ? "text-purple-900" : "text-slate-700"
-                      )}>
-                        {option.label}
-                      </span>
-                      <p className="text-xs text-slate-500 mt-0.5">
-                        {option.description}
-                      </p>
-                      {option.triggersEstateProfile && (
-                        <p className="text-xs text-purple-600 mt-0.5 font-medium">
-                          + Estate Profile
-                        </p>
+              {getApplicableCommunityTypes(residentialConfig.residentialType || null).map(
+                option => {
+                  const isSelected = residentialConfig.communityTypes?.includes(option.value);
+
+                  return (
+                    <label
+                      key={option.value}
+                      className={cn(
+                        'flex items-center gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all duration-200',
+                        isSelected
+                          ? 'border-purple-500 bg-purple-50'
+                          : 'border-slate-200 hover:border-purple-300 hover:bg-purple-50/30',
                       )}
-                    </div>
-                  </label>
-                );
-              })}
+                    >
+                      <Checkbox
+                        checked={isSelected}
+                        onCheckedChange={() => handleCommunityTypeToggle(option.value)}
+                        className="data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <span
+                          className={cn(
+                            'font-medium text-sm',
+                            isSelected ? 'text-purple-900' : 'text-slate-700',
+                          )}
+                        >
+                          {option.label}
+                        </span>
+                        <p className="text-xs text-slate-500 mt-0.5">{option.description}</p>
+                        {option.triggersEstateProfile && (
+                          <p className="text-xs text-purple-600 mt-0.5 font-medium">
+                            + Estate Profile
+                          </p>
+                        )}
+                      </div>
+                    </label>
+                  );
+                },
+              )}
             </div>
-            
+
             {/* Info about Estate Profile */}
-            {residentialConfig.communityTypes?.some(t => 
-              COMMUNITY_TYPE_OPTIONS.find(o => o.value === t)?.triggersEstateProfile
+            {residentialConfig.communityTypes?.some(
+              t => COMMUNITY_TYPE_OPTIONS.find(o => o.value === t)?.triggersEstateProfile,
             ) && (
               <div className="mt-4 flex items-start gap-2 p-3 bg-purple-50 rounded-lg text-sm text-purple-700">
                 <Info className="w-4 h-4 shrink-0 mt-0.5" />
                 <span>
-                  You'll configure estate-level details (HOA, levies, estate amenities) in a dedicated step.
+                  You'll configure estate-level details (HOA, levies, estate amenities) in a
+                  dedicated step.
                 </span>
               </div>
             )}
           </CardContent>
         </Card>
       )}
-
-      {/* Navigation */}
-      <div className="flex justify-between pt-8 border-t border-slate-200">
-        <Button
-          variant="outline"
-          onClick={handleBack}
-          className="px-6 h-11 border-slate-300"
-        >
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Back
-        </Button>
-        <Button
-          onClick={handleContinue}
-          size="lg"
-          disabled={!residentialConfig.residentialType}
-          className="px-8 h-11 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 shadow-md hover:shadow-lg transition-all duration-300"
-        >
-          Continue to Project Identity
-          <ArrowRight className="w-4 h-4 ml-2" />
-        </Button>
-      </div>
     </div>
   );
 }

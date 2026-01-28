@@ -1,6 +1,6 @@
 /**
  * Preview Summary Component
- * 
+ *
  * Displays a comprehensive summary of all entered information with edit buttons
  */
 
@@ -17,27 +17,27 @@ export interface SummarySection {
    * Section title
    */
   title: string;
-  
+
   /**
    * Step number to navigate to when edit is clicked
    */
   stepNumber: number;
-  
+
   /**
    * Icon component for the section
    */
   icon?: React.ReactNode;
-  
+
   /**
    * Array of field items to display
    */
   items: SummaryItem[];
-  
+
   /**
    * Whether this section is complete
    */
   isComplete?: boolean;
-  
+
   /**
    * Warning message for incomplete optional fields
    */
@@ -49,17 +49,17 @@ export interface SummaryItem {
    * Field label
    */
   label: string;
-  
+
   /**
    * Field value (can be string, number, or React node)
    */
   value: React.ReactNode;
-  
+
   /**
    * Whether this field is empty/missing
    */
   isEmpty?: boolean;
-  
+
   /**
    * Whether this is a required field
    */
@@ -71,22 +71,22 @@ export interface PreviewSummaryProps {
    * Array of sections to display
    */
   sections: SummarySection[];
-  
+
   /**
    * Callback when edit button is clicked
    */
   onEdit: (stepNumber: number) => void;
-  
+
   /**
    * Additional CSS classes
    */
   className?: string;
-  
+
   /**
    * Title for the summary
    */
   title?: string;
-  
+
   /**
    * Description text
    */
@@ -122,9 +122,7 @@ export const PreviewSummary: React.FC<PreviewSummaryProps> = ({
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     {section.icon && (
-                      <div className="flex-shrink-0 text-blue-600">
-                        {section.icon}
-                      </div>
+                      <div className="flex-shrink-0 text-blue-600">{section.icon}</div>
                     )}
                     <div>
                       <CardTitle className="text-lg">{section.title}</CardTitle>
@@ -145,7 +143,7 @@ export const PreviewSummary: React.FC<PreviewSummaryProps> = ({
                       )}
                     </div>
                   </div>
-                  
+
                   <Button
                     variant="outline"
                     size="sm"
@@ -170,17 +168,9 @@ export const PreviewSummary: React.FC<PreviewSummaryProps> = ({
                 {/* Items Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {section.items.map((item, itemIndex) => (
-                    <div
-                      key={itemIndex}
-                      className={cn(
-                        'space-y-1',
-                        item.isEmpty && 'opacity-50'
-                      )}
-                    >
+                    <div key={itemIndex} className={cn('space-y-1', item.isEmpty && 'opacity-50')}>
                       <div className="flex items-center gap-2">
-                        <p className="text-sm font-medium text-gray-700">
-                          {item.label}
-                        </p>
+                        <p className="text-sm font-medium text-gray-700">{item.label}</p>
                         {item.isRequired && item.isEmpty && (
                           <Badge variant="destructive" className="text-xs">
                             Required
@@ -208,9 +198,7 @@ export const PreviewSummary: React.FC<PreviewSummaryProps> = ({
         <CardContent className="pt-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-blue-900">
-                Completion Status
-              </p>
+              <p className="text-sm font-medium text-blue-900">Completion Status</p>
               <p className="text-xs text-blue-700 mt-1">
                 {sections.filter(s => s.isComplete).length} of {sections.length} sections complete
               </p>

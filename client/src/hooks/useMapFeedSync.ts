@@ -30,22 +30,22 @@ export interface UseMapFeedSyncOptions {
    * Throttle delay for map pan updates (default: 250ms)
    */
   throttleDelay?: number;
-  
+
   /**
    * Debounce delay for feed updates (default: 300ms)
    */
   debounceDelay?: number;
-  
+
   /**
    * Initial map center
    */
   initialCenter?: { lat: number; lng: number };
-  
+
   /**
    * Callback when map bounds change (after debounce)
    */
   onBoundsChange?: (bounds: MapBounds) => void;
-  
+
   /**
    * Callback when property is selected
    */
@@ -54,17 +54,17 @@ export interface UseMapFeedSyncOptions {
 
 /**
  * Hook for synchronizing map and feed interactions with throttling and debouncing
- * 
+ *
  * Features:
  * - Throttled map pan updates (250ms default)
  * - Debounced feed updates (300ms default)
  * - Selected property state management
  * - Map center animation logic
  * - Feed scroll-to-item logic
- * 
+ *
  * @param options - Configuration options
  * @returns Map/feed sync state and handlers
- * 
+ *
  * @example
  * ```tsx
  * const {
@@ -118,13 +118,13 @@ export function useMapFeedSync(options: UseMapFeedSyncOptions = {}) {
    */
   const handleMapLoad = useCallback((map: google.maps.Map) => {
     mapRef.current = map;
-    
+
     // Get initial bounds
     const bounds = map.getBounds();
     if (bounds) {
       const ne = bounds.getNorthEast();
       const sw = bounds.getSouthWest();
-      
+
       setMapBounds({
         north: ne.lat(),
         south: sw.lat(),
@@ -138,46 +138,52 @@ export function useMapFeedSync(options: UseMapFeedSyncOptions = {}) {
    * Handle feed item selection - centers map on property
    * Includes smooth animation to property location
    */
-  const handleFeedItemSelect = useCallback((propertyId: number, location: { lat: number; lng: number }) => {
-    setSelectedPropertyId(propertyId);
-    
-    // Animate map to property location
-    if (mapRef.current) {
-      mapRef.current.panTo(location);
-      
-      // Optionally zoom in slightly
-      const currentZoom = mapRef.current.getZoom();
-      if (currentZoom && currentZoom < 15) {
-        mapRef.current.setZoom(15);
+  const handleFeedItemSelect = useCallback(
+    (propertyId: number, location: { lat: number; lng: number }) => {
+      setSelectedPropertyId(propertyId);
+
+      // Animate map to property location
+      if (mapRef.current) {
+        mapRef.current.panTo(location);
+
+        // Optionally zoom in slightly
+        const currentZoom = mapRef.current.getZoom();
+        if (currentZoom && currentZoom < 15) {
+          mapRef.current.setZoom(15);
+        }
       }
-    }
-    
-    // Update map center for state tracking
-    setMapCenter(location);
-    
-    // Trigger callback
-    onPropertySelect?.(propertyId);
-  }, [onPropertySelect]);
+
+      // Update map center for state tracking
+      setMapCenter(location);
+
+      // Trigger callback
+      onPropertySelect?.(propertyId);
+    },
+    [onPropertySelect],
+  );
 
   /**
    * Handle map marker click - scrolls feed to property card
    * Includes smooth scroll animation
    */
-  const handleMarkerClick = useCallback((propertyId: number) => {
-    setSelectedPropertyId(propertyId);
-    
-    // Scroll feed to property card
-    const propertyElement = propertyRefs.current.get(propertyId);
-    if (propertyElement && feedScrollRef.current) {
-      propertyElement.scrollIntoView({
-        behavior: 'smooth',
-        block: 'center',
-      });
-    }
-    
-    // Trigger callback
-    onPropertySelect?.(propertyId);
-  }, [onPropertySelect]);
+  const handleMarkerClick = useCallback(
+    (propertyId: number) => {
+      setSelectedPropertyId(propertyId);
+
+      // Scroll feed to property card
+      const propertyElement = propertyRefs.current.get(propertyId);
+      if (propertyElement && feedScrollRef.current) {
+        propertyElement.scrollIntoView({
+          behavior: 'smooth',
+          block: 'center',
+        });
+      }
+
+      // Trigger callback
+      onPropertySelect?.(propertyId);
+    },
+    [onPropertySelect],
+  );
 
   /**
    * Handle property hover - highlights map marker
@@ -210,12 +216,12 @@ export function useMapFeedSync(options: UseMapFeedSyncOptions = {}) {
   const panToLocation = useCallback((location: { lat: number; lng: number }, zoom?: number) => {
     if (mapRef.current) {
       mapRef.current.panTo(location);
-      
+
       if (zoom !== undefined) {
         mapRef.current.setZoom(zoom);
       }
     }
-    
+
     setMapCenter(location);
   }, []);
 
@@ -231,11 +237,11 @@ export function useMapFeedSync(options: UseMapFeedSyncOptions = {}) {
     });
 
     mapRef.current.fitBounds(bounds);
-    
+
     // Update state with new bounds
     const ne = bounds.getNorthEast();
     const sw = bounds.getSouthWest();
-    
+
     setMapBounds({
       north: ne.lat(),
       south: sw.lat(),
@@ -265,11 +271,11 @@ export function useMapFeedSync(options: UseMapFeedSyncOptions = {}) {
     selectedPropertyId,
     hoveredPropertyId,
     mapCenter,
-    
+
     // Refs
     mapRef,
     feedScrollRef,
-    
+
     // Handlers
     handleMapPan,
     handleMapLoad,

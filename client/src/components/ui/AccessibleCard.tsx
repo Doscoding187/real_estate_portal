@@ -1,6 +1,6 @@
 /**
  * Accessible Card Components
- * 
+ *
  * Provides accessible card components with proper ARIA attributes,
  * keyboard navigation, and focus management.
  */
@@ -38,7 +38,7 @@ export const AccessibleCard = forwardRef<HTMLDivElement, AccessibleCardProps>(
       role = 'article',
       tabIndex,
     },
-    ref
+    ref,
   ) {
     const isInteractive = onClick || href;
     const computedRole = href ? 'link' : onClick ? 'button' : role;
@@ -46,7 +46,7 @@ export const AccessibleCard = forwardRef<HTMLDivElement, AccessibleCardProps>(
 
     const handleKeyDown = (e: React.KeyboardEvent) => {
       if (isDisabled) return;
-      
+
       if ((e.key === 'Enter' || e.key === ' ') && onClick) {
         e.preventDefault();
         onClick();
@@ -107,7 +107,7 @@ export const AccessibleCard = forwardRef<HTMLDivElement, AccessibleCardProps>(
         )}
       </div>
     );
-  }
+  },
 );
 
 /**

@@ -22,7 +22,7 @@ import { AmenitiesSection } from '@/components/location/AmenitiesSection';
 import { InteractiveMap } from '@/components/location/InteractiveMap';
 import { SimilarLocations } from '@/components/location/SimilarLocations';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Helmet } from 'react-helmet';
+import { Helmet } from 'react-helmet-async';
 import { LocationSchema } from '@/components/location/LocationSchema';
 import { useSimilarLocations } from '@/hooks/useSimilarLocations';
 
@@ -33,7 +33,11 @@ import { Link } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { ArrowRight } from 'lucide-react';
 
-export default function SuburbPage({ params }: { params: { province: string; city: string; suburb: string; action?: string; locationId?: string } }) {
+export default function SuburbPage({
+  params,
+}: {
+  params: { province: string; city: string; suburb: string; action?: string; locationId?: string };
+}) {
   const [location, navigate] = useLocation();
   const { province: provinceSlug, city: citySlug, suburb: suburbSlug, action, locationId } = params;
 
@@ -41,29 +45,29 @@ export default function SuburbPage({ params }: { params: { province: string; cit
   // Render Transaction Page (SearchResults) if 'view=list' OR any search filters are present
   // Derive search params from location to ensure reactivity
   const searchParams = new URLSearchParams(location.split('?')[1] || '');
-  const hasSearchFilters = 
-    searchParams.has('propertyType') || 
-    searchParams.has('minPrice') || 
-    searchParams.has('maxPrice') || 
+  const hasSearchFilters =
+    searchParams.has('propertyType') ||
+    searchParams.has('minPrice') ||
+    searchParams.has('maxPrice') ||
     searchParams.has('bedrooms');
-    
+
   const isTransactionMode = searchParams.get('view') === 'list' || hasSearchFilters;
 
   if (isTransactionMode) {
-      return <SearchResults locationId={locationId} />;
+    return <SearchResults locationId={locationId} />;
   }
 
   // Restore data fetching
   const { data, isLoading, error } = trpc.locationPages.getSuburbData.useQuery({
     provinceSlug,
     citySlug,
-    suburbSlug
+    suburbSlug,
   });
 
   // Fetch campaign for banner
-  const { data: heroCampaign } = trpc.locationPages.getHeroCampaign.useQuery({ 
+  const { data: heroCampaign } = trpc.locationPages.getHeroCampaign.useQuery({
     locationSlug: `${provinceSlug}/${citySlug}/${suburbSlug}`,
-    fallbacks: [`${provinceSlug}/${citySlug}`, provinceSlug] 
+    fallbacks: [`${provinceSlug}/${citySlug}`, provinceSlug],
   });
 
   if (isLoading) {
@@ -87,12 +91,17 @@ export default function SuburbPage({ params }: { params: { province: string; cit
     <div className="min-h-screen bg-white">
       <MetaControl />
       <Helmet>
-        <title>Properties for Sale in {suburb.name}, {suburb.cityName} | Real Estate Portal</title>
-        <meta name="description" content={`Find the best homes in ${suburb.name}, ${suburb.cityName}. Search ${stats.totalListings} properties for sale and rent.`} />
+        <title>
+          Properties for Sale in {suburb.name}, {suburb.cityName} | Real Estate Portal
+        </title>
+        <meta
+          name="description"
+          content={`Find the best homes in ${suburb.name}, ${suburb.cityName}. Search ${stats.totalListings} properties for sale and rent.`}
+        />
         {/* Canonical handled by MetaControl */}
       </Helmet>
 
-      <LocationSchema 
+      <LocationSchema
         type="Suburb"
         name={suburb.name}
         description={`Real estate in ${suburb.name}, ${suburb.cityName}`}
@@ -101,11 +110,11 @@ export default function SuburbPage({ params }: { params: { province: string; cit
           { name: 'Home', url: '/' },
           { name: suburb.provinceName || provinceSlug, url: `/${provinceSlug}` },
           { name: suburb.cityName || citySlug, url: `/${provinceSlug}/${citySlug}` },
-          { name: suburb.name, url: `/${provinceSlug}/${citySlug}/${suburbSlug}` }
+          { name: suburb.name, url: `/${provinceSlug}/${citySlug}/${suburbSlug}` },
         ]}
         geo={{
           latitude: Number(suburb.latitude),
-          longitude: Number(suburb.longitude)
+          longitude: Number(suburb.longitude),
         }}
         stats={stats}
         image="https://images.unsplash.com/photo-1574362848149-11496d93a7c7?ixlib=rb-4.0.3&auto=format&fit=crop&w=1984&q=80"
@@ -114,7 +123,6 @@ export default function SuburbPage({ params }: { params: { province: string; cit
       <LocationPageLayout
         locationName={suburb.name}
         locationSlug={`${provinceSlug}/${citySlug}/${suburbSlug}`}
-        
         banner={
           <LocationHeroSection
             locationName={suburb.name}
@@ -124,51 +132,54 @@ export default function SuburbPage({ params }: { params: { province: string; cit
             backgroundImage="https://images.unsplash.com/photo-1574362848149-11496d93a7c7?ixlib=rb-4.0.3&auto=format&fit=crop&w=1984&q=80"
             listingCount={stats.totalListings}
             campaign={heroCampaign}
-            quickLinks={subLocalities?.slice(0, 10).map((loc: any) => ({
-              label: loc.name,
-              slug: loc.slug,
-            })) || []}
+            quickLinks={
+              subLocalities?.slice(0, 10).map((loc: any) => ({
+                label: loc.name,
+                slug: loc.slug,
+              })) || []
+            }
           />
         }
-
         searchStage={null}
-
         // Suburb Page Specific: Property Type Explorer
-        propertyTypeExplorer={<PropertyCategories preselectedLocation={{
-            name: suburb.name,
-            slug: suburbSlug,
-            provinceSlug: `${provinceSlug}/${citySlug}`,
-            type: 'suburb'
-        }} />}
-
+        propertyTypeExplorer={
+          <PropertyCategories
+            preselectedLocation={{
+              name: suburb.name,
+              slug: suburbSlug,
+              provinceSlug: `${provinceSlug}/${citySlug}`,
+              type: 'suburb',
+            }}
+          />
+        }
         popularLocations={
-            subLocalities && subLocalities.length > 0 ? (
-                <ExploreCities
-                    basePath="/property-for-sale"
-                    queryParams="?view=list"
-                    title={`Neighborhoods in ${suburb.name}`}
-                    description={`Explore popular residential areas and neighborhoods within ${suburb.name}.`}
-                    customLocations={subLocalities.map((loc: any) => ({
-                        name: loc.name,
-                        province: suburb.name,
-                        slug: loc.slug,
-                        provinceSlug: `${provinceSlug}/${citySlug}/${suburbSlug}`,
-                        propertyCount: loc.listingCount ? `${loc.listingCount.toLocaleString()}+ Properties` : undefined,
-                    }))}
-                />
-            ) : undefined
+          subLocalities && subLocalities.length > 0 ? (
+            <ExploreCities
+              basePath="/property-for-sale"
+              queryParams="?view=list"
+              title={`Neighborhoods in ${suburb.name}`}
+              description={`Explore popular residential areas and neighborhoods within ${suburb.name}.`}
+              customLocations={subLocalities.map((loc: any) => ({
+                name: loc.name,
+                province: suburb.name,
+                slug: loc.slug,
+                provinceSlug: `${provinceSlug}/${citySlug}/${suburbSlug}`,
+                propertyCount: loc.listingCount
+                  ? `${loc.listingCount.toLocaleString()}+ Properties`
+                  : undefined,
+              }))}
+            />
+          ) : undefined
         }
-
         buyerCTA={
-            <div className="py-8 text-center bg-blue-50 rounded-lg mx-4 md:mx-0">
-                <h3 className="text-fluid-h4 font-bold mb-2">Looking for a home in {suburb.name}?</h3>
-                <p className="mb-4 text-slate-600">Get alerts when new properties are listed.</p>
-                <button className="px-6 py-2 bg-blue-600 text-white rounded font-medium hover:bg-blue-700">
-                    Set Property Alert
-                </button>
-            </div>
+          <div className="py-8 text-center bg-blue-50 rounded-lg mx-4 md:mx-0">
+            <h3 className="text-fluid-h4 font-bold mb-2">Looking for a home in {suburb.name}?</h3>
+            <p className="mb-4 text-slate-600">Get alerts when new properties are listed.</p>
+            <button className="px-6 py-2 bg-blue-600 text-white rounded font-medium hover:bg-blue-700">
+              Set Property Alert
+            </button>
+          </div>
         }
-
         // The core content for Suburb page is LISTINGS
         listingsFeed={
           <div className="space-y-12">
@@ -181,10 +192,12 @@ export default function SuburbPage({ params }: { params: { province: string; cit
                   <div>
                     <h2 className="text-fluid-h2 font-bold mb-3">Homes in {suburb.name}</h2>
                     <p className="text-muted-foreground text-base max-w-2xl">
-                      Browse a selection of properties for sale in {suburb.name}. 
+                      Browse a selection of properties for sale in {suburb.name}.
                     </p>
                   </div>
-                  <Link href={`/property-for-sale/${provinceSlug}/${citySlug}/${suburbSlug}?view=list`}>
+                  <Link
+                    href={`/property-for-sale/${provinceSlug}/${citySlug}/${suburbSlug}?view=list`}
+                  >
                     <Button variant="outline" className="hidden md:flex gap-2">
                       View all properties <ArrowRight className="h-4 w-4" />
                     </Button>
@@ -193,14 +206,16 @@ export default function SuburbPage({ params }: { params: { province: string; cit
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                   {listings.slice(0, 8).map((item: any, index: number) => {
-                      const property = normalizePropertyForUI(item);
-                      if (!property) return null;
-                      return <PropertyCard key={index} {...property} />;
+                    const property = normalizePropertyForUI(item);
+                    if (!property) return null;
+                    return <PropertyCard key={index} {...property} />;
                   })}
                 </div>
 
                 <div className="mt-8 text-center md:hidden">
-                   <Link href={`/property-for-sale/${provinceSlug}/${citySlug}/${suburbSlug}?view=list`}>
+                  <Link
+                    href={`/property-for-sale/${provinceSlug}/${citySlug}/${suburbSlug}?view=list`}
+                  >
                     <Button variant="outline" className="w-full gap-2">
                       View all properties <ArrowRight className="h-4 w-4" />
                     </Button>
@@ -209,14 +224,10 @@ export default function SuburbPage({ params }: { params: { province: string; cit
               </div>
             </div>
 
-            <MarketInsights 
-              stats={stats} 
-              locationName={suburb.name} 
-              type="suburb"
-            />
-            
+            <MarketInsights stats={stats} locationName={suburb.name} type="suburb" />
+
             <div className="container py-8">
-              <SuburbInsights 
+              <SuburbInsights
                 suburbId={suburb.id}
                 suburbName={suburb.name}
                 pros={insights?.pros}
@@ -235,12 +246,16 @@ export default function SuburbPage({ params }: { params: { province: string; cit
                     lat: Number(suburb.latitude),
                     lng: Number(suburb.longitude),
                   }}
-                  viewport={suburb.viewport_ne_lat ? {
-                    ne_lat: Number(suburb.viewport_ne_lat),
-                    ne_lng: Number(suburb.viewport_ne_lng),
-                    sw_lat: Number(suburb.viewport_sw_lat),
-                    sw_lng: Number(suburb.viewport_sw_lng),
-                  } : undefined}
+                  viewport={
+                    suburb.viewport_ne_lat
+                      ? {
+                          ne_lat: Number(suburb.viewport_ne_lat),
+                          ne_lng: Number(suburb.viewport_ne_lng),
+                          sw_lat: Number(suburb.viewport_sw_lat),
+                          sw_lng: Number(suburb.viewport_sw_lng),
+                        }
+                      : undefined
+                  }
                   properties={listings.map((listing: any) => ({
                     id: listing.id,
                     latitude: Number(listing.latitude),
@@ -252,31 +267,24 @@ export default function SuburbPage({ params }: { params: { province: string; cit
               </div>
             )}
 
-            <AmenitiesSection 
+            <AmenitiesSection
               location={{
                 latitude: Number(suburb.latitude),
-                longitude: Number(suburb.longitude)
-              }} 
+                longitude: Number(suburb.longitude),
+              }}
             />
 
             {/* Similar Locations Section */}
             {suburb.id && (
-                <SimilarLocationsSection locationId={suburb.id} currentLocationName={suburb.name} />
+              <SimilarLocationsSection locationId={suburb.id} currentLocationName={suburb.name} />
             )}
           </div>
         }
-
-
-
         exploreMore={
-            <DiscoverProperties 
-                initialCity={suburb.cityName} 
-                locationName={suburb.name}
-            />
+          <DiscoverProperties initialCity={suburb.cityName} locationName={suburb.name} />
         }
-
         finalCTA={
-          <FinalCTA 
+          <FinalCTA
             locationName={suburb.name}
             provinceSlug={provinceSlug}
             citySlug={citySlug}
@@ -288,7 +296,13 @@ export default function SuburbPage({ params }: { params: { province: string; cit
   );
 }
 
-function SimilarLocationsSection({ locationId, currentLocationName }: { locationId: number; currentLocationName: string }) {
+function SimilarLocationsSection({
+  locationId,
+  currentLocationName,
+}: {
+  locationId: number;
+  currentLocationName: string;
+}) {
   const { data: similarLocations, isLoading } = useSimilarLocations({ locationId, limit: 5 });
 
   return (

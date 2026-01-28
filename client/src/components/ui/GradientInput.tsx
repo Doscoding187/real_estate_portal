@@ -2,15 +2,14 @@
  * GradientInput Component
  * Enhanced input field with gradient focus states and error handling
  * Part of the Soft UI design system
- * 
+ *
  * Requirements: 3.1, 3.2, 3.3
  */
 
 import * as React from 'react';
 import { cn } from '@/lib/utils';
 
-export interface GradientInputProps
-  extends React.InputHTMLAttributes<HTMLInputElement> {
+export interface GradientInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   /**
    * Label text for the input
    */
@@ -34,19 +33,7 @@ export interface GradientInputProps
 }
 
 const GradientInput = React.forwardRef<HTMLInputElement, GradientInputProps>(
-  (
-    {
-      className,
-      label,
-      error,
-      required,
-      helperText,
-      containerClassName,
-      id,
-      ...props
-    },
-    ref
-  ) => {
+  ({ className, label, error, required, helperText, containerClassName, id, ...props }, ref) => {
     const inputId = id || `input-${React.useId()}`;
     const hasError = !!error;
 
@@ -54,10 +41,7 @@ const GradientInput = React.forwardRef<HTMLInputElement, GradientInputProps>(
       <div className={cn('space-y-2', containerClassName)}>
         {/* Label */}
         {label && (
-          <label
-            htmlFor={inputId}
-            className="block text-sm font-medium text-gray-700"
-          >
+          <label htmlFor={inputId} className="block text-sm font-medium text-gray-700">
             {label}
             {required && (
               <span
@@ -97,15 +81,11 @@ const GradientInput = React.forwardRef<HTMLInputElement, GradientInputProps>(
               ],
               // Disabled state
               'disabled:bg-gray-50 disabled:text-gray-500 disabled:cursor-not-allowed disabled:opacity-60',
-              className
+              className,
             )}
             aria-invalid={hasError}
             aria-describedby={
-              error
-                ? `${inputId}-error`
-                : helperText
-                  ? `${inputId}-helper`
-                  : undefined
+              error ? `${inputId}-error` : helperText ? `${inputId}-helper` : undefined
             }
             {...props}
           />
@@ -136,16 +116,13 @@ const GradientInput = React.forwardRef<HTMLInputElement, GradientInputProps>(
 
         {/* Helper Text */}
         {!error && helperText && (
-          <p
-            id={`${inputId}-helper`}
-            className="text-sm text-gray-500"
-          >
+          <p id={`${inputId}-helper`} className="text-sm text-gray-500">
             {helperText}
           </p>
         )}
       </div>
     );
-  }
+  },
 );
 
 GradientInput.displayName = 'GradientInput';

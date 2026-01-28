@@ -1,7 +1,7 @@
 /**
  * useReducedMotion Hook
  * Detects user's motion preference and provides utilities for respecting it
- * 
+ *
  * Requirements: 12.4
  */
 
@@ -21,7 +21,7 @@ export function useReducedMotion(): boolean {
     }
 
     const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
-    
+
     // Set initial value
     setPrefersReducedMotion(mediaQuery.matches);
 
@@ -34,7 +34,7 @@ export function useReducedMotion(): boolean {
     if (mediaQuery.addEventListener) {
       mediaQuery.addEventListener('change', handleChange);
       return () => mediaQuery.removeEventListener('change', handleChange);
-    } 
+    }
     // Legacy browsers
     else if (mediaQuery.addListener) {
       mediaQuery.addListener(handleChange);
@@ -49,10 +49,7 @@ export function useReducedMotion(): boolean {
  * Get animation duration based on reduced motion preference
  * Returns 0 if reduced motion is preferred, otherwise returns the specified duration
  */
-export function getAnimationDuration(
-  duration: number,
-  prefersReducedMotion: boolean
-): number {
+export function getAnimationDuration(duration: number, prefersReducedMotion: boolean): number {
   return prefersReducedMotion ? 0 : duration;
 }
 
@@ -60,9 +57,6 @@ export function getAnimationDuration(
  * Get transition class based on reduced motion preference
  * Returns empty string if reduced motion is preferred
  */
-export function getTransitionClass(
-  transitionClass: string,
-  prefersReducedMotion: boolean
-): string {
+export function getTransitionClass(transitionClass: string, prefersReducedMotion: boolean): string {
   return prefersReducedMotion ? '' : transitionClass;
 }

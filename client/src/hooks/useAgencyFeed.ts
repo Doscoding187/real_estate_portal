@@ -51,7 +51,7 @@ export function useAgencyFeed(options: UseAgencyFeedOptions) {
         setFeed(newFeed);
       } else {
         // Subsequent pages - append to existing feed
-        setFeed((prev) => {
+        setFeed(prev => {
           if (!prev) return newFeed;
           return {
             ...newFeed,
@@ -69,7 +69,7 @@ export function useAgencyFeed(options: UseAgencyFeedOptions) {
   const loadMore = useCallback(() => {
     if (!isLoadingMore && feed?.hasMore && !feedQuery.isLoading) {
       setIsLoadingMore(true);
-      setPage((prev) => prev + 1);
+      setPage(prev => prev + 1);
     }
   }, [isLoadingMore, feed?.hasMore, feedQuery.isLoading]);
 
@@ -83,17 +83,17 @@ export function useAgencyFeed(options: UseAgencyFeedOptions) {
       if (!element) return;
 
       observerRef.current = new IntersectionObserver(
-        (entries) => {
+        entries => {
           if (entries[0].isIntersecting && feed?.hasMore && !isLoadingMore) {
             loadMore();
           }
         },
-        { threshold: 0.5 }
+        { threshold: 0.5 },
       );
 
       observerRef.current.observe(element);
     },
-    [feed?.hasMore, isLoadingMore, loadMore]
+    [feed?.hasMore, isLoadingMore, loadMore],
   );
 
   // Invalidate cache (for content updates)

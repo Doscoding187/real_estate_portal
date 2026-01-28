@@ -47,9 +47,7 @@ export default function FollowedItems() {
             </div>
             <div>
               <h1 className="text-2xl font-bold text-gray-900">Following</h1>
-              <p className="text-sm text-gray-600 mt-1">
-                Neighbourhoods and creators you follow
-              </p>
+              <p className="text-sm text-gray-600 mt-1">Neighbourhoods and creators you follow</p>
             </div>
           </div>
 
@@ -141,7 +139,7 @@ function NeighbourhoodsTab({
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-      {neighbourhoods.map((item) => (
+      {neighbourhoods.map(item => (
         <div key={item.id} className="relative">
           <NeighbourhoodCard
             id={item.neighbourhood.id}
@@ -192,7 +190,7 @@ function CreatorsTab({ creators, onUnfollow }: { creators: any[]; onUnfollow: ()
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-      {creators.map((item) => (
+      {creators.map(item => (
         <div
           key={item.id}
           className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow p-6"
@@ -210,9 +208,7 @@ function CreatorsTab({ creators, onUnfollow }: { creators: any[]; onUnfollow: ()
             {/* Stats */}
             <div className="flex items-center gap-4 text-sm text-gray-600 mb-4">
               <div>
-                <span className="font-semibold text-gray-900">
-                  {item.creator.videoCount || 0}
-                </span>{' '}
+                <span className="font-semibold text-gray-900">{item.creator.videoCount || 0}</span>{' '}
                 videos
               </div>
               <div>

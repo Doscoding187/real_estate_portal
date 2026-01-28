@@ -1,15 +1,15 @@
 /**
  * Property-Based Tests for Trending Suburbs Feature
- * 
+ *
  * **Feature: google-places-autocomplete-integration, Property 31: Search event recording**
- * 
+ *
  * Requirements:
  * - 21.1: Record search events with location, user, and timestamp
- * 
+ *
  * Property 31: Search event recording
  * For any location search, a record should be created in location_searches table
  * with location_id, user_id (if authenticated), and timestamp
- * 
+ *
  * **Validates: Requirements 21.1**
  */
 
@@ -33,7 +33,7 @@ describe('Property 31: Search event recording', () => {
 
   beforeAll(async () => {
     console.log('[TrendingSuburbs PBT] Setting up test database...');
-    
+
     // Initialize database connection
     try {
       db = await getDb();
@@ -50,26 +50,32 @@ describe('Property 31: Search event recording', () => {
     }
 
     // Create a test location
-    const [location] = await db.insert(locations).values({
-      name: 'Test Suburb for Trending',
-      slug: 'test-suburb-trending',
-      type: 'suburb',
-      parentId: null,
-    }).returning();
+    const [location] = await db
+      .insert(locations)
+      .values({
+        name: 'Test Suburb for Trending',
+        slug: 'test-suburb-trending',
+        type: 'suburb',
+        parentId: null,
+      })
+      .returning();
     testLocationId = location.id;
 
     // Create a test user
-    const [user] = await db.insert(users).values({
-      email: `test-trending-${Date.now()}@example.com`,
-      username: `test-trending-${Date.now()}`,
-      role: 'user',
-    }).returning();
+    const [user] = await db
+      .insert(users)
+      .values({
+        email: `test-trending-${Date.now()}@example.com`,
+        username: `test-trending-${Date.now()}`,
+        role: 'user',
+      })
+      .returning();
     testUserId = user.id;
   });
 
   afterAll(async () => {
     if (skipTests || !db) return;
-    
+
     // Clean up test data
     if (testLocationId) {
       await db.delete(locationSearches).where(eq(locationSearches.locationId, testLocationId));
@@ -82,7 +88,7 @@ describe('Property 31: Search event recording', () => {
 
   beforeEach(async () => {
     if (skipTests || !db) return;
-    
+
     // Clean up search records before each test
     await db.delete(locationSearches).where(eq(locationSearches.locationId, testLocationId));
   });
@@ -95,7 +101,7 @@ describe('Property 31: Search event recording', () => {
     await fc.assert(
       fc.asyncProperty(
         fc.integer({ min: 1, max: 10 }), // Number of searches to perform
-        async (searchCount) => {
+        async searchCount => {
           // Track multiple searches
           for (let i = 0; i < searchCount; i++) {
             await locationAnalyticsService.trackLocationSearch(testLocationId, testUserId);
@@ -108,8 +114,8 @@ describe('Property 31: Search event recording', () => {
             .where(
               and(
                 eq(locationSearches.locationId, testLocationId),
-                eq(locationSearches.userId, testUserId)
-              )
+                eq(locationSearches.userId, testUserId),
+              ),
             );
 
           // Property: For any number of searches, that many records should exist
@@ -123,9 +129,9 @@ describe('Property 31: Search event recording', () => {
 
           // Property: All records should have a timestamp
           expect(searches.every(s => s.searchedAt !== null)).toBe(true);
-        }
+        },
       ),
-      { numRuns: 100 }
+      { numRuns: 100 },
     );
   });
 
@@ -134,11 +140,11 @@ describe('Property 31: Search event recording', () => {
       console.log('⏭️  Skipping test: Database not available');
       return;
     }
-    
+
     await fc.assert(
       fc.asyncProperty(
         fc.integer({ min: 1, max: 10 }), // Number of searches to perform
-        async (searchCount) => {
+        async searchCount => {
           // Track multiple anonymous searches
           for (let i = 0; i < searchCount; i++) {
             await locationAnalyticsService.trackLocationSearch(testLocationId);
@@ -151,8 +157,8 @@ describe('Property 31: Search event recording', () => {
             .where(
               and(
                 eq(locationSearches.locationId, testLocationId),
-                sql`${locationSearches.userId} IS NULL`
-              )
+                sql`${locationSearches.userId} IS NULL`,
+              ),
             );
 
           // Property: For any number of anonymous searches, that many records should exist
@@ -166,9 +172,9 @@ describe('Property 31: Search event recording', () => {
 
           // Property: All records should have a timestamp
           expect(searches.every(s => s.searchedAt !== null)).toBe(true);
-        }
+        },
       ),
-      { numRuns: 100 }
+      { numRuns: 100 },
     );
   });
 
@@ -177,17 +183,17 @@ describe('Property 31: Search event recording', () => {
       console.log('⏭️  Skipping test: Database not available');
       return;
     }
-    
+
     await fc.assert(
       fc.asyncProperty(
         fc.boolean(), // Whether to include user ID
-        async (includeUser) => {
+        async includeUser => {
           const beforeSearch = new Date();
-          
+
           // Track search
           await locationAnalyticsService.trackLocationSearch(
             testLocationId,
-            includeUser ? testUserId : undefined
+            includeUser ? testUserId : undefined,
           );
 
           const afterSearch = new Date();
@@ -207,9 +213,9 @@ describe('Property 31: Search event recording', () => {
           const searchTime = new Date(search.searchedAt);
           expect(searchTime.getTime()).toBeGreaterThanOrEqual(beforeSearch.getTime() - 1000); // 1s tolerance
           expect(searchTime.getTime()).toBeLessThanOrEqual(afterSearch.getTime() + 1000); // 1s tolerance
-        }
+        },
       ),
-      { numRuns: 100 }
+      { numRuns: 100 },
     );
   });
 
@@ -218,14 +224,14 @@ describe('Property 31: Search event recording', () => {
       console.log('⏭️  Skipping test: Database not available');
       return;
     }
-    
+
     await fc.assert(
       fc.asyncProperty(
         fc.integer({ min: 2, max: 5 }), // Number of concurrent searches
-        async (concurrentCount) => {
+        async concurrentCount => {
           // Track concurrent searches
           const promises = Array.from({ length: concurrentCount }, () =>
-            locationAnalyticsService.trackLocationSearch(testLocationId, testUserId)
+            locationAnalyticsService.trackLocationSearch(testLocationId, testUserId),
           );
 
           await Promise.all(promises);
@@ -238,9 +244,9 @@ describe('Property 31: Search event recording', () => {
 
           // Property: All concurrent searches should be recorded
           expect(searches.length).toBe(concurrentCount);
-        }
+        },
       ),
-      { numRuns: 50 } // Fewer runs for concurrent tests
+      { numRuns: 50 }, // Fewer runs for concurrent tests
     );
   });
 
@@ -249,15 +255,15 @@ describe('Property 31: Search event recording', () => {
       console.log('⏭️  Skipping test: Database not available');
       return;
     }
-    
+
     await fc.assert(
       fc.asyncProperty(
         fc.boolean(), // Whether to include user ID
-        async (includeUser) => {
+        async includeUser => {
           // Track search
           await locationAnalyticsService.trackLocationSearch(
             testLocationId,
-            includeUser ? testUserId : undefined
+            includeUser ? testUserId : undefined,
           );
 
           // Verify the search record exists
@@ -279,9 +285,9 @@ describe('Property 31: Search event recording', () => {
             expect(location.length).toBe(1);
             expect(location[0].id).toBe(testLocationId);
           }
-        }
+        },
       ),
-      { numRuns: 100 }
+      { numRuns: 100 },
     );
   });
 });
@@ -293,18 +299,21 @@ describe('Trending Score Calculation', () => {
     if (skipTests || !db) return;
 
     // Create a test location
-    const [location] = await db.insert(locations).values({
-      name: 'Test Suburb for Score',
-      slug: 'test-suburb-score',
-      type: 'suburb',
-      parentId: null,
-    }).returning();
+    const [location] = await db
+      .insert(locations)
+      .values({
+        name: 'Test Suburb for Score',
+        slug: 'test-suburb-score',
+        type: 'suburb',
+        parentId: null,
+      })
+      .returning();
     testLocationId = location.id;
   });
 
   afterAll(async () => {
     if (skipTests || !db) return;
-    
+
     // Clean up test data
     if (testLocationId) {
       await db.delete(locationSearches).where(eq(locationSearches.locationId, testLocationId));
@@ -314,7 +323,7 @@ describe('Trending Score Calculation', () => {
 
   beforeEach(async () => {
     if (skipTests || !db) return;
-    
+
     // Clean up search records before each test
     await db.delete(locationSearches).where(eq(locationSearches.locationId, testLocationId));
   });
@@ -325,7 +334,7 @@ describe('Trending Score Calculation', () => {
       return;
     }
     const score = await locationAnalyticsService.calculateTrendingScore(testLocationId);
-    
+
     // Property: Locations with no searches should have a score of 0
     expect(score).toBe(0);
   });
@@ -335,11 +344,11 @@ describe('Trending Score Calculation', () => {
       console.log('⏭️  Skipping test: Database not available');
       return;
     }
-    
+
     await fc.assert(
       fc.asyncProperty(
         fc.integer({ min: 1, max: 200 }), // Number of searches
-        async (searchCount) => {
+        async searchCount => {
           // Create search records
           for (let i = 0; i < searchCount; i++) {
             await locationAnalyticsService.trackLocationSearch(testLocationId);
@@ -350,9 +359,9 @@ describe('Trending Score Calculation', () => {
           // Property: Score should always be between 0 and 100
           expect(score).toBeGreaterThanOrEqual(0);
           expect(score).toBeLessThanOrEqual(100);
-        }
+        },
       ),
-      { numRuns: 50 }
+      { numRuns: 50 },
     );
   });
 
@@ -361,7 +370,7 @@ describe('Trending Score Calculation', () => {
       console.log('⏭️  Skipping test: Database not available');
       return;
     }
-    
+
     // Create a few searches
     await locationAnalyticsService.trackLocationSearch(testLocationId);
     const score1 = await locationAnalyticsService.calculateTrendingScore(testLocationId);

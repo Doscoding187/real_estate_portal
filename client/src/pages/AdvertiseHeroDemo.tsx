@@ -1,6 +1,6 @@
 /**
  * Advertise Hero Demo Page
- * 
+ *
  * Demonstrates the enhanced HeroSection with elevated card stack carousel
  */
 
@@ -47,8 +47,10 @@ const AdvertiseHeroDemo: React.FC = () => {
       {/* Demo Info */}
       <div className="container mx-auto px-4 py-12">
         <div className="max-w-4xl mx-auto">
-          <h2 className="text-3xl font-bold mb-6">HeroSection v3 Features - Static Billboard Banner</h2>
-          
+          <h2 className="text-3xl font-bold mb-6">
+            HeroSection v3 Features - Static Billboard Banner
+          </h2>
+
           <div className="grid md:grid-cols-2 gap-6">
             <div className="p-6 bg-white rounded-2xl shadow-lg">
               <h3 className="text-xl font-semibold mb-3">🎯 Focused Conversion</h3>
@@ -94,10 +96,20 @@ const AdvertiseHeroDemo: React.FC = () => {
           <div className="mt-8 p-6 bg-gradient-to-r from-purple-50 to-pink-50 rounded-2xl">
             <h3 className="text-xl font-semibold mb-3">💡 Try It Out</h3>
             <ul className="space-y-2 text-gray-700">
-              <li>• <strong>Desktop</strong>: Hover over the banner to see the lift effect and image zoom</li>
-              <li>• <strong>Mobile</strong>: Tap the banner to navigate to the development page</li>
-              <li>• <strong>All Devices</strong>: Notice the smooth animations and premium feel</li>
-              <li>• <strong>Conversion</strong>: Single focused message drives better conversion than rotating carousel</li>
+              <li>
+                • <strong>Desktop</strong>: Hover over the banner to see the lift effect and image
+                zoom
+              </li>
+              <li>
+                • <strong>Mobile</strong>: Tap the banner to navigate to the development page
+              </li>
+              <li>
+                • <strong>All Devices</strong>: Notice the smooth animations and premium feel
+              </li>
+              <li>
+                • <strong>Conversion</strong>: Single focused message drives better conversion than
+                rotating carousel
+              </li>
             </ul>
           </div>
         </div>

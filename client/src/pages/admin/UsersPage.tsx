@@ -95,80 +95,93 @@ const UsersPage: React.FC = () => {
           {/* User Table */}
           <div className="mt-6">
             {isLoading ? (
-               <div className="py-12 text-center text-muted-foreground">Loading users...</div>
+              <div className="py-12 text-center text-muted-foreground">Loading users...</div>
             ) : !data?.users?.length ? (
-               <div className="py-12 text-center text-muted-foreground">No users found.</div>
+              <div className="py-12 text-center text-muted-foreground">No users found.</div>
             ) : (
-            <Table>
-              <TableHeader className="bg-slate-50/50">
-                <TableRow className="border-slate-100 hover:bg-transparent">
-                  <TableHead className="font-semibold text-slate-500">Name</TableHead>
-                  <TableHead className="font-semibold text-slate-500">Email</TableHead>
-                  <TableHead className="font-semibold text-slate-500">Role</TableHead>
-                  <TableHead className="font-semibold text-slate-500">Registration</TableHead>
-                  <TableHead className="font-semibold text-slate-500">Last Active</TableHead>
-                  <TableHead className="text-right font-semibold text-slate-500 pr-6">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {data.users.map((user: any) => (
-                  <TableRow key={user.id} className="border-slate-100 hover:bg-slate-50/50 transition-colors">
-                    <TableCell className="font-medium text-slate-700">
-                      {user.firstName} {user.lastName}
-                    </TableCell>
-                    <TableCell className="text-slate-600">{user.email}</TableCell>
-                    <TableCell>
-                      <Badge variant={getUserRoleVariant(user.role)} className="capitalize">
-                        {user.role}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-slate-600">
-                      {new Date(user.createdAt).toLocaleDateString()}
-                    </TableCell>
-                    <TableCell className="text-slate-600">
-                      {user.lastActive ? new Date(user.lastActive).toLocaleDateString() : 'Never'}
-                    </TableCell>
-                    <TableCell className="text-right pr-6">
-                      <div className="flex justify-end space-x-2">
-                        <Button variant="outline" size="sm" className="h-8 w-8 p-0 bg-white hover:bg-slate-100" onClick={() => handleViewUser(user)}>
-                          <Eye className="h-4 w-4 text-slate-500" />
-                        </Button>
-                        <Button variant="outline" size="sm" className="h-8 w-8 p-0 bg-white hover:bg-slate-100">
-                          <MessageSquare className="h-4 w-4 text-slate-500" />
-                        </Button>
-                      </div>
-                    </TableCell>
+              <Table>
+                <TableHeader className="bg-slate-50/50">
+                  <TableRow className="border-slate-100 hover:bg-transparent">
+                    <TableHead className="font-semibold text-slate-500">Name</TableHead>
+                    <TableHead className="font-semibold text-slate-500">Email</TableHead>
+                    <TableHead className="font-semibold text-slate-500">Role</TableHead>
+                    <TableHead className="font-semibold text-slate-500">Registration</TableHead>
+                    <TableHead className="font-semibold text-slate-500">Last Active</TableHead>
+                    <TableHead className="text-right font-semibold text-slate-500 pr-6">
+                      Actions
+                    </TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {data.users.map((user: any) => (
+                    <TableRow
+                      key={user.id}
+                      className="border-slate-100 hover:bg-slate-50/50 transition-colors"
+                    >
+                      <TableCell className="font-medium text-slate-700">
+                        {user.firstName} {user.lastName}
+                      </TableCell>
+                      <TableCell className="text-slate-600">{user.email}</TableCell>
+                      <TableCell>
+                        <Badge variant={getUserRoleVariant(user.role)} className="capitalize">
+                          {user.role}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-slate-600">
+                        {new Date(user.createdAt).toLocaleDateString()}
+                      </TableCell>
+                      <TableCell className="text-slate-600">
+                        {user.lastActive ? new Date(user.lastActive).toLocaleDateString() : 'Never'}
+                      </TableCell>
+                      <TableCell className="text-right pr-6">
+                        <div className="flex justify-end space-x-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-8 w-8 p-0 bg-white hover:bg-slate-100"
+                            onClick={() => handleViewUser(user)}
+                          >
+                            <Eye className="h-4 w-4 text-slate-500" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-8 w-8 p-0 bg-white hover:bg-slate-100"
+                          >
+                            <MessageSquare className="h-4 w-4 text-slate-500" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             )}
-            
-            {/* Pagination */}
-             <div className="flex items-center justify-end space-x-2 p-4 border-t border-slate-100 mt-4">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setPage(p => Math.max(1, p - 1))}
-                  disabled={page === 1}
-                  className="bg-white hover:bg-slate-50"
-                >
-                  Previous
-                </Button>
-                <div className="text-sm text-muted-foreground">
-                  Page {page} of {data?.pagination?.totalPages || 1}
-                </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setPage(p => p + 1)}
-                  disabled={page >= (data?.pagination?.totalPages || 1)}
-                  className="bg-white hover:bg-slate-50"
-                >
-                  Next
-                </Button>
-              </div>
 
+            {/* Pagination */}
+            <div className="flex items-center justify-end space-x-2 p-4 border-t border-slate-100 mt-4">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPage(p => Math.max(1, p - 1))}
+                disabled={page === 1}
+                className="bg-white hover:bg-slate-50"
+              >
+                Previous
+              </Button>
+              <div className="text-sm text-muted-foreground">
+                Page {page} of {data?.pagination?.totalPages || 1}
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPage(p => p + 1)}
+                disabled={page >= (data?.pagination?.totalPages || 1)}
+                className="bg-white hover:bg-slate-50"
+              >
+                Next
+              </Button>
+            </div>
           </div>
         </CardContent>
       </GlassCard>
@@ -185,32 +198,42 @@ const UsersPage: React.FC = () => {
             <div className="space-y-6 pt-4">
               {/* Basic Info */}
               <div>
-                <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-3">Basic Information</h3>
+                <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-3">
+                  Basic Information
+                </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="p-4 rounded-xl bg-slate-50">
-                      <p className="text-xs text-slate-400 mb-1">Email</p>
-                      <p className="font-semibold text-slate-800">{selectedUser.email}</p>
+                    <p className="text-xs text-slate-400 mb-1">Email</p>
+                    <p className="font-semibold text-slate-800">{selectedUser.email}</p>
                   </div>
                   <div className="p-4 rounded-xl bg-slate-50">
-                      <p className="text-xs text-slate-400 mb-1">Role</p>
-                      <Badge variant={getUserRoleVariant(selectedUser.role)} className="capitalize">
-                        {selectedUser.role}
-                      </Badge>
+                    <p className="text-xs text-slate-400 mb-1">Role</p>
+                    <Badge variant={getUserRoleVariant(selectedUser.role)} className="capitalize">
+                      {selectedUser.role}
+                    </Badge>
                   </div>
                   <div className="p-4 rounded-xl bg-slate-50">
-                      <p className="text-xs text-slate-400 mb-1">Registered</p>
-                      <p className="font-semibold text-slate-800">{new Date(selectedUser.createdAt).toLocaleDateString()}</p>
+                    <p className="text-xs text-slate-400 mb-1">Registered</p>
+                    <p className="font-semibold text-slate-800">
+                      {new Date(selectedUser.createdAt).toLocaleDateString()}
+                    </p>
                   </div>
-                   <div className="p-4 rounded-xl bg-slate-50">
-                      <p className="text-xs text-slate-400 mb-1">Last Active</p>
-                      <p className="font-semibold text-slate-800">{selectedUser.lastActive ? new Date(selectedUser.lastActive).toLocaleDateString() : 'N/A'}</p>
+                  <div className="p-4 rounded-xl bg-slate-50">
+                    <p className="text-xs text-slate-400 mb-1">Last Active</p>
+                    <p className="font-semibold text-slate-800">
+                      {selectedUser.lastActive
+                        ? new Date(selectedUser.lastActive).toLocaleDateString()
+                        : 'N/A'}
+                    </p>
                   </div>
                 </div>
               </div>
 
               {/* Actions */}
               <div className="flex flex-wrap gap-2 pt-4 border-t border-slate-100">
-                <Button size="sm" className="bg-primary hover:bg-primary/90 text-white">Send Message</Button>
+                <Button size="sm" className="bg-primary hover:bg-primary/90 text-white">
+                  Send Message
+                </Button>
                 <Button variant="outline" size="sm" className="bg-white">
                   Reset Password
                 </Button>
@@ -220,7 +243,11 @@ const UsersPage: React.FC = () => {
               </div>
 
               <div className="mt-4 flex justify-end">
-                <Button variant="outline" onClick={() => setIsModalOpen(false)} className="bg-white">
+                <Button
+                  variant="outline"
+                  onClick={() => setIsModalOpen(false)}
+                  className="bg-white"
+                >
                   Close
                 </Button>
               </div>

@@ -1,9 +1,9 @@
 /**
  * TrendingVideoCard Component
- * 
+ *
  * Compact video card optimized for horizontal scrolling in the Trending Videos section.
  * Features 9:16 aspect ratio, glass overlays, and smooth hover animations.
- * 
+ *
  * Requirements: 2.1, 2.2, 2.3
  */
 
@@ -93,10 +93,7 @@ export function TrendingVideoCard({ video, onClick, index = 0 }: TrendingVideoCa
         <motion.img
           src={video.thumbnailUrl}
           alt={video.title}
-          className={cn(
-            'w-full h-full object-cover',
-            imageLoaded ? 'opacity-100' : 'opacity-0'
-          )}
+          className={cn('w-full h-full object-cover', imageLoaded ? 'opacity-100' : 'opacity-0')}
           onLoad={() => setImageLoaded(true)}
           loading="lazy"
           animate={{
@@ -106,10 +103,11 @@ export function TrendingVideoCard({ video, onClick, index = 0 }: TrendingVideoCa
         />
 
         {/* Gradient overlay for text readability */}
-        <div 
+        <div
           className="absolute inset-0 pointer-events-none"
           style={{
-            background: 'linear-gradient(to top, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0.1) 40%, transparent 60%)',
+            background:
+              'linear-gradient(to top, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0.1) 40%, transparent 60%)',
           }}
         />
 
@@ -132,11 +130,7 @@ export function TrendingVideoCard({ video, onClick, index = 0 }: TrendingVideoCa
             }}
             transition={{ duration: 0.2 }}
           >
-            <Play 
-              className="w-5 h-5 text-white ml-0.5" 
-              fill="currentColor" 
-              aria-hidden="true"
-            />
+            <Play className="w-5 h-5 text-white ml-0.5" fill="currentColor" aria-hidden="true" />
           </motion.div>
         </motion.div>
 
@@ -176,7 +170,7 @@ export function TrendingVideoCard({ video, onClick, index = 0 }: TrendingVideoCa
 
       {/* Title and creator info */}
       <div className="mt-2 px-1">
-        <h3 
+        <h3
           className="text-xs font-medium line-clamp-2 leading-tight"
           style={{ color: designTokens.colors.text.primary }}
         >
@@ -191,7 +185,7 @@ export function TrendingVideoCard({ video, onClick, index = 0 }: TrendingVideoCa
               aria-hidden="true"
             />
           ) : (
-            <div 
+            <div
               className="w-4 h-4 rounded-full flex items-center justify-center text-white text-[8px] font-bold"
               style={{ background: designTokens.colors.accent.gradient }}
               aria-hidden="true"
@@ -199,7 +193,7 @@ export function TrendingVideoCard({ video, onClick, index = 0 }: TrendingVideoCa
               {video.creatorName.charAt(0).toUpperCase()}
             </div>
           )}
-          <span 
+          <span
             className="text-[11px] truncate"
             style={{ color: designTokens.colors.text.secondary }}
           >

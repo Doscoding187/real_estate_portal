@@ -1,16 +1,16 @@
 /**
  * Video Playback Hook
- * 
+ *
  * Provides viewport-based auto-play/pause functionality for video elements
  * using IntersectionObserver with 50% threshold.
- * 
+ *
  * Features:
  * - Auto-play when video enters viewport (50% visible)
  * - Auto-pause when video exits viewport
  * - Buffering state detection
  * - Error handling with retry logic
  * - Network speed detection for adaptive loading
- * 
+ *
  * Requirements: 2.1, 2.3, 2.7
  */
 
@@ -22,24 +22,24 @@ interface UseVideoPlaybackOptions {
    * @default false
    */
   preloadNext?: boolean;
-  
+
   /**
    * Enable low-bandwidth mode (poster images instead of auto-play)
    * @default false
    */
   lowBandwidthMode?: boolean;
-  
+
   /**
    * Viewport visibility threshold (0-1)
    * @default 0.5 (50%)
    */
   threshold?: number;
-  
+
   /**
    * Callback when video enters viewport
    */
   onEnterViewport?: () => void;
-  
+
   /**
    * Callback when video exits viewport
    */
@@ -51,42 +51,42 @@ interface UseVideoPlaybackReturn {
    * Ref to attach to video element
    */
   videoRef: React.RefObject<HTMLVideoElement | null>;
-  
+
   /**
    * Ref to attach to container element for viewport detection
    */
   containerRef: React.RefObject<HTMLDivElement | null>;
-  
+
   /**
    * Whether video is currently playing
    */
   isPlaying: boolean;
-  
+
   /**
    * Whether video is buffering
    */
   isBuffering: boolean;
-  
+
   /**
    * Error object if playback failed
    */
   error: Error | null;
-  
+
   /**
    * Whether video is in viewport
    */
   inView: boolean;
-  
+
   /**
    * Manually retry playback after error
    */
   retry: () => void;
-  
+
   /**
    * Manually play video
    */
   play: () => Promise<void>;
-  
+
   /**
    * Manually pause video
    */
@@ -95,12 +95,12 @@ interface UseVideoPlaybackReturn {
 
 /**
  * Hook for managing video playback with viewport detection
- * 
+ *
  * @example
  * ```tsx
- * const { videoRef, containerRef, isPlaying, isBuffering, error, retry } = 
+ * const { videoRef, containerRef, isPlaying, isBuffering, error, retry } =
  *   useVideoPlayback({ preloadNext: true });
- * 
+ *
  * return (
  *   <div ref={containerRef}>
  *     <video ref={videoRef} src={videoUrl} />
@@ -110,9 +110,7 @@ interface UseVideoPlaybackReturn {
  * );
  * ```
  */
-export function useVideoPlayback(
-  options: UseVideoPlaybackOptions = {}
-): UseVideoPlaybackReturn {
+export function useVideoPlayback(options: UseVideoPlaybackOptions = {}): UseVideoPlaybackReturn {
   const {
     preloadNext = false,
     lowBandwidthMode = false,
@@ -153,7 +151,7 @@ export function useVideoPlayback(
       if (retryCountRef.current < maxRetries) {
         retryCountRef.current++;
         const delay = Math.min(1000 * Math.pow(2, retryCountRef.current - 1), 5000);
-        
+
         setTimeout(() => {
           if (inView) {
             play();
@@ -195,15 +193,15 @@ export function useVideoPlayback(
     if (!container) return;
 
     const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
+      entries => {
+        entries.forEach(entry => {
           const isIntersecting = entry.isIntersecting;
           setInView(isIntersecting);
 
           if (isIntersecting) {
             // Video entered viewport
             onEnterViewport?.();
-            
+
             // Auto-play if not in low-bandwidth mode
             if (!lowBandwidthMode) {
               play();
@@ -211,7 +209,7 @@ export function useVideoPlayback(
           } else {
             // Video exited viewport
             onExitViewport?.();
-            
+
             // Auto-pause to conserve resources
             pause();
           }
@@ -221,7 +219,7 @@ export function useVideoPlayback(
         threshold,
         // Add root margin for smoother transitions
         rootMargin: '0px',
-      }
+      },
     );
 
     observer.observe(container);

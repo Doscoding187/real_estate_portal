@@ -1,6 +1,6 @@
 /**
  * Lead Service
- * 
+ *
  * Handles lead capture, qualification, and management
  * Validates: Requirements 5.1, 5.2, 5.3, 5.4, 5.5, 14.1, 14.2, 14.3, 14.4, 14.5
  */
@@ -16,7 +16,7 @@ export interface CreateLeadInput {
   email: string;
   phone?: string;
   message?: string;
-  
+
   // Affordability data (Requirements 5.3)
   affordabilityData?: {
     monthlyIncome: number;
@@ -26,7 +26,7 @@ export interface CreateLeadInput {
     maxAffordable: number;
     calculatedAt: string;
   };
-  
+
   // Lead source tracking (Requirements 14.1, 14.2, 14.3, 14.4)
   leadSource?: string;
   referrerUrl?: string;
@@ -48,7 +48,7 @@ export interface LeadQualificationResult {
 export function calculateLeadQualification(
   affordabilityData: CreateLeadInput['affordabilityData'],
   unitPrice?: number,
-  developmentPriceRange?: { priceFrom: number; priceTo: number }
+  developmentPriceRange?: { priceFrom: number; priceTo: number },
 ): LeadQualificationResult {
   const reasons: string[] = [];
   let score = 0;
@@ -159,13 +159,13 @@ export function calculateLeadQualification(
 export async function createLead(
   input: CreateLeadInput,
   unitPrice?: number,
-  developmentPriceRange?: { priceFrom: number; priceTo: number }
+  developmentPriceRange?: { priceFrom: number; priceTo: number },
 ) {
   // Calculate qualification
   const qualification = calculateLeadQualification(
     input.affordabilityData,
     unitPrice,
-    developmentPriceRange
+    developmentPriceRange,
   );
 
   // Create lead record
@@ -176,22 +176,22 @@ export async function createLead(
     email: input.email,
     phone: input.phone,
     message: input.message,
-    
+
     // Affordability data
     affordabilityData: input.affordabilityData ? JSON.stringify(input.affordabilityData) : null,
     qualificationStatus: qualification.qualificationStatus,
     qualificationScore: qualification.qualificationScore,
-    
+
     // Lead source tracking
     leadSource: input.leadSource || 'direct',
     referrerUrl: input.referrerUrl,
     utmSource: input.utmSource,
     utmMedium: input.utmMedium,
     utmCampaign: input.utmCampaign,
-    
+
     // Funnel stage
     funnelStage: input.affordabilityData ? 'affordability' : 'interest',
-    
+
     // Status
     status: 'new',
     leadType: 'inquiry',
@@ -218,7 +218,7 @@ export async function getDevelopmentLeads(
     assignedTo?: number;
     dateFrom?: string;
     dateTo?: string;
-  }
+  },
 ) {
   let query = db.select().from(leads).where(eq(leads.developmentId, developmentId));
 
@@ -256,7 +256,7 @@ export async function getDevelopmentLeads(
  */
 export async function getLeadById(leadId: number) {
   const [lead] = await db.select().from(leads).where(eq(leads.id, leadId));
-  
+
   if (!lead) {
     throw new Error('Lead not found');
   }
@@ -275,8 +275,16 @@ export async function getLeadById(leadId: number) {
  */
 export async function updateLeadStatus(
   leadId: number,
-  status: 'new' | 'contacted' | 'qualified' | 'viewing_scheduled' | 'offer_sent' | 'converted' | 'closed' | 'lost',
-  notes?: string
+  status:
+    | 'new'
+    | 'contacted'
+    | 'qualified'
+    | 'viewing_scheduled'
+    | 'offer_sent'
+    | 'converted'
+    | 'closed'
+    | 'lost',
+  notes?: string,
 ) {
   const updateData: any = {
     status,
@@ -297,15 +305,11 @@ export async function updateLeadStatus(
     if (existingLead) {
       const timestamp = new Date().toISOString();
       const newNote = `[${timestamp}] ${notes}`;
-      updateData.notes = existingLead.notes 
-        ? `${existingLead.notes}\n${newNote}`
-        : newNote;
+      updateData.notes = existingLead.notes ? `${existingLead.notes}\n${newNote}` : newNote;
     }
   }
 
-    await db.update(leads)
-    .set(updateData)
-    .where(eq(leads.id, leadId));
+  await db.update(leads).set(updateData).where(eq(leads.id, leadId));
 
   const updatedLead = await getLeadById(leadId);
 
@@ -317,7 +321,8 @@ export async function updateLeadStatus(
  * Validates: Requirements 5.5, 6.3
  */
 export async function assignLead(leadId: number, userId: number) {
-  await db.update(leads)
+  await db
+    .update(leads)
     .set({
       assignedTo: userId,
       assignedAt: new Date().toISOString(),
@@ -336,9 +341,17 @@ export async function assignLead(leadId: number, userId: number) {
  */
 export async function updateLeadFunnelStage(
   leadId: number,
-  funnelStage: 'interest' | 'affordability' | 'qualification' | 'viewing' | 'offer' | 'bond' | 'sale'
+  funnelStage:
+    | 'interest'
+    | 'affordability'
+    | 'qualification'
+    | 'viewing'
+    | 'offer'
+    | 'bond'
+    | 'sale',
 ) {
-  await db.update(leads)
+  await db
+    .update(leads)
     .set({
       funnelStage,
       updatedAt: new Date().toISOString(),
@@ -355,21 +368,20 @@ export async function updateLeadFunnelStage(
  * Validates: Requirements 8.2
  */
 export async function getDevelopmentLeadStats(developmentId: number) {
-  const allLeads = await db
-    .select()
-    .from(leads)
-    .where(eq(leads.developmentId, developmentId));
+  const allLeads = await db.select().from(leads).where(eq(leads.developmentId, developmentId));
 
   const stats = {
     total: allLeads.length,
     qualified: allLeads.filter((l: any) => l.qualificationStatus === 'qualified').length,
-    partiallyQualified: allLeads.filter((l: any) => l.qualificationStatus === 'partially_qualified').length,
+    partiallyQualified: allLeads.filter((l: any) => l.qualificationStatus === 'partially_qualified')
+      .length,
     unqualified: allLeads.filter((l: any) => l.qualificationStatus === 'unqualified').length,
     pending: allLeads.filter((l: any) => l.qualificationStatus === 'pending').length,
     converted: allLeads.filter((l: any) => l.status === 'converted').length,
-    conversionRate: allLeads.length > 0 
-      ? (allLeads.filter((l: any) => l.status === 'converted').length / allLeads.length) * 100 
-      : 0,
+    conversionRate:
+      allLeads.length > 0
+        ? (allLeads.filter((l: any) => l.status === 'converted').length / allLeads.length) * 100
+        : 0,
     bySource: {} as Record<string, number>,
     byFunnelStage: {} as Record<string, number>,
   };

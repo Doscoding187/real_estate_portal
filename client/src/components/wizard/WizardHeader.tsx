@@ -1,145 +1,107 @@
-/**
- * WizardHeader Component
- * Header with gradient title and step counter
- * Part of the Soft UI design system
- * 
- * Requirements: 1.1
- */
-
-import * as React from 'react';
+import React from 'react';
+import { Button } from '@/components/ui/button';
+import { CheckCircle2, RotateCw, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Badge } from '@/components/ui/badge';
 
 export interface WizardHeaderProps {
-  /**
-   * Main title
-   */
   title: string;
-  /**
-   * Subtitle/description
-   */
-  subtitle?: string;
-  /**
-   * Current step number
-   */
-  currentStep?: number;
-  /**
-   * Total number of steps
-   */
-  totalSteps?: number;
-  /**
-   * Save status indicator
-   */
-  saveStatus?: 'saved' | 'saving' | 'unsaved';
-  /**
-   * Additional className
-   */
+  description?: string;
+  progressPercent: number;
+  showExit?: boolean;
+  onExit?: () => void;
+  saveStatus?: 'saved' | 'saving' | 'error';
+  lastSavedAt?: Date;
   className?: string;
 }
 
-export const WizardHeader = React.forwardRef<HTMLDivElement, WizardHeaderProps>(
-  (
-    {
-      title,
-      subtitle,
-      currentStep,
-      totalSteps,
-      saveStatus,
-      className,
-    },
-    ref
-  ) => {
-    const getSaveStatusText = () => {
-      switch (saveStatus) {
-        case 'saved':
-          return 'All changes saved';
-        case 'saving':
-          return 'Saving...';
-        case 'unsaved':
-          return 'Unsaved changes';
-        default:
-          return null;
-      }
-    };
-
-    const getSaveStatusColor = () => {
-      switch (saveStatus) {
-        case 'saved':
-          return 'text-green-600';
-        case 'saving':
-          return 'text-blue-600';
-        case 'unsaved':
-          return 'text-orange-600';
-        default:
-          return '';
-      }
-    };
-
-    return (
-      <div
-        ref={ref}
-        className={cn(
-          'px-6 py-8 md:px-8 md:py-10',
-          'border-b border-gray-200',
-          className
-        )}
-      >
-        <div className="flex items-start justify-between gap-4">
-          {/* Title and subtitle */}
-          <div className="flex-1">
-            <h1
-              className={cn(
-                'text-3xl md:text-4xl font-bold',
-                'bg-gradient-to-r from-blue-600 to-indigo-600',
-                'bg-clip-text text-transparent',
-                'mb-2'
-              )}
-            >
+export function WizardHeader({
+  title,
+  description,
+  progressPercent,
+  showExit = true,
+  onExit,
+  saveStatus = 'saved',
+  lastSavedAt,
+  className,
+}: WizardHeaderProps) {
+  return (
+    <div
+      className={cn(
+        'w-full bg-white/80 backdrop-blur-md border-b border-slate-200 z-10 sticky top-0',
+        className,
+      )}
+    >
+      <div className="max-w-5xl mx-auto px-4 py-4">
+        {/* Top Row: Title & Controls */}
+        <div className="flex items-start justify-between mb-4">
+          <div className="space-y-1">
+            <h1 className="text-xl md:text-2xl font-bold bg-gradient-to-r from-blue-900 to-slate-900 bg-clip-text text-transparent leading-tight">
               {title}
             </h1>
-            {subtitle && (
-              <p className="text-gray-600 text-base md:text-lg">
-                {subtitle}
-              </p>
+            {description && (
+              <p className="text-sm text-slate-500 max-w-2xl text-balance">{description}</p>
             )}
           </div>
 
-          {/* Step counter and save status */}
-          <div className="flex flex-col items-end gap-2">
-            {currentStep !== undefined && totalSteps !== undefined && (
-              <div
-                className={cn(
-                  'px-4 py-2 rounded-full',
-                  'bg-gradient-to-r from-blue-50 to-indigo-50',
-                  'border border-blue-200'
-                )}
-              >
+          <div className="flex items-center gap-4 pl-4">
+            {/* Save Status */}
+            <div className="hidden md:flex items-center">
+              {saveStatus === 'saving' && (
+                <span className="flex items-center text-xs text-slate-400 font-medium">
+                  <RotateCw className="w-3 h-3 mr-1.5 animate-spin" />
+                  Saving...
+                </span>
+              )}
+              {saveStatus === 'saved' && (
                 <span
-                  className={cn(
-                    'text-sm font-semibold',
-                    'bg-gradient-to-r from-blue-600 to-indigo-600',
-                    'bg-clip-text text-transparent'
-                  )}
+                  className="flex items-center text-xs text-slate-400 font-medium"
+                  title={lastSavedAt ? `Saved at ${lastSavedAt.toLocaleTimeString()}` : 'Saved'}
                 >
-                  Step {currentStep} of {totalSteps}
+                  <CheckCircle2 className="w-3 h-3 mr-1.5 text-emerald-500" />
+                  Saved
                 </span>
-              </div>
-            )}
+              )}
+              {saveStatus === 'error' && (
+                <Badge variant="destructive" className="text-[10px] h-5">
+                  Save Failed
+                </Badge>
+              )}
+            </div>
 
-            {saveStatus && (
-              <div className="flex items-center gap-2">
-                {saveStatus === 'saving' && (
-                  <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
-                )}
-                <span className={cn('text-xs font-medium', getSaveStatusColor())}>
-                  {getSaveStatusText()}
-                </span>
-              </div>
+            {/* Separator */}
+            <div className="h-6 w-px bg-slate-200 hidden md:block" />
+
+            {/* Progress Percentage Badge (The only "stepper") */}
+            <div className="flex flex-col items-end">
+              <span className="text-2xl font-bold text-slate-900 leading-none font-mono tracking-tight">
+                {Math.round(progressPercent)}%
+              </span>
+            </div>
+
+            {/* Exit Button */}
+            {showExit && onExit && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={onExit}
+                className="ml-2 text-slate-400 hover:text-red-700 hover:bg-red-50 rounded-full h-9 w-9 transition-colors"
+                title="Exit Wizard"
+              >
+                <X className="w-5 h-5" />
+              </Button>
             )}
           </div>
         </div>
-      </div>
-    );
-  }
-);
 
-WizardHeader.displayName = 'WizardHeader';
+        {/* Thin Progress Bar */}
+        <div className="h-1 w-full bg-slate-100 rounded-full overflow-hidden">
+          <div
+            className="h-full bg-gradient-to-r from-blue-600 to-purple-600 transition-all duration-500 ease-out rounded-full"
+            style={{ width: `${Math.max(progressPercent, 5)}%` }} // Min 5% so its visible
+          />
+        </div>
+      </div>
+    </div>
+  );
+}

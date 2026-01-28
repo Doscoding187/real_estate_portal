@@ -1,6 +1,6 @@
 /**
  * MapPreview Component Tests
- * 
+ *
  * Basic functionality tests for the map preview feature
  */
 
@@ -28,21 +28,21 @@ describe('MapPreview', () => {
 
   it('renders map preview in small mode by default', () => {
     render(<MapPreview {...defaultProps} />);
-    
+
     const map = screen.getByTestId('google-map');
     expect(map).toBeInTheDocument();
   });
 
   it('renders marker at center position', () => {
     render(<MapPreview {...defaultProps} />);
-    
+
     const marker = screen.getByTestId('marker');
     expect(marker).toBeInTheDocument();
   });
 
   it('shows expand button when showExpandButton is true', () => {
     render(<MapPreview {...defaultProps} showExpandButton={true} />);
-    
+
     const expandButton = screen.getByText(/Expand Map/i);
     expect(expandButton).toBeInTheDocument();
   });
@@ -58,29 +58,22 @@ describe('MapPreview', () => {
     }));
 
     render(<MapPreview {...defaultProps} />);
-    
+
     expect(screen.getByText(/Loading map preview/i)).toBeInTheDocument();
   });
 
   it('accepts custom className', () => {
-    const { container } = render(
-      <MapPreview {...defaultProps} className="custom-class" />
-    );
-    
+    const { container } = render(<MapPreview {...defaultProps} className="custom-class" />);
+
     const card = container.querySelector('.custom-class');
     expect(card).toBeInTheDocument();
   });
 
   it('calls onLocationChange when provided', () => {
     const onLocationChange = vi.fn();
-    
-    render(
-      <MapPreview
-        {...defaultProps}
-        onLocationChange={onLocationChange}
-      />
-    );
-    
+
+    render(<MapPreview {...defaultProps} onLocationChange={onLocationChange} />);
+
     // Component should render without errors
     expect(screen.getByTestId('google-map')).toBeInTheDocument();
   });

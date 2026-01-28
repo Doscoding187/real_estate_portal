@@ -56,7 +56,7 @@ export function SaveButton({
 
   return (
     <button
-      onClick={(e) => {
+      onClick={e => {
         e.preventDefault();
         e.stopPropagation();
         toggleSave();
@@ -80,11 +80,7 @@ export function SaveButton({
         fill={isSaved ? 'currentColor' : 'none'}
         className={`transition-all duration-200 ${isAnimating ? 'animate-bounce' : ''}`}
       />
-      {showLabel && (
-        <span className="ml-2 text-sm font-medium">
-          {isSaved ? 'Saved' : 'Save'}
-        </span>
-      )}
+      {showLabel && <span className="ml-2 text-sm font-medium">{isSaved ? 'Saved' : 'Save'}</span>}
     </button>
   );
 }

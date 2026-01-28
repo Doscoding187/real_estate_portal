@@ -336,11 +336,12 @@ export const enhancedLocationRouter = router({
 
       // Use Google Places Service to fetch real data
       const { googlePlacesService } = await import('./services/googlePlacesService');
-      
-      const allPromises = (input.types || []).map(async (type) => {
+
+      const allPromises = (input.types || []).map(async type => {
         // Map our internal types to Google Place types
         let googleType = type as string;
-        if (type === 'transport') googleType = 'train_station|bus_station|subway_station|transit_station';
+        if (type === 'transport')
+          googleType = 'train_station|bus_station|subway_station|transit_station';
         if (type === 'shopping') googleType = 'shopping_mall|supermarket';
         if (type === 'education') googleType = 'school|university'; // Fallback if 'education' used
         // 'school', 'hospital', 'restaurant', 'bank', 'park' map directly
@@ -348,17 +349,17 @@ export const enhancedLocationRouter = router({
         // Google API expects one type for text search or type param.
         // We will assume 'type' parameter supports the primary one.
         // "nearbysearch" supports 'type' (singular) or 'keyword'.
-        
+
         // For composite types like "transport", we might need multiple calls or use 'keyword'
         // For simplicity, we pass the mapped type. If pipe separated, we might need to handle differently or pick primary.
         // Let's stick to simple 1-to-1 mapping where possible or parallel calls.
-        const searchType = googleType.split('|')[0]; 
+        const searchType = googleType.split('|')[0];
 
         return googlePlacesService.getNearbyPlaces(
-          input.latitude, 
-          input.longitude, 
+          input.latitude,
+          input.longitude,
           input.radius * 1000, // convert km to meters
-          searchType
+          searchType,
         );
       });
 
@@ -366,7 +367,9 @@ export const enhancedLocationRouter = router({
       const allResults = resultsNested.flat();
 
       // De-duplicate by place_id
-      const uniqueResults = Array.from(new Map(allResults.map(item => [item.place_id, item])).values());
+      const uniqueResults = Array.from(
+        new Map(allResults.map(item => [item.place_id, item])).values(),
+      );
 
       // Calculate accurate distances and sort
       const amenitiesWithDistance = uniqueResults
@@ -377,7 +380,7 @@ export const enhancedLocationRouter = router({
             amenity.latitude,
             amenity.longitude,
           );
-          
+
           return {
             id: amenity.id || Math.random(), // Ensure ID
             name: amenity.name,

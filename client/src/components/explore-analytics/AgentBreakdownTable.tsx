@@ -25,9 +25,7 @@ export function AgentBreakdownTable({ agents }: AgentBreakdownTableProps) {
           <CardDescription>No agent data available</CardDescription>
         </CardHeader>
         <CardContent>
-          <p className="text-muted-foreground">
-            No agents have created content yet.
-          </p>
+          <p className="text-muted-foreground">No agents have created content yet.</p>
         </CardContent>
       </Card>
     );
@@ -40,9 +38,7 @@ export function AgentBreakdownTable({ agents }: AgentBreakdownTableProps) {
           <Users className="h-5 w-5" />
           Agent Performance
         </CardTitle>
-        <CardDescription>
-          Performance breakdown by agent within your agency
-        </CardDescription>
+        <CardDescription>Performance breakdown by agent within your agency</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="space-y-3">
@@ -52,10 +48,7 @@ export function AgentBreakdownTable({ agents }: AgentBreakdownTableProps) {
               className="flex items-center justify-between p-4 rounded-lg bg-slate-50 hover:bg-slate-100 transition-colors"
             >
               <div className="flex items-center gap-3 flex-1">
-                <Badge
-                  variant="secondary"
-                  className="w-8 h-8 flex items-center justify-center"
-                >
+                <Badge variant="secondary" className="w-8 h-8 flex items-center justify-center">
                   {index + 1}
                 </Badge>
                 <div className="flex-1">

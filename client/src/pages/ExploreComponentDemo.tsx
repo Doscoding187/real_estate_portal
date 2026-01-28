@@ -1,6 +1,6 @@
 /**
  * Explore Component Demo Page
- * 
+ *
  * Interactive showcase of all Hybrid Modern + Soft UI components
  * for the Explore feature refinement.
  */
@@ -10,21 +10,21 @@ import { ModernCard } from '@/components/ui/soft/ModernCard';
 import { IconButton } from '@/components/ui/soft/IconButton';
 import { MicroPill } from '@/components/ui/soft/MicroPill';
 import { AvatarBubble } from '@/components/ui/soft/AvatarBubble';
-import { 
-  ModernSkeleton, 
-  PropertyCardSkeleton, 
-  VideoCardSkeleton, 
+import {
+  ModernSkeleton,
+  PropertyCardSkeleton,
+  VideoCardSkeleton,
   NeighbourhoodCardSkeleton,
-  InsightCardSkeleton 
+  InsightCardSkeleton,
 } from '@/components/ui/soft/ModernSkeleton';
 import { InsightCard } from '@/components/explore-discovery/cards/InsightCard';
 import { useVideoPlayback } from '@/hooks/useVideoPlayback';
-import { 
-  Heart, 
-  Share2, 
-  MapPin, 
-  Home, 
-  Building2, 
+import {
+  Heart,
+  Share2,
+  MapPin,
+  Home,
+  Building2,
   Sparkles,
   Play,
   Grid3x3,
@@ -37,18 +37,12 @@ import {
  * Demonstrates the useVideoPlayback hook with viewport detection
  */
 function VideoPlaybackDemo() {
-  const { 
-    videoRef, 
-    containerRef, 
-    isPlaying, 
-    isBuffering, 
-    error, 
-    inView,
-    retry 
-  } = useVideoPlayback({
-    preloadNext: true,
-    threshold: 0.5,
-  });
+  const { videoRef, containerRef, isPlaying, isBuffering, error, inView, retry } = useVideoPlayback(
+    {
+      preloadNext: true,
+      threshold: 0.5,
+    },
+  );
 
   return (
     <ModernCard>
@@ -65,14 +59,18 @@ function VideoPlaybackDemo() {
 
         {/* Status Overlay */}
         <div className="absolute top-2 right-2 flex gap-2">
-          <div className={`px-2 py-1 rounded-full text-xs font-medium ${
-            inView ? 'bg-green-500 text-white' : 'bg-gray-500 text-white'
-          }`}>
+          <div
+            className={`px-2 py-1 rounded-full text-xs font-medium ${
+              inView ? 'bg-green-500 text-white' : 'bg-gray-500 text-white'
+            }`}
+          >
             {inView ? 'In View' : 'Out of View'}
           </div>
-          <div className={`px-2 py-1 rounded-full text-xs font-medium ${
-            isPlaying ? 'bg-blue-500 text-white' : 'bg-gray-500 text-white'
-          }`}>
+          <div
+            className={`px-2 py-1 rounded-full text-xs font-medium ${
+              isPlaying ? 'bg-blue-500 text-white' : 'bg-gray-500 text-white'
+            }`}
+          >
             {isPlaying ? 'Playing' : 'Paused'}
           </div>
         </div>
@@ -92,10 +90,7 @@ function VideoPlaybackDemo() {
             <div className="text-center p-4">
               <AlertCircle className="w-12 h-12 text-red-400 mx-auto mb-2" />
               <p className="text-white text-sm mb-3">{error.message}</p>
-              <button
-                onClick={retry}
-                className="accent-btn px-4 py-2 text-white text-sm"
-              >
+              <button onClick={retry} className="accent-btn px-4 py-2 text-white text-sm">
                 Retry
               </button>
             </div>
@@ -138,9 +133,7 @@ export default function ExploreComponentDemo() {
       <div className="max-w-7xl mx-auto space-y-12">
         {/* Header */}
         <div>
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">
-            Explore Component Library
-          </h1>
+          <h1 className="text-4xl font-bold text-gray-900 mb-2">Explore Component Library</h1>
           <p className="text-gray-600">
             Hybrid Modern + Soft UI Design System - Interactive Component Showcase
           </p>
@@ -155,9 +148,7 @@ export default function ExploreComponentDemo() {
           <ModernCard className="p-6">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Card Variant
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Card Variant</label>
                 <div className="flex gap-2">
                   <button
                     onClick={() => setCardVariant('default')}
@@ -193,9 +184,7 @@ export default function ExploreComponentDemo() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Button State
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Button State</label>
                 <button
                   onClick={() => setButtonDisabled(!buttonDisabled)}
                   className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700"
@@ -205,16 +194,12 @@ export default function ExploreComponentDemo() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Pill Size
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Pill Size</label>
                 <div className="flex gap-2">
                   <button
                     onClick={() => setPillSize('sm')}
                     className={`px-3 py-1 rounded text-sm ${
-                      pillSize === 'sm'
-                        ? 'bg-indigo-600 text-white'
-                        : 'bg-gray-200 text-gray-700'
+                      pillSize === 'sm' ? 'bg-indigo-600 text-white' : 'bg-gray-200 text-gray-700'
                     }`}
                   >
                     Small
@@ -222,9 +207,7 @@ export default function ExploreComponentDemo() {
                   <button
                     onClick={() => setPillSize('md')}
                     className={`px-3 py-1 rounded text-sm ${
-                      pillSize === 'md'
-                        ? 'bg-indigo-600 text-white'
-                        : 'bg-gray-200 text-gray-700'
+                      pillSize === 'md' ? 'bg-indigo-600 text-white' : 'bg-gray-200 text-gray-700'
                     }`}
                   >
                     Medium
@@ -232,9 +215,7 @@ export default function ExploreComponentDemo() {
                   <button
                     onClick={() => setPillSize('lg')}
                     className={`px-3 py-1 rounded text-sm ${
-                      pillSize === 'lg'
-                        ? 'bg-indigo-600 text-white'
-                        : 'bg-gray-200 text-gray-700'
+                      pillSize === 'lg' ? 'bg-indigo-600 text-white' : 'bg-gray-200 text-gray-700'
                     }`}
                   >
                     Large
@@ -278,8 +259,8 @@ export default function ExploreComponentDemo() {
 
           <div className="mt-6">
             <h3 className="font-semibold mb-3">Interactive Card (Click Me!)</h3>
-            <ModernCard 
-              variant={cardVariant} 
+            <ModernCard
+              variant={cardVariant}
               onClick={() => alert('Card clicked!')}
               className="max-w-md"
             >
@@ -303,25 +284,25 @@ export default function ExploreComponentDemo() {
             <div className="space-y-2">
               <p className="text-sm font-medium text-gray-700">Default Variant</p>
               <div className="flex gap-2">
-                <IconButton 
-                  icon={Heart} 
-                  onClick={() => alert('Liked!')} 
-                  label="Like" 
-                  size="sm" 
+                <IconButton
+                  icon={Heart}
+                  onClick={() => alert('Liked!')}
+                  label="Like"
+                  size="sm"
                   disabled={buttonDisabled}
                 />
-                <IconButton 
-                  icon={Heart} 
-                  onClick={() => alert('Liked!')} 
-                  label="Like" 
-                  size="md" 
+                <IconButton
+                  icon={Heart}
+                  onClick={() => alert('Liked!')}
+                  label="Like"
+                  size="md"
                   disabled={buttonDisabled}
                 />
-                <IconButton 
-                  icon={Heart} 
-                  onClick={() => alert('Liked!')} 
-                  label="Like" 
-                  size="lg" 
+                <IconButton
+                  icon={Heart}
+                  onClick={() => alert('Liked!')}
+                  label="Like"
+                  size="lg"
                   disabled={buttonDisabled}
                 />
               </div>
@@ -330,28 +311,28 @@ export default function ExploreComponentDemo() {
             <div className="space-y-2">
               <p className="text-sm font-medium text-gray-700">Glass Variant (on gradient)</p>
               <div className="flex gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 p-4 rounded-lg">
-                <IconButton 
-                  icon={Share2} 
-                  onClick={() => alert('Shared!')} 
-                  label="Share" 
-                  variant="glass" 
-                  size="sm" 
+                <IconButton
+                  icon={Share2}
+                  onClick={() => alert('Shared!')}
+                  label="Share"
+                  variant="glass"
+                  size="sm"
                   disabled={buttonDisabled}
                 />
-                <IconButton 
-                  icon={Share2} 
-                  onClick={() => alert('Shared!')} 
-                  label="Share" 
-                  variant="glass" 
-                  size="md" 
+                <IconButton
+                  icon={Share2}
+                  onClick={() => alert('Shared!')}
+                  label="Share"
+                  variant="glass"
+                  size="md"
                   disabled={buttonDisabled}
                 />
-                <IconButton 
-                  icon={Share2} 
-                  onClick={() => alert('Shared!')} 
-                  label="Share" 
-                  variant="glass" 
-                  size="lg" 
+                <IconButton
+                  icon={Share2}
+                  onClick={() => alert('Shared!')}
+                  label="Share"
+                  variant="glass"
+                  size="lg"
                   disabled={buttonDisabled}
                 />
               </div>
@@ -360,35 +341,37 @@ export default function ExploreComponentDemo() {
             <div className="space-y-2">
               <p className="text-sm font-medium text-gray-700">Accent Variant</p>
               <div className="flex gap-2">
-                <IconButton 
-                  icon={Play} 
-                  onClick={() => alert('Playing!')} 
-                  label="Play" 
-                  variant="accent" 
-                  size="sm" 
+                <IconButton
+                  icon={Play}
+                  onClick={() => alert('Playing!')}
+                  label="Play"
+                  variant="accent"
+                  size="sm"
                   disabled={buttonDisabled}
                 />
-                <IconButton 
-                  icon={Play} 
-                  onClick={() => alert('Playing!')} 
-                  label="Play" 
-                  variant="accent" 
-                  size="md" 
+                <IconButton
+                  icon={Play}
+                  onClick={() => alert('Playing!')}
+                  label="Play"
+                  variant="accent"
+                  size="md"
                   disabled={buttonDisabled}
                 />
-                <IconButton 
-                  icon={Play} 
-                  onClick={() => alert('Playing!')} 
-                  label="Play" 
-                  variant="accent" 
-                  size="lg" 
+                <IconButton
+                  icon={Play}
+                  onClick={() => alert('Playing!')}
+                  label="Play"
+                  variant="accent"
+                  size="lg"
                   disabled={buttonDisabled}
                 />
               </div>
             </div>
           </div>
           <p className="text-sm text-gray-500 mt-4">
-            {buttonDisabled ? '✓ Buttons are disabled' : 'Use the controls above to disable buttons'}
+            {buttonDisabled
+              ? '✓ Buttons are disabled'
+              : 'Use the controls above to disable buttons'}
           </p>
         </section>
 
@@ -404,28 +387,28 @@ export default function ExploreComponentDemo() {
                 Default Variant (Size: {pillSize})
               </p>
               <div className="flex flex-wrap gap-2">
-                <MicroPill 
-                  label="All" 
+                <MicroPill
+                  label="All"
                   selected={selectedChip === 'all'}
                   onClick={() => setSelectedChip('all')}
                   size={pillSize}
                 />
-                <MicroPill 
-                  label="Houses" 
+                <MicroPill
+                  label="Houses"
                   icon={Home}
                   selected={selectedChip === 'houses'}
                   onClick={() => setSelectedChip('houses')}
                   size={pillSize}
                 />
-                <MicroPill 
-                  label="Apartments" 
+                <MicroPill
+                  label="Apartments"
                   icon={Building2}
                   selected={selectedChip === 'apartments'}
                   onClick={() => setSelectedChip('apartments')}
                   size={pillSize}
                 />
-                <MicroPill 
-                  label="Developments" 
+                <MicroPill
+                  label="Developments"
                   icon={Grid3x3}
                   selected={selectedChip === 'developments'}
                   onClick={() => setSelectedChip('developments')}
@@ -439,16 +422,16 @@ export default function ExploreComponentDemo() {
                 Accent Variant (Size: {pillSize})
               </p>
               <div className="flex flex-wrap gap-2">
-                <MicroPill 
-                  label="Featured" 
+                <MicroPill
+                  label="Featured"
                   icon={Sparkles}
                   variant="accent"
                   selected={selectedChip === 'featured'}
                   onClick={() => setSelectedChip('featured')}
                   size={pillSize}
                 />
-                <MicroPill 
-                  label="Near You" 
+                <MicroPill
+                  label="Near You"
                   icon={MapPin}
                   variant="accent"
                   selected={selectedChip === 'near'}
@@ -461,17 +444,8 @@ export default function ExploreComponentDemo() {
             <div>
               <p className="text-sm font-medium text-gray-700 mb-2">Disabled State</p>
               <div className="flex flex-wrap gap-2">
-                <MicroPill 
-                  label="Disabled" 
-                  disabled
-                  size={pillSize}
-                />
-                <MicroPill 
-                  label="Disabled Selected" 
-                  selected
-                  disabled
-                  size={pillSize}
-                />
+                <MicroPill label="Disabled" disabled size={pillSize} />
+                <MicroPill label="Disabled Selected" selected disabled size={pillSize} />
               </div>
             </div>
           </div>
@@ -491,43 +465,23 @@ export default function ExploreComponentDemo() {
               <p className="text-sm font-medium text-gray-700 mb-3">Size Variants</p>
               <div className="flex items-end gap-3">
                 <div className="text-center">
-                  <AvatarBubble 
-                    src="https://i.pravatar.cc/150?img=1" 
-                    alt="User" 
-                    size="xs" 
-                  />
+                  <AvatarBubble src="https://i.pravatar.cc/150?img=1" alt="User" size="xs" />
                   <p className="text-xs text-gray-500 mt-1">xs</p>
                 </div>
                 <div className="text-center">
-                  <AvatarBubble 
-                    src="https://i.pravatar.cc/150?img=2" 
-                    alt="User" 
-                    size="sm" 
-                  />
+                  <AvatarBubble src="https://i.pravatar.cc/150?img=2" alt="User" size="sm" />
                   <p className="text-xs text-gray-500 mt-1">sm</p>
                 </div>
                 <div className="text-center">
-                  <AvatarBubble 
-                    src="https://i.pravatar.cc/150?img=3" 
-                    alt="User" 
-                    size="md" 
-                  />
+                  <AvatarBubble src="https://i.pravatar.cc/150?img=3" alt="User" size="md" />
                   <p className="text-xs text-gray-500 mt-1">md</p>
                 </div>
                 <div className="text-center">
-                  <AvatarBubble 
-                    src="https://i.pravatar.cc/150?img=4" 
-                    alt="User" 
-                    size="lg" 
-                  />
+                  <AvatarBubble src="https://i.pravatar.cc/150?img=4" alt="User" size="lg" />
                   <p className="text-xs text-gray-500 mt-1">lg</p>
                 </div>
                 <div className="text-center">
-                  <AvatarBubble 
-                    src="https://i.pravatar.cc/150?img=5" 
-                    alt="User" 
-                    size="xl" 
-                  />
+                  <AvatarBubble src="https://i.pravatar.cc/150?img=5" alt="User" size="xl" />
                   <p className="text-xs text-gray-500 mt-1">xl</p>
                 </div>
               </div>
@@ -537,27 +491,27 @@ export default function ExploreComponentDemo() {
               <p className="text-sm font-medium text-gray-700 mb-3">Status Indicators</p>
               <div className="flex items-center gap-4">
                 <div className="text-center">
-                  <AvatarBubble 
-                    src="https://i.pravatar.cc/150?img=6" 
-                    alt="Online User" 
+                  <AvatarBubble
+                    src="https://i.pravatar.cc/150?img=6"
+                    alt="Online User"
                     status="online"
                     size="lg"
                   />
                   <p className="text-xs text-gray-500 mt-1">Online</p>
                 </div>
                 <div className="text-center">
-                  <AvatarBubble 
-                    src="https://i.pravatar.cc/150?img=7" 
-                    alt="Busy User" 
+                  <AvatarBubble
+                    src="https://i.pravatar.cc/150?img=7"
+                    alt="Busy User"
                     status="busy"
                     size="lg"
                   />
                   <p className="text-xs text-gray-500 mt-1">Busy</p>
                 </div>
                 <div className="text-center">
-                  <AvatarBubble 
-                    src="https://i.pravatar.cc/150?img=8" 
-                    alt="Offline User" 
+                  <AvatarBubble
+                    src="https://i.pravatar.cc/150?img=8"
+                    alt="Offline User"
                     status="offline"
                     size="lg"
                   />
@@ -570,17 +524,11 @@ export default function ExploreComponentDemo() {
               <p className="text-sm font-medium text-gray-700 mb-3">Fallback States</p>
               <div className="flex items-center gap-4">
                 <div className="text-center">
-                  <AvatarBubble 
-                    name="John Doe" 
-                    size="lg" 
-                  />
+                  <AvatarBubble name="John Doe" size="lg" />
                   <p className="text-xs text-gray-500 mt-1">Initials</p>
                 </div>
                 <div className="text-center">
-                  <AvatarBubble 
-                    alt="No Image" 
-                    size="lg" 
-                  />
+                  <AvatarBubble alt="No Image" size="lg" />
                   <p className="text-xs text-gray-500 mt-1">Icon</p>
                 </div>
               </div>
@@ -588,9 +536,9 @@ export default function ExploreComponentDemo() {
 
             <div>
               <p className="text-sm font-medium text-gray-700 mb-3">Interactive (Clickable)</p>
-              <AvatarBubble 
-                src="https://i.pravatar.cc/150?img=9" 
-                alt="Clickable Avatar" 
+              <AvatarBubble
+                src="https://i.pravatar.cc/150?img=9"
+                alt="Clickable Avatar"
                 size="xl"
                 status="online"
                 onClick={() => alert('Avatar clicked!')}
@@ -612,7 +560,8 @@ export default function ExploreComponentDemo() {
                 insight={{
                   id: 1,
                   title: 'Sandton Property Market Surging',
-                  description: 'Average property prices in Sandton have increased significantly over the past quarter, driven by high demand and limited supply.',
+                  description:
+                    'Average property prices in Sandton have increased significantly over the past quarter, driven by high demand and limited supply.',
                   insightType: 'market-trend',
                   data: {
                     value: 'R 2.5M',
@@ -631,7 +580,8 @@ export default function ExploreComponentDemo() {
                 insight={{
                   id: 2,
                   title: 'Cape Town Coastal Properties',
-                  description: 'Coastal property prices are showing signs of stabilization with slight decreases in some areas.',
+                  description:
+                    'Coastal property prices are showing signs of stabilization with slight decreases in some areas.',
                   insightType: 'price-analysis',
                   data: {
                     value: 'R 4.2M',
@@ -650,7 +600,8 @@ export default function ExploreComponentDemo() {
                 insight={{
                   id: 3,
                   title: 'Best Time to Invest',
-                  description: 'Market analysis suggests Q2 2024 is optimal for Johannesburg investments with favorable interest rates.',
+                  description:
+                    'Market analysis suggests Q2 2024 is optimal for Johannesburg investments with favorable interest rates.',
                   insightType: 'investment-tip',
                   data: {
                     value: '8.5%',
@@ -668,7 +619,8 @@ export default function ExploreComponentDemo() {
                 insight={{
                   id: 4,
                   title: 'Rosebank: The New Business Hub',
-                  description: 'Rosebank is emerging as a prime business district with new developments and excellent transport links.',
+                  description:
+                    'Rosebank is emerging as a prime business district with new developments and excellent transport links.',
                   insightType: 'area-spotlight',
                   imageUrl: 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=400',
                 }}
@@ -682,7 +634,8 @@ export default function ExploreComponentDemo() {
                 insight={{
                   id: 5,
                   title: 'Understanding Transfer Costs',
-                  description: 'Learn about the various costs involved in property transfers, including transfer duty and legal fees.',
+                  description:
+                    'Learn about the various costs involved in property transfers, including transfer duty and legal fees.',
                   insightType: 'investment-tip',
                 }}
                 onClick={() => alert('Simple insight clicked!')}
@@ -695,7 +648,8 @@ export default function ExploreComponentDemo() {
                 insight={{
                   id: 6,
                   title: 'Pretoria East Boom',
-                  description: 'The Pretoria East property market is experiencing unprecedented growth with new developments.',
+                  description:
+                    'The Pretoria East property market is experiencing unprecedented growth with new developments.',
                   insightType: 'market-trend',
                   data: {
                     value: 'R 1.8M',
@@ -738,7 +692,8 @@ export default function ExploreComponentDemo() {
         <section>
           <h2 className="text-2xl font-semibold text-gray-900 mb-4">Video Playback Hook</h2>
           <p className="text-gray-600 mb-4">
-            Viewport-based auto-play/pause with IntersectionObserver. Scroll the video in/out of view to see it work!
+            Viewport-based auto-play/pause with IntersectionObserver. Scroll the video in/out of
+            view to see it work!
           </p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <VideoPlaybackDemo />
@@ -772,7 +727,8 @@ export default function ExploreComponentDemo() {
               </ul>
               <div className="mt-4 p-3 bg-blue-50 rounded-lg">
                 <p className="text-xs text-blue-800">
-                  <strong>Tip:</strong> Scroll the page to see the video auto-play/pause based on viewport visibility!
+                  <strong>Tip:</strong> Scroll the page to see the video auto-play/pause based on
+                  viewport visibility!
                 </p>
               </div>
             </ModernCard>
@@ -786,7 +742,7 @@ export default function ExploreComponentDemo() {
             Skeleton loaders with subtle pulse animation that match actual card layouts precisely.
             Requirements: 7.4
           </p>
-          
+
           <button
             onClick={() => setShowSkeletons(!showSkeletons)}
             className="accent-btn px-6 py-3 mb-6 text-white"
@@ -800,7 +756,8 @@ export default function ExploreComponentDemo() {
               <div>
                 <h3 className="font-semibold mb-3 text-lg">PropertyCard Skeleton</h3>
                 <p className="text-sm text-gray-600 mb-4">
-                  Matches PropertyCard layout: Image (aspect-[4/3]), price, title (2 lines), location, features
+                  Matches PropertyCard layout: Image (aspect-[4/3]), price, title (2 lines),
+                  location, features
                 </p>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <PropertyCardSkeleton />
@@ -813,7 +770,8 @@ export default function ExploreComponentDemo() {
               <div>
                 <h3 className="font-semibold mb-3 text-lg">VideoCard Skeleton</h3>
                 <p className="text-sm text-gray-600 mb-4">
-                  Matches VideoCard layout: Thumbnail (aspect-[9/16]), play button, badges, title, creator
+                  Matches VideoCard layout: Thumbnail (aspect-[9/16]), play button, badges, title,
+                  creator
                 </p>
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                   <VideoCardSkeleton />
@@ -827,7 +785,8 @@ export default function ExploreComponentDemo() {
               <div>
                 <h3 className="font-semibold mb-3 text-lg">NeighbourhoodCard Skeleton</h3>
                 <p className="text-sm text-gray-600 mb-4">
-                  Matches NeighbourhoodCard layout: Image (aspect-[16/10]), follow button, name overlay, stats, highlights
+                  Matches NeighbourhoodCard layout: Image (aspect-[16/10]), follow button, name
+                  overlay, stats, highlights
                 </p>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <NeighbourhoodCardSkeleton />
@@ -840,7 +799,8 @@ export default function ExploreComponentDemo() {
               <div>
                 <h3 className="font-semibold mb-3 text-lg">InsightCard Skeleton</h3>
                 <p className="text-sm text-gray-600 mb-4">
-                  Matches InsightCard layout: Gradient header, icon, badge, data value, title, description, image
+                  Matches InsightCard layout: Gradient header, icon, badge, data value, title,
+                  description, image
                 </p>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <InsightCardSkeleton />
@@ -881,14 +841,31 @@ export default function ExploreComponentDemo() {
                     <div>
                       <p className="text-sm font-medium text-gray-700 mb-2">Custom Dimensions</p>
                       <div className="space-y-2">
-                        <ModernSkeleton variant="custom" width="200px" height="40px" className="rounded-lg" />
-                        <ModernSkeleton variant="custom" width="150px" height="30px" className="rounded-full" />
-                        <ModernSkeleton variant="custom" width="100%" height="120px" className="rounded-xl" />
+                        <ModernSkeleton
+                          variant="custom"
+                          width="200px"
+                          height="40px"
+                          className="rounded-lg"
+                        />
+                        <ModernSkeleton
+                          variant="custom"
+                          width="150px"
+                          height="30px"
+                          className="rounded-full"
+                        />
+                        <ModernSkeleton
+                          variant="custom"
+                          width="100%"
+                          height="120px"
+                          className="rounded-xl"
+                        />
                       </div>
                     </div>
 
                     <div>
-                      <p className="text-sm font-medium text-gray-700 mb-2">Multiple Lines (count prop)</p>
+                      <p className="text-sm font-medium text-gray-700 mb-2">
+                        Multiple Lines (count prop)
+                      </p>
                       <ModernSkeleton variant="text" count={4} />
                     </div>
                   </div>
@@ -913,7 +890,7 @@ export default function ExploreComponentDemo() {
                 <h3 className="font-semibold mb-3">Usage Example</h3>
                 <div className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto">
                   <pre className="text-xs">
-{`import { 
+                    {`import { 
   PropertyCardSkeleton,
   VideoCardSkeleton,
   NeighbourhoodCardSkeleton,
@@ -1018,9 +995,9 @@ function CustomCard() {
           <h2 className="text-2xl font-semibold text-gray-900 mb-4">Interactive Example</h2>
           <ModernCard hoverable className="max-w-md">
             <div className="flex items-center gap-4 mb-4">
-              <AvatarBubble 
-                src="https://i.pravatar.cc/150?img=8" 
-                alt="Agent" 
+              <AvatarBubble
+                src="https://i.pravatar.cc/150?img=8"
+                alt="Agent"
                 size="lg"
                 status="online"
               />
@@ -1080,23 +1057,12 @@ function CustomCard() {
                 Click these elements to see press feedback
               </p>
               <div className="space-y-3">
-                <ModernCard 
-                  variant="default" 
-                  onClick={() => {}} 
-                  className="p-3"
-                >
+                <ModernCard variant="default" onClick={() => {}} className="p-3">
                   <p className="text-sm">Click me - Scale down (0.98)</p>
                 </ModernCard>
                 <div className="flex gap-2">
-                  <IconButton 
-                    icon={Heart} 
-                    onClick={() => {}} 
-                    label="Press animation" 
-                  />
-                  <MicroPill 
-                    label="Press me" 
-                    onClick={() => {}}
-                  />
+                  <IconButton icon={Heart} onClick={() => {}} label="Press animation" />
+                  <MicroPill label="Press me" onClick={() => {}} />
                 </div>
               </div>
             </ModernCard>
@@ -1111,16 +1077,28 @@ function CustomCard() {
               <div>
                 <h3 className="font-semibold mb-3">Shadows</h3>
                 <div className="space-y-2">
-                  <div className="p-3 bg-white rounded-lg" style={{ boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)' }}>
+                  <div
+                    className="p-3 bg-white rounded-lg"
+                    style={{ boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)' }}
+                  >
                     sm: Subtle
                   </div>
-                  <div className="p-3 bg-white rounded-lg" style={{ boxShadow: '0 2px 4px 0 rgba(0, 0, 0, 0.08)' }}>
+                  <div
+                    className="p-3 bg-white rounded-lg"
+                    style={{ boxShadow: '0 2px 4px 0 rgba(0, 0, 0, 0.08)' }}
+                  >
                     md: Default
                   </div>
-                  <div className="p-3 bg-white rounded-lg" style={{ boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}>
+                  <div
+                    className="p-3 bg-white rounded-lg"
+                    style={{ boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}
+                  >
                     lg: Elevated
                   </div>
-                  <div className="p-3 bg-white rounded-lg" style={{ boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)' }}>
+                  <div
+                    className="p-3 bg-white rounded-lg"
+                    style={{ boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)' }}
+                  >
                     xl: High
                   </div>
                 </div>
@@ -1146,7 +1124,7 @@ function CustomCard() {
               <div>
                 <h3 className="font-semibold mb-2">Importing Components</h3>
                 <pre className="bg-gray-100 p-4 rounded-lg text-sm overflow-x-auto">
-{`import { ModernCard } from '@/components/ui/soft/ModernCard';
+                  {`import { ModernCard } from '@/components/ui/soft/ModernCard';
 import { IconButton } from '@/components/ui/soft/IconButton';
 import { MicroPill } from '@/components/ui/soft/MicroPill';
 import { AvatarBubble } from '@/components/ui/soft/AvatarBubble';
@@ -1157,7 +1135,7 @@ import { ModernSkeleton } from '@/components/ui/soft/ModernSkeleton';`}
               <div>
                 <h3 className="font-semibold mb-2">Design Tokens</h3>
                 <pre className="bg-gray-100 p-4 rounded-lg text-sm overflow-x-auto">
-{`import { designTokens } from '@/lib/design-tokens';
+                  {`import { designTokens } from '@/lib/design-tokens';
 
 // Access tokens
 const shadow = designTokens.shadows.md;
@@ -1169,7 +1147,7 @@ const spacing = designTokens.spacing.md;`}
               <div>
                 <h3 className="font-semibold mb-2">Animation Variants</h3>
                 <pre className="bg-gray-100 p-4 rounded-lg text-sm overflow-x-auto">
-{`import { cardVariants, buttonVariants } from '@/lib/animations/exploreAnimations';
+                  {`import { cardVariants, buttonVariants } from '@/lib/animations/exploreAnimations';
 import { motion } from 'framer-motion';
 
 <motion.div variants={cardVariants} initial="initial" animate="animate">
@@ -1181,7 +1159,7 @@ import { motion } from 'framer-motion';
               <div>
                 <h3 className="font-semibold mb-2">Tailwind Utilities</h3>
                 <pre className="bg-gray-100 p-4 rounded-lg text-sm overflow-x-auto">
-{`// Available custom utilities
+                  {`// Available custom utilities
 .modern-card       // Default card with shadow
 .glass-overlay     // Glass effect with blur
 .modern-btn        // Modern button style
@@ -1211,7 +1189,7 @@ import { motion } from 'framer-motion';
           <p className="text-gray-600 mb-4">
             Intelligent video preloading with network speed detection and adaptive loading.
           </p>
-          
+
           <ModernCard className="p-6 mb-6">
             <h3 className="font-semibold mb-3">Features</h3>
             <ul className="space-y-2 text-sm text-gray-600">
@@ -1228,7 +1206,7 @@ import { motion } from 'framer-motion';
             <h3 className="font-semibold mb-3">Usage Example</h3>
             <div className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto">
               <pre className="text-xs">
-{`import { useVideoPreload } from '@/hooks/useVideoPreload';
+                {`import { useVideoPreload } from '@/hooks/useVideoPreload';
 
 const { isLowBandwidth, networkInfo, isPreloaded } = useVideoPreload({
   currentIndex: 0,
@@ -1287,7 +1265,7 @@ const { isLowBandwidth, networkInfo, isPreloaded } = useVideoPreload({
           <p className="text-gray-600 mb-4">
             Modern filter panel with Zustand integration and Airbnb-inspired chip-style filters.
           </p>
-          
+
           <ModernCard className="p-6 mb-6">
             <h3 className="font-semibold mb-3">Features</h3>
             <ul className="space-y-2 text-sm text-gray-600">
@@ -1306,7 +1284,7 @@ const { isLowBandwidth, networkInfo, isPreloaded } = useVideoPreload({
             <h3 className="font-semibold mb-3">Usage Example</h3>
             <div className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto">
               <pre className="text-xs">
-{`import { FilterPanel } from '@/components/explore-discovery/FilterPanel';
+                {`import { FilterPanel } from '@/components/explore-discovery/FilterPanel';
 import { useExploreFiltersStore } from '@/store/exploreFiltersStore';
 
 function MyComponent() {
@@ -1386,7 +1364,7 @@ function MyComponent() {
           <p className="text-gray-600 mb-4">
             Drag-to-close bottom sheet with snap points, keyboard navigation, and focus trap.
           </p>
-          
+
           <ModernCard className="p-6 mb-6">
             <h3 className="font-semibold mb-3">Features</h3>
             <ul className="space-y-2 text-sm text-gray-600">
@@ -1405,7 +1383,7 @@ function MyComponent() {
             <h3 className="font-semibold mb-3">Responsive Wrapper</h3>
             <div className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto">
               <pre className="text-xs">
-{`import { ResponsiveFilterPanel } from '@/components/explore-discovery/ResponsiveFilterPanel';
+                {`import { ResponsiveFilterPanel } from '@/components/explore-discovery/ResponsiveFilterPanel';
 
 // Automatically uses mobile bottom sheet on mobile, desktop panel on desktop
 <ResponsiveFilterPanel
@@ -1472,7 +1450,8 @@ function MyComponent() {
               </code>
             </p>
             <p className="text-sm text-gray-600 mt-2">
-              💡 To test on desktop, resize your browser to mobile width (&lt;768px) or use device emulation
+              💡 To test on desktop, resize your browser to mobile width (&lt;768px) or use device
+              emulation
             </p>
           </div>
         </section>

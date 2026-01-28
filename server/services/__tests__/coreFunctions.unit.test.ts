@@ -1,7 +1,7 @@
 /**
  * Core Functions Unit Tests
  * Unit tests for core utility functions used across the Google Places integration
- * 
+ *
  * Task 24: Write unit tests for core functions
  * - Test address component extraction logic
  * - Test slug generation from location names
@@ -30,7 +30,7 @@ function createMockPlaceDetails(
   components: AddressComponent[],
   lat: number,
   lng: number,
-  viewport?: PlaceGeometry['viewport']
+  viewport?: PlaceGeometry['viewport'],
 ): PlaceDetails {
   return {
     placeId: 'test-place-id',
@@ -255,8 +255,8 @@ describe('Slug Generation', () => {
     });
 
     it('should remove special characters', () => {
-      expect(generateSlug('St. John\'s')).toBe('st-johns');
-      expect(generateSlug('O\'Reilly Street')).toBe('oreilly-street');
+      expect(generateSlug("St. John's")).toBe('st-johns');
+      expect(generateSlug("O'Reilly Street")).toBe('oreilly-street');
       expect(generateSlug('Main Road (North)')).toBe('main-road-north');
     });
 
@@ -330,7 +330,7 @@ describe('Coordinate Validation', () => {
 
     it('should reject coordinates with less than 6 decimal places', () => {
       expect(validateCoordinatePrecision(-26.2041, 28.0473)).toBe(false);
-      expect(validateCoordinatePrecision(-26.20, 28.04)).toBe(false);
+      expect(validateCoordinatePrecision(-26.2, 28.04)).toBe(false);
     });
 
     it('should reject integer coordinates', () => {
@@ -339,7 +339,7 @@ describe('Coordinate Validation', () => {
 
     it('should handle coordinates with different precision', () => {
       // Lat has 6, lng has 5 - should fail
-      expect(validateCoordinatePrecision(-26.204118, 28.04730)).toBe(false);
+      expect(validateCoordinatePrecision(-26.204118, 28.0473)).toBe(false);
       // Lat has 5, lng has 6 - should fail
       expect(validateCoordinatePrecision(-26.20411, 28.047305)).toBe(false);
     });
@@ -366,7 +366,7 @@ describe('Coordinate Validation', () => {
       // London
       expect(validateSouthAfricaBoundaries(51.5074, -0.1278)).toBe(false);
       // New York
-      expect(validateSouthAfricaBoundaries(40.7128, -74.0060)).toBe(false);
+      expect(validateSouthAfricaBoundaries(40.7128, -74.006)).toBe(false);
       // Sydney
       expect(validateSouthAfricaBoundaries(-33.8688, 151.2093)).toBe(false);
     });
@@ -422,7 +422,7 @@ describe('URL Generation', () => {
     it('should generate correct province URL format', () => {
       const provinceSlug = generateSlug('Gauteng');
       const url = `/south-africa/${provinceSlug}`;
-      
+
       expect(url).toBe('/south-africa/gauteng');
       expect(url).toMatch(/^\/south-africa\/[a-z0-9-]+$/);
     });
@@ -430,7 +430,7 @@ describe('URL Generation', () => {
     it('should handle multi-word province names', () => {
       const provinceSlug = generateSlug('Western Cape');
       const url = `/south-africa/${provinceSlug}`;
-      
+
       expect(url).toBe('/south-africa/western-cape');
     });
   });
@@ -440,7 +440,7 @@ describe('URL Generation', () => {
       const provinceSlug = generateSlug('Gauteng');
       const citySlug = generateSlug('Johannesburg');
       const url = `/south-africa/${provinceSlug}/${citySlug}`;
-      
+
       expect(url).toBe('/south-africa/gauteng/johannesburg');
       expect(url).toMatch(/^\/south-africa\/[a-z0-9-]+\/[a-z0-9-]+$/);
     });
@@ -449,7 +449,7 @@ describe('URL Generation', () => {
       const provinceSlug = generateSlug('Western Cape');
       const citySlug = generateSlug('Cape Town');
       const url = `/south-africa/${provinceSlug}/${citySlug}`;
-      
+
       expect(url).toBe('/south-africa/western-cape/cape-town');
     });
   });
@@ -460,7 +460,7 @@ describe('URL Generation', () => {
       const citySlug = generateSlug('Johannesburg');
       const suburbSlug = generateSlug('Sandton');
       const url = `/south-africa/${provinceSlug}/${citySlug}/${suburbSlug}`;
-      
+
       expect(url).toBe('/south-africa/gauteng/johannesburg/sandton');
       expect(url).toMatch(/^\/south-africa\/[a-z0-9-]+\/[a-z0-9-]+\/[a-z0-9-]+$/);
     });
@@ -470,7 +470,7 @@ describe('URL Generation', () => {
       const citySlug = generateSlug('Cape Town');
       const suburbSlug = generateSlug('Sea Point');
       const url = `/south-africa/${provinceSlug}/${citySlug}/${suburbSlug}`;
-      
+
       expect(url).toBe('/south-africa/western-cape/cape-town/sea-point');
     });
   });
@@ -480,11 +480,11 @@ describe('URL Generation', () => {
       const provinceSlug = generateSlug('Gauteng');
       const citySlug = generateSlug('Johannesburg');
       const suburbSlug = generateSlug('Sandton');
-      
+
       const provinceUrl = `/south-africa/${provinceSlug}`;
       const cityUrl = `/south-africa/${provinceSlug}/${citySlug}`;
       const suburbUrl = `/south-africa/${provinceSlug}/${citySlug}/${suburbSlug}`;
-      
+
       // City URL should start with province URL
       expect(cityUrl.startsWith(provinceUrl)).toBe(true);
       // Suburb URL should start with city URL
@@ -502,7 +502,7 @@ describe('Cache Logic', () => {
     // Note: These tests would require access to the SimpleCache class
     // which is currently private in googlePlacesService.ts
     // For now, we'll test the cache behavior through the service interface
-    
+
     it('should be tested through service interface', () => {
       // This is a placeholder to indicate that cache logic is tested
       // through the GooglePlacesService integration tests
@@ -516,7 +516,7 @@ describe('Cache Logic', () => {
       const countryRestriction = 'ZA';
       const cacheKey1 = `places:autocomplete:${input}:${countryRestriction}`;
       const cacheKey2 = `places:autocomplete:${input}:${countryRestriction}`;
-      
+
       expect(cacheKey1).toBe(cacheKey2);
     });
 
@@ -524,10 +524,10 @@ describe('Cache Logic', () => {
       const input1 = 'Johannesburg';
       const input2 = 'Cape Town';
       const countryRestriction = 'ZA';
-      
+
       const cacheKey1 = `places:autocomplete:${input1}:${countryRestriction}`;
       const cacheKey2 = `places:autocomplete:${input2}:${countryRestriction}`;
-      
+
       expect(cacheKey1).not.toBe(cacheKey2);
     });
 
@@ -535,10 +535,10 @@ describe('Cache Logic', () => {
       const input1 = 'johannesburg';
       const input2 = 'Johannesburg';
       const countryRestriction = 'ZA';
-      
+
       const cacheKey1 = `places:autocomplete:${input1}:${countryRestriction}`;
       const cacheKey2 = `places:autocomplete:${input2}:${countryRestriction}`;
-      
+
       expect(cacheKey1).not.toBe(cacheKey2);
     });
   });
@@ -608,13 +608,13 @@ describe('Edge Cases', () => {
     it('should handle very long strings', () => {
       const longString = 'a'.repeat(1000);
       const slug = generateSlug(longString);
-      
+
       expect(slug).toBe(longString);
       expect(slug.length).toBe(1000);
     });
 
     it('should handle strings with mixed case and special characters', () => {
-      expect(generateSlug('St. John\'s-on-the-Lake')).toBe('st-johns-on-the-lake');
+      expect(generateSlug("St. John's-on-the-Lake")).toBe('st-johns-on-the-lake');
     });
 
     it('should handle strings with numbers and letters', () => {

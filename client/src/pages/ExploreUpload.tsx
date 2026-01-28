@@ -1,6 +1,16 @@
 import { useState } from 'react';
 import { useLocation } from 'wouter';
-import { Upload, Image as ImageIcon, Video, X, Plus, Sparkles, CheckCircle, Eye, ArrowLeft } from 'lucide-react';
+import {
+  Upload,
+  Image as ImageIcon,
+  Video,
+  X,
+  Plus,
+  Sparkles,
+  CheckCircle,
+  Eye,
+  ArrowLeft,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -28,7 +38,7 @@ export default function ExploreUpload() {
   const [, setLocation] = useLocation();
   const { user, isAuthenticated } = useAuth();
   const { toast } = useToast();
-  
+
   const [title, setTitle] = useState('');
   const [caption, setCaption] = useState('');
   const [mediaFiles, setMediaFiles] = useState<UploadedMedia[]>([]);
@@ -63,11 +73,11 @@ export default function ExploreUpload() {
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
-    
+
     files.forEach(file => {
       const isImage = file.type.startsWith('image/');
       const isVideo = file.type.startsWith('video/');
-      
+
       if (!isImage && !isVideo) {
         toast({
           title: 'Invalid file type',
@@ -78,7 +88,7 @@ export default function ExploreUpload() {
       }
 
       const reader = new FileReader();
-      reader.onload = (event) => {
+      reader.onload = event => {
         const newMedia: UploadedMedia = {
           id: Math.random().toString(36).substr(2, 9),
           url: event.target?.result as string,
@@ -113,7 +123,7 @@ export default function ExploreUpload() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!title.trim()) {
       toast({
         title: 'Title required',
@@ -137,10 +147,10 @@ export default function ExploreUpload() {
     try {
       // Step 1: Upload all media files to S3
       const uploadedUrls: string[] = [];
-      
+
       for (let i = 0; i < mediaFiles.length; i++) {
         const media = mediaFiles[i];
-        
+
         toast({
           title: `Uploading ${media.type} ${i + 1}/${mediaFiles.length}`,
           description: 'Please wait...',
@@ -186,9 +196,10 @@ export default function ExploreUpload() {
         title: title.trim(),
         caption: caption.trim() || undefined,
         mediaUrls: uploadedUrls, // Now using S3 URLs instead of data URLs
-        highlights: highlights.filter(h => h.trim()).length > 0 
-          ? highlights.filter(h => h.trim()) 
-          : undefined,
+        highlights:
+          highlights.filter(h => h.trim()).length > 0
+            ? highlights.filter(h => h.trim())
+            : undefined,
         listingId: selectedListingId || undefined,
         attributeToAgency, // NEW: Pass agency attribution preference
       });
@@ -198,16 +209,18 @@ export default function ExploreUpload() {
       setCaption('');
       setMediaFiles([]);
       setHighlights(['']);
-      
+
       // Set return path and show success modal
       setReturnPath(getReturnPath());
       setShowSuccessModal(true);
-      
     } catch (error) {
       console.error('Upload error:', error);
       toast({
         title: 'Upload failed',
-        description: error instanceof Error ? error.message : 'There was an error uploading your content. Please try again.',
+        description:
+          error instanceof Error
+            ? error.message
+            : 'There was an error uploading your content. Please try again.',
         variant: 'destructive',
       });
     } finally {
@@ -220,11 +233,7 @@ export default function ExploreUpload() {
       <div className="container max-w-4xl">
         {/* Header */}
         <div className="mb-8">
-          <Button
-            variant="ghost"
-            onClick={() => setLocation('/explore')}
-            className="mb-4"
-          >
+          <Button variant="ghost" onClick={() => setLocation('/explore')} className="mb-4">
             ← Back to Explore
           </Button>
           <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
@@ -286,11 +295,7 @@ export default function ExploreUpload() {
                               className="w-full h-full object-cover"
                             />
                           ) : (
-                            <video
-                              src={media.url}
-                              className="w-full h-full object-cover"
-                              muted
-                            />
+                            <video src={media.url} className="w-full h-full object-cover" muted />
                           )}
                         </div>
                         <button
@@ -316,9 +321,7 @@ export default function ExploreUpload() {
             <Card>
               <CardHeader>
                 <CardTitle>Content Details</CardTitle>
-                <CardDescription>
-                  Add a compelling title and description
-                </CardDescription>
+                <CardDescription>Add a compelling title and description</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
@@ -326,7 +329,7 @@ export default function ExploreUpload() {
                   <Input
                     id="title"
                     value={title}
-                    onChange={(e) => setTitle(e.target.value)}
+                    onChange={e => setTitle(e.target.value)}
                     placeholder="e.g., Stunning 3BR Apartment in Sandton"
                     maxLength={255}
                     required
@@ -338,7 +341,7 @@ export default function ExploreUpload() {
                   <Textarea
                     id="caption"
                     value={caption}
-                    onChange={(e) => setCaption(e.target.value)}
+                    onChange={e => setCaption(e.target.value)}
                     placeholder="Add a description to engage viewers..."
                     rows={4}
                     maxLength={500}
@@ -357,16 +360,14 @@ export default function ExploreUpload() {
                   <Sparkles className="h-5 w-5" />
                   Highlights
                 </CardTitle>
-                <CardDescription>
-                  Add up to 4 key features (optional)
-                </CardDescription>
+                <CardDescription>Add up to 4 key features (optional)</CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
                 {highlights.map((highlight, index) => (
                   <div key={index} className="flex gap-2">
                     <Input
                       value={highlight}
-                      onChange={(e) => updateHighlight(index, e.target.value)}
+                      onChange={e => updateHighlight(index, e.target.value)}
                       placeholder={`Highlight ${index + 1}`}
                       maxLength={50}
                     />
@@ -382,7 +383,7 @@ export default function ExploreUpload() {
                     )}
                   </div>
                 ))}
-                
+
                 {highlights.length < 4 && (
                   <Button
                     type="button"
@@ -404,12 +405,7 @@ export default function ExploreUpload() {
               <Card className="border-blue-200 bg-blue-50/50">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-blue-900">
-                    <svg
-                      className="h-5 w-5"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
+                    <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path
                         strokeLinecap="round"
                         strokeLinejoin="round"
@@ -430,9 +426,7 @@ export default function ExploreUpload() {
                         {user?.username?.charAt(0).toUpperCase() || 'A'}
                       </div>
                       <div className="flex-1">
-                        <p className="font-medium text-gray-900">
-                          Your Agency
-                        </p>
+                        <p className="font-medium text-gray-900">Your Agency</p>
                         <p className="text-sm text-gray-600">
                           This content will help build your agency's brand presence
                         </p>
@@ -444,7 +438,7 @@ export default function ExploreUpload() {
                         type="checkbox"
                         id="attributeToAgency"
                         checked={attributeToAgency}
-                        onChange={(e) => setAttributeToAgency(e.target.checked)}
+                        onChange={e => setAttributeToAgency(e.target.checked)}
                         className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                       />
                       <label
@@ -458,7 +452,8 @@ export default function ExploreUpload() {
                     {!attributeToAgency && (
                       <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
                         <p className="text-sm text-yellow-800">
-                          <strong>Note:</strong> Content will be attributed to you individually, not your agency.
+                          <strong>Note:</strong> Content will be attributed to you individually, not
+                          your agency.
                         </p>
                       </div>
                     )}
@@ -501,7 +496,7 @@ export default function ExploreUpload() {
               Your content has been published to Explore and is now live for everyone to see.
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="flex flex-col gap-3 mt-4">
             <Button
               onClick={() => {
@@ -513,7 +508,7 @@ export default function ExploreUpload() {
               <Eye className="mr-2 h-4 w-4" />
               View on Explore
             </Button>
-            
+
             <Button
               variant="outline"
               onClick={() => {
@@ -525,7 +520,7 @@ export default function ExploreUpload() {
               <ArrowLeft className="mr-2 h-4 w-4" />
               Back to Dashboard
             </Button>
-            
+
             <Button
               variant="ghost"
               onClick={() => {

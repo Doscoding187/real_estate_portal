@@ -3,12 +3,7 @@ import { useLocation } from 'wouter';
 import { trpc } from '@/lib/trpc';
 import { Plus, Search, Filter, MoreVertical, AlertCircle, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
@@ -43,23 +38,32 @@ const DevelopmentsList: React.FC = () => {
       toast.success('Development deleted successfully');
       refetch();
     },
-    onError: (error) => {
+    onError: error => {
       toast.error(error.message || 'Failed to delete development');
     },
   });
 
   const handleDelete = (devId: number, devName: string) => {
-    if (window.confirm(`Are you sure you want to delete "${devName}"? This action cannot be undone.`)) {
+    // HARD GUARD: Prevent sending undefined/bad IDs to the server
+    if (!devId || typeof devId !== 'number') {
+      console.error('[DevelopmentsList] Cannot delete: Invalid ID', { devId, devName });
+      toast.error('Cannot delete: Missing development ID');
+      return;
+    }
+
+    if (
+      window.confirm(`Are you sure you want to delete "${devName}"? This action cannot be undone.`)
+    ) {
       deleteMutation.mutate({ id: devId });
     }
   };
-  
+
   const safeDevelopments = developments || [];
 
   const filteredDevelopments = safeDevelopments.filter(
     (dev: any) =>
       dev.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (dev.city && dev.city.toLowerCase().includes(searchTerm.toLowerCase()))
+      (dev.city && dev.city.toLowerCase().includes(searchTerm.toLowerCase())),
   );
 
   // Status Badge Logic
@@ -71,45 +75,61 @@ const DevelopmentsList: React.FC = () => {
             <Tooltip>
               <TooltipTrigger>
                 <Badge variant="destructive" className="cursor-help flex items-center gap-1">
-                   <AlertCircle className="w-3 h-3" /> Rejected
+                  <AlertCircle className="w-3 h-3" /> Rejected
                 </Badge>
               </TooltipTrigger>
               <TooltipContent className="max-w-xs bg-red-900 text-white border-red-800">
                 <p className="font-semibold mb-1">Reason for Rejection:</p>
-                <p>{dev.rejectionReason || "Please contact support for details."}</p>
+                <p>{dev.rejectionReason || 'Please contact support for details.'}</p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
         );
       case 'pending':
-        return <Badge className="bg-orange-100 text-orange-700 hover:bg-orange-200 border-orange-200">Pending Review</Badge>;
+        return (
+          <Badge className="bg-orange-100 text-orange-700 hover:bg-orange-200 border-orange-200">
+            Pending Review
+          </Badge>
+        );
       case 'approved':
         // If approved, check if published
-        // Note: Backend might need to return isPublished 
-        return <Badge className="bg-green-100 text-green-700 hover:bg-green-200 border-green-200">Live</Badge>;
+        // Note: Backend might need to return isPublished
+        return (
+          <Badge className="bg-green-100 text-green-700 hover:bg-green-200 border-green-200">
+            Live
+          </Badge>
+        );
       default:
         return <Badge variant="secondary">Draft</Badge>;
     }
   };
 
-
   // Robust image parser helper
   const safelyParseImages = (imagesData: any): string[] => {
+    let images: any[] = [];
     if (!imagesData) return [];
-    if (Array.isArray(imagesData)) return imagesData;
-    if (typeof imagesData === 'string') {
+
+    if (Array.isArray(imagesData)) {
+      images = imagesData;
+    } else if (typeof imagesData === 'string') {
       try {
         const parsed = JSON.parse(imagesData);
-        if (Array.isArray(parsed)) return parsed;
-        if (typeof parsed === 'string') return [parsed]; // Handle "url" case
-        return []; 
+        if (Array.isArray(parsed)) images = parsed;
+        else if (typeof parsed === 'string') images = [parsed];
       } catch (e) {
         // If parsing fails, it might be a raw comma-separated list or a single URL
-        if (imagesData.startsWith('http')) return [imagesData];
-        return [];
+        if (imagesData.startsWith('http')) images = [imagesData];
       }
     }
-    return [];
+
+    // Normalize elements to strings
+    return images.map(img => {
+      // Handle string URLs
+      if (typeof img === 'string') return img;
+      // Handle image objects (e.g. { url: "...", category: "hero" })
+      if (typeof img === 'object' && img !== null && img.url) return img.url;
+      return null;
+    }).filter(url => typeof url === 'string' && url.length > 0) as string[];
   };
 
   return (
@@ -122,7 +142,10 @@ const DevelopmentsList: React.FC = () => {
             Manage all your property developments in one place
           </p>
         </div>
-        <Button className="bg-accent hover:bg-accent/90" onClick={() => setLocation('/developer/create-development')}>
+        <Button
+          className="bg-accent hover:bg-accent/90"
+          onClick={() => setLocation('/developer/create-development')}
+        >
           <Plus className="h-4 w-4 mr-2" />
           Add New Development
         </Button>
@@ -152,40 +175,49 @@ const DevelopmentsList: React.FC = () => {
       {/* Developments Grid */}
       <div className="grid grid-cols-1 gap-4">
         {filteredDevelopments.map(dev => {
+          // Debugging: Check if ID is present
+          if (!dev.id) console.warn('[DevelopmentsList] Item missing ID:', dev);
+
           const parsedImages = safelyParseImages(dev.images);
           return (
-           <EntityStatusCard
+            <EntityStatusCard
               key={dev.id}
               type="development"
               data={{
-                  ...dev,
-                  // Map backend status to frontend status for the card
-                  status: dev.isPublished ? 'published' : 
-                          dev.approvalStatus === 'approved' ? 'approved' : 
-                          dev.approvalStatus === 'pending' ? 'pending' : 
-                          dev.approvalStatus === 'rejected' ? 'rejected' : 'draft',
-                  images: parsedImages, // Use safely parsed images
-                  priceFrom: dev.priceFrom, 
+                ...dev,
+                // Map backend status to frontend status for the card
+                status: dev.isPublished
+                  ? 'published'
+                  : dev.approvalStatus === 'approved'
+                    ? 'approved'
+                    : dev.approvalStatus === 'pending'
+                      ? 'pending'
+                      : dev.approvalStatus === 'rejected'
+                        ? 'rejected'
+                        : 'draft',
+                images: parsedImages, // Use safely parsed images
+                priceFrom: dev.priceFrom,
               }}
               readiness={calculateDevelopmentReadiness({
-                  name: dev.name,
-                  description: dev.description, // Ensure description is fetched
-                  address: dev.address || dev.city,
-                  latitude: dev.latitude,
-                  longitude: dev.longitude,
-                  images: parsedImages,
-                  priceFrom: dev.priceFrom // Ensure priceFrom is fetched
+                name: dev.name,
+                description: dev.description, // Ensure description is fetched
+                address: dev.address || dev.city,
+                latitude: dev.latitude,
+                longitude: dev.longitude,
+                images: parsedImages,
+                priceFrom: dev.priceFrom, // Ensure priceFrom is fetched
               })}
-              onEdit={(id) => setLocation(`/developer/create-development?id=${id}`)}
-              onDelete={(id) => handleDelete(id, dev.name)}
-              onView={(id) => setLocation(`/development/${id}`)}
-           />
-        )})}
-        
+              onEdit={id => setLocation(`/developer/create-development?id=${id}`)}
+              onDelete={id => handleDelete(id, dev.name)}
+              onView={id => setLocation(`/development/${id}`)}
+            />
+          );
+        })}
+
         {filteredDevelopments.length === 0 && (
-             <div className="text-center py-12 bg-white rounded-lg border border-dashed text-slate-500">
-                No developments found matching your search.
-             </div>
+          <div className="text-center py-12 bg-white rounded-lg border border-dashed text-slate-500">
+            No developments found matching your search.
+          </div>
         )}
       </div>
     </div>

@@ -1,206 +1,245 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useLocation } from 'wouter';
+import { toast } from 'sonner';
+
 import { useDevelopmentWizard } from '@/hooks/useDevelopmentWizard';
-import { useWizardNavigation } from '@/hooks/useWizardNavigation';
 import { useAutoSave } from '@/hooks/useAutoSave';
-import { SaveStatusIndicator } from '@/components/ui/SaveStatusIndicator';
 import { DraftManager } from '@/components/wizard/DraftManager';
-import { ProgressIndicator, generateSteps } from '@/components/wizard/ProgressIndicator';
 import { ErrorAlert } from '@/components/ui/ErrorAlert';
 import { parseError, type AppError } from '@/lib/errors/ErrorRecoveryStrategy';
-import { handleSessionExpiry, wasSessionExpired, clearSessionExpiryFlags } from '@/lib/auth/SessionExpiryHandler';
+import { wasSessionExpired, clearSessionExpiryFlags } from '@/lib/auth/SessionExpiryHandler';
 import { useAuth } from '@/_core/hooks/useAuth';
-import { Button } from '@/components/ui/button';
-import { useLocation, useRoute } from 'wouter';
-import { toast } from 'sonner';
 import { trpc } from '@/lib/trpc';
-import { cn } from '@/lib/utils';
-import { ReadinessIndicator } from '@/components/common/ReadinessIndicator';
-import { calculateDevelopmentReadiness } from '@/lib/readiness';
-import { 
-  AlertDialog, 
-  AlertDialogAction, 
-  AlertDialogCancel, 
-  AlertDialogContent, 
-  AlertDialogDescription, 
-  AlertDialogFooter, 
-  AlertDialogHeader, 
-  AlertDialogTitle 
+import { getVisibleSteps, getWorkflow } from '@/lib/workflows';
+
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 
-// Import Phases
-import { DevelopmentTypePhase } from './phases/DevelopmentTypePhase';
-import { RepresentationPhase } from './phases/RepresentationPhase';
-import { ResidentialConfigPhase } from './phases/ResidentialConfigPhase';
-import { LandConfigPhase } from './phases/LandConfigPhase';
-import { CommercialConfigPhase } from './phases/CommercialConfigPhase';
-import { MixedUseConfigPhase } from './phases/MixedUseConfigPhase';
-import { IdentityPhase } from './phases/IdentityPhase';
-import { LocationPhase } from './phases/LocationPhase';
-import { EstateProfilePhase } from './phases/EstateProfilePhase';
-import { AmenitiesPhase } from './phases/AmenitiesPhase';
-import { MediaPhase } from './phases/MediaPhase';
-import { ClassificationPhase } from './phases/ClassificationPhase';
-import { OverviewPhase } from './phases/OverviewPhase';
-import { UnitTypesPhase } from './phases/UnitTypesPhase';
-import { FinalisationPhase } from './phases/FinalisationPhase';
-
-// Phase Definitions (matches renderPhase cases)
-const PHASES = [
-  'Representation',       // 1
-  'Development Type',     // 2
-  'Configuration',        // 3
-  'Project Identity',     // 4 (was 'Basic Details')
-  'Location',             // 5
-  'Development Profile',  // 6 (conditional - skipped for Land/Commercial)
-  'Amenities',            // 7
-  'Marketing Summary',    // 8 (was 'Overview')
-  'Media',                // 9
-  'Unit Types',           // 10
-  'Review & Publish'      // 11 (was 'Publish')
-];
+import { WizardEngine } from '../wizard/WizardEngine';
 
 interface DevelopmentWizardProps {
-  developmentId?: number;
   isModal?: boolean;
 }
 
-export function DevelopmentWizard({ developmentId, isModal = false }: DevelopmentWizardProps) {
+const parseNumericParam = (value: string | null) => {
+  if (!value) return undefined;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : undefined;
+};
+
+export function DevelopmentWizard({ isModal = false }: DevelopmentWizardProps) {
   const [, setLocation] = useLocation();
-  const [, params] = useRoute('/developer/create-development');
+
+  // --- URL params (source of truth for mode) ---
   const urlParams = new URLSearchParams(window.location.search);
   const draftIdFromUrl = urlParams.get('draftId');
   const idFromUrl = urlParams.get('id');
-  const brandProfileId = urlParams.get('brandProfileId') ? parseInt(urlParams.get('brandProfileId')!) : undefined;
-  
-  const [currentDraftId, setCurrentDraftId] = useState<number | undefined>(draftIdFromUrl ? parseInt(draftIdFromUrl) : undefined);
-  
-  // Resolve development ID from props or URL
-  const activeDevelopmentId = developmentId || (idFromUrl ? parseInt(idFromUrl) : undefined);
+  const brandProfileId = urlParams.get('brandProfileId')
+    ? parseInt(urlParams.get('brandProfileId')!, 10)
+    : undefined;
+
+  const editId = parseNumericParam(idFromUrl);
+  const draftId = parseNumericParam(draftIdFromUrl);
+
+  const isEditMode = editId != null;
+  const isDraftMode = draftId != null;
+
+  // Keep draftId in state because new drafts get an ID after save
+  const [currentDraftId, setCurrentDraftId] = useState<number | undefined>(draftId);
+  useEffect(() => {
+    setCurrentDraftId(draftId);
+  }, [draftId]);
 
   const [showExitDialog, setShowExitDialog] = useState(false);
   const [showResumeDraftDialog, setShowResumeDraftDialog] = useState(false);
   const [apiError, setApiError] = useState<AppError | null>(null);
+
   const store = useDevelopmentWizard();
-  const navigation = useWizardNavigation();
-  
-  // Destructure from store
-  const { 
-    currentPhase, setPhase, developmentType, developmentData, classification, overview, unitTypes, finalisation, 
-    reset, saveDraft, hydrateDevelopment
-  } = store;
-
-  // Mutation for saving drafts
-  const saveDraftMutation = trpc.developer.saveDraft.useMutation();
-
-  // State to track if we've already hydrated to prevent overwriting user work
-  const [isHydrated, setIsHydrated] = useState(false);
-
-  // Auto-Save Configuration
-  const stateToWatch = React.useMemo(() => ({
-    currentPhase, developmentData, classification, overview, unitTypes, finalisation 
-  }), [currentPhase, developmentData, classification, overview, unitTypes, finalisation]);
-
-  // Calculate readiness
-  const selectedAmenities = store.selectedAmenities;
-  const developmentMedia = store.developmentData.media;
-  
-  const readiness = React.useMemo(() => {
-    // Map store to listing object expected by readiness calculator
-    const devCandidate = {
-       name: developmentData.name,
-       description: overview.description,
-       address: developmentData.location?.address,
-       latitude: developmentData.location?.latitude,
-       longitude: developmentData.location?.longitude,
-       // Collect images from both top-level and media.photos
-       images: developmentMedia?.photos || developmentData.images || [], 
-       // Get priceFrom from unitTypes or residentialConfig
-       priceFrom: unitTypes.priceFrom || store.residentialConfig?.priceRange?.min,
-       // Map selectedAmenities to amenities field
-       amenities: selectedAmenities,
-    };
-    return calculateDevelopmentReadiness(devCandidate);
-  }, [developmentData, overview, unitTypes, selectedAmenities, developmentMedia, store.residentialConfig]);
-
-  const { lastSaved, isSaving, error: autoSaveError, saveNow } = useAutoSave(stateToWatch, {
-    debounceMs: 60000, // Reverted to 1 Minute because 3s caused data loss during hydration debugging
-    onSave: async () => {
-      // Trigger backend draft save
-      await saveDraft(async (data) => {
-        const result = await saveDraftMutation.mutateAsync({
-          id: currentDraftId,
-          brandProfileId: brandProfileId, // Pass brand context
-          draftData: data
-        });
-        // If it was a new draft, update the ID
-        if (result?.id && !currentDraftId) setCurrentDraftId(result.id);
-      });
-    }
+  const [persistReady, setPersistReady] = useState(() => {
+    return useDevelopmentWizard.persist?.hasHydrated?.() ?? true;
   });
 
-  // Save on phase transition (user-requested behavior)
-  const prevPhaseRef = React.useRef(currentPhase);
+  const {
+    currentPhase,
+    setPhase,
+    developmentType,
+    developmentData,
+    classification,
+    overview,
+    unitTypes,
+    finalisation,
+    reset,
+    saveDraft,
+    hydrateDevelopment,
+    initializeWorkflow,
+    setWorkflowStep,
+  } = store;
+
+  // Local guard: prevent double-hydration (edit/draft/create)
+  const [isHydrated, setIsHydrated] = useState(false);
+
+  // --- Create mode: wait for persist rehydrate, then hard reset ---
+  useEffect(() => {
+    const persistApi = useDevelopmentWizard.persist;
+    if (!persistApi?.onFinishHydration) {
+      setPersistReady(true);
+      return;
+    }
+
+    if (persistApi.hasHydrated()) setPersistReady(true);
+
+    const unsub = persistApi.onFinishHydration(() => setPersistReady(true));
+    return () => unsub?.();
+  }, []);
+
+  useEffect(() => {
+    if (!persistReady) return;
+    if (!isEditMode && !isDraftMode) {
+      reset();
+      setIsHydrated(true);
+    }
+  }, [persistReady, isEditMode, isDraftMode, reset]);
+
+  // --- Autosave (currently disabled in your code) ---
+  const saveDraftMutation = trpc.developer.saveDraft.useMutation();
+
+  const stateToWatch = useMemo(
+    () => ({
+      currentPhase,
+      developmentData,
+      classification,
+      overview,
+      unitTypes,
+      finalisation,
+    }),
+    [currentPhase, developmentData, classification, overview, unitTypes, finalisation],
+  );
+
+  const { lastSaved, isSaving, error: autoSaveError, saveNow } = useAutoSave(stateToWatch, {
+    debounceMs: 60000,
+    enabled: false, // TODO: re-enable when backend is stable
+    onSave: async () => {
+      await saveDraft(async data => {
+        const result = await saveDraftMutation.mutateAsync({
+          ...(currentDraftId ? { id: currentDraftId } : {}),
+          ...(brandProfileId ? { brandProfileId } : {}),
+          draftData: data,
+        });
+        if (result?.id && !currentDraftId) setCurrentDraftId(result.id);
+      });
+    },
+  });
+
+  // Save on phase transition (only after hydration)
+  const prevPhaseRef = useRef(currentPhase);
   useEffect(() => {
     if (prevPhaseRef.current !== currentPhase && prevPhaseRef.current !== 0) {
-      // Phase changed - trigger immediate save
-      saveNow();
+      if (isHydrated) saveNow();
     }
     prevPhaseRef.current = currentPhase;
-  }, [currentPhase, saveNow]);
+  }, [currentPhase, saveNow, isHydrated]);
 
-  // tRPC hooks for draft operations
-  const { data: loadedDraft, isLoading: isDraftLoading, error: draftError } = trpc.developer.getDraft.useQuery(
+  // --- Queries ---
+  const {
+    data: loadedDraft,
+    isLoading: isDraftLoading,
+    error: draftError,
+  } = trpc.developer.getDraft.useQuery(
     { id: currentDraftId! },
-    { 
-      enabled: !!currentDraftId && !activeDevelopmentId, 
+    {
+      enabled: !!currentDraftId && !isEditMode,
       retry: false,
-      // Critical: Prevent background refetches from overwriting local state
       refetchOnWindowFocus: false,
       refetchOnMount: false,
-      refetchOnReconnect: false
-    }
+      refetchOnReconnect: false,
+    },
   );
 
-  // tRPC hooks for Development Edit Mode
-  const { data: editData, isLoading: isEditLoading, error: loadError } = trpc.developer.getDevelopment.useQuery(
-    { id: activeDevelopmentId! },
-    { 
-      enabled: !!activeDevelopmentId, 
+  const {
+    data: editData,
+    isLoading: isEditLoading,
+    error: loadError,
+  } = trpc.developer.getDevelopment.useQuery(
+    { id: editId! },
+    {
+      enabled: !!editId,
       retry: false,
-      refetchOnWindowFocus: false 
-    }
+      refetchOnWindowFocus: false,
+    },
   );
 
-  // Handle API Errors
+  // --- Error handling ---
   useEffect(() => {
-    const error = loadError || draftError || autoSaveError;
-    if (error) {
-      setApiError(parseError(error));
-    }
+    const err = loadError || draftError || autoSaveError;
+    if (err) setApiError(parseError(err));
   }, [loadError, draftError, autoSaveError]);
 
-  // Hydrate from existing development (Edit Mode)
+  // --- Edit hydration (gated by persist rehydrate) ---
   useEffect(() => {
-    if (editData && !isHydrated) {
-        // Hydrate the store atomically
-        hydrateDevelopment(editData);
-        setIsHydrated(true);
-        // EDIT MODE: Start at Publish step (9) so user can navigate back to edit sections
-        setPhase(9);
-        toast.success('Development loaded for editing. Navigate back to edit any section.');
-    }
-  }, [editData, isHydrated]);
+    if (!persistReady) return;
+    if (!isEditMode) return;
+    if (!editData || isHydrated) return;
 
-  // Auto-load draft logic (Simplified for Phase 2)
+    hydrateDevelopment(editData);
+
+    const devType = editData.developmentType === 'mixed_use' ? 'mixed' : editData.developmentType;
+    const txType =
+      editData.transactionType ?? editData.developmentData?.transactionType ?? 'for_sale';
+
+    if (devType && txType) {
+      initializeWorkflow(devType, txType);
+
+      const wizardData = useDevelopmentWizard.getState().getWizardData();
+      const workflow = getWorkflow(wizardData);
+      const visibleSteps = workflow ? getVisibleSteps(workflow, wizardData) : [];
+
+      const preferredStepId =
+        wizardData.currentStepId ??
+        visibleSteps.find(step => !wizardData.completedSteps?.includes(step.id))?.id ??
+        visibleSteps[0]?.id;
+
+      if (preferredStepId) setWorkflowStep(preferredStepId);
+    }
+
+    setIsHydrated(true);
+    toast.success('Development loaded for editing.');
+  }, [
+    persistReady,
+    isEditMode,
+    editData,
+    isHydrated,
+    hydrateDevelopment,
+    initializeWorkflow,
+    setWorkflowStep,
+  ]);
+
+  // --- Draft hydration (gated by persist rehydrate; never in edit mode) ---
   useEffect(() => {
-    if (loadedDraft && loadedDraft.draftData && !isHydrated) {
-       hydrateDevelopment(loadedDraft.draftData);
-       setIsHydrated(true);
-       toast.success('Draft loaded successfully');
-    }
-  }, [loadedDraft, isHydrated]);
+    if (!persistReady) return;
+    if (isEditMode) return;
+    if (!loadedDraft?.draftData || isHydrated) return;
 
-  // Session recovery
+    hydrateDevelopment(loadedDraft.draftData);
+    setIsHydrated(true);
+    toast.success('Draft loaded successfully');
+  }, [persistReady, isEditMode, loadedDraft, isHydrated, hydrateDevelopment]);
+
+  // --- Legacy phase skip ---
+  useEffect(() => {
+    if (currentPhase !== 6) return;
+    const shouldSkip = developmentType === 'land' || developmentType === 'commercial';
+    if (shouldSkip) setPhase(7);
+  }, [currentPhase, developmentType, setPhase]);
+
+  // --- Session recovery ---
   useEffect(() => {
     if (wasSessionExpired()) {
       clearSessionExpiryFlags();
@@ -211,165 +250,85 @@ export function DevelopmentWizard({ developmentId, isModal = false }: Developmen
   const { user } = useAuth();
   const isSuperAdmin = user?.role === 'super_admin';
 
-  const handleExit = () => setShowExitDialog(true);
-  const confirmExit = () => {
-    reset();
-    // Redirect Super Admin to admin dashboard, others to developer dashboard
-    setLocation(isSuperAdmin ? '/admin/overview' : '/developer');
+  const confirmExit = async () => {
+    try {
+      if (isHydrated) await saveNow();
+    } finally {
+      reset();
+      setLocation(isSuperAdmin ? '/admin/overview' : '/developer');
+    }
   };
 
-  // Generate Progress Steps
-  // Note: progressSteps expects 1-based index but arrays are 0-based
-  const progressSteps = generateSteps(
-    PHASES,
-    currentPhase,
-    [], // TODO: Track completed phases
-    []
-  );
-
-  // Render Current Phase
   const renderPhase = () => {
-    // Show loading state if hydrating
-    if (activeDevelopmentId && isEditLoading) {
-        return (
-            <div className="flex flex-col items-center justify-center h-64 text-gray-500">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
-                <p>Loading development data...</p>
-            </div>
-        );
+    if (isEditMode && isEditLoading) {
+      return (
+        <div className="flex flex-col items-center justify-center h-screen bg-slate-50 text-gray-500">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4" />
+          <p>Loading development data...</p>
+        </div>
+      );
     }
 
-    switch (currentPhase) {
-      case 1: return <RepresentationPhase />;
-      case 2: return <DevelopmentTypePhase />;
-      case 3: 
-        // Route to appropriate config phase based on development type
-        if (developmentType === 'land') {
-          return <LandConfigPhase />;
-        } else if (developmentType === 'commercial') {
-          return <CommercialConfigPhase />;
-        } else if (developmentType === 'mixed_use') {
-          return <MixedUseConfigPhase />;
-        }
-        // Default: Residential
-        return <ResidentialConfigPhase />;
-      case 4: return <IdentityPhase />;
-      case 5: return <LocationPhase />;
-      case 6: 
-        // Conditional: Skip estate profile for Land/Commercial
-        if (developmentType === 'land' || developmentType === 'commercial') {
-          return <AmenitiesPhase />;
-        }
-        if (!navigation.shouldShowEstateProfile) {
-          // Auto-advance to amenities (this will be called once, then navigation handles it)
-          return <AmenitiesPhase />;
-        }
-        return <EstateProfilePhase />;
-      case 7: return <AmenitiesPhase />;
-      case 8: return <OverviewPhase />;
-      case 9: return <MediaPhase />;
-      case 10: return <UnitTypesPhase />; // Unit Types (Step 10 now)
-      case 11: return <FinalisationPhase />; // Publish (Step 11 now)
-      default: return <RepresentationPhase />;
+    // Optional: avoid any flash before persist is ready
+    if (!persistReady) {
+      return (
+        <div className="flex flex-col items-center justify-center h-screen bg-slate-50 text-gray-500">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4" />
+          <p>Preparing wizard...</p>
+        </div>
+      );
     }
+
+    return (
+      <WizardEngine
+        onExit={() => setShowExitDialog(true)}
+        saveStatus={isSaving ? 'saving' : autoSaveError ? 'error' : 'saved'}
+        lastSavedAt={lastSaved}
+      />
+    );
   };
 
   return (
-    <div className={`${isModal ? '' : 'min-h-screen'} bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/40 py-6 md:py-10`}>
+    <>
       <DraftManager
         open={showResumeDraftDialog}
         onOpenChange={setShowResumeDraftDialog}
         onResume={() => setShowResumeDraftDialog(false)}
-        onStartFresh={() => { setShowResumeDraftDialog(false); reset(); }}
+        onStartFresh={() => {
+          setShowResumeDraftDialog(false);
+          setCurrentDraftId(undefined);
+          reset();
+          window.history.replaceState({}, '', window.location.pathname);
+        }}
         wizardType="development"
         draftData={{
           currentStep: currentPhase,
-          totalSteps: 10,
+          totalSteps: 1,
           developmentName: developmentData.name || '',
           address: developmentData.location?.address || '',
           lastModified: loadedDraft?.lastModified || undefined,
         }}
       />
 
-      <div className="container mx-auto px-4 max-w-6xl">
-        {/* Enhanced Header */}
-        <div className="mb-6 md:mb-10">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-4">
-              <div className="h-12 w-1 bg-gradient-to-b from-blue-600 to-purple-600 rounded-full" />
-              <div>
-                <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-blue-600 bg-clip-text text-transparent bg-[length:200%_auto] animate-gradient">
-                  {PHASES[currentPhase - 1]}
-                </h1>
-                <p className="text-slate-600 text-sm md:text-base mt-1">
-                  Step {currentPhase} of {PHASES.length}
-                </p>
-              </div>
-            </div>
-            
-            <div className="flex items-center gap-2 md:gap-3">
-              <SaveStatusIndicator 
-                lastSaved={lastSaved} 
-                isSaving={isSaving} 
-                error={autoSaveError} 
-                variant="compact"
-                className="glass border border-white/40 shadow-sm"
-              />
-              <Button 
-                variant="ghost" 
-                onClick={handleExit}
-                className="text-slate-600 hover:text-slate-900 hover:bg-white/60 transition-all"
-              >
-                Exit
-              </Button>
-            </div>
-          </div>
-          
-           {/* Readiness Indicator (Global) */}
-            <div className="absolute top-8 right-8 flex items-center gap-4">
-                 <div className="bg-white/80 backdrop-blur-md p-1.5 rounded-full shadow-sm">
-                    <ReadinessIndicator score={readiness.score} missing={readiness.missing} size="md" />
-                 </div>
-            </div>
+      {renderPhase()}
 
-          {/* Enhanced Progress Indicator */}
-          <div className="glass border border-white/40 rounded-2xl p-4 md:p-6 shadow-sm">
-            <ProgressIndicator
-              steps={progressSteps}
-              onStepClick={(stepNumber) => {
-                if (stepNumber < currentPhase) setPhase(stepNumber);
-              }} 
-            />
-          </div>
+      {apiError && (
+        <div className="fixed bottom-4 right-4 z-50">
+          <ErrorAlert
+            type={apiError.type}
+            message={apiError.message}
+            retryable={apiError.isRecoverable}
+            onDismiss={() => setApiError(null)}
+            show={true}
+          />
         </div>
+      )}
 
-        {/* Enhanced Phase Content */}
-        <div className="glass border border-white/40 rounded-2xl shadow-lg p-6 md:p-8 lg:p-10 mb-8 min-h-[500px] animate-slide-up">
-          {renderPhase()}
-        </div>
-
-        {/* Error Alert */}
-        {apiError && (
-          <div className="mt-4">
-            <ErrorAlert
-              type={apiError.type}
-              message={apiError.message}
-              retryable={apiError.isRecoverable}
-              onDismiss={() => setApiError(null)}
-              show={true}
-            />
-          </div>
-        )}
-      </div>
-
-      {/* Exit Confirmation Dialog */}
       <AlertDialog open={showExitDialog} onOpenChange={setShowExitDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Exit Development Wizard?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Your progress will be saved as a draft.
-            </AlertDialogDescription>
+            <AlertDialogDescription>Your progress will be saved as a draft.</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Continue Editing</AlertDialogCancel>
@@ -377,6 +336,6 @@ export function DevelopmentWizard({ developmentId, isModal = false }: Developmen
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </>
   );
 }

@@ -5,11 +5,7 @@ import { developerSubscriptionService } from '../services/developerSubscriptionS
  * Middleware to check if developer can create a development based on tier limits
  * Validates: Requirements 13.1, 13.4
  */
-export async function checkDevelopmentLimit(
-  req: Request,
-  res: Response,
-  next: NextFunction
-) {
+export async function checkDevelopmentLimit(req: Request, res: Response, next: NextFunction) {
   try {
     const developerId = parseInt(req.body.developerId || req.params.developerId);
 
@@ -54,11 +50,7 @@ export async function checkDevelopmentLimit(
  * Middleware to check if developer can capture a lead based on tier limits
  * Validates: Requirements 13.1, 13.4
  */
-export async function checkLeadLimit(
-  req: Request,
-  res: Response,
-  next: NextFunction
-) {
+export async function checkLeadLimit(req: Request, res: Response, next: NextFunction) {
   try {
     const developerId = parseInt(req.body.developerId || req.params.developerId);
 
@@ -103,11 +95,7 @@ export async function checkLeadLimit(
  * Middleware to check if developer can add a team member based on tier limits
  * Validates: Requirements 13.1, 13.4
  */
-export async function checkTeamMemberLimit(
-  req: Request,
-  res: Response,
-  next: NextFunction
-) {
+export async function checkTeamMemberLimit(req: Request, res: Response, next: NextFunction) {
   try {
     const developerId = parseInt(req.body.developerId || req.params.developerId);
 
@@ -151,7 +139,9 @@ export async function checkTeamMemberLimit(
 /**
  * Middleware to check if developer has access to a feature based on tier
  */
-export async function checkFeatureAccess(feature: 'crm' | 'advanced_analytics' | 'bond_integration') {
+export async function checkFeatureAccess(
+  feature: 'crm' | 'advanced_analytics' | 'bond_integration',
+) {
   return async (req: Request, res: Response, next: NextFunction) => {
     try {
       const developerId = parseInt(req.body.developerId || req.params.developerId);

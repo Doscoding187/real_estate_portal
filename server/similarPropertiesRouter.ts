@@ -150,7 +150,7 @@ export const similarPropertiesRouter = router({
         50, // Get more to find the specific one
       );
 
-      const match = similar.find((p) => p.propertyId === input.similarPropertyId);
+      const match = similar.find(p => p.propertyId === input.similarPropertyId);
 
       if (!match) {
         return {

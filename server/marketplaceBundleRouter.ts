@@ -1,9 +1,9 @@
 /**
  * Marketplace Bundle API Router
- * 
+ *
  * Provides endpoints for managing and displaying marketplace bundles.
  * Bundles group curated partners by category (e.g., First-Time Buyer Bundle).
- * 
+ *
  * Endpoints:
  * - GET /api/bundles - Get all active bundles
  * - GET /api/bundles/:slug - Get bundle with partners by slug
@@ -34,9 +34,9 @@ router.get('/bundles', async (req: Request, res: Response) => {
     res.json(bundles);
   } catch (error) {
     console.error('Error fetching bundles:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       error: 'Failed to fetch bundles',
-      message: error instanceof Error ? error.message : 'Unknown error'
+      message: error instanceof Error ? error.message : 'Unknown error',
     });
   }
 });
@@ -50,7 +50,7 @@ router.get('/bundles/:slug', async (req: Request, res: Response) => {
   try {
     const { slug } = req.params;
     const bundle = await marketplaceBundleService.getBundleWithPartnersBySlug(slug);
-    
+
     if (!bundle) {
       return res.status(404).json({ error: 'Bundle not found' });
     }
@@ -58,9 +58,9 @@ router.get('/bundles/:slug', async (req: Request, res: Response) => {
     res.json(bundle);
   } catch (error) {
     console.error('Error fetching bundle:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       error: 'Failed to fetch bundle',
-      message: error instanceof Error ? error.message : 'Unknown error'
+      message: error instanceof Error ? error.message : 'Unknown error',
     });
   }
 });
@@ -73,7 +73,7 @@ router.get('/bundles/:bundleId/partners', async (req: Request, res: Response) =>
   try {
     const { bundleId } = req.params;
     const bundle = await marketplaceBundleService.getBundleWithPartners(bundleId);
-    
+
     if (!bundle) {
       return res.status(404).json({ error: 'Bundle not found' });
     }
@@ -81,9 +81,9 @@ router.get('/bundles/:bundleId/partners', async (req: Request, res: Response) =>
     res.json(bundle.partners);
   } catch (error) {
     console.error('Error fetching bundle partners:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       error: 'Failed to fetch bundle partners',
-      message: error instanceof Error ? error.message : 'Unknown error'
+      message: error instanceof Error ? error.message : 'Unknown error',
     });
   }
 });
@@ -96,13 +96,13 @@ router.get('/bundles/:bundleId/category/:category', async (req: Request, res: Re
   try {
     const { bundleId, category } = req.params;
     const partners = await marketplaceBundleService.getPartnersByCategory(bundleId, category);
-    
+
     res.json(partners);
   } catch (error) {
     console.error('Error fetching partners by category:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       error: 'Failed to fetch partners by category',
-      message: error instanceof Error ? error.message : 'Unknown error'
+      message: error instanceof Error ? error.message : 'Unknown error',
     });
   }
 });
@@ -122,9 +122,9 @@ router.post('/bundles', async (req: Request, res: Response) => {
 
     // Validation
     if (!slug || !name) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         error: 'Missing required fields',
-        required: ['slug', 'name']
+        required: ['slug', 'name'],
       });
     }
 
@@ -139,15 +139,15 @@ router.post('/bundles', async (req: Request, res: Response) => {
       name,
       description,
       targetAudience,
-      displayOrder
+      displayOrder,
     });
 
     res.status(201).json(bundle);
   } catch (error) {
     console.error('Error creating bundle:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       error: 'Failed to create bundle',
-      message: error instanceof Error ? error.message : 'Unknown error'
+      message: error instanceof Error ? error.message : 'Unknown error',
     });
   }
 });
@@ -164,9 +164,9 @@ router.post('/bundles/:bundleId/partners', async (req: Request, res: Response) =
 
     // Validation
     if (!partnerId || !category) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         error: 'Missing required fields',
-        required: ['partnerId', 'category']
+        required: ['partnerId', 'category'],
       });
     }
 
@@ -175,20 +175,20 @@ router.post('/bundles/:bundleId/partners', async (req: Request, res: Response) =
       partnerId,
       category,
       displayOrder,
-      inclusionFee
+      inclusionFee,
     });
 
     res.status(201).json({ message: 'Partner added to bundle successfully' });
   } catch (error) {
     console.error('Error adding partner to bundle:', error);
-    
+
     if (error instanceof Error && error.message.includes('not found')) {
       return res.status(404).json({ error: error.message });
     }
 
-    res.status(500).json({ 
+    res.status(500).json({
       error: 'Failed to add partner to bundle',
-      message: error instanceof Error ? error.message : 'Unknown error'
+      message: error instanceof Error ? error.message : 'Unknown error',
     });
   }
 });
@@ -207,9 +207,9 @@ router.delete('/bundles/:bundleId/partners/:partnerId', async (req: Request, res
     res.json({ message: 'Partner removed from bundle successfully' });
   } catch (error) {
     console.error('Error removing partner from bundle:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       error: 'Failed to remove partner from bundle',
-      message: error instanceof Error ? error.message : 'Unknown error'
+      message: error instanceof Error ? error.message : 'Unknown error',
     });
   }
 });
@@ -219,39 +219,42 @@ router.delete('/bundles/:bundleId/partners/:partnerId', async (req: Request, res
  * Update partner performance score in bundle
  * Admin only
  */
-router.put('/bundles/:bundleId/partners/:partnerId/performance', async (req: Request, res: Response) => {
-  try {
-    const { bundleId, partnerId } = req.params;
-    const { performanceScore } = req.body;
+router.put(
+  '/bundles/:bundleId/partners/:partnerId/performance',
+  async (req: Request, res: Response) => {
+    try {
+      const { bundleId, partnerId } = req.params;
+      const { performanceScore } = req.body;
 
-    // Validation
-    if (performanceScore === undefined || performanceScore === null) {
-      return res.status(400).json({ 
-        error: 'Missing required field: performanceScore'
+      // Validation
+      if (performanceScore === undefined || performanceScore === null) {
+        return res.status(400).json({
+          error: 'Missing required field: performanceScore',
+        });
+      }
+
+      if (performanceScore < 0 || performanceScore > 100) {
+        return res.status(400).json({
+          error: 'Performance score must be between 0 and 100',
+        });
+      }
+
+      await marketplaceBundleService.updatePartnerPerformance(
+        bundleId,
+        partnerId,
+        performanceScore,
+      );
+
+      res.json({ message: 'Partner performance updated successfully' });
+    } catch (error) {
+      console.error('Error updating partner performance:', error);
+      res.status(500).json({
+        error: 'Failed to update partner performance',
+        message: error instanceof Error ? error.message : 'Unknown error',
       });
     }
-
-    if (performanceScore < 0 || performanceScore > 100) {
-      return res.status(400).json({ 
-        error: 'Performance score must be between 0 and 100'
-      });
-    }
-
-    await marketplaceBundleService.updatePartnerPerformance(
-      bundleId,
-      partnerId,
-      performanceScore
-    );
-
-    res.json({ message: 'Partner performance updated successfully' });
-  } catch (error) {
-    console.error('Error updating partner performance:', error);
-    res.status(500).json({ 
-      error: 'Failed to update partner performance',
-      message: error instanceof Error ? error.message : 'Unknown error'
-    });
-  }
-});
+  },
+);
 
 /**
  * GET /api/bundles/:bundleId/underperforming
@@ -263,17 +266,14 @@ router.get('/bundles/:bundleId/underperforming', async (req: Request, res: Respo
     const { bundleId } = req.params;
     const threshold = req.query.threshold ? parseFloat(req.query.threshold as string) : 40;
 
-    const partners = await marketplaceBundleService.getUnderperformingPartners(
-      bundleId,
-      threshold
-    );
+    const partners = await marketplaceBundleService.getUnderperformingPartners(bundleId, threshold);
 
     res.json(partners);
   } catch (error) {
     console.error('Error fetching underperforming partners:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       error: 'Failed to fetch underperforming partners',
-      message: error instanceof Error ? error.message : 'Unknown error'
+      message: error instanceof Error ? error.message : 'Unknown error',
     });
   }
 });
@@ -289,8 +289,8 @@ router.put('/bundles/:bundleId/status', async (req: Request, res: Response) => {
     const { isActive } = req.body;
 
     if (isActive === undefined || isActive === null) {
-      return res.status(400).json({ 
-        error: 'Missing required field: isActive'
+      return res.status(400).json({
+        error: 'Missing required field: isActive',
       });
     }
 
@@ -299,9 +299,9 @@ router.put('/bundles/:bundleId/status', async (req: Request, res: Response) => {
     res.json({ message: 'Bundle status updated successfully' });
   } catch (error) {
     console.error('Error updating bundle status:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       error: 'Failed to update bundle status',
-      message: error instanceof Error ? error.message : 'Unknown error'
+      message: error instanceof Error ? error.message : 'Unknown error',
     });
   }
 });
@@ -320,9 +320,9 @@ router.delete('/bundles/:bundleId', async (req: Request, res: Response) => {
     res.json({ message: 'Bundle deleted successfully' });
   } catch (error) {
     console.error('Error deleting bundle:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       error: 'Failed to delete bundle',
-      message: error instanceof Error ? error.message : 'Unknown error'
+      message: error instanceof Error ? error.message : 'Unknown error',
     });
   }
 });
@@ -338,22 +338,22 @@ router.post('/bundles/:bundleId/validate', async (req: Request, res: Response) =
     const { requiredCategories } = req.body;
 
     if (!requiredCategories || !Array.isArray(requiredCategories)) {
-      return res.status(400).json({ 
-        error: 'Missing or invalid required field: requiredCategories (must be array)'
+      return res.status(400).json({
+        error: 'Missing or invalid required field: requiredCategories (must be array)',
       });
     }
 
     const validation = await marketplaceBundleService.validateBundleCategories(
       bundleId,
-      requiredCategories
+      requiredCategories,
     );
 
     res.json(validation);
   } catch (error) {
     console.error('Error validating bundle:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       error: 'Failed to validate bundle',
-      message: error instanceof Error ? error.message : 'Unknown error'
+      message: error instanceof Error ? error.message : 'Unknown error',
     });
   }
 });
@@ -382,15 +382,15 @@ router.post('/bundles/:bundleId/track/view', async (req: Request, res: Response)
     await bundleAttributionService.trackBundleView({
       bundleId,
       userId,
-      metadata
+      metadata,
     });
 
     res.status(201).json({ message: 'Bundle view tracked successfully' });
   } catch (error) {
     console.error('Error tracking bundle view:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       error: 'Failed to track bundle view',
-      message: error instanceof Error ? error.message : 'Unknown error'
+      message: error instanceof Error ? error.message : 'Unknown error',
     });
   }
 });
@@ -405,15 +405,15 @@ router.post('/bundles/:bundleId/track/partner-engagement', async (req: Request, 
     const { partnerId, userId, eventType, contentId, metadata } = req.body;
 
     if (!partnerId || !userId || !eventType) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         error: 'Missing required fields',
-        required: ['partnerId', 'userId', 'eventType']
+        required: ['partnerId', 'userId', 'eventType'],
       });
     }
 
     if (!['partner_click', 'profile_view'].includes(eventType)) {
-      return res.status(400).json({ 
-        error: 'Invalid eventType. Must be "partner_click" or "profile_view"'
+      return res.status(400).json({
+        error: 'Invalid eventType. Must be "partner_click" or "profile_view"',
       });
     }
 
@@ -423,15 +423,15 @@ router.post('/bundles/:bundleId/track/partner-engagement', async (req: Request, 
       userId,
       eventType,
       contentId,
-      metadata
+      metadata,
     });
 
     res.status(201).json({ message: 'Partner engagement tracked successfully' });
   } catch (error) {
     console.error('Error tracking partner engagement:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       error: 'Failed to track partner engagement',
-      message: error instanceof Error ? error.message : 'Unknown error'
+      message: error instanceof Error ? error.message : 'Unknown error',
     });
   }
 });
@@ -446,15 +446,15 @@ router.post('/bundles/:bundleId/track/lead', async (req: Request, res: Response)
     const { partnerId, userId, leadId, eventType, metadata } = req.body;
 
     if (!partnerId || !userId || !leadId || !eventType) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         error: 'Missing required fields',
-        required: ['partnerId', 'userId', 'leadId', 'eventType']
+        required: ['partnerId', 'userId', 'leadId', 'eventType'],
       });
     }
 
     if (!['lead_generated', 'lead_converted'].includes(eventType)) {
-      return res.status(400).json({ 
-        error: 'Invalid eventType. Must be "lead_generated" or "lead_converted"'
+      return res.status(400).json({
+        error: 'Invalid eventType. Must be "lead_generated" or "lead_converted"',
       });
     }
 
@@ -464,15 +464,15 @@ router.post('/bundles/:bundleId/track/lead', async (req: Request, res: Response)
       userId,
       leadId,
       eventType,
-      metadata
+      metadata,
     });
 
     res.status(201).json({ message: 'Lead attribution tracked successfully' });
   } catch (error) {
     console.error('Error tracking lead attribution:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       error: 'Failed to track lead attribution',
-      message: error instanceof Error ? error.message : 'Unknown error'
+      message: error instanceof Error ? error.message : 'Unknown error',
     });
   }
 });
@@ -493,9 +493,9 @@ router.get('/bundles/:bundleId/metrics', async (req: Request, res: Response) => 
     res.json(metrics);
   } catch (error) {
     console.error('Error fetching bundle metrics:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       error: 'Failed to fetch bundle metrics',
-      message: error instanceof Error ? error.message : 'Unknown error'
+      message: error instanceof Error ? error.message : 'Unknown error',
     });
   }
 });
@@ -512,9 +512,9 @@ router.get('/partners/:partnerId/bundle-metrics', async (req: Request, res: Resp
     res.json(metrics);
   } catch (error) {
     console.error('Error fetching partner bundle metrics:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       error: 'Failed to fetch partner bundle metrics',
-      message: error instanceof Error ? error.message : 'Unknown error'
+      message: error instanceof Error ? error.message : 'Unknown error',
     });
   }
 });
@@ -531,9 +531,9 @@ router.get('/users/:userId/bundle-history', async (req: Request, res: Response) 
     res.json(history);
   } catch (error) {
     console.error('Error fetching user bundle history:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       error: 'Failed to fetch user bundle history',
-      message: error instanceof Error ? error.message : 'Unknown error'
+      message: error instanceof Error ? error.message : 'Unknown error',
     });
   }
 });
@@ -550,9 +550,9 @@ router.get('/bundles-analytics/top-performing', async (req: Request, res: Respon
     res.json(bundles);
   } catch (error) {
     console.error('Error fetching top performing bundles:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       error: 'Failed to fetch top performing bundles',
-      message: error instanceof Error ? error.message : 'Unknown error'
+      message: error instanceof Error ? error.message : 'Unknown error',
     });
   }
 });

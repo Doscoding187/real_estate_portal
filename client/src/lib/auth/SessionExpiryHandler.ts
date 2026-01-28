@@ -99,18 +99,18 @@ export function useSessionRestoration() {
   const checkAndRestore = () => {
     if (wasSessionExpired() && wasSessionExpiryRecent()) {
       const returnUrl = getReturnUrl();
-      
+
       if (returnUrl) {
         // Clear flags before redirecting
         clearSessionExpiryFlags();
-        
+
         // Redirect back to the original page
         // The wizard will automatically load the draft from localStorage
         window.location.href = returnUrl;
         return true;
       }
     }
-    
+
     return false;
   };
 

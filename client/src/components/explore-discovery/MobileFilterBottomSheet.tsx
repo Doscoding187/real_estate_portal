@@ -36,7 +36,7 @@ export function MobileFilterBottomSheet({
   const [snapPoint, setSnapPoint] = useState<SnapPoint>('half');
   const [isDragging, setIsDragging] = useState(false);
   const y = useMotionValue(0);
-  
+
   // Get filter state from Zustand store
   const {
     propertyType,
@@ -86,7 +86,7 @@ export function MobileFilterBottomSheet({
         setSnapPoint('full');
       }
     },
-    [snapPoint, onClose]
+    [snapPoint, onClose],
   );
 
   // Focus trap implementation
@@ -95,7 +95,7 @@ export function MobileFilterBottomSheet({
 
     const sheet = sheetRef.current;
     const focusableElements = sheet.querySelectorAll<HTMLElement>(
-      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
     );
     const firstElement = focusableElements[0];
     const lastElement = focusableElements[focusableElements.length - 1];
@@ -188,7 +188,7 @@ export function MobileFilterBottomSheet({
           <motion.div
             ref={sheetRef}
             initial={{ y: '100%' }}
-            animate={{ 
+            animate={{
               y: snapPoint === 'closed' ? '100%' : 0,
               height: getSheetHeight(),
             }}
@@ -207,10 +207,7 @@ export function MobileFilterBottomSheet({
           >
             {/* Drag Handle */}
             <div className="flex justify-center pt-3 pb-2 cursor-grab active:cursor-grabbing">
-              <div 
-                className="w-12 h-1.5 bg-gray-300 rounded-full"
-                aria-hidden="true"
-              />
+              <div className="w-12 h-1.5 bg-gray-300 rounded-full" aria-hidden="true" />
             </div>
 
             {/* Header */}
@@ -218,10 +215,7 @@ export function MobileFilterBottomSheet({
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-3">
                   <SlidersHorizontal className="w-5 h-5 text-gray-700" />
-                  <h2 
-                    id="filter-sheet-title"
-                    className="text-xl font-bold text-gray-900"
-                  >
+                  <h2 id="filter-sheet-title" className="text-xl font-bold text-gray-900">
                     Filters
                   </h2>
                 </div>
@@ -233,7 +227,7 @@ export function MobileFilterBottomSheet({
                   variant="default"
                 />
               </div>
-              
+
               {filterCount > 0 && (
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-gray-600">
@@ -270,29 +264,28 @@ export function MobileFilterBottomSheet({
             </div>
 
             {/* Content - Scrollable */}
-            <div 
-              ref={contentRef}
-              className="flex-1 overflow-y-auto px-6 py-6 space-y-8"
-            >
+            <div ref={contentRef} className="flex-1 overflow-y-auto px-6 py-6 space-y-8">
               {/* Property Type */}
               <div>
-                <label 
+                <label
                   className="block text-sm font-semibold text-gray-900 mb-3"
                   id="property-type-label"
                 >
                   Property Type
                 </label>
-                <div 
+                <div
                   className="flex flex-wrap gap-2"
                   role="group"
                   aria-labelledby="property-type-label"
                 >
-                  {propertyTypes.map((type) => (
+                  {propertyTypes.map(type => (
                     <MicroPill
                       key={type.value}
                       label={type.label}
                       selected={propertyType === type.value}
-                      onClick={() => setPropertyType(propertyType === type.value ? null : type.value)}
+                      onClick={() =>
+                        setPropertyType(propertyType === type.value ? null : type.value)
+                      }
                       size="md"
                       variant="default"
                     />
@@ -302,7 +295,7 @@ export function MobileFilterBottomSheet({
 
               {/* Price Range */}
               <div>
-                <label 
+                <label
                   className="block text-sm font-semibold text-gray-900 mb-3"
                   id="price-range-label"
                 >
@@ -310,17 +303,16 @@ export function MobileFilterBottomSheet({
                 </label>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label 
-                      htmlFor="min-price"
-                      className="block text-xs text-gray-600 mb-1.5"
-                    >
+                    <label htmlFor="min-price" className="block text-xs text-gray-600 mb-1.5">
                       Min Price
                     </label>
                     <input
                       id="min-price"
                       type="number"
                       value={priceMin || ''}
-                      onChange={(e) => setPriceRange(e.target.value ? Number(e.target.value) : null, priceMax)}
+                      onChange={e =>
+                        setPriceRange(e.target.value ? Number(e.target.value) : null, priceMax)
+                      }
                       placeholder="No min"
                       className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
                       style={{ boxShadow: designTokens.shadows.sm }}
@@ -328,17 +320,16 @@ export function MobileFilterBottomSheet({
                     />
                   </div>
                   <div>
-                    <label 
-                      htmlFor="max-price"
-                      className="block text-xs text-gray-600 mb-1.5"
-                    >
+                    <label htmlFor="max-price" className="block text-xs text-gray-600 mb-1.5">
                       Max Price
                     </label>
                     <input
                       id="max-price"
                       type="number"
                       value={priceMax || ''}
-                      onChange={(e) => setPriceRange(priceMin, e.target.value ? Number(e.target.value) : null)}
+                      onChange={e =>
+                        setPriceRange(priceMin, e.target.value ? Number(e.target.value) : null)
+                      }
                       placeholder="No max"
                       className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
                       style={{ boxShadow: designTokens.shadows.sm }}
@@ -350,18 +341,14 @@ export function MobileFilterBottomSheet({
 
               {/* Bedrooms */}
               <div>
-                <label 
+                <label
                   className="block text-sm font-semibold text-gray-900 mb-3"
                   id="bedrooms-label"
                 >
                   Bedrooms
                 </label>
-                <div 
-                  className="flex flex-wrap gap-2"
-                  role="group"
-                  aria-labelledby="bedrooms-label"
-                >
-                  {bedroomOptions.map((num) => (
+                <div className="flex flex-wrap gap-2" role="group" aria-labelledby="bedrooms-label">
+                  {bedroomOptions.map(num => (
                     <MicroPill
                       key={num}
                       label={`${num}+`}
@@ -376,18 +363,18 @@ export function MobileFilterBottomSheet({
 
               {/* Bathrooms */}
               <div>
-                <label 
+                <label
                   className="block text-sm font-semibold text-gray-900 mb-3"
                   id="bathrooms-label"
                 >
                   Bathrooms
                 </label>
-                <div 
+                <div
                   className="flex flex-wrap gap-2"
                   role="group"
                   aria-labelledby="bathrooms-label"
                 >
-                  {bathroomOptions.map((num) => (
+                  {bathroomOptions.map(num => (
                     <MicroPill
                       key={num}
                       label={`${num}+`}
@@ -402,7 +389,7 @@ export function MobileFilterBottomSheet({
 
               {/* Location */}
               <div>
-                <label 
+                <label
                   htmlFor="location-input"
                   className="block text-sm font-semibold text-gray-900 mb-3"
                 >
@@ -412,7 +399,7 @@ export function MobileFilterBottomSheet({
                   id="location-input"
                   type="text"
                   value={location || ''}
-                  onChange={(e) => setLocation(e.target.value || null)}
+                  onChange={e => setLocation(e.target.value || null)}
                   placeholder="Enter location..."
                   className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
                   style={{ boxShadow: designTokens.shadows.sm }}
@@ -430,7 +417,7 @@ export function MobileFilterBottomSheet({
                   background: designTokens.colors.accent.gradient,
                   boxShadow: designTokens.shadows.accent,
                 }}
-                whileHover={{ 
+                whileHover={{
                   scale: 1.02,
                   boxShadow: designTokens.shadows.accentHover,
                 }}
@@ -443,7 +430,7 @@ export function MobileFilterBottomSheet({
                   <span>Apply Filters</span>
                 </div>
               </motion.button>
-              
+
               {filterCount > 0 && (
                 <motion.button
                   onClick={handleReset}

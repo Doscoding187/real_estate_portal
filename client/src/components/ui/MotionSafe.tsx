@@ -1,6 +1,6 @@
 /**
  * Motion-Safe Components
- * 
+ *
  * Components that respect prefers-reduced-motion setting
  * and provide static alternatives when needed.
  */
@@ -134,43 +134,35 @@ export function Transition({
     return <div className={className}>{children}</div>;
   }
 
-  const transitionClasses = isEntering
-    ? `${enter} ${enterTo}`
-    : `${leave} ${leaveTo}`;
+  const transitionClasses = isEntering ? `${enter} ${enterTo}` : `${leave} ${leaveTo}`;
 
-  return (
-    <div className={`${transitionClasses} ${className}`}>
-      {children}
-    </div>
-  );
+  return <div className={`${transitionClasses} ${className}`}>{children}</div>;
 }
 
 /**
  * Pulse animation that respects reduced motion
  */
-export function Pulse({ 
-  children, 
-  className = '' 
-}: { 
-  children: React.ReactNode; 
+export function Pulse({
+  children,
+  className = '',
+}: {
+  children: React.ReactNode;
   className?: string;
 }) {
   const prefersReducedMotion = useReducedMotion();
 
   return (
-    <div className={`${prefersReducedMotion ? '' : 'animate-pulse'} ${className}`}>
-      {children}
-    </div>
+    <div className={`${prefersReducedMotion ? '' : 'animate-pulse'} ${className}`}>{children}</div>
   );
 }
 
 /**
  * Spinner that respects reduced motion
  */
-export function Spinner({ 
+export function Spinner({
   size = 'md',
   className = '',
-}: { 
+}: {
   size?: 'sm' | 'md' | 'lg';
   className?: string;
 }) {
@@ -184,11 +176,7 @@ export function Spinner({
 
   if (prefersReducedMotion) {
     return (
-      <div 
-        className={`${sizeClasses[size]} ${className}`}
-        role="status"
-        aria-label="Loading"
-      >
+      <div className={`${sizeClasses[size]} ${className}`} role="status" aria-label="Loading">
         <span className="text-blue-600">●●●</span>
         <span className="sr-only">Loading...</span>
       </div>
@@ -196,11 +184,7 @@ export function Spinner({
   }
 
   return (
-    <div
-      className={`${sizeClasses[size]} ${className}`}
-      role="status"
-      aria-label="Loading"
-    >
+    <div className={`${sizeClasses[size]} ${className}`} role="status" aria-label="Loading">
       <svg
         className="animate-spin text-blue-600"
         xmlns="http://www.w3.org/2000/svg"

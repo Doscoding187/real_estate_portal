@@ -35,19 +35,73 @@ export default function AgentProductivity() {
 
   // Mock tasks data
   const [tasks, setTasks] = useState([
-    { id: 1, title: 'Follow up with Sarah about offer', dueDate: '2024-12-02', priority: 'high', completed: false, category: 'follow-up' },
-    { id: 2, title: 'Upload new photos for Waterfront listing', dueDate: '2024-12-02', priority: 'medium', completed: true, category: 'listing' },
-    { id: 3, title: 'Prepare market analysis report', dueDate: '2024-12-03', priority: 'high', completed: false, category: 'admin' },
-    { id: 4, title: 'Schedule viewing for Sandton property', dueDate: '2024-12-02', priority: 'low', completed: true, category: 'showing' },
-    { id: 5, title: 'Send contract to John Smith', dueDate: '2024-12-04', priority: 'high', completed: false, category: 'admin' },
-    { id: 6, title: 'Update pricing on 3 listings', dueDate: '2024-12-05', priority: 'medium', completed: false, category: 'listing' },
+    {
+      id: 1,
+      title: 'Follow up with Sarah about offer',
+      dueDate: '2024-12-02',
+      priority: 'high',
+      completed: false,
+      category: 'follow-up',
+    },
+    {
+      id: 2,
+      title: 'Upload new photos for Waterfront listing',
+      dueDate: '2024-12-02',
+      priority: 'medium',
+      completed: true,
+      category: 'listing',
+    },
+    {
+      id: 3,
+      title: 'Prepare market analysis report',
+      dueDate: '2024-12-03',
+      priority: 'high',
+      completed: false,
+      category: 'admin',
+    },
+    {
+      id: 4,
+      title: 'Schedule viewing for Sandton property',
+      dueDate: '2024-12-02',
+      priority: 'low',
+      completed: true,
+      category: 'showing',
+    },
+    {
+      id: 5,
+      title: 'Send contract to John Smith',
+      dueDate: '2024-12-04',
+      priority: 'high',
+      completed: false,
+      category: 'admin',
+    },
+    {
+      id: 6,
+      title: 'Update pricing on 3 listings',
+      dueDate: '2024-12-05',
+      priority: 'medium',
+      completed: false,
+      category: 'listing',
+    },
   ]);
 
   // Mock reminders data
   const reminders = [
     { id: 1, title: 'Call back Mike Davis', time: '2:00 PM Today', type: 'call', priority: 'high' },
-    { id: 2, title: 'Send property brochure to Alice', time: '4:00 PM Today', type: 'email', priority: 'medium' },
-    { id: 3, title: 'Property inspection follow-up', time: 'Tomorrow 10:00 AM', type: 'meeting', priority: 'high' },
+    {
+      id: 2,
+      title: 'Send property brochure to Alice',
+      time: '4:00 PM Today',
+      type: 'email',
+      priority: 'medium',
+    },
+    {
+      id: 3,
+      title: 'Property inspection follow-up',
+      time: 'Tomorrow 10:00 AM',
+      type: 'meeting',
+      priority: 'high',
+    },
   ];
 
   // Mock upcoming showings
@@ -92,7 +146,7 @@ export default function AgentProductivity() {
   }
 
   const toggleTask = (id: number) => {
-    setTasks(tasks.map(task => task.id === id ? { ...task, completed: !task.completed } : task));
+    setTasks(tasks.map(task => (task.id === id ? { ...task, completed: !task.completed } : task)));
   };
 
   const deleteTask = (id: number) => {
@@ -165,8 +219,12 @@ export default function AgentProductivity() {
                 <div className="flex items-start justify-between">
                   <div>
                     <p className="text-sm font-medium text-gray-500 mb-1">Tasks Today</p>
-                    <p className="text-2xl font-bold text-gray-900">{tasks.filter(t => !t.completed).length}</p>
-                    <p className="text-xs text-blue-600 font-medium mt-2">{tasksCompleted} completed</p>
+                    <p className="text-2xl font-bold text-gray-900">
+                      {tasks.filter(t => !t.completed).length}
+                    </p>
+                    <p className="text-xs text-blue-600 font-medium mt-2">
+                      {tasksCompleted} completed
+                    </p>
                   </div>
                   <div className="p-3 bg-blue-50 rounded-xl">
                     <CheckCircle className="h-6 w-6 text-blue-600" />
@@ -229,16 +287,28 @@ export default function AgentProductivity() {
           {/* Tabs */}
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="grid w-full max-w-2xl grid-cols-4 p-1 bg-white rounded-xl shadow-soft">
-              <TabsTrigger value="tasks" className="rounded-lg data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700">
+              <TabsTrigger
+                value="tasks"
+                className="rounded-lg data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700"
+              >
                 Tasks
               </TabsTrigger>
-              <TabsTrigger value="calendar" className="rounded-lg data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700">
+              <TabsTrigger
+                value="calendar"
+                className="rounded-lg data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700"
+              >
                 Calendar
               </TabsTrigger>
-              <TabsTrigger value="showings" className="rounded-lg data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700">
+              <TabsTrigger
+                value="showings"
+                className="rounded-lg data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700"
+              >
                 Showings
               </TabsTrigger>
-              <TabsTrigger value="reminders" className="rounded-lg data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700">
+              <TabsTrigger
+                value="reminders"
+                className="rounded-lg data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700"
+              >
                 Reminders
               </TabsTrigger>
             </TabsList>
@@ -271,31 +341,42 @@ export default function AgentProductivity() {
                       </div>
                       <div className="flex gap-2">
                         <Button className="flex-1 bg-blue-600 text-white">Save Task</Button>
-                        <Button variant="outline" onClick={() => setShowAddTask(false)}>Cancel</Button>
+                        <Button variant="outline" onClick={() => setShowAddTask(false)}>
+                          Cancel
+                        </Button>
                       </div>
                     </div>
                   )}
 
-                  {tasks.map((task) => (
+                  {tasks.map(task => (
                     <div
                       key={task.id}
                       className={cn(
                         'flex items-center gap-4 p-4 rounded-xl transition-all duration-200',
-                        task.completed ? 'bg-gray-50' : 'bg-white border border-gray-200 hover:shadow-soft'
+                        task.completed
+                          ? 'bg-gray-50'
+                          : 'bg-white border border-gray-200 hover:shadow-soft',
                       )}
                     >
                       <button
                         onClick={() => toggleTask(task.id)}
                         className={cn(
                           'h-6 w-6 rounded border-2 flex items-center justify-center flex-shrink-0 transition-all',
-                          task.completed ? 'bg-green-500 border-green-500' : 'border-gray-300 hover:border-blue-500'
+                          task.completed
+                            ? 'bg-green-500 border-green-500'
+                            : 'border-gray-300 hover:border-blue-500',
                         )}
                       >
                         {task.completed && <CheckCircle className="h-4 w-4 text-white" />}
                       </button>
 
                       <div className="flex-1">
-                        <p className={cn('font-medium', task.completed ? 'text-gray-400 line-through' : 'text-gray-900')}>
+                        <p
+                          className={cn(
+                            'font-medium',
+                            task.completed ? 'text-gray-400 line-through' : 'text-gray-900',
+                          )}
+                        >
                           {task.title}
                         </p>
                         <div className="flex items-center gap-2 mt-1">
@@ -314,7 +395,11 @@ export default function AgentProductivity() {
                       </Badge>
 
                       <div className="flex gap-1">
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-blue-600 hover:bg-blue-50">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-blue-600 hover:bg-blue-50"
+                        >
                           <Edit className="h-4 w-4" />
                         </Button>
                         <Button
@@ -344,8 +429,11 @@ export default function AgentProductivity() {
                   <CardTitle>Viewing Schedule</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  {upcomingShowings.map((showing) => (
-                    <div key={showing.id} className="p-5 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors">
+                  {upcomingShowings.map(showing => (
+                    <div
+                      key={showing.id}
+                      className="p-5 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors"
+                    >
                       <div className="flex items-start justify-between mb-3">
                         <div>
                           <h3 className="font-semibold text-gray-900">{showing.property}</h3>
@@ -354,14 +442,22 @@ export default function AgentProductivity() {
                             {showing.address}
                           </p>
                         </div>
-                        <Badge className={showing.status === 'confirmed' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}>
+                        <Badge
+                          className={
+                            showing.status === 'confirmed'
+                              ? 'bg-green-100 text-green-700'
+                              : 'bg-yellow-100 text-yellow-700'
+                          }
+                        >
                           {showing.status}
                         </Badge>
                       </div>
                       <div className="grid grid-cols-3 gap-4 text-sm">
                         <div>
                           <p className="text-gray-500">Date</p>
-                          <p className="font-semibold text-gray-900">{new Date(showing.date).toLocaleDateString()}</p>
+                          <p className="font-semibold text-gray-900">
+                            {new Date(showing.date).toLocaleDateString()}
+                          </p>
                         </div>
                         <div>
                           <p className="text-gray-500">Time</p>
@@ -391,8 +487,11 @@ export default function AgentProductivity() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  {reminders.map((reminder) => (
-                    <div key={reminder.id} className="p-4 bg-orange-50 rounded-xl hover:bg-orange-100 transition-colors">
+                  {reminders.map(reminder => (
+                    <div
+                      key={reminder.id}
+                      className="p-4 bg-orange-50 rounded-xl hover:bg-orange-100 transition-colors"
+                    >
                       <div className="flex items-start justify-between">
                         <div className="flex items-start gap-3">
                           <div className="p-2 bg-orange-200 rounded-lg">
@@ -401,12 +500,18 @@ export default function AgentProductivity() {
                           <div>
                             <p className="font-semibold text-gray-900">{reminder.title}</p>
                             <p className="text-sm text-gray-600 mt-1">{reminder.time}</p>
-                            <Badge className={cn('mt-2 text-xs', getPriorityColor(reminder.priority))}>
+                            <Badge
+                              className={cn('mt-2 text-xs', getPriorityColor(reminder.priority))}
+                            >
                               {reminder.priority} priority
                             </Badge>
                           </div>
                         </div>
-                        <Button variant="ghost" size="icon" className="text-gray-400 hover:text-red-600">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="text-gray-400 hover:text-red-600"
+                        >
                           <X className="h-4 w-4" />
                         </Button>
                       </div>

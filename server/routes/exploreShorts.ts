@@ -1,16 +1,21 @@
-import { Router } from "express";
-import { db } from "../db";
-import { exploreShorts, exploreInteractions, exploreHighlightTags, exploreUserPreferences } from "../../drizzle/schema";
-import { eq, and, desc, sql } from "drizzle-orm";
-import type { Request, Response } from "express";
-import { exploreFeedService } from "../services/exploreFeedService";
-import { exploreInteractionService } from "../services/exploreInteractionService";
+import { Router } from 'express';
+import { db } from '../db';
+import {
+  exploreShorts,
+  exploreInteractions,
+  exploreHighlightTags,
+  exploreUserPreferences,
+} from '../../drizzle/schema';
+import { eq, and, desc, sql } from 'drizzle-orm';
+import type { Request, Response } from 'express';
+import { exploreFeedService } from '../services/exploreFeedService';
+import { exploreInteractionService } from '../services/exploreInteractionService';
 
 const router = Router();
 
 /**
  * Explore Shorts API Router
- * 
+ *
  * Handles all API endpoints for the Property Explore Shorts feature
  * including feed generation, interaction tracking, and content management.
  */
@@ -25,7 +30,7 @@ const optionalAuth = (req: Request, res: Response, next: Function) => {
 // Middleware to require authentication
 const requireAuth = (req: Request, res: Response, next: Function) => {
   if (!req.user) {
-    return res.status(401).json({ error: "Authentication required" });
+    return res.status(401).json({ error: 'Authentication required' });
   }
   next();
 };
@@ -35,11 +40,11 @@ const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
 
 const rateLimit = (maxRequests: number, windowMs: number) => {
   return (req: Request, res: Response, next: Function) => {
-    const identifier = req.ip || req.socket.remoteAddress || "unknown";
+    const identifier = req.ip || req.socket.remoteAddress || 'unknown';
     const now = Date.now();
-    
+
     const userLimit = rateLimitMap.get(identifier);
-    
+
     if (!userLimit || now > userLimit.resetTime) {
       rateLimitMap.set(identifier, {
         count: 1,
@@ -47,14 +52,14 @@ const rateLimit = (maxRequests: number, windowMs: number) => {
       });
       return next();
     }
-    
+
     if (userLimit.count >= maxRequests) {
       return res.status(429).json({
-        error: "Too many requests",
+        error: 'Too many requests',
         retryAfter: Math.ceil((userLimit.resetTime - now) / 1000),
       });
     }
-    
+
     userLimit.count++;
     next();
   };
@@ -65,7 +70,7 @@ const rateLimit = (maxRequests: number, windowMs: number) => {
  * Get personalized recommended feed
  */
 router.get(
-  "/recommended",
+  '/recommended',
   optionalAuth,
   rateLimit(100, 60000), // 100 requests per minute
   async (req: Request, res: Response) => {
@@ -81,48 +86,43 @@ router.get(
 
       res.json(result);
     } catch (error) {
-      console.error("Error fetching recommended feed:", error);
-      res.status(500).json({ error: "Failed to fetch feed" });
+      console.error('Error fetching recommended feed:', error);
+      res.status(500).json({ error: 'Failed to fetch feed' });
     }
-  }
+  },
 );
 
 /**
  * GET /api/explore/by-area
  * Get properties from specific area
  */
-router.get(
-  "/by-area",
-  optionalAuth,
-  rateLimit(100, 60000),
-  async (req: Request, res: Response) => {
-    try {
-      const { location, limit = 20, offset = 0 } = req.query;
+router.get('/by-area', optionalAuth, rateLimit(100, 60000), async (req: Request, res: Response) => {
+  try {
+    const { location, limit = 20, offset = 0 } = req.query;
 
-      if (!location) {
-        return res.status(400).json({ error: "Location parameter required" });
-      }
-
-      const result = await exploreFeedService.getAreaFeed({
-        location: String(location),
-        limit: Number(limit),
-        offset: Number(offset),
-      });
-
-      res.json(result);
-    } catch (error) {
-      console.error("Error fetching area feed:", error);
-      res.status(500).json({ error: "Failed to fetch feed" });
+    if (!location) {
+      return res.status(400).json({ error: 'Location parameter required' });
     }
+
+    const result = await exploreFeedService.getAreaFeed({
+      location: String(location),
+      limit: Number(limit),
+      offset: Number(offset),
+    });
+
+    res.json(result);
+  } catch (error) {
+    console.error('Error fetching area feed:', error);
+    res.status(500).json({ error: 'Failed to fetch feed' });
   }
-);
+});
 
 /**
  * GET /api/explore/by-category
  * Get properties by category
  */
 router.get(
-  "/by-category",
+  '/by-category',
   optionalAuth,
   rateLimit(100, 60000),
   async (req: Request, res: Response) => {
@@ -130,7 +130,7 @@ router.get(
       const { category, limit = 20, offset = 0 } = req.query;
 
       if (!category) {
-        return res.status(400).json({ error: "Category parameter required" });
+        return res.status(400).json({ error: 'Category parameter required' });
       }
 
       const result = await exploreFeedService.getCategoryFeed({
@@ -141,10 +141,10 @@ router.get(
 
       res.json(result);
     } catch (error) {
-      console.error("Error fetching category feed:", error);
-      res.status(500).json({ error: "Failed to fetch feed" });
+      console.error('Error fetching category feed:', error);
+      res.status(500).json({ error: 'Failed to fetch feed' });
     }
-  }
+  },
 );
 
 /**
@@ -152,7 +152,7 @@ router.get(
  * Get all properties from specific agent
  */
 router.get(
-  "/agent-feed/:id",
+  '/agent-feed/:id',
   optionalAuth,
   rateLimit(100, 60000),
   async (req: Request, res: Response) => {
@@ -168,10 +168,10 @@ router.get(
 
       res.json(result);
     } catch (error) {
-      console.error("Error fetching agent feed:", error);
-      res.status(500).json({ error: "Failed to fetch feed" });
+      console.error('Error fetching agent feed:', error);
+      res.status(500).json({ error: 'Failed to fetch feed' });
     }
-  }
+  },
 );
 
 /**
@@ -179,7 +179,7 @@ router.get(
  * Get all properties from specific developer
  */
 router.get(
-  "/developer-feed/:id",
+  '/developer-feed/:id',
   optionalAuth,
   rateLimit(100, 60000),
   async (req: Request, res: Response) => {
@@ -195,10 +195,10 @@ router.get(
 
       res.json(result);
     } catch (error) {
-      console.error("Error fetching developer feed:", error);
-      res.status(500).json({ error: "Failed to fetch feed" });
+      console.error('Error fetching developer feed:', error);
+      res.status(500).json({ error: 'Failed to fetch feed' });
     }
-  }
+  },
 );
 
 /**
@@ -206,22 +206,15 @@ router.get(
  * Record user interaction with a short
  */
 router.post(
-  "/interaction",
+  '/interaction',
   optionalAuth,
   rateLimit(500, 60000), // 500 requests per minute for interactions
   async (req: Request, res: Response) => {
     try {
-      const {
-        shortId,
-        interactionType,
-        duration,
-        feedType,
-        feedContext,
-        deviceType,
-      } = req.body;
+      const { shortId, interactionType, duration, feedType, feedContext, deviceType } = req.body;
 
       if (!shortId || !interactionType || !feedType || !deviceType) {
-        return res.status(400).json({ error: "Missing required fields" });
+        return res.status(400).json({ error: 'Missing required fields' });
       }
 
       // Generate session ID if not provided
@@ -236,16 +229,16 @@ router.post(
         feedType,
         feedContext,
         deviceType,
-        userAgent: req.headers["user-agent"],
+        userAgent: req.headers['user-agent'],
         ipAddress: req.ip || req.socket.remoteAddress || undefined,
       });
 
       res.json({ success: true });
     } catch (error) {
-      console.error("Error recording interaction:", error);
-      res.status(500).json({ error: "Failed to record interaction" });
+      console.error('Error recording interaction:', error);
+      res.status(500).json({ error: 'Failed to record interaction' });
     }
-  }
+  },
 );
 
 /**
@@ -253,7 +246,7 @@ router.post(
  * Save property to favorites
  */
 router.post(
-  "/save/:propertyId",
+  '/save/:propertyId',
   requireAuth,
   rateLimit(100, 60000),
   async (req: Request, res: Response) => {
@@ -265,10 +258,10 @@ router.post(
 
       res.json({ success: true, propertyId: Number(propertyId) });
     } catch (error) {
-      console.error("Error saving property:", error);
-      res.status(500).json({ error: "Failed to save property" });
+      console.error('Error saving property:', error);
+      res.status(500).json({ error: 'Failed to save property' });
     }
-  }
+  },
 );
 
 /**
@@ -276,7 +269,7 @@ router.post(
  * Record property share
  */
 router.post(
-  "/share/:propertyId",
+  '/share/:propertyId',
   optionalAuth,
   rateLimit(100, 60000),
   async (req: Request, res: Response) => {
@@ -289,38 +282,34 @@ router.post(
         Number(propertyId),
         req.user?.id,
         sessionId,
-        platform
+        platform,
       );
 
       res.json({ success: true, propertyId: Number(propertyId), platform });
     } catch (error) {
-      console.error("Error recording share:", error);
-      res.status(500).json({ error: "Failed to record share" });
+      console.error('Error recording share:', error);
+      res.status(500).json({ error: 'Failed to record share' });
     }
-  }
+  },
 );
 
 /**
  * GET /api/explore/highlight-tags
  * Get all available highlight tags
  */
-router.get(
-  "/highlight-tags",
-  rateLimit(50, 60000),
-  async (req: Request, res: Response) => {
-    try {
-      const tags = await db
-        .select()
-        .from(exploreHighlightTags)
-        .where(eq(exploreHighlightTags.isActive, 1))
-        .orderBy(exploreHighlightTags.displayOrder);
+router.get('/highlight-tags', rateLimit(50, 60000), async (req: Request, res: Response) => {
+  try {
+    const tags = await db
+      .select()
+      .from(exploreHighlightTags)
+      .where(eq(exploreHighlightTags.isActive, 1))
+      .orderBy(exploreHighlightTags.displayOrder);
 
-      res.json({ tags });
-    } catch (error) {
-      console.error("Error fetching highlight tags:", error);
-      res.status(500).json({ error: "Failed to fetch tags" });
-    }
+    res.json({ tags });
+  } catch (error) {
+    console.error('Error fetching highlight tags:', error);
+    res.status(500).json({ error: 'Failed to fetch tags' });
   }
-);
+});
 
 export default router;

@@ -1,14 +1,5 @@
 import React, { useState } from 'react';
-import { 
-  MapPin, 
-  School, 
-  Heart, 
-  Bus, 
-  ShoppingBag, 
-  Ticket, 
-  Footprints,
-  Loader2
-} from 'lucide-react';
+import { MapPin, School, Heart, Bus, ShoppingBag, Ticket, Footprints, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { GooglePropertyMap } from '@/components/maps/GooglePropertyMap';
 import { trpc } from '@/lib/trpc';
@@ -25,21 +16,38 @@ interface NearbyLandmarksProps {
 const TABS = [
   { id: 'Education', icon: School, label: 'Education', types: ['school', 'university'] },
   { id: 'Health', icon: Heart, label: 'Health', types: ['hospital', 'doctor', 'pharmacy'] },
-  { id: 'Transportation', icon: Bus, label: 'Transportation', types: ['bus_station', 'train_station', 'transit_station', 'subway_station'] },
-  { id: 'Shopping', icon: ShoppingBag, label: 'Shopping', types: ['shopping_mall', 'supermarket', 'department_store'] },
-  { id: 'Entertainment', icon: Ticket, label: 'Entertainment', types: ['movie_theater', 'park', 'attraction', 'stadium'] },
+  {
+    id: 'Transportation',
+    icon: Bus,
+    label: 'Transportation',
+    types: ['bus_station', 'train_station', 'transit_station', 'subway_station'],
+  },
+  {
+    id: 'Shopping',
+    icon: ShoppingBag,
+    label: 'Shopping',
+    types: ['shopping_mall', 'supermarket', 'department_store'],
+  },
+  {
+    id: 'Entertainment',
+    icon: Ticket,
+    label: 'Entertainment',
+    types: ['movie_theater', 'park', 'attraction', 'stadium'],
+  },
 ];
 
 export function NearbyLandmarks({ property }: NearbyLandmarksProps) {
   const [activeTab, setActiveTab] = useState('Education');
-  
+
   // Fallback to Sandton if no coordinates (for test properties)
   // Fallback to Sandton if no coordinates (for test properties)
   const DEFAULT_LAT = -26.107567;
   const DEFAULT_LNG = 28.056702;
 
-  let latitude = typeof property.latitude === 'string' ? parseFloat(property.latitude) : property.latitude;
-  let longitude = typeof property.longitude === 'string' ? parseFloat(property.longitude) : property.longitude;
+  let latitude =
+    typeof property.latitude === 'string' ? parseFloat(property.latitude) : property.latitude;
+  let longitude =
+    typeof property.longitude === 'string' ? parseFloat(property.longitude) : property.longitude;
 
   // Use default if coordinates are missing or 0
   if (!latitude || !longitude) {
@@ -49,39 +57,46 @@ export function NearbyLandmarks({ property }: NearbyLandmarksProps) {
 
   const activeTabConfig = TABS.find(t => t.id === activeTab);
 
-  const { data: connectedPOIs, isLoading } = trpc.location.getNearbyAmenities.useQuery({
-    latitude,
-    longitude,
-    radius: 5000,
-    types: activeTabConfig?.types || [],
-    limit: 5
-  }, {
-    enabled: !!activeTabConfig, // Always enabled since we have defaults
-    staleTime: 1000 * 60 * 60, // 1 hour
-  });
+  const { data: connectedPOIs, isLoading } = trpc.location.getNearbyAmenities.useQuery(
+    {
+      latitude,
+      longitude,
+      radius: 5000,
+      types: activeTabConfig?.types || [],
+      limit: 5,
+    },
+    {
+      enabled: !!activeTabConfig, // Always enabled since we have defaults
+      staleTime: 1000 * 60 * 60, // 1 hour
+    },
+  );
 
   const handleOpenMap = () => {
-    window.open(`https://www.google.com/maps/search/?api=1&query=${latitude},${longitude}`, '_blank');
+    window.open(
+      `https://www.google.com/maps/search/?api=1&query=${latitude},${longitude}`,
+      '_blank',
+    );
   };
 
   return (
     <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
       <div className="p-6 pb-0">
         <h3 className="text-xl font-bold text-slate-900 mb-6">Nearby Landmarks</h3>
-        
+
         {/* Map Preview with Static Fallback */}
         <div className="relative rounded-xl overflow-hidden border border-slate-200 h-[240px] mb-6 group">
           {/* Static map image as fallback background */}
-          <img 
+          <img
             src={`https://maps.googleapis.com/maps/api/staticmap?center=${latitude},${longitude}&zoom=14&size=800x400&maptype=roadmap&markers=color:red%7C${latitude},${longitude}&key=${import.meta.env.VITE_GOOGLE_MAPS_API_KEY || ''}`}
             alt="Map location"
             className="absolute inset-0 w-full h-full object-cover"
-            onError={(e) => {
+            onError={e => {
               // Fallback to a generic map placeholder if static map fails
-              (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1526778548025-fa2f459cd5c1?w=800&h=400&fit=crop';
+              (e.target as HTMLImageElement).src =
+                'https://images.unsplash.com/photo-1526778548025-fa2f459cd5c1?w=800&h=400&fit=crop';
             }}
           />
-          
+
           {/* Interactive map overlay */}
           <div className="absolute inset-0">
             <GooglePropertyMap
@@ -103,15 +118,15 @@ export function NearbyLandmarks({ property }: NearbyLandmarksProps) {
                   bedrooms: 0,
                   bathrooms: 0,
                   area: 0,
-                  mainImage: ''
-                }
+                  mainImage: '',
+                },
               ]}
             />
           </div>
-          
+
           {/* Floating Button */}
           <div className="absolute inset-0 flex items-center justify-center pointer-events-auto bg-black/5 opacity-0 group-hover:opacity-100 transition-opacity">
-            <Button 
+            <Button
               onClick={handleOpenMap}
               className="bg-blue-600 hover:bg-blue-700 text-white rounded-full px-6 py-2 shadow-lg flex items-center gap-2 transform scale-95 group-hover:scale-100 transition-all duration-200"
             >
@@ -123,23 +138,26 @@ export function NearbyLandmarks({ property }: NearbyLandmarksProps) {
 
         {/* Tabs */}
         <div className="flex gap-3 overflow-x-auto pb-2 mb-4 scrollbar-hide">
-          {TABS.map((tab) => {
+          {TABS.map(tab => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
-            
+
             return (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
                 className={`
                   flex items-center gap-2 px-4 py-2 rounded-full border text-sm font-medium whitespace-nowrap transition-colors
-                  ${isActive 
-                    ? 'bg-orange-50 border-orange-500 text-orange-700' 
-                    : 'bg-white border-orange-200 text-slate-600 hover:border-orange-300 hover:bg-orange-50/50'
+                  ${
+                    isActive
+                      ? 'bg-orange-50 border-orange-500 text-orange-700'
+                      : 'bg-white border-orange-200 text-slate-600 hover:border-orange-300 hover:bg-orange-50/50'
                   }
                 `}
               >
-                <Icon className={`h-3.5 w-3.5 ${isActive ? 'text-orange-500' : 'text-slate-400'}`} />
+                <Icon
+                  className={`h-3.5 w-3.5 ${isActive ? 'text-orange-500' : 'text-slate-400'}`}
+                />
                 {tab.label}
               </button>
             );
@@ -156,14 +174,16 @@ export function NearbyLandmarks({ property }: NearbyLandmarksProps) {
         ) : connectedPOIs && connectedPOIs.length > 0 ? (
           <div className="space-y-0">
             {connectedPOIs.map((poi: any, index: number) => (
-              <div 
-                key={poi.id || index} 
+              <div
+                key={poi.id || index}
                 className={`flex items-center justify-between py-4 ${index !== connectedPOIs.length - 1 ? 'border-b border-slate-100' : ''}`}
               >
                 <div className="flex flex-col">
                   <span className="text-slate-700 font-medium">{poi.name}</span>
                   {poi.type && (
-                    <span className="text-xs text-slate-400 capitalize">{poi.type.replace(/_/g, ' ')}</span>
+                    <span className="text-xs text-slate-400 capitalize">
+                      {poi.type.replace(/_/g, ' ')}
+                    </span>
                   )}
                 </div>
                 <div className="flex items-center gap-1.5 text-slate-500">

@@ -1,9 +1,9 @@
 /**
  * HeroSection Component
- * 
+ *
  * The hero section is the first visible section of the Advertise With Us landing page.
  * It communicates the core value proposition and provides primary CTAs.
- * 
+ *
  * Requirements: 1.1, 10.2, 10.3, 10.4
  */
 
@@ -73,13 +73,10 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
           variants={staggerContainer}
           initial="initial"
           whileInView="animate"
-          viewport={{ once: true, margin: "-100px" }}
+          viewport={{ once: true, margin: '-100px' }}
         >
           {/* Left Column: Text Content */}
-          <motion.div
-            className="text-center lg:text-left space-y-6"
-            variants={staggerItem}
-          >
+          <motion.div className="text-center lg:text-left space-y-6" variants={staggerItem}>
             {/* Headline with gradient text */}
             <motion.h1
               id="hero-headline"
@@ -105,27 +102,16 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
             </motion.p>
 
             {/* CTA Button Group */}
-            <motion.div
-              className="justify-center lg:justify-start"
-              variants={fadeUp}
-            >
-              <CTAButtonGroup
-                primaryCTA={primaryCTA}
-                secondaryCTA={secondaryCTA}
-              />
+            <motion.div className="justify-center lg:justify-start" variants={fadeUp}>
+              <CTAButtonGroup primaryCTA={primaryCTA} secondaryCTA={secondaryCTA} />
             </motion.div>
 
             {/* Trust Signals */}
-            {trustSignals.length > 0 && (
-              <TrustSignals signals={trustSignals} />
-            )}
+            {trustSignals.length > 0 && <TrustSignals signals={trustSignals} />}
           </motion.div>
 
           {/* Right Column: Static Billboard Banner */}
-          <motion.div
-            className="relative"
-            variants={staggerItem}
-          >
+          <motion.div className="relative" variants={staggerItem}>
             <BillboardBanner
               imageUrl={billboard.imageUrl}
               alt={billboard.alt}

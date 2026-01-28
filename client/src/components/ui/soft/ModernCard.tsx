@@ -1,9 +1,9 @@
 /**
  * ModernCard Component
- * 
+ *
  * A versatile card component with modern design and subtle shadows.
  * Supports multiple variants: default, glass, and elevated.
- * 
+ *
  * Features:
  * - Smooth hover animations
  * - Press state feedback
@@ -30,10 +30,10 @@ const variantStyles = {
   elevated: 'bg-white rounded-lg shadow-xl hover:shadow-2xl',
 } as const;
 
-export function ModernCard({ 
-  children, 
-  className = '', 
-  onClick, 
+export function ModernCard({
+  children,
+  className = '',
+  onClick,
   hoverable = true,
   variant = 'default',
   as = 'div',
@@ -48,26 +48,38 @@ export function ModernCard({
         variantStyles[variant],
         'transition-all duration-300 ease-out',
         isInteractive && 'cursor-pointer',
-        className
+        className,
       )}
       onClick={onClick}
-      whileHover={hoverable && isInteractive ? { 
-        y: -2, 
-        scale: 1.01,
-        transition: { duration: 0.2, ease: 'easeOut' }
-      } : undefined}
-      whileTap={isInteractive ? { 
-        scale: 0.98,
-        transition: { duration: 0.15, ease: 'easeOut' }
-      } : undefined}
+      whileHover={
+        hoverable && isInteractive
+          ? {
+              y: -2,
+              scale: 1.01,
+              transition: { duration: 0.2, ease: 'easeOut' },
+            }
+          : undefined
+      }
+      whileTap={
+        isInteractive
+          ? {
+              scale: 0.98,
+              transition: { duration: 0.15, ease: 'easeOut' },
+            }
+          : undefined
+      }
       role={isInteractive ? 'button' : undefined}
       tabIndex={isInteractive ? 0 : undefined}
-      onKeyDown={isInteractive ? (e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          onClick?.();
-        }
-      } : undefined}
+      onKeyDown={
+        isInteractive
+          ? e => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                onClick?.();
+              }
+            }
+          : undefined
+      }
       {...props}
     >
       {children}

@@ -1,6 +1,6 @@
 /**
  * Partner Selection Section Demo Page
- * 
+ *
  * Demonstrates the PartnerSelectionSection component with all five partner types.
  * Shows staggered animations, hover interactions, and responsive layout.
  */
@@ -77,7 +77,9 @@ export default function PartnerSelectionDemo() {
               lineHeight: '1.75',
             }}
           >
-            <li>Five partner type cards (Agent, Developer, Bank, Bond Originator, Service Provider)</li>
+            <li>
+              Five partner type cards (Agent, Developer, Bank, Bond Originator, Service Provider)
+            </li>
             <li>Staggered fade-up animations on scroll (100ms delay per card)</li>
             <li>Hover lift animation with shadow expansion</li>
             <li>Click navigation to sub-landing pages</li>
@@ -92,4 +94,3 @@ export default function PartnerSelectionDemo() {
     </div>
   );
 }
-

@@ -1,6 +1,6 @@
 /**
  * PricingPreviewDemo Page
- * 
+ *
  * Demo page to showcase the PricingPreviewSection component
  */
 
@@ -14,9 +14,7 @@ export default function PricingPreviewDemo() {
         <h1 style={{ fontSize: '2rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>
           Pricing Preview Section Demo
         </h1>
-        <p style={{ color: '#6b7280' }}>
-          Task 8: Implement Pricing Preview Section
-        </p>
+        <p style={{ color: '#6b7280' }}>Task 8: Implement Pricing Preview Section</p>
       </div>
 
       <PricingPreviewSection />

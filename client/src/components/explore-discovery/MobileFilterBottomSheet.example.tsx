@@ -112,7 +112,7 @@ export function CustomApplyExample() {
       bedrooms: 3,
       bathrooms: 2,
     };
-    
+
     setAppliedFilters(filters);
     console.log('Applied filters:', filters);
   };
@@ -176,7 +176,7 @@ export function ExplorePageExample() {
               No properties found. Try adjusting your filters.
             </p>
           ) : (
-            properties.map((property) => (
+            properties.map(property => (
               <div key={property.id} className="bg-white rounded-lg p-4 shadow">
                 {property.title}
               </div>
@@ -205,9 +205,7 @@ export function SnapPointTestExample() {
     <div className="p-4">
       <div className="space-y-4">
         <h2 className="text-xl font-bold">Snap Point Testing</h2>
-        <p className="text-gray-600">
-          Open the bottom sheet and try:
-        </p>
+        <p className="text-gray-600">Open the bottom sheet and try:</p>
         <ul className="list-disc list-inside space-y-2 text-sm text-gray-600">
           <li>Dragging the handle down slowly</li>
           <li>Dragging the handle up slowly</li>
@@ -215,7 +213,7 @@ export function SnapPointTestExample() {
           <li>Fast swipe up (should go to full)</li>
           <li>Clicking the snap point indicators</li>
         </ul>
-        
+
         <button
           onClick={() => setIsOpen(true)}
           className="px-4 py-2 bg-indigo-600 text-white rounded-lg"
@@ -224,10 +222,7 @@ export function SnapPointTestExample() {
         </button>
       </div>
 
-      <MobileFilterBottomSheet
-        isOpen={isOpen}
-        onClose={() => setIsOpen(false)}
-      />
+      <MobileFilterBottomSheet isOpen={isOpen} onClose={() => setIsOpen(false)} />
     </div>
   );
 }
@@ -242,9 +237,7 @@ export function AccessibilityTestExample() {
     <div className="p-4">
       <div className="space-y-4">
         <h2 className="text-xl font-bold">Accessibility Testing</h2>
-        <p className="text-gray-600">
-          Test keyboard navigation:
-        </p>
+        <p className="text-gray-600">Test keyboard navigation:</p>
         <ul className="list-disc list-inside space-y-2 text-sm text-gray-600">
           <li>Press Tab to cycle through elements</li>
           <li>Press Shift+Tab to go backwards</li>
@@ -252,7 +245,7 @@ export function AccessibilityTestExample() {
           <li>Focus should stay trapped in the sheet</li>
           <li>First element should receive focus on open</li>
         </ul>
-        
+
         <button
           onClick={() => setIsOpen(true)}
           className="px-4 py-2 bg-indigo-600 text-white rounded-lg"
@@ -261,10 +254,7 @@ export function AccessibilityTestExample() {
         </button>
       </div>
 
-      <MobileFilterBottomSheet
-        isOpen={isOpen}
-        onClose={() => setIsOpen(false)}
-      />
+      <MobileFilterBottomSheet isOpen={isOpen} onClose={() => setIsOpen(false)} />
     </div>
   );
 }

@@ -154,10 +154,10 @@ export function useNeighbourhoodDetail(neighbourhoodId: number) {
     mutationFn: async () => {
       // TODO: Replace with actual tRPC call
       // await apiClient.exploreApi.toggleNeighbourhoodFollow.mutate({ neighbourhoodId });
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      await new Promise(resolve => setTimeout(resolve, 500));
       return !isFollowing;
     },
-    onSuccess: (newFollowState) => {
+    onSuccess: newFollowState => {
       setIsFollowing(newFollowState);
       // Invalidate queries to refresh data
       queryClient.invalidateQueries({ queryKey: ['neighbourhoodDetail', neighbourhoodId] });

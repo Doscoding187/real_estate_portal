@@ -1,13 +1,21 @@
 /**
  * InsightCard Component
- * 
+ *
  * Displays market insights, price analysis, and investment tips with modern design.
  * Features accent colors, micro-interactions, and smooth animations.
- * 
+ *
  * Requirements: 1.2, 9.3
  */
 
-import { TrendingUp, TrendingDown, BarChart3, Info, Lightbulb, MapPin, ArrowRight } from 'lucide-react';
+import {
+  TrendingUp,
+  TrendingDown,
+  BarChart3,
+  Info,
+  Lightbulb,
+  MapPin,
+  ArrowRight,
+} from 'lucide-react';
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { ModernCard } from '@/components/ui/soft/ModernCard';
@@ -37,7 +45,7 @@ export function InsightCard({ insight, onClick }: InsightCardProps) {
   const [imageLoaded, setImageLoaded] = useState(false);
 
   const getIcon = () => {
-    const iconClass = "w-5 h-5";
+    const iconClass = 'w-5 h-5';
     switch (insight.insightType) {
       case 'market-trend':
         return <TrendingUp className={iconClass} />;
@@ -109,14 +117,9 @@ export function InsightCard({ insight, onClick }: InsightCardProps) {
       aria-label={`${insight.insightType} insight: ${insight.title}`}
     >
       {/* Header with accent gradient */}
-      <div className={cn(
-        'relative p-4 bg-gradient-to-br text-white',
-        colors.gradient
-      )}>
+      <div className={cn('relative p-4 bg-gradient-to-br text-white', colors.gradient)}>
         {/* Content Badge - Requirements 4.1, 4.7 */}
-        {insight.badgeType && (
-          <ContentBadgeOverlay type={insight.badgeType} size="sm" />
-        )}
+        {insight.badgeType && <ContentBadgeOverlay type={insight.badgeType} size="sm" />}
 
         <div className="flex items-start justify-between mb-3">
           {/* Icon with glass effect */}
@@ -133,7 +136,7 @@ export function InsightCard({ insight, onClick }: InsightCardProps) {
             className={cn(
               'px-3 py-1 rounded-full text-xs font-medium',
               colors.badge,
-              'backdrop-blur-sm'
+              'backdrop-blur-sm',
             )}
             initial={{ opacity: 0, x: 10 }}
             animate={{ opacity: 1, x: 0 }}
@@ -153,10 +156,8 @@ export function InsightCard({ insight, onClick }: InsightCardProps) {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.15 }}
           >
-            <div className="text-3xl font-bold mb-1 tracking-tight">
-              {insight.data.value}
-            </div>
-            
+            <div className="text-3xl font-bold mb-1 tracking-tight">{insight.data.value}</div>
+
             {insight.data.change !== undefined && (
               <motion.div
                 className="flex items-center gap-1 text-sm"
@@ -169,15 +170,14 @@ export function InsightCard({ insight, onClick }: InsightCardProps) {
                   <TrendingDown className="w-4 h-4" />
                 )}
                 <span className="font-medium">
-                  {Math.abs(insight.data.change)}% {insight.data.change >= 0 ? 'increase' : 'decrease'}
+                  {Math.abs(insight.data.change)}%{' '}
+                  {insight.data.change >= 0 ? 'increase' : 'decrease'}
                 </span>
               </motion.div>
             )}
-            
+
             {insight.data.label && (
-              <div className="text-xs text-white/80 mt-1">
-                {insight.data.label}
-              </div>
+              <div className="text-xs text-white/80 mt-1">{insight.data.label}</div>
             )}
           </motion.div>
         )}
@@ -185,30 +185,25 @@ export function InsightCard({ insight, onClick }: InsightCardProps) {
 
       {/* Content */}
       <div className="p-4">
-        <h3 className={cn(
-          'text-base font-bold mb-2 transition-colors duration-200',
-          'text-gray-900 group-hover:text-indigo-600'
-        )}>
+        <h3
+          className={cn(
+            'text-base font-bold mb-2 transition-colors duration-200',
+            'text-gray-900 group-hover:text-indigo-600',
+          )}
+        >
           {insight.title}
         </h3>
-        <p className="text-sm text-gray-600 line-clamp-3 leading-relaxed">
-          {insight.description}
-        </p>
+        <p className="text-sm text-gray-600 line-clamp-3 leading-relaxed">{insight.description}</p>
       </div>
 
       {/* Optional image with smooth loading */}
       {insight.imageUrl && (
         <div className="relative h-32 overflow-hidden bg-gray-100">
-          {!imageLoaded && (
-            <div className="absolute inset-0 animate-pulse bg-gray-200" />
-          )}
+          {!imageLoaded && <div className="absolute inset-0 animate-pulse bg-gray-200" />}
           <motion.img
             src={insight.imageUrl}
             alt={insight.title}
-            className={cn(
-              'w-full h-full object-cover',
-              imageLoaded ? 'opacity-100' : 'opacity-0'
-            )}
+            className={cn('w-full h-full object-cover', imageLoaded ? 'opacity-100' : 'opacity-0')}
             onLoad={() => setImageLoaded(true)}
             loading="lazy"
             whileHover={{ scale: 1.05 }}
@@ -222,7 +217,7 @@ export function InsightCard({ insight, onClick }: InsightCardProps) {
         <motion.div
           className={cn(
             'text-sm font-medium flex items-center gap-1',
-            'text-indigo-600 group-hover:text-indigo-700'
+            'text-indigo-600 group-hover:text-indigo-700',
           )}
           whileHover={{ x: 2 }}
           transition={{ duration: 0.2 }}

@@ -1,9 +1,9 @@
 /**
  * Optimized Image Component
- * 
+ *
  * Task 21: Add performance optimizations
  * Requirements 5.5, 24.5: Optimize image loading (lazy loading, WebP format)
- * 
+ *
  * Features:
  * - Lazy loading with Intersection Observer
  * - WebP format with fallback
@@ -37,18 +37,14 @@ const RESPONSIVE_WIDTHS = [320, 640, 768, 1024, 1280, 1536, 1920];
  * Generate srcset for responsive images
  */
 function generateSrcSet(baseUrl: string, widths: number[]): string {
-  return widths
-    .map(width => `${baseUrl}?w=${width} ${width}w`)
-    .join(', ');
+  return widths.map(width => `${baseUrl}?w=${width} ${width}w`).join(', ');
 }
 
 /**
  * Generate WebP srcset
  */
 function generateWebPSrcSet(baseUrl: string, widths: number[]): string {
-  return widths
-    .map(width => `${baseUrl}?w=${width}&format=webp ${width}w`)
-    .join(', ');
+  return widths.map(width => `${baseUrl}?w=${width}&format=webp ${width}w`).join(', ');
 }
 
 /**
@@ -76,8 +72,8 @@ export function OptimizedImage({
     if (priority || !imgRef.current) return;
 
     const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
+      entries => {
+        entries.forEach(entry => {
           if (entry.isIntersecting) {
             setIsInView(true);
             observer.disconnect();
@@ -86,7 +82,7 @@ export function OptimizedImage({
       },
       {
         rootMargin: '50px', // Start loading 50px before entering viewport
-      }
+      },
     );
 
     observer.observe(imgRef.current);
@@ -112,10 +108,7 @@ export function OptimizedImage({
 
   return (
     <div
-      className={cn(
-        'relative overflow-hidden bg-gray-100',
-        className
-      )}
+      className={cn('relative overflow-hidden bg-gray-100', className)}
       style={{ width, height }}
     >
       {/* Blur placeholder while loading */}
@@ -149,11 +142,7 @@ export function OptimizedImage({
       {isInView && !hasError && (
         <picture>
           {/* WebP source for modern browsers */}
-          <source
-            type="image/webp"
-            srcSet={webpSrcSet}
-            sizes={sizes}
-          />
+          <source type="image/webp" srcSet={webpSrcSet} sizes={sizes} />
 
           {/* Fallback to standard formats */}
           <img
@@ -173,7 +162,7 @@ export function OptimizedImage({
               objectFit === 'contain' && 'object-contain',
               objectFit === 'fill' && 'object-fill',
               objectFit === 'none' && 'object-none',
-              objectFit === 'scale-down' && 'object-scale-down'
+              objectFit === 'scale-down' && 'object-scale-down',
             )}
             style={{
               width: width || '100%',
@@ -212,8 +201,8 @@ export function OptimizedBackgroundImage({
     if (priority || !containerRef.current) return;
 
     const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
+      entries => {
+        entries.forEach(entry => {
           if (entry.isIntersecting) {
             setIsInView(true);
             observer.disconnect();
@@ -222,7 +211,7 @@ export function OptimizedBackgroundImage({
       },
       {
         rootMargin: '100px',
-      }
+      },
     );
 
     observer.observe(containerRef.current);
@@ -233,10 +222,7 @@ export function OptimizedBackgroundImage({
   }, [priority]);
 
   return (
-    <div
-      ref={containerRef}
-      className={cn('relative overflow-hidden', className)}
-    >
+    <div ref={containerRef} className={cn('relative overflow-hidden', className)}>
       {/* Blur placeholder */}
       {!isLoaded && (
         <div className="absolute inset-0 bg-gradient-to-br from-gray-200 to-gray-300 animate-pulse" />
@@ -245,10 +231,7 @@ export function OptimizedBackgroundImage({
       {/* Background image */}
       {isInView && (
         <picture>
-          <source
-            type="image/webp"
-            srcSet={generateWebPSrcSet(src, RESPONSIVE_WIDTHS)}
-          />
+          <source type="image/webp" srcSet={generateWebPSrcSet(src, RESPONSIVE_WIDTHS)} />
           <img
             src={src}
             srcSet={generateSrcSet(src, RESPONSIVE_WIDTHS)}
@@ -257,7 +240,7 @@ export function OptimizedBackgroundImage({
             onLoad={() => setIsLoaded(true)}
             className={cn(
               'absolute inset-0 w-full h-full object-cover transition-opacity duration-500',
-              isLoaded ? 'opacity-100' : 'opacity-0'
+              isLoaded ? 'opacity-100' : 'opacity-0',
             )}
           />
         </picture>

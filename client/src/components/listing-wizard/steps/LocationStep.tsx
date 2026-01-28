@@ -36,7 +36,7 @@ const LocationStep: React.FC = () => {
         toast.success('Address populated from map location');
       }
     },
-    [manualOverride, setLocation, location]
+    [manualOverride, setLocation, location],
   );
 
   const handleGeocodingError = useCallback((error: string) => {
@@ -83,7 +83,7 @@ const LocationStep: React.FC = () => {
           onLocationSelect={handleLocationSelect}
           onGeocodingError={handleGeocodingError}
         />
-        
+
         {geocodingError && (
           <Alert variant="destructive">
             <AlertTriangle className="h-4 w-4" />
@@ -97,14 +97,18 @@ const LocationStep: React.FC = () => {
         <div className="flex items-start gap-2 text-sm text-slate-600 bg-blue-50 p-3 rounded-lg">
           <Info className="w-4 h-4 mt-0.5 flex-shrink-0" />
           <p>
-            Address fields are auto-populated when you select a location. You can edit them manually if needed.
+            Address fields are auto-populated when you select a location. You can edit them manually
+            if needed.
           </p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="col-span-2">
             <Label htmlFor="address">
-              Street Address {!manualOverride && <span className="text-xs text-slate-500">(Auto-filled from map)</span>}
+              Street Address{' '}
+              {!manualOverride && (
+                <span className="text-xs text-slate-500">(Auto-filled from map)</span>
+              )}
             </Label>
             <Input
               id="address"

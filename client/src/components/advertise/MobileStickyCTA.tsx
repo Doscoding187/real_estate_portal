@@ -1,9 +1,9 @@
 /**
  * MobileStickyCTA Component
- * 
+ *
  * Sticky CTA button that appears on mobile devices after scrolling past the hero section.
  * Includes slide-up animation and dismissible functionality.
- * 
+ *
  * Requirements: 8.3
  */
 
@@ -45,7 +45,7 @@ export const MobileStickyCTA: React.FC<MobileStickyCTAProps> = ({
       ctaLocation: 'mobile_sticky',
       ctaHref: href,
     });
-    
+
     if (onClick) {
       e.preventDefault();
       onClick();
@@ -55,7 +55,7 @@ export const MobileStickyCTA: React.FC<MobileStickyCTAProps> = ({
   const handleDismiss = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.stopPropagation();
     setIsDismissed(true);
-    
+
     // Track dismiss event
     if (typeof window !== 'undefined' && (window as any).gtag) {
       (window as any).gtag('event', 'sticky_cta_dismiss', {
@@ -63,11 +63,11 @@ export const MobileStickyCTA: React.FC<MobileStickyCTAProps> = ({
         timestamp: new Date().toISOString(),
       });
     }
-    
+
     if (process.env.NODE_ENV === 'development') {
       console.log('📊 Mobile Sticky CTA Dismissed');
     }
-    
+
     if (onDismiss) {
       onDismiss();
     }
@@ -146,10 +146,7 @@ export const MobileStickyCTA: React.FC<MobileStickyCTAProps> = ({
               }}
               aria-label="Dismiss sticky CTA"
             >
-              <X
-                size={20}
-                style={{ color: softUITokens.colors.neutral.gray600 }}
-              />
+              <X size={20} style={{ color: softUITokens.colors.neutral.gray600 }} />
             </motion.button>
           </div>
         </motion.div>
@@ -167,7 +164,7 @@ export const useMobileStickyCTA = (heroSectionId: string = 'hero-section') => {
   useEffect(() => {
     const handleScroll = () => {
       const heroSection = document.getElementById(heroSectionId);
-      
+
       if (!heroSection) {
         return;
       }
@@ -192,4 +189,3 @@ export const useMobileStickyCTA = (heroSectionId: string = 'hero-section') => {
 
   return isVisible;
 };
-

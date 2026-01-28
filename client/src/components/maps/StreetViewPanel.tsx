@@ -59,7 +59,6 @@ export function StreetViewPanel({
 
   const error = localError || mapsError;
 
-
   // Initialize Street View panorama
   useEffect(() => {
     if (!panoramaRef.current || !isLoaded || !location.lat || !location.lng) return;

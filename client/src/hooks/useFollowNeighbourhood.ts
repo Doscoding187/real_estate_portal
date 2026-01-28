@@ -22,7 +22,7 @@ export function useFollowNeighbourhood({
   const [isFollowing, setIsFollowing] = useState(initialFollowing);
 
   const toggleFollowMutation = trpc.exploreApi.toggleNeighbourhoodFollow.useMutation({
-    onSuccess: (data) => {
+    onSuccess: data => {
       setIsFollowing(data.data.following);
 
       // Call success callbacks
@@ -32,7 +32,7 @@ export function useFollowNeighbourhood({
         onUnfollowSuccess();
       }
     },
-    onError: (error) => {
+    onError: error => {
       console.error('Failed to toggle follow:', error);
       // Optionally show a toast notification
     },

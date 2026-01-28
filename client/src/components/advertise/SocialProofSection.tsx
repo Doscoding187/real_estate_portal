@@ -1,9 +1,9 @@
 /**
  * SocialProofSection Component
- * 
+ *
  * Displays social proof including partner logos and key metrics.
  * Builds trust through credibility indicators.
- * 
+ *
  * Requirements: 6.1, 6.2, 6.3, 6.4, 6.5
  */
 
@@ -21,12 +21,12 @@ export interface PartnerLogo {
    * Partner name
    */
   name: string;
-  
+
   /**
    * Logo image URL
    */
   imageUrl?: string;
-  
+
   /**
    * Alt text for the logo
    */
@@ -38,17 +38,17 @@ export interface SocialProofMetric {
    * Metric value (number or formatted string)
    */
   value: string | number;
-  
+
   /**
    * Descriptive label
    */
   label: string;
-  
+
   /**
    * Optional icon
    */
   icon?: typeof TrendingUp;
-  
+
   /**
    * Icon color
    */
@@ -61,28 +61,28 @@ export interface SocialProofSectionProps {
    * @default "Trusted by Leading Property Professionals"
    */
   heading?: string;
-  
+
   /**
    * Section subheading
    */
   subheading?: string;
-  
+
   /**
    * Partner logos to display
    */
   partnerLogos?: PartnerLogo[];
-  
+
   /**
    * Key metrics to display
    */
   metrics: SocialProofMetric[];
-  
+
   /**
    * Whether to show partner logos
    * @default true
    */
   showLogos?: boolean;
-  
+
   /**
    * Disclaimer text for placeholder data
    */
@@ -91,7 +91,7 @@ export interface SocialProofSectionProps {
 
 /**
  * SocialProofSection Component
- * 
+ *
  * @example
  * ```tsx
  * <SocialProofSection
@@ -125,10 +125,7 @@ export const SocialProofSection: React.FC<SocialProofSectionProps> = ({
   if (!metrics || !Array.isArray(metrics) || metrics.length === 0) {
     console.warn('SocialProofSection: metrics prop is missing or empty');
     return (
-      <section
-        ref={ref}
-        className="py-20 md:py-28 bg-gray-50"
-      >
+      <section ref={ref} className="py-20 md:py-28 bg-gray-50">
         <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <p className="text-gray-600">Loading social proof...</p>
         </div>
@@ -137,10 +134,7 @@ export const SocialProofSection: React.FC<SocialProofSectionProps> = ({
   }
 
   return (
-    <section
-      ref={ref}
-      className="py-20 md:py-28 bg-gray-50"
-    >
+    <section ref={ref} className="py-20 md:py-28 bg-gray-50">
       <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
         <motion.div
@@ -170,7 +164,7 @@ export const SocialProofSection: React.FC<SocialProofSectionProps> = ({
           <motion.div
             variants={staggerContainer}
             initial="initial"
-            animate={isVisible ? "animate" : "initial"}
+            animate={isVisible ? 'animate' : 'initial'}
             className="mb-16"
           >
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-8 items-center justify-items-center">
@@ -211,7 +205,7 @@ export const SocialProofSection: React.FC<SocialProofSectionProps> = ({
         <motion.div
           variants={staggerContainer}
           initial="initial"
-          animate={isVisible ? "animate" : "initial"}
+          animate={isVisible ? 'animate' : 'initial'}
           className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8"
         >
           {metrics.map((metric, index) => (

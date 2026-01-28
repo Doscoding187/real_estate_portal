@@ -9,6 +9,28 @@ import { developerNotifications, users } from '../../drizzle/schema';
 import { eq, and, desc, gte, sql } from 'drizzle-orm';
 import type { NotificationType, NotificationSeverity } from '../../shared/types';
 
+type NotificationRow = {
+  id: number;
+  developerId: number;
+  userId: number | null;
+  title: string;
+  body: string;
+  type: NotificationType;
+  severity: NotificationSeverity;
+  read: number;
+  actionUrl: string | null;
+  metadata: unknown;
+  createdAt: string;
+  user: {
+    id: number;
+    name: string;
+    email: string;
+  } | null;
+};
+
+const READ_FALSE = 0 as const;
+const READ_TRUE = 1 as const;
+
 export interface CreateNotificationParams {
   developerId: number;
   userId?: number;
@@ -51,18 +73,9 @@ export interface GetNotificationsParams {
  * Create a new notification
  */
 export async function createNotification(
-  params: CreateNotificationParams
+  params: CreateNotificationParams,
 ): Promise<DeveloperNotification> {
-  const {
-    developerId,
-    userId,
-    title,
-    body,
-    type,
-    severity = 'info',
-    actionUrl,
-    metadata,
-  } = params;
+  const { developerId, userId, title, body, type, severity = 'info', actionUrl, metadata } = params;
 
   const [notification] = await db
     .insert(developerNotifications)
@@ -73,7 +86,7 @@ export async function createNotification(
       body,
       type,
       severity,
-      read: false,
+      read: READ_FALSE,
       actionUrl: actionUrl || null,
       metadata: metadata ? JSON.stringify(metadata) : null,
       createdAt: new Date().toISOString(),
@@ -122,7 +135,7 @@ export async function createNotification(
  * Get notifications with filtering and pagination
  */
 export async function getNotifications(
-  params: GetNotificationsParams
+  params: GetNotificationsParams,
 ): Promise<DeveloperNotification[]> {
   const { developerId, unreadOnly = false, limit = 20, offset = 0, types } = params;
 
@@ -153,7 +166,7 @@ export async function getNotifications(
   const conditions = [eq(developerNotifications.developerId, developerId)];
 
   if (unreadOnly) {
-    conditions.push(eq(developerNotifications.read, false));
+    conditions.push(eq(developerNotifications.read, READ_FALSE));
   }
 
   if (types && types.length > 0) {
@@ -166,13 +179,11 @@ export async function getNotifications(
     .limit(limit)
     .offset(offset);
 
-  return results.map((notification) => ({
+  return results.map((notification: NotificationRow) => ({
     ...notification,
     read: Boolean(notification.read),
     createdAt: new Date(notification.createdAt),
-    metadata: notification.metadata
-      ? JSON.parse(notification.metadata as string)
-      : undefined,
+    metadata: notification.metadata ? JSON.parse(notification.metadata as string) : undefined,
   })) as DeveloperNotification[];
 }
 
@@ -186,8 +197,8 @@ export async function getUnreadCount(developerId: number): Promise<number> {
     .where(
       and(
         eq(developerNotifications.developerId, developerId),
-        eq(developerNotifications.read, false)
-      )
+        eq(developerNotifications.read, READ_FALSE),
+      ),
     );
 
   return Number(result[0]?.count || 0);
@@ -196,18 +207,15 @@ export async function getUnreadCount(developerId: number): Promise<number> {
 /**
  * Mark a notification as read
  */
-export async function markAsRead(
-  notificationId: number,
-  developerId: number
-): Promise<boolean> {
+export async function markAsRead(notificationId: number, developerId: number): Promise<boolean> {
   const result = await db
     .update(developerNotifications)
-    .set({ read: true })
+    .set({ read: READ_TRUE })
     .where(
       and(
         eq(developerNotifications.id, notificationId),
-        eq(developerNotifications.developerId, developerId)
-      )
+        eq(developerNotifications.developerId, developerId),
+      ),
     );
 
   return (result.rowsAffected || 0) > 0;
@@ -219,12 +227,12 @@ export async function markAsRead(
 export async function markAllAsRead(developerId: number): Promise<number> {
   const result = await db
     .update(developerNotifications)
-    .set({ read: true })
+    .set({ read: READ_TRUE })
     .where(
       and(
         eq(developerNotifications.developerId, developerId),
-        eq(developerNotifications.read, false)
-      )
+        eq(developerNotifications.read, READ_FALSE),
+      ),
     );
 
   return result.rowsAffected || 0;
@@ -235,15 +243,15 @@ export async function markAllAsRead(developerId: number): Promise<number> {
  */
 export async function dismissNotification(
   notificationId: number,
-  developerId: number
+  developerId: number,
 ): Promise<boolean> {
   const result = await db
     .delete(developerNotifications)
     .where(
       and(
         eq(developerNotifications.id, notificationId),
-        eq(developerNotifications.developerId, developerId)
-      )
+        eq(developerNotifications.developerId, developerId),
+      ),
     );
 
   return (result.rowsAffected || 0) > 0;
@@ -254,7 +262,7 @@ export async function dismissNotification(
  */
 export async function deleteOldNotifications(
   developerId: number,
-  olderThanDays: number = 30
+  olderThanDays: number = 30,
 ): Promise<number> {
   const cutoffDate = new Date();
   cutoffDate.setDate(cutoffDate.getDate() - olderThanDays);
@@ -264,9 +272,9 @@ export async function deleteOldNotifications(
     .where(
       and(
         eq(developerNotifications.developerId, developerId),
-        eq(developerNotifications.read, true),
-        sql`${developerNotifications.createdAt} < ${cutoffDate.toISOString()}`
-      )
+        eq(developerNotifications.read, READ_TRUE),
+        sql`${developerNotifications.createdAt} < ${cutoffDate.toISOString()}`,
+      ),
     );
 
   return result.rowsAffected || 0;
@@ -282,7 +290,7 @@ export async function notifyNewLead(
   leadName: string,
   leadEmail: string,
   developmentName: string,
-  leadId: number
+  leadId: number,
 ): Promise<DeveloperNotification> {
   return createNotification({
     developerId,
@@ -302,7 +310,7 @@ export async function notifyQualifiedLead(
   developerId: number,
   leadName: string,
   developmentName: string,
-  leadId: number
+  leadId: number,
 ): Promise<DeveloperNotification> {
   return createNotification({
     developerId,
@@ -323,7 +331,7 @@ export async function notifyViewingScheduled(
   leadName: string,
   developmentName: string,
   viewingDate: Date,
-  leadId: number
+  leadId: number,
 ): Promise<DeveloperNotification> {
   return createNotification({
     developerId,
@@ -343,7 +351,7 @@ export async function notifyViewingCompleted(
   developerId: number,
   leadName: string,
   developmentName: string,
-  leadId: number
+  leadId: number,
 ): Promise<DeveloperNotification> {
   return createNotification({
     developerId,
@@ -364,7 +372,7 @@ export async function notifyUnitSold(
   unitNumber: string,
   developmentName: string,
   price: number,
-  unitId: number
+  unitId: number,
 ): Promise<DeveloperNotification> {
   return createNotification({
     developerId,
@@ -385,7 +393,7 @@ export async function notifyUnitReserved(
   unitNumber: string,
   developmentName: string,
   leadName: string,
-  unitId: number
+  unitId: number,
 ): Promise<DeveloperNotification> {
   return createNotification({
     developerId,
@@ -404,7 +412,7 @@ export async function notifyUnitReserved(
 export async function notifySubscriptionExpiring(
   developerId: number,
   daysRemaining: number,
-  tier: string
+  tier: string,
 ): Promise<DeveloperNotification> {
   return createNotification({
     developerId,
@@ -424,7 +432,7 @@ export async function notifySubscriptionLimitReached(
   developerId: number,
   limitType: string,
   currentValue: number,
-  maxValue: number
+  maxValue: number,
 ): Promise<DeveloperNotification> {
   return createNotification({
     developerId,
@@ -444,7 +452,7 @@ export async function notifyTeamMemberJoined(
   developerId: number,
   memberName: string,
   memberEmail: string,
-  role: string
+  role: string,
 ): Promise<DeveloperNotification> {
   return createNotification({
     developerId,
@@ -465,7 +473,7 @@ export async function notifyCampaignPerformance(
   campaignName: string,
   metric: string,
   value: number,
-  campaignId: number
+  campaignId: number,
 ): Promise<DeveloperNotification> {
   return createNotification({
     developerId,
@@ -484,7 +492,7 @@ export async function notifyCampaignPerformance(
 export async function notifySystemUpdate(
   developerId: number,
   updateTitle: string,
-  updateDescription: string
+  updateDescription: string,
 ): Promise<DeveloperNotification> {
   return createNotification({
     developerId,

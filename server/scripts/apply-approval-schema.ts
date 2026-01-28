@@ -1,4 +1,3 @@
-
 import 'dotenv/config';
 import { getDb } from '../db.ts';
 import { sql } from 'drizzle-orm';
@@ -12,17 +11,17 @@ async function applySchema() {
     // 1. Add approvalStatus to developments
     console.log('Checking developments table...');
     try {
-        await db.execute(sql`
+      await db.execute(sql`
             ALTER TABLE developments 
             ADD COLUMN approval_status ENUM('draft', 'pending', 'approved', 'rejected') DEFAULT 'draft';
         `);
-        console.log('Added approval_status column.');
+      console.log('Added approval_status column.');
     } catch (e: any) {
-        if (e.message.includes("Duplicate column name")) {
-            console.log('approval_status column already exists.');
-        } else {
-            console.error('Error adding column:', e);
-        }
+      if (e.message.includes('Duplicate column name')) {
+        console.log('approval_status column already exists.');
+      } else {
+        console.error('Error adding column:', e);
+      }
     }
 
     // 2. Create development_approval_queue
@@ -48,7 +47,6 @@ async function applySchema() {
         );
     `);
     console.log('development_approval_queue table ensured.');
-
   } catch (err) {
     console.error('Migration failed:', err);
     process.exit(1);

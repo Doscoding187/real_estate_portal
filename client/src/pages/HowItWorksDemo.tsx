@@ -1,6 +1,6 @@
 /**
  * HowItWorksDemo Page
- * 
+ *
  * Demo page to showcase the HowItWorksSection component
  * with different configurations and responsive behavior.
  */
@@ -12,7 +12,9 @@ export default function HowItWorksDemo() {
   return (
     <div style={{ minHeight: '100vh', background: '#f9fafb' }}>
       {/* Spacer for scroll testing */}
-      <div style={{ height: '50vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div
+        style={{ height: '50vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+      >
         <h1 style={{ fontSize: '2rem', color: '#1f2937' }}>
           Scroll down to see the How It Works section
         </h1>

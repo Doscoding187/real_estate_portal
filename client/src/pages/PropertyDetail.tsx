@@ -55,7 +55,10 @@ import { NearbyLandmarks } from '@/components/property/NearbyLandmarks';
 import { SuburbInsights } from '@/components/property/SuburbInsights';
 import { LocalityGuide } from '@/components/property/LocalityGuide';
 import { PropertyMobileFooter } from '@/components/property/PropertyMobileFooter';
-import { DeveloperBrandSection, DeveloperBrandData } from '@/components/property/DeveloperBrandSection';
+import {
+  DeveloperBrandSection,
+  DeveloperBrandData,
+} from '@/components/property/DeveloperBrandSection';
 
 const amenityIcons: Record<string, any> = {
   parking: Car,
@@ -72,8 +75,9 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
   const [, params] = useRoute('/property/:id');
   const [, setLocation] = useLocation();
   const { isAuthenticated } = useAuth();
-  const { addViewedProperty, addGuestFavorite, removeGuestFavorite, isGuestFavorite } = useGuestActivity();
-  
+  const { addViewedProperty, addGuestFavorite, removeGuestFavorite, isGuestFavorite } =
+    useGuestActivity();
+
   // Use prop if provided, otherwise try to get from route
   const rawId = propPropertyId?.toString() || params?.id || '0';
   const numericId = parseInt(rawId);
@@ -154,7 +158,9 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
         <ListingNavbar />
         <div className="container py-fluid-xl text-center">
           <h2 className="text-2xl font-semibold mb-4">Property Not Found</h2>
-          <p className="text-slate-500 mb-6">The property you're looking for doesn't exist or has been removed.</p>
+          <p className="text-slate-500 mb-6">
+            The property you're looking for doesn't exist or has been removed.
+          </p>
           <Button onClick={() => setLocation('/properties')}>Back to Properties</Button>
         </div>
       </div>
@@ -162,27 +168,27 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
   }
 
   const { property, images, agent } = data;
-  
+
   // Safely parse amenities with error handling
-  let amenitiesList:string[] = [];
+  let amenitiesList: string[] = [];
   try {
     if (property.amenities) {
-      amenitiesList = typeof property.amenities === 'string' 
-        ? JSON.parse(property.amenities) 
-        : property.amenities;
+      amenitiesList =
+        typeof property.amenities === 'string'
+          ? JSON.parse(property.amenities)
+          : property.amenities;
     }
   } catch (error) {
     console.error('Error parsing amenities:', error);
     amenitiesList = [];
   }
-  
+
   // Use highlights if available (from features/amenities)
   let highlights: string[] = [];
   try {
     if (property.features) {
-      highlights = typeof property.features === 'string' 
-        ? JSON.parse(property.features) 
-        : property.features;
+      highlights =
+        typeof property.features === 'string' ? JSON.parse(property.features) : property.features;
     } else {
       highlights = amenitiesList;
     }
@@ -190,12 +196,11 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
     console.error('Error parsing features:', error);
     highlights = amenitiesList;
   }
-  
+
   const description = property.description || '';
   const shouldTruncate = description.length > 300;
-  const displayDescription = showFullDescription || !shouldTruncate 
-    ? description 
-    : description.slice(0, 300) + '...';
+  const displayDescription =
+    showFullDescription || !shouldTruncate ? description : description.slice(0, 300) + '...';
 
   // Parse Property Specs
   interface PropertySpecs {
@@ -210,21 +215,21 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
     electricitySupply?: string;
     additionalRooms?: string[];
   }
-  
+
   let specs: PropertySpecs = {};
   try {
     if ((property as any).propertySettings) {
-      specs = typeof (property as any).propertySettings === 'string'
-        ? JSON.parse((property as any).propertySettings)
-        : (property as any).propertySettings;
+      specs =
+        typeof (property as any).propertySettings === 'string'
+          ? JSON.parse((property as any).propertySettings)
+          : (property as any).propertySettings;
     }
   } catch (e) {
     console.error('Failed to parse property settings', e);
   }
 
-  const similarProperties = similarPropertiesData?.properties?.filter(
-    p => p.id !== propertyId
-  ) || [];
+  const similarProperties =
+    similarPropertiesData?.properties?.filter(p => p.id !== propertyId) || [];
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -235,20 +240,27 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
         <div className="container py-6">
           {/* Breadcrumbs */}
           <div className="mb-4">
-            <Breadcrumbs items={generateBreadcrumbs({
-              listingType: property.listingType as any,
-              province: property.province,
-              city: property.city,
-              suburb: property.suburb
-            })} />
+            <Breadcrumbs
+              items={generateBreadcrumbs({
+                listingType: property.listingType as any,
+                province: property.province,
+                city: property.city,
+                suburb: property.suburb,
+              })}
+            />
           </div>
 
           {/* Top Row: Badges */}
           <div className="flex items-center gap-2 mb-4">
-            <Badge className="bg-blue-500 hover:bg-blue-600 text-white border-0 rounded-md px-3 py-1 font-normal">
-              FEATURED
-            </Badge>
-            <Badge variant="secondary" className="bg-slate-100 text-slate-600 hover:bg-slate-200 border-0 rounded-md px-3 py-1 font-normal">
+            {property.featured === 1 && (
+              <Badge className="bg-blue-500 hover:bg-blue-600 text-white border-0 rounded-md px-3 py-1 font-normal">
+                FEATURED
+              </Badge>
+            )}
+            <Badge
+              variant="secondary"
+              className="bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 rounded-md px-3 py-1 font-normal"
+            >
               Ready to move
             </Badge>
           </div>
@@ -266,16 +278,29 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
             </div>
 
             <div className="flex items-center gap-3">
-              <Button variant="outline" size="icon" onClick={handleFavoriteClick} className="h-10 w-10 border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100 hover:text-red-500">
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={handleFavoriteClick}
+                className="h-10 w-10 border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100 hover:text-red-500"
+              >
                 <Heart className="h-5 w-5" />
               </Button>
-              <Button variant="outline" size="icon" onClick={handleShare} className="h-10 w-10 border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100 hover:text-blue-600">
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={handleShare}
+                className="h-10 w-10 border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100 hover:text-blue-600"
+              >
                 <Share2 className="h-5 w-5" />
               </Button>
-              <Button variant="outline" className="border-slate-200 text-slate-700 hover:bg-slate-50 h-10 px-6">
+              <Button
+                variant="outline"
+                className="border-slate-200 text-slate-700 hover:bg-slate-50 h-10 px-6"
+              >
                 Shortlist
               </Button>
-              <Button 
+              <Button
                 className="bg-orange-500 hover:bg-orange-600 text-white font-medium px-6 h-10"
                 onClick={() => setIsContactModalOpen(true)}
               >
@@ -297,7 +322,7 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
           </div>
 
           {/* Right Column - Property Info */}
-          <div className="lg:col-span-5 space-y-8">
+          <div className="lg:col-span-5 space-y-12">
             {/* Price Section */}
             <div>
               <div className="text-fluid-h1 font-bold text-orange-500 mb-2">
@@ -305,7 +330,9 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
               </div>
               <div className="flex items-center gap-2 text-sm">
                 <span className="text-slate-500 font-medium">Estimated Repayment:</span>
-                <span className="text-slate-900 font-bold">{formatCurrency(Math.round(property.price * 0.0095), { compact: false })}/Pm</span>
+                <span className="text-slate-900 font-bold">
+                  {formatCurrency(Math.round(property.price * 0.0095), { compact: false })}/Pm
+                </span>
                 <button className="text-blue-500 hover:text-blue-600 font-medium hover:underline ml-1">
                   Get Pre-Qualified
                 </button>
@@ -353,7 +380,9 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
                   </div>
                   <div>
                     <p className="text-sm text-slate-400">House Size</p>
-                    <p className="font-semibold text-slate-900">{property.area.toLocaleString()} m²</p>
+                    <p className="font-semibold text-slate-900">
+                      {property.area.toLocaleString()} m²
+                    </p>
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
@@ -361,7 +390,7 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
                     <Home className="h-5 w-5" />
                   </div>
                   <div>
-                    <p className="text-sm text-slate-400">Yard/Stand Size</p>
+                    <p className="text-sm text-slate-400">Erf Size</p>
                     <p className="font-semibold text-slate-900">150 m²</p>
                   </div>
                 </div>
@@ -371,19 +400,27 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
                   </div>
                   <div>
                     <p className="text-sm text-slate-400">Property Type</p>
-                    <p className="font-semibold text-slate-900 capitalize">{property.propertyType}</p>
+                    <p className="font-semibold text-slate-900 capitalize">
+                      {property.propertyType}
+                    </p>
                   </div>
                 </div>
               </div>
             </div>
 
             {/* Additional Rooms */}
-             {specs.additionalRooms && specs.additionalRooms.length > 0 && (
+            {specs.additionalRooms && specs.additionalRooms.length > 0 && (
               <div className="mb-6">
-                <h3 className="text-lg font-medium text-slate-400 mb-3">Additional rooms & Specifications</h3>
+                <h3 className="text-lg font-medium text-slate-400 mb-3">
+                  Additional rooms & Specifications
+                </h3>
                 <div className="flex flex-wrap gap-2">
-                  {specs.additionalRooms.map((room) => (
-                    <Badge key={room} variant="secondary" className="bg-orange-50 text-slate-900 hover:bg-orange-100 border-0 px-4 py-1.5 rounded-full font-medium">
+                  {specs.additionalRooms.map(room => (
+                    <Badge
+                      key={room}
+                      variant="secondary"
+                      className="bg-orange-50 text-slate-900 hover:bg-orange-100 border-0 px-4 py-1.5 rounded-full font-medium"
+                    >
                       {room}
                     </Badge>
                   ))}
@@ -420,11 +457,12 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
         <div className="grid grid-cols-12 gap-6">
           {/* LEFT COLUMN (8 columns) */}
           <div className="col-span-12 lg:col-span-8 space-y-6">
-            
             {/* 2.1 About This Property */}
             <Card className="border-slate-200 shadow-sm">
               <CardHeader className="bg-slate-50/50 border-b border-slate-100">
-                <CardTitle className="text-fluid-h3 font-bold text-slate-900">About This Property</CardTitle>
+                <CardTitle className="text-fluid-h3 font-bold text-slate-900">
+                  About This Property
+                </CardTitle>
               </CardHeader>
               <CardContent className="p-4">
                 <p className="text-slate-600 leading-relaxed whitespace-pre-line">
@@ -443,100 +481,131 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
             </Card>
 
             {/* 2.2 Property Features / Specs Table (Dynamic) */}
-            {(specs.ownershipType || specs.powerBackup || (specs.securityFeatures && specs.securityFeatures.length > 0) || specs.waterSupply || specs.internetAccess || specs.flooring || specs.parkingType || specs.petFriendly || specs.electricitySupply) && (
-              <Card className="border-slate-200 shadow-sm">
-                <CardHeader className="bg-slate-50/50 border-b border-slate-100">
-                  <CardTitle className="text-fluid-h3 font-bold text-slate-900">Property Features & Specifications</CardTitle>
-                </CardHeader>
-                <CardContent className="p-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                    {specs.ownershipType && (
-                      <div className="flex items-start gap-2 p-2.5 bg-slate-50 rounded-lg">
-                        <Home className="h-5 w-5 text-orange-500 mt-0.5" />
-                        <div>
-                          <p className="text-sm text-slate-500">Ownership Type</p>
-                          <p className="font-semibold text-slate-900 capitalize">{String(specs.ownershipType).replace(/_/g, ' ')}</p>
+            {(specs.ownershipType ||
+              specs.powerBackup ||
+              (specs.securityFeatures && specs.securityFeatures.length > 0) ||
+              specs.waterSupply ||
+              specs.internetAccess ||
+              specs.flooring ||
+              specs.parkingType ||
+              specs.petFriendly ||
+              specs.electricitySupply) && (
+                <Card className="border-slate-200 shadow-sm">
+                  <CardHeader className="bg-slate-50/50 border-b border-slate-100">
+                    <CardTitle className="text-fluid-h3 font-bold text-slate-900">
+                      Property Features & Specifications
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                      {specs.ownershipType && (
+                        <div className="flex items-start gap-2 p-2.5 bg-slate-50 rounded-lg">
+                          <Home className="h-5 w-5 text-orange-500 mt-0.5" />
+                          <div>
+                            <p className="text-sm text-slate-500">Ownership Type</p>
+                            <p className="font-semibold text-slate-900 capitalize">
+                              {String(specs.ownershipType).replace(/_/g, ' ')}
+                            </p>
+                          </div>
                         </div>
-                      </div>
-                    )}
-                    {specs.powerBackup && (
-                      <div className="flex items-start gap-2 p-2.5 bg-slate-50 rounded-lg">
-                        <Zap className="h-5 w-5 text-orange-500 mt-0.5" />
-                        <div>
-                          <p className="text-sm text-slate-500">Power Backup</p>
-                          <p className="font-semibold text-slate-900 capitalize">{String(specs.powerBackup).replace(/_/g, ' ')}</p>
+                      )}
+                      {specs.powerBackup && (
+                        <div className="flex items-start gap-2 p-2.5 bg-slate-50 rounded-lg">
+                          <Zap className="h-5 w-5 text-orange-500 mt-0.5" />
+                          <div>
+                            <p className="text-sm text-slate-500">Power Backup</p>
+                            <p className="font-semibold text-slate-900 capitalize">
+                              {String(specs.powerBackup).replace(/_/g, ' ')}
+                            </p>
+                          </div>
                         </div>
-                      </div>
-                    )}
-                    {specs.securityFeatures && specs.securityFeatures.length > 0 && (
-                      <div className="flex items-start gap-2 p-2.5 bg-slate-50 rounded-lg">
-                        <Shield className="h-5 w-5 text-orange-500 mt-0.5" />
-                        <div>
-                          <p className="text-sm text-slate-500">Security</p>
-                          <p className="font-semibold text-slate-900 capitalize text-ellipsis overflow-hidden whitespace-nowrap" title={specs.securityFeatures.join(', ').replace(/_/g, ' ')}>
-                             {specs.securityFeatures.length > 1 ? `${specs.securityFeatures.length} Features` : String(specs.securityFeatures[0]).replace(/_/g, ' ')}
-                          </p>
+                      )}
+                      {specs.securityFeatures && specs.securityFeatures.length > 0 && (
+                        <div className="flex items-start gap-2 p-2.5 bg-slate-50 rounded-lg">
+                          <Shield className="h-5 w-5 text-orange-500 mt-0.5" />
+                          <div>
+                            <p className="text-sm text-slate-500">Security</p>
+                            <p
+                              className="font-semibold text-slate-900 capitalize text-ellipsis overflow-hidden whitespace-nowrap"
+                              title={specs.securityFeatures.join(', ').replace(/_/g, ' ')}
+                            >
+                              {specs.securityFeatures.length > 1
+                                ? `${specs.securityFeatures.length} Features`
+                                : String(specs.securityFeatures[0]).replace(/_/g, ' ')}
+                            </p>
+                          </div>
                         </div>
-                      </div>
-                    )}
-                    {specs.waterSupply && (
-                      <div className="flex items-start gap-2 p-2.5 bg-slate-50 rounded-lg">
-                        <Droplets className="h-5 w-5 text-orange-500 mt-0.5" />
-                        <div>
-                          <p className="text-sm text-slate-500">Water Supply</p>
-                          <p className="font-semibold text-slate-900 capitalize">{String(specs.waterSupply).replace(/_/g, ' ')}</p>
+                      )}
+                      {specs.waterSupply && (
+                        <div className="flex items-start gap-2 p-2.5 bg-slate-50 rounded-lg">
+                          <Droplets className="h-5 w-5 text-orange-500 mt-0.5" />
+                          <div>
+                            <p className="text-sm text-slate-500">Water Supply</p>
+                            <p className="font-semibold text-slate-900 capitalize">
+                              {String(specs.waterSupply).replace(/_/g, ' ')}
+                            </p>
+                          </div>
                         </div>
-                      </div>
-                    )}
-                    {specs.internetAccess && (
-                      <div className="flex items-start gap-2 p-2.5 bg-slate-50 rounded-lg">
-                        <Wifi className="h-5 w-5 text-orange-500 mt-0.5" />
-                        <div>
-                          <p className="text-sm text-slate-500">Internet</p>
-                          <p className="font-semibold text-slate-900 capitalize">{String(specs.internetAccess).replace(/_/g, ' ')}</p>
+                      )}
+                      {specs.internetAccess && (
+                        <div className="flex items-start gap-2 p-2.5 bg-slate-50 rounded-lg">
+                          <Wifi className="h-5 w-5 text-orange-500 mt-0.5" />
+                          <div>
+                            <p className="text-sm text-slate-500">Internet</p>
+                            <p className="font-semibold text-slate-900 capitalize">
+                              {String(specs.internetAccess).replace(/_/g, ' ')}
+                            </p>
+                          </div>
                         </div>
-                      </div>
-                    )}
-                    {specs.flooring && (
-                      <div className="flex items-start gap-2 p-2.5 bg-slate-50 rounded-lg">
-                        <Building2 className="h-5 w-5 text-orange-500 mt-0.5" />
-                        <div>
-                          <p className="text-sm text-slate-500">Flooring</p>
-                          <p className="font-semibold text-slate-900 capitalize">{String(specs.flooring).replace(/_/g, ' ')}</p>
+                      )}
+                      {specs.flooring && (
+                        <div className="flex items-start gap-2 p-2.5 bg-slate-50 rounded-lg">
+                          <Building2 className="h-5 w-5 text-orange-500 mt-0.5" />
+                          <div>
+                            <p className="text-sm text-slate-500">Flooring</p>
+                            <p className="font-semibold text-slate-900 capitalize">
+                              {String(specs.flooring).replace(/_/g, ' ')}
+                            </p>
+                          </div>
                         </div>
-                      </div>
-                    )}
-                    {specs.parkingType && (
-                      <div className="flex items-start gap-2 p-2.5 bg-slate-50 rounded-lg">
-                        <Car className="h-5 w-5 text-orange-500 mt-0.5" />
-                        <div>
-                          <p className="text-sm text-slate-500">Parking Type</p>
-                          <p className="font-semibold text-slate-900 capitalize">{String(specs.parkingType).replace(/_/g, ' ')}</p>
+                      )}
+                      {specs.parkingType && (
+                        <div className="flex items-start gap-2 p-2.5 bg-slate-50 rounded-lg">
+                          <Car className="h-5 w-5 text-orange-500 mt-0.5" />
+                          <div>
+                            <p className="text-sm text-slate-500">Parking Type</p>
+                            <p className="font-semibold text-slate-900 capitalize">
+                              {String(specs.parkingType).replace(/_/g, ' ')}
+                            </p>
+                          </div>
                         </div>
-                      </div>
-                    )}
-                    {specs.petFriendly && (
-                      <div className="flex items-start gap-2 p-2.5 bg-slate-50 rounded-lg">
-                        <CheckCircle2 className="h-5 w-5 text-orange-500 mt-0.5" />
-                        <div>
-                          <p className="text-sm text-slate-500">Pet Friendly</p>
-                          <p className="font-semibold text-slate-900 capitalize">{String(specs.petFriendly).replace(/_/g, ' ')}</p>
+                      )}
+                      {specs.petFriendly && (
+                        <div className="flex items-start gap-2 p-2.5 bg-slate-50 rounded-lg">
+                          <CheckCircle2 className="h-5 w-5 text-orange-500 mt-0.5" />
+                          <div>
+                            <p className="text-sm text-slate-500">Pet Friendly</p>
+                            <p className="font-semibold text-slate-900 capitalize">
+                              {String(specs.petFriendly).replace(/_/g, ' ')}
+                            </p>
+                          </div>
                         </div>
-                      </div>
-                    )}
-                    {specs.electricitySupply && (
-                      <div className="flex items-start gap-2 p-2.5 bg-slate-50 rounded-lg">
-                        <Zap className="h-5 w-5 text-orange-500 mt-0.5" />
-                        <div>
-                          <p className="text-sm text-slate-500">Electricity</p>
-                          <p className="font-semibold text-slate-900 capitalize">{String(specs.electricitySupply).replace(/_/g, ' ')}</p>
+                      )}
+                      {specs.electricitySupply && (
+                        <div className="flex items-start gap-2 p-2.5 bg-slate-50 rounded-lg">
+                          <Zap className="h-5 w-5 text-orange-500 mt-0.5" />
+                          <div>
+                            <p className="text-sm text-slate-500">Electricity</p>
+                            <p className="font-semibold text-slate-900 capitalize">
+                              {String(specs.electricitySupply).replace(/_/g, ' ')}
+                            </p>
+                          </div>
                         </div>
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
 
             {/* 2.3 Agent Overview */}
             {/* 2.3 Agent Overview */}
@@ -544,7 +613,7 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
               <div className="flex items-center gap-4 mb-6 pb-4 border-b border-slate-200">
                 <h3 className="text-fluid-h3 font-bold text-slate-900">Agent Overview</h3>
               </div>
-              
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 {/* Left Column: Agent Profile Card */}
                 <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-100">
@@ -552,7 +621,11 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
                   <div className="flex items-center gap-4 mb-6">
                     <div className="w-16 h-16 rounded-full bg-slate-100 overflow-hidden border-2 border-slate-200 shrink-0">
                       {agent?.image ? (
-                        <img src={agent.image} alt={agent.name} className="w-full h-full object-cover" />
+                        <img
+                          src={agent.image}
+                          alt={agent.name}
+                          className="w-full h-full object-cover"
+                        />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center bg-slate-200 text-slate-500 font-bold text-xl">
                           {agent?.name?.charAt(0) || 'A'}
@@ -560,7 +633,9 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
                       )}
                     </div>
                     <div>
-                      <h4 className="text-lg font-bold text-slate-900">{agent?.name || 'Property Agent'}</h4>
+                      <h4 className="text-lg font-bold text-slate-900">
+                        {agent?.name || 'Property Agent'}
+                      </h4>
                       <Badge className="bg-orange-500 hover:bg-orange-600 text-white border-none rounded-full px-3 py-0.5 text-xs font-medium mt-1">
                         PRO AGENT
                       </Badge>
@@ -588,7 +663,10 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
                   </div>
 
                   {/* Current Listings Button */}
-                  <Button variant="outline" className="w-full justify-between h-12 rounded-lg border-slate-200 hover:bg-slate-50 hover:text-slate-900 group">
+                  <Button
+                    variant="outline"
+                    className="w-full justify-between h-12 rounded-lg border-slate-200 hover:bg-slate-50 hover:text-slate-900 group"
+                  >
                     <span className="font-medium text-slate-700">Current Listings</span>
                     <div className="flex items-center gap-2">
                       <span className="bg-slate-100 text-slate-600 text-xs font-bold px-2 py-1 rounded-full group-hover:bg-white">
@@ -603,27 +681,27 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
                 <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-100 flex flex-col h-full">
                   <div className="space-y-4 flex-1">
                     <div className="space-y-1">
-                      <Input 
-                        placeholder="Name" 
-                        className="bg-slate-50 border-slate-200 focus:border-orange-500 focus:ring-orange-500/20 h-11" 
+                      <Input
+                        placeholder="Name"
+                        className="bg-slate-50 border-slate-200 focus:border-orange-500 focus:ring-orange-500/20 h-11"
                       />
                     </div>
                     <div className="space-y-1">
-                      <Input 
-                        type="email" 
-                        placeholder="Email ID" 
-                        className="bg-slate-50 border-slate-200 focus:border-orange-500 focus:ring-orange-500/20 h-11" 
+                      <Input
+                        type="email"
+                        placeholder="Email ID"
+                        className="bg-slate-50 border-slate-200 focus:border-orange-500 focus:ring-orange-500/20 h-11"
                       />
                     </div>
                     <div className="space-y-1">
-                      <Input 
-                        type="tel" 
-                        placeholder="Phone Number" 
-                        className="bg-slate-50 border-slate-200 focus:border-orange-500 focus:ring-orange-500/20 h-11" 
+                      <Input
+                        type="tel"
+                        placeholder="Phone Number"
+                        className="bg-slate-50 border-slate-200 focus:border-orange-500 focus:ring-orange-500/20 h-11"
                       />
                     </div>
                   </div>
-                  
+
                   <Button className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold h-12 rounded-lg mt-6 shadow-sm">
                     Whatsapp Agent
                   </Button>
@@ -633,8 +711,11 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
 
             {/* 2.4 Developer Brand Section (when property is linked to a brand profile) */}
             {((property as any).developerBrand || (property as any).developerBrandProfile) && (
-              <DeveloperBrandSection 
-                brand={((property as any).developerBrand || (property as any).developerBrandProfile) as DeveloperBrandData} 
+              <DeveloperBrandSection
+                brand={
+                  ((property as any).developerBrand ||
+                    (property as any).developerBrandProfile) as DeveloperBrandData
+                }
               />
             )}
 
@@ -644,18 +725,15 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
             {/* 2.5 Suburb Reviews & Insights */}
             <Card className="border-slate-200 shadow-sm">
               <CardContent className="p-6">
-                <SuburbInsights 
-                  suburbName={property.suburb || property.city} 
+                <SuburbInsights
+                  suburbName={property.suburb || property.city}
                   isDevelopment={!!property.developmentId}
                 />
               </CardContent>
             </Card>
 
             {/* 2.6 Locality Guide */}
-            <LocalityGuide 
-              suburb={property.suburb || property.city} 
-              city={property.city}
-            />
+            <LocalityGuide suburb={property.suburb || property.city} city={property.city} />
           </div>
 
           {/* RIGHT COLUMN (4 columns) */}
@@ -663,11 +741,14 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
             {/* Buyability Calculator - Sticky */}
             <div className="sticky top-24 space-y-4">
               <BondCalculator propertyPrice={property.price} showTransferCosts={true} />
-              
+
               {/* Disclaimer */}
               <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
                 <p className="text-xs text-yellow-800">
-                  <strong>Disclaimer:</strong> These calculations are estimates only. Actual bond approval, interest rates, and transfer costs may vary based on individual circumstances and bank policies. Consult with a bond originator or financial advisor for accurate figures.
+                  <strong>Disclaimer:</strong> These calculations are estimates only. Actual bond
+                  approval, interest rates, and transfer costs may vary based on individual
+                  circumstances and bank policies. Consult with a bond originator or financial
+                  advisor for accurate figures.
                 </p>
               </div>
             </div>
@@ -678,85 +759,87 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
         {similarProperties.length > 0 && (
           <div className="mt-12">
             <div className="flex items-center justify-between mb-6">
-                <h3 className="text-2xl font-bold text-slate-900">
+              <h3 className="text-2xl font-bold text-slate-900">
                 Property Listings in {property.suburb || property.city}
-                </h3>
-                <div className="text-sm font-medium text-blue-600 cursor-pointer hover:underline">
-                    View All
-                </div>
+              </h3>
+              <div className="text-sm font-medium text-blue-600 cursor-pointer hover:underline">
+                View All
+              </div>
             </div>
-            
+
             {/* Horizontal Scroll Carousel */}
             <div className="relative -mx-4 px-4 md:mx-0 md:px-0">
-                <div className="flex overflow-x-auto gap-4 pb-8 snap-x snap-mandatory scrollbar-hide">
-                {similarProperties.map((prop) => (
-                    <div
+              <div className="flex overflow-x-auto gap-4 pb-8 snap-x snap-mandatory scrollbar-hide">
+                {similarProperties.map(prop => (
+                  <div
                     key={prop.id}
                     onClick={() => setLocation(`/property/${prop.id}`)}
                     className="group cursor-pointer bg-white rounded-xl border border-slate-200 shadow-sm hover:shadow-lg transition-all overflow-hidden min-w-[280px] md:min-w-[300px] snap-start"
-                    >
+                  >
                     {/* Image */}
                     <div className="relative h-44 overflow-hidden bg-slate-100">
-                        <img
+                      <img
                         src={prop.mainImage || '/placeholder-property.jpg'}
                         alt={prop.title}
                         className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                        />
-                         <div className="absolute top-2 left-2">
-                             <Badge className="bg-white/90 text-slate-700 hover:bg-white backdrop-blur-sm shadow-sm border-0 text-xs py-0 h-5">
-                                 {prop.propertyType}
-                             </Badge>
-                         </div>
+                      />
+                      <div className="absolute top-2 left-2">
+                        <Badge className="bg-white/90 text-slate-700 hover:bg-white backdrop-blur-sm shadow-sm border-0 text-xs py-0 h-5">
+                          {prop.propertyType}
+                        </Badge>
+                      </div>
                     </div>
 
                     {/* Content */}
                     <div className="p-3 space-y-2">
-                        {/* Price */}
-                         <p className="text-lg font-bold text-[#005ca8]">
-                            R {prop.price.toLocaleString()}
-                        </p>
+                      {/* Price */}
+                      <p className="text-lg font-bold text-[#005ca8]">
+                        R {prop.price.toLocaleString()}
+                      </p>
 
-                        {/* Title */}
-                        <h4 className="font-semibold text-slate-800 line-clamp-1 text-sm">
+                      {/* Title */}
+                      <h4 className="font-semibold text-slate-800 line-clamp-1 text-sm">
                         {prop.title}
-                        </h4>
+                      </h4>
 
-                        {/* Property Details */}
-                        <div className="flex items-center gap-3 text-xs text-slate-500">
-                           {prop.bedrooms && (
-                            <div className="flex items-center gap-1">
-                                <Bed className="h-3.5 w-3.5" />
-                                <span>{prop.bedrooms}</span>
-                            </div>
-                           )}
-                           {prop.bathrooms && (
-                            <div className="flex items-center gap-1">
-                                <Bath className="h-3.5 w-3.5" />
-                                <span>{prop.bathrooms}</span>
-                            </div>
-                           )}
-                           {prop.area && (
-                            <div className="flex items-center gap-1">
-                                <Square className="h-3.5 w-3.5" />
-                                <span>{prop.area} m²</span>
-                            </div>
-                           )}
-                        </div>
+                      {/* Property Details */}
+                      <div className="flex items-center gap-3 text-xs text-slate-500">
+                        {prop.bedrooms && (
+                          <div className="flex items-center gap-1">
+                            <Bed className="h-3.5 w-3.5" />
+                            <span>{prop.bedrooms}</span>
+                          </div>
+                        )}
+                        {prop.bathrooms && (
+                          <div className="flex items-center gap-1">
+                            <Bath className="h-3.5 w-3.5" />
+                            <span>{prop.bathrooms}</span>
+                          </div>
+                        )}
+                        {prop.area && (
+                          <div className="flex items-center gap-1">
+                            <Square className="h-3.5 w-3.5" />
+                            <span>{prop.area} m²</span>
+                          </div>
+                        )}
+                      </div>
                     </div>
-                    </div>
+                  </div>
                 ))}
-                </div>
+              </div>
             </div>
           </div>
         )}
       </div>
 
       {/* Sticky Mobile Footer */}
-      <PropertyMobileFooter 
-        agentName={agent?.name || "Agent"} 
+      <PropertyMobileFooter
+        agentName={agent?.name || 'Agent'}
         onCall={() => window.open(`tel:${agent?.phone || ''}`)}
         onEmail={() => setIsContactModalOpen(true)}
-        onWhatsApp={() => window.open(`https://wa.me/${agent?.phone?.replace(/\s+/g, '') || ''}`, '_blank')}
+        onWhatsApp={() =>
+          window.open(`https://wa.me/${agent?.phone?.replace(/\s+/g, '') || ''}`, '_blank')
+        }
       />
 
       {/* Modals */}

@@ -1,6 +1,6 @@
 /**
  * Payload CMS Provider
- * 
+ *
  * Integrates with Payload CMS for content management
  * https://payloadcms.com/
  */
@@ -51,7 +51,7 @@ export class PayloadCMSProvider implements CMSClient {
       }
 
       const data = await response.json();
-      
+
       // Transform Payload response to our content structure
       const content = this.transformPayloadData(data);
 

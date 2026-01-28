@@ -1,19 +1,19 @@
 /**
  * Google Places Service Tests
  * Property-based tests for Google Places API integration
- * 
+ *
  * Feature: google-places-autocomplete-integration
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { fc } from '@fast-check/vitest';
-import { 
-  GooglePlacesService, 
-  extractHierarchy, 
+import {
+  GooglePlacesService,
+  extractHierarchy,
   validateCoordinatePrecision,
   validateSouthAfricaBoundaries,
   type PlaceDetails,
-  type AddressComponent
+  type AddressComponent,
 } from '../googlePlacesService';
 
 describe('GooglePlacesService', () => {
@@ -32,7 +32,7 @@ describe('GooglePlacesService', () => {
      * Property 15: Session token termination
      * For any session token, when terminated, it should be marked as terminated
      * and removed from active sessions after a short delay
-     * 
+     *
      * Validates: Requirements 5.3
      * Feature: google-places-autocomplete-integration, Property 15: Session token termination
      */
@@ -40,7 +40,7 @@ describe('GooglePlacesService', () => {
       fc.assert(
         fc.property(
           fc.nat({ max: 100 }), // Number of tokens to create
-          (tokenCount) => {
+          tokenCount => {
             // Create multiple session tokens
             const tokens: string[] = [];
             for (let i = 0; i < tokenCount; i++) {
@@ -60,7 +60,7 @@ describe('GooglePlacesService', () => {
             // After termination, tokens should be marked as terminated
             // We can verify this by checking that the service handles them correctly
             // The actual removal happens after a 1 second delay, which we test separately
-            
+
             // Property: Terminating a token multiple times should be idempotent
             tokens.forEach(token => {
               service.terminateSessionToken(token);
@@ -69,9 +69,9 @@ describe('GooglePlacesService', () => {
 
             // No errors should occur from multiple terminations
             expect(true).toBe(true);
-          }
+          },
         ),
-        { numRuns: 100 }
+        { numRuns: 100 },
       );
     });
 
@@ -81,21 +81,18 @@ describe('GooglePlacesService', () => {
      */
     it('should create unique session tokens', () => {
       fc.assert(
-        fc.property(
-          fc.integer({ min: 1, max: 1000 }),
-          (count) => {
-            const tokens = new Set<string>();
-            
-            for (let i = 0; i < count; i++) {
-              const token = service.createSessionToken();
-              tokens.add(token);
-            }
+        fc.property(fc.integer({ min: 1, max: 1000 }), count => {
+          const tokens = new Set<string>();
 
-            // All tokens should be unique
-            expect(tokens.size).toBe(count);
+          for (let i = 0; i < count; i++) {
+            const token = service.createSessionToken();
+            tokens.add(token);
           }
-        ),
-        { numRuns: 100 }
+
+          // All tokens should be unique
+          expect(tokens.size).toBe(count);
+        }),
+        { numRuns: 100 },
       );
     });
 
@@ -109,16 +106,16 @@ describe('GooglePlacesService', () => {
           fc.constant(null), // No input needed
           () => {
             const token = service.createSessionToken();
-            
+
             // Token should be a non-empty string
             expect(typeof token).toBe('string');
             expect(token.length).toBeGreaterThan(0);
-            
+
             // Token should not contain spaces or special characters that could cause issues
             expect(token).toMatch(/^[a-zA-Z0-9_-]+$/);
-          }
+          },
         ),
-        { numRuns: 100 }
+        { numRuns: 100 },
       );
     });
 
@@ -128,20 +125,17 @@ describe('GooglePlacesService', () => {
      */
     it('should handle multiple terminations of the same token', () => {
       fc.assert(
-        fc.property(
-          fc.integer({ min: 1, max: 10 }),
-          (terminationCount) => {
-            const token = service.createSessionToken();
-            
-            // Terminate the same token multiple times
-            for (let i = 0; i < terminationCount; i++) {
-              expect(() => {
-                service.terminateSessionToken(token);
-              }).not.toThrow();
-            }
+        fc.property(fc.integer({ min: 1, max: 10 }), terminationCount => {
+          const token = service.createSessionToken();
+
+          // Terminate the same token multiple times
+          for (let i = 0; i < terminationCount; i++) {
+            expect(() => {
+              service.terminateSessionToken(token);
+            }).not.toThrow();
           }
-        ),
-        { numRuns: 100 }
+        }),
+        { numRuns: 100 },
       );
     });
 
@@ -151,16 +145,13 @@ describe('GooglePlacesService', () => {
      */
     it('should handle termination of non-existent tokens gracefully', () => {
       fc.assert(
-        fc.property(
-          fc.string({ minLength: 1, maxLength: 50 }),
-          (randomToken) => {
-            // Terminating a non-existent token should not throw
-            expect(() => {
-              service.terminateSessionToken(randomToken);
-            }).not.toThrow();
-          }
-        ),
-        { numRuns: 100 }
+        fc.property(fc.string({ minLength: 1, maxLength: 50 }), randomToken => {
+          // Terminating a non-existent token should not throw
+          expect(() => {
+            service.terminateSessionToken(randomToken);
+          }).not.toThrow();
+        }),
+        { numRuns: 100 },
       );
     });
   });
@@ -169,23 +160,20 @@ describe('GooglePlacesService', () => {
     /**
      * Property: Minimum input length
      * For any input string with length < 3, autocomplete should return empty array
-     * 
+     *
      * Validates: Requirements 1.2
      */
     it('should not fetch suggestions for inputs shorter than 3 characters', async () => {
       fc.assert(
-        fc.asyncProperty(
-          fc.string({ maxLength: 2 }),
-          async (shortInput) => {
-            const token = service.createSessionToken();
-            const results = await service.getAutocompleteSuggestions(shortInput, token);
-            
-            // Should return empty array for short inputs
-            expect(Array.isArray(results)).toBe(true);
-            expect(results.length).toBe(0);
-          }
-        ),
-        { numRuns: 50 } // Fewer runs for async tests
+        fc.asyncProperty(fc.string({ maxLength: 2 }), async shortInput => {
+          const token = service.createSessionToken();
+          const results = await service.getAutocompleteSuggestions(shortInput, token);
+
+          // Should return empty array for short inputs
+          expect(Array.isArray(results)).toBe(true);
+          expect(results.length).toBe(0);
+        }),
+        { numRuns: 50 }, // Fewer runs for async tests
       );
     });
 
@@ -195,18 +183,15 @@ describe('GooglePlacesService', () => {
      */
     it('should handle valid input lengths without errors', async () => {
       fc.assert(
-        fc.asyncProperty(
-          fc.string({ minLength: 3, maxLength: 100 }),
-          async (validInput) => {
-            const token = service.createSessionToken();
-            
-            // Should not throw for valid inputs
-            await expect(
-              service.getAutocompleteSuggestions(validInput, token)
-            ).resolves.toBeDefined();
-          }
-        ),
-        { numRuns: 20 } // Fewer runs since this makes API calls (or fails gracefully)
+        fc.asyncProperty(fc.string({ minLength: 3, maxLength: 100 }), async validInput => {
+          const token = service.createSessionToken();
+
+          // Should not throw for valid inputs
+          await expect(
+            service.getAutocompleteSuggestions(validInput, token),
+          ).resolves.toBeDefined();
+        }),
+        { numRuns: 20 }, // Fewer runs since this makes API calls (or fails gracefully)
       );
     });
   });
@@ -216,46 +201,46 @@ describe('GooglePlacesService', () => {
      * Property 16: Cache hit for duplicate queries
      * For any autocomplete query that was made within the last 5 minutes,
      * the system should return cached results instead of making a new API call
-     * 
+     *
      * Validates: Requirements 5.5
      * Feature: google-places-autocomplete-integration, Property 16: Cache hit for duplicate queries
      */
     it('should return cached results for duplicate queries within TTL', async () => {
       // Mock axios to track API calls
       const mockAxios = vi.fn();
-      
+
       fc.assert(
         fc.asyncProperty(
           fc.string({ minLength: 3, maxLength: 50 }),
           fc.integer({ min: 2, max: 5 }),
           async (query, duplicateCount) => {
             const token = service.createSessionToken();
-            
+
             // Note: This test validates the caching logic structure
             // In a real scenario with mocked axios, we would verify:
             // 1. First call makes an API request
             // 2. Subsequent calls within 5 minutes use cache
             // 3. No additional API calls are made for cached queries
-            
+
             // For now, we test that the cache mechanism doesn't throw errors
             // and handles duplicate queries gracefully
             const results: any[] = [];
-            
+
             for (let i = 0; i < duplicateCount; i++) {
               const result = await service.getAutocompleteSuggestions(query, token);
               results.push(result);
-              
+
               // All results should be arrays
               expect(Array.isArray(result)).toBe(true);
             }
-            
+
             // All duplicate queries should return the same structure
             results.forEach(result => {
               expect(Array.isArray(result)).toBe(true);
             });
-          }
+          },
         ),
-        { numRuns: 20 } // Fewer runs for async tests
+        { numRuns: 20 }, // Fewer runs for async tests
       );
     });
 
@@ -271,19 +256,19 @@ describe('GooglePlacesService', () => {
           async (query1, query2) => {
             // Skip if queries are the same
             fc.pre(query1 !== query2);
-            
+
             const token = service.createSessionToken();
-            
+
             // Make requests for both queries
             const result1 = await service.getAutocompleteSuggestions(query1, token);
             const result2 = await service.getAutocompleteSuggestions(query2, token);
-            
+
             // Both should return arrays (even if empty due to no API key)
             expect(Array.isArray(result1)).toBe(true);
             expect(Array.isArray(result2)).toBe(true);
-          }
+          },
         ),
-        { numRuns: 20 }
+        { numRuns: 20 },
       );
     });
 
@@ -293,16 +278,13 @@ describe('GooglePlacesService', () => {
      */
     it('should clear all caches when requested', () => {
       fc.assert(
-        fc.property(
-          fc.constant(null),
-          () => {
-            // Clear caches should not throw
-            expect(() => {
-              service.clearCaches();
-            }).not.toThrow();
-          }
-        ),
-        { numRuns: 100 }
+        fc.property(fc.constant(null), () => {
+          // Clear caches should not throw
+          expect(() => {
+            service.clearCaches();
+          }).not.toThrow();
+        }),
+        { numRuns: 100 },
       );
     });
   });
@@ -314,30 +296,27 @@ describe('GooglePlacesService', () => {
      */
     it('should return properly structured usage statistics', () => {
       fc.assert(
-        fc.property(
-          fc.date(),
-          (sinceDate) => {
-            const stats = service.getUsageStatistics(sinceDate);
-            
-            // Verify structure
-            expect(typeof stats.totalRequests).toBe('number');
-            expect(typeof stats.successfulRequests).toBe('number');
-            expect(typeof stats.failedRequests).toBe('number');
-            expect(typeof stats.averageResponseTime).toBe('number');
-            expect(typeof stats.requestsByType).toBe('object');
-            expect(typeof stats.errorsByType).toBe('object');
-            
-            // Verify constraints
-            expect(stats.totalRequests).toBeGreaterThanOrEqual(0);
-            expect(stats.successfulRequests).toBeGreaterThanOrEqual(0);
-            expect(stats.failedRequests).toBeGreaterThanOrEqual(0);
-            expect(stats.averageResponseTime).toBeGreaterThanOrEqual(0);
-            
-            // Total should equal successful + failed
-            expect(stats.totalRequests).toBe(stats.successfulRequests + stats.failedRequests);
-          }
-        ),
-        { numRuns: 100 }
+        fc.property(fc.date(), sinceDate => {
+          const stats = service.getUsageStatistics(sinceDate);
+
+          // Verify structure
+          expect(typeof stats.totalRequests).toBe('number');
+          expect(typeof stats.successfulRequests).toBe('number');
+          expect(typeof stats.failedRequests).toBe('number');
+          expect(typeof stats.averageResponseTime).toBe('number');
+          expect(typeof stats.requestsByType).toBe('object');
+          expect(typeof stats.errorsByType).toBe('object');
+
+          // Verify constraints
+          expect(stats.totalRequests).toBeGreaterThanOrEqual(0);
+          expect(stats.successfulRequests).toBeGreaterThanOrEqual(0);
+          expect(stats.failedRequests).toBeGreaterThanOrEqual(0);
+          expect(stats.averageResponseTime).toBeGreaterThanOrEqual(0);
+
+          // Total should equal successful + failed
+          expect(stats.totalRequests).toBe(stats.successfulRequests + stats.failedRequests);
+        }),
+        { numRuns: 100 },
       );
     });
 
@@ -347,19 +326,16 @@ describe('GooglePlacesService', () => {
      */
     it('should maintain consistent statistics', () => {
       fc.assert(
-        fc.property(
-          fc.constant(null),
-          () => {
-            const stats1 = service.getUsageStatistics();
-            const stats2 = service.getUsageStatistics();
-            
-            // Multiple calls should return the same data
-            expect(stats1.totalRequests).toBe(stats2.totalRequests);
-            expect(stats1.successfulRequests).toBe(stats2.successfulRequests);
-            expect(stats1.failedRequests).toBe(stats2.failedRequests);
-          }
-        ),
-        { numRuns: 100 }
+        fc.property(fc.constant(null), () => {
+          const stats1 = service.getUsageStatistics();
+          const stats2 = service.getUsageStatistics();
+
+          // Multiple calls should return the same data
+          expect(stats1.totalRequests).toBe(stats2.totalRequests);
+          expect(stats1.successfulRequests).toBe(stats2.successfulRequests);
+          expect(stats1.failedRequests).toBe(stats2.failedRequests);
+        }),
+        { numRuns: 100 },
       );
     });
   });
@@ -369,7 +345,7 @@ describe('GooglePlacesService', () => {
      * Property 18: Network error retry
      * For any network error during API requests, the system should retry
      * exactly once before falling back to manual entry
-     * 
+     *
      * Validates: Requirements 11.4
      * Feature: google-places-autocomplete-integration, Property 18: Network error retry
      */
@@ -380,25 +356,22 @@ describe('GooglePlacesService', () => {
       // 2. Mock success on second call
       // 3. Verify exactly 2 calls were made
       // 4. Verify the result is from the second call
-      
+
       fc.assert(
-        fc.asyncProperty(
-          fc.string({ minLength: 3, maxLength: 50 }),
-          async (query) => {
-            const token = service.createSessionToken();
-            
-            // Without API key, the service will handle errors gracefully
-            // and return empty results, which is the expected fallback behavior
-            const result = await service.getAutocompleteSuggestions(query, token);
-            
-            // Should return an array (empty if no API key or network error)
-            expect(Array.isArray(result)).toBe(true);
-            
-            // The service should not throw errors even on network failures
-            // This validates the graceful fallback behavior
-          }
-        ),
-        { numRuns: 20 }
+        fc.asyncProperty(fc.string({ minLength: 3, maxLength: 50 }), async query => {
+          const token = service.createSessionToken();
+
+          // Without API key, the service will handle errors gracefully
+          // and return empty results, which is the expected fallback behavior
+          const result = await service.getAutocompleteSuggestions(query, token);
+
+          // Should return an array (empty if no API key or network error)
+          expect(Array.isArray(result)).toBe(true);
+
+          // The service should not throw errors even on network failures
+          // This validates the graceful fallback behavior
+        }),
+        { numRuns: 20 },
       );
     });
 
@@ -415,22 +388,16 @@ describe('GooglePlacesService', () => {
           fc.double({ min: 16, max: 33, noNaN: true }),
           async (query, address, lat, lng) => {
             const token = service.createSessionToken();
-            
+
             // All methods should handle errors gracefully without throwing
-            await expect(
-              service.getAutocompleteSuggestions(query, token)
-            ).resolves.toBeDefined();
-            
-            await expect(
-              service.geocodeAddress(address)
-            ).resolves.toBeDefined();
-            
-            await expect(
-              service.reverseGeocode(lat, lng)
-            ).resolves.toBeDefined();
-          }
+            await expect(service.getAutocompleteSuggestions(query, token)).resolves.toBeDefined();
+
+            await expect(service.geocodeAddress(address)).resolves.toBeDefined();
+
+            await expect(service.reverseGeocode(lat, lng)).resolves.toBeDefined();
+          },
         ),
-        { numRuns: 10 } // Fewer runs since this tests multiple methods
+        { numRuns: 10 }, // Fewer runs since this tests multiple methods
       );
     });
 
@@ -440,25 +407,22 @@ describe('GooglePlacesService', () => {
      */
     it('should produce consistent results when retrying', async () => {
       fc.assert(
-        fc.asyncProperty(
-          fc.string({ minLength: 3, maxLength: 50 }),
-          async (query) => {
-            const token1 = service.createSessionToken();
-            const token2 = service.createSessionToken();
-            
-            // Make the same request twice with different tokens
-            const result1 = await service.getAutocompleteSuggestions(query, token1);
-            const result2 = await service.getAutocompleteSuggestions(query, token2);
-            
-            // Both should return arrays
-            expect(Array.isArray(result1)).toBe(true);
-            expect(Array.isArray(result2)).toBe(true);
-            
-            // If both succeed or both fail, they should have the same structure
-            expect(typeof result1).toBe(typeof result2);
-          }
-        ),
-        { numRuns: 20 }
+        fc.asyncProperty(fc.string({ minLength: 3, maxLength: 50 }), async query => {
+          const token1 = service.createSessionToken();
+          const token2 = service.createSessionToken();
+
+          // Make the same request twice with different tokens
+          const result1 = await service.getAutocompleteSuggestions(query, token1);
+          const result2 = await service.getAutocompleteSuggestions(query, token2);
+
+          // Both should return arrays
+          expect(Array.isArray(result1)).toBe(true);
+          expect(Array.isArray(result2)).toBe(true);
+
+          // If both succeed or both fail, they should have the same structure
+          expect(typeof result1).toBe(typeof result2);
+        }),
+        { numRuns: 20 },
       );
     });
   });
@@ -470,22 +434,19 @@ describe('GooglePlacesService', () => {
      */
     it('should clean up resources on destroy', () => {
       fc.assert(
-        fc.property(
-          fc.constant(null),
-          () => {
-            const testService = new GooglePlacesService();
-            
-            // Create some tokens
-            testService.createSessionToken();
-            testService.createSessionToken();
-            
-            // Destroy should not throw
-            expect(() => {
-              testService.destroy();
-            }).not.toThrow();
-          }
-        ),
-        { numRuns: 100 }
+        fc.property(fc.constant(null), () => {
+          const testService = new GooglePlacesService();
+
+          // Create some tokens
+          testService.createSessionToken();
+          testService.createSessionToken();
+
+          // Destroy should not throw
+          expect(() => {
+            testService.destroy();
+          }).not.toThrow();
+        }),
+        { numRuns: 100 },
       );
     });
 
@@ -495,20 +456,17 @@ describe('GooglePlacesService', () => {
      */
     it('should handle multiple destroy calls safely', () => {
       fc.assert(
-        fc.property(
-          fc.integer({ min: 1, max: 5 }),
-          (destroyCount) => {
-            const testService = new GooglePlacesService();
-            
-            // Multiple destroy calls should not throw
-            for (let i = 0; i < destroyCount; i++) {
-              expect(() => {
-                testService.destroy();
-              }).not.toThrow();
-            }
+        fc.property(fc.integer({ min: 1, max: 5 }), destroyCount => {
+          const testService = new GooglePlacesService();
+
+          // Multiple destroy calls should not throw
+          for (let i = 0; i < destroyCount; i++) {
+            expect(() => {
+              testService.destroy();
+            }).not.toThrow();
           }
-        ),
-        { numRuns: 100 }
+        }),
+        { numRuns: 100 },
       );
     });
   });
@@ -518,30 +476,30 @@ describe('GooglePlacesService', () => {
      * Property: South Africa boundary validation
      * For any coordinates within South Africa bounds, they should be valid
      * South Africa bounds: latitude -35 to -22, longitude 16 to 33
-     * 
+     *
      * Validates: Requirements 4.5
      */
     it('should validate South Africa coordinates correctly', () => {
       fc.assert(
         fc.property(
           fc.double({ min: -35, max: -22, noNaN: true }), // SA latitude range
-          fc.double({ min: 16, max: 33, noNaN: true }),   // SA longitude range
+          fc.double({ min: 16, max: 33, noNaN: true }), // SA longitude range
           (lat, lng) => {
             // Coordinates within SA bounds should be valid
             expect(lat).toBeGreaterThanOrEqual(-35);
             expect(lat).toBeLessThanOrEqual(-22);
             expect(lng).toBeGreaterThanOrEqual(16);
             expect(lng).toBeLessThanOrEqual(33);
-          }
+          },
         ),
-        { numRuns: 100 }
+        { numRuns: 100 },
       );
     });
 
     /**
      * Property: Coordinate precision
      * For any coordinates, they should maintain at least 6 decimal places of precision
-     * 
+     *
      * Validates: Requirements 4.2
      */
     it('should maintain coordinate precision', () => {
@@ -553,18 +511,18 @@ describe('GooglePlacesService', () => {
             // Convert to string with 6 decimal places
             const latStr = lat.toFixed(6);
             const lngStr = lng.toFixed(6);
-            
+
             // Parse back
             const parsedLat = parseFloat(latStr);
             const parsedLng = parseFloat(lngStr);
-            
+
             // Should maintain precision within tolerance of 6 decimal places
             // Using 0.000001 (1e-6) as the tolerance for 6 decimal places
             expect(Math.abs(parsedLat - lat)).toBeLessThanOrEqual(0.000001);
             expect(Math.abs(parsedLng - lng)).toBeLessThanOrEqual(0.000001);
-          }
+          },
         ),
-        { numRuns: 100 }
+        { numRuns: 100 },
       );
     });
   });
@@ -574,7 +532,7 @@ describe('GooglePlacesService', () => {
     const createMockPlaceDetails = (
       components: AddressComponent[],
       lat: number,
-      lng: number
+      lng: number,
     ): PlaceDetails => ({
       placeId: 'test-place-id',
       formattedAddress: 'Test Address',
@@ -594,7 +552,7 @@ describe('GooglePlacesService', () => {
      * Property 5: Address component extraction
      * For any Place Details response containing administrative_area_level_1,
      * the province field should be populated with that value
-     * 
+     *
      * Validates: Requirements 3.2
      * Feature: google-places-autocomplete-integration, Property 5: Address component extraction
      */
@@ -618,9 +576,9 @@ describe('GooglePlacesService', () => {
 
             // Province should be extracted from administrative_area_level_1
             expect(hierarchy.province).toBe(provinceName);
-          }
+          },
         ),
-        { numRuns: 100 }
+        { numRuns: 100 },
       );
     });
 
@@ -628,7 +586,7 @@ describe('GooglePlacesService', () => {
      * Property 6: City extraction with fallback
      * For any Place Details response, the city field should be populated from
      * locality if present, otherwise from administrative_area_level_2
-     * 
+     *
      * Validates: Requirements 3.3
      * Feature: google-places-autocomplete-integration, Property 6: City extraction with fallback
      */
@@ -674,9 +632,9 @@ describe('GooglePlacesService', () => {
             } else {
               expect(hierarchy.city).toBe(fallbackCity);
             }
-          }
+          },
         ),
-        { numRuns: 100 }
+        { numRuns: 100 },
       );
     });
 
@@ -684,7 +642,7 @@ describe('GooglePlacesService', () => {
      * Property 7: Suburb extraction with fallback
      * For any Place Details response, the suburb field should be populated from
      * sublocality_level_1 if present, otherwise from neighborhood
-     * 
+     *
      * Validates: Requirements 3.4
      * Feature: google-places-autocomplete-integration, Property 7: Suburb extraction with fallback
      */
@@ -730,9 +688,9 @@ describe('GooglePlacesService', () => {
             } else {
               expect(hierarchy.suburb).toBe(fallbackSuburb);
             }
-          }
+          },
         ),
-        { numRuns: 100 }
+        { numRuns: 100 },
       );
     });
 
@@ -740,7 +698,7 @@ describe('GooglePlacesService', () => {
      * Property 8: Street address concatenation
      * For any Place Details response containing street_number and route,
      * the street address should be the concatenation of these components
-     * 
+     *
      * Validates: Requirements 3.5
      */
     it('should concatenate street_number and route for street address', () => {
@@ -777,9 +735,9 @@ describe('GooglePlacesService', () => {
             } else {
               expect(hierarchy.streetAddress).toBe(streetName);
             }
-          }
+          },
         ),
-        { numRuns: 100 }
+        { numRuns: 100 },
       );
     });
 
@@ -787,7 +745,7 @@ describe('GooglePlacesService', () => {
      * Property 10: Coordinate precision
      * For any extracted coordinates, they should preserve the precision provided by Google Places
      * Google Places typically returns coordinates with 6-8 decimal places
-     * 
+     *
      * Validates: Requirements 4.2
      * Feature: google-places-autocomplete-integration, Property 10: Coordinate precision
      */
@@ -811,8 +769,10 @@ describe('GooglePlacesService', () => {
             const lngDecimals = lng.toString().split('.')[1]?.length ?? 0;
 
             // Calculate output precision
-            const resultLatDecimals = hierarchy.coordinates.lat.toString().split('.')[1]?.length ?? 0;
-            const resultLngDecimals = hierarchy.coordinates.lng.toString().split('.')[1]?.length ?? 0;
+            const resultLatDecimals =
+              hierarchy.coordinates.lat.toString().split('.')[1]?.length ?? 0;
+            const resultLngDecimals =
+              hierarchy.coordinates.lng.toString().split('.')[1]?.length ?? 0;
 
             // System should preserve precision (not lose decimal places)
             expect(resultLatDecimals).toBeGreaterThanOrEqual(latDecimals);
@@ -821,9 +781,9 @@ describe('GooglePlacesService', () => {
             // The precision field should accurately reflect the actual precision
             const actualPrecision = Math.min(resultLatDecimals, resultLngDecimals);
             expect(hierarchy.coordinates.precision).toBe(actualPrecision);
-          }
+          },
         ),
-        { numRuns: 100 }
+        { numRuns: 100 },
       );
     });
 
@@ -831,7 +791,7 @@ describe('GooglePlacesService', () => {
      * Property 12: South Africa boundary validation
      * For any coordinates extracted from a place, they should be validated
      * against South Africa's geographic boundaries (latitude: -35 to -22, longitude: 16 to 33)
-     * 
+     *
      * Validates: Requirements 4.5
      * Feature: google-places-autocomplete-integration, Property 12: South Africa boundary validation
      */
@@ -846,18 +806,16 @@ describe('GooglePlacesService', () => {
             const hierarchy = extractHierarchy(placeDetails);
 
             // Check if coordinates are within SA bounds
-            const expectedWithinSA = 
-              lat >= -35 && lat <= -22 && 
-              lng >= 16 && lng <= 33;
+            const expectedWithinSA = lat >= -35 && lat <= -22 && lng >= 16 && lng <= 33;
 
             // The isWithinSouthAfrica flag should match the expected value
             expect(hierarchy.isWithinSouthAfrica).toBe(expectedWithinSA);
 
             // Validate using the helper function
             expect(validateSouthAfricaBoundaries(lat, lng)).toBe(expectedWithinSA);
-          }
+          },
         ),
-        { numRuns: 100 }
+        { numRuns: 100 },
       );
     });
 
@@ -885,9 +843,9 @@ describe('GooglePlacesService', () => {
             // But coordinates should still be present
             expect(hierarchy.coordinates.lat).toBe(lat);
             expect(hierarchy.coordinates.lng).toBe(lng);
-          }
+          },
         ),
-        { numRuns: 100 }
+        { numRuns: 100 },
       );
     });
 
@@ -917,9 +875,9 @@ describe('GooglePlacesService', () => {
               expect(hierarchy.viewport.southwest.lat).toBeLessThan(lat);
               expect(hierarchy.viewport.southwest.lng).toBeLessThan(lng);
             }
-          }
+          },
         ),
-        { numRuns: 100 }
+        { numRuns: 100 },
       );
     });
 
@@ -977,9 +935,9 @@ describe('GooglePlacesService', () => {
             expect(hierarchy.coordinates.lat).toBe(lat);
             expect(hierarchy.coordinates.lng).toBe(lng);
             expect(hierarchy.isWithinSouthAfrica).toBe(true); // Since we're using SA coordinates
-          }
+          },
         ),
-        { numRuns: 100 }
+        { numRuns: 100 },
       );
     });
   });

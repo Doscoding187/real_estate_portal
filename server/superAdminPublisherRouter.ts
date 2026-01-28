@@ -10,24 +10,25 @@ import { developmentService } from './services/developmentService';
 
 /**
  * Super Admin Publisher Router
- * 
+ *
  * Allows Super Admins to act as platform-owned developer brands.
  * All actions MUST be scoped to a developerBrandProfileId.
  */
 export const superAdminPublisherRouter = router({
-  
   // ==========================================================================
   // Brand Context Selection
   // ==========================================================================
-  
+
   /**
    * List all brand profiles for the context selector
    */
   listBrandProfiles: superAdminProcedure
-    .input(z.object({
-      search: z.string().optional(),
-      limit: z.number().default(50),
-    }))
+    .input(
+      z.object({
+        search: z.string().optional(),
+        limit: z.number().default(50),
+      }),
+    )
     .query(async ({ input }) => {
       return await developerBrandProfileService.listBrandProfiles({
         search: input.search,
@@ -40,9 +41,11 @@ export const superAdminPublisherRouter = router({
    * Get full details of a specific brand profile for context hydration
    */
   getBrandContext: superAdminProcedure
-    .input(z.object({
-      brandProfileId: z.number().int(),
-    }))
+    .input(
+      z.object({
+        brandProfileId: z.number().int(),
+      }),
+    )
     .query(async ({ input }) => {
       return await developerBrandProfileService.getBrandProfileWithStats(input.brandProfileId);
     }),
@@ -51,34 +54,36 @@ export const superAdminPublisherRouter = router({
    * Create a new brand profile (Context Creation)
    */
   createBrandProfile: superAdminProcedure
-    .input(z.object({
-      // Identity
-      brandName: z.string().min(2),
-      brandTier: z.enum(['national', 'regional', 'boutique']).default('regional'),
-      identityType: z.enum(['developer', 'marketing_agency', 'hybrid']).default('developer'),
-      logoUrl: z.string().optional(),
-      
-      // Company Info
-      description: z.string().optional(),
-      category: z.string().optional(),
-      establishedYear: z.number().nullable().optional(),
-      website: z.string().optional(),
-      
-      // Contact Info
-      email: z.string().email().optional().or(z.literal('')),
-      phone: z.string().optional(),
-      address: z.string().optional(),
-      city: z.string().optional(),
-      province: z.string().optional(),
-      
-      // Portfolio
-      completedProjects: z.number().default(0),
-      currentProjects: z.number().default(0),
-      upcomingProjects: z.number().default(0),
-      specializations: z.array(z.string()).default([]),
-      
-      operatingProvinces: z.array(z.string()).optional(),
-    }))
+    .input(
+      z.object({
+        // Identity
+        brandName: z.string().min(2),
+        brandTier: z.enum(['national', 'regional', 'boutique']).default('regional'),
+        identityType: z.enum(['developer', 'marketing_agency', 'hybrid']).default('developer'),
+        logoUrl: z.string().optional(),
+
+        // Company Info
+        description: z.string().optional(),
+        category: z.string().optional(),
+        establishedYear: z.number().nullable().optional(),
+        website: z.string().optional(),
+
+        // Contact Info
+        email: z.string().email().optional().or(z.literal('')),
+        phone: z.string().optional(),
+        address: z.string().optional(),
+        city: z.string().optional(),
+        province: z.string().optional(),
+
+        // Portfolio
+        completedProjects: z.number().default(0),
+        currentProjects: z.number().default(0),
+        upcomingProjects: z.number().default(0),
+        specializations: z.array(z.string()).default([]),
+
+        operatingProvinces: z.array(z.string()).optional(),
+      }),
+    )
     .mutation(async ({ input }) => {
       // Create new platform-owned brand profile
       const result = await developerBrandProfileService.createBrandProfile({
@@ -86,32 +91,35 @@ export const superAdminPublisherRouter = router({
         brandTier: input.brandTier,
         identityType: input.identityType,
         logoUrl: input.logoUrl,
-        
+
         // Map extended fields
         about: input.description,
         // Category is not directly on developerBrandProfiles schema based on service check,
         // but we can map it to 'propertyFocus' or store in 'about' if needed.
-        // Re-checking service definition: propertyFocus is string[]. 
+        // Re-checking service definition: propertyFocus is string[].
         // We'll treat category as primary property focus.
-        propertyFocus: input.category ? [input.category, ...input.specializations] : input.specializations,
-        
+        propertyFocus: input.category
+          ? [input.category, ...input.specializations]
+          : input.specializations,
+
         foundedYear: input.establishedYear,
         websiteUrl: input.website,
         publicContactEmail: input.email,
-        
+
         // Combine address components for headOfficeLocation
-        headOfficeLocation: input.city && input.province 
-          ? `${input.address ? input.address + ', ' : ''}${input.city}, ${input.province}`
-          : input.address,
-          
+        headOfficeLocation:
+          input.city && input.province
+            ? `${input.address ? input.address + ', ' : ''}${input.city}, ${input.province}`
+            : input.address,
+
         operatingProvinces: input.operatingProvinces || (input.province ? [input.province] : []),
-        
+
         // Note: Project counts are currently not in createBrandProfileInput in service
         // We might need to handle them separately or update service if they are critical
         // Looking at service, it has 'totalLeadsReceived' etc but not project counts?
-        // Wait, 'developerBrandProfiles' table schema check needed. 
+        // Wait, 'developerBrandProfiles' table schema check needed.
         // Based on service 'createBrandProfile', it takes 'CreateBrandProfileInput'.
-        
+
         isVisible: true,
       });
 
@@ -122,44 +130,48 @@ export const superAdminPublisherRouter = router({
    * Update an existing brand profile
    */
   updateBrandProfile: superAdminProcedure
-    .input(z.object({
-      brandProfileId: z.number().int(),
-      
-      // Identity
-      brandName: z.string().min(2).optional(),
-      brandTier: z.enum(['national', 'regional', 'boutique']).optional(),
-      identityType: z.enum(['developer', 'marketing_agency', 'hybrid']).optional(),
-      logoUrl: z.string().optional(),
-      
-      // Company Info
-      description: z.string().optional(),
-      category: z.string().optional(),
-      establishedYear: z.number().nullable().optional(),
-      website: z.string().optional(),
-      
-      // Contact Info
-      email: z.string().email().optional().or(z.literal('')),
-      phone: z.string().optional(),
-      address: z.string().optional(),
-      city: z.string().optional(),
-      province: z.string().optional(),
-      
-      // Portfolio (We will just map specializations for now as project counts aren't in schema update yet)
-      specializations: z.array(z.string()).optional(),
-      
-      operatingProvinces: z.array(z.string()).optional(),
-    }))
+    .input(
+      z.object({
+        brandProfileId: z.number().int(),
+
+        // Identity
+        brandName: z.string().min(2).optional(),
+        brandTier: z.enum(['national', 'regional', 'boutique']).optional(),
+        identityType: z.enum(['developer', 'marketing_agency', 'hybrid']).optional(),
+        logoUrl: z.string().optional(),
+
+        // Company Info
+        description: z.string().optional(),
+        category: z.string().optional(),
+        establishedYear: z.number().nullable().optional(),
+        website: z.string().optional(),
+
+        // Contact Info
+        email: z.string().email().optional().or(z.literal('')),
+        phone: z.string().optional(),
+        address: z.string().optional(),
+        city: z.string().optional(),
+        province: z.string().optional(),
+
+        // Portfolio (We will just map specializations for now as project counts aren't in schema update yet)
+        specializations: z.array(z.string()).optional(),
+
+        operatingProvinces: z.array(z.string()).optional(),
+      }),
+    )
     .mutation(async ({ input }) => {
       // Logic to combine address if partial updates are provided is tricky without reading first.
       // ideally frontend sends full address data if updating address.
       // We will perform a simple mapping assuming what is sent is what is intended.
-      
+
       let headOfficeLocation = undefined;
       // Only construct location if at least one component is present, implying an address update intention
       // But for updates, usually better to let frontend send the combined string or we read-modify-write.
       // For simplicity, we will update headOfficeLocation ONLY if 'city' or 'address' is explicitly provided.
       if (input.city || input.address || input.province) {
-         headOfficeLocation = `${input.address || ''}, ${input.city || ''}, ${input.province || ''}`.replace(/^, /, '').replace(/, ,/, ',');
+        headOfficeLocation = `${input.address || ''}, ${input.city || ''}, ${input.province || ''}`
+          .replace(/^, /, '')
+          .replace(/, ,/, ',');
       }
 
       await developerBrandProfileService.updateBrandProfile(input.brandProfileId, {
@@ -183,9 +195,11 @@ export const superAdminPublisherRouter = router({
    * Delete a brand profile
    */
   deleteBrandProfile: superAdminProcedure
-    .input(z.object({
-      brandProfileId: z.number().int(),
-    }))
+    .input(
+      z.object({
+        brandProfileId: z.number().int(),
+      }),
+    )
     .mutation(async ({ input }) => {
       return await developerBrandProfileService.deleteBrandProfile(input.brandProfileId);
     }),
@@ -198,11 +212,13 @@ export const superAdminPublisherRouter = router({
    * List developments for the selected brand context
    */
   getDevelopments: superAdminProcedure
-    .input(z.object({
-      brandProfileId: z.number().int(),
-      status: z.enum(['all', 'draft', 'pending', 'approved', 'rejected', 'published']).optional(),
-      search: z.string().optional(),
-    }))
+    .input(
+      z.object({
+        brandProfileId: z.number().int(),
+        status: z.enum(['all', 'draft', 'pending', 'approved', 'rejected', 'published']).optional(),
+        search: z.string().optional(),
+      }),
+    )
     .query(async ({ input }) => {
       // Use service to get developments specifically linked to this brand profile
       return await developerBrandProfileService.getBrandDevelopments(input.brandProfileId);
@@ -212,14 +228,16 @@ export const superAdminPublisherRouter = router({
    * Create a development under the selected brand context
    */
   createDevelopment: superAdminProcedure
-    .input(z.object({
-      brandProfileId: z.number().int(),
-      name: z.string().min(2),
-      description: z.string().optional(),
-      city: z.string(),
-      province: z.string(),
-      developmentType: z.enum(['residential', 'commercial', 'mixed_use', 'estate', 'complex']),
-    }))
+    .input(
+      z.object({
+        brandProfileId: z.number().int(),
+        name: z.string().min(2),
+        description: z.string().optional(),
+        city: z.string(),
+        province: z.string(),
+        developmentType: z.enum(['residential', 'commercial', 'mixed_use', 'estate', 'complex']),
+      }),
+    )
     .mutation(async ({ input, ctx }) => {
       const dbConn = await db.getDb();
       if (!dbConn) throw new Error('Database not available');
@@ -240,12 +258,18 @@ export const superAdminPublisherRouter = router({
         updatedAt: new Date().toISOString(),
         views: 0,
         isFeatured: 0,
-        slug: input.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') + '-' + Date.now().toString().slice(-4),
+        slug:
+          input.name
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/^-+|-+$/g, '') +
+          '-' +
+          Date.now().toString().slice(-4),
       });
 
-      return { 
-        id: result.insertId, 
-        message: 'Development created under brand context' 
+      return {
+        id: result.insertId,
+        message: 'Development created under brand context',
       };
     }),
 
@@ -253,11 +277,13 @@ export const superAdminPublisherRouter = router({
    * Update a development (must check brand context ownership)
    */
   updateDevelopment: superAdminProcedure
-    .input(z.object({
-      brandProfileId: z.number().int(),
-      developmentId: z.number().int(),
-      data: z.any(), // Flexible partial update, validating ownership first
-    }))
+    .input(
+      z.object({
+        brandProfileId: z.number().int(),
+        developmentId: z.number().int(),
+        data: z.any(), // Flexible partial update, validating ownership first
+      }),
+    )
     .mutation(async ({ input, ctx }) => {
       const dbConn = await db.getDb();
       if (!dbConn) throw new Error('Database not available');
@@ -266,10 +292,12 @@ export const superAdminPublisherRouter = router({
       const [dev] = await dbConn
         .select()
         .from(developments)
-        .where(and(
-          eq(developments.id, input.developmentId),
-          eq(developments.developerBrandProfileId, input.brandProfileId)
-        ));
+        .where(
+          and(
+            eq(developments.id, input.developmentId),
+            eq(developments.developerBrandProfileId, input.brandProfileId),
+          ),
+        );
 
       if (!dev) {
         throw new TRPCError({
@@ -299,11 +327,13 @@ export const superAdminPublisherRouter = router({
    * Get leads captured for this brand
    */
   getBrandLeads: superAdminProcedure
-    .input(z.object({
-      brandProfileId: z.number().int(),
-      limit: z.number().default(50),
-      offset: z.number().default(0),
-    }))
+    .input(
+      z.object({
+        brandProfileId: z.number().int(),
+        limit: z.number().default(50),
+        offset: z.number().default(0),
+      }),
+    )
     .query(async ({ input }) => {
       const dbConn = await db.getDb();
       if (!dbConn) throw new Error('Database not available');
@@ -323,12 +353,13 @@ export const superAdminPublisherRouter = router({
    * Get aggregated metrics for this brand
    */
   getBrandMetrics: superAdminProcedure
-    .input(z.object({
-      brandProfileId: z.number().int(),
-    }))
+    .input(
+      z.object({
+        brandProfileId: z.number().int(),
+      }),
+    )
     .query(async ({ input }) => {
       // Reuse the service's lead stats which aggregates leads, views, etc.
       return await developerBrandProfileService.getBrandLeadStats(input.brandProfileId);
     }),
-
 });

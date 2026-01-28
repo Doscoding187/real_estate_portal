@@ -264,7 +264,7 @@ export function LeadPipeline({ className }: LeadPipelineProps) {
                 </CardHeader>
                 <CardContent className="pt-0">
                   <div className="space-y-3 min-h-[200px] p-1 rounded">
-                    {leads.map((lead) => (
+                    {leads.map(lead => (
                       <div key={lead.id}>
                         <LeadCard lead={lead} />
                       </div>

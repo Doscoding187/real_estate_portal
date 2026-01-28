@@ -16,12 +16,12 @@ interface MediaLightboxProps {
   title?: string;
 }
 
-export function MediaLightbox({ 
-  media, 
-  initialIndex = 0, 
-  isOpen, 
+export function MediaLightbox({
+  media,
+  initialIndex = 0,
+  isOpen,
   onClose,
-  title 
+  title,
 }: MediaLightboxProps) {
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
 
@@ -32,7 +32,7 @@ export function MediaLightbox({
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (!isOpen) return;
-      
+
       switch (e.key) {
         case 'Escape':
           onClose();
@@ -63,11 +63,11 @@ export function MediaLightbox({
   }, [isOpen]);
 
   const goToNext = () => {
-    setCurrentIndex((prev) => (prev + 1) % media.length);
+    setCurrentIndex(prev => (prev + 1) % media.length);
   };
 
   const goToPrevious = () => {
-    setCurrentIndex((prev) => (prev - 1 + media.length) % media.length);
+    setCurrentIndex(prev => (prev - 1 + media.length) % media.length);
   };
 
   if (!isOpen || media.length === 0) return null;
@@ -75,7 +75,7 @@ export function MediaLightbox({
   const currentMedia = media[currentIndex];
 
   return (
-    <div 
+    <div
       className="fixed inset-0 z-50 bg-black/95 flex items-center justify-center"
       onClick={onClose}
     >
@@ -101,9 +101,9 @@ export function MediaLightbox({
       </div>
 
       {/* Main Content */}
-      <div 
+      <div
         className="relative w-full h-full flex items-center justify-center p-4"
-        onClick={(e) => e.stopPropagation()}
+        onClick={e => e.stopPropagation()}
       >
         {/* Previous Button */}
         {media.length > 1 && (

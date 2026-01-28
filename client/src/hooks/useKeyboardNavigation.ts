@@ -1,9 +1,9 @@
 /**
  * Keyboard Navigation Hook
- * 
+ *
  * Provides keyboard shortcuts and navigation support for Explore pages.
  * Requirements: 5.1, 5.6
- * 
+ *
  * Features:
  * - Common keyboard shortcuts (Escape, Enter, Arrow keys)
  * - Focus management
@@ -52,7 +52,9 @@ export function useKeyboardNavigation({
       // Check if any shortcut matches
       for (const shortcut of shortcutsRef.current) {
         const keyMatches = event.key === shortcut.key;
-        const ctrlMatches = shortcut.ctrl ? event.ctrlKey || event.metaKey : !event.ctrlKey && !event.metaKey;
+        const ctrlMatches = shortcut.ctrl
+          ? event.ctrlKey || event.metaKey
+          : !event.ctrlKey && !event.metaKey;
         const shiftMatches = shortcut.shift ? event.shiftKey : !event.shiftKey;
         const altMatches = shortcut.alt ? event.altKey : !event.altKey;
 
@@ -63,7 +65,7 @@ export function useKeyboardNavigation({
         }
       }
     },
-    [enabled, preventDefaultKeys]
+    [enabled, preventDefaultKeys],
   );
 
   useEffect(() => {
@@ -88,7 +90,7 @@ export function useFocusTrap(containerRef: React.RefObject<HTMLElement>, enabled
 
     const container = containerRef.current;
     const focusableElements = container.querySelectorAll<HTMLElement>(
-      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
     );
     const firstElement = focusableElements[0];
     const lastElement = focusableElements[focusableElements.length - 1];
@@ -133,7 +135,7 @@ export function useFocusOnMount(elementRef: React.RefObject<HTMLElement>, enable
 export function useArrowKeyNavigation(
   itemsCount: number,
   onNavigate: (index: number) => void,
-  enabled: boolean = true
+  enabled: boolean = true,
 ) {
   const currentIndexRef = useRef(0);
 
@@ -169,7 +171,7 @@ export function useArrowKeyNavigation(
       currentIndexRef.current = newIndex;
       onNavigate(newIndex);
     },
-    [enabled, itemsCount, onNavigate]
+    [enabled, itemsCount, onNavigate],
   );
 
   useEffect(() => {

@@ -1,15 +1,15 @@
 /**
  * Marketplace Bundle Service
- * 
+ *
  * Manages marketplace bundles that group curated partners by category
  * (e.g., First-Time Buyer Bundle with Finance, Legal, Inspection, Insurance partners).
- * 
+ *
  * Key Features:
  * - Bundle CRUD operations
  * - Partner inclusion in bundles with category assignment
  * - Bundle display with partner ratings and verification status
  * - Performance tracking for bundle partners
- * 
+ *
  * Requirements: 12.1, 12.4
  */
 
@@ -92,7 +92,7 @@ export class MarketplaceBundleService {
    */
   async createBundle(input: CreateBundleInput): Promise<MarketplaceBundle> {
     const id = nanoid();
-    
+
     const result = await db.execute(
       `INSERT INTO marketplace_bundles 
        (id, slug, name, description, target_audience, display_order, is_active)
@@ -103,8 +103,8 @@ export class MarketplaceBundleService {
         input.name,
         input.description || null,
         input.targetAudience || null,
-        input.displayOrder || 0
-      ]
+        input.displayOrder || 0,
+      ],
     );
 
     return this.getBundleById(id);
@@ -119,7 +119,7 @@ export class MarketplaceBundleService {
               is_active as isActive, display_order as displayOrder, created_at as createdAt
        FROM marketplace_bundles
        WHERE id = ?`,
-      [bundleId]
+      [bundleId],
     );
 
     const rows = result.rows as any[];
@@ -135,7 +135,7 @@ export class MarketplaceBundleService {
               is_active as isActive, display_order as displayOrder, created_at as createdAt
        FROM marketplace_bundles
        WHERE slug = ?`,
-      [slug]
+      [slug],
     );
 
     const rows = result.rows as any[];
@@ -151,7 +151,7 @@ export class MarketplaceBundleService {
               is_active as isActive, display_order as displayOrder, created_at as createdAt
        FROM marketplace_bundles
        WHERE is_active = true
-       ORDER BY display_order ASC, name ASC`
+       ORDER BY display_order ASC, name ASC`,
     );
 
     return result.rows as MarketplaceBundle[];
@@ -168,10 +168,9 @@ export class MarketplaceBundleService {
     }
 
     // Verify partner exists
-    const partnerResult = await db.execute(
-      `SELECT id FROM explore_partners WHERE id = ?`,
-      [input.partnerId]
-    );
+    const partnerResult = await db.execute(`SELECT id FROM explore_partners WHERE id = ?`, [
+      input.partnerId,
+    ]);
     if ((partnerResult.rows as any[]).length === 0) {
       throw new Error(`Partner not found: ${input.partnerId}`);
     }
@@ -190,8 +189,8 @@ export class MarketplaceBundleService {
         input.partnerId,
         input.category,
         input.displayOrder || 0,
-        input.inclusionFee || null
-      ]
+        input.inclusionFee || null,
+      ],
     );
   }
 
@@ -202,14 +201,14 @@ export class MarketplaceBundleService {
     await db.execute(
       `DELETE FROM bundle_partners 
        WHERE bundle_id = ? AND partner_id = ?`,
-      [bundleId, partnerId]
+      [bundleId, partnerId],
     );
   }
 
   /**
    * Get bundle with full partner information
    * Includes partner ratings and verification status
-   * 
+   *
    * Validates: Requirements 12.4
    */
   async getBundleWithPartners(bundleId: string): Promise<BundleWithPartners | null> {
@@ -235,7 +234,7 @@ export class MarketplaceBundleService {
        INNER JOIN explore_partners p ON bp.partner_id = p.id
        WHERE bp.bundle_id = ?
        ORDER BY bp.category ASC, bp.display_order ASC`,
-      [bundleId]
+      [bundleId],
     );
 
     const partners = (result.rows as any[]).map(row => ({
@@ -250,12 +249,12 @@ export class MarketplaceBundleService {
       performanceScore: parseFloat(row.performanceScore),
       // In a full implementation, these would come from a reviews table
       averageRating: undefined,
-      reviewCount: undefined
+      reviewCount: undefined,
     }));
 
     return {
       ...bundle,
-      partners
+      partners,
     };
   }
 
@@ -289,7 +288,7 @@ export class MarketplaceBundleService {
        INNER JOIN explore_partners p ON bp.partner_id = p.id
        WHERE bp.bundle_id = ? AND bp.category = ?
        ORDER BY bp.display_order ASC`,
-      [bundleId, category]
+      [bundleId, category],
     );
 
     return (result.rows as any[]).map(row => ({
@@ -301,7 +300,7 @@ export class MarketplaceBundleService {
       trustScore: parseFloat(row.trustScore),
       category: row.category,
       displayOrder: row.displayOrder,
-      performanceScore: parseFloat(row.performanceScore)
+      performanceScore: parseFloat(row.performanceScore),
     }));
   }
 
@@ -311,7 +310,7 @@ export class MarketplaceBundleService {
   async updatePartnerPerformance(
     bundleId: string,
     partnerId: string,
-    performanceScore: number
+    performanceScore: number,
   ): Promise<void> {
     if (performanceScore < 0 || performanceScore > 100) {
       throw new Error('Performance score must be between 0 and 100');
@@ -321,7 +320,7 @@ export class MarketplaceBundleService {
       `UPDATE bundle_partners 
        SET performance_score = ?
        WHERE bundle_id = ? AND partner_id = ?`,
-      [performanceScore, bundleId, partnerId]
+      [performanceScore, bundleId, partnerId],
     );
   }
 
@@ -331,7 +330,7 @@ export class MarketplaceBundleService {
    */
   async getUnderperformingPartners(
     bundleId: string,
-    threshold: number = 40
+    threshold: number = 40,
   ): Promise<BundlePartnerInfo[]> {
     const result = await db.execute(
       `SELECT 
@@ -348,7 +347,7 @@ export class MarketplaceBundleService {
        INNER JOIN explore_partners p ON bp.partner_id = p.id
        WHERE bp.bundle_id = ? AND bp.performance_score < ?
        ORDER BY bp.performance_score ASC`,
-      [bundleId, threshold]
+      [bundleId, threshold],
     );
 
     return (result.rows as any[]).map(row => ({
@@ -360,35 +359,33 @@ export class MarketplaceBundleService {
       trustScore: parseFloat(row.trustScore),
       category: row.category,
       displayOrder: row.displayOrder,
-      performanceScore: parseFloat(row.performanceScore)
+      performanceScore: parseFloat(row.performanceScore),
     }));
   }
 
   /**
    * Validate bundle has required categories
    * For example, First-Time Buyer Bundle should have Finance, Legal, Inspection, Insurance
-   * 
+   *
    * Validates: Requirements 12.1
    */
   async validateBundleCategories(
     bundleId: string,
-    requiredCategories: string[]
+    requiredCategories: string[],
   ): Promise<{ valid: boolean; missingCategories: string[] }> {
     const result = await db.execute(
       `SELECT DISTINCT category
        FROM bundle_partners
        WHERE bundle_id = ?`,
-      [bundleId]
+      [bundleId],
     );
 
     const existingCategories = (result.rows as any[]).map(row => row.category);
-    const missingCategories = requiredCategories.filter(
-      cat => !existingCategories.includes(cat)
-    );
+    const missingCategories = requiredCategories.filter(cat => !existingCategories.includes(cat));
 
     return {
       valid: missingCategories.length === 0,
-      missingCategories
+      missingCategories,
     };
   }
 
@@ -400,7 +397,7 @@ export class MarketplaceBundleService {
       `UPDATE marketplace_bundles 
        SET is_active = ?
        WHERE id = ?`,
-      [isActive, bundleId]
+      [isActive, bundleId],
     );
   }
 
@@ -409,10 +406,7 @@ export class MarketplaceBundleService {
    */
   async deleteBundle(bundleId: string): Promise<void> {
     // Foreign key cascade will handle bundle_partners deletion
-    await db.execute(
-      `DELETE FROM marketplace_bundles WHERE id = ?`,
-      [bundleId]
-    );
+    await db.execute(`DELETE FROM marketplace_bundles WHERE id = ?`, [bundleId]);
   }
 
   /**
@@ -423,7 +417,7 @@ export class MarketplaceBundleService {
       `SELECT id, slug, name, description, target_audience as targetAudience,
               is_active as isActive, display_order as displayOrder, created_at as createdAt
        FROM marketplace_bundles
-       ORDER BY display_order ASC, name ASC`
+       ORDER BY display_order ASC, name ASC`,
     );
 
     return (result.rows as any[]).map(row => ({
@@ -434,7 +428,7 @@ export class MarketplaceBundleService {
       targetAudience: row.targetAudience,
       isActive: Boolean(row.isActive),
       displayOrder: row.displayOrder,
-      createdAt: row.createdAt
+      createdAt: row.createdAt,
     }));
   }
 
@@ -455,12 +449,14 @@ export class MarketplaceBundleService {
     bundleId: string,
     partnerId: string,
     userId: string,
-    engagementType: 'view' | 'click' | 'contact'
+    engagementType: 'view' | 'click' | 'contact',
   ): Promise<void> {
     // In a full implementation, this would insert into a bundle_engagements table
     // For now, we'll log it
-    console.log(`[BUNDLE ENGAGEMENT] Bundle: ${bundleId}, Partner: ${partnerId}, User: ${userId}, Type: ${engagementType}`);
-    
+    console.log(
+      `[BUNDLE ENGAGEMENT] Bundle: ${bundleId}, Partner: ${partnerId}, User: ${userId}, Type: ${engagementType}`,
+    );
+
     // This would be used for:
     // 1. Attribution tracking
     // 2. Partner performance scoring
@@ -478,14 +474,15 @@ export class MarketplaceBundleService {
     engagementCount: number;
   }> {
     const partners = await this.getBundlePartners(bundleId);
-    
+
     const totalPartners = partners.length;
-    const averagePerformanceScore = totalPartners > 0
-      ? partners.reduce((sum, p) => sum + (p.performanceScore || 0), 0) / totalPartners
-      : 0;
-    
+    const averagePerformanceScore =
+      totalPartners > 0
+        ? partners.reduce((sum, p) => sum + (p.performanceScore || 0), 0) / totalPartners
+        : 0;
+
     const categoryCoverage = [...new Set(partners.map(p => p.category))];
-    
+
     // In a full implementation, this would query bundle_engagements table
     const engagementCount = 0;
 
@@ -493,7 +490,7 @@ export class MarketplaceBundleService {
       totalPartners,
       averagePerformanceScore,
       categoryCoverage,
-      engagementCount
+      engagementCount,
     };
   }
 }

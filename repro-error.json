@@ -1,0 +1,4 @@
+{
+  "message": "require is not defined",
+  "stack": "ReferenceError: require is not defined\n    at main (C:\\Users\\Edward\\Desktop\\real_estate_portal\\scripts\\repro-500.ts:43:18)\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)"
+}

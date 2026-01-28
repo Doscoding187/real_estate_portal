@@ -1,7 +1,7 @@
 /**
  * Progressive Image Component
  * Task 17.4: Progressive loading - Blur-up for images
- * 
+ *
  * Implements progressive image loading with:
  * - Low-quality placeholder (blur-up effect)
  * - Lazy loading with Intersection Observer
@@ -39,7 +39,7 @@ function getPlaceholderUrl(src: string): string {
     url.searchParams.set('q', '10');
     return url.toString();
   }
-  
+
   // For other URLs, return a data URI placeholder
   return 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1 1"%3E%3Crect fill="%23e5e7eb" width="1" height="1"/%3E%3C/svg%3E';
 }
@@ -68,8 +68,8 @@ export function ProgressiveImage({
     if (priority || isInView) return;
 
     const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
+      entries => {
+        entries.forEach(entry => {
           if (entry.isIntersecting) {
             setIsInView(true);
             observer.disconnect();
@@ -79,7 +79,7 @@ export function ProgressiveImage({
       {
         rootMargin: '200px', // Start loading 200px before entering viewport
         threshold: 0,
-      }
+      },
     );
 
     if (containerRef.current) {
@@ -113,7 +113,7 @@ export function ProgressiveImage({
         className={cn(
           'absolute inset-0 bg-cover bg-center transition-opacity duration-500',
           isLoaded ? 'opacity-0' : 'opacity-100',
-          placeholderClassName
+          placeholderClassName,
         )}
         style={{
           backgroundImage: `url(${placeholderUrl})`,
@@ -136,7 +136,7 @@ export function ProgressiveImage({
           onError={handleError}
           className={cn(
             'absolute inset-0 w-full h-full object-cover transition-opacity duration-500',
-            isLoaded ? 'opacity-100' : 'opacity-0'
+            isLoaded ? 'opacity-100' : 'opacity-0',
           )}
         />
       )}
@@ -174,7 +174,7 @@ export function OptimizedImage({
 
     const widths = [320, 640, 768, 1024, 1280, 1536];
     return widths
-      .map((w) => {
+      .map(w => {
         const url = new URL(baseSrc);
         url.searchParams.set('w', w.toString());
         return `${url.toString()} ${w}w`;
@@ -182,14 +182,7 @@ export function OptimizedImage({
       .join(', ');
   };
 
-  return (
-    <ProgressiveImage
-      src={src}
-      alt={alt}
-      className={className}
-      {...props}
-    />
-  );
+  return <ProgressiveImage src={src} alt={alt} className={className} {...props} />;
 }
 
 /**
@@ -215,16 +208,12 @@ export function VideoThumbnail({
   return (
     <div className={cn('relative group', className)}>
       <ProgressiveImage {...props} className="w-full h-full" />
-      
+
       {/* Play button overlay */}
       {showPlayButton && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/30 transition-colors">
           <div className="w-12 h-12 bg-white/90 rounded-full flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
-            <svg
-              className="w-5 h-5 text-gray-900 ml-1"
-              fill="currentColor"
-              viewBox="0 0 24 24"
-            >
+            <svg className="w-5 h-5 text-gray-900 ml-1" fill="currentColor" viewBox="0 0 24 24">
               <path d="M8 5v14l11-7z" />
             </svg>
           </div>

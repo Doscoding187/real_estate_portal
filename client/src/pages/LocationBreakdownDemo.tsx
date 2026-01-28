@@ -17,7 +17,7 @@ export default function LocationBreakdownDemo() {
       slug: 'johannesburg',
       suburbCount: 45,
       developmentCount: 12,
-      popularity: 95
+      popularity: 95,
     },
     {
       id: 2,
@@ -27,7 +27,7 @@ export default function LocationBreakdownDemo() {
       slug: 'pretoria',
       suburbCount: 38,
       developmentCount: 8,
-      popularity: 85
+      popularity: 85,
     },
     {
       id: 3,
@@ -37,7 +37,7 @@ export default function LocationBreakdownDemo() {
       slug: 'centurion',
       suburbCount: 15,
       developmentCount: 5,
-      popularity: 75
+      popularity: 75,
     },
   ];
 
@@ -50,7 +50,7 @@ export default function LocationBreakdownDemo() {
       avgPrice: 4500000,
       slug: 'sandton',
       priceChange: 5.2,
-      popularity: 98
+      popularity: 98,
     },
     {
       id: 2,
@@ -59,7 +59,7 @@ export default function LocationBreakdownDemo() {
       avgPrice: 3800000,
       slug: 'rosebank',
       priceChange: 3.1,
-      popularity: 92
+      popularity: 92,
     },
     {
       id: 3,
@@ -68,7 +68,7 @@ export default function LocationBreakdownDemo() {
       avgPrice: 3200000,
       slug: 'fourways',
       priceChange: -1.5,
-      popularity: 88
+      popularity: 88,
     },
     {
       id: 4,
@@ -77,7 +77,7 @@ export default function LocationBreakdownDemo() {
       avgPrice: 2500000,
       slug: 'randburg',
       priceChange: 2.8,
-      popularity: 82
+      popularity: 82,
     },
   ];
 
@@ -90,7 +90,7 @@ export default function LocationBreakdownDemo() {
       avgPrice: 3800000,
       slug: 'rosebank',
       distance: 3.2,
-      cityName: 'Johannesburg'
+      cityName: 'Johannesburg',
     },
     {
       id: 5,
@@ -99,7 +99,7 @@ export default function LocationBreakdownDemo() {
       avgPrice: 5200000,
       slug: 'hyde-park',
       distance: 2.1,
-      cityName: 'Johannesburg'
+      cityName: 'Johannesburg',
     },
     {
       id: 6,
@@ -108,7 +108,7 @@ export default function LocationBreakdownDemo() {
       avgPrice: 4100000,
       slug: 'morningside',
       distance: 4.5,
-      cityName: 'Johannesburg'
+      cityName: 'Johannesburg',
     },
   ];
 
@@ -161,7 +161,7 @@ export default function LocationBreakdownDemo() {
       <div className="bg-slate-50 py-12">
         <div className="container">
           <h2 className="text-2xl font-bold text-slate-900 mb-6">Component Features</h2>
-          
+
           <div className="grid md:grid-cols-3 gap-6">
             <div className="bg-white p-6 rounded-lg border border-slate-200">
               <h3 className="font-bold text-lg mb-3">CityList</h3>

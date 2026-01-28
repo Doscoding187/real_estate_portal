@@ -2,7 +2,7 @@
  * GradientSelect Component
  * Enhanced select dropdown with gradient highlights
  * Part of the Soft UI design system
- * 
+ *
  * Requirements: 3.4
  */
 
@@ -68,7 +68,7 @@ const GradientSelect = React.forwardRef<HTMLButtonElement, GradientSelectProps>(
       children,
       disabled,
     },
-    ref
+    ref,
   ) => {
     const selectId = `select-${React.useId()}`;
     const hasError = !!error;
@@ -77,10 +77,7 @@ const GradientSelect = React.forwardRef<HTMLButtonElement, GradientSelectProps>(
       <div className={cn('space-y-2', containerClassName)}>
         {/* Label */}
         {label && (
-          <label
-            htmlFor={selectId}
-            className="block text-sm font-medium text-gray-700"
-          >
+          <label htmlFor={selectId} className="block text-sm font-medium text-gray-700">
             {label}
             {required && (
               <span
@@ -94,11 +91,7 @@ const GradientSelect = React.forwardRef<HTMLButtonElement, GradientSelectProps>(
         )}
 
         {/* Select */}
-        <SelectPrimitive.Root
-          value={value}
-          onValueChange={onValueChange}
-          disabled={disabled}
-        >
+        <SelectPrimitive.Root value={value} onValueChange={onValueChange} disabled={disabled}>
           <SelectPrimitive.Trigger
             ref={ref}
             id={selectId}
@@ -126,15 +119,11 @@ const GradientSelect = React.forwardRef<HTMLButtonElement, GradientSelectProps>(
               // Disabled state
               'disabled:bg-gray-50 disabled:text-gray-500 disabled:cursor-not-allowed disabled:opacity-60',
               // Placeholder
-              'data-[placeholder]:text-gray-400'
+              'data-[placeholder]:text-gray-400',
             )}
             aria-invalid={hasError}
             aria-describedby={
-              error
-                ? `${selectId}-error`
-                : helperText
-                  ? `${selectId}-helper`
-                  : undefined
+              error ? `${selectId}-error` : helperText ? `${selectId}-helper` : undefined
             }
           >
             <SelectPrimitive.Value placeholder={placeholder} />
@@ -152,14 +141,12 @@ const GradientSelect = React.forwardRef<HTMLButtonElement, GradientSelectProps>(
                 'data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
                 'data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95',
                 'data-[side=bottom]:slide-in-from-top-2',
-                'data-[side=top]:slide-in-from-bottom-2'
+                'data-[side=top]:slide-in-from-bottom-2',
               )}
               position="popper"
               sideOffset={4}
             >
-              <SelectPrimitive.Viewport className="p-1">
-                {children}
-              </SelectPrimitive.Viewport>
+              <SelectPrimitive.Viewport className="p-1">{children}</SelectPrimitive.Viewport>
             </SelectPrimitive.Content>
           </SelectPrimitive.Portal>
         </SelectPrimitive.Root>
@@ -183,7 +170,7 @@ const GradientSelect = React.forwardRef<HTMLButtonElement, GradientSelectProps>(
         )}
       </div>
     );
-  }
+  },
 );
 
 GradientSelect.displayName = 'GradientSelect';
@@ -210,7 +197,7 @@ const GradientSelectItem = React.forwardRef<
       'data-[state=checked]:text-white data-[state=checked]:font-medium',
       // Disabled state
       'data-[disabled]:pointer-events-none data-[disabled]:opacity-50',
-      className
+      className,
     )}
     {...props}
   >

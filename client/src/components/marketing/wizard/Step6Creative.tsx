@@ -77,13 +77,13 @@ const Step6Creative: React.FC<Step6Props> = ({ data, updateData, onNext, onBack,
         {/* Ad Copy */}
         <div className="space-y-4 bg-white p-6 rounded-xl border border-slate-200">
           <h3 className="font-semibold text-slate-900">Ad Copy</h3>
-          
+
           <div className="space-y-2">
             <Label>Headline</Label>
             <Input
               placeholder="e.g. Luxury Apartment in Cape Town"
               value={creative.headline}
-              onChange={(e) => setCreative({ ...creative, headline: e.target.value })}
+              onChange={e => setCreative({ ...creative, headline: e.target.value })}
               maxLength={50}
             />
             <p className="text-xs text-slate-500 text-right">{creative.headline.length}/50</p>
@@ -94,7 +94,7 @@ const Step6Creative: React.FC<Step6Props> = ({ data, updateData, onNext, onBack,
             <Textarea
               placeholder="Highlight key features and selling points..."
               value={creative.description}
-              onChange={(e) => setCreative({ ...creative, description: e.target.value })}
+              onChange={e => setCreative({ ...creative, description: e.target.value })}
               maxLength={150}
               rows={3}
             />
@@ -123,8 +123,15 @@ const Step6Creative: React.FC<Step6Props> = ({ data, updateData, onNext, onBack,
           ) : (
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
               {creative.images.map((img: string, index: number) => (
-                <div key={index} className="relative group aspect-video bg-slate-100 rounded-lg overflow-hidden">
-                  <img src={img} alt={`Creative ${index + 1}`} className="w-full h-full object-cover" />
+                <div
+                  key={index}
+                  className="relative group aspect-video bg-slate-100 rounded-lg overflow-hidden"
+                >
+                  <img
+                    src={img}
+                    alt={`Creative ${index + 1}`}
+                    className="w-full h-full object-cover"
+                  />
                   <button
                     onClick={() => removeImage(index)}
                     className="absolute top-2 right-2 p-1 bg-black/50 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black/70"
@@ -140,13 +147,13 @@ const Step6Creative: React.FC<Step6Props> = ({ data, updateData, onNext, onBack,
         {/* Call to Action */}
         <div className="space-y-4 bg-white p-6 rounded-xl border border-slate-200">
           <h3 className="font-semibold text-slate-900">Call to Action</h3>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Button Text</Label>
               <Select
                 value={creative.ctaType}
-                onValueChange={(value) => setCreative({ ...creative, ctaType: value })}
+                onValueChange={value => setCreative({ ...creative, ctaType: value })}
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -166,7 +173,7 @@ const Step6Creative: React.FC<Step6Props> = ({ data, updateData, onNext, onBack,
               <Input
                 placeholder="https://..."
                 value={creative.ctaUrl}
-                onChange={(e) => setCreative({ ...creative, ctaUrl: e.target.value })}
+                onChange={e => setCreative({ ...creative, ctaUrl: e.target.value })}
               />
             </div>
           </div>

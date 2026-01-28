@@ -26,10 +26,11 @@ export default function AgentApprovals() {
   const [rejectionReason, setRejectionReason] = useState('');
 
   // Query pending agents
-  const { data: agents, isLoading, refetch } = trpc.admin.getPendingAgents.useQuery(
-    { status: selectedStatus },
-    { enabled: true }
-  );
+  const {
+    data: agents,
+    isLoading,
+    refetch,
+  } = trpc.admin.getPendingAgents.useQuery({ status: selectedStatus }, { enabled: true });
 
   // Approve mutation
   const approveMutation = trpc.admin.approveAgent.useMutation({
@@ -37,7 +38,7 @@ export default function AgentApprovals() {
       toast.success('Agent approved successfully!');
       refetch();
     },
-    onError: (error) => {
+    onError: error => {
       toast.error('Failed to approve agent: ' + error.message);
     },
   });
@@ -51,7 +52,7 @@ export default function AgentApprovals() {
       setSelectedAgentId(null);
       refetch();
     },
-    onError: (error) => {
+    onError: error => {
       toast.error('Failed to reject agent: ' + error.message);
     },
   });
@@ -99,7 +100,7 @@ export default function AgentApprovals() {
         <p className="text-slate-600 mt-1">Review and manage agent registration applications</p>
       </div>
 
-      <Tabs value={selectedStatus} onValueChange={(v) => setSelectedStatus(v as AgentStatus)}>
+      <Tabs value={selectedStatus} onValueChange={v => setSelectedStatus(v as AgentStatus)}>
         <TabsList className="grid w-full max-w-md grid-cols-4">
           <TabsTrigger value="pending">Pending</TabsTrigger>
           <TabsTrigger value="approved">Approved</TabsTrigger>
@@ -134,7 +135,9 @@ export default function AgentApprovals() {
                     <div className="grid md:grid-cols-2 gap-4">
                       <div className="flex items-center gap-2 text-sm">
                         <Phone className="h-4 w-4 text-slate-500" />
-                        <span className="text-slate-700">{agent.phone || agent.phoneNumber || 'No phone'}</span>
+                        <span className="text-slate-700">
+                          {agent.phone || agent.phoneNumber || 'No phone'}
+                        </span>
                       </div>
                       {agent.licenseNumber && (
                         <div className="flex items-center gap-2 text-sm">
@@ -171,7 +174,8 @@ export default function AgentApprovals() {
 
                     <div className="text-xs text-slate-500">
                       Applied: {new Date(agent.createdAt).toLocaleDateString()}
-                      {agent.approvedAt && ` • Approved: ${new Date(agent.approvedAt).toLocaleDateString()}`}
+                      {agent.approvedAt &&
+                        ` • Approved: ${new Date(agent.approvedAt).toLocaleDateString()}`}
                     </div>
 
                     {agent.status === 'pending' && (
@@ -203,9 +207,7 @@ export default function AgentApprovals() {
             <Card>
               <CardContent className="flex flex-col items-center justify-center py-12">
                 <User className="h-12 w-12 text-slate-300 mb-3" />
-                <p className="text-slate-500 text-center">
-                  No {selectedStatus} agents found
-                </p>
+                <p className="text-slate-500 text-center">No {selectedStatus} agents found</p>
               </CardContent>
             </Card>
           )}
@@ -218,7 +220,8 @@ export default function AgentApprovals() {
           <DialogHeader>
             <DialogTitle>Reject Agent Application</DialogTitle>
             <DialogDescription>
-              Please provide a reason for rejecting this agent application. This will be visible to the applicant.
+              Please provide a reason for rejecting this agent application. This will be visible to
+              the applicant.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-2">
@@ -227,7 +230,7 @@ export default function AgentApprovals() {
               id="reason"
               placeholder="e.g., Incomplete information, Invalid license number..."
               value={rejectionReason}
-              onChange={(e) => setRejectionReason(e.target.value)}
+              onChange={e => setRejectionReason(e.target.value)}
               rows={4}
             />
           </div>

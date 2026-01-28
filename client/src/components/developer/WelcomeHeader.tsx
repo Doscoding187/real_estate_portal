@@ -46,16 +46,14 @@ export function WelcomeHeader({
         <h1 className="text-3xl font-bold text-gray-900">
           {getGreeting()}, {developerName}! 👋
         </h1>
-        <p className="text-gray-600 mt-1">
-          Here's what's happening with your developments today
-        </p>
+        <p className="text-gray-600 mt-1">Here's what's happening with your developments today</p>
       </div>
 
       {/* Time Range Selector */}
       <div className="flex items-center gap-2">
         <Calendar className="w-5 h-5 text-gray-400" />
         <div className="flex items-center bg-gray-100 rounded-lg p-1">
-          {TIME_RANGES.map((range) => (
+          {TIME_RANGES.map(range => (
             <button
               key={range.value}
               onClick={() => handleTimeRangeChange(range.value)}
@@ -63,7 +61,7 @@ export function WelcomeHeader({
                 'px-4 py-2 rounded-md text-sm font-medium transition-all duration-200',
                 timeRange === range.value
                   ? 'bg-white text-blue-600 shadow-sm'
-                  : 'text-gray-600 hover:text-gray-900'
+                  : 'text-gray-600 hover:text-gray-900',
               )}
             >
               {range.label}

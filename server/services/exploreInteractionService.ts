@@ -1,11 +1,11 @@
-import { db } from "../db";
-import { exploreShorts, exploreInteractions } from "../../drizzle/schema";
-import { eq, sql } from "drizzle-orm";
-import type { InteractionType, DeviceType, FeedType } from "../../shared/types";
+import { db } from '../db';
+import { exploreShorts, exploreInteractions } from '../../drizzle/schema';
+import { eq, sql } from 'drizzle-orm';
+import type { InteractionType, DeviceType, FeedType } from '../../shared/types';
 
 /**
  * Explore Interaction Service
- * 
+ *
  * Handles tracking and recording of user interactions with property shorts.
  * Supports both authenticated and guest users.
  */
@@ -64,11 +64,11 @@ export class ExploreInteractionService {
       });
 
       // Update short metrics asynchronously (don't wait)
-      this.updateShortMetrics(shortId, interactionType, duration).catch((error) => {
-        console.error("Error updating short metrics:", error);
+      this.updateShortMetrics(shortId, interactionType, duration).catch(error => {
+        console.error('Error updating short metrics:', error);
       });
     } catch (error) {
-      console.error("Error recording interaction:", error);
+      console.error('Error recording interaction:', error);
       throw error;
     }
   }
@@ -86,16 +86,14 @@ export class ExploreInteractionService {
 
     try {
       // Prepare batch insert values
-      const values = interactions.map((interaction) => ({
+      const values = interactions.map(interaction => ({
         shortId: interaction.shortId,
         userId: interaction.userId || null,
         sessionId: interaction.sessionId,
         interactionType: interaction.interactionType,
         duration: interaction.duration || null,
         feedType: interaction.feedType,
-        feedContext: interaction.feedContext
-          ? JSON.stringify(interaction.feedContext)
-          : null,
+        feedContext: interaction.feedContext ? JSON.stringify(interaction.feedContext) : null,
         deviceType: interaction.deviceType,
         userAgent: interaction.userAgent || null,
         ipAddress: interaction.ipAddress || null,
@@ -106,21 +104,19 @@ export class ExploreInteractionService {
       await db.insert(exploreInteractions).values(values);
 
       // Update metrics for all affected shorts
-      const shortIds = [...new Set(interactions.map((i) => i.shortId))];
+      const shortIds = [...new Set(interactions.map(i => i.shortId))];
       for (const shortId of shortIds) {
-        const shortInteractions = interactions.filter((i) => i.shortId === shortId);
+        const shortInteractions = interactions.filter(i => i.shortId === shortId);
         for (const interaction of shortInteractions) {
-          this.updateShortMetrics(
-            shortId,
-            interaction.interactionType,
-            interaction.duration
-          ).catch((error) => {
-            console.error("Error updating short metrics:", error);
-          });
+          this.updateShortMetrics(shortId, interaction.interactionType, interaction.duration).catch(
+            error => {
+              console.error('Error updating short metrics:', error);
+            },
+          );
         }
       }
     } catch (error) {
-      console.error("Error recording batch interactions:", error);
+      console.error('Error recording batch interactions:', error);
       throw error;
     }
   }
@@ -135,14 +131,14 @@ export class ExploreInteractionService {
         shortId,
         userId,
         sessionId: `user-${userId}`,
-        interactionType: "save",
-        feedType: "recommended",
-        deviceType: "mobile",
+        interactionType: 'save',
+        feedType: 'recommended',
+        deviceType: 'mobile',
       });
 
       // TODO: Add to favorites table in Phase 7
     } catch (error) {
-      console.error("Error saving property:", error);
+      console.error('Error saving property:', error);
       throw error;
     }
   }
@@ -154,20 +150,20 @@ export class ExploreInteractionService {
     shortId: number,
     userId: number | undefined,
     sessionId: string,
-    platform?: string
+    platform?: string,
   ): Promise<void> {
     try {
       await this.recordInteraction({
         shortId,
         userId,
         sessionId,
-        interactionType: "share",
-        feedType: "recommended",
-        deviceType: "mobile",
+        interactionType: 'share',
+        feedType: 'recommended',
+        deviceType: 'mobile',
         metadata: { platform },
       });
     } catch (error) {
-      console.error("Error recording share:", error);
+      console.error('Error recording share:', error);
       throw error;
     }
   }
@@ -179,16 +175,16 @@ export class ExploreInteractionService {
   private async updateShortMetrics(
     shortId: number,
     interactionType: InteractionType,
-    duration?: number
+    duration?: number,
   ): Promise<void> {
     try {
       // Map interaction types to metric fields
       const metricUpdates: Record<string, string> = {
-        impression: "view_count",
-        view: "view_count",
-        skip: "skip_count",
-        save: "save_count",
-        share: "share_count",
+        impression: 'view_count',
+        view: 'view_count',
+        skip: 'skip_count',
+        save: 'save_count',
+        share: 'share_count',
       };
 
       const field = metricUpdates[interactionType];
@@ -203,7 +199,7 @@ export class ExploreInteractionService {
       }
 
       // Update average watch time for view interactions
-      if (interactionType === "view" && duration) {
+      if (interactionType === 'view' && duration) {
         await db.execute(sql`
           UPDATE explore_shorts 
           SET average_watch_time = (
@@ -214,7 +210,7 @@ export class ExploreInteractionService {
       }
 
       // Update unique view count (simplified - in production, use session tracking)
-      if (interactionType === "impression") {
+      if (interactionType === 'impression') {
         await db.execute(sql`
           UPDATE explore_shorts 
           SET unique_view_count = unique_view_count + 1
@@ -222,7 +218,7 @@ export class ExploreInteractionService {
         `);
       }
     } catch (error) {
-      console.error("Error updating short metrics:", error);
+      console.error('Error updating short metrics:', error);
       // Don't throw - this is a background operation
     }
   }
@@ -239,7 +235,7 @@ export class ExploreInteractionService {
         .limit(1);
 
       if (short.length === 0) {
-        throw new Error("Short not found");
+        throw new Error('Short not found');
       }
 
       return {
@@ -253,7 +249,7 @@ export class ExploreInteractionService {
         performanceScore: short[0].performanceScore,
       };
     } catch (error) {
-      console.error("Error getting short stats:", error);
+      console.error('Error getting short stats:', error);
       throw error;
     }
   }
@@ -261,10 +257,7 @@ export class ExploreInteractionService {
   /**
    * Get user interaction history
    */
-  async getUserInteractionHistory(
-    userId: number,
-    limit: number = 50
-  ): Promise<any[]> {
+  async getUserInteractionHistory(userId: number, limit: number = 50): Promise<any[]> {
     try {
       const interactions = await db
         .select()
@@ -275,7 +268,7 @@ export class ExploreInteractionService {
 
       return interactions;
     } catch (error) {
-      console.error("Error getting user interaction history:", error);
+      console.error('Error getting user interaction history:', error);
       throw error;
     }
   }
@@ -283,10 +276,7 @@ export class ExploreInteractionService {
   /**
    * Get session interaction history (for guest users)
    */
-  async getSessionInteractionHistory(
-    sessionId: string,
-    limit: number = 50
-  ): Promise<any[]> {
+  async getSessionInteractionHistory(sessionId: string, limit: number = 50): Promise<any[]> {
     try {
       const interactions = await db
         .select()
@@ -297,7 +287,7 @@ export class ExploreInteractionService {
 
       return interactions;
     } catch (error) {
-      console.error("Error getting session interaction history:", error);
+      console.error('Error getting session interaction history:', error);
       throw error;
     }
   }
@@ -318,7 +308,7 @@ export class ExploreInteractionService {
       }
 
       const { viewCount, saveCount, shareCount } = short[0];
-      
+
       if (viewCount === 0) {
         return 0;
       }
@@ -327,7 +317,7 @@ export class ExploreInteractionService {
       const engagementRate = ((saveCount + shareCount) / viewCount) * 100;
       return Math.round(engagementRate * 100) / 100; // Round to 2 decimal places
     } catch (error) {
-      console.error("Error calculating engagement rate:", error);
+      console.error('Error calculating engagement rate:', error);
       return 0;
     }
   }

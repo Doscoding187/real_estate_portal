@@ -4,13 +4,13 @@ import { useExploreFiltersStore } from '@/store/exploreFiltersStore';
 
 /**
  * Hook to synchronize filter state with URL query parameters
- * 
+ *
  * Features:
  * - Bidirectional sync: Store ↔ URL
  * - Updates URL without page reload (replaceState)
  * - Reads URL params on mount and syncs to store
  * - Prevents infinite loops with ref tracking
- * 
+ *
  * Usage:
  * ```tsx
  * function ExplorePage() {
@@ -18,7 +18,7 @@ import { useExploreFiltersStore } from '@/store/exploreFiltersStore';
  *   // Rest of component...
  * }
  * ```
- * 
+ *
  * Requirements: 4.2, 11.7
  */
 export function useFilterUrlSync() {
@@ -30,9 +30,9 @@ export function useFilterUrlSync() {
   // Sync URL to filters on mount (only once)
   useEffect(() => {
     if (!isInitialMount.current) return;
-    
+
     const params = new URLSearchParams(window.location.search);
-    
+
     const type = params.get('type');
     const minPrice = params.get('minPrice');
     const maxPrice = params.get('maxPrice');
@@ -47,7 +47,7 @@ export function useFilterUrlSync() {
       if (minPrice || maxPrice) {
         filters.setPriceRange(
           minPrice ? parseInt(minPrice, 10) : null,
-          maxPrice ? parseInt(maxPrice, 10) : null
+          maxPrice ? parseInt(maxPrice, 10) : null,
         );
       }
       if (beds) filters.setBedrooms(parseInt(beds, 10));
@@ -65,7 +65,7 @@ export function useFilterUrlSync() {
     if (isInitialMount.current) return;
 
     const params = new URLSearchParams();
-    
+
     // Add non-null filters to URL params
     if (filters.propertyType) params.set('type', filters.propertyType);
     if (filters.priceMin !== null) params.set('minPrice', filters.priceMin.toString());
@@ -78,9 +78,12 @@ export function useFilterUrlSync() {
     const queryString = params.toString();
     const basePath = location.split('?')[0];
     const newUrl = queryString ? `${basePath}?${queryString}` : basePath;
-    
+
     // Only update if URL actually changed (prevent infinite loops)
-    if (newUrl !== lastUrlUpdate.current && newUrl !== window.location.pathname + window.location.search) {
+    if (
+      newUrl !== lastUrlUpdate.current &&
+      newUrl !== window.location.pathname + window.location.search
+    ) {
       lastUrlUpdate.current = newUrl;
       window.history.replaceState({}, '', newUrl);
     }

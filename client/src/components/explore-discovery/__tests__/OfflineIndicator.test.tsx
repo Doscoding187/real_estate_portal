@@ -45,11 +45,11 @@ describe('OfflineIndicator', () => {
 
   it('should show reconnection message when coming back online', () => {
     const { rerender } = render(<OfflineIndicator />);
-    
+
     // Start offline
     useOnlineStatusSpy.mockReturnValue(false);
     rerender(<OfflineIndicator />);
-    
+
     // Come back online
     useOnlineStatusSpy.mockReturnValue(true);
     rerender(<OfflineIndicator />);
@@ -60,11 +60,11 @@ describe('OfflineIndicator', () => {
 
   it('should auto-dismiss reconnection message after 3 seconds', async () => {
     const { rerender } = render(<OfflineIndicator />);
-    
+
     // Start offline
     useOnlineStatusSpy.mockReturnValue(false);
     rerender(<OfflineIndicator />);
-    
+
     // Come back online
     useOnlineStatusSpy.mockReturnValue(true);
     rerender(<OfflineIndicator />);
@@ -91,11 +91,11 @@ describe('OfflineIndicator', () => {
 
   it('should have proper ARIA attributes for reconnection banner', () => {
     const { rerender } = render(<OfflineIndicator />);
-    
+
     // Start offline
     useOnlineStatusSpy.mockReturnValue(false);
     rerender(<OfflineIndicator />);
-    
+
     // Come back online
     useOnlineStatusSpy.mockReturnValue(true);
     rerender(<OfflineIndicator />);
@@ -116,11 +116,11 @@ describe('OfflineIndicator', () => {
 
   it('should show Wifi icon when reconnected', () => {
     const { rerender, container } = render(<OfflineIndicator />);
-    
+
     // Start offline
     useOnlineStatusSpy.mockReturnValue(false);
     rerender(<OfflineIndicator />);
-    
+
     // Come back online
     useOnlineStatusSpy.mockReturnValue(true);
     rerender(<OfflineIndicator />);
@@ -140,26 +140,26 @@ describe('OfflineIndicator', () => {
 
   it('should handle multiple offline/online cycles', () => {
     const { rerender } = render(<OfflineIndicator />);
-    
+
     // First offline
     useOnlineStatusSpy.mockReturnValue(false);
     rerender(<OfflineIndicator />);
     expect(screen.getByText(/you're offline/i)).toBeInTheDocument();
-    
+
     // First online
     useOnlineStatusSpy.mockReturnValue(true);
     rerender(<OfflineIndicator />);
     expect(screen.getByText(/back online/i)).toBeInTheDocument();
-    
+
     // Wait for auto-dismiss
     vi.advanceTimersByTime(3000);
     rerender(<OfflineIndicator />);
-    
+
     // Second offline
     useOnlineStatusSpy.mockReturnValue(false);
     rerender(<OfflineIndicator />);
     expect(screen.getByText(/you're offline/i)).toBeInTheDocument();
-    
+
     // Second online
     useOnlineStatusSpy.mockReturnValue(true);
     rerender(<OfflineIndicator />);

@@ -9,19 +9,19 @@ export default defineConfig({
     alias: {
       '@': path.resolve(__dirname, './src'),
       '@/_core': path.resolve(__dirname, '../server/_core'),
-      '@/_shared': path.resolve(__dirname, '../server/_shared'),
+      '@/shared': path.resolve(__dirname, '../shared'),
     },
   },
   server: {
     port: 3009,
     proxy: {
       '/api': {
-        target: process.env.VITE_API_URL || 'http://localhost:8081',
+        target: process.env.VITE_API_URL || 'http://localhost:5000',
         changeOrigin: true,
         secure: false,
       },
       '/trpc': {
-        target: process.env.VITE_API_URL || 'http://localhost:8081',
+        target: process.env.VITE_API_URL || 'http://localhost:5000',
         changeOrigin: true,
         secure: false,
       },

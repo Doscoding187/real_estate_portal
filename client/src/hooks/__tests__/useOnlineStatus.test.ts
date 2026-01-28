@@ -16,23 +16,23 @@ describe('useOnlineStatus', () => {
 
   it('should return true when online', () => {
     onlineGetter.mockReturnValue(true);
-    
+
     const { result } = renderHook(() => useOnlineStatus());
-    
+
     expect(result.current).toBe(true);
   });
 
   it('should return false when offline', () => {
     onlineGetter.mockReturnValue(false);
-    
+
     const { result } = renderHook(() => useOnlineStatus());
-    
+
     expect(result.current).toBe(false);
   });
 
   it('should update to false when going offline', () => {
     onlineGetter.mockReturnValue(true);
-    
+
     const { result } = renderHook(() => useOnlineStatus());
     expect(result.current).toBe(true);
 
@@ -47,7 +47,7 @@ describe('useOnlineStatus', () => {
 
   it('should update to true when coming back online', () => {
     onlineGetter.mockReturnValue(false);
-    
+
     const { result } = renderHook(() => useOnlineStatus());
     expect(result.current).toBe(false);
 
@@ -62,20 +62,20 @@ describe('useOnlineStatus', () => {
 
   it('should clean up event listeners on unmount', () => {
     const removeEventListenerSpy = vi.spyOn(window, 'removeEventListener');
-    
+
     const { unmount } = renderHook(() => useOnlineStatus());
-    
+
     unmount();
 
     expect(removeEventListenerSpy).toHaveBeenCalledWith('online', expect.any(Function));
     expect(removeEventListenerSpy).toHaveBeenCalledWith('offline', expect.any(Function));
-    
+
     removeEventListenerSpy.mockRestore();
   });
 
   it('should handle rapid online/offline transitions', () => {
     onlineGetter.mockReturnValue(true);
-    
+
     const { result } = renderHook(() => useOnlineStatus());
     expect(result.current).toBe(true);
 

@@ -13,8 +13,10 @@ export function CityShortcutRedirect({ params }: { params: { city: string } }) {
   useEffect(() => {
     const province = CITY_PROVINCE_MAP[city.toLowerCase()] || 'gauteng'; // Fallback? Need to be careful.
     // Preserving the transaction root from the current location
-    const root = location.startsWith('/property-to-rent') ? 'property-to-rent' : 'property-for-sale';
-    
+    const root = location.startsWith('/property-to-rent')
+      ? 'property-to-rent'
+      : 'property-for-sale';
+
     setLocation(`/${root}/${province}/${city}`, { replace: true });
   }, [city, location, setLocation]);
 
@@ -40,7 +42,11 @@ export function LegacyCityRedirect({ params }: { params: { province: string; cit
  * Handles migration of Legacy Suburb URLs (e.g., /gauteng/johannesburg/sandton)
  * Redirects to /property-for-sale/gauteng/johannesburg/sandton
  */
-export function LegacySuburbRedirect({ params }: { params: { province: string; city: string; suburb: string } }) {
+export function LegacySuburbRedirect({
+  params,
+}: {
+  params: { province: string; city: string; suburb: string };
+}) {
   const [, setLocation] = useLocation();
   const { province, city, suburb } = params;
 
@@ -60,9 +66,9 @@ export function LegacyProvinceRedirect({ params }: { params: { province: string 
   const { province } = params;
 
   useEffect(() => {
-     // Check if it's a known province or potentially a city without province (legacy issue?)
-     // For now assume strictly province if it matches
-     setLocation(`/property-for-sale/${province}`, { replace: true });
+    // Check if it's a known province or potentially a city without province (legacy issue?)
+    // For now assume strictly province if it matches
+    setLocation(`/property-for-sale/${province}`, { replace: true });
   }, [province, setLocation]);
 
   return <RedirectMessage />;

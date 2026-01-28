@@ -2,17 +2,17 @@ import { defineConfig, devices } from '@playwright/test';
 
 /**
  * E2E Testing Configuration
- * 
+ *
  * This configuration sets up Playwright for E2E testing including:
  * - Routing architecture tests
  * - Visual regression tests
  */
 export default defineConfig({
   testDir: './e2e',
-  
+
   // Timeout for each test
   timeout: 30 * 1000,
-  
+
   // Expect timeout for assertions
   expect: {
     timeout: 5000,
@@ -26,36 +26,33 @@ export default defineConfig({
       animations: 'disabled',
     },
   },
-  
+
   // Run tests in parallel
   fullyParallel: true,
-  
+
   // Fail the build on CI if you accidentally left test.only in the source code
   forbidOnly: !!process.env.CI,
-  
+
   // Retry on CI only
   retries: process.env.CI ? 2 : 0,
-  
+
   // Opt out of parallel tests on CI
   workers: process.env.CI ? 1 : undefined,
-  
+
   // Reporter to use
-  reporter: [
-    ['html', { outputFolder: 'playwright-report' }],
-    ['list'],
-  ],
-  
+  reporter: [['html', { outputFolder: 'playwright-report' }], ['list']],
+
   // Shared settings for all projects
   use: {
     // Base URL for tests
-    baseURL: process.env.BASE_URL || 'http://localhost:3000',
-    
+    baseURL: process.env.BASE_URL || 'http://localhost:5000',
+
     // Collect trace when retrying the failed test
     trace: 'on-first-retry',
-    
+
     // Screenshot on failure
     screenshot: 'only-on-failure',
-    
+
     // Video on failure
     video: 'retain-on-failure',
 
@@ -70,53 +67,53 @@ export default defineConfig({
     // Desktop viewports
     {
       name: 'Desktop Chrome',
-      use: { 
+      use: {
         ...devices['Desktop Chrome'],
         viewport: { width: 1440, height: 900 },
       },
     },
     {
       name: 'Desktop Firefox',
-      use: { 
+      use: {
         ...devices['Desktop Firefox'],
         viewport: { width: 1440, height: 900 },
       },
     },
     {
       name: 'Desktop Safari',
-      use: { 
+      use: {
         ...devices['Desktop Safari'],
         viewport: { width: 1440, height: 900 },
       },
     },
-    
+
     // Tablet viewports
     {
       name: 'Tablet iPad',
-      use: { 
+      use: {
         ...devices['iPad Pro'],
         viewport: { width: 768, height: 1024 },
       },
     },
     {
       name: 'Tablet Landscape',
-      use: { 
+      use: {
         ...devices['iPad Pro landscape'],
         viewport: { width: 1024, height: 768 },
       },
     },
-    
+
     // Mobile viewports
     {
       name: 'Mobile iPhone',
-      use: { 
+      use: {
         ...devices['iPhone 13'],
         viewport: { width: 375, height: 667 },
       },
     },
     {
       name: 'Mobile Pixel',
-      use: { 
+      use: {
         ...devices['Pixel 5'],
         viewport: { width: 393, height: 851 },
       },
@@ -125,8 +122,8 @@ export default defineConfig({
 
   // Run your local dev server before starting the tests
   webServer: {
-    command: 'pnpm dev:frontend',
-    url: 'http://localhost:3000',
+    command: 'pnpm dev:backend',
+    url: 'http://localhost:5000',
     reuseExistingServer: !process.env.CI,
     timeout: 120 * 1000,
   },

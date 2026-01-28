@@ -2,7 +2,7 @@
  * GradientButton Component
  * Premium button with gradient backgrounds and smooth animations
  * Part of the Soft UI design system
- * 
+ *
  * Requirements: 5.1, 5.2, 5.3, 5.4, 5.5
  */
 
@@ -103,7 +103,7 @@ const GradientButton = React.forwardRef<HTMLButtonElement, GradientButtonProps>(
       disabled,
       ...props
     },
-    ref
+    ref,
   ) => {
     const isDisabled = disabled || loading;
 
@@ -115,13 +115,7 @@ const GradientButton = React.forwardRef<HTMLButtonElement, GradientButtonProps>(
         {...props}
       >
         {/* Loading Spinner */}
-        {loading && (
-          <Loader2
-            className="animate-spin"
-            aria-label="Loading"
-            aria-hidden="false"
-          />
-        )}
+        {loading && <Loader2 className="animate-spin" aria-label="Loading" aria-hidden="false" />}
 
         {/* Left Icon */}
         {!loading && Icon && <Icon aria-hidden="true" />}
@@ -133,7 +127,7 @@ const GradientButton = React.forwardRef<HTMLButtonElement, GradientButtonProps>(
         {!loading && IconRight && <IconRight aria-hidden="true" />}
       </button>
     );
-  }
+  },
 );
 
 GradientButton.displayName = 'GradientButton';

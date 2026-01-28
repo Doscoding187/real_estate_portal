@@ -1,9 +1,9 @@
 /**
  * Accessibility Audit Utility
- * 
+ *
  * Automated checks for common accessibility issues.
  * Complements manual screen reader testing.
- * 
+ *
  * Requirements: 10.5
  */
 
@@ -30,7 +30,7 @@ export interface AccessibilityAuditResult {
  * Run accessibility audit on a container element
  */
 export function runAccessibilityAudit(
-  container: HTMLElement = document.body
+  container: HTMLElement = document.body,
 ): AccessibilityAuditResult {
   const issues: AccessibilityIssue[] = [];
 
@@ -60,9 +60,9 @@ export function runAccessibilityAudit(
 
   // Calculate score and summary
   const summary = {
-    errors: issues.filter((i) => i.severity === 'error').length,
-    warnings: issues.filter((i) => i.severity === 'warning').length,
-    info: issues.filter((i) => i.severity === 'info').length,
+    errors: issues.filter(i => i.severity === 'error').length,
+    warnings: issues.filter(i => i.severity === 'warning').length,
+    info: issues.filter(i => i.severity === 'info').length,
   };
 
   const totalChecks = 8; // Number of check functions
@@ -85,7 +85,7 @@ function checkImageAltText(container: HTMLElement): AccessibilityIssue[] {
   const issues: AccessibilityIssue[] = [];
   const images = container.querySelectorAll('img');
 
-  images.forEach((img) => {
+  images.forEach(img => {
     const alt = img.getAttribute('alt');
     const ariaHidden = img.getAttribute('aria-hidden');
 
@@ -121,7 +121,7 @@ function checkHeadingHierarchy(container: HTMLElement): AccessibilityIssue[] {
 
   let previousLevel = 0;
 
-  headings.forEach((heading) => {
+  headings.forEach(heading => {
     const level = parseInt(heading.tagName.substring(1));
 
     if (previousLevel > 0 && level > previousLevel + 1) {
@@ -147,7 +147,7 @@ function checkFormLabels(container: HTMLElement): AccessibilityIssue[] {
   const issues: AccessibilityIssue[] = [];
   const inputs = container.querySelectorAll('input, textarea, select');
 
-  inputs.forEach((input) => {
+  inputs.forEach(input => {
     const id = input.getAttribute('id');
     const ariaLabel = input.getAttribute('aria-label');
     const ariaLabelledby = input.getAttribute('aria-labelledby');
@@ -180,29 +180,29 @@ function checkFormLabels(container: HTMLElement): AccessibilityIssue[] {
  */
 function checkColorContrast(container: HTMLElement): AccessibilityIssue[] {
   const issues: AccessibilityIssue[] = [];
-  
+
   // Note: This is a simplified check. For comprehensive contrast checking,
   // use tools like axe-core or Lighthouse
-  
+
   const textElements = container.querySelectorAll('p, span, a, button, h1, h2, h3, h4, h5, h6');
-  
-  textElements.forEach((element) => {
+
+  textElements.forEach(element => {
     const styles = window.getComputedStyle(element);
     const fontSize = parseFloat(styles.fontSize);
     const fontWeight = styles.fontWeight;
-    
+
     // Check if text is large (18pt+ or 14pt+ bold)
     const isLargeText = fontSize >= 18 || (fontSize >= 14 && parseInt(fontWeight) >= 700);
-    
+
     // This is a placeholder - actual contrast calculation requires color parsing
     // In production, use a library like color-contrast-checker
-    
+
     issues.push({
       severity: 'info',
       element: element as HTMLElement,
       message: 'Color contrast should be verified manually',
       wcagCriterion: '1.4.3 Contrast (Minimum)',
-      suggestion: isLargeText 
+      suggestion: isLargeText
         ? 'Ensure 3:1 contrast ratio for large text'
         : 'Ensure 4.5:1 contrast ratio for normal text',
     });
@@ -216,9 +216,11 @@ function checkColorContrast(container: HTMLElement): AccessibilityIssue[] {
  */
 function checkAriaLabels(container: HTMLElement): AccessibilityIssue[] {
   const issues: AccessibilityIssue[] = [];
-  const interactiveElements = container.querySelectorAll('button, a, [role="button"], [role="link"]');
+  const interactiveElements = container.querySelectorAll(
+    'button, a, [role="button"], [role="link"]',
+  );
 
-  interactiveElements.forEach((element) => {
+  interactiveElements.forEach(element => {
     const textContent = element.textContent?.trim();
     const ariaLabel = element.getAttribute('aria-label');
     const ariaLabelledby = element.getAttribute('aria-labelledby');
@@ -243,9 +245,11 @@ function checkAriaLabels(container: HTMLElement): AccessibilityIssue[] {
  */
 function checkKeyboardAccessibility(container: HTMLElement): AccessibilityIssue[] {
   const issues: AccessibilityIssue[] = [];
-  const interactiveElements = container.querySelectorAll('a, button, input, textarea, select, [tabindex]');
+  const interactiveElements = container.querySelectorAll(
+    'a, button, input, textarea, select, [tabindex]',
+  );
 
-  interactiveElements.forEach((element) => {
+  interactiveElements.forEach(element => {
     const tabindex = element.getAttribute('tabindex');
 
     // Warn about positive tabindex values
@@ -284,7 +288,7 @@ function checkLinkText(container: HTMLElement): AccessibilityIssue[] {
 
   const genericLinkText = ['click here', 'read more', 'learn more', 'here', 'more'];
 
-  links.forEach((link) => {
+  links.forEach(link => {
     const text = link.textContent?.trim().toLowerCase() || '';
     const ariaLabel = link.getAttribute('aria-label');
 
@@ -340,7 +344,7 @@ export function generateAccessibilityReport(result: AccessibilityAuditResult): s
   let report = '# Accessibility Audit Report\n\n';
   report += `**Score**: ${result.score}/100\n`;
   report += `**Status**: ${result.passed ? '✅ Passed' : '❌ Failed'}\n\n`;
-  
+
   report += `## Summary\n`;
   report += `- Errors: ${result.summary.errors}\n`;
   report += `- Warnings: ${result.summary.warnings}\n`;
@@ -352,9 +356,9 @@ export function generateAccessibilityReport(result: AccessibilityAuditResult): s
   }
 
   // Group issues by severity
-  const errors = result.issues.filter((i) => i.severity === 'error');
-  const warnings = result.issues.filter((i) => i.severity === 'warning');
-  const info = result.issues.filter((i) => i.severity === 'info');
+  const errors = result.issues.filter(i => i.severity === 'error');
+  const warnings = result.issues.filter(i => i.severity === 'warning');
+  const info = result.issues.filter(i => i.severity === 'info');
 
   if (errors.length > 0) {
     report += `## Errors (${errors.length})\n\n`;

@@ -7,14 +7,15 @@ interface BreadcrumbsProps {
   className?: string;
 }
 
-export function Breadcrumbs({ items, className = "" }: BreadcrumbsProps) {
+export function Breadcrumbs({ items, className = '' }: BreadcrumbsProps) {
   return (
-    <nav aria-label="Breadcrumb" className={`flex items-center text-sm text-muted-foreground ${className}`}>
+    <nav
+      aria-label="Breadcrumb"
+      className={`flex items-center text-sm text-muted-foreground ${className}`}
+    >
       {items.map((item, index) => (
         <div key={item.href} className="flex items-center">
-          {index > 0 && (
-            <ChevronRight className="h-4 w-4 mx-2 text-gray-400" />
-          )}
+          {index > 0 && <ChevronRight className="h-4 w-4 mx-2 text-gray-400" />}
           {index === items.length - 1 ? (
             // Last item - not a link
             <span className="text-foreground font-medium">{item.label}</span>

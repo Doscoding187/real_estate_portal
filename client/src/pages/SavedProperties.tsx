@@ -101,12 +101,10 @@ export default function SavedProperties() {
             <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
               <Bookmark className="w-12 h-12 text-gray-400" />
             </div>
-            <h2 className="text-2xl font-semibold text-gray-900 mb-2">
-              No saved properties yet
-            </h2>
+            <h2 className="text-2xl font-semibold text-gray-900 mb-2">No saved properties yet</h2>
             <p className="text-gray-600 mb-8 max-w-md mx-auto">
-              Start exploring and save properties you're interested in. They'll appear here for
-              easy access later.
+              Start exploring and save properties you're interested in. They'll appear here for easy
+              access later.
             </p>
             <a
               href="/explore"
@@ -119,7 +117,7 @@ export default function SavedProperties() {
           <>
             {viewMode === 'grid' ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                {savedItems.map((item) => (
+                {savedItems.map(item => (
                   <div key={item.id} className="relative group">
                     <PropertyCard
                       id={item.property.id}
@@ -134,17 +132,14 @@ export default function SavedProperties() {
                     />
                     {/* Unsave button overlay */}
                     <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <SaveButtonWrapper
-                        propertyId={item.property.id}
-                        onUnsave={handleUnsave}
-                      />
+                      <SaveButtonWrapper propertyId={item.property.id} onUnsave={handleUnsave} />
                     </div>
                   </div>
                 ))}
               </div>
             ) : (
               <div className="space-y-4">
-                {savedItems.map((item) => (
+                {savedItems.map(item => (
                   <div
                     key={item.id}
                     className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow p-4 flex items-center gap-4"
@@ -155,9 +150,7 @@ export default function SavedProperties() {
                       className="w-32 h-24 object-cover rounded-lg"
                     />
                     <div className="flex-1">
-                      <h3 className="font-semibold text-gray-900 mb-1">
-                        {item.property.title}
-                      </h3>
+                      <h3 className="font-semibold text-gray-900 mb-1">{item.property.title}</h3>
                       <p className="text-sm text-gray-600 mb-2">{item.property.location}</p>
                       <div className="flex items-center gap-4 text-sm text-gray-600">
                         <span>{item.property.beds} beds</span>
@@ -188,13 +181,7 @@ export default function SavedProperties() {
 }
 
 // Wrapper component to handle unsave
-function SaveButtonWrapper({
-  propertyId,
-  onUnsave,
-}: {
-  propertyId: number;
-  onUnsave: () => void;
-}) {
+function SaveButtonWrapper({ propertyId, onUnsave }: { propertyId: number; onUnsave: () => void }) {
   const { isSaved, toggleSave } = useSaveProperty({
     propertyId,
     initialSaved: true,
@@ -203,7 +190,7 @@ function SaveButtonWrapper({
 
   return (
     <button
-      onClick={(e) => {
+      onClick={e => {
         e.preventDefault();
         e.stopPropagation();
         toggleSave();

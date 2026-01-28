@@ -41,18 +41,20 @@ export function TrendingSlider({ locations, provinceSlug }: TrendingSliderProps)
           <div>
             <div className="flex items-center gap-2 mb-2 text-primary">
               <TrendingUp className="h-5 w-5" />
-              <span className="font-semibold uppercase tracking-wider text-sm">Market Hotspots</span>
+              <span className="font-semibold uppercase tracking-wider text-sm">
+                Market Hotspots
+              </span>
             </div>
             <h2 className="text-3xl font-bold text-slate-900">Trending Suburbs</h2>
           </div>
           <div className="hidden md:flex gap-2">
-             {/* Carousel controls custom navigation hooks could be placed here if context available */}
+            {/* Carousel controls custom navigation hooks could be placed here if context available */}
           </div>
         </div>
 
         <Carousel className="w-full">
           <CarouselContent className="-ml-4">
-            {locations.map((loc) => (
+            {locations.map(loc => (
               <CarouselItem key={loc.id} className="pl-4 md:basis-1/3 lg:basis-1/4">
                 <Link href={getUrl(loc)}>
                   <Card className="h-full hover:shadow-lg transition-all cursor-pointer border-slate-200 group">
@@ -63,17 +65,16 @@ export function TrendingSlider({ locations, provinceSlug }: TrendingSliderProps)
                         </div>
                         {loc.growth && (
                           <div className="bg-green-100 text-green-700 px-2 py-1 rounded text-xs font-bold flex items-center">
-                            <TrendingUp className="h-3 w-3 mr-1" />
-                            +{loc.growth}%
+                            <TrendingUp className="h-3 w-3 mr-1" />+{loc.growth}%
                           </div>
                         )}
                       </div>
-                      
+
                       <h3 className="text-lg font-bold text-slate-900 mb-1 group-hover:text-primary transition-colors">
                         {loc.name}
                       </h3>
                       <p className="text-sm text-slate-500 mb-4">{loc.cityName}</p>
-                      
+
                       <div className="pt-4 border-t border-slate-100 flex justify-between items-center text-sm">
                         <span className="text-slate-600">{loc.listingCount} Properties</span>
                         <ChevronRight className="h-4 w-4 text-slate-400 group-hover:translate-x-1 transition-transform" />

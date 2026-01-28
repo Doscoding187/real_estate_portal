@@ -1,14 +1,14 @@
-import { db } from "../db";
-import { 
-  contentApprovalQueue, 
-  explorePartners, 
+import { db } from '../db';
+import {
+  contentApprovalQueue,
+  explorePartners,
   partnerTiers,
   exploreContent,
-  exploreShorts 
-} from "../../drizzle/schema";
-import { eq, and, desc, sql } from "drizzle-orm";
-import { randomUUID } from "crypto";
-import { partnerService } from "./partnerService";
+  exploreShorts,
+} from '../../drizzle/schema';
+import { eq, and, desc, sql } from 'drizzle-orm';
+import { randomUUID } from 'crypto';
+import { partnerService } from './partnerService';
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -66,7 +66,7 @@ export class ContentApprovalService {
   async submitForApproval(contentId: string, partnerId: string): Promise<ContentApprovalQueue> {
     // Check if partner exists
     const partner = await db.query.explorePartners.findFirst({
-      where: eq(explorePartners.id, partnerId)
+      where: eq(explorePartners.id, partnerId),
     });
 
     if (!partner) {
@@ -77,8 +77,8 @@ export class ContentApprovalService {
     const existingQueueItem = await db.query.contentApprovalQueue.findFirst({
       where: and(
         eq(contentApprovalQueue.contentId, contentId),
-        eq(contentApprovalQueue.partnerId, partnerId)
-      )
+        eq(contentApprovalQueue.partnerId, partnerId),
+      ),
     });
 
     if (existingQueueItem) {
@@ -124,14 +124,14 @@ export class ContentApprovalService {
   async flagContent(contentId: string, reason: string, reporterId: string): Promise<void> {
     // Find the queue item for this content
     const queueItem = await db.query.contentApprovalQueue.findFirst({
-      where: eq(contentApprovalQueue.contentId, contentId)
+      where: eq(contentApprovalQueue.contentId, contentId),
     });
 
     if (!queueItem) {
       // If content not in queue, it may already be approved
       // We need to create a new queue item for review
       const content = await db.query.exploreContent.findFirst({
-        where: eq(exploreContent.id, parseInt(contentId))
+        where: eq(exploreContent.id, parseInt(contentId)),
       });
 
       if (!content) {
@@ -157,7 +157,8 @@ export class ContentApprovalService {
     }
 
     // Update existing queue item
-    await db.update(contentApprovalQueue)
+    await db
+      .update(contentApprovalQueue)
       .set({
         status: 'pending',
         autoApprovalEligible: false,
@@ -172,7 +173,8 @@ export class ContentApprovalService {
    * Requirements: 6.3
    */
   async routeToManualReview(queueId: string, reason: string): Promise<void> {
-    await db.update(contentApprovalQueue)
+    await db
+      .update(contentApprovalQueue)
       .set({
         status: 'pending',
         autoApprovalEligible: false,
@@ -186,9 +188,13 @@ export class ContentApprovalService {
    * Provides feedback on rejection
    * Requirements: 6.5
    */
-  async reviewContent(queueId: string, decision: ApprovalDecision, reviewerId: string): Promise<void> {
+  async reviewContent(
+    queueId: string,
+    decision: ApprovalDecision,
+    reviewerId: string,
+  ): Promise<void> {
     const queueItem = await db.query.contentApprovalQueue.findFirst({
-      where: eq(contentApprovalQueue.id, queueId)
+      where: eq(contentApprovalQueue.id, queueId),
     });
 
     if (!queueItem) {
@@ -196,13 +202,16 @@ export class ContentApprovalService {
     }
 
     // Validate decision has feedback for rejections and revision requests
-    if ((decision.status === 'rejected' || decision.status === 'revision_requested') && !decision.feedback) {
+    if (
+      (decision.status === 'rejected' || decision.status === 'revision_requested') &&
+      !decision.feedback
+    ) {
       throw new Error('Feedback is required for rejected or revision-requested content');
     }
 
     // Build comprehensive feedback message
     let feedbackMessage = decision.feedback || '';
-    
+
     if (decision.violationTypes && decision.violationTypes.length > 0) {
       feedbackMessage += `\n\nViolation types: ${decision.violationTypes.join(', ')}`;
     }
@@ -211,7 +220,7 @@ export class ContentApprovalService {
     if (decision.status === 'rejected') {
       feedbackMessage += '\n\nPlease review our content guidelines and ensure your content:';
       feedbackMessage += '\n- Provides educational value, not just promotion';
-      feedbackMessage += '\n- Matches your tier\'s allowed content types';
+      feedbackMessage += "\n- Matches your tier's allowed content types";
       feedbackMessage += '\n- Uses only approved CTAs for your tier';
       feedbackMessage += '\n- Has complete and accurate metadata';
       feedbackMessage += '\n\nAsk yourself: "Would I watch this even if I wasn\'t buying?"';
@@ -223,7 +232,8 @@ export class ContentApprovalService {
     }
 
     // Update queue item with decision
-    await db.update(contentApprovalQueue)
+    await db
+      .update(contentApprovalQueue)
       .set({
         status: decision.status,
         reviewedAt: sql`CURRENT_TIMESTAMP`,
@@ -235,7 +245,7 @@ export class ContentApprovalService {
     // If approved, increment partner's approved content count
     if (decision.status === 'approved') {
       await partnerService.incrementApprovedContentCount(queueItem.partnerId);
-      
+
       // Recalculate partner trust score after approval
       await partnerService.calculateTrustScore(queueItem.partnerId);
     }
@@ -245,7 +255,10 @@ export class ContentApprovalService {
    * Get pending reviews for a specific reviewer
    * Requirements: 6.5
    */
-  async getPendingReviews(reviewerId?: string, limit: number = 50): Promise<ContentApprovalQueue[]> {
+  async getPendingReviews(
+    reviewerId?: string,
+    limit: number = 50,
+  ): Promise<ContentApprovalQueue[]> {
     const items = await db.query.contentApprovalQueue.findMany({
       where: eq(contentApprovalQueue.status, 'pending'),
       orderBy: [desc(contentApprovalQueue.submittedAt)],
@@ -278,7 +291,7 @@ export class ContentApprovalService {
     approvalRate: number;
   }> {
     const items = await db.query.contentApprovalQueue.findMany({
-      where: eq(contentApprovalQueue.partnerId, partnerId)
+      where: eq(contentApprovalQueue.partnerId, partnerId),
     });
 
     const total = items.length;
@@ -286,7 +299,7 @@ export class ContentApprovalService {
     const rejected = items.filter(i => i.status === 'rejected').length;
     const pending = items.filter(i => i.status === 'pending').length;
     const revisionRequested = items.filter(i => i.status === 'revision_requested').length;
-    
+
     const approvalRate = total > 0 ? (approved / total) * 100 : 0;
 
     return {
@@ -340,15 +353,12 @@ export class ContentApprovalService {
    * Validate content rules against partner tier permissions
    * Requirements: 1.6, 15.2, 15.3
    */
-  async validateContentRules(
-    content: ContentSubmission,
-    partner: any
-  ): Promise<ValidationResult> {
+  async validateContentRules(content: ContentSubmission, partner: any): Promise<ValidationResult> {
     const errors: string[] = [];
 
     // Get partner tier information
     const tier = await db.query.partnerTiers.findFirst({
-      where: eq(partnerTiers.id, partner.tierId)
+      where: eq(partnerTiers.id, partner.tierId),
     });
 
     if (!tier) {
@@ -357,19 +367,19 @@ export class ContentApprovalService {
     }
 
     // Parse allowed content types and CTAs
-    const allowedContentTypes = typeof tier.allowedContentTypes === 'string'
-      ? JSON.parse(tier.allowedContentTypes)
-      : tier.allowedContentTypes;
+    const allowedContentTypes =
+      typeof tier.allowedContentTypes === 'string'
+        ? JSON.parse(tier.allowedContentTypes)
+        : tier.allowedContentTypes;
 
-    const allowedCTAs = typeof tier.allowedCTAs === 'string'
-      ? JSON.parse(tier.allowedCTAs)
-      : tier.allowedCTAs;
+    const allowedCTAs =
+      typeof tier.allowedCTAs === 'string' ? JSON.parse(tier.allowedCTAs) : tier.allowedCTAs;
 
     // Validate content type against tier permissions
     if (!allowedContentTypes.includes(content.contentType)) {
       errors.push(
         `Content type "${content.contentType}" not allowed for tier "${tier.name}". ` +
-        `Allowed types: ${allowedContentTypes.join(', ')}`
+          `Allowed types: ${allowedContentTypes.join(', ')}`,
       );
     }
 
@@ -379,7 +389,7 @@ export class ContentApprovalService {
       if (invalidCTAs.length > 0) {
         errors.push(
           `CTAs not allowed for tier "${tier.name}": ${invalidCTAs.join(', ')}. ` +
-          `Allowed CTAs: ${allowedCTAs.join(', ')}`
+            `Allowed CTAs: ${allowedCTAs.join(', ')}`,
         );
       }
     }
@@ -391,7 +401,7 @@ export class ContentApprovalService {
       // Check for required metadata fields
       const requiredFields = ['title', 'description'];
       const missingFields = requiredFields.filter(field => !content.metadata[field]);
-      
+
       if (missingFields.length > 0) {
         errors.push(`Missing required metadata fields: ${missingFields.join(', ')}`);
       }
@@ -413,18 +423,23 @@ export class ContentApprovalService {
       // Check for promotional language without educational value
       if (content.metadata.description) {
         const promotionalKeywords = [
-          'buy now', 'limited time', 'act fast', 'don\'t miss',
-          'exclusive offer', 'special deal', 'hurry'
+          'buy now',
+          'limited time',
+          'act fast',
+          "don't miss",
+          'exclusive offer',
+          'special deal',
+          'hurry',
         ];
-        
+
         const hasPromotionalLanguage = promotionalKeywords.some(keyword =>
-          content.metadata.description.toLowerCase().includes(keyword)
+          content.metadata.description.toLowerCase().includes(keyword),
         );
 
         if (hasPromotionalLanguage) {
           errors.push(
             'Content appears to be purely promotional. Please add educational value. ' +
-            'Ask yourself: "Would I watch this even if I wasn\'t buying?"'
+              'Ask yourself: "Would I watch this even if I wasn\'t buying?"',
           );
         }
       }
@@ -432,7 +447,7 @@ export class ContentApprovalService {
 
     return {
       isValid: errors.length === 0,
-      errors
+      errors,
     };
   }
 
@@ -442,16 +457,17 @@ export class ContentApprovalService {
    */
   async validateContentType(contentType: string, tierId: number): Promise<boolean> {
     const tier = await db.query.partnerTiers.findFirst({
-      where: eq(partnerTiers.id, tierId)
+      where: eq(partnerTiers.id, tierId),
     });
 
     if (!tier) {
       return false;
     }
 
-    const allowedContentTypes = typeof tier.allowedContentTypes === 'string'
-      ? JSON.parse(tier.allowedContentTypes)
-      : tier.allowedContentTypes;
+    const allowedContentTypes =
+      typeof tier.allowedContentTypes === 'string'
+        ? JSON.parse(tier.allowedContentTypes)
+        : tier.allowedContentTypes;
 
     return allowedContentTypes.includes(contentType);
   }
@@ -460,24 +476,26 @@ export class ContentApprovalService {
    * Validate CTAs against tier permissions
    * Requirements: 1.6
    */
-  async validateCTAs(ctas: string[], tierId: number): Promise<{ isValid: boolean; invalidCTAs: string[] }> {
+  async validateCTAs(
+    ctas: string[],
+    tierId: number,
+  ): Promise<{ isValid: boolean; invalidCTAs: string[] }> {
     const tier = await db.query.partnerTiers.findFirst({
-      where: eq(partnerTiers.id, tierId)
+      where: eq(partnerTiers.id, tierId),
     });
 
     if (!tier) {
       return { isValid: false, invalidCTAs: ctas };
     }
 
-    const allowedCTAs = typeof tier.allowedCTAs === 'string'
-      ? JSON.parse(tier.allowedCTAs)
-      : tier.allowedCTAs;
+    const allowedCTAs =
+      typeof tier.allowedCTAs === 'string' ? JSON.parse(tier.allowedCTAs) : tier.allowedCTAs;
 
     const invalidCTAs = ctas.filter(cta => !allowedCTAs.includes(cta));
 
     return {
       isValid: invalidCTAs.length === 0,
-      invalidCTAs
+      invalidCTAs,
     };
   }
 
@@ -491,7 +509,7 @@ export class ContentApprovalService {
 
     return {
       isValid: missingFields.length === 0,
-      missingFields
+      missingFields,
     };
   }
 }

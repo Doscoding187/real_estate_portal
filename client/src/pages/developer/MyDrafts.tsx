@@ -1,18 +1,25 @@
 import { useState } from 'react';
 import { trpc } from '@/lib/trpc';
 import { useLocation } from 'wouter';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { 
-  Building2, 
-  Clock, 
-  MapPin, 
-  Trash2, 
-  FileEdit, 
+import {
+  Building2,
+  Clock,
+  MapPin,
+  Trash2,
+  FileEdit,
   Loader2,
   AlertCircle,
   FileText,
-  Plus
+  Plus,
 } from 'lucide-react';
 import {
   AlertDialog,
@@ -38,7 +45,7 @@ export default function MyDrafts() {
       refetch();
       setDraftToDelete(null);
     },
-    onError: (error) => {
+    onError: error => {
       toast.error('Failed to delete draft', {
         description: error.message,
       });
@@ -104,12 +111,10 @@ export default function MyDrafts() {
             <FileText className="w-16 h-16 text-slate-300 mb-4" />
             <h3 className="text-lg font-semibold text-slate-900 mb-2">No drafts yet</h3>
             <p className="text-slate-500 text-center mb-6">
-              Start creating a development listing and your progress will be automatically saved as a draft.
+              Start creating a development listing and your progress will be automatically saved as
+              a draft.
             </p>
-            <Button
-              onClick={() => setLocation('/developer/create-development')}
-              variant="outline"
-            >
+            <Button onClick={() => setLocation('/developer/create-development')} variant="outline">
               <Plus className="w-4 h-4 mr-2" />
               Create Your First Development
             </Button>
@@ -117,7 +122,7 @@ export default function MyDrafts() {
         </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {drafts.map((draft) => {
+          {drafts.map(draft => {
             const draftData = draft.draftData as any;
             const progress = draft.progress || calculateProgress(draft.currentStep);
             const progressColor = getProgressColor(progress);
@@ -213,7 +218,8 @@ export default function MyDrafts() {
               Delete Draft?
             </AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete this draft? This action cannot be undone and all your progress will be lost.
+              Are you sure you want to delete this draft? This action cannot be undone and all your
+              progress will be lost.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

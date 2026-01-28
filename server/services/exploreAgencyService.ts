@@ -1,16 +1,16 @@
 /**
  * Explore Agency Service
- * 
+ *
  * Handles agency-level analytics and metrics for the Explore feed.
  * Provides aggregated performance data for agencies and their agents.
- * 
+ *
  * Requirements: 3.1, 3.2, 3.3, 3.4
  */
 
-import { db } from "../db";
-import { exploreShorts, agents } from "../../drizzle/schema";
-import { eq, and, sql, desc } from "drizzle-orm";
-import { cache, CacheKeys, CacheTTL } from "../lib/cache";
+import { db } from '../db';
+import { exploreShorts, agents } from '../../drizzle/schema';
+import { eq, and, sql, desc } from 'drizzle-orm';
+import { cache, CacheKeys, CacheTTL } from '../lib/cache';
 
 /**
  * Agency metrics interface
@@ -55,7 +55,7 @@ export class ExploreAgencyService {
   /**
    * Get comprehensive agency metrics
    * Requirements: 3.1, 3.2, 3.3, 3.4
-   * 
+   *
    * Aggregates all metrics across agency-attributed content including:
    * - Total content count
    * - View counts and engagement metrics
@@ -89,7 +89,7 @@ export class ExploreAgencyService {
 
       return result;
     } catch (error) {
-      console.error("Error getting agency metrics:", error);
+      console.error('Error getting agency metrics:', error);
       throw error;
     }
   }
@@ -97,7 +97,7 @@ export class ExploreAgencyService {
   /**
    * Aggregate core metrics for an agency
    * Requirements: 3.1, 3.2
-   * 
+   *
    * Queries and aggregates:
    * - Total content count
    * - Total views across all content
@@ -146,7 +146,7 @@ export class ExploreAgencyService {
   /**
    * Get agent breakdown analytics
    * Requirement 3.4: Compare performance by agent within agency
-   * 
+   *
    * Returns per-agent metrics including:
    * - Content count
    * - Total views
@@ -179,7 +179,7 @@ export class ExploreAgencyService {
         averagePerformanceScore: Number(row.averagePerformanceScore) || 0,
       }));
     } catch (error) {
-      console.error("Error getting agent breakdown:", error);
+      console.error('Error getting agent breakdown:', error);
       throw error;
     }
   }
@@ -187,7 +187,7 @@ export class ExploreAgencyService {
   /**
    * Get top performing content for an agency
    * Requirement 3.3: Display top content ordered by performance
-   * 
+   *
    * Returns top 10 content items ordered by performance score
    * Includes full content details for display
    */
@@ -225,7 +225,7 @@ export class ExploreAgencyService {
         shareCount: Number(row.shareCount) || 0,
       }));
     } catch (error) {
-      console.error("Error getting top performing content:", error);
+      console.error('Error getting top performing content:', error);
       throw error;
     }
   }

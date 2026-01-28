@@ -1,7 +1,7 @@
 /**
  * Agency Feed Page
  * Requirements: 9.1, 9.2
- * 
+ *
  * Displays agency-specific content feed with:
  * - Agency profile header
  * - Content grid/list
@@ -17,27 +17,23 @@ import { AgencyHeader } from '@/components/explore-discovery/AgencyHeader';
 import { PropertyCard } from '@/components/explore-discovery/cards/PropertyCard';
 import { EmptyState } from '@/components/explore-discovery/EmptyState';
 import { designTokens } from '@/lib/design-tokens';
-import { pageVariants, staggerContainerVariants, staggerItemVariants } from '@/lib/animations/exploreAnimations';
+import {
+  pageVariants,
+  staggerContainerVariants,
+  staggerItemVariants,
+} from '@/lib/animations/exploreAnimations';
 
 export default function AgencyFeed() {
   const params = useParams();
   const agencyId = params.agencyId ? parseInt(params.agencyId, 10) : null;
 
   // Fetch agency feed
-  const {
-    feed,
-    shorts,
-    metadata,
-    isLoading,
-    isLoadingMore,
-    error,
-    hasMore,
-    setupObserver,
-  } = useAgencyFeed({
-    agencyId: agencyId || 0,
-    includeAgentContent: true,
-    limit: 20,
-  });
+  const { feed, shorts, metadata, isLoading, isLoadingMore, error, hasMore, setupObserver } =
+    useAgencyFeed({
+      agencyId: agencyId || 0,
+      includeAgentContent: true,
+      limit: 20,
+    });
 
   // Handle invalid agency ID
   if (!agencyId) {
@@ -48,7 +44,7 @@ export default function AgencyFeed() {
           title="Invalid Agency"
           description="The agency you're looking for doesn't exist."
           actionLabel="Go to Explore"
-          onAction={() => window.location.href = '/explore'}
+          onAction={() => (window.location.href = '/explore')}
         />
       </div>
     );
@@ -68,10 +64,7 @@ export default function AgencyFeed() {
             className="w-12 h-12 animate-spin mx-auto mb-4"
             style={{ color: designTokens.colors.accent.primary }}
           />
-          <p
-            className="text-lg"
-            style={{ color: designTokens.colors.text.secondary }}
-          >
+          <p className="text-lg" style={{ color: designTokens.colors.text.secondary }}>
             Loading agency feed...
           </p>
         </div>
@@ -105,17 +98,12 @@ export default function AgencyFeed() {
         variants={pageVariants}
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          {metadata && (
-            <AgencyHeader
-              metadata={metadata}
-              className="mb-8"
-            />
-          )}
+          {metadata && <AgencyHeader metadata={metadata} className="mb-8" />}
           <EmptyState
             title="No Content Yet"
             description="This agency hasn't published any content yet. Check back soon!"
             actionLabel="Explore Other Content"
-            onAction={() => window.location.href = '/explore'}
+            onAction={() => (window.location.href = '/explore')}
           />
         </div>
       </motion.div>
@@ -133,17 +121,10 @@ export default function AgencyFeed() {
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Agency Header */}
-        <AgencyHeader
-          metadata={metadata}
-          className="mb-8"
-        />
+        <AgencyHeader metadata={metadata} className="mb-8" />
 
         {/* Content Grid */}
-        <motion.div
-          variants={staggerContainerVariants}
-          initial="initial"
-          animate="animate"
-        >
+        <motion.div variants={staggerContainerVariants} initial="initial" animate="animate">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             <AnimatePresence mode="popLayout">
               {shorts.map((short, index) => (
@@ -159,7 +140,11 @@ export default function AgencyFeed() {
                   <PropertyCard
                     id={short.id}
                     title={short.title}
-                    imageUrl={short.mediaIds?.[0] ? `/api/media/${short.mediaIds[0]}` : '/placeholder-property.jpg'}
+                    imageUrl={
+                      short.mediaIds?.[0]
+                        ? `/api/media/${short.mediaIds[0]}`
+                        : '/placeholder-property.jpg'
+                    }
                     price={0} // TODO: Get from listing/development
                     location={{
                       city: 'City', // TODO: Get from listing/development
@@ -198,14 +183,8 @@ export default function AgencyFeed() {
 
         {/* Infinite Scroll Trigger */}
         {hasMore && !isLoadingMore && (
-          <div
-            ref={setupObserver}
-            className="h-20 flex items-center justify-center"
-          >
-            <p
-              className="text-sm"
-              style={{ color: designTokens.colors.text.tertiary }}
-            >
+          <div ref={setupObserver} className="h-20 flex items-center justify-center">
+            <p className="text-sm" style={{ color: designTokens.colors.text.tertiary }}>
               Scroll for more
             </p>
           </div>
@@ -228,10 +207,7 @@ export default function AgencyFeed() {
             >
               You've reached the end
             </p>
-            <p
-              className="text-sm"
-              style={{ color: designTokens.colors.text.tertiary }}
-            >
+            <p className="text-sm" style={{ color: designTokens.colors.text.tertiary }}>
               That's all the content from this agency
             </p>
           </motion.div>

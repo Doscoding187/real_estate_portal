@@ -1,14 +1,14 @@
 /**
  * Integration Tests for Explore Agency Content Attribution
  * Task 10: Write integration tests
- * 
+ *
  * Tests:
  * - End-to-end agency feed flow
  * - Agency analytics calculation
  * - Cache invalidation
  * - Permission enforcement
  * - Migration and rollback
- * 
+ *
  * Requirements: All
  */
 
@@ -38,7 +38,7 @@ describe('Explore Agency Content Attribution - Integration Tests', () => {
     // Initialize database connection
     try {
       db = await getDb();
-      
+
       if (!db) {
         console.warn('⚠️  Database connection not available. Skipping integration tests.');
         return;
@@ -59,10 +59,12 @@ describe('Explore Agency Content Attribution - Integration Tests', () => {
 
     // Clean up test data
     await db.execute(sql`DELETE FROM explore_shorts WHERE title LIKE 'TEST:INTEGRATION:%'`);
-    await db.execute(sql`DELETE FROM agents WHERE first_name = 'TEST' AND last_name LIKE 'INTEGRATION%'`);
+    await db.execute(
+      sql`DELETE FROM agents WHERE first_name = 'TEST' AND last_name LIKE 'INTEGRATION%'`,
+    );
     await db.execute(sql`DELETE FROM agencies WHERE name LIKE 'TEST:INTEGRATION:%'`);
     await db.execute(sql`DELETE FROM users WHERE username LIKE 'test_integration_%'`);
-    
+
     testAgentIds = [];
     testShortIds = [];
     testUserIds = [];
@@ -73,7 +75,9 @@ describe('Explore Agency Content Attribution - Integration Tests', () => {
 
     // Final cleanup
     await db.execute(sql`DELETE FROM explore_shorts WHERE title LIKE 'TEST:INTEGRATION:%'`);
-    await db.execute(sql`DELETE FROM agents WHERE first_name = 'TEST' AND last_name LIKE 'INTEGRATION%'`);
+    await db.execute(
+      sql`DELETE FROM agents WHERE first_name = 'TEST' AND last_name LIKE 'INTEGRATION%'`,
+    );
     await db.execute(sql`DELETE FROM agencies WHERE name LIKE 'TEST:INTEGRATION:%'`);
     await db.execute(sql`DELETE FROM users WHERE username LIKE 'test_integration_%'`);
   });
@@ -81,7 +85,7 @@ describe('Explore Agency Content Attribution - Integration Tests', () => {
   /**
    * Integration Test 1: End-to-end agency feed flow
    * Requirements: 1.2, 2.1, 2.2, 2.3, 8.1, 8.2
-   * 
+   *
    * Tests the complete flow from content creation to feed retrieval:
    * 1. Create agency
    * 2. Create agents in agency
@@ -206,7 +210,7 @@ describe('Explore Agency Content Attribution - Integration Tests', () => {
         Number(short1.insertId),
         Number(short2.insertId),
         Number(short3.insertId),
-        Number(short4.insertId)
+        Number(short4.insertId),
       );
 
       // Step 5: Retrieve agency feed with agent content
@@ -294,7 +298,7 @@ describe('Explore Agency Content Attribution - Integration Tests', () => {
   /**
    * Integration Test 2: Agency analytics calculation
    * Requirements: 3.1, 3.2, 3.3, 3.4
-   * 
+   *
    * Tests the complete analytics workflow:
    * 1. Create agency with multiple agents
    * 2. Create content with various metrics
@@ -438,21 +442,17 @@ describe('Explore Agency Content Attribution - Integration Tests', () => {
 
       // Should be sorted by views (descending)
       expect(metrics.agentBreakdown[0].totalViews).toBeGreaterThanOrEqual(
-        metrics.agentBreakdown[1].totalViews
+        metrics.agentBreakdown[1].totalViews,
       );
 
       // Verify agent 1 metrics
-      const agent1Metrics = metrics.agentBreakdown.find(
-        (a) => a.agentId === testAgentIds[0]
-      );
+      const agent1Metrics = metrics.agentBreakdown.find(a => a.agentId === testAgentIds[0]);
       expect(agent1Metrics).toBeDefined();
       expect(agent1Metrics!.contentCount).toBe(3);
       expect(agent1Metrics!.totalViews).toBe(1050);
 
       // Verify agent 2 metrics
-      const agent2Metrics = metrics.agentBreakdown.find(
-        (a) => a.agentId === testAgentIds[1]
-      );
+      const agent2Metrics = metrics.agentBreakdown.find(a => a.agentId === testAgentIds[1]);
       expect(agent2Metrics).toBeDefined();
       expect(agent2Metrics!.contentCount).toBe(2);
       expect(agent2Metrics!.totalViews).toBe(325);
@@ -465,7 +465,7 @@ describe('Explore Agency Content Attribution - Integration Tests', () => {
       // Top content should be sorted by performance score
       for (let i = 0; i < metrics.topPerformingContent.length - 1; i++) {
         expect(metrics.topPerformingContent[i].performanceScore).toBeGreaterThanOrEqual(
-          metrics.topPerformingContent[i + 1].performanceScore
+          metrics.topPerformingContent[i + 1].performanceScore,
         );
       }
 
@@ -490,7 +490,7 @@ describe('Explore Agency Content Attribution - Integration Tests', () => {
   /**
    * Integration Test 3: Cache invalidation
    * Requirements: 2.5, Performance
-   * 
+   *
    * Tests cache behavior:
    * 1. Retrieve agency feed (should cache)
    * 2. Retrieve again (should hit cache)
@@ -662,7 +662,7 @@ describe('Explore Agency Content Attribution - Integration Tests', () => {
   /**
    * Integration Test 4: Permission enforcement
    * Requirements: 3.4, Security
-   * 
+   *
    * Tests access control for agency analytics:
    * 1. Create agency with owner
    * 2. Create agent in agency
@@ -800,7 +800,7 @@ describe('Explore Agency Content Attribution - Integration Tests', () => {
   /**
    * Integration Test 5: Migration and rollback
    * Requirements: 4.1, 4.2, 4.3, 7.5
-   * 
+   *
    * Tests database schema changes:
    * 1. Verify agency_id column exists in explore_shorts
    * 2. Verify creator_type and agency_id columns exist in explore_content
@@ -974,9 +974,7 @@ describe('Explore Agency Content Attribution - Integration Tests', () => {
       });
 
       // Should include content without agency_id
-      const hasNullAgencyContent = feed.shorts.some(
-        (s: any) => s.id === Number(short.insertId)
-      );
+      const hasNullAgencyContent = feed.shorts.some((s: any) => s.id === Number(short.insertId));
       expect(hasNullAgencyContent).toBe(true);
 
       // Clean up
@@ -1035,4 +1033,3 @@ describe('Explore Agency Content Attribution - Integration Tests', () => {
     });
   });
 });
-

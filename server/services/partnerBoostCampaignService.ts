@@ -1,7 +1,7 @@
 /**
  * Partner Boost Campaign Service
  * Manages paid promotion campaigns for partner content in Explore
- * 
+ *
  * Requirements:
  * - 8.1: Require topic selection for targeting
  * - 8.2: Display "Sponsored" label on boosted content
@@ -12,12 +12,12 @@
  */
 
 import { db } from '../db';
-import { 
+import {
   boostCampaigns,
   explorePartners,
   topics,
   exploreContent,
-  exploreShorts
+  exploreShorts,
 } from '../../drizzle/schema';
 import { eq, and, sql, gte, lte } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
@@ -111,7 +111,7 @@ export class PartnerBoostCampaignService {
       endDate: data.endDate?.toISOString() || null,
       impressions: 0,
       clicks: 0,
-      costPerImpression: (data.costPerImpression || 0.10).toString(),
+      costPerImpression: (data.costPerImpression || 0.1).toString(),
     });
 
     const campaign = await db.query.boostCampaigns.findFirst({
@@ -141,7 +141,7 @@ export class PartnerBoostCampaignService {
     // Check if budget is already depleted
     const spent = parseFloat(campaign.spent || '0');
     const budget = parseFloat(campaign.budget);
-    
+
     if (spent >= budget) {
       throw new Error('Cannot activate campaign: budget depleted');
     }
@@ -155,7 +155,8 @@ export class PartnerBoostCampaignService {
       }
     }
 
-    await db.update(boostCampaigns)
+    await db
+      .update(boostCampaigns)
       .set({ status: 'active' })
       .where(eq(boostCampaigns.id, campaignId));
   }
@@ -164,7 +165,8 @@ export class PartnerBoostCampaignService {
    * Pause a boost campaign
    */
   async pauseCampaign(campaignId: string): Promise<void> {
-    await db.update(boostCampaigns)
+    await db
+      .update(boostCampaigns)
       .set({ status: 'paused' })
       .where(eq(boostCampaigns.id, campaignId));
   }
@@ -192,7 +194,8 @@ export class PartnerBoostCampaignService {
     // Check if budget will be depleted
     const shouldDeplete = newSpent >= budget;
 
-    await db.update(boostCampaigns)
+    await db
+      .update(boostCampaigns)
       .set({
         impressions: newImpressions,
         spent: newSpent.toString(),
@@ -202,7 +205,9 @@ export class PartnerBoostCampaignService {
 
     // Log budget depletion
     if (shouldDeplete) {
-      console.log(`[PartnerBoostCampaign] Campaign ${campaignId} budget depleted. Status set to 'depleted'.`);
+      console.log(
+        `[PartnerBoostCampaign] Campaign ${campaignId} budget depleted. Status set to 'depleted'.`,
+      );
     }
   }
 
@@ -221,7 +226,8 @@ export class PartnerBoostCampaignService {
 
     const newClicks = (campaign.clicks || 0) + 1;
 
-    await db.update(boostCampaigns)
+    await db
+      .update(boostCampaigns)
       .set({
         clicks: newClicks,
       })
@@ -240,7 +246,7 @@ export class PartnerBoostCampaignService {
         eq(boostCampaigns.topicId, topicId),
         eq(boostCampaigns.status, 'active'),
         lte(boostCampaigns.startDate, now),
-        sql`(${boostCampaigns.endDate} IS NULL OR ${boostCampaigns.endDate} >= ${now})`
+        sql`(${boostCampaigns.endDate} IS NULL OR ${boostCampaigns.endDate} >= ${now})`,
       ),
     });
 
@@ -275,7 +281,10 @@ export class PartnerBoostCampaignService {
     if (campaign.endDate) {
       const now = new Date();
       const endDate = new Date(campaign.endDate);
-      daysRemaining = Math.max(0, Math.ceil((endDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)));
+      daysRemaining = Math.max(
+        0,
+        Math.ceil((endDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)),
+      );
     }
 
     return {
@@ -317,11 +326,12 @@ export class PartnerBoostCampaignService {
     // Check content category - only allow primary and secondary content to be boosted
     // Requirement 8.6: Reject boosts that violate content hierarchy
     const contentCategory = content?.contentCategory || short?.contentCategory;
-    
+
     if (contentCategory === 'tertiary') {
       return {
         isValid: false,
-        reason: 'Tertiary content (inspiration/trends) cannot be boosted to maintain content hierarchy. Only primary (properties) and secondary (services/education) content can be boosted.',
+        reason:
+          'Tertiary content (inspiration/trends) cannot be boosted to maintain content hierarchy. Only primary (properties) and secondary (services/education) content can be boosted.',
       };
     }
 
@@ -330,7 +340,8 @@ export class PartnerBoostCampaignService {
     if (existingBoost.isBoosted) {
       return {
         isValid: false,
-        reason: 'Content is already being boosted by an active campaign. Only one active boost per content item is allowed.',
+        reason:
+          'Content is already being boosted by an active campaign. Only one active boost per content item is allowed.',
       };
     }
 
@@ -386,12 +397,15 @@ export class PartnerBoostCampaignService {
   async updateExpiredCampaigns(): Promise<number> {
     const now = new Date().toISOString();
 
-    const result = await db.update(boostCampaigns)
+    const result = await db
+      .update(boostCampaigns)
       .set({ status: 'completed' })
-      .where(and(
-        eq(boostCampaigns.status, 'active'),
-        sql`${boostCampaigns.endDate} IS NOT NULL AND ${boostCampaigns.endDate} < ${now}`
-      ));
+      .where(
+        and(
+          eq(boostCampaigns.status, 'active'),
+          sql`${boostCampaigns.endDate} IS NOT NULL AND ${boostCampaigns.endDate} < ${now}`,
+        ),
+      );
 
     return result[0]?.affectedRows || 0;
   }
@@ -414,12 +428,15 @@ export class PartnerBoostCampaignService {
       const budget = parseFloat(campaign.budget);
 
       if (spent >= budget) {
-        await db.update(boostCampaigns)
+        await db
+          .update(boostCampaigns)
           .set({ status: 'depleted' })
           .where(eq(boostCampaigns.id, campaign.id));
-        
+
         pausedCount++;
-        console.log(`[PartnerBoostCampaign] Auto-paused campaign ${campaign.id} due to budget depletion`);
+        console.log(
+          `[PartnerBoostCampaign] Auto-paused campaign ${campaign.id} due to budget depletion`,
+        );
       }
     }
 
@@ -477,7 +494,7 @@ export class PartnerBoostCampaignService {
         eq(boostCampaigns.contentId, contentId),
         eq(boostCampaigns.status, 'active'),
         lte(boostCampaigns.startDate, now),
-        sql`(${boostCampaigns.endDate} IS NULL OR ${boostCampaigns.endDate} >= ${now})`
+        sql`(${boostCampaigns.endDate} IS NULL OR ${boostCampaigns.endDate} >= ${now})`,
       ),
     });
 
@@ -530,10 +547,13 @@ export class PartnerBoostCampaignService {
 
     const activeCampaigns = await db.query.boostCampaigns.findMany({
       where: and(
-        sql`${boostCampaigns.contentId} IN (${sql.join(contentIds.map(id => sql`${id}`), sql`, `)})`,
+        sql`${boostCampaigns.contentId} IN (${sql.join(
+          contentIds.map(id => sql`${id}`),
+          sql`, `,
+        )})`,
         eq(boostCampaigns.status, 'active'),
         lte(boostCampaigns.startDate, now),
-        sql`(${boostCampaigns.endDate} IS NULL OR ${boostCampaigns.endDate} >= ${now})`
+        sql`(${boostCampaigns.endDate} IS NULL OR ${boostCampaigns.endDate} >= ${now})`,
       ),
     });
 

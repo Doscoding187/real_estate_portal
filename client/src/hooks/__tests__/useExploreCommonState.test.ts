@@ -50,7 +50,7 @@ describe('useExploreCommonState', () => {
           initialViewMode: 'cards',
           initialFeedType: 'area',
           initialShowFilters: true,
-        })
+        }),
       );
 
       expect(result.current.viewMode).toBe('cards');
@@ -81,7 +81,7 @@ describe('useExploreCommonState', () => {
         'shorts',
       ];
 
-      viewModes.forEach((mode) => {
+      viewModes.forEach(mode => {
         act(() => {
           result.current.setViewMode(mode);
         });
@@ -110,7 +110,7 @@ describe('useExploreCommonState', () => {
         'category',
       ];
 
-      feedTypes.forEach((type) => {
+      feedTypes.forEach(type => {
         act(() => {
           result.current.setFeedType(type);
         });
@@ -236,9 +236,7 @@ describe('useExploreCommonState', () => {
 
   describe('integration scenarios', () => {
     it('should handle typical ExploreHome workflow', () => {
-      const { result } = renderHook(() =>
-        useExploreCommonState({ initialViewMode: 'home' })
-      );
+      const { result } = renderHook(() => useExploreCommonState({ initialViewMode: 'home' }));
 
       // Start on home view
       expect(result.current.viewMode).toBe('home');
@@ -268,7 +266,7 @@ describe('useExploreCommonState', () => {
         useExploreCommonState({
           initialViewMode: 'videos',
           initialFeedType: 'recommended',
-        })
+        }),
       );
 
       // Start with recommended feed
@@ -288,9 +286,7 @@ describe('useExploreCommonState', () => {
     });
 
     it('should handle typical ExploreMap workflow', () => {
-      const { result } = renderHook(() =>
-        useExploreCommonState({ initialViewMode: 'map' })
-      );
+      const { result } = renderHook(() => useExploreCommonState({ initialViewMode: 'map' }));
 
       // Start on map view
       expect(result.current.viewMode).toBe('map');

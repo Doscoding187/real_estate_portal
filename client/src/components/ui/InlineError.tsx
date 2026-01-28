@@ -1,6 +1,6 @@
 /**
  * InlineError Component
- * 
+ *
  * Displays inline validation error messages with smooth animations
  * Used throughout forms to provide immediate feedback
  */
@@ -15,22 +15,22 @@ export interface InlineErrorProps {
    * Error message to display
    */
   error?: string;
-  
+
   /**
    * Whether to show the error
    */
   show: boolean;
-  
+
   /**
    * Additional CSS classes
    */
   className?: string;
-  
+
   /**
    * Icon to display (defaults to AlertCircle)
    */
   icon?: React.ReactNode;
-  
+
   /**
    * Size variant
    */
@@ -73,7 +73,7 @@ export const InlineError: React.FC<InlineErrorProps> = ({
           className={cn(
             'text-red-600 flex items-start gap-1.5 overflow-hidden',
             sizeClasses[size],
-            className
+            className,
           )}
           role="alert"
           aria-live="polite"

@@ -1,6 +1,6 @@
 /**
  * Onboarding Components Verification
- * 
+ *
  * Quick verification that all onboarding components are properly implemented
  * and can be imported without errors.
  */
@@ -11,7 +11,11 @@ import { OnboardingTooltip, FloatingTooltip } from './OnboardingTooltip';
 
 // Hook imports
 import { useWelcomeOverlay } from '../../hooks/useWelcomeOverlay';
-import { useOnboardingTooltip, useTopicNavigationTooltip, usePartnerContentTooltip } from '../../hooks/useOnboardingTooltip';
+import {
+  useOnboardingTooltip,
+  useTopicNavigationTooltip,
+  usePartnerContentTooltip,
+} from '../../hooks/useOnboardingTooltip';
 
 // Type definitions
 interface VerificationResult {
@@ -72,7 +76,11 @@ export function verifyOnboardingComponents(): VerificationResult[] {
     if (typeof useOnboardingTooltip === 'function') {
       results.push({ component: 'useOnboardingTooltip', status: 'available' });
     } else {
-      results.push({ component: 'useOnboardingTooltip', status: 'missing', error: 'Not a function' });
+      results.push({
+        component: 'useOnboardingTooltip',
+        status: 'missing',
+        error: 'Not a function',
+      });
     }
   } catch (error) {
     results.push({ component: 'useOnboardingTooltip', status: 'missing', error: String(error) });
@@ -82,20 +90,36 @@ export function verifyOnboardingComponents(): VerificationResult[] {
     if (typeof useTopicNavigationTooltip === 'function') {
       results.push({ component: 'useTopicNavigationTooltip', status: 'available' });
     } else {
-      results.push({ component: 'useTopicNavigationTooltip', status: 'missing', error: 'Not a function' });
+      results.push({
+        component: 'useTopicNavigationTooltip',
+        status: 'missing',
+        error: 'Not a function',
+      });
     }
   } catch (error) {
-    results.push({ component: 'useTopicNavigationTooltip', status: 'missing', error: String(error) });
+    results.push({
+      component: 'useTopicNavigationTooltip',
+      status: 'missing',
+      error: String(error),
+    });
   }
 
   try {
     if (typeof usePartnerContentTooltip === 'function') {
       results.push({ component: 'usePartnerContentTooltip', status: 'available' });
     } else {
-      results.push({ component: 'usePartnerContentTooltip', status: 'missing', error: 'Not a function' });
+      results.push({
+        component: 'usePartnerContentTooltip',
+        status: 'missing',
+        error: 'Not a function',
+      });
     }
   } catch (error) {
-    results.push({ component: 'usePartnerContentTooltip', status: 'missing', error: String(error) });
+    results.push({
+      component: 'usePartnerContentTooltip',
+      status: 'missing',
+      error: String(error),
+    });
   }
 
   return results;
@@ -106,10 +130,10 @@ export function verifyOnboardingComponents(): VerificationResult[] {
  */
 export function printVerificationResults(): void {
   const results = verifyOnboardingComponents();
-  
+
   console.log('🔍 Onboarding Components Verification');
   console.log('=====================================');
-  
+
   results.forEach(result => {
     const status = result.status === 'available' ? '✅' : '❌';
     console.log(`${status} ${result.component}: ${result.status}`);
@@ -117,13 +141,13 @@ export function printVerificationResults(): void {
       console.log(`   Error: ${result.error}`);
     }
   });
-  
+
   const availableCount = results.filter(r => r.status === 'available').length;
   const totalCount = results.length;
-  
+
   console.log('=====================================');
   console.log(`📊 Summary: ${availableCount}/${totalCount} components available`);
-  
+
   if (availableCount === totalCount) {
     console.log('🎉 All onboarding components are properly implemented!');
   } else {

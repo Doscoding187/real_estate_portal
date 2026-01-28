@@ -1,9 +1,9 @@
 /**
  * MetricCard Component
- * 
+ *
  * Displays a social proof metric with large number and descriptive label.
  * Includes count-up animation when entering viewport.
- * 
+ *
  * Requirements: 6.3
  */
 
@@ -20,29 +20,29 @@ export interface MetricCardProps {
    * Can be a number or formatted string (e.g., "10K+", "95%")
    */
   value: string | number;
-  
+
   /**
    * Descriptive label for the metric
    */
   label: string;
-  
+
   /**
    * Optional icon to display above the metric
    */
   icon?: LucideIcon;
-  
+
   /**
    * Optional color accent for the icon
    * @default 'primary'
    */
   iconColor?: 'primary' | 'secondary' | 'blue' | 'green' | 'yellow' | 'purple';
-  
+
   /**
    * Duration of count-up animation in milliseconds
    * @default 2000
    */
   animationDuration?: number;
-  
+
   /**
    * Whether to enable count-up animation
    * Only works if value is a number
@@ -60,7 +60,7 @@ const easeOutQuart = (t: number): number => {
 
 /**
  * MetricCard Component
- * 
+ *
  * @example
  * ```tsx
  * <MetricCard
@@ -85,7 +85,7 @@ export const MetricCard: React.FC<MetricCardProps> = ({
   });
 
   const [displayValue, setDisplayValue] = useState<string | number>(
-    typeof value === 'number' && enableCountUp ? 0 : value
+    typeof value === 'number' && enableCountUp ? 0 : value,
   );
 
   // Count-up animation effect
@@ -103,11 +103,11 @@ export const MetricCard: React.FC<MetricCardProps> = ({
       const currentTime = Date.now();
       const elapsed = currentTime - startTime;
       const progress = Math.min(elapsed / animationDuration, 1);
-      
+
       // Apply easing function
       const easedProgress = easeOutQuart(progress);
       const currentValue = Math.floor(startValue + (endValue - startValue) * easedProgress);
-      
+
       setDisplayValue(currentValue);
 
       if (progress < 1) {
@@ -135,7 +135,7 @@ export const MetricCard: React.FC<MetricCardProps> = ({
       ref={ref}
       variants={fadeUp}
       initial="initial"
-      animate={isVisible ? "animate" : "initial"}
+      animate={isVisible ? 'animate' : 'initial'}
       className="flex flex-col items-center text-center p-6 md:p-8"
     >
       {/* Optional Icon */}
@@ -150,11 +150,7 @@ export const MetricCard: React.FC<MetricCardProps> = ({
           }}
           className="mb-4"
         >
-          <Icon
-            size={32}
-            style={{ color: iconColorMap[iconColor] }}
-            strokeWidth={2}
-          />
+          <Icon size={32} style={{ color: iconColorMap[iconColor] }} strokeWidth={2} />
         </motion.div>
       )}
 

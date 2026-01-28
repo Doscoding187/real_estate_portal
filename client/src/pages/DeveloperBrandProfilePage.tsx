@@ -1,6 +1,6 @@
 /**
  * Developer Brand Profile Page
- * 
+ *
  * Unified public-facing page for both:
  * 1. Subscriber Developers (Developer Accounts)
  * 2. Platform Brand Profiles (Managed Brands)
@@ -12,23 +12,23 @@ import { ListingNavbar } from '@/components/ListingNavbar';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { Helmet } from 'react-helmet';
+import { Helmet } from 'react-helmet-async';
 import { trpc } from '@/lib/trpc';
 import { DevelopmentCard } from '@/components/DevelopmentCard';
-import { 
-  Loader2, 
-  MapPin, 
-  Globe, 
-  Mail, 
-  Phone, 
-  Building2, 
-  CheckCircle2, 
+import {
+  Loader2,
+  MapPin,
+  Globe,
+  Mail,
+  Phone,
+  Building2,
+  CheckCircle2,
   Award,
   ArrowRight,
   ShieldCheck,
   BarChart3,
   Calendar,
-  AlertCircle
+  AlertCircle,
 } from 'lucide-react';
 
 export default function DeveloperBrandProfilePage() {
@@ -37,19 +37,21 @@ export default function DeveloperBrandProfilePage() {
   const slug = params?.slug || '';
 
   // Fetch unified profile (Subscriber or Brand)
-  const { data: profile, isLoading, error } = trpc.developer.getPublicDeveloperBySlug.useQuery(
-    { slug },
-    { enabled: !!slug, retry: false }
-  );
+  const {
+    data: profile,
+    isLoading,
+    error,
+  } = trpc.developer.getPublicDeveloperBySlug.useQuery({ slug }, { enabled: !!slug, retry: false });
 
   // Fetch developments for this profile
-  const { data: developments, isLoading: isLoadingDevs } = trpc.developer.getPublicDevelopmentsForProfile.useQuery(
-    { 
-      profileType: profile?.type || 'subscriber', 
-      profileId: profile?.id || 0 
-    },
-    { enabled: !!profile }
-  );
+  const { data: developments, isLoading: isLoadingDevs } =
+    trpc.developer.getPublicDevelopmentsForProfile.useQuery(
+      {
+        profileType: profile?.type || 'subscriber',
+        profileId: profile?.id || 0,
+      },
+      { enabled: !!profile },
+    );
 
   if (isLoading) {
     return (
@@ -76,9 +78,7 @@ export default function DeveloperBrandProfilePage() {
           <p className="text-slate-500 mb-6">
             The developer profile you're looking for doesn't exist or has been removed.
           </p>
-          <Button onClick={() => setLocation('/developers')}>
-            Browse All Developers
-          </Button>
+          <Button onClick={() => setLocation('/developers')}>Browse All Developers</Button>
         </div>
       </div>
     );
@@ -86,29 +86,36 @@ export default function DeveloperBrandProfilePage() {
 
   // Construct JSON-LD Schema
   const schemaData = {
-    "@context": "https://schema.org",
-    "@type": "RealEstateAgent", // Using RealEstateAgent as it covers property developers well in schema.org context
-    "name": profile.name,
-    "image": profile.logo,
-    "description": profile.description,
-    "url": window.location.href,
-    "address": profile.address ? {
-      "@type": "PostalAddress",
-      "streetAddress": profile.address
-    } : undefined,
-    "telephone": profile.phones && profile.phones.length > 0 ? profile.phones[0] : undefined,
-    "email": profile.emails && profile.emails.length > 0 ? profile.emails[0] : undefined,
-    "sameAs": profile.website ? [profile.website] : []
+    '@context': 'https://schema.org',
+    '@type': 'RealEstateAgent', // Using RealEstateAgent as it covers property developers well in schema.org context
+    name: profile.name,
+    image: profile.logo,
+    description: profile.description,
+    url: window.location.href,
+    address: profile.address
+      ? {
+          '@type': 'PostalAddress',
+          streetAddress: profile.address,
+        }
+      : undefined,
+    telephone: profile.phones && profile.phones.length > 0 ? profile.phones[0] : undefined,
+    email: profile.emails && profile.emails.length > 0 ? profile.emails[0] : undefined,
+    sameAs: profile.website ? [profile.website] : [],
   };
 
   return (
     <div className="min-h-screen bg-slate-50">
       <Helmet>
         <title>{`${profile.name} - Property Developer Profile | Property Listify`}</title>
-        <meta name="description" content={profile.description ? profile.description.slice(0, 160) : `Learn more about ${profile.name}, a property developer on Property Listify.`} />
-        <script type="application/ld+json">
-          {JSON.stringify(schemaData)}
-        </script>
+        <meta
+          name="description"
+          content={
+            profile.description
+              ? profile.description.slice(0, 160)
+              : `Learn more about ${profile.name}, a property developer on Property Listify.`
+          }
+        />
+        <script type="application/ld+json">{JSON.stringify(schemaData)}</script>
       </Helmet>
       <ListingNavbar />
 
@@ -119,11 +126,7 @@ export default function DeveloperBrandProfilePage() {
             {/* Logo */}
             <div className="w-24 h-24 md:w-32 md:h-32 rounded-2xl bg-white/10 overflow-hidden border-2 border-white/20 shrink-0 flex items-center justify-center">
               {profile.logo ? (
-                <img 
-                  src={profile.logo} 
-                  alt={profile.name} 
-                  className="w-full h-full object-cover" 
-                />
+                <img src={profile.logo} alt={profile.name} className="w-full h-full object-cover" />
               ) : (
                 <Building2 className="h-12 w-12 text-white/50" />
               )}
@@ -133,19 +136,19 @@ export default function DeveloperBrandProfilePage() {
             <div className="flex-1">
               <div className="flex flex-wrap items-center gap-3 mb-2">
                 <h1 className="text-3xl md:text-4xl font-bold">{profile.name}</h1>
-                
+
                 {profile.stats.isVerified && (
-                   <Badge className="bg-emerald-500/20 text-emerald-100 border-emerald-500/50 flex items-center gap-1">
-                     <CheckCircle className="h-3 w-3" />
-                     Verified
-                   </Badge>
+                  <Badge className="bg-emerald-500/20 text-emerald-100 border-emerald-500/50 flex items-center gap-1">
+                    <CheckCircle className="h-3 w-3" />
+                    Verified
+                  </Badge>
                 )}
-                
+
                 {profile.stats.isTrusted && (
-                   <Badge className="bg-indigo-500/20 text-indigo-100 border-indigo-500/50 flex items-center gap-1">
-                     <ShieldCheck className="h-3 w-3" />
-                     Trusted Partner
-                   </Badge>
+                  <Badge className="bg-indigo-500/20 text-indigo-100 border-indigo-500/50 flex items-center gap-1">
+                    <ShieldCheck className="h-3 w-3" />
+                    Trusted Partner
+                  </Badge>
                 )}
               </div>
 
@@ -171,9 +174,9 @@ export default function DeveloperBrandProfilePage() {
                   </div>
                 )}
                 {profile.website && (
-                  <a 
-                    href={profile.website} 
-                    target="_blank" 
+                  <a
+                    href={profile.website}
+                    target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center gap-1.5 hover:text-white transition-colors"
                   >
@@ -204,21 +207,24 @@ export default function DeveloperBrandProfilePage() {
                 // Parse images safely
                 let images: string[] = [];
                 try {
-                  const rawImages = typeof dev.images === 'string' ? JSON.parse(dev.images) : dev.images;
+                  const rawImages =
+                    typeof dev.images === 'string' ? JSON.parse(dev.images) : dev.images;
                   if (Array.isArray(rawImages)) {
-                    images = rawImages.map((img: any) => {
-                      if (typeof img === 'string') return img;
-                      if (typeof img === 'object' && img !== null && 'url' in img) return img.url;
-                      return '';
-                    }).filter(Boolean);
+                    images = rawImages
+                      .map((img: any) => {
+                        if (typeof img === 'string') return img;
+                        if (typeof img === 'object' && img !== null && 'url' in img) return img.url;
+                        return '';
+                      })
+                      .filter(Boolean);
                   }
                 } catch (e) {
                   images = [];
                 }
 
                 return (
-                  <DevelopmentCard 
-                    key={dev.id} 
+                  <DevelopmentCard
+                    key={dev.id}
                     id={dev.slug || String(dev.id)}
                     title={dev.name}
                     rating={Number(dev.rating) || 0}
@@ -228,13 +234,13 @@ export default function DeveloperBrandProfilePage() {
                     unitTypes={dev.unitTypes || []}
                     highlights={(dev.highlights as string[]) || []}
                     developer={{
-                        name: profile.name,
-                        isFeatured: !!profile.stats.isVerified
+                      name: profile.name,
+                      isFeatured: !!profile.stats.isVerified,
                     }}
                     imageCount={images.length}
                     isFeatured={!!dev.isFeatured}
                     status={dev.status}
-                    nature={dev.nature} 
+                    nature={dev.nature}
                   />
                 );
               })}
@@ -249,9 +255,9 @@ export default function DeveloperBrandProfilePage() {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-               {[1,2,3].map(i => (
-                 <div key={i} className="h-96 bg-slate-200 rounded-xl animate-pulse" />
-               ))}
+              {[1, 2, 3].map(i => (
+                <div key={i} className="h-96 bg-slate-200 rounded-xl animate-pulse" />
+              ))}
             </div>
           )}
         </div>
@@ -264,7 +270,7 @@ export default function DeveloperBrandProfilePage() {
             <p className="text-slate-600 mb-3">
               Are you part of the <strong>{profile.name}</strong> team?
             </p>
-            <Button 
+            <Button
               variant="outline"
               className="border-indigo-200 text-indigo-600 hover:bg-indigo-50"
               onClick={() => setLocation('/developer/setup')}

@@ -59,7 +59,16 @@ export function ActiveFilterChips({ filters, onRemoveFilter, onClearAll }: Activ
     // Skip false booleans
     if (typeof value === 'boolean' && !value) return false;
     // Include these filter types
-    return ['minPrice', 'maxPrice', 'minBedrooms', 'maxBedrooms', 'minBathrooms', 'maxBathrooms', 'furnished', 'amenities'].includes(key);
+    return [
+      'minPrice',
+      'maxPrice',
+      'minBedrooms',
+      'maxBedrooms',
+      'minBathrooms',
+      'maxBathrooms',
+      'furnished',
+      'amenities',
+    ].includes(key);
   });
 
   if (removableFilters.length === 0) return null;
@@ -67,11 +76,11 @@ export function ActiveFilterChips({ filters, onRemoveFilter, onClearAll }: Activ
   return (
     <div className="flex flex-wrap items-center gap-2">
       <span className="text-sm text-muted-foreground">Active filters:</span>
-      
+
       {removableFilters.map(([key, value]) => {
         const label = getFilterLabel(key, value);
         if (!label) return null;
-        
+
         return (
           <Badge
             key={key}

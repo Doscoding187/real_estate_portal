@@ -1,15 +1,20 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { db } from '../../db';
-import { exploreShorts, exploreInteractions, exploreHighlightTags, exploreUserPreferences } from '../../../drizzle/schema';
+import {
+  exploreShorts,
+  exploreInteractions,
+  exploreHighlightTags,
+  exploreUserPreferences,
+} from '../../../drizzle/schema';
 import { sql } from 'drizzle-orm';
 import fc from 'fast-check';
 
 /**
  * Feature: property-explore-shorts, Property 16: Platform integration
  * Validates: Requirements 12.1
- * 
+ *
  * Property: For any property displayed in Explore Shorts, the system SHALL retrieve data from the internal listings database
- * 
+ *
  * This test verifies that the database schema is correctly set up and can handle
  * all required operations for the Explore Shorts feature.
  */
@@ -39,7 +44,7 @@ describe('Explore Shorts Database Schema', () => {
     // Verify explore_shorts table structure
     const shortsColumns = await db.execute(sql`DESCRIBE explore_shorts`);
     const shortsColumnNames = shortsColumns.rows.map((row: any) => row.Field);
-    
+
     expect(shortsColumnNames).toContain('id');
     expect(shortsColumnNames).toContain('listing_id');
     expect(shortsColumnNames).toContain('development_id');
@@ -52,7 +57,7 @@ describe('Explore Shorts Database Schema', () => {
     // Verify explore_interactions table structure
     const interactionsColumns = await db.execute(sql`DESCRIBE explore_interactions`);
     const interactionsColumnNames = interactionsColumns.rows.map((row: any) => row.Field);
-    
+
     expect(interactionsColumnNames).toContain('id');
     expect(interactionsColumnNames).toContain('short_id');
     expect(interactionsColumnNames).toContain('user_id');
@@ -63,7 +68,7 @@ describe('Explore Shorts Database Schema', () => {
     // Verify explore_highlight_tags table structure
     const tagsColumns = await db.execute(sql`DESCRIBE explore_highlight_tags`);
     const tagsColumnNames = tagsColumns.rows.map((row: any) => row.Field);
-    
+
     expect(tagsColumnNames).toContain('id');
     expect(tagsColumnNames).toContain('tag_key');
     expect(tagsColumnNames).toContain('label');
@@ -73,7 +78,7 @@ describe('Explore Shorts Database Schema', () => {
     // Verify explore_user_preferences table structure
     const prefsColumns = await db.execute(sql`DESCRIBE explore_user_preferences`);
     const prefsColumnNames = prefsColumns.rows.map((row: any) => row.Field);
-    
+
     expect(prefsColumnNames).toContain('id');
     expect(prefsColumnNames).toContain('user_id');
     expect(prefsColumnNames).toContain('preferred_locations');
@@ -84,7 +89,7 @@ describe('Explore Shorts Database Schema', () => {
   it('should have correct indexes on explore_shorts table', async () => {
     const indexes = await db.execute(sql`SHOW INDEX FROM explore_shorts`);
     const indexNames = indexes.rows.map((row: any) => row.Key_name);
-    
+
     expect(indexNames).toContain('idx_explore_shorts_listing_id');
     expect(indexNames).toContain('idx_explore_shorts_development_id');
     expect(indexNames).toContain('idx_explore_shorts_agent_id');
@@ -95,7 +100,7 @@ describe('Explore Shorts Database Schema', () => {
   it('should have correct indexes on explore_interactions table', async () => {
     const indexes = await db.execute(sql`SHOW INDEX FROM explore_interactions`);
     const indexNames = indexes.rows.map((row: any) => row.Key_name);
-    
+
     expect(indexNames).toContain('idx_explore_interactions_short_id');
     expect(indexNames).toContain('idx_explore_interactions_user_id');
     expect(indexNames).toContain('idx_explore_interactions_session_id');
@@ -105,7 +110,7 @@ describe('Explore Shorts Database Schema', () => {
 
   /**
    * Property-Based Test: Schema integrity for random data
-   * 
+   *
    * For any valid explore short data, the database should accept and store it correctly
    */
   it('should accept and store valid explore shorts data', async () => {
@@ -118,14 +123,16 @@ describe('Explore Shorts Database Schema', () => {
           mediaIds: fc.array(fc.integer({ min: 1, max: 1000 }), { minLength: 1, maxLength: 10 }),
           highlights: fc.option(
             fc.array(fc.string({ minLength: 1, maxLength: 50 }), { maxLength: 4 }),
-            { nil: null }
+            { nil: null },
           ),
-          performanceScore: fc.float({ min: 0, max: 100, noNaN: true }).map(n => Number(n.toFixed(2))),
+          performanceScore: fc
+            .float({ min: 0, max: 100, noNaN: true })
+            .map(n => Number(n.toFixed(2))),
           boostPriority: fc.integer({ min: 0, max: 100 }),
           isPublished: fc.boolean(),
           isFeatured: fc.boolean(),
         }),
-        async (shortData) => {
+        async shortData => {
           // Insert the short
           const result = await db.insert(exploreShorts).values({
             title: shortData.title,
@@ -141,18 +148,18 @@ describe('Explore Shorts Database Schema', () => {
 
           // Verify it was inserted
           expect(result).toBeDefined();
-          
+
           // Clean up
           await db.execute(sql`DELETE FROM explore_shorts WHERE title = ${shortData.title}`);
-        }
+        },
       ),
-      { numRuns: 100 } // Run 100 iterations as specified in design
+      { numRuns: 100 }, // Run 100 iterations as specified in design
     );
   });
 
   /**
    * Property-Based Test: Interaction tracking integrity
-   * 
+   *
    * For any valid interaction data, the database should accept and store it correctly
    */
   it('should accept and store valid interaction data', async () => {
@@ -181,13 +188,20 @@ describe('Explore Shorts Database Schema', () => {
             'share',
             'contact',
             'whatsapp',
-            'book_viewing'
+            'book_viewing',
           ),
           duration: fc.option(fc.integer({ min: 0, max: 300 }), { nil: null }),
-          feedType: fc.constantFrom('recommended', 'area', 'category', 'agent', 'developer', 'agency'),
+          feedType: fc.constantFrom(
+            'recommended',
+            'area',
+            'category',
+            'agent',
+            'developer',
+            'agency',
+          ),
           deviceType: fc.constantFrom('mobile', 'tablet', 'desktop'),
         }),
-        async (interactionData) => {
+        async interactionData => {
           // Insert the interaction
           const result = await db.insert(exploreInteractions).values({
             shortId,
@@ -200,9 +214,9 @@ describe('Explore Shorts Database Schema', () => {
 
           // Verify it was inserted
           expect(result).toBeDefined();
-        }
+        },
       ),
-      { numRuns: 100 }
+      { numRuns: 100 },
     );
 
     // Clean up
@@ -211,24 +225,26 @@ describe('Explore Shorts Database Schema', () => {
 
   /**
    * Property-Based Test: Highlight tags integrity
-   * 
+   *
    * For any valid highlight tag, the database should accept and store it correctly
    */
   it('should accept and store valid highlight tags', async () => {
     await fc.assert(
       fc.asyncProperty(
         fc.record({
-          tagKey: fc.string({ minLength: 1, maxLength: 50 }).map(s => `test_${s.replace(/[^a-z0-9_]/gi, '')}`),
+          tagKey: fc
+            .string({ minLength: 1, maxLength: 50 })
+            .map(s => `test_${s.replace(/[^a-z0-9_]/gi, '')}`),
           label: fc.string({ minLength: 1, maxLength: 100 }),
           icon: fc.option(fc.string({ maxLength: 50 }), { nil: null }),
           color: fc.option(
             fc.hexaString({ minLength: 6, maxLength: 6 }).map(s => `#${s}`),
-            { nil: null }
+            { nil: null },
           ),
           category: fc.option(fc.constantFrom('status', 'feature', 'financial'), { nil: null }),
           displayOrder: fc.integer({ min: 0, max: 100 }),
         }),
-        async (tagData) => {
+        async tagData => {
           try {
             // Insert the tag
             const result = await db.insert(exploreHighlightTags).values({
@@ -243,24 +259,26 @@ describe('Explore Shorts Database Schema', () => {
 
             // Verify it was inserted
             expect(result).toBeDefined();
-            
+
             // Clean up
-            await db.execute(sql`DELETE FROM explore_highlight_tags WHERE tag_key = ${tagData.tagKey}`);
+            await db.execute(
+              sql`DELETE FROM explore_highlight_tags WHERE tag_key = ${tagData.tagKey}`,
+            );
           } catch (error: any) {
             // Skip duplicate key errors (expected in property testing)
             if (!error.message?.includes('Duplicate entry')) {
               throw error;
             }
           }
-        }
+        },
       ),
-      { numRuns: 50 } // Fewer runs due to unique constraint
+      { numRuns: 50 }, // Fewer runs due to unique constraint
     );
   });
 
   /**
    * Property-Based Test: Foreign key constraints
-   * 
+   *
    * The database should enforce referential integrity
    */
   it('should enforce foreign key constraints', async () => {

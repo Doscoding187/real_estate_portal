@@ -140,7 +140,9 @@ export default function AgentMarketingHub() {
   }
 
   const totalViews = exploreVideos.reduce((acc, v) => acc + v.views, 0);
-  const totalEngagement = Math.round(exploreVideos.reduce((acc, v) => acc + v.engagement, 0) / exploreVideos.length);
+  const totalEngagement = Math.round(
+    exploreVideos.reduce((acc, v) => acc + v.engagement, 0) / exploreVideos.length,
+  );
 
   return (
     <div className="flex min-h-screen bg-[#F4F7FA]">
@@ -183,7 +185,9 @@ export default function AgentMarketingHub() {
                 <div className="flex items-start justify-between">
                   <div>
                     <p className="text-sm font-medium text-gray-500 mb-1">Total Explore Views</p>
-                    <p className="text-2xl font-bold text-gray-900">{totalViews.toLocaleString()}</p>
+                    <p className="text-2xl font-bold text-gray-900">
+                      {totalViews.toLocaleString()}
+                    </p>
                     <p className="text-xs text-green-600 font-medium mt-2 flex items-center gap-1">
                       <TrendingUp className="h-3 w-3" />
                       +12% this week
@@ -231,7 +235,9 @@ export default function AgentMarketingHub() {
                 <div className="flex items-start justify-between">
                   <div>
                     <p className="text-sm font-medium text-gray-500 mb-1">Active Promotions</p>
-                    <p className="text-2xl font-bold text-gray-900">{promotedListings.filter(p => p.status === 'active').length}</p>
+                    <p className="text-2xl font-bold text-gray-900">
+                      {promotedListings.filter(p => p.status === 'active').length}
+                    </p>
                     <p className="text-xs text-green-600 font-medium mt-2">Running campaigns</p>
                   </div>
                   <div className="p-3 bg-green-50 rounded-xl">
@@ -245,19 +251,34 @@ export default function AgentMarketingHub() {
           {/* Tabs */}
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="grid w-full max-w-3xl grid-cols-5 p-1 bg-white rounded-xl shadow-soft">
-              <TabsTrigger value="explore" className="rounded-lg data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700">
+              <TabsTrigger
+                value="explore"
+                className="rounded-lg data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700"
+              >
                 Explore Feed
               </TabsTrigger>
-              <TabsTrigger value="promote" className="rounded-lg data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700">
+              <TabsTrigger
+                value="promote"
+                className="rounded-lg data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700"
+              >
                 Promote Listings
               </TabsTrigger>
-              <TabsTrigger value="social" className="rounded-lg data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700">
+              <TabsTrigger
+                value="social"
+                className="rounded-lg data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700"
+              >
                 Social Media
               </TabsTrigger>
-              <TabsTrigger value="branding" className="rounded-lg data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700">
+              <TabsTrigger
+                value="branding"
+                className="rounded-lg data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700"
+              >
                 Branding
               </TabsTrigger>
-              <TabsTrigger value="templates" className="rounded-lg data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700">
+              <TabsTrigger
+                value="templates"
+                className="rounded-lg data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700"
+              >
                 Templates
               </TabsTrigger>
             </TabsList>
@@ -281,8 +302,11 @@ export default function AgentMarketingHub() {
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  {exploreVideos.map((video) => (
-                    <div key={video.id} className="p-5 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors">
+                  {exploreVideos.map(video => (
+                    <div
+                      key={video.id}
+                      className="p-5 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors"
+                    >
                       <div className="flex gap-4">
                         <div className="w-32 h-24 bg-gradient-to-br from-pink-500 to-pink-600 rounded-lg flex items-center justify-center flex-shrink-0">
                           <Play className="h-10 w-10 text-white" />
@@ -291,14 +315,18 @@ export default function AgentMarketingHub() {
                           <div className="flex items-start justify-between mb-2">
                             <div>
                               <h3 className="font-semibold text-gray-900">{video.title}</h3>
-                              <p className="text-sm text-gray-500">Uploaded {new Date(video.uploadDate).toLocaleDateString()}</p>
+                              <p className="text-sm text-gray-500">
+                                Uploaded {new Date(video.uploadDate).toLocaleDateString()}
+                              </p>
                             </div>
                             <Badge className="bg-green-100 text-green-700">{video.status}</Badge>
                           </div>
                           <div className="grid grid-cols-4 gap-4 mt-3">
                             <div>
                               <p className="text-xs text-gray-500">Views</p>
-                              <p className="font-semibold text-gray-900">{video.views.toLocaleString()}</p>
+                              <p className="font-semibold text-gray-900">
+                                {video.views.toLocaleString()}
+                              </p>
                             </div>
                             <div>
                               <p className="text-xs text-gray-500">Likes</p>
@@ -334,29 +362,41 @@ export default function AgentMarketingHub() {
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  {promotedListings.map((promo) => (
+                  {promotedListings.map(promo => (
                     <div key={promo.id} className="p-5 bg-gray-50 rounded-xl">
                       <div className="flex items-start justify-between mb-4">
                         <div>
                           <h3 className="font-semibold text-gray-900">{promo.title}</h3>
                           <p className="text-sm text-gray-500">Ends in: {promo.endsIn}</p>
                         </div>
-                        <Badge className={promo.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}>
+                        <Badge
+                          className={
+                            promo.status === 'active'
+                              ? 'bg-green-100 text-green-700'
+                              : 'bg-gray-100 text-gray-700'
+                          }
+                        >
                           {promo.status}
                         </Badge>
                       </div>
                       <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-sm">
                         <div>
                           <p className="text-gray-500">Budget</p>
-                          <p className="font-semibold text-gray-900">R {promo.budget.toLocaleString()}</p>
+                          <p className="font-semibold text-gray-900">
+                            R {promo.budget.toLocaleString()}
+                          </p>
                         </div>
                         <div>
                           <p className="text-gray-500">Spent</p>
-                          <p className="font-semibold text-blue-600">R {promo.spent.toLocaleString()}</p>
+                          <p className="font-semibold text-blue-600">
+                            R {promo.spent.toLocaleString()}
+                          </p>
                         </div>
                         <div>
                           <p className="text-gray-500">Impressions</p>
-                          <p className="font-semibold text-gray-900">{promo.impressions.toLocaleString()}</p>
+                          <p className="font-semibold text-gray-900">
+                            {promo.impressions.toLocaleString()}
+                          </p>
                         </div>
                         <div>
                           <p className="text-gray-500">Clicks</p>
@@ -394,11 +434,31 @@ export default function AgentMarketingHub() {
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {[
-                      { name: 'Instagram', icon: Instagram, color: 'from-pink-500 to-purple-600', connected: true },
-                      { name: 'Facebook', icon: Facebook, color: 'from-blue-600 to-blue-700', connected: true },
-                      { name: 'Twitter', icon: Twitter, color: 'from-sky-400 to-sky-600', connected: false },
-                      { name: 'LinkedIn', icon: Linkedin, color: 'from-blue-700 to-blue-800', connected: false },
-                    ].map((platform) => (
+                      {
+                        name: 'Instagram',
+                        icon: Instagram,
+                        color: 'from-pink-500 to-purple-600',
+                        connected: true,
+                      },
+                      {
+                        name: 'Facebook',
+                        icon: Facebook,
+                        color: 'from-blue-600 to-blue-700',
+                        connected: true,
+                      },
+                      {
+                        name: 'Twitter',
+                        icon: Twitter,
+                        color: 'from-sky-400 to-sky-600',
+                        connected: false,
+                      },
+                      {
+                        name: 'LinkedIn',
+                        icon: Linkedin,
+                        color: 'from-blue-700 to-blue-800',
+                        connected: false,
+                      },
+                    ].map(platform => (
                       <div key={platform.name} className="p-5 bg-gray-50 rounded-xl">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-3">
@@ -496,17 +556,26 @@ export default function AgentMarketingHub() {
                 </CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {contentTemplates.map((template) => (
-                      <div key={template.id} className="p-5 bg-gradient-to-br from-gray-50 to-blue-50 rounded-xl hover:from-blue-50 hover:to-blue-100 transition-all cursor-pointer">
+                    {contentTemplates.map(template => (
+                      <div
+                        key={template.id}
+                        className="p-5 bg-gradient-to-br from-gray-50 to-blue-50 rounded-xl hover:from-blue-50 hover:to-blue-100 transition-all cursor-pointer"
+                      >
                         <div className="flex items-start gap-4">
                           <div className="p-3 bg-white rounded-xl shadow-sm">
                             <template.icon className="h-6 w-6 text-blue-600" />
                           </div>
                           <div className="flex-1">
-                            <Badge className="bg-blue-100 text-blue-700 text-xs mb-2">{template.category}</Badge>
+                            <Badge className="bg-blue-100 text-blue-700 text-xs mb-2">
+                              {template.category}
+                            </Badge>
                             <h3 className="font-semibold text-gray-900 mb-1">{template.title}</h3>
                             <p className="text-sm text-gray-600 mb-3">{template.description}</p>
-                            <Button variant="ghost" size="sm" className="text-blue-600 p-0 h-auto hover:bg-transparent">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-blue-600 p-0 h-auto hover:bg-transparent"
+                            >
                               Use Template <ExternalLink className="h-3 w-3 ml-1" />
                             </Button>
                           </div>

@@ -1,9 +1,9 @@
 /**
  * PartnerTypeCard Component
- * 
+ *
  * Displays a partner type option with icon, title, benefit, and CTA.
  * Includes hover lift animation with shadow expansion and click navigation.
- * 
+ *
  * Requirements: 2.2, 2.3, 2.4
  */
 
@@ -18,32 +18,32 @@ export interface PartnerTypeCardProps {
    * Icon component from lucide-react
    */
   icon: LucideIcon;
-  
+
   /**
    * Partner type title (e.g., "Real Estate Agent")
    */
   title: string;
-  
+
   /**
    * One-sentence benefit description
    */
   benefit: string;
-  
+
   /**
    * Navigation URL for the partner type sub-landing page
    */
   href: string;
-  
+
   /**
    * Index for staggered animation timing
    */
   index: number;
-  
+
   /**
    * Optional click handler
    */
   onClick?: () => void;
-  
+
   /**
    * Optional additional CSS classes
    */
@@ -62,7 +62,7 @@ const trackPartnerTypeClick = (partnerType: string, href: string) => {
       timestamp: new Date().toISOString(),
     });
   }
-  
+
   console.log('Partner Type Click:', { partnerType, href });
 };
 
@@ -77,7 +77,7 @@ export const PartnerTypeCard: React.FC<PartnerTypeCardProps> = ({
   const handleClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
     // Track analytics
     trackPartnerTypeClick(title, href);
-    
+
     // Call custom onClick if provided
     if (onClick) {
       e.preventDefault();
@@ -138,14 +138,10 @@ export const PartnerTypeCard: React.FC<PartnerTypeCardProps> = ({
         </motion.div>
 
         {/* Title */}
-        <h3 className="text-2xl font-bold text-gray-900 mb-3 leading-tight">
-          {title}
-        </h3>
+        <h3 className="text-2xl font-bold text-gray-900 mb-3 leading-tight">{title}</h3>
 
         {/* Benefit */}
-        <p className="text-base text-gray-600 leading-relaxed mb-6">
-          {benefit}
-        </p>
+        <p className="text-base text-gray-600 leading-relaxed mb-6">{benefit}</p>
 
         {/* CTA */}
         <motion.div
@@ -178,4 +174,3 @@ export const PartnerTypeCard: React.FC<PartnerTypeCardProps> = ({
     </motion.a>
   );
 };
-

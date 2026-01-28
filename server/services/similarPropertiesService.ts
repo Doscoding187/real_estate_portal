@@ -37,8 +37,8 @@ export class SimilarPropertiesService {
   private readonly defaultWeights: SimilarityWeights = {
     priceMatch: 0.35, // 35% weight
     locationMatch: 0.25, // 25% weight
-    propertyTypeMatch: 0.20, // 20% weight
-    bedroomsMatch: 0.10, // 10% weight
+    propertyTypeMatch: 0.2, // 20% weight
+    bedroomsMatch: 0.1, // 10% weight
     bathroomsMatch: 0.05, // 5% weight
     areaMatch: 0.05, // 5% weight
   };
@@ -140,10 +140,7 @@ export class SimilarPropertiesService {
       })
       .from(exploreContent)
       .where(
-        and(
-          inArray(exploreContent.id, propertyIds),
-          eq(exploreContent.contentType, 'property'),
-        ),
+        and(inArray(exploreContent.id, propertyIds), eq(exploreContent.contentType, 'property')),
       );
 
     // Merge explore data
@@ -216,11 +213,7 @@ export class SimilarPropertiesService {
    */
   private calculateLocationScore(reference: any, candidate: any): number {
     // Same suburb (best match)
-    if (
-      reference.suburbId &&
-      candidate.suburbId &&
-      reference.suburbId === candidate.suburbId
-    ) {
+    if (reference.suburbId && candidate.suburbId && reference.suburbId === candidate.suburbId) {
       return 100;
     }
 
@@ -235,12 +228,7 @@ export class SimilarPropertiesService {
     }
 
     // If we have coordinates, calculate distance
-    if (
-      reference.latitude &&
-      reference.longitude &&
-      candidate.latitude &&
-      candidate.longitude
-    ) {
+    if (reference.latitude && reference.longitude && candidate.latitude && candidate.longitude) {
       const distance = this.calculateDistance(
         reference.latitude,
         reference.longitude,
@@ -337,11 +325,7 @@ export class SimilarPropertiesService {
    * Expand search when not enough similar properties found
    * Requirement 15.5: Expand search radius and adjust price range
    */
-  private async expandSearch(
-    reference: any,
-    excludeId: number,
-    limit: number,
-  ): Promise<any[]> {
+  private async expandSearch(reference: any, excludeId: number, limit: number): Promise<any[]> {
     // Expand price range to ±40%
     const priceMin = reference.price ? reference.price * 0.6 : 0;
     const priceMax = reference.price ? reference.price * 1.4 : Number.MAX_SAFE_INTEGER;

@@ -1,6 +1,14 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import {
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+} from 'recharts';
 import { GlassCard } from '@/components/ui/glass-card';
 import { PastelBadge } from '@/components/ui/pastel-badge';
 import { TrendingUp, Users, Building2, FileText, CheckCircle2 } from 'lucide-react';
@@ -167,7 +175,7 @@ export default function CommandCenterOverview() {
             <GlassCard className="p-6">
               <h3 className="text-xl font-bold text-slate-800 mb-4">Pending Approvals</h3>
               <div className="space-y-4">
-                {pendingApprovals.map((approval) => (
+                {pendingApprovals.map(approval => (
                   <div key={approval.id} className="flex items-start gap-3">
                     <img
                       src={approval.avatar}
@@ -213,13 +221,9 @@ export default function CommandCenterOverview() {
         >
           <h3 className="text-2xl font-bold text-slate-800 mb-6">Recent Leads</h3>
           <div className="grid grid-cols-3 gap-6">
-            {recentLeads.map((lead) => (
+            {recentLeads.map(lead => (
               <GlassCard key={lead.id} hover className="overflow-hidden">
-                <img
-                  src={lead.image}
-                  alt={lead.title}
-                  className="w-full h-48 object-cover"
-                />
+                <img src={lead.image} alt={lead.title} className="w-full h-48 object-cover" />
                 <div className="p-6">
                   <h4 className="font-bold text-slate-800 mb-2">{lead.title}</h4>
                   <div className="flex items-center justify-between">

@@ -1,6 +1,6 @@
 /**
  * React Query Client - Usage Examples
- * 
+ *
  * This file demonstrates how to use the optimized queryClient
  * and prefetch strategies in the Explore feature.
  */
@@ -64,9 +64,9 @@ export function InfiniteScrollExample() {
   // Prefetch next page when user scrolls to 80%
   useEffect(() => {
     const handleScroll = () => {
-      const scrollPercentage = 
+      const scrollPercentage =
         (window.scrollY + window.innerHeight) / document.documentElement.scrollHeight;
-      
+
       if (scrollPercentage > 0.8) {
         // Prefetch next page
         prefetchExploreFeed({
@@ -85,9 +85,7 @@ export function InfiniteScrollExample() {
       {data?.items.map((item: any) => (
         <div key={item.id}>{item.title}</div>
       ))}
-      <button onClick={() => setOffset(offset + limit)}>
-        Load More
-      </button>
+      <button onClick={() => setOffset(offset + limit)}>Load More</button>
     </div>
   );
 }
@@ -121,9 +119,7 @@ export function VideoFeedExample() {
   return (
     <div>
       <video src={data?.videos[currentIndex]?.url} />
-      <button onClick={() => setCurrentIndex(currentIndex + 1)}>
-        Next Video
-      </button>
+      <button onClick={() => setCurrentIndex(currentIndex + 1)}>Next Video</button>
     </div>
   );
 }
@@ -157,7 +153,7 @@ export function MapViewExample() {
   // Prefetch adjacent map areas
   const handleMapMove = (newBounds: typeof mapBounds) => {
     setMapBounds(newBounds);
-    
+
     // Prefetch the new bounds
     prefetchMapProperties(newBounds);
   };
@@ -219,11 +215,7 @@ export function SavePropertyExample({ propertyId }: { propertyId: number }) {
     }
   };
 
-  return (
-    <button onClick={handleSave}>
-      {isSaved ? 'Saved ✓' : 'Save'}
-    </button>
-  );
+  return <button onClick={handleSave}>{isSaved ? 'Saved ✓' : 'Save'}</button>;
 }
 
 // ============================================================================
@@ -246,11 +238,7 @@ export function LogoutExample() {
     }
   };
 
-  return (
-    <button onClick={handleLogout}>
-      Logout
-    </button>
-  );
+  return <button onClick={handleLogout}>Logout</button>;
 }
 
 // ============================================================================
@@ -262,9 +250,7 @@ export function useExploreFeedWithPrefetch(filters: any) {
     queryKey: ['explore', 'feed', filters],
     queryFn: async () => {
       const params = new URLSearchParams(
-        Object.fromEntries(
-          Object.entries(filters).filter(([_, v]) => v != null)
-        ) as any
+        Object.fromEntries(Object.entries(filters).filter(([_, v]) => v != null)) as any,
       );
       const response = await fetch(`/api/explore/getFeed?${params}`);
       return response.json();

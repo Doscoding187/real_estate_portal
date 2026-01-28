@@ -28,8 +28,6 @@ CREATE TABLE IF NOT EXISTS `unit_types` (
   
   -- Sizes
   `unit_size` INT NULL,
-  `size_from` INT NULL,
-  `size_to` INT NULL,
   `yard_size` INT NULL,
   
   -- Pricing
@@ -46,7 +44,6 @@ CREATE TABLE IF NOT EXISTS `unit_types` (
   `extras` JSON NULL,
   
   -- Parking
-  `parking` ENUM('none', '1', '2', 'carport', 'garage') DEFAULT 'none',
   `parking_type` VARCHAR(50) NULL,
   `parking_bays` INT DEFAULT 0,
   

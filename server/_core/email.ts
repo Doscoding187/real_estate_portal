@@ -1,6 +1,21 @@
 import { Resend } from 'resend';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+let resendClient: Resend | null = null;
+
+export function getResend() {
+  const key = process.env.RESEND_API_KEY;
+
+  if (!key) {
+    // In dev, allow server to run without email
+    return null;
+  }
+
+  if (!resendClient) {
+    resendClient = new Resend(key);
+  }
+
+  return resendClient;
+}
 
 interface SendVerificationEmailParams {
   to: string;
@@ -14,7 +29,15 @@ export async function sendVerificationEmail({
   name,
 }: SendVerificationEmailParams) {
   const verificationUrl = `${process.env.APP_URL || 'http://localhost:3000'}/verify-email?token=${verificationToken}`;
-  
+
+  const resend = getResend();
+  if (!resend) {
+    console.warn('[Email] RESEND_API_KEY missing — skipping sendVerificationEmail');
+    // In dev mode, we might want to log the URL so devs can still verify
+    console.log('[Email Local Dev] Verification URL:', verificationUrl);
+    return { success: true, messageId: 'dev-mock-id' };
+  }
+
   try {
     const { data, error } = await resend.emails.send({
       from: process.env.EMAIL_FROM || 'Property Listify <onboarding@resend.dev>',
@@ -98,7 +121,14 @@ export async function sendPasswordResetEmail({
   name,
 }: SendPasswordResetEmailParams) {
   const resetUrl = `${process.env.APP_URL || 'http://localhost:3000'}/reset-password?token=${resetToken}`;
-  
+
+  const resend = getResend();
+  if (!resend) {
+    console.warn('[Email] RESEND_API_KEY missing — skipping sendPasswordResetEmail');
+    console.log('[Email Local Dev] Reset URL:', resetUrl);
+    return { success: true, messageId: 'dev-mock-id' };
+  }
+
   try {
     const { data, error } = await resend.emails.send({
       from: process.env.EMAIL_FROM || 'Property Listify <onboarding@resend.dev>',

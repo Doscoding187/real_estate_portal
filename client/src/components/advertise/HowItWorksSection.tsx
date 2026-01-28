@@ -41,9 +41,7 @@ export const HowItWorksSection: React.FC = () => {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         <div className="text-center max-w-3xl mx-auto mb-16">
-          <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-            How It Works
-          </h2>
+          <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">How It Works</h2>
           <p className="text-lg text-gray-600">
             Get started in under 2 minutes. Our streamlined process helps you reach buyers faster.
           </p>
@@ -70,12 +68,8 @@ export const HowItWorksSection: React.FC = () => {
                 </div>
               </div>
 
-              <h3 className="text-xl font-bold text-gray-900 mb-3">
-                {step.title}
-              </h3>
-              <p className="text-gray-600 leading-relaxed">
-                {step.description}
-              </p>
+              <h3 className="text-xl font-bold text-gray-900 mb-3">{step.title}</h3>
+              <p className="text-gray-600 leading-relaxed">{step.description}</p>
             </motion.div>
           ))}
         </div>
@@ -88,9 +82,7 @@ export const HowItWorksSection: React.FC = () => {
             Start Now
             <ArrowRight className="ml-2 w-5 h-5" />
           </a>
-          <p className="mt-4 text-sm text-gray-500">
-            No credit card required for signup
-          </p>
+          <p className="mt-4 text-sm text-gray-500">No credit card required for signup</p>
         </div>
       </div>
     </section>

@@ -5,16 +5,16 @@ import { useOnlineStatus } from '@/hooks/useOnlineStatus';
 
 /**
  * OfflineIndicator Component
- * 
+ *
  * Displays a banner when the user goes offline and shows a reconnection message
  * when they come back online. Uses smooth animations for transitions.
- * 
+ *
  * Features:
  * - Auto-detects online/offline status
  * - Smooth slide-in/out animations
  * - Shows cached content availability message
  * - Auto-dismisses reconnection message after 3 seconds
- * 
+ *
  * @example
  * ```tsx
  * <OfflineIndicator />
@@ -53,9 +53,7 @@ export function OfflineIndicator() {
         >
           <div className="container mx-auto px-4 py-3 flex items-center justify-center gap-3">
             <WifiOff className="w-5 h-5" />
-            <p className="text-sm font-medium">
-              You're offline. Showing cached content.
-            </p>
+            <p className="text-sm font-medium">You're offline. Showing cached content.</p>
           </div>
         </motion.div>
       )}
@@ -72,9 +70,7 @@ export function OfflineIndicator() {
         >
           <div className="container mx-auto px-4 py-3 flex items-center justify-center gap-3">
             <Wifi className="w-5 h-5" />
-            <p className="text-sm font-medium">
-              Back online! Content updated.
-            </p>
+            <p className="text-sm font-medium">Back online! Content updated.</p>
           </div>
         </motion.div>
       )}

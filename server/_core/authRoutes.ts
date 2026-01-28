@@ -41,7 +41,8 @@ export function registerAuthRoutes(app: Express) {
       if (role === 'agent') {
         if (!agentProfile || !agentProfile.displayName || !agentProfile.phoneNumber) {
           return res.status(400).json({
-            error: 'Agent profile with display name and phone number is required for agent registration',
+            error:
+              'Agent profile with display name and phone number is required for agent registration',
           });
         }
       }
@@ -50,13 +51,20 @@ export function registerAuthRoutes(app: Express) {
       // Allow specific roles if requested, otherwise default to 'visitor'
       const allowedRoles = ['agent', 'agency_admin', 'property_developer', 'visitor'];
       const requestedRole = allowedRoles.includes(role) ? role : 'visitor';
-      
-      const userId = await authService.register(email, password, name, requestedRole as any, agentProfile);
+
+      const userId = await authService.register(
+        email,
+        password,
+        name,
+        requestedRole as any,
+        agentProfile,
+      );
 
       // Return success message - user must verify email before logging in
-      const message = role === 'agent'
-        ? 'Registration successful! Please check your email to verify your account. Your agent profile will be created after email verification.'
-        : 'Registration successful. Please check your email to verify your account.';
+      const message =
+        role === 'agent'
+          ? 'Registration successful! Please check your email to verify your account. Your agent profile will be created after email verification.'
+          : 'Registration successful. Please check your email to verify your account.';
 
       res.status(201).json({
         success: true,
@@ -127,8 +135,11 @@ export function registerAuthRoutes(app: Express) {
 
       // Handle specific error cases with appropriate status codes
       const errorMessage = error.message || 'Unknown error';
-      
-      if (errorMessage.includes('Invalid email or password') || errorMessage.includes('verify your email')) {
+
+      if (
+        errorMessage.includes('Invalid email or password') ||
+        errorMessage.includes('verify your email')
+      ) {
         return res.status(401).json({ error: errorMessage });
       }
 
@@ -136,17 +147,25 @@ export function registerAuthRoutes(app: Express) {
         return res.status(403).json({ error: errorMessage });
       }
 
-      if (errorMessage.includes('pending review') || errorMessage.includes('rejected') || errorMessage.includes('suspended')) {
+      if (
+        errorMessage.includes('pending review') ||
+        errorMessage.includes('rejected') ||
+        errorMessage.includes('suspended')
+      ) {
         return res.status(403).json({ error: errorMessage });
       }
 
       if (errorMessage.includes('JWT_SECRET')) {
-        return res.status(500).json({ error: 'Server configuration error. Please contact support.' });
+        return res
+          .status(500)
+          .json({ error: 'Server configuration error. Please contact support.' });
       }
 
       // Database connection errors
       if (errorMessage.includes('connect') || errorMessage.includes('ECONNREFUSED')) {
-        return res.status(503).json({ error: 'Database service unavailable. Please try again later.' });
+        return res
+          .status(503)
+          .json({ error: 'Database service unavailable. Please try again later.' });
       }
 
       res.status(500).json({

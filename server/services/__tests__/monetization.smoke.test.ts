@@ -1,14 +1,14 @@
 /**
  * Monetization Features - Smoke Tests
- * 
+ *
  * These tests verify that the monetization services
  * (QualityScoringService, PartnerSubscriptionService, PartnerBoostCampaignService,
  * LeadGenerationService, MarketplaceBundleService, PartnerAnalyticsService)
  * are properly instantiated and have their core methods available.
- * 
+ *
  * This is a checkpoint test to ensure all monetization infrastructure is working
  * before proceeding to API endpoint implementation.
- * 
+ *
  * Task 20: Checkpoint - Ensure monetization tests pass
  */
 

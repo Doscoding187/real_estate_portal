@@ -1,9 +1,9 @@
 /**
  * VideoCard Component (Explore Discovery)
- * 
+ *
  * A modern video card component with glass overlay effects and smooth animations.
  * Integrates with useVideoPlayback hook for viewport-based auto-play.
- * 
+ *
  * Features:
  * - Modern design with subtle shadows
  * - Glass overlay for controls
@@ -11,7 +11,7 @@
  * - Integrated video playback
  * - Buffering and error states
  * - Accessible keyboard navigation
- * 
+ *
  * Requirements: 1.2, 2.1
  */
 
@@ -91,9 +91,7 @@ export function VideoCard({ video, onClick, onSave, enablePreview = false }: Vid
       {/* Thumbnail */}
       <div className="relative aspect-[9/16] overflow-hidden bg-gray-100">
         {/* Content Badge - Requirements 4.1, 4.7 */}
-        {video.badgeType && (
-          <ContentBadgeOverlay type={video.badgeType} size="sm" />
-        )}
+        {video.badgeType && <ContentBadgeOverlay type={video.badgeType} size="sm" />}
 
         {/* Loading skeleton */}
         {!imageLoaded && (
@@ -117,10 +115,7 @@ export function VideoCard({ video, onClick, onSave, enablePreview = false }: Vid
         <motion.img
           src={video.thumbnailUrl}
           alt={video.title}
-          className={cn(
-            'w-full h-full object-cover',
-            imageLoaded ? 'opacity-100' : 'opacity-0'
-          )}
+          className={cn('w-full h-full object-cover', imageLoaded ? 'opacity-100' : 'opacity-0')}
           onLoad={() => setImageLoaded(true)}
           loading="lazy"
           animate={{
@@ -184,7 +179,7 @@ export function VideoCard({ video, onClick, onSave, enablePreview = false }: Vid
             <Heart
               className={cn(
                 'w-5 h-5 transition-all duration-300',
-                isSaved ? 'fill-red-500 text-red-500' : 'text-gray-700'
+                isSaved ? 'fill-red-500 text-red-500' : 'text-gray-700',
               )}
             />
           </motion.div>
@@ -210,7 +205,7 @@ export function VideoCard({ video, onClick, onSave, enablePreview = false }: Vid
         <motion.h3
           className={cn(
             'text-sm font-semibold text-gray-800 mb-2 line-clamp-2 transition-colors duration-300',
-            isHovered && 'text-indigo-600'
+            isHovered && 'text-indigo-600',
           )}
           style={{ color: designTokens.colors.text.primary }}
         >
@@ -236,10 +231,7 @@ export function VideoCard({ video, onClick, onSave, enablePreview = false }: Vid
               {video.creatorName.charAt(0).toUpperCase()}
             </motion.div>
           )}
-          <span
-            className="text-xs truncate"
-            style={{ color: designTokens.colors.text.secondary }}
-          >
+          <span className="text-xs truncate" style={{ color: designTokens.colors.text.secondary }}>
             {video.creatorName}
           </span>
         </div>

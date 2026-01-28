@@ -396,7 +396,8 @@ export const PLACEHOLDER_INSIGHTS = [
   {
     id: 4001,
     title: 'Property Market Update Q4 2024',
-    description: 'Gauteng property prices show steady growth with Sandton leading at 8.5% YoY increase',
+    description:
+      'Gauteng property prices show steady growth with Sandton leading at 8.5% YoY increase',
     imageUrl: 'https://images.unsplash.com/photo-1460472178825-e5240623afd5?w=800&h=400&fit=crop',
     insightType: 'market-trend',
     data: {
@@ -436,7 +437,7 @@ export function getPlaceholderSections() {
       title: 'For You',
       subtitle: 'Personalized based on your preferences',
       type: 'for-you' as const,
-      items: PLACEHOLDER_PROPERTIES.slice(0, 5).map((p) => ({
+      items: PLACEHOLDER_PROPERTIES.slice(0, 5).map(p => ({
         id: p.id,
         type: 'property' as const,
         data: p,
@@ -447,7 +448,7 @@ export function getPlaceholderSections() {
       title: 'Popular Near You',
       subtitle: 'Trending properties in your area',
       type: 'popular-near-you' as const,
-      items: PLACEHOLDER_PROPERTIES.slice(5, 10).map((p) => ({
+      items: PLACEHOLDER_PROPERTIES.slice(5, 10).map(p => ({
         id: p.id,
         type: 'property' as const,
         data: p,
@@ -458,7 +459,7 @@ export function getPlaceholderSections() {
       title: 'Trending Videos',
       subtitle: 'Most watched property tours',
       type: 'trending' as const,
-      items: PLACEHOLDER_VIDEOS.map((v) => ({
+      items: PLACEHOLDER_VIDEOS.map(v => ({
         id: v.id,
         type: 'video' as const,
         data: v,
@@ -469,7 +470,7 @@ export function getPlaceholderSections() {
       title: 'Explore Neighbourhoods',
       subtitle: 'Discover your perfect area',
       type: 'trending' as const,
-      items: PLACEHOLDER_NEIGHBOURHOODS.map((n) => ({
+      items: PLACEHOLDER_NEIGHBOURHOODS.map(n => ({
         id: n.id,
         type: 'neighbourhood' as const,
         data: n,
@@ -480,7 +481,7 @@ export function getPlaceholderSections() {
       title: 'Market Insights',
       subtitle: 'Stay informed about the property market',
       type: 'trending' as const,
-      items: PLACEHOLDER_INSIGHTS.map((i) => ({
+      items: PLACEHOLDER_INSIGHTS.map(i => ({
         id: i.id,
         type: 'insight' as const,
         data: i,
@@ -496,7 +497,7 @@ export function getPlaceholderContentBlocks() {
       id: 'block-properties',
       title: 'Featured Properties',
       type: 'for-you' as const,
-      items: PLACEHOLDER_PROPERTIES.slice(0, 6).map((p) => ({
+      items: PLACEHOLDER_PROPERTIES.slice(0, 6).map(p => ({
         id: p.id,
         type: 'property' as const,
         data: p,
@@ -506,7 +507,7 @@ export function getPlaceholderContentBlocks() {
       id: 'block-videos',
       title: 'Property Tours',
       type: 'trending' as const,
-      items: PLACEHOLDER_VIDEOS.slice(0, 4).map((v) => ({
+      items: PLACEHOLDER_VIDEOS.slice(0, 4).map(v => ({
         id: v.id,
         type: 'video' as const,
         data: v,
@@ -516,7 +517,7 @@ export function getPlaceholderContentBlocks() {
       id: 'block-neighbourhoods',
       title: 'Popular Areas',
       type: 'popular-near-you' as const,
-      items: PLACEHOLDER_NEIGHBOURHOODS.map((n) => ({
+      items: PLACEHOLDER_NEIGHBOURHOODS.map(n => ({
         id: n.id,
         type: 'neighbourhood' as const,
         data: n,
@@ -526,7 +527,7 @@ export function getPlaceholderContentBlocks() {
       id: 'block-more-properties',
       title: 'More Properties',
       type: 'new-developments' as const,
-      items: PLACEHOLDER_PROPERTIES.slice(4, 10).map((p) => ({
+      items: PLACEHOLDER_PROPERTIES.slice(4, 10).map(p => ({
         id: p.id,
         type: 'property' as const,
         data: p,

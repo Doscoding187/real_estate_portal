@@ -27,7 +27,7 @@ import { agents, agencies } from '../drizzle/schema';
 /**
  * Helper function to verify agency access
  * Requirements: 3.4, Security
- * 
+ *
  * Checks if user has permission to view agency analytics:
  * - User is agency owner (agency_admin role with matching agency)
  * - User is agent in the agency
@@ -38,11 +38,7 @@ async function verifyAgencyAccess(userId: number, agencyId: number): Promise<voi
   const { users } = await import('../drizzle/schema');
 
   // Get user details
-  const userResult = await db
-    .select()
-    .from(users)
-    .where(eq(users.id, userId))
-    .limit(1);
+  const userResult = await db.select().from(users).where(eq(users.id, userId)).limit(1);
 
   if (!userResult[0]) {
     throw new TRPCError({
@@ -62,12 +58,7 @@ async function verifyAgencyAccess(userId: number, agencyId: number): Promise<voi
   const agentResult = await db
     .select()
     .from(agents)
-    .where(
-      and(
-        eq(agents.userId, userId),
-        eq(agents.agencyId, agencyId)
-      )
-    )
+    .where(and(eq(agents.userId, userId), eq(agents.agencyId, agencyId)))
     .limit(1);
 
   if (agentResult[0]) {
@@ -75,11 +66,7 @@ async function verifyAgencyAccess(userId: number, agencyId: number): Promise<voi
   }
 
   // Check if user is agency admin/owner
-  const agencyResult = await db
-    .select()
-    .from(agencies)
-    .where(eq(agencies.id, agencyId))
-    .limit(1);
+  const agencyResult = await db.select().from(agencies).where(eq(agencies.id, agencyId)).limit(1);
 
   if (agencyResult[0] && agencyResult[0].ownerId === userId) {
     return;
@@ -115,7 +102,7 @@ export const exploreApiRouter = router({
     .query(async ({ ctx, input }) => {
       // Get user profile for boost targeting
       const userProfile = await recommendationEngineService.getUserProfile(ctx.user.id);
-      
+
       // Get personalized recommendations
       const recommendations = await recommendationEngineService.generatePersonalizedFeed(
         {
@@ -129,7 +116,7 @@ export const exploreApiRouter = router({
       // Inject boosted content (Requirement 9.2, 9.3, 9.6)
       const feedWithBoosts = await recommendationEngineService.injectBoostedContent(
         recommendations,
-        userProfile
+        userProfile,
       );
 
       // Apply pagination
@@ -646,7 +633,7 @@ export const exploreApiRouter = router({
     )
     .mutation(async ({ ctx, input }) => {
       // Insert all engagements
-      const values = input.engagements.map((eng) => ({
+      const values = input.engagements.map(eng => ({
         userId: ctx.user.id,
         contentId: eng.contentId,
         engagementType: eng.engagementType,
@@ -666,7 +653,7 @@ export const exploreApiRouter = router({
   /**
    * Get agency feed
    * Requirements 8.1, 8.2, 8.3: Agency feed endpoint
-   * 
+   *
    * Returns all published content attributed to a specific agency.
    * Supports pagination and optional inclusion of agent content.
    */
@@ -677,7 +664,7 @@ export const exploreApiRouter = router({
         includeAgentContent: z.boolean().default(true),
         limit: z.number().min(1).max(50).default(20),
         offset: z.number().min(0).default(0),
-      })
+      }),
     )
     .query(async ({ input }) => {
       try {
@@ -714,13 +701,13 @@ export const exploreApiRouter = router({
   /**
    * Get agency analytics
    * Requirements 3.1, 3.2, 3.3, 3.4, 8.1: Agency analytics endpoint
-   * 
+   *
    * Returns comprehensive analytics for an agency including:
    * - Total content count and views
    * - Engagement metrics
    * - Agent breakdown
    * - Top performing content
-   * 
+   *
    * Requires authentication and agency access permission.
    */
   getAgencyAnalytics: protectedProcedure
@@ -728,7 +715,7 @@ export const exploreApiRouter = router({
       z.object({
         agencyId: z.number(),
         timeRange: z.enum(['7d', '30d', '90d', 'all']).default('30d'),
-      })
+      }),
     )
     .query(async ({ ctx, input }) => {
       try {
@@ -761,7 +748,7 @@ export const exploreApiRouter = router({
   /**
    * Get feed by type
    * Requirements 2.1, 7.2, 7.3: Generic feed endpoint with type routing
-   * 
+   *
    * Routes to appropriate feed generator based on feedType.
    * Supports: recommended, area, category, agent, developer, agency
    * Maintains backward compatibility with existing feed types.
@@ -779,7 +766,7 @@ export const exploreApiRouter = router({
         includeAgentContent: z.boolean().default(true),
         limit: z.number().min(1).max(50).default(20),
         offset: z.number().min(0).default(0),
-      })
+      }),
     )
     .query(async ({ input }) => {
       try {

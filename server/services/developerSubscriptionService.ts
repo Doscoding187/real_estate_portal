@@ -1,19 +1,19 @@
 import { db } from '../db.ts';
-import { 
-  developerSubscriptions, 
-  developerSubscriptionLimits, 
+import {
+  developerSubscriptions,
+  developerSubscriptionLimits,
   developerSubscriptionUsage,
   developers,
-  developments 
+  developments,
 } from '../../drizzle/schema.ts';
 import { eq, and, sql } from 'drizzle-orm';
-import { 
-  DeveloperSubscription, 
-  DeveloperSubscriptionLimits, 
+import {
+  DeveloperSubscription,
+  DeveloperSubscriptionLimits,
   DeveloperSubscriptionUsage,
   DeveloperSubscriptionWithDetails,
   SubscriptionTier,
-  SUBSCRIPTION_TIER_LIMITS 
+  SUBSCRIPTION_TIER_LIMITS,
 } from '../../shared/types.ts';
 
 export class DeveloperSubscriptionService {
@@ -35,7 +35,7 @@ export class DeveloperSubscriptionService {
       currentPeriodStart: new Date().toISOString(),
       currentPeriodEnd: trialEndsAt.toISOString(),
     });
-    
+
     const subscriptionId = subscriptionResult[0].insertId;
 
     // Create limits based on free_trial tier
@@ -44,7 +44,7 @@ export class DeveloperSubscriptionService {
       subscriptionId,
       ...tierLimits,
     });
-    
+
     const limitsId = limitsResult[0].insertId;
 
     // Create usage tracking
@@ -55,18 +55,18 @@ export class DeveloperSubscriptionService {
       teamMembersCount: 0,
       lastResetAt: new Date().toISOString(),
     });
-    
+
     const usageId = usageResult[0].insertId;
 
     // Fetch the created records
     const subscription = await db.query.developerSubscriptions.findFirst({
       where: eq(developerSubscriptions.id, subscriptionId),
     });
-    
+
     const limits = await db.query.developerSubscriptionLimits.findFirst({
       where: eq(developerSubscriptionLimits.id, limitsId),
     });
-    
+
     const usage = await db.query.developerSubscriptionUsage.findFirst({
       where: eq(developerSubscriptionUsage.id, usageId),
     });
@@ -86,23 +86,30 @@ export class DeveloperSubscriptionService {
    * Get subscription details for a developer
    */
   async getSubscription(developerId: number): Promise<DeveloperSubscriptionWithDetails | null> {
-    const rows = await db.select({
-      subscription: developerSubscriptions,
-      limits: developerSubscriptionLimits,
-      usage: developerSubscriptionUsage,
-    })
-    .from(developerSubscriptions)
-    .leftJoin(developerSubscriptionLimits, eq(developerSubscriptionLimits.subscriptionId, developerSubscriptions.id))
-    .leftJoin(developerSubscriptionUsage, eq(developerSubscriptionUsage.subscriptionId, developerSubscriptions.id))
-    .where(eq(developerSubscriptions.developerId, developerId))
-    .limit(1);
+    const rows = await db
+      .select({
+        subscription: developerSubscriptions,
+        limits: developerSubscriptionLimits,
+        usage: developerSubscriptionUsage,
+      })
+      .from(developerSubscriptions)
+      .leftJoin(
+        developerSubscriptionLimits,
+        eq(developerSubscriptionLimits.subscriptionId, developerSubscriptions.id),
+      )
+      .leftJoin(
+        developerSubscriptionUsage,
+        eq(developerSubscriptionUsage.subscriptionId, developerSubscriptions.id),
+      )
+      .where(eq(developerSubscriptions.developerId, developerId))
+      .limit(1);
 
     if (rows.length === 0) return null;
 
     const row = rows[0];
     if (!row.limits || !row.usage) {
-        // Should not happen for active subscriptions, but handle gracefully
-        return null;
+      // Should not happen for active subscriptions, but handle gracefully
+      return null;
     }
 
     return {
@@ -116,15 +123,19 @@ export class DeveloperSubscriptionService {
    * Update subscription tier
    * Validates: Requirements 1.4, 13.5
    */
-  async updateTier(developerId: number, newTier: SubscriptionTier): Promise<DeveloperSubscriptionWithDetails> {
+  async updateTier(
+    developerId: number,
+    newTier: SubscriptionTier,
+  ): Promise<DeveloperSubscriptionWithDetails> {
     const subscription = await this.getSubscription(developerId);
     if (!subscription) {
       throw new Error('Subscription not found');
     }
 
     // Update subscription tier
-    await db.update(developerSubscriptions)
-      .set({ 
+    await db
+      .update(developerSubscriptions)
+      .set({
         tier: newTier,
         updatedAt: new Date().toISOString(),
       })
@@ -132,7 +143,8 @@ export class DeveloperSubscriptionService {
 
     // Update limits based on new tier
     const newLimits = SUBSCRIPTION_TIER_LIMITS[newTier];
-    await db.update(developerSubscriptionLimits)
+    await db
+      .update(developerSubscriptionLimits)
       .set({
         ...newLimits,
         updatedAt: new Date().toISOString(),
@@ -148,8 +160,8 @@ export class DeveloperSubscriptionService {
    * Validates: Requirements 13.1, 13.4
    */
   async checkLimit(
-    developerId: number, 
-    limitType: 'developments' | 'leads' | 'teamMembers'
+    developerId: number,
+    limitType: 'developments' | 'leads' | 'teamMembers',
   ): Promise<{ allowed: boolean; current: number; max: number; tier: SubscriptionTier }> {
     const subscription = await this.getSubscription(developerId);
     if (!subscription) {
@@ -187,7 +199,7 @@ export class DeveloperSubscriptionService {
    */
   async incrementUsage(
     developerId: number,
-    usageType: 'developments' | 'leads' | 'teamMembers'
+    usageType: 'developments' | 'leads' | 'teamMembers',
   ): Promise<void> {
     const subscription = await this.getSubscription(developerId);
     if (!subscription) {
@@ -210,7 +222,8 @@ export class DeveloperSubscriptionService {
         break;
     }
 
-    await db.update(developerSubscriptionUsage)
+    await db
+      .update(developerSubscriptionUsage)
       .set(updates)
       .where(eq(developerSubscriptionUsage.subscriptionId, subscription.id));
   }
@@ -220,7 +233,7 @@ export class DeveloperSubscriptionService {
    */
   async decrementUsage(
     developerId: number,
-    usageType: 'developments' | 'leads' | 'teamMembers'
+    usageType: 'developments' | 'leads' | 'teamMembers',
   ): Promise<void> {
     const subscription = await this.getSubscription(developerId);
     if (!subscription) {
@@ -243,7 +256,8 @@ export class DeveloperSubscriptionService {
         break;
     }
 
-    await db.update(developerSubscriptionUsage)
+    await db
+      .update(developerSubscriptionUsage)
       .set(updates)
       .where(eq(developerSubscriptionUsage.subscriptionId, subscription.id));
   }
@@ -257,7 +271,8 @@ export class DeveloperSubscriptionService {
       throw new Error('Subscription not found');
     }
 
-    await db.update(developerSubscriptionUsage)
+    await db
+      .update(developerSubscriptionUsage)
       .set({
         leadsThisMonth: 0,
         lastResetAt: new Date().toISOString(),
@@ -270,7 +285,9 @@ export class DeveloperSubscriptionService {
    * Check if trial has expired and update status
    * Validates: Requirements 1.3
    */
-  async checkTrialExpiration(developerId: number): Promise<{ expired: boolean; daysRemaining: number }> {
+  async checkTrialExpiration(
+    developerId: number,
+  ): Promise<{ expired: boolean; daysRemaining: number }> {
     const subscription = await this.getSubscription(developerId);
     if (!subscription || subscription.tier !== 'free_trial') {
       return { expired: false, daysRemaining: 0 };
@@ -286,8 +303,9 @@ export class DeveloperSubscriptionService {
 
     if (daysRemaining <= 0) {
       // Trial expired, update status
-      await db.update(developerSubscriptions)
-        .set({ 
+      await db
+        .update(developerSubscriptions)
+        .set({
           status: 'expired',
           updatedAt: new Date().toISOString(),
         })
@@ -309,14 +327,16 @@ export class DeveloperSubscriptionService {
     }
 
     // Count actual developments in database
-    const [result] = await db.select({ count: sql<number>`count(*)` })
+    const [result] = await db
+      .select({ count: sql<number>`count(*)` })
       .from(developments)
       .where(eq(developments.developerId, developerId));
-    
+
     const actualCount = result?.count || 0;
 
     // Update the usage counter to match actual count
-    await db.update(developerSubscriptionUsage)
+    await db
+      .update(developerSubscriptionUsage)
       .set({
         developmentsCount: actualCount,
         updatedAt: new Date().toISOString(),

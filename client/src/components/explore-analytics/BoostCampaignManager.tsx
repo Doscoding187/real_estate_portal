@@ -8,9 +8,16 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { trpc } from '@/lib/trpc';
-import { 
-  TrendingUp, DollarSign, Eye, MousePointerClick, Target, 
-  Play, Pause, Calendar, AlertCircle 
+import {
+  TrendingUp,
+  DollarSign,
+  Eye,
+  MousePointerClick,
+  Target,
+  Play,
+  Pause,
+  Calendar,
+  AlertCircle,
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -45,7 +52,7 @@ export function BoostCampaignManager() {
           <div className="h-4 bg-slate-200 rounded w-1/2"></div>
         </div>
         <div className="grid grid-cols-1 gap-4">
-          {[1, 2].map((i) => (
+          {[1, 2].map(i => (
             <div key={i} className="h-48 bg-slate-200 rounded animate-pulse"></div>
           ))}
         </div>
@@ -87,7 +94,7 @@ export function BoostCampaignManager() {
 
       {/* Campaign List */}
       <div className="grid grid-cols-1 gap-4">
-        {campaigns.map((campaign) => (
+        {campaigns.map(campaign => (
           <CampaignCard
             key={campaign.id}
             campaign={campaign}
@@ -102,7 +109,13 @@ export function BoostCampaignManager() {
   );
 }
 
-function CampaignCard({ campaign, onPause, onResume, isSelected, onSelect }: {
+function CampaignCard({
+  campaign,
+  onPause,
+  onResume,
+  isSelected,
+  onSelect,
+}: {
   campaign: any;
   onPause: (id: number) => void;
   onResume: (id: number) => void;
@@ -119,9 +132,7 @@ function CampaignCard({ campaign, onPause, onResume, isSelected, onSelect }: {
     completed: 'bg-slate-100 text-slate-700 border-slate-200',
   };
 
-  const budgetPercentage = analytics 
-    ? (analytics.spent / analytics.budget) * 100 
-    : 0;
+  const budgetPercentage = analytics ? (analytics.spent / analytics.budget) * 100 : 0;
 
   return (
     <Card className={isSelected ? 'ring-2 ring-emerald-500' : ''}>
@@ -135,21 +146,13 @@ function CampaignCard({ campaign, onPause, onResume, isSelected, onSelect }: {
           </div>
           <div className="flex gap-2">
             {campaign.status === 'active' && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => onPause(campaign.id)}
-              >
+              <Button variant="outline" size="sm" onClick={() => onPause(campaign.id)}>
                 <Pause className="h-4 w-4 mr-1" />
                 Pause
               </Button>
             )}
             {campaign.status === 'paused' && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => onResume(campaign.id)}
-              >
+              <Button variant="outline" size="sm" onClick={() => onResume(campaign.id)}>
                 <Play className="h-4 w-4 mr-1" />
                 Resume
               </Button>
@@ -162,8 +165,8 @@ function CampaignCard({ campaign, onPause, onResume, isSelected, onSelect }: {
             {analytics?.daysRemaining || 0} days remaining
           </span>
           <span className="flex items-center gap-1">
-            <DollarSign className="h-3 w-3" />
-            R{analytics?.spent.toFixed(2) || 0} / R{analytics?.budget.toFixed(2) || 0}
+            <DollarSign className="h-3 w-3" />R{analytics?.spent.toFixed(2) || 0} / R
+            {analytics?.budget.toFixed(2) || 0}
           </span>
         </CardDescription>
       </CardHeader>
@@ -179,9 +182,11 @@ function CampaignCard({ campaign, onPause, onResume, isSelected, onSelect }: {
               <div className="w-full bg-slate-200 rounded-full h-2">
                 <div
                   className={`h-2 rounded-full transition-all ${
-                    budgetPercentage >= 90 ? 'bg-red-500' : 
-                    budgetPercentage >= 70 ? 'bg-yellow-500' : 
-                    'bg-emerald-500'
+                    budgetPercentage >= 90
+                      ? 'bg-red-500'
+                      : budgetPercentage >= 70
+                        ? 'bg-yellow-500'
+                        : 'bg-emerald-500'
                   }`}
                   style={{ width: `${Math.min(budgetPercentage, 100)}%` }}
                 />
@@ -217,7 +222,8 @@ function CampaignCard({ campaign, onPause, onResume, isSelected, onSelect }: {
               <div className="flex items-center gap-2 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
                 <AlertCircle className="h-4 w-4 text-yellow-600" />
                 <p className="text-sm text-yellow-700">
-                  Campaign budget is almost depleted. It will pause automatically when budget is reached.
+                  Campaign budget is almost depleted. It will pause automatically when budget is
+                  reached.
                 </p>
               </div>
             )}
@@ -228,7 +234,11 @@ function CampaignCard({ campaign, onPause, onResume, isSelected, onSelect }: {
   );
 }
 
-function MetricBox({ icon, label, value }: {
+function MetricBox({
+  icon,
+  label,
+  value,
+}: {
   icon: React.ReactNode;
   label: string;
   value: string;

@@ -1,6 +1,6 @@
 /**
  * Google Places API Monitoring Service
- * 
+ *
  * Requirements:
  * - 26.1: Log autocomplete requests with session tokens
  * - 26.2: Log Place Details requests with response times
@@ -101,7 +101,7 @@ export class GooglePlacesApiMonitoringService {
     try {
       const db = await getDb();
       if (!db) return;
-      
+
       await db.execute(sql`
         INSERT INTO google_places_api_logs (
           timestamp,
@@ -224,7 +224,7 @@ export class GooglePlacesApiMonitoringService {
    */
   private calculateRequestCost(
     requestType: APIUsageLog['requestType'],
-    config: MonitoringConfig
+    config: MonitoringConfig,
   ): number {
     switch (requestType) {
       case 'autocomplete':
@@ -289,7 +289,10 @@ export class GooglePlacesApiMonitoringService {
           alertType: 'response_time',
           thresholdValue: config.responseTimeThreshold,
           currentValue: summary.average_response_time_ms,
-          severity: summary.average_response_time_ms >= config.responseTimeThreshold * 2 ? 'critical' : 'warning',
+          severity:
+            summary.average_response_time_ms >= config.responseTimeThreshold * 2
+              ? 'critical'
+              : 'warning',
           message: `Average API response time at ${summary.average_response_time_ms}ms (threshold: ${config.responseTimeThreshold}ms)`,
         });
       }
@@ -366,8 +369,12 @@ export class GooglePlacesApiMonitoringService {
   async getUsageStatistics(): Promise<UsageStatistics> {
     try {
       const today = new Date().toISOString().split('T')[0];
-      const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-      const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+      const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+        .toISOString()
+        .split('T')[0];
+      const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+        .toISOString()
+        .split('T')[0];
 
       const db = await getDb();
       if (!db) throw new Error('Database not available');
@@ -452,9 +459,12 @@ export class GooglePlacesApiMonitoringService {
         last30Days: last30DaysSummary,
         currentHour: {
           totalRequests: Number(currentHourData?.total_requests || 0),
-          successRate: currentHourData?.total_requests > 0
-            ? (Number(currentHourData.successful_requests) / Number(currentHourData.total_requests)) * 100
-            : 100,
+          successRate:
+            currentHourData?.total_requests > 0
+              ? (Number(currentHourData.successful_requests) /
+                  Number(currentHourData.total_requests)) *
+                100
+              : 100,
           averageResponseTime: Number(currentHourData?.average_response_time_ms || 0),
         },
         topErrors: (topErrorsResult.rows as any[]).map(row => ({
@@ -604,7 +614,7 @@ export class GooglePlacesApiMonitoringService {
       return this.config;
     } catch (error) {
       console.error('Failed to load monitoring config:', error);
-      
+
       // Return default config
       return {
         dailyRequestLimit: 10000,
@@ -663,7 +673,9 @@ export class GooglePlacesApiMonitoringService {
    */
   async getHistoricalData(days: number = 30): Promise<DailySummary[]> {
     try {
-      const startDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+      const startDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000)
+        .toISOString()
+        .split('T')[0];
       const db = await getDb();
       if (!db) return [];
 

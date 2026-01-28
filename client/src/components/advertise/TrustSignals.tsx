@@ -1,9 +1,9 @@
 /**
  * TrustSignals Component
- * 
+ *
  * Displays partner logos and trust statements to build credibility.
  * Features subtle fade-in animations and responsive layout.
- * 
+ *
  * Requirements: 1.4
  */
 
@@ -29,17 +29,9 @@ export const TrustSignals: React.FC<TrustSignalsProps> = ({ signals }) => {
   }
 
   return (
-    <motion.div
-      className="pt-8"
-      variants={staggerContainer}
-      initial="initial"
-      animate="animate"
-    >
+    <motion.div className="pt-8" variants={staggerContainer} initial="initial" animate="animate">
       {/* "Trusted by" label */}
-      <motion.p
-        className="text-sm text-gray-500 text-center lg:text-left mb-4"
-        variants={fadeUp}
-      >
+      <motion.p className="text-sm text-gray-500 text-center lg:text-left mb-4" variants={fadeUp}>
         Trusted by leading property professionals
       </motion.p>
 
@@ -49,11 +41,7 @@ export const TrustSignals: React.FC<TrustSignalsProps> = ({ signals }) => {
         variants={staggerContainer}
       >
         {signals.map((signal, index) => (
-          <motion.div
-            key={index}
-            variants={staggerItem}
-            className="flex items-center"
-          >
+          <motion.div key={index} variants={staggerItem} className="flex items-center">
             {signal.type === 'logo' && signal.imageUrl ? (
               <div
                 className="h-8 px-4 flex items-center justify-center rounded-lg"

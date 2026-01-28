@@ -2,7 +2,7 @@
  * MetricGrid Component
  * Responsive grid layout for portfolio metrics
  * Part of the Soft UI design system
- * 
+ *
  * Requirements: 6.1, 13.2
  */
 
@@ -41,7 +41,7 @@ export const MetricGrid = React.forwardRef<HTMLDivElement, MetricGridProps>(
           // 1 column on mobile, 2 columns on tablet/desktop
           'grid gap-4',
           'grid-cols-1 md:grid-cols-2',
-          className
+          className,
         )}
         role="group"
         aria-label="Portfolio metrics"
@@ -67,7 +67,7 @@ export const MetricGrid = React.forwardRef<HTMLDivElement, MetricGridProps>(
         ))}
       </div>
     );
-  }
+  },
 );
 
 MetricGrid.displayName = 'MetricGrid';

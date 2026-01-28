@@ -23,11 +23,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
 
 export function AgentTopNav() {
@@ -38,7 +34,7 @@ export function AgentTopNav() {
   const initials = user?.name
     ? user.name
         .split(' ')
-        .map((n) => n[0])
+        .map(n => n[0])
         .join('')
         .toUpperCase()
         .slice(0, 2)
@@ -48,8 +44,8 @@ export function AgentTopNav() {
   const notifications: any[] = [];
   const messages: any[] = [];
 
-  const unreadNotifications = notifications.filter((n) => n.unread).length;
-  const unreadMessages = messages.filter((m) => m.unread).length;
+  const unreadNotifications = notifications.filter(n => n.unread).length;
+  const unreadMessages = messages.filter(m => m.unread).length;
 
   const handleLogout = () => {
     logout();
@@ -95,7 +91,7 @@ export function AgentTopNav() {
             placeholder="Search listings, clients, content..."
             className="pl-10 bg-gray-50/50 border-gray-200 focus:bg-white focus:ring-2 focus:ring-blue-500/20 rounded-xl transition-all duration-200 w-full"
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={e => setSearchQuery(e.target.value)}
           />
         </div>
       </div>
@@ -125,12 +121,12 @@ export function AgentTopNav() {
                   <p className="text-sm">No new notifications</p>
                 </div>
               ) : (
-                notifications.map((notification) => (
+                notifications.map(notification => (
                   <div
                     key={notification.id}
                     className={cn(
                       'p-4 hover:bg-gray-50 transition-colors cursor-pointer border-b border-gray-50 last:border-0',
-                      notification.unread && 'bg-blue-50/30'
+                      notification.unread && 'bg-blue-50/30',
                     )}
                   >
                     <p className="text-sm text-gray-900 font-medium">{notification.text}</p>
@@ -174,12 +170,12 @@ export function AgentTopNav() {
                   <p className="text-sm">No new messages</p>
                 </div>
               ) : (
-                messages.map((message) => (
+                messages.map(message => (
                   <div
                     key={message.id}
                     className={cn(
                       'p-4 hover:bg-gray-50 transition-colors cursor-pointer border-b border-gray-50 last:border-0',
-                      message.unread && 'bg-blue-50/30'
+                      message.unread && 'bg-blue-50/30',
                     )}
                   >
                     <p className="text-sm text-gray-900 font-semibold">{message.from}</p>
@@ -204,7 +200,10 @@ export function AgentTopNav() {
         {/* Profile Menu */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="flex items-center gap-2 rounded-xl hover:bg-gray-50 px-3">
+            <Button
+              variant="ghost"
+              className="flex items-center gap-2 rounded-xl hover:bg-gray-50 px-3"
+            >
               <div className="h-8 w-8 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-soft">
                 <span className="text-xs font-semibold text-white">{initials}</span>
               </div>

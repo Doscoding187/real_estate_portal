@@ -150,7 +150,7 @@ export function ActivityItem({
       className={cn(
         'flex items-start gap-3 p-3 rounded-lg transition-all duration-200',
         onClick ? 'cursor-pointer hover:bg-gray-50' : '',
-        'group'
+        'group',
       )}
     >
       {/* Icon */}
@@ -158,7 +158,7 @@ export function ActivityItem({
         className={cn(
           'flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center',
           config.bgColor,
-          'group-hover:scale-110 transition-transform duration-200'
+          'group-hover:scale-110 transition-transform duration-200',
         )}
       >
         <Icon className={cn('w-5 h-5', config.color)} />
@@ -167,9 +167,7 @@ export function ActivityItem({
       {/* Content */}
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium text-gray-900 truncate">{title}</p>
-        {description && (
-          <p className="text-sm text-gray-600 mt-0.5 line-clamp-2">{description}</p>
-        )}
+        {description && <p className="text-sm text-gray-600 mt-0.5 line-clamp-2">{description}</p>}
         <p className="text-xs text-gray-500 mt-1">{formatTimestamp(createdAt)}</p>
       </div>
 

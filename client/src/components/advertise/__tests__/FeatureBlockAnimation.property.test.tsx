@@ -1,9 +1,9 @@
 /**
  * Property-Based Tests for FeatureBlock Animation
- * 
+ *
  * Feature: advertise-with-us-landing, Property 5: Feature block animation
  * Validates: Requirements 3.2
- * 
+ *
  * Tests that for any feature block in the value proposition section, when the block
  * enters the viewport, it should trigger a fade-up animation.
  */
@@ -29,37 +29,37 @@ describe('FeatureBlock - Property 5: Feature block animation', () => {
           description: fc.string({ minLength: 20, maxLength: 200 }),
           index: fc.integer({ min: 0, max: 10 }),
         }),
-        (featureData) => {
+        featureData => {
           const { container, unmount } = render(
             <FeatureBlock
               icon={featureData.icon}
               headline={featureData.headline}
               description={featureData.description}
               index={featureData.index}
-            />
+            />,
           );
 
           try {
             // Find the feature block container
             const featureBlock = container.querySelector('.feature-block');
             expect(featureBlock).toBeDefined();
-            
+
             if (featureBlock) {
               // Check initial animation state (should start with opacity 0 and translateY)
               const style = window.getComputedStyle(featureBlock);
-              
+
               // The element should have opacity set (either 0 initially or 1 after animation)
               expect(style.opacity).toBeTruthy();
-              
+
               // The element should have transform property (for translateY animation)
               expect(style.transform).toBeTruthy();
             }
           } finally {
             unmount();
           }
-        }
+        },
       ),
-      { numRuns: 100 }
+      { numRuns: 100 },
     );
   });
 
@@ -75,28 +75,26 @@ describe('FeatureBlock - Property 5: Feature block animation', () => {
           description: fc.string({ minLength: 20, maxLength: 200 }),
           index: fc.integer({ min: 0, max: 3 }),
         }),
-        (featureData) => {
+        featureData => {
           const { container, unmount } = render(
             <FeatureBlock
               icon={featureData.icon}
               headline={featureData.headline}
               description={featureData.description}
               index={featureData.index}
-            />
+            />,
           );
 
           try {
             // Find the icon container (72px x 72px div)
             const iconContainers = container.querySelectorAll('div');
-            const iconContainer = Array.from(iconContainers).find(
-              (div) => {
-                const style = window.getComputedStyle(div);
-                return style.width === '72px' && style.height === '72px';
-              }
-            );
+            const iconContainer = Array.from(iconContainers).find(div => {
+              const style = window.getComputedStyle(div);
+              return style.width === '72px' && style.height === '72px';
+            });
 
             expect(iconContainer).toBeDefined();
-            
+
             if (iconContainer) {
               // Icon container should have flexbox for centering
               const style = window.getComputedStyle(iconContainer);
@@ -107,9 +105,9 @@ describe('FeatureBlock - Property 5: Feature block animation', () => {
           } finally {
             unmount();
           }
-        }
+        },
       ),
-      { numRuns: 100 }
+      { numRuns: 100 },
     );
   });
 
@@ -125,29 +123,29 @@ describe('FeatureBlock - Property 5: Feature block animation', () => {
           description: fc.string({ minLength: 20, maxLength: 200 }),
           index: fc.integer({ min: 0, max: 10 }),
         }),
-        (featureData) => {
+        featureData => {
           const { container, unmount } = render(
             <FeatureBlock
               icon={featureData.icon}
               headline={featureData.headline}
               description={featureData.description}
               index={featureData.index}
-            />
+            />,
           );
 
           try {
             // The component should render successfully with any index
             const featureBlock = container.querySelector('.feature-block');
             expect(featureBlock).toBeDefined();
-            
+
             // The index should be a non-negative number (used for stagger delay)
             expect(featureData.index).toBeGreaterThanOrEqual(0);
           } finally {
             unmount();
           }
-        }
+        },
       ),
-      { numRuns: 100 }
+      { numRuns: 100 },
     );
   });
 
@@ -161,12 +159,12 @@ describe('FeatureBlock - Property 5: Feature block animation', () => {
         headline="Test Feature"
         description="This is a test description for the feature block"
         index={0}
-      />
+      />,
     );
 
     const featureBlock = container.querySelector('.feature-block');
     expect(featureBlock).toBeDefined();
-    
+
     if (featureBlock) {
       const style = window.getComputedStyle(featureBlock);
       expect(style.opacity).toBeTruthy();

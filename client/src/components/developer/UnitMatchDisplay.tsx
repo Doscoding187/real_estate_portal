@@ -1,9 +1,9 @@
 /**
  * Unit Match Display Component
- * 
+ *
  * Shows units filtered and categorized by buyer's affordability
  * with visual indicators for match levels.
- * 
+ *
  * Validates: Requirements 16.1, 16.2, 16.3
  */
 
@@ -11,15 +11,7 @@ import React from 'react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import {
-  Home,
-  Bed,
-  Bath,
-  Maximize,
-  CheckCircle2,
-  AlertTriangle,
-  XCircle,
-} from 'lucide-react';
+import { Home, Bed, Bath, Maximize, CheckCircle2, AlertTriangle, XCircle } from 'lucide-react';
 import { formatSARandShort } from '@/lib/bond-calculator';
 
 interface UnitMatch {
@@ -48,11 +40,7 @@ interface UnitMatchDisplayProps {
   onReserve?: (unit: Unit) => void;
 }
 
-export function UnitMatchDisplay({
-  units,
-  onUnitSelect,
-  onReserve,
-}: UnitMatchDisplayProps) {
+export function UnitMatchDisplay({ units, onUnitSelect, onReserve }: UnitMatchDisplayProps) {
   const getMatchBadge = (matchLevel: string) => {
     switch (matchLevel) {
       case 'perfect':
@@ -90,21 +78,31 @@ export function UnitMatchDisplay({
 
   const getMatchBorderColor = (matchLevel: string) => {
     switch (matchLevel) {
-      case 'perfect': return 'border-green-300';
-      case 'good': return 'border-blue-300';
-      case 'stretch': return 'border-yellow-300';
-      case 'out_of_reach': return 'border-red-300';
-      default: return 'border-gray-200';
+      case 'perfect':
+        return 'border-green-300';
+      case 'good':
+        return 'border-blue-300';
+      case 'stretch':
+        return 'border-yellow-300';
+      case 'out_of_reach':
+        return 'border-red-300';
+      default:
+        return 'border-gray-200';
     }
   };
 
   const getMatchBgColor = (matchLevel: string) => {
     switch (matchLevel) {
-      case 'perfect': return 'bg-green-50';
-      case 'good': return 'bg-blue-50';
-      case 'stretch': return 'bg-yellow-50';
-      case 'out_of_reach': return 'bg-red-50';
-      default: return 'bg-white';
+      case 'perfect':
+        return 'bg-green-50';
+      case 'good':
+        return 'bg-blue-50';
+      case 'stretch':
+        return 'bg-yellow-50';
+      case 'out_of_reach':
+        return 'bg-red-50';
+      default:
+        return 'bg-white';
     }
   };
 
@@ -117,7 +115,7 @@ export function UnitMatchDisplay({
   const renderUnitCard = (unit: Unit) => {
     const match = unit.match;
     const matchLevel = match?.matchLevel || 'out_of_reach';
-    
+
     return (
       <Card
         key={unit.id}
@@ -170,9 +168,7 @@ export function UnitMatchDisplay({
 
           {/* Match Message */}
           {match && (
-            <div className="text-sm text-gray-700 bg-white/50 rounded p-2">
-              {match.message}
-            </div>
+            <div className="text-sm text-gray-700 bg-white/50 rounded p-2">{match.message}</div>
           )}
 
           {/* Actions */}
@@ -182,7 +178,7 @@ export function UnitMatchDisplay({
                 variant="outline"
                 size="sm"
                 className="flex-1"
-                onClick={(e) => {
+                onClick={e => {
                   e.stopPropagation();
                   onUnitSelect?.(unit);
                 }}
@@ -193,7 +189,7 @@ export function UnitMatchDisplay({
                 <Button
                   size="sm"
                   className="flex-1 bg-green-600 hover:bg-green-700"
-                  onClick={(e) => {
+                  onClick={e => {
                     e.stopPropagation();
                     onReserve?.(unit);
                   }}
@@ -281,7 +277,8 @@ export function UnitMatchDisplay({
             <Badge className="bg-red-500 text-white">{outOfReach.length}</Badge>
           </div>
           <p className="text-sm text-gray-600">
-            These units are currently above your affordability range. Consider increasing your deposit or improving your financial profile.
+            These units are currently above your affordability range. Consider increasing your
+            deposit or improving your financial profile.
           </p>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 opacity-60">
             {outOfReach.slice(0, 3).map(renderUnitCard)}

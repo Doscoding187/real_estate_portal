@@ -1,6 +1,6 @@
 /**
  * Validation Engine - Rule-based validation system
- * 
+ *
  * Provides a flexible, reusable validation system for forms with:
  * - Rule-based validation
  * - Conditional validation based on context
@@ -22,7 +22,7 @@ export interface ValidationContext {
 
 export type ValidatorFunction = (
   value: any,
-  context?: ValidationContext
+  context?: ValidationContext,
 ) => ValidationResult | Promise<ValidationResult>;
 
 export interface ValidationRule {
@@ -61,7 +61,7 @@ export class ValidationEngine {
   async validate(
     field: string,
     value: any,
-    context?: ValidationContext
+    context?: ValidationContext,
   ): Promise<ValidationResult> {
     const fieldRules = this.rules.get(field);
 
@@ -94,7 +94,7 @@ export class ValidationEngine {
    */
   async validateFields(
     data: Record<string, any>,
-    context?: ValidationContext
+    context?: ValidationContext,
   ): Promise<Record<string, ValidationResult>> {
     const results: Record<string, ValidationResult> = {};
 
@@ -111,7 +111,7 @@ export class ValidationEngine {
   async validateStep(
     step: number,
     data: Record<string, any>,
-    context?: ValidationContext
+    context?: ValidationContext,
   ): Promise<ValidationResult[]> {
     const stepContext = { ...context, currentStep: step };
     const results: ValidationResult[] = [];
@@ -129,10 +129,7 @@ export class ValidationEngine {
   /**
    * Check if all validations pass
    */
-  async isValid(
-    data: Record<string, any>,
-    context?: ValidationContext
-  ): Promise<boolean> {
+  async isValid(data: Record<string, any>, context?: ValidationContext): Promise<boolean> {
     const results = await this.validateFields(data, context);
     return Object.values(results).every(result => result.isValid);
   }
@@ -299,11 +296,7 @@ export const max = (maxValue: number, message?: string): ValidatorFunction => {
 /**
  * Range validator
  */
-export const range = (
-  minValue: number,
-  maxValue: number,
-  message?: string
-): ValidatorFunction => {
+export const range = (minValue: number, maxValue: number, message?: string): ValidatorFunction => {
   return (value: any): ValidationResult => {
     if (value === null || value === undefined || value === '') {
       return { isValid: true }; // Allow empty (use required separately)
@@ -356,7 +349,7 @@ export const pattern = (regex: RegExp, message = 'Invalid format'): ValidatorFun
  */
 export const custom = (
   validatorFn: (value: any, context?: ValidationContext) => boolean,
-  message = 'Validation failed'
+  message = 'Validation failed',
 ): ValidatorFunction => {
   return (value: any, context?: ValidationContext): ValidationResult => {
     const isValid = validatorFn(value, context);
@@ -392,7 +385,7 @@ export const compose = (...validators: ValidatorFunction[]): ValidatorFunction =
  */
 export const when = (
   condition: (context?: ValidationContext) => boolean,
-  validator: ValidatorFunction
+  validator: ValidatorFunction,
 ): ValidatorFunction => {
   return async (value: any, context?: ValidationContext): Promise<ValidationResult> => {
     if (!condition(context)) {

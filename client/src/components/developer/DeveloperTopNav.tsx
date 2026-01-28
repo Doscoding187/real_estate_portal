@@ -52,7 +52,7 @@ export function DeveloperTopNav() {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" className="w-56 rounded-xl shadow-hover">
-            <DropdownMenuItem onClick={() => setLocation('/developer/developments/new')}>
+            <DropdownMenuItem onClick={() => setLocation('/developer/create-development')}>
               <Building2 className="h-4 w-4 mr-2" />
               Create Development
             </DropdownMenuItem>
@@ -85,7 +85,7 @@ export function DeveloperTopNav() {
             type="text"
             placeholder="Search developments, leads, units..."
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={e => setSearchQuery(e.target.value)}
             className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
           />
         </div>

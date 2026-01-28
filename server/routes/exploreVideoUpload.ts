@@ -26,7 +26,10 @@ const generateUploadUrlSchema = z.object({
 const createVideoSchema = z.object({
   videoUrl: z.string().url('Invalid video URL'),
   thumbnailUrl: z.string().url('Invalid thumbnail URL'),
-  duration: z.number().min(8, 'Video must be at least 8 seconds').max(60, 'Video must not exceed 60 seconds'),
+  duration: z
+    .number()
+    .min(8, 'Video must be at least 8 seconds')
+    .max(60, 'Video must not exceed 60 seconds'),
   metadata: z.object({
     propertyId: z.number().optional(),
     developmentId: z.number().optional(),
@@ -136,13 +139,7 @@ router.post('/create', async (req, res) => {
     }
 
     // Create video record
-    const result = await createExploreVideo(
-      creatorId,
-      videoUrl,
-      thumbnailUrl,
-      metadata,
-      duration,
-    );
+    const result = await createExploreVideo(creatorId, videoUrl, thumbnailUrl, metadata, duration);
 
     res.json({
       success: true,

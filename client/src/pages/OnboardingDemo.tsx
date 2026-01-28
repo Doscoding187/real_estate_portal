@@ -1,6 +1,6 @@
 /**
  * Onboarding Demo Page
- * 
+ *
  * Demonstrates the welcome overlay and tooltips functionality.
  * Implements Requirements 16.7, 16.8, 16.10, 16.11
  */
@@ -10,7 +10,10 @@ import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { WelcomeOverlay } from '@/components/explore-discovery/WelcomeOverlay';
-import { OnboardingTooltip, FloatingTooltip } from '@/components/explore-discovery/OnboardingTooltip';
+import {
+  OnboardingTooltip,
+  FloatingTooltip,
+} from '@/components/explore-discovery/OnboardingTooltip';
 import { TopicsNavigation } from '@/components/explore-discovery/TopicsNavigation';
 import { ContentBadge } from '@/components/explore-discovery/ContentBadge';
 import { useWelcomeOverlay } from '@/hooks/useWelcomeOverlay';
@@ -70,10 +73,12 @@ const MOCK_CONTENT = [
 ];
 
 export default function OnboardingDemo() {
-  const [demoStep, setDemoStep] = useState<'welcome' | 'topics' | 'partner' | 'complete'>('welcome');
+  const [demoStep, setDemoStep] = useState<'welcome' | 'topics' | 'partner' | 'complete'>(
+    'welcome',
+  );
   const [selectedTopic, setSelectedTopic] = useState<string | null>(null);
   const [scrollCount, setScrollCount] = useState(0);
-  
+
   // Refs for tooltip positioning
   const topicsRef = useRef<HTMLDivElement>(null);
   const partnerContentRef = useRef<HTMLDivElement>(null);
@@ -92,7 +97,7 @@ export default function OnboardingDemo() {
     setSelectedTopic(topicSlug);
     setShowWelcome(false);
     setDemoStep('topics');
-    
+
     // Show topic tooltip after a delay
     setTimeout(() => {
       setShowTopicTooltip(true);
@@ -102,7 +107,7 @@ export default function OnboardingDemo() {
   const handleWelcomeDismiss = () => {
     setShowWelcome(false);
     setDemoStep('topics');
-    
+
     // Show topic tooltip after a delay
     setTimeout(() => {
       setShowTopicTooltip(true);
@@ -112,7 +117,7 @@ export default function OnboardingDemo() {
   const handleTopicTooltipDismiss = () => {
     setShowTopicTooltip(false);
     setDemoStep('partner');
-    
+
     // Show partner tooltip after a delay
     setTimeout(() => {
       setShowPartnerTooltip(true);
@@ -127,7 +132,7 @@ export default function OnboardingDemo() {
   const handleScrollSimulation = () => {
     const newCount = scrollCount + 1;
     setScrollCount(newCount);
-    
+
     if (newCount >= 5 && !showTopicTooltip && demoStep === 'topics') {
       setShowTopicTooltip(true);
     }
@@ -147,13 +152,11 @@ export default function OnboardingDemo() {
       <div className="container mx-auto px-4 py-8">
         {/* Header */}
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">
-            Onboarding Demo
-          </h1>
+          <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">Onboarding Demo</h1>
           <p className="text-lg text-gray-600 dark:text-gray-400 mb-6">
             Experience the welcome overlay and progressive disclosure tooltips
           </p>
-          
+
           {/* Demo Controls */}
           <div className="flex flex-wrap justify-center gap-4 mb-8">
             <Button onClick={handleWelcomeStart} variant="default">
@@ -172,24 +175,32 @@ export default function OnboardingDemo() {
 
           {/* Demo Status */}
           <div className="inline-flex items-center gap-2 px-4 py-2 bg-white dark:bg-gray-800 rounded-full shadow-sm">
-            <div className={`w-3 h-3 rounded-full ${
-              demoStep === 'welcome' ? 'bg-blue-500' : 'bg-gray-300'
-            }`} />
+            <div
+              className={`w-3 h-3 rounded-full ${
+                demoStep === 'welcome' ? 'bg-blue-500' : 'bg-gray-300'
+              }`}
+            />
             <span className="text-sm">Welcome</span>
-            
-            <div className={`w-3 h-3 rounded-full ${
-              demoStep === 'topics' ? 'bg-blue-500' : 'bg-gray-300'
-            }`} />
+
+            <div
+              className={`w-3 h-3 rounded-full ${
+                demoStep === 'topics' ? 'bg-blue-500' : 'bg-gray-300'
+              }`}
+            />
             <span className="text-sm">Topics</span>
-            
-            <div className={`w-3 h-3 rounded-full ${
-              demoStep === 'partner' ? 'bg-blue-500' : 'bg-gray-300'
-            }`} />
+
+            <div
+              className={`w-3 h-3 rounded-full ${
+                demoStep === 'partner' ? 'bg-blue-500' : 'bg-gray-300'
+              }`}
+            />
             <span className="text-sm">Partner</span>
-            
-            <div className={`w-3 h-3 rounded-full ${
-              demoStep === 'complete' ? 'bg-green-500' : 'bg-gray-300'
-            }`} />
+
+            <div
+              className={`w-3 h-3 rounded-full ${
+                demoStep === 'complete' ? 'bg-green-500' : 'bg-gray-300'
+              }`}
+            />
             <span className="text-sm">Complete</span>
           </div>
         </div>
@@ -227,9 +238,7 @@ export default function OnboardingDemo() {
                   </div>
 
                   <div className="ml-16">
-                    <h3 className="font-semibold text-gray-900 dark:text-white">
-                      {content.title}
-                    </h3>
+                    <h3 className="font-semibold text-gray-900 dark:text-white">{content.title}</h3>
                     <div className="flex items-center gap-2 mt-2 text-sm text-gray-600 dark:text-gray-400">
                       <span>{content.partnerName}</span>
                       {content.isVerified && (
@@ -303,11 +312,7 @@ export default function OnboardingDemo() {
 
       {/* Floating Tooltip Demo */}
       {demoStep === 'complete' && (
-        <FloatingTooltip
-          tooltipId="topic_navigation"
-          isVisible={true}
-          onDismiss={() => {}}
-        />
+        <FloatingTooltip tooltipId="topic_navigation" isVisible={true} onDismiss={() => {}} />
       )}
     </div>
   );

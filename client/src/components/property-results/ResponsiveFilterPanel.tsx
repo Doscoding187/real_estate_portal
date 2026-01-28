@@ -1,9 +1,9 @@
 /**
  * Responsive Filter Panel Component
- * 
+ *
  * Automatically switches between desktop sidebar and mobile bottom sheet
  * based on screen size. Provides a unified API for filter management.
- * 
+ *
  * Requirements: 2.1, 8.1, 16.5
  */
 
@@ -43,7 +43,7 @@ function useIsMobile(breakpoint: number = MOBILE_BREAKPOINT): boolean {
 
     // Add event listener
     window.addEventListener('resize', handleResize);
-    
+
     // Initial check
     handleResize();
 
@@ -55,7 +55,7 @@ function useIsMobile(breakpoint: number = MOBILE_BREAKPOINT): boolean {
 
 /**
  * ResponsiveFilterPanel Component
- * 
+ *
  * Renders either a desktop sidebar or mobile bottom sheet based on viewport.
  * On mobile, shows a floating filter button that opens the bottom sheet.
  */

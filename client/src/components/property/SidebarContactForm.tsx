@@ -22,17 +22,23 @@ export function SidebarContactForm() {
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="space-y-2">
-        <Label htmlFor="name" className="text-sm font-medium text-slate-700">Name</Label>
+        <Label htmlFor="name" className="text-sm font-medium text-slate-700">
+          Name
+        </Label>
         <Input id="name" placeholder="Your Name" required className="bg-white" />
       </div>
-      
+
       <div className="space-y-2">
-        <Label htmlFor="email" className="text-sm font-medium text-slate-700">Email</Label>
+        <Label htmlFor="email" className="text-sm font-medium text-slate-700">
+          Email
+        </Label>
         <Input id="email" type="email" placeholder="Your Email" required className="bg-white" />
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="phone" className="text-sm font-medium text-slate-700">Phone</Label>
+        <Label htmlFor="phone" className="text-sm font-medium text-slate-700">
+          Phone
+        </Label>
         <Input id="phone" type="tel" placeholder="Your Phone Number" className="bg-white" />
       </div>
 
@@ -40,7 +46,10 @@ export function SidebarContactForm() {
         <Label className="text-sm font-medium text-slate-700">I am interested in...</Label>
         <div className="flex flex-col gap-2 mt-1">
           <div className="flex items-center space-x-2">
-            <Checkbox id="schedule" className="data-[state=checked]:bg-[#005ca8] data-[state=checked]:border-[#005ca8]" />
+            <Checkbox
+              id="schedule"
+              className="data-[state=checked]:bg-[#005ca8] data-[state=checked]:border-[#005ca8]"
+            />
             <label
               htmlFor="schedule"
               className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-slate-600"
@@ -49,7 +58,11 @@ export function SidebarContactForm() {
             </label>
           </div>
           <div className="flex items-center space-x-2">
-            <Checkbox id="details" defaultChecked className="data-[state=checked]:bg-[#005ca8] data-[state=checked]:border-[#005ca8]" />
+            <Checkbox
+              id="details"
+              defaultChecked
+              className="data-[state=checked]:bg-[#005ca8] data-[state=checked]:border-[#005ca8]"
+            />
             <label
               htmlFor="details"
               className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-slate-600"
@@ -60,14 +73,14 @@ export function SidebarContactForm() {
         </div>
       </div>
 
-      <Button 
-        type="submit" 
+      <Button
+        type="submit"
         className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-6 text-lg shadow-md transition-all hover:shadow-lg"
         disabled={isLoading}
       >
         {isLoading ? 'Sending...' : 'Contact Agent'}
       </Button>
-      
+
       <p className="text-xs text-slate-400 text-center mt-2">
         By clicking Contact Agent, you agree to our Terms and Privacy Policy.
       </p>

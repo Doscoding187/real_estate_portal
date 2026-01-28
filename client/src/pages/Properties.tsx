@@ -75,12 +75,10 @@ export default function Properties() {
       setIsSaveSearchOpen(false);
       setSaveSearchName('');
     },
-    onError: (error) => {
+    onError: error => {
       toast.error(error.message);
     },
   });
-
-
 
   const handleBoundsChange = (bounds: google.maps.LatLngBounds) => {
     const ne = bounds.getNorthEast();
@@ -111,7 +109,6 @@ export default function Properties() {
     }
     addFavoriteMutation.mutate({ propertyId: parseInt(propertyId) });
   };
-
 
   const handleSaveSearch = () => {
     if (!isAuthenticated) {
@@ -158,12 +155,12 @@ export default function Properties() {
                 </h2>
                 {Object.keys(filters).length > 0 && (
                   <p className="text-sm text-slate-500 mt-1">
-                    Results for {filters.city || 'All Cities'} 
+                    Results for {filters.city || 'All Cities'}
                     {filters.propertyType && ` • ${filters.propertyType}`}
                   </p>
                 )}
               </div>
-              
+
               <div className="flex items-center gap-3">
                 {/* Mobile Filter Toggle */}
                 <Button variant="outline" className="lg:hidden border-slate-200 text-slate-600">
@@ -208,10 +205,10 @@ export default function Properties() {
             ) : properties && properties.length > 0 ? (
               viewMode === 'list' ? (
                 <div className="flex flex-col gap-4">
-                  {properties.map((property) => {
+                  {properties.map(property => {
                     const normalized = normalizePropertyForUI(property);
                     if (!normalized) return null;
-                    
+
                     return (
                       <PropertyCardList
                         key={normalized.id}
@@ -244,7 +241,7 @@ export default function Properties() {
                       };
                     })
                     .filter((p): p is NonNullable<typeof p> => p !== null)}
-                  onPropertySelect={(id) => {
+                  onPropertySelect={id => {
                     // Navigate to property detail or show modal
                     window.location.href = `/property/${id}`;
                   }}
@@ -254,9 +251,7 @@ export default function Properties() {
             ) : (
               <div className="flex flex-col items-center justify-center py-20 text-center">
                 <Building2 className="h-16 w-16 text-slate-300 mb-4" />
-                <h3 className="text-lg font-semibold text-slate-700 mb-2">
-                  No properties found
-                </h3>
+                <h3 className="text-lg font-semibold text-slate-700 mb-2">No properties found</h3>
                 <p className="text-slate-500 max-w-md">
                   Try adjusting your filters or search criteria to find more properties.
                 </p>
@@ -281,7 +276,7 @@ export default function Properties() {
                 id="search-name"
                 placeholder="e.g. 2 Bed Apartments in Sandton"
                 value={saveSearchName}
-                onChange={(e) => setSaveSearchName(e.target.value)}
+                onChange={e => setSaveSearchName(e.target.value)}
               />
             </div>
           </div>

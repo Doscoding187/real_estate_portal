@@ -160,11 +160,7 @@ export function VirtualizedFeed({
         overscanCount={overscanCount}
         rowComponent={({ index }) => {
           const item = items[index];
-          return (
-            <div className="px-4 py-2">
-              {renderCard(item)}
-            </div>
-          );
+          return <div className="px-4 py-2">{renderCard(item)}</div>;
         }}
         rowProps={{}}
       />

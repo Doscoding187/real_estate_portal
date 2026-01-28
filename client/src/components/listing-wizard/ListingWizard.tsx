@@ -8,12 +8,23 @@ import { useListingWizardStore } from '@/hooks/useListingWizard';
 import { useAutoSave } from '@/hooks/useAutoSave';
 import { SaveStatusIndicator } from '@/components/ui/SaveStatusIndicator';
 import { DraftManager } from '@/components/wizard/DraftManager';
-import { ProgressIndicator, generateSteps, updateStepsWithErrors } from '@/components/wizard/ProgressIndicator';
+import {
+  ProgressIndicator,
+  generateSteps,
+  updateStepsWithErrors,
+} from '@/components/wizard/ProgressIndicator';
 import { ErrorAlert } from '@/components/ui/ErrorAlert';
 import { ValidationErrorList } from '@/components/ui/ValidationErrorList';
 import { parseError, getRecoveryStrategy, type AppError } from '@/lib/errors/ErrorRecoveryStrategy';
-import { parseServerValidationErrors, type ValidationErrorResult } from '@/lib/errors/ValidationErrorParser';
-import { handleSessionExpiry, wasSessionExpired, clearSessionExpiryFlags } from '@/lib/auth/SessionExpiryHandler';
+import {
+  parseServerValidationErrors,
+  type ValidationErrorResult,
+} from '@/lib/errors/ValidationErrorParser';
+import {
+  handleSessionExpiry,
+  wasSessionExpired,
+  clearSessionExpiryFlags,
+} from '@/lib/auth/SessionExpiryHandler';
 import { trpc } from '@/lib/trpc';
 import { useLocation } from 'wouter';
 import { useAuth } from '@/_core/hooks/useAuth';
@@ -30,12 +41,7 @@ import { ArrowLeft, ArrowRight, Home, Save, Check } from 'lucide-react';
 import { toast } from 'sonner';
 import { ReadinessIndicator } from '@/components/common/ReadinessIndicator';
 import { calculateListingReadiness } from '@/lib/readiness';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 const ListingWizard: React.FC = () => {
   const store = useListingWizardStore();
@@ -52,7 +58,11 @@ const ListingWizard: React.FC = () => {
   const [validationErrors, setValidationErrors] = useState<ValidationErrorResult | null>(null);
 
   // Auto-save hook - saves draft to localStorage automatically
-  const { lastSaved, isSaving: isAutoSaving, error: autoSaveError } = useAutoSave(
+  const {
+    lastSaved,
+    isSaving: isAutoSaving,
+    error: autoSaveError,
+  } = useAutoSave(
     {
       action: store.action,
       propertyType: store.propertyType,
@@ -78,11 +88,11 @@ const ListingWizard: React.FC = () => {
       },
       debounceMs: 2000,
       enabled: !isSubmitting && store.currentStep > 1, // Only auto-save after first step
-      onError: (error) => {
+      onError: error => {
         console.error('Auto-save error:', error);
         toast.error('Failed to auto-save draft');
       },
-    }
+    },
   );
 
   // TRPC mutation for creating listing
@@ -100,40 +110,45 @@ const ListingWizard: React.FC = () => {
   // Fetch existing listing if in edit mode
   const { data: existingListing, isLoading: isLoadingExisting } = trpc.listing.getById.useQuery(
     { id: Number(editId) },
-    { enabled: !!editId && isEditMode }
+    { enabled: !!editId && isEditMode },
   );
 
   // Populate store with existing listing data
   useEffect(() => {
     if (existingListing && isEditMode) {
       console.log('Populating wizard with existing listing:', existingListing);
-      
+
       // Reset store first to clear any drafts
       store.reset();
-      
+
       // Set basic fields
       store.setAction(existingListing.action as any);
       store.setPropertyType(existingListing.propertyType as any);
       store.setTitle(existingListing.title);
       store.setDescription(existingListing.description);
-      
+
       // Set pricing
       const pricing: any = {};
       if (existingListing.askingPrice) pricing.askingPrice = Number(existingListing.askingPrice);
       if (existingListing.monthlyRent) pricing.monthlyRent = Number(existingListing.monthlyRent);
       if (existingListing.deposit) pricing.deposit = Number(existingListing.deposit);
-      if (existingListing.transferCostEstimate) pricing.transferCostEstimate = Number(existingListing.transferCostEstimate);
+      if (existingListing.transferCostEstimate)
+        pricing.transferCostEstimate = Number(existingListing.transferCostEstimate);
       if (existingListing.startingBid) pricing.startingBid = Number(existingListing.startingBid);
       if (existingListing.reservePrice) pricing.reservePrice = Number(existingListing.reservePrice);
       if (existingListing.leaseTerms) pricing.leaseTerms = existingListing.leaseTerms;
-      if (existingListing.availableFrom) pricing.availableFrom = new Date(existingListing.availableFrom);
-      if (existingListing.utilitiesIncluded) pricing.utilitiesIncluded = Boolean(existingListing.utilitiesIncluded);
-      if (existingListing.auctionDateTime) pricing.auctionDateTime = new Date(existingListing.auctionDateTime);
-      if (existingListing.auctionTermsDocumentUrl) pricing.auctionTermsDocumentUrl = existingListing.auctionTermsDocumentUrl;
+      if (existingListing.availableFrom)
+        pricing.availableFrom = new Date(existingListing.availableFrom);
+      if (existingListing.utilitiesIncluded)
+        pricing.utilitiesIncluded = Boolean(existingListing.utilitiesIncluded);
+      if (existingListing.auctionDateTime)
+        pricing.auctionDateTime = new Date(existingListing.auctionDateTime);
+      if (existingListing.auctionTermsDocumentUrl)
+        pricing.auctionTermsDocumentUrl = existingListing.auctionTermsDocumentUrl;
       if (existingListing.negotiable) pricing.negotiable = Boolean(existingListing.negotiable);
-      
+
       store.setPricing(pricing);
-      
+
       // Set property details
       if (existingListing.propertyDetails) {
         store.setPropertyDetails(existingListing.propertyDetails as any);
@@ -142,13 +157,13 @@ const ListingWizard: React.FC = () => {
         // But setPropertyDetails should handle the main ones.
         // Check if we need to populate additionalInfo for features
         if ((existingListing.propertyDetails as any).features) {
-             store.setAdditionalInfo({
-                 propertyHighlights: (existingListing.propertyDetails as any).features || [],
-                 // Map other fields if necessary
-             });
+          store.setAdditionalInfo({
+            propertyHighlights: (existingListing.propertyDetails as any).features || [],
+            // Map other fields if necessary
+          });
         }
       }
-      
+
       // Set location
       store.setLocation({
         address: existingListing.address,
@@ -160,37 +175,37 @@ const ListingWizard: React.FC = () => {
         postalCode: existingListing.postalCode || '',
         placeId: existingListing.placeId || '',
       });
-      
+
       // Set media
       if (existingListing.media && existingListing.media.length > 0) {
         // Clear existing media first (reset did this, but just to be sure)
         // store.media is [] after reset
-        
+
         // We need to map DB media to store MediaFile
         // This might be tricky if store expects File objects for new uploads
         // But for existing ones, it should handle URL-based media
         existingListing.media.forEach((m: any) => {
-            store.addMedia({
-                id: m.id,
-                file: null as any, // No file object for existing media
-                preview: m.originalUrl,
-                type: m.mediaType,
-                progress: 100,
-                displayOrder: m.displayOrder,
-                isPrimary: Boolean(m.isPrimary),
-                description: '',
-            });
-            
-            if (m.isPrimary) {
-                store.setMainMedia(m.id);
-            }
+          store.addMedia({
+            id: m.id,
+            file: null as any, // No file object for existing media
+            preview: m.originalUrl,
+            type: m.mediaType,
+            progress: 100,
+            displayOrder: m.displayOrder,
+            isPrimary: Boolean(m.isPrimary),
+            description: '',
+          });
+
+          if (m.isPrimary) {
+            store.setMainMedia(m.id);
+          }
         });
       }
-      
-      // Set step to 1 or last step? 
+
+      // Set step to 1 or last step?
       // Maybe let user start at 1 to review everything
       store.goToStep(1);
-      
+
       // Disable resume draft dialog
       setShowResumeDraftDialog(false);
     }
@@ -201,7 +216,7 @@ const ListingWizard: React.FC = () => {
     if (wasSessionExpired()) {
       console.log('Session was expired, draft should be restored automatically');
       clearSessionExpiryFlags();
-      
+
       // Show a toast to inform user their session was restored
       toast.success('Welcome back! Your draft has been restored.', {
         description: 'You can continue where you left off.',
@@ -233,7 +248,7 @@ const ListingWizard: React.FC = () => {
     if (hasDraft) {
       setShowResumeDraftDialog(true);
     }
-    
+
     setIsInitialized(true);
   }, [isEditMode]); // Run when isEditMode is determined
 
@@ -323,15 +338,15 @@ const ListingWizard: React.FC = () => {
       // Submit to API
       let result;
       if (isEditMode && editId) {
-          await updateListingMutation.mutateAsync({
-              id: Number(editId),
-              ...listingData
-          });
-          result = { id: Number(editId) };
-          console.log('Listing updated:', result);
+        await updateListingMutation.mutateAsync({
+          id: Number(editId),
+          ...listingData,
+        });
+        result = { id: Number(editId) };
+        console.log('Listing updated:', result);
       } else {
-          result = await createListingMutation.mutateAsync(listingData);
-          console.log('Listing created:', result);
+        result = await createListingMutation.mutateAsync(listingData);
+        console.log('Listing created:', result);
       }
 
       // Submit for review
@@ -360,32 +375,32 @@ const ListingWizard: React.FC = () => {
         }
       } catch (reviewError: any) {
         console.error('Error submitting for review:', reviewError);
-        
+
         // Parse and handle review submission error
-        const appError = parseError(reviewError, { 
+        const appError = parseError(reviewError, {
           type: 'server',
-          context: { operation: 'submitForReview' }
+          context: { operation: 'submitForReview' },
         });
         setApiError(appError);
-        
+
         toast.error('Listing created but failed to submit for review.');
         // Keep as draft and stay on page
       }
     } catch (error: any) {
       console.error('Error submitting listing:', error);
-      
+
       // Parse error and determine recovery strategy
-      const appError = parseError(error, { 
+      const appError = parseError(error, {
         type: 'network',
-        context: { operation: 'createListing' }
+        context: { operation: 'createListing' },
       });
       const strategy = getRecoveryStrategy(appError);
-      
+
       // Check if this is a validation error
       if (appError.type === 'validation') {
         const validationResult = parseServerValidationErrors(error, 'listing');
         setValidationErrors(validationResult);
-        
+
         // Show toast with summary
         toast.error('Please fix validation errors', {
           description: `${validationResult.fieldErrors.length + validationResult.generalErrors.length} error(s) found`,
@@ -393,7 +408,7 @@ const ListingWizard: React.FC = () => {
       } else {
         setApiError(appError);
         setSubmitError(appError.message);
-        
+
         // Show appropriate toast based on error type
         if (appError.type === 'network') {
           toast.error('Connection lost. Your draft has been saved.', {
@@ -487,20 +502,20 @@ const ListingWizard: React.FC = () => {
   // Generate steps for progress indicator with error highlighting
   const progressSteps = useMemo(() => {
     const steps = generateSteps(stepTitles, store.currentStep, store.completedSteps);
-    
+
     // Add error counts if validation errors exist
     if (validationErrors && validationErrors.affectedSteps.length > 0) {
       const errorsByStep = new Map<number, number>();
-      
+
       validationErrors.fieldErrors.forEach(error => {
         if (error.step !== undefined) {
           errorsByStep.set(error.step, (errorsByStep.get(error.step) || 0) + 1);
         }
       });
-      
+
       return updateStepsWithErrors(steps, errorsByStep);
     }
-    
+
     return steps;
     return steps;
   }, [stepTitles, store.currentStep, store.completedSteps, validationErrors]);
@@ -509,18 +524,25 @@ const ListingWizard: React.FC = () => {
   const readiness = useMemo(() => {
     // Map store to listing object expected by readiness calculator
     const listingCandidate = {
-       address: store.location?.address,
-       latitude: store.location?.latitude,
-       longitude: store.location?.longitude,
-       askingPrice: store.pricing?.askingPrice,
-       monthlyRent: store.pricing?.monthlyRent,
-       media: store.media,
-       description: store.description,
-       propertyType: store.propertyType,
-       propertyDetails: store.propertyDetails,
+      address: store.location?.address,
+      latitude: store.location?.latitude,
+      longitude: store.location?.longitude,
+      askingPrice: store.pricing?.askingPrice,
+      monthlyRent: store.pricing?.monthlyRent,
+      media: store.media,
+      description: store.description,
+      propertyType: store.propertyType,
+      propertyDetails: store.propertyDetails,
     };
     return calculateListingReadiness(listingCandidate);
-  }, [store.location, store.pricing, store.media, store.description, store.propertyType, store.propertyDetails]);
+  }, [
+    store.location,
+    store.pricing,
+    store.media,
+    store.description,
+    store.propertyType,
+    store.propertyDetails,
+  ]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50 py-8">
@@ -553,145 +575,149 @@ const ListingWizard: React.FC = () => {
         ) : (
           <>
             {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-4">
-            <div className="text-center flex-1">
-              <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-3">
-                Create New Listing
-              </h1>
-              <p className="text-gray-600 text-lg">Follow the steps to create your property listing</p>
+            <div className="mb-8">
+              <div className="flex items-center justify-between mb-4">
+                <div className="text-center flex-1">
+                  <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-3">
+                    Create New Listing
+                  </h1>
+                  <p className="text-gray-600 text-lg">
+                    Follow the steps to create your property listing
+                  </p>
+                </div>
+                {/* Auto-save status indicator */}
+                {store.currentStep > 1 && (
+                  <div className="absolute top-8 right-8 flex items-center gap-4">
+                    <div className="bg-white/80 backdrop-blur-md p-1.5 rounded-full shadow-sm">
+                      <ReadinessIndicator
+                        score={readiness.score}
+                        missing={readiness.missing}
+                        size="md"
+                      />
+                    </div>
+                    {/* SaveStatusIndicator removed - auto-save runs silently */}
+                  </div>
+                )}
+              </div>
             </div>
-            {/* Auto-save status indicator */}
-            {store.currentStep > 1 && (
-              <div className="absolute top-8 right-8 flex items-center gap-4">
-                 <div className="bg-white/80 backdrop-blur-md p-1.5 rounded-full shadow-sm">
-                    <ReadinessIndicator score={readiness.score} missing={readiness.missing} size="md" />
-                 </div>
-                <SaveStatusIndicator
-                  lastSaved={lastSaved}
-                  isSaving={isAutoSaving}
-                  error={autoSaveError}
-                  variant="compact"
+
+            {/* Step Indicator */}
+            <div className="mb-8">
+              <ProgressIndicator
+                steps={progressSteps}
+                onStepClick={stepNumber => store.goToStep(stepNumber)}
+              />
+            </div>
+
+            {/* Step Content */}
+            <div
+              key={wizardKey}
+              className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-8 mb-8"
+            >
+              {getCurrentStep()}
+            </div>
+
+            {/* Navigation */}
+            <div className="flex items-center justify-between">
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  onClick={store.prevStep}
+                  disabled={store.currentStep === 1 || isSubmitting}
+                >
+                  <ArrowLeft className="h-4 w-4 mr-2" />
+                  Previous
+                </Button>
+
+                {/* Save Draft Button */}
+                <Button
+                  variant="outline"
+                  onClick={handleSaveDraft}
+                  disabled={isSavingDraft || isSubmitting}
+                  className={`gap-2 ${draftSaved ? 'border-green-500 text-green-600' : ''}`}
+                >
+                  {draftSaved ? (
+                    <>
+                      <Check className="h-4 w-4" />
+                      Saved
+                    </>
+                  ) : (
+                    <>
+                      <Save className="h-4 w-4" />
+                      {isSavingDraft ? 'Saving...' : 'Save Draft'}
+                    </>
+                  )}
+                </Button>
+              </div>
+
+              {store.currentStep < 8 ? (
+                <Button
+                  onClick={store.nextStep}
+                  disabled={isSubmitting}
+                  className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 shadow-lg"
+                >
+                  Next
+                  <ArrowRight className="h-4 w-4 ml-2" />
+                </Button>
+              ) : (
+                <div className="flex flex-col items-end gap-2">
+                  {readiness.score < 90 && (
+                    <span className="text-xs text-amber-600 font-medium">
+                      Readiness Score must be 90% to submit
+                    </span>
+                  )}
+                  <Button
+                    onClick={handleSubmit}
+                    disabled={isSubmitting || readiness.score < 90}
+                    className={
+                      isSubmitting || readiness.score < 90
+                        ? 'bg-slate-300 text-slate-500 cursor-not-allowed'
+                        : 'bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 shadow-lg'
+                    }
+                  >
+                    {isSubmitting ? 'Submitting...' : 'Submit Listing'}
+                    <Home className="h-4 w-4 ml-2" />
+                  </Button>
+                </div>
+              )}
+            </div>
+
+            {/* Validation Errors */}
+            {validationErrors &&
+              (validationErrors.fieldErrors.length > 0 ||
+                validationErrors.generalErrors.length > 0) && (
+                <div className="mt-4">
+                  <ValidationErrorList
+                    fieldErrors={validationErrors.fieldErrors}
+                    generalErrors={validationErrors.generalErrors}
+                    onFieldClick={handleValidationFieldClick}
+                    onDismiss={handleDismissValidationErrors}
+                  />
+                </div>
+              )}
+
+            {/* Error Alert with Recovery */}
+            {apiError && !validationErrors && (
+              <div className="mt-4">
+                <ErrorAlert
+                  type={apiError.type}
+                  message={apiError.message}
+                  retryable={apiError.isRecoverable}
+                  onRetry={handleRetry}
+                  onDismiss={handleDismissError}
+                  show={true}
                 />
               </div>
             )}
-          </div>
-        </div>
 
-        {/* Step Indicator */}
-        <div className="mb-8">
-          <ProgressIndicator
-            steps={progressSteps}
-            onStepClick={(stepNumber) => store.goToStep(stepNumber)}
-          />
-        </div>
-
-        {/* Step Content */}
-        <div
-          key={wizardKey}
-          className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-8 mb-8"
-        >
-          {getCurrentStep()}
-        </div>
-
-        {/* Navigation */}
-        <div className="flex items-center justify-between">
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              onClick={store.prevStep}
-              disabled={store.currentStep === 1 || isSubmitting}
-            >
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Previous
-            </Button>
-
-            {/* Save Draft Button */}
-            <Button
-              variant="outline"
-              onClick={handleSaveDraft}
-              disabled={isSavingDraft || isSubmitting}
-              className={`gap-2 ${draftSaved ? 'border-green-500 text-green-600' : ''}`}
-            >
-              {draftSaved ? (
-                <>
-                  <Check className="h-4 w-4" />
-                  Saved
-                </>
-              ) : (
-                <>
-                  <Save className="h-4 w-4" />
-                  {isSavingDraft ? 'Saving...' : 'Save Draft'}
-                </>
-              )}
-            </Button>
-          </div>
-
-          {store.currentStep < 8 ? (
-            <Button
-              onClick={store.nextStep}
-              disabled={isSubmitting}
-              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 shadow-lg"
-            >
-              Next
-              <ArrowRight className="h-4 w-4 ml-2" />
-            </Button>
-          ) : (
-            <div className="flex flex-col items-end gap-2">
-               {readiness.score < 90 && (
-                   <span className="text-xs text-amber-600 font-medium">
-                       Readiness Score must be 90% to submit
-                   </span>
-               )}
-               <Button
-                onClick={handleSubmit}
-                disabled={isSubmitting || readiness.score < 90}
-                className={isSubmitting || readiness.score < 90 
-                    ? "bg-slate-300 text-slate-500 cursor-not-allowed"
-                    : "bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 shadow-lg"
-                }
-              >
-                {isSubmitting ? 'Submitting...' : 'Submit Listing'}
-                <Home className="h-4 w-4 ml-2" />
-              </Button>
-            </div>
-          )}
-        </div>
-
-        {/* Validation Errors */}
-        {validationErrors && (validationErrors.fieldErrors.length > 0 || validationErrors.generalErrors.length > 0) && (
-          <div className="mt-4">
-            <ValidationErrorList
-              fieldErrors={validationErrors.fieldErrors}
-              generalErrors={validationErrors.generalErrors}
-              onFieldClick={handleValidationFieldClick}
-              onDismiss={handleDismissValidationErrors}
-            />
-          </div>
+            {/* Legacy Error Message (fallback) */}
+            {submitError && !apiError && !validationErrors && (
+              <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+                <p className="text-red-800">{submitError}</p>
+              </div>
+            )}
+          </>
         )}
-
-        {/* Error Alert with Recovery */}
-        {apiError && !validationErrors && (
-          <div className="mt-4">
-            <ErrorAlert
-              type={apiError.type}
-              message={apiError.message}
-              retryable={apiError.isRecoverable}
-              onRetry={handleRetry}
-              onDismiss={handleDismissError}
-              show={true}
-            />
-          </div>
-        )}
-
-        {/* Legacy Error Message (fallback) */}
-        {submitError && !apiError && !validationErrors && (
-          <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
-            <p className="text-red-800">{submitError}</p>
-          </div>
-        )}
-        </>
-      )}
       </div>
     </div>
   );

@@ -1,6 +1,6 @@
 /**
  * Error Alert Component
- * 
+ *
  * Displays error messages with retry and dismiss actions
  */
 
@@ -17,42 +17,42 @@ export interface ErrorAlertProps {
    * Error type
    */
   type: ErrorType;
-  
+
   /**
    * Error title
    */
   title?: string;
-  
+
   /**
    * Error message
    */
   message: string;
-  
+
   /**
    * Whether the error is retryable
    */
   retryable?: boolean;
-  
+
   /**
    * Callback when retry button is clicked
    */
   onRetry?: () => void;
-  
+
   /**
    * Callback when dismiss button is clicked
    */
   onDismiss?: () => void;
-  
+
   /**
    * Whether to show the alert
    */
   show?: boolean;
-  
+
   /**
    * Additional CSS classes
    */
   className?: string;
-  
+
   /**
    * Auto-dismiss after milliseconds
    */
@@ -139,18 +139,12 @@ export const ErrorAlert: React.FC<ErrorAlertProps> = ({
           <Alert variant={getVariant()} className="relative">
             <div className="flex items-start gap-3">
               {/* Icon */}
-              <div className="flex-shrink-0 mt-0.5">
-                {getIcon()}
-              </div>
+              <div className="flex-shrink-0 mt-0.5">{getIcon()}</div>
 
               {/* Content */}
               <div className="flex-1 min-w-0">
-                <AlertTitle className="mb-1">
-                  {title || getDefaultTitle()}
-                </AlertTitle>
-                <AlertDescription className="text-sm">
-                  {message}
-                </AlertDescription>
+                <AlertTitle className="mb-1">{title || getDefaultTitle()}</AlertTitle>
+                <AlertDescription className="text-sm">{message}</AlertDescription>
               </div>
 
               {/* Actions */}
@@ -166,7 +160,7 @@ export const ErrorAlert: React.FC<ErrorAlertProps> = ({
                     Retry
                   </Button>
                 )}
-                
+
                 {onDismiss && (
                   <Button
                     variant="ghost"
@@ -188,7 +182,7 @@ export const ErrorAlert: React.FC<ErrorAlertProps> = ({
 
 /**
  * Error Alert List Component
- * 
+ *
  * Displays multiple error alerts in a stack
  */
 export interface ErrorAlertListProps {
@@ -202,17 +196,17 @@ export interface ErrorAlertListProps {
     message: string;
     retryable?: boolean;
   }>;
-  
+
   /**
    * Callback when retry is clicked
    */
   onRetry?: (id: string) => void;
-  
+
   /**
    * Callback when dismiss is clicked
    */
   onDismiss?: (id: string) => void;
-  
+
   /**
    * Additional CSS classes
    */
@@ -229,7 +223,7 @@ export const ErrorAlertList: React.FC<ErrorAlertListProps> = ({
 
   return (
     <div className={cn('space-y-3', className)}>
-      {errors.map((error) => (
+      {errors.map(error => (
         <ErrorAlert
           key={error.id}
           type={error.type}

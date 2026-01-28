@@ -1,7 +1,7 @@
 /**
  * Focus Management Utilities
  * Helpers for managing keyboard focus in wizards and forms
- * 
+ *
  * Requirements: 12.1
  */
 
@@ -11,7 +11,7 @@
  */
 export function trapFocus(container: HTMLElement): () => void {
   const focusableElements = container.querySelectorAll<HTMLElement>(
-    'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+    'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
   );
 
   const firstElement = focusableElements[0];
@@ -48,7 +48,7 @@ export function trapFocus(container: HTMLElement): () => void {
  */
 export function focusFirstElement(container: HTMLElement): void {
   const focusableElement = container.querySelector<HTMLElement>(
-    'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+    'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
   );
 
   if (focusableElement) {
@@ -64,7 +64,7 @@ export function focusFirstElement(container: HTMLElement): void {
  */
 export function getFocusableElements(container: HTMLElement): HTMLElement[] {
   const elements = container.querySelectorAll<HTMLElement>(
-    'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+    'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
   );
 
   return Array.from(elements);
@@ -77,7 +77,7 @@ export function isFocusable(element: HTMLElement): boolean {
   if (element.hasAttribute('disabled')) return false;
   if (element.getAttribute('tabindex') === '-1') return false;
   if (element.offsetParent === null) return false; // Hidden element
-  
+
   const style = window.getComputedStyle(element);
   if (style.display === 'none' || style.visibility === 'hidden') return false;
 
@@ -87,7 +87,10 @@ export function isFocusable(element: HTMLElement): boolean {
 /**
  * Announce message to screen readers
  */
-export function announceToScreenReader(message: string, priority: 'polite' | 'assertive' = 'polite'): void {
+export function announceToScreenReader(
+  message: string,
+  priority: 'polite' | 'assertive' = 'polite',
+): void {
   const announcement = document.createElement('div');
   announcement.setAttribute('role', 'status');
   announcement.setAttribute('aria-live', priority);
@@ -108,7 +111,7 @@ export function announceToScreenReader(message: string, priority: 'polite' | 'as
  */
 export function ensureLogicalTabOrder(container: HTMLElement): void {
   const focusableElements = getFocusableElements(container);
-  
+
   focusableElements.forEach((element, index) => {
     // Only set tabindex if not already set
     if (!element.hasAttribute('tabindex')) {

@@ -2,7 +2,7 @@
  * BasicInfoStep Component
  * First step of the developer registration wizard
  * Collects basic company information with gradient styling
- * 
+ *
  * Requirements: 1.1, 1.2, 1.3, 1.4, 1.5, 1.6
  */
 
@@ -73,45 +73,35 @@ export const BasicInfoStep = React.forwardRef<HTMLDivElement, BasicInfoStepProps
           <h2 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
             Company Information
           </h2>
-          <p className="text-gray-600">
-            Tell us about your development company
-          </p>
+          <p className="text-gray-600">Tell us about your development company</p>
         </div>
 
         {/* Form Fields */}
         <div className="space-y-6">
           {/* Company Name */}
           <div className="space-y-2">
-            <label className="block text-sm font-medium text-gray-700">
-              Company Name *
-            </label>
+            <label className="block text-sm font-medium text-gray-700">Company Name *</label>
             <GradientInput
               type="text"
               placeholder="Enter your company name"
               value={data.name}
-              onChange={(e) => handleChange('name', e.target.value)}
+              onChange={e => handleChange('name', e.target.value)}
               error={errors?.name}
             />
-            {errors?.name && (
-              <p className="text-sm text-red-600">{errors.name}</p>
-            )}
+            {errors?.name && <p className="text-sm text-red-600">{errors.name}</p>}
           </div>
 
           {/* Description */}
           <div className="space-y-2">
-            <label className="block text-sm font-medium text-gray-700">
-              Company Description
-            </label>
+            <label className="block text-sm font-medium text-gray-700">Company Description</label>
             <GradientTextarea
               placeholder="Describe your company's focus and expertise..."
               value={data.description}
-              onChange={(e) => handleChange('description', e.target.value)}
+              onChange={e => handleChange('description', e.target.value)}
               error={errors?.description}
               rows={4}
             />
-            {errors?.description && (
-              <p className="text-sm text-red-600">{errors.description}</p>
-            )}
+            {errors?.description && <p className="text-sm text-red-600">{errors.description}</p>}
           </div>
 
           {/* Category */}
@@ -122,34 +112,32 @@ export const BasicInfoStep = React.forwardRef<HTMLDivElement, BasicInfoStepProps
             <GradientSelect
               placeholder="Select your primary focus"
               value={data.category}
-              onValueChange={(value) => handleChange('category', value)}
+              onValueChange={value => handleChange('category', value)}
               error={errors?.category}
             >
-              {categoryOptions.map((option) => (
+              {categoryOptions.map(option => (
                 <GradientSelectItem key={option.value} value={option.value}>
                   {option.label}
                 </GradientSelectItem>
               ))}
             </GradientSelect>
-            {errors?.category && (
-              <p className="text-sm text-red-600">{errors.category}</p>
-            )}
+            {errors?.category && <p className="text-sm text-red-600">{errors.category}</p>}
           </div>
 
           {/* Two-column layout for remaining fields */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Established Year */}
             <div className="space-y-2">
-              <label className="block text-sm font-medium text-gray-700">
-                Established Year
-              </label>
+              <label className="block text-sm font-medium text-gray-700">Established Year</label>
               <GradientSelect
                 placeholder="Select year"
                 value={data.establishedYear?.toString() || ''}
-                onValueChange={(value) => handleChange('establishedYear', value ? parseInt(value) : null)}
+                onValueChange={value =>
+                  handleChange('establishedYear', value ? parseInt(value) : null)
+                }
                 error={errors?.establishedYear}
               >
-                {yearOptions.map((option) => (
+                {yearOptions.map(option => (
                   <GradientSelectItem key={option.value} value={option.value}>
                     {option.label}
                   </GradientSelectItem>
@@ -162,19 +150,15 @@ export const BasicInfoStep = React.forwardRef<HTMLDivElement, BasicInfoStepProps
 
             {/* Website */}
             <div className="space-y-2">
-              <label className="block text-sm font-medium text-gray-700">
-                Website
-              </label>
+              <label className="block text-sm font-medium text-gray-700">Website</label>
               <GradientInput
                 type="url"
                 placeholder="https://yourcompany.com"
                 value={data.website}
-                onChange={(e) => handleChange('website', e.target.value)}
+                onChange={e => handleChange('website', e.target.value)}
                 error={errors?.website}
               />
-              {errors?.website && (
-                <p className="text-sm text-red-600">{errors.website}</p>
-              )}
+              {errors?.website && <p className="text-sm text-red-600">{errors.website}</p>}
             </div>
           </div>
         </div>
@@ -182,12 +166,13 @@ export const BasicInfoStep = React.forwardRef<HTMLDivElement, BasicInfoStepProps
         {/* Help Text */}
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
           <p className="text-sm text-blue-700">
-            <strong>Tip:</strong> Provide accurate information as this will be displayed on your public profile and used for verification.
+            <strong>Tip:</strong> Provide accurate information as this will be displayed on your
+            public profile and used for verification.
           </p>
         </div>
       </div>
     );
-  }
+  },
 );
 
 BasicInfoStep.displayName = 'BasicInfoStep';

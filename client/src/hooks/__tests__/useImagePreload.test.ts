@@ -6,7 +6,11 @@
 
 import { renderHook, waitFor, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { useImagePreload, useFeedImagePreload, useProgressiveImagePreload } from '../useImagePreload';
+import {
+  useImagePreload,
+  useFeedImagePreload,
+  useProgressiveImagePreload,
+} from '../useImagePreload';
 
 // Mock Image constructor
 class MockImage {
@@ -34,7 +38,7 @@ describe('useImagePreload', () => {
   beforeEach(() => {
     // Mock Image
     global.Image = MockImage as any;
-    
+
     // Mock navigator.connection
     Object.defineProperty(navigator, 'connection', {
       value: mockConnection,
@@ -50,7 +54,7 @@ describe('useImagePreload', () => {
   describe('Basic Preloading', () => {
     it('should preload images successfully', async () => {
       const urls = ['image1.jpg', 'image2.jpg', 'image3.jpg'];
-      
+
       const { result } = renderHook(() => useImagePreload(urls));
 
       // Initially, no images should be loaded
@@ -61,7 +65,7 @@ describe('useImagePreload', () => {
         () => {
           expect(result.current.loadedImages.size).toBe(3);
         },
-        { timeout: 1000 }
+        { timeout: 1000 },
       );
 
       // All images should be loaded
@@ -72,16 +76,14 @@ describe('useImagePreload', () => {
 
     it('should respect preloadCount option', async () => {
       const urls = ['image1.jpg', 'image2.jpg', 'image3.jpg', 'image4.jpg', 'image5.jpg'];
-      
-      const { result } = renderHook(() =>
-        useImagePreload(urls, { preloadCount: 3 })
-      );
+
+      const { result } = renderHook(() => useImagePreload(urls, { preloadCount: 3 }));
 
       await waitFor(
         () => {
           expect(result.current.loadedImages.size).toBe(3);
         },
-        { timeout: 1000 }
+        { timeout: 1000 },
       );
 
       // Only first 3 should be loaded
@@ -95,16 +97,14 @@ describe('useImagePreload', () => {
     it('should call onImageLoaded callback', async () => {
       const onImageLoaded = vi.fn();
       const urls = ['image1.jpg'];
-      
-      renderHook(() =>
-        useImagePreload(urls, { onImageLoaded })
-      );
+
+      renderHook(() => useImagePreload(urls, { onImageLoaded }));
 
       await waitFor(
         () => {
           expect(onImageLoaded).toHaveBeenCalledWith('image1.jpg');
         },
-        { timeout: 1000 }
+        { timeout: 1000 },
       );
     });
 
@@ -124,16 +124,14 @@ describe('useImagePreload', () => {
 
       const onImageError = vi.fn();
       const urls = ['failing-image.jpg'];
-      
-      const { result } = renderHook(() =>
-        useImagePreload(urls, { onImageError })
-      );
+
+      const { result } = renderHook(() => useImagePreload(urls, { onImageError }));
 
       await waitFor(
         () => {
           expect(result.current.failedImages.size).toBe(1);
         },
-        { timeout: 1000 }
+        { timeout: 1000 },
       );
 
       expect(result.current.isImageFailed('failing-image.jpg')).toBe(true);
@@ -147,13 +145,13 @@ describe('useImagePreload', () => {
       mockConnection.effectiveType = '2g';
 
       const urls = ['image1.jpg', 'image2.jpg'];
-      
+
       const { result } = renderHook(() =>
-        useImagePreload(urls, { preloadOnSlowConnection: false })
+        useImagePreload(urls, { preloadOnSlowConnection: false }),
       );
 
       // Wait a bit
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      await new Promise(resolve => setTimeout(resolve, 100));
 
       // Should not preload on slow connection
       expect(result.current.loadedImages.size).toBe(0);
@@ -167,16 +165,14 @@ describe('useImagePreload', () => {
       mockConnection.effectiveType = '2g';
 
       const urls = ['image1.jpg'];
-      
-      const { result } = renderHook(() =>
-        useImagePreload(urls, { preloadOnSlowConnection: true })
-      );
+
+      const { result } = renderHook(() => useImagePreload(urls, { preloadOnSlowConnection: true }));
 
       await waitFor(
         () => {
           expect(result.current.loadedImages.size).toBe(1);
         },
-        { timeout: 1000 }
+        { timeout: 1000 },
       );
 
       // Reset connection
@@ -188,13 +184,13 @@ describe('useImagePreload', () => {
       mockConnection.saveData = true;
 
       const urls = ['image1.jpg'];
-      
+
       const { result } = renderHook(() =>
-        useImagePreload(urls, { preloadOnSlowConnection: false })
+        useImagePreload(urls, { preloadOnSlowConnection: false }),
       );
 
       // Wait a bit
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      await new Promise(resolve => setTimeout(resolve, 100));
 
       // Should not preload with data saver
       expect(result.current.loadedImages.size).toBe(0);
@@ -207,14 +203,14 @@ describe('useImagePreload', () => {
   describe('Helper Functions', () => {
     it('should correctly identify loaded images', async () => {
       const urls = ['image1.jpg', 'image2.jpg'];
-      
+
       const { result } = renderHook(() => useImagePreload(urls));
 
       await waitFor(
         () => {
           expect(result.current.isImageLoaded('image1.jpg')).toBe(true);
         },
-        { timeout: 1000 }
+        { timeout: 1000 },
       );
 
       expect(result.current.isImageLoaded('image1.jpg')).toBe(true);
@@ -223,7 +219,7 @@ describe('useImagePreload', () => {
 
     it('should correctly identify loading images', async () => {
       const urls = ['image1.jpg'];
-      
+
       const { result } = renderHook(() => useImagePreload(urls));
 
       // Should be loading initially
@@ -233,7 +229,7 @@ describe('useImagePreload', () => {
         () => {
           expect(result.current.isImageLoading('image1.jpg')).toBe(false);
         },
-        { timeout: 1000 }
+        { timeout: 1000 },
       );
     });
 
@@ -251,14 +247,14 @@ describe('useImagePreload', () => {
   describe('Cleanup', () => {
     it('should cleanup on unmount', async () => {
       const urls = ['image1.jpg', 'image2.jpg'];
-      
+
       const { unmount } = renderHook(() => useImagePreload(urls));
 
       // Unmount immediately
       unmount();
 
       // Wait a bit
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      await new Promise(resolve => setTimeout(resolve, 100));
 
       // Should not throw errors
       expect(true).toBe(true);
@@ -280,15 +276,13 @@ describe('useFeedImagePreload', () => {
       { id: 3, data: { heroBannerUrl: 'feed3.jpg' } },
     ];
 
-    const { result } = renderHook(() =>
-      useFeedImagePreload(items, 0, { preloadCount: 3 })
-    );
+    const { result } = renderHook(() => useFeedImagePreload(items, 0, { preloadCount: 3 }));
 
     await waitFor(
       () => {
         expect(result.current.loadedImages.size).toBeGreaterThan(0);
       },
-      { timeout: 1000 }
+      { timeout: 1000 },
     );
   });
 
@@ -302,14 +296,14 @@ describe('useFeedImagePreload', () => {
 
     const { result, rerender } = renderHook(
       ({ currentIndex }) => useFeedImagePreload(items, currentIndex, { preloadCount: 2 }),
-      { initialProps: { currentIndex: 0 } }
+      { initialProps: { currentIndex: 0 } },
     );
 
     await waitFor(
       () => {
         expect(result.current.loadedImages.size).toBe(2);
       },
-      { timeout: 1000 }
+      { timeout: 1000 },
     );
 
     // Should preload feed2.jpg and feed3.jpg (next 2 after index 0)
@@ -323,15 +317,13 @@ describe('useFeedImagePreload', () => {
       { id: 2, data: { imageUrl: 'feed2.jpg' } },
     ];
 
-    const { result } = renderHook(() =>
-      useFeedImagePreload(items, 0, { preloadCount: 2 })
-    );
+    const { result } = renderHook(() => useFeedImagePreload(items, 0, { preloadCount: 2 }));
 
     await waitFor(
       () => {
         expect(result.current.loadedImages.size).toBe(1);
       },
-      { timeout: 1000 }
+      { timeout: 1000 },
     );
   });
 });
@@ -345,7 +337,7 @@ describe('useProgressiveImagePreload', () => {
 
   it('should load low quality first, then high quality', async () => {
     const url = 'https://cloudfront.net/image.jpg';
-    
+
     const { result } = renderHook(() => useProgressiveImagePreload(url));
 
     // Initially loading
@@ -356,7 +348,7 @@ describe('useProgressiveImagePreload', () => {
       () => {
         expect(result.current.lowQualityLoaded).toBe(true);
       },
-      { timeout: 1000 }
+      { timeout: 1000 },
     );
 
     // Then high quality should load
@@ -364,7 +356,7 @@ describe('useProgressiveImagePreload', () => {
       () => {
         expect(result.current.highQualityLoaded).toBe(true);
       },
-      { timeout: 2000 }
+      { timeout: 2000 },
     );
 
     expect(result.current.isLoading).toBe(false);
@@ -372,14 +364,14 @@ describe('useProgressiveImagePreload', () => {
 
   it('should generate low quality URL for CloudFront images', async () => {
     const url = 'https://cloudfront.net/image.jpg';
-    
+
     const { result } = renderHook(() => useProgressiveImagePreload(url));
 
     await waitFor(
       () => {
         expect(result.current.lowQualityLoaded).toBe(true);
       },
-      { timeout: 1000 }
+      { timeout: 1000 },
     );
 
     // Low quality should load first
@@ -395,16 +387,15 @@ describe('Integration Tests', () => {
   });
 
   it('should handle URL changes correctly', async () => {
-    const { result, rerender } = renderHook(
-      ({ urls }) => useImagePreload(urls),
-      { initialProps: { urls: ['image1.jpg'] } }
-    );
+    const { result, rerender } = renderHook(({ urls }) => useImagePreload(urls), {
+      initialProps: { urls: ['image1.jpg'] },
+    });
 
     await waitFor(
       () => {
         expect(result.current.loadedImages.size).toBe(1);
       },
-      { timeout: 1000 }
+      { timeout: 1000 },
     );
 
     // Change URLs
@@ -414,30 +405,28 @@ describe('Integration Tests', () => {
       () => {
         expect(result.current.loadedImages.size).toBeGreaterThan(1);
       },
-      { timeout: 1000 }
+      { timeout: 1000 },
     );
   });
 
   it('should not reload already loaded images', async () => {
     const onImageLoaded = vi.fn();
     const urls = ['image1.jpg'];
-    
-    const { rerender } = renderHook(() =>
-      useImagePreload(urls, { onImageLoaded })
-    );
+
+    const { rerender } = renderHook(() => useImagePreload(urls, { onImageLoaded }));
 
     await waitFor(
       () => {
         expect(onImageLoaded).toHaveBeenCalledTimes(1);
       },
-      { timeout: 1000 }
+      { timeout: 1000 },
     );
 
     // Rerender with same URLs
     rerender();
 
     // Wait a bit
-    await new Promise((resolve) => setTimeout(resolve, 100));
+    await new Promise(resolve => setTimeout(resolve, 100));
 
     // Should not reload
     expect(onImageLoaded).toHaveBeenCalledTimes(1);

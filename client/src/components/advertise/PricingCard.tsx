@@ -1,9 +1,9 @@
 /**
  * PricingCard Component
- * 
+ *
  * Displays a pricing category card with minimalist styling and hover border glow effect.
  * Navigates to full pricing page on click and tracks analytics.
- * 
+ *
  * Requirements: 7.2, 7.3
  */
 
@@ -18,27 +18,27 @@ export interface PricingCardProps {
    * Icon component from lucide-react
    */
   icon: LucideIcon;
-  
+
   /**
    * Pricing category title (e.g., "Agent Plans")
    */
   category: string;
-  
+
   /**
    * Brief description of the pricing category
    */
   description: string;
-  
+
   /**
    * Navigation URL to full pricing page
    */
   href: string;
-  
+
   /**
    * Optional click handler
    */
   onClick?: () => void;
-  
+
   /**
    * Optional additional CSS classes
    */
@@ -57,7 +57,7 @@ const trackPricingCardClick = (category: string, href: string) => {
       timestamp: new Date().toISOString(),
     });
   }
-  
+
   console.log('Pricing Card Click:', { category, href });
 };
 
@@ -72,7 +72,7 @@ export const PricingCard: React.FC<PricingCardProps> = ({
   const handleClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
     // Track analytics
     trackPricingCardClick(category, href);
-    
+
     // Call custom onClick if provided
     if (onClick) {
       e.preventDefault();
@@ -129,14 +129,10 @@ export const PricingCard: React.FC<PricingCardProps> = ({
         </motion.div>
 
         {/* Category */}
-        <h3 className="text-xl font-bold text-gray-900 mb-3 leading-tight">
-          {category}
-        </h3>
+        <h3 className="text-xl font-bold text-gray-900 mb-3 leading-tight">{category}</h3>
 
         {/* Description */}
-        <p className="text-base text-gray-600 leading-relaxed mb-6">
-          {description}
-        </p>
+        <p className="text-base text-gray-600 leading-relaxed mb-6">{description}</p>
 
         {/* View Pricing Arrow */}
         <motion.div

@@ -1,5 +1,11 @@
 import { useState, useCallback, useMemo, useEffect } from 'react';
-import { GoogleMap, useJsApiLoader, Marker, InfoWindow, MarkerClusterer } from '@react-google-maps/api';
+import {
+  GoogleMap,
+  useJsApiLoader,
+  Marker,
+  InfoWindow,
+  MarkerClusterer,
+} from '@react-google-maps/api';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Loader2, MapPin, Navigation } from 'lucide-react';
@@ -40,7 +46,7 @@ interface GooglePropertyMapProps {
   minimal?: boolean;
 }
 
-const libraries: ("places")[] = ['places'];
+const libraries: 'places'[] = ['places'];
 
 export function GooglePropertyMap({
   properties,
@@ -66,7 +72,7 @@ export function GooglePropertyMap({
       } else if (properties.length > 1) {
         const bounds = new window.google.maps.LatLngBounds();
         let hasValidBounds = false;
-        properties.forEach((prop) => {
+        properties.forEach(prop => {
           if (prop.latitude && prop.longitude) {
             bounds.extend({ lat: prop.latitude, lng: prop.longitude });
             hasValidBounds = true;
@@ -81,7 +87,7 @@ export function GooglePropertyMap({
       }
       setMap(map);
     },
-    [properties]
+    [properties],
   );
 
   const onUnmount = useCallback(() => {
@@ -116,7 +122,7 @@ export function GooglePropertyMap({
       } else if (properties.length > 1) {
         const bounds = new window.google.maps.LatLngBounds();
         let hasValidBounds = false;
-        properties.forEach((prop) => {
+        properties.forEach(prop => {
           if (prop.latitude && prop.longitude) {
             bounds.extend({ lat: prop.latitude, lng: prop.longitude });
             hasValidBounds = true;
@@ -159,7 +165,7 @@ export function GooglePropertyMap({
         <MarkerClusterer>
           {(clusterer: any) => (
             <>
-              {properties.map((property) => (
+              {properties.map(property => (
                 <Marker
                   key={property.id}
                   position={{ lat: property.latitude, lng: property.longitude }}
@@ -193,7 +199,8 @@ export function GooglePropertyMap({
                 }).format(selectedProperty.price)}
               </p>
               <p className="text-xs text-slate-500 mb-2">
-                {selectedProperty.bedrooms} Bed • {selectedProperty.bathrooms} Bath • {selectedProperty.area} m²
+                {selectedProperty.bedrooms} Bed • {selectedProperty.bathrooms} Bath •{' '}
+                {selectedProperty.area} m²
               </p>
               <Button
                 size="sm"
@@ -206,17 +213,17 @@ export function GooglePropertyMap({
           </InfoWindow>
         )}
       </GoogleMap>
-      
+
       {!minimal && (
         <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-10">
-           <Button 
-             variant="secondary" 
-             className="shadow-md bg-white/90 hover:bg-white text-slate-800"
-             onClick={handleSearchInArea}
-           >
-             <MapPin className="h-4 w-4 mr-2 text-blue-600" />
-             Search in this area
-           </Button>
+          <Button
+            variant="secondary"
+            className="shadow-md bg-white/90 hover:bg-white text-slate-800"
+            onClick={handleSearchInArea}
+          >
+            <MapPin className="h-4 w-4 mr-2 text-blue-600" />
+            Search in this area
+          </Button>
         </div>
       )}
     </div>

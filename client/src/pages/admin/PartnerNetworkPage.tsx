@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { trpc } from '@/lib/trpc';
 import { GlassCard } from '@/components/ui/glass-card';
@@ -31,7 +30,17 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Handshake, Plus, Search, Pencil, Trash2, Globe, Mail, Phone, ExternalLink } from 'lucide-react';
+import {
+  Handshake,
+  Plus,
+  Search,
+  Pencil,
+  Trash2,
+  Globe,
+  Mail,
+  Phone,
+  ExternalLink,
+} from 'lucide-react';
 import { toast } from 'sonner';
 
 type Partner = {
@@ -81,7 +90,7 @@ const PartnerNetworkPage = () => {
       resetForm();
       utils.partners.list.invalidate();
     },
-    onError: (err) => toast.error(err.message),
+    onError: err => toast.error(err.message),
   });
 
   const updateMutation = trpc.partners.update.useMutation({
@@ -92,7 +101,7 @@ const PartnerNetworkPage = () => {
       resetForm();
       utils.partners.list.invalidate();
     },
-    onError: (err) => toast.error(err.message),
+    onError: err => toast.error(err.message),
   });
 
   const deleteMutation = trpc.partners.delete.useMutation({
@@ -100,7 +109,7 @@ const PartnerNetworkPage = () => {
       toast.success('Partner deleted successfully');
       utils.partners.list.invalidate();
     },
-    onError: (err) => toast.error(err.message),
+    onError: err => toast.error(err.message),
   });
 
   const resetForm = () => {
@@ -189,7 +198,7 @@ const PartnerNetworkPage = () => {
             <Input
               placeholder="Search partners..."
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={e => setSearchTerm(e.target.value)}
               className="pl-9"
             />
           </div>
@@ -199,7 +208,7 @@ const PartnerNetworkPage = () => {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Categories</SelectItem>
-              {CATEGORIES.map((cat) => (
+              {CATEGORIES.map(cat => (
                 <SelectItem key={cat.value} value={cat.value}>
                   {cat.label}
                 </SelectItem>
@@ -224,13 +233,18 @@ const PartnerNetworkPage = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {data?.partners.map((partner) => (
+              {data?.partners.map(partner => (
                 <TableRow key={partner.id}>
                   <TableCell className="font-medium">
                     <div className="flex flex-col">
                       <span>{partner.name}</span>
                       {partner.isVerified ? (
-                        <Badge variant="secondary" className="w-fit text-[10px] mt-1 bg-blue-100 text-blue-700 hover:bg-blue-100">Verified</Badge>
+                        <Badge
+                          variant="secondary"
+                          className="w-fit text-[10px] mt-1 bg-blue-100 text-blue-700 hover:bg-blue-100"
+                        >
+                          Verified
+                        </Badge>
                       ) : null}
                     </div>
                   </TableCell>
@@ -269,8 +283,8 @@ const PartnerNetworkPage = () => {
                         partner.status === 'active'
                           ? 'bg-green-100 text-green-700 hover:bg-green-100'
                           : partner.status === 'pending'
-                          ? 'bg-yellow-100 text-yellow-700 hover:bg-yellow-100'
-                          : 'bg-slate-100 text-slate-700 hover:bg-slate-100'
+                            ? 'bg-yellow-100 text-yellow-700 hover:bg-yellow-100'
+                            : 'bg-slate-100 text-slate-700 hover:bg-slate-100'
                       }
                     >
                       {partner.status}
@@ -300,26 +314,26 @@ const PartnerNetworkPage = () => {
             <DialogTitle>Add New Partner</DialogTitle>
             <DialogDescription>Add a strategic partner to the network.</DialogDescription>
           </DialogHeader>
-          <form onSubmit={(e) => handleSubmit(e, false)} className="space-y-4">
+          <form onSubmit={e => handleSubmit(e, false)} className="space-y-4">
             <div>
               <Label>Partner Name</Label>
               <Input
                 required
                 value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                onChange={e => setFormData({ ...formData, name: e.target.value })}
               />
             </div>
             <div>
               <Label>Category</Label>
               <Select
                 value={formData.category}
-                onValueChange={(val) => setFormData({ ...formData, category: val })}
+                onValueChange={val => setFormData({ ...formData, category: val })}
               >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {CATEGORIES.map((cat) => (
+                  {CATEGORIES.map(cat => (
                     <SelectItem key={cat.value} value={cat.value}>
                       {cat.label}
                     </SelectItem>
@@ -333,14 +347,14 @@ const PartnerNetworkPage = () => {
                 <Input
                   type="email"
                   value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  onChange={e => setFormData({ ...formData, email: e.target.value })}
                 />
               </div>
               <div>
                 <Label>Phone</Label>
                 <Input
                   value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  onChange={e => setFormData({ ...formData, phone: e.target.value })}
                 />
               </div>
             </div>
@@ -349,14 +363,14 @@ const PartnerNetworkPage = () => {
               <Input
                 type="url"
                 value={formData.website}
-                onChange={(e) => setFormData({ ...formData, website: e.target.value })}
+                onChange={e => setFormData({ ...formData, website: e.target.value })}
               />
             </div>
             <div>
               <Label>Description</Label>
               <Textarea
                 value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                onChange={e => setFormData({ ...formData, description: e.target.value })}
               />
             </div>
             <DialogFooter>
@@ -374,26 +388,26 @@ const PartnerNetworkPage = () => {
           <DialogHeader>
             <DialogTitle>Edit Partner</DialogTitle>
           </DialogHeader>
-          <form onSubmit={(e) => handleSubmit(e, true)} className="space-y-4">
+          <form onSubmit={e => handleSubmit(e, true)} className="space-y-4">
             <div>
               <Label>Partner Name</Label>
               <Input
                 required
                 value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                onChange={e => setFormData({ ...formData, name: e.target.value })}
               />
             </div>
             <div>
               <Label>Category</Label>
               <Select
                 value={formData.category}
-                onValueChange={(val) => setFormData({ ...formData, category: val })}
+                onValueChange={val => setFormData({ ...formData, category: val })}
               >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {CATEGORIES.map((cat) => (
+                  {CATEGORIES.map(cat => (
                     <SelectItem key={cat.value} value={cat.value}>
                       {cat.label}
                     </SelectItem>
@@ -407,14 +421,14 @@ const PartnerNetworkPage = () => {
                 <Input
                   type="email"
                   value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  onChange={e => setFormData({ ...formData, email: e.target.value })}
                 />
               </div>
               <div>
                 <Label>Phone</Label>
                 <Input
                   value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  onChange={e => setFormData({ ...formData, phone: e.target.value })}
                 />
               </div>
             </div>
@@ -423,7 +437,7 @@ const PartnerNetworkPage = () => {
                 <Label>Status</Label>
                 <Select
                   value={formData.status}
-                  onValueChange={(val) => setFormData({ ...formData, status: val })}
+                  onValueChange={val => setFormData({ ...formData, status: val })}
                 >
                   <SelectTrigger>
                     <SelectValue />
@@ -441,7 +455,7 @@ const PartnerNetworkPage = () => {
                   id="verified"
                   className="rounded border-gray-300"
                   checked={formData.isVerified}
-                  onChange={(e) => setFormData({ ...formData, isVerified: e.target.checked })}
+                  onChange={e => setFormData({ ...formData, isVerified: e.target.checked })}
                 />
                 <Label htmlFor="verified">Verified Partner</Label>
               </div>
@@ -451,14 +465,14 @@ const PartnerNetworkPage = () => {
               <Input
                 type="url"
                 value={formData.website}
-                onChange={(e) => setFormData({ ...formData, website: e.target.value })}
+                onChange={e => setFormData({ ...formData, website: e.target.value })}
               />
             </div>
             <div>
               <Label>Description</Label>
               <Textarea
                 value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                onChange={e => setFormData({ ...formData, description: e.target.value })}
               />
             </div>
             <DialogFooter>

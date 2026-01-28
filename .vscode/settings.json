@@ -1,0 +1,51 @@
+{
+    "typescript.autoClosingTags": false,
+    "sqltools.connections": [
+        {
+            "mysqlOptions": {
+                "authProtocol": "default",
+                "enableSsl": "Disabled"
+            },
+            "ssh": "Disabled",
+            "previewLimit": 50,
+            "server": "gateway01.ap-northeast-1.prod.aws.tidbcloud.com",
+            "port": 4000,
+            "sshOptions": {
+                "port": 22
+            },
+            "driver": "TiDB",
+            "name": "Property-listify Sa",
+            "database": "lisitify-property",
+            "username": "292qWmvn2YGy2jW.root"
+        },
+        {
+            "mysqlOptions": {
+                "authProtocol": "default",
+                "enableSsl": "Disabled"
+            },
+            "ssh": "Disabled",
+            "previewLimit": 50,
+            "server": "localhost",
+            "driver": "TiDB",
+            "name": "Property Listify",
+            "connectString": "mysql://292qWmvn2YGy2jW.root:TOdjCJY1bepCcJg1@gateway01.ap-northeast-1.prod.aws.tidbcloud.com:4000/listify_property_sa?ssl=%7B%22enabled%22%3Atrue%7D"
+        },
+        {
+            "mysqlOptions": {
+                "authProtocol": "default",
+                "enableSsl": "Enabled",
+                "ssl": {
+                    "ca": ""
+                }
+            },
+            "ssh": "Disabled",
+            "previewLimit": 50,
+            "server": "gateway01.ap-northeast-1.prod.aws.tidbcloud.com",
+            "driver": "TiDB",
+            "name": "TiDB  SQL",
+            "connectString": "mysql://292qWmvn2YGy2jW.root:TOdjCJY1bepCcJg1@gateway01.ap-northeast-1.prod.aws.tidbcloud.com:4000/listify_property_sa?ssl={\"rejectUnauthorized\":true}",
+            "database": "listify_property_sa",
+            "username": "292qWmvn2YGy2jW.root"
+        }
+    ]
+}

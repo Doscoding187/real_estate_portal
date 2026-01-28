@@ -36,7 +36,7 @@ export function VideoPlayer({
     if (!videoElement) return;
 
     if (isActive) {
-      videoElement.play().catch((err) => {
+      videoElement.play().catch(err => {
         console.error('Failed to play video:', err);
       });
       hasCompletedRef.current = false;
@@ -63,7 +63,7 @@ export function VideoPlayer({
     // Auto-loop: restart video
     if (videoRef.current) {
       videoRef.current.currentTime = 0;
-      videoRef.current.play().catch((err) => {
+      videoRef.current.play().catch(err => {
         console.error('Failed to loop video:', err);
       });
     }

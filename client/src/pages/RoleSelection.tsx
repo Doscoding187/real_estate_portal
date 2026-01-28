@@ -74,7 +74,7 @@ export default function RoleSelection() {
 
         {/* Role Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
-          {roles.map((role) => {
+          {roles.map(role => {
             const Icon = role.icon;
             return (
               <div
@@ -83,19 +83,21 @@ export default function RoleSelection() {
               >
                 {/* Icon */}
                 <div className="flex justify-center mb-6">
-                  <div className={`w-20 h-20 rounded-full bg-gradient-to-br ${role.gradient} flex items-center justify-center transform group-hover:scale-110 transition-transform duration-300`}>
+                  <div
+                    className={`w-20 h-20 rounded-full bg-gradient-to-br ${role.gradient} flex items-center justify-center transform group-hover:scale-110 transition-transform duration-300`}
+                  >
                     <Icon className="w-10 h-10 text-white" />
                   </div>
                 </div>
 
                 {/* Content */}
                 <div className="text-center mb-6">
-                  <h2 className={`text-2xl font-bold bg-gradient-to-r ${role.gradient} bg-clip-text text-transparent mb-3`}>
+                  <h2
+                    className={`text-2xl font-bold bg-gradient-to-r ${role.gradient} bg-clip-text text-transparent mb-3`}
+                  >
                     {role.title}
                   </h2>
-                  <p className="text-gray-600 mb-6">
-                    {role.description}
-                  </p>
+                  <p className="text-gray-600 mb-6">{role.description}</p>
 
                   {/* Features */}
                   <div className={`bg-gradient-to-br ${role.bgGradient} rounded-xl p-4 mb-6`}>
@@ -127,7 +129,8 @@ export default function RoleSelection() {
         <div className="text-center">
           <div className="inline-block bg-white/80 backdrop-blur-sm rounded-xl shadow-lg border-2 border-white p-6 max-w-2xl">
             <p className="text-gray-700">
-              <strong>Not sure which role to choose?</strong> No problem! You can explore the platform as a regular user and upgrade to a professional account anytime.
+              <strong>Not sure which role to choose?</strong> No problem! You can explore the
+              platform as a regular user and upgrade to a professional account anytime.
             </p>
             <button
               onClick={() => setLocation('/')}

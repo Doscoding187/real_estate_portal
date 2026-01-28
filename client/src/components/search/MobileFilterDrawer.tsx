@@ -73,24 +73,17 @@ export function MobileFilterDrawer({
           <div className="flex-1 overflow-y-auto p-4">
             <SidebarFilters
               filters={localFilters as any}
-              onFilterChange={(f) => setLocalFilters(f as SearchFilters)}
+              onFilterChange={f => setLocalFilters(f as SearchFilters)}
               onSaveSearch={() => {}}
             />
           </div>
 
           {/* Footer Actions */}
           <div className="flex items-center gap-3 px-4 py-4 border-t border-gray-200 bg-white">
-            <Button
-              variant="outline"
-              className="flex-1"
-              onClick={handleReset}
-            >
+            <Button variant="outline" className="flex-1" onClick={handleReset}>
               Reset
             </Button>
-            <Button
-              className="flex-1 bg-blue-600 hover:bg-blue-700"
-              onClick={handleApply}
-            >
+            <Button className="flex-1 bg-blue-600 hover:bg-blue-700" onClick={handleApply}>
               Apply Filters
             </Button>
           </div>

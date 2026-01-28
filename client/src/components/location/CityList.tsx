@@ -31,12 +31,7 @@ interface CityListProps {
 
 type SortOption = 'name' | 'price-asc' | 'price-desc' | 'listings' | 'popularity';
 
-export function CityList({ 
-  title, 
-  cities, 
-  parentSlug,
-  showFilters = true 
-}: CityListProps) {
+export function CityList({ title, cities, parentSlug, showFilters = true }: CityListProps) {
   const [sortBy, setSortBy] = useState<SortOption>('popularity');
   const [minListings, setMinListings] = useState<number>(0);
 
@@ -79,10 +74,10 @@ export function CityList({
       <div className="container">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8 gap-4">
           <h2 className="text-2xl font-bold text-slate-900">{title}</h2>
-          
+
           {showFilters && (
             <div className="flex flex-wrap gap-3">
-              <Select value={sortBy} onValueChange={(value) => setSortBy(value as SortOption)}>
+              <Select value={sortBy} onValueChange={value => setSortBy(value as SortOption)}>
                 <SelectTrigger className="w-[180px]">
                   <SelectValue placeholder="Sort by" />
                 </SelectTrigger>
@@ -95,9 +90,9 @@ export function CityList({
                 </SelectContent>
               </Select>
 
-              <Select 
-                value={minListings.toString()} 
-                onValueChange={(value) => setMinListings(parseInt(value))}
+              <Select
+                value={minListings.toString()}
+                onValueChange={value => setMinListings(parseInt(value))}
               >
                 <SelectTrigger className="w-[180px]">
                   <SelectValue placeholder="Min listings" />
@@ -114,7 +109,7 @@ export function CityList({
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {sortedAndFilteredCities.map((city) => (
+          {sortedAndFilteredCities.map(city => (
             <Link key={city.id} href={getUrl(city)}>
               <Card className="hover:shadow-lg transition-all cursor-pointer border-slate-200 group h-full hover:border-primary/50">
                 <CardContent className="p-6 flex flex-col h-full justify-between">
@@ -125,7 +120,7 @@ export function CityList({
                       </h3>
                       <ArrowRight className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity text-primary flex-shrink-0 ml-2" />
                     </div>
-                    
+
                     <div className="flex items-center gap-1 text-sm text-slate-500 mb-4">
                       <MapPin className="h-4 w-4" />
                       <span>City</span>
@@ -145,7 +140,7 @@ export function CityList({
                       </div>
                     )}
                   </div>
-                  
+
                   <div className="mt-auto space-y-3 pt-4 border-t border-slate-100">
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-slate-500">Total Listings</span>
@@ -166,7 +161,9 @@ export function CityList({
 
         {sortedAndFilteredCities.length === 0 && (
           <div className="text-center py-12">
-            <p className="text-slate-500">No cities match your filters. Try adjusting your criteria.</p>
+            <p className="text-slate-500">
+              No cities match your filters. Try adjusting your criteria.
+            </p>
           </div>
         )}
 

@@ -11,9 +11,9 @@ export function ResponsiveHighlights({ items = [] }: ResponsiveHighlightsProps) 
   return (
     <div className="flex flex-wrap gap-2 mt-1 w-full overflow-hidden h-[26px]">
       {safeItems.map((highlight, index) => (
-        <Badge 
-          key={`${highlight}-${index}`} 
-          variant="outline" 
+        <Badge
+          key={`${highlight}-${index}`}
+          variant="outline"
           className="text-xs bg-slate-50 border-slate-200 text-slate-700 whitespace-nowrap h-[22px]"
         >
           {highlight}

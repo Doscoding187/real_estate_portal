@@ -1,6 +1,6 @@
 /**
  * Keyboard Navigation Hook Tests
- * 
+ *
  * Tests keyboard shortcuts, focus management, and navigation utilities.
  * Requirements: 5.1, 5.6
  */
@@ -39,7 +39,7 @@ describe('useKeyboardNavigation', () => {
       useKeyboardNavigation({
         shortcuts,
         enabled: true,
-      })
+      }),
     );
 
     // Simulate 'f' key press
@@ -66,7 +66,7 @@ describe('useKeyboardNavigation', () => {
       useKeyboardNavigation({
         shortcuts,
         enabled: true,
-      })
+      }),
     );
 
     // Simulate Ctrl+K
@@ -92,7 +92,7 @@ describe('useKeyboardNavigation', () => {
       useKeyboardNavigation({
         shortcuts,
         enabled: false,
-      })
+      }),
     );
 
     const event = new KeyboardEvent('keydown', { key: 'f' });
@@ -118,7 +118,7 @@ describe('useKeyboardNavigation', () => {
         shortcuts,
         enabled: true,
         preventDefaultKeys: ['ArrowDown'],
-      })
+      }),
     );
 
     const event = new KeyboardEvent('keydown', { key: 'ArrowDown' });
@@ -177,9 +177,7 @@ describe('useArrowKeyNavigation', () => {
   it('should navigate up with ArrowUp', () => {
     const mockOnNavigate = vi.fn();
 
-    const { result } = renderHook(() =>
-      useArrowKeyNavigation(5, mockOnNavigate, true)
-    );
+    const { result } = renderHook(() => useArrowKeyNavigation(5, mockOnNavigate, true));
 
     // Set current index to 2
     act(() => {
@@ -211,9 +209,7 @@ describe('useArrowKeyNavigation', () => {
   it('should navigate to first item with Home', () => {
     const mockOnNavigate = vi.fn();
 
-    const { result } = renderHook(() =>
-      useArrowKeyNavigation(5, mockOnNavigate, true)
-    );
+    const { result } = renderHook(() => useArrowKeyNavigation(5, mockOnNavigate, true));
 
     // Set current index to 3
     act(() => {
@@ -247,7 +243,7 @@ describe('useFocusTrap', () => {
     const container = document.createElement('div');
     const button1 = document.createElement('button');
     const button2 = document.createElement('button');
-    
+
     container.appendChild(button1);
     container.appendChild(button2);
     document.body.appendChild(container);

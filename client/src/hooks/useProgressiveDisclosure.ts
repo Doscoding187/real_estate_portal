@@ -1,9 +1,9 @@
 /**
  * Progressive Disclosure Hook
- * 
+ *
  * Manages progressive feature revelation based on user engagement.
  * Implements Requirements 14.2, 14.3, 14.4
- * 
+ *
  * Feature Unlock Thresholds:
  * - Filters/Save: 10+ content views
  * - Topics: 3+ saves
@@ -80,7 +80,7 @@ export function useProgressiveDisclosure() {
   };
 
   const getFeatureProgress = (feature: string): FeatureUnlock | undefined => {
-    return featureUnlocks.find((unlock) => unlock.feature === feature);
+    return featureUnlocks.find(unlock => unlock.feature === feature);
   };
 
   // Specific feature checks
@@ -149,7 +149,7 @@ export function useAutoTrackContentView() {
  */
 export function useFeatureUnlockProgress(feature: string) {
   const { getFeatureProgress, isFeatureUnlocked } = useProgressiveDisclosure();
-  
+
   const progress = getFeatureProgress(feature);
   const unlocked = isFeatureUnlocked(feature);
 
@@ -157,8 +157,6 @@ export function useFeatureUnlockProgress(feature: string) {
     unlocked,
     progress: progress?.currentProgress ?? 0,
     threshold: progress?.threshold ?? 0,
-    percentage: progress
-      ? Math.min(100, (progress.currentProgress / progress.threshold) * 100)
-      : 0,
+    percentage: progress ? Math.min(100, (progress.currentProgress / progress.threshold) * 100) : 0,
   };
 }

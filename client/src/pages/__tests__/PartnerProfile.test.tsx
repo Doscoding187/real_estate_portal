@@ -25,7 +25,7 @@ const mockPartnerProfile = {
     id: 1,
     name: 'Property Professional',
     allowedContentTypes: ['property_tour'],
-    allowedCTAs: ['view_listing', 'contact']
+    allowedCTAs: ['view_listing', 'contact'],
   },
   companyName: 'Test Real Estate Co.',
   description: 'Leading real estate company in Cape Town',
@@ -36,14 +36,14 @@ const mockPartnerProfile = {
   subscriptionTier: 'premium' as const,
   approvedContentCount: 15,
   createdAt: new Date('2024-01-01'),
-  updatedAt: new Date('2024-01-15')
+  updatedAt: new Date('2024-01-15'),
 };
 
 const mockMetrics = {
   totalViews: 12500,
   engagementRate: 8.5,
   totalContent: 15,
-  averageQualityScore: 78
+  averageQualityScore: 78,
 };
 
 describe('PartnerProfile', () => {
@@ -64,16 +64,18 @@ describe('PartnerProfile', () => {
     return render(
       <QueryClientProvider client={queryClient}>
         <PartnerProfile />
-      </QueryClientProvider>
+      </QueryClientProvider>,
     );
   };
 
   it('displays loading skeleton initially', () => {
     mockFetch.mockImplementation(() => new Promise(() => {})); // Never resolves
-    
+
     renderComponent();
-    
-    expect(screen.getByTestId('partner-profile-skeleton') || document.querySelector('.animate-pulse')).toBeTruthy();
+
+    expect(
+      screen.getByTestId('partner-profile-skeleton') || document.querySelector('.animate-pulse'),
+    ).toBeTruthy();
   });
 
   it('displays partner profile information correctly', async () => {
@@ -81,15 +83,15 @@ describe('PartnerProfile', () => {
     mockFetch
       .mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve(mockPartnerProfile)
+        json: () => Promise.resolve(mockPartnerProfile),
       })
       .mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve(mockMetrics)
+        json: () => Promise.resolve(mockMetrics),
       })
       .mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve([]) // Empty reviews
+        json: () => Promise.resolve([]), // Empty reviews
       });
 
     renderComponent();
@@ -101,7 +103,7 @@ describe('PartnerProfile', () => {
 
     // Requirement 5.1: Display verification badge status
     expect(screen.getByText('Verified Partner')).toBeInTheDocument();
-    
+
     // Requirement 5.1: Display trust score
     expect(screen.getByText('85')).toBeInTheDocument();
     expect(screen.getByText('Trust Score')).toBeInTheDocument();
@@ -124,15 +126,15 @@ describe('PartnerProfile', () => {
     mockFetch
       .mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve(mockPartnerProfile)
+        json: () => Promise.resolve(mockPartnerProfile),
       })
       .mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve(mockMetrics)
+        json: () => Promise.resolve(mockMetrics),
       })
       .mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve([])
+        json: () => Promise.resolve([]),
       });
 
     renderComponent();
@@ -146,21 +148,21 @@ describe('PartnerProfile', () => {
   it('displays "New Partner" indicator when no reviews exist', async () => {
     const unverifiedPartner = {
       ...mockPartnerProfile,
-      verificationStatus: 'pending' as const
+      verificationStatus: 'pending' as const,
     };
 
     mockFetch
       .mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve(unverifiedPartner)
+        json: () => Promise.resolve(unverifiedPartner),
       })
       .mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve(mockMetrics)
+        json: () => Promise.resolve(mockMetrics),
       })
       .mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve([])
+        json: () => Promise.resolve([]),
       });
 
     renderComponent();
@@ -174,14 +176,18 @@ describe('PartnerProfile', () => {
   it('handles partner not found error', async () => {
     mockFetch.mockResolvedValueOnce({
       ok: false,
-      status: 404
+      status: 404,
     });
 
     renderComponent();
 
     await waitFor(() => {
       expect(screen.getByText('Partner Not Found')).toBeInTheDocument();
-      expect(screen.getByText("The partner profile you're looking for doesn't exist or has been removed.")).toBeInTheDocument();
+      expect(
+        screen.getByText(
+          "The partner profile you're looking for doesn't exist or has been removed.",
+        ),
+      ).toBeInTheDocument();
     });
   });
 
@@ -189,15 +195,15 @@ describe('PartnerProfile', () => {
     mockFetch
       .mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve(mockPartnerProfile)
+        json: () => Promise.resolve(mockPartnerProfile),
       })
       .mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve(mockMetrics)
+        json: () => Promise.resolve(mockMetrics),
       })
       .mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve([])
+        json: () => Promise.resolve([]),
       });
 
     renderComponent();
@@ -212,21 +218,21 @@ describe('PartnerProfile', () => {
   it('displays fallback icon when no logo is provided', async () => {
     const partnerWithoutLogo = {
       ...mockPartnerProfile,
-      logoUrl: null
+      logoUrl: null,
     };
 
     mockFetch
       .mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve(partnerWithoutLogo)
+        json: () => Promise.resolve(partnerWithoutLogo),
       })
       .mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve(mockMetrics)
+        json: () => Promise.resolve(mockMetrics),
       })
       .mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve([])
+        json: () => Promise.resolve([]),
       });
 
     renderComponent();

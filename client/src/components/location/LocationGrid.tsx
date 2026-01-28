@@ -34,11 +34,11 @@ export function LocationGrid({ title, items, parentSlug, type }: LocationGridPro
     <div className="py-12 bg-white/50 backdrop-blur-sm">
       <div className="container">
         <div className="flex items-center justify-between mb-8">
-            <h2 className="text-2xl font-bold text-slate-900">{title}</h2>
+          <h2 className="text-2xl font-bold text-slate-900">{title}</h2>
         </div>
-        
+
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
-          {items.map((item) => (
+          {items.map(item => (
             <Link key={item.id} href={getUrl(item.name)}>
               <div className="rounded-2xl border border-slate-100 bg-white shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer group h-full">
                 <div className="p-5 flex flex-col h-full justify-between">
@@ -54,16 +54,24 @@ export function LocationGrid({ title, items, parentSlug, type }: LocationGridPro
                       <span>{type === 'city' ? 'City' : 'Suburb'}</span>
                     </div>
                   </div>
-                  
+
                   <div className="mt-auto pt-4 border-t border-slate-50 space-y-2">
                     <div className="flex justify-between items-center text-sm">
-                      <span className="text-slate-500 text-xs uppercase tracking-wide font-medium">Listings</span>
-                      <span className="font-bold text-slate-700 bg-slate-50 px-2 py-0.5 rounded-md group-hover:bg-blue-50 group-hover:text-blue-700 transition-colors">{item.listingCount}</span>
+                      <span className="text-slate-500 text-xs uppercase tracking-wide font-medium">
+                        Listings
+                      </span>
+                      <span className="font-bold text-slate-700 bg-slate-50 px-2 py-0.5 rounded-md group-hover:bg-blue-50 group-hover:text-blue-700 transition-colors">
+                        {item.listingCount}
+                      </span>
                     </div>
                     {item.avgPrice && (
                       <div className="flex justify-between items-center text-sm">
-                        <span className="text-slate-500 text-xs uppercase tracking-wide font-medium">Avg</span>
-                        <span className="font-bold text-slate-900">{formatPrice(item.avgPrice)}</span>
+                        <span className="text-slate-500 text-xs uppercase tracking-wide font-medium">
+                          Avg
+                        </span>
+                        <span className="font-bold text-slate-900">
+                          {formatPrice(item.avgPrice)}
+                        </span>
                       </div>
                     )}
                   </div>

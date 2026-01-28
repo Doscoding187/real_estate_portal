@@ -1,12 +1,12 @@
 import { db } from '../db';
 import { developmentUnits, developments } from '../../drizzle/schema';
 import { eq, and, inArray, sql } from 'drizzle-orm';
-import { 
-  DevelopmentUnit, 
-  CreateUnitInput, 
+import {
+  DevelopmentUnit,
+  CreateUnitInput,
   UpdateUnitInput,
   BulkCreateUnitsInput,
-  UnitStatus 
+  UnitStatus,
 } from '../../shared/types';
 
 export class UnitService {
@@ -31,7 +31,7 @@ export class UnitService {
     const existing = await db.query.developmentUnits.findFirst({
       where: and(
         eq(developmentUnits.developmentId, input.developmentId),
-        eq(developmentUnits.unitNumber, input.unitNumber)
+        eq(developmentUnits.unitNumber, input.unitNumber),
       ),
     });
 
@@ -58,7 +58,7 @@ export class UnitService {
 
     const newUnit = await this.getUnit(unit.insertId);
     if (!newUnit) throw new Error('Failed to create unit');
-    
+
     return newUnit;
   }
 
@@ -66,7 +66,10 @@ export class UnitService {
    * Bulk create units
    * Validates: Requirements 3.1
    */
-  async bulkCreateUnits(developerId: number, input: BulkCreateUnitsInput): Promise<DevelopmentUnit[]> {
+  async bulkCreateUnits(
+    developerId: number,
+    input: BulkCreateUnitsInput,
+  ): Promise<DevelopmentUnit[]> {
     // Verify ownership
     const development = await db.query.developments.findFirst({
       where: eq(developments.id, input.developmentId),
@@ -98,12 +101,12 @@ export class UnitService {
 
     // Bulk insert
     const [result] = await db.insert(developmentUnits).values(unitsData);
-    
+
     // Fetch newly created units (MySQL bulk insert guarantees sequential IDs starting from insertId)
     const newUnits = await db.query.developmentUnits.findMany({
       where: and(
         eq(developmentUnits.developmentId, input.developmentId),
-        sql`${developmentUnits.id} >= ${result.insertId}`
+        sql`${developmentUnits.id} >= ${result.insertId}`,
       ),
     });
 
@@ -125,11 +128,14 @@ export class UnitService {
    * Get all units for a development
    * Validates: Requirements 3.4
    */
-  async getDevelopmentUnits(developmentId: number, filters?: {
-    phaseId?: number;
-    status?: UnitStatus;
-    unitType?: string;
-  }): Promise<DevelopmentUnit[]> {
+  async getDevelopmentUnits(
+    developmentId: number,
+    filters?: {
+      phaseId?: number;
+      status?: UnitStatus;
+      unitType?: string;
+    },
+  ): Promise<DevelopmentUnit[]> {
     const conditions = [eq(developmentUnits.developmentId, developmentId)];
 
     if (filters?.phaseId) {
@@ -157,7 +163,7 @@ export class UnitService {
   async updateUnit(
     unitId: number,
     developerId: number,
-    input: UpdateUnitInput
+    input: UpdateUnitInput,
   ): Promise<DevelopmentUnit> {
     // Get unit and verify ownership
     const unit = await this.getUnit(unitId);
@@ -196,9 +202,7 @@ export class UnitService {
     }
 
     // Update unit
-    await db.update(developmentUnits)
-      .set(updateData)
-      .where(eq(developmentUnits.id, unitId));
+    await db.update(developmentUnits).set(updateData).where(eq(developmentUnits.id, unitId));
 
     const updated = await this.getUnit(unitId);
     if (!updated) throw new Error('Failed to update unit');
@@ -214,7 +218,7 @@ export class UnitService {
     unitId: number,
     developerId: number,
     newStatus: UnitStatus,
-    reservedBy?: number
+    reservedBy?: number,
   ): Promise<DevelopmentUnit> {
     // Get unit and verify ownership
     const unit = await this.getUnit(unitId);
@@ -245,17 +249,20 @@ export class UnitService {
       }
 
       // Update with WHERE clause to ensure status hasn't changed
-      const [result] = await db.update(developmentUnits)
+      const [result] = await db
+        .update(developmentUnits)
         .set({
           status: 'reserved',
           reservedAt: new Date().toISOString(),
           reservedBy: reservedBy || null,
           updatedAt: new Date().toISOString(),
         })
-        .where(and(
-          eq(developmentUnits.id, unitId),
-          eq(developmentUnits.status, 'available') // Optimistic lock
-        ));
+        .where(
+          and(
+            eq(developmentUnits.id, unitId),
+            eq(developmentUnits.status, 'available'), // Optimistic lock
+          ),
+        );
 
       if (result.affectedRows === 0) {
         throw new Error('Unit was reserved by another user. Please try a different unit.');
@@ -263,7 +270,7 @@ export class UnitService {
 
       const updated = await this.getUnit(unitId);
       if (!updated) throw new Error('Failed to retrieve reserved unit');
-      
+
       return updated;
     }
 
@@ -282,9 +289,7 @@ export class UnitService {
       updateData.soldAt = null;
     }
 
-    await db.update(developmentUnits)
-      .set(updateData)
-      .where(eq(developmentUnits.id, unitId));
+    await db.update(developmentUnits).set(updateData).where(eq(developmentUnits.id, unitId));
 
     const updated = await this.getUnit(unitId);
     if (!updated) throw new Error('Failed to update unit stats');
@@ -356,7 +361,10 @@ export class UnitService {
       available: units.filter(u => u.status === 'available').length,
       reserved: units.filter(u => u.status === 'reserved').length,
       sold: units.filter(u => u.status === 'sold').length,
-      byType: {} as Record<string, { total: number; available: number; reserved: number; sold: number }>,
+      byType: {} as Record<
+        string,
+        { total: number; available: number; reserved: number; sold: number }
+      >,
     };
 
     // Group by unit type

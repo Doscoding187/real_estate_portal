@@ -1,0 +1,27 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true
+  },
+  "exclude": [
+    "node_modules",
+    "dist",
+    "build",
+    "coverage",
+    "**/*.example.ts",
+    "**/*.example.tsx",
+    "**/*.backup.ts",
+    "**/*.backup.tsx",
+    "**/*.demo.ts",
+    "**/*.demo.tsx",
+    "**/__tests__/**",
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "**/*.spec.ts",
+    "**/*.spec.tsx",
+    "server/scripts/**",
+    "server/db_*.ts",
+    "server/**/debug-*.ts",
+    "client/**/stories/**"
+  ]
+}

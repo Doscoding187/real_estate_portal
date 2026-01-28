@@ -1,5 +1,11 @@
 import { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { MapPin, Search } from 'lucide-react';
@@ -62,10 +68,10 @@ const allSouthAfricanCities = [
 ];
 
 const popularSuburbs: Record<string, string[]> = {
-  'Johannesburg': ['Sandton', 'Rosebank', 'Fourways', 'Randburg', 'Midrand'],
+  Johannesburg: ['Sandton', 'Rosebank', 'Fourways', 'Randburg', 'Midrand'],
   'Cape Town': ['Sea Point', 'Camps Bay', 'Constantia', 'Claremont', 'Bellville'],
-  'Durban': ['Umhlanga', 'Ballito', 'Westville', 'Morningside', 'Glenwood'],
-  'Pretoria': ['Centurion', 'Hatfield', 'Menlyn', 'Brooklyn', 'Waterkloof'],
+  Durban: ['Umhlanga', 'Ballito', 'Westville', 'Morningside', 'Glenwood'],
+  Pretoria: ['Centurion', 'Hatfield', 'Menlyn', 'Brooklyn', 'Waterkloof'],
 };
 
 export function LocationSelectionModal({
@@ -96,28 +102,32 @@ export function LocationSelectionModal({
   const handleContinue = () => {
     if (selectedCity.trim()) {
       // Save to localStorage
-      localStorage.setItem('lastSearchLocation', JSON.stringify({
-        city: selectedCity,
-        suburb: suburbSearch || undefined,
-        timestamp: Date.now(),
-      }));
-      
+      localStorage.setItem(
+        'lastSearchLocation',
+        JSON.stringify({
+          city: selectedCity,
+          suburb: suburbSearch || undefined,
+          timestamp: Date.now(),
+        }),
+      );
+
       onLocationSelected(selectedCity, suburbSearch || undefined);
       onClose();
     }
   };
 
   const filteredCities = citySearch
-    ? allSouthAfricanCities.filter(city =>
-        city.toLowerCase().includes(citySearch.toLowerCase())
-      ).slice(0, 8)
+    ? allSouthAfricanCities
+        .filter(city => city.toLowerCase().includes(citySearch.toLowerCase()))
+        .slice(0, 8)
     : allSouthAfricanCities.slice(0, 8);
 
-  const filteredSuburbs = selectedCity && popularSuburbs[selectedCity]
-    ? popularSuburbs[selectedCity].filter(s => 
-        s.toLowerCase().includes(suburbSearch.toLowerCase())
-      )
-    : [];
+  const filteredSuburbs =
+    selectedCity && popularSuburbs[selectedCity]
+      ? popularSuburbs[selectedCity].filter(s =>
+          s.toLowerCase().includes(suburbSearch.toLowerCase()),
+        )
+      : [];
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -127,7 +137,8 @@ export function LocationSelectionModal({
             Where are you looking to {listingType === 'sale' ? 'buy' : 'rent'}?
           </DialogTitle>
           <DialogDescription>
-            Enter a city and optionally a suburb to find {propertyType.toLowerCase()} in your preferred area.
+            Enter a city and optionally a suburb to find {propertyType.toLowerCase()} in your
+            preferred area.
           </DialogDescription>
         </DialogHeader>
 
@@ -141,14 +152,14 @@ export function LocationSelectionModal({
             <Input
               placeholder="Type a city name (e.g., Johannesburg, Cape Town)..."
               value={citySearch}
-              onChange={(e) => handleCityInputChange(e.target.value)}
+              onChange={e => handleCityInputChange(e.target.value)}
               onFocus={() => setShowCitySuggestions(true)}
               className="mb-2"
             />
-            
+
             {showCitySuggestions && filteredCities.length > 0 && (
               <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto border rounded-md p-2 bg-slate-50">
-                {filteredCities.map((city) => (
+                {filteredCities.map(city => (
                   <Button
                     key={city}
                     variant="outline"
@@ -173,13 +184,13 @@ export function LocationSelectionModal({
               <Input
                 placeholder="Search for a suburb..."
                 value={suburbSearch}
-                onChange={(e) => setSuburbSearch(e.target.value)}
+                onChange={e => setSuburbSearch(e.target.value)}
                 className="mb-3"
               />
-              
+
               {filteredSuburbs.length > 0 && (
                 <div className="grid grid-cols-2 gap-2 max-h-32 overflow-y-auto">
-                  {filteredSuburbs.map((suburb) => (
+                  {filteredSuburbs.map(suburb => (
                     <Button
                       key={suburb}
                       variant="outline"
@@ -197,11 +208,7 @@ export function LocationSelectionModal({
 
           {/* Action Buttons */}
           <div className="flex gap-3 pt-4">
-            <Button
-              variant="outline"
-              onClick={onClose}
-              className="flex-1"
-            >
+            <Button variant="outline" onClick={onClose} className="flex-1">
               Cancel
             </Button>
             <Button

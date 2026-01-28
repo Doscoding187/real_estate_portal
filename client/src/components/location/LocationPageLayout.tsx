@@ -1,6 +1,5 @@
-
 import React from 'react';
-import { Helmet } from 'react-helmet';
+import { Helmet } from 'react-helmet-async';
 
 import { useLocation } from 'wouter';
 import { ListingNavbar } from '@/components/ListingNavbar';
@@ -59,63 +58,58 @@ export const LocationPageLayout: React.FC<LocationPageLayoutProps> = ({
     <div className="min-h-screen bg-slate-50 w-full pt-16">
       <Helmet>
         <title>{`Property for Sale in ${locationName} | Real Estate Portal`}</title>
-        <meta 
-          name="description" 
-          content={`Find the best properties for sale in ${locationName}. Search apartments, houses, and new developments.`} 
+        <meta
+          name="description"
+          content={`Find the best properties for sale in ${locationName}. Search apartments, houses, and new developments.`}
         />
       </Helmet>
 
       <ListingNavbar />
-      
+
       {/* Breadcrumbs Bar */}
       <div className="bg-white border-b border-slate-200">
         <div className="container mx-auto px-4 py-3">
-            {(() => {
-                const [location] = useLocation();
-                const isRent = location.startsWith('/property-to-rent');
-                const rootLabel = isRent ? 'For Rent' : 'For Sale';
-                const rootPath = isRent ? '/property-to-rent' : '/property-for-sale';
-                
-                // Parse slugs from locationSlug prop (expected format: province/city/suburb or province/city or province)
-                const parts = locationSlug.split('/').filter(Boolean);
-                const items = [
-                    { label: 'Home', href: '/' },
-                    { label: rootLabel, href: rootPath }
-                ];
-                
-                let currentPath = rootPath;
-                parts.forEach((part, index) => {
-                    currentPath += `/${part}`;
-                    // Last item is current page, so href '#' or actual path
-                    items.push({
-                        label: unslugify(part),
-                        href: currentPath
-                    });
-                });
+          {(() => {
+            const [location] = useLocation();
+            const isRent = location.startsWith('/property-to-rent');
+            const rootLabel = isRent ? 'For Rent' : 'For Sale';
+            const rootPath = isRent ? '/property-to-rent' : '/property-for-sale';
 
-                return <Breadcrumbs items={items} />;
-            })()}
+            // Parse slugs from locationSlug prop (expected format: province/city/suburb or province/city or province)
+            const parts = locationSlug.split('/').filter(Boolean);
+            const items = [
+              { label: 'Home', href: '/' },
+              { label: rootLabel, href: rootPath },
+            ];
+
+            let currentPath = rootPath;
+            parts.forEach((part, index) => {
+              currentPath += `/${part}`;
+              // Last item is current page, so href '#' or actual path
+              items.push({
+                label: unslugify(part),
+                href: currentPath,
+              });
+            });
+
+            return <Breadcrumbs items={items} />;
+          })()}
         </div>
       </div>
 
       {/* 2️⃣ Monetized Location Banner (Taller, Full Width) */}
-      <section className="relative w-full z-10">
-        {banner}
-      </section>
+      <section className="relative w-full z-10">{banner}</section>
 
       {/* 3️⃣ Search Stage (Overlapping) */}
       <section className="relative z-20 -mt-20 md:-mt-24 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pointer-events-none">
-         {/* Inner container restores pointer events for the search card */}
-        <div className="pointer-events-auto">
-          {searchStage}
-        </div>
+        {/* Inner container restores pointer events for the search card */}
+        <div className="pointer-events-auto">{searchStage}</div>
       </section>
 
-        {/* 4️⃣ Recent Searches (Optional - to be inserted here if needed) */}
-      
+      {/* 4️⃣ Recent Searches (Optional - to be inserted here if needed) */}
+
       {/* Main Content Flow */}
       <main className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-16">
-        
         {/* 5️⃣ Featured Top Projects */}
         {featuredProperties && (
           <section id="featured-projects" className="scroll-mt-24">
@@ -138,11 +132,7 @@ export const LocationPageLayout: React.FC<LocationPageLayoutProps> = ({
         )}
 
         {/* 6.5️⃣ Trending Suburbs (Full Width Carousel) */}
-        {fullWidthSection && (
-          <section className="w-full scroll-mt-24">
-            {fullWidthSection}
-          </section>
-        )}
+        {fullWidthSection && <section className="w-full scroll-mt-24">{fullWidthSection}</section>}
 
         {/* 7️⃣ High Demand Developments (Projects) */}
         {highDemandDevelopments && (
@@ -153,9 +143,9 @@ export const LocationPageLayout: React.FC<LocationPageLayoutProps> = ({
 
         {/* 7️⃣ Top Localities - Market Intelligence */}
         {topLocalitiesShowcase && (
-            <section id="top-localities" className="scroll-mt-24">
-                {topLocalitiesShowcase}
-            </section>
+          <section id="top-localities" className="scroll-mt-24">
+            {topLocalitiesShowcase}
+          </section>
         )}
 
         {/* 8️⃣ Popular Locations (moved up) */}
@@ -168,14 +158,14 @@ export const LocationPageLayout: React.FC<LocationPageLayoutProps> = ({
         {/* 9️⃣ Recommended Agents */}
         {recommendedAgents && (
           <section id="agents" className="scroll-mt-24">
-             {recommendedAgents}
+            {recommendedAgents}
           </section>
         )}
 
         {/* 9️⃣b Recommended Agencies */}
         {agencyShowcase && (
           <section id="agencies" className="scroll-mt-24">
-             {agencyShowcase}
+            {agencyShowcase}
           </section>
         )}
 
@@ -193,45 +183,28 @@ export const LocationPageLayout: React.FC<LocationPageLayoutProps> = ({
           </section>
         )}
 
-         {/* 1️⃣2️⃣ Buyer CTA */}
-         {buyerCTA && (
-          <section className="my-16">
-            {buyerCTA}
-          </section>
-        )}
+        {/* 1️⃣2️⃣ Buyer CTA */}
+        {buyerCTA && <section className="my-16">{buyerCTA}</section>}
 
         {/* 1️⃣2️⃣ Listings Feed & Market Stats */}
         {listingsFeed && (
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-            <div className="lg:col-span-8 space-y-8">
-              {listingsFeed}
-            </div>
+            <div className="lg:col-span-8 space-y-8">{listingsFeed}</div>
             <aside className="lg:col-span-4 space-y-8 hidden lg:block">
-               {/* Sidebar content (Market stats, Ad units) can go here */}
-               {seoContent}
+              {/* Sidebar content (Market stats, Ad units) can go here */}
+              {seoContent}
             </aside>
           </div>
         )}
-        
+
         {/* Mobile SEO Content (if needed below feed) */}
-        <div className="lg:hidden">
-             {seoContent}
-        </div>
+        <div className="lg:hidden">{seoContent}</div>
 
         {/* 1️⃣3️⃣ Explore More Section */}
-        {exploreMore && (
-          <section className="my-16">
-            {exploreMore}
-          </section>
-        )}
+        {exploreMore && <section className="my-16">{exploreMore}</section>}
 
         {/* 1️⃣4️⃣ Seller CTA */}
-        {sellerCTA && (
-          <section className="mt-20 mb-12">
-            {sellerCTA}
-          </section>
-        )}
-
+        {sellerCTA && <section className="mt-20 mb-12">{sellerCTA}</section>}
       </main>
       <Footer />
     </div>

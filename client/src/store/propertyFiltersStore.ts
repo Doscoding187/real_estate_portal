@@ -12,7 +12,7 @@ interface PropertyFiltersState {
   sortOption: SortOption;
   viewMode: ViewMode;
   page: number;
-  
+
   // Actions
   setFilters: (filters: Partial<PropertyFilters>) => void;
   updateFilter: <K extends keyof PropertyFilters>(key: K, value: PropertyFilters[K]) => void;
@@ -20,11 +20,11 @@ interface PropertyFiltersState {
   setSortOption: (sort: SortOption) => void;
   setViewMode: (mode: ViewMode) => void;
   setPage: (page: number) => void;
-  
+
   // URL synchronization
   syncFromUrl: (searchParams: URLSearchParams) => void;
   syncToUrl: () => URLSearchParams;
-  
+
   // Utility
   getActiveFilterCount: () => number;
 }
@@ -49,7 +49,7 @@ const defaultViewMode: ViewMode = 'list';
  */
 const parseFiltersFromUrl = (searchParams: URLSearchParams): PropertyFilters => {
   const filters: PropertyFilters = {};
-  
+
   // Location filters
   if (searchParams.has('province')) filters.province = searchParams.get('province')!;
   if (searchParams.has('city')) filters.city = searchParams.get('city')!;
@@ -57,7 +57,7 @@ const parseFiltersFromUrl = (searchParams: URLSearchParams): PropertyFilters => 
     const suburbs = searchParams.get('suburb')!;
     filters.suburb = suburbs.split(',').filter(Boolean);
   }
-  
+
   // Basic filters
   if (searchParams.has('propertyType')) {
     const types = searchParams.get('propertyType')!;
@@ -81,7 +81,7 @@ const parseFiltersFromUrl = (searchParams: URLSearchParams): PropertyFilters => 
   if (searchParams.has('minBathrooms')) {
     filters.minBathrooms = Number(searchParams.get('minBathrooms'));
   }
-  
+
   // Size filters
   if (searchParams.has('minErfSize')) {
     filters.minErfSize = Number(searchParams.get('minErfSize'));
@@ -95,7 +95,7 @@ const parseFiltersFromUrl = (searchParams: URLSearchParams): PropertyFilters => 
   if (searchParams.has('maxFloorSize')) {
     filters.maxFloorSize = Number(searchParams.get('maxFloorSize'));
   }
-  
+
   // SA-specific filters
   if (searchParams.has('titleType')) {
     const types = searchParams.get('titleType')!;
@@ -117,20 +117,20 @@ const parseFiltersFromUrl = (searchParams: URLSearchParams): PropertyFilters => 
     const solutions = searchParams.get('loadSheddingSolutions')!;
     filters.loadSheddingSolutions = solutions.split(',') as any[];
   }
-  
+
   // Status filters
   if (searchParams.has('status')) {
     const statuses = searchParams.get('status')!;
     filters.status = statuses.split(',') as any[];
   }
-  
+
   // Map bounds
   if (searchParams.has('bounds')) {
     const boundsStr = searchParams.get('bounds')!;
     const [north, south, east, west] = boundsStr.split(',').map(Number);
     filters.bounds = { north, south, east, west };
   }
-  
+
   return filters;
 };
 
@@ -139,14 +139,14 @@ const parseFiltersFromUrl = (searchParams: URLSearchParams): PropertyFilters => 
  */
 const serializeFiltersToUrl = (filters: PropertyFilters): URLSearchParams => {
   const params = new URLSearchParams();
-  
+
   // Location filters
   if (filters.province) params.set('province', filters.province);
   if (filters.city) params.set('city', filters.city);
   if (filters.suburb && filters.suburb.length > 0) {
     params.set('suburb', filters.suburb.join(','));
   }
-  
+
   // Basic filters
   if (filters.propertyType && filters.propertyType.length > 0) {
     params.set('propertyType', filters.propertyType.join(','));
@@ -157,13 +157,13 @@ const serializeFiltersToUrl = (filters: PropertyFilters): URLSearchParams => {
   if (filters.minBedrooms !== undefined) params.set('minBedrooms', String(filters.minBedrooms));
   if (filters.maxBedrooms !== undefined) params.set('maxBedrooms', String(filters.maxBedrooms));
   if (filters.minBathrooms !== undefined) params.set('minBathrooms', String(filters.minBathrooms));
-  
+
   // Size filters
   if (filters.minErfSize !== undefined) params.set('minErfSize', String(filters.minErfSize));
   if (filters.maxErfSize !== undefined) params.set('maxErfSize', String(filters.maxErfSize));
   if (filters.minFloorSize !== undefined) params.set('minFloorSize', String(filters.minFloorSize));
   if (filters.maxFloorSize !== undefined) params.set('maxFloorSize', String(filters.maxFloorSize));
-  
+
   // SA-specific filters
   if (filters.titleType && filters.titleType.length > 0) {
     params.set('titleType', filters.titleType.join(','));
@@ -181,31 +181,31 @@ const serializeFiltersToUrl = (filters: PropertyFilters): URLSearchParams => {
   if (filters.loadSheddingSolutions && filters.loadSheddingSolutions.length > 0) {
     params.set('loadSheddingSolutions', filters.loadSheddingSolutions.join(','));
   }
-  
+
   // Status filters
   if (filters.status && filters.status.length > 0) {
     params.set('status', filters.status.join(','));
   }
-  
+
   // Map bounds
   if (filters.bounds) {
     const { north, south, east, west } = filters.bounds;
     params.set('bounds', `${north},${south},${east},${west}`);
   }
-  
+
   return params;
 };
 
 /**
  * Zustand store for property search filters
- * 
+ *
  * Features:
  * - Manages all property filter state
  * - Persists to localStorage
  * - Synchronizes with URL parameters
  * - Supports sort options and view modes
  * - Provides utility functions for filter management
- * 
+ *
  * Requirements: 2.1, 2.2, 2.3, 2.4, 2.5
  */
 export const usePropertyFiltersStore = create<PropertyFiltersState>()(
@@ -216,50 +216,48 @@ export const usePropertyFiltersStore = create<PropertyFiltersState>()(
       sortOption: defaultSortOption,
       viewMode: defaultViewMode,
       page: 1,
-      
+
       // Set multiple filters at once
-      setFilters: (newFilters) =>
-        set((state) => ({
+      setFilters: newFilters =>
+        set(state => ({
           filters: { ...state.filters, ...newFilters },
           page: 1, // Reset to first page when filters change
         })),
-      
+
       // Update a single filter
       updateFilter: (key, value) =>
-        set((state) => ({
+        set(state => ({
           filters: { ...state.filters, [key]: value },
           page: 1, // Reset to first page when filters change
         })),
-      
+
       // Reset all filters to default
       resetFilters: () =>
         set({
           filters: defaultFilters,
           page: 1,
         }),
-      
+
       // Set sort option
-      setSortOption: (sort) =>
+      setSortOption: sort =>
         set({
           sortOption: sort,
           page: 1, // Reset to first page when sort changes
         }),
-      
+
       // Set view mode
-      setViewMode: (mode) =>
-        set({ viewMode: mode }),
-      
+      setViewMode: mode => set({ viewMode: mode }),
+
       // Set current page
-      setPage: (page) =>
-        set({ page }),
-      
+      setPage: page => set({ page }),
+
       // Sync filters from URL parameters
-      syncFromUrl: (searchParams) => {
+      syncFromUrl: searchParams => {
         const filters = parseFiltersFromUrl(searchParams);
         const sort = searchParams.get('sort') as SortOption | null;
         const view = searchParams.get('view') as ViewMode | null;
         const page = searchParams.get('page');
-        
+
         set({
           filters,
           sortOption: sort || defaultSortOption,
@@ -267,12 +265,12 @@ export const usePropertyFiltersStore = create<PropertyFiltersState>()(
           page: page ? Number(page) : 1,
         });
       },
-      
+
       // Sync filters to URL parameters
       syncToUrl: () => {
         const state = get();
         const params = serializeFiltersToUrl(state.filters);
-        
+
         // Add sort, view, and page to URL
         if (state.sortOption !== defaultSortOption) {
           params.set('sort', state.sortOption);
@@ -283,20 +281,20 @@ export const usePropertyFiltersStore = create<PropertyFiltersState>()(
         if (state.page > 1) {
           params.set('page', String(state.page));
         }
-        
+
         return params;
       },
-      
+
       // Get count of active filters
       getActiveFilterCount: () => {
         const { filters } = get();
         let count = 0;
-        
+
         // Count location filters
         if (filters.province) count++;
         if (filters.city) count++;
         if (filters.suburb && filters.suburb.length > 0) count++;
-        
+
         // Count basic filters
         if (filters.propertyType && filters.propertyType.length > 0) count++;
         if (filters.listingType) count++;
@@ -305,13 +303,13 @@ export const usePropertyFiltersStore = create<PropertyFiltersState>()(
         if (filters.minBedrooms !== undefined) count++;
         if (filters.maxBedrooms !== undefined) count++;
         if (filters.minBathrooms !== undefined) count++;
-        
+
         // Count size filters
         if (filters.minErfSize !== undefined) count++;
         if (filters.maxErfSize !== undefined) count++;
         if (filters.minFloorSize !== undefined) count++;
         if (filters.maxFloorSize !== undefined) count++;
-        
+
         // Count SA-specific filters
         if (filters.titleType && filters.titleType.length > 0) count++;
         if (filters.maxLevy !== undefined) count++;
@@ -319,25 +317,25 @@ export const usePropertyFiltersStore = create<PropertyFiltersState>()(
         if (filters.petFriendly) count++;
         if (filters.fibreReady) count++;
         if (filters.loadSheddingSolutions && filters.loadSheddingSolutions.length > 0) count++;
-        
+
         // Count status filters
         if (filters.status && filters.status.length > 0) count++;
-        
+
         // Count map bounds
         if (filters.bounds) count++;
-        
+
         return count;
       },
     }),
     {
       name: 'property-filters', // localStorage key
-      partialize: (state) => ({
+      partialize: state => ({
         // Only persist filters, sortOption, and viewMode
         // Don't persist page number
         filters: state.filters,
         sortOption: state.sortOption,
         viewMode: state.viewMode,
       }),
-    }
-  )
+    },
+  ),
 );
