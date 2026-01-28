@@ -7,6 +7,8 @@
 import { z } from 'zod';
 import { router, publicProcedure, protectedProcedure } from './_core/trpc';
 import { TRPCError } from '@trpc/server';
+import { eq } from 'drizzle-orm';
+import { locations } from '../drizzle/schema';
 import * as db from './db';
 import { ENV } from './_core/env';
 import {
@@ -15,6 +17,51 @@ import {
 } from './services/locationAutoPopulation';
 import { calculateListingReadiness } from './lib/readiness';
 import { calculateListingQualityScore } from './lib/quality';
+
+// Helper to normalize placeId vs locationId logic
+async function normalizeLocationInput(inputLocation: { placeId?: string; locationId?: number }) {
+  let sanitizedPlaceId: string | null = inputLocation.placeId ?? null;
+  let resolvedLocationId: number | null = inputLocation.locationId ?? null;
+
+  if (sanitizedPlaceId && /^\d+$/.test(sanitizedPlaceId)) {
+    // Numeric placeId = locations.id, move to location_id
+    resolvedLocationId = Number(sanitizedPlaceId);
+    sanitizedPlaceId = null;
+  }
+
+  // If we got a numeric location id, validate it exists
+  if (resolvedLocationId != null) {
+    const dbInstance = await db.getDb();
+    const exists = await dbInstance
+      .select({ id: locations.id })
+      .from(locations)
+      .where(eq(locations.id, resolvedLocationId))
+      .limit(1);
+
+    if (exists.length === 0) {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: `Invalid location_id: ${resolvedLocationId}. Location does not exist.`,
+      });
+    }
+  }
+
+  // If we have a real Google placeId, resolve to a location_id if possible
+  if (sanitizedPlaceId && resolvedLocationId === null) {
+    const dbInstance = await db.getDb();
+    const found = await dbInstance
+      .select({ id: locations.id })
+      .from(locations)
+      .where(eq(locations.placeId, sanitizedPlaceId))
+      .limit(1);
+
+    if (found.length > 0) {
+      resolvedLocationId = found[0].id; // Resolve to internal ID
+    }
+  }
+
+  return { sanitizedPlaceId, resolvedLocationId };
+}
 
 // Validation schemas
 const listingActionSchema = z.enum(['sell', 'rent', 'auction']);
@@ -59,6 +106,7 @@ const createListingSchema = z.object({
     province: z.string(),
     postalCode: z.string().optional(),
     placeId: z.string().optional(),
+    locationId: z.number().optional(), // Added for internal Location ID support
     // Google Places address components for auto-population
     addressComponents: z
       .array(
@@ -174,6 +222,9 @@ export const listingRouter = router({
         }
       }
 
+      // GUARD: Normalize placeId and validate location_id
+      const { sanitizedPlaceId, resolvedLocationId } = await normalizeLocationInput(input.location);
+
       // Create listing in database with auto-populated location IDs
       const listingId = await db.createListing({
         userId,
@@ -190,8 +241,8 @@ export const listingRouter = router({
         suburb: input.location.suburb,
         province: input.location.province,
         postalCode: input.location.postalCode,
-        placeId: input.location.placeId,
-        // locationId removed - column doesn't exist in database
+        placeId: sanitizedPlaceId,
+        locationId: resolvedLocationId, // New: Direct location_id if from numeric placeId
         provinceId, // New: Auto-populated province ID
         cityId, // New: Auto-populated city ID
         suburbId, // New: Auto-populated suburb ID
@@ -259,11 +310,24 @@ export const listingRouter = router({
           });
         }
 
-        // Update listing
-        await db.updateListing(input.id, {
+        // GUARD: Normalize placeId and validate location_id (if location is being updated)
+        const updatePayload: any = {
           ...input,
           updatedAt: new Date(),
-        });
+        };
+
+        if (input.location) {
+          const { sanitizedPlaceId, resolvedLocationId } = await normalizeLocationInput(
+            input.location,
+          );
+          updatePayload.placeId = sanitizedPlaceId;
+          updatePayload.locationId = resolvedLocationId;
+          // Remove nested location object strictly to avoid Drizzle schema errors
+          delete updatePayload.location;
+        }
+
+        // Update listing
+        await db.updateListing(input.id, updatePayload);
 
         // Recalculate readiness and quality
         // Fetch full listing with media to ensure accuracy (or construct from input + existing)

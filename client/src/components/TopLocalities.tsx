@@ -529,10 +529,9 @@ export function TopLocalities({
                 onClick={() => setSelectedCity(city)}
                 className={`
                   px-5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-300
-                  ${
-                    selectedCity === city
-                      ? 'bg-gradient-to-r from-[#2774AE] to-[#2D68C4] text-white shadow-lg scale-105'
-                      : 'text-slate-600 hover:text-[#2774AE] hover:bg-blue-50/50'
+                  ${selectedCity === city
+                    ? 'bg-gradient-to-r from-[#2774AE] to-[#2D68C4] text-white shadow-lg scale-105'
+                    : 'text-slate-600 hover:text-[#2774AE] hover:bg-blue-50/50'
                   }
                 `}
               >
@@ -556,28 +555,28 @@ export function TopLocalities({
                 return (
                   <div
                     key={idx}
-                    className="flex-[0_0_100%] min-w-0 sm:flex-[0_0_50%] lg:flex-[0_0_33.333%]"
+                    className="flex-[0_0_100%] min-w-0 sm:flex-[0_0_50%] lg:flex-[0_0_25%]"
                   >
                     <Card className="hover:shadow-xl transition-all duration-300 border-0 bg-white/50 backdrop-blur-sm group h-full">
-                      <CardContent className="p-6">
+                      <CardContent className="p-4">
                         {/* Header with map and locality name */}
                         <Link href={localityUrl}>
-                          <div className="flex items-start gap-4 mb-6 cursor-pointer">
-                            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-teal-500 to-emerald-500 flex items-center justify-center flex-shrink-0 shadow-lg shadow-teal-500/20 group-hover:scale-110 transition-transform duration-300">
-                              <MapPin className="h-8 w-8 text-white" />
+                          <div className="flex items-center gap-3 mb-4 cursor-pointer">
+                            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-teal-500 to-emerald-500 flex items-center justify-center flex-shrink-0 shadow-lg shadow-teal-500/20 group-hover:scale-110 transition-transform duration-300">
+                              <MapPin className="h-6 w-6 text-white" />
                             </div>
-                            <div className="flex-1">
-                              <h3 className="font-bold text-xl mb-2 text-gray-900 group-hover:text-blue-600 transition-colors">
+                            <div className="flex-1 min-w-0">
+                              <h3 className="font-bold text-lg mb-1 text-gray-900 group-hover:text-blue-600 transition-colors truncate">
                                 {locality.name}
                               </h3>
-                              <div className="flex items-center gap-2 text-sm">
-                                <div className="flex items-center gap-1 bg-yellow-50 px-2 py-0.5 rounded-md border border-yellow-100">
-                                  <Star className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400" />
+                              <div className="flex items-center gap-2 text-xs">
+                                <div className="flex items-center gap-1 bg-yellow-50 px-1.5 py-0.5 rounded-md border border-yellow-100">
+                                  <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
                                   <span className="font-bold text-yellow-700">
                                     {locality.rating}
                                   </span>
                                 </div>
-                                <span className="text-muted-foreground text-xs">
+                                <span className="text-muted-foreground text-[10px]">
                                   ({locality.reviews} Reviews)
                                 </span>
                               </div>
@@ -586,55 +585,55 @@ export function TopLocalities({
                         </Link>
 
                         {/* Pricing Info */}
-                        <div className="grid grid-cols-2 gap-4 mb-6 p-4 bg-gray-50/80 rounded-xl border border-gray-100">
+                        <div className="grid grid-cols-2 gap-3 mb-4 p-3 bg-gray-50/80 rounded-lg border border-gray-100">
                           <div>
-                            <p className="text-xs text-muted-foreground mb-1 font-medium uppercase tracking-wide">
+                            <p className="text-[10px] text-muted-foreground mb-0.5 font-medium uppercase tracking-wide truncate">
                               Avg. Sale Price
                             </p>
-                            <p className="font-bold text-gray-900">
+                            <p className="font-bold text-sm text-gray-900 truncate">
                               R {locality.avgSalePrice.toLocaleString()}
-                              <span className="text-xs text-muted-foreground font-normal">/m²</span>
+                              <span className="text-[10px] text-muted-foreground font-normal">/m²</span>
                             </p>
                           </div>
                           <div>
-                            <p className="text-xs text-muted-foreground mb-1 font-medium uppercase tracking-wide">
+                            <p className="text-[10px] text-muted-foreground mb-0.5 font-medium uppercase tracking-wide truncate">
                               Avg. Rental
                             </p>
-                            <p className="font-bold text-gray-900">
+                            <p className="font-bold text-sm text-gray-900 truncate">
                               R {locality.avgRental}
-                              <span className="text-xs text-muted-foreground font-normal">/m²</span>
+                              <span className="text-[10px] text-muted-foreground font-normal">/m²</span>
                             </p>
                           </div>
                         </div>
 
                         {/* Property Links */}
-                        <div className="space-y-3">
+                        <div className="space-y-2">
                           <Link
                             href={`${localityUrl}?listingType=sale`}
-                            className="flex items-center justify-between p-3 rounded-xl bg-white border border-gray-100 hover:border-blue-200 hover:shadow-md transition-all group/link"
+                            className="flex items-center justify-between p-2 rounded-lg bg-white border border-gray-100 hover:border-blue-200 hover:shadow-sm transition-all group/link"
                           >
-                            <div>
-                              <p className="font-semibold text-sm text-gray-900 group-hover/link:text-blue-600 transition-colors">
+                            <div className="min-w-0">
+                              <p className="font-semibold text-xs text-gray-900 group-hover/link:text-blue-600 transition-colors truncate">
                                 {locality.propertiesForSale.toLocaleString()} Properties for Sale
                               </p>
-                              <p className="text-xs text-muted-foreground">in {locality.name}</p>
+                              <p className="text-[10px] text-muted-foreground truncate">in {locality.name}</p>
                             </div>
-                            <div className="h-8 w-8 rounded-full bg-gray-50 flex items-center justify-center group-hover/link:bg-blue-50 transition-colors">
-                              <ArrowRight className="h-4 w-4 text-gray-400 group-hover/link:text-blue-600 group-hover/link:translate-x-0.5 transition-all" />
+                            <div className="h-6 w-6 rounded-full bg-gray-50 flex items-center justify-center group-hover/link:bg-blue-50 transition-colors flex-shrink-0">
+                              <ArrowRight className="h-3 w-3 text-gray-400 group-hover/link:text-blue-600 group-hover/link:translate-x-0.5 transition-all" />
                             </div>
                           </Link>
                           <Link
                             href={`${localityUrl}?listingType=rent`}
-                            className="flex items-center justify-between p-3 rounded-xl bg-white border border-gray-100 hover:border-blue-200 hover:shadow-md transition-all group/link"
+                            className="flex items-center justify-between p-2 rounded-lg bg-white border border-gray-100 hover:border-blue-200 hover:shadow-sm transition-all group/link"
                           >
-                            <div>
-                              <p className="font-semibold text-sm text-gray-900 group-hover/link:text-blue-600 transition-colors">
+                            <div className="min-w-0">
+                              <p className="font-semibold text-xs text-gray-900 group-hover/link:text-blue-600 transition-colors truncate">
                                 {locality.propertiesForRent.toLocaleString()} Properties for Rent
                               </p>
-                              <p className="text-xs text-muted-foreground">in {locality.name}</p>
+                              <p className="text-[10px] text-muted-foreground truncate">in {locality.name}</p>
                             </div>
-                            <div className="h-8 w-8 rounded-full bg-gray-50 flex items-center justify-center group-hover/link:bg-blue-50 transition-colors">
-                              <ArrowRight className="h-4 w-4 text-gray-400 group-hover/link:text-blue-600 group-hover/link:translate-x-0.5 transition-all" />
+                            <div className="h-6 w-6 rounded-full bg-gray-50 flex items-center justify-center group-hover/link:bg-blue-50 transition-colors flex-shrink-0">
+                              <ArrowRight className="h-3 w-3 text-gray-400 group-hover/link:text-blue-600 group-hover/link:translate-x-0.5 transition-all" />
                             </div>
                           </Link>
                         </div>
@@ -669,10 +668,10 @@ export function TopLocalities({
         <div className="mt-8 text-center md:text-left">
           <Link
             href={`/${getProvinceSlug(selectedCity)}/${getCitySlug(selectedCity)}`}
-            className="inline-flex items-center gap-2 text-blue-600 font-semibold hover:text-blue-700 hover:underline transition-colors"
+            className="inline-flex items-center justify-center whitespace-nowrap text-sm font-medium outline-none text-white rounded-md gap-2 h-12 px-8 bg-gradient-to-r from-[#2774AE] to-[#2D68C4] hover:from-[#2D68C4] hover:to-[#2774AE] shadow-lg hover:shadow-xl transition-all duration-300 group"
           >
-            View all localities in {selectedCity}
-            <ArrowRight className="h-4 w-4" />
+            Explore All in {selectedCity}
+            <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
           </Link>
         </div>
       </div>

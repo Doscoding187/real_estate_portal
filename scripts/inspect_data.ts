@@ -1,32 +1,28 @@
+import { config } from 'dotenv';
+config();
+import { getDb } from '../server/db';
+import { sql } from 'drizzle-orm';
 
-import 'dotenv/config';
-import { getDb } from '../server/db-connection';
-import { developments, unitTypes } from '../drizzle/schema';
-import { eq } from 'drizzle-orm';
+async function main() {
+  try {
+    const db = await getDb();
+    console.log('--- Listings PlaceIDs ---');
+    const result1 = await db.execute(
+      sql`SELECT id, placeId, city, suburb FROM listings WHERE placeId IS NOT NULL`,
+    );
+    // @ts-ignore
+    console.table(result1[0]);
 
-async function checkData() {
-  const db = await getDb();
-  if (!db) {
-    console.error('No DB connection');
-    return;
+    console.log('\n--- Locations Sample ---');
+    const result2 = await db.execute(sql`SELECT id, place_id, name, type FROM locations LIMIT 10`);
+    // @ts-ignore
+    console.table(result2[0]);
+
+    process.exit(0);
+  } catch (error) {
+    console.error('Error:', error);
+    process.exit(1);
   }
-
-  // Check the development (assuming ID 300001 based on logs or standard dev ID)
-  // or list all enabled developments
-  const devList = await db.select().from(developments).limit(5);
-  
-  console.log('--- Developments ---');
-  devList.forEach(d => {
-    console.log(`ID: ${d.id}, Name: ${d.name}, Images Length: ${d.images ? d.images.length : 0}`);
-    console.log('Images Raw:', d.images);
-  });
-
-  const units = await db.select().from(unitTypes);
-  console.log('\n--- Unit Types ---');
-  console.log(`Total Units Found: ${units.length}`);
-  units.forEach(u => {
-    console.log(`ID: ${u.id}, DevID: ${u.developmentId}, Name: ${u.name}`);
-  });
 }
 
-checkData().then(() => process.exit(0)).catch(console.error);
+main();

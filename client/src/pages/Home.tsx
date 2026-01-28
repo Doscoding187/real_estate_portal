@@ -209,7 +209,7 @@ export default function Home() {
       <PropertyCategories />
 
       {/* Property Price Insights Section */}
-      <PropertyInsights />
+      <PropertyInsights level="national" allowInPlaceDrilldown />
 
       {/* Discover More Properties Section */}
       <DiscoverProperties />

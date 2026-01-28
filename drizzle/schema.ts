@@ -1842,7 +1842,7 @@ export const listings = mysqlTable('listings', {
   province: varchar({ length: 100 }).notNull(),
   postalCode: varchar({ length: 20 }),
   placeId: varchar({ length: 255 }),
-  // locationId removed - column doesn't exist in database
+  locationId: int('location_id'), // Added to schema to match existing DB column
   mainMediaId: int(),
   mainMediaType: mysqlEnum(['image', 'video']),
   status: mysqlEnum([

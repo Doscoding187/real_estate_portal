@@ -227,19 +227,9 @@ export function ExploreCities({
               <div className="group cursor-pointer">
                 <div className="flex items-start gap-4 p-3 rounded-xl hover:bg-slate-50 transition-colors border border-transparent hover:border-slate-100">
                   {/* Image */}
-                  <div className="w-20 h-20 rounded-lg overflow-hidden flex-shrink-0 shadow-sm relative bg-slate-100">
-                    {city.image ? (
-                      <img
-                        src={city.image}
-                        alt={city.name}
-                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-slate-300">
-                        <Building className="h-8 w-8" />
-                      </div>
-                    )}
-                    <div className="absolute inset-0 bg-black/10 group-hover:bg-transparent transition-colors" />
+                  {/* Icon Only */}
+                  <div className="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0 relative bg-blue-50 flex items-center justify-center text-blue-500 shadow-sm border border-blue-100">
+                    <Building className="h-8 w-8 opacity-90" />
                   </div>
 
                   {/* Content */}

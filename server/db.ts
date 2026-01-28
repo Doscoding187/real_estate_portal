@@ -1881,7 +1881,7 @@ export async function createListing(listingData: any) {
       if (listingData.suburb) insertValues.suburb = listingData.suburb;
       if (listingData.postalCode) insertValues.postalCode = listingData.postalCode;
       if (listingData.placeId) insertValues.placeId = listingData.placeId;
-      // Note: locationId removed - column doesn't exist in database
+      if (listingData.locationId) insertValues.locationId = listingData.locationId;
 
       // Explicit nulls for strictness if needed, but omitting them is cleaner for Drizzle
       // insertValues.mainMediaId = null;
