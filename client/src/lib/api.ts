@@ -3,7 +3,9 @@
  * Uses relative path to leverage Vite proxy
  */
 export const getApiUrl = (endpoint: string) => {
-  return `/api/${endpoint.replace(/^\//, '')}`;
+  const baseUrl = import.meta.env.VITE_API_BASE_URL || '';
+  const cleanEndpoint = endpoint.replace(/^\//, '');
+  return baseUrl ? `${baseUrl}/${cleanEndpoint}` : `/api/${cleanEndpoint}`;
 };
 
 /**
