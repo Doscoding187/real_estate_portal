@@ -56,21 +56,39 @@ export function getSessionCookieOptions(
   const isProduction = process.env.NODE_ENV === 'production';
   const isSecure = isSecureRequest(req);
 
-  // For cross-domain scenarios (Vercel frontend + Railway backend), we need sameSite: 'none' and secure: true
-  // This is required when frontend is served over HTTPS (like Vercel) and communicates with backend
-  const isCrossDomain =
-    req.headers.origin?.includes('.vercel.app') ||
-    req.headers.origin?.includes('.railway.app') ||
-    (req.headers.origin?.startsWith('https://') && !req.headers.origin?.includes(hostname));
+  // Determine if origin shares the same root domain (e.g. www.prop.co.za vs api.prop.co.za)
+  const origin = req.headers.origin;
+  const rootDomain = getRootDomain(hostname);
+  const isSameRoot = origin && origin.includes(rootDomain);
 
-  return {
+  // Cross-domain is ONLY when totally different domains (e.g. vercel.app -> custom domain)
+  // If sharing subdomains, we can use 'Lax' which is more reliable than 'None'
+  const isExternalCrossDomain =
+    origin?.includes('.vercel.app') ||
+    origin?.includes('.railway.app') ||
+    (origin?.startsWith('https://') && !isSameRoot);
+
+  const options: Pick<CookieOptions, 'domain' | 'httpOnly' | 'path' | 'sameSite' | 'secure'> = {
     domain,
     httpOnly: true,
     path: '/',
-    // For cross-domain (Vercel frontend + Railway backend), use 'none'
-    // For same-domain or local dev, use 'lax'
-    sameSite: (isProduction && isSecure) || isCrossDomain ? 'none' : 'lax',
-    // Secure cookies required for sameSite: 'none'
-    secure: (isProduction && isSecure) || isCrossDomain,
+    // Use 'none' only for truly external cross-domain (e.g. Vercel preview URLs)
+    // Use 'lax' for production subdomains (same eTLD+1)
+    sameSite: isProduction && isSecure && isExternalCrossDomain ? 'none' : 'lax',
+    secure: (isProduction && isSecure) || isExternalCrossDomain,
   };
+
+  // Debug log for production auth issues
+  if (req.path.includes('/auth') && req.method === 'POST') {
+    console.log('[Cookies] Setting session cookie:', {
+      hostname,
+      rootDomain,
+      origin,
+      isSameRoot,
+      isExternalCrossDomain,
+      options,
+    });
+  }
+
+  return options;
 }
