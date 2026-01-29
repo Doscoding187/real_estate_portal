@@ -1,55 +1,28 @@
 /**
  * Get the API URL for a given endpoint
- * Uses relative path to leverage Vite proxy
+ *
+ * Pattern: VITE_API_URL should be the HOST only (e.g., https://api.propertylistifysa.co.za)
+ * This function ALWAYS adds /api prefix to ensure consistent routing.
  */
-export const getApiUrl = (endpoint: string) => {
-  // Get base URL from env
-  let baseUrl = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || '';
+export const getApiUrl = (endpoint: string): string => {
+  // Get base URL from env - should be HOST only, no /api at end
+  const baseUrl = (import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || '').replace(
+    /\/+$/,
+    '',
+  ); // Remove trailing slashes
 
-  // Remove ALL trailing slashes from base if present (robust normalization)
-  baseUrl = baseUrl.replace(/\/+$/, '');
+  // Normalize endpoint: ensure it starts with /
+  const normalizedPath = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
 
-  // Clean endpoint: remove leading slash
-  const cleanEndpoint = endpoint.replace(/^\//, '');
+  // If endpoint already has /api, don't double it
+  const apiPath =
+    normalizedPath.startsWith('/api/') || normalizedPath === '/api'
+      ? normalizedPath
+      : `/api${normalizedPath}`;
 
-  let finalUrl = '';
+  const finalUrl = baseUrl ? `${baseUrl}${apiPath}` : apiPath;
 
-  // If endpoint already starts with 'api/', don't double add it if base url also has it
-  // This is tricky because we don't know if base url includes /api or not
-  // Safest bet for our monolithic app:
-  // If base url is empty (relative), always prepend /api/
-  // If base url is provided, assume it is the HOST, so we append /api/ if endpoint doesn't have it
-
-  if (!baseUrl) {
-    // Relative path (standard for same-domain deployment)
-    finalUrl = cleanEndpoint.startsWith('api/') ? `/${cleanEndpoint}` : `/api/${cleanEndpoint}`;
-  } else {
-    // Absolute URL logic
-    // Check if baseUrl already ends with /api (some configs do this)
-    const baseEndsWithApi = baseUrl.endsWith('/api');
-    const endpointStartsWithApi = cleanEndpoint.startsWith('api/');
-
-    if (baseEndsWithApi) {
-      // base: https://api.com/api
-      // endpoint: auth/login OR api/auth/login
-      if (endpointStartsWithApi) {
-        // endpoint: api/auth/login -> auth/login to avoid /api/api
-        finalUrl = `${baseUrl}/${cleanEndpoint.replace(/^api\//, '')}`;
-      } else {
-        finalUrl = `${baseUrl}/${cleanEndpoint}`;
-      }
-    } else {
-      // base: https://api.com
-      // endpoint: auth/login OR api/auth/login
-      if (endpointStartsWithApi) {
-        finalUrl = `${baseUrl}/${cleanEndpoint}`;
-      } else {
-        finalUrl = `${baseUrl}/api/${cleanEndpoint}`;
-      }
-    }
-  }
-
-  // Always log in production to debug URL issues
+  // Always log to debug URL issues in production
   console.log(`[API] getApiUrl: baseUrl="${baseUrl}" endpoint="${endpoint}" -> "${finalUrl}"`);
 
   return finalUrl;
