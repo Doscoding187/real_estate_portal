@@ -48,11 +48,11 @@ export default defineConfig({
               return 'ui-vendor';
             }
 
-            // Maps
+            // Maps - only pure libraries, NOT React bindings
+            // react-leaflet must stay with react-vendor to avoid createContext errors
             if (
-              id.includes('leaflet') ||
-              id.includes('react-leaflet') ||
-              id.includes('google-maps')
+              (id.includes('leaflet') && !id.includes('react-leaflet')) ||
+              (id.includes('google-maps') && !id.includes('react'))
             ) {
               return 'maps-vendor';
             }
