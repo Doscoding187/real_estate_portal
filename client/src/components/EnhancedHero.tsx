@@ -486,62 +486,65 @@ export function EnhancedHero({
         <div className="text-center mb-6 max-w-4xl mx-auto">
           {title ? (
             // Location / Context Title
-            <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4 leading-tight">
+            <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold mb-3 leading-tight">
               {title}
             </h1>
           ) : (
             // Default Homepage Title
-            <h1 className="text-3xl md:text-5xl lg:text-6xl font-bold mb-6 leading-tight tracking-tight">
+            <h1 className="text-xl sm:text-2xl md:text-4xl lg:text-5xl font-bold mb-4 leading-tight tracking-tight">
               South Africa's{' '}
               <span className="bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent animate-gradient bg-[length:200%_auto]">
                 Fastest Growing
               </span>
-              <br />
+              <br className="hidden sm:block" />
+              <span className="sm:hidden"> </span>
               Real Estate Platform
             </h1>
           )}
 
-          <p className="text-base md:text-lg text-white/90 animate-fade-in max-w-2xl mx-auto">
+          <p className="text-sm sm:text-base md:text-lg text-white/90 animate-fade-in max-w-2xl mx-auto">
             {subtitle || (
               <>
                 From browsing properties to closing deals - your complete
-                <br />
+                <span className="hidden sm:inline"><br /></span>
+                <span className="sm:hidden"> </span>
                 real estate journey starts here
               </>
             )}
           </p>
         </div>
 
-        {/* Category Tabs (Always Visible) */}
-        <div className="flex justify-center mb-8">
-          <div className="inline-flex bg-white/10 backdrop-blur-md rounded-xl p-1.5 gap-1 flex-wrap shadow-lg border border-white/20">
-            {categories.map(category => {
-              const Icon = category.icon;
-              return (
-                <button
-                  key={category.id}
-                  onClick={() => handleCategoryClick(category.id)}
-                  className={`
-                    flex items-center gap-2 px-5 py-3 rounded-lg transition-all font-medium text-sm
-                    ${
-                      activeTab === category.id
+        {/* Category Tabs (Horizontal Scroll on Mobile) */}
+        <div className="flex justify-center mb-6 sm:mb-8">
+          <div className="w-full overflow-x-auto scrollbar-hide -mx-4 px-4 sm:mx-0 sm:px-0 sm:w-auto">
+            <div className="inline-flex bg-white/10 backdrop-blur-md rounded-xl p-1 gap-1 shadow-lg border border-white/20 min-w-max">
+              {categories.map(category => {
+                const Icon = category.icon;
+                return (
+                  <button
+                    key={category.id}
+                    onClick={() => handleCategoryClick(category.id)}
+                    className={`
+                      flex items-center gap-1.5 px-3 py-2 sm:px-4 sm:py-2.5 rounded-lg transition-all font-medium text-xs sm:text-sm whitespace-nowrap
+                      ${activeTab === category.id
                         ? 'bg-white text-blue-900 shadow-lg scale-105'
-                        : 'text-white hover:bg-white/15 hover:scale-102'
-                    }
-                  `}
-                >
-                  <Icon className="h-4 w-4" />
-                  {category.label}
-                </button>
-              );
-            })}
+                        : 'text-white hover:bg-white/15'
+                      }
+                    `}
+                  >
+                    <Icon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                    {category.label}
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
 
         {/* Search Card */}
         <div className="max-w-4xl mx-auto">
-          <Card className="shadow-2xl border-0 bg-white/95 backdrop-blur-sm rounded-2xl">
-            <CardContent className="p-4 md:p-6">
+          <Card className="shadow-2xl border-0 bg-white/95 backdrop-blur-sm rounded-xl sm:rounded-2xl">
+            <CardContent className="p-3 sm:p-4 md:p-6">
               {/* Main Search Row */}
               <div className="flex flex-col md:flex-row gap-4">
                 {/* Unified Search Input */}
@@ -606,7 +609,7 @@ export function EnhancedHero({
                 {/* Search Button */}
                 <Button
                   onClick={handleSearch}
-                  className="bg-blue-600 hover:bg-blue-700 text-white h-14 px-8 shadow-lg hover:shadow-xl transition-all font-semibold text-base min-w-[140px] rounded-xl"
+                  className="bg-blue-600 hover:bg-blue-700 text-white h-12 sm:h-14 px-6 sm:px-8 shadow-lg hover:shadow-xl transition-all font-semibold text-sm sm:text-base min-w-[100px] sm:min-w-[140px] rounded-xl"
                   size="lg"
                 >
                   {isCountLoading ? (
@@ -622,23 +625,20 @@ export function EnhancedHero({
               </div>
 
               {/* FOOTER: Navigation Pills OR Shortcuts */}
-              <div className="mt-6 flex flex-wrap gap-3 items-center justify-center border-t border-slate-100 pt-4">
+              <div className="mt-4 sm:mt-6 flex gap-2 sm:gap-3 items-center border-t border-slate-100 pt-3 sm:pt-4 overflow-x-auto scrollbar-hide -mx-3 px-3 sm:mx-0 sm:px-0">
                 {/* 1. If Navigation Mode (Province/City): Show Pills */}
                 {isNavigationMode ? (
                   <>
-                    <span className="text-xs text-slate-500 font-bold uppercase tracking-wider mr-1">
-                      {heroMode === 'province' ? 'Popular Locations:' : 'Popular Areas:'}
-                    </span>
                     {navigationItems.map((item, idx) => (
                       <Button
                         key={idx}
                         variant="outline"
                         onClick={() => setLocation(item.path)}
                         className={`
-                                        h-9 px-4 rounded-full text-sm font-medium border-blue-100 bg-blue-50/50 text-blue-700 
-                                        hover:bg-blue-100 hover:border-blue-200 hover:text-blue-800 transition-all
-                                        ${item.active ? 'ring-2 ring-blue-500 ring-offset-1' : ''}
-                                    `}
+                          h-7 sm:h-8 px-3 sm:px-4 rounded-full text-xs sm:text-sm font-medium border-blue-100 bg-blue-50/50 text-blue-700 
+                          hover:bg-blue-100 hover:border-blue-200 hover:text-blue-800 transition-all whitespace-nowrap flex-shrink-0
+                          ${item.active ? 'ring-2 ring-blue-500 ring-offset-1' : ''}
+                        `}
                       >
                         {item.label}
                       </Button>
@@ -647,8 +647,8 @@ export function EnhancedHero({
                 ) : (
                   /* 2. If Standard Mode: Show Shortcuts */
                   <>
-                    <span className="text-xs text-slate-500 font-bold uppercase tracking-wider mr-1">
-                      Quick Search:
+                    <span className="text-[10px] sm:text-xs text-slate-500 font-bold uppercase tracking-wider mr-1 whitespace-nowrap flex-shrink-0">
+                      Quick:
                     </span>
                     {shortcuts.map((shortcut, idx) => {
                       const Icon = shortcut.icon;
@@ -656,9 +656,9 @@ export function EnhancedHero({
                         <button
                           key={idx}
                           onClick={() => handleShortcutClick(shortcut)}
-                          className="flex items-center gap-2 px-3.5 py-2 bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-900 rounded-full text-sm font-medium transition-colors border border-slate-200 hover:border-slate-300 shadow-sm"
+                          className="flex items-center gap-1.5 px-2.5 sm:px-3.5 py-1.5 sm:py-2 bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-900 rounded-full text-xs sm:text-sm font-medium transition-colors border border-slate-200 hover:border-slate-300 shadow-sm whitespace-nowrap flex-shrink-0"
                         >
-                          {Icon && <Icon className="h-3.5 w-3.5 text-slate-400" />}
+                          {Icon && <Icon className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-slate-400" />}
                           {shortcut.label}
                         </button>
                       );
@@ -713,12 +713,12 @@ export function EnhancedHero({
                             <SelectContent>
                               <SelectItem value="all">Any Type</SelectItem>
                               {(filters.propertyIntent &&
-                              filterConfig.buy.propertyTypes[
+                                filterConfig.buy.propertyTypes[
                                 filters.propertyIntent as keyof typeof filterConfig.buy.propertyTypes
-                              ]
+                                ]
                                 ? filterConfig.buy.propertyTypes[
-                                    filters.propertyIntent as keyof typeof filterConfig.buy.propertyTypes
-                                  ]
+                                filters.propertyIntent as keyof typeof filterConfig.buy.propertyTypes
+                                ]
                                 : Object.values(filterConfig.buy.propertyTypes).flat()
                               ).map((type: string) => (
                                 <SelectItem key={type} value={type}>

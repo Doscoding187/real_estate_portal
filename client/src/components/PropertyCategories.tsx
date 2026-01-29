@@ -229,12 +229,12 @@ export function PropertyCategories({ preselectedLocation }: PropertyCategoriesPr
           </p>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 md:gap-6">
+        <div className="flex overflow-x-auto gap-4 pb-2 snap-x scrollbar-hide -mx-4 px-4 sm:grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 sm:gap-4 md:gap-6 sm:overflow-visible sm:mx-0 sm:px-0">
           {categories.map((category, idx) => (
             <button
               key={idx}
               onClick={() => handleCategoryClick(category)}
-              className="group relative flex flex-col items-center text-center p-6 md:p-8 rounded-2xl bg-white hover:bg-gradient-to-br hover:from-white hover:to-blue-50/30 shadow-sm hover:shadow-2xl transition-all duration-500 border border-slate-200/60 hover:border-[#2774AE]/30 overflow-hidden hover:-translate-y-1 w-full"
+              className="group relative flex flex-col items-center text-center p-6 md:p-8 rounded-2xl bg-white hover:bg-gradient-to-br hover:from-white hover:to-blue-50/30 shadow-sm hover:shadow-2xl transition-all duration-500 border border-slate-200/60 hover:border-[#2774AE]/30 overflow-hidden hover:-translate-y-1 flex-none w-[140px] sm:w-auto snap-center"
             >
               <div
                 className={`absolute inset-0 bg-gradient-to-br ${category.gradient} opacity-0 group-hover:opacity-[0.03] transition-opacity duration-500`}

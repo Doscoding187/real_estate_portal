@@ -215,7 +215,7 @@ export function ExploreCities({
         </div>
 
         {/* Grid Layout */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="flex overflow-x-auto gap-4 pb-2 snap-x scrollbar-hide -mx-4 px-4 sm:grid sm:grid-cols-2 lg:grid-cols-4 sm:gap-6 sm:overflow-visible sm:mx-0 sm:px-0">
           {displayedCities.map(city => (
             <Link
               key={city.slug}
@@ -223,8 +223,9 @@ export function ExploreCities({
                 /\/\//g,
                 '/',
               )}
+              className="flex-none w-[200px] sm:w-auto snap-center"
             >
-              <div className="group cursor-pointer">
+              <div className="group cursor-pointer h-full">
                 <div className="flex items-start gap-4 p-3 rounded-xl hover:bg-slate-50 transition-colors border border-transparent hover:border-slate-100">
                   {/* Image */}
                   {/* Icon Only */}

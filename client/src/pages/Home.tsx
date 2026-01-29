@@ -5,11 +5,7 @@ import { EnhancedNavbar } from '@/components/EnhancedNavbar';
 import { EnhancedHero } from '@/components/EnhancedHero';
 import { SimpleDevelopmentCard } from '@/components/SimpleDevelopmentCard';
 import { Button } from '@/components/ui/button';
-import {
-  Building2,
-  MapPin,
-  ArrowRight,
-} from 'lucide-react';
+import { Building2, MapPin, ArrowRight } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { PropertyInsights } from '@/components/PropertyInsights';
 import { DiscoverProperties } from '@/components/DiscoverProperties';
@@ -69,7 +65,6 @@ export default function Home() {
 
     return [];
   };
-
 
   // Fetch real developments from database
   const { data: gautengDevelopments = [], isLoading: gautengLoading } =
@@ -152,7 +147,10 @@ export default function Home() {
                       const displayImage = development.heroImage || images[0] || '';
 
                       return (
-                        <div key={development.id} className="flex-none w-[280px] sm:w-[300px] snap-center">
+                        <div
+                          key={development.id}
+                          className="flex-none w-[240px] sm:w-[280px] md:w-[300px] snap-center"
+                        >
                           <SimpleDevelopmentCard
                             id={development.id}
                             title={development.name}
@@ -183,8 +181,7 @@ export default function Home() {
                       Check back soon for new listings in {province}
                     </p>
                   </div>
-                )
-                }
+                )}
               </TabsContent>
             ))}
           </Tabs>
@@ -224,22 +221,22 @@ export default function Home() {
       <ExploreCities />
 
       {/* Testimonials Section */}
-      <div className="py-16 md:py-20 bg-gradient-to-b from-slate-50/50 to-white">
+      <div className="py-12 md:py-20 bg-gradient-to-b from-slate-50/50 to-white">
         <div className="container">
-          <div className="text-left mb-12">
-            <div className="inline-flex items-center gap-2 bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 rounded-full px-4 py-2 mb-4">
-              <span className="text-2xl">⭐</span>
-              <span className="text-sm font-semibold text-yellow-700">Trusted by Thousands</span>
+          <div className="text-left mb-8 md:mb-12">
+            <div className="inline-flex items-center gap-2 bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 rounded-full px-3 py-1.5 sm:px-4 sm:py-2 mb-3 sm:mb-4">
+              <span className="text-xl sm:text-2xl">⭐</span>
+              <span className="text-xs sm:text-sm font-semibold text-yellow-700">Trusted by Thousands</span>
             </div>
-            <h2 className="text-3xl md:text-4xl font-bold mb-4 bg-gradient-to-r from-slate-900 via-[#2774AE] to-slate-900 bg-clip-text text-transparent">
+            <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-3 md:mb-4 bg-gradient-to-r from-slate-900 via-[#2774AE] to-slate-900 bg-clip-text text-transparent">
               What Our Clients Say
             </h2>
-            <p className="text-slate-600 text-lg max-w-2xl leading-relaxed">
-              Real experiences from people who found their dream homes with us
+            <p className="text-slate-600 text-sm sm:text-base md:text-lg max-w-2xl leading-relaxed">
+              Real experiences from people who found their dream homes
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">
+          <div className="flex overflow-x-auto gap-4 pb-4 snap-x scrollbar-hide -mx-4 px-4 md:grid md:grid-cols-3 md:gap-8 md:overflow-visible md:mx-0 md:px-0">
             {[
               {
                 name: 'Thabo Mkhize',
@@ -265,7 +262,7 @@ export default function Home() {
             ].map((testimonial, idx) => (
               <div
                 key={idx}
-                className="relative bg-white p-8 rounded-2xl border border-slate-200/60 hover:shadow-2xl transition-all duration-500 hover:-translate-y-1 group"
+                className="flex-none w-[280px] sm:w-[320px] md:w-auto snap-center relative bg-white p-5 sm:p-6 md:p-8 rounded-xl md:rounded-2xl border border-slate-200/60 hover:shadow-2xl transition-all duration-500 hover:-translate-y-1 group"
               >
                 {/* Quote mark decoration */}
                 <div className="absolute top-6 right-6 text-6xl text-[#2774AE]/10 group-hover:text-[#2774AE]/20 transition-colors font-serif leading-none">
@@ -301,34 +298,33 @@ export default function Home() {
       </div>
 
       {/* CTA Section */}
-      <div className="py-16 md:py-20 bg-white">
+      <div className="py-12 md:py-20 bg-white">
         <div className="container">
-          <div className="relative rounded-3xl md:rounded-[2rem] overflow-hidden bg-gradient-to-br from-[#2774AE] via-[#2D68C4] to-[#0F52BA] px-6 py-16 md:px-12 md:py-20 text-center shadow-2xl">
+          <div className="relative rounded-2xl md:rounded-[2rem] overflow-hidden bg-gradient-to-br from-[#2774AE] via-[#2D68C4] to-[#0F52BA] px-4 py-10 sm:px-6 sm:py-12 md:px-12 md:py-20 text-center shadow-2xl">
             {/* Decorative Elements */}
-            <div className="absolute top-0 left-0 w-96 h-96 bg-white/10 rounded-full -translate-x-1/2 -translate-y-1/2 blur-3xl animate-pulse"></div>
-            <div className="absolute bottom-0 right-0 w-96 h-96 bg-white/10 rounded-full translate-x-1/2 translate-y-1/2 blur-3xl animate-pulse delay-1000"></div>
+            <div className="absolute top-0 left-0 w-48 md:w-96 h-48 md:h-96 bg-white/10 rounded-full -translate-x-1/2 -translate-y-1/2 blur-3xl animate-pulse"></div>
+            <div className="absolute bottom-0 right-0 w-48 md:w-96 h-48 md:h-96 bg-white/10 rounded-full translate-x-1/2 translate-y-1/2 blur-3xl animate-pulse delay-1000"></div>
             <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSAxMCAwIEwgMCAwIDAgMTAiIGZpbGw9Im5vbmUiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS1vcGFjaXR5PSIwLjA1IiBzdHJva2Utd2lkdGg9IjEiLz48L3BhdHRlcm4+PC9kZWZzPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9InVybCgjZ3JpZCkiLz48L3N2Zz4=')] opacity-30"></div>
 
             <div className="relative z-10 max-w-4xl mx-auto">
-              <h2 className="text-3xl md:text-5xl font-bold mb-6 text-white tracking-tight leading-tight">
+              <h2 className="text-2xl sm:text-3xl md:text-5xl font-bold mb-4 md:mb-6 text-white tracking-tight leading-tight">
                 Ready to Find Your Dream Property?
               </h2>
-              <p className="text-lg md:text-xl mb-10 text-blue-50 leading-relaxed max-w-2xl mx-auto">
-                Join thousands of satisfied users. Whether you're buying, renting, or selling, we
-                provide the best tools and insights to make your journey smooth.
+              <p className="text-sm sm:text-base md:text-xl mb-6 md:mb-10 text-blue-50 leading-relaxed max-w-2xl mx-auto">
+                Join thousands of satisfied users. Whether you're buying, renting, or selling.
               </p>
-              <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+              <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center items-center">
                 <Button
                   size="lg"
                   onClick={() => setLocation('/properties')}
-                  className="bg-white text-[#2774AE] hover:bg-blue-50 font-bold text-base md:text-lg px-8 py-6 h-auto shadow-2xl hover:shadow-3xl transition-all transform hover:-translate-y-1 hover:scale-105"
+                  className="bg-white text-[#2774AE] hover:bg-blue-50 font-bold text-sm sm:text-base md:text-lg px-6 sm:px-8 py-4 sm:py-6 h-auto shadow-2xl hover:shadow-3xl transition-all transform hover:-translate-y-1 hover:scale-105 w-full sm:w-auto"
                 >
                   Browse All Properties
                 </Button>
                 <Button
                   size="lg"
                   variant="outline"
-                  className="bg-transparent border-2 border-white text-white hover:bg-white hover:text-[#2774AE] font-bold text-base md:text-lg px-8 py-6 h-auto transition-all hover:scale-105"
+                  className="bg-transparent border-2 border-white text-white hover:bg-white hover:text-[#2774AE] font-bold text-sm sm:text-base md:text-lg px-6 sm:px-8 py-4 sm:py-6 h-auto transition-all hover:scale-105 w-full sm:w-auto"
                 >
                   List Your Property
                 </Button>

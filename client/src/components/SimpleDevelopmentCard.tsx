@@ -84,7 +84,7 @@ export function SimpleDevelopmentCard({
       {/* Content - Compact Layout */}
       <div className="p-3">
         {/* Title */}
-        <h3 className="font-semibold text-slate-900 truncate text-[15px] leading-tight mb-1 group-hover:text-[#2774AE] transition-colors">
+        <h3 className="font-semibold text-slate-900 truncate text-fluid-sm leading-tight mb-1 group-hover:text-[#2774AE] transition-colors">
           {title}
         </h3>
 
@@ -96,7 +96,7 @@ export function SimpleDevelopmentCard({
 
         {/* Price */}
         <div className="pt-2 border-t border-slate-100">
-          <p className="font-bold text-[#2774AE] text-sm">{priceLabel}</p>
+          <p className="font-bold text-[#2774AE] text-fluid-sm">{priceLabel}</p>
         </div>
       </div>
     </Link>

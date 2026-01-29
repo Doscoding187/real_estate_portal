@@ -8,7 +8,14 @@
 /* Ikhaya Design System utilities & components */
 @import '../../design-system/components.css';
 
-
+/* Scrollbar hide utility for horizontal carousels */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
 
 @theme inline {
   --radius-sm: calc(var(--radius) - 4px);
@@ -87,19 +94,24 @@
   /* ========================= */
   /* FLUID DESIGN SYSTEM       */
   /* ========================= */
-  
+
   /* Fluid spacing tokens - scales with viewport */
   --space-xs: clamp(0.25rem, 0.5vw, 0.5rem);
   --space-sm: clamp(0.5rem, 0.8vw, 0.75rem);
   --space-md: clamp(0.75rem, 1.2vw, 1rem);
   --space-lg: clamp(1rem, 1.8vw, 1.5rem);
   --space-xl: clamp(1.5rem, 2.5vw, 2rem);
-  
+
   /* Card-specific spacing */
   --card-padding: clamp(0.75rem, 1.2vw, 1.1rem);
   --card-gap: clamp(0.5rem, 0.8vw, 0.75rem);
   --card-radius: 12px;
   --card-border: 1px solid rgba(0, 0, 0, 0.06);
+
+  /* Fluid card widths - viewport-aware for mobile carousels */
+  --card-width-sm: clamp(240px, 70vw, 280px); /* Mobile: ~70% viewport */
+  --card-width-md: clamp(260px, 45vw, 320px); /* Tablet: ~45% viewport */
+  --card-width-lg: 300px; /* Desktop: fixed */
 }
 
 .dark {
@@ -146,7 +158,7 @@
   * {
     @apply border-border outline-ring/50;
   }
-  
+
   body {
     @apply bg-background text-foreground;
     font-family:
@@ -158,23 +170,23 @@
     font-size: clamp(0.9rem, 0.95vw, 1rem);
     line-height: 1.55;
   }
-  
+
   /* Fluid headings - balanced, SquareYards-like */
   h1 {
     font-size: clamp(1.6rem, 2.2vw, 2.2rem);
     line-height: 1.2;
   }
-  
+
   h2 {
     font-size: clamp(1.3rem, 1.6vw, 1.75rem);
     line-height: 1.3;
   }
-  
+
   h3 {
     font-size: clamp(1.1rem, 1.2vw, 1.35rem);
     line-height: 1.3;
   }
-  
+
   h4 {
     font-size: clamp(1rem, 1.1vw, 1.15rem);
     line-height: 1.4;
@@ -277,13 +289,21 @@
 
   /* Shake animation for validation errors */
   @keyframes shake {
-    0%, 100% {
+    0%,
+    100% {
       transform: translateX(0);
     }
-    10%, 30%, 50%, 70%, 90% {
+    10%,
+    30%,
+    50%,
+    70%,
+    90% {
       transform: translateX(-4px);
     }
-    20%, 40%, 60%, 80% {
+    20%,
+    40%,
+    60%,
+    80% {
       transform: translateX(4px);
     }
   }
@@ -310,7 +330,8 @@
 
   /* Pulse glow effect */
   @keyframes pulse-glow {
-    0%, 100% {
+    0%,
+    100% {
       box-shadow: 0 0 0 0 oklch(0.2 0.08 240 / 0.4);
     }
     50% {
@@ -333,5 +354,41 @@
     background: oklch(0.21 0.006 285.885 / 0.7);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
+  }
+
+  /* Fluid text utilities for fine-grained control */
+  .text-fluid-xs {
+    font-size: clamp(0.65rem, 0.7vw, 0.75rem);
+  }
+  .text-fluid-sm {
+    font-size: clamp(0.75rem, 0.85vw, 0.875rem);
+  }
+  .text-fluid-base {
+    font-size: clamp(0.875rem, 0.95vw, 1rem);
+  }
+  .text-fluid-lg {
+    font-size: clamp(1rem, 1.1vw, 1.125rem);
+  }
+  .text-fluid-xl {
+    font-size: clamp(1.125rem, 1.3vw, 1.25rem);
+  }
+  .text-fluid-2xl {
+    font-size: clamp(1.25rem, 1.6vw, 1.5rem);
+  }
+
+  /* Fluid spacing utilities */
+  .py-fluid-lg {
+    padding-top: var(--space-lg);
+    padding-bottom: var(--space-lg);
+  }
+  .py-fluid-xl {
+    padding-top: var(--space-xl);
+    padding-bottom: var(--space-xl);
+  }
+  .gap-fluid-sm {
+    gap: var(--space-sm);
+  }
+  .gap-fluid-md {
+    gap: var(--space-md);
   }
 }

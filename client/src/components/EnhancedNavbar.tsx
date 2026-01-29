@@ -15,6 +15,8 @@ import {
   Key,
   Building2,
   Lightbulb,
+  Menu,
+  X,
 } from 'lucide-react';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { getLoginUrl } from '@/const';
@@ -241,6 +243,7 @@ function CityDropdownContent() {
 export function EnhancedNavbar() {
   const { user, logout } = useAuth();
   const [location, setLocation] = useLocation();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // Check if current route is advertise page
   const isAdvertisePage = location === '/advertise';
@@ -367,12 +370,21 @@ export function EnhancedNavbar() {
 
   return (
     <nav className="bg-white/95 backdrop-blur-md shadow-sm sticky top-0 z-50 border-b border-gray-200/50">
-      <div className="w-full" style={{ padding: '0 80px' }}>
-        <div className="flex items-center justify-between h-16">
+      <div className="w-full px-4 sm:px-6 lg:px-20">
+        <div className="flex items-center justify-between h-14 lg:h-16">
+          {/* Mobile Menu Button */}
+          <button
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            className="lg:hidden p-2 -ml-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+            aria-label="Toggle menu"
+          >
+            {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+          </button>
+
           {/* Logo */}
           <Link href="/">
             <div className="flex items-center gap-2 cursor-pointer group">
-              <span className="text-xl md:text-2xl font-bold tracking-tight text-blue-600 group-hover:text-blue-700 transition-colors">
+              <span className="text-lg sm:text-xl lg:text-2xl font-bold tracking-tight text-blue-600 group-hover:text-blue-700 transition-colors">
                 Property Listify
               </span>
             </div>
@@ -848,16 +860,15 @@ export function EnhancedNavbar() {
           </NavigationMenu>
 
           {/* Right Side Actions */}
-          <div className="flex items-center gap-3">
+          <div className="hidden lg:flex items-center gap-3">
             {/* Advertise Button - Enhanced CTA */}
             <Link href="/advertise">
               <Button
                 size="sm"
                 className={`
-                  ${
-                    isAdvertisePage
-                      ? 'bg-gradient-to-r from-blue-800 to-blue-900 ring-2 ring-blue-400 ring-offset-2'
-                      : 'bg-gradient-to-r from-blue-700 to-blue-800 hover:from-blue-800 hover:to-blue-900'
+                  ${isAdvertisePage
+                    ? 'bg-gradient-to-r from-blue-800 to-blue-900 ring-2 ring-blue-400 ring-offset-2'
+                    : 'bg-gradient-to-r from-blue-700 to-blue-800 hover:from-blue-800 hover:to-blue-900'
                   }
                   text-white shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-200 font-bold border border-blue-600
                 `}
@@ -927,7 +938,85 @@ export function EnhancedNavbar() {
               </Button>
             )}
           </div>
+
+          {/* Mobile: Login Button */}
+          <div className="lg:hidden">
+            {user ? (
+              <Link href="/dashboard">
+                <Button variant="ghost" size="sm" className="text-blue-600">
+                  <User className="h-5 w-5" />
+                </Button>
+              </Link>
+            ) : (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => (window.location.href = getLoginUrl())}
+                className="text-blue-600 font-medium"
+              >
+                Login
+              </Button>
+            )}
+          </div>
         </div>
+
+        {/* Mobile Menu Drawer */}
+        {mobileMenuOpen && (
+          <div className="lg:hidden border-t border-gray-100 py-4 animate-in slide-in-from-top-2 duration-200">
+            <div className="space-y-1">
+              <Link href="/property-for-sale">
+                <button
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="w-full text-left px-4 py-3 text-sm font-medium text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors"
+                >
+                  Buy Property
+                </button>
+              </Link>
+              <Link href="/property-to-rent">
+                <button
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="w-full text-left px-4 py-3 text-sm font-medium text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors"
+                >
+                  Rent Property
+                </button>
+              </Link>
+              <Link href="/new-developments">
+                <button
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="w-full text-left px-4 py-3 text-sm font-medium text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors"
+                >
+                  New Developments
+                </button>
+              </Link>
+              <Link href="/agents">
+                <button
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="w-full text-left px-4 py-3 text-sm font-medium text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors"
+                >
+                  Find Agents
+                </button>
+              </Link>
+              <Link href="/explore/home">
+                <button
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="w-full text-left px-4 py-3 text-sm font-medium text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors"
+                >
+                  Explore
+                </button>
+              </Link>
+              <div className="pt-2 mt-2 border-t border-gray-100">
+                <Link href="/advertise">
+                  <button
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="w-full text-left px-4 py-3 text-sm font-bold text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                  >
+                    Advertise with us
+                  </button>
+                </Link>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Location Selection Modal */}

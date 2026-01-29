@@ -105,4 +105,5 @@ verification_*.txt
 .env.production.local
 .env.production
 .env.prod.backup
+.env.backup
 dist/
