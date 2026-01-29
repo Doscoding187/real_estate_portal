@@ -8,6 +8,25 @@ function isIpAddress(host: string) {
   return host.includes(':');
 }
 
+/**
+ * Extract root domain for cookie sharing across subdomains
+ * e.g., "api.propertylistifysa.co.za" -> "propertylistifysa.co.za"
+ * This enables cookies to work across www and api subdomains
+ */
+function getRootDomain(hostname: string): string {
+  const parts = hostname.split('.');
+  // Handle domains like propertylistifysa.co.za (3+ parts with .co.za TLD)
+  if (parts.length >= 3 && parts[parts.length - 2] === 'co') {
+    // .co.za, .co.uk style TLDs - take last 3 parts
+    return parts.slice(-3).join('.');
+  }
+  // Handle standard domains like example.com (2+ parts)
+  if (parts.length >= 2) {
+    return parts.slice(-2).join('.');
+  }
+  return hostname;
+}
+
 function isSecureRequest(req: Request) {
   if (req.protocol === 'https') return true;
 
@@ -30,12 +49,9 @@ export function getSessionCookieOptions(
     hostname !== '127.0.0.1' &&
     hostname !== '::1';
 
-  const domain =
-    shouldSetDomain && !hostname.startsWith('.')
-      ? `.${hostname}`
-      : shouldSetDomain
-        ? hostname
-        : undefined;
+  const domain = shouldSetDomain
+    ? `.${getRootDomain(hostname)}` // Use root domain for cross-subdomain cookie sharing
+    : undefined;
 
   const isProduction = process.env.NODE_ENV === 'production';
   const isSecure = isSecureRequest(req);
