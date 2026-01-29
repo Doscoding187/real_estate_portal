@@ -17,6 +17,7 @@ import { toast } from 'sonner';
 import { trpc } from '@/lib/trpc';
 import { useLocation } from 'wouter';
 import { useAuth } from '@/_core/hooks/useAuth';
+import { usePublisherContext } from '@/hooks/usePublisherContext';
 import {
   CheckCircle2,
   AlertCircle,
@@ -49,7 +50,7 @@ type UnitTypeV2 = {
   unitSize?: number;
   yardSize?: number;
   basePriceFrom: number;
-  extras?: Array<{ price: number;[key: string]: any }>;
+  extras?: Array<{ price: number; [key: string]: any }>;
   monthlyRentFrom?: number;
   monthlyRentTo?: number;
   leaseTerm?: string;
@@ -83,6 +84,7 @@ export function FinalisationPhase() {
   const [, navigate] = useLocation();
   const { user } = useAuth();
   const isSuperAdmin = user?.role === 'super_admin';
+  const { context: publisherContext } = usePublisherContext();
   const store = useDevelopmentWizard();
   const stepAmenitiesRaw = useDevelopmentWizard(
     state => state.stepData?.amenities_features?.amenities,
@@ -110,12 +112,8 @@ export function FinalisationPhase() {
       return [trimmed];
     }
     if (typeof value === 'object') {
-      const standard = Array.isArray((value as any).standard)
-        ? (value as any).standard
-        : [];
-      const additional = Array.isArray((value as any).additional)
-        ? (value as any).additional
-        : [];
+      const standard = Array.isArray((value as any).standard) ? (value as any).standard : [];
+      const additional = Array.isArray((value as any).additional) ? (value as any).additional : [];
       const merged = [...standard, ...additional].filter(Boolean).map(String);
       return merged.length ? merged : undefined;
     }
@@ -289,8 +287,7 @@ export function FinalisationPhase() {
       const reservePrice = toNumber(u?.reservePrice ?? 0, 0);
       const auctionStartDate = normalizeDateString(u?.auctionStartDate);
       const auctionEndDate = normalizeDateString(u?.auctionEndDate);
-      const auctionStatus =
-        typeof u?.auctionStatus === 'string' ? u.auctionStatus : undefined;
+      const auctionStatus = typeof u?.auctionStatus === 'string' ? u.auctionStatus : undefined;
 
       const parkingBays = Math.max(0, toInt(u?.parkingBays, 0));
       const parkingType = normalizeParkingType(u?.parkingType);
@@ -324,10 +321,7 @@ export function FinalisationPhase() {
         auctionStartDate,
         auctionEndDate,
         auctionStatus,
-        features:
-          typeof u?.features === 'object' && u?.features
-            ? u.features
-            : undefined,
+        features: typeof u?.features === 'object' && u?.features ? u.features : undefined,
         parkingType,
         parkingBays: parkingType === 'none' ? 0 : parkingBays,
         totalUnits,
@@ -378,8 +372,7 @@ export function FinalisationPhase() {
       })
       .filter(r => r.from > 0 || r.to > 0);
 
-    if (rentRanges.length === 0)
-      return { monthlyRentFrom: undefined, monthlyRentTo: undefined };
+    if (rentRanges.length === 0) return { monthlyRentFrom: undefined, monthlyRentTo: undefined };
 
     const mins = rentRanges.map(r => r.from).filter(n => n > 0);
     const maxs = rentRanges.map(r => r.to).filter(n => n > 0);
@@ -499,7 +492,7 @@ export function FinalisationPhase() {
         Array.isArray((wizardData as any).ownershipTypes) &&
         (wizardData as any).ownershipTypes.length > 0
           ? (wizardData as any).ownershipTypes
-          : (wizardData as any).ownershipType ?? (store as any).developmentData?.ownershipType;
+          : ((wizardData as any).ownershipType ?? (store as any).developmentData?.ownershipType);
 
       Object.assign(payload, {
         tagline: (wizardData as any).tagline ?? wizardData.subtitle,
@@ -521,32 +514,31 @@ export function FinalisationPhase() {
         // Financials (🔥 FIX: compute from basePriceFrom + extras; stop using legacy priceFrom/priceTo)
         priceFrom: isRent
           ? undefined
-          : computedDevPriceFromTo.priceFrom ?? (wizardData as any).priceFrom,
+          : (computedDevPriceFromTo.priceFrom ?? (wizardData as any).priceFrom),
         priceTo: isRent
           ? undefined
-          : computedDevPriceFromTo.priceTo ?? (wizardData as any).priceTo,
+          : (computedDevPriceFromTo.priceTo ?? (wizardData as any).priceTo),
         monthlyRentFrom: isRent
-          ? computedDevRentFromTo.monthlyRentFrom ?? (wizardData as any).monthlyRentFrom
+          ? (computedDevRentFromTo.monthlyRentFrom ?? (wizardData as any).monthlyRentFrom)
           : (wizardData as any).monthlyRentFrom,
         monthlyRentTo: isRent
-          ? computedDevRentFromTo.monthlyRentTo ?? (wizardData as any).monthlyRentTo
+          ? (computedDevRentFromTo.monthlyRentTo ?? (wizardData as any).monthlyRentTo)
           : (wizardData as any).monthlyRentTo,
         auctionStartDate: isAuction
-          ? computedDevAuctionRange.auctionStartDate?.toISOString() ??
-            (wizardData as any).auctionStartDate
+          ? (computedDevAuctionRange.auctionStartDate?.toISOString() ??
+            (wizardData as any).auctionStartDate)
           : (wizardData as any).auctionStartDate,
         auctionEndDate: isAuction
-          ? computedDevAuctionRange.auctionEndDate?.toISOString() ??
-            (wizardData as any).auctionEndDate
+          ? (computedDevAuctionRange.auctionEndDate?.toISOString() ??
+            (wizardData as any).auctionEndDate)
           : (wizardData as any).auctionEndDate,
         startingBidFrom: isAuction
-          ? computedDevAuctionRange.startingBidFrom ?? (wizardData as any).startingBidFrom
+          ? (computedDevAuctionRange.startingBidFrom ?? (wizardData as any).startingBidFrom)
           : (wizardData as any).startingBidFrom,
         reservePriceFrom: isAuction
-          ? computedDevAuctionRange.reservePriceFrom ?? (wizardData as any).reservePriceFrom
+          ? (computedDevAuctionRange.reservePriceFrom ?? (wizardData as any).reservePriceFrom)
           : (wizardData as any).reservePriceFrom,
-        monthlyLevyFrom:
-          (wizardData as any).monthlyLevyFrom ?? (wizardData as any).levyRange?.min,
+        monthlyLevyFrom: (wizardData as any).monthlyLevyFrom ?? (wizardData as any).levyRange?.min,
         monthlyLevyTo: (wizardData as any).monthlyLevyTo ?? (wizardData as any).levyRange?.max,
         ratesFrom: (wizardData as any).ratesFrom ?? (wizardData as any).rightsAndTaxes?.min,
         ratesTo: (wizardData as any).ratesTo ?? (wizardData as any).rightsAndTaxes?.max,
@@ -593,21 +585,21 @@ export function FinalisationPhase() {
         estateSpecs:
           (wizardData as any).hasGoverningBody !== undefined || (wizardData as any).governanceType
             ? {
-              hasHOA: (wizardData as any).hasGoverningBody,
-              governanceType: (wizardData as any).governanceType,
-              architecturalGuidelines: (wizardData as any).architecturalGuidelines,
-              guidelinesSummary: (wizardData as any).guidelinesSummary,
-              levyRange: {
-                min:
-                  (wizardData as any).monthlyLevyFrom ?? (wizardData as any).levyRange?.min ?? 0,
-                max:
-                  (wizardData as any).monthlyLevyTo ?? (wizardData as any).levyRange?.max ?? 0,
-              },
-              rightsAndTaxes: {
-                min: (wizardData as any).ratesFrom ?? (wizardData as any).rightsAndTaxes?.min ?? 0,
-                max: (wizardData as any).ratesTo ?? (wizardData as any).rightsAndTaxes?.max ?? 0,
-              },
-            }
+                hasHOA: (wizardData as any).hasGoverningBody,
+                governanceType: (wizardData as any).governanceType,
+                architecturalGuidelines: (wizardData as any).architecturalGuidelines,
+                guidelinesSummary: (wizardData as any).guidelinesSummary,
+                levyRange: {
+                  min:
+                    (wizardData as any).monthlyLevyFrom ?? (wizardData as any).levyRange?.min ?? 0,
+                  max: (wizardData as any).monthlyLevyTo ?? (wizardData as any).levyRange?.max ?? 0,
+                },
+                rightsAndTaxes: {
+                  min:
+                    (wizardData as any).ratesFrom ?? (wizardData as any).rightsAndTaxes?.min ?? 0,
+                  max: (wizardData as any).ratesTo ?? (wizardData as any).rightsAndTaxes?.max ?? 0,
+                },
+              }
             : undefined,
         residentialConfig: residentialConfig as any,
         landConfig: (store as any).landConfig,
@@ -648,26 +640,51 @@ export function FinalisationPhase() {
         // CREATE OPERATION
         console.log('[FinalisationPhase] Executing CREATE');
 
-        // Identity & Branding logic
-        const isBrandDevelopment =
-          listingIdentity?.identityType === 'brand' ||
-          listingIdentity?.identityType === 'marketing_agency';
+        // Determine if using super admin flow (publisher context) or regular developer endpoint
+        const shouldUseSuperAdminFlow = isSuperAdmin && publisherContext?.brandProfileId;
 
-        const createPayload = {
-          ...payload,
-          // Identity & Branding
-          brandProfileId: isBrandDevelopment ? listingIdentity?.developerBrandProfileId : undefined,
-          marketingBrandProfileId:
-            listingIdentity?.identityType === 'marketing_agency'
-              ? listingIdentity.marketingBrandProfileId
+        if (shouldUseSuperAdminFlow) {
+          // SUPER ADMIN WITH PUBLISHER CONTEXT: modify payload for brand context and use regular endpoint
+          console.log(
+            '[FinalisationPhase] Using Super Admin flow with publisher context:',
+            publisherContext.brandProfileId,
+          );
+
+          const superAdminPayload = {
+            ...payload,
+            // Ensure brandProfileId is set from publisher context
+            brandProfileId: publisherContext.brandProfileId,
+            developerBrandProfileId: publisherContext.brandProfileId,
+            devOwnerType: 'platform',
+          };
+
+          const result = await createDevelopment.mutateAsync(superAdminPayload);
+          developmentId = result.development.id;
+        } else {
+          // REGULAR FLOW: use existing developer endpoint
+          console.log('[FinalisationPhase] Using regular developer endpoint');
+
+          // Identity & Branding logic
+          const isBrandDevelopment =
+            listingIdentity?.identityType === 'brand' ||
+            listingIdentity?.identityType === 'marketing_agency';
+
+          const createPayload = {
+            ...payload,
+            // Identity & Branding
+            brandProfileId: isBrandDevelopment
+              ? listingIdentity?.developerBrandProfileId
               : undefined,
-          marketingRole: listingIdentity?.marketingRole || 'exclusive',
-        };
+            marketingBrandProfileId:
+              listingIdentity?.identityType === 'marketing_agency'
+                ? listingIdentity.marketingBrandProfileId
+                : undefined,
+            marketingRole: listingIdentity?.marketingRole || 'exclusive',
+          };
 
-        const result = await createDevelopment.mutateAsync(createPayload);
-
-        developmentId = result.development.id;
-        toast.success('Development created!');
+          const result = await createDevelopment.mutateAsync(createPayload);
+          developmentId = result.development.id;
+        }
       }
 
       // Now publish (submit for review)
@@ -1002,26 +1019,26 @@ export function FinalisationPhase() {
 
                   {((wizardData as any).transferCostsIncluded ||
                     (wizardData as any).reservePriceIncluded) && (
-                      <div className="flex gap-2 mt-2 pt-2 border-t">
-                        {(wizardData as any).transferCostsIncluded && (
-                          <Badge
-                            variant="outline"
-                            className="text-emerald-700 bg-emerald-50 border-emerald-200"
-                          >
-                            Transfer Costs Included
-                          </Badge>
-                        )}
-                        {(wizardData as any).reservePriceIncluded && (
-                          <Badge
-                            variant="outline"
-                            className="text-amber-700 bg-amber-50 border-amber-200"
-                          >
-                            Reserve: R{' '}
-                            {(wizardData as any).reservePriceAmount?.toLocaleString() || '---'}
-                          </Badge>
-                        )}
-                      </div>
-                    )}
+                    <div className="flex gap-2 mt-2 pt-2 border-t">
+                      {(wizardData as any).transferCostsIncluded && (
+                        <Badge
+                          variant="outline"
+                          className="text-emerald-700 bg-emerald-50 border-emerald-200"
+                        >
+                          Transfer Costs Included
+                        </Badge>
+                      )}
+                      {(wizardData as any).reservePriceIncluded && (
+                        <Badge
+                          variant="outline"
+                          className="text-amber-700 bg-amber-50 border-amber-200"
+                        >
+                          Reserve: R{' '}
+                          {(wizardData as any).reservePriceAmount?.toLocaleString() || '---'}
+                        </Badge>
+                      )}
+                    </div>
+                  )}
 
                   {wizardData.highlights && wizardData.highlights.length > 0 && (
                     <div className="pt-3 mt-3 border-t border-slate-100">
@@ -1142,19 +1159,21 @@ export function FinalisationPhase() {
                 <div className="flex bg-slate-100 rounded-lg p-1">
                   <button
                     onClick={() => setActivePreviewTab('desktop')}
-                    className={`p-1.5 rounded ${activePreviewTab === 'desktop'
-                      ? 'bg-white shadow-sm text-blue-600'
-                      : 'text-slate-400 hover:text-slate-600'
-                      }`}
+                    className={`p-1.5 rounded ${
+                      activePreviewTab === 'desktop'
+                        ? 'bg-white shadow-sm text-blue-600'
+                        : 'text-slate-400 hover:text-slate-600'
+                    }`}
                   >
                     <Monitor className="w-4 h-4" />
                   </button>
                   <button
                     onClick={() => setActivePreviewTab('mobile')}
-                    className={`p-1.5 rounded ${activePreviewTab === 'mobile'
-                      ? 'bg-white shadow-sm text-blue-600'
-                      : 'text-slate-400 hover:text-slate-600'
-                      }`}
+                    className={`p-1.5 rounded ${
+                      activePreviewTab === 'mobile'
+                        ? 'bg-white shadow-sm text-blue-600'
+                        : 'text-slate-400 hover:text-slate-600'
+                    }`}
                   >
                     <Smartphone className="w-4 h-4" />
                   </button>
@@ -1163,10 +1182,11 @@ export function FinalisationPhase() {
             </CardHeader>
             <CardContent className="p-0">
               <div
-                className={`mx-auto bg-slate-100 overflow-hidden transition-all duration-300 ${activePreviewTab === 'mobile'
-                  ? 'w-[280px] h-[500px] my-4 rounded-[2rem] border-4 border-slate-800 shadow-xl'
-                  : 'w-full h-[400px]'
-                  }`}
+                className={`mx-auto bg-slate-100 overflow-hidden transition-all duration-300 ${
+                  activePreviewTab === 'mobile'
+                    ? 'w-[280px] h-[500px] my-4 rounded-[2rem] border-4 border-slate-800 shadow-xl'
+                    : 'w-full h-[400px]'
+                }`}
               >
                 <div className="bg-white w-full h-full flex flex-col overflow-y-auto">
                   <div className="h-1/3 bg-slate-200 relative">

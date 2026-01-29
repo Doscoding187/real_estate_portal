@@ -37,14 +37,32 @@ export const superAdminPublisherRouter = router({
       });
     }),
 
-  /**
-   * Get full details of a specific brand profile for context hydration
-   */
-  getBrandContext: superAdminProcedure
+   /**
+    * Create a development under the selected brand context
+    */
+  createDevelopment: superAdminProcedure
     .input(
       z.object({
         brandProfileId: z.number().int(),
-      }),
+      }).passthrough(),
+    )
+    .mutation(async ({ input, ctx }) => {
+      // Use the existing development service but override ownership parameters
+      // Ensure the development is created with PLATFORM ownership and brand profile linkage
+      const metadata = {
+        ownerType: 'platform',
+        brandProfileId: input.brandProfileId,
+      };
+
+      // Call the existing service with platform ownership context
+      const development = await developmentService.createDevelopment(ctx.user.id, input as any, metadata);
+      
+      return {
+        id: development.id,
+        development,
+        message: 'Development created under brand context',
+      };
+    }),
     )
     .query(async ({ input }) => {
       return await developerBrandProfileService.getBrandProfileWithStats(input.brandProfileId);
@@ -231,44 +249,22 @@ export const superAdminPublisherRouter = router({
     .input(
       z.object({
         brandProfileId: z.number().int(),
-        name: z.string().min(2),
-        description: z.string().optional(),
-        city: z.string(),
-        province: z.string(),
-        developmentType: z.enum(['residential', 'commercial', 'mixed_use', 'estate', 'complex']),
-      }),
+      }).passthrough(),
     )
     .mutation(async ({ input, ctx }) => {
-      const dbConn = await db.getDb();
-      if (!dbConn) throw new Error('Database not available');
+      // Use the existing development service but override ownership parameters
+      // Ensure the development is created with PLATFORM ownership and brand profile linkage
+      const metadata = {
+        ownerType: 'platform',
+        brandProfileId: input.brandProfileId,
+      };
 
-      // Create development with explicit brand profile link and PLATFORM ownership
-      const [result] = await dbConn.insert(developments).values({
-        name: input.name,
-        description: input.description,
-        city: input.city,
-        province: input.province,
-        developmentType: input.developmentType,
-        developerBrandProfileId: input.brandProfileId,
-        devOwnerType: 'platform', // Crucial: distinct from subscriber-owned
-        // Default platform-safe values
-        isPublished: 0,
-        approvalStatus: 'draft',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        views: 0,
-        isFeatured: 0,
-        slug:
-          input.name
-            .toLowerCase()
-            .replace(/[^a-z0-9]+/g, '-')
-            .replace(/^-+|-+$/g, '') +
-          '-' +
-          Date.now().toString().slice(-4),
-      });
-
+      // Call the existing service with platform ownership context
+      const development = await developmentService.createDevelopment(ctx.user.id, input as any, metadata);
+      
       return {
-        id: result.insertId,
+        id: development.id,
+        development,
         message: 'Development created under brand context',
       };
     }),
@@ -348,6 +344,25 @@ export const superAdminPublisherRouter = router({
 
       return brandLeads;
     }),
+
+  /**
+   * Get global metrics across all brands (for header stats)
+   */
+  getGlobalMetrics: superAdminProcedure.query(async () => {
+    const dbConn = await db.getDb();
+    if (!dbConn) throw new Error('Database not available');
+
+    // Count total developments
+    const [devCount] = await dbConn.select({ count: sql<number>`count(*)` }).from(developments);
+
+    // Count total leads
+    const [leadCount] = await dbConn.select({ count: sql<number>`count(*)` }).from(leads);
+
+    return {
+      totalDevelopments: Number(devCount?.count || 0),
+      totalLeads: Number(leadCount?.count || 0),
+    };
+  }),
 
   /**
    * Get aggregated metrics for this brand

@@ -10,6 +10,7 @@ import {
   locations,
   developerBrandProfiles,
   developmentDrafts,
+  users,
 } from '../../drizzle/schema';
 import * as crypto from 'crypto';
 
@@ -920,21 +921,61 @@ export async function createDevelopment(
     developerId,
   );
 
-  // 1) userId -> developer profile id
-  const validDeveloper = await db.query.developers.findFirst({
-    where: eq(developers.userId, developerId),
-    columns: { id: true, status: true, userId: true },
-  });
+  // 1) Check if user is super admin first
+  const [userRecord] = await db
+    .select({ role: users.role })
+    .from(users)
+    .where(eq(users.id, developerId))
+    .limit(1);
 
-  if (!validDeveloper) {
-    throw createError(
-      `Developer profile for user ID ${developerId} not found. Please complete your developer profile setup.`,
-      'NOT_FOUND',
-      { userId: developerId },
-    );
+  const isSuperAdmin = userRecord?.role === 'super_admin';
+  let developerProfileId: number;
+
+  if (isSuperAdmin) {
+    // For super admins, find or create a system developer profile
+    let systemDeveloper = await db.query.developers.findFirst({
+      where: eq(developers.userId, developerId),
+      columns: { id: true, status: true, userId: true },
+    });
+
+    if (!systemDeveloper) {
+      // Create a developer profile for the super admin
+      const [newDevProfile] = await db.insert(developers).values({
+        userId: developerId,
+        companyName: 'Platform Administrator',
+        status: 'approved',
+        description: 'System developer profile for platform administration',
+        contactEmail: 'admin@realestateportal.test',
+        phone: '0000000000',
+        website: 'https://realestateportal.test',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      });
+      systemDeveloper = {
+        id: newDevProfile.insertId,
+        status: 'approved' as const,
+        userId: developerId,
+      };
+    }
+
+    developerProfileId = systemDeveloper.id;
+  } else {
+    // Regular developers need a developer profile
+    const validDeveloper = await db.query.developers.findFirst({
+      where: eq(developers.userId, developerId),
+      columns: { id: true, status: true, userId: true },
+    });
+
+    if (!validDeveloper) {
+      throw createError(
+        `Developer profile for user ID ${developerId} not found. Please complete your developer profile setup.`,
+        'NOT_FOUND',
+        { userId: developerId },
+      );
+    }
+
+    developerProfileId = validDeveloper.id;
   }
-
-  const developerProfileId = validDeveloper.id;
 
   // 2) brand profile validation
   const targetBrandId = brandProfileId ?? (developmentData as any).developerBrandProfileId;
@@ -999,7 +1040,8 @@ export async function createDevelopment(
     baseSlug = (developmentData as any).name;
   }
 
-  const slugSource = baseSlug.trim();
+  // Ensure baseSlug is never undefined
+  const slugSource = (baseSlug || '').trim();
   const slug = await generateUniqueSlug(slugSource);
 
   // IMPORTANT:
@@ -1015,7 +1057,7 @@ export async function createDevelopment(
     normalizedTransactionType === 'auction' ? computeAuctionRangeFromUnits(unitTypesData) : null;
 
   const insertPayload: Record<string, any> = {
-    developerId: developerProfileId,
+    developerId: developerProfileId, // Now always populated (auto-created for super admins)
     name: (developmentData as any).name,
     slug,
     city: (developmentData as any).city,
@@ -1144,6 +1186,14 @@ export async function createDevelopment(
     (developmentData as any).brochures.length > 0
   ) {
     insertPayload.brochures = JSON.stringify((developmentData as any).brochures);
+  }
+
+  // Apply metadata overrides explicitly
+  if (ownerType && !(ownerType in insertPayload)) {
+    insertPayload.devOwnerType = ownerType;
+  }
+  if (brandProfileId && !(brandProfileId in insertPayload)) {
+    insertPayload.developerBrandProfileId = brandProfileId;
   }
 
   Object.keys(restMetadata).forEach(key => {
