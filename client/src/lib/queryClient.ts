@@ -1,4 +1,5 @@
 import { QueryClient } from '@tanstack/react-query';
+import { getApiUrl } from './api';
 
 /**
  * Optimized React Query Client Configuration
@@ -78,9 +79,10 @@ export function prefetchExploreFeed(filters: ExploreFeedFilters) {
     queryFn: async () => {
       // This will be handled by the actual API hook
       // The prefetch just warms up the cache
-      const baseUrl = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || '';
+      // The prefetch just warms up the cache
+      // Ensure we don't strip /api if specific baseUrl is provided
       const endpoint = '/api/explore/getFeed';
-      const url = baseUrl ? `${baseUrl}${endpoint.replace('/api', '')}` : endpoint;
+      const url = getApiUrl(endpoint);
 
       const response = await fetch(
         url +
@@ -109,9 +111,8 @@ export function prefetchVideoFeed(filters: ExploreFeedFilters) {
   return queryClient.prefetchQuery({
     queryKey: ['explore', 'videos', { ...filters, offset: nextOffset }],
     queryFn: async () => {
-      const baseUrl = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || '';
       const endpoint = '/api/explore/getVideoFeed';
-      const url = baseUrl ? `${baseUrl}${endpoint.replace('/api', '')}` : endpoint;
+      const url = getApiUrl(endpoint);
 
       const response = await fetch(
         url +
@@ -152,9 +153,8 @@ export function prefetchMapProperties(
         ...(categoryId && { categoryId: categoryId.toString() }),
       });
 
-      const baseUrl = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || '';
       const endpoint = '/api/explore/getMapProperties';
-      const url = baseUrl ? `${baseUrl}${endpoint.replace('/api', '')}` : endpoint;
+      const url = getApiUrl(endpoint);
 
       const response = await fetch(url + '?' + params);
       return response.json();
@@ -171,9 +171,8 @@ export function prefetchNeighbourhoodDetail(neighbourhoodId: number) {
   return queryClient.prefetchQuery({
     queryKey: ['neighbourhood', neighbourhoodId],
     queryFn: async () => {
-      const baseUrl = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || '';
       const endpoint = `/api/explore/getNeighbourhoodDetail?id=${neighbourhoodId}`;
-      const url = baseUrl ? `${baseUrl}${endpoint.replace('/api', '')}` : endpoint;
+      const url = getApiUrl(endpoint);
 
       const response = await fetch(url);
       return response.json();

@@ -20,7 +20,7 @@ import { sql } from 'drizzle-orm';
 export const activities = mysqlTable(
   'activities',
   {
-    id: int().autoincrement().notNull(),
+    id: int().autoincrement().primaryKey(),
     developerId: int('developer_id')
       .notNull()
       .references(() => developers.id),
@@ -48,7 +48,7 @@ export const activities = mysqlTable(
 );
 
 export const agencies = mysqlTable('agencies', {
-  id: int().autoincrement().notNull(),
+  id: int().autoincrement().primaryKey(),
   name: varchar({ length: 255 }).notNull(),
   slug: varchar({ length: 255 }).notNull(),
   description: text(),
@@ -68,7 +68,7 @@ export const agencies = mysqlTable('agencies', {
 });
 
 export const agencyBranding = mysqlTable('agency_branding', {
-  id: int().autoincrement().notNull(),
+  id: int().autoincrement().primaryKey(),
   agencyId: int()
     .notNull()
     .references(() => agencies.id, { onDelete: 'cascade' }),
@@ -93,7 +93,7 @@ export const agencyBranding = mysqlTable('agency_branding', {
 });
 
 export const agencyJoinRequests = mysqlTable('agency_join_requests', {
-  id: int().autoincrement().notNull(),
+  id: int().autoincrement().primaryKey(),
   agencyId: int()
     .notNull()
     .references(() => agencies.id, { onDelete: 'cascade' }),
@@ -109,7 +109,7 @@ export const agencyJoinRequests = mysqlTable('agency_join_requests', {
 });
 
 export const agencySubscriptions = mysqlTable('agency_subscriptions', {
-  id: int().autoincrement().notNull(),
+  id: int().autoincrement().primaryKey(),
   agencyId: int()
     .notNull()
     .references(() => agencies.id, { onDelete: 'cascade' }),
@@ -140,7 +140,7 @@ export const agencySubscriptions = mysqlTable('agency_subscriptions', {
 });
 
 export const agentCoverageAreas = mysqlTable('agent_coverage_areas', {
-  id: int().autoincrement().notNull(),
+  id: int().autoincrement().primaryKey(),
   agentId: int()
     .notNull()
     .references(() => agents.id, { onDelete: 'cascade' }),
@@ -155,7 +155,7 @@ export const agentCoverageAreas = mysqlTable('agent_coverage_areas', {
 export const agentKnowledge = mysqlTable(
   'agent_knowledge',
   {
-    id: int().autoincrement().notNull(),
+    id: int().autoincrement().primaryKey(),
     topic: varchar({ length: 200 }).notNull(),
     content: text().notNull(),
     category: varchar({ length: 100 }),
@@ -177,7 +177,7 @@ export const agentKnowledge = mysqlTable(
 export const agentMemory = mysqlTable(
   'agent_memory',
   {
-    id: int().autoincrement().notNull(),
+    id: int().autoincrement().primaryKey(),
     sessionId: varchar('session_id', { length: 100 }).notNull(),
     conversationId: varchar('conversation_id', { length: 100 }),
     userId: int('user_id').references(() => users.id),
@@ -197,7 +197,7 @@ export const agentMemory = mysqlTable(
 export const agentTasks = mysqlTable(
   'agent_tasks',
   {
-    id: int().autoincrement().notNull(),
+    id: int().autoincrement().primaryKey(),
     taskId: varchar('task_id', { length: 100 }).notNull(),
     sessionId: varchar('session_id', { length: 100 }),
     userId: int('user_id').references(() => users.id),
@@ -223,7 +223,7 @@ export const agentTasks = mysqlTable(
 );
 
 export const agents = mysqlTable('agents', {
-  id: int().autoincrement().notNull(),
+  id: int().autoincrement().primaryKey(),
   userId: int().references(() => users.id, { onDelete: 'cascade' }),
   agencyId: int().references(() => agencies.id, { onDelete: 'set null' }),
   firstName: varchar({ length: 100 }).notNull(),
@@ -256,7 +256,7 @@ export const agents = mysqlTable('agents', {
 export const amenities = mysqlTable(
   'amenities',
   {
-    id: int().autoincrement().notNull(),
+    id: int().autoincrement().primaryKey(),
     locationId: int('location_id')
       .notNull()
       .references(() => locations.id, { onDelete: 'cascade' }),
@@ -276,7 +276,7 @@ export const amenities = mysqlTable(
 );
 
 export const analyticsAggregations = mysqlTable('analytics_aggregations', {
-  id: int().autoincrement().notNull(),
+  id: int().autoincrement().primaryKey(),
   aggregationType: mysqlEnum(['daily', 'weekly', 'monthly']).notNull(),
   aggregationDate: varchar({ length: 10 }).notNull(),
   suburbId: int().references(() => suburbs.id, { onDelete: 'cascade' }),
@@ -303,7 +303,7 @@ export const analyticsAggregations = mysqlTable('analytics_aggregations', {
 });
 
 export const auditLogs = mysqlTable('audit_logs', {
-  id: int().autoincrement().notNull(),
+  id: int().autoincrement().primaryKey(),
   userId: int()
     .notNull()
     .references(() => users.id, { onDelete: 'cascade' }),
@@ -319,7 +319,7 @@ export const auditLogs = mysqlTable('audit_logs', {
 export const billingTransactions = mysqlTable(
   'billing_transactions',
   {
-    id: int().autoincrement().notNull(),
+    id: int().autoincrement().primaryKey(),
     userId: int('user_id')
       .notNull()
       .references(() => users.id),
@@ -351,7 +351,7 @@ export const billingTransactions = mysqlTable(
 export const boostCampaigns = mysqlTable(
   'boost_campaigns',
   {
-    id: varchar({ length: 36 }).notNull(),
+    id: varchar({ length: 36 }).notNull().primaryKey(),
     partnerId: varchar('partner_id', { length: 36 })
       .notNull()
       .references(() => explorePartners.id),
@@ -381,7 +381,7 @@ export const boostCampaigns = mysqlTable(
 export const boostCredits = mysqlTable(
   'boost_credits',
   {
-    id: int().autoincrement().notNull(),
+    id: int().autoincrement().primaryKey(),
     userId: int('user_id')
       .notNull()
       .references(() => users.id),
@@ -415,7 +415,7 @@ export const bundlePartners = mysqlTable(
 export const cities = mysqlTable(
   'cities',
   {
-    id: int().autoincrement().notNull(),
+    id: int().autoincrement().primaryKey(),
     provinceId: int()
       .notNull()
       .references(() => provinces.id, { onDelete: 'cascade' }),
@@ -430,11 +430,11 @@ export const cities = mysqlTable(
     seoTitle: varchar('seo_title', { length: 255 }),
     seoDescription: text('seo_description'),
   },
-  table => [index('idx_city_slug').on(table.slug), index('').on(table.slug)],
+  table => [index('idx_city_slug').on(table.slug), index('idx_fixed_slug').on(table.slug)],
 );
 
 export const cityPriceAnalytics = mysqlTable('city_price_analytics', {
-  id: int().autoincrement().notNull(),
+  id: int().autoincrement().primaryKey(),
   cityId: int()
     .notNull()
     .references(() => cities.id, { onDelete: 'cascade' }),
@@ -459,7 +459,7 @@ export const cityPriceAnalytics = mysqlTable('city_price_analytics', {
 });
 
 export const commissions = mysqlTable('commissions', {
-  id: int().autoincrement().notNull(),
+  id: int().autoincrement().primaryKey(),
   agentId: int()
     .notNull()
     .references(() => agents.id, { onDelete: 'cascade' }),
@@ -479,7 +479,7 @@ export const commissions = mysqlTable('commissions', {
 export const contentApprovalQueue = mysqlTable(
   'content_approval_queue',
   {
-    id: varchar({ length: 36 }).notNull(),
+    id: varchar({ length: 36 }).notNull().primaryKey(),
     contentId: varchar('content_id', { length: 36 }).notNull(),
     partnerId: varchar('partner_id', { length: 36 })
       .notNull()
@@ -506,9 +506,7 @@ export const contentQualityScores = mysqlTable(
     engagementScore: decimal('engagement_score', { precision: 5, scale: 2 }).default('0'),
     productionScore: decimal('production_score', { precision: 5, scale: 2 }).default('0'),
     negativeSignals: int('negative_signals').default(0),
-    lastCalculatedAt: timestamp('last_calculated_at', { mode: 'string' }).default(
-      'CURRENT_TIMESTAMP',
-    ),
+    lastCalculatedAt: timestamp('last_calculated_at', { mode: 'string' }).defaultNow(),
   },
   table => [index('idx_quality_score').on(table.overallScore)],
 );
@@ -527,7 +525,7 @@ export const contentTopics = mysqlTable(
 );
 
 export const coupons = mysqlTable('coupons', {
-  id: int().autoincrement().notNull(),
+  id: int().autoincrement().primaryKey(),
   code: varchar({ length: 50 }).notNull(),
   stripeCouponId: varchar({ length: 100 }),
   name: varchar({ length: 100 }),
@@ -547,7 +545,7 @@ export const coupons = mysqlTable('coupons', {
 export const developerBrandProfiles = mysqlTable(
   'developer_brand_profiles',
   {
-    id: int().autoincrement().notNull(),
+    id: int().autoincrement().primaryKey(),
     brandName: varchar('brand_name', { length: 255 }).notNull(),
     slug: varchar({ length: 255 }).notNull(),
     logoUrl: text('logo_url'),
@@ -567,9 +565,7 @@ export const developerBrandProfiles = mysqlTable(
     isClaimable: tinyint('is_claimable').default(1).notNull(),
     isVisible: tinyint('is_visible').default(1).notNull(),
     isContactVerified: tinyint('is_contact_verified').default(0).notNull(),
-    linkedDeveloperAccountId: int('linked_developer_account_id').references(() => developers.id, {
-      onDelete: 'set null',
-    }),
+    linkedDeveloperAccountId: int('linked_developer_account_id'),
     ownerType: mysqlEnum('owner_type', ['platform', 'developer']).default('platform').notNull(),
     claimRequestedAt: timestamp('claim_requested_at', { mode: 'string' }),
     totalLeadsReceived: int('total_leads_received').default(0).notNull(),
@@ -588,13 +584,18 @@ export const developerBrandProfiles = mysqlTable(
     index('idx_brand_profiles_visible').on(table.isVisible),
     index('idx_brand_profiles_subscriber').on(table.isSubscriber),
     index('idx_brand_profiles_owner').on(table.ownerType),
+    foreignKey({
+      name: 'dev_brand_linked_dev_fk',
+      columns: [table.linkedDeveloperAccountId],
+      foreignColumns: [developers.id],
+    }).onDelete('set null'),
   ],
 );
 
 export const developerNotifications = mysqlTable(
   'developer_notifications',
   {
-    id: int().autoincrement().notNull(),
+    id: int().autoincrement().primaryKey(),
     developerId: int('developer_id')
       .notNull()
       .references(() => developers.id, { onDelete: 'cascade' }),
@@ -621,10 +622,9 @@ export const developerNotifications = mysqlTable(
 export const developerSubscriptionLimits = mysqlTable(
   'developer_subscription_limits',
   {
-    id: int().autoincrement().notNull(),
+    id: int().autoincrement().primaryKey(),
     subscriptionId: int('subscription_id')
-      .notNull()
-      .references(() => developerSubscriptions.id),
+      .notNull(),
     maxDevelopments: int('max_developments').default(1).notNull(),
     maxLeadsPerMonth: int('max_leads_per_month').default(50).notNull(),
     maxTeamMembers: int('max_team_members').default(1).notNull(),
@@ -635,16 +635,16 @@ export const developerSubscriptionLimits = mysqlTable(
     createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
   },
-  table => [index('idx_developer_subscription_limits_subscription_id').on(table.subscriptionId)],
+  table => [index('idx_developer_subscription_limits_subscription_id').on(table.subscriptionId),
+    foreignKey({ name: 'dev_sub_lim_sub_fk', columns: [table.subscriptionId], foreignColumns: [developerSubscriptions.id] }),],
 );
 
 export const developerSubscriptionUsage = mysqlTable(
   'developer_subscription_usage',
   {
-    id: int().autoincrement().notNull(),
+    id: int().autoincrement().primaryKey(),
     subscriptionId: int('subscription_id')
-      .notNull()
-      .references(() => developerSubscriptions.id),
+      .notNull(),
     developmentsCount: int('developments_count').default(0).notNull(),
     leadsThisMonth: int('leads_this_month').default(0).notNull(),
     teamMembersCount: int('team_members_count').default(0).notNull(),
@@ -652,13 +652,14 @@ export const developerSubscriptionUsage = mysqlTable(
     createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
   },
-  table => [index('idx_developer_subscription_usage_subscription_id').on(table.subscriptionId)],
+  table => [index('idx_developer_subscription_usage_subscription_id').on(table.subscriptionId),
+    foreignKey({ name: 'dev_sub_usage_sub_fk', columns: [table.subscriptionId], foreignColumns: [developerSubscriptions.id] }),],
 );
 
 export const developerSubscriptions = mysqlTable(
   'developer_subscriptions',
   {
-    id: int().autoincrement().notNull(),
+    id: int().autoincrement().primaryKey(),
     developerId: int('developer_id')
       .notNull()
       .references(() => developers.id),
@@ -683,7 +684,7 @@ export const developerSubscriptions = mysqlTable(
 export const developers = mysqlTable(
   'developers',
   {
-    id: int().autoincrement().notNull(),
+    id: int().autoincrement().primaryKey(),
     name: varchar({ length: 255 }).notNull(),
     description: text(),
     logo: text(),
@@ -733,7 +734,7 @@ export const developers = mysqlTable(
 export const developmentApprovalQueue = mysqlTable(
   'development_approval_queue',
   {
-    id: int().autoincrement().notNull(),
+    id: int().autoincrement().primaryKey(),
     developmentId: int('development_id')
       .notNull()
       .references(() => developments.id),
@@ -762,7 +763,7 @@ export const developmentApprovalQueue = mysqlTable(
 export const developmentDrafts = mysqlTable(
   'development_drafts',
   {
-    id: int().autoincrement().notNull(),
+    id: int().autoincrement().primaryKey(),
     developerId: int().references(() => developers.id, { onDelete: 'cascade' }),
     draftName: varchar({ length: 255 }),
     draftData: json().notNull(),
@@ -770,12 +771,10 @@ export const developmentDrafts = mysqlTable(
     currentStep: int().default(0).notNull(),
     lastModified: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
     createdAt: timestamp({ mode: 'string' }).defaultNow().notNull(),
-    developerBrandProfileId: int('developer_brand_profile_id').references(
-      () => developerBrandProfiles.id,
-      { onDelete: 'cascade' },
-    ),
+    developerBrandProfileId: int('developer_brand_profile_id'),
   },
   table => [
+    foreignKey({ name: 'dev_drafts_brand_fk', columns: [table.developerBrandProfileId], foreignColumns: [developerBrandProfiles.id] }).onDelete('cascade'),
     index('idx_dev_drafts_developer_id').on(table.developerId),
     index('idx_dev_drafts_last_modified').on(table.lastModified),
   ],
@@ -784,7 +783,7 @@ export const developmentDrafts = mysqlTable(
 export const developmentLeadRoutes = mysqlTable(
   'development_lead_routes',
   {
-    id: int().autoincrement().notNull(),
+    id: int().autoincrement().primaryKey(),
     developmentId: int('development_id')
       .notNull()
       .references(() => developments.id),
@@ -794,22 +793,17 @@ export const developmentLeadRoutes = mysqlTable(
       'development_page',
       'campaign',
     ]).notNull(),
-    sourceBrandProfileId: int('source_brand_profile_id').references(
-      () => developerBrandProfiles.id,
-      { onDelete: 'cascade' },
-    ),
-    receiverBrandProfileId: int('receiver_brand_profile_id')
-      .notNull()
-      .references(() => developerBrandProfiles.id, { onDelete: 'cascade' }),
-    fallbackBrandProfileId: int('fallback_brand_profile_id').references(
-      () => developerBrandProfiles.id,
-      { onDelete: 'set null' },
-    ),
+    sourceBrandProfileId: int('source_brand_profile_id'),
+    receiverBrandProfileId: int('receiver_brand_profile_id').notNull(),
+    fallbackBrandProfileId: int('fallback_brand_profile_id'),
     priority: int().default(0).notNull(),
     isActive: tinyint('is_active').default(1).notNull(),
     createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
   },
   table => [
+    foreignKey({ name: 'dev_lead_src_fk', columns: [table.sourceBrandProfileId], foreignColumns: [developerBrandProfiles.id] }).onDelete('cascade'),
+    foreignKey({ name: 'dev_lead_rcv_fk', columns: [table.receiverBrandProfileId], foreignColumns: [developerBrandProfiles.id] }).onDelete('cascade'),
+    foreignKey({ name: 'dev_lead_flb_fk', columns: [table.fallbackBrandProfileId], foreignColumns: [developerBrandProfiles.id] }).onDelete('set null'),
     index('idx_lead_routes_development_id').on(table.developmentId),
     index('idx_lead_routes_source_type').on(table.sourceType),
     index('idx_lead_routes_lookup').on(
@@ -823,7 +817,7 @@ export const developmentLeadRoutes = mysqlTable(
 export const developmentPhases = mysqlTable(
   'development_phases',
   {
-    id: int().autoincrement().notNull(),
+    id: int().autoincrement().primaryKey(),
     developmentId: int('development_id')
       .notNull()
       .references(() => developments.id),
@@ -860,7 +854,7 @@ export const developmentPhases = mysqlTable(
 export const developmentUnits = mysqlTable(
   'development_units',
   {
-    id: int().autoincrement().notNull(),
+    id: int().autoincrement().primaryKey(),
     developmentId: int('development_id')
       .notNull()
       .references(() => developments.id),
@@ -904,7 +898,7 @@ export const developmentUnits = mysqlTable(
 export const developments = mysqlTable(
   'developments',
   {
-    id: int().autoincrement().notNull(),
+    id: int().autoincrement().primaryKey(),
     developerId: int().references(() => developers.id, { onDelete: 'cascade' }),
     name: varchar({ length: 255 }).notNull(),
     description: text(),
@@ -952,16 +946,10 @@ export const developments = mysqlTable(
     readinessScore: int('readiness_score').default(0).notNull(),
     rejectionReasons: json('rejection_reasons'),
     rejectionNote: text('rejection_note'),
-    developerBrandProfileId: int('developer_brand_profile_id').references(
-      () => developerBrandProfiles.id,
-      { onDelete: 'set null' },
-    ),
+    developerBrandProfileId: int('developer_brand_profile_id'),
     devOwnerType: mysqlEnum('dev_owner_type', ['platform', 'developer']).default('developer'),
     isShowcase: int('is_showcase').default(0),
-    marketingBrandProfileId: int('marketing_brand_profile_id').references(
-      () => developerBrandProfiles.id,
-      { onDelete: 'set null' },
-    ),
+    marketingBrandProfileId: int('marketing_brand_profile_id'),
     marketingRole: mysqlEnum('marketing_role', ['exclusive', 'joint', 'open']),
     tagline: varchar({ length: 255 }),
     marketingName: varchar('marketing_name', { length: 255 }),
@@ -1015,6 +1003,8 @@ export const developments = mysqlTable(
     reservePriceFrom: decimal('reserve_price_from', { precision: 15, scale: 2 }),
   },
   table => [
+    foreignKey({ name: 'dev_brand_fk', columns: [table.developerBrandProfileId], foreignColumns: [developerBrandProfiles.id] }).onDelete('set null'),
+    foreignKey({ name: 'mkt_brand_fk', columns: [table.marketingBrandProfileId], foreignColumns: [developerBrandProfiles.id] }).onDelete('set null'),
     index('idx_developments_slug').on(table.slug),
     index('idx_developments_location').on(table.latitude, table.longitude),
     index('idx_developments_auction_dates').on(table.auctionStartDate, table.auctionEndDate),
@@ -1022,7 +1012,7 @@ export const developments = mysqlTable(
 );
 
 export const emailTemplates = mysqlTable('email_templates', {
-  id: int().autoincrement().notNull(),
+  id: int().autoincrement().primaryKey(),
   templateKey: varchar({ length: 100 }).notNull(),
   subject: varchar({ length: 255 }).notNull(),
   htmlContent: text().notNull(),
@@ -1034,7 +1024,7 @@ export const emailTemplates = mysqlTable('email_templates', {
 });
 
 export const exploreComments = mysqlTable('exploreComments', {
-  id: varchar({ length: 191 }).notNull(),
+  id: varchar({ length: 191 }).notNull().primaryKey(),
   videoId: varchar({ length: 191 }).notNull(),
   userId: int().notNull(),
   comment: text().notNull(),
@@ -1044,7 +1034,7 @@ export const exploreComments = mysqlTable('exploreComments', {
 export const exploreFollows = mysqlTable(
   'exploreFollows',
   {
-    id: varchar({ length: 191 }).notNull(),
+    id: varchar({ length: 191 }).notNull().primaryKey(),
     followerId: int().notNull(),
     followingId: int().notNull(),
     createdAt: timestamp({ mode: 'string' }).defaultNow(),
@@ -1055,7 +1045,7 @@ export const exploreFollows = mysqlTable(
 export const exploreLikes = mysqlTable(
   'exploreLikes',
   {
-    id: varchar({ length: 191 }).notNull(),
+    id: varchar({ length: 191 }).notNull().primaryKey(),
     videoId: varchar({ length: 191 }).notNull(),
     userId: int().notNull(),
     createdAt: timestamp({ mode: 'string' }).defaultNow(),
@@ -1064,14 +1054,14 @@ export const exploreLikes = mysqlTable(
 );
 
 export const exploreVideoViews = mysqlTable('exploreVideoViews', {
-  id: varchar({ length: 191 }).notNull(),
+  id: varchar({ length: 191 }).notNull().primaryKey(),
   videoId: varchar({ length: 191 }).notNull(),
   userId: int().notNull(),
   createdAt: timestamp({ mode: 'string' }).defaultNow(),
 });
 
 export const exploreVideos = mysqlTable('exploreVideos', {
-  id: int().autoincrement().notNull(),
+  id: int().autoincrement().primaryKey(),
   agentId: int().references(() => agents.id, { onDelete: 'cascade' }),
   propertyId: int().references(() => properties.id, { onDelete: 'set null' }),
   developmentId: int().references(() => developments.id, { onDelete: 'set null' }),
@@ -1092,7 +1082,7 @@ export const exploreVideos = mysqlTable('exploreVideos', {
 export const exploreCategories = mysqlTable(
   'explore_categories',
   {
-    id: int().autoincrement().notNull(),
+    id: int().autoincrement().primaryKey(),
     name: varchar({ length: 100 }).notNull(),
     slug: varchar({ length: 100 }).notNull(),
     description: text(),
@@ -1111,7 +1101,7 @@ export const exploreCategories = mysqlTable(
 export const exploreTopics = mysqlTable(
   'explore_topics',
   {
-    id: int().autoincrement().notNull(),
+    id: int().autoincrement().primaryKey(),
     name: varchar({ length: 150 }).notNull(),
     slug: varchar({ length: 150 }).notNull(),
     description: text(),
@@ -1133,7 +1123,7 @@ export const exploreTopics = mysqlTable(
 export const exploreNeighbourhoods = mysqlTable(
   'explore_neighbourhoods',
   {
-    id: int().autoincrement().notNull(),
+    id: int().autoincrement().primaryKey(),
     name: varchar({ length: 150 }).notNull(),
     slug: varchar({ length: 150 }).notNull(),
     city: varchar({ length: 100 }).notNull(),
@@ -1158,10 +1148,8 @@ export const exploreNeighbourhoods = mysqlTable(
 export const exploreNeighbourhoodStories = mysqlTable(
   'explore_neighbourhood_stories',
   {
-    id: int().autoincrement().notNull(),
-    neighbourhoodId: int('neighbourhood_id').references(() => exploreNeighbourhoods.id, {
-      onDelete: 'cascade',
-    }),
+    id: int().autoincrement().primaryKey(),
+    neighbourhoodId: int('neighbourhood_id'),
     title: varchar({ length: 255 }).notNull(),
     content: text().notNull(),
     authorId: int('author_id').references(() => users.id, { onDelete: 'set null' }),
@@ -1173,6 +1161,7 @@ export const exploreNeighbourhoodStories = mysqlTable(
     updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
   },
   table => [
+    foreignKey({ name: 'exp_nbh_story_fk', columns: [table.neighbourhoodId], foreignColumns: [exploreNeighbourhoods.id] }).onDelete('cascade'),
     index('idx_neighbourhood_stories_neighbourhood').on(table.neighbourhoodId),
     index('idx_neighbourhood_stories_published').on(table.isPublished),
   ],
@@ -1181,7 +1170,7 @@ export const exploreNeighbourhoodStories = mysqlTable(
 export const exploreContent = mysqlTable(
   'explore_content',
   {
-    id: int().autoincrement().notNull(),
+    id: int().autoincrement().primaryKey(),
     contentType: varchar('content_type', { length: 50 }).notNull(),
     referenceId: int('reference_id').notNull(),
     creatorId: int('creator_id').references(() => users.id),
@@ -1222,7 +1211,7 @@ export const exploreContent = mysqlTable(
 export const exploreHighlightTags = mysqlTable(
   'explore_highlight_tags',
   {
-    id: int().autoincrement().notNull(),
+    id: int().autoincrement().primaryKey(),
     tagKey: varchar('tag_key', { length: 50 }).notNull(),
     label: varchar({ length: 100 }).notNull(),
     icon: varchar({ length: 50 }),
@@ -1242,7 +1231,7 @@ export const exploreHighlightTags = mysqlTable(
 export const exploreInteractions = mysqlTable(
   'explore_interactions',
   {
-    id: int().autoincrement().notNull(),
+    id: int().autoincrement().primaryKey(),
     shortId: int('short_id').notNull(),
     userId: int('user_id'),
     sessionId: varchar('session_id', { length: 255 }).notNull(),
@@ -1283,7 +1272,7 @@ export const exploreInteractions = mysqlTable(
 export const explorePartners = mysqlTable(
   'explore_partners',
   {
-    id: varchar({ length: 36 }).notNull(),
+    id: varchar({ length: 36 }).notNull().primaryKey(),
     userId: varchar('user_id', { length: 36 }).notNull(),
     tierId: int('tier_id')
       .notNull()
@@ -1312,7 +1301,7 @@ export const explorePartners = mysqlTable(
 export const exploreShorts = mysqlTable(
   'explore_shorts',
   {
-    id: int().autoincrement().notNull(),
+    id: int().autoincrement().primaryKey(),
     listingId: int('listing_id'),
     developmentId: int('development_id'),
     agentId: int('agent_id'),
@@ -1375,7 +1364,7 @@ export const exploreShorts = mysqlTable(
 export const exploreUserPreferences = mysqlTable(
   'explore_user_preferences',
   {
-    id: int().autoincrement().notNull(),
+    id: int().autoincrement().primaryKey(),
     userId: int('user_id').notNull(),
     preferredLocations: json('preferred_locations'),
     budgetMin: int('budget_min'),
@@ -1391,7 +1380,7 @@ export const exploreUserPreferences = mysqlTable(
 );
 
 export const favorites = mysqlTable('favorites', {
-  id: int().autoincrement().notNull(),
+  id: int().autoincrement().primaryKey(),
   userId: int()
     .notNull()
     .references(() => users.id, { onDelete: 'cascade' }),
@@ -1419,7 +1408,7 @@ export const foundingPartners = mysqlTable('founding_partners', {
 export const heroCampaigns = mysqlTable(
   'hero_campaigns',
   {
-    id: int().autoincrement().notNull(),
+    id: int().autoincrement().primaryKey(),
     locationType: mysqlEnum('location_type', ['province', 'city', 'suburb']).notNull(),
     targetSlug: varchar('target_slug', { length: 255 }).notNull(),
     imageUrl: varchar('image_url', { length: 1024 }).notNull(),
@@ -1438,7 +1427,7 @@ export const heroCampaigns = mysqlTable(
 );
 
 export const invitations = mysqlTable('invitations', {
-  id: int().autoincrement().notNull(),
+  id: int().autoincrement().primaryKey(),
   agencyId: int()
     .notNull()
     .references(() => agencies.id, { onDelete: 'cascade' }),
@@ -1457,7 +1446,7 @@ export const invitations = mysqlTable('invitations', {
 });
 
 export const invites = mysqlTable('invites', {
-  id: int().autoincrement().notNull(),
+  id: int().autoincrement().primaryKey(),
   agencyId: int()
     .notNull()
     .references(() => agencies.id, { onDelete: 'cascade' }),
@@ -1472,7 +1461,7 @@ export const invites = mysqlTable('invites', {
 });
 
 export const invoices = mysqlTable('invoices', {
-  id: int().autoincrement().notNull(),
+  id: int().autoincrement().primaryKey(),
   agencyId: int()
     .notNull()
     .references(() => agencies.id, { onDelete: 'cascade' }),
@@ -1507,7 +1496,7 @@ export const invoices = mysqlTable('invoices', {
 export const launchContentQuotas = mysqlTable(
   'launch_content_quotas',
   {
-    id: varchar({ length: 36 }).notNull(),
+    id: varchar({ length: 36 }).notNull().primaryKey(),
     contentType: varchar('content_type', { length: 50 }).notNull(),
     requiredCount: int('required_count').notNull(),
     currentCount: int('current_count').default(0),
@@ -1519,7 +1508,7 @@ export const launchContentQuotas = mysqlTable(
 export const launchMetrics = mysqlTable(
   'launch_metrics',
   {
-    id: varchar({ length: 36 }).notNull(),
+    id: varchar({ length: 36 }).notNull().primaryKey(),
     // you can use { mode: 'date' }, if you want to have Date as type for this column
     metricDate: date('metric_date', { mode: 'string' }).notNull(),
     topicEngagementRate: decimal('topic_engagement_rate', { precision: 5, scale: 2 }),
@@ -1533,7 +1522,7 @@ export const launchMetrics = mysqlTable(
 );
 
 export const launchPhases = mysqlTable('launch_phases', {
-  id: varchar({ length: 36 }).notNull(),
+  id: varchar({ length: 36 }).notNull().primaryKey(),
   phase: mysqlEnum(['pre_launch', 'launch_period', 'ramp_up', 'ecosystem_maturity']).notNull(),
   // you can use { mode: 'date' }, if you want to have Date as type for this column
   startDate: date('start_date', { mode: 'string' }).notNull(),
@@ -1547,7 +1536,7 @@ export const launchPhases = mysqlTable('launch_phases', {
 });
 
 export const leadActivities = mysqlTable('lead_activities', {
-  id: int().autoincrement().notNull(),
+  id: int().autoincrement().primaryKey(),
   leadId: int()
     .notNull()
     .references(() => leads.id, { onDelete: 'cascade' }),
@@ -1569,7 +1558,7 @@ export const leadActivities = mysqlTable('lead_activities', {
 export const leads = mysqlTable(
   'leads',
   {
-    id: int().autoincrement().notNull(),
+    id: int().autoincrement().primaryKey(),
     propertyId: int().references(() => properties.id, { onDelete: 'set null' }),
     developmentId: int().references(() => developments.id, { onDelete: 'set null' }),
     agencyId: int().references(() => agencies.id, { onDelete: 'set null' }),
@@ -1625,10 +1614,7 @@ export const leads = mysqlTable(
     assignedAt: timestamp('assigned_at', { mode: 'string' }),
     convertedAt: timestamp('converted_at', { mode: 'string' }),
     lostReason: text('lost_reason'),
-    developerBrandProfileId: int('developer_brand_profile_id').references(
-      () => developerBrandProfiles.id,
-      { onDelete: 'set null' },
-    ),
+    developerBrandProfileId: int('developer_brand_profile_id'),
     brandLeadStatus: mysqlEnum('brand_lead_status', [
       'captured',
       'delivered_unsubscribed',
@@ -1651,7 +1637,7 @@ export const leads = mysqlTable(
 );
 
 export const listingAnalytics = mysqlTable('listing_analytics', {
-  id: int().autoincrement().notNull(),
+  id: int().autoincrement().primaryKey(),
   listingId: int()
     .notNull()
     .references(() => listings.id),
@@ -1674,7 +1660,7 @@ export const listingAnalytics = mysqlTable('listing_analytics', {
 });
 
 export const listingApprovalQueue = mysqlTable('listing_approval_queue', {
-  id: int().autoincrement().notNull(),
+  id: int().autoincrement().primaryKey(),
   listingId: int()
     .notNull()
     .references(() => listings.id),
@@ -1692,7 +1678,7 @@ export const listingApprovalQueue = mysqlTable('listing_approval_queue', {
 });
 
 export const listingLeads = mysqlTable('listing_leads', {
-  id: int().autoincrement().notNull(),
+  id: int().autoincrement().primaryKey(),
   listingId: int()
     .notNull()
     .references(() => listings.id),
@@ -1734,7 +1720,7 @@ export const listingLeads = mysqlTable('listing_leads', {
 });
 
 export const listingMedia = mysqlTable('listing_media', {
-  id: int().autoincrement().notNull(),
+  id: int().autoincrement().primaryKey(),
   listingId: int()
     .notNull()
     .references(() => listings.id),
@@ -1761,7 +1747,7 @@ export const listingMedia = mysqlTable('listing_media', {
 });
 
 export const listingSettings = mysqlTable('listing_settings', {
-  id: int().autoincrement().notNull(),
+  id: int().autoincrement().primaryKey(),
   autoPublishForVerifiedAccounts: int().default(0).notNull(),
   maxImagesPerListing: int().default(30).notNull(),
   maxVideosPerListing: int().default(5).notNull(),
@@ -1782,7 +1768,7 @@ export const listingSettings = mysqlTable('listing_settings', {
 });
 
 export const listingViewings = mysqlTable('listing_viewings', {
-  id: int().autoincrement().notNull(),
+  id: int().autoincrement().primaryKey(),
   listingId: int()
     .notNull()
     .references(() => listings.id),
@@ -1806,7 +1792,7 @@ export const listingViewings = mysqlTable('listing_viewings', {
 });
 
 export const listings = mysqlTable('listings', {
-  id: int().autoincrement().notNull(),
+  id: int().autoincrement().primaryKey(),
   ownerId: int().notNull(),
   agentId: int(),
   agencyId: int(),
@@ -1880,7 +1866,7 @@ export const listings = mysqlTable('listings', {
 });
 
 export const locationSearchCache = mysqlTable('location_search_cache', {
-  id: int().autoincrement().notNull(),
+  id: int().autoincrement().primaryKey(),
   searchQuery: varchar({ length: 255 }).notNull(),
   searchType: mysqlEnum(['province', 'city', 'suburb', 'address', 'all']).notNull(),
   resultsJson: text().notNull(),
@@ -1891,7 +1877,7 @@ export const locationSearchCache = mysqlTable('location_search_cache', {
 export const locations = mysqlTable(
   'locations',
   {
-    id: int().autoincrement().notNull(),
+    id: int().autoincrement().primaryKey(),
     name: varchar({ length: 200 }).notNull(),
     slug: varchar({ length: 200 }).notNull(),
     type: mysqlEnum(['province', 'city', 'suburb', 'neighborhood']).notNull(),
@@ -1915,7 +1901,7 @@ export const locations = mysqlTable(
 );
 
 export const marketInsightsCache = mysqlTable('market_insights_cache', {
-  id: int().autoincrement().notNull(),
+  id: int().autoincrement().primaryKey(),
   cacheKey: varchar({ length: 255 }).notNull(),
   cacheData: text().notNull(),
   cacheType: mysqlEnum([
@@ -1933,7 +1919,7 @@ export const marketInsightsCache = mysqlTable('market_insights_cache', {
 export const marketplaceBundles = mysqlTable(
   'marketplace_bundles',
   {
-    id: varchar({ length: 36 }).notNull(),
+    id: varchar({ length: 36 }).notNull().primaryKey(),
     slug: varchar({ length: 100 }).notNull(),
     name: varchar({ length: 255 }).notNull(),
     description: text(),
@@ -1946,7 +1932,7 @@ export const marketplaceBundles = mysqlTable(
 );
 
 export const notifications = mysqlTable('notifications', {
-  id: int().autoincrement().notNull(),
+  id: int().autoincrement().primaryKey(),
   userId: int()
     .notNull()
     .references(() => users.id, { onDelete: 'cascade' }),
@@ -1965,7 +1951,7 @@ export const notifications = mysqlTable('notifications', {
 });
 
 export const offers = mysqlTable('offers', {
-  id: int().autoincrement().notNull(),
+  id: int().autoincrement().primaryKey(),
   propertyId: int()
     .notNull()
     .references(() => properties.id, { onDelete: 'cascade' }),
@@ -1988,7 +1974,7 @@ export const offers = mysqlTable('offers', {
 export const partnerLeads = mysqlTable(
   'partner_leads',
   {
-    id: varchar({ length: 36 }).notNull(),
+    id: varchar({ length: 36 }).notNull().primaryKey(),
     partnerId: varchar('partner_id', { length: 36 })
       .notNull()
       .references(() => explorePartners.id),
@@ -2013,7 +1999,7 @@ export const partnerLeads = mysqlTable(
 export const partnerSubscriptions = mysqlTable(
   'partner_subscriptions',
   {
-    id: varchar({ length: 36 }).notNull(),
+    id: varchar({ length: 36 }).notNull().primaryKey(),
     partnerId: varchar('partner_id', { length: 36 })
       .notNull()
       .references(() => explorePartners.id),
@@ -2034,7 +2020,7 @@ export const partnerSubscriptions = mysqlTable(
 );
 
 export const partnerTiers = mysqlTable('partner_tiers', {
-  id: int().notNull(),
+  id: int().notNull().primaryKey(),
   name: varchar({ length: 100 }).notNull(),
   allowedContentTypes: json('allowed_content_types').notNull(),
   allowedCtas: json('allowed_ctas').notNull(),
@@ -2044,7 +2030,7 @@ export const partnerTiers = mysqlTable('partner_tiers', {
 });
 
 export const paymentMethods = mysqlTable('payment_methods', {
-  id: int().autoincrement().notNull(),
+  id: int().autoincrement().primaryKey(),
   agencyId: int()
     .notNull()
     .references(() => agencies.id, { onDelete: 'cascade' }),
@@ -2064,7 +2050,7 @@ export const paymentMethods = mysqlTable('payment_methods', {
 });
 
 export const plans = mysqlTable('plans', {
-  id: int().autoincrement().notNull(),
+  id: int().autoincrement().primaryKey(),
   name: varchar({ length: 100 }).notNull(),
   displayName: varchar({ length: 100 }).notNull(),
   description: text(),
@@ -2082,7 +2068,7 @@ export const plans = mysqlTable('plans', {
 });
 
 export const platformSettings = mysqlTable('platform_settings', {
-  id: int().autoincrement().notNull(),
+  id: int().autoincrement().primaryKey(),
   key: varchar({ length: 100 }).notNull(),
   value: text().notNull(),
   description: text(),
@@ -2096,7 +2082,7 @@ export const platformSettings = mysqlTable('platform_settings', {
 });
 
 export const priceAnalytics = mysqlTable('price_analytics', {
-  id: int().autoincrement().notNull(),
+  id: int().autoincrement().primaryKey(),
   locationId: int().notNull(),
   locationType: mysqlEnum(['suburb', 'city', 'province']).notNull(),
   currentAvgPrice: int(),
@@ -2126,7 +2112,7 @@ export const priceAnalytics = mysqlTable('price_analytics', {
 });
 
 export const priceHistory = mysqlTable('price_history', {
-  id: int().autoincrement().notNull(),
+  id: int().autoincrement().primaryKey(),
   propertyId: int()
     .notNull()
     .references(() => properties.id, { onDelete: 'cascade' }),
@@ -2156,7 +2142,7 @@ export const priceHistory = mysqlTable('price_history', {
 });
 
 export const pricePredictions = mysqlTable('price_predictions', {
-  id: int().autoincrement().notNull(),
+  id: int().autoincrement().primaryKey(),
   propertyId: int().references(() => properties.id, { onDelete: 'cascade' }),
   suburbId: int().references(() => suburbs.id, { onDelete: 'cascade' }),
   cityId: int().references(() => cities.id, { onDelete: 'cascade' }),
@@ -2178,7 +2164,7 @@ export const pricePredictions = mysqlTable('price_predictions', {
 export const properties = mysqlTable(
   'properties',
   {
-    id: int().autoincrement().notNull(),
+    id: int().autoincrement().primaryKey(),
     title: varchar({ length: 255 }).notNull(),
     description: text().notNull(),
     propertyType: mysqlEnum([
@@ -2233,12 +2219,10 @@ export const properties = mysqlTable(
     createdAt: timestamp({ mode: 'string' }).defaultNow().notNull(),
     updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
     locationId: int('location_id').references(() => locations.id, { onDelete: 'set null' }),
-    developerBrandProfileId: int('developer_brand_profile_id').references(
-      () => developerBrandProfiles.id,
-      { onDelete: 'set null' },
-    ),
+    developerBrandProfileId: int('developer_brand_profile_id'),
   },
   table => [
+    foreignKey({ name: 'prop_dev_brand_fk', columns: [table.developerBrandProfileId], foreignColumns: [developerBrandProfiles.id] }).onDelete('set null'),
     index('price_idx').on(table.price),
     index('status_idx').on(table.status),
     index('city_idx').on(table.city),
@@ -2251,13 +2235,13 @@ export const properties = mysqlTable(
     index('idx_properties_suburbId').on(table.suburbId),
     index('idx_properties_cityId_status').on(table.cityId, table.status),
     index('idx_properties_cityId_area').on(table.cityId, table.area),
-    index('').on(table.suburbId),
+    index('idx_fixed_suburb_id').on(table.suburbId),
     index('idx_properties_location_id').on(table.locationId),
   ],
 );
 
 export const propertyImages = mysqlTable('propertyImages', {
-  id: int().autoincrement().notNull(),
+  id: int().autoincrement().primaryKey(),
   propertyId: int()
     .notNull()
     .references(() => properties.id, { onDelete: 'cascade' }),
@@ -2268,7 +2252,7 @@ export const propertyImages = mysqlTable('propertyImages', {
 });
 
 export const propertySimilarityIndex = mysqlTable('property_similarity_index', {
-  id: int().autoincrement().notNull(),
+  id: int().autoincrement().primaryKey(),
   propertyId1: int()
     .notNull()
     .references(() => properties.id, { onDelete: 'cascade' }),
@@ -2285,7 +2269,7 @@ export const propertySimilarityIndex = mysqlTable('property_similarity_index', {
 });
 
 export const prospectFavorites = mysqlTable('prospect_favorites', {
-  id: int().autoincrement().notNull(),
+  id: int().autoincrement().primaryKey(),
   prospectId: int()
     .notNull()
     .references(() => prospects.id, { onDelete: 'cascade' }),
@@ -2296,7 +2280,7 @@ export const prospectFavorites = mysqlTable('prospect_favorites', {
 });
 
 export const prospects = mysqlTable('prospects', {
-  id: int().autoincrement().notNull(),
+  id: int().autoincrement().primaryKey(),
   sessionId: varchar({ length: 255 }).notNull(),
   email: varchar({ length: 320 }),
   phone: varchar({ length: 50 }),
@@ -2347,7 +2331,7 @@ export const prospects = mysqlTable('prospects', {
 export const provinces = mysqlTable(
   'provinces',
   {
-    id: int().autoincrement().notNull(),
+    id: int().autoincrement().primaryKey(),
     name: varchar({ length: 100 }).notNull(),
     code: varchar({ length: 10 }).notNull(),
     latitude: varchar({ length: 20 }),
@@ -2359,11 +2343,11 @@ export const provinces = mysqlTable(
     seoTitle: varchar('seo_title', { length: 255 }),
     seoDescription: text('seo_description'),
   },
-  table => [index('idx_province_slug').on(table.slug), index('').on(table.slug)],
+  table => [index('idx_province_slug').on(table.slug), index('idx_fixed_slug').on(table.slug)],
 );
 
 export const recentlyViewed = mysqlTable('recently_viewed', {
-  id: int().autoincrement().notNull(),
+  id: int().autoincrement().primaryKey(),
   prospectId: int()
     .notNull()
     .references(() => prospects.id, { onDelete: 'cascade' }),
@@ -2374,7 +2358,7 @@ export const recentlyViewed = mysqlTable('recently_viewed', {
 });
 
 export const reviews = mysqlTable('reviews', {
-  id: int().autoincrement().notNull(),
+  id: int().autoincrement().primaryKey(),
   userId: int()
     .notNull()
     .references(() => users.id, { onDelete: 'cascade' }),
@@ -2390,7 +2374,7 @@ export const reviews = mysqlTable('reviews', {
 });
 
 export const savedSearches = mysqlTable('saved_searches', {
-  id: int().autoincrement().notNull(),
+  id: int().autoincrement().primaryKey(),
   userId: int()
     .notNull()
     .references(() => users.id),
@@ -2403,7 +2387,7 @@ export const savedSearches = mysqlTable('saved_searches', {
 });
 
 export const scheduledViewings = mysqlTable('scheduled_viewings', {
-  id: int().autoincrement().notNull(),
+  id: int().autoincrement().primaryKey(),
   prospectId: int()
     .notNull()
     .references(() => prospects.id, { onDelete: 'cascade' }),
@@ -2425,7 +2409,7 @@ export const scheduledViewings = mysqlTable('scheduled_viewings', {
 });
 
 export const services = mysqlTable('services', {
-  id: int().autoincrement().notNull(),
+  id: int().autoincrement().primaryKey(),
   name: varchar({ length: 255 }).notNull(),
   category: mysqlEnum([
     'home_loan',
@@ -2448,7 +2432,7 @@ export const services = mysqlTable('services', {
 });
 
 export const showings = mysqlTable('showings', {
-  id: int().autoincrement().notNull(),
+  id: int().autoincrement().primaryKey(),
   propertyId: int()
     .notNull()
     .references(() => properties.id, { onDelete: 'cascade' }),
@@ -2466,7 +2450,7 @@ export const showings = mysqlTable('showings', {
 export const subscriptionEvents = mysqlTable(
   'subscription_events',
   {
-    id: int().autoincrement().notNull(),
+    id: int().autoincrement().primaryKey(),
     userId: int('user_id')
       .notNull()
       .references(() => users.id),
@@ -2495,7 +2479,7 @@ export const subscriptionEvents = mysqlTable(
 export const subscriptionPlans = mysqlTable(
   'subscription_plans',
   {
-    id: int().autoincrement().notNull(),
+    id: int().autoincrement().primaryKey(),
     planId: varchar('plan_id', { length: 100 }).notNull(),
     category: mysqlEnum(['agent', 'agency', 'developer']).notNull(),
     name: varchar({ length: 100 }).notNull(),
@@ -2531,7 +2515,7 @@ export const subscriptionPlans = mysqlTable(
 export const subscriptionUsage = mysqlTable(
   'subscription_usage',
   {
-    id: int().autoincrement().notNull(),
+    id: int().autoincrement().primaryKey(),
     userId: int('user_id')
       .notNull()
       .references(() => users.id),
@@ -2553,7 +2537,7 @@ export const subscriptionUsage = mysqlTable(
 );
 
 export const suburbPriceAnalytics = mysqlTable('suburb_price_analytics', {
-  id: int().autoincrement().notNull(),
+  id: int().autoincrement().primaryKey(),
   suburbId: int()
     .notNull()
     .references(() => suburbs.id, { onDelete: 'cascade' }),
@@ -2582,7 +2566,7 @@ export const suburbPriceAnalytics = mysqlTable('suburb_price_analytics', {
 export const suburbs = mysqlTable(
   'suburbs',
   {
-    id: int().autoincrement().notNull(),
+    id: int().autoincrement().primaryKey(),
     cityId: int()
       .notNull()
       .references(() => cities.id, { onDelete: 'cascade' }),
@@ -2594,13 +2578,13 @@ export const suburbs = mysqlTable(
     updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
     slug: varchar({ length: 100 }),
   },
-  table => [index('idx_suburb_slug').on(table.slug), index('').on(table.slug)],
+  table => [index('idx_suburb_slug').on(table.slug), index('idx_fixed_slug').on(table.slug)],
 );
 
 export const topics = mysqlTable(
   'topics',
   {
-    id: varchar({ length: 36 }).notNull(),
+    id: varchar({ length: 36 }).notNull().primaryKey(),
     slug: varchar({ length: 100 }).notNull(),
     name: varchar({ length: 100 }).notNull(),
     description: text(),
@@ -2622,7 +2606,7 @@ export const topics = mysqlTable(
 export const unitTypes = mysqlTable(
   'unit_types',
   {
-    id: varchar({ length: 36 }).notNull(),
+    id: varchar({ length: 36 }).notNull().primaryKey(),
     developmentId: int('development_id')
       .notNull()
       .references(() => developments.id, { onDelete: 'cascade' }),
@@ -2709,7 +2693,7 @@ export const unitTypes = mysqlTable(
 );
 
 export const userBehaviorEvents = mysqlTable('user_behavior_events', {
-  id: int().autoincrement().notNull(),
+  id: int().autoincrement().primaryKey(),
   userId: int().references(() => users.id, { onDelete: 'set null' }),
   sessionId: varchar({ length: 255 }).notNull(),
   eventType: mysqlEnum([
@@ -2754,7 +2738,7 @@ export const userOnboardingState = mysqlTable('user_onboarding_state', {
 });
 
 export const userPreferences = mysqlTable('user_preferences', {
-  id: int().autoincrement().notNull(),
+  id: int().autoincrement().primaryKey(),
   userId: int()
     .notNull()
     .references(() => users.id, { onDelete: 'cascade' }),
@@ -2789,7 +2773,7 @@ export const userPreferences = mysqlTable('user_preferences', {
 });
 
 export const userRecommendations = mysqlTable('user_recommendations', {
-  id: int().autoincrement().notNull(),
+  id: int().autoincrement().primaryKey(),
   userId: int()
     .notNull()
     .references(() => users.id, { onDelete: 'cascade' }),
@@ -2810,7 +2794,7 @@ export const userRecommendations = mysqlTable('user_recommendations', {
 export const userSubscriptions = mysqlTable(
   'user_subscriptions',
   {
-    id: int().autoincrement().notNull(),
+    id: int().autoincrement().primaryKey(),
     userId: int('user_id')
       .notNull()
       .references(() => users.id),
@@ -2859,7 +2843,7 @@ export const userSubscriptions = mysqlTable(
 export const users = mysqlTable(
   'users',
   {
-    id: int().autoincrement().notNull(),
+    id: int().autoincrement().primaryKey(),
     openId: varchar({ length: 64 }),
     email: varchar({ length: 320 }),
     passwordHash: varchar({ length: 255 }),
@@ -2885,7 +2869,7 @@ export const users = mysqlTable(
 );
 
 export const videoLikes = mysqlTable('videoLikes', {
-  id: int().autoincrement().notNull(),
+  id: int().autoincrement().primaryKey(),
   videoId: int()
     .notNull()
     .references(() => videos.id, { onDelete: 'cascade' }),
@@ -2896,7 +2880,7 @@ export const videoLikes = mysqlTable('videoLikes', {
 });
 
 export const videos = mysqlTable('videos', {
-  id: int().autoincrement().notNull(),
+  id: int().autoincrement().primaryKey(),
   agentId: int().references(() => agents.id, { onDelete: 'cascade' }),
   propertyId: int().references(() => properties.id, { onDelete: 'set null' }),
   developmentId: int().references(() => developments.id, { onDelete: 'set null' }),
@@ -2957,9 +2941,7 @@ export const developmentPartners = mysqlTable(
     developmentId: int('development_id')
       .notNull()
       .references(() => developments.id, { onDelete: 'cascade' }),
-    brandProfileId: int('brand_profile_id')
-      .notNull()
-      .references(() => developerBrandProfiles.id, { onDelete: 'cascade' }),
+    brandProfileId: int('brand_profile_id').notNull(),
     partnerType: mysqlEnum('partner_type', [
       'co_developer',
       'joint_venture',
@@ -2984,6 +2966,7 @@ export const developmentPartners = mysqlTable(
   },
   table => {
     return {
+      devPartBrandFk: foreignKey({ name: 'dev_part_brand_fk', columns: [table.brandProfileId], foreignColumns: [developerBrandProfiles.id] }).onDelete('cascade'),
       idxDevPartnersDevelopmentId: index('idx_dev_partners_development_id').on(table.developmentId),
       idxDevPartnersBrandProfileId: index('idx_dev_partners_brand_profile_id').on(
         table.brandProfileId,
@@ -3007,7 +2990,7 @@ export const exploreBoostCampaigns = mysqlTable(
     creatorId: int('creator_id')
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
-    partnerId: int('partner_id').references(() => explorePartners.id),
+    partnerId: varchar('partner_id', { length: 36 }).references(() => explorePartners.id),
     contentType: mysqlEnum('content_type', [
       'video',
       'story',
@@ -3077,9 +3060,7 @@ export const exploreDiscoveryVideos = mysqlTable(
   'explore_discovery_videos',
   {
     id: int('id').autoincrement().notNull().primaryKey(),
-    exploreContentId: int('explore_content_id')
-      .notNull()
-      .references(() => exploreContent.id, { onDelete: 'cascade' }),
+    exploreContentId: int('explore_content_id').notNull(),
     title: varchar('title', { length: 255 }).notNull(),
     description: text('description'),
     videoUrl: varchar('video_url', { length: 500 }).notNull(),
@@ -3092,6 +3073,7 @@ export const exploreDiscoveryVideos = mysqlTable(
   },
   table => {
     return {
+      expDiscContFk: foreignKey({ name: 'exp_disc_cont_fk', columns: [table.exploreContentId], foreignColumns: [exploreContent.id] }).onDelete('cascade'),
       idxDiscoveryContent: index('idx_discovery_content').on(table.exploreContentId),
     };
   },
@@ -3162,9 +3144,7 @@ export const exploreNeighbourhoodFollows = mysqlTable(
     userId: int('user_id')
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
-    neighbourhoodId: int('neighbourhood_id')
-      .notNull()
-      .references(() => exploreNeighbourhoods.id, { onDelete: 'cascade' }),
+    neighbourhoodId: int('neighbourhood_id').notNull(),
     notificationLevel: mysqlEnum('notification_level', ['all', 'highlights', 'none'])
       .default('all')
       .notNull(),
@@ -3173,6 +3153,7 @@ export const exploreNeighbourhoodFollows = mysqlTable(
   table => {
     return {
       idxNbhUser: index('idx_nbh_user').on(table.userId),
+      expNbhFollowFk: foreignKey({ name: 'exp_nbh_follow_fk', columns: [table.neighbourhoodId], foreignColumns: [exploreNeighbourhoods.id] }).onDelete('cascade'),
       idxNbhId: index('idx_nbh_id').on(table.neighbourhoodId),
       uniqueNbhFollow: uniqueIndex('unique_nbh_follow').on(table.userId, table.neighbourhoodId),
     };
@@ -3205,9 +3186,7 @@ export const exploreSponsorships = mysqlTable(
   'explore_sponsorships',
   {
     id: int('id').autoincrement().notNull().primaryKey(),
-    partnerId: int('partner_id')
-      .notNull()
-      .references(() => explorePartners.id, { onDelete: 'cascade' }),
+    partnerId: varchar('partner_id', { length: 36 }).notNull().references(() => explorePartners.id, { onDelete: 'cascade' }),
     contentType: mysqlEnum('content_type', [
       'video',
       'story',

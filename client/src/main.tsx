@@ -1,4 +1,5 @@
 import { trpc } from '@/lib/trpc';
+import { getApiUrl } from '@/lib/api';
 import { UNAUTHED_ERR_MSG } from '@shared/const';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { httpBatchLink, TRPCClientError } from '@trpc/client';
@@ -51,9 +52,8 @@ queryClient.getMutationCache().subscribe(event => {
 const trpcClient = trpc.createClient({
   links: [
     httpBatchLink({
-      url: (import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL)
-        ? `${import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL}/trpc`
-        : '/api/trpc', // Fallback to relative URL in dev
+      url: getApiUrl('/trpc'),
+
       transformer: superjson,
       async fetch(input, init) {
         // Execute fetch with credentials

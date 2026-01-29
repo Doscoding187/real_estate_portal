@@ -31,7 +31,63 @@ export default defineConfig({
     // Prevent name mangling issues with wouter
     rollupOptions: {
       output: {
-        manualChunks: undefined,
+        manualChunks: id => {
+          if (id.includes('node_modules')) {
+            // UI Libraries (must checks before 'react' to capture react-based UI libs)
+            if (
+              id.includes('@radix-ui') ||
+              id.includes('framer-motion') ||
+              id.includes('lucide-react') ||
+              id.includes('embla-carousel') ||
+              id.includes('sonner') ||
+              id.includes('vaul') ||
+              id.includes('class-variance-authority') ||
+              id.includes('clsx') ||
+              id.includes('tailwind-merge')
+            ) {
+              return 'ui-vendor';
+            }
+
+            // Maps
+            if (
+              id.includes('leaflet') ||
+              id.includes('react-leaflet') ||
+              id.includes('google-maps')
+            ) {
+              return 'maps-vendor';
+            }
+
+            // Charts
+            if (id.includes('recharts')) {
+              return 'charts-vendor';
+            }
+
+            // Backend/Data/Utils
+            if (
+              id.includes('drizzle-orm') ||
+              id.includes('@aws-sdk') ||
+              id.includes('date-fns') ||
+              id.includes('zod') ||
+              id.includes('superjson')
+            ) {
+              return 'utils-vendor';
+            }
+
+            // Core React Ecosystem
+            if (
+              id.includes('react') ||
+              id.includes('react-dom') ||
+              id.includes('wouter') ||
+              id.includes('@tanstack/react-query') ||
+              id.includes('@trpc')
+            ) {
+              return 'react-vendor';
+            }
+
+            // Fallback for everything else
+            return 'vendor';
+          }
+        },
       },
     },
   },

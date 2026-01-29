@@ -3,9 +3,58 @@
  * Uses relative path to leverage Vite proxy
  */
 export const getApiUrl = (endpoint: string) => {
-  const baseUrl = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || '';
+  // Get base URL from env
+  let baseUrl = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || '';
+
+  // Remove ALL trailing slashes from base if present (robust normalization)
+  baseUrl = baseUrl.replace(/\/+$/, '');
+
+  // Clean endpoint: remove leading slash
   const cleanEndpoint = endpoint.replace(/^\//, '');
-  return baseUrl ? `${baseUrl}/${cleanEndpoint}` : `/api/${cleanEndpoint}`;
+
+  let finalUrl = '';
+
+  // If endpoint already starts with 'api/', don't double add it if base url also has it
+  // This is tricky because we don't know if base url includes /api or not
+  // Safest bet for our monolithic app:
+  // If base url is empty (relative), always prepend /api/
+  // If base url is provided, assume it is the HOST, so we append /api/ if endpoint doesn't have it
+
+  if (!baseUrl) {
+    // Relative path (standard for same-domain deployment)
+    finalUrl = cleanEndpoint.startsWith('api/') ? `/${cleanEndpoint}` : `/api/${cleanEndpoint}`;
+  } else {
+    // Absolute URL logic
+    // Check if baseUrl already ends with /api (some configs do this)
+    const baseEndsWithApi = baseUrl.endsWith('/api');
+    const endpointStartsWithApi = cleanEndpoint.startsWith('api/');
+
+    if (baseEndsWithApi) {
+      // base: https://api.com/api
+      // endpoint: auth/login OR api/auth/login
+      if (endpointStartsWithApi) {
+        // endpoint: api/auth/login -> auth/login to avoid /api/api
+        finalUrl = `${baseUrl}/${cleanEndpoint.replace(/^api\//, '')}`;
+      } else {
+        finalUrl = `${baseUrl}/${cleanEndpoint}`;
+      }
+    } else {
+      // base: https://api.com
+      // endpoint: auth/login OR api/auth/login
+      if (endpointStartsWithApi) {
+        finalUrl = `${baseUrl}/${cleanEndpoint}`;
+      } else {
+        finalUrl = `${baseUrl}/api/${cleanEndpoint}`;
+      }
+    }
+  }
+
+  // Dev-only logging to catch routing issues early
+  if (import.meta.env.DEV) {
+    // console.log(`[API] Resolved ${endpoint} -> ${finalUrl}`);
+  }
+
+  return finalUrl;
 };
 
 /**
