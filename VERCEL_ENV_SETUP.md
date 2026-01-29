@@ -5,29 +5,37 @@
 Add these in Vercel Dashboard → Your Project → Settings → Environment Variables
 
 ### 1. Analytics Configuration
+
 ```
-VITE_ANALYTICS_ENDPOINT=https://realestateportal-production-9bb8.up.railway.app/api/analytics
+VITE_ANALYTICS_ENDPOINT=https://api.propertylistifysa.co.za/api/analytics
 VITE_ANALYTICS_WEBSITE_ID=real-estate-portal-prod
 ```
 
-### 2. API Configuration
+### 2. API Configuration (CRITICAL for login to work!)
+
 ```
-VITE_API_URL=https://realestateportal-production-9bb8.up.railway.app
+VITE_API_URL=https://api.propertylistifysa.co.za
 ```
 
+> ⚠️ **IMPORTANT**: Do NOT use the Railway internal URL (`realestateportal-production-9bb8.up.railway.app`).
+> The custom domain is required for cross-subdomain cookie authentication.
+
 ### 3. Application Configuration
+
 ```
 VITE_APP_TITLE=Real Estate Portal
 NODE_ENV=production
 ```
 
 ### 4. Google Maps (if using location features)
+
 ```
 GOOGLE_MAPS_API_KEY=your_key_here
 GOOGLE_PLACES_API_KEY=your_key_here
 ```
 
 ### 5. AWS S3 (if using image uploads)
+
 ```
 AWS_REGION=us-east-1
 AWS_ACCESS_KEY_ID=your_key_here
@@ -60,6 +68,7 @@ CLOUDFRONT_URL=https://your-cloudfront-url.cloudfront.net
 ## Verification
 
 After redeployment, check browser console:
+
 - ✅ No warnings about missing `VITE_ANALYTICS_ENDPOINT`
 - ✅ No warnings about missing `VITE_ANALYTICS_WEBSITE_ID`
 - ✅ Analytics tracking works without errors
