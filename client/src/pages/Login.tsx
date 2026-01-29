@@ -200,7 +200,7 @@ export default function Login() {
 
       toast.success(
         result.message ||
-          'Account created successfully! Please check your email to verify your account.',
+        'Account created successfully! Please check your email to verify your account.',
       );
       setActiveTab('login');
       registerForm.reset();
@@ -282,7 +282,7 @@ export default function Login() {
 
         {/* Right Side - Auth Card */}
         <div className="w-full max-w-md mx-auto">
-          <div className="bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl rounded-3xl shadow-2xl shadow-slate-200/50 dark:shadow-black/50 border border-white/50 dark:border-slate-700/50 p-8">
+          <div className="bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl rounded-3xl shadow-2xl shadow-slate-200/50 dark:shadow-black/50 border border-white/50 dark:border-slate-700/50 p-8 text-slate-900 dark:text-slate-100">
             {/* Mobile Logo */}
             <div className="lg:hidden flex items-center justify-center gap-2 mb-8">
               <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center">
