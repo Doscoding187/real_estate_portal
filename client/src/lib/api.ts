@@ -49,10 +49,8 @@ export const getApiUrl = (endpoint: string) => {
     }
   }
 
-  // Dev-only logging to catch routing issues early
-  if (import.meta.env.DEV) {
-    // console.log(`[API] Resolved ${endpoint} -> ${finalUrl}`);
-  }
+  // Always log in production to debug URL issues
+  console.log(`[API] getApiUrl: baseUrl="${baseUrl}" endpoint="${endpoint}" -> "${finalUrl}"`);
 
   return finalUrl;
 };
