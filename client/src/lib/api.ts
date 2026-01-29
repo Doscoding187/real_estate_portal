@@ -3,7 +3,7 @@
  * Uses relative path to leverage Vite proxy
  */
 export const getApiUrl = (endpoint: string) => {
-  const baseUrl = import.meta.env.VITE_API_BASE_URL || '';
+  const baseUrl = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || '';
   const cleanEndpoint = endpoint.replace(/^\//, '');
   return baseUrl ? `${baseUrl}/${cleanEndpoint}` : `/api/${cleanEndpoint}`;
 };
@@ -73,7 +73,7 @@ export async function apiFetch<T = any>(endpoint: string, init?: RequestInit): P
     const parsed = JSON.parse(text);
     console.log(`[API] Success response:`, parsed);
     return parsed as T;
-  } catch (err) {
+  } catch (error) {
     console.error(`[API] Invalid JSON response for ${endpoint}:`, text);
     throw new ApiError(res.status, 'Invalid JSON response', text);
   }

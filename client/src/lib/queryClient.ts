@@ -78,8 +78,13 @@ export function prefetchExploreFeed(filters: ExploreFeedFilters) {
     queryFn: async () => {
       // This will be handled by the actual API hook
       // The prefetch just warms up the cache
+      const baseUrl = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || '';
+      const endpoint = '/api/explore/getFeed';
+      const url = baseUrl ? `${baseUrl}${endpoint.replace('/api', '')}` : endpoint;
+
       const response = await fetch(
-        '/api/explore/getFeed?' +
+        url +
+          '?' +
           new URLSearchParams({
             ...Object.fromEntries(
               Object.entries({ ...filters, offset: nextOffset }).filter(([_, v]) => v != null),
@@ -104,8 +109,13 @@ export function prefetchVideoFeed(filters: ExploreFeedFilters) {
   return queryClient.prefetchQuery({
     queryKey: ['explore', 'videos', { ...filters, offset: nextOffset }],
     queryFn: async () => {
+      const baseUrl = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || '';
+      const endpoint = '/api/explore/getVideoFeed';
+      const url = baseUrl ? `${baseUrl}${endpoint.replace('/api', '')}` : endpoint;
+
       const response = await fetch(
-        '/api/explore/getVideoFeed?' +
+        url +
+          '?' +
           new URLSearchParams({
             ...Object.fromEntries(
               Object.entries({ ...filters, offset: nextOffset }).filter(([_, v]) => v != null),
@@ -142,7 +152,11 @@ export function prefetchMapProperties(
         ...(categoryId && { categoryId: categoryId.toString() }),
       });
 
-      const response = await fetch('/api/explore/getMapProperties?' + params);
+      const baseUrl = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || '';
+      const endpoint = '/api/explore/getMapProperties';
+      const url = baseUrl ? `${baseUrl}${endpoint.replace('/api', '')}` : endpoint;
+
+      const response = await fetch(url + '?' + params);
       return response.json();
     },
     staleTime: 5 * 60 * 1000,
@@ -157,7 +171,11 @@ export function prefetchNeighbourhoodDetail(neighbourhoodId: number) {
   return queryClient.prefetchQuery({
     queryKey: ['neighbourhood', neighbourhoodId],
     queryFn: async () => {
-      const response = await fetch(`/api/explore/getNeighbourhoodDetail?id=${neighbourhoodId}`);
+      const baseUrl = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || '';
+      const endpoint = `/api/explore/getNeighbourhoodDetail?id=${neighbourhoodId}`;
+      const url = baseUrl ? `${baseUrl}${endpoint.replace('/api', '')}` : endpoint;
+
+      const response = await fetch(url);
       return response.json();
     },
     staleTime: 10 * 60 * 1000, // Neighbourhood data changes less frequently

@@ -46,6 +46,13 @@ import {
   platformSettings,
   unitTypes,
   developmentPhases,
+  partners as services, // Alias partners as services to match db usage
+  reviews,
+  exploreVideos,
+  locations,
+  partners,
+  explorePartners,
+  auditLogs,
 } from '../drizzle/schema';
 
 import { ENV } from './_core/env.ts';
