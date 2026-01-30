@@ -15,6 +15,7 @@ import { MetricCard } from '@/components/MetricCard';
 import { LeadCard } from '@/components/LeadCard';
 import { TaskCard } from '@/components/TaskCard';
 import { trpc } from '@/lib/trpc';
+import { useAuth } from '@/hooks/useAuth';
 import { WelcomeHeader } from './WelcomeHeader';
 import { KPIGrid } from './KPIGrid';
 import { ActivityFeed } from './ActivityFeed';
@@ -32,13 +33,18 @@ import {
 export default function Overview() {
   // Time range state for KPI filtering
   const [timeRange, setTimeRange] = useState<'7d' | '30d' | '90d'>('30d');
+  const { user } = useAuth();
+  const isSuperAdmin = user?.role === 'super_admin';
 
-  // Fetch real data from API
+  // Fetch real data from API (skip for super admins)
   const {
     data: developerProfile,
     isLoading: profileLoading,
     error: profileError,
-  } = trpc.developer.getProfile.useQuery();
+  } = trpc.developer.getProfile.useQuery(undefined, {
+    enabled: !isSuperAdmin,
+    retry: false,
+  });
   const {
     data: developments,
     isLoading: developmentsLoading,

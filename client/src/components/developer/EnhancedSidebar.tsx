@@ -27,6 +27,7 @@ import {
 import { cn } from '@/lib/utils';
 import { trpc } from '@/lib/trpc';
 import { useLocation } from 'wouter';
+import { useAuth } from '@/hooks/useAuth';
 
 interface MenuItem {
   id: string;
@@ -164,9 +165,14 @@ interface EnhancedSidebarProps {
 export function EnhancedSidebar({ className }: EnhancedSidebarProps) {
   const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set());
   const [location, setLocation] = useLocation();
+  const { user } = useAuth();
+  const isSuperAdmin = user?.role === 'super_admin';
 
-  // Fetch developer profile
-  const { data: developerProfile } = trpc.developer.getProfile.useQuery();
+  // Fetch developer profile (skip for super admins)
+  const { data: developerProfile } = trpc.developer.getProfile.useQuery(undefined, {
+    enabled: !isSuperAdmin,
+    retry: false,
+  });
 
   // Fetch unread notifications count
   const { data: notificationsData } = trpc.developer.getUnreadNotificationsCount.useQuery(
@@ -181,7 +187,7 @@ export function EnhancedSidebar({ className }: EnhancedSidebarProps) {
   );
 
   const unreadCount = notificationsData?.count || 0;
-  const developerName = developerProfile?.name || 'Developer';
+  const developerName = isSuperAdmin ? 'Super Admin' : (developerProfile?.name || 'Developer');
   const developerInitials = developerName.substring(0, 2).toUpperCase();
 
   const toggleSection = (sectionId: string) => {
