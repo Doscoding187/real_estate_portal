@@ -156,7 +156,6 @@ export function EditBrandProfileDialog({
   const updateMutation = trpc.superAdminPublisher.updateBrandProfile.useMutation({
     onSuccess: () => {
       toast.success('Brand profile updated successfully');
-      utils.superAdminPublisher.getBrandContext.invalidate();
       utils.superAdminPublisher.listBrandProfiles.invalidate();
       setOpen(false);
       if (onSuccess) onSuccess();

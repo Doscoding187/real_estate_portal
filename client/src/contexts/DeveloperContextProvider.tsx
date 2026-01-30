@@ -27,18 +27,16 @@ export const DeveloperContextProvider: React.FC<{ children: ReactNode }> = ({ ch
   const [selectedBrand, setSelectedBrand] = useState<BrandProfile | null>(null);
   const { setOperatingAs, clearContext } = usePublisherContext();
 
-  // Fetch full brand details when ID changes
-  const { data: brandDetails, isLoading } = trpc.superAdminPublisher.getBrandContext.useQuery(
-    { brandProfileId: selectedBrandId! },
-    {
-      enabled: !!selectedBrandId,
-      staleTime: 5 * 60 * 1000,
-    },
-  );
-
+  // Brand details should be passed from parent or fetched via listBrandProfiles
+  // For now, we'll create a minimal brand object from the ID
   useEffect(() => {
-    if (brandDetails) {
-      const brand = brandDetails as unknown as BrandProfile;
+    if (selectedBrandId) {
+      // Minimal brand object - parent should pass full details
+      const brand: BrandProfile = {
+        id: selectedBrandId,
+        brandName: `Brand ${selectedBrandId}`,
+        slug: `brand-${selectedBrandId}`,
+      };
       setSelectedBrand(brand);
 
       // Sync with global publisher context store
@@ -46,21 +44,21 @@ export const DeveloperContextProvider: React.FC<{ children: ReactNode }> = ({ ch
         mode: 'seeding',
         brandProfileId: brand.id,
         brandProfileName: brand.brandName,
-        brandProfileType: brand.identityType || 'developer',
+        brandProfileType: 'developer',
         logoUrl: brand.logoUrl,
       });
-    } else if (!selectedBrandId) {
+    } else {
       setSelectedBrand(null);
       clearContext();
     }
-  }, [brandDetails, selectedBrandId, setOperatingAs, clearContext]);
+  }, [selectedBrandId, setOperatingAs, clearContext]);
 
   const value: DeveloperContextValue = {
     selectedBrandId,
     selectedBrand,
     setSelectedBrandId,
     isContextSet: !!selectedBrandId,
-    isLoading,
+    isLoading: false, // No longer fetching brand details
   };
 
   return <DeveloperContext.Provider value={value}>{children}</DeveloperContext.Provider>;
