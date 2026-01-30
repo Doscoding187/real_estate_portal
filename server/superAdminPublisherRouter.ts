@@ -37,14 +37,16 @@ export const superAdminPublisherRouter = router({
       });
     }),
 
-   /**
-    * Create a development under the selected brand context
-    */
+  /**
+   * Create a development under the selected brand context
+   */
   createDevelopment: superAdminProcedure
     .input(
-      z.object({
-        brandProfileId: z.number().int(),
-      }).passthrough(),
+      z
+        .object({
+          brandProfileId: z.number().int(),
+        })
+        .passthrough(),
     )
     .mutation(async ({ input, ctx }) => {
       // Use the existing development service but override ownership parameters
@@ -55,17 +57,17 @@ export const superAdminPublisherRouter = router({
       };
 
       // Call the existing service with platform ownership context
-      const development = await developmentService.createDevelopment(ctx.user.id, input as any, metadata);
-      
+      const development = await developmentService.createDevelopment(
+        ctx.user.id,
+        input as any,
+        metadata,
+      );
+
       return {
         id: development.id,
         development,
         message: 'Development created under brand context',
       };
-    }),
-    )
-    .query(async ({ input }) => {
-      return await developerBrandProfileService.getBrandProfileWithStats(input.brandProfileId);
     }),
 
   /**
@@ -247,9 +249,11 @@ export const superAdminPublisherRouter = router({
    */
   createDevelopment: superAdminProcedure
     .input(
-      z.object({
-        brandProfileId: z.number().int(),
-      }).passthrough(),
+      z
+        .object({
+          brandProfileId: z.number().int(),
+        })
+        .passthrough(),
     )
     .mutation(async ({ input, ctx }) => {
       // Use the existing development service but override ownership parameters
@@ -260,8 +264,12 @@ export const superAdminPublisherRouter = router({
       };
 
       // Call the existing service with platform ownership context
-      const development = await developmentService.createDevelopment(ctx.user.id, input as any, metadata);
-      
+      const development = await developmentService.createDevelopment(
+        ctx.user.id,
+        input as any,
+        metadata,
+      );
+
       return {
         id: development.id,
         development,

@@ -118,15 +118,6 @@ const PublisherContent: React.FC = () => {
         {/* Enhanced Tab Navigation */}
         <div className="flex items-center justify-between mb-8">
           <TabsList className="relative bg-white/80 backdrop-blur-md p-1.5 h-14 rounded-xl border border-gray-200/50 shadow-lg overflow-hidden">
-            {/* Animated Tab Indicator */}
-            <div
-              className="absolute bottom-0 left-0 h-0.5 bg-gradient-to-r from-blue-500 to-purple-500 transition-all duration-300"
-              style={{
-                width: '33.33%',
-                transform: `translateX(${activeTab === 'developments' ? '0' : activeTab === 'leads' ? '100%' : '200%'})`,
-              }}
-            />
-
             <TabsTrigger
               value="developments"
               className={cn(
@@ -189,7 +180,7 @@ const PublisherContent: React.FC = () => {
                 Context: {selectedBrand?.slug} (ID: {selectedBrand?.id})
               </div>
             </div>
-            
+
             {/* Action Buttons */}
             <div className="flex items-center gap-2">
               <Button
@@ -201,7 +192,7 @@ const PublisherContent: React.FC = () => {
                 <Edit className="w-3.5 h-3.5" />
                 <span className="font-medium">Edit</span>
               </Button>
-              
+
               <Button
                 variant="outline"
                 size="sm"
@@ -213,34 +204,6 @@ const PublisherContent: React.FC = () => {
                 <span className="font-medium">Delete</span>
               </Button>
             </div>
-          </div>
-            {selectedBrand && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setIsLinkDialogOpen(true)}
-                className="h-8 gap-2 text-blue-600 border-blue-200 hover:bg-blue-50"
-              >
-                <Users className="w-3.5 h-3.5" /> Link Subscriber
-              </Button>
-            )}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setIsEditDialogOpen(true)}
-              className="h-8 gap-2"
-            >
-              <Edit className="w-3.5 h-3.5" /> Edit
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleDelete}
-              disabled={deleteMutation.isPending}
-              className="h-8 gap-2 text-red-600 hover:text-red-700 hover:bg-red-50 hover:border-red-200"
-            >
-              <Trash2 className="w-3.5 h-3.5" />
-            </Button>
           </div>
         </div>
 
@@ -256,6 +219,7 @@ const PublisherContent: React.FC = () => {
           <PublisherMetrics />
         </TabsContent>
       </Tabs>
+
     </div>
   );
 };
