@@ -91,16 +91,18 @@ import type { AppRouter } from '../../../../server/routers';
  * SECURITY: Only sends brand ID - server resolves type from DB
  */
 export function createBrandEmulationLink(): TRPCLink<AppRouter> {
-  return ({ op, next }: { op: any; next: any }) => {
-    // Get brand ID if emulation is active
-    const brandId = brandEmulationClientService.getCurrentBrandId();
-    if (brandId) {
-      op.context.headers = {
-        ...op.context.headers,
-        'x-operating-as-brand': String(brandId),
-      };
-    }
+  return () => {
+    return ({ op, next }: { op: any; next: any }) => {
+      // Get brand ID if emulation is active
+      const brandId = brandEmulationClientService.getCurrentBrandId();
+      if (brandId) {
+        op.context.headers = {
+          ...op.context.headers,
+          'x-operating-as-brand': String(brandId),
+        };
+      }
 
-    return next(op);
+      return next(op);
+    };
   };
 }
