@@ -10,11 +10,18 @@ export const IS_DEV_MODE = import.meta.env.DEV;
 export const MODE = import.meta.env.MODE;
 
 // Get the configured API URL (from Vercel env vars)
-export const API_BASE_URL = (
-  import.meta.env.VITE_API_URL ||
-  import.meta.env.VITE_API_BASE_URL ||
-  ''
-).replace(/\/+$/, '');
+// Get the configured API URL (from Vercel env vars)
+let envUrl = (import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || '').replace(
+  /\/+$/,
+  '',
+);
+
+// Ensure protocol exists (required for URL parsing)
+if (envUrl && !envUrl.startsWith('http')) {
+  envUrl = `https://${envUrl}`;
+}
+
+export const API_BASE_URL = envUrl;
 
 // STRICT ALLOWLISTS
 // Define exact allowed hostnames for each environment.
