@@ -468,33 +468,29 @@ export function normalizeForPublish(
     customClassification: emptyToNull(wizardData.customClassification),
 
     // Optional enums
-    constructionPhase: mapEnum(
-      wizardData.constructionPhase,
-      ['planning', 'under_construction', 'completed', 'phase_completed'] as const,
-    ),
+    constructionPhase: mapEnum(wizardData.constructionPhase, [
+      'planning',
+      'under_construction',
+      'completed',
+      'phase_completed',
+    ] as const),
     nature: mapEnum(
       wizardData.nature,
       ['new', 'phase', 'extension', 'redevelopment'] as const,
       'new',
     ),
     ownershipType: normalizeOwnershipType(wizardData.ownershipType),
-    structuralType: mapEnum(
-      wizardData.structuralType,
-      [
-        'apartment',
-        'freestanding-house',
-        'simplex',
-        'duplex',
-        'penthouse',
-        'plot-and-plan',
-        'townhouse',
-        'studio',
-      ] as const,
-    ),
-    floors: mapEnum(
-      wizardData.floors,
-      ['single-storey', 'double-storey', 'triplex'] as const,
-    ),
+    structuralType: mapEnum(wizardData.structuralType, [
+      'apartment',
+      'freestanding-house',
+      'simplex',
+      'duplex',
+      'penthouse',
+      'plot-and-plan',
+      'townhouse',
+      'studio',
+    ] as const),
+    floors: mapEnum(wizardData.floors, ['single-storey', 'double-storey', 'triplex'] as const),
     marketingRole: mapEnum(wizardData.marketingRole, ['exclusive', 'joint', 'open'] as const),
 
     // Numeric fields
@@ -504,19 +500,19 @@ export function normalizeForPublish(
     monthlyRentTo: coerceDecimal(wizardData.monthlyRentTo),
     auctionStartDate:
       transactionType === 'auction'
-        ? auctionRange?.auctionStartDate ?? emptyToNull((wizardData as any).auctionStartDate)
+        ? (auctionRange?.auctionStartDate ?? emptyToNull((wizardData as any).auctionStartDate))
         : emptyToNull((wizardData as any).auctionStartDate),
     auctionEndDate:
       transactionType === 'auction'
-        ? auctionRange?.auctionEndDate ?? emptyToNull((wizardData as any).auctionEndDate)
+        ? (auctionRange?.auctionEndDate ?? emptyToNull((wizardData as any).auctionEndDate))
         : emptyToNull((wizardData as any).auctionEndDate),
     startingBidFrom:
       transactionType === 'auction'
-        ? auctionRange?.startingBidFrom ?? coerceDecimal((wizardData as any).startingBidFrom)
+        ? (auctionRange?.startingBidFrom ?? coerceDecimal((wizardData as any).startingBidFrom))
         : coerceDecimal((wizardData as any).startingBidFrom),
     reservePriceFrom:
       transactionType === 'auction'
-        ? auctionRange?.reservePriceFrom ?? coerceDecimal((wizardData as any).reservePriceFrom)
+        ? (auctionRange?.reservePriceFrom ?? coerceDecimal((wizardData as any).reservePriceFrom))
         : coerceDecimal((wizardData as any).reservePriceFrom),
     monthlyLevyFrom: coerceDecimal(wizardData.monthlyLevyFrom),
     monthlyLevyTo: coerceDecimal(wizardData.monthlyLevyTo),

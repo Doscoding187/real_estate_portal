@@ -165,9 +165,7 @@ const formatParkingLabel = (parking?: string | number, parkingBays?: number): st
   if (typeof parkingValue === 'string') {
     const trimmed = parkingValue.trim();
     if (trimmed === '' || trimmed === 'none' || trimmed === '0') {
-      return baysValue && baysValue > 0
-        ? `${baysValue} Bay${baysValue === 1 ? '' : 's'}`
-        : null;
+      return baysValue && baysValue > 0 ? `${baysValue} Bay${baysValue === 1 ? '' : 's'}` : null;
     }
     if (/^\d+$/.test(trimmed)) {
       const bays = Number(trimmed);
@@ -235,7 +233,7 @@ function UnitTypeCarousel({ units }: UnitTypeCarouselProps) {
                     <img
                       src={unit.normalizedImage}
                       alt={unit.normalizedType}
-                      onError={(e) => {
+                      onError={e => {
                         const target = e.currentTarget as HTMLImageElement;
                         if (!target.src.includes('placeholder')) {
                           target.src = '/assets/placeholder-home.jpg';
@@ -659,7 +657,7 @@ export default function DevelopmentDetail() {
         acc.available += avail > 0 ? avail : 0;
         return acc;
       },
-      { total: 0, available: 0 }
+      { total: 0, available: 0 },
     );
 
     if (totals.total <= 0) return { soldPct: null, total: 0, available: 0 };
@@ -718,7 +716,7 @@ export default function DevelopmentDetail() {
       const structural = u.structuralType || u.type;
       const inferred = inferOwnership(structural);
 
-      const source = rawOwnership ? 'Unit' : (estateOwnership ? 'Estate' : `Derived(${structural})`);
+      const source = rawOwnership ? 'Unit' : estateOwnership ? 'Estate' : `Derived(${structural})`;
       const finalLabel = formatLabel(rawOwnership || estateOwnership || inferred);
 
       return {
@@ -978,8 +976,12 @@ export default function DevelopmentDetail() {
                       return (
                         <div className="w-full text-center py-12 bg-slate-50 rounded-lg border border-dashed border-slate-300">
                           <Home className="mx-auto h-8 w-8 text-slate-300 mb-2" />
-                          <p className="text-slate-500 font-medium">Detailed unit configurations coming soon.</p>
-                          <p className="text-xs text-slate-400">Contact the developer for floor plans.</p>
+                          <p className="text-slate-500 font-medium">
+                            Detailed unit configurations coming soon.
+                          </p>
+                          <p className="text-xs text-slate-400">
+                            Contact the developer for floor plans.
+                          </p>
                         </div>
                       );
                     }
@@ -1003,7 +1005,15 @@ export default function DevelopmentDetail() {
                             // Smart Group Labeling
                             let label = 'Apartments';
                             const lowerTypes = types.map((t: any) => t.toLowerCase());
-                            if (lowerTypes.every(t => t.includes('house') || t.includes('simplex') || t.includes('duplex'))) label = 'Houses';
+                            if (
+                              lowerTypes.every(
+                                t =>
+                                  t.includes('house') ||
+                                  t.includes('simplex') ||
+                                  t.includes('duplex'),
+                              )
+                            )
+                              label = 'Houses';
                             else if (types.length === 1) label = `${types[0]}s`;
 
                             return (
@@ -1250,7 +1260,6 @@ export default function DevelopmentDetail() {
                   </>
                 )}
 
-
                 <Separator className="bg-slate-200" />
 
                 {/* Developer Overview */}
@@ -1290,17 +1299,17 @@ export default function DevelopmentDetail() {
                     province={dev.province}
                   />
                 </section>
-              </main >
+              </main>
 
               {/* Sidebar - CRITICAL: Proper sticky positioning */}
-              < aside className="w-full lg:w-[360px] space-y-4 self-stretch" >
+              <aside className="w-full lg:w-[360px] space-y-4 self-stretch">
                 {/* Sticky wrapper with proper constraints */}
-                < div
+                <div
                   className="sticky self-start space-y-4"
                   style={{ top: showQuickNav ? 64 : 96 }}
                 >
                   {/* Contact Form */}
-                  < Card className="shadow-sm border-slate-200" >
+                  <Card className="shadow-sm border-slate-200">
                     <CardHeader className="bg-slate-50 border-b border-slate-100 py-3 px-4">
                       <CardTitle className="text-sm font-bold text-slate-800">
                         Interested in This Development?
@@ -1326,19 +1335,19 @@ export default function DevelopmentDetail() {
                         Contact Sales Team
                       </Button>
                     </CardContent>
-                  </Card >
-                </div >
-              </aside >
-            </div >
-          </div >
-        </div >
-      </div >
+                  </Card>
+                </div>
+              </aside>
+            </div>
+          </div>
+        </div>
+      </div>
 
       {/* Footer - Outside main container */}
-      < Footer />
+      <Footer />
 
       {/* Lightbox - Portal */}
-      < MediaLightbox
+      <MediaLightbox
         media={development.unifiedMedia}
         initialIndex={lightboxIndex}
         isOpen={lightboxOpen}

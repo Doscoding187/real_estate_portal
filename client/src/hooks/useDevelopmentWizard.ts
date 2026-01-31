@@ -171,7 +171,7 @@ export interface UnitType {
     | string; // looser string to accommodate DB varchar variability
   parkingBays: number; // 0-4
 
-// Size (single source of truth)
+  // Size (single source of truth)
   unitSize?: number; // m² (floor/indoor size)
   yardSize?: number; // m² (for townhouses/freeholds)
 
@@ -507,7 +507,6 @@ export interface DevelopmentWizardState {
   goWorkflowNext: () => void;
   goWorkflowBack: () => void;
   saveWorkflowStepData: (stepId: WizardStepId, data: Record<string, any>) => void;
-
 
   // Phase 2A Actions
   initializeWorkflow: (
@@ -1062,7 +1061,9 @@ const createActions = (
           errors.push('Add at least one unit type');
         } else {
           const transactionType =
-            wizardData.transactionType ?? state.transactionType ?? state.developmentData.transactionType;
+            wizardData.transactionType ??
+            state.transactionType ??
+            state.developmentData.transactionType;
           const isRent = transactionType === 'for_rent';
           const isAuction = transactionType === 'auction';
 
@@ -1095,8 +1096,7 @@ const createActions = (
               if (startDate.getTime() < now) return false;
               return true;
             });
-            if (!validAuctionUnits)
-              errors.push('All unit types must have valid auction terms');
+            if (!validAuctionUnits) errors.push('All unit types must have valid auction terms');
           } else {
             const validPrices = units.every((u: any) => (u.priceFrom || 0) > 0);
             if (!validPrices) errors.push('All unit types must have a base price');
@@ -1581,10 +1581,8 @@ const createActions = (
               leaseTerm: u.leaseTerm || undefined,
               isFurnished: u.isFurnished ?? undefined,
               depositRequired: u.depositRequired ? Number(u.depositRequired) : undefined,
-              startingBid:
-                u.startingBid != null ? Number(u.startingBid) : undefined,
-              reservePrice:
-                u.reservePrice != null ? Number(u.reservePrice) : undefined,
+              startingBid: u.startingBid != null ? Number(u.startingBid) : undefined,
+              reservePrice: u.reservePrice != null ? Number(u.reservePrice) : undefined,
               auctionStartDate: u.auctionStartDate || undefined,
               auctionEndDate: u.auctionEndDate || undefined,
               auctionStatus: u.auctionStatus || undefined,
@@ -1685,7 +1683,7 @@ const createActions = (
         };
 
         const hydratedStepData = isDraft
-          ? source.stepData ?? state.stepData
+          ? (source.stepData ?? state.stepData)
           : {
               identity_market: {
                 name: canonicalDevelopmentData.name,

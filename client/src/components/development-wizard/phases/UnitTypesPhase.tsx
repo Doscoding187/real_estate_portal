@@ -270,11 +270,9 @@ export function UnitTypesPhase() {
       const isFurnishedValue =
         typeof (unit as any).isFurnished === 'boolean' ? (unit as any).isFurnished : false;
       const depositValueRaw = (unit as any).depositRequired ?? (unit as any).deposit;
-      const depositValue =
-        depositValueRaw == null ? undefined : Number(depositValueRaw);
+      const depositValue = depositValueRaw == null ? undefined : Number(depositValueRaw);
       const monthlyRentToRaw = (unit as any).monthlyRentTo;
-      const monthlyRentToValue =
-        monthlyRentToRaw == null ? undefined : Number(monthlyRentToRaw);
+      const monthlyRentToValue = monthlyRentToRaw == null ? undefined : Number(monthlyRentToRaw);
       const startingBidRaw = (unit as any).startingBid;
       const startingBidValue = startingBidRaw == null ? undefined : Number(startingBidRaw);
       const reservePriceRaw = (unit as any).reservePrice;
@@ -373,8 +371,7 @@ export function UnitTypesPhase() {
     value: string,
   ) => {
     const parsed = toOptionalNumber(value);
-    const nextValue =
-      parsed === undefined || Number.isFinite(parsed) ? parsed : undefined;
+    const nextValue = parsed === undefined || Number.isFinite(parsed) ? parsed : undefined;
     setFormData(prev => ({ ...prev, [field]: nextValue }));
   };
 
@@ -400,12 +397,10 @@ export function UnitTypesPhase() {
     // Validation
     if (!formData.name) return toast.error('Unit Name is required');
     if (!formData.description) return toast.error('Description is required');
-    if (!formData.bedrooms && formData.bedrooms !== 0)
-      return toast.error('Bedrooms are required');
+    if (!formData.bedrooms && formData.bedrooms !== 0) return toast.error('Bedrooms are required');
     if (!formData.bathrooms && formData.bathrooms !== 0)
       return toast.error('Bathrooms are required');
-    if (!formData.unitSize || formData.unitSize <= 0)
-      return toast.error('Unit Size is required');
+    if (!formData.unitSize || formData.unitSize <= 0) return toast.error('Unit Size is required');
     if (!formData.yardSize || formData.yardSize <= 0)
       return toast.error('Erf/Garden Size is required');
     if (isAuction) {
@@ -1008,11 +1003,7 @@ export function UnitTypesPhase() {
                     const saleFrom = Number(unit.priceFrom ?? 0);
                     const saleTo = Number(unit.priceTo ?? 0);
 
-                    const primaryValue = isRental
-                      ? rentFrom
-                      : isAuction
-                        ? auctionStart
-                        : saleFrom;
+                    const primaryValue = isRental ? rentFrom : isAuction ? auctionStart : saleFrom;
                     const secondaryValue = isRental ? rentTo : isAuction ? 0 : saleTo;
 
                     if (!primaryValue || primaryValue <= 0) return '---';
@@ -1101,9 +1092,9 @@ export function UnitTypesPhase() {
 
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     <div className="space-y-2">
-                    <Label>
-                      Bedrooms <span className="text-red-500">*</span>
-                    </Label>
+                      <Label>
+                        Bedrooms <span className="text-red-500">*</span>
+                      </Label>
                       <Select
                         value={formData.bedrooms?.toString() ?? '1'}
                         onValueChange={v => setFormData(p => ({ ...p, bedrooms: parseFloat(v) }))}
@@ -1122,9 +1113,9 @@ export function UnitTypesPhase() {
                       </Select>
                     </div>
                     <div className="space-y-2">
-                    <Label>
-                      Bathrooms <span className="text-red-500">*</span>
-                    </Label>
+                      <Label>
+                        Bathrooms <span className="text-red-500">*</span>
+                      </Label>
                       <Select
                         value={formData.bathrooms?.toString() ?? '1'}
                         onValueChange={v => setFormData(p => ({ ...p, bathrooms: parseFloat(v) }))}
@@ -1144,9 +1135,9 @@ export function UnitTypesPhase() {
                       </Select>
                     </div>
                     <div className="space-y-2">
-                    <Label>
-                      Parking Type <span className="text-red-500">*</span>
-                    </Label>
+                      <Label>
+                        Parking Type <span className="text-red-500">*</span>
+                      </Label>
                       <Select
                         value={formData.parkingKind || 'none'}
                         onValueChange={v => {
@@ -1174,9 +1165,9 @@ export function UnitTypesPhase() {
                     </div>
 
                     <div className="space-y-2">
-                    <Label>
-                      Parking Bays <span className="text-red-500">*</span>
-                    </Label>
+                      <Label>
+                        Parking Bays <span className="text-red-500">*</span>
+                      </Label>
                       <Input
                         type="number"
                         value={formData.parkingBays ?? ''}
@@ -1221,9 +1212,9 @@ export function UnitTypesPhase() {
                   </div>
                   <div className="grid grid-cols-2 gap-4 border-t pt-4">
                     <div className="space-y-2">
-                    <Label>
-                      Unit Size (m2) <span className="text-red-500">*</span>
-                    </Label>
+                      <Label>
+                        Unit Size (m2) <span className="text-red-500">*</span>
+                      </Label>
                       <Input
                         type="number"
                         placeholder="e.g. 70"
@@ -1238,9 +1229,9 @@ export function UnitTypesPhase() {
                       />
                     </div>
                     <div className="space-y-2">
-                    <Label>
-                      Erf/Garden Size (m2) <span className="text-red-500">*</span>
-                    </Label>
+                      <Label>
+                        Erf/Garden Size (m2) <span className="text-red-500">*</span>
+                      </Label>
                       <Input
                         type="number"
                         placeholder="m²"

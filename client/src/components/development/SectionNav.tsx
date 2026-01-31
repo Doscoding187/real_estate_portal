@@ -43,11 +43,7 @@ export function SectionNav() {
   };
 
   return (
-    <nav
-      className={cn(
-        'bg-white border-b border-slate-200 transition-all duration-300',
-      )}
-    >
+    <nav className={cn('bg-white border-b border-slate-200 transition-all duration-300')}>
       <div className="container max-w-7xl mx-auto px-4">
         <div className="flex overflow-x-auto scrollbar-hide">
           {sections.map(section => (

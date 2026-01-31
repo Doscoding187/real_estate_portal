@@ -679,8 +679,9 @@ export default function VideoCard({ video, isActive, onView }: VideoCardProps) {
             }}
           >
             <Heart
-              className={`h-7 w-7 md:h-8 md:w-8 transition-all duration-300 ${liked ? 'text-white fill-current' : 'text-white'
-                }`}
+              className={`h-7 w-7 md:h-8 md:w-8 transition-all duration-300 ${
+                liked ? 'text-white fill-current' : 'text-white'
+              }`}
             />
           </div>
           <span className="text-xs md:text-sm mt-1.5 font-bold drop-shadow-lg text-white">

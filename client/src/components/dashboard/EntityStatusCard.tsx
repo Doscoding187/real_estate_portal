@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -79,9 +78,7 @@ export const EntityStatusCard: React.FC<EntityStatusCardProps> = ({
   const title = isListing ? data.title : data.name;
 
   // Use robust helper for developments, or direct prop for listings
-  const image = isListing
-    ? data.primaryImage
-    : getPrimaryDevelopmentImageUrl(data.images);
+  const image = isListing ? data.primaryImage : getPrimaryDevelopmentImageUrl(data.images);
 
   const priceFrom = isListing
     ? data.pricing?.askingPrice || data.pricing?.monthlyRent
@@ -117,7 +114,7 @@ export const EntityStatusCard: React.FC<EntityStatusCardProps> = ({
                 src={withApiBase(image)}
                 alt={title}
                 className="w-full h-full object-cover"
-                onError={(e) => {
+                onError={e => {
                   e.currentTarget.src = 'https://placehold.co/400x300?text=No+Image'; // Simple fallback
                   e.currentTarget.onerror = null; // Prevent infinite loop
                 }}

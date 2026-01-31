@@ -117,13 +117,14 @@ export default function AdminPropertyReview() {
           <div className="text-sm text-slate-500">
             Current Status:
             <span
-              className={`ml-2 font-bold uppercase ${propertyData?.property?.status === 'published' ||
+              className={`ml-2 font-bold uppercase ${
+                propertyData?.property?.status === 'published' ||
                 propertyData?.property?.status === 'approved'
-                ? 'text-green-600'
-                : propertyData?.property?.status === 'rejected'
-                  ? 'text-red-600'
-                  : 'text-orange-500'
-                }`}
+                  ? 'text-green-600'
+                  : propertyData?.property?.status === 'rejected'
+                    ? 'text-red-600'
+                    : 'text-orange-500'
+              }`}
             >
               {propertyData?.property?.status || 'Loading...'}
             </span>

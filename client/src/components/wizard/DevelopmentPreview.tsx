@@ -261,75 +261,75 @@ export const DevelopmentPreview: React.FC = () => {
                 const parkingLabel = formatParkingLabel(unit);
 
                 return (
-                <div
-                  key={unit.id}
-                  className={`rounded-xl shadow-sm border transition-colors ${isDarkMode ? 'bg-gray-900 border-gray-800 hover:border-blue-800' : 'bg-white border-gray-100 hover:border-blue-200'} ${isMobile ? 'p-4' : 'p-6 flex flex-col md:flex-row gap-6 items-center'}`}
-                >
-                  <div className="flex-1">
-                    <div className="flex justify-between items-start mb-2">
-                      <h3
-                        className={`font-bold ${isMobile ? 'text-base' : 'text-xl'} ${isDarkMode ? 'text-white' : 'text-gray-900'}`}
-                      >
-                        {unit.name}
-                      </h3>
-                      <span
-                        className={`font-bold text-blue-500 ${isMobile ? 'text-base' : 'text-lg'}`}
-                      >
-                        R {unit.basePriceFrom?.toLocaleString()}
-                      </span>
-                    </div>
+                  <div
+                    key={unit.id}
+                    className={`rounded-xl shadow-sm border transition-colors ${isDarkMode ? 'bg-gray-900 border-gray-800 hover:border-blue-800' : 'bg-white border-gray-100 hover:border-blue-200'} ${isMobile ? 'p-4' : 'p-6 flex flex-col md:flex-row gap-6 items-center'}`}
+                  >
+                    <div className="flex-1">
+                      <div className="flex justify-between items-start mb-2">
+                        <h3
+                          className={`font-bold ${isMobile ? 'text-base' : 'text-xl'} ${isDarkMode ? 'text-white' : 'text-gray-900'}`}
+                        >
+                          {unit.name}
+                        </h3>
+                        <span
+                          className={`font-bold text-blue-500 ${isMobile ? 'text-base' : 'text-lg'}`}
+                        >
+                          R {unit.basePriceFrom?.toLocaleString()}
+                        </span>
+                      </div>
 
-                    <div
-                      className={`flex flex-wrap gap-4 text-sm my-3 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'} ${isMobile ? 'gap-y-2' : ''}`}
-                    >
-                      <div className="flex items-center gap-1.5">
-                        <Bed className="w-4 h-4" /> {unit.bedrooms}
-                      </div>
-                      <div className="flex items-center gap-1.5">
-                        <Bath className="w-4 h-4" /> {unit.bathrooms}
-                      </div>
-                      {showHouseSize && houseSizeLabel && (
+                      <div
+                        className={`flex flex-wrap gap-4 text-sm my-3 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'} ${isMobile ? 'gap-y-2' : ''}`}
+                      >
                         <div className="flex items-center gap-1.5">
-                          <Maximize className="w-4 h-4" /> House size {houseSizeLabel} m?
+                          <Bed className="w-4 h-4" /> {unit.bedrooms}
                         </div>
-                      )}
-                      {showYardSize && yardSizeLabel ? (
                         <div className="flex items-center gap-1.5">
-                          <Maximize className="w-4 h-4" /> Erf/Yard size {yardSizeLabel} m?
+                          <Bath className="w-4 h-4" /> {unit.bathrooms}
                         </div>
-                      ) : (
-                        parkingLabel && (
+                        {showHouseSize && houseSizeLabel && (
                           <div className="flex items-center gap-1.5">
-                            <Car className="w-4 h-4" /> Parking {parkingLabel}
+                            <Maximize className="w-4 h-4" /> House size {houseSizeLabel} m?
                           </div>
-                        )
-                      )}
-                    </div>
+                        )}
+                        {showYardSize && yardSizeLabel ? (
+                          <div className="flex items-center gap-1.5">
+                            <Maximize className="w-4 h-4" /> Erf/Yard size {yardSizeLabel} m?
+                          </div>
+                        ) : (
+                          parkingLabel && (
+                            <div className="flex items-center gap-1.5">
+                              <Car className="w-4 h-4" /> Parking {parkingLabel}
+                            </div>
+                          )
+                        )}
+                      </div>
 
-                    <div className="flex flex-wrap gap-2 mt-3">
-                      {Object.entries(unit.specifications?.builtInFeatures || {})
-                        .filter(([_, v]) => v)
-                        .map(([k]) => (
-                          <span
-                            key={k}
-                            className={`px-2 py-1 text-[10px] md:text-xs rounded capitalize ${isDarkMode ? 'bg-gray-800 text-gray-300' : 'bg-gray-100 text-gray-600'}`}
-                          >
-                            {k.replace(/([A-Z])/g, ' $1').trim()}
-                          </span>
-                        ))}
+                      <div className="flex flex-wrap gap-2 mt-3">
+                        {Object.entries(unit.specifications?.builtInFeatures || {})
+                          .filter(([_, v]) => v)
+                          .map(([k]) => (
+                            <span
+                              key={k}
+                              className={`px-2 py-1 text-[10px] md:text-xs rounded capitalize ${isDarkMode ? 'bg-gray-800 text-gray-300' : 'bg-gray-100 text-gray-600'}`}
+                            >
+                              {k.replace(/([A-Z])/g, ' $1').trim()}
+                            </span>
+                          ))}
+                      </div>
                     </div>
+                    {!isMobile && (
+                      <button className="w-full md:w-auto px-6 py-3 bg-gray-900 text-white font-medium rounded-lg hover:bg-gray-800 transition-colors">
+                        View Details
+                      </button>
+                    )}
+                    {isMobile && (
+                      <button className="w-full mt-4 py-2.5 bg-gray-900 text-white text-sm font-medium rounded-lg">
+                        View Details
+                      </button>
+                    )}
                   </div>
-                  {!isMobile && (
-                    <button className="w-full md:w-auto px-6 py-3 bg-gray-900 text-white font-medium rounded-lg hover:bg-gray-800 transition-colors">
-                      View Details
-                    </button>
-                  )}
-                  {isMobile && (
-                    <button className="w-full mt-4 py-2.5 bg-gray-900 text-white text-sm font-medium rounded-lg">
-                      View Details
-                    </button>
-                  )}
-                </div>
                 );
               })}
               {(!unitTypes || unitTypes.length === 0) && (

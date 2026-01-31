@@ -506,7 +506,9 @@ export function EnhancedHero({
             {subtitle || (
               <>
                 From browsing properties to closing deals - your complete
-                <span className="hidden sm:inline"><br /></span>
+                <span className="hidden sm:inline">
+                  <br />
+                </span>
                 <span className="sm:hidden"> </span>
                 real estate journey starts here
               </>
@@ -526,9 +528,10 @@ export function EnhancedHero({
                     onClick={() => handleCategoryClick(category.id)}
                     className={`
                       flex items-center gap-1.5 px-3 py-2 sm:px-4 sm:py-2.5 rounded-lg transition-all font-medium text-xs sm:text-sm whitespace-nowrap
-                      ${activeTab === category.id
-                        ? 'bg-white text-blue-900 shadow-lg scale-105'
-                        : 'text-white hover:bg-white/15'
+                      ${
+                        activeTab === category.id
+                          ? 'bg-white text-blue-900 shadow-lg scale-105'
+                          : 'text-white hover:bg-white/15'
                       }
                     `}
                   >
@@ -713,12 +716,12 @@ export function EnhancedHero({
                             <SelectContent>
                               <SelectItem value="all">Any Type</SelectItem>
                               {(filters.propertyIntent &&
-                                filterConfig.buy.propertyTypes[
+                              filterConfig.buy.propertyTypes[
                                 filters.propertyIntent as keyof typeof filterConfig.buy.propertyTypes
-                                ]
+                              ]
                                 ? filterConfig.buy.propertyTypes[
-                                filters.propertyIntent as keyof typeof filterConfig.buy.propertyTypes
-                                ]
+                                    filters.propertyIntent as keyof typeof filterConfig.buy.propertyTypes
+                                  ]
                                 : Object.values(filterConfig.buy.propertyTypes).flat()
                               ).map((type: string) => (
                                 <SelectItem key={type} value={type}>

@@ -123,13 +123,15 @@ const DevelopmentsList: React.FC = () => {
     }
 
     // Normalize elements to strings
-    return images.map(img => {
-      // Handle string URLs
-      if (typeof img === 'string') return img;
-      // Handle image objects (e.g. { url: "...", category: "hero" })
-      if (typeof img === 'object' && img !== null && img.url) return img.url;
-      return null;
-    }).filter(url => typeof url === 'string' && url.length > 0) as string[];
+    return images
+      .map(img => {
+        // Handle string URLs
+        if (typeof img === 'string') return img;
+        // Handle image objects (e.g. { url: "...", category: "hero" })
+        if (typeof img === 'object' && img !== null && img.url) return img.url;
+        return null;
+      })
+      .filter(url => typeof url === 'string' && url.length > 0) as string[];
   };
 
   return (

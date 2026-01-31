@@ -123,7 +123,12 @@ export function DevelopmentWizard({ isModal = false }: DevelopmentWizardProps) {
     [currentPhase, developmentData, classification, overview, unitTypes, finalisation],
   );
 
-  const { lastSaved, isSaving, error: autoSaveError, saveNow } = useAutoSave(stateToWatch, {
+  const {
+    lastSaved,
+    isSaving,
+    error: autoSaveError,
+    saveNow,
+  } = useAutoSave(stateToWatch, {
     debounceMs: 60000,
     enabled: false, // TODO: re-enable when backend is stable
     onSave: async () => {

@@ -447,8 +447,7 @@ export class ExploreAnalyticsService {
       sessions.reduce((sum: number, s: any) => {
         if (s.sessionEnd && s.sessionStart) {
           return (
-            sum +
-            (new Date(s.sessionEnd).getTime() - new Date(s.sessionStart).getTime()) / 1000
+            sum + (new Date(s.sessionEnd).getTime() - new Date(s.sessionStart).getTime()) / 1000
           );
         }
         return sum;

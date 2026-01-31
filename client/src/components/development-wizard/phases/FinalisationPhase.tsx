@@ -414,7 +414,6 @@ export function FinalisationPhase() {
       startingBidFrom: startingBids.length ? Math.min(...startingBids) : undefined,
       reservePriceFrom: reservePrices.length ? Math.min(...reservePrices) : undefined,
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLand, canonicalUnitTypesRaw]);
 
   const handlePublish = async () => {

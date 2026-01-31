@@ -200,7 +200,7 @@ export default function Login() {
 
       toast.success(
         result.message ||
-        'Account created successfully! Please check your email to verify your account.',
+          'Account created successfully! Please check your email to verify your account.',
       );
       setActiveTab('login');
       registerForm.reset();

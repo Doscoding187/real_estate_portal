@@ -300,7 +300,9 @@ export function IdentityPhase() {
                   value={developmentData.auctionType || undefined}
                   onValueChange={(val: string) => handleFieldChange('auctionType', val as any)}
                 >
-                  <SelectTrigger className={`h-11 ${getError('auctionType') ? 'border-red-300' : ''}`}>
+                  <SelectTrigger
+                    className={`h-11 ${getError('auctionType') ? 'border-red-300' : ''}`}
+                  >
                     <SelectValue placeholder="Select auction type" />
                   </SelectTrigger>
                   <SelectContent>

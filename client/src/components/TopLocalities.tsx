@@ -529,9 +529,10 @@ export function TopLocalities({
                 onClick={() => setSelectedCity(city)}
                 className={`
                   px-5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-300
-                  ${selectedCity === city
-                    ? 'bg-gradient-to-r from-[#2774AE] to-[#2D68C4] text-white shadow-lg scale-105'
-                    : 'text-slate-600 hover:text-[#2774AE] hover:bg-blue-50/50'
+                  ${
+                    selectedCity === city
+                      ? 'bg-gradient-to-r from-[#2774AE] to-[#2D68C4] text-white shadow-lg scale-105'
+                      : 'text-slate-600 hover:text-[#2774AE] hover:bg-blue-50/50'
                   }
                 `}
               >
@@ -592,7 +593,9 @@ export function TopLocalities({
                             </p>
                             <p className="font-bold text-sm text-gray-900 truncate">
                               R {locality.avgSalePrice.toLocaleString()}
-                              <span className="text-[10px] text-muted-foreground font-normal">/m²</span>
+                              <span className="text-[10px] text-muted-foreground font-normal">
+                                /m²
+                              </span>
                             </p>
                           </div>
                           <div>
@@ -601,7 +604,9 @@ export function TopLocalities({
                             </p>
                             <p className="font-bold text-sm text-gray-900 truncate">
                               R {locality.avgRental}
-                              <span className="text-[10px] text-muted-foreground font-normal">/m²</span>
+                              <span className="text-[10px] text-muted-foreground font-normal">
+                                /m²
+                              </span>
                             </p>
                           </div>
                         </div>
@@ -616,7 +621,9 @@ export function TopLocalities({
                               <p className="font-semibold text-xs text-gray-900 group-hover/link:text-blue-600 transition-colors truncate">
                                 {locality.propertiesForSale.toLocaleString()} Properties for Sale
                               </p>
-                              <p className="text-[10px] text-muted-foreground truncate">in {locality.name}</p>
+                              <p className="text-[10px] text-muted-foreground truncate">
+                                in {locality.name}
+                              </p>
                             </div>
                             <div className="h-6 w-6 rounded-full bg-gray-50 flex items-center justify-center group-hover/link:bg-blue-50 transition-colors flex-shrink-0">
                               <ArrowRight className="h-3 w-3 text-gray-400 group-hover/link:text-blue-600 group-hover/link:translate-x-0.5 transition-all" />
@@ -630,7 +637,9 @@ export function TopLocalities({
                               <p className="font-semibold text-xs text-gray-900 group-hover/link:text-blue-600 transition-colors truncate">
                                 {locality.propertiesForRent.toLocaleString()} Properties for Rent
                               </p>
-                              <p className="text-[10px] text-muted-foreground truncate">in {locality.name}</p>
+                              <p className="text-[10px] text-muted-foreground truncate">
+                                in {locality.name}
+                              </p>
                             </div>
                             <div className="h-6 w-6 rounded-full bg-gray-50 flex items-center justify-center group-hover/link:bg-blue-50 transition-colors flex-shrink-0">
                               <ArrowRight className="h-3 w-3 text-gray-400 group-hover/link:text-blue-600 group-hover/link:translate-x-0.5 transition-all" />

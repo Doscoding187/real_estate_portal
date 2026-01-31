@@ -434,7 +434,6 @@ export default function DeveloperPlans() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
     </>
   );
 }

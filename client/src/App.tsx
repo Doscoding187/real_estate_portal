@@ -108,12 +108,14 @@ const ListingTemplate = lazy(() => import('./pages/ListingTemplate'));
 const CreateDevelopment = lazy(() => import('./pages/CreateDevelopment'));
 const DevelopmentsDemo = lazy(() => import('./pages/DevelopmentsDemo'));
 const DevelopmentDetail = lazy(() => import('./pages/DevelopmentDetail'));
-// DeveloperSetupWizard (unused in routes?) - keeping imported if it was used, but checking usage... 
+// DeveloperSetupWizard (unused in routes?) - keeping imported if it was used, but checking usage...
 // It was imported but not used in the Route list in the original file! I will comment it out or lazy load it if I see it.
-// Ah, checking original file... L98 imported it. L230 uses CreateDevelopment. 
+// Ah, checking original file... L98 imported it. L230 uses CreateDevelopment.
 // I don't see DeveloperSetupWizard used in the Switch. I'll omit it or lazy load it just in case.
 // Better to follow the pattern and lazy load relevant page-like components.
-const DeveloperSetupWizard = lazy(() => import('./components/developer/DeveloperSetupWizardEnhanced'));
+const DeveloperSetupWizard = lazy(
+  () => import('./components/developer/DeveloperSetupWizardEnhanced'),
+);
 const DevelopmentsList = lazy(() => import('./components/developer/DevelopmentsList'));
 const AgencySetupWizard = lazy(() => import('./components/agency/AgencySetupWizard'));
 
@@ -561,7 +563,7 @@ function App() {
       <BrandingProvider>
         <ThemeProvider
           defaultTheme="light"
-        // switchable
+          // switchable
         >
           <GuestActivityProvider>
             <ComparisonProvider>

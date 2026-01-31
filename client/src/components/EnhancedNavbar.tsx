@@ -866,9 +866,10 @@ export function EnhancedNavbar() {
               <Button
                 size="sm"
                 className={`
-                  ${isAdvertisePage
-                    ? 'bg-gradient-to-r from-blue-800 to-blue-900 ring-2 ring-blue-400 ring-offset-2'
-                    : 'bg-gradient-to-r from-blue-700 to-blue-800 hover:from-blue-800 hover:to-blue-900'
+                  ${
+                    isAdvertisePage
+                      ? 'bg-gradient-to-r from-blue-800 to-blue-900 ring-2 ring-blue-400 ring-offset-2'
+                      : 'bg-gradient-to-r from-blue-700 to-blue-800 hover:from-blue-800 hover:to-blue-900'
                   }
                   text-white shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-200 font-bold border border-blue-600
                 `}

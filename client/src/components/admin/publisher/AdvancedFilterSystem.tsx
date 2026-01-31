@@ -2,12 +2,7 @@ import React, { useState, useMemo, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle
-} from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -29,7 +24,7 @@ import {
   ChevronDown,
   Sliders,
   Save,
-  RotateCcw
+  RotateCcw,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { publisherTheme, getStatusColor, animations, cardElevation } from '@/lib/publisherTheme';
@@ -76,19 +71,15 @@ const FilterChip: React.FC<{
         'hover:scale-105 border-2',
         isActive
           ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white border-blue-500 shadow-md'
-          : 'bg-white border-gray-200 text-gray-700 hover:border-blue-300'
+          : 'bg-white border-gray-200 text-gray-700 hover:border-blue-300',
       )}
       onClick={onToggle}
     >
       {filter.label}
-      {filter.count && (
-        <span className="ml-1.5 text-xs opacity-75">
-          ({filter.count})
-        </span>
-      )}
+      {filter.count && <span className="ml-1.5 text-xs opacity-75">({filter.count})</span>}
       {onRemove && isActive && (
         <button
-          onClick={(e) => {
+          onClick={e => {
             e.stopPropagation();
             onRemove();
           }}
@@ -111,7 +102,7 @@ const DateRangeFilter: React.FC<{
       <Input
         type="date"
         value={startDate}
-        onChange={(e) => onChange(e.target.value, endDate)}
+        onChange={e => onChange(e.target.value, endDate)}
         className="w-40 h-9 text-sm"
         placeholder="Start date"
       />
@@ -119,7 +110,7 @@ const DateRangeFilter: React.FC<{
       <Input
         type="date"
         value={endDate}
-        onChange={(e) => onChange(startDate, e.target.value)}
+        onChange={e => onChange(startDate, e.target.value)}
         className="w-40 h-9 text-sm"
         placeholder="End date"
       />
@@ -139,7 +130,7 @@ const PriceRangeFilter: React.FC<{
         <Input
           type="number"
           value={minPrice || ''}
-          onChange={(e) => onChange(parseInt(e.target.value) || 0, maxPrice || 0)}
+          onChange={e => onChange(parseInt(e.target.value) || 0, maxPrice || 0)}
           className="h-9 text-sm"
           placeholder="0"
         />
@@ -149,7 +140,7 @@ const PriceRangeFilter: React.FC<{
         <Input
           type="number"
           value={maxPrice || ''}
-          onChange={(e) => onChange(minPrice || 0, parseInt(e.target.value) || 0)}
+          onChange={e => onChange(minPrice || 0, parseInt(e.target.value) || 0)}
           className="h-9 text-sm"
           placeholder="Any"
         />
@@ -169,7 +160,7 @@ export const AdvancedFilterSystem: React.FC<AdvancedFilterProps> = ({
   onClearAll,
   onSaveFilter,
   savedFilters,
-  onLoadSavedFilter
+  onLoadSavedFilter,
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [showSavedFilters, setShowSavedFilters] = useState(false);
@@ -183,27 +174,33 @@ export const AdvancedFilterSystem: React.FC<AdvancedFilterProps> = ({
     }).length;
   }, [activeFilters]);
 
-  const handleFilterChange = useCallback((filterId: string, value: any) => {
-    const newFilters = { ...activeFilters };
-    if (Array.isArray(value)) {
-      const current = newFilters[filterId] || [];
-      const index = current.indexOf(value);
-      if (index > -1) {
-        newFilters[filterId] = current.filter((_, i) => i !== index);
+  const handleFilterChange = useCallback(
+    (filterId: string, value: any) => {
+      const newFilters = { ...activeFilters };
+      if (Array.isArray(value)) {
+        const current = newFilters[filterId] || [];
+        const index = current.indexOf(value);
+        if (index > -1) {
+          newFilters[filterId] = current.filter((_, i) => i !== index);
+        } else {
+          newFilters[filterId] = [...current, value];
+        }
       } else {
-        newFilters[filterId] = [...current, value];
+        newFilters[filterId] = value;
       }
-    } else {
-      newFilters[filterId] = value;
-    }
-    onFiltersChange(newFilters);
-  }, [activeFilters, onFiltersChange]);
+      onFiltersChange(newFilters);
+    },
+    [activeFilters, onFiltersChange],
+  );
 
-  const clearFilter = useCallback((filterId: string) => {
-    const newFilters = { ...activeFilters };
-    delete newFilters[filterId];
-    onFiltersChange(newFilters);
-  }, [activeFilters, onFiltersChange]);
+  const clearFilter = useCallback(
+    (filterId: string) => {
+      const newFilters = { ...activeFilters };
+      delete newFilters[filterId];
+      onFiltersChange(newFilters);
+    },
+    [activeFilters, onFiltersChange],
+  );
 
   const renderFilterContent = (filter: FilterGroup) => {
     switch (filter.type) {
@@ -235,7 +232,10 @@ export const AdvancedFilterSystem: React.FC<AdvancedFilterProps> = ({
               <FilterChip
                 key={option.id}
                 filter={option}
-                isActive={Array.isArray(activeFilters[filter.id]) && activeFilters[filter.id].includes(option.value)}
+                isActive={
+                  Array.isArray(activeFilters[filter.id]) &&
+                  activeFilters[filter.id].includes(option.value)
+                }
                 onToggle={() => handleFilterChange(filter.id, option.value)}
                 onRemove={() => {
                   const current = activeFilters[filter.id] || [];
@@ -258,7 +258,7 @@ export const AdvancedFilterSystem: React.FC<AdvancedFilterProps> = ({
                   'flex items-center gap-2 p-2 rounded-lg cursor-pointer transition-colors duration-200',
                   activeFilters[filter.id] === option.value
                     ? 'bg-blue-50 border-blue-200 text-blue-700'
-                    : 'hover:bg-gray-50 border-gray-200'
+                    : 'hover:bg-gray-50 border-gray-200',
                 )}
               >
                 <input
@@ -271,9 +271,7 @@ export const AdvancedFilterSystem: React.FC<AdvancedFilterProps> = ({
                 />
                 <span className="text-sm">{option.label}</span>
                 {option.count && (
-                  <span className="text-xs text-gray-500 ml-auto">
-                    ({option.count})
-                  </span>
+                  <span className="text-xs text-gray-500 ml-auto">({option.count})</span>
                 )}
               </label>
             ))}
@@ -296,11 +294,7 @@ export const AdvancedFilterSystem: React.FC<AdvancedFilterProps> = ({
             {savedFilters && savedFilters.length > 0 && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-8 gap-1.5"
-                  >
+                  <Button variant="outline" size="sm" className="h-8 gap-1.5">
                     <Save className="w-3.5 h-3.5" />
                     <ChevronDown className="w-3 h-3" />
                   </Button>
@@ -356,7 +350,7 @@ export const AdvancedFilterSystem: React.FC<AdvancedFilterProps> = ({
           <Input
             placeholder="Search across all fields..."
             value={searchQuery}
-            onChange={(e) => onSearchChange(e.target.value)}
+            onChange={e => onSearchChange(e.target.value)}
             className="pl-12 h-11 text-base border-2 border-gray-200 rounded-xl focus:border-blue-400 focus:ring-4 focus:ring-blue-100 transition-all duration-200"
           />
           {searchQuery && (
@@ -395,10 +389,12 @@ export const AdvancedFilterSystem: React.FC<AdvancedFilterProps> = ({
         )}
 
         {/* Filter Groups */}
-        <div className={cn(
-          'space-y-6 transition-all duration-300',
-          isExpanded ? 'max-h-96 overflow-y-auto' : 'max-h-0 overflow-hidden'
-        )}>
+        <div
+          className={cn(
+            'space-y-6 transition-all duration-300',
+            isExpanded ? 'max-h-96 overflow-y-auto' : 'max-h-0 overflow-hidden',
+          )}
+        >
           {filters.map((filter, index) => (
             <div
               key={filter.id}
@@ -406,7 +402,7 @@ export const AdvancedFilterSystem: React.FC<AdvancedFilterProps> = ({
                 'space-y-3 p-4 rounded-xl border-2 transition-all duration-200',
                 'border-gray-100 hover:border-blue-200',
                 animations.fadeIn,
-                `animate-stagger-${index + 1}`
+                `animate-stagger-${index + 1}`,
               )}
             >
               <div className="flex items-center gap-2 mb-3">
@@ -436,10 +432,12 @@ export const AdvancedFilterSystem: React.FC<AdvancedFilterProps> = ({
             className="flex items-center gap-2 text-blue-600 hover:bg-blue-50 transition-colors duration-200"
           >
             {isExpanded ? 'Hide Filters' : 'Show Advanced Filters'}
-            <ChevronDown className={cn(
-              'w-4 h-4 transition-transform duration-200',
-              isExpanded ? 'rotate-180' : ''
-            )} />
+            <ChevronDown
+              className={cn(
+                'w-4 h-4 transition-transform duration-200',
+                isExpanded ? 'rotate-180' : '',
+              )}
+            />
           </Button>
         </div>
       </CardContent>

@@ -81,4 +81,3 @@ verifyIdFix().catch(err => {
   console.error('❌ Script validation failed:', err);
   process.exit(1);
 });
-

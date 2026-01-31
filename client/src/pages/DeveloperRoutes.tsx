@@ -69,7 +69,10 @@ export default function DeveloperRoutes() {
 
         {/* Growth */}
         <Route path="/developer/analytics" component={AnalyticsPanel} />
-        <Route path="/developer/explore" component={() => <PlaceholderContent title="Explore Analytics" />} />
+        <Route
+          path="/developer/explore"
+          component={() => <PlaceholderContent title="Explore Analytics" />}
+        />
         <Route path="/developer/campaigns" component={MarketingCampaigns} />
         <Route path="/developer/campaigns/new" component={DeveloperCampaignsPage} />
         <Route path="/developer/performance" component={DeveloperPerformancePage} />
@@ -80,7 +83,10 @@ export default function DeveloperRoutes() {
         <Route path="/developer/subscription" component={BillingPanel} />
         <Route path="/developer/settings/subscription" component={BillingPanel} />
         <Route path="/developer/plans" component={DeveloperPlans} />
-        <Route path="/developer/notifications" component={() => <PlaceholderContent title="Notifications" />} />
+        <Route
+          path="/developer/notifications"
+          component={() => <PlaceholderContent title="Notifications" />}
+        />
 
         {/* Default fallback */}
         <Route>

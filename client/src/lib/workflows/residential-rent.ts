@@ -141,7 +141,10 @@ const residentialRentSteps: WizardStep[] = [
 
           const rentFrom = Number(u.monthlyRentFrom ?? u.monthlyRent ?? 0);
           const rentTo = Number(u.monthlyRentTo ?? 0);
-          if ((!Number.isFinite(rentFrom) || rentFrom <= 0) && (!Number.isFinite(rentTo) || rentTo <= 0)) {
+          if (
+            (!Number.isFinite(rentFrom) || rentFrom <= 0) &&
+            (!Number.isFinite(rentTo) || rentTo <= 0)
+          ) {
             errors.push({
               field: `unitTypes.${id}.monthlyRentFrom`,
               message: `${label} is missing a monthly rent`,

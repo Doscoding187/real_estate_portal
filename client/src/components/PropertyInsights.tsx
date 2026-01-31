@@ -45,7 +45,7 @@ function InsightCard({
   colorTheme,
   children,
   action,
-  className
+  className,
 }: {
   title: string;
   subtitle: string;
@@ -56,40 +56,64 @@ function InsightCard({
   className?: string;
 }) {
   const themes = {
-    blue: { bg: 'bg-blue-50', headerBg: 'bg-transparent', iconBg: 'bg-blue-600', iconText: 'text-white', title: 'text-slate-900', border: 'border-blue-100' },
-    orange: { bg: 'bg-orange-50', headerBg: 'bg-transparent', iconBg: 'bg-orange-500', iconText: 'text-white', title: 'text-slate-900', border: 'border-orange-100' },
-    green: { bg: 'bg-emerald-50', headerBg: 'bg-transparent', iconBg: 'bg-emerald-500', iconText: 'text-white', title: 'text-slate-900', border: 'border-emerald-100' },
-    purple: { bg: 'bg-purple-50', headerBg: 'bg-transparent', iconBg: 'bg-purple-500', iconText: 'text-white', title: 'text-slate-900', border: 'border-purple-100' },
+    blue: {
+      bg: 'bg-blue-50',
+      headerBg: 'bg-transparent',
+      iconBg: 'bg-blue-600',
+      iconText: 'text-white',
+      title: 'text-slate-900',
+      border: 'border-blue-100',
+    },
+    orange: {
+      bg: 'bg-orange-50',
+      headerBg: 'bg-transparent',
+      iconBg: 'bg-orange-500',
+      iconText: 'text-white',
+      title: 'text-slate-900',
+      border: 'border-orange-100',
+    },
+    green: {
+      bg: 'bg-emerald-50',
+      headerBg: 'bg-transparent',
+      iconBg: 'bg-emerald-500',
+      iconText: 'text-white',
+      title: 'text-slate-900',
+      border: 'border-emerald-100',
+    },
+    purple: {
+      bg: 'bg-purple-50',
+      headerBg: 'bg-transparent',
+      iconBg: 'bg-purple-500',
+      iconText: 'text-white',
+      title: 'text-slate-900',
+      border: 'border-purple-100',
+    },
   };
 
   const t = themes[colorTheme];
 
   return (
-    <div className={cn(
-      "flex-none w-[300px] sm:w-[340px] rounded-2xl border transition-all hover:shadow-lg flex flex-col snap-center bg-opacity-40 backdrop-blur-sm",
-      t.bg,
-      t.border,
-      className
-    )}>
+    <div
+      className={cn(
+        'flex-none w-[300px] sm:w-[340px] rounded-2xl border transition-all hover:shadow-lg flex flex-col snap-center bg-opacity-40 backdrop-blur-sm',
+        t.bg,
+        t.border,
+        className,
+      )}
+    >
       <div className="p-5 flex flex-col gap-1">
         <div className="flex items-center gap-2 mb-1">
-          <div className={cn("p-1.5 rounded-lg shadow-sm", t.iconBg, t.iconText)}>
+          <div className={cn('p-1.5 rounded-lg shadow-sm', t.iconBg, t.iconText)}>
             <Icon size={16} strokeWidth={2.5} />
           </div>
-          <h3 className={cn("font-bold text-base", t.title)}>{title}</h3>
+          <h3 className={cn('font-bold text-base', t.title)}>{title}</h3>
         </div>
         <p className="text-xs text-slate-500 font-medium pl-9">{subtitle}</p>
       </div>
 
-      <div className="px-5 pb-5 flex-1 flex flex-col">
-        {children}
-      </div>
+      <div className="px-5 pb-5 flex-1 flex flex-col">{children}</div>
 
-      {action && (
-        <div className="px-5 pb-5 mt-auto">
-          {action}
-        </div>
-      )}
+      {action && <div className="px-5 pb-5 mt-auto">{action}</div>}
     </div>
   );
 }
@@ -114,7 +138,8 @@ export function PropertyInsights({
   const insightsQuery = trpc.priceInsights.getHierarchy.useQuery(
     { level: effectiveLevel, parentId: effectiveParentId },
     {
-      enabled: effectiveLevel === 'national' ||
+      enabled:
+        effectiveLevel === 'national' ||
         (effectiveLevel === 'province' && typeof effectiveParentId === 'number') ||
         (effectiveLevel === 'city' && typeof effectiveParentId === 'number'),
     },
@@ -185,15 +210,14 @@ export function PropertyInsights({
     <div className="py-16 md:py-20 bg-white border-t border-slate-100">
       <div className="container">
         <div className="w-full space-y-8">
-
           {/* Header */}
           <div>
             <h2 className="text-3xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
               Property Price Insights in {effectiveLevel === 'national' ? 'South Africa' : 'Market'}
             </h2>
             <p className="text-slate-500 mt-2 max-w-3xl leading-relaxed">
-              Get accurate property price insights with city-wise trends, median rates, and micro-market comparisons.
-              Make smarter investment choices backed by real-time data.
+              Get accurate property price insights with city-wise trends, median rates, and
+              micro-market comparisons. Make smarter investment choices backed by real-time data.
             </p>
           </div>
 
@@ -216,9 +240,11 @@ export function PropertyInsights({
             </div>
 
             {/* Content Row */}
-            <TabsContent value={activeTabId} className="mt-0 focus-visible:outline-none animate-in fade-in slide-in-from-bottom-2 duration-500">
+            <TabsContent
+              value={activeTabId}
+              className="mt-0 focus-visible:outline-none animate-in fade-in slide-in-from-bottom-2 duration-500"
+            >
               <div className="flex overflow-x-auto pb-8 gap-6 snap-x -mx-4 px-4 sm:mx-0 sm:px-0 scrollbar-hide">
-
                 {/* 1. AVERAGE PRICE MAP (Blue) */}
                 <InsightCard
                   title="Average Price Map"
@@ -227,12 +253,17 @@ export function PropertyInsights({
                   colorTheme="blue"
                   className="bg-blue-50/60"
                 >
-                  <p className="text-xs text-slate-500 mb-6">Interactive map showing average property prices across different areas</p>
+                  <p className="text-xs text-slate-500 mb-6">
+                    Interactive map showing average property prices across different areas
+                  </p>
 
-                  <div className="flex-1 rounded-xl bg-white border border-blue-100 flex flex-col items-center justify-center p-6 shadow-sm group cursor-pointer hover:shadow-md transition-all relative overflow-hidden"
+                  <div
+                    className="flex-1 rounded-xl bg-white border border-blue-100 flex flex-col items-center justify-center p-6 shadow-sm group cursor-pointer hover:shadow-md transition-all relative overflow-hidden"
                     onClick={() => {
-                      if (effectiveLevel === 'national') drillTo({ level: 'province', parentId: Number(activeTabId) });
-                      else if (effectiveLevel === 'province') drillTo({ level: 'city', parentId: Number(activeTabId) });
+                      if (effectiveLevel === 'national')
+                        drillTo({ level: 'province', parentId: Number(activeTabId) });
+                      else if (effectiveLevel === 'province')
+                        drillTo({ level: 'city', parentId: Number(activeTabId) });
                     }}
                   >
                     {/* Map Decoration */}
@@ -242,10 +273,14 @@ export function PropertyInsights({
                   </div>
 
                   <div className="mt-6">
-                    <Button variant="outline" className="w-full bg-white border-blue-200 text-blue-700 hover:bg-blue-50 hover:text-blue-800"
+                    <Button
+                      variant="outline"
+                      className="w-full bg-white border-blue-200 text-blue-700 hover:bg-blue-50 hover:text-blue-800"
                       onClick={() => {
-                        if (effectiveLevel === 'national') drillTo({ level: 'province', parentId: Number(activeTabId) });
-                        else if (effectiveLevel === 'province') drillTo({ level: 'city', parentId: Number(activeTabId) });
+                        if (effectiveLevel === 'national')
+                          drillTo({ level: 'province', parentId: Number(activeTabId) });
+                        else if (effectiveLevel === 'province')
+                          drillTo({ level: 'city', parentId: Number(activeTabId) });
                       }}
                     >
                       Explore Map
@@ -262,7 +297,14 @@ export function PropertyInsights({
                   className="bg-orange-50/60"
                 >
                   <p className="text-xs text-slate-500 mb-4">
-                    {activeTabName} has <strong className="text-orange-700">{formatNumber(summary?.listingCount)} listings</strong> with median price of <strong className="text-orange-700">{formatMoneyZAR(summary?.medianPrice)}</strong>
+                    {activeTabName} has{' '}
+                    <strong className="text-orange-700">
+                      {formatNumber(summary?.listingCount)} listings
+                    </strong>{' '}
+                    with median price of{' '}
+                    <strong className="text-orange-700">
+                      {formatMoneyZAR(summary?.medianPrice)}
+                    </strong>
                   </p>
 
                   <div className="flex-1 space-y-3 overflow-y-auto pr-1 custom-scrollbar">
@@ -270,16 +312,23 @@ export function PropertyInsights({
                       const percent = (bucket.count / totalBucketCount) * 100;
                       return (
                         <div key={idx} className="flex items-center gap-2 text-xs">
-                          <span className="w-16 text-slate-500 shrink-0 text-[10px]">{bucket.label}</span>
+                          <span className="w-16 text-slate-500 shrink-0 text-[10px]">
+                            {bucket.label}
+                          </span>
                           <div className="flex-1 h-2.5 bg-white/80 rounded-full overflow-hidden border border-orange-100">
                             <div
                               className="h-full bg-orange-500 rounded-full transition-all duration-1000"
-                              style={{ width: `${percent}%`, minWidth: bucket.count > 0 ? '4px' : '0' }}
+                              style={{
+                                width: `${percent}%`,
+                                minWidth: bucket.count > 0 ? '4px' : '0',
+                              }}
                             />
                           </div>
-                          <span className="w-4 text-right font-medium text-orange-700">{bucket.count}</span>
+                          <span className="w-4 text-right font-medium text-orange-700">
+                            {bucket.count}
+                          </span>
                         </div>
-                      )
+                      );
                     })}
                   </div>
 
@@ -296,31 +345,45 @@ export function PropertyInsights({
                   colorTheme="green"
                   className="bg-emerald-50/60"
                 >
-                  <p className="text-xs text-slate-500 mb-6">Current market activity and listing trends in {activeTabName}</p>
+                  <p className="text-xs text-slate-500 mb-6">
+                    Current market activity and listing trends in {activeTabName}
+                  </p>
 
                   <div className="space-y-3">
                     <div className="bg-white p-3 rounded-xl border border-emerald-100 flex items-center justify-between shadow-sm">
                       <div className="flex items-center gap-3">
-                        <div className="bg-emerald-100 p-1.5 rounded text-emerald-600"><BarChart3 size={14} /></div>
+                        <div className="bg-emerald-100 p-1.5 rounded text-emerald-600">
+                          <BarChart3 size={14} />
+                        </div>
                         <span className="text-sm font-medium text-slate-600">Active Listings</span>
                       </div>
-                      <span className="font-bold text-emerald-900">{formatNumber(summary?.listingCount)}</span>
+                      <span className="font-bold text-emerald-900">
+                        {formatNumber(summary?.listingCount)}
+                      </span>
                     </div>
 
                     <div className="bg-white p-3 rounded-xl border border-emerald-100 flex items-center justify-between shadow-sm">
                       <div className="flex items-center gap-3">
-                        <div className="bg-emerald-100 p-1.5 rounded text-emerald-600"><TrendingUp size={14} /></div>
+                        <div className="bg-emerald-100 p-1.5 rounded text-emerald-600">
+                          <TrendingUp size={14} />
+                        </div>
                         <span className="text-sm font-medium text-slate-600">Avg. Price/m²</span>
                       </div>
-                      <span className="font-bold text-emerald-900">R {(Math.random() * 5000 + 8000).toFixed(0)}</span>
+                      <span className="font-bold text-emerald-900">
+                        R {(Math.random() * 5000 + 8000).toFixed(0)}
+                      </span>
                     </div>
 
                     <div className="bg-white p-3 rounded-xl border border-emerald-100 flex items-center justify-between shadow-sm">
                       <div className="flex items-center gap-3">
-                        <div className="bg-emerald-100 p-1.5 rounded text-emerald-600"><Building2 size={14} /></div>
+                        <div className="bg-emerald-100 p-1.5 rounded text-emerald-600">
+                          <Building2 size={14} />
+                        </div>
                         <span className="text-sm font-medium text-slate-600">Median Price</span>
                       </div>
-                      <span className="font-bold text-emerald-900">{formatMoneyZAR(summary?.medianPrice)}</span>
+                      <span className="font-bold text-emerald-900">
+                        {formatMoneyZAR(summary?.medianPrice)}
+                      </span>
                     </div>
                   </div>
                 </InsightCard>
@@ -333,28 +396,37 @@ export function PropertyInsights({
                   colorTheme="purple"
                   className="bg-purple-50/60"
                 >
-                  <p className="text-xs text-slate-500 mb-4">{activeTabName} avg. price is R {(Math.random() * 5000 + 10000).toFixed(0)} / m²</p>
+                  <p className="text-xs text-slate-500 mb-4">
+                    {activeTabName} avg. price is R {(Math.random() * 5000 + 10000).toFixed(0)} / m²
+                  </p>
 
                   <div className="flex-1 bg-white rounded-xl border border-purple-100 overflow-hidden shadow-sm">
                     <div className="divide-y divide-purple-50">
-                      {topChildren.slice(0, 5).map((child) => (
-                        <div key={child.id} className="p-3 flex items-center justify-between hover:bg-purple-50/50 transition-colors cursor-pointer"
+                      {topChildren.slice(0, 5).map(child => (
+                        <div
+                          key={child.id}
+                          className="p-3 flex items-center justify-between hover:bg-purple-50/50 transition-colors cursor-pointer"
                           onClick={() => {
-                            if (effectiveLevel === 'national') drillTo({ level: 'province', parentId: Number(activeTabId) });
-                            else if (effectiveLevel === 'province') drillTo({ level: 'city', parentId: Number(activeTabId) });
+                            if (effectiveLevel === 'national')
+                              drillTo({ level: 'province', parentId: Number(activeTabId) });
+                            else if (effectiveLevel === 'province')
+                              drillTo({ level: 'city', parentId: Number(activeTabId) });
                           }}
                         >
-                          <span className="font-bold text-sm text-purple-900">{formatMoneyZAR(child.medianPrice)}</span>
+                          <span className="font-bold text-sm text-purple-900">
+                            {formatMoneyZAR(child.medianPrice)}
+                          </span>
                           <span className="text-xs font-medium text-slate-500">{child.name}</span>
                         </div>
                       ))}
                       {topChildren.length === 0 && (
-                        <div className="p-4 text-center text-xs text-slate-400">No comparison data</div>
+                        <div className="p-4 text-center text-xs text-slate-400">
+                          No comparison data
+                        </div>
                       )}
                     </div>
                   </div>
                 </InsightCard>
-
               </div>
             </TabsContent>
           </Tabs>

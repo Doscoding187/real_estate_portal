@@ -113,7 +113,6 @@ export async function generateUniqueSlug(baseName: string): Promise<string> {
   let slug = generateSlug(baseName);
   let counter = 1;
 
-  // eslint-disable-next-line no-constant-condition
   while (true) {
     const existing = await db
       .select({ id: developments.id })

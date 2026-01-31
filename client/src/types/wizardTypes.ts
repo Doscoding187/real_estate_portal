@@ -185,7 +185,11 @@ export const AUCTION_TYPE_OPTIONS: {
   label: string;
   description: string;
 }[] = [
-  { value: 'sealed_bid', label: 'Sealed Bid', description: 'Private bids submitted confidentially' },
+  {
+    value: 'sealed_bid',
+    label: 'Sealed Bid',
+    description: 'Private bids submitted confidentially',
+  },
   { value: 'open', label: 'Open Auction', description: 'Competitive bids visible to participants' },
   { value: 'online', label: 'Online Auction', description: 'Bidding hosted digitally' },
   { value: 'live_event', label: 'Live Event', description: 'In-person auction event' },

@@ -84,18 +84,16 @@ export const brandEmulationClientService = new BrandEmulationClientService();
  * SECURITY: Only sends brand ID - server resolves type from DB
  */
 export function createBrandEmulationLink() {
-  return ({ ctx, next }: { ctx: any; next: any }) => {
+  return ({ op, next }: { op: any; next: any }) => {
     // Get brand ID if emulation is active
     const brandId = brandEmulationClientService.getCurrentBrandId();
     if (brandId) {
-      ctx.headers = {
-        ...ctx.headers,
+      op.context.headers = {
+        ...op.context.headers,
         'x-operating-as-brand': String(brandId),
       };
     }
 
-    return next({
-      ...ctx,
-    });
+    return next(op);
   };
 }

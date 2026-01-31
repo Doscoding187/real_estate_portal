@@ -6,10 +6,15 @@
  */
 export const getApiUrl = (endpoint: string): string => {
   // Get base URL from env - should be HOST only, no /api at end
-  const baseUrl = (import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || '').replace(
+  let baseUrl = (import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || '').replace(
     /\/+$/,
     '',
   ); // Remove trailing slashes
+
+  // Ensure protocol exists if baseUrl is provided
+  if (baseUrl && !baseUrl.startsWith('http')) {
+    baseUrl = `https://${baseUrl}`;
+  }
 
   // Normalize endpoint: ensure it starts with /
   const normalizedPath = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;

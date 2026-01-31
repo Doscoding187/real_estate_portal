@@ -219,7 +219,6 @@ const PublisherContent: React.FC = () => {
           <PublisherMetrics />
         </TabsContent>
       </Tabs>
-
     </div>
   );
 };
