@@ -1,5 +1,5 @@
 import { trpc } from '@/lib/trpc';
-import { getApiUrl } from '@/lib/api';
+// getApiUrl removed as we are hardcoding TRPC_URL for safety
 import { UNAUTHED_ERR_MSG } from '@shared/const';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { httpBatchLink, TRPCClientError } from '@trpc/client';
@@ -9,6 +9,7 @@ import { HelmetProvider } from 'react-helmet-async';
 import superjson from 'superjson';
 import { validateEnvironmentConfig } from './lib/env'; // Runtime guard
 import { createBrandEmulationLink } from './lib/brandEmulation/brandEmulationClient';
+import { trpcDebugLink } from './lib/trpcDebugLink';
 import App from './App';
 import { AuthProvider } from './contexts/AuthContext';
 import { getLoginUrl } from './const';
@@ -54,11 +55,25 @@ queryClient.getMutationCache().subscribe(event => {
   }
 });
 
+
+// Build marker to confirm which code is running in production
+console.log('[BUILD_MARKER] main.tsx 2026-01-31 B (Reverted AuthProvider)');
+console.log(`[ENV] Mode=${import.meta.env.MODE}, Prod=${import.meta.env.PROD}`);
+
+const API_BASE_URL = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || '';
+const TRPC_URL = new URL('/api/trpc', API_BASE_URL.endsWith('/') ? API_BASE_URL : API_BASE_URL + '/')
+  .toString()
+  .replace(/\/api\/api\//, '/api/');
+
+console.log('[tRPC] URL =', TRPC_URL);
+
 const links = [
+  // Debug link to log tRPC paths
+  trpcDebugLink(),
   // Brand emulation link to inject X-Brand-Emulation headers when in emulator mode
   createBrandEmulationLink(),
   httpBatchLink({
-    url: getApiUrl('/trpc'),
+    url: TRPC_URL,
 
     transformer: superjson,
     async fetch(input, init) {
