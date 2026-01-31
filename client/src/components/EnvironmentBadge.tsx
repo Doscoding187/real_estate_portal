@@ -1,18 +1,16 @@
 import React from 'react';
-import { IS_PROD_BUILD, API_BASE_URL } from '../lib/env';
+import { API_BASE_URL } from '../lib/env';
 
 /**
  * A visible badge for Non-Production environments to prevent confusion.
- * Does not render in Production.
+ * Does not render in Production builds.
  */
 export const EnvironmentBadge: React.FC = () => {
-  if (IS_PROD_BUILD) return null;
+  // Simple check: If this IS a production build, show nothing.
+  if (import.meta.env.PROD) return null;
 
-  // Determine label based on URL or Mode
-  let label = 'DEV';
-  if (API_BASE_URL.includes('staging')) label = 'STAGING';
-  else if (import.meta.env.MODE === 'test') label = 'TEST';
-  else if (API_BASE_URL.includes('localhost')) label = 'LOCAL';
+  // Otherwise, show the mode (DEV, TEST, etc.)
+  const label = (import.meta.env.MODE || 'NON-PROD').toUpperCase();
 
   return (
     <div

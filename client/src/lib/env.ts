@@ -2,7 +2,7 @@
  * Environment Configuration & Runtime Guards
  *
  * This file centralizes environment variable access and enforces safety rules
- * to prevent cross-environment contamination (e.g., Staging frontend talking to Prod backend).
+ * to prevent cross-environment contamination.
  */
 
 export const IS_PROD_BUILD = import.meta.env.PROD;
@@ -16,66 +16,67 @@ export const API_BASE_URL = (
   ''
 ).replace(/\/+$/, '');
 
-// KNOWN DOMAINS
-// We check against these signatures to verify we are connecting to the right place.
-const PROD_BACKEND_SIGNATURES = [
-  'propertylistifysa.co.za', // Custom Domain
-  'realestateportal-production', // Railway Default
-  'listify-property-sa', // Potential project name
+// STRICT ALLOWLISTS
+// Define exact allowed hostnames for each environment.
+// No fuzzy matching.
+export const PROD_BACKEND_HOSTS = [
+  'api.propertylistifysa.co.za',
+  'realestateportal-production.up.railway.app',
 ];
 
-const STAGING_BACKEND_SIGNATURES = ['realestateportal-staging', 'staging'];
+export const STAGING_BACKEND_HOST = 'realestateportal-staging.up.railway.app';
+
+/**
+ * Extracts the hostname from a URL string safely.
+ */
+export function hostOf(url: string): string {
+  try {
+    return new URL(url).hostname;
+  } catch {
+    return '';
+  }
+}
 
 /**
  * Validates that the current build environment matches the configured Backend URL.
  * Throws a CRITICAL error if a mismatch is detected.
  */
 export function validateEnvironmentConfig() {
-  console.log(`[ENV] Booting... Mode=${MODE}, ProdBuild=${IS_PROD_BUILD}, API=${API_BASE_URL}`);
+  const host = hostOf(API_BASE_URL);
 
-  if (!API_BASE_URL) {
+  console.log(`[ENV] Booting... Mode=${MODE}, ProdBuild=${IS_PROD_BUILD}, Host=${host}`);
+
+  if (!API_BASE_URL || !host) {
     if (IS_PROD_BUILD) {
-      // It is critical to have an API URL in production
-      throw new Error('CRITICAL: VITE_API_URL is missing in Production build!');
+      throw new Error('CRITICAL: VITE_API_URL is missing or invalid in Production build!');
     } else {
-      console.warn('[ENV] VITE_API_URL missing in Dev/Preview. Defaults may apply.');
+      console.warn('[ENV] VITE_API_URL missing. defaulting to local/empty.');
       return;
     }
   }
 
-  // GUARD 1: Production Build Safety
+  // GUARD: Production Build Integrity
   if (IS_PROD_BUILD) {
-    // If we are building for PROD, we MUST connect to a Prod-like Backend.
-    // AND securely NOT connect to localhost or staging.
-
-    const isLocalhost = API_BASE_URL.includes('localhost') || API_BASE_URL.includes('127.0.0.1');
-    const isStaging = STAGING_BACKEND_SIGNATURES.some(sig => API_BASE_URL.includes(sig));
-
-    if (isLocalhost || isStaging) {
+    // Prod build MUST connect to one of the allowed Prod hosts
+    if (!PROD_BACKEND_HOSTS.includes(host)) {
       throw new Error(
-        `CRITICAL ENV MISMATCH: Production build attempting to connect to NON-PROD Backend: ${API_BASE_URL}`,
+        `CRITICAL ENV MISMATCH: PROD build must use Production Backend (${PROD_BACKEND_HOSTS.join(' or ')}). Got: ${host}`,
+      );
+    }
+  } else {
+    // GUARD: Non-Production Build (Preview, Staging, Dev)
+    // MUST NOT connect to Production
+    if (PROD_BACKEND_HOSTS.includes(host)) {
+      throw new Error(
+        `CRITICAL ENV MISMATCH: NON-PROD build must NOT use Production Backend! Got: ${host}`,
       );
     }
 
-    // Optional: Enforce specific prod domain if desired
-    // const isProd = PROD_BACKEND_SIGNATURES.some(sig => API_BASE_URL.includes(sig));
-    // if (!isProd) { ... }
-  }
-
-  // GUARD 2: Non-Prod Build Safety (Prevention of Accidental Prod Usage)
-  if (!IS_PROD_BUILD && !IS_DEV_MODE) {
-    // This catches "Preview" deployments or Staging builds.
-    // They should NOT be looking at the live production DB.
-
-    const isProd = PROD_BACKEND_SIGNATURES.some(sig => API_BASE_URL.includes(sig));
-
-    if (isProd) {
-      throw new Error(
-        `CRITICAL ENV MISMATCH: Non-Production build (Preview/Staging) attempting to connect to PROD Backend: ${API_BASE_URL}. This is dangerous!`,
+    // Optional: Enforce Staging Host for Previews (if not localhost)
+    if (!host.includes('localhost') && host !== '127.0.0.1' && host !== STAGING_BACKEND_HOST) {
+      console.warn(
+        `[ENV] Warning: Non-prod build using unknown host: ${host}. Expected: ${STAGING_BACKEND_HOST} or localhost.`,
       );
     }
   }
 }
-
-// Auto-validate on import logic?
-// Better to call explicitly in main.tsx to ensure it runs before React mounts.

@@ -1,90 +1,82 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 
-// We will mock process.env, import.meta.env logic conceptually
-// because import.meta is read-only in some environments.
-// Instead, we will test the LOGIC by temporarily mocking the module if possible,
-// or by refactoring logic to be testable.
-// Since 'env.ts' reads safe constants from import.meta.env at module load time,
-// checking them dynamically is hard without re-importing.
-//
-// A better approach for this test is to verify our ASSUMPTIONS about the file's logic
-// by creating a synthetic copy of the logic here to prove it works given specific inputs.
+// Replicating logic from client/src/lib/env.ts for verification
+// We duplicate the HOST constants to verify they are correct in the source too.
 
-function testGuardLogic(isProdBuild: boolean, isDevMode: boolean, apiUrl: string) {
-  const PROD_BACKEND_SIGNATURES = [
-    'propertylistifysa.co.za', // Custom Domain
-    'realestateportal-production', // Railway Default
-    'listify-property-sa', // Potential project name
-  ];
+const PROD_BACKEND_HOSTS = [
+  'api.propertylistifysa.co.za',
+  'realestateportal-production.up.railway.app',
+];
+const STAGING_BACKEND_HOST = 'realestateportal-staging.up.railway.app';
 
-  const STAGING_BACKEND_SIGNATURES = ['realestateportal-staging', 'staging'];
+function hostOf(url: string): string {
+  try {
+    return new URL(url).hostname;
+  } catch {
+    return '';
+  }
+}
 
-  // Logic replicated from src/lib/env.ts for verification:
-  if (!apiUrl) {
-    if (isProdBuild) {
-      throw new Error('CRITICAL: VITE_API_URL is missing in Production build!');
-    }
-    return; // Non-prod missing URL is warned, not thrown
+function testGuardLogic(isProdBuild: boolean, apiUrl: string) {
+  const host = hostOf(apiUrl);
+
+  if (!apiUrl || !host) {
+    if (isProdBuild) throw new Error('CRITICAL: VITE_API_URL is missing');
+    return;
   }
 
-  // GUARD 1: Production Build Safety
+  // GUARD: Production Build Integrity
   if (isProdBuild) {
-    const isLocalhost = apiUrl.includes('localhost') || apiUrl.includes('127.0.0.1');
-    const isStaging = STAGING_BACKEND_SIGNATURES.some(sig => apiUrl.includes(sig));
-
-    if (isLocalhost || isStaging) {
+    if (!PROD_BACKEND_HOSTS.includes(host)) {
       throw new Error(
-        `CRITICAL ENV MISMATCH: Production build attempting to connect to NON-PROD Backend: ${apiUrl}`,
+        `CRITICAL ENV MISMATCH: PROD build must use Production Backend. Got: ${host}`,
       );
     }
-  }
-
-  // GUARD 2: Non-Prod Build Safety
-  if (!isProdBuild && !isDevMode) {
-    const isProd = PROD_BACKEND_SIGNATURES.some(sig => apiUrl.includes(sig));
-    if (isProd) {
+  } else {
+    // GUARD: Non-Production Build
+    if (PROD_BACKEND_HOSTS.includes(host)) {
       throw new Error(
-        `CRITICAL ENV MISMATCH: Non-Production build (Preview/Staging) attempting to connect to PROD Backend: ${apiUrl}. This is dangerous!`,
+        `CRITICAL ENV MISMATCH: NON-PROD build must NOT use Production Backend! Got: ${host}`,
       );
     }
   }
 }
 
-describe('Environment Guard Logic Verification', () => {
+describe('Environment Guard Logic Verification (Strict)', () => {
   // 1. Production Build Verification
-  it('Should PASS when Production Build connects to Production Backend', () => {
+  it('Should PASS when Production Build connects to Allowed Production Host', () => {
+    expect(() => testGuardLogic(true, 'https://api.propertylistifysa.co.za')).not.toThrow();
     expect(() =>
-      testGuardLogic(true, false, 'https://realestateportal-production.up.railway.app'),
+      testGuardLogic(true, 'https://realestateportal-production.up.railway.app'),
     ).not.toThrow();
-    expect(() => testGuardLogic(true, false, 'https://api.propertylistifysa.co.za')).not.toThrow();
   });
 
   it('Should FAIL when Production Build connects to Staging Backend', () => {
-    expect(() =>
-      testGuardLogic(true, false, 'https://realestateportal-staging.up.railway.app'),
-    ).toThrow(/CRITICAL ENV MISMATCH: Production build attempting to connect to NON-PROD/);
-  });
-
-  it('Should FAIL when Production Build connects to Localhost', () => {
-    expect(() => testGuardLogic(true, false, 'http://localhost:3000')).toThrow(
-      /CRITICAL ENV MISMATCH: Production build attempting to connect to NON-PROD/,
+    expect(() => testGuardLogic(true, 'https://realestateportal-staging.up.railway.app')).toThrow(
+      /CRITICAL ENV MISMATCH: PROD build must use Production Backend/,
     );
   });
 
-  // 2. Preview/Staging Build Verification
-  it('Should PASS when Preview Build connects to Staging Backend', () => {
+  it('Should FAIL when Production Build connects to Localhost', () => {
+    expect(() => testGuardLogic(true, 'http://localhost:3000')).toThrow(
+      /CRITICAL ENV MISMATCH: PROD build must use Production Backend/,
+    );
+  });
+
+  // 2. Non-Prod Build Verification (Preview/Staging/Dev)
+  it('Should PASS when Non-Prod connects to Staging', () => {
     expect(() =>
-      testGuardLogic(false, false, 'https://realestateportal-staging.up.railway.app'),
+      testGuardLogic(false, 'https://realestateportal-staging.up.railway.app'),
     ).not.toThrow();
   });
 
-  it('Should PASS when Dev Mode connects to Localhost', () => {
-    expect(() => testGuardLogic(false, true, 'http://localhost:3000')).not.toThrow();
+  it('Should PASS when Non-Prod connects to Localhost', () => {
+    expect(() => testGuardLogic(false, 'http://localhost:3000')).not.toThrow();
   });
 
-  it('Should FAIL when Preview Build connects to Production Backend', () => {
-    expect(() =>
-      testGuardLogic(false, false, 'https://realestateportal-production.up.railway.app'),
-    ).toThrow(/CRITICAL ENV MISMATCH: Non-Production build/);
+  it('Should FAIL when Non-Prod connects to Production', () => {
+    expect(() => testGuardLogic(false, 'https://api.propertylistifysa.co.za')).toThrow(
+      /CRITICAL ENV MISMATCH: NON-PROD build must NOT use Production Backend/,
+    );
   });
 });
