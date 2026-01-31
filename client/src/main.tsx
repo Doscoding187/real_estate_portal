@@ -107,12 +107,19 @@ const trpcClient = trpc.createClient({
   ],
 });
 
+import { validateEnvironmentConfig } from './lib/env'; // Runtime guard
+import { EnvironmentBadge } from './components/EnvironmentBadge';
+
+// Run critical environment checks before React boots
+validateEnvironmentConfig();
+
 createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <HelmetProvider>
       <AuthProvider>
         <trpc.Provider client={trpcClient} queryClient={queryClient}>
           <QueryClientProvider client={queryClient}>
+            <EnvironmentBadge />
             <App />
           </QueryClientProvider>
         </trpc.Provider>
