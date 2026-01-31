@@ -7,6 +7,7 @@ import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { HelmetProvider } from 'react-helmet-async';
 import superjson from 'superjson';
+import { validateEnvironmentConfig } from './lib/env'; // Runtime guard
 import { createBrandEmulationLink } from './lib/brandEmulation/brandEmulationClient';
 import App from './App';
 import { AuthProvider } from './contexts/AuthContext';
@@ -14,6 +15,9 @@ import { getLoginUrl } from './const';
 import { queryClient } from './lib/queryClient';
 import './index.css';
 import './styles/reduced-motion.css';
+
+// Run critical environment checks before React boots
+validateEnvironmentConfig();
 
 const redirectToLoginIfUnauthorized = (error: unknown) => {
   if (!(error instanceof TRPCClientError)) return;
@@ -97,6 +101,7 @@ const trpcClient = trpc.createClient({
               '- Backend server is not running (start with: pnpm dev)',
               '- Proxy configuration issue',
               '- Upstream server error returned HTML/text instead of JSON',
+              '- Environment configuration (check VITE_API_URL)',
             ].join('\n'),
           );
         }
@@ -104,14 +109,10 @@ const trpcClient = trpc.createClient({
         return res;
       },
     }),
-  ],
+  ].filter(Boolean),
 });
 
-import { validateEnvironmentConfig } from './lib/env'; // Runtime guard
 import { EnvironmentBadge } from './components/EnvironmentBadge';
-
-// Run critical environment checks before React boots
-validateEnvironmentConfig();
 
 createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
