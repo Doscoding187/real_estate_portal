@@ -54,62 +54,64 @@ queryClient.getMutationCache().subscribe(event => {
   }
 });
 
-const trpcClient = trpc.createClient({
-  links: [
-    // Brand emulation link to inject X-Brand-Emulation headers when in emulator mode
-    createBrandEmulationLink(),
-    httpBatchLink({
-      url: getApiUrl('/trpc'),
+const links = [
+  // Brand emulation link to inject X-Brand-Emulation headers when in emulator mode
+  createBrandEmulationLink(),
+  httpBatchLink({
+    url: getApiUrl('/trpc'),
 
-      transformer: superjson,
-      async fetch(input, init) {
-        // Execute fetch with credentials
-        const res = await globalThis.fetch(input, {
-          ...(init ?? {}),
-          credentials: 'include',
-        });
+    transformer: superjson,
+    async fetch(input, init) {
+      // Execute fetch with credentials
+      const res = await globalThis.fetch(input, {
+        ...(init ?? {}),
+        credentials: 'include',
+      });
 
-        // Defensive: Validate response is JSON before tRPC tries to parse it
-        // This prevents misleading "Unexpected end of JSON input" errors when:
-        // - Backend is down (Vite proxy returns text/plain 500)
-        // - Proxy fails (returns HTML or empty response)
-        // - Network issues (connection drops mid-stream)
-        const contentType = res.headers.get('content-type') || '';
-        const isJson = contentType.includes('application/json');
+      // Defensive: Validate response is JSON before tRPC tries to parse it
+      // This prevents misleading "Unexpected end of JSON input" errors when:
+      // - Backend is down (Vite proxy returns text/plain 500)
+      // - Proxy fails (returns HTML or empty response)
+      // - Network issues (connection drops mid-stream)
+      const contentType = res.headers.get('content-type') || '';
+      const isJson = contentType.includes('application/json');
 
-        if (!isJson) {
-          // Try to read response body snippet for diagnostics (won't throw on empty)
-          let snippet = '';
-          try {
-            const text = await res.clone().text();
-            snippet = text.slice(0, 300);
-          } catch {
-            // Ignore - body might already be consumed
-          }
-
-          const url = typeof input === 'string' ? input : (input as Request).url;
-
-          // Throw clear error instead of letting tRPC crash on JSON parse
-          throw new Error(
-            [
-              `Backend returned non-JSON response (status ${res.status}).`,
-              `URL: ${url}`,
-              `Content-Type: ${contentType || '(missing)'}`,
-              snippet ? `Body: ${snippet}` : 'Body: (empty)',
-              '',
-              'Most likely causes:',
-              '- Backend server is not running (start with: pnpm dev)',
-              '- Proxy configuration issue',
-              '- Upstream server error returned HTML/text instead of JSON',
-              '- Environment configuration (check VITE_API_URL)',
-            ].join('\n'),
-          );
+      if (!isJson) {
+        // Try to read response body snippet for diagnostics (won't throw on empty)
+        let snippet = '';
+        try {
+          const text = await res.clone().text();
+          snippet = text.slice(0, 300);
+        } catch {
+          // Ignore - body might already be consumed
         }
 
-        return res;
-      },
-    }),
-  ].filter(Boolean),
+        const url = typeof input === 'string' ? input : (input as Request).url;
+
+        // Throw clear error instead of letting tRPC crash on JSON parse
+        throw new Error(
+          [
+            `Backend returned non-JSON response (status ${res.status}).`,
+            `URL: ${url}`,
+            `Content-Type: ${contentType || '(missing)'}`,
+            snippet ? `Body: ${snippet}` : 'Body: (empty)',
+            '',
+            'Most likely causes:',
+            '- Backend server is not running (start with: pnpm dev)',
+            '- Proxy configuration issue',
+            '- Upstream server error returned HTML/text instead of JSON',
+            '- Environment configuration (check VITE_API_URL)',
+          ].join('\n'),
+        );
+      }
+
+      return res;
+    },
+  }),
+].filter(Boolean);
+
+const trpcClient = trpc.createClient({
+  links,
 });
 
 import { EnvironmentBadge } from './components/EnvironmentBadge';
