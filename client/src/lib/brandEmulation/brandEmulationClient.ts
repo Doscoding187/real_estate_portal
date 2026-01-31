@@ -83,7 +83,14 @@ export const brandEmulationClientService = new BrandEmulationClientService();
  * tRPC link middleware to automatically inject brand emulation headers
  * SECURITY: Only sends brand ID - server resolves type from DB
  */
-export function createBrandEmulationLink() {
+import type { TRPCLink } from '@trpc/client';
+import type { AppRouter } from '../../../../server/routers';
+
+/**
+ * tRPC link middleware to automatically inject brand emulation headers
+ * SECURITY: Only sends brand ID - server resolves type from DB
+ */
+export function createBrandEmulationLink(): TRPCLink<AppRouter> {
   return ({ op, next }: { op: any; next: any }) => {
     // Get brand ID if emulation is active
     const brandId = brandEmulationClientService.getCurrentBrandId();
