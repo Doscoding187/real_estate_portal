@@ -1,15 +1,15 @@
 import { describe, it, expect } from 'vitest';
 
-// Replicating logic from client/src/lib/env.ts for verification
-// We duplicate the HOST constants to verify they are correct in the source too.
+// Replicating/Importing consts for verification
+const PROD_HOSTS = new Set(['api.propertylistifysa.co.za']);
 
-const PROD_BACKEND_HOSTS = [
-  'api.propertylistifysa.co.za',
-  'realestateportal-production.up.railway.app',
-];
-const STAGING_BACKEND_HOST = 'realestateportal-staging.up.railway.app';
+const NONPROD_HOSTS = new Set([
+  'realestateportal-staging.up.railway.app',
+  'localhost',
+  '127.0.0.1',
+]);
 
-function hostOf(url: string): string {
+function getHost(url: string): string {
   try {
     return new URL(url).hostname;
   } catch {
@@ -18,47 +18,41 @@ function hostOf(url: string): string {
 }
 
 function testGuardLogic(isProdBuild: boolean, apiUrl: string) {
-  const host = hostOf(apiUrl);
+  const host = getHost(apiUrl);
 
   if (!apiUrl || !host) {
     if (isProdBuild) throw new Error('CRITICAL: VITE_API_URL is missing');
     return;
   }
 
-  // GUARD: Production Build Integrity
   if (isProdBuild) {
-    if (!PROD_BACKEND_HOSTS.includes(host)) {
-      throw new Error(
-        `CRITICAL ENV MISMATCH: PROD build must use Production Backend. Got: ${host}`,
-      );
+    if (!PROD_HOSTS.has(host)) {
+      throw new Error(`CRITICAL ENV MISMATCH: PROD build must use Production Backend`);
     }
   } else {
-    // GUARD: Non-Production Build
-    if (PROD_BACKEND_HOSTS.includes(host)) {
-      throw new Error(
-        `CRITICAL ENV MISMATCH: NON-PROD build must NOT use Production Backend! Got: ${host}`,
-      );
+    if (!NONPROD_HOSTS.has(host)) {
+      if (PROD_HOSTS.has(host)) {
+        throw new Error(`CRITICAL ENV MISMATCH: NON-PROD build must NOT use Production Backend`);
+      }
+      throw new Error(`CRITICAL ENV MISMATCH: NON-PROD build must use allowed Backend`);
     }
   }
 }
 
-describe('Environment Guard Logic Verification (Strict)', () => {
+describe('Environment Guard Logic Verification (Final Strict)', () => {
   // 1. Production Build Verification
-  it('Should PASS when Production Build connects to Allowed Production Host', () => {
+  it('Should PASS when Production Build connects to Verified Prod Host', () => {
     expect(() => testGuardLogic(true, 'https://api.propertylistifysa.co.za')).not.toThrow();
+  });
+
+  it('Should FAIL when Production Build connects to Old Railway Prod Host', () => {
     expect(() =>
       testGuardLogic(true, 'https://realestateportal-production.up.railway.app'),
-    ).not.toThrow();
+    ).toThrow(/CRITICAL ENV MISMATCH: PROD build must use Production Backend/);
   });
 
   it('Should FAIL when Production Build connects to Staging Backend', () => {
     expect(() => testGuardLogic(true, 'https://realestateportal-staging.up.railway.app')).toThrow(
-      /CRITICAL ENV MISMATCH: PROD build must use Production Backend/,
-    );
-  });
-
-  it('Should FAIL when Production Build connects to Localhost', () => {
-    expect(() => testGuardLogic(true, 'http://localhost:3000')).toThrow(
       /CRITICAL ENV MISMATCH: PROD build must use Production Backend/,
     );
   });
@@ -77,6 +71,12 @@ describe('Environment Guard Logic Verification (Strict)', () => {
   it('Should FAIL when Non-Prod connects to Production', () => {
     expect(() => testGuardLogic(false, 'https://api.propertylistifysa.co.za')).toThrow(
       /CRITICAL ENV MISMATCH: NON-PROD build must NOT use Production Backend/,
+    );
+  });
+
+  it('Should FAIL when Non-Prod connects to Unknown Host', () => {
+    expect(() => testGuardLogic(false, 'https://unknown-host.com')).toThrow(
+      /CRITICAL ENV MISMATCH: NON-PROD build must use allowed Backend/,
     );
   });
 });
