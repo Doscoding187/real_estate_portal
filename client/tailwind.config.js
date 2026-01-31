@@ -7,7 +7,7 @@ module.exports = {
   theme: themeExtend,
   plugins: [
     // Hybrid Modern + Soft UI utilities for Explore feature
-    plugin(function({ addUtilities }) {
+    plugin(function ({ addUtilities }) {
       addUtilities({
         // Modern card with subtle shadow
         '.modern-card': {
@@ -115,6 +115,27 @@ module.exports = {
           WebkitBackgroundClip: 'text',
           WebkitTextFillColor: 'transparent',
           backgroundClip: 'text',
+        },
+        // Line clamp utilities
+        '.line-clamp-1': {
+          overflow: 'hidden',
+          display: '-webkit-box',
+          WebkitBoxOrient: 'vertical',
+          WebkitLineClamp: '1',
+        },
+        '.line-clamp-2': {
+          overflow: 'hidden',
+          display: '-webkit-box',
+          WebkitBoxOrient: 'vertical',
+          WebkitLineClamp: '2',
+        },
+        // Scrollbar hide
+        '.scrollbar-hide': {
+          '-ms-overflow-style': 'none',
+          'scrollbar-width': 'none',
+          '&::-webkit-scrollbar': {
+            display: 'none',
+          },
         },
       });
     }),

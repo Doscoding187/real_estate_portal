@@ -7,6 +7,7 @@ import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { HelmetProvider } from 'react-helmet-async';
 import superjson from 'superjson';
+import { createBrandEmulationLink } from './lib/brandEmulation/brandEmulationClient';
 import App from './App';
 import { AuthProvider } from './contexts/AuthContext';
 import { getLoginUrl } from './const';
@@ -51,6 +52,8 @@ queryClient.getMutationCache().subscribe(event => {
 
 const trpcClient = trpc.createClient({
   links: [
+    // Brand emulation link to inject X-Brand-Emulation headers when in emulator mode
+    createBrandEmulationLink(),
     httpBatchLink({
       url: getApiUrl('/trpc'),
 

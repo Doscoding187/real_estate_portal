@@ -11,8 +11,9 @@
  */
 
 import { db } from '../db';
-import { developerBrandProfiles, developments, leads } from '../../drizzle/schema';
+import { developerBrandProfiles, developments, leads, listings } from '../../drizzle/schema';
 import { eq, and, desc, sql, like, or, isNull, inArray } from 'drizzle-orm';
+import { TRPCError } from '@trpc/server';
 
 // ============================================================================
 // Types
@@ -124,7 +125,7 @@ async function createBrandProfile(input: CreateBrandProfileInput) {
 /**
  * Get brand profile by ID
  */
-async function getBrandProfileById(id: number) {
+export async function getBrandProfileById(id: number) {
   const [profile] = await db
     .select()
     .from(developerBrandProfiles)
@@ -467,43 +468,127 @@ async function getBrandLeadStats(brandProfileId: number) {
  * - Hard delete if no dependencies (leads/developments)
  * - Soft delete (hide + rename) if dependencies exist
  */
-async function deleteBrandProfile(id: number) {
-  // 1. Check dependencies
-  const devCount = await db
-    .select({ count: sql<number>`COUNT(*)` })
-    .from(developments)
-    .where(eq(developments.developerBrandProfileId, id));
+/**
+ * Delete brand profile with safety enforcement
+ * - HARD DELETE: Only for status='seeded' (test data)
+ * - SOFT DELETE: For status='live' (set to 'archived')
+ * - PREVENT: Accidental deletion of customer brands
+ */
+async function deleteBrandProfile(id: number, force: boolean = false) {
+  // 1. Get brand profile with status
+  const [profile] = await db
+    .select({
+      id: developerBrandProfiles.id,
+      brandName: developerBrandProfiles.brandName,
+      status: developerBrandProfiles.status,
+      ownerType: developerBrandProfiles.ownerType,
+    })
+    .from(developerBrandProfiles)
+    .where(eq(developerBrandProfiles.id, id));
 
-  const leadCount = await db
-    .select({ count: sql<number>`COUNT(*)` })
-    .from(leads)
-    .where(eq(leads.developerBrandProfileId, id));
+  if (!profile) {
+    throw new TRPCError({
+      code: 'NOT_FOUND',
+      message: `Brand profile ${id} not found`,
+    });
+  }
 
-  const hasDeps = (devCount[0]?.count || 0) > 0 || (leadCount[0]?.count || 0) > 0;
-
-  if (hasDeps) {
-    // Soft Delete
-    const [current] = await db
-      .select({ brandName: developerBrandProfiles.brandName })
-      .from(developerBrandProfiles)
-      .where(eq(developerBrandProfiles.id, id));
-
+  // 2. Safety check: Only seeded brands can be hard deleted (unless force=true)
+  if (profile.status !== 'seeded' && !force) {
+    // Soft delete: Set to archived
     await db
       .update(developerBrandProfiles)
       .set({
+        status: 'archived',
         isVisible: 0,
-        brandName: `${current?.brandName} (Deleted ${new Date().toISOString().split('T')[0]})`,
-        slug: `deleted-${id}-${Date.now()}`, // Free up the slug
+        brandName: `${profile.brandName} (Archived ${new Date().toISOString().split('T')[0]})`,
+        slug: `archived-${id}-${Date.now()}`, // Free up the slug
       })
       .where(eq(developerBrandProfiles.id, id));
 
-    return { success: true, mode: 'soft' };
-  } else {
-    // Hard Delete
+    return {
+      success: true,
+      mode: 'soft',
+      message: `Brand "${profile.brandName}" archived. Use force=true to permanently delete.`,
+    };
+  }
+
+  // 3. Hard delete: Only for seeded brands or force=true
+  if (profile.status === 'seeded' || force) {
+    // Check dependencies before cascading
+    const devCount = await db
+      .select({ count: sql<number>`COUNT(*)` })
+      .from(developments)
+      .where(eq(developments.developerBrandProfileId, id));
+
+    const listingCount = await db
+      .select({ count: sql<number>`COUNT(*)` })
+      .from(listings)
+      .where(eq(listings.brandProfileId, id));
+
+    const leadCount = await db
+      .select({ count: sql<number>`COUNT(*)` })
+      .from(leads)
+      .where(eq(leads.developerBrandProfileId, id));
+
+    const totalDeps =
+      (devCount[0]?.count || 0) + (listingCount[0]?.count || 0) + (leadCount[0]?.count || 0);
+
+    // Hard delete (CASCADE will handle related records)
     await db.delete(developerBrandProfiles).where(eq(developerBrandProfiles.id, id));
 
-    return { success: true, mode: 'hard' };
+    return {
+      success: true,
+      mode: 'hard',
+      message: `Brand "${profile.brandName}" permanently deleted. Cascaded ${totalDeps} related records.`,
+      cascaded: {
+        developments: devCount[0]?.count || 0,
+        listings: listingCount[0]?.count || 0,
+        leads: leadCount[0]?.count || 0, // Note: leads are SET NULL, not deleted
+      },
+    };
   }
+
+  throw new TRPCError({
+    code: 'FORBIDDEN',
+    message: `Cannot delete live brand "${profile.brandName}". Set status='seeded' first or use force=true.`,
+  });
+}
+
+/**
+ * Verify brand can be safely operated on by super admin
+ */
+async function verifyBrandOperation(
+  id: number,
+  operation: string,
+): Promise<{
+  canOperate: boolean;
+  reason?: string;
+  brandProfile?: any;
+}> {
+  const profile = await getBrandProfileById(id);
+
+  if (!profile) {
+    return { canOperate: false, reason: 'Brand profile not found' };
+  }
+
+  // Only allow operations on platform-owned profiles for super admin emulator
+  if (profile.ownerType !== 'platform') {
+    return {
+      canOperate: false,
+      reason: `Cannot ${operation} on subscriber-owned brand profile. Only platform-owned profiles can be managed in emulator mode.`,
+    };
+  }
+
+  // Check if brand is claimed by a real developer
+  if (profile.linkedDeveloperAccountId) {
+    return {
+      canOperate: false,
+      reason: `Cannot ${operation} on claimed brand profile. Brand is linked to active developer account.`,
+    };
+  }
+
+  return { canOperate: true, brandProfile: profile };
 }
 
 export const developerBrandProfileService = {
@@ -513,8 +598,9 @@ export const developerBrandProfileService = {
   getBrandProfileBySlug,
   listBrandProfiles,
   updateBrandProfile,
-  deleteBrandProfile, // Added
   toggleVisibility,
+  deleteBrandProfile, // Added
+  verifyBrandOperation,
 
   // Development linking
   attachDevelopmentToBrand,

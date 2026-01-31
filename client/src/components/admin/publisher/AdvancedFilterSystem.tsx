@@ -2,11 +2,11 @@ import React, { useState, useMemo, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { 
-  Card, 
-  CardContent, 
-  CardHeader, 
-  CardTitle 
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle
 } from '@/components/ui/card';
 import {
   DropdownMenu,
@@ -74,8 +74,8 @@ const FilterChip: React.FC<{
       className={cn(
         'px-3 py-1.5 text-sm font-medium cursor-pointer transition-all duration-200',
         'hover:scale-105 border-2',
-        isActive 
-          ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white border-blue-500 shadow-md' 
+        isActive
+          ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white border-blue-500 shadow-md'
           : 'bg-white border-gray-200 text-gray-700 hover:border-blue-300'
       )}
       onClick={onToggle}
@@ -155,7 +155,6 @@ const PriceRangeFilter: React.FC<{
         />
       </div>
     </div>
-  </div>
   );
 };
 
@@ -291,7 +290,7 @@ export const AdvancedFilterSystem: React.FC<AdvancedFilterProps> = ({
             <Sliders className="w-5 h-5 text-blue-600" />
             Advanced Filters
           </CardTitle>
-          
+
           <div className="flex items-center gap-2">
             {/* Saved Filters */}
             {savedFilters && savedFilters.length > 0 && (

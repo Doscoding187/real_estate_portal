@@ -302,19 +302,50 @@ export const analyticsAggregations = mysqlTable('analytics_aggregations', {
   createdAt: timestamp({ mode: 'string' }).defaultNow().notNull(),
 });
 
-export const auditLogs = mysqlTable('audit_logs', {
-  id: int().autoincrement().primaryKey(),
-  userId: int()
-    .notNull()
-    .references(() => users.id, { onDelete: 'cascade' }),
-  action: varchar({ length: 100 }).notNull(),
-  targetType: varchar({ length: 50 }),
-  targetId: int(),
-  metadata: text(),
-  ipAddress: varchar({ length: 45 }),
-  userAgent: text(),
-  createdAt: timestamp({ mode: 'string' }).defaultNow().notNull(),
-});
+// Task 5.4: Enhanced audit logs for emulator actions
+export const auditLogs = mysqlTable(
+  'audit_logs',
+  {
+    id: int().autoincrement().primaryKey(),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
+    actorUserId: int('actor_user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'restrict' }), // CRITICAL: Preserve audit history
+    brandProfileId: int('brand_profile_id').references(() => developerBrandProfiles.id, {
+      onDelete: 'cascade',
+    }),
+    action: mysqlEnum([
+      'create',
+      'update',
+      'delete',
+      'publish',
+      'unpublish',
+      'approve',
+      'reject',
+    ]).notNull(),
+    entity: mysqlEnum([
+      'development',
+      'listing',
+      'brand',
+      'lead',
+      'unit_type',
+      'media',
+      'other',
+    ]).notNull(),
+    entityId: int('entity_id'),
+    metadata: json(),
+    ipAddress: varchar('ip_address', { length: 45 }),
+    userAgent: text('user_agent'),
+  },
+  table => [
+    index('idx_audit_actor').on(table.actorUserId),
+    index('idx_audit_brand').on(table.brandProfileId),
+    index('idx_audit_entity').on(table.entity, table.entityId),
+    index('idx_audit_action').on(table.action),
+    index('idx_audit_created').on(table.createdAt),
+    index('idx_audit_brand_date').on(table.brandProfileId, table.createdAt), // Composite for brand history
+  ],
+);
 
 export const billingTransactions = mysqlTable(
   'billing_transactions',
@@ -577,6 +608,12 @@ export const developerBrandProfiles = mysqlTable(
     identityType: mysqlEnum('identity_type', ['developer', 'marketing_agency', 'hybrid'])
       .default('developer')
       .notNull(),
+    // Task 5.3: Brand status and seeded tracking
+    status: mysqlEnum('status', ['seeded', 'live', 'archived']).default('live').notNull(),
+    seededByAdminUserId: int('seeded_by_admin_user_id').references(() => users.id, {
+      onDelete: 'set null',
+    }),
+    seedBatchId: varchar('seed_batch_id', { length: 36 }),
   },
   table => [
     index('idx_brand_profiles_slug').on(table.slug),
@@ -584,6 +621,9 @@ export const developerBrandProfiles = mysqlTable(
     index('idx_brand_profiles_visible').on(table.isVisible),
     index('idx_brand_profiles_subscriber').on(table.isSubscriber),
     index('idx_brand_profiles_owner').on(table.ownerType),
+    index('idx_brand_status').on(table.status),
+    index('idx_brand_seeded_by').on(table.seededByAdminUserId),
+    index('idx_brand_seed_batch').on(table.seedBatchId),
     foreignKey({
       name: 'dev_brand_linked_dev_fk',
       columns: [table.linkedDeveloperAccountId],
@@ -623,8 +663,7 @@ export const developerSubscriptionLimits = mysqlTable(
   'developer_subscription_limits',
   {
     id: int().autoincrement().primaryKey(),
-    subscriptionId: int('subscription_id')
-      .notNull(),
+    subscriptionId: int('subscription_id').notNull(),
     maxDevelopments: int('max_developments').default(1).notNull(),
     maxLeadsPerMonth: int('max_leads_per_month').default(50).notNull(),
     maxTeamMembers: int('max_team_members').default(1).notNull(),
@@ -635,16 +674,21 @@ export const developerSubscriptionLimits = mysqlTable(
     createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
   },
-  table => [index('idx_developer_subscription_limits_subscription_id').on(table.subscriptionId),
-    foreignKey({ name: 'dev_sub_lim_sub_fk', columns: [table.subscriptionId], foreignColumns: [developerSubscriptions.id] }),],
+  table => [
+    index('idx_developer_subscription_limits_subscription_id').on(table.subscriptionId),
+    foreignKey({
+      name: 'dev_sub_lim_sub_fk',
+      columns: [table.subscriptionId],
+      foreignColumns: [developerSubscriptions.id],
+    }),
+  ],
 );
 
 export const developerSubscriptionUsage = mysqlTable(
   'developer_subscription_usage',
   {
     id: int().autoincrement().primaryKey(),
-    subscriptionId: int('subscription_id')
-      .notNull(),
+    subscriptionId: int('subscription_id').notNull(),
     developmentsCount: int('developments_count').default(0).notNull(),
     leadsThisMonth: int('leads_this_month').default(0).notNull(),
     teamMembersCount: int('team_members_count').default(0).notNull(),
@@ -652,8 +696,14 @@ export const developerSubscriptionUsage = mysqlTable(
     createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
   },
-  table => [index('idx_developer_subscription_usage_subscription_id').on(table.subscriptionId),
-    foreignKey({ name: 'dev_sub_usage_sub_fk', columns: [table.subscriptionId], foreignColumns: [developerSubscriptions.id] }),],
+  table => [
+    index('idx_developer_subscription_usage_subscription_id').on(table.subscriptionId),
+    foreignKey({
+      name: 'dev_sub_usage_sub_fk',
+      columns: [table.subscriptionId],
+      foreignColumns: [developerSubscriptions.id],
+    }),
+  ],
 );
 
 export const developerSubscriptions = mysqlTable(
@@ -774,7 +824,11 @@ export const developmentDrafts = mysqlTable(
     developerBrandProfileId: int('developer_brand_profile_id'),
   },
   table => [
-    foreignKey({ name: 'dev_drafts_brand_fk', columns: [table.developerBrandProfileId], foreignColumns: [developerBrandProfiles.id] }).onDelete('cascade'),
+    foreignKey({
+      name: 'dev_drafts_brand_fk',
+      columns: [table.developerBrandProfileId],
+      foreignColumns: [developerBrandProfiles.id],
+    }).onDelete('cascade'),
     index('idx_dev_drafts_developer_id').on(table.developerId),
     index('idx_dev_drafts_last_modified').on(table.lastModified),
   ],
@@ -801,9 +855,21 @@ export const developmentLeadRoutes = mysqlTable(
     createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
   },
   table => [
-    foreignKey({ name: 'dev_lead_src_fk', columns: [table.sourceBrandProfileId], foreignColumns: [developerBrandProfiles.id] }).onDelete('cascade'),
-    foreignKey({ name: 'dev_lead_rcv_fk', columns: [table.receiverBrandProfileId], foreignColumns: [developerBrandProfiles.id] }).onDelete('cascade'),
-    foreignKey({ name: 'dev_lead_flb_fk', columns: [table.fallbackBrandProfileId], foreignColumns: [developerBrandProfiles.id] }).onDelete('set null'),
+    foreignKey({
+      name: 'dev_lead_src_fk',
+      columns: [table.sourceBrandProfileId],
+      foreignColumns: [developerBrandProfiles.id],
+    }).onDelete('cascade'),
+    foreignKey({
+      name: 'dev_lead_rcv_fk',
+      columns: [table.receiverBrandProfileId],
+      foreignColumns: [developerBrandProfiles.id],
+    }).onDelete('cascade'),
+    foreignKey({
+      name: 'dev_lead_flb_fk',
+      columns: [table.fallbackBrandProfileId],
+      foreignColumns: [developerBrandProfiles.id],
+    }).onDelete('set null'),
     index('idx_lead_routes_development_id').on(table.developmentId),
     index('idx_lead_routes_source_type').on(table.sourceType),
     index('idx_lead_routes_lookup').on(
@@ -1003,8 +1069,16 @@ export const developments = mysqlTable(
     reservePriceFrom: decimal('reserve_price_from', { precision: 15, scale: 2 }),
   },
   table => [
-    foreignKey({ name: 'dev_brand_fk', columns: [table.developerBrandProfileId], foreignColumns: [developerBrandProfiles.id] }).onDelete('set null'),
-    foreignKey({ name: 'mkt_brand_fk', columns: [table.marketingBrandProfileId], foreignColumns: [developerBrandProfiles.id] }).onDelete('set null'),
+    foreignKey({
+      name: 'dev_brand_fk',
+      columns: [table.developerBrandProfileId],
+      foreignColumns: [developerBrandProfiles.id],
+    }).onDelete('cascade'),
+    foreignKey({
+      name: 'mkt_brand_fk',
+      columns: [table.marketingBrandProfileId],
+      foreignColumns: [developerBrandProfiles.id],
+    }).onDelete('cascade'),
     index('idx_developments_slug').on(table.slug),
     index('idx_developments_location').on(table.latitude, table.longitude),
     index('idx_developments_auction_dates').on(table.auctionStartDate, table.auctionEndDate),
@@ -1161,7 +1235,11 @@ export const exploreNeighbourhoodStories = mysqlTable(
     updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
   },
   table => [
-    foreignKey({ name: 'exp_nbh_story_fk', columns: [table.neighbourhoodId], foreignColumns: [exploreNeighbourhoods.id] }).onDelete('cascade'),
+    foreignKey({
+      name: 'exp_nbh_story_fk',
+      columns: [table.neighbourhoodId],
+      foreignColumns: [exploreNeighbourhoods.id],
+    }).onDelete('cascade'),
     index('idx_neighbourhood_stories_neighbourhood').on(table.neighbourhoodId),
     index('idx_neighbourhood_stories_published').on(table.isPublished),
   ],
@@ -1633,6 +1711,12 @@ export const leads = mysqlTable(
     index('idx_leads_funnel_stage').on(table.funnelStage),
     index('idx_leads_assigned_to').on(table.assignedTo),
     index('idx_leads_lead_source').on(table.leadSource),
+    index('idx_leads_brand_profile_id').on(table.developerBrandProfileId),
+    foreignKey({
+      name: 'fk_leads_brand_profile',
+      columns: [table.developerBrandProfileId],
+      foreignColumns: [developerBrandProfiles.id],
+    }).onDelete('set null'),
   ],
 );
 
@@ -1791,79 +1875,87 @@ export const listingViewings = mysqlTable('listing_viewings', {
   updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
 });
 
-export const listings = mysqlTable('listings', {
-  id: int().autoincrement().primaryKey(),
-  ownerId: int().notNull(),
-  agentId: int(),
-  agencyId: int(),
-  action: mysqlEnum(['sell', 'rent', 'auction']).notNull(),
-  propertyType: mysqlEnum([
-    'apartment',
-    'house',
-    'farm',
-    'land',
-    'commercial',
-    'shared_living',
-  ]).notNull(),
-  title: varchar({ length: 255 }).notNull(),
-  description: text().notNull(),
-  askingPrice: decimal({ precision: 12, scale: 2 }),
-  negotiable: int().default(0),
-  transferCostEstimate: decimal({ precision: 12, scale: 2 }),
-  monthlyRent: decimal({ precision: 12, scale: 2 }),
-  deposit: decimal({ precision: 12, scale: 2 }),
-  leaseTerms: varchar({ length: 100 }),
-  availableFrom: timestamp({ mode: 'string' }),
-  utilitiesIncluded: int().default(0),
-  startingBid: decimal({ precision: 12, scale: 2 }),
-  reservePrice: decimal({ precision: 12, scale: 2 }),
-  auctionDateTime: timestamp({ mode: 'string' }),
-  auctionTermsDocumentUrl: text(),
-  propertyDetails: json(),
-  address: text().notNull(),
-  latitude: decimal({ precision: 10, scale: 7 }).notNull(),
-  longitude: decimal({ precision: 10, scale: 7 }).notNull(),
-  city: varchar({ length: 100 }).notNull(),
-  suburb: varchar({ length: 100 }),
-  province: varchar({ length: 100 }).notNull(),
-  postalCode: varchar({ length: 20 }),
-  placeId: varchar({ length: 255 }),
-  locationId: int('location_id'), // Added to schema to match existing DB column
-  mainMediaId: int(),
-  mainMediaType: mysqlEnum(['image', 'video']),
-  status: mysqlEnum([
-    'draft',
-    'pending_review',
-    'approved',
-    'published',
-    'rejected',
-    'archived',
-    'sold',
-    'rented',
-  ])
-    .default('draft')
-    .notNull(),
-  approvalStatus: mysqlEnum(['pending', 'approved', 'rejected']).default('pending'),
-  reviewedBy: int(),
-  reviewedAt: timestamp({ mode: 'string' }),
-  rejectionReason: text(),
-  autoPublished: int().default(0),
-  slug: varchar({ length: 255 }).notNull(),
-  readinessScore: int('readiness_score').default(0).notNull(),
-  qualityScore: int('quality_score').default(0).notNull(),
-  qualityBreakdown: json('quality_breakdown'),
-  rejectionReasons: json('rejection_reasons'),
-  rejectionNote: text('rejection_note'),
-  metaTitle: varchar({ length: 255 }),
-  metaDescription: text(),
-  canonicalUrl: text(),
-  searchTags: text(),
-  featured: int().default(0).notNull(),
-  createdAt: timestamp({ mode: 'string' }).defaultNow().notNull(),
-  updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
-  publishedAt: timestamp({ mode: 'string' }),
-  archivedAt: timestamp({ mode: 'string' }),
-});
+export const listings = mysqlTable(
+  'listings',
+  {
+    id: int().autoincrement().primaryKey(),
+    ownerId: int().notNull(),
+    agentId: int(),
+    agencyId: int(),
+    action: mysqlEnum(['sell', 'rent', 'auction']).notNull(),
+    propertyType: mysqlEnum([
+      'apartment',
+      'house',
+      'farm',
+      'land',
+      'commercial',
+      'shared_living',
+    ]).notNull(),
+    title: varchar({ length: 255 }).notNull(),
+    description: text().notNull(),
+    askingPrice: decimal({ precision: 12, scale: 2 }),
+    negotiable: int().default(0),
+    transferCostEstimate: decimal({ precision: 12, scale: 2 }),
+    monthlyRent: decimal({ precision: 12, scale: 2 }),
+    deposit: decimal({ precision: 12, scale: 2 }),
+    leaseTerms: varchar({ length: 100 }),
+    availableFrom: timestamp({ mode: 'string' }),
+    utilitiesIncluded: int().default(0),
+    startingBid: decimal({ precision: 12, scale: 2 }),
+    reservePrice: decimal({ precision: 12, scale: 2 }),
+    auctionDateTime: timestamp({ mode: 'string' }),
+    auctionTermsDocumentUrl: text(),
+    propertyDetails: json(),
+    address: text().notNull(),
+    latitude: decimal({ precision: 10, scale: 7 }).notNull(),
+    longitude: decimal({ precision: 10, scale: 7 }).notNull(),
+    city: varchar({ length: 100 }).notNull(),
+    suburb: varchar({ length: 100 }),
+    province: varchar({ length: 100 }).notNull(),
+    postalCode: varchar({ length: 20 }),
+    placeId: varchar({ length: 255 }),
+    locationId: int('location_id'), // Added to schema to match existing DB column
+    mainMediaId: int(),
+    mainMediaType: mysqlEnum(['image', 'video']),
+    status: mysqlEnum([
+      'draft',
+      'pending_review',
+      'approved',
+      'published',
+      'rejected',
+      'archived',
+      'sold',
+      'rented',
+    ])
+      .default('draft')
+      .notNull(),
+    approvalStatus: mysqlEnum(['pending', 'approved', 'rejected']).default('pending'),
+    reviewedBy: int(),
+    reviewedAt: timestamp({ mode: 'string' }),
+    rejectionReason: text(),
+    autoPublished: int().default(0),
+    slug: varchar({ length: 255 }).notNull(),
+    readinessScore: int('readiness_score').default(0).notNull(),
+    qualityScore: int('quality_score').default(0).notNull(),
+    qualityBreakdown: json('quality_breakdown'),
+    rejectionReasons: json('rejection_reasons'),
+    rejectionNote: text('rejection_note'),
+    metaTitle: varchar({ length: 255 }),
+    metaDescription: text(),
+    canonicalUrl: text(),
+    searchTags: text(),
+    featured: int().default(0).notNull(),
+    createdAt: timestamp({ mode: 'string' }).defaultNow().notNull(),
+    updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+    publishedAt: timestamp({ mode: 'string' }),
+    archivedAt: timestamp({ mode: 'string' }),
+    // Task 5.2: Brand ownership for seeded listings
+    brandProfileId: int('brand_profile_id').references(() => developerBrandProfiles.id, {
+      onDelete: 'cascade',
+    }),
+  },
+  table => [index('idx_listings_brand_profile_id').on(table.brandProfileId)],
+);
 
 export const locationSearchCache = mysqlTable('location_search_cache', {
   id: int().autoincrement().primaryKey(),
@@ -2222,7 +2314,11 @@ export const properties = mysqlTable(
     developerBrandProfileId: int('developer_brand_profile_id'),
   },
   table => [
-    foreignKey({ name: 'prop_dev_brand_fk', columns: [table.developerBrandProfileId], foreignColumns: [developerBrandProfiles.id] }).onDelete('set null'),
+    foreignKey({
+      name: 'prop_dev_brand_fk',
+      columns: [table.developerBrandProfileId],
+      foreignColumns: [developerBrandProfiles.id],
+    }).onDelete('set null'),
     index('price_idx').on(table.price),
     index('status_idx').on(table.status),
     index('city_idx').on(table.city),
@@ -2966,7 +3062,11 @@ export const developmentPartners = mysqlTable(
   },
   table => {
     return {
-      devPartBrandFk: foreignKey({ name: 'dev_part_brand_fk', columns: [table.brandProfileId], foreignColumns: [developerBrandProfiles.id] }).onDelete('cascade'),
+      devPartBrandFk: foreignKey({
+        name: 'dev_part_brand_fk',
+        columns: [table.brandProfileId],
+        foreignColumns: [developerBrandProfiles.id],
+      }).onDelete('cascade'),
       idxDevPartnersDevelopmentId: index('idx_dev_partners_development_id').on(table.developmentId),
       idxDevPartnersBrandProfileId: index('idx_dev_partners_brand_profile_id').on(
         table.brandProfileId,
@@ -3073,7 +3173,11 @@ export const exploreDiscoveryVideos = mysqlTable(
   },
   table => {
     return {
-      expDiscContFk: foreignKey({ name: 'exp_disc_cont_fk', columns: [table.exploreContentId], foreignColumns: [exploreContent.id] }).onDelete('cascade'),
+      expDiscContFk: foreignKey({
+        name: 'exp_disc_cont_fk',
+        columns: [table.exploreContentId],
+        foreignColumns: [exploreContent.id],
+      }).onDelete('cascade'),
       idxDiscoveryContent: index('idx_discovery_content').on(table.exploreContentId),
     };
   },
@@ -3153,7 +3257,11 @@ export const exploreNeighbourhoodFollows = mysqlTable(
   table => {
     return {
       idxNbhUser: index('idx_nbh_user').on(table.userId),
-      expNbhFollowFk: foreignKey({ name: 'exp_nbh_follow_fk', columns: [table.neighbourhoodId], foreignColumns: [exploreNeighbourhoods.id] }).onDelete('cascade'),
+      expNbhFollowFk: foreignKey({
+        name: 'exp_nbh_follow_fk',
+        columns: [table.neighbourhoodId],
+        foreignColumns: [exploreNeighbourhoods.id],
+      }).onDelete('cascade'),
       idxNbhId: index('idx_nbh_id').on(table.neighbourhoodId),
       uniqueNbhFollow: uniqueIndex('unique_nbh_follow').on(table.userId, table.neighbourhoodId),
     };
@@ -3186,7 +3294,9 @@ export const exploreSponsorships = mysqlTable(
   'explore_sponsorships',
   {
     id: int('id').autoincrement().notNull().primaryKey(),
-    partnerId: varchar('partner_id', { length: 36 }).notNull().references(() => explorePartners.id, { onDelete: 'cascade' }),
+    partnerId: varchar('partner_id', { length: 36 })
+      .notNull()
+      .references(() => explorePartners.id, { onDelete: 'cascade' }),
     contentType: mysqlEnum('content_type', [
       'video',
       'story',

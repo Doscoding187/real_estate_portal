@@ -15,6 +15,42 @@ export async function getDb() {
     );
   }
 
+  // Safety Check: Verify Database Environment Separation
+  try {
+    const url = new URL(process.env.DATABASE_URL);
+    const dbName = url.pathname.replace(/^\//, ''); // Remove leading slash
+    const env = process.env.NODE_ENV || 'development';
+
+    // Production: Must match listify_property_sa (Live Prod)
+    if (env === 'production' && dbName !== 'listify_property_sa') {
+      throw new Error(
+        `CRITICAL: Attempting to connect to non-production DB (${dbName}) in PRODUCTION environment. Expected: listify_property_sa`,
+      );
+    }
+    // Staging: Must match listify_staging
+    if (env === 'staging' && dbName !== 'listify_staging') {
+      throw new Error(
+        `CRITICAL: Attempting to connect to non-staging DB (${dbName}) in STAGING environment. Expected: listify_staging`,
+      );
+    }
+    // Test: Must match listify_test
+    if (env === 'test' && dbName !== 'listify_test') {
+      throw new Error(
+        `CRITICAL: Attempting to connect to non-test DB (${dbName}) in TEST environment. Expected: listify_test`,
+      );
+    }
+
+    // Reverse Check: Don't allow Prod DB in non-prod envs
+    if (dbName === 'listify_property_sa' && env !== 'production') {
+      throw new Error(`CRITICAL: DANGER! Attempting to connect to PROD DB in ${env} environment.`);
+    }
+  } catch (e: any) {
+    // If URL parsing fails, we might want to let it slide or throw.
+    // Assuming valid URLs for now, but catching to be safe.
+    if (e.message.includes('CRITICAL')) throw e;
+    console.warn('[Database] URL parsing warning:', e.message);
+  }
+
   try {
     const isProduction = process.env.NODE_ENV === 'production';
 

@@ -904,9 +904,10 @@ export async function listPublicDevelopments(options: { limit?: number; province
 // ===========================================================================
 
 export async function createDevelopment(
-  developerId: number,
+  userId: number,
   data: CreateDevelopmentData,
   metadata: DevelopmentMetadata = {},
+  operatingContext?: { brandProfileId: number } | null,
 ) {
   const db = await getDb();
   if (!db) throw new Error('Database not available');
@@ -916,69 +917,52 @@ export async function createDevelopment(
   const { unitTypes: unitTypesData, ...developmentData } = data;
   const { ownerType, brandProfileId, ...restMetadata } = metadata;
 
-  validateDevelopmentData(
-    { ...developmentData, devOwnerType: ownerType || 'developer' } as any,
-    developerId,
-  );
+  // ============================================================================
+  // IDENTITY RESOLUTION - Use new identity resolver
+  // ============================================================================
+  const { resolveOperatingIdentity } = await import('../_core/identityResolver');
 
-  // 1) Check if user is super admin first
-  const [userRecord] = await db
-    .select({ role: users.role })
-    .from(users)
-    .where(eq(users.id, developerId))
-    .limit(1);
+  const identity = await resolveOperatingIdentity({
+    userId,
+    operatingAs: operatingContext,
+    db,
+  });
 
-  const isSuperAdmin = userRecord?.role === 'super_admin';
-  let developerProfileId: number;
+  console.log('[createDevelopment] Resolved identity:', {
+    mode: identity.mode,
+    userId: identity.userId,
+    brandProfileId: identity.brandProfileId,
+  });
 
-  if (isSuperAdmin) {
-    // For super admins, find or create a system developer profile
-    let systemDeveloper = await db.query.developers.findFirst({
-      where: eq(developers.userId, developerId),
-      columns: { id: true, status: true, userId: true },
-    });
-
-    if (!systemDeveloper) {
-      // Create a developer profile for the super admin
-      const [newDevProfile] = await db.insert(developers).values({
-        userId: developerId,
-        companyName: 'Platform Administrator',
-        status: 'approved',
-        description: 'System developer profile for platform administration',
-        contactEmail: 'admin@realestateportal.test',
-        phone: '0000000000',
-        website: 'https://realestateportal.test',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      });
-      systemDeveloper = {
-        id: newDevProfile.insertId,
-        status: 'approved' as const,
-        userId: developerId,
-      };
-    }
-
-    developerProfileId = systemDeveloper.id;
-  } else {
-    // Regular developers need a developer profile
-    const validDeveloper = await db.query.developers.findFirst({
-      where: eq(developers.userId, developerId),
-      columns: { id: true, status: true, userId: true },
-    });
-
-    if (!validDeveloper) {
-      throw createError(
-        `Developer profile for user ID ${developerId} not found. Please complete your developer profile setup.`,
-        'NOT_FOUND',
-        { userId: developerId },
-      );
-    }
-
-    developerProfileId = validDeveloper.id;
+  // Validate ownership: exactly one path must be set
+  if (!identity.developerProfileId && !identity.brandProfileId) {
+    throw createError(
+      'Invalid ownership: must have either developerProfileId or brandProfileId',
+      'VALIDATION_ERROR',
+      { identity },
+    );
   }
 
+  // For emulator mode, brandProfileId is required
+  if (identity.mode === 'emulator' && !identity.brandProfileId) {
+    throw createError('Emulator mode requires brandProfileId', 'VALIDATION_ERROR', { identity });
+  }
+
+  // Use the resolved identity for ownership
+  const developerProfileId = identity.developerProfileId || null;
+  const resolvedBrandProfileId =
+    identity.brandProfileId ||
+    brandProfileId ||
+    (developmentData as any).developerBrandProfileId ||
+    null;
+
+  validateDevelopmentData(
+    { ...developmentData, devOwnerType: ownerType || 'developer' } as any,
+    userId,
+  );
+
   // 2) brand profile validation
-  const targetBrandId = brandProfileId ?? (developmentData as any).developerBrandProfileId;
+  const targetBrandId = resolvedBrandProfileId;
   if (targetBrandId) {
     const validBrand = await db.query.developerBrandProfiles.findFirst({
       where: eq(developerBrandProfiles.id, targetBrandId),
@@ -1057,7 +1041,8 @@ export async function createDevelopment(
     normalizedTransactionType === 'auction' ? computeAuctionRangeFromUnits(unitTypesData) : null;
 
   const insertPayload: Record<string, any> = {
-    developerId: developerProfileId, // Now always populated (auto-created for super admins)
+    // Use resolved identity for ownership
+    developerId: developerProfileId, // null for emulator mode
     name: (developmentData as any).name,
     slug,
     city: (developmentData as any).city,
@@ -1092,8 +1077,8 @@ export async function createDevelopment(
       ? JSON.stringify((developmentData as any).propertyTypes)
       : null,
 
-    developerBrandProfileId:
-      brandProfileId ?? (developmentData as any).developerBrandProfileId ?? null,
+    // Use resolved brand profile ID
+    developerBrandProfileId: resolvedBrandProfileId,
     marketingBrandProfileId: (developmentData as any).marketingBrandProfileId || null,
     locationId: (developmentData as any).locationId || null,
 
@@ -2652,6 +2637,26 @@ async function deleteDevelopment(id: number, developerId?: number) {
   return db.delete(developments).where(whereClause);
 }
 
+async function getDevelopmentById(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error('Database unavailable');
+
+  const result = await db
+    .select({
+      id: developments.id,
+      title: developments.title,
+      brandProfileId: developments.brandProfileId,
+      slug: developments.slug,
+      status: developments.status,
+      // Add other required fields as needed
+    })
+    .from(developments)
+    .where(eq(developments.id, id))
+    .limit(1);
+
+  return result[0] || null;
+}
+
 // ===========================================================================
 // EXPORTS
 // ===========================================================================
@@ -2668,6 +2673,7 @@ export const developmentService = {
   createDevelopment,
   updateDevelopment,
   getDevelopmentWithPhases,
+  getDevelopmentById, // Add this method
   getDevelopmentsByDeveloperId,
   getDeveloperDevelopments: getDevelopmentsByDeveloperId,
   createPhase,

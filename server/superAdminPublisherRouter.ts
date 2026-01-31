@@ -38,6 +38,29 @@ export const superAdminPublisherRouter = router({
     }),
 
   /**
+   * Debug: Get current operating context
+   * Helps diagnose identity resolution issues
+   */
+  whoAmI: superAdminProcedure.query(async ({ ctx }) => {
+    const enhancedCtx = ctx as any; // EnhancedTRPCContext from middleware
+
+    return {
+      userId: ctx.user?.id,
+      userEmail: ctx.user?.email,
+      userRole: ctx.user?.role,
+      isEmulatorMode: !!enhancedCtx.operatingAs,
+      operatingAs: enhancedCtx.operatingAs
+        ? {
+            brandProfileId: enhancedCtx.operatingAs.brandProfileId,
+            brandType: enhancedCtx.operatingAs.brandType,
+            brandName: enhancedCtx.operatingAs.brandName,
+          }
+        : null,
+      timestamp: new Date().toISOString(),
+    };
+  }),
+
+  /**
    * Create a development under the selected brand context
    */
   createDevelopment: superAdminProcedure
@@ -49,18 +72,23 @@ export const superAdminPublisherRouter = router({
         .passthrough(),
     )
     .mutation(async ({ input, ctx }) => {
-      // Use the existing development service but override ownership parameters
-      // Ensure the development is created with PLATFORM ownership and brand profile linkage
+      // Get operating context from middleware (set by brandContext.ts)
+      const enhancedCtx = ctx as any; // EnhancedTRPCContext
+      const operatingContext = enhancedCtx.operatingAs
+        ? { brandProfileId: enhancedCtx.operatingAs.brandProfileId }
+        : { brandProfileId: input.brandProfileId };
+
       const metadata = {
-        ownerType: 'platform',
+        ownerType: 'platform' as const,
         brandProfileId: input.brandProfileId,
       };
 
-      // Call the existing service with platform ownership context
+      // Call service with operating context for identity resolution
       const development = await developmentService.createDevelopment(
         ctx.user.id,
         input as any,
         metadata,
+        operatingContext,
       );
 
       return {
@@ -71,7 +99,20 @@ export const superAdminPublisherRouter = router({
     }),
 
   /**
-   * Create a new brand profile (Context Creation)
+   * Get brand profile by ID for identity resolution
+   */
+  getBrandProfileById: superAdminProcedure
+    .input(
+      z.object({
+        id: z.number().int(),
+      }),
+    )
+    .query(async ({ input }) => {
+      return await developerBrandProfileService.getBrandProfileById(input.id);
+    }),
+
+  /**
+   * Create a development under the selected brand context
    */
   createBrandProfile: superAdminProcedure
     .input(
@@ -184,7 +225,7 @@ export const superAdminPublisherRouter = router({
       // ideally frontend sends full address data if updating address.
       // We will perform a simple mapping assuming what is sent is what is intended.
 
-      let headOfficeLocation = undefined;
+      let headOfficeLocation: string | undefined = undefined;
       // Only construct location if at least one component is present, implying an address update intention
       // But for updates, usually better to let frontend send the combined string or we read-modify-write.
       // For simplicity, we will update headOfficeLocation ONLY if 'city' or 'address' is explicitly provided.
@@ -218,10 +259,14 @@ export const superAdminPublisherRouter = router({
     .input(
       z.object({
         brandProfileId: z.number().int(),
+        force: z.boolean().optional().default(false),
       }),
     )
     .mutation(async ({ input }) => {
-      return await developerBrandProfileService.deleteBrandProfile(input.brandProfileId);
+      return await developerBrandProfileService.deleteBrandProfile(
+        input.brandProfileId,
+        input.force,
+      );
     }),
 
   // ==========================================================================
@@ -242,39 +287,6 @@ export const superAdminPublisherRouter = router({
     .query(async ({ input }) => {
       // Use service to get developments specifically linked to this brand profile
       return await developerBrandProfileService.getBrandDevelopments(input.brandProfileId);
-    }),
-
-  /**
-   * Create a development under the selected brand context
-   */
-  createDevelopment: superAdminProcedure
-    .input(
-      z
-        .object({
-          brandProfileId: z.number().int(),
-        })
-        .passthrough(),
-    )
-    .mutation(async ({ input, ctx }) => {
-      // Use the existing development service but override ownership parameters
-      // Ensure the development is created with PLATFORM ownership and brand profile linkage
-      const metadata = {
-        ownerType: 'platform',
-        brandProfileId: input.brandProfileId,
-      };
-
-      // Call the existing service with platform ownership context
-      const development = await developmentService.createDevelopment(
-        ctx.user.id,
-        input as any,
-        metadata,
-      );
-
-      return {
-        id: development.id,
-        development,
-        message: 'Development created under brand context',
-      };
     }),
 
   /**

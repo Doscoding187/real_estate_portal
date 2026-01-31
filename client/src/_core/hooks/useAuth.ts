@@ -51,6 +51,12 @@ export function useAuth(options?: UseAuthOptions) {
     } finally {
       utils.auth.me.setData(undefined, null);
       await utils.auth.me.invalidate();
+
+      // Clear brand emulation context on logout
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('publisher-context');
+        localStorage.removeItem('brandEmulation');
+      }
     }
   }, [logoutMutation, utils]);
 

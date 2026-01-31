@@ -2,7 +2,10 @@ import { useState } from 'react';
 import { useLocation } from 'wouter';
 import { trpc } from '@/lib/trpc';
 import { EnhancedNavbar } from '@/components/EnhancedNavbar';
-import { EnhancedHero } from '@/components/EnhancedHero';
+import { ModernHeroSection } from '@/components/ModernHeroSection';
+import { PropertyShowcase } from '@/components/PropertyShowcase';
+import { LocationRecommendations } from '@/components/LocationRecommendations';
+import { ModernFooter } from '@/components/ModernFooter';
 import { SimpleDevelopmentCard } from '@/components/SimpleDevelopmentCard';
 import { Button } from '@/components/ui/button';
 import { Building2, MapPin, ArrowRight } from 'lucide-react';
@@ -14,7 +17,6 @@ import { TopDevelopers } from '@/components/TopDevelopers';
 
 import { ExploreCities } from '@/components/ExploreCities';
 import { PropertyCategories } from '@/components/PropertyCategories';
-import { Footer } from '@/components/Footer';
 
 export default function Home() {
   const [, setLocation] = useLocation();
@@ -100,107 +102,27 @@ export default function Home() {
     <div className="min-h-screen bg-background">
       <EnhancedNavbar />
 
-      {/* Enhanced Hero Section */}
-      <EnhancedHero heroMode="province" navigationItems={provinceNavItems} />
+      {/* Modern Hero Section */}
+      <ModernHeroSection />
 
-      {/* Hot Selling Developments Section */}
-      <div className="py-fluid-xl bg-gradient-to-b from-slate-50/50 to-white">
-        <div className="container">
-          <div className="text-left mb-12">
-            <div className="inline-flex items-center gap-2 bg-gradient-to-r from-red-50 to-orange-50 border border-red-200 rounded-full px-4 py-2 mb-4">
-              <span className="text-2xl">🔥</span>
-              <span className="text-sm font-semibold text-red-700">Trending Now</span>
-            </div>
-            <h2 className="font-bold mb-4 bg-gradient-to-r from-slate-900 via-[#2774AE] to-slate-900 bg-clip-text text-transparent">
-              Hot Selling Residential Developments
-            </h2>
-            <p className="text-slate-600 max-w-3xl leading-relaxed">
-              A handpicked collection of the country's most in-demand residential developments.
-              These properties offer unmatched value in top cities with ideal locations, smart
-              amenities, and trusted builders.
-            </p>
-          </div>
+      {/* Featured Properties for Sale */}
+      <PropertyShowcase
+        title="Featured Properties for Sale"
+        subtitle="Hand-picked homes and apartments from trusted agents and agencies"
+        listingType="sale"
+        limit={6}
+      />
 
-          <Tabs value={selectedProvince} onValueChange={setSelectedProvince} className="w-full">
-            <div className="flex justify-start mb-10 overflow-x-auto pb-2 scrollbar-hide">
-              <TabsList className="inline-flex flex-wrap justify-start gap-2 bg-white/80 backdrop-blur-sm p-2 rounded-2xl shadow-lg border border-slate-200/60 h-auto">
-                {provinces.map(province => (
-                  <TabsTrigger
-                    key={province}
-                    value={province}
-                    className="px-5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-300 data-[state=inactive]:text-slate-600 data-[state=inactive]:hover:text-[#2774AE] data-[state=inactive]:hover:bg-blue-50/50 data-[state=active]:bg-gradient-to-r data-[state=active]:from-[#2774AE] data-[state=active]:to-[#2D68C4] data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:scale-105"
-                  >
-                    {province}
-                  </TabsTrigger>
-                ))}
-              </TabsList>
-            </div>
+      {/* Featured Properties for Rent */}
+      <PropertyShowcase
+        title="Featured Properties for Rent"
+        subtitle="Find your perfect rental home from our curated selection"
+        listingType="rent"
+        limit={6}
+      />
 
-            {provinces.map(province => (
-              <TabsContent key={province} value={province} className="mt-0 animate-slide-up">
-                {developmentsByProvince[province] && developmentsByProvince[province].length > 0 ? (
-                  /* Carousel Layout */
-                  <div className="flex gap-4 overflow-x-auto pb-4 snap-x scrollbar-hide -mx-4 px-4 sm:mx-0 sm:px-0">
-                    {developmentsByProvince[province].map(development => {
-                      // Backend now returns explicit heroImage. Fallback to parsed images if needed (though backend clears images array now).
-                      const images = parseImages(development.images);
-                      const displayImage = development.heroImage || images[0] || '';
-
-                      return (
-                        <div
-                          key={development.id}
-                          className="flex-none w-[240px] sm:w-[280px] md:w-[300px] snap-center"
-                        >
-                          <SimpleDevelopmentCard
-                            id={development.id}
-                            title={development.name}
-                            city={development.city}
-                            suburb={development.suburb}
-                            priceRange={{
-                              min: development.priceFrom || 0,
-                              max: development.priceTo || 0,
-                            }}
-                            image={displayImage}
-                            slug={development.slug}
-                            isHotSelling={development.isHotSelling}
-                            isHighDemand={development.isHighDemand}
-                          />
-                        </div>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <div className="text-left py-16 bg-gradient-to-br from-slate-50 to-blue-50/30 rounded-2xl border-2 border-dashed border-slate-300">
-                    <div className="p-4 bg-slate-100 rounded-full w-20 h-20 mb-4 flex items-center justify-center">
-                      <Building2 className="h-10 w-10 text-slate-400" />
-                    </div>
-                    <p className="text-lg font-medium text-slate-700 mb-2">
-                      No developments available
-                    </p>
-                    <p className="text-sm text-slate-500">
-                      Check back soon for new listings in {province}
-                    </p>
-                  </div>
-                )}
-              </TabsContent>
-            ))}
-          </Tabs>
-
-          <div className="text-left mt-10">
-            <Button
-              size="lg"
-              onClick={() => {
-                const provinceSlug = selectedProvince.toLowerCase().replace(/\s+/g, '-');
-                setLocation(`/${provinceSlug}`);
-              }}
-              className="gap-2 h-12 px-8 bg-gradient-to-r from-[#2774AE] to-[#2D68C4] hover:from-[#2D68C4] hover:to-[#2774AE] shadow-lg hover:shadow-xl transition-all duration-300 group"
-            >
-              Explore All in {selectedProvince}
-              <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
-            </Button>
-          </div>
-        </div>
-      </div>
+      {/* Location Recommendations */}
+      <LocationRecommendations />
 
       {/* Property Categories Section (Restored with Location Picker) */}
       <PropertyCategories />
@@ -226,7 +148,9 @@ export default function Home() {
           <div className="text-left mb-8 md:mb-12">
             <div className="inline-flex items-center gap-2 bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 rounded-full px-3 py-1.5 sm:px-4 sm:py-2 mb-3 sm:mb-4">
               <span className="text-xl sm:text-2xl">⭐</span>
-              <span className="text-xs sm:text-sm font-semibold text-yellow-700">Trusted by Thousands</span>
+              <span className="text-xs sm:text-sm font-semibold text-yellow-700">
+                Trusted by Thousands
+              </span>
             </div>
             <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-3 md:mb-4 bg-gradient-to-r from-slate-900 via-[#2774AE] to-slate-900 bg-clip-text text-transparent">
               What Our Clients Say
@@ -334,8 +258,8 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Footer */}
-      <Footer />
+      {/* Modern Footer */}
+      <ModernFooter />
     </div>
   );
 }

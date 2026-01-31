@@ -27,7 +27,7 @@ import {
 import { cn } from '@/lib/utils';
 import { trpc } from '@/lib/trpc';
 import { useLocation } from 'wouter';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface MenuItem {
   id: string;
@@ -168,9 +168,8 @@ export function EnhancedSidebar({ className }: EnhancedSidebarProps) {
   const { user } = useAuth();
   const isSuperAdmin = user?.role === 'super_admin';
 
-  // Fetch developer profile (skip for super admins)
+  // Fetch developer profile - now works with brand emulation for super admins
   const { data: developerProfile } = trpc.developer.getProfile.useQuery(undefined, {
-    enabled: !isSuperAdmin,
     retry: false,
   });
 
@@ -187,7 +186,7 @@ export function EnhancedSidebar({ className }: EnhancedSidebarProps) {
   );
 
   const unreadCount = notificationsData?.count || 0;
-  const developerName = isSuperAdmin ? 'Super Admin' : (developerProfile?.name || 'Developer');
+  const developerName = isSuperAdmin ? 'Super Admin' : developerProfile?.name || 'Developer';
   const developerInitials = developerName.substring(0, 2).toUpperCase();
 
   const toggleSection = (sectionId: string) => {
@@ -236,7 +235,6 @@ export function EnhancedSidebar({ className }: EnhancedSidebarProps) {
     }
     return location.startsWith(path);
   };
-
 
   return (
     <aside

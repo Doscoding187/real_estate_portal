@@ -1,9 +1,10 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, Legend } from 'recharts';
 import Button from '../components/common/Button';
 import Badge from '../components/common/Badge';
 import StatCard from '../components/common/StatCard';
 import Table from '../components/common/Table';
+import PropertyStatsCard from '../components/common/PropertyStatsCard';
 
 // Icons (using simple SVG components)
 const MenuIcon: React.FC = () => (
@@ -48,10 +49,17 @@ const DeveloperDashboard: React.FC = () => { // Padding fix applied
   
   // Mock data
   const statsData = [
-    { title: 'Total Developments', value: '24', change: '+12%', icon: 'ðŸ¢' },
-    { title: 'Active Leads', value: '142', change: '+8%', icon: 'ðŸ‘¥' },
-    { title: 'Revenue', value: '$1.2M', change: '+15%', icon: 'ðŸ’°' },
-    { title: 'Conversion Rate', value: '24.3%', change: '+3.2%', icon: 'ðŸ“ˆ' },
+    { title: 'Total Developments', value: '24', change: '+12%', icon: '🏢' },
+    { title: 'Active Leads', value: '142', change: '+8%', icon: '👥' },
+    { title: 'Revenue', value: '$1.2M', change: '+15%', icon: '💰' },
+    { title: 'Conversion Rate', value: '24.3%', change: '+3.2%', icon: '📈' },
+  ];
+
+  // Property statistics data
+  const propertyStatsData = [
+    { title: 'Apartments', value: '127 Units', percentage: '+40%', color: 'bg-blue-50', icon: 'apartment' as const },
+    { title: 'Houses', value: '93 Units', percentage: '+20%', color: 'bg-green-50', icon: 'house' as const },
+    { title: 'Commercial', value: '8 Units', percentage: '+15%', color: 'bg-amber-50', icon: 'building' as const },
   ];
   
   const developmentsData = [
@@ -266,6 +274,24 @@ const DeveloperDashboard: React.FC = () => { // Padding fix applied
                 <p className="text-slate-600">Welcome back! Here's what's happening with your developments today.</p>
               </div>
               
+              {/* Property Statistics Cards */}
+              <div className="mb-8">
+                <h2 className="text-xl font-bold text-gray-900 mb-6">Property Statistics</h2>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  {propertyStatsData.map((stat, index) => (
+                    <PropertyStatsCard
+                      key={index}
+                      title={stat.title}
+                      value={stat.value}
+                      percentage={stat.percentage}
+                      color={stat.color}
+                      icon={stat.icon}
+                      onClick={() => console.log(`Clicked on ${stat.title}`)}
+                    />
+                  ))}
+                </div>
+              </div>
+
               {/* Stats Cards */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
                 {statsData.map((stat, index) => (
@@ -324,25 +350,23 @@ const DeveloperDashboard: React.FC = () => { // Padding fix applied
                     <span className="ml-2">Add Development</span>
                   </Button>
                 </div>
-                <div className="p-4">
-                  <div className="p-4"><Table 
-                    columns={[
-                      { key: 'name', title: 'Development Name' },
-                      { key: 'location', title: 'Location' },
-                      { key: 'units', title: 'Units' },
-                      { key: 'status', title: 'Status', render: (value) => <Badge variant={statusColors[value] || 'default'}>{value}</Badge> },
-                      { key: 'progress', title: 'Progress', render: (value) => (
-                        <div className="w-full bg-slate-200 rounded-full h-2">
-                          <div 
-                            className="bg-blue-600 h-2 rounded-full" 
-                            style={{ width: `${value}%` }}
-                          ></div>
-                        </div>
-                      )},
-                    ]}
-                    data={developmentsData}
-                  />
-                </div>
+                <Table
+                  columns={[
+                    { key: 'name', title: 'Development Name' },
+                    { key: 'location', title: 'Location' },
+                    { key: 'units', title: 'Units' },
+                    { key: 'status', title: 'Status', render: (value) => <Badge variant={statusColors[value] || 'default'}>{value}</Badge> },
+                    { key: 'progress', title: 'Progress', render: (value) => (
+                      <div className="w-full bg-slate-200 rounded-full h-2">
+                        <div 
+                          className="bg-blue-600 h-2 rounded-full" 
+                          style={{ width: `${value}%` }}
+                        ></div>
+                      </div>
+                    )},
+                  ]}
+                  data={developmentsData}
+                />
               </div>
             </div>
           )}
@@ -406,7 +430,7 @@ const DeveloperDashboard: React.FC = () => { // Padding fix applied
                     </Button>
                   </div>
                 </div>
-                <div className="p-4"><Table 
+                <Table 
                   columns={[
                     { key: 'name', title: 'Name' },
                     { key: 'email', title: 'Email' },

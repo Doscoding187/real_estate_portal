@@ -3,6 +3,7 @@ import { initTRPC, TRPCError } from '@trpc/server';
 import { ZodError } from 'zod';
 import superjson from 'superjson';
 import type { TrpcContext } from './context';
+import { applyBrandContext, type EnhancedTRPCContext } from './brandContext';
 
 const t = initTRPC.context<TrpcContext>().create({
   transformer: superjson,
@@ -45,11 +46,11 @@ const requireUser = t.middleware(async opts => {
     throw new TRPCError({ code: 'UNAUTHORIZED', message: UNAUTHED_ERR_MSG });
   }
 
+  // Apply brand context for super admin emulator mode
+  const enhancedCtx = await applyBrandContext(ctx);
+
   return next({
-    ctx: {
-      ...ctx,
-      user: ctx.user,
-    },
+    ctx: enhancedCtx,
   });
 });
 

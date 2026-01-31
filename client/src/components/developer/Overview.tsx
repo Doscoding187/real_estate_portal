@@ -15,7 +15,7 @@ import { MetricCard } from '@/components/MetricCard';
 import { LeadCard } from '@/components/LeadCard';
 import { TaskCard } from '@/components/TaskCard';
 import { trpc } from '@/lib/trpc';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '@/contexts/AuthContext';
 import { WelcomeHeader } from './WelcomeHeader';
 import { KPIGrid } from './KPIGrid';
 import { ActivityFeed } from './ActivityFeed';
@@ -36,13 +36,12 @@ export default function Overview() {
   const { user } = useAuth();
   const isSuperAdmin = user?.role === 'super_admin';
 
-  // Fetch real data from API (skip for super admins)
+  // Fetch developer profile - now works with brand emulation for super admins
   const {
     data: developerProfile,
     isLoading: profileLoading,
     error: profileError,
   } = trpc.developer.getProfile.useQuery(undefined, {
-    enabled: !isSuperAdmin,
     retry: false,
   });
   const {

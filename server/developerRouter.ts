@@ -8,12 +8,14 @@ import { developmentService } from './services/developmentService';
 import { unitService } from './services/unitService';
 import * as partnershipService from './services/partnershipService';
 import { getDeveloperByUserId, requireDeveloperProfileByUserId } from './services/developerService'; // [NEW] Import service methods
+import { getBrandProfileById } from './services/developerBrandProfileService';
+import { brandEmulatorService } from './services/brandEmulatorService';
 import { developerBrandProfileService } from './services/developerBrandProfileService';
 import {
   calculateAffordabilityCompanion,
   matchUnitsToAffordability,
 } from './services/affordabilityCompanion';
-import { getActivityFeed } from './services/activityService';
+import { getActivityFeed as getActivityFeedService } from './services/activityService';
 import { getKPIsWithCache } from './services/kpiService';
 import {
   developmentDrafts,
@@ -257,7 +259,10 @@ function assertPublishable(fullDev: any, verifiedUnitCount?: number) {
       if (isRent) {
         const rentFrom = Number(u?.monthlyRentFrom ?? u?.monthlyRent ?? 0);
         const rentTo = Number(u?.monthlyRentTo ?? 0);
-        if ((!Number.isFinite(rentFrom) || rentFrom <= 0) && (!Number.isFinite(rentTo) || rentTo <= 0)) {
+        if (
+          (!Number.isFinite(rentFrom) || rentFrom <= 0) &&
+          (!Number.isFinite(rentTo) || rentTo <= 0)
+        ) {
           errors.push({
             field: `${unitPrefix}.monthlyRentFrom`,
             message: `Unit "${unitLabel}" must have a valid monthly rent > 0.`,
@@ -340,7 +345,8 @@ export const developerRouter = router({
         logoUrl: input.logo || null,
         about: input.description || null,
         foundedYear: input.establishedYear ?? null,
-        headOfficeLocation: input.city && input.province ? `${input.city}, ${input.province}` : null,
+        headOfficeLocation:
+          input.city && input.province ? `${input.city}, ${input.province}` : null,
         operatingProvinces: input.province ? [input.province] : [],
         propertyFocus: input.specializations || [],
         websiteUrl: input.website || null,
@@ -406,7 +412,13 @@ export const developerRouter = router({
         .passthrough(),
     )
     .mutation(async ({ ctx, input }) => {
-      const development = await developmentService.createDevelopment(ctx.user.id, input as any);
+      // Real developer flow - no operating context
+      const development = await developmentService.createDevelopment(
+        ctx.user.id,
+        input as any,
+        {},
+        null, // No emulation context
+      );
       return { development };
     }),
 
@@ -424,16 +436,17 @@ export const developerRouter = router({
 
   getActivityFeed: protectedProcedure.query(async ({ ctx }) => {
     const profile = await requireDeveloperProfileByUserId(ctx.user.id);
-    return await getActivityFeed(profile.id);
+    return await getActivityFeedService(profile.id);
   }),
 
   /**
    * Get Developer Profile (Dashboard)
    * Secured by role guard: property_developer or super_admin
+   * Supports brand emulation for super admins
    */
   getProfile: protectedProcedure.query(async ({ ctx }) => {
-    // Auth is guaranteed by protectedProcedure; still enforce role
-    const role = ctx.user?.role;
+    const { user, brandEmulationContext } = ctx;
+    const role = user?.role;
 
     if (role !== 'property_developer' && role !== 'super_admin') {
       throw new TRPCError({
@@ -442,7 +455,55 @@ export const developerRouter = router({
       });
     }
 
-    const profile = await getDeveloperByUserId(ctx.user.id);
+    // Handle brand emulation mode
+    if (role === 'super_admin' && brandEmulationContext?.mode === 'seeding') {
+      if (
+        brandEmulationContext.brandProfileType !== 'developer' &&
+        brandEmulationContext.brandProfileType !== 'hybrid'
+      ) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message:
+            'Brand emulation context must be developer or hybrid type for developer profile.',
+        });
+      }
+
+      // Return brand profile instead of user profile in emulation mode
+      const brandProfile = await getBrandProfileById(brandEmulationContext.brandProfileId);
+      if (!brandProfile) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: `Brand profile ${brandEmulationContext.brandProfileId} not found.`,
+        });
+      }
+
+      // Transform brand profile to match expected developer profile format
+      return {
+        id: brandProfile.id,
+        userId: user.id, // Use super admin's user ID for context
+        companyName: brandProfile.brandName,
+        brandProfileId: brandProfile.id,
+        logoUrl: brandProfile.logoUrl,
+        about: brandProfile.about,
+        websiteUrl: brandProfile.websiteUrl,
+        foundedYear: brandProfile.foundedYear,
+        headOfficeLocation: brandProfile.headOfficeLocation,
+        operatingProvinces: brandProfile.operatingProvinces,
+        propertyFocus: brandProfile.propertyFocus,
+        // Emulation-specific fields
+        isEmulation: true,
+        emulationType: 'developer',
+        actualUser: {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          role: user.role,
+        },
+      };
+    }
+
+    // Normal real user flow
+    const profile = await getDeveloperByUserId(user.id);
 
     if (!profile) {
       throw new TRPCError({ code: 'NOT_FOUND', message: 'Developer profile not found.' });
@@ -451,23 +512,6 @@ export const developerRouter = router({
     return profile;
   }),
 
-  // -- [NEW] Dashboard Procedures --
-  getDashboardKPIs: protectedProcedure
-    .input(z.object({ timeRange: z.enum(['7d', '30d', '90d']).optional() }))
-    .query(async ({ ctx, input }) => {
-      const profile = await requireDeveloperProfileByUserId(ctx.user.id);
-      return await getKPIsWithCache(profile.id, input.timeRange);
-    }),
-
-  getSubscription: protectedProcedure.query(async ({ ctx }) => {
-    const profile = await requireDeveloperProfileByUserId(ctx.user.id);
-    return await developerSubscriptionService.getSubscription(profile.id);
-  }),
-
-  getActivityFeed: protectedProcedure.query(async ({ ctx }) => {
-    const profile = await requireDeveloperProfileByUserId(ctx.user.id);
-    return await getActivityFeed(profile.id);
-  }),
   // ------------------------------
 
   updateDevelopment: protectedProcedure

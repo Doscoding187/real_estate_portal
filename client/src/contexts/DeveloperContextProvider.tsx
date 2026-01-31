@@ -27,38 +27,50 @@ export const DeveloperContextProvider: React.FC<{ children: ReactNode }> = ({ ch
   const [selectedBrand, setSelectedBrand] = useState<BrandProfile | null>(null);
   const { setOperatingAs, clearContext } = usePublisherContext();
 
-  // Brand details should be passed from parent or fetched via listBrandProfiles
-  // For now, we'll create a minimal brand object from the ID
+  // Fetch real brand profile data when brand ID is selected
+  const { data: brandProfile, isLoading } = trpc.superAdminPublisher.getBrandProfileById.useQuery(
+    { id: selectedBrandId! },
+    {
+      enabled: !!selectedBrandId,
+      staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+    },
+  );
+
+  // Update selected brand and sync with global publisher context
   useEffect(() => {
-    if (selectedBrandId) {
-      // Minimal brand object - parent should pass full details
+    if (selectedBrandId && brandProfile) {
       const brand: BrandProfile = {
-        id: selectedBrandId,
-        brandName: `Brand ${selectedBrandId}`,
-        slug: `brand-${selectedBrandId}`,
+        id: brandProfile.id,
+        brandName: brandProfile.brandName,
+        slug: brandProfile.slug,
+        logoUrl: brandProfile.logoUrl,
+        brandTier: brandProfile.brandTier,
+        identityType: brandProfile.identityType,
+        totalLeadsReceived: brandProfile.totalLeadsReceived,
       };
       setSelectedBrand(brand);
 
       // Sync with global publisher context store
+      // CRITICAL: Use actual identityType from database, never hardcode
       setOperatingAs({
         mode: 'seeding',
         brandProfileId: brand.id,
         brandProfileName: brand.brandName,
-        brandProfileType: 'developer',
+        brandProfileType: brand.identityType || 'developer', // Use real identityType
         logoUrl: brand.logoUrl,
       });
-    } else {
+    } else if (!selectedBrandId) {
       setSelectedBrand(null);
       clearContext();
     }
-  }, [selectedBrandId, setOperatingAs, clearContext]);
+  }, [selectedBrandId, brandProfile, setOperatingAs, clearContext]);
 
   const value: DeveloperContextValue = {
     selectedBrandId,
     selectedBrand,
     setSelectedBrandId,
-    isContextSet: !!selectedBrandId,
-    isLoading: false, // No longer fetching brand details
+    isContextSet: !!selectedBrandId && !!selectedBrand,
+    isLoading,
   };
 
   return <DeveloperContext.Provider value={value}>{children}</DeveloperContext.Provider>;

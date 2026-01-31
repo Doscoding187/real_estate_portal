@@ -10,6 +10,8 @@ import { router, protectedProcedure, publicProcedure } from './_core/trpc';
 import { TRPCError } from '@trpc/server';
 import { developerBrandProfileService } from './services/developerBrandProfileService';
 import { brandLeadService } from './services/brandLeadService';
+import { brandEmulationService } from './_core/brandEmulation';
+import { developmentService } from './services/developmentService';
 
 // ============================================================================
 // Input Schemas
