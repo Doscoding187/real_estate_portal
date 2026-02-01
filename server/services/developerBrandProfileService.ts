@@ -127,6 +127,9 @@ async function createBrandProfile(input: CreateBrandProfileInput) {
     totalLeadsReceived: 0,
     unclaimedLeadCount: 0,
     createdBy: input.createdBy || null,
+    // ✅ Explicitly set nullable timestamp fields to null to prevent invalid datetime values
+    claimRequestedAt: null,
+    lastLeadDate: null,
   });
 
   return { id: result.insertId, slug };
