@@ -38,7 +38,9 @@
     "migration:tidb": "tsx server/migrations/tidbDevWizardMigration.ts",
     "migration:serverless": "tsx server/migrations/tidbServerlessMigration.ts",
     "migration:serverless:staging": "cross-env NODE_ENV=staging tsx server/migrations/tidbServerlessMigration.ts",
-    "migration:serverless:production": "cross-env NODE_ENV=production tsx server/migrations/tidbServerlessMigration.ts"
+    "migration:serverless:production": "cross-env NODE_ENV=production tsx server/migrations/tidbServerlessMigration.ts",
+    "db:migrate": "pnpm migration:serverless:production",
+    "start:prod": "pnpm db:migrate && node dist/index.js"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.693.0",
