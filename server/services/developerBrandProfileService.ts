@@ -94,6 +94,16 @@ function generateSlug(brandName: string): string {
 async function createBrandProfile(input: CreateBrandProfileInput) {
   const slug = input.slug || generateSlug(input.brandName);
 
+  if (process.env.NODE_ENV !== 'test') {
+    console.log('[brandProfile.create][PAYLOAD]', {
+      linkedDeveloperAccountId: null,
+      ownerType: 'platform', // Hardcoded in insert
+      identityType: input.identityType,
+      createdBy: input.createdBy,
+      profileType: 'industry_reference', // Hardcoded in insert
+    });
+  }
+
   const [result] = await db.insert(developerBrandProfiles).values({
     brandName: input.brandName,
     slug,

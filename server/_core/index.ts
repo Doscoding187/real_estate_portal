@@ -43,6 +43,11 @@ async function findAvailablePort(startPort: number = 3000): Promise<number> {
 
 async function startServer() {
   console.log('[Server] startServer() called');
+  console.log('[BUILD_MARKER][SERVER]', {
+    commit: process.env.RAILWAY_GIT_COMMIT_SHA ?? process.env.GITHUB_SHA ?? 'unknown',
+    env: process.env.NODE_ENV,
+    startedAt: new Date().toISOString(),
+  });
   // Check for critical environment variables
   if (!process.env.JWT_SECRET) {
     console.error('\n❌ CRITICAL ERROR: JWT_SECRET is not defined in environment variables.');
