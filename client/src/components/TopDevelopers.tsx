@@ -30,14 +30,12 @@ export function TopDevelopers() {
       <div className="container">
         {/* Section Header */}
         <div className="mb-8">
-          <h2 className="text-fluid-h2 font-bold mb-3 bg-gradient-to-r from-slate-900 via-[#2774AE] to-slate-900 bg-clip-text text-transparent">
+          <h2 className="text-xl md:text-[26px] font-bold text-slate-900 mb-2">
             Top Developers in South Africa
           </h2>
-          <p className="text-slate-600 text-lg max-w-3xl leading-relaxed">
-            In real estate, the builder you choose makes a genuine difference. Our list of top
-            developers features names that are industry leaders in customer satisfaction, design,
-            and timely delivery. These brands have shaped the skyline with thoughtful living spaces.
-            Know who's building your future before you invest.
+          <p className="text-slate-600 max-w-3xl leading-relaxed text-xs md:text-sm">
+            Explore South Africa’s most trusted property developers, building with purpose and
+            precision.
           </p>
         </div>
 

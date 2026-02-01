@@ -199,8 +199,8 @@ export function ExploreCities({
         {/* Section Header */}
         <div className="mb-10 text-center md:text-left flex flex-col md:flex-row justify-between items-end gap-4">
           <div>
-            <h2 className="text-2xl md:text-3xl font-bold mb-3 text-slate-900">{displayTitle}</h2>
-            <p className="text-slate-500 text-lg max-w-3xl">{displayDescription}</p>
+            <h2 className="text-xl md:text-[26px] font-bold text-slate-900 mb-2">{displayTitle}</h2>
+            <p className="text-slate-500 text-xs md:text-sm max-w-3xl">{displayDescription}</p>
           </div>
 
           <Link href="/property-for-sale">

@@ -2,18 +2,7 @@ import { Link } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { ArrowRight, Building2 } from 'lucide-react';
 import { SimpleDevelopmentCard } from '@/components/SimpleDevelopmentCard';
-// Temporary type definition if not imported
-interface DevelopmentItem {
-  id: number;
-  name: string;
-  description: string | null;
-  images: string[] | string | null;
-  minPrice?: number;
-  city: string;
-  suburb?: string | null;
-  isHotSelling?: number | boolean;
-  isHighDemand?: number | boolean;
-}
+import { getPrimaryDevelopmentImageUrl } from '@/lib/mediaUtils';
 
 interface DevelopmentsGridProps {
   developments: any[]; // Using any to be flexible with backend return type for now
@@ -50,27 +39,7 @@ export function DevelopmentsGrid({ developments, locationName }: DevelopmentsGri
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {developments.map(dev => {
             // Handle image parsing safely
-            // Handle image parsing safely
-            let mainImage = '';
-            let imagesArr: any[] = [];
-
-            if (Array.isArray(dev.images)) {
-              imagesArr = dev.images;
-            } else if (typeof dev.images === 'string') {
-              try {
-                imagesArr = JSON.parse(dev.images);
-                if (!Array.isArray(imagesArr)) imagesArr = [imagesArr];
-              } catch {
-                imagesArr = [dev.images];
-              }
-            }
-
-            if (imagesArr.length > 0) {
-              const first = imagesArr[0];
-              if (typeof first === 'string') mainImage = first;
-              else if (typeof first === 'object' && first !== null && 'url' in first)
-                mainImage = first.url;
-            }
+            const mainImage = getPrimaryDevelopmentImageUrl(dev.images);
 
             return (
               <Link key={dev.id} href={`/development/${dev.id}`}>
@@ -86,6 +55,7 @@ export function DevelopmentsGrid({ developments, locationName }: DevelopmentsGri
                     image={mainImage || 'https://placehold.co/600x400/e2e8f0/64748b?text=No+Image'}
                     isHotSelling={!!dev.isHotSelling}
                     isHighDemand={!!dev.isHighDemand}
+                    bedrooms={dev.bedrooms}
                   />
                 </div>
               </Link>

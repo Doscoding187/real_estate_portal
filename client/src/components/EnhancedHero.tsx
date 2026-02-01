@@ -34,6 +34,7 @@ import { trpc } from '@/lib/trpc';
 import { normalizeLocationKey, getProvinceForCity, isProvinceSearch } from '@/lib/locationUtils';
 import { LocationNode } from '@/types/location';
 
+// ... imports
 export interface EnhancedHeroProps {
   variant?: 'home' | 'location';
   title?: React.ReactNode;
@@ -48,7 +49,29 @@ export interface EnhancedHeroProps {
     filters?: any;
   }[];
   initialSearchQuery?: string;
+  activeTab?: string;
+  onTabChange?: (tab: string) => void;
 }
+
+const categoryIcons: Record<string, any> = {
+  Buy: Home,
+  Rent: Key,
+  'Shared Living': Users,
+  'Plot & Land': MapPinned,
+  Commercial: Building2,
+  Developments: Building,
+  Agents: Briefcase,
+};
+
+const categories = [
+  { label: 'Buy', icon: Home },
+  { label: 'Rent', icon: Key },
+  { label: 'Shared Living', icon: Users },
+  { label: 'Plot & Land', icon: MapPinned },
+  { label: 'Commercial', icon: Building2 },
+  { label: 'Developments', icon: Building },
+  { label: 'Agents', icon: Briefcase },
+];
 
 export function EnhancedHero({
   variant = 'home',
@@ -59,9 +82,18 @@ export function EnhancedHero({
   navigationItems = [],
   customShortcuts,
   initialSearchQuery = '',
+  activeTab: controlledTab,
+  onTabChange,
 }: EnhancedHeroProps) {
   const [, setLocation] = useLocation();
-  const [activeTab, setActiveTab] = useState<string | null>(null);
+  const [internalTab, setInternalTab] = useState('Buy');
+  const activeTab = controlledTab ?? internalTab;
+
+  const handleTabChange = (tab: string) => {
+    setInternalTab(tab);
+    onTabChange?.(tab);
+  };
+
   const [searchQuery, setSearchQuery] = useState(initialSearchQuery);
   const [selectedLocations, setSelectedLocations] = useState<LocationNode[]>([]);
   // computed for backward compatibility in single-select logic
@@ -456,7 +488,7 @@ export function EnhancedHero({
   const isNavigationMode = heroMode === 'province' || heroMode === 'city';
 
   return (
-    <div className="relative bg-gradient-to-br from-blue-900 via-blue-800 to-indigo-900 text-white overflow-hidden">
+    <div className="relative bg-gradient-to-br from-blue-50 via-white to-blue-50 text-slate-900 overflow-hidden">
       {/* Background Image / Overlay */}
       {backgroundImage ? (
         <>
@@ -464,36 +496,36 @@ export function EnhancedHero({
             <img
               src={backgroundImage}
               alt="Hero Background"
-              className="w-full h-full object-cover opacity-30"
+              className="w-full h-full object-cover opacity-10"
             />
-            <div className="absolute inset-0 bg-gradient-to-b from-blue-900/80 to-indigo-900/90 mix-blend-multiply" />
+            <div className="absolute inset-0 bg-gradient-to-b from-white/80 to-blue-50/90" />
           </div>
         </>
       ) : (
-        /* Default Animated Background Shapes */
+        /* Default Animated Background Shapes - Light Mode */
         <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute -top-40 -right-40 w-80 h-80 bg-blue-500/20 rounded-full blur-3xl animate-pulse"></div>
-          <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-indigo-500/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-purple-500/10 rounded-full blur-3xl"></div>
+          <div className="absolute -top-40 -right-40 w-80 h-80 bg-blue-200/40 rounded-full blur-3xl animate-pulse"></div>
+          <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-indigo-200/40 rounded-full blur-3xl animate-pulse delay-1000"></div>
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-sky-200/20 rounded-full blur-3xl"></div>
         </div>
       )}
 
-      {/* Grid Pattern Overlay */}
-      <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSAxMCAwIEwgMCAwIDAgMTAiIGZpbGw9Im5vbmUiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS1vcGFjaXR5PSIwLjA1IiBzdHJva2Utd2lkdGg9IjEiLz48L3BhdHRlcm4+PC9kZWZzPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9InVybCgjZ3JpZCkiLz48L3N2Zz4=')] opacity-40 mix-blend-overlay"></div>
+      {/* Grid Pattern Overlay - Dark stroke for light bg */}
+      <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSAxMCAwIEwgMCAwIDAgMTAiIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzAyMDYxNyIgc3Ryb2tlLW9wYWNpdHk9IjAuMDUiIHN0cm9rZS13aWR0aD0iMSIvPjwvcGF0dGVybj48L2RlZnM+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0idXJsKCNncmlQikiLz48L3N2Zz4=')] opacity-30 mix-blend-multiply"></div>
 
-      <div className="container relative py-fluid-xl z-10">
+      <div className="container relative py-16 md:py-24 z-10">
         {/* Hero Title */}
         <div className="text-center mb-6 max-w-4xl mx-auto">
           {title ? (
             // Location / Context Title
-            <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold mb-3 leading-tight">
+            <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold mb-3 leading-tight text-blue-950">
               {title}
             </h1>
           ) : (
             // Default Homepage Title
-            <h1 className="text-xl sm:text-2xl md:text-4xl lg:text-5xl font-bold mb-4 leading-tight tracking-tight">
+            <h1 className="text-xl sm:text-2xl md:text-4xl lg:text-5xl font-bold mb-4 leading-tight tracking-tight text-blue-950">
               South Africa's{' '}
-              <span className="bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent animate-gradient bg-[length:200%_auto]">
+              <span className="bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent animate-gradient bg-[length:200%_auto]">
                 Fastest Growing
               </span>
               <br className="hidden sm:block" />
@@ -502,50 +534,57 @@ export function EnhancedHero({
             </h1>
           )}
 
-          <p className="text-sm sm:text-base md:text-lg text-white/90 animate-fade-in max-w-2xl mx-auto">
+          <p className="text-sm sm:text-base md:text-lg text-slate-600 animate-fade-in max-w-2xl mx-auto">
             {subtitle || (
               <>
-                From browsing properties to closing deals - your complete
+                Your dream home is just a search away. Discover thousands of properties
                 <span className="hidden sm:inline">
                   <br />
                 </span>
                 <span className="sm:hidden"> </span>
-                real estate journey starts here
+                for sale and rent across South Africa.
               </>
             )}
           </p>
         </div>
 
-        {/* Category Tabs (Horizontal Scroll on Mobile) */}
+        {/* Categories/Tabs */}
         <div className="flex justify-center mb-6 sm:mb-8">
-          <div className="w-full overflow-x-auto scrollbar-hide -mx-4 px-4 sm:mx-0 sm:px-0 sm:w-auto">
-            <div className="inline-flex bg-white/10 backdrop-blur-md rounded-xl p-1 gap-1 shadow-lg border border-white/20 min-w-max">
-              {categories.map(category => {
-                const Icon = category.icon;
-                return (
-                  <button
-                    key={category.id}
-                    onClick={() => handleCategoryClick(category.id)}
-                    className={`
-                      flex items-center gap-1.5 px-3 py-2 sm:px-4 sm:py-2.5 rounded-lg transition-all font-medium text-xs sm:text-sm whitespace-nowrap
-                      ${
-                        activeTab === category.id
-                          ? 'bg-white text-blue-900 shadow-lg scale-105'
-                          : 'text-white hover:bg-white/15'
-                      }
-                    `}
-                  >
-                    <Icon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                    {category.label}
-                  </button>
-                );
-              })}
-            </div>
+          <div className="bg-white/90 backdrop-blur-md p-1.5 rounded-full inline-flex shadow-lg border border-slate-200/50 overflow-x-auto max-w-[95vw] sm:max-w-none scrollbar-hide">
+            {categories.map(category => {
+              // Only show specific tabs if needed, for instance
+              if (category.label === 'Projects') return null; // Logic from original if needed
+
+              // Fallback icon logic if not in map
+              const Icon = categoryIcons[category.label] || Home;
+              const isActive = activeTab === category.label;
+
+              return (
+                <button
+                  key={category.label}
+                  onClick={() => handleTabChange(category.label)}
+                  className={`
+                        flex items-center gap-2 px-4 sm:px-6 py-2.5 rounded-full text-xs sm:text-sm font-semibold transition-all duration-300
+                        whitespace-nowrap flex-shrink-0
+                        ${
+                          isActive
+                            ? 'bg-blue-600 text-white shadow-md transform scale-105'
+                            : 'text-slate-600 hover:text-blue-600 hover:bg-slate-50'
+                        }
+                      `}
+                >
+                  <Icon
+                    className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${isActive ? 'text-white' : 'text-slate-400 group-hover:text-blue-500'}`}
+                  />
+                  {category.label}
+                </button>
+              );
+            })}
           </div>
         </div>
 
         {/* Search Card */}
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-5xl mx-auto">
           <Card className="shadow-2xl border-0 bg-white/95 backdrop-blur-sm rounded-xl sm:rounded-2xl">
             <CardContent className="p-3 sm:p-4 md:p-6">
               {/* Main Search Row */}
@@ -627,48 +666,25 @@ export function EnhancedHero({
                 </Button>
               </div>
 
-              {/* FOOTER: Navigation Pills OR Shortcuts */}
-              <div className="mt-4 sm:mt-6 flex gap-2 sm:gap-3 items-center border-t border-slate-100 pt-3 sm:pt-4 overflow-x-auto scrollbar-hide -mx-3 px-3 sm:mx-0 sm:px-0">
-                {/* 1. If Navigation Mode (Province/City): Show Pills */}
-                {isNavigationMode ? (
-                  <>
-                    {navigationItems.map((item, idx) => (
-                      <Button
-                        key={idx}
-                        variant="outline"
-                        onClick={() => setLocation(item.path)}
-                        className={`
+              {/* FOOTER: Navigation Pills ONLY (Quick Searches hidden per request) */}
+              {isNavigationMode && (
+                <div className="mt-4 sm:mt-6 flex gap-2 sm:gap-3 items-center border-t border-slate-100 pt-3 sm:pt-4 overflow-x-auto scrollbar-hide -mx-3 px-3 sm:mx-0 sm:px-0">
+                  {navigationItems.map((item, idx) => (
+                    <Button
+                      key={idx}
+                      variant="outline"
+                      onClick={() => setLocation(item.path)}
+                      className={`
                           h-7 sm:h-8 px-3 sm:px-4 rounded-full text-xs sm:text-sm font-medium border-blue-100 bg-blue-50/50 text-blue-700 
                           hover:bg-blue-100 hover:border-blue-200 hover:text-blue-800 transition-all whitespace-nowrap flex-shrink-0
                           ${item.active ? 'ring-2 ring-blue-500 ring-offset-1' : ''}
                         `}
-                      >
-                        {item.label}
-                      </Button>
-                    ))}
-                  </>
-                ) : (
-                  /* 2. If Standard Mode: Show Shortcuts */
-                  <>
-                    <span className="text-[10px] sm:text-xs text-slate-500 font-bold uppercase tracking-wider mr-1 whitespace-nowrap flex-shrink-0">
-                      Quick:
-                    </span>
-                    {shortcuts.map((shortcut, idx) => {
-                      const Icon = shortcut.icon;
-                      return (
-                        <button
-                          key={idx}
-                          onClick={() => handleShortcutClick(shortcut)}
-                          className="flex items-center gap-1.5 px-2.5 sm:px-3.5 py-1.5 sm:py-2 bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-900 rounded-full text-xs sm:text-sm font-medium transition-colors border border-slate-200 hover:border-slate-300 shadow-sm whitespace-nowrap flex-shrink-0"
-                        >
-                          {Icon && <Icon className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-slate-400" />}
-                          {shortcut.label}
-                        </button>
-                      );
-                    })}
-                  </>
-                )}
-              </div>
+                    >
+                      {item.label}
+                    </Button>
+                  ))}
+                </div>
+              )}
 
               {/* Dynamic Filter Panel */}
               {showFilters && activeTab !== 'agents' && (

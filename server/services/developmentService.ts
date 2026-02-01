@@ -738,13 +738,24 @@ export async function getPublicDevelopment(id: number) {
   return { ...results[0], images: parseJsonField(results[0].images) };
 }
 
-export async function listPublicDevelopments(options: { limit?: number; province?: string } = {}) {
+export async function listPublicDevelopments(
+  options: {
+    limit?: number;
+    province?: string;
+    transactionType?: 'for_sale' | 'for_rent' | 'auction';
+    developmentType?: 'residential' | 'commercial' | 'mixed_use' | 'land';
+  } = {},
+) {
   const { limit = 20, province } = options;
   const db = await getDb();
   if (!db) return [];
 
   const conditions = [eq(developments.isPublished, 1)];
   if (province) conditions.push(eq(developments.province, province));
+  if (options.transactionType)
+    conditions.push(eq(developments.transactionType, options.transactionType));
+  if (options.developmentType)
+    conditions.push(eq(developments.developmentType, options.developmentType));
 
   const results = await db
     .select({
@@ -762,6 +773,7 @@ export async function listPublicDevelopments(options: { limit?: number; province
       monthlyRentFrom: developments.monthlyRentFrom,
       monthlyRentTo: developments.monthlyRentTo,
       transactionType: developments.transactionType,
+      developmentType: developments.developmentType,
       status: developments.status,
       isFeatured: developments.isFeatured,
       developer: {
@@ -777,10 +789,17 @@ export async function listPublicDevelopments(options: { limit?: number; province
     .orderBy(desc(developments.isFeatured), desc(developments.createdAt))
     .limit(limit);
 
-  const devIds = results.map((d: (typeof results)[number]) => d.id);
+  // Parse images for all results to ensure consistent array format
+  const parsedResults = results.map(d => ({
+    ...d,
+    images: parseJsonField(d.images),
+  }));
+
+  const devIds = parsedResults.map(d => d.id);
 
   let priceMap: Record<number, { min: number; max: number }> = {};
   let rentMap: Record<number, { min: number; max: number }> = {};
+  let bedroomMap: Record<number, number[]> = {};
 
   if (devIds.length > 0) {
     const priceAgg = await db
@@ -818,11 +837,34 @@ export async function listPublicDevelopments(options: { limit?: number; province
       },
       {} as Record<number, { min: number; max: number }>,
     );
+
+    // Fetch bedrooms
+    const units = await db
+      .select({
+        devId: unitTypes.developmentId,
+        bedrooms: unitTypes.bedrooms,
+      })
+      .from(unitTypes)
+      .where(and(inArray(unitTypes.developmentId, devIds), eq(unitTypes.isActive, 1)));
+
+    for (const u of units) {
+      if (u.devId && u.bedrooms !== null && u.bedrooms !== undefined) {
+        if (!bedroomMap[u.devId]) bedroomMap[u.devId] = [];
+        const beds = Number(u.bedrooms);
+        if (!isNaN(beds) && !bedroomMap[u.devId].includes(beds)) {
+          bedroomMap[u.devId].push(beds);
+        }
+      }
+    }
+    // Sort bedrooms
+    for (const id in bedroomMap) {
+      bedroomMap[id].sort((a, b) => a - b);
+    }
   }
 
-  return results
-    .map((dev: (typeof results)[number]) => {
-      const rawImages = parseJsonField(dev.images);
+  return parsedResults
+    .map((dev: any) => {
+      const rawImages = dev.images; // Already parsed above
       let heroImage = '';
 
       const extractUrl = (item: unknown): string | null => {
@@ -887,7 +929,8 @@ export async function listPublicDevelopments(options: { limit?: number; province
 
       return {
         ...dev,
-        images: [],
+        images: rawImages,
+        bedrooms: bedroomMap[dev.id] || [],
         heroImage,
         priceFrom: isRental ? (dev as any).priceFrom : finalPriceMin,
         priceTo: isRental ? (dev as any).priceTo : finalPriceMax,
@@ -917,50 +960,69 @@ export async function createDevelopment(
   const { ownerType, brandProfileId, ...restMetadata } = metadata;
 
   // ============================================================================
-  // IDENTITY RESOLUTION - Use new identity resolver
+  // SUPER ADMIN BYPASS - CHECK FIRST!
   // ============================================================================
-  const { resolveOperatingIdentity } = await import('../_core/identityResolver');
 
-  const identity = await resolveOperatingIdentity({
+  console.log('[createDevelopment] Input params:', {
     userId,
-    operatingAs: operatingContext,
-    db,
+    operatingContext,
+    brandProfileId,
+    ownerType,
   });
 
-  console.log('[createDevelopment] Resolved identity:', {
-    mode: identity.mode,
-    userId: identity.userId,
-    brandProfileId: identity.brandProfileId,
+  // Check user role FIRST before any validation
+  const user = await db.query.users.findFirst({
+    where: eq(users.id, userId),
+    columns: { id: true, role: true },
   });
 
-  // Validate ownership: exactly one path must be set
-  if (!identity.developerProfileId && !identity.brandProfileId) {
-    throw createError(
-      'Invalid ownership: must have either developerProfileId or brandProfileId',
-      'VALIDATION_ERROR',
-      { identity },
-    );
+  let developerProfileId: number | null = null;
+  let resolvedBrandProfileId: number | null = null;
+  let effectiveOwnerType: 'platform' | 'developer' = ownerType || 'developer';
+
+  // If super admin, bypass ALL checks
+  if (user?.role === 'super_admin') {
+    // Super admin mode - use brand profile from context or metadata
+    resolvedBrandProfileId =
+      operatingContext?.brandProfileId ||
+      brandProfileId ||
+      (developmentData as any).developerBrandProfileId ||
+      null;
+    developerProfileId = null;
+    effectiveOwnerType = 'platform';
+
+    console.log('[createDevelopment] ✅ SUPER ADMIN MODE - Bypassing all checks:', {
+      brandProfileId: resolvedBrandProfileId,
+      ownerType: effectiveOwnerType,
+    });
+  } else {
+    // Regular developer mode - require developer profile
+    const devProfile = await db.query.developers.findFirst({
+      where: eq(developers.userId, userId),
+      columns: { id: true, brandProfileId: true },
+    });
+
+    if (!devProfile) {
+      throw createError(
+        'Developer profile not found. Please complete onboarding.',
+        'VALIDATION_ERROR',
+        { userId },
+      );
+    }
+
+    developerProfileId = devProfile.id;
+    resolvedBrandProfileId = devProfile.brandProfileId || brandProfileId || null;
+    effectiveOwnerType = 'developer';
+
+    console.log('[createDevelopment] Developer mode:', {
+      developerId: developerProfileId,
+      brandProfileId: resolvedBrandProfileId,
+    });
   }
 
-  // For emulator mode, brandProfileId is required
-  if (identity.mode === 'emulator' && !identity.brandProfileId) {
-    throw createError('Emulator mode requires brandProfileId', 'VALIDATION_ERROR', { identity });
-  }
+  validateDevelopmentData({ ...developmentData, devOwnerType: effectiveOwnerType } as any, userId);
 
-  // Use the resolved identity for ownership
-  const developerProfileId = identity.developerProfileId || null;
-  const resolvedBrandProfileId =
-    identity.brandProfileId ||
-    brandProfileId ||
-    (developmentData as any).developerBrandProfileId ||
-    null;
-
-  validateDevelopmentData(
-    { ...developmentData, devOwnerType: ownerType || 'developer' } as any,
-    userId,
-  );
-
-  // 2) brand profile validation
+  // 2) brand profile validation (only if brandProfileId is set)
   const targetBrandId = resolvedBrandProfileId;
   if (targetBrandId) {
     const validBrand = await db.query.developerBrandProfiles.findFirst({
@@ -2290,20 +2352,131 @@ async function updatePhase(phaseId: number, developerId: number, data: any) {
   return updated;
 }
 
-async function publishDevelopment(id: number, developerId: number) {
+async function publishDevelopment(
+  id: number,
+  userId: number,
+  operatingContext?: { brandProfileId: number } | null,
+) {
   const db = await getDb();
   if (!db) throw new Error('Database not available');
 
+  console.log('[publishDevelopment] Input params:', {
+    id,
+    userId,
+    operatingContext,
+  });
+
+  // Check user role FIRST before any validation
+  const user = await db.query.users.findFirst({
+    where: eq(users.id, userId),
+    columns: { id: true, role: true },
+  });
+
+  // If super admin, bypass ALL checks
+  if (user?.role === 'super_admin') {
+    // Super admin mode - use brand profile from context
+    const brandProfileId = operatingContext?.brandProfileId;
+
+    console.log('[publishDevelopment] ✅ SUPER ADMIN MODE - Bypassing all checks:', {
+      brandProfileId,
+    });
+
+    // First, get the development to verify it exists and check its brand
+    const [existingDev] = await db
+      .select()
+      .from(developments)
+      .where(eq(developments.id, id))
+      .limit(1);
+
+    if (!existingDev) {
+      throw new TRPCError({
+        code: 'NOT_FOUND',
+        message: 'Development not found',
+      });
+    }
+
+    console.log('[publishDevelopment] Development found:', {
+      id: existingDev.id,
+      name: existingDev.name,
+      developerBrandProfileId: existingDev.developerBrandProfileId,
+      requestedBrandProfileId: brandProfileId,
+    });
+
+    // Verify brand ownership if brandProfileId is provided
+    if (brandProfileId && existingDev.developerBrandProfileId !== brandProfileId) {
+      throw new TRPCError({
+        code: 'FORBIDDEN',
+        message: `Development belongs to brand ${existingDev.developerBrandProfileId}, not ${brandProfileId}`,
+      });
+    }
+
+    // Publish it
+    console.log('[publishDevelopment] About to execute UPDATE query for development:', id);
+
+    try {
+      // Format datetime for MySQL (YYYY-MM-DD HH:MM:SS)
+      const publishedAtFormatted = new Date().toISOString().slice(0, 19).replace('T', ' ');
+      const updateResult = await db
+        .update(developments)
+        .set({ isPublished: 1, publishedAt: publishedAtFormatted, status: 'launching-soon' })
+        .where(eq(developments.id, id));
+
+      console.log(
+        '[publishDevelopment] ✅ Update query executed successfully, result:',
+        updateResult,
+      );
+    } catch (dbError: any) {
+      console.error('[publishDevelopment] ❌ Database error during UPDATE:', {
+        developmentId: id,
+        error: dbError,
+        errorName: dbError?.name,
+        errorMessage: dbError?.message,
+        errorCode: dbError?.code,
+        errorSql: dbError?.sql,
+        errorStack: dbError?.stack,
+      });
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: `Database error: ${dbError?.message || dbError?.toString() || 'Unknown error'}`,
+      });
+    }
+
+    console.log('[publishDevelopment] About to SELECT updated development');
+
+    const [updated] = await db.select().from(developments).where(eq(developments.id, id)).limit(1);
+
+    if (!updated) {
+      console.error('[publishDevelopment] ❌ Development not found after update!');
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Publish failed: Could not retrieve updated development',
+      });
+    }
+
+    console.log('[publishDevelopment] ✅ Super admin published development:', {
+      id: updated.id,
+      name: updated.name,
+      isPublished: updated.isPublished,
+      status: updated.status,
+    });
+    return updated;
+  }
+
+  // Real developer mode - check ownership
   const devProfile = await db.query.developers.findFirst({
-    where: eq(developers.userId, developerId),
+    where: eq(developers.userId, userId),
     columns: { id: true },
   });
-  if (!devProfile)
-    throw new TRPCError({ code: 'FORBIDDEN', message: 'Developer profile not found' });
 
+  if (!devProfile) {
+    throw new TRPCError({ code: 'FORBIDDEN', message: 'Developer profile not found' });
+  }
+
+  // Format datetime for MySQL (YYYY-MM-DD HH:MM:SS)
+  const publishedAtFormatted = new Date().toISOString().slice(0, 19).replace('T', ' ');
   await db
     .update(developments)
-    .set({ isPublished: 1, publishedAt: new Date().toISOString(), status: 'launching-soon' })
+    .set({ isPublished: 1, publishedAt: publishedAtFormatted, status: 'launching-soon' })
     .where(and(eq(developments.id, id), eq(developments.developerId, devProfile.id)));
 
   const [updated] = await db
@@ -2581,59 +2754,103 @@ function validateForPublish(wizardState: WizardData): void {
 // DELETE DEVELOPMENT
 // ===========================================================================
 
-async function deleteDevelopment(id: number, developerId?: number) {
+async function deleteDevelopment(
+  id: number,
+  userId?: number,
+  operatingContext?: { brandProfileId: number } | null,
+) {
   const db = await getDb();
   if (!db) throw new Error('Database not available');
 
-  let developerProfileId: number | null = null;
+  console.log('[deleteDevelopment] Input params:', { id, userId, operatingContext });
 
-  if (developerId !== undefined && developerId !== -1) {
-    const devProfile = await db.query.developers.findFirst({
-      where: eq(developers.userId, developerId),
-      columns: { id: true },
+  // Check user role FIRST before any validation (same pattern as publishDevelopment)
+  if (userId !== undefined && userId !== -1) {
+    const user = await db.query.users.findFirst({
+      where: eq(users.id, userId),
+      columns: { id: true, role: true },
     });
 
-    if (!devProfile) {
-      throw new TRPCError({
-        code: 'FORBIDDEN',
-        message: 'Unauthorized: developer profile not found',
-      });
-    }
+    // If super admin with brand context, use brand profile ownership check
+    if (user?.role === 'super_admin' && operatingContext?.brandProfileId) {
+      console.log('[deleteDevelopment] ✅ SUPER ADMIN MODE - Using brand profile ownership');
 
-    const profileId = devProfile.id;
-    developerProfileId = profileId;
-
-    const [owned] = await db
-      .select({ id: developments.id })
-      .from(developments)
-      .where(and(eq(developments.id, id), eq(developments.developerId, profileId)))
-      .limit(1);
-
-    if (!owned) {
-      const [exists] = await db
+      const [owned] = await db
         .select({ id: developments.id })
         .from(developments)
-        .where(eq(developments.id, id))
+        .where(
+          and(
+            eq(developments.id, id),
+            eq(developments.developerBrandProfileId, operatingContext.brandProfileId),
+          ),
+        )
         .limit(1);
 
-      if (!exists) throw new TRPCError({ code: 'NOT_FOUND', message: 'Development not found' });
+      if (!owned) {
+        const [exists] = await db
+          .select({ id: developments.id })
+          .from(developments)
+          .where(eq(developments.id, id))
+          .limit(1);
 
-      throw new TRPCError({
-        code: 'FORBIDDEN',
-        message: 'Unauthorized: You do not own this development',
+        if (!exists) throw new TRPCError({ code: 'NOT_FOUND', message: 'Development not found' });
+
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'Unauthorized: Development belongs to a different brand profile',
+        });
+      }
+
+      console.log('[deleteDevelopment] ✅ Brand ownership verified, proceeding with delete');
+    } else {
+      // Real developer mode - check developer ownership
+      const devProfile = await db.query.developers.findFirst({
+        where: eq(developers.userId, userId),
+        columns: { id: true },
       });
+
+      if (!devProfile) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'Unauthorized: developer profile not found',
+        });
+      }
+
+      const [owned] = await db
+        .select({ id: developments.id })
+        .from(developments)
+        .where(and(eq(developments.id, id), eq(developments.developerId, devProfile.id)))
+        .limit(1);
+
+      if (!owned) {
+        const [exists] = await db
+          .select({ id: developments.id })
+          .from(developments)
+          .where(eq(developments.id, id))
+          .limit(1);
+
+        if (!exists) throw new TRPCError({ code: 'NOT_FOUND', message: 'Development not found' });
+
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'Unauthorized: You do not own this development',
+        });
+      }
     }
   }
 
   await db.delete(unitTypes).where(eq(unitTypes.developmentId, id));
   await db.delete(developmentPhases).where(eq(developmentPhases.developmentId, id));
+  try {
+    await db
+      .delete(developmentDrafts)
+      .where(sql`JSON_EXTRACT(${developmentDrafts.draftData}, '$.id') = ${id}`);
+  } catch (err) {
+    console.warn('Failed to delete associated drafts:', err);
+    // Continue with deletion of development even if draft cleanup fails
+  }
 
-  const whereClause =
-    developerProfileId !== null
-      ? and(eq(developments.id, id), eq(developments.developerId, developerProfileId))
-      : eq(developments.id, id);
-
-  return db.delete(developments).where(whereClause);
+  return db.delete(developments).where(eq(developments.id, id));
 }
 
 async function getDevelopmentById(id: number) {

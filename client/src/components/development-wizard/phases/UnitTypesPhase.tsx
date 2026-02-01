@@ -345,6 +345,80 @@ export function UnitTypesPhase() {
     toast.success('Draft discarded');
   };
 
+  const handleDuplicate = (unit: UnitType) => {
+    // --- Hydrate Parking UI State (Same as Edit) ---
+    let pKind: any = 'none';
+    let pBays = unit.parkingBays ?? (unit as any).parking_bays ?? 0;
+    let pLayout: any = undefined;
+
+    const pType = unit.parkingType || (unit as any).parking_type;
+
+    if (pType === 'carport') pKind = 'carport';
+    else if (pType === 'garage') pKind = 'garage';
+    else if (pType === 'open') pKind = 'open';
+    else if (pType === 'covered') pKind = 'covered';
+    else if (pType === 'none' || !pType) pKind = 'none';
+
+    if (pType === 'tandem' || pType === 'side-by-side') {
+      pKind = 'garage';
+      pLayout = pType;
+    }
+
+    if (pKind !== 'none' && (!pBays || pBays < 1)) {
+      pBays = 1;
+    }
+
+    const isFurnishedValue =
+      typeof (unit as any).isFurnished === 'boolean' ? (unit as any).isFurnished : false;
+    const depositValueRaw = (unit as any).depositRequired ?? (unit as any).deposit;
+    const depositValue = depositValueRaw == null ? undefined : Number(depositValueRaw);
+    const monthlyRentToRaw = (unit as any).monthlyRentTo;
+    const monthlyRentToValue = monthlyRentToRaw == null ? undefined : Number(monthlyRentToRaw);
+    const startingBidRaw = (unit as any).startingBid;
+    const startingBidValue = startingBidRaw == null ? undefined : Number(startingBidRaw);
+    const reservePriceRaw = (unit as any).reservePrice;
+    const reservePriceValue = reservePriceRaw == null ? undefined : Number(reservePriceRaw);
+    const auctionStartDateValue = formatDateTimeLocal((unit as any).auctionStartDate);
+    const auctionEndDateValue = formatDateTimeLocal((unit as any).auctionEndDate);
+    const auctionStatusValue = (unit as any).auctionStatus ?? 'scheduled';
+
+    setFormData({
+      ...unit,
+      name: `${unit.name} (Copy)`,
+      parkingKind: pKind,
+      parkingBays: pBays,
+      garageLayout: pLayout,
+      monthlyRentFrom: (unit as any).monthlyRentFrom ?? (unit as any).monthlyRent ?? 0,
+      monthlyRentTo: monthlyRentToValue,
+      depositRequired: depositValue,
+      leaseTerm: (unit as any).leaseTerm ?? '',
+      isFurnished: isFurnishedValue,
+      startingBid: startingBidValue,
+      reservePrice: reservePriceValue,
+      auctionStartDate: auctionStartDateValue,
+      auctionEndDate: auctionEndDateValue,
+      auctionStatus: auctionStatusValue,
+      extras: unit.extras || [],
+      features: unit.features || {
+        kitchen: [],
+        bathroom: [],
+        flooring: [],
+        storage: [],
+        climate: [],
+        outdoor: [],
+        security: [],
+        other: [],
+      },
+    });
+    // Deep copy media to avoid reference issues
+    setUnitGallery(unit.baseMedia?.gallery ? [...unit.baseMedia.gallery] : []);
+    setFloorPlanImages(unit.baseMedia?.floorPlans ? [...unit.baseMedia.floorPlans] : []);
+
+    setEditingId(null); // Treat as new
+    setIsDialogOpen(true);
+    toast.info('Unit type duplicated. Please review details.');
+  };
+
   // --- LOGIC HANDLERS ---
 
   const handleFeatureToggle = (category: keyof typeof UNIT_FEATURE_CATEGORIES, item: string) => {
@@ -965,6 +1039,15 @@ export function UnitTypesPhase() {
                     size="icon"
                     variant="secondary"
                     className="h-8 w-8"
+                    onClick={() => handleDuplicate(unit)}
+                    title="Duplicate Unit Type"
+                  >
+                    <Copy className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    size="icon"
+                    variant="secondary"
+                    className="h-8 w-8"
                     onClick={() => handleOpenDialog(unit)}
                   >
                     <Edit2 className="w-4 h-4" />
@@ -1022,19 +1105,19 @@ export function UnitTypesPhase() {
                 </p>
               </CardHeader>
               <CardContent className="text-sm text-slate-600 space-y-1">
-                <div className="flex gap-4">
+                <div className="flex gap-4 items-center">
+                  <span className="flex items-center gap-1">
+                    <HouseMeasureIcon className="w-3.5 h-3.5" /> {unit.unitSize} m²
+                  </span>
                   <span className="flex items-center gap-1">
                     <BedDouble className="w-3.5 h-3.5" /> {unit.bedrooms}
                   </span>
                   <span className="flex items-center gap-1">
                     <Bath className="w-3.5 h-3.5" /> {unit.bathrooms}
                   </span>
-                  <span className="flex items-center gap-1">
-                    <HouseMeasureIcon className="w-3.5 h-3.5" /> {unit.unitSize} m2
-                  </span>
                   {unit.yardSize && unit.yardSize > 0 && (
-                    <span className="flex items-center gap-1 text-green-700 bg-green-50 px-1.5 py-0.5 rounded-full text-xs border border-green-100">
-                      <Maximize className="w-3 h-3" /> {unit.yardSize}m²
+                    <span className="flex items-center gap-1 text-slate-600">
+                      <Maximize className="w-3.5 h-3.5" /> {unit.yardSize} m²
                     </span>
                   )}
                 </div>

@@ -2,18 +2,18 @@ import { useState } from 'react';
 import { useLocation } from 'wouter';
 import { trpc } from '@/lib/trpc';
 import { EnhancedNavbar } from '@/components/EnhancedNavbar';
-import { ModernHeroSection } from '@/components/ModernHeroSection';
-import { PropertyShowcase } from '@/components/PropertyShowcase';
-import { LocationRecommendations } from '@/components/LocationRecommendations';
+import { EnhancedHero } from '@/components/EnhancedHero';
 import { ModernFooter } from '@/components/ModernFooter';
 import { SimpleDevelopmentCard } from '@/components/SimpleDevelopmentCard';
 import { Button } from '@/components/ui/button';
-import { Building2, MapPin, ArrowRight } from 'lucide-react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { MapPin } from 'lucide-react';
 import { PropertyInsights } from '@/components/PropertyInsights';
 import { DiscoverProperties } from '@/components/DiscoverProperties';
 import { TopLocalities } from '@/components/TopLocalities';
 import { TopDevelopers } from '@/components/TopDevelopers';
+import { getPrimaryDevelopmentImageUrl } from '@/lib/mediaUtils';
+
+console.log('Home.tsx loaded - timestamp: ' + Date.now());
 
 import { ExploreCities } from '@/components/ExploreCities';
 import { PropertyCategories } from '@/components/PropertyCategories';
@@ -21,6 +21,7 @@ import { PropertyCategories } from '@/components/PropertyCategories';
 export default function Home() {
   const [, setLocation] = useLocation();
   const [selectedProvince, setSelectedProvince] = useState('Gauteng');
+  const [activeHeroTab, setActiveHeroTab] = useState('Buy');
 
   const provinces = [
     'Gauteng',
@@ -34,95 +35,189 @@ export default function Home() {
     'Northern Cape',
   ];
 
-  // Only show top 5 popular provinces in hero for better UX
-  const popularProvinces = provinces.slice(0, 5);
+  // --- Trending Now Logic ---
 
-  const provinceNavItems = popularProvinces.map(p => ({
-    label: p,
-    path: `/${p.toLowerCase().replace(/\s+/g, '-')}`,
-  }));
-
-  // Helper to parse images
-  const parseImages = (imagesVal: any): string[] => {
-    if (!imagesVal) return [];
-
-    let parsed = imagesVal;
-    if (typeof imagesVal === 'string') {
-      try {
-        parsed = JSON.parse(imagesVal);
-      } catch (e) {
-        return [];
-      }
+  const handleTabChange = (tab: string) => {
+    if (tab === 'Agents') {
+      setLocation('/agents'); // Or whatever the agents route is
+      return;
     }
-
-    if (Array.isArray(parsed)) {
-      return parsed
-        .map((img: any) => {
-          if (typeof img === 'string') return img;
-          if (typeof img === 'object' && img !== null && 'url' in img) return img.url;
-          return '';
-        })
-        .filter(Boolean);
-    }
-
-    return [];
+    setActiveHeroTab(tab);
   };
 
-  // Fetch real developments from database
-  const { data: gautengDevelopments = [], isLoading: gautengLoading } =
-    trpc.developer.getPublishedDevelopments.useQuery({
-      province: 'Gauteng',
-      limit: 10,
-    });
-  const { data: westernCapeDevelopments = [], isLoading: westernCapeLoading } =
-    trpc.developer.getPublishedDevelopments.useQuery({
-      province: 'Western Cape',
-      limit: 10,
-    });
-  const { data: kznDevelopments = [], isLoading: kznLoading } =
-    trpc.developer.getPublishedDevelopments.useQuery({
-      province: 'KwaZulu-Natal',
-      limit: 10,
-    });
-
-  // Group developments by province
-  const developmentsByProvince: Record<string, any[]> = {
-    Gauteng: gautengDevelopments,
-    'Western Cape': westernCapeDevelopments,
-    'KwaZulu-Natal': kznDevelopments,
-    'Eastern Cape': [],
-    Mpumalanga: [],
-    Limpopo: [],
-    'North West': [],
-    'Free State': [],
-    'Northern Cape': [],
+  const getTrendingFilters = (tab: string) => {
+    switch (tab) {
+      case 'Buy':
+        return { transactionType: 'for_sale' as const, developmentType: 'residential' as const };
+      case 'Rent':
+      case 'Rental':
+        return { transactionType: 'for_rent' as const, developmentType: 'residential' as const };
+      case 'Developments':
+        return {}; // All types
+      case 'Shared Living':
+        // Mapping 'Shared Living' to Residential Rentals for now as 'student' type doesn't exist yet
+        return { transactionType: 'for_rent' as const, developmentType: 'residential' as const };
+      case 'Plot & Land':
+        return { transactionType: 'for_sale' as const, developmentType: 'land' as const };
+      case 'Commercial':
+        return { developmentType: 'commercial' as const }; // Sale or Rent
+      default:
+        return { transactionType: 'for_sale' as const, developmentType: 'residential' as const }; // Default to Buy
+    }
   };
+
+  // --- Single Source of Truth for Hero Copy ---
+  const TAB_COPY: Record<string, { titleBase: string; subtitleBase: string }> = {
+    buy: {
+      titleBase: 'Trending Residential Properties for Sale',
+      subtitleBase:
+        'Discover the latest and most popular homes for sale across South Africa’s top locations.',
+    },
+    rent: {
+      titleBase: 'Trending Residential Properties for Rent',
+      subtitleBase:
+        'Browse the newest and most in-demand rental homes and apartments available right now.',
+    },
+    developments: {
+      titleBase: 'Trending Developments',
+      subtitleBase:
+        'Explore the newest residential, commercial, and mixed-use developments across South Africa.',
+    },
+    shared_living: {
+      titleBase: 'Trending Student & Shared Living',
+      subtitleBase:
+        'Find modern student accommodation and shared living spaces in prime urban and campus locations.',
+    },
+    plot_land: {
+      titleBase: 'Trending Plot & Land',
+      subtitleBase:
+        'View the latest plots and land opportunities ideal for building or investment projects.',
+    },
+    commercial: {
+      titleBase: 'Trending Commercial Developments',
+      subtitleBase:
+        'Discover newly listed office, retail, and industrial developments in high-growth business areas.',
+    },
+  };
+
+  // Helper to map activeHeroTab (Label) to TAB_COPY key
+  const getTabKey = (tabLabel: string): string => {
+    const t = tabLabel.toLowerCase();
+    if (t === 'buy') return 'buy';
+    if (t === 'rent' || t === 'rental') return 'rent';
+    if (t === 'developments' || t === 'projects') return 'developments';
+    if (t.includes('shared')) return 'shared_living';
+    if (t.includes('plot')) return 'plot_land';
+    if (t === 'commercial') return 'commercial';
+    return 'buy';
+  };
+
+  const getHeroContent = (tab: string, province: string) => {
+    const key = getTabKey(tab);
+    const content = TAB_COPY[key] || TAB_COPY.buy;
+
+    // Province Injection Logic: "${titleBase} in ${province}"
+    // ONLY if province is selected.
+    const title = province ? `${content.titleBase} in ${province}` : content.titleBase;
+
+    return {
+      title,
+      subtitle: content.subtitleBase,
+    };
+  };
+
+  const trendingFilters = getTrendingFilters(activeHeroTab);
+  const heroContent = getHeroContent(activeHeroTab, selectedProvince);
+
+  // Trending Data Query (Separate from province tabs)
+  const { data: trendingData } = trpc.developer.getPublishedDevelopments.useQuery({
+    ...trendingFilters,
+    province: selectedProvince, // Apply province filter to trending too
+    limit: 10,
+    enableFallback: true, // Enable backend fallback logic
+  });
+
+  // Logging for Observability
+  if (trendingData?.meta) {
+    console.log('Trending Now Debug:', {
+      tab: activeHeroTab,
+      province: selectedProvince,
+      primaryCount: trendingData.meta.primaryCount,
+      usedFallback: trendingData.meta.usedFallback,
+      fallbackLevel: trendingData.meta.fallbackLevel,
+    });
+  }
+
+  const trendingDevelopments = trendingData?.developments || [];
 
   return (
     <div className="min-h-screen bg-background">
       <EnhancedNavbar />
 
-      {/* Modern Hero Section */}
-      <ModernHeroSection />
+      {/* Enhanced Hero Section */}
+      <EnhancedHero activeTab={activeHeroTab} onTabChange={handleTabChange} />
 
-      {/* Featured Properties for Sale */}
-      <PropertyShowcase
-        title="Featured Properties for Sale"
-        subtitle="Hand-picked homes and apartments from trusted agents and agencies"
-        listingType="sale"
-        limit={6}
-      />
+      {/* Trending Now Section */}
+      <section className="py-16 bg-slate-50/50">
+        <div className="container mx-auto px-4">
+          <div className="mb-10">
+            <div className="inline-flex items-center gap-2 bg-orange-50 border border-orange-100 rounded-full px-3 py-1 mb-4">
+              <span className="text-lg">🔥</span>
+              <span className="text-sm font-semibold text-orange-600">Trending Now</span>
+            </div>
+            <h2 className="text-xl md:text-[26px] font-bold text-slate-900 mb-2">
+              {heroContent.title}
+            </h2>
+            <p className="text-slate-600 max-w-2xl text-xs md:text-sm">{heroContent.subtitle}</p>
+          </div>
 
-      {/* Featured Properties for Rent */}
-      <PropertyShowcase
-        title="Featured Properties for Rent"
-        subtitle="Find your perfect rental home from our curated selection"
-        listingType="rent"
-        limit={6}
-      />
+          <div className="flex justify-start mb-10 overflow-x-auto pb-4 scrollbar-hide">
+            <div className="inline-flex flex-nowrap justify-start gap-2 bg-white/80 backdrop-blur-sm p-2 rounded-2xl shadow-lg border border-slate-200/60 h-auto">
+              {provinces.map(province => (
+                <button
+                  key={province}
+                  onClick={() => setSelectedProvince(province)}
+                  className={`
+                    px-5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-300 whitespace-nowrap
+                    ${
+                      selectedProvince === province
+                        ? 'bg-gradient-to-r from-[#2774AE] to-[#2D68C4] text-white shadow-lg scale-105'
+                        : 'text-slate-600 hover:text-[#2774AE] hover:bg-blue-50/50'
+                    }
+                  `}
+                >
+                  {province}
+                </button>
+              ))}
+            </div>
+          </div>
 
-      {/* Location Recommendations */}
-      <LocationRecommendations />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {trendingDevelopments.map(dev => (
+              <SimpleDevelopmentCard
+                key={dev.id}
+                id={dev.id}
+                title={dev.title || dev.name} // Handle potential title mismatch
+                city={dev.city}
+                suburb={dev.suburb}
+                priceRange={{
+                  min: dev.priceFrom,
+                  max: dev.priceTo,
+                }}
+                image={getPrimaryDevelopmentImageUrl(dev.images) || ''}
+                slug={dev.slug}
+                isHotSelling={true}
+                bedrooms={dev.bedrooms}
+              />
+            ))}
+            {trendingDevelopments.length === 0 && (
+              <div className="col-span-full py-12 text-center text-slate-500 bg-white rounded-lg border border-slate-100 border-dashed">
+                No developments found.
+              </div>
+            )}
+          </div>
+        </div>
+      </section>
 
       {/* Property Categories Section (Restored with Location Picker) */}
       <PropertyCategories />
@@ -152,10 +247,10 @@ export default function Home() {
                 Trusted by Thousands
               </span>
             </div>
-            <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-3 md:mb-4 bg-gradient-to-r from-slate-900 via-[#2774AE] to-slate-900 bg-clip-text text-transparent">
+            <h2 className="text-xl md:text-[26px] font-bold text-slate-900 mb-2">
               What Our Clients Say
             </h2>
-            <p className="text-slate-600 text-sm sm:text-base md:text-lg max-w-2xl leading-relaxed">
+            <p className="text-slate-600 text-xs md:text-sm max-w-2xl leading-relaxed">
               Real experiences from people who found their dream homes
             </p>
           </div>

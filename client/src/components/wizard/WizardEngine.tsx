@@ -147,14 +147,16 @@ export function WizardEngine({ onExit, saveStatus, lastSavedAt }: WizardEnginePr
               Back
             </Button>
 
-            <Button
-              onClick={goWorkflowNext}
-              size="lg"
-              className="px-8 h-12 bg-blue-600 hover:bg-blue-700 shadow-sm transition-all"
-            >
-              {currentStepIndex === visibleSteps.length - 1 ? 'Review & Publish' : 'Next'}
-              <ChevronRight className="w-4 h-4 ml-2" />
-            </Button>
+            {currentStepIndex < visibleSteps.length - 1 && (
+              <Button
+                onClick={goWorkflowNext}
+                size="lg"
+                className="px-8 h-12 bg-blue-600 hover:bg-blue-700 shadow-sm transition-all"
+              >
+                Next
+                <ChevronRight className="w-4 h-4 ml-2" />
+              </Button>
+            )}
           </div>
         </div>
       </main>

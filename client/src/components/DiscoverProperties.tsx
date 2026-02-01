@@ -214,10 +214,8 @@ export function DiscoverProperties({
     <div className="py-16 bg-gradient-to-b from-white to-muted/20">
       <div className="container">
         <div className="mb-8">
-          <h2 className="text-fluid-h2 font-bold mb-4 bg-gradient-to-r from-slate-900 via-[#2774AE] to-slate-900 bg-clip-text text-transparent">
-            {displayTitle}
-          </h2>
-          <p className="text-muted-foreground text-base max-w-2xl">{displaySubtitle}</p>
+          <h2 className="text-xl md:text-[26px] font-bold text-slate-900 mb-2">{displayTitle}</h2>
+          <p className="text-muted-foreground text-xs md:text-sm max-w-2xl">{displaySubtitle}</p>
         </div>
 
         {/* City Tabs */}

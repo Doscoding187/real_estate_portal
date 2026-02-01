@@ -29,13 +29,14 @@ export async function applyBrandContext(ctx: TrpcContext): Promise<EnhancedTRPCC
   }
 
   // Check for X-Operating-As-Brand header
+
   const operatingAsHeader = ctx.req?.headers?.['x-operating-as-brand'];
 
   if (!operatingAsHeader) {
     return ctx as EnhancedTRPCContext;
   }
 
-  const brandProfileId = parseInt(operatingAsHeader, 10);
+  const brandProfileId = parseInt(operatingAsHeader as string, 10);
 
   if (isNaN(brandProfileId)) {
     throw new TRPCError({

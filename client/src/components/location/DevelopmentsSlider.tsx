@@ -2,6 +2,7 @@ import { Link } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { ArrowRight, Building2 } from 'lucide-react';
 import { SimpleDevelopmentCard } from '@/components/SimpleDevelopmentCard';
+import { getPrimaryDevelopmentImageUrl } from '@/lib/mediaUtils';
 import {
   Carousel,
   CarouselContent,
@@ -50,26 +51,7 @@ export function DevelopmentsSlider({ developments, locationName }: DevelopmentsS
               {developments.map(dev => {
                 // Handle image parsing safely
                 // Handle image parsing safely
-                let mainImage = '';
-                let imagesArr: any[] = [];
-
-                if (Array.isArray(dev.images)) {
-                  imagesArr = dev.images;
-                } else if (typeof dev.images === 'string') {
-                  try {
-                    imagesArr = JSON.parse(dev.images);
-                    if (!Array.isArray(imagesArr)) imagesArr = [imagesArr];
-                  } catch {
-                    imagesArr = [dev.images];
-                  }
-                }
-
-                if (imagesArr.length > 0) {
-                  const first = imagesArr[0];
-                  if (typeof first === 'string') mainImage = first;
-                  else if (typeof first === 'object' && first !== null && 'url' in first)
-                    mainImage = first.url;
-                }
+                const mainImage = getPrimaryDevelopmentImageUrl(dev.images);
 
                 return (
                   <CarouselItem key={dev.id} className="pl-4 basis-full md:basis-1/2 lg:basis-1/3">
@@ -88,6 +70,7 @@ export function DevelopmentsSlider({ developments, locationName }: DevelopmentsS
                           }
                           isHotSelling={!!dev.isHotSelling}
                           isHighDemand={!!dev.isHighDemand}
+                          bedrooms={dev.bedrooms}
                         />
                       </div>
                     </Link>

@@ -168,7 +168,7 @@ describe('EmptyState', () => {
 
       expect(document.activeElement).toBe(button);
 
-      fireEvent.keyDown(button, { key: 'Enter' });
+      fireEvent.keyDown(button, { key: 'Enter', code: 'Enter', charCode: 13 });
       expect(handleAction).toHaveBeenCalled();
     });
   });

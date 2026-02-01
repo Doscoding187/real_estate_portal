@@ -375,13 +375,57 @@ export const developerRouter = router({
       z.object({
         province: z.string().optional(),
         limit: z.number().optional(),
+        transactionType: z.enum(['for_sale', 'for_rent', 'auction']).optional(),
+        developmentType: z.enum(['residential', 'commercial', 'mixed_use', 'land']).optional(),
+        enableFallback: z.boolean().optional(),
       }),
     )
     .query(async ({ input }) => {
-      return await developmentService.listPublicDevelopments({
+      // Primary Query
+      let results = await developmentService.listPublicDevelopments({
         province: input.province,
         limit: input.limit,
+        transactionType: input.transactionType,
+        developmentType: input.developmentType,
       });
+
+      let usedFallback = false;
+      let fallbackLevel: 'none' | 'province' | 'nationwide' = 'none';
+
+      // Fallback Logic
+      if (input.enableFallback && results.length === 0) {
+        usedFallback = true;
+
+        // Fallback A: Residential For Sale in SAME province
+        if (input.province) {
+          fallbackLevel = 'province';
+          results = await developmentService.listPublicDevelopments({
+            province: input.province,
+            limit: input.limit,
+            transactionType: 'for_sale',
+            developmentType: 'residential',
+          });
+        }
+
+        // Fallback B: Residential For Sale NATIONWIDE (if Fallback A empty or no province)
+        if (results.length === 0) {
+          fallbackLevel = 'nationwide';
+          results = await developmentService.listPublicDevelopments({
+            limit: input.limit,
+            transactionType: 'for_sale',
+            developmentType: 'residential',
+          });
+        }
+      }
+
+      return {
+        developments: results,
+        meta: {
+          usedFallback,
+          fallbackLevel,
+          primaryCount: usedFallback ? 0 : results.length,
+        },
+      };
     }),
 
   getPublicDevelopmentBySlug: publicProcedure
@@ -417,9 +461,36 @@ export const developerRouter = router({
         ctx.user.id,
         input as any,
         {},
-        null, // No emulation context
+        ctx.brandEmulationContext, // Use emulation context if available
       );
       return { development };
+    }),
+
+  deleteDevelopment: protectedProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ ctx, input }) => {
+      const { user } = ctx;
+      // Use operatingAs from applyBrandContext middleware
+      const operatingAs = (ctx as any).operatingAs;
+
+      // Debug: Log context again to confirm router sees what middleware set
+      console.log('[deleteDevelopment Router] Context inspection:', {
+        userId: user.id,
+        userRole: user.role,
+        operatingAs: operatingAs,
+        hasOperatingAs: !!operatingAs,
+      });
+
+      // Build operating context for super admin emulation
+      const operatingContext = operatingAs?.brandProfileId
+        ? { brandProfileId: operatingAs.brandProfileId }
+        : null;
+
+      console.log('[deleteDevelopment Router] Built operatingContext:', operatingContext);
+
+      await developmentService.deleteDevelopment(input.id, user.id, operatingContext);
+
+      return { success: true, deletedId: input.id };
     }),
 
   getDashboardKPIs: protectedProcedure
@@ -556,60 +627,28 @@ export const developerRouter = router({
   publishDevelopment: protectedProcedure
     .input(z.object({ id: z.number() }))
     .mutation(async ({ ctx, input }) => {
-      // Map user ID to developer profile ID using canonical helper
-      const developerProfile = await requireDeveloperProfileByUserId(ctx.user.id);
+      const dbConn = await db.getDb();
+      if (!dbConn)
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database unavailable' });
 
-      const dev = await developmentService.getDevelopmentWithPhases(input.id);
-      if (!dev) throw new TRPCError({ code: 'NOT_FOUND' });
+      // Simplified: Let the service handle super admin vs developer logic
+      const result = await developmentService.publishDevelopment(
+        input.id,
+        ctx.user.id,
+        ctx.brandEmulationContext, // Pass emulation context directly
+      );
 
-      // Compare using developer profile ID
-      if (dev.developerId !== developerProfile.id) {
-        throw new TRPCError({ code: 'FORBIDDEN' });
-      }
-
-      // 1. Strict Validation - DB-backed unit types check
-      const isLand = dev.developmentType === 'land';
-
-      let unitTypeCount = 0;
-
-      if (!isLand) {
-        // ✅ Query DB directly instead of relying on object shape
-        const dbConn = await db.getDb();
-        if (!dbConn)
-          throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database unavailable' });
-
-        const unitTypeCountRes = await dbConn
-          .select({ cnt: sql<number>`count(*)`.as('cnt') })
-          .from(unitTypes)
-          .where(eq(unitTypes.developmentId, input.id));
-
-        unitTypeCount = Number(unitTypeCountRes?.[0]?.cnt ?? 0);
-
-        console.log('[publishDevelopment] id=', input.id);
-        console.log('[publishDevelopment] unitTypeCountRes=', unitTypeCountRes);
-        console.log('[publishDevelopment] unitTypeCount=', unitTypeCount);
-
-        if (unitTypeCount <= 0) {
-          throw new TRPCError({
-            code: 'BAD_REQUEST',
-            message:
-              'No unit types found. Please ensure you have added and saved at least one unit type.',
-          });
-        }
-      }
-
-      // Run remaining validation
-      assertPublishable(dev, unitTypeCount);
-
-      // 2. Publish
-      // Using simple publish for now as confirmed by user preference
-      return await developmentService.publishDevelopment(input.id, ctx.user.id);
+      return result;
     }),
 
-  deleteDevelopment: protectedProcedure
+  unpublishDevelopment: protectedProcedure
     .input(z.object({ id: z.number() }))
     .mutation(async ({ ctx, input }) => {
-      const profile = await requireDeveloperProfileByUserId(ctx.user.id);
-      return await developmentService.deleteDevelopment(input.id, profile.id);
+      const dbConn = await db.getDb();
+      if (!dbConn)
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database unavailable' });
+
+      const result = await developmentService.unpublishDevelopment(input.id, ctx.user.id);
+      return result;
     }),
 });

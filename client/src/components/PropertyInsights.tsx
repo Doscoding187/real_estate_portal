@@ -212,10 +212,10 @@ export function PropertyInsights({
         <div className="w-full space-y-8">
           {/* Header */}
           <div>
-            <h2 className="text-3xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
+            <h2 className="text-xl md:text-[26px] font-bold text-slate-900 mb-2">
               Property Price Insights in {effectiveLevel === 'national' ? 'South Africa' : 'Market'}
             </h2>
-            <p className="text-slate-500 mt-2 max-w-3xl leading-relaxed">
+            <p className="text-slate-500 mt-2 max-w-3xl leading-relaxed text-xs md:text-sm">
               Get accurate property price insights with city-wise trends, median rates, and
               micro-market comparisons. Make smarter investment choices backed by real-time data.
             </p>

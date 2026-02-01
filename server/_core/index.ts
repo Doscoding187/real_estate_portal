@@ -101,7 +101,7 @@ async function startServer() {
       },
       credentials: true,
       methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-      allowedHeaders: ['Content-Type', 'Authorization', 'trpc-batch-mode'],
+      allowedHeaders: ['Content-Type', 'Authorization', 'trpc-batch-mode', 'x-operating-as-brand'],
       exposedHeaders: ['Set-Cookie'],
       maxAge: 86400, // 24 hours
     }),

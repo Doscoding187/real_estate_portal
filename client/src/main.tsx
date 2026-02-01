@@ -8,7 +8,6 @@ import { createRoot } from 'react-dom/client';
 import { HelmetProvider } from 'react-helmet-async';
 import superjson from 'superjson';
 import { validateEnvironmentConfig } from './lib/env'; // Runtime guard
-import { createBrandEmulationLink } from './lib/brandEmulation/brandEmulationClient';
 import { trpcDebugLink } from './lib/trpcDebugLink';
 import App from './App';
 import { AuthProvider } from './contexts/AuthContext';
@@ -55,13 +54,15 @@ queryClient.getMutationCache().subscribe(event => {
   }
 });
 
-
 // Build marker to confirm which code is running in production
 console.log('[BUILD_MARKER] main.tsx 2026-01-31 B (Reverted AuthProvider)');
 console.log(`[ENV] Mode=${import.meta.env.MODE}, Prod=${import.meta.env.PROD}`);
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || '';
-const TRPC_URL = new URL('/api/trpc', API_BASE_URL.endsWith('/') ? API_BASE_URL : API_BASE_URL + '/')
+const TRPC_URL = new URL(
+  '/api/trpc',
+  API_BASE_URL.endsWith('/') ? API_BASE_URL : API_BASE_URL + '/',
+)
   .toString()
   .replace(/\/api\/api\//, '/api/');
 
@@ -71,11 +72,32 @@ const links = [
   // Debug link to log tRPC paths
   trpcDebugLink(),
   // Brand emulation link to inject X-Brand-Emulation headers when in emulator mode
-  createBrandEmulationLink(),
   httpBatchLink({
     url: TRPC_URL,
-
     transformer: superjson,
+    // Fix: Inject headers here to ensure they survive tRPC batching
+    headers: () => {
+      const headers: Record<string, string> = {};
+
+      try {
+        // Get brand context from localStorage directly
+        // We can't easily reuse the service here as it's outside React context
+        const storedContext = localStorage.getItem('publisher-context');
+        if (storedContext) {
+          const publisherContext = JSON.parse(storedContext);
+          // Zustand persistence wraps state in 'state' property
+          const brandId = publisherContext.state?.context?.brandProfileId;
+
+          if (brandId) {
+            headers['x-operating-as-brand'] = String(brandId);
+          }
+        }
+      } catch {
+        // Silent failure for emulation headers
+      }
+
+      return headers;
+    },
     async fetch(input, init) {
       // Execute fetch with credentials
       const res = await globalThis.fetch(input, {

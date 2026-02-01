@@ -60,17 +60,24 @@ beforeEach(() => {
 
 describe('Device Type Detection', () => {
   it('should detect mobile devices', () => {
-    mockWindow.innerWidth = 500;
+    Object.defineProperty(window, 'innerWidth', { writable: true, configurable: true, value: 500 });
+    window.dispatchEvent(new Event('resize'));
     expect(getDeviceType()).toBe('mobile');
   });
 
   it('should detect tablet devices', () => {
-    mockWindow.innerWidth = 800;
+    Object.defineProperty(window, 'innerWidth', { writable: true, configurable: true, value: 800 });
+    window.dispatchEvent(new Event('resize'));
     expect(getDeviceType()).toBe('tablet');
   });
 
   it('should detect desktop devices', () => {
-    mockWindow.innerWidth = 1440;
+    Object.defineProperty(window, 'innerWidth', {
+      writable: true,
+      configurable: true,
+      value: 1440,
+    });
+    window.dispatchEvent(new Event('resize'));
     expect(getDeviceType()).toBe('desktop');
   });
 });
@@ -113,7 +120,7 @@ describe('Referrer Tracking', () => {
   });
 
   it('should return undefined when no referrer', () => {
-    mockDocument.referrer = '';
+    Object.defineProperty(document, 'referrer', { writable: true, configurable: true, value: '' });
     expect(getReferrer()).toBeUndefined();
   });
 });

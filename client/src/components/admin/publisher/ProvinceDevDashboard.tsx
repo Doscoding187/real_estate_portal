@@ -5,8 +5,10 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { trpc } from '@/lib/trpc';
 import { useLocation } from 'wouter';
-import { Building2, MapPin, Loader2, ExternalLink, Users } from 'lucide-react';
+import { Building2, MapPin, Loader2, ExternalLink, Users, Plus } from 'lucide-react';
 import { useDeveloperContext } from '@/contexts/DeveloperContextProvider';
+import { CreateBrandProfileDialog } from '@/components/admin/publisher/CreateBrandProfileDialog';
+import { cn } from '@/lib/utils';
 
 // South African Provinces
 const SA_PROVINCES = [
@@ -71,19 +73,21 @@ const BrandProfileCard: React.FC<{ brand: BrandProfile }> = ({ brand }) => {
 
   return (
     <Card className="group hover:shadow-lg transition-all duration-200 border-muted hover:border-primary/20 overflow-hidden">
-      <CardContent className="p-4 space-y-3">
-        <div className="flex items-start gap-3">
+      <CardContent className="p-5 space-y-4">
+        <div className="flex items-start gap-4">
           {brand.logoUrl ? (
-            <img
-              src={brand.logoUrl}
-              alt={brand.brandName}
-              className="w-12 h-12 rounded-lg object-cover border"
-              onError={e => {
-                (e.target as HTMLImageElement).style.display = 'none';
-              }}
-            />
+            <div className="w-14 h-14 rounded-lg border bg-white flex items-center justify-center overflow-hidden shrink-0">
+              <img
+                src={brand.logoUrl}
+                alt={brand.brandName}
+                className="w-full h-full object-contain p-1"
+                onError={e => {
+                  (e.target as HTMLImageElement).parentElement!.style.display = 'none';
+                }}
+              />
+            </div>
           ) : (
-            <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center text-xl">
+            <div className="w-14 h-14 rounded-lg bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center text-2xl shrink-0 border border-primary/10">
               {getIdentityIcon(brand.identityType)}
             </div>
           )}
@@ -125,6 +129,7 @@ const BrandProfileCard: React.FC<{ brand: BrandProfile }> = ({ brand }) => {
 
 export const ProvinceDevDashboard: React.FC = () => {
   const [activeProvince, setActiveProvince] = useState('Gauteng');
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
 
   // Fetch all brand profiles
   const { data: brandProfiles, isLoading } = trpc.superAdminPublisher.listBrandProfiles.useQuery(
@@ -190,7 +195,14 @@ export const ProvinceDevDashboard: React.FC = () => {
             {totalBrands} brand profiles across South Africa
           </p>
         </div>
+        <Button size="sm" className="gap-2" onClick={() => setIsCreateDialogOpen(true)}>
+          <Plus className="w-4 h-4" />
+          <span className="hidden sm:inline">New Brand Profile</span>
+          <span className="sm:hidden">New</span>
+        </Button>
       </div>
+
+      <CreateBrandProfileDialog open={isCreateDialogOpen} setOpen={setIsCreateDialogOpen} />
 
       {isLoading ? (
         <div className="flex items-center justify-center py-12">
@@ -198,12 +210,15 @@ export const ProvinceDevDashboard: React.FC = () => {
         </div>
       ) : (
         <Tabs value={activeProvince} onValueChange={setActiveProvince} className="w-full">
-          <TabsList className="flex flex-wrap h-auto gap-1 bg-muted/30 p-1.5 rounded-lg">
+          <TabsList className="flex flex-wrap h-auto gap-2 bg-transparent p-0">
             {SA_PROVINCES.map(province => (
               <TabsTrigger
                 key={province}
                 value={province}
-                className="text-xs px-3 py-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm"
+                className={cn(
+                  'flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold transition-all duration-300 border border-slate-200 bg-white hover:bg-slate-50 hover:border-blue-300 hover:text-blue-600',
+                  'data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:border-blue-600 data-[state=active]:shadow-md data-[state=active]:hover:text-white',
+                )}
               >
                 {province
                   .replace('KwaZulu-Natal', 'KZN')
@@ -211,7 +226,14 @@ export const ProvinceDevDashboard: React.FC = () => {
                   .replace('Eastern Cape', 'E. Cape')
                   .replace('Northern Cape', 'N. Cape')
                   .replace('North West', 'N. West')}
-                <span className="ml-1.5 text-[10px] opacity-60">({provinceCounts[province]})</span>
+                <span
+                  className={cn(
+                    'ml-1.5 text-[10px]',
+                    activeProvince === province ? 'text-blue-100' : 'text-muted-foreground',
+                  )}
+                >
+                  ({provinceCounts[province]})
+                </span>
               </TabsTrigger>
             ))}
           </TabsList>
@@ -219,7 +241,7 @@ export const ProvinceDevDashboard: React.FC = () => {
           {SA_PROVINCES.map(province => (
             <TabsContent key={province} value={province} className="mt-4">
               {groupedByProvince[province]?.length > 0 ? (
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                   {groupedByProvince[province].map(brand => (
                     <BrandProfileCard key={brand.id} brand={brand} />
                   ))}

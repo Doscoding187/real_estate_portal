@@ -117,58 +117,51 @@ const PublisherContent: React.FC = () => {
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         {/* Enhanced Tab Navigation */}
         <div className="flex items-center justify-between mb-8">
-          <TabsList className="relative bg-white/80 backdrop-blur-md p-1.5 h-14 rounded-xl border border-gray-200/50 shadow-lg overflow-hidden">
+          <TabsList className="relative bg-white/90 backdrop-blur-md p-1.5 h-auto rounded-full border border-slate-200 shadow-sm inline-flex">
             <TabsTrigger
               value="developments"
               className={cn(
-                'relative h-11 px-6 gap-2.5 transition-all duration-300 rounded-lg',
-                'data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-purple-500 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:scale-105',
-                'data-[state=inactive]:text-gray-600 hover:text-blue-600 hover:bg-gray-50',
-                'font-semibold text-sm',
+                'flex items-center gap-2 px-6 py-2.5 rounded-full text-sm font-semibold transition-all duration-300',
+                'data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-md',
+                'data-[state=inactive]:text-slate-600 hover:text-blue-600 hover:bg-slate-50',
               )}
             >
               <Building2 className="w-4 h-4" />
               <span>Developments</span>
-              {activeTab === 'developments' && (
-                <div className="absolute -top-1 -right-1 w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-              )}
             </TabsTrigger>
 
             <TabsTrigger
               value="leads"
               className={cn(
-                'relative h-11 px-6 gap-2.5 transition-all duration-300 rounded-lg',
-                'data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-purple-500 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:scale-105',
-                'data-[state=inactive]:text-gray-600 hover:text-blue-600 hover:bg-gray-50',
-                'font-semibold text-sm',
+                'flex items-center gap-2 px-6 py-2.5 rounded-full text-sm font-semibold transition-all duration-300',
+                'data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-md',
+                'data-[state=inactive]:text-slate-600 hover:text-blue-600 hover:bg-slate-50',
               )}
             >
               <Users className="w-4 h-4" />
               <span>Leads</span>
               {leads && leads.length > 0 && (
-                <Badge className="ml-1 h-5 px-1.5 text-[10px] bg-gradient-to-r from-red-500 to-pink-500 border-0 text-white animate-bounce">
+                <Badge
+                  className={cn(
+                    'ml-1 h-5 px-1.5 text-[10px] border-0',
+                    activeTab === 'leads' ? 'bg-white text-blue-600' : 'bg-blue-100 text-blue-700',
+                  )}
+                >
                   {leads.length}
                 </Badge>
-              )}
-              {activeTab === 'leads' && (
-                <div className="absolute -top-1 -right-1 w-2 h-2 bg-green-400 rounded-full animate-pulse" />
               )}
             </TabsTrigger>
 
             <TabsTrigger
               value="metrics"
               className={cn(
-                'relative h-11 px-6 gap-2.5 transition-all duration-300 rounded-lg',
-                'data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-purple-500 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:scale-105',
-                'data-[state=inactive]:text-gray-600 hover:text-blue-600 hover:bg-gray-50',
-                'font-semibold text-sm',
+                'flex items-center gap-2 px-6 py-2.5 rounded-full text-sm font-semibold transition-all duration-300',
+                'data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-md',
+                'data-[state=inactive]:text-slate-600 hover:text-blue-600 hover:bg-slate-50',
               )}
             >
               <BarChart3 className="w-4 h-4" />
               <span>Metrics</span>
-              {activeTab === 'metrics' && (
-                <div className="absolute -top-1 -right-1 w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-              )}
             </TabsTrigger>
           </TabsList>
 
@@ -235,33 +228,23 @@ export const SuperAdminPublisher: React.FC = () => {
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/20">
         <div className="container mx-auto py-8 max-w-7xl">
           {/* Enhanced Header with Gradient Background */}
-          <div className="relative mb-8 rounded-2xl overflow-hidden shadow-2xl transform transition-all duration-500 hover:scale-[1.01]">
-            {/* Animated Gradient Background */}
-            <div className="absolute inset-0 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 opacity-95 animate-pulse" />
-            <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSAxMCAwIEwgMCAwIDAgMTAiIGZpbGw9Im5vbmUiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS1vcGFjaXR5PSIwLjEiIHN0cm9rZS13aWR0aD0iMSIvPjwvcGF0dGVybj48L2RlZnM+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0idXJsKCNncmlkKSIvPjwvc3ZnPg==')] opacity-20" />
-
-            {/* Floating Orb Effects */}
-            <div
-              className="absolute top-10 left-20 w-32 h-32 bg-white/10 rounded-full blur-2xl animate-bounce"
-              style={{ animationDelay: '0s', animationDuration: '3s' }}
-            />
-            <div
-              className="absolute bottom-10 right-20 w-40 h-40 bg-blue-400/10 rounded-full blur-3xl animate-bounce"
-              style={{ animationDelay: '1.5s', animationDuration: '4s' }}
-            />
+          <div className="relative mb-8 rounded-2xl overflow-hidden shadow-xl bg-white border border-slate-200">
+            {/* Clean Background */}
+            <div className="absolute inset-0 bg-slate-50 opacity-50" />
+            <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSAxMCAwIEwgMCAwIDAgMTAiIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzAyMDYxNyIgc3Ryb2tlLW9wYWNpdHk9IjAuMDUiIHN0cm9rZS13aWR0aD0iMSIvPjwvcGF0dGVybj48L2RlZnM+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0idXJsKCNncmlQikiLz48L3N2Zz4=')] opacity-30 mix-blend-multiply"></div>
 
             {/* Content */}
             <div className="relative z-10 p-8">
               <div className="flex items-start justify-between mb-6">
                 <div className="max-w-4xl">
-                  <h1 className="text-4xl font-bold tracking-tight text-white mb-3 flex items-center gap-3 animate-fade-in">
+                  <h1 className="text-3xl font-bold tracking-tight text-slate-900 mb-3 flex items-center gap-3">
                     Developer Publisher
-                    <span className="inline-flex items-center gap-1.5 text-xs bg-white/20 backdrop-blur-sm text-white px-3 py-1.5 rounded-full font-semibold uppercase tracking-wide border border-white/30 shadow-lg animate-pulse hover:bg-white/30 transition-colors cursor-pointer">
+                    <span className="inline-flex items-center gap-1.5 text-xs bg-blue-100 text-blue-700 px-3 py-1.5 rounded-full font-semibold uppercase tracking-wide border border-blue-200">
                       <Sparkles className="w-3 h-3" />
                       Super Admin
                     </span>
                   </h1>
-                  <p className="text-blue-100 max-w-3xl text-lg leading-relaxed animate-slide-in">
+                  <p className="text-slate-600 max-w-3xl text-lg leading-relaxed">
                     Browse and edit all developments by province, or select a brand profile to
                     emulate developer workflows.
                   </p>
@@ -269,13 +252,15 @@ export const SuperAdminPublisher: React.FC = () => {
 
                 {/* Quick Actions */}
                 <div className="hidden lg:flex flex-col gap-2">
-                  <div className="glass-effect-light p-3 rounded-xl border border-white/20">
-                    <div className="text-xs text-white/70 mb-1">Total Brands</div>
-                    <div className="text-2xl font-bold text-white">{allBrands?.length || 0}</div>
+                  <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
+                    <div className="text-xs text-slate-500 mb-1">Total Brands</div>
+                    <div className="text-2xl font-bold text-slate-900">
+                      {allBrands?.length || 0}
+                    </div>
                   </div>
-                  <div className="glass-effect-light p-3 rounded-xl border border-white/20">
-                    <div className="text-xs text-white/70 mb-1">Active Developments</div>
-                    <div className="text-2xl font-bold text-white">
+                  <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
+                    <div className="text-xs text-slate-500 mb-1">Active Developments</div>
+                    <div className="text-2xl font-bold text-slate-900">
                       {globalMetrics?.totalDevelopments || 0}
                     </div>
                   </div>
@@ -284,7 +269,7 @@ export const SuperAdminPublisher: React.FC = () => {
 
               {/* Enhanced Quick Stats Bar */}
               {globalMetrics && (
-                <div className="animate-slide-up">
+                <div className="">
                   <QuickStatsBar
                     totalBrands={allBrands?.length || 0}
                     totalDevelopments={globalMetrics.totalDevelopments || 0}

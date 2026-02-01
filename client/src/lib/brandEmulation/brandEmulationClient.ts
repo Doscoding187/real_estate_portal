@@ -31,7 +31,8 @@ class BrandEmulationClientService {
       if (!storedContext) return false;
 
       const publisherContext = JSON.parse(storedContext);
-      return publisherContext.context?.mode === 'seeding';
+      // Zustand persist wraps state in 'state' property
+      return publisherContext.state?.context?.mode === 'seeding';
     } catch {
       return false;
     }
@@ -46,8 +47,8 @@ class BrandEmulationClientService {
       if (!storedContext) return null;
 
       const publisherContext = JSON.parse(storedContext);
-      if (publisherContext.context?.mode === 'seeding') {
-        return publisherContext.context.brandProfileId || null;
+      if (publisherContext.state?.context?.mode === 'seeding') {
+        return publisherContext.state.context.brandProfileId || null;
       }
       return null;
     } catch {
@@ -64,10 +65,10 @@ class BrandEmulationClientService {
       if (!storedContext) return null;
 
       const publisherContext = JSON.parse(storedContext);
-      if (publisherContext.context?.mode === 'seeding') {
+      if (publisherContext.state?.context?.mode === 'seeding') {
         return {
-          brandProfileId: publisherContext.context.brandProfileId,
-          brandProfileName: publisherContext.context.brandProfileName,
+          brandProfileId: publisherContext.state.context.brandProfileId,
+          brandProfileName: publisherContext.state.context.brandProfileName,
         };
       }
       return null;
@@ -95,11 +96,16 @@ export function createBrandEmulationLink(): TRPCLink<AppRouter> {
     return ({ op, next }: { op: any; next: any }) => {
       // Get brand ID if emulation is active
       const brandId = brandEmulationClientService.getCurrentBrandId();
+
       if (brandId) {
-        op.context.headers = {
-          ...op.context.headers,
-          'x-operating-as-brand': String(brandId),
+        op.context = {
+          ...op.context,
+          headers: {
+            ...(op.context.headers || {}),
+            'x-operating-as-brand': String(brandId),
+          },
         };
+        console.log('[brandEmulationLink] Added header x-operating-as-brand:', brandId);
       }
 
       return next(op);

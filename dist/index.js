@@ -3453,6 +3453,44 @@ import { drizzle } from "drizzle-orm/mysql2";
 import mysql from "mysql2/promise";
 async function getDb() {
   if (_db) return _db;
+  if (process.env.NODE_ENV === "test") {
+    const mockTable = {
+      findFirst: async () => null,
+      findMany: async () => [],
+      delete: async () => [],
+      update: async () => [],
+      insert: async () => []
+    };
+    const createQueryProxy = () => new Proxy(
+      {},
+      {
+        get: (target, prop) => {
+          if (prop === "developers") {
+            return {
+              ...mockTable,
+              findFirst: async () => ({
+                id: 1,
+                userId: "user_123",
+                status: "approved",
+                name: "Test Dev"
+              })
+            };
+          }
+          return mockTable;
+        }
+      }
+    );
+    const mockDb = {
+      query: createQueryProxy(),
+      select: () => ({ from: () => ({ where: () => [], limit: () => [], orderBy: () => [] }) }),
+      insert: () => ({ values: () => ({ returning: () => [] }) }),
+      update: () => ({ set: () => ({ where: () => ({ returning: () => [] }) }) }),
+      delete: () => ({ where: () => ({ returning: () => [] }) }),
+      transaction: (cb) => cb(mockDb)
+      // Reuse same mock for translation
+    };
+    return mockDb;
+  }
   if (!process.env.DATABASE_URL) {
     throw new Error(
       "DATABASE_URL is missing. Set it in .env.local (dev) or .env.production (prod)."
@@ -6418,141 +6456,6 @@ var init_auth = __esm({
   }
 });
 
-// server/services/developerService.ts
-import { eq as eq5 } from "drizzle-orm";
-async function getDeveloperByUserId2(userId) {
-  const db3 = await getDb();
-  if (!db3) return null;
-  const results = await db3.select().from(developers).where(eq5(developers.userId, userId)).limit(1);
-  const devRow = results[0];
-  if (!devRow) return null;
-  let brandProfile = null;
-  if (devRow.developerBrandProfileId) {
-    const brandResults = await db3.select().from(developerBrandProfiles).where(eq5(developerBrandProfiles.id, devRow.developerBrandProfileId)).limit(1);
-    if (brandResults.length > 0) {
-      brandProfile = brandResults[0];
-    }
-  } else {
-    const brandResults = await db3.select().from(developerBrandProfiles).where(eq5(developerBrandProfiles.linkedDeveloperAccountId, devRow.id)).limit(1);
-    if (brandResults.length > 0) {
-      brandProfile = brandResults[0];
-    }
-  }
-  return {
-    ...devRow,
-    brandProfile
-  };
-}
-async function requireDeveloperProfileByUserId(userId) {
-  const profile = await getDeveloperByUserId2(userId);
-  if (!profile) {
-    throw new Error("Developer profile not found for this user");
-  }
-  return profile;
-}
-var init_developerService = __esm({
-  "server/services/developerService.ts"() {
-    "use strict";
-    init_db_connection();
-    init_schema();
-  }
-});
-
-// server/_core/identityResolver.ts
-var identityResolver_exports = {};
-__export(identityResolver_exports, {
-  getOwnershipFields: () => getOwnershipFields,
-  isEmulatorMode: () => isEmulatorMode,
-  isRealDeveloperMode: () => isRealDeveloperMode,
-  resolveOperatingIdentity: () => resolveOperatingIdentity,
-  validateOwnership: () => validateOwnership
-});
-import { TRPCError as TRPCError5 } from "@trpc/server";
-async function resolveOperatingIdentity(ctx) {
-  if (!ctx.user) {
-    throw new TRPCError5({ code: "UNAUTHORIZED", message: "Not authenticated" });
-  }
-  if (ctx.user.role === "super_admin" && ctx.operatingAs) {
-    return {
-      mode: "emulator",
-      brandProfileId: ctx.operatingAs.brandProfileId,
-      identityType: ctx.operatingAs.brandType,
-      superAdminUserId: ctx.user.id
-    };
-  }
-  if (ctx.user.role === "property_developer") {
-    const profile = await getDeveloperByUserId2(ctx.user.id);
-    if (!profile) {
-      throw new TRPCError5({
-        code: "FORBIDDEN",
-        message: "Developer profile not found. Please complete onboarding."
-      });
-    }
-    return {
-      mode: "real_developer",
-      developerId: profile.id,
-      brandProfileId: profile.brandProfileId || null,
-      userId: ctx.user.id
-    };
-  }
-  if (ctx.user.role === "agency_admin") {
-    return {
-      mode: "real_agency",
-      agencyId: 0,
-      // Will be replaced with actual lookup
-      userId: ctx.user.id
-    };
-  }
-  throw new TRPCError5({
-    code: "FORBIDDEN",
-    message: "Invalid role for content creation"
-  });
-}
-function validateOwnership(fields) {
-  const paths = [fields.brandProfileId, fields.developerId, fields.agencyId].filter(
-    (v) => v !== null && v !== void 0
-  );
-  if (paths.length === 0) {
-    throw new Error("At least one ownership field must be set");
-  }
-  if (paths.length > 1) {
-    throw new Error("Only one ownership path allowed (brand OR developer OR agency)");
-  }
-}
-function getOwnershipFields(identity) {
-  if (identity.mode === "emulator") {
-    return {
-      developerBrandProfileId: identity.brandProfileId,
-      developerId: null,
-      devOwnerType: "platform"
-    };
-  }
-  if (identity.mode === "real_developer") {
-    return {
-      developerBrandProfileId: identity.brandProfileId,
-      developerId: identity.developerId,
-      devOwnerType: "developer"
-    };
-  }
-  return {
-    developerBrandProfileId: null,
-    developerId: null,
-    devOwnerType: "platform"
-  };
-}
-function isEmulatorMode(identity) {
-  return identity.mode === "emulator";
-}
-function isRealDeveloperMode(identity) {
-  return identity.mode === "real_developer";
-}
-var init_identityResolver = __esm({
-  "server/_core/identityResolver.ts"() {
-    "use strict";
-    init_developerService();
-  }
-});
-
 // server/lib/redis.ts
 import { createClient } from "redis";
 var CacheTTL, RedisCache, redisCache;
@@ -7924,7 +7827,7 @@ __export(locationPagesServiceEnhanced_exports, {
   generateSlug: () => generateSlug3,
   locationPagesServiceEnhanced: () => locationPagesServiceEnhanced
 });
-import { eq as eq19, and as and18 } from "drizzle-orm";
+import { eq as eq18, and as and18 } from "drizzle-orm";
 function generateSlug3(name) {
   return name.toLowerCase().trim().replace(/[\s_]+/g, "-").replace(/[^a-z0-9-]/g, "").replace(/-+/g, "-").replace(/^-+|-+$/g, "");
 }
@@ -7981,7 +7884,7 @@ var init_locationPagesServiceEnhanced = __esm({
       async findOrCreateLocation(input) {
         const db3 = await getDb();
         if (input.placeId) {
-          const [existing] = await db3.select().from(locations).where(eq19(locations.placeId, input.placeId)).limit(1);
+          const [existing] = await db3.select().from(locations).where(eq18(locations.placeId, input.placeId)).limit(1);
           if (existing) {
             console.log(
               `[LocationPagesEnhanced] Found existing location by Place ID: ${existing.name}`
@@ -7991,7 +7894,7 @@ var init_locationPagesServiceEnhanced = __esm({
         }
         const slug = generateSlug3(input.name);
         const existingBySlug = await db3.select().from(locations).where(
-          input.parentId ? and18(eq19(locations.slug, slug), eq19(locations.parentId, input.parentId)) : eq19(locations.slug, slug)
+          input.parentId ? and18(eq18(locations.slug, slug), eq18(locations.parentId, input.parentId)) : eq18(locations.slug, slug)
         ).limit(1);
         if (existingBySlug.length > 0) {
           console.log(
@@ -8018,7 +7921,7 @@ var init_locationPagesServiceEnhanced = __esm({
           heroImage: input.heroImage || seoContent.heroImage || null,
           propertyCount: 0
         }).$returningId();
-        const [created] = await db3.select().from(locations).where(eq19(locations.id, newLocation.id)).limit(1);
+        const [created] = await db3.select().from(locations).where(eq18(locations.id, newLocation.id)).limit(1);
         console.log(`[LocationPagesEnhanced] Created new location: ${created.name} (${created.type})`);
         return created;
       },
@@ -8089,14 +7992,14 @@ var init_locationPagesServiceEnhanced = __esm({
        */
       async syncLegacyTables(locationId) {
         const db3 = await getDb();
-        const [location] = await db3.select().from(locations).where(eq19(locations.id, locationId)).limit(1);
+        const [location] = await db3.select().from(locations).where(eq18(locations.id, locationId)).limit(1);
         if (!location) {
           console.warn(`[LocationPagesEnhanced] Location ${locationId} not found for sync`);
           return;
         }
         switch (location.type) {
           case "province":
-            const [existingProvince] = await db3.select().from(provinces).where(eq19(provinces.name, location.name)).limit(1);
+            const [existingProvince] = await db3.select().from(provinces).where(eq18(provinces.name, location.name)).limit(1);
             if (!existingProvince) {
               await db3.insert(provinces).values({
                 name: location.name,
@@ -8110,11 +8013,11 @@ var init_locationPagesServiceEnhanced = __esm({
             break;
           case "city":
             if (location.parentId) {
-              const [parentLocation] = await db3.select().from(locations).where(eq19(locations.id, location.parentId)).limit(1);
+              const [parentLocation] = await db3.select().from(locations).where(eq18(locations.id, location.parentId)).limit(1);
               if (parentLocation) {
-                const [province2] = await db3.select().from(provinces).where(eq19(provinces.name, parentLocation.name)).limit(1);
+                const [province2] = await db3.select().from(provinces).where(eq18(provinces.name, parentLocation.name)).limit(1);
                 if (province2) {
-                  const [existingCity] = await db3.select().from(cities).where(and18(eq19(cities.name, location.name), eq19(cities.provinceId, province2.id))).limit(1);
+                  const [existingCity] = await db3.select().from(cities).where(and18(eq18(cities.name, location.name), eq18(cities.provinceId, province2.id))).limit(1);
                   if (!existingCity) {
                     await db3.insert(cities).values({
                       name: location.name,
@@ -8135,11 +8038,11 @@ var init_locationPagesServiceEnhanced = __esm({
             break;
           case "suburb":
             if (location.parentId) {
-              const [parentLocation] = await db3.select().from(locations).where(eq19(locations.id, location.parentId)).limit(1);
+              const [parentLocation] = await db3.select().from(locations).where(eq18(locations.id, location.parentId)).limit(1);
               if (parentLocation) {
-                const [city] = await db3.select().from(cities).where(eq19(cities.name, parentLocation.name)).limit(1);
+                const [city] = await db3.select().from(cities).where(eq18(cities.name, parentLocation.name)).limit(1);
                 if (city) {
-                  const [existingSuburb] = await db3.select().from(suburbs).where(and18(eq19(suburbs.name, location.name), eq19(suburbs.cityId, city.id))).limit(1);
+                  const [existingSuburb] = await db3.select().from(suburbs).where(and18(eq18(suburbs.name, location.name), eq18(suburbs.cityId, city.id))).limit(1);
                   if (!existingSuburb) {
                     await db3.insert(suburbs).values({
                       name: location.name,
@@ -8171,14 +8074,14 @@ var init_locationPagesServiceEnhanced = __esm({
       async getLocationByPath(province2, city, suburb) {
         const db3 = await getDb();
         if (suburb) {
-          const [location2] = await db3.select().from(locations).where(and18(eq19(locations.slug, suburb), eq19(locations.type, "suburb"))).limit(1);
+          const [location2] = await db3.select().from(locations).where(and18(eq18(locations.slug, suburb), eq18(locations.type, "suburb"))).limit(1);
           return location2 || null;
         }
         if (city) {
-          const [location2] = await db3.select().from(locations).where(and18(eq19(locations.slug, city), eq19(locations.type, "city"))).limit(1);
+          const [location2] = await db3.select().from(locations).where(and18(eq18(locations.slug, city), eq18(locations.type, "city"))).limit(1);
           return location2 || null;
         }
-        const [location] = await db3.select().from(locations).where(and18(eq19(locations.slug, province2), eq19(locations.type, "province"))).limit(1);
+        const [location] = await db3.select().from(locations).where(and18(eq18(locations.slug, province2), eq18(locations.type, "province"))).limit(1);
         return location || null;
       },
       /**
@@ -8507,13 +8410,13 @@ __export(revenueCenterSync_exports, {
   recordSubscriptionTransaction: () => recordSubscriptionTransaction,
   updateFailedPaymentRetry: () => updateFailedPaymentRetry
 });
-import { eq as eq23, and as and20 } from "drizzle-orm";
+import { eq as eq22, and as and20 } from "drizzle-orm";
 async function recordTransaction(data) {
   const db3 = await getDb();
   if (!db3) throw new Error("Database not available");
   try {
     const existingConditions = [
-      eq23(subscriptionTransactions.subscriptionId, data.referenceId)
+      eq22(subscriptionTransactions.subscriptionId, data.referenceId)
       // We reuse subscriptionId column for reference ID for now, or we should have a generic referenceId
       // Note: The schema currently has specific columns. We will map 'campaign' source to metadata or add columns if needed.
       // For this implementation, we will assume subscriptionTransactions table is the central revenue table.
@@ -8524,8 +8427,8 @@ async function recordTransaction(data) {
     if (data.source === "subscription") {
       const existing = await db3.query.subscriptionTransactions.findFirst({
         where: and20(
-          eq23(subscriptionTransactions.subscriptionId, data.referenceId),
-          data.stripePaymentIntentId ? eq23(subscriptionTransactions.stripePaymentIntentId, data.stripePaymentIntentId) : void 0
+          eq22(subscriptionTransactions.subscriptionId, data.referenceId),
+          data.stripePaymentIntentId ? eq22(subscriptionTransactions.stripePaymentIntentId, data.stripePaymentIntentId) : void 0
           // For manual payments without stripe ID, we might risk duplicates if we don't have a unique ID.
           // We'll rely on the caller to provide a unique reference if possible, or just time-based check?
           // For now, let's trust the stripe ID or unique invoice ID in metadata.
@@ -8628,7 +8531,7 @@ async function updateFailedPaymentRetry(failedPaymentId, success) {
   const db3 = await getDb();
   if (!db3) throw new Error("Database not available");
   try {
-    const [failedPayment] = await db3.select().from(failedPayments).where(eq23(failedPayments.id, failedPaymentId)).limit(1);
+    const [failedPayment] = await db3.select().from(failedPayments).where(eq22(failedPayments.id, failedPaymentId)).limit(1);
     if (!failedPayment) {
       throw new Error(`Failed payment ${failedPaymentId} not found`);
     }
@@ -8636,7 +8539,7 @@ async function updateFailedPaymentRetry(failedPaymentId, success) {
       await db3.update(failedPayments).set({
         status: "resolved",
         resolvedAt: (/* @__PURE__ */ new Date()).toISOString().slice(0, 19).replace("T", " ")
-      }).where(eq23(failedPayments.id, failedPaymentId));
+      }).where(eq22(failedPayments.id, failedPaymentId));
     } else {
       const newRetryCount = failedPayment.retryCount + 1;
       const status = newRetryCount >= failedPayment.maxRetries ? "abandoned" : "pending_retry";
@@ -8647,7 +8550,7 @@ async function updateFailedPaymentRetry(failedPaymentId, success) {
         churnRisk,
         lastRetryAt: (/* @__PURE__ */ new Date()).toISOString().slice(0, 19).replace("T", " "),
         nextRetryAt: status === "pending_retry" ? new Date(Date.now() + 48 * 60 * 60 * 1e3).toISOString().slice(0, 19).replace("T", " ") : null
-      }).where(eq23(failedPayments.id, failedPaymentId));
+      }).where(eq22(failedPayments.id, failedPaymentId));
     }
     console.log(
       `[Revenue Center] Updated failed payment ${failedPaymentId} retry status: ${success ? "resolved" : "retry failed"}`
@@ -8663,7 +8566,7 @@ async function backfillRevenueCenter() {
   try {
     let syncedCount = 0;
     let totalItems = 0;
-    const allInvoices = await db3.select().from(invoices).where(eq23(invoices.status, "paid"));
+    const allInvoices = await db3.select().from(invoices).where(eq22(invoices.status, "paid"));
     totalItems += allInvoices.length;
     for (const invoice of allInvoices) {
       if (!invoice.subscriptionId) continue;
@@ -8679,11 +8582,11 @@ async function backfillRevenueCenter() {
       });
       syncedCount++;
     }
-    const activeCampaigns = await db3.select().from(marketingCampaigns2).where(eq23(marketingCampaigns2.status, "active"));
+    const activeCampaigns = await db3.select().from(marketingCampaigns2).where(eq22(marketingCampaigns2.status, "active"));
     totalItems += activeCampaigns.length;
     for (const campaign of activeCampaigns) {
       const budget = await db3.query.campaignBudgets.findFirst({
-        where: eq23(campaignBudgets2.campaignId, campaign.id)
+        where: eq22(campaignBudgets2.campaignId, campaign.id)
       });
       if (budget && Number(budget.budgetAmount) > 0) {
         let agencyId = 0;
@@ -8719,6 +8622,46 @@ var init_revenueCenterSync = __esm({
   }
 });
 
+// server/services/developerService.ts
+import { eq as eq25 } from "drizzle-orm";
+async function getDeveloperByUserId2(userId) {
+  const db3 = await getDb();
+  if (!db3) return null;
+  const results = await db3.select().from(developers).where(eq25(developers.userId, userId)).limit(1);
+  const devRow = results[0];
+  if (!devRow) return null;
+  let brandProfile = null;
+  if (devRow.developerBrandProfileId) {
+    const brandResults = await db3.select().from(developerBrandProfiles).where(eq25(developerBrandProfiles.id, devRow.developerBrandProfileId)).limit(1);
+    if (brandResults.length > 0) {
+      brandProfile = brandResults[0];
+    }
+  } else {
+    const brandResults = await db3.select().from(developerBrandProfiles).where(eq25(developerBrandProfiles.linkedDeveloperAccountId, devRow.id)).limit(1);
+    if (brandResults.length > 0) {
+      brandProfile = brandResults[0];
+    }
+  }
+  return {
+    ...devRow,
+    brandProfile
+  };
+}
+async function requireDeveloperProfileByUserId(userId) {
+  const profile = await getDeveloperByUserId2(userId);
+  if (!profile) {
+    throw new Error("Developer profile not found for this user");
+  }
+  return profile;
+}
+var init_developerService = __esm({
+  "server/services/developerService.ts"() {
+    "use strict";
+    init_db_connection();
+    init_schema();
+  }
+});
+
 // server/services/videoProcessingService.ts
 var videoProcessingService_exports = {};
 __export(videoProcessingService_exports, {
@@ -8738,7 +8681,7 @@ import {
   GetObjectCommand,
   HeadObjectCommand
 } from "@aws-sdk/client-s3";
-import { eq as eq32 } from "drizzle-orm";
+import { eq as eq31 } from "drizzle-orm";
 async function queueVideoForTranscoding(exploreVideoId, videoUrl) {
   try {
     console.log(`[VideoProcessing] Queuing video ${exploreVideoId} for transcoding`);
@@ -8753,7 +8696,7 @@ async function queueVideoForTranscoding(exploreVideoId, videoUrl) {
         inputPath,
         outputPath
       })
-    }).where(eq32(exploreDiscoveryVideos.id, exploreVideoId));
+    }).where(eq31(exploreDiscoveryVideos.id, exploreVideoId));
     if (MEDIACONVERT_ENDPOINT && MEDIACONVERT_ROLE_ARN) {
       try {
         const jobId = await submitMediaConvertJob(inputPath, outputPath, exploreVideoId);
@@ -8765,7 +8708,7 @@ async function queueVideoForTranscoding(exploreVideoId, videoUrl) {
             inputPath,
             outputPath
           })
-        }).where(eq32(exploreDiscoveryVideos.id, exploreVideoId));
+        }).where(eq31(exploreDiscoveryVideos.id, exploreVideoId));
         console.log(
           `[VideoProcessing] Video ${exploreVideoId} submitted to MediaConvert, Job ID: ${jobId}`
         );
@@ -8791,7 +8734,7 @@ async function queueVideoForTranscoding(exploreVideoId, videoUrl) {
         ...fallbackUrls,
         note: "Using original video (MediaConvert not configured)"
       })
-    }).where(eq32(exploreDiscoveryVideos.id, exploreVideoId));
+    }).where(eq31(exploreDiscoveryVideos.id, exploreVideoId));
     console.log(`[VideoProcessing] Video ${exploreVideoId} marked as processed (fallback mode)`);
     return { status: "completed" };
   } catch (error) {
@@ -8802,7 +8745,7 @@ async function queueVideoForTranscoding(exploreVideoId, videoUrl) {
         error: error.message,
         failedAt: (/* @__PURE__ */ new Date()).toISOString()
       })
-    }).where(eq32(exploreDiscoveryVideos.id, exploreVideoId)).catch(() => {
+    }).where(eq31(exploreDiscoveryVideos.id, exploreVideoId)).catch(() => {
     });
     throw new Error(`Failed to queue video for transcoding: ${error.message}`);
   }
@@ -8820,7 +8763,7 @@ async function updateTranscodedUrls(exploreVideoId, transcodedVideos) {
     }
     await db.update(exploreDiscoveryVideos).set({
       transcodedUrls: JSON.stringify(transcodedUrlsMap)
-    }).where(eq32(exploreDiscoveryVideos.id, exploreVideoId));
+    }).where(eq31(exploreDiscoveryVideos.id, exploreVideoId));
     console.log(`[VideoProcessing] Updated transcoded URLs for video ${exploreVideoId}`);
     console.log(`  Formats: ${Object.keys(transcodedUrlsMap).join(", ")}`);
   } catch (error) {
@@ -9094,7 +9037,7 @@ async function processUploadedVideo(exploreVideoId, videoUrl, providedDuration) 
           error: error.message,
           failedAt: (/* @__PURE__ */ new Date()).toISOString()
         })
-      }).where(eq32(exploreDiscoveryVideos.id, exploreVideoId));
+      }).where(eq31(exploreDiscoveryVideos.id, exploreVideoId));
     } catch (dbError) {
       console.error(`[VideoProcessing] Failed to update video status:`, dbError);
     }
@@ -9113,7 +9056,7 @@ async function handleTranscodingComplete(exploreVideoId, jobId, outputUrls) {
         jobId,
         ...outputUrls
       })
-    }).where(eq32(exploreDiscoveryVideos.id, exploreVideoId));
+    }).where(eq31(exploreDiscoveryVideos.id, exploreVideoId));
     console.log(`[VideoProcessing] Video ${exploreVideoId} transcoding complete and URLs updated`);
   } catch (error) {
     console.error(`[VideoProcessing] Failed to handle transcoding completion:`, error);
@@ -9123,7 +9066,7 @@ async function handleTranscodingComplete(exploreVideoId, jobId, outputUrls) {
 async function getTranscodingStatus(exploreVideoId) {
   try {
     const video = await db.query.exploreDiscoveryVideos.findFirst({
-      where: eq32(exploreDiscoveryVideos.id, exploreVideoId)
+      where: eq31(exploreDiscoveryVideos.id, exploreVideoId)
     });
     if (!video) {
       throw new Error(`Video ${exploreVideoId} not found`);
@@ -9180,11 +9123,11 @@ var locationAnalyticsService_exports = {};
 __export(locationAnalyticsService_exports, {
   locationAnalyticsService: () => locationAnalyticsService
 });
-import { eq as eq36, and as and30, sql as sql29, gte as gte8 } from "drizzle-orm";
+import { eq as eq35, and as and29, sql as sql28, gte as gte8 } from "drizzle-orm";
 async function getLocationHierarchyIds(locationId) {
   const db3 = await getDb();
   const ids = [locationId];
-  const children = await db3.select({ id: locations.id }).from(locations).where(eq36(locations.parentId, locationId));
+  const children = await db3.select({ id: locations.id }).from(locations).where(eq35(locations.parentId, locationId));
   for (const child of children) {
     const childIds = await getLocationHierarchyIds(child.id);
     ids.push(...childIds);
@@ -9236,7 +9179,7 @@ var init_locationAnalyticsService = __esm({
       async calculatePriceStats(locationId) {
         const db3 = await getDb();
         const locationIds = await getLocationHierarchyIds(locationId);
-        const [location] = await db3.select().from(locations).where(eq36(locations.id, locationId)).limit(1);
+        const [location] = await db3.select().from(locations).where(eq35(locations.id, locationId)).limit(1);
         if (!location) {
           return {
             avgSalePrice: null,
@@ -9249,20 +9192,20 @@ var init_locationAnalyticsService = __esm({
         }
         let locationFilter;
         if (location.type === "province") {
-          locationFilter = eq36(listings.province, location.name);
+          locationFilter = eq35(listings.province, location.name);
         } else if (location.type === "city") {
-          locationFilter = eq36(listings.city, location.name);
+          locationFilter = eq35(listings.city, location.name);
         } else if (location.type === "suburb") {
-          locationFilter = eq36(listings.suburb, location.name);
+          locationFilter = eq35(listings.suburb, location.name);
         } else {
-          locationFilter = eq36(listings.suburb, location.name);
+          locationFilter = eq35(listings.suburb, location.name);
         }
         const activeListings = await db3.select({
           action: listings.action,
           askingPrice: listings.askingPrice,
           monthlyRent: listings.monthlyRent,
           propertyDetails: listings.propertyDetails
-        }).from(listings).where(and30(locationFilter, eq36(listings.status, "published")));
+        }).from(listings).where(and29(locationFilter, eq35(listings.status, "published")));
         const saleListings = activeListings.filter((l) => l.action === "sell" && l.askingPrice);
         const rentalListings = activeListings.filter((l) => l.action === "rent" && l.monthlyRent);
         const avgSalePrice = saleListings.length > 0 ? saleListings.reduce((sum3, l) => sum3 + Number(l.askingPrice), 0) / saleListings.length : null;
@@ -9307,7 +9250,7 @@ var init_locationAnalyticsService = __esm({
        */
       async calculateMarketActivity(locationId) {
         const db3 = await getDb();
-        const [location] = await db3.select().from(locations).where(eq36(locations.id, locationId)).limit(1);
+        const [location] = await db3.select().from(locations).where(eq35(locations.id, locationId)).limit(1);
         if (!location) {
           return {
             avgDaysOnMarket: null,
@@ -9320,19 +9263,19 @@ var init_locationAnalyticsService = __esm({
         }
         let locationFilter;
         if (location.type === "province") {
-          locationFilter = eq36(listings.province, location.name);
+          locationFilter = eq35(listings.province, location.name);
         } else if (location.type === "city") {
-          locationFilter = eq36(listings.city, location.name);
+          locationFilter = eq35(listings.city, location.name);
         } else if (location.type === "suburb") {
-          locationFilter = eq36(listings.suburb, location.name);
+          locationFilter = eq35(listings.suburb, location.name);
         } else {
-          locationFilter = eq36(listings.suburb, location.name);
+          locationFilter = eq35(listings.suburb, location.name);
         }
         const activeListings = await db3.select({
           id: listings.id,
           action: listings.action,
           createdAt: listings.createdAt
-        }).from(listings).where(and30(locationFilter, eq36(listings.status, "published")));
+        }).from(listings).where(and29(locationFilter, eq35(listings.status, "published")));
         const now = /* @__PURE__ */ new Date();
         const daysOnMarket = activeListings.map((l) => {
           const createdAt = new Date(l.createdAt);
@@ -9344,10 +9287,10 @@ var init_locationAnalyticsService = __esm({
         ) : null;
         const thirtyDaysAgo = /* @__PURE__ */ new Date();
         thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-        const newListings = await db3.select({ count: sql29`count(*)` }).from(listings).where(
-          and30(
+        const newListings = await db3.select({ count: sql28`count(*)` }).from(listings).where(
+          and29(
             locationFilter,
-            eq36(listings.status, "published"),
+            eq35(listings.status, "published"),
             gte8(listings.createdAt, thirtyDaysAgo.toISOString())
           )
         );
@@ -9374,24 +9317,24 @@ var init_locationAnalyticsService = __esm({
        */
       async calculatePropertyTypes(locationId) {
         const db3 = await getDb();
-        const [location] = await db3.select().from(locations).where(eq36(locations.id, locationId)).limit(1);
+        const [location] = await db3.select().from(locations).where(eq35(locations.id, locationId)).limit(1);
         if (!location) {
           return {};
         }
         let locationFilter;
         if (location.type === "province") {
-          locationFilter = eq36(listings.province, location.name);
+          locationFilter = eq35(listings.province, location.name);
         } else if (location.type === "city") {
-          locationFilter = eq36(listings.city, location.name);
+          locationFilter = eq35(listings.city, location.name);
         } else if (location.type === "suburb") {
-          locationFilter = eq36(listings.suburb, location.name);
+          locationFilter = eq35(listings.suburb, location.name);
         } else {
-          locationFilter = eq36(listings.suburb, location.name);
+          locationFilter = eq35(listings.suburb, location.name);
         }
         const distribution = await db3.select({
           propertyType: listings.propertyType,
-          count: sql29`count(*)`
-        }).from(listings).where(and30(locationFilter, eq36(listings.status, "published"))).groupBy(listings.propertyType);
+          count: sql28`count(*)`
+        }).from(listings).where(and29(locationFilter, eq35(listings.status, "published"))).groupBy(listings.propertyType);
         const result = {};
         for (const item of distribution) {
           if (item.propertyType) {
@@ -9423,7 +9366,7 @@ var init_locationAnalyticsService = __esm({
        */
       async getLocationStatistics(locationId) {
         const db3 = await getDb();
-        const [location] = await db3.select().from(locations).where(eq36(locations.id, locationId)).limit(1);
+        const [location] = await db3.select().from(locations).where(eq35(locations.id, locationId)).limit(1);
         if (!location) {
           throw new Error(`Location ${locationId} not found`);
         }
@@ -9432,15 +9375,15 @@ var init_locationAnalyticsService = __esm({
         const propertyTypeDistribution = await this.calculatePropertyTypes(locationId);
         let locationFilter;
         if (location.type === "province") {
-          locationFilter = eq36(developments.province, location.name);
+          locationFilter = eq35(developments.province, location.name);
         } else if (location.type === "city") {
-          locationFilter = eq36(developments.city, location.name);
+          locationFilter = eq35(developments.city, location.name);
         } else if (location.type === "suburb") {
-          locationFilter = eq36(developments.suburb, location.name);
+          locationFilter = eq35(developments.suburb, location.name);
         } else {
-          locationFilter = eq36(developments.suburb, location.name);
+          locationFilter = eq35(developments.suburb, location.name);
         }
-        const developmentCount = await db3.select({ count: sql29`count(*)` }).from(developments).where(and30(locationFilter, eq36(developments.isPublished, 1)));
+        const developmentCount = await db3.select({ count: sql28`count(*)` }).from(developments).where(and29(locationFilter, eq35(developments.isPublished, 1)));
         return {
           // Price metrics
           avgSalePrice: priceStats.avgSalePrice,
@@ -9480,7 +9423,7 @@ var init_locationAnalyticsService = __esm({
             userId: userId || null
           });
           if (userId) {
-            await db3.execute(sql29`
+            await db3.execute(sql28`
           INSERT INTO recent_searches (user_id, location_id, searched_at)
           VALUES (${userId}, ${locationId}, CURRENT_TIMESTAMP)
           ON DUPLICATE KEY UPDATE searched_at = CURRENT_TIMESTAMP
@@ -9507,7 +9450,7 @@ var init_locationAnalyticsService = __esm({
       async calculateTrendingScore(locationId) {
         const db3 = await getDb();
         try {
-          const result = await db3.execute(sql29`
+          const result = await db3.execute(sql28`
         SELECT 
           COUNT(*) as total_searches,
           SUM(
@@ -9544,7 +9487,7 @@ var init_locationAnalyticsService = __esm({
       async getTrendingSuburbs(limit = 10) {
         const db3 = await getDb();
         try {
-          const result = await db3.execute(sql29`
+          const result = await db3.execute(sql28`
         SELECT 
           l.id,
           l.name,
@@ -9657,7 +9600,7 @@ var init_locationAnalyticsService = __esm({
       async getSimilarLocations(locationId, limit = 5) {
         const db3 = await getDb();
         try {
-          const [targetLocation] = await db3.select().from(locations).where(eq36(locations.id, locationId)).limit(1);
+          const [targetLocation] = await db3.select().from(locations).where(eq35(locations.id, locationId)).limit(1);
           if (!targetLocation) {
             console.error(`[LocationAnalytics] Location ${locationId} not found`);
             return [];
@@ -9671,7 +9614,7 @@ var init_locationAnalyticsService = __esm({
             slug: locations.slug,
             type: locations.type,
             parentId: locations.parentId
-          }).from(locations).where(and30(eq36(locations.type, targetLocation.type), sql29`${locations.id} != ${locationId}`)).limit(100);
+          }).from(locations).where(and29(eq35(locations.type, targetLocation.type), sql28`${locations.id} != ${locationId}`)).limit(100);
           const similarLocations = [];
           for (const candidate of candidateLocations) {
             try {
@@ -9725,12 +9668,12 @@ var init_locationAnalyticsService = __esm({
               let cityName = null;
               let provinceName = null;
               if (result.parentId) {
-                const [parent] = await db3.select().from(locations).where(eq36(locations.id, result.parentId)).limit(1);
+                const [parent] = await db3.select().from(locations).where(eq35(locations.id, result.parentId)).limit(1);
                 if (parent) {
                   if (parent.type === "city") {
                     cityName = parent.name;
                     if (parent.parentId) {
-                      const [province2] = await db3.select().from(locations).where(eq36(locations.id, parent.parentId)).limit(1);
+                      const [province2] = await db3.select().from(locations).where(eq35(locations.id, parent.parentId)).limit(1);
                       if (province2) {
                         provinceName = province2.name;
                       }
@@ -9769,7 +9712,7 @@ var locationInsightsService_exports = {};
 __export(locationInsightsService_exports, {
   locationInsightsService: () => locationInsightsService
 });
-import { eq as eq37, desc as desc22 } from "drizzle-orm";
+import { eq as eq36, desc as desc21 } from "drizzle-orm";
 import { OpenAI } from "openai";
 var openai, locationInsightsService;
 var init_locationInsightsService = __esm({
@@ -9787,7 +9730,7 @@ var init_locationInsightsService = __esm({
        */
       async getInsights(suburbId, suburbName, cityName) {
         const suburb = await db.query.suburbs.findFirst({
-          where: eq37(suburbs.id, suburbId)
+          where: eq36(suburbs.id, suburbId)
         });
         if (!suburb) throw new Error("Suburb not found");
         if (suburb.pros && suburb.cons) {
@@ -9824,7 +9767,7 @@ var init_locationInsightsService = __esm({
             pros: data.pros,
             cons: data.cons,
             aiGenerationDate: (/* @__PURE__ */ new Date()).toISOString()
-          }).where(eq37(suburbs.id, suburbId));
+          }).where(eq36(suburbs.id, suburbId));
           return {
             pros: data.pros,
             cons: data.cons,
@@ -9879,8 +9822,8 @@ var init_locationInsightsService = __esm({
        */
       async getReviews(suburbId) {
         const reviews2 = await db.query.suburbReviews.findMany({
-          where: eq37(suburbReviews.suburbId, suburbId),
-          orderBy: [desc22(suburbReviews.createdAt)],
+          where: eq36(suburbReviews.suburbId, suburbId),
+          orderBy: [desc21(suburbReviews.createdAt)],
           with: {
             user: {
               columns: {
@@ -9904,7 +9847,7 @@ __export(propertySearchService_exports, {
   PropertySearchService: () => PropertySearchService,
   propertySearchService: () => propertySearchService
 });
-import { eq as eq39, and as and32, gte as gte10, lte as lte9, inArray as inArray10, or as or15, sql as sql30, desc as desc23, asc as asc3 } from "drizzle-orm";
+import { eq as eq38, and as and31, gte as gte10, lte as lte9, inArray as inArray10, or as or14, sql as sql29, desc as desc22, asc as asc3 } from "drizzle-orm";
 var CACHE_PREFIX, PropertySearchService, propertySearchService;
 var init_propertySearchService = __esm({
   "server/services/propertySearchService.ts"() {
@@ -9987,7 +9930,7 @@ var init_propertySearchService = __esm({
           );
         }
         const conditions = this.buildFilterConditions(filters, locationIds);
-        const countResult = await db.select({ count: sql30`count(*)` }).from(properties).leftJoin(developments, eq39(properties.developmentId, developments.id)).where(and32(...conditions));
+        const countResult = await db.select({ count: sql29`count(*)` }).from(properties).leftJoin(developments, eq38(properties.developmentId, developments.id)).where(and31(...conditions));
         const total = Number(countResult[0]?.count || 0);
         const offset = (page - 1) * pageSize;
         const hasMore = offset + pageSize < total;
@@ -9996,41 +9939,41 @@ var init_propertySearchService = __esm({
           id: properties.id,
           title: properties.title,
           price: properties.price,
-          suburb: sql30`COALESCE(${properties.address}, '')`,
+          suburb: sql29`COALESCE(${properties.address}, '')`,
           city: properties.city,
           province: properties.province,
           propertyType: properties.propertyType,
           listingType: properties.listingType,
           bedrooms: properties.bedrooms,
           bathrooms: properties.bathrooms,
-          erfSize: sql30`CAST(${properties.area} AS SIGNED)`,
-          floorSize: sql30`CAST(${properties.area} AS SIGNED)`,
-          titleType: sql30`'freehold'`,
+          erfSize: sql29`CAST(${properties.area} AS SIGNED)`,
+          floorSize: sql29`CAST(${properties.area} AS SIGNED)`,
+          titleType: sql29`'freehold'`,
           // Default until migration
           levy: properties.levies,
           rates: properties.ratesAndTaxes,
-          securityEstate: sql30`false`,
+          securityEstate: sql29`false`,
           // Default until migration
-          petFriendly: sql30`false`,
+          petFriendly: sql29`false`,
           // Default until migration
-          fibreReady: sql30`false`,
+          fibreReady: sql29`false`,
           // Default until migration
-          loadSheddingSolutions: sql30`JSON_ARRAY('none')`,
-          videoCount: sql30`0`,
+          loadSheddingSolutions: sql29`JSON_ARRAY('none')`,
+          videoCount: sql29`0`,
           // Will be calculated from related tables
           status: properties.status,
           listedDate: properties.createdAt,
-          latitude: sql30`CAST(${properties.latitude} AS DECIMAL(10,8))`,
-          longitude: sql30`CAST(${properties.longitude} AS DECIMAL(11,8))`,
-          highlights: sql30`JSON_ARRAY()`,
+          latitude: sql29`CAST(${properties.latitude} AS DECIMAL(10,8))`,
+          longitude: sql29`CAST(${properties.longitude} AS DECIMAL(11,8))`,
+          highlights: sql29`JSON_ARRAY()`,
           agentId: properties.agentId
-        }).from(properties).leftJoin(developments, eq39(properties.developmentId, developments.id)).where(and32(...conditions)).orderBy(orderBy).limit(pageSize).offset(offset);
+        }).from(properties).leftJoin(developments, eq38(properties.developmentId, developments.id)).where(and31(...conditions)).orderBy(orderBy).limit(pageSize).offset(offset);
         const propertyIds = results.map((p) => Number(p.id));
         const images = propertyIds.length > 0 ? await db.select({
           propertyId: propertyImages.propertyId,
           imageUrl: propertyImages.imageUrl,
           isPrimary: propertyImages.isPrimary
-        }).from(propertyImages).where(inArray10(propertyImages.propertyId, propertyIds)).orderBy(desc23(propertyImages.isPrimary), asc3(propertyImages.displayOrder)) : [];
+        }).from(propertyImages).where(inArray10(propertyImages.propertyId, propertyIds)).orderBy(desc22(propertyImages.isPrimary), asc3(propertyImages.displayOrder)) : [];
         const imagesByProperty = /* @__PURE__ */ new Map();
         images.forEach((img) => {
           const propId = img.propertyId;
@@ -10127,69 +10070,69 @@ var init_propertySearchService = __esm({
        */
       buildFilterConditions(filters, locationIds = []) {
         const conditions = [];
-        conditions.push(or15(eq39(properties.status, "available"), eq39(properties.status, "published")));
+        conditions.push(or14(eq38(properties.status, "available"), eq38(properties.status, "published")));
         const locationConditions = [];
         if (locationIds.length > 0) {
           for (const loc of locationIds) {
             if (loc.suburbId) {
-              locationConditions.push(eq39(properties.suburbId, loc.suburbId));
+              locationConditions.push(eq38(properties.suburbId, loc.suburbId));
             } else if (loc.cityId) {
               if (loc.cityName) {
                 locationConditions.push(
-                  or15(
-                    eq39(properties.cityId, loc.cityId),
-                    sql30`LOWER(${properties.city}) = LOWER(${loc.cityName})`
+                  or14(
+                    eq38(properties.cityId, loc.cityId),
+                    sql29`LOWER(${properties.city}) = LOWER(${loc.cityName})`
                   )
                 );
               } else {
-                locationConditions.push(eq39(properties.cityId, loc.cityId));
+                locationConditions.push(eq38(properties.cityId, loc.cityId));
               }
             } else if (loc.provinceId) {
               if (loc.provinceName) {
                 locationConditions.push(
-                  or15(
-                    eq39(properties.provinceId, loc.provinceId),
-                    sql30`LOWER(${properties.province}) = LOWER(${loc.provinceName})`
+                  or14(
+                    eq38(properties.provinceId, loc.provinceId),
+                    sql29`LOWER(${properties.province}) = LOWER(${loc.provinceName})`
                   )
                 );
               } else {
-                locationConditions.push(eq39(properties.provinceId, loc.provinceId));
+                locationConditions.push(eq38(properties.provinceId, loc.provinceId));
               }
             }
           }
         }
         if (locationIds.length === 0) {
           if (filters.province) {
-            locationConditions.push(sql30`LOWER(${properties.province}) = LOWER(${filters.province})`);
+            locationConditions.push(sql29`LOWER(${properties.province}) = LOWER(${filters.province})`);
           }
           if (filters.city) {
-            locationConditions.push(sql30`LOWER(${properties.city}) = LOWER(${filters.city})`);
+            locationConditions.push(sql29`LOWER(${properties.city}) = LOWER(${filters.city})`);
           }
           if (filters.suburb && filters.suburb.length > 0) {
             const suburbConditions = filters.suburb.map(
-              (suburb) => sql30`LOWER(${properties.address}) LIKE LOWER(${`%${suburb}%`})`
+              (suburb) => sql29`LOWER(${properties.address}) LIKE LOWER(${`%${suburb}%`})`
             );
-            locationConditions.push(or15(...suburbConditions));
+            locationConditions.push(or14(...suburbConditions));
           }
         }
         if (filters.locations && filters.locations.length > 0 && locationIds.length === 0) {
           const multiTextConditions = filters.locations.map((slug) => {
             const textParams = slug.replace(/-/g, " ");
-            return or15(
-              sql30`LOWER(${properties.city}) LIKE LOWER(${`%${textParams}%`})`,
-              sql30`LOWER(${properties.address}) LIKE LOWER(${`%${textParams}%`})`
+            return or14(
+              sql29`LOWER(${properties.city}) LIKE LOWER(${`%${textParams}%`})`,
+              sql29`LOWER(${properties.address}) LIKE LOWER(${`%${textParams}%`})`
             );
           });
-          locationConditions.push(or15(...multiTextConditions));
+          locationConditions.push(or14(...multiTextConditions));
         }
         if (locationConditions.length > 0) {
-          conditions.push(or15(...locationConditions));
+          conditions.push(or14(...locationConditions));
         }
         if (filters.propertyType && filters.propertyType.length > 0) {
           conditions.push(inArray10(properties.propertyType, filters.propertyType));
         }
         if (filters.listingType) {
-          conditions.push(eq39(properties.listingType, filters.listingType));
+          conditions.push(eq38(properties.listingType, filters.listingType));
         }
         if (filters.minPrice !== void 0) {
           conditions.push(gte10(properties.price, filters.minPrice));
@@ -10231,26 +10174,26 @@ var init_propertySearchService = __esm({
           const statusConditions = filters.status.map((status) => {
             switch (status) {
               case "available":
-                return or15(eq39(properties.status, "available"), eq39(properties.status, "published"));
+                return or14(eq38(properties.status, "available"), eq38(properties.status, "published"));
               case "sold":
-                return eq39(properties.status, "sold");
+                return eq38(properties.status, "sold");
               case "let":
-                return eq39(properties.status, "rented");
+                return eq38(properties.status, "rented");
               case "under_offer":
-                return eq39(properties.status, "pending");
+                return eq38(properties.status, "pending");
               default:
-                return eq39(properties.status, status);
+                return eq38(properties.status, status);
             }
           });
-          conditions.push(or15(...statusConditions));
+          conditions.push(or14(...statusConditions));
         }
         if (filters.bounds) {
           conditions.push(
-            and32(
-              sql30`CAST(${properties.latitude} AS DECIMAL(10,8)) >= ${filters.bounds.south}`,
-              sql30`CAST(${properties.latitude} AS DECIMAL(10,8)) <= ${filters.bounds.north}`,
-              sql30`CAST(${properties.longitude} AS DECIMAL(11,8)) >= ${filters.bounds.west}`,
-              sql30`CAST(${properties.longitude} AS DECIMAL(11,8)) <= ${filters.bounds.east}`
+            and31(
+              sql29`CAST(${properties.latitude} AS DECIMAL(10,8)) >= ${filters.bounds.south}`,
+              sql29`CAST(${properties.latitude} AS DECIMAL(10,8)) <= ${filters.bounds.north}`,
+              sql29`CAST(${properties.longitude} AS DECIMAL(11,8)) >= ${filters.bounds.west}`,
+              sql29`CAST(${properties.longitude} AS DECIMAL(11,8)) <= ${filters.bounds.east}`
             )
           );
         }
@@ -10265,17 +10208,17 @@ var init_propertySearchService = __esm({
           case "price_asc":
             return asc3(properties.price);
           case "price_desc":
-            return desc23(properties.price);
+            return desc22(properties.price);
           case "date_desc":
-            return desc23(properties.createdAt);
+            return desc22(properties.createdAt);
           case "date_asc":
             return asc3(properties.createdAt);
           case "suburb_asc":
             return asc3(properties.address);
           case "suburb_desc":
-            return desc23(properties.address);
+            return desc22(properties.address);
           default:
-            return desc23(properties.createdAt);
+            return desc22(properties.createdAt);
         }
       }
       /**
@@ -10362,12 +10305,12 @@ var init_propertySearchService = __esm({
           );
         }
         const conditions = this.buildFilterConditions(baseFilters, locationIds);
-        const totalResult = await db.select({ count: sql30`count(*)` }).from(properties).leftJoin(developments, eq39(properties.developmentId, developments.id)).where(and32(...conditions));
+        const totalResult = await db.select({ count: sql29`count(*)` }).from(properties).leftJoin(developments, eq38(properties.developmentId, developments.id)).where(and31(...conditions));
         const total = Number(totalResult[0]?.count || 0);
         const typeResults = await db.select({
           propertyType: properties.propertyType,
-          count: sql30`count(*)`
-        }).from(properties).leftJoin(developments, eq39(properties.developmentId, developments.id)).where(and32(...conditions)).groupBy(properties.propertyType);
+          count: sql29`count(*)`
+        }).from(properties).leftJoin(developments, eq38(properties.developmentId, developments.id)).where(and31(...conditions)).groupBy(properties.propertyType);
         const byPropertyType = {};
         typeResults.forEach((row) => {
           byPropertyType[row.propertyType] = Number(row.count);
@@ -10386,7 +10329,7 @@ var init_propertySearchService = __esm({
               gte10(properties.price, min2),
               lte9(properties.price, max2)
             ];
-            const result = await db.select({ count: sql30`count(*)` }).from(properties).leftJoin(developments, eq39(properties.developmentId, developments.id)).where(and32(...rangeConditions));
+            const result = await db.select({ count: sql29`count(*)` }).from(properties).leftJoin(developments, eq38(properties.developmentId, developments.id)).where(and31(...rangeConditions));
             return {
               range,
               count: Number(result[0]?.count || 0)
@@ -10523,7 +10466,7 @@ __export(partnerService_exports, {
   PartnerService: () => PartnerService,
   partnerService: () => partnerService
 });
-import { eq as eq48, desc as desc29, sql as sql35 } from "drizzle-orm";
+import { eq as eq47, desc as desc28, sql as sql34 } from "drizzle-orm";
 import { randomUUID as randomUUID2 } from "crypto";
 var PartnerService, partnerService;
 var init_partnerService = __esm({
@@ -10538,13 +10481,13 @@ var init_partnerService = __esm({
        */
       async registerPartner(data) {
         const tier = await db.query.partnerTiers.findFirst({
-          where: eq48(partnerTiers.id, data.tierId)
+          where: eq47(partnerTiers.id, data.tierId)
         });
         if (!tier) {
           throw new Error(`Invalid tier ID: ${data.tierId}`);
         }
         const existingPartner = await db.query.explorePartners.findFirst({
-          where: eq48(explorePartners.userId, data.userId)
+          where: eq47(explorePartners.userId, data.userId)
         });
         if (existingPartner) {
           throw new Error("User already has a partner account");
@@ -10571,21 +10514,21 @@ var init_partnerService = __esm({
        */
       async assignTier(partnerId, tierId) {
         const tier = await db.query.partnerTiers.findFirst({
-          where: eq48(partnerTiers.id, tierId)
+          where: eq47(partnerTiers.id, tierId)
         });
         if (!tier) {
           throw new Error(`Invalid tier ID: ${tierId}`);
         }
         const partner = await db.query.explorePartners.findFirst({
-          where: eq48(explorePartners.id, partnerId)
+          where: eq47(explorePartners.id, partnerId)
         });
         if (!partner) {
           throw new Error("Partner not found");
         }
         await db.update(explorePartners).set({
           tierId,
-          updatedAt: sql35`CURRENT_TIMESTAMP`
-        }).where(eq48(explorePartners.id, partnerId));
+          updatedAt: sql34`CURRENT_TIMESTAMP`
+        }).where(eq47(explorePartners.id, partnerId));
       }
       /**
        * Update partner profile information
@@ -10593,7 +10536,7 @@ var init_partnerService = __esm({
        */
       async updateProfile(partnerId, data) {
         const updateData = {
-          updatedAt: sql35`CURRENT_TIMESTAMP`
+          updatedAt: sql34`CURRENT_TIMESTAMP`
         };
         if (data.companyName !== void 0) updateData.companyName = data.companyName;
         if (data.description !== void 0) updateData.description = data.description;
@@ -10601,7 +10544,7 @@ var init_partnerService = __esm({
         if (data.serviceLocations !== void 0) {
           updateData.serviceLocations = data.serviceLocations;
         }
-        const [updated] = await db.update(explorePartners).set(updateData).where(eq48(explorePartners.id, partnerId));
+        const [updated] = await db.update(explorePartners).set(updateData).where(eq47(explorePartners.id, partnerId));
         return updated;
       }
       /**
@@ -10610,7 +10553,7 @@ var init_partnerService = __esm({
        */
       async getPartnerProfile(partnerId) {
         const partner = await db.query.explorePartners.findFirst({
-          where: eq48(explorePartners.id, partnerId),
+          where: eq47(explorePartners.id, partnerId),
           with: {
             tier: true
           }
@@ -10655,15 +10598,15 @@ var init_partnerService = __esm({
        */
       async verifyPartner(partnerId, credentials) {
         const partner = await db.query.explorePartners.findFirst({
-          where: eq48(explorePartners.id, partnerId)
+          where: eq47(explorePartners.id, partnerId)
         });
         if (!partner) {
           throw new Error("Partner not found");
         }
         await db.update(explorePartners).set({
           verificationStatus: "verified",
-          updatedAt: sql35`CURRENT_TIMESTAMP`
-        }).where(eq48(explorePartners.id, partnerId));
+          updatedAt: sql34`CURRENT_TIMESTAMP`
+        }).where(eq47(explorePartners.id, partnerId));
         await this.calculateTrustScore(partnerId);
       }
       /**
@@ -10678,7 +10621,7 @@ var init_partnerService = __esm({
        */
       async calculateTrustScore(partnerId) {
         const partner = await db.query.explorePartners.findFirst({
-          where: eq48(explorePartners.id, partnerId)
+          where: eq47(explorePartners.id, partnerId)
         });
         if (!partner) {
           throw new Error("Partner not found");
@@ -10690,8 +10633,8 @@ var init_partnerService = __esm({
           score += 15;
         }
         const contentQualityResult = await db.select({
-          avgQuality: sql35`AVG(${contentQualityScores.overallScore})`
-        }).from(contentQualityScores).innerJoin(exploreContent, eq48(exploreContent.id, contentQualityScores.contentId)).where(eq48(exploreContent.partnerId, partnerId)).limit(1);
+          avgQuality: sql34`AVG(${contentQualityScores.overallScore})`
+        }).from(contentQualityScores).innerJoin(exploreContent, eq47(exploreContent.id, contentQualityScores.contentId)).where(eq47(exploreContent.partnerId, partnerId)).limit(1);
         const avgContentQuality = contentQualityResult[0]?.avgQuality || 50;
         score += avgContentQuality / 100 * 30;
         score += 10;
@@ -10699,8 +10642,8 @@ var init_partnerService = __esm({
         const finalScore = Math.round(score * 100) / 100;
         await db.update(explorePartners).set({
           trustScore: finalScore.toString(),
-          updatedAt: sql35`CURRENT_TIMESTAMP`
-        }).where(eq48(explorePartners.id, partnerId));
+          updatedAt: sql34`CURRENT_TIMESTAMP`
+        }).where(eq47(explorePartners.id, partnerId));
         return finalScore;
       }
       /**
@@ -10708,8 +10651,8 @@ var init_partnerService = __esm({
        */
       async getPartnersByTier(tierId) {
         return await db.query.explorePartners.findMany({
-          where: eq48(explorePartners.tierId, tierId),
-          orderBy: [desc29(explorePartners.trustScore)]
+          where: eq47(explorePartners.tierId, tierId),
+          orderBy: [desc28(explorePartners.trustScore)]
         });
       }
       /**
@@ -10718,15 +10661,15 @@ var init_partnerService = __esm({
        */
       async incrementApprovedContentCount(partnerId) {
         const partner = await db.query.explorePartners.findFirst({
-          where: eq48(explorePartners.id, partnerId)
+          where: eq47(explorePartners.id, partnerId)
         });
         if (!partner) {
           throw new Error("Partner not found");
         }
         await db.update(explorePartners).set({
           approvedContentCount: partner.approvedContentCount + 1,
-          updatedAt: sql35`CURRENT_TIMESTAMP`
-        }).where(eq48(explorePartners.id, partnerId));
+          updatedAt: sql34`CURRENT_TIMESTAMP`
+        }).where(eq47(explorePartners.id, partnerId));
       }
       /**
        * Check if partner is eligible for auto-approval
@@ -10734,7 +10677,7 @@ var init_partnerService = __esm({
        */
       async isEligibleForAutoApproval(partnerId) {
         const partner = await db.query.explorePartners.findFirst({
-          where: eq48(explorePartners.id, partnerId)
+          where: eq47(explorePartners.id, partnerId)
         });
         if (!partner) {
           return false;
@@ -10881,14 +10824,14 @@ var init_partnerRouter = __esm({
 });
 
 // server/services/partnerAnalyticsService.ts
-import { eq as eq49, and as and41, gte as gte12, lte as lte11, sql as sql36, desc as desc30, count as count8, sum as sum2, avg as avg3 } from "drizzle-orm";
+import { eq as eq48, and as and40, gte as gte12, lte as lte11, sql as sql35, desc as desc29, count as count8, sum as sum2, avg as avg3 } from "drizzle-orm";
 async function getPartnerAnalyticsSummary(partnerId, startDate, endDate) {
-  const dateFilter = startDate && endDate ? and41(
+  const dateFilter = startDate && endDate ? and40(
     gte12(exploreEngagements.createdAt, startDate.toISOString()),
     lte11(exploreEngagements.createdAt, endDate.toISOString())
   ) : void 0;
-  const partnerContent = await db.select({ id: exploreContent.id }).from(exploreContent).where(eq49(exploreContent.partnerId, partnerId));
-  const partnerShorts = await db.select({ id: exploreShorts.id }).from(exploreShorts).where(eq49(exploreShorts.partnerId, partnerId));
+  const partnerContent = await db.select({ id: exploreContent.id }).from(exploreContent).where(eq48(exploreContent.partnerId, partnerId));
+  const partnerShorts = await db.select({ id: exploreShorts.id }).from(exploreShorts).where(eq48(exploreShorts.partnerId, partnerId));
   const contentIds = [
     ...partnerContent.map((c) => c.id),
     ...partnerShorts.map((s) => s.id.toString())
@@ -10906,13 +10849,13 @@ async function getPartnerAnalyticsSummary(partnerId, startDate, endDate) {
   const engagementQuery = db.select({
     totalViews: count8(exploreEngagements.id),
     totalEngagements: sum2(
-      sql36`CASE WHEN ${exploreEngagements.engagementType} IN ('save', 'share', 'click') THEN 1 ELSE 0 END`
+      sql35`CASE WHEN ${exploreEngagements.engagementType} IN ('save', 'share', 'click') THEN 1 ELSE 0 END`
     )
   }).from(exploreEngagements).where(
-    and41(
-      sql36`${exploreEngagements.contentId} IN (${sql36.join(
-        contentIds.map((id) => sql36`${id}`),
-        sql36`, `
+    and40(
+      sql35`${exploreEngagements.contentId} IN (${sql35.join(
+        contentIds.map((id) => sql35`${id}`),
+        sql35`, `
       )})`,
       dateFilter
     )
@@ -10921,12 +10864,12 @@ async function getPartnerAnalyticsSummary(partnerId, startDate, endDate) {
   const leadQuery = db.select({
     totalLeads: count8(partnerLeads.id),
     convertedLeads: sum2(
-      sql36`CASE WHEN ${partnerLeads.status} = 'converted' THEN 1 ELSE 0 END`
+      sql35`CASE WHEN ${partnerLeads.status} = 'converted' THEN 1 ELSE 0 END`
     )
   }).from(partnerLeads).where(
-    and41(
-      eq49(partnerLeads.partnerId, partnerId),
-      dateFilter ? and41(
+    and40(
+      eq48(partnerLeads.partnerId, partnerId),
+      dateFilter ? and40(
         gte12(partnerLeads.createdAt, startDate.toISOString()),
         lte11(partnerLeads.createdAt, endDate.toISOString())
       ) : void 0
@@ -10936,9 +10879,9 @@ async function getPartnerAnalyticsSummary(partnerId, startDate, endDate) {
   const qualityQuery = db.select({
     avgScore: avg3(contentQualityScores.overallScore)
   }).from(contentQualityScores).where(
-    sql36`${contentQualityScores.contentId} IN (${sql36.join(
-      contentIds.map((id) => sql36`${id}`),
-      sql36`, `
+    sql35`${contentQualityScores.contentId} IN (${sql35.join(
+      contentIds.map((id) => sql35`${id}`),
+      sql35`, `
     )})`
   );
   const [qualityData] = await qualityQuery;
@@ -10955,8 +10898,8 @@ async function getPartnerAnalyticsSummary(partnerId, startDate, endDate) {
   };
 }
 async function getPerformanceTrends(partnerId, period, startDate, endDate) {
-  const partnerContent = await db.select({ id: exploreContent.id }).from(exploreContent).where(eq49(exploreContent.partnerId, partnerId));
-  const partnerShorts = await db.select({ id: exploreShorts.id }).from(exploreShorts).where(eq49(exploreShorts.partnerId, partnerId));
+  const partnerContent = await db.select({ id: exploreContent.id }).from(exploreContent).where(eq48(exploreContent.partnerId, partnerId));
+  const partnerShorts = await db.select({ id: exploreShorts.id }).from(exploreShorts).where(eq48(exploreShorts.partnerId, partnerId));
   const contentIds = [
     ...partnerContent.map((c) => c.id),
     ...partnerShorts.map((s) => s.id.toString())
@@ -10966,31 +10909,31 @@ async function getPerformanceTrends(partnerId, period, startDate, endDate) {
   }
   const dateFormat = period === "daily" ? "%Y-%m-%d" : period === "weekly" ? "%Y-%U" : "%Y-%m";
   const trendsQuery = await db.select({
-    date: sql36`DATE_FORMAT(${exploreEngagements.createdAt}, ${dateFormat})`,
+    date: sql35`DATE_FORMAT(${exploreEngagements.createdAt}, ${dateFormat})`,
     views: count8(exploreEngagements.id),
     engagements: sum2(
-      sql36`CASE WHEN ${exploreEngagements.engagementType} IN ('save', 'share', 'click') THEN 1 ELSE 0 END`
+      sql35`CASE WHEN ${exploreEngagements.engagementType} IN ('save', 'share', 'click') THEN 1 ELSE 0 END`
     )
   }).from(exploreEngagements).where(
-    and41(
-      sql36`${exploreEngagements.contentId} IN (${sql36.join(
-        contentIds.map((id) => sql36`${id}`),
-        sql36`, `
+    and40(
+      sql35`${exploreEngagements.contentId} IN (${sql35.join(
+        contentIds.map((id) => sql35`${id}`),
+        sql35`, `
       )})`,
       gte12(exploreEngagements.createdAt, startDate.toISOString()),
       lte11(exploreEngagements.createdAt, endDate.toISOString())
     )
-  ).groupBy(sql36`DATE_FORMAT(${exploreEngagements.createdAt}, ${dateFormat})`);
+  ).groupBy(sql35`DATE_FORMAT(${exploreEngagements.createdAt}, ${dateFormat})`);
   const leadTrendsQuery = await db.select({
-    date: sql36`DATE_FORMAT(${partnerLeads.createdAt}, ${dateFormat})`,
+    date: sql35`DATE_FORMAT(${partnerLeads.createdAt}, ${dateFormat})`,
     leads: count8(partnerLeads.id)
   }).from(partnerLeads).where(
-    and41(
-      eq49(partnerLeads.partnerId, partnerId),
+    and40(
+      eq48(partnerLeads.partnerId, partnerId),
       gte12(partnerLeads.createdAt, startDate.toISOString()),
       lte11(partnerLeads.createdAt, endDate.toISOString())
     )
-  ).groupBy(sql36`DATE_FORMAT(${partnerLeads.createdAt}, ${dateFormat})`);
+  ).groupBy(sql35`DATE_FORMAT(${partnerLeads.createdAt}, ${dateFormat})`);
   const leadMap = new Map(
     leadTrendsQuery.map((l) => [l.date, Number(l.leads)])
   );
@@ -11005,41 +10948,41 @@ async function getContentRankedByPerformance(partnerId, limit = 10) {
   const contentPerformance = await db.select({
     contentId: exploreContent.id,
     title: exploreContent.title,
-    type: sql36`'card'`,
+    type: sql35`'card'`,
     createdAt: exploreContent.createdAt,
     views: count8(exploreEngagements.id),
     engagements: sum2(
-      sql36`CASE WHEN ${exploreEngagements.engagementType} IN ('save', 'share', 'click') THEN 1 ELSE 0 END`
+      sql35`CASE WHEN ${exploreEngagements.engagementType} IN ('save', 'share', 'click') THEN 1 ELSE 0 END`
     ),
     qualityScore: contentQualityScores.overallScore
-  }).from(exploreContent).leftJoin(exploreEngagements, eq49(exploreContent.id, exploreEngagements.contentId)).leftJoin(contentQualityScores, eq49(exploreContent.id, contentQualityScores.contentId)).where(eq49(exploreContent.partnerId, partnerId)).groupBy(
+  }).from(exploreContent).leftJoin(exploreEngagements, eq48(exploreContent.id, exploreEngagements.contentId)).leftJoin(contentQualityScores, eq48(exploreContent.id, contentQualityScores.contentId)).where(eq48(exploreContent.partnerId, partnerId)).groupBy(
     exploreContent.id,
     exploreContent.title,
     exploreContent.createdAt,
     contentQualityScores.overallScore
-  ).orderBy(desc30(count8(exploreEngagements.id))).limit(limit);
+  ).orderBy(desc29(count8(exploreEngagements.id))).limit(limit);
   const shortsPerformance = await db.select({
-    contentId: sql36`CAST(${exploreShorts.id} AS CHAR)`,
+    contentId: sql35`CAST(${exploreShorts.id} AS CHAR)`,
     title: exploreShorts.title,
-    type: sql36`'short'`,
+    type: sql35`'short'`,
     createdAt: exploreShorts.createdAt,
     views: count8(exploreEngagements.id),
     engagements: sum2(
-      sql36`CASE WHEN ${exploreEngagements.engagementType} IN ('save', 'share', 'click') THEN 1 ELSE 0 END`
+      sql35`CASE WHEN ${exploreEngagements.engagementType} IN ('save', 'share', 'click') THEN 1 ELSE 0 END`
     ),
     qualityScore: contentQualityScores.overallScore
   }).from(exploreShorts).leftJoin(
     exploreEngagements,
-    sql36`CAST(${exploreShorts.id} AS CHAR) = ${exploreEngagements.contentId}`
+    sql35`CAST(${exploreShorts.id} AS CHAR) = ${exploreEngagements.contentId}`
   ).leftJoin(
     contentQualityScores,
-    sql36`CAST(${exploreShorts.id} AS CHAR) = ${contentQualityScores.contentId}`
-  ).where(eq49(exploreShorts.partnerId, partnerId)).groupBy(
+    sql35`CAST(${exploreShorts.id} AS CHAR) = ${contentQualityScores.contentId}`
+  ).where(eq48(exploreShorts.partnerId, partnerId)).groupBy(
     exploreShorts.id,
     exploreShorts.title,
     exploreShorts.createdAt,
     contentQualityScores.overallScore
-  ).orderBy(desc30(count8(exploreEngagements.id))).limit(limit);
+  ).orderBy(desc29(count8(exploreEngagements.id))).limit(limit);
   const allContent = [...contentPerformance, ...shortsPerformance].map((item) => {
     const views = Number(item.views || 0);
     const engagements = Number(item.engagements || 0);
@@ -11076,7 +11019,7 @@ async function getTierBenchmarks() {
     tierId: partnerTiers.id,
     tierName: partnerTiers.name,
     partnerCount: count8(explorePartners.id),
-    totalViews: sum2(sql36`(
+    totalViews: sum2(sql35`(
         SELECT COUNT(*) 
         FROM explore_engagements 
         WHERE content_id IN (
@@ -11085,7 +11028,7 @@ async function getTierBenchmarks() {
           SELECT CAST(id AS CHAR) FROM explore_shorts WHERE partner_id = explore_partners.id
         )
       )`),
-    totalEngagements: sum2(sql36`(
+    totalEngagements: sum2(sql35`(
         SELECT COUNT(*) 
         FROM explore_engagements 
         WHERE engagement_type IN ('save', 'share', 'click')
@@ -11095,13 +11038,13 @@ async function getTierBenchmarks() {
           SELECT CAST(id AS CHAR) FROM explore_shorts WHERE partner_id = explore_partners.id
         )
       )`),
-    totalLeads: sum2(sql36`(
+    totalLeads: sum2(sql35`(
         SELECT COUNT(*) 
         FROM partner_leads 
         WHERE partner_id = explore_partners.id 
         AND status = 'converted'
       )`)
-  }).from(partnerTiers).leftJoin(explorePartners, eq49(partnerTiers.id, explorePartners.tierId)).groupBy(partnerTiers.id, partnerTiers.name);
+  }).from(partnerTiers).leftJoin(explorePartners, eq48(partnerTiers.id, explorePartners.tierId)).groupBy(partnerTiers.id, partnerTiers.name);
   return benchmarks.map((b) => {
     const partnerCount = Number(b.partnerCount || 1);
     const avgViews = Number(b.totalViews || 0) / partnerCount;
@@ -11126,13 +11069,13 @@ async function getBoostCampaignROI(partnerId) {
     impressions: boostCampaigns.impressions,
     clicks: boostCampaigns.clicks,
     costPerImpression: boostCampaigns.costPerImpression
-  }).from(boostCampaigns).where(eq49(boostCampaigns.partnerId, partnerId));
+  }).from(boostCampaigns).where(eq48(boostCampaigns.partnerId, partnerId));
   const roiData = [];
   for (const campaign of campaigns) {
     const [leadData] = await db.select({
       leads: count8(partnerLeads.id)
     }).from(partnerLeads).where(
-      and41(eq49(partnerLeads.partnerId, partnerId), eq49(partnerLeads.contentId, campaign.contentId))
+      and40(eq48(partnerLeads.partnerId, partnerId), eq48(partnerLeads.contentId, campaign.contentId))
     );
     const leads2 = Number(leadData?.leads || 0);
     const spent = Number(campaign.spent);
@@ -11364,7 +11307,7 @@ var init_partnerAnalyticsRouter = __esm({
 });
 
 // server/services/contentApprovalService.ts
-import { eq as eq50, and as and42, desc as desc31, sql as sql37 } from "drizzle-orm";
+import { eq as eq49, and as and41, desc as desc30, sql as sql36 } from "drizzle-orm";
 import { randomUUID as randomUUID3 } from "crypto";
 var ContentApprovalService, contentApprovalService;
 var init_contentApprovalService = __esm({
@@ -11382,15 +11325,15 @@ var init_contentApprovalService = __esm({
        */
       async submitForApproval(contentId, partnerId) {
         const partner = await db.query.explorePartners.findFirst({
-          where: eq50(explorePartners.id, partnerId)
+          where: eq49(explorePartners.id, partnerId)
         });
         if (!partner) {
           throw new Error("Partner not found");
         }
         const existingQueueItem = await db.query.contentApprovalQueue.findFirst({
-          where: and42(
-            eq50(contentApprovalQueue.contentId, contentId),
-            eq50(contentApprovalQueue.partnerId, partnerId)
+          where: and41(
+            eq49(contentApprovalQueue.contentId, contentId),
+            eq49(contentApprovalQueue.partnerId, partnerId)
           )
         });
         if (existingQueueItem) {
@@ -11428,11 +11371,11 @@ var init_contentApprovalService = __esm({
        */
       async flagContent(contentId, reason, reporterId) {
         const queueItem = await db.query.contentApprovalQueue.findFirst({
-          where: eq50(contentApprovalQueue.contentId, contentId)
+          where: eq49(contentApprovalQueue.contentId, contentId)
         });
         if (!queueItem) {
           const content = await db.query.exploreContent.findFirst({
-            where: eq50(exploreContent.id, parseInt(contentId))
+            where: eq49(exploreContent.id, parseInt(contentId))
           });
           if (!content) {
             throw new Error("Content not found");
@@ -11455,7 +11398,7 @@ var init_contentApprovalService = __esm({
           status: "pending",
           autoApprovalEligible: false,
           feedback: `Flagged by user ${reporterId}: ${reason}`
-        }).where(eq50(contentApprovalQueue.id, queueItem.id));
+        }).where(eq49(contentApprovalQueue.id, queueItem.id));
       }
       /**
        * Route content to manual review queue
@@ -11467,7 +11410,7 @@ var init_contentApprovalService = __esm({
           status: "pending",
           autoApprovalEligible: false,
           feedback: reason
-        }).where(eq50(contentApprovalQueue.id, queueId));
+        }).where(eq49(contentApprovalQueue.id, queueId));
       }
       /**
        * Review content with approve/reject/revision decision
@@ -11476,7 +11419,7 @@ var init_contentApprovalService = __esm({
        */
       async reviewContent(queueId, decision, reviewerId) {
         const queueItem = await db.query.contentApprovalQueue.findFirst({
-          where: eq50(contentApprovalQueue.id, queueId)
+          where: eq49(contentApprovalQueue.id, queueId)
         });
         if (!queueItem) {
           throw new Error("Queue item not found");
@@ -11505,10 +11448,10 @@ Ask yourself: "Would I watch this even if I wasn't buying?"`;
         }
         await db.update(contentApprovalQueue).set({
           status: decision.status,
-          reviewedAt: sql37`CURRENT_TIMESTAMP`,
+          reviewedAt: sql36`CURRENT_TIMESTAMP`,
           reviewerId,
           feedback: feedbackMessage
-        }).where(eq50(contentApprovalQueue.id, queueId));
+        }).where(eq49(contentApprovalQueue.id, queueId));
         if (decision.status === "approved") {
           await partnerService.incrementApprovedContentCount(queueItem.partnerId);
           await partnerService.calculateTrustScore(queueItem.partnerId);
@@ -11520,8 +11463,8 @@ Ask yourself: "Would I watch this even if I wasn't buying?"`;
        */
       async getPendingReviews(reviewerId, limit = 50) {
         const items = await db.query.contentApprovalQueue.findMany({
-          where: eq50(contentApprovalQueue.status, "pending"),
-          orderBy: [desc31(contentApprovalQueue.submittedAt)],
+          where: eq49(contentApprovalQueue.status, "pending"),
+          orderBy: [desc30(contentApprovalQueue.submittedAt)],
           limit
         });
         return items.map((item) => ({
@@ -11542,7 +11485,7 @@ Ask yourself: "Would I watch this even if I wasn't buying?"`;
        */
       async getPartnerReviewStats(partnerId) {
         const items = await db.query.contentApprovalQueue.findMany({
-          where: eq50(contentApprovalQueue.partnerId, partnerId)
+          where: eq49(contentApprovalQueue.partnerId, partnerId)
         });
         const total = items.length;
         const approved = items.filter((i) => i.status === "approved").length;
@@ -11566,15 +11509,15 @@ Ask yourself: "Would I watch this even if I wasn't buying?"`;
       async getApprovalQueue(filters = {}) {
         const conditions = [];
         if (filters.status) {
-          conditions.push(eq50(contentApprovalQueue.status, filters.status));
+          conditions.push(eq49(contentApprovalQueue.status, filters.status));
         }
         if (filters.partnerId) {
-          conditions.push(eq50(contentApprovalQueue.partnerId, filters.partnerId));
+          conditions.push(eq49(contentApprovalQueue.partnerId, filters.partnerId));
         }
-        const whereClause = conditions.length > 0 ? and42(...conditions) : void 0;
+        const whereClause = conditions.length > 0 ? and41(...conditions) : void 0;
         const items = await db.query.contentApprovalQueue.findMany({
           where: whereClause,
-          orderBy: [desc31(contentApprovalQueue.submittedAt)],
+          orderBy: [desc30(contentApprovalQueue.submittedAt)],
           limit: filters.limit || 50,
           offset: filters.offset || 0
         });
@@ -11597,7 +11540,7 @@ Ask yourself: "Would I watch this even if I wasn't buying?"`;
       async validateContentRules(content, partner) {
         const errors = [];
         const tier = await db.query.partnerTiers.findFirst({
-          where: eq50(partnerTiers.id, partner.tierId)
+          where: eq49(partnerTiers.id, partner.tierId)
         });
         if (!tier) {
           errors.push("Partner tier not found");
@@ -11666,7 +11609,7 @@ Ask yourself: "Would I watch this even if I wasn't buying?"`;
        */
       async validateContentType(contentType, tierId) {
         const tier = await db.query.partnerTiers.findFirst({
-          where: eq50(partnerTiers.id, tierId)
+          where: eq49(partnerTiers.id, tierId)
         });
         if (!tier) {
           return false;
@@ -11680,7 +11623,7 @@ Ask yourself: "Would I watch this even if I wasn't buying?"`;
        */
       async validateCTAs(ctas, tierId) {
         const tier = await db.query.partnerTiers.findFirst({
-          where: eq50(partnerTiers.id, tierId)
+          where: eq49(partnerTiers.id, tierId)
         });
         if (!tier) {
           return { isValid: false, invalidCTAs: ctas };
@@ -11892,7 +11835,7 @@ var init_contentRouter = __esm({
 });
 
 // server/services/topicsService.ts
-import { eq as eq51, and as and43, inArray as inArray11, sql as sql38, desc as desc32, asc as asc4 } from "drizzle-orm";
+import { eq as eq50, and as and42, inArray as inArray11, sql as sql37, desc as desc31, asc as asc4 } from "drizzle-orm";
 var TopicsService, topicsService;
 var init_topicsService = __esm({
   "server/services/topicsService.ts"() {
@@ -11905,7 +11848,7 @@ var init_topicsService = __esm({
        * Requirement 3.1: Display horizontal scrollable list of Topics
        */
       async getAllTopics() {
-        const result = await db.select().from(topics).where(eq51(topics.isActive, true)).orderBy(asc4(topics.displayOrder), asc4(topics.name));
+        const result = await db.select().from(topics).where(eq50(topics.isActive, true)).orderBy(asc4(topics.displayOrder), asc4(topics.name));
         return result.map(this.mapTopicFromDb);
       }
       /**
@@ -11913,7 +11856,7 @@ var init_topicsService = __esm({
        * Requirement 3.1: Support URL routing with topic slugs
        */
       async getTopicBySlug(slug) {
-        const result = await db.select().from(topics).where(and43(eq51(topics.slug, slug), eq51(topics.isActive, true))).limit(1);
+        const result = await db.select().from(topics).where(and42(eq50(topics.slug, slug), eq50(topics.isActive, true))).limit(1);
         if (result.length === 0) {
           return null;
         }
@@ -11923,7 +11866,7 @@ var init_topicsService = __esm({
        * Get a single topic by its ID
        */
       async getTopicById(topicId) {
-        const result = await db.select().from(topics).where(eq51(topics.id, topicId)).limit(1);
+        const result = await db.select().from(topics).where(eq50(topics.id, topicId)).limit(1);
         if (result.length === 0) {
           return null;
         }
@@ -11935,7 +11878,7 @@ var init_topicsService = __esm({
        * Requirements: 3.6, 16.36
        */
       async getTopicContentCount(topicId) {
-        const result = await db.select({ count: sql38`count(*)` }).from(contentTopics).where(eq51(contentTopics.topicId, topicId));
+        const result = await db.select({ count: sql37`count(*)` }).from(contentTopics).where(eq50(contentTopics.topicId, topicId));
         return result[0]?.count || 0;
       }
       /**
@@ -12009,46 +11952,46 @@ var init_topicsService = __esm({
           return [];
         }
         const offset = (pagination.page - 1) * pagination.limit;
-        const taggedContentIds = await db.select({ contentId: contentTopics.contentId }).from(contentTopics).where(eq51(contentTopics.topicId, topicId));
+        const taggedContentIds = await db.select({ contentId: contentTopics.contentId }).from(contentTopics).where(eq50(contentTopics.topicId, topicId));
         const taggedIds = taggedContentIds.map((item) => item.contentId);
-        const conditions = [eq51(exploreContent.isActive, 1)];
+        const conditions = [eq50(exploreContent.isActive, 1)];
         if (taggedIds.length > 0) {
-          conditions.push(sql38`${exploreContent.id} IN ${taggedIds.map((id) => parseInt(id))}`);
+          conditions.push(sql37`${exploreContent.id} IN ${taggedIds.map((id) => parseInt(id))}`);
         } else {
           const tagConditions = [];
           if (topic.contentTags && topic.contentTags.length > 0) {
             for (const tag of topic.contentTags) {
-              tagConditions.push(sql38`JSON_CONTAINS(${exploreContent.tags}, JSON_QUOTE(${tag}))`);
+              tagConditions.push(sql37`JSON_CONTAINS(${exploreContent.tags}, JSON_QUOTE(${tag}))`);
             }
           }
           if (topic.propertyFeatures && topic.propertyFeatures.length > 0) {
             for (const feature of topic.propertyFeatures) {
               tagConditions.push(
-                sql38`JSON_CONTAINS(${exploreContent.metadata}, JSON_QUOTE(${feature}), '$.propertyFeatures')`
+                sql37`JSON_CONTAINS(${exploreContent.metadata}, JSON_QUOTE(${feature}), '$.propertyFeatures')`
               );
             }
           }
           if (topic.partnerCategories && topic.partnerCategories.length > 0) {
             for (const category of topic.partnerCategories) {
               tagConditions.push(
-                sql38`JSON_CONTAINS(${exploreContent.metadata}, JSON_QUOTE(${category}), '$.partnerCategory')`
+                sql37`JSON_CONTAINS(${exploreContent.metadata}, JSON_QUOTE(${category}), '$.partnerCategory')`
               );
             }
           }
           if (tagConditions.length > 0) {
-            conditions.push(sql38`(${sql38.join(tagConditions, sql38` OR `)})`);
+            conditions.push(sql37`(${sql37.join(tagConditions, sql37` OR `)})`);
           }
         }
         if (filters?.contentTypes && filters.contentTypes.length > 0) {
           conditions.push(inArray11(exploreContent.contentType, filters.contentTypes));
         }
         if (filters?.priceMin !== void 0) {
-          conditions.push(sql38`${exploreContent.priceMin} >= ${filters.priceMin}`);
+          conditions.push(sql37`${exploreContent.priceMin} >= ${filters.priceMin}`);
         }
         if (filters?.priceMax !== void 0) {
-          conditions.push(sql38`${exploreContent.priceMax} <= ${filters.priceMax}`);
+          conditions.push(sql37`${exploreContent.priceMax} <= ${filters.priceMax}`);
         }
-        const content = await db.select().from(exploreContent).where(and43(...conditions)).orderBy(desc32(exploreContent.engagementScore), desc32(exploreContent.createdAt)).limit(pagination.limit).offset(offset);
+        const content = await db.select().from(exploreContent).where(and42(...conditions)).orderBy(desc31(exploreContent.engagementScore), desc31(exploreContent.createdAt)).limit(pagination.limit).offset(offset);
         return content;
       }
       /**
@@ -12061,20 +12004,20 @@ var init_topicsService = __esm({
           return [];
         }
         const offset = (pagination.page - 1) * pagination.limit;
-        const conditions = [eq51(exploreShorts.isPublished, 1)];
+        const conditions = [eq50(exploreShorts.isPublished, 1)];
         const tagConditions = [];
         if (filters?.contentTypes && filters.contentTypes.length > 0) {
           conditions.push(inArray11(exploreShorts.contentType, filters.contentTypes));
         }
         if (topic.contentTags && topic.contentTags.length > 0) {
           for (const tag of topic.contentTags) {
-            tagConditions.push(sql38`JSON_CONTAINS(${exploreShorts.highlights}, JSON_QUOTE(${tag}))`);
+            tagConditions.push(sql37`JSON_CONTAINS(${exploreShorts.highlights}, JSON_QUOTE(${tag}))`);
           }
         }
         if (tagConditions.length > 0) {
-          conditions.push(sql38`(${sql38.join(tagConditions, sql38` OR `)})`);
+          conditions.push(sql37`(${sql37.join(tagConditions, sql37` OR `)})`);
         }
-        const shorts = await db.select().from(exploreShorts).where(and43(...conditions)).orderBy(desc32(exploreShorts.performanceScore), desc32(exploreShorts.publishedAt)).limit(pagination.limit).offset(offset);
+        const shorts = await db.select().from(exploreShorts).where(and42(...conditions)).orderBy(desc31(exploreShorts.performanceScore), desc31(exploreShorts.publishedAt)).limit(pagination.limit).offset(offset);
         return shorts;
       }
       /**
@@ -12083,7 +12026,7 @@ var init_topicsService = __esm({
        * Requirement 3.2: Create tagContentWithTopics() for content-topic mapping
        */
       async tagContentWithTopics(contentId, topicIds, contentData) {
-        await db.delete(contentTopics).where(eq51(contentTopics.contentId, contentId));
+        await db.delete(contentTopics).where(eq50(contentTopics.contentId, contentId));
         for (const topicId of topicIds) {
           const topic = await this.getTopicById(topicId);
           if (!topic) continue;
@@ -12217,7 +12160,7 @@ var init_topicsService = __esm({
         const mappings = await db.select({
           topicId: contentTopics.topicId,
           relevanceScore: contentTopics.relevanceScore
-        }).from(contentTopics).where(eq51(contentTopics.contentId, contentId)).orderBy(desc32(contentTopics.relevanceScore));
+        }).from(contentTopics).where(eq50(contentTopics.contentId, contentId)).orderBy(desc31(contentTopics.relevanceScore));
         const topicIds = mappings.map((m) => m.topicId);
         if (topicIds.length === 0) return [];
         const topicsData = await db.select().from(topics).where(inArray11(topics.id, topicIds));
@@ -12910,7 +12853,7 @@ var init_partnerSubscriptionRouter = __esm({
 });
 
 // server/services/partnerBoostCampaignService.ts
-import { eq as eq52, and as and44, sql as sql39, lte as lte12 } from "drizzle-orm";
+import { eq as eq51, and as and43, sql as sql38, lte as lte12 } from "drizzle-orm";
 import { nanoid as nanoid5 } from "nanoid";
 var PartnerBoostCampaignService, partnerBoostCampaignService;
 var init_partnerBoostCampaignService = __esm({
@@ -12926,13 +12869,13 @@ var init_partnerBoostCampaignService = __esm({
        */
       async createCampaign(data) {
         const topic = await db.query.topics.findFirst({
-          where: eq52(topics.id, data.topicId)
+          where: eq51(topics.id, data.topicId)
         });
         if (!topic) {
           throw new Error("Topic not found. Topic selection is required for boost campaigns.");
         }
         const partner = await db.query.explorePartners.findFirst({
-          where: eq52(explorePartners.id, data.partnerId)
+          where: eq51(explorePartners.id, data.partnerId)
         });
         if (!partner) {
           throw new Error("Partner not found");
@@ -12957,7 +12900,7 @@ var init_partnerBoostCampaignService = __esm({
           costPerImpression: (data.costPerImpression || 0.1).toString()
         });
         const campaign = await db.query.boostCampaigns.findFirst({
-          where: eq52(boostCampaigns.id, campaignId)
+          where: eq51(boostCampaigns.id, campaignId)
         });
         if (!campaign) {
           throw new Error("Failed to create campaign");
@@ -12970,7 +12913,7 @@ var init_partnerBoostCampaignService = __esm({
        */
       async activateCampaign(campaignId) {
         const campaign = await db.query.boostCampaigns.findFirst({
-          where: eq52(boostCampaigns.id, campaignId)
+          where: eq51(boostCampaigns.id, campaignId)
         });
         if (!campaign) {
           throw new Error("Campaign not found");
@@ -12987,13 +12930,13 @@ var init_partnerBoostCampaignService = __esm({
             throw new Error("Cannot activate campaign: campaign has expired");
           }
         }
-        await db.update(boostCampaigns).set({ status: "active" }).where(eq52(boostCampaigns.id, campaignId));
+        await db.update(boostCampaigns).set({ status: "active" }).where(eq51(boostCampaigns.id, campaignId));
       }
       /**
        * Pause a boost campaign
        */
       async pauseCampaign(campaignId) {
-        await db.update(boostCampaigns).set({ status: "paused" }).where(eq52(boostCampaigns.id, campaignId));
+        await db.update(boostCampaigns).set({ status: "paused" }).where(eq51(boostCampaigns.id, campaignId));
       }
       /**
        * Record impression for a boosted content
@@ -13002,7 +12945,7 @@ var init_partnerBoostCampaignService = __esm({
        */
       async recordImpression(campaignId) {
         const campaign = await db.query.boostCampaigns.findFirst({
-          where: eq52(boostCampaigns.id, campaignId)
+          where: eq51(boostCampaigns.id, campaignId)
         });
         if (!campaign || campaign.status !== "active") {
           return;
@@ -13017,7 +12960,7 @@ var init_partnerBoostCampaignService = __esm({
           impressions: newImpressions,
           spent: newSpent.toString(),
           status: shouldDeplete ? "depleted" : "active"
-        }).where(eq52(boostCampaigns.id, campaignId));
+        }).where(eq51(boostCampaigns.id, campaignId));
         if (shouldDeplete) {
           console.log(
             `[PartnerBoostCampaign] Campaign ${campaignId} budget depleted. Status set to 'depleted'.`
@@ -13030,7 +12973,7 @@ var init_partnerBoostCampaignService = __esm({
        */
       async recordClick(campaignId) {
         const campaign = await db.query.boostCampaigns.findFirst({
-          where: eq52(boostCampaigns.id, campaignId)
+          where: eq51(boostCampaigns.id, campaignId)
         });
         if (!campaign || campaign.status !== "active") {
           return;
@@ -13038,7 +12981,7 @@ var init_partnerBoostCampaignService = __esm({
         const newClicks = (campaign.clicks || 0) + 1;
         await db.update(boostCampaigns).set({
           clicks: newClicks
-        }).where(eq52(boostCampaigns.id, campaignId));
+        }).where(eq51(boostCampaigns.id, campaignId));
       }
       /**
        * Get active campaigns for a specific topic
@@ -13047,11 +12990,11 @@ var init_partnerBoostCampaignService = __esm({
       async getActiveCampaignsForTopic(topicId) {
         const now = (/* @__PURE__ */ new Date()).toISOString();
         const campaigns = await db.query.boostCampaigns.findMany({
-          where: and44(
-            eq52(boostCampaigns.topicId, topicId),
-            eq52(boostCampaigns.status, "active"),
+          where: and43(
+            eq51(boostCampaigns.topicId, topicId),
+            eq51(boostCampaigns.status, "active"),
             lte12(boostCampaigns.startDate, now),
-            sql39`(${boostCampaigns.endDate} IS NULL OR ${boostCampaigns.endDate} >= ${now})`
+            sql38`(${boostCampaigns.endDate} IS NULL OR ${boostCampaigns.endDate} >= ${now})`
           )
         });
         return campaigns;
@@ -13062,7 +13005,7 @@ var init_partnerBoostCampaignService = __esm({
        */
       async getCampaignAnalytics(campaignId) {
         const campaign = await db.query.boostCampaigns.findFirst({
-          where: eq52(boostCampaigns.id, campaignId)
+          where: eq51(boostCampaigns.id, campaignId)
         });
         if (!campaign) {
           throw new Error("Campaign not found");
@@ -13102,10 +13045,10 @@ var init_partnerBoostCampaignService = __esm({
        */
       async validateBoostEligibility(contentId) {
         const content = await db.query.exploreContent.findFirst({
-          where: eq52(exploreContent.id, parseInt(contentId))
+          where: eq51(exploreContent.id, parseInt(contentId))
         });
         const short = await db.query.exploreShorts.findFirst({
-          where: eq52(exploreShorts.id, parseInt(contentId))
+          where: eq51(exploreShorts.id, parseInt(contentId))
         });
         if (!content && !short) {
           return {
@@ -13144,7 +13087,7 @@ var init_partnerBoostCampaignService = __esm({
        */
       async checkBudgetDepletion(campaignId) {
         const campaign = await db.query.boostCampaigns.findFirst({
-          where: eq52(boostCampaigns.id, campaignId)
+          where: eq51(boostCampaigns.id, campaignId)
         });
         if (!campaign) {
           return false;
@@ -13158,7 +13101,7 @@ var init_partnerBoostCampaignService = __esm({
        */
       async getPartnerCampaigns(partnerId) {
         const campaigns = await db.query.boostCampaigns.findMany({
-          where: eq52(boostCampaigns.partnerId, partnerId)
+          where: eq51(boostCampaigns.partnerId, partnerId)
         });
         return campaigns;
       }
@@ -13170,9 +13113,9 @@ var init_partnerBoostCampaignService = __esm({
       async updateExpiredCampaigns() {
         const now = (/* @__PURE__ */ new Date()).toISOString();
         const result = await db.update(boostCampaigns).set({ status: "completed" }).where(
-          and44(
-            eq52(boostCampaigns.status, "active"),
-            sql39`${boostCampaigns.endDate} IS NOT NULL AND ${boostCampaigns.endDate} < ${now}`
+          and43(
+            eq51(boostCampaigns.status, "active"),
+            sql38`${boostCampaigns.endDate} IS NOT NULL AND ${boostCampaigns.endDate} < ${now}`
           )
         );
         return result[0]?.affectedRows || 0;
@@ -13184,14 +13127,14 @@ var init_partnerBoostCampaignService = __esm({
        */
       async checkAndPauseDepletedCampaigns() {
         const campaigns = await db.query.boostCampaigns.findMany({
-          where: eq52(boostCampaigns.status, "active")
+          where: eq51(boostCampaigns.status, "active")
         });
         let pausedCount = 0;
         for (const campaign of campaigns) {
           const spent = parseFloat(campaign.spent || "0");
           const budget = parseFloat(campaign.budget);
           if (spent >= budget) {
-            await db.update(boostCampaigns).set({ status: "depleted" }).where(eq52(boostCampaigns.id, campaign.id));
+            await db.update(boostCampaigns).set({ status: "depleted" }).where(eq51(boostCampaigns.id, campaign.id));
             pausedCount++;
             console.log(
               `[PartnerBoostCampaign] Auto-paused campaign ${campaign.id} due to budget depletion`
@@ -13206,7 +13149,7 @@ var init_partnerBoostCampaignService = __esm({
        */
       async getBudgetStatus(campaignId) {
         const campaign = await db.query.boostCampaigns.findFirst({
-          where: eq52(boostCampaigns.id, campaignId)
+          where: eq51(boostCampaigns.id, campaignId)
         });
         if (!campaign) {
           throw new Error("Campaign not found");
@@ -13232,11 +13175,11 @@ var init_partnerBoostCampaignService = __esm({
       async isContentBoosted(contentId) {
         const now = (/* @__PURE__ */ new Date()).toISOString();
         const activeCampaign = await db.query.boostCampaigns.findFirst({
-          where: and44(
-            eq52(boostCampaigns.contentId, contentId),
-            eq52(boostCampaigns.status, "active"),
+          where: and43(
+            eq51(boostCampaigns.contentId, contentId),
+            eq51(boostCampaigns.status, "active"),
             lte12(boostCampaigns.startDate, now),
-            sql39`(${boostCampaigns.endDate} IS NULL OR ${boostCampaigns.endDate} >= ${now})`
+            sql38`(${boostCampaigns.endDate} IS NULL OR ${boostCampaigns.endDate} >= ${now})`
           )
         });
         if (activeCampaign) {
@@ -13276,14 +13219,14 @@ var init_partnerBoostCampaignService = __esm({
         }
         const now = (/* @__PURE__ */ new Date()).toISOString();
         const activeCampaigns = await db.query.boostCampaigns.findMany({
-          where: and44(
-            sql39`${boostCampaigns.contentId} IN (${sql39.join(
-              contentIds.map((id) => sql39`${id}`),
-              sql39`, `
+          where: and43(
+            sql38`${boostCampaigns.contentId} IN (${sql38.join(
+              contentIds.map((id) => sql38`${id}`),
+              sql38`, `
             )})`,
-            eq52(boostCampaigns.status, "active"),
+            eq51(boostCampaigns.status, "active"),
             lte12(boostCampaigns.startDate, now),
-            sql39`(${boostCampaigns.endDate} IS NULL OR ${boostCampaigns.endDate} >= ${now})`
+            sql38`(${boostCampaigns.endDate} IS NULL OR ${boostCampaigns.endDate} >= ${now})`
           )
         });
         return new Set(activeCampaigns.map((c) => c.contentId));
@@ -13803,7 +13746,7 @@ var init_partnerLeadRouter = __esm({
 // server/_core/index.ts
 import dotenv from "dotenv";
 import path3 from "path";
-import { sql as sql40 } from "drizzle-orm";
+import { sql as sql39 } from "drizzle-orm";
 import express4 from "express";
 import cors from "cors";
 import rateLimit from "express-rate-limit";
@@ -14660,7 +14603,7 @@ init_db();
 import { z as z2 } from "zod";
 init_db();
 init_schema();
-import { eq as eq7, desc as desc4, asc, and as and6, or as or3, like as like3, sql as sql7 } from "drizzle-orm";
+import { eq as eq6, desc as desc4, asc, and as and6, or as or3, like as like3, sql as sql7 } from "drizzle-orm";
 
 // server/_core/auditLog.ts
 init_db();
@@ -14728,8 +14671,8 @@ function nowAsDbTimestamp() {
 // server/services/developmentService.ts
 init_db_connection();
 init_schema();
-import { eq as eq6, desc as desc3, and as and5, sql as sql6, inArray as inArray3 } from "drizzle-orm";
-import { TRPCError as TRPCError6 } from "@trpc/server";
+import { eq as eq5, desc as desc3, and as and5, sql as sql6, inArray as inArray3 } from "drizzle-orm";
+import { TRPCError as TRPCError5 } from "@trpc/server";
 import * as crypto2 from "crypto";
 
 // server/services/publishNormalizer.ts
@@ -14912,33 +14855,29 @@ function normalizeForPublish(wizardData, ownerType = "developer") {
     longitude: emptyToNull(wizardData.longitude),
     customClassification: emptyToNull(wizardData.customClassification),
     // Optional enums
-    constructionPhase: mapEnum(
-      wizardData.constructionPhase,
-      ["planning", "under_construction", "completed", "phase_completed"]
-    ),
+    constructionPhase: mapEnum(wizardData.constructionPhase, [
+      "planning",
+      "under_construction",
+      "completed",
+      "phase_completed"
+    ]),
     nature: mapEnum(
       wizardData.nature,
       ["new", "phase", "extension", "redevelopment"],
       "new"
     ),
     ownershipType: normalizeOwnershipType(wizardData.ownershipType),
-    structuralType: mapEnum(
-      wizardData.structuralType,
-      [
-        "apartment",
-        "freestanding-house",
-        "simplex",
-        "duplex",
-        "penthouse",
-        "plot-and-plan",
-        "townhouse",
-        "studio"
-      ]
-    ),
-    floors: mapEnum(
-      wizardData.floors,
-      ["single-storey", "double-storey", "triplex"]
-    ),
+    structuralType: mapEnum(wizardData.structuralType, [
+      "apartment",
+      "freestanding-house",
+      "simplex",
+      "duplex",
+      "penthouse",
+      "plot-and-plan",
+      "townhouse",
+      "studio"
+    ]),
+    floors: mapEnum(wizardData.floors, ["single-storey", "double-storey", "triplex"]),
     marketingRole: mapEnum(wizardData.marketingRole, ["exclusive", "joint", "open"]),
     // Numeric fields
     priceFrom: coerceInt(wizardData.priceFrom),
@@ -15015,7 +14954,7 @@ async function generateUniqueSlug(baseName) {
   let slug = generateSlug2(baseName);
   let counter = 1;
   while (true) {
-    const existing = await db3.select({ id: developments.id }).from(developments).where(eq6(developments.slug, slug)).limit(1);
+    const existing = await db3.select({ id: developments.id }).from(developments).where(eq5(developments.slug, slug)).limit(1);
     if (existing.length === 0) return slug;
     slug = `${generateSlug2(baseName)}-${counter}`;
     counter++;
@@ -15233,7 +15172,7 @@ function stringifyJsonValue(value, fallback) {
 function requireEnum(value, allowed, fieldName) {
   const sanitized = sanitizeEnum(value, allowed, null);
   if (sanitized === null) {
-    throw new TRPCError6({
+    throw new TRPCError5({
       code: "BAD_REQUEST",
       message: `Invalid ${fieldName}`
     });
@@ -15320,7 +15259,7 @@ async function getPublicDevelopmentBySlug(slugOrId) {
     }
     const { isId, value } = parseSlugOrId(slugOrId);
     if (!isId && (!value || value === "undefined" || value === "null")) return null;
-    const whereClause = isId ? and5(eq6(developments.id, value), eq6(developments.isPublished, 1)) : and5(eq6(developments.slug, value), eq6(developments.isPublished, 1));
+    const whereClause = isId ? and5(eq5(developments.id, value), eq5(developments.isPublished, 1)) : and5(eq5(developments.slug, value), eq5(developments.isPublished, 1));
     const results = await db3.select({
       id: developments.id,
       name: developments.name,
@@ -15371,11 +15310,11 @@ async function getPublicDevelopmentBySlug(slugOrId) {
         phone: developers.phone,
         status: developers.status
       }
-    }).from(developments).leftJoin(developers, eq6(developments.developerId, developers.id)).where(whereClause).limit(1);
+    }).from(developments).leftJoin(developers, eq5(developments.developerId, developers.id)).where(whereClause).limit(1);
     if (results.length === 0) return null;
     const dev = results[0];
     const [units, phases] = await Promise.all([
-      db3.select().from(unitTypes).where(and5(eq6(unitTypes.developmentId, dev.id), eq6(unitTypes.isActive, 1))).orderBy(unitTypes.basePriceFrom),
+      db3.select().from(unitTypes).where(and5(eq5(unitTypes.developmentId, dev.id), eq5(unitTypes.isActive, 1))).orderBy(unitTypes.basePriceFrom),
       db3.select({
         id: developmentPhases.id,
         developmentId: developmentPhases.developmentId,
@@ -15389,7 +15328,7 @@ async function getPublicDevelopmentBySlug(slugOrId) {
         priceTo: developmentPhases.priceTo,
         launchDate: developmentPhases.launchDate,
         completionDate: developmentPhases.completionDate
-      }).from(developmentPhases).where(eq6(developmentPhases.developmentId, dev.id)).orderBy(developmentPhases.phaseNumber)
+      }).from(developmentPhases).where(eq5(developmentPhases.developmentId, dev.id)).orderBy(developmentPhases.phaseNumber)
     ]);
     const unitsWithMedia = units.map((u) => {
       let baseMedia = u.baseMedia;
@@ -15476,7 +15415,7 @@ async function getPublicDevelopment(id) {
     status: developments.status,
     transactionType: developments.transactionType,
     developerId: developments.developerId
-  }).from(developments).where(and5(eq6(developments.id, id), eq6(developments.isPublished, 1))).limit(1);
+  }).from(developments).where(and5(eq5(developments.id, id), eq5(developments.isPublished, 1))).limit(1);
   if (!results[0]) return null;
   return { ...results[0], images: parseJsonField(results[0].images) };
 }
@@ -15484,8 +15423,12 @@ async function listPublicDevelopments(options = {}) {
   const { limit = 20, province: province2 } = options;
   const db3 = await getDb();
   if (!db3) return [];
-  const conditions = [eq6(developments.isPublished, 1)];
-  if (province2) conditions.push(eq6(developments.province, province2));
+  const conditions = [eq5(developments.isPublished, 1)];
+  if (province2) conditions.push(eq5(developments.province, province2));
+  if (options.transactionType)
+    conditions.push(eq5(developments.transactionType, options.transactionType));
+  if (options.developmentType)
+    conditions.push(eq5(developments.developmentType, options.developmentType));
   const results = await db3.select({
     id: developments.id,
     developerId: developments.developerId,
@@ -15501,6 +15444,7 @@ async function listPublicDevelopments(options = {}) {
     monthlyRentFrom: developments.monthlyRentFrom,
     monthlyRentTo: developments.monthlyRentTo,
     transactionType: developments.transactionType,
+    developmentType: developments.developmentType,
     status: developments.status,
     isFeatured: developments.isFeatured,
     developer: {
@@ -15508,16 +15452,21 @@ async function listPublicDevelopments(options = {}) {
       name: developers.name,
       logo: developers.logo
     }
-  }).from(developments).leftJoin(developers, eq6(developments.developerId, developers.id)).where(and5(...conditions)).orderBy(desc3(developments.isFeatured), desc3(developments.createdAt)).limit(limit);
-  const devIds = results.map((d) => d.id);
+  }).from(developments).leftJoin(developers, eq5(developments.developerId, developers.id)).where(and5(...conditions)).orderBy(desc3(developments.isFeatured), desc3(developments.createdAt)).limit(limit);
+  const parsedResults = results.map((d) => ({
+    ...d,
+    images: parseJsonField(d.images)
+  }));
+  const devIds = parsedResults.map((d) => d.id);
   let priceMap = {};
   let rentMap = {};
+  let bedroomMap = {};
   if (devIds.length > 0) {
     const priceAgg = await db3.select({
       devId: unitTypes.developmentId,
       minPrice: sql6`min(case when ${unitTypes.basePriceFrom} > 0 then ${unitTypes.basePriceFrom} end)`,
       maxPrice: sql6`max(case when ${unitTypes.basePriceFrom} > 0 then ${unitTypes.basePriceFrom} end)`
-    }).from(unitTypes).where(and5(inArray3(unitTypes.developmentId, devIds), eq6(unitTypes.isActive, 1))).groupBy(unitTypes.developmentId);
+    }).from(unitTypes).where(and5(inArray3(unitTypes.developmentId, devIds), eq5(unitTypes.isActive, 1))).groupBy(unitTypes.developmentId);
     priceMap = priceAgg.reduce(
       (acc, curr) => {
         acc[curr.devId] = { min: Number(curr.minPrice) || 0, max: Number(curr.maxPrice) || 0 };
@@ -15529,7 +15478,7 @@ async function listPublicDevelopments(options = {}) {
       devId: unitTypes.developmentId,
       minRent: sql6`min(case when ${unitTypes.monthlyRentFrom} > 0 then ${unitTypes.monthlyRentFrom} end)`,
       maxRent: sql6`max(case when coalesce(${unitTypes.monthlyRentTo}, ${unitTypes.monthlyRentFrom}) > 0 then coalesce(${unitTypes.monthlyRentTo}, ${unitTypes.monthlyRentFrom}) end)`
-    }).from(unitTypes).where(and5(inArray3(unitTypes.developmentId, devIds), eq6(unitTypes.isActive, 1))).groupBy(unitTypes.developmentId);
+    }).from(unitTypes).where(and5(inArray3(unitTypes.developmentId, devIds), eq5(unitTypes.isActive, 1))).groupBy(unitTypes.developmentId);
     rentMap = rentAgg.reduce(
       (acc, curr) => {
         acc[curr.devId] = { min: Number(curr.minRent) || 0, max: Number(curr.maxRent) || 0 };
@@ -15537,9 +15486,25 @@ async function listPublicDevelopments(options = {}) {
       },
       {}
     );
+    const units = await db3.select({
+      devId: unitTypes.developmentId,
+      bedrooms: unitTypes.bedrooms
+    }).from(unitTypes).where(and5(inArray3(unitTypes.developmentId, devIds), eq5(unitTypes.isActive, 1)));
+    for (const u of units) {
+      if (u.devId && u.bedrooms !== null && u.bedrooms !== void 0) {
+        if (!bedroomMap[u.devId]) bedroomMap[u.devId] = [];
+        const beds = Number(u.bedrooms);
+        if (!isNaN(beds) && !bedroomMap[u.devId].includes(beds)) {
+          bedroomMap[u.devId].push(beds);
+        }
+      }
+    }
+    for (const id in bedroomMap) {
+      bedroomMap[id].sort((a, b) => a - b);
+    }
   }
-  return results.map((dev) => {
-    const rawImages = parseJsonField(dev.images);
+  return parsedResults.map((dev) => {
+    const rawImages = dev.images;
     let heroImage = "";
     const extractUrl = (item) => {
       if (typeof item === "string") return item;
@@ -15592,7 +15557,8 @@ async function listPublicDevelopments(options = {}) {
     if (!heroImage) return null;
     return {
       ...dev,
-      images: [],
+      images: rawImages,
+      bedrooms: bedroomMap[dev.id] || [],
       heroImage,
       priceFrom: isRental ? dev.priceFrom : finalPriceMin,
       priceTo: isRental ? dev.priceTo : finalPriceMax,
@@ -15607,37 +15573,52 @@ async function createDevelopment(userId, data, metadata = {}, operatingContext) 
   console.log("[createDevelopment] Input data:", { name: data.name, slug: data.slug });
   const { unitTypes: unitTypesData, ...developmentData } = data;
   const { ownerType, brandProfileId, ...restMetadata } = metadata;
-  const { resolveOperatingIdentity: resolveOperatingIdentity2 } = await Promise.resolve().then(() => (init_identityResolver(), identityResolver_exports));
-  const identity = await resolveOperatingIdentity2({
+  console.log("[createDevelopment] Input params:", {
     userId,
-    operatingAs: operatingContext,
-    db: db3
+    operatingContext,
+    brandProfileId,
+    ownerType
   });
-  console.log("[createDevelopment] Resolved identity:", {
-    mode: identity.mode,
-    userId: identity.userId,
-    brandProfileId: identity.brandProfileId
+  const user = await db3.query.users.findFirst({
+    where: eq5(users.id, userId),
+    columns: { id: true, role: true }
   });
-  if (!identity.developerProfileId && !identity.brandProfileId) {
-    throw createError(
-      "Invalid ownership: must have either developerProfileId or brandProfileId",
-      "VALIDATION_ERROR",
-      { identity }
-    );
+  let developerProfileId = null;
+  let resolvedBrandProfileId = null;
+  let effectiveOwnerType = ownerType || "developer";
+  if (user?.role === "super_admin") {
+    resolvedBrandProfileId = operatingContext?.brandProfileId || brandProfileId || developmentData.developerBrandProfileId || null;
+    developerProfileId = null;
+    effectiveOwnerType = "platform";
+    console.log("[createDevelopment] \u2705 SUPER ADMIN MODE - Bypassing all checks:", {
+      brandProfileId: resolvedBrandProfileId,
+      ownerType: effectiveOwnerType
+    });
+  } else {
+    const devProfile = await db3.query.developers.findFirst({
+      where: eq5(developers.userId, userId),
+      columns: { id: true, brandProfileId: true }
+    });
+    if (!devProfile) {
+      throw createError(
+        "Developer profile not found. Please complete onboarding.",
+        "VALIDATION_ERROR",
+        { userId }
+      );
+    }
+    developerProfileId = devProfile.id;
+    resolvedBrandProfileId = devProfile.brandProfileId || brandProfileId || null;
+    effectiveOwnerType = "developer";
+    console.log("[createDevelopment] Developer mode:", {
+      developerId: developerProfileId,
+      brandProfileId: resolvedBrandProfileId
+    });
   }
-  if (identity.mode === "emulator" && !identity.brandProfileId) {
-    throw createError("Emulator mode requires brandProfileId", "VALIDATION_ERROR", { identity });
-  }
-  const developerProfileId = identity.developerProfileId || null;
-  const resolvedBrandProfileId = identity.brandProfileId || brandProfileId || developmentData.developerBrandProfileId || null;
-  validateDevelopmentData(
-    { ...developmentData, devOwnerType: ownerType || "developer" },
-    userId
-  );
+  validateDevelopmentData({ ...developmentData, devOwnerType: effectiveOwnerType }, userId);
   const targetBrandId = resolvedBrandProfileId;
   if (targetBrandId) {
     const validBrand = await db3.query.developerBrandProfiles.findFirst({
-      where: eq6(developerBrandProfiles.id, targetBrandId),
+      where: eq5(developerBrandProfiles.id, targetBrandId),
       columns: { id: true }
     });
     if (!validBrand) {
@@ -15648,7 +15629,7 @@ async function createDevelopment(userId, data, metadata = {}, operatingContext) 
   }
   if (developmentData.marketingBrandProfileId) {
     const validMarketing = await db3.query.developerBrandProfiles.findFirst({
-      where: eq6(developerBrandProfiles.id, developmentData.marketingBrandProfileId),
+      where: eq5(developerBrandProfiles.id, developmentData.marketingBrandProfileId),
       columns: { id: true }
     });
     if (!validMarketing) {
@@ -15661,7 +15642,7 @@ async function createDevelopment(userId, data, metadata = {}, operatingContext) 
   }
   if (developmentData.locationId) {
     const validLocation = await db3.query.locations.findFirst({
-      where: eq6(locations.id, developmentData.locationId),
+      where: eq5(locations.id, developmentData.locationId),
       columns: { id: true }
     });
     if (!validLocation) {
@@ -15836,12 +15817,12 @@ async function createDevelopment(userId, data, metadata = {}, operatingContext) 
       let persistedCount = 0;
       if (unitTypesData && Array.isArray(unitTypesData) && unitTypesData.length > 0) {
         await persistUnitTypes(tx, newId, unitTypesData);
-        const [{ count: count9 }] = await tx.select({ count: sql6`count(*)` }).from(unitTypes).where(eq6(unitTypes.developmentId, newId));
+        const [{ count: count9 }] = await tx.select({ count: sql6`count(*)` }).from(unitTypes).where(eq5(unitTypes.developmentId, newId));
         console.log(
           `[createDevelopment] Verification read: ${count9} units persisted (expected >= 1)`
         );
         if (Number(count9) === 0) {
-          throw new TRPCError6({
+          throw new TRPCError5({
             code: "INTERNAL_SERVER_ERROR",
             message: "Unit types were provided but none were persisted. Aborting create."
           });
@@ -15875,7 +15856,7 @@ async function createDevelopment(userId, data, metadata = {}, operatingContext) 
       developerBrandProfileId: brandProfileId ?? null
     });
   }
-  const [created] = await db3.select().from(developments).where(eq6(developments.id, resultId)).limit(1);
+  const [created] = await db3.select().from(developments).where(eq5(developments.id, resultId)).limit(1);
   if (!created) {
     throw new Error(`Development created but not found on retrieval. ID: ${resultId}`);
   }
@@ -15890,11 +15871,11 @@ async function updateDevelopment(id, developerId2, data) {
   const db3 = await getDb();
   if (!db3) throw new Error("Database not available");
   const devProfile = await db3.query.developers.findFirst({
-    where: eq6(developers.userId, developerId2),
+    where: eq5(developers.userId, developerId2),
     columns: { id: true }
   });
   if (!devProfile) {
-    throw new TRPCError6({
+    throw new TRPCError5({
       code: "FORBIDDEN",
       message: `Developer profile for user ID ${developerId2} not found`
     });
@@ -15918,7 +15899,7 @@ async function updateDevelopment(id, developerId2, data) {
   if (developmentData.name !== void 0) {
     const name = sanitizeString(developmentData.name);
     if (name === null) {
-      throw new TRPCError6({ code: "BAD_REQUEST", message: "Invalid name" });
+      throw new TRPCError5({ code: "BAD_REQUEST", message: "Invalid name" });
     }
     updatePayload.name = name;
   }
@@ -16126,12 +16107,12 @@ async function updateDevelopment(id, developerId2, data) {
   }
   updatePayload.updatedAt = (/* @__PURE__ */ new Date()).toISOString();
   console.log("[updateDevelopment] Update payload fields:", Object.keys(updatePayload));
-  await db3.update(developments).set(updatePayload).where(and5(eq6(developments.id, id), eq6(developments.developerId, developerProfileId)));
+  await db3.update(developments).set(updatePayload).where(and5(eq5(developments.id, id), eq5(developments.developerId, developerProfileId)));
   const updated = await db3.query.developments.findFirst({
-    where: and5(eq6(developments.id, id), eq6(developments.developerId, developerProfileId))
+    where: and5(eq5(developments.id, id), eq5(developments.developerId, developerProfileId))
   });
   if (!updated) {
-    throw new TRPCError6({
+    throw new TRPCError5({
       code: "FORBIDDEN",
       message: "Update failed or you do not own this development"
     });
@@ -16209,7 +16190,7 @@ async function persistUnitTypes(db3, developmentId, unitTypesData) {
     console.log("[persistUnitTypes] Empty payload - preserving existing units");
     return;
   }
-  const existingUnits = await db3.select({ id: unitTypes.id }).from(unitTypes).where(eq6(unitTypes.developmentId, developmentId));
+  const existingUnits = await db3.select({ id: unitTypes.id }).from(unitTypes).where(eq5(unitTypes.developmentId, developmentId));
   const existingIds = new Set(
     existingUnits.map((u) => String(u.id ?? "").trim()).filter(Boolean)
   );
@@ -16227,7 +16208,7 @@ async function persistUnitTypes(db3, developmentId, unitTypesData) {
     );
     if (idsToDelete.length > 0) {
       console.log(`[persistUnitTypes] Deleting ${idsToDelete.length} units:`, idsToDelete);
-      await db3.delete(unitTypes).where(and5(eq6(unitTypes.developmentId, developmentId), inArray3(unitTypes.id, idsToDelete)));
+      await db3.delete(unitTypes).where(and5(eq5(unitTypes.developmentId, developmentId), inArray3(unitTypes.id, idsToDelete)));
     }
   } else {
     console.warn(
@@ -16350,11 +16331,11 @@ async function persistUnitTypes(db3, developmentId, unitTypesData) {
         createdAt: mysqlDateTime()
       });
     } else {
-      await db3.update(unitTypes).set(unitPayload).where(and5(eq6(unitTypes.developmentId, developmentId), eq6(unitTypes.id, unitId)));
+      await db3.update(unitTypes).set(unitPayload).where(and5(eq5(unitTypes.developmentId, developmentId), eq5(unitTypes.id, unitId)));
     }
   }
   try {
-    const finalCount = await db3.select({ count: sql6`count(*)` }).from(unitTypes).where(eq6(unitTypes.developmentId, developmentId));
+    const finalCount = await db3.select({ count: sql6`count(*)` }).from(unitTypes).where(eq5(unitTypes.developmentId, developmentId));
     console.log(`[persistUnitTypes] DONE. DB count: ${finalCount[0]?.count ?? "?"}`);
   } catch (e) {
     console.warn("[persistUnitTypes] Verification count failed:", e);
@@ -16363,7 +16344,7 @@ async function persistUnitTypes(db3, developmentId, unitTypesData) {
 async function persistDevelopmentPhases(db3, developmentId, phasesData) {
   console.log(`[persistDevelopmentPhases] Processing ${phasesData?.length ?? 0} phases`);
   const safePhases = Array.isArray(phasesData) ? phasesData : [];
-  const existingPhases = await db3.select({ id: developmentPhases.id }).from(developmentPhases).where(eq6(developmentPhases.developmentId, developmentId));
+  const existingPhases = await db3.select({ id: developmentPhases.id }).from(developmentPhases).where(eq5(developmentPhases.developmentId, developmentId));
   const existingIds = new Set(
     existingPhases.map((p) => Number(p.id)).filter((n) => Number.isFinite(n))
   );
@@ -16374,7 +16355,7 @@ async function persistDevelopmentPhases(db3, developmentId, phasesData) {
   if (idsToDelete.length > 0) {
     await db3.delete(developmentPhases).where(
       and5(
-        eq6(developmentPhases.developmentId, developmentId),
+        eq5(developmentPhases.developmentId, developmentId),
         inArray3(developmentPhases.id, idsToDelete)
       )
     );
@@ -16395,8 +16376,8 @@ async function persistDevelopmentPhases(db3, developmentId, phasesData) {
     if (phaseId !== null && Number.isFinite(phaseId)) {
       await db3.update(developmentPhases).set(phasePayload).where(
         and5(
-          eq6(developmentPhases.developmentId, developmentId),
-          eq6(developmentPhases.id, phaseId)
+          eq5(developmentPhases.developmentId, developmentId),
+          eq5(developmentPhases.id, phaseId)
         )
       );
     } else {
@@ -16411,14 +16392,14 @@ async function getDevelopmentWithPhases(id) {
   console.log("[getDevelopmentWithPhases] Loading development:", id);
   const db3 = await getDb();
   if (!db3) throw new Error("Database not available");
-  const [dev] = await db3.select().from(developments).where(eq6(developments.id, id)).limit(1);
+  const [dev] = await db3.select().from(developments).where(eq5(developments.id, id)).limit(1);
   if (!dev) throw new Error("Development not found");
   let unitTypesData = [];
   let phasesData = [];
   try {
     const [unitTypesRes, phasesRes] = await Promise.all([
-      db3.select().from(unitTypes).where(eq6(unitTypes.developmentId, id)),
-      db3.select().from(developmentPhases).where(eq6(developmentPhases.developmentId, id))
+      db3.select().from(unitTypes).where(eq5(unitTypes.developmentId, id)),
+      db3.select().from(developmentPhases).where(eq5(developmentPhases.developmentId, id))
     ]);
     unitTypesData = unitTypesRes || [];
     phasesData = phasesRes || [];
@@ -16483,7 +16464,7 @@ async function getDevelopmentWithPhases(id) {
 async function getDevelopmentsByDeveloperId(developerProfileId) {
   const db3 = await getDb();
   if (!db3) return [];
-  const results = await db3.select().from(developments).where(eq6(developments.developerId, developerProfileId));
+  const results = await db3.select().from(developments).where(eq5(developments.developerId, developerProfileId));
   const safeParse = (val, fallback) => {
     if (val === null || val === void 0 || val === "") return fallback;
     if (Array.isArray(val) || typeof val === "object") return val;
@@ -16513,14 +16494,14 @@ async function createPhase(developmentId, developerId2, data) {
   const db3 = await getDb();
   if (!db3) throw new Error("Database not available");
   const devProfile = await db3.query.developers.findFirst({
-    where: eq6(developers.userId, developerId2),
+    where: eq5(developers.userId, developerId2),
     columns: { id: true }
   });
   if (!devProfile)
-    throw new TRPCError6({ code: "FORBIDDEN", message: "Developer profile not found" });
-  const [owned] = await db3.select({ id: developments.id }).from(developments).where(and5(eq6(developments.id, developmentId), eq6(developments.developerId, devProfile.id))).limit(1);
+    throw new TRPCError5({ code: "FORBIDDEN", message: "Developer profile not found" });
+  const [owned] = await db3.select({ id: developments.id }).from(developments).where(and5(eq5(developments.id, developmentId), eq5(developments.developerId, devProfile.id))).limit(1);
   if (!owned) {
-    throw new TRPCError6({
+    throw new TRPCError5({
       code: "FORBIDDEN",
       message: "Unauthorized: you do not own this development"
     });
@@ -16531,7 +16512,7 @@ async function createPhase(developmentId, developerId2, data) {
     developmentId,
     createdAt: (/* @__PURE__ */ new Date()).toISOString()
   });
-  const [created] = await db3.select().from(developmentPhases).where(eq6(developmentPhases.id, Number(result.insertId))).limit(1);
+  const [created] = await db3.select().from(developmentPhases).where(eq5(developmentPhases.id, Number(result.insertId))).limit(1);
   return created;
 }
 async function updatePhase(phaseId, developerId2, data) {
@@ -16539,46 +16520,121 @@ async function updatePhase(phaseId, developerId2, data) {
   if (!db3) throw new Error("Database not available");
   const idNum = Number(phaseId);
   if (!Number.isFinite(idNum)) {
-    throw new TRPCError6({ code: "BAD_REQUEST", message: "Invalid phaseId" });
+    throw new TRPCError5({ code: "BAD_REQUEST", message: "Invalid phaseId" });
   }
   const devProfile = await db3.query.developers.findFirst({
-    where: eq6(developers.userId, developerId2),
+    where: eq5(developers.userId, developerId2),
     columns: { id: true }
   });
   if (!devProfile)
-    throw new TRPCError6({ code: "FORBIDDEN", message: "Developer profile not found" });
-  const [phaseRow] = await db3.select({ developmentId: developmentPhases.developmentId }).from(developmentPhases).where(eq6(developmentPhases.id, idNum)).limit(1);
-  if (!phaseRow) throw new TRPCError6({ code: "NOT_FOUND", message: "Phase not found" });
+    throw new TRPCError5({ code: "FORBIDDEN", message: "Developer profile not found" });
+  const [phaseRow] = await db3.select({ developmentId: developmentPhases.developmentId }).from(developmentPhases).where(eq5(developmentPhases.id, idNum)).limit(1);
+  if (!phaseRow) throw new TRPCError5({ code: "NOT_FOUND", message: "Phase not found" });
   const [owned] = await db3.select({ id: developments.id }).from(developments).where(
     and5(
-      eq6(developments.id, Number(phaseRow.developmentId)),
-      eq6(developments.developerId, devProfile.id)
+      eq5(developments.id, Number(phaseRow.developmentId)),
+      eq5(developments.developerId, devProfile.id)
     )
   ).limit(1);
   if (!owned) {
-    throw new TRPCError6({
+    throw new TRPCError5({
       code: "FORBIDDEN",
       message: "Unauthorized: you do not own this development"
     });
   }
   const { id, ...safe } = data || {};
-  await db3.update(developmentPhases).set(safe).where(eq6(developmentPhases.id, idNum));
-  const [updated] = await db3.select().from(developmentPhases).where(eq6(developmentPhases.id, idNum)).limit(1);
+  await db3.update(developmentPhases).set(safe).where(eq5(developmentPhases.id, idNum));
+  const [updated] = await db3.select().from(developmentPhases).where(eq5(developmentPhases.id, idNum)).limit(1);
   return updated;
 }
-async function publishDevelopment(id, developerId2) {
+async function publishDevelopment(id, userId, operatingContext) {
   const db3 = await getDb();
   if (!db3) throw new Error("Database not available");
+  console.log("[publishDevelopment] Input params:", {
+    id,
+    userId,
+    operatingContext
+  });
+  const user = await db3.query.users.findFirst({
+    where: eq5(users.id, userId),
+    columns: { id: true, role: true }
+  });
+  if (user?.role === "super_admin") {
+    const brandProfileId = operatingContext?.brandProfileId;
+    console.log("[publishDevelopment] \u2705 SUPER ADMIN MODE - Bypassing all checks:", {
+      brandProfileId
+    });
+    const [existingDev] = await db3.select().from(developments).where(eq5(developments.id, id)).limit(1);
+    if (!existingDev) {
+      throw new TRPCError5({
+        code: "NOT_FOUND",
+        message: "Development not found"
+      });
+    }
+    console.log("[publishDevelopment] Development found:", {
+      id: existingDev.id,
+      name: existingDev.name,
+      developerBrandProfileId: existingDev.developerBrandProfileId,
+      requestedBrandProfileId: brandProfileId
+    });
+    if (brandProfileId && existingDev.developerBrandProfileId !== brandProfileId) {
+      throw new TRPCError5({
+        code: "FORBIDDEN",
+        message: `Development belongs to brand ${existingDev.developerBrandProfileId}, not ${brandProfileId}`
+      });
+    }
+    console.log("[publishDevelopment] About to execute UPDATE query for development:", id);
+    try {
+      const publishedAtFormatted2 = (/* @__PURE__ */ new Date()).toISOString().slice(0, 19).replace("T", " ");
+      const updateResult = await db3.update(developments).set({ isPublished: 1, publishedAt: publishedAtFormatted2, status: "launching-soon" }).where(eq5(developments.id, id));
+      console.log(
+        "[publishDevelopment] \u2705 Update query executed successfully, result:",
+        updateResult
+      );
+    } catch (dbError) {
+      console.error("[publishDevelopment] \u274C Database error during UPDATE:", {
+        developmentId: id,
+        error: dbError,
+        errorName: dbError?.name,
+        errorMessage: dbError?.message,
+        errorCode: dbError?.code,
+        errorSql: dbError?.sql,
+        errorStack: dbError?.stack
+      });
+      throw new TRPCError5({
+        code: "INTERNAL_SERVER_ERROR",
+        message: `Database error: ${dbError?.message || dbError?.toString() || "Unknown error"}`
+      });
+    }
+    console.log("[publishDevelopment] About to SELECT updated development");
+    const [updated2] = await db3.select().from(developments).where(eq5(developments.id, id)).limit(1);
+    if (!updated2) {
+      console.error("[publishDevelopment] \u274C Development not found after update!");
+      throw new TRPCError5({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Publish failed: Could not retrieve updated development"
+      });
+    }
+    console.log("[publishDevelopment] \u2705 Super admin published development:", {
+      id: updated2.id,
+      name: updated2.name,
+      isPublished: updated2.isPublished,
+      status: updated2.status
+    });
+    return updated2;
+  }
   const devProfile = await db3.query.developers.findFirst({
-    where: eq6(developers.userId, developerId2),
+    where: eq5(developers.userId, userId),
     columns: { id: true }
   });
-  if (!devProfile)
-    throw new TRPCError6({ code: "FORBIDDEN", message: "Developer profile not found" });
-  await db3.update(developments).set({ isPublished: 1, publishedAt: (/* @__PURE__ */ new Date()).toISOString(), status: "launching-soon" }).where(and5(eq6(developments.id, id), eq6(developments.developerId, devProfile.id)));
-  const [updated] = await db3.select().from(developments).where(and5(eq6(developments.id, id), eq6(developments.developerId, devProfile.id))).limit(1);
+  if (!devProfile) {
+    throw new TRPCError5({ code: "FORBIDDEN", message: "Developer profile not found" });
+  }
+  const publishedAtFormatted = (/* @__PURE__ */ new Date()).toISOString().slice(0, 19).replace("T", " ");
+  await db3.update(developments).set({ isPublished: 1, publishedAt: publishedAtFormatted, status: "launching-soon" }).where(and5(eq5(developments.id, id), eq5(developments.developerId, devProfile.id)));
+  const [updated] = await db3.select().from(developments).where(and5(eq5(developments.id, id), eq5(developments.developerId, devProfile.id))).limit(1);
   if (!updated) {
-    throw new TRPCError6({
+    throw new TRPCError5({
       code: "FORBIDDEN",
       message: "Publish failed: Development not found or unauthorized"
     });
@@ -16594,7 +16650,7 @@ async function approveDevelopment(id, adminId) {
     isPublished: true,
     approvedAt: (/* @__PURE__ */ new Date()).toISOString(),
     approvedBy: adminId
-  }).where(eq6(developments.id, id));
+  }).where(eq5(developments.id, id));
 }
 async function rejectDevelopment(id, adminId, reason) {
   const db3 = await getDb();
@@ -16603,7 +16659,7 @@ async function rejectDevelopment(id, adminId, reason) {
     isPublished: 0,
     approvalStatus: "rejected",
     rejectionReason: reason
-  }).where(eq6(developments.id, id));
+  }).where(eq5(developments.id, id));
 }
 async function requestChanges(id, adminId, notes) {
   const db3 = await getDb();
@@ -16612,18 +16668,18 @@ async function requestChanges(id, adminId, notes) {
     isPublished: 0,
     approvalStatus: "pending_changes",
     changeRequestNotes: notes
-  }).where(eq6(developments.id, id));
+  }).where(eq5(developments.id, id));
 }
 async function saveDraft(developerId2, wizardState) {
   const db3 = await getDb();
   if (!db3) throw new Error("Database not available");
   if (!developerId2) throw new Error("Developer ID is required");
   const devProfile = await db3.query.developers.findFirst({
-    where: eq6(developers.userId, developerId2),
+    where: eq5(developers.userId, developerId2),
     columns: { id: true }
   });
   if (!devProfile) {
-    throw new TRPCError6({
+    throw new TRPCError5({
       code: "FORBIDDEN",
       message: `Developer profile for user ID ${developerId2} not found`
     });
@@ -16653,7 +16709,7 @@ async function publishDevelopmentStrict(developerId2, wizardState, ownerType = "
   try {
     normalized = normalizeForPublish(wizardState, ownerType);
   } catch (error) {
-    throw new TRPCError6({
+    throw new TRPCError5({
       code: "BAD_REQUEST",
       message: "Normalization failed",
       cause: { field: "normalization", error: error.message }
@@ -16662,7 +16718,7 @@ async function publishDevelopmentStrict(developerId2, wizardState, ownerType = "
   try {
     validateNormalizedPayload(normalized);
   } catch (error) {
-    throw new TRPCError6({
+    throw new TRPCError5({
       code: "BAD_REQUEST",
       message: "Validation failed",
       cause: { field: "validation", error: error.message }
@@ -16673,11 +16729,11 @@ async function publishDevelopmentStrict(developerId2, wizardState, ownerType = "
   try {
     const result = await db3.transaction(async (tx) => {
       const devProfile = await tx.query.developers.findFirst({
-        where: eq6(developers.userId, developerId2),
+        where: eq5(developers.userId, developerId2),
         columns: { id: true }
       });
       if (!devProfile) {
-        throw new TRPCError6({
+        throw new TRPCError5({
           code: "FORBIDDEN",
           message: `Developer profile for user ID ${developerId2} not found`
         });
@@ -16697,10 +16753,10 @@ async function publishDevelopmentStrict(developerId2, wizardState, ownerType = "
       let unitCount = 0;
       if (Array.isArray(wizardState.unitTypes) && wizardState.unitTypes.length > 0) {
         await persistUnitTypes(tx, newId, wizardState.unitTypes);
-        const [{ count: count9 }] = await tx.select({ count: sql6`count(*)` }).from(unitTypes).where(eq6(unitTypes.developmentId, newId));
+        const [{ count: count9 }] = await tx.select({ count: sql6`count(*)` }).from(unitTypes).where(eq5(unitTypes.developmentId, newId));
         unitCount = Number(count9);
         if (unitCount === 0) {
-          throw new TRPCError6({
+          throw new TRPCError5({
             code: "INTERNAL_SERVER_ERROR",
             message: "Unit types were provided but none were persisted"
           });
@@ -16712,8 +16768,8 @@ async function publishDevelopmentStrict(developerId2, wizardState, ownerType = "
     return { developmentId: result.newId, unitTypesCount: result.unitCount };
   } catch (error) {
     console.error("[publishDevelopmentStrict] Transaction failed:", error);
-    if (error instanceof TRPCError6) throw error;
-    throw new TRPCError6({
+    if (error instanceof TRPCError5) throw error;
+    throw new TRPCError5({
       code: "INTERNAL_SERVER_ERROR",
       message: `Publish failed: ${error.message}`
     });
@@ -16761,44 +16817,69 @@ function validateForPublish(wizardState) {
     }
   }
   if (Object.keys(errors).length > 0) {
-    throw new TRPCError6({
+    throw new TRPCError5({
       code: "BAD_REQUEST",
       message: "Publish validation failed",
       cause: { fields: errors }
     });
   }
 }
-async function deleteDevelopment(id, developerId2) {
+async function deleteDevelopment(id, userId, operatingContext) {
   const db3 = await getDb();
   if (!db3) throw new Error("Database not available");
-  let developerProfileId = null;
-  if (developerId2 !== void 0 && developerId2 !== -1) {
-    const devProfile = await db3.query.developers.findFirst({
-      where: eq6(developers.userId, developerId2),
-      columns: { id: true }
+  console.log("[deleteDevelopment] Input params:", { id, userId, operatingContext });
+  if (userId !== void 0 && userId !== -1) {
+    const user = await db3.query.users.findFirst({
+      where: eq5(users.id, userId),
+      columns: { id: true, role: true }
     });
-    if (!devProfile) {
-      throw new TRPCError6({
-        code: "FORBIDDEN",
-        message: "Unauthorized: developer profile not found"
+    if (user?.role === "super_admin" && operatingContext?.brandProfileId) {
+      console.log("[deleteDevelopment] \u2705 SUPER ADMIN MODE - Using brand profile ownership");
+      const [owned] = await db3.select({ id: developments.id }).from(developments).where(
+        and5(
+          eq5(developments.id, id),
+          eq5(developments.developerBrandProfileId, operatingContext.brandProfileId)
+        )
+      ).limit(1);
+      if (!owned) {
+        const [exists] = await db3.select({ id: developments.id }).from(developments).where(eq5(developments.id, id)).limit(1);
+        if (!exists) throw new TRPCError5({ code: "NOT_FOUND", message: "Development not found" });
+        throw new TRPCError5({
+          code: "FORBIDDEN",
+          message: "Unauthorized: Development belongs to a different brand profile"
+        });
+      }
+      console.log("[deleteDevelopment] \u2705 Brand ownership verified, proceeding with delete");
+    } else {
+      const devProfile = await db3.query.developers.findFirst({
+        where: eq5(developers.userId, userId),
+        columns: { id: true }
       });
-    }
-    const profileId = devProfile.id;
-    developerProfileId = profileId;
-    const [owned] = await db3.select({ id: developments.id }).from(developments).where(and5(eq6(developments.id, id), eq6(developments.developerId, profileId))).limit(1);
-    if (!owned) {
-      const [exists] = await db3.select({ id: developments.id }).from(developments).where(eq6(developments.id, id)).limit(1);
-      if (!exists) throw new TRPCError6({ code: "NOT_FOUND", message: "Development not found" });
-      throw new TRPCError6({
-        code: "FORBIDDEN",
-        message: "Unauthorized: You do not own this development"
-      });
+      if (!devProfile) {
+        throw new TRPCError5({
+          code: "FORBIDDEN",
+          message: "Unauthorized: developer profile not found"
+        });
+      }
+      const [owned] = await db3.select({ id: developments.id }).from(developments).where(and5(eq5(developments.id, id), eq5(developments.developerId, devProfile.id))).limit(1);
+      if (!owned) {
+        const [exists] = await db3.select({ id: developments.id }).from(developments).where(eq5(developments.id, id)).limit(1);
+        if (!exists) throw new TRPCError5({ code: "NOT_FOUND", message: "Development not found" });
+        throw new TRPCError5({
+          code: "FORBIDDEN",
+          message: "Unauthorized: You do not own this development"
+        });
+      }
     }
   }
-  await db3.delete(unitTypes).where(eq6(unitTypes.developmentId, id));
-  await db3.delete(developmentPhases).where(eq6(developmentPhases.developmentId, id));
-  const whereClause = developerProfileId !== null ? and5(eq6(developments.id, id), eq6(developments.developerId, developerProfileId)) : eq6(developments.id, id);
-  return db3.delete(developments).where(whereClause);
+  await db3.delete(unitTypes).where(eq5(unitTypes.developmentId, id));
+  await db3.delete(developmentPhases).where(eq5(developmentPhases.developmentId, id));
+  try {
+    await db3.delete(developmentDrafts).where(sql6`JSON_EXTRACT(${developmentDrafts.draftData}, '$.id') = ${id}`);
+  } catch (err) {
+    console.warn("Failed to delete associated drafts:", err);
+  }
+  return db3.delete(developments).where(eq5(developments.id, id));
 }
 async function getDevelopmentById2(id) {
   const db3 = await getDb();
@@ -16810,7 +16891,7 @@ async function getDevelopmentById2(id) {
     slug: developments.slug,
     status: developments.status
     // Add other required fields as needed
-  }).from(developments).where(eq6(developments.id, id)).limit(1);
+  }).from(developments).where(eq5(developments.id, id)).limit(1);
   return result[0] || null;
 }
 var developmentService = {
@@ -16843,7 +16924,7 @@ var adminRouter = router({
    */
   getAdminActionItems: superAdminProcedure.query(
     async () => {
-      const [agents2, listings2, developments4] = await Promise.all([
+      const [agents2, listings2, developments3] = await Promise.all([
         countPendingAgents(),
         countPendingListings(),
         countPendingDevelopments()
@@ -16851,7 +16932,7 @@ var adminRouter = router({
       return {
         pendingAgentApprovals: agents2,
         pendingListingApprovals: listings2,
-        pendingDevelopmentApprovals: developments4,
+        pendingDevelopmentApprovals: developments3,
         flaggedItems: 0
         // Placeholder
       };
@@ -16891,8 +16972,8 @@ var adminRouter = router({
       });
       const offset = (input.page - 1) * input.limit;
       const conditions = [];
-      if (input.role) conditions.push(eq7(users.role, input.role));
-      if (input.agencyId) conditions.push(eq7(users.agencyId, input.agencyId));
+      if (input.role) conditions.push(eq6(users.role, input.role));
+      if (input.agencyId) conditions.push(eq6(users.agencyId, input.agencyId));
       if (input.search) {
         conditions.push(
           or3(
@@ -16974,7 +17055,7 @@ var adminRouter = router({
   ).mutation(async ({ ctx, input }) => {
     const db3 = await getDb();
     if (!db3) throw new Error("Database not available");
-    await db3.update(users).set({ role: input.role }).where(eq7(users.id, input.userId));
+    await db3.update(users).set({ role: input.role }).where(eq6(users.id, input.userId));
     await logAudit({
       userId: ctx.user.id,
       action: AuditActions.UPDATE_USER_ROLE,
@@ -17014,7 +17095,7 @@ var adminRouter = router({
     if (ctx.user.role === "agency_admin" && !agencyId) {
       throw new Error("Agency admin must be associated with an agency");
     }
-    const subaccounts = await db3.select().from(users).where(and6(eq7(users.isSubaccount, 1), agencyId ? eq7(users.agencyId, agencyId) : void 0)).orderBy(desc4(users.createdAt));
+    const subaccounts = await db3.select().from(users).where(and6(eq6(users.isSubaccount, 1), agencyId ? eq6(users.agencyId, agencyId) : void 0)).orderBy(desc4(users.createdAt));
     return subaccounts.map((u) => ({
       ...u,
       passwordHash: void 0
@@ -17035,8 +17116,8 @@ var adminRouter = router({
       throw new Error("Agency admin must be associated with an agency");
     }
     const conditions = [];
-    if (agencyId) conditions.push(eq7(agencyJoinRequests.agencyId, agencyId));
-    if (input.status) conditions.push(eq7(agencyJoinRequests.status, input.status));
+    if (agencyId) conditions.push(eq6(agencyJoinRequests.agencyId, agencyId));
+    if (input.status) conditions.push(eq6(agencyJoinRequests.status, input.status));
     const where = conditions.length > 0 ? and6(...conditions) : void 0;
     const requests = await db3.select().from(agencyJoinRequests).where(where).orderBy(desc4(agencyJoinRequests.createdAt));
     return requests;
@@ -17052,7 +17133,7 @@ var adminRouter = router({
   ).mutation(async ({ ctx, input }) => {
     const db3 = await getDb();
     if (!db3) throw new Error("Database not available");
-    const [request] = await db3.select().from(agencyJoinRequests).where(eq7(agencyJoinRequests.id, input.requestId)).limit(1);
+    const [request] = await db3.select().from(agencyJoinRequests).where(eq6(agencyJoinRequests.id, input.requestId)).limit(1);
     if (!request) {
       throw new Error("Join request not found");
     }
@@ -17063,12 +17144,12 @@ var adminRouter = router({
       status: input.status,
       reviewedBy: ctx.user.id,
       reviewedAt: nowAsDbTimestamp()
-    }).where(eq7(agencyJoinRequests.id, input.requestId));
+    }).where(eq6(agencyJoinRequests.id, input.requestId));
     if (input.status === "approved") {
       await db3.update(users).set({
         agencyId: request.agencyId,
         isSubaccount: 1
-      }).where(eq7(users.id, request.userId));
+      }).where(eq6(users.id, request.userId));
     }
     await logAudit({
       userId: ctx.user.id,
@@ -17127,9 +17208,9 @@ var adminRouter = router({
       });
       const offset = (input.page - 1) * input.limit;
       const conditions = [];
-      if (input.status) conditions.push(eq7(listings.status, input.status));
+      if (input.status) conditions.push(eq6(listings.status, input.status));
       if (input.agencyId) {
-        conditions.push(eq7(listings.agencyId, input.agencyId));
+        conditions.push(eq6(listings.agencyId, input.agencyId));
       }
       if (input.search) {
         conditions.push(
@@ -17188,7 +17269,7 @@ var adminRouter = router({
           // Scores (Phase 2/3)
           readinessScore: listings.readinessScore,
           qualityScore: listings.qualityScore
-        }).from(listings).leftJoin(agents, eq7(listings.agentId, agents.id)).leftJoin(users, eq7(listings.ownerId, users.id)).leftJoin(listingMedia, eq7(listings.mainMediaId, listingMedia.id)).where(where).limit(input.limit).offset(offset).orderBy(...orderByClause),
+        }).from(listings).leftJoin(agents, eq6(listings.agentId, agents.id)).leftJoin(users, eq6(listings.ownerId, users.id)).leftJoin(listingMedia, eq6(listings.mainMediaId, listingMedia.id)).where(where).limit(input.limit).offset(offset).orderBy(...orderByClause),
         db3.select({ count: sql7`count(*)` }).from(listings).where(where)
       ]);
       const total = Number(totalResult[0]?.count || 0);
@@ -17224,8 +17305,8 @@ var adminRouter = router({
       averageQuality: sql7`avg(${listings.qualityScore})`,
       featuredCount: sql7`count(case when ${listings.qualityScore} >= 90 then 1 end)`,
       optimizedCount: sql7`count(case when ${listings.qualityScore} >= 75 AND ${listings.qualityScore} < 90 then 1 end)`
-    }).from(listings).where(eq7(listings.status, "published"));
-    const [pendingResult] = await db3.select({ count: sql7`count(*)` }).from(listings).where(eq7(listings.approvalStatus, "pending"));
+    }).from(listings).where(eq6(listings.status, "published"));
+    const [pendingResult] = await db3.select({ count: sql7`count(*)` }).from(listings).where(eq6(listings.approvalStatus, "pending"));
     return {
       totalInventoryValue: Number(stats2?.totalInventoryValue || 0),
       newListingsToday: Number(stats2?.newListingsToday || 0),
@@ -17244,7 +17325,7 @@ var adminRouter = router({
   getDevelopmentAnalytics: superAdminProcedure.query(async ({ ctx }) => {
     const db3 = await getDb();
     if (!db3) throw new Error("Database not available");
-    const [pendingRes] = await db3.select({ count: sql7`count(*)` }).from(developments).where(eq7(developments.approvalStatus, "pending"));
+    const [pendingRes] = await db3.select({ count: sql7`count(*)` }).from(developments).where(eq6(developments.approvalStatus, "pending"));
     const [queueStats] = await db3.execute(sql7`
         SELECT
             COUNT(*) as total_processed,
@@ -17348,8 +17429,8 @@ var adminRouter = router({
       db3.select({ count: sql7`count(*)` }).from(users),
       db3.select({ count: sql7`count(*)` }).from(agencies),
       db3.select({ count: sql7`count(*)` }).from(listings),
-      db3.select({ count: sql7`count(*)` }).from(listings).where(eq7(listings.status, "active")),
-      db3.select({ count: sql7`count(*)` }).from(users).where(eq7(users.role, "agent")),
+      db3.select({ count: sql7`count(*)` }).from(listings).where(eq6(listings.status, "active")),
+      db3.select({ count: sql7`count(*)` }).from(users).where(eq6(users.role, "agent")),
       db3.select().from(users).orderBy(desc4(users.createdAt)).limit(5),
       db3.select().from(listings).orderBy(desc4(listings.createdAt)).limit(5)
     ]);
@@ -17386,7 +17467,7 @@ var adminRouter = router({
   ).query(async ({ input }) => {
     const db3 = await getDb();
     if (!db3) throw new Error("Database not available");
-    const where = input.status ? eq7(agents.status, input.status) : void 0;
+    const where = input.status ? eq6(agents.status, input.status) : void 0;
     const agentsList = await db3.select({
       id: agents.id,
       userId: agents.userId,
@@ -17419,7 +17500,7 @@ var adminRouter = router({
       approvedBy: ctx.user.id,
       approvedAt: (/* @__PURE__ */ new Date()).toISOString().slice(0, 19).replace("T", " "),
       updatedAt: (/* @__PURE__ */ new Date()).toISOString().slice(0, 19).replace("T", " ")
-    }).where(eq7(agents.id, input.agentId));
+    }).where(eq6(agents.id, input.agentId));
     await logAudit({
       userId: ctx.user.id,
       action: AuditActions.APPROVE_JOIN_REQUEST,
@@ -17445,7 +17526,7 @@ var adminRouter = router({
       status: "rejected",
       rejectionReason: input.reason,
       updatedAt: (/* @__PURE__ */ new Date()).toISOString().slice(0, 19).replace("T", " ")
-    }).where(eq7(agents.id, input.agentId));
+    }).where(eq6(agents.id, input.agentId));
     await logAudit({
       userId: ctx.user.id,
       action: AuditActions.REJECT_JOIN_REQUEST,
@@ -17466,7 +17547,7 @@ var adminRouter = router({
       development: developments,
       developer: developers,
       queueEntry: developmentApprovalQueue
-    }).from(developmentApprovalQueue).innerJoin(developments, eq7(developmentApprovalQueue.developmentId, developments.id)).innerJoin(developers, eq7(developments.developerId, developers.id)).where(eq7(developmentApprovalQueue.status, "pending")).orderBy(desc4(developmentApprovalQueue.submittedAt));
+    }).from(developmentApprovalQueue).innerJoin(developments, eq6(developmentApprovalQueue.developmentId, developments.id)).innerJoin(developers, eq6(developments.developerId, developers.id)).where(eq6(developmentApprovalQueue.status, "pending")).orderBy(desc4(developmentApprovalQueue.submittedAt));
     return pendingDevs.map((item) => ({
       ...item.development,
       developerName: item.developer.name,
@@ -17550,7 +17631,7 @@ var adminRouter = router({
 import { z as z3 } from "zod";
 init_schema();
 init_db();
-import { eq as eq8, like as like4, or as or4, desc as desc5, and as and7 } from "drizzle-orm";
+import { eq as eq7, like as like4, or as or4, desc as desc5, and as and7 } from "drizzle-orm";
 var createAgencySchema = z3.object({
   name: z3.string().min(2, "Agency name must be at least 2 characters"),
   slug: z3.string().min(2).regex(/^[a-z0-9-]+$/, "Slug must contain only lowercase letters, numbers, and hyphens"),
@@ -17605,18 +17686,18 @@ var agencyRouter = router({
     if (!db3) {
       throw new Error("Database not available");
     }
-    const [plan] = await db3.select().from(plans).where(eq8(plans.id, input.planId)).limit(1);
+    const [plan] = await db3.select().from(plans).where(eq7(plans.id, input.planId)).limit(1);
     if (!plan || !plan.isActive) {
       throw new Error("Selected plan is not available");
     }
     const existing = await db3.select().from(agencies).where(
-      or4(eq8(agencies.name, input.basicInfo.name), eq8(agencies.email, input.basicInfo.email))
+      or4(eq7(agencies.name, input.basicInfo.name), eq7(agencies.email, input.basicInfo.email))
     ).limit(1);
     if (existing.length > 0) {
       throw new Error("Agency name or email already registered");
     }
     const slug = input.basicInfo.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
-    const [slugExists] = await db3.select().from(agencies).where(eq8(agencies.slug, slug)).limit(1);
+    const [slugExists] = await db3.select().from(agencies).where(eq7(agencies.slug, slug)).limit(1);
     const finalSlug = slugExists ? `${slug}-${Date.now()}` : slug;
     const [agencyResult] = await db3.insert(agencies).values({
       name: input.basicInfo.name,
@@ -17648,7 +17729,7 @@ var agencyRouter = router({
       agencyId,
       role: "agency_admin",
       updatedAt: /* @__PURE__ */ new Date()
-    }).where(eq8(users.id, ctx.user.id));
+    }).where(eq7(users.id, ctx.user.id));
     if (input.teamEmails && input.teamEmails.length > 0) {
       const invitationValues = input.teamEmails.map((email) => ({
         agencyId,
@@ -17681,7 +17762,7 @@ var agencyRouter = router({
     if (!db3) {
       throw new Error("Database not available");
     }
-    const existing = await db3.select().from(agencies).where(eq8(agencies.slug, input.slug)).limit(1);
+    const existing = await db3.select().from(agencies).where(eq7(agencies.slug, input.slug)).limit(1);
     if (existing.length > 0) {
       throw new Error("An agency with this slug already exists");
     }
@@ -17707,7 +17788,7 @@ var agencyRouter = router({
       targetId: Number(result.insertId),
       req: ctx.req
     });
-    const [agency] = await db3.select().from(agencies).where(eq8(agencies.id, Number(result.insertId)));
+    const [agency] = await db3.select().from(agencies).where(eq7(agencies.id, Number(result.insertId)));
     return agency;
   }),
   /**
@@ -17730,13 +17811,13 @@ var agencyRouter = router({
       );
     }
     if (input.province) {
-      conditions.push(eq8(agencies.province, input.province));
+      conditions.push(eq7(agencies.province, input.province));
     }
     if (input.subscriptionPlan) {
-      conditions.push(eq8(agencies.subscriptionPlan, input.subscriptionPlan));
+      conditions.push(eq7(agencies.subscriptionPlan, input.subscriptionPlan));
     }
     if (input.isVerified !== void 0) {
-      conditions.push(eq8(agencies.isVerified, input.isVerified ? 1 : 0));
+      conditions.push(eq7(agencies.isVerified, input.isVerified ? 1 : 0));
     }
     if (conditions.length > 0) {
       query = query.where(or4(...conditions));
@@ -17758,7 +17839,7 @@ var agencyRouter = router({
     if (!db3) {
       throw new Error("Database not available");
     }
-    const [agency] = await db3.select().from(agencies).where(eq8(agencies.id, input.id)).limit(1);
+    const [agency] = await db3.select().from(agencies).where(eq7(agencies.id, input.id)).limit(1);
     if (!agency) {
       throw new Error("Agency not found");
     }
@@ -17772,7 +17853,7 @@ var agencyRouter = router({
     if (!db3) {
       throw new Error("Database not available");
     }
-    const [agency] = await db3.select().from(agencies).where(eq8(agencies.slug, input.slug)).limit(1);
+    const [agency] = await db3.select().from(agencies).where(eq7(agencies.slug, input.slug)).limit(1);
     if (!agency) {
       throw new Error("Agency not found");
     }
@@ -17787,7 +17868,7 @@ var agencyRouter = router({
       throw new Error("Database not available");
     }
     const { id, ...updateData } = input;
-    const [agency] = await db3.select().from(agencies).where(eq8(agencies.id, id)).limit(1);
+    const [agency] = await db3.select().from(agencies).where(eq7(agencies.id, id)).limit(1);
     if (!agency) {
       throw new Error("Agency not found");
     }
@@ -17799,7 +17880,7 @@ var agencyRouter = router({
     await db3.update(agencies).set({
       ...updateData,
       updatedAt: /* @__PURE__ */ new Date()
-    }).where(eq8(agencies.id, id));
+    }).where(eq7(agencies.id, id));
     await logAudit({
       userId: ctx.user.id,
       action: "agency.update",
@@ -17807,7 +17888,7 @@ var agencyRouter = router({
       targetId: id,
       req: ctx.req
     });
-    const [updated] = await db3.select().from(agencies).where(eq8(agencies.id, id));
+    const [updated] = await db3.select().from(agencies).where(eq7(agencies.id, id));
     return updated;
   }),
   /**
@@ -17818,11 +17899,11 @@ var agencyRouter = router({
     if (!db3) {
       throw new Error("Database not available");
     }
-    const [agency] = await db3.select().from(agencies).where(eq8(agencies.id, input.id)).limit(1);
+    const [agency] = await db3.select().from(agencies).where(eq7(agencies.id, input.id)).limit(1);
     if (!agency) {
       throw new Error("Agency not found");
     }
-    await db3.delete(agencies).where(eq8(agencies.id, input.id));
+    await db3.delete(agencies).where(eq7(agencies.id, input.id));
     await logAudit({
       userId: ctx.user.id,
       action: "agency.delete",
@@ -17843,7 +17924,7 @@ var agencyRouter = router({
     await db3.update(agencies).set({
       isVerified: input.isVerified ? 1 : 0,
       updatedAt: /* @__PURE__ */ new Date()
-    }).where(eq8(agencies.id, input.id));
+    }).where(eq7(agencies.id, input.id));
     await logAudit({
       userId: ctx.user.id,
       action: input.isVerified ? "agency.verify" : "agency.unverify",
@@ -17851,7 +17932,7 @@ var agencyRouter = router({
       targetId: input.id,
       req: ctx.req
     });
-    const [updated] = await db3.select().from(agencies).where(eq8(agencies.id, input.id));
+    const [updated] = await db3.select().from(agencies).where(eq7(agencies.id, input.id));
     return updated;
   }),
   /**
@@ -17912,12 +17993,12 @@ var agencyRouter = router({
     if (!db3) {
       throw new Error("Database not available");
     }
-    const [user] = await db3.select().from(users).where(eq8(users.id, input.userId)).limit(1);
+    const [user] = await db3.select().from(users).where(eq7(users.id, input.userId)).limit(1);
     if (!user || user.agencyId !== ctx.user.agencyId) {
       throw new Error("User not found in your agency");
     }
     if (user.id === ctx.user.id && input.role !== "agency_admin") {
-      const agencyAdmins = await db3.select().from(users).where(and7(eq8(users.agencyId, ctx.user.agencyId), eq8(users.role, "agency_admin")));
+      const agencyAdmins = await db3.select().from(users).where(and7(eq7(users.agencyId, ctx.user.agencyId), eq7(users.role, "agency_admin")));
       if (agencyAdmins.length === 1) {
         throw new Error("Cannot demote the last agency admin");
       }
@@ -17925,7 +18006,7 @@ var agencyRouter = router({
     await db3.update(users).set({
       role: input.role,
       updatedAt: /* @__PURE__ */ new Date()
-    }).where(eq8(users.id, input.userId));
+    }).where(eq7(users.id, input.userId));
     await logAudit({
       userId: ctx.user.id,
       action: "agency.agent_role_update",
@@ -17944,7 +18025,7 @@ var agencyRouter = router({
     if (!db3) {
       throw new Error("Database not available");
     }
-    const [user] = await db3.select().from(users).where(eq8(users.id, input.userId)).limit(1);
+    const [user] = await db3.select().from(users).where(eq7(users.id, input.userId)).limit(1);
     if (!user || user.agencyId !== ctx.user.agencyId) {
       throw new Error("User not found in your agency");
     }
@@ -17957,7 +18038,7 @@ var agencyRouter = router({
       role: "visitor",
       // Reset to default role
       updatedAt: /* @__PURE__ */ new Date()
-    }).where(eq8(users.id, input.userId));
+    }).where(eq7(users.id, input.userId));
     await logAudit({
       userId: ctx.user.id,
       action: "agency.agent_removed",
@@ -18021,7 +18102,7 @@ var agencyRouter = router({
           isEnabled: true
         };
       }
-      const [branding] = await db3.select().from(agencyBranding).where(eq8(agencyBranding.agencyId, targetAgencyId)).limit(1);
+      const [branding] = await db3.select().from(agencyBranding).where(eq7(agencyBranding.agencyId, targetAgencyId)).limit(1);
       if (!branding || !branding.isEnabled) {
         return {
           companyName: "Real Estate Portal",
@@ -18058,7 +18139,7 @@ var agencyRouter = router({
 import { z as z4 } from "zod";
 init_schema();
 init_db();
-import { eq as eq9, like as like5, or as or5, desc as desc6, and as and8 } from "drizzle-orm";
+import { eq as eq8, like as like5, or as or5, desc as desc6, and as and8 } from "drizzle-orm";
 var userFiltersSchema = z4.object({
   search: z4.string().optional(),
   role: z4.enum(["visitor", "agent", "agency_admin", "property_developer", "super_admin"]).optional(),
@@ -18097,13 +18178,13 @@ var userRouter = router({
       );
     }
     if (input.role) {
-      conditions.push(eq9(users.role, input.role));
+      conditions.push(eq8(users.role, input.role));
     }
     if (input.agencyId !== void 0) {
       if (input.agencyId === null) {
-        conditions.push(eq9(users.agencyId, null));
+        conditions.push(eq8(users.agencyId, null));
       } else {
-        conditions.push(eq9(users.agencyId, input.agencyId));
+        conditions.push(eq8(users.agencyId, input.agencyId));
       }
     }
     if (conditions.length > 0) {
@@ -18127,7 +18208,7 @@ var userRouter = router({
     if (!db3) {
       throw new Error("Database not available");
     }
-    const [user] = await db3.select().from(users).where(eq9(users.id, input.userId)).limit(1);
+    const [user] = await db3.select().from(users).where(eq8(users.id, input.userId)).limit(1);
     if (!user) {
       throw new Error("User not found");
     }
@@ -18141,12 +18222,12 @@ var userRouter = router({
     if (!db3) {
       throw new Error("Database not available");
     }
-    const [user] = await db3.select().from(users).where(eq9(users.id, input.userId)).limit(1);
+    const [user] = await db3.select().from(users).where(eq8(users.id, input.userId)).limit(1);
     if (!user) {
       throw new Error("User not found");
     }
     if (user.role === "super_admin" && input.role !== "super_admin") {
-      const superAdmins = await db3.select().from(users).where(eq9(users.role, "super_admin"));
+      const superAdmins = await db3.select().from(users).where(eq8(users.role, "super_admin"));
       if (superAdmins.length === 1) {
         throw new Error("Cannot demote the last super admin");
       }
@@ -18154,7 +18235,7 @@ var userRouter = router({
     await db3.update(users).set({
       role: input.role,
       updatedAt: /* @__PURE__ */ new Date()
-    }).where(eq9(users.id, input.userId));
+    }).where(eq8(users.id, input.userId));
     await logAudit({
       userId: ctx.user.id,
       action: "user.update_role",
@@ -18166,7 +18247,7 @@ var userRouter = router({
       },
       req: ctx.req
     });
-    const [updated] = await db3.select().from(users).where(eq9(users.id, input.userId));
+    const [updated] = await db3.select().from(users).where(eq8(users.id, input.userId));
     return updated;
   }),
   /**
@@ -18177,7 +18258,7 @@ var userRouter = router({
     if (!db3) {
       throw new Error("Database not available");
     }
-    const [user] = await db3.select().from(users).where(eq9(users.id, input.userId)).limit(1);
+    const [user] = await db3.select().from(users).where(eq8(users.id, input.userId)).limit(1);
     if (!user) {
       throw new Error("User not found");
     }
@@ -18185,7 +18266,7 @@ var userRouter = router({
       agencyId: input.agencyId,
       isSubaccount: input.agencyId ? input.isSubaccount ? 1 : 0 : 0,
       updatedAt: /* @__PURE__ */ new Date()
-    }).where(eq9(users.id, input.userId));
+    }).where(eq8(users.id, input.userId));
     await logAudit({
       userId: ctx.user.id,
       action: input.agencyId ? "user.assign_agency" : "user.remove_agency",
@@ -18197,7 +18278,7 @@ var userRouter = router({
       },
       req: ctx.req
     });
-    const [updated] = await db3.select().from(users).where(eq9(users.id, input.userId));
+    const [updated] = await db3.select().from(users).where(eq8(users.id, input.userId));
     return updated;
   }),
   /**
@@ -18208,7 +18289,7 @@ var userRouter = router({
     if (!db3) {
       throw new Error("Database not available");
     }
-    const [user] = await db3.select().from(users).where(eq9(users.id, input.userId)).limit(1);
+    const [user] = await db3.select().from(users).where(eq8(users.id, input.userId)).limit(1);
     if (!user) {
       throw new Error("User not found");
     }
@@ -18216,12 +18297,12 @@ var userRouter = router({
       throw new Error("Cannot delete your own account");
     }
     if (user.role === "super_admin") {
-      const superAdmins = await db3.select().from(users).where(eq9(users.role, "super_admin"));
+      const superAdmins = await db3.select().from(users).where(eq8(users.role, "super_admin"));
       if (superAdmins.length === 1) {
         throw new Error("Cannot delete the last super admin");
       }
     }
-    await db3.delete(users).where(eq9(users.id, input.userId));
+    await db3.delete(users).where(eq8(users.id, input.userId));
     await logAudit({
       userId: ctx.user.id,
       action: "user.delete",
@@ -18263,7 +18344,7 @@ var userRouter = router({
 import { z as z5 } from "zod";
 init_schema();
 init_db();
-import { eq as eq10, and as and9, desc as desc7 } from "drizzle-orm";
+import { eq as eq9, and as and9, desc as desc7 } from "drizzle-orm";
 init_auth();
 init_const();
 import crypto3 from "crypto";
@@ -18286,15 +18367,15 @@ var invitationRouter = router({
     if (!ctx.user.agencyId) {
       throw new Error("You must be part of an agency to send invitations");
     }
-    const [existingUser] = await db3.select().from(users).where(eq10(users.email, input.email)).limit(1);
+    const [existingUser] = await db3.select().from(users).where(eq9(users.email, input.email)).limit(1);
     if (existingUser && existingUser.agencyId === ctx.user.agencyId) {
       throw new Error("This user is already part of your agency");
     }
     const [existingInvitation] = await db3.select().from(invitations).where(
       and9(
-        eq10(invitations.email, input.email),
-        eq10(invitations.agencyId, ctx.user.agencyId),
-        eq10(invitations.status, "pending")
+        eq9(invitations.email, input.email),
+        eq9(invitations.agencyId, ctx.user.agencyId),
+        eq9(invitations.status, "pending")
       )
     ).limit(1);
     if (existingInvitation) {
@@ -18323,7 +18404,7 @@ var invitationRouter = router({
       },
       req: ctx.req
     });
-    const [invitation] = await db3.select().from(invitations).where(eq10(invitations.id, Number(result.insertId)));
+    const [invitation] = await db3.select().from(invitations).where(eq9(invitations.id, Number(result.insertId)));
     return invitation;
   }),
   /**
@@ -18337,7 +18418,7 @@ var invitationRouter = router({
     if (!ctx.user.agencyId) {
       throw new Error("You must be part of an agency");
     }
-    const results = await db3.select().from(invitations).where(eq10(invitations.agencyId, ctx.user.agencyId)).orderBy(desc7(invitations.createdAt));
+    const results = await db3.select().from(invitations).where(eq9(invitations.agencyId, ctx.user.agencyId)).orderBy(desc7(invitations.createdAt));
     return results;
   }),
   /**
@@ -18348,12 +18429,12 @@ var invitationRouter = router({
     if (!db3) {
       throw new Error("Database not available");
     }
-    const [invitation] = await db3.select().from(invitations).where(eq10(invitations.token, input.token)).limit(1);
+    const [invitation] = await db3.select().from(invitations).where(eq9(invitations.token, input.token)).limit(1);
     if (!invitation) {
       throw new Error("Invitation not found");
     }
     if (/* @__PURE__ */ new Date() > new Date(invitation.expiresAt)) {
-      await db3.update(invitations).set({ status: "expired" }).where(eq10(invitations.id, invitation.id));
+      await db3.update(invitations).set({ status: "expired" }).where(eq9(invitations.id, invitation.id));
       throw new Error("This invitation has expired");
     }
     if (invitation.status !== "pending") {
@@ -18369,7 +18450,7 @@ var invitationRouter = router({
     if (!db3) {
       throw new Error("Database not available");
     }
-    const [invitation] = await db3.select().from(invitations).where(eq10(invitations.token, input.token)).limit(1);
+    const [invitation] = await db3.select().from(invitations).where(eq9(invitations.token, input.token)).limit(1);
     if (!invitation) {
       throw new Error("Invitation not found");
     }
@@ -18377,7 +18458,7 @@ var invitationRouter = router({
       throw new Error(`This invitation is ${invitation.status}`);
     }
     if (/* @__PURE__ */ new Date() > new Date(invitation.expiresAt)) {
-      await db3.update(invitations).set({ status: "expired" }).where(eq10(invitations.id, invitation.id));
+      await db3.update(invitations).set({ status: "expired" }).where(eq9(invitations.id, invitation.id));
       throw new Error("This invitation has expired");
     }
     if (ctx.user.email !== invitation.email) {
@@ -18388,13 +18469,13 @@ var invitationRouter = router({
       role: invitation.role,
       isSubaccount: 1,
       updatedAt: /* @__PURE__ */ new Date()
-    }).where(eq10(users.id, ctx.user.id));
+    }).where(eq9(users.id, ctx.user.id));
     await db3.update(invitations).set({
       status: "accepted",
       acceptedAt: /* @__PURE__ */ new Date(),
       acceptedBy: ctx.user.id
-    }).where(eq10(invitations.id, invitation.id));
-    const [updatedUser] = await db3.select().from(users).where(eq10(users.id, ctx.user.id)).limit(1);
+    }).where(eq9(invitations.id, invitation.id));
+    const [updatedUser] = await db3.select().from(users).where(eq9(users.id, ctx.user.id)).limit(1);
     if (updatedUser) {
       const sessionToken = await authService.createSessionToken(
         updatedUser.id,
@@ -18423,14 +18504,14 @@ var invitationRouter = router({
     if (!db3) {
       throw new Error("Database not available");
     }
-    const [invitation] = await db3.select().from(invitations).where(eq10(invitations.id, input.invitationId)).limit(1);
+    const [invitation] = await db3.select().from(invitations).where(eq9(invitations.id, input.invitationId)).limit(1);
     if (!invitation) {
       throw new Error("Invitation not found");
     }
     if (invitation.agencyId !== ctx.user.agencyId) {
       throw new Error("You can only cancel invitations from your agency");
     }
-    await db3.update(invitations).set({ status: "cancelled" }).where(eq10(invitations.id, input.invitationId));
+    await db3.update(invitations).set({ status: "cancelled" }).where(eq9(invitations.id, input.invitationId));
     await logAudit({
       userId: ctx.user.id,
       action: "invitation.cancel",
@@ -18448,7 +18529,7 @@ var invitationRouter = router({
     if (!db3) {
       throw new Error("Database not available");
     }
-    const [invitation] = await db3.select().from(invitations).where(eq10(invitations.id, input.invitationId)).limit(1);
+    const [invitation] = await db3.select().from(invitations).where(eq9(invitations.id, input.invitationId)).limit(1);
     if (!invitation) {
       throw new Error("Invitation not found");
     }
@@ -18463,7 +18544,7 @@ var invitationRouter = router({
       expiresAt,
       status: "pending",
       updatedAt: /* @__PURE__ */ new Date()
-    }).where(eq10(invitations.id, input.invitationId));
+    }).where(eq9(invitations.id, input.invitationId));
     await logAudit({
       userId: ctx.user.id,
       action: "invitation.resend",
@@ -18471,7 +18552,7 @@ var invitationRouter = router({
       targetId: input.invitationId,
       req: ctx.req
     });
-    const [updated] = await db3.select().from(invitations).where(eq10(invitations.id, input.invitationId));
+    const [updated] = await db3.select().from(invitations).where(eq9(invitations.id, input.invitationId));
     return updated;
   })
 });
@@ -18481,7 +18562,7 @@ init_db();
 init_schema();
 init_env();
 import { z as z6 } from "zod";
-import { eq as eq11, and as and10, desc as desc8, gte as gte3, lte as lte3, sql as sql8, count as count2, or as or7 } from "drizzle-orm";
+import { eq as eq10, and as and10, desc as desc8, gte as gte3, lte as lte3, sql as sql8, count as count2, or as or7 } from "drizzle-orm";
 var agentRouter = router({
   /**
    * Get agent's dashboard KPIs
@@ -18491,7 +18572,7 @@ var agentRouter = router({
       ctx
     }) => {
       const db3 = await getDb();
-      const [agentRecord] = await db3.select().from(agents).where(eq11(agents.userId, ctx.user.id)).limit(1);
+      const [agentRecord] = await db3.select().from(agents).where(eq10(agents.userId, ctx.user.id)).limit(1);
       if (!agentRecord) {
         return {
           activeListings: 0,
@@ -18509,17 +18590,17 @@ var agentRouter = router({
       const today = todayDate.toISOString();
       const tomorrow = tomorrowDate.toISOString();
       const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1e3).toISOString();
-      const [activeListingsResult] = await db3.select({ count: count2() }).from(properties).where(and10(eq11(properties.agentId, agentId), eq11(properties.status, "available")));
-      const [newLeadsResult] = await db3.select({ count: count2() }).from(leads).where(and10(eq11(leads.agentId, agentId), gte3(leads.createdAt, weekAgo)));
+      const [activeListingsResult] = await db3.select({ count: count2() }).from(properties).where(and10(eq10(properties.agentId, agentId), eq10(properties.status, "available")));
+      const [newLeadsResult] = await db3.select({ count: count2() }).from(leads).where(and10(eq10(leads.agentId, agentId), gte3(leads.createdAt, weekAgo)));
       const [showingsTodayResult] = await db3.select({ count: count2() }).from(showings).where(
         and10(
-          eq11(showings.agentId, agentId),
+          eq10(showings.agentId, agentId),
           gte3(showings.scheduledAt, today),
           lte3(showings.scheduledAt, tomorrow)
         )
       );
-      const [offersInProgressResult] = await db3.select({ count: count2() }).from(offers).where(and10(eq11(offers.agentId, agentId), eq11(offers.status, "pending")));
-      const [pendingCommissionsResult] = await db3.select({ total: sql8`SUM(${commissions.amount})` }).from(commissions).where(and10(eq11(commissions.agentId, agentId), eq11(commissions.status, "pending")));
+      const [offersInProgressResult] = await db3.select({ count: count2() }).from(offers).where(and10(eq10(offers.agentId, agentId), eq10(offers.status, "pending")));
+      const [pendingCommissionsResult] = await db3.select({ total: sql8`SUM(${commissions.amount})` }).from(commissions).where(and10(eq10(commissions.agentId, agentId), eq10(commissions.status, "pending")));
       return {
         activeListings: activeListingsResult?.count || 0,
         newLeadsThisWeek: newLeadsResult?.count || 0,
@@ -18545,16 +18626,16 @@ var agentRouter = router({
     })
   ).query(async ({ ctx, input }) => {
     const db3 = await getDb();
-    const [agentRecord] = await db3.select().from(agents).where(eq11(agents.userId, ctx.user.id)).limit(1);
+    const [agentRecord] = await db3.select().from(agents).where(eq10(agents.userId, ctx.user.id)).limit(1);
     if (!agentRecord) {
       throw new Error("Agent profile not found");
     }
-    const conditions = [eq11(leads.agentId, agentRecord.id)];
+    const conditions = [eq10(leads.agentId, agentRecord.id)];
     if (input.filters?.propertyId) {
-      conditions.push(eq11(leads.propertyId, input.filters.propertyId));
+      conditions.push(eq10(leads.propertyId, input.filters.propertyId));
     }
     if (input.filters?.source) {
-      conditions.push(eq11(leads.source, input.filters.source));
+      conditions.push(eq10(leads.source, input.filters.source));
     }
     if (input.filters?.dateRange?.start) {
       conditions.push(
@@ -18567,7 +18648,7 @@ var agentRouter = router({
     const leadsList = await db3.select({
       lead: leads,
       property: properties
-    }).from(leads).leftJoin(properties, eq11(leads.propertyId, properties.id)).where(and10(...conditions)).orderBy(leads.createdAt);
+    }).from(leads).leftJoin(properties, eq10(leads.propertyId, properties.id)).where(and10(...conditions)).orderBy(leads.createdAt);
     const pipeline = {
       new: [],
       contacted: [],
@@ -18628,11 +18709,11 @@ var agentRouter = router({
     })
   ).mutation(async ({ ctx, input }) => {
     const db3 = await getDb();
-    const [agentRecord] = await db3.select().from(agents).where(eq11(agents.userId, ctx.user.id)).limit(1);
+    const [agentRecord] = await db3.select().from(agents).where(eq10(agents.userId, ctx.user.id)).limit(1);
     if (!agentRecord) {
       throw new Error("Agent profile not found");
     }
-    const [lead] = await db3.select().from(leads).where(eq11(leads.id, input.leadId)).limit(1);
+    const [lead] = await db3.select().from(leads).where(eq10(leads.id, input.leadId)).limit(1);
     if (!lead || lead.agentId !== agentRecord.id) {
       throw new Error("Lead not found or unauthorized");
     }
@@ -18657,7 +18738,7 @@ var agentRouter = router({
     await db3.update(leads).set({
       status: newStatus,
       updatedAt: nowAsDbTimestamp()
-    }).where(eq11(leads.id, input.leadId));
+    }).where(eq10(leads.id, input.leadId));
     await db3.insert(leadActivities).values({
       leadId: input.leadId,
       agentId: agentRecord.id,
@@ -18684,22 +18765,22 @@ var agentRouter = router({
     })
   ).query(async ({ ctx, input }) => {
     const db3 = await getDb();
-    const [agentRecord] = await db3.select().from(agents).where(eq11(agents.userId, ctx.user.id)).limit(1);
+    const [agentRecord] = await db3.select().from(agents).where(eq10(agents.userId, ctx.user.id)).limit(1);
     const conditions = [];
     if (agentRecord) {
       conditions.push(
-        or7(eq11(properties.agentId, agentRecord.id), eq11(properties.ownerId, ctx.user.id))
+        or7(eq10(properties.agentId, agentRecord.id), eq10(properties.ownerId, ctx.user.id))
       );
     } else {
-      conditions.push(eq11(properties.ownerId, ctx.user.id));
+      conditions.push(eq10(properties.ownerId, ctx.user.id));
     }
     if (input.status && input.status !== "all") {
-      conditions.push(eq11(properties.status, input.status));
+      conditions.push(eq10(properties.status, input.status));
     }
     const listings2 = await db3.select().from(properties).where(and10(...conditions)).orderBy(desc8(properties.createdAt)).limit(input.limit);
     const listingsWithImages = await Promise.all(
       listings2.map(async (property) => {
-        const images = await db3.select().from(propertyImages).where(eq11(propertyImages.propertyId, property.id)).orderBy(propertyImages.displayOrder).limit(1);
+        const images = await db3.select().from(propertyImages).where(eq10(propertyImages.propertyId, property.id)).orderBy(propertyImages.displayOrder).limit(1);
         const cdnUrl = ENV.cloudFrontUrl || `https://${ENV.s3BucketName}.s3.${ENV.awsRegion}.amazonaws.com`;
         const primaryImage = images.length > 0 ? images[0].imageUrl.startsWith("http") ? images[0].imageUrl : `${cdnUrl}/${images[0].imageUrl}` : null;
         return {
@@ -18718,20 +18799,20 @@ var agentRouter = router({
    */
   archiveProperty: agentProcedure.input(z6.object({ id: z6.number() })).mutation(async ({ ctx, input }) => {
     const db3 = await getDb();
-    const [property] = await db3.select().from(properties).where(eq11(properties.id, input.id)).limit(1);
+    const [property] = await db3.select().from(properties).where(eq10(properties.id, input.id)).limit(1);
     if (!property) {
       throw new Error("Property not found");
     }
     const isOwner = property.ownerId === ctx.user.id;
     let isAgent = false;
     if (property.agentId) {
-      const [agentRecord] = await db3.select().from(agents).where(and10(eq11(agents.id, property.agentId), eq11(agents.userId, ctx.user.id))).limit(1);
+      const [agentRecord] = await db3.select().from(agents).where(and10(eq10(agents.id, property.agentId), eq10(agents.userId, ctx.user.id))).limit(1);
       isAgent = !!agentRecord;
     }
     if (!isOwner && !isAgent) {
       throw new Error("Not authorized to archive this property");
     }
-    await db3.update(properties).set({ status: "archived" }).where(eq11(properties.id, input.id));
+    await db3.update(properties).set({ status: "archived" }).where(eq10(properties.id, input.id));
     return { success: true };
   }),
   /**
@@ -18739,20 +18820,20 @@ var agentRouter = router({
    */
   deleteProperty: agentProcedure.input(z6.object({ id: z6.number() })).mutation(async ({ ctx, input }) => {
     const db3 = await getDb();
-    const [property] = await db3.select().from(properties).where(eq11(properties.id, input.id)).limit(1);
+    const [property] = await db3.select().from(properties).where(eq10(properties.id, input.id)).limit(1);
     if (!property) {
       throw new Error("Property not found");
     }
     const isOwner = property.ownerId === ctx.user.id;
     let isAgent = false;
     if (property.agentId) {
-      const [agentRecord] = await db3.select().from(agents).where(and10(eq11(agents.id, property.agentId), eq11(agents.userId, ctx.user.id))).limit(1);
+      const [agentRecord] = await db3.select().from(agents).where(and10(eq10(agents.id, property.agentId), eq10(agents.userId, ctx.user.id))).limit(1);
       isAgent = !!agentRecord;
     }
     if (!isOwner && !isAgent) {
       throw new Error("Not authorized to delete this property");
     }
-    await db3.delete(properties).where(eq11(properties.id, input.id));
+    await db3.delete(properties).where(eq10(properties.id, input.id));
     return { success: true };
   }),
   /**
@@ -18769,7 +18850,7 @@ var agentRouter = router({
     })
   ).mutation(async ({ ctx, input }) => {
     const db3 = await getDb();
-    const [existing] = await db3.select().from(agents).where(eq11(agents.userId, ctx.user.id)).limit(1);
+    const [existing] = await db3.select().from(agents).where(eq10(agents.userId, ctx.user.id)).limit(1);
     if (existing) {
       throw new Error("Agent profile already exists");
     }
@@ -18804,18 +18885,18 @@ var agentRouter = router({
     })
   ).query(async ({ ctx, input }) => {
     const db3 = await getDb();
-    const [agentRecord] = await db3.select().from(agents).where(eq11(agents.userId, ctx.user.id)).limit(1);
+    const [agentRecord] = await db3.select().from(agents).where(eq10(agents.userId, ctx.user.id)).limit(1);
     if (!agentRecord) {
       throw new Error("Agent profile not found");
     }
-    const conditions = [eq11(leads.agentId, agentRecord.id)];
+    const conditions = [eq10(leads.agentId, agentRecord.id)];
     if (input.status && input.status !== "all") {
-      conditions.push(eq11(leads.status, input.status));
+      conditions.push(eq10(leads.status, input.status));
     }
     const leadsList = await db3.select({
       lead: leads,
       property: properties
-    }).from(leads).leftJoin(properties, eq11(leads.propertyId, properties.id)).where(and10(...conditions)).orderBy(desc8(leads.createdAt)).limit(input.limit);
+    }).from(leads).leftJoin(properties, eq10(leads.propertyId, properties.id)).where(and10(...conditions)).orderBy(desc8(leads.createdAt)).limit(input.limit);
     return leadsList.map(({ lead, property }) => ({
       ...lead,
       property: property ? {
@@ -18846,18 +18927,18 @@ var agentRouter = router({
     })
   ).mutation(async ({ ctx, input }) => {
     const db3 = await getDb();
-    const [agentRecord] = await db3.select().from(agents).where(eq11(agents.userId, ctx.user.id)).limit(1);
+    const [agentRecord] = await db3.select().from(agents).where(eq10(agents.userId, ctx.user.id)).limit(1);
     if (!agentRecord) {
       throw new Error("Agent profile not found");
     }
-    const [lead] = await db3.select().from(leads).where(eq11(leads.id, input.leadId)).limit(1);
+    const [lead] = await db3.select().from(leads).where(eq10(leads.id, input.leadId)).limit(1);
     if (!lead || lead.agentId !== agentRecord.id) {
       throw new Error("Lead not found or unauthorized");
     }
     await db3.update(leads).set({
       status: input.status,
       updatedAt: nowAsDbTimestamp()
-    }).where(eq11(leads.id, input.leadId));
+    }).where(eq10(leads.id, input.leadId));
     await db3.insert(leadActivities).values({
       leadId: input.leadId,
       agentId: agentRecord.id,
@@ -18886,11 +18967,11 @@ var agentRouter = router({
     })
   ).mutation(async ({ ctx, input }) => {
     const db3 = await getDb();
-    const [agentRecord] = await db3.select().from(agents).where(eq11(agents.userId, ctx.user.id)).limit(1);
+    const [agentRecord] = await db3.select().from(agents).where(eq10(agents.userId, ctx.user.id)).limit(1);
     if (!agentRecord) {
       throw new Error("Agent profile not found");
     }
-    const [lead] = await db3.select().from(leads).where(eq11(leads.id, input.leadId)).limit(1);
+    const [lead] = await db3.select().from(leads).where(eq10(leads.id, input.leadId)).limit(1);
     if (!lead || lead.agentId !== agentRecord.id) {
       throw new Error("Lead not found or unauthorized");
     }
@@ -18901,7 +18982,7 @@ var agentRouter = router({
       description: input.description,
       metadata: input.metadata
     });
-    await db3.update(leads).set({ updatedAt: nowAsDbTimestamp() }).where(eq11(leads.id, input.leadId));
+    await db3.update(leads).set({ updatedAt: nowAsDbTimestamp() }).where(eq10(leads.id, input.leadId));
     return { success: true };
   }),
   /**
@@ -18913,7 +18994,7 @@ var agentRouter = router({
     })
   ).query(async ({ ctx, input }) => {
     const db3 = await getDb();
-    const activities2 = await db3.select().from(leadActivities).where(eq11(leadActivities.leadId, input.leadId)).orderBy(desc8(leadActivities.createdAt));
+    const activities2 = await db3.select().from(leadActivities).where(eq10(leadActivities.leadId, input.leadId)).orderBy(desc8(leadActivities.createdAt));
     return activities2;
   }),
   /**
@@ -18927,11 +19008,11 @@ var agentRouter = router({
     })
   ).query(async ({ ctx, input }) => {
     const db3 = await getDb();
-    const [agentRecord] = await db3.select().from(agents).where(eq11(agents.userId, ctx.user.id)).limit(1);
+    const [agentRecord] = await db3.select().from(agents).where(eq10(agents.userId, ctx.user.id)).limit(1);
     if (!agentRecord) {
       throw new Error("Agent profile not found");
     }
-    const conditions = [eq11(showings.agentId, agentRecord.id)];
+    const conditions = [eq10(showings.agentId, agentRecord.id)];
     if (input.startDate) {
       conditions.push(gte3(showings.scheduledAt, new Date(input.startDate).toISOString()));
     }
@@ -18939,13 +19020,13 @@ var agentRouter = router({
       conditions.push(lte3(showings.scheduledAt, new Date(input.endDate).toISOString()));
     }
     if (input.status && input.status !== "all") {
-      conditions.push(eq11(showings.status, input.status));
+      conditions.push(eq10(showings.status, input.status));
     }
     const showingsList = await db3.select({
       showing: showings,
       property: properties,
       lead: leads
-    }).from(showings).leftJoin(properties, eq11(showings.propertyId, properties.id)).leftJoin(leads, eq11(showings.leadId, leads.id)).where(and10(...conditions)).orderBy(showings.scheduledAt);
+    }).from(showings).leftJoin(properties, eq10(showings.propertyId, properties.id)).leftJoin(leads, eq10(showings.leadId, leads.id)).where(and10(...conditions)).orderBy(showings.scheduledAt);
     return showingsList.map(({ showing, property, lead }) => ({
       ...showing,
       property: property ? {
@@ -18972,7 +19053,7 @@ var agentRouter = router({
     })
   ).mutation(async ({ ctx, input }) => {
     const db3 = await getDb();
-    const [agentRecord] = await db3.select().from(agents).where(eq11(agents.userId, ctx.user.id)).limit(1);
+    const [agentRecord] = await db3.select().from(agents).where(eq10(agents.userId, ctx.user.id)).limit(1);
     if (!agentRecord) {
       throw new Error("Agent profile not found");
     }
@@ -18980,7 +19061,7 @@ var agentRouter = router({
       status: input.status,
       notes: input.notes || showings.notes,
       updatedAt: nowAsDbTimestamp()
-    }).where(and10(eq11(showings.id, input.showingId), eq11(showings.agentId, agentRecord.id)));
+    }).where(and10(eq10(showings.id, input.showingId), eq10(showings.agentId, agentRecord.id)));
     return { success: true };
   }),
   /**
@@ -18992,19 +19073,19 @@ var agentRouter = router({
     })
   ).query(async ({ ctx, input }) => {
     const db3 = await getDb();
-    const [agentRecord] = await db3.select().from(agents).where(eq11(agents.userId, ctx.user.id)).limit(1);
+    const [agentRecord] = await db3.select().from(agents).where(eq10(agents.userId, ctx.user.id)).limit(1);
     if (!agentRecord) {
       throw new Error("Agent profile not found");
     }
-    const conditions = [eq11(commissions.agentId, agentRecord.id)];
+    const conditions = [eq10(commissions.agentId, agentRecord.id)];
     if (input.status && input.status !== "all") {
-      conditions.push(eq11(commissions.status, input.status));
+      conditions.push(eq10(commissions.status, input.status));
     }
     const commissionsList = await db3.select({
       commission: commissions,
       property: properties,
       lead: leads
-    }).from(commissions).leftJoin(properties, eq11(commissions.propertyId, properties.id)).leftJoin(leads, eq11(commissions.leadId, leads.id)).where(and10(...conditions)).orderBy(desc8(commissions.createdAt));
+    }).from(commissions).leftJoin(properties, eq10(commissions.propertyId, properties.id)).leftJoin(leads, eq10(commissions.leadId, leads.id)).where(and10(...conditions)).orderBy(desc8(commissions.createdAt));
     return commissionsList.map(
       ({ commission, property, lead }) => ({
         ...commission,
@@ -19027,7 +19108,7 @@ var agentRouter = router({
     })
   ).query(async ({ ctx, input }) => {
     const db3 = await getDb();
-    const [agentRecord] = await db3.select().from(agents).where(eq11(agents.userId, ctx.user.id)).limit(1);
+    const [agentRecord] = await db3.select().from(agents).where(eq10(agents.userId, ctx.user.id)).limit(1);
     if (!agentRecord) {
       throw new Error("Agent profile not found");
     }
@@ -19039,19 +19120,19 @@ var agentRouter = router({
       year: 365
     }[input.period];
     const startDate = new Date(now.getTime() - periodDays * 24 * 60 * 60 * 1e3).toISOString();
-    const [leadsContactedResult] = await db3.select({ count: count2() }).from(leads).where(and10(eq11(leads.agentId, agentRecord.id), gte3(leads.createdAt, startDate)));
+    const [leadsContactedResult] = await db3.select({ count: count2() }).from(leads).where(and10(eq10(leads.agentId, agentRecord.id), gte3(leads.createdAt, startDate)));
     const [propertiesClosedResult] = await db3.select({ count: count2() }).from(properties).where(
       and10(
-        eq11(properties.agentId, agentRecord.id),
+        eq10(properties.agentId, agentRecord.id),
         sql8`${properties.status} IN ('sold', 'rented')`,
         gte3(properties.updatedAt, startDate)
       )
     );
-    const [totalLeadsResult] = await db3.select({ count: count2() }).from(leads).where(and10(eq11(leads.agentId, agentRecord.id), gte3(leads.createdAt, startDate)));
+    const [totalLeadsResult] = await db3.select({ count: count2() }).from(leads).where(and10(eq10(leads.agentId, agentRecord.id), gte3(leads.createdAt, startDate)));
     const [convertedLeadsResult] = await db3.select({ count: count2() }).from(leads).where(
       and10(
-        eq11(leads.agentId, agentRecord.id),
-        eq11(leads.status, "converted"),
+        eq10(leads.agentId, agentRecord.id),
+        eq10(leads.status, "converted"),
         gte3(leads.createdAt, startDate)
       )
     );
@@ -19077,9 +19158,9 @@ var agentRouter = router({
     })
   ).query(async ({ ctx, input }) => {
     const db3 = await getDb();
-    const conditions = [eq11(notifications.userId, ctx.user.id)];
+    const conditions = [eq10(notifications.userId, ctx.user.id)];
     if (input.unreadOnly) {
-      conditions.push(eq11(notifications.isRead, 0));
+      conditions.push(eq10(notifications.isRead, 0));
     }
     const notificationsList = await db3.select().from(notifications).where(and10(...conditions)).orderBy(desc8(notifications.createdAt)).limit(input.limit).offset(input.offset);
     return notificationsList;
@@ -19090,7 +19171,7 @@ var agentRouter = router({
   markNotificationAsRead: agentProcedure.input(z6.object({ notificationId: z6.number() })).mutation(async ({ ctx, input }) => {
     const db3 = await getDb();
     await db3.update(notifications).set({ isRead: 1, readAt: /* @__PURE__ */ new Date() }).where(
-      and10(eq11(notifications.id, input.notificationId), eq11(notifications.userId, ctx.user.id))
+      and10(eq10(notifications.id, input.notificationId), eq10(notifications.userId, ctx.user.id))
     );
     return { success: true };
   }),
@@ -19099,7 +19180,7 @@ var agentRouter = router({
    */
   markAllNotificationsAsRead: agentProcedure.mutation(async ({ ctx }) => {
     const db3 = await getDb();
-    await db3.update(notifications).set({ isRead: 1, readAt: /* @__PURE__ */ new Date() }).where(eq11(notifications.userId, ctx.user.id));
+    await db3.update(notifications).set({ isRead: 1, readAt: /* @__PURE__ */ new Date() }).where(eq10(notifications.userId, ctx.user.id));
     return { success: true };
   }),
   /**
@@ -19107,7 +19188,7 @@ var agentRouter = router({
    */
   getUnreadNotificationCount: agentProcedure.query(async ({ ctx }) => {
     const db3 = await getDb();
-    const [result] = await db3.select({ count: count2() }).from(notifications).where(and10(eq11(notifications.userId, ctx.user.id), eq11(notifications.isRead, 0)));
+    const [result] = await db3.select({ count: count2() }).from(notifications).where(and10(eq10(notifications.userId, ctx.user.id), eq10(notifications.isRead, 0)));
     return { count: result?.count || 0 };
   }),
   /**
@@ -19119,19 +19200,19 @@ var agentRouter = router({
     })
   ).query(async ({ ctx, input }) => {
     const db3 = await getDb();
-    const [agentRecord] = await db3.select().from(agents).where(eq11(agents.userId, ctx.user.id)).limit(1);
+    const [agentRecord] = await db3.select().from(agents).where(eq10(agents.userId, ctx.user.id)).limit(1);
     if (!agentRecord) {
       throw new Error("Agent profile not found");
     }
-    const conditions = [eq11(commissions.agentId, agentRecord.id)];
+    const conditions = [eq10(commissions.agentId, agentRecord.id)];
     if (input.status && input.status !== "all") {
-      conditions.push(eq11(commissions.status, input.status));
+      conditions.push(eq10(commissions.status, input.status));
     }
     const commissionsList = await db3.select({
       commission: commissions,
       property: properties,
       lead: leads
-    }).from(commissions).leftJoin(properties, eq11(commissions.propertyId, properties.id)).leftJoin(leads, eq11(commissions.leadId, leads.id)).where(and10(...conditions)).orderBy(desc8(commissions.createdAt));
+    }).from(commissions).leftJoin(properties, eq10(commissions.propertyId, properties.id)).leftJoin(leads, eq10(commissions.leadId, leads.id)).where(and10(...conditions)).orderBy(desc8(commissions.createdAt));
     const csvHeaders = [
       "Property",
       "Client",
@@ -19174,11 +19255,11 @@ var agentRouter = router({
     })
   ).mutation(async ({ ctx, input }) => {
     const db3 = await getDb();
-    const [agentRecord] = await db3.select().from(agents).where(eq11(agents.userId, ctx.user.id)).limit(1);
+    const [agentRecord] = await db3.select().from(agents).where(eq10(agents.userId, ctx.user.id)).limit(1);
     if (!agentRecord) {
       throw new Error("Agent profile not found");
     }
-    const [property] = await db3.select().from(properties).where(and10(eq11(properties.id, input.propertyId), eq11(properties.agentId, agentRecord.id))).limit(1);
+    const [property] = await db3.select().from(properties).where(and10(eq10(properties.id, input.propertyId), eq10(properties.agentId, agentRecord.id))).limit(1);
     if (!property) {
       throw new Error("Property not found or unauthorized");
     }
@@ -19186,7 +19267,7 @@ var agentRouter = router({
     if (input.updates.featured !== void 0) {
       updateData.featured = input.updates.featured ? 1 : 0;
     }
-    await db3.update(properties).set(updateData).where(eq11(properties.id, input.propertyId));
+    await db3.update(properties).set(updateData).where(eq10(properties.id, input.propertyId));
     return { success: true };
   })
 });
@@ -19197,7 +19278,7 @@ import { z as z7 } from "zod";
 // server/services/agentService.ts
 init_db_connection();
 init_schema();
-import { eq as eq12, desc as desc9, and as and11, like as like7, or as or8, sql as sql9 } from "drizzle-orm";
+import { eq as eq11, desc as desc9, and as and11, like as like7, or as or8, sql as sql9 } from "drizzle-orm";
 async function storeConversation(data) {
   try {
     const db3 = await getDb();
@@ -19212,12 +19293,12 @@ async function storeConversation(data) {
 async function getConversationHistory(sessionId, limit = 50) {
   const db3 = await getDb();
   if (!db3) throw new Error("Database not available");
-  return await db3.select().from(agentMemory).where(eq12(agentMemory.sessionId, sessionId)).orderBy(desc9(agentMemory.createdAt)).limit(limit);
+  return await db3.select().from(agentMemory).where(eq11(agentMemory.sessionId, sessionId)).orderBy(desc9(agentMemory.createdAt)).limit(limit);
 }
 async function getConversationsByUser(userId, limit = 20) {
   const db3 = await getDb();
   if (!db3) throw new Error("Database not available");
-  return await db3.select().from(agentMemory).where(eq12(agentMemory.userId, userId)).orderBy(desc9(agentMemory.createdAt)).limit(limit);
+  return await db3.select().from(agentMemory).where(eq11(agentMemory.userId, userId)).orderBy(desc9(agentMemory.createdAt)).limit(limit);
 }
 async function createTask(data) {
   try {
@@ -19253,7 +19334,7 @@ async function updateTaskStatus(taskId, status, outputData, errorMessage) {
     if (errorMessage) {
       updates.errorMessage = errorMessage;
     }
-    await db3.update(agentTasks).set(updates).where(eq12(agentTasks.taskId, taskId));
+    await db3.update(agentTasks).set(updates).where(eq11(agentTasks.taskId, taskId));
   } catch (error) {
     console.error("[agentService] Failed to update task status:", error);
     throw new Error("Failed to update task status in database");
@@ -19262,18 +19343,18 @@ async function updateTaskStatus(taskId, status, outputData, errorMessage) {
 async function getTaskById(taskId) {
   const db3 = await getDb();
   if (!db3) throw new Error("Database not available");
-  const result = await db3.select().from(agentTasks).where(eq12(agentTasks.taskId, taskId)).limit(1);
+  const result = await db3.select().from(agentTasks).where(eq11(agentTasks.taskId, taskId)).limit(1);
   return result[0];
 }
 async function getTasksBySession(sessionId, limit = 50) {
   const db3 = await getDb();
   if (!db3) throw new Error("Database not available");
-  return await db3.select().from(agentTasks).where(eq12(agentTasks.sessionId, sessionId)).orderBy(desc9(agentTasks.createdAt)).limit(limit);
+  return await db3.select().from(agentTasks).where(eq11(agentTasks.sessionId, sessionId)).orderBy(desc9(agentTasks.createdAt)).limit(limit);
 }
 async function getTasksByUser(userId, limit = 50) {
   const db3 = await getDb();
   if (!db3) throw new Error("Database not available");
-  return await db3.select().from(agentTasks).where(eq12(agentTasks.userId, userId)).orderBy(desc9(agentTasks.createdAt)).limit(limit);
+  return await db3.select().from(agentTasks).where(eq11(agentTasks.userId, userId)).orderBy(desc9(agentTasks.createdAt)).limit(limit);
 }
 async function addKnowledge(data) {
   try {
@@ -19289,14 +19370,14 @@ async function addKnowledge(data) {
 async function updateKnowledge(id, updates) {
   const db3 = await getDb();
   if (!db3) throw new Error("Database not available");
-  await db3.update(agentKnowledge).set({ ...updates, updatedAt: /* @__PURE__ */ new Date() }).where(eq12(agentKnowledge.id, id));
+  await db3.update(agentKnowledge).set({ ...updates, updatedAt: /* @__PURE__ */ new Date() }).where(eq11(agentKnowledge.id, id));
 }
 async function searchKnowledge(query, limit = 10) {
   const db3 = await getDb();
   if (!db3) throw new Error("Database not available");
   return await db3.select().from(agentKnowledge).where(
     and11(
-      eq12(agentKnowledge.isActive, 1),
+      eq11(agentKnowledge.isActive, 1),
       or8(
         like7(agentKnowledge.topic, `%${query}%`),
         like7(agentKnowledge.content, `%${query}%`),
@@ -19308,18 +19389,18 @@ async function searchKnowledge(query, limit = 10) {
 async function getKnowledgeByCategory(category, limit = 20) {
   const db3 = await getDb();
   if (!db3) throw new Error("Database not available");
-  return await db3.select().from(agentKnowledge).where(and11(eq12(agentKnowledge.isActive, 1), eq12(agentKnowledge.category, category))).orderBy(desc9(agentKnowledge.createdAt)).limit(limit);
+  return await db3.select().from(agentKnowledge).where(and11(eq11(agentKnowledge.isActive, 1), eq11(agentKnowledge.category, category))).orderBy(desc9(agentKnowledge.createdAt)).limit(limit);
 }
 async function getKnowledgeById(id) {
   const db3 = await getDb();
   if (!db3) throw new Error("Database not available");
-  const result = await db3.select().from(agentKnowledge).where(eq12(agentKnowledge.id, id)).limit(1);
+  const result = await db3.select().from(agentKnowledge).where(eq11(agentKnowledge.id, id)).limit(1);
   return result[0];
 }
 async function deactivateKnowledge(id) {
   const db3 = await getDb();
   if (!db3) throw new Error("Database not available");
-  await db3.update(agentKnowledge).set({ isActive: 0, updatedAt: /* @__PURE__ */ new Date() }).where(eq12(agentKnowledge.id, id));
+  await db3.update(agentKnowledge).set({ isActive: 0, updatedAt: /* @__PURE__ */ new Date() }).where(eq11(agentKnowledge.id, id));
 }
 
 // server/routers/aiAgentRouter.ts
@@ -19474,7 +19555,7 @@ var aiAgentRouter = router({
 // server/videoRouter.ts
 init_schema();
 import { z as z8 } from "zod";
-import { eq as eq13, and as and12, desc as desc10, sql as sql10 } from "drizzle-orm";
+import { eq as eq12, and as and12, desc as desc10, sql as sql10 } from "drizzle-orm";
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 var s3 = new S3Client({
@@ -19535,7 +19616,7 @@ var videoRouter = router({
     if (ctx.user.role !== "agent" && ctx.user.role !== "agency_admin" && ctx.user.role !== "super_admin") {
       throw new Error("Only agents can upload videos");
     }
-    const agent = await ctx.db.select().from(agents).where(eq13(agents.userId, ctx.user.id)).limit(1);
+    const agent = await ctx.db.select().from(agents).where(eq12(agents.userId, ctx.user.id)).limit(1);
     if (!agent[0]) {
       throw new Error("Agent profile not found");
     }
@@ -19589,14 +19670,14 @@ var videoRouter = router({
       agentEmail: agents.email,
       // User like status (for authenticated users)
       userLiked: videoLikes.id
-    }).from(videos).leftJoin(properties, eq13(videos.propertyId, properties.id)).leftJoin(agents, eq13(videos.agentId, agents.id)).leftJoin(developments, eq13(videos.developmentId, developments.id)).leftJoin(
+    }).from(videos).leftJoin(properties, eq12(videos.propertyId, properties.id)).leftJoin(agents, eq12(videos.agentId, agents.id)).leftJoin(developments, eq12(videos.developmentId, developments.id)).leftJoin(
       videoLikes,
       and12(
-        eq13(videoLikes.videoId, videos.id),
-        ctx.user?.id ? eq13(videoLikes.userId, ctx.user.id) : sql10`1=0`
+        eq12(videoLikes.videoId, videos.id),
+        ctx.user?.id ? eq12(videoLikes.userId, ctx.user.id) : sql10`1=0`
         // Always false if no user
       )
-    ).where(eq13(videos.isPublished, 1)).orderBy(desc10(videos.createdAt)).limit(50);
+    ).where(eq12(videos.isPublished, 1)).orderBy(desc10(videos.createdAt)).limit(50);
     return videosWithData.map((video) => ({
       ...video,
       isLiked: !!video.userLiked,
@@ -19611,7 +19692,7 @@ var videoRouter = router({
       limit: z8.number().default(20)
     })
   ).query(async ({ ctx, input }) => {
-    const whereCondition = input.type ? and12(eq13(videos.isPublished, 1), eq13(videos.type, input.type)) : eq13(videos.isPublished, 1);
+    const whereCondition = input.type ? and12(eq12(videos.isPublished, 1), eq12(videos.type, input.type)) : eq12(videos.isPublished, 1);
     const videosWithData = await ctx.db.select({
       id: videos.id,
       videoUrl: videos.videoUrl,
@@ -19634,11 +19715,11 @@ var videoRouter = router({
       agentLastName: agents.lastName,
       agentEmail: agents.email,
       userLiked: videoLikes.id
-    }).from(videos).leftJoin(properties, eq13(videos.propertyId, properties.id)).leftJoin(agents, eq13(videos.agentId, agents.id)).leftJoin(developments, eq13(videos.developmentId, developments.id)).leftJoin(
+    }).from(videos).leftJoin(properties, eq12(videos.propertyId, properties.id)).leftJoin(agents, eq12(videos.agentId, agents.id)).leftJoin(developments, eq12(videos.developmentId, developments.id)).leftJoin(
       videoLikes,
       and12(
-        eq13(videoLikes.videoId, videos.id),
-        ctx.user?.id ? eq13(videoLikes.userId, ctx.user.id) : sql10`1=0`
+        eq12(videoLikes.videoId, videos.id),
+        ctx.user?.id ? eq12(videoLikes.userId, ctx.user.id) : sql10`1=0`
       )
     ).where(whereCondition).orderBy(desc10(videos.createdAt)).limit(input.limit);
     return videosWithData.map((video) => ({
@@ -19649,23 +19730,23 @@ var videoRouter = router({
   }),
   // Toggle like/unlike on a video
   toggleLike: protectedProcedure.input(z8.object({ videoId: z8.number() })).mutation(async ({ ctx, input }) => {
-    const existingLike = await ctx.db.select().from(videoLikes).where(and12(eq13(videoLikes.videoId, input.videoId), eq13(videoLikes.userId, ctx.user.id))).limit(1);
+    const existingLike = await ctx.db.select().from(videoLikes).where(and12(eq12(videoLikes.videoId, input.videoId), eq12(videoLikes.userId, ctx.user.id))).limit(1);
     if (existingLike[0]) {
-      await ctx.db.delete(videoLikes).where(eq13(videoLikes.id, existingLike[0].id));
-      await ctx.db.update(videos).set({ likes: sql10`likes - 1` }).where(eq13(videos.id, input.videoId));
+      await ctx.db.delete(videoLikes).where(eq12(videoLikes.id, existingLike[0].id));
+      await ctx.db.update(videos).set({ likes: sql10`likes - 1` }).where(eq12(videos.id, input.videoId));
       return { liked: false };
     } else {
       await ctx.db.insert(videoLikes).values({
         videoId: input.videoId,
         userId: ctx.user.id
       });
-      await ctx.db.update(videos).set({ likes: sql10`likes + 1` }).where(eq13(videos.id, input.videoId));
+      await ctx.db.update(videos).set({ likes: sql10`likes + 1` }).where(eq12(videos.id, input.videoId));
       return { liked: true };
     }
   }),
   // Increment view count
   incrementViews: publicProcedure.input(z8.object({ videoId: z8.number() })).mutation(async ({ ctx, input }) => {
-    await ctx.db.update(videos).set({ views: sql10`views + 1` }).where(eq13(videos.id, input.videoId));
+    await ctx.db.update(videos).set({ views: sql10`views + 1` }).where(eq12(videos.id, input.videoId));
     return { success: true };
   }),
   // Contact agent through video
@@ -19680,7 +19761,7 @@ var videoRouter = router({
       message: z8.string()
     })
   ).mutation(async ({ ctx, input }) => {
-    const agent = await ctx.db.select().from(agents).where(eq13(agents.id, input.agentId)).limit(1);
+    const agent = await ctx.db.select().from(agents).where(eq12(agents.id, input.agentId)).limit(1);
     if (!agent[0]) {
       throw new Error("Agent not found");
     }
@@ -19712,7 +19793,7 @@ var videoRouter = router({
   ).query(async ({ ctx, input }) => {
     let targetAgentId = input.agentId;
     if (!targetAgentId) {
-      const agent = await ctx.db.select().from(agents).where(eq13(agents.userId, ctx.user.id)).limit(1);
+      const agent = await ctx.db.select().from(agents).where(eq12(agents.userId, ctx.user.id)).limit(1);
       if (!agent[0]) {
         throw new Error("Agent profile not found");
       }
@@ -19735,26 +19816,26 @@ var videoRouter = router({
       propertyPrice: properties.price,
       developmentName: developments.name,
       likesCount: sql10`COUNT(${videoLikes.id})`.as("likes_count")
-    }).from(videos).leftJoin(properties, eq13(videos.propertyId, properties.id)).leftJoin(developments, eq13(videos.developmentId, developments.id)).leftJoin(videoLikes, eq13(videoLikes.videoId, videos.id)).where(eq13(videos.agentId, targetAgentId)).groupBy(videos.id, properties.id, developments.id).orderBy(desc10(videos.createdAt)).limit(input.limit);
+    }).from(videos).leftJoin(properties, eq12(videos.propertyId, properties.id)).leftJoin(developments, eq12(videos.developmentId, developments.id)).leftJoin(videoLikes, eq12(videoLikes.videoId, videos.id)).where(eq12(videos.agentId, targetAgentId)).groupBy(videos.id, properties.id, developments.id).orderBy(desc10(videos.createdAt)).limit(input.limit);
     return videosData;
   }),
   // Delete video (agent can delete their own videos)
   deleteVideo: protectedProcedure.input(z8.object({ videoId: z8.number() })).mutation(async ({ ctx, input }) => {
-    const video = await ctx.db.select().from(videos).where(eq13(videos.id, input.videoId)).limit(1);
+    const video = await ctx.db.select().from(videos).where(eq12(videos.id, input.videoId)).limit(1);
     if (!video[0]) {
       throw new Error("Video not found");
     }
-    const agent = await ctx.db.select().from(agents).where(eq13(agents.userId, ctx.user.id)).limit(1);
+    const agent = await ctx.db.select().from(agents).where(eq12(agents.userId, ctx.user.id)).limit(1);
     if (!agent[0] || video[0].agentId !== agent[0].id) {
       throw new Error("Unauthorized to delete this video");
     }
-    await ctx.db.delete(videos).where(eq13(videos.id, input.videoId));
+    await ctx.db.delete(videos).where(eq12(videos.id, input.videoId));
     return { success: true };
   })
 });
 
 // server/billingRouter.ts
-import { TRPCError as TRPCError7 } from "@trpc/server";
+import { TRPCError as TRPCError6 } from "@trpc/server";
 import { z as z9 } from "zod";
 init_db();
 
@@ -19778,7 +19859,7 @@ function verifyStripeWebhook(rawBody, signature) {
 
 // server/billingRouter.ts
 init_schema();
-import { eq as eq14, and as and13, sql as sql11, or as or9, desc as desc11 } from "drizzle-orm";
+import { eq as eq13, and as and13, sql as sql11, or as or9, desc as desc11 } from "drizzle-orm";
 var createCheckoutSessionSchema = z9.object({
   planId: z9.number(),
   successUrl: z9.string().url(),
@@ -19792,39 +19873,39 @@ var billingRouter = {
   plans: publicProcedure.query(async () => {
     const db3 = await getDb();
     if (!db3)
-      throw new TRPCError7({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
-    return await db3.select().from(plans).where(eq14(plans.isActive, 1)).orderBy(plans.sortOrder);
+      throw new TRPCError6({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+    return await db3.select().from(plans).where(eq13(plans.isActive, 1)).orderBy(plans.sortOrder);
   }),
   createCheckoutSession: agencyAdminProcedure.input(createCheckoutSessionSchema).mutation(async ({ input, ctx }) => {
     const db3 = await getDb();
     if (!db3)
-      throw new TRPCError7({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+      throw new TRPCError6({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
     if (!stripe) {
-      throw new TRPCError7({
+      throw new TRPCError6({
         code: "SERVICE_UNAVAILABLE",
         message: "Payment system is not configured. Please contact support."
       });
     }
     try {
-      const [plan] = await db3.select().from(plans).where(eq14(plans.id, input.planId)).limit(1);
+      const [plan] = await db3.select().from(plans).where(eq13(plans.id, input.planId)).limit(1);
       if (!plan) {
-        throw new TRPCError7({ code: "NOT_FOUND", message: "Plan not found" });
+        throw new TRPCError6({ code: "NOT_FOUND", message: "Plan not found" });
       }
       if (!plan.stripePriceId) {
-        throw new TRPCError7({
+        throw new TRPCError6({
           code: "BAD_REQUEST",
           message: "Plan is not configured for Stripe billing"
         });
       }
       if (!ctx.user.agencyId) {
-        throw new TRPCError7({ code: "FORBIDDEN", message: "User must belong to an agency" });
+        throw new TRPCError6({ code: "FORBIDDEN", message: "User must belong to an agency" });
       }
-      const [agency] = await db3.select().from(agencies).where(eq14(agencies.id, ctx.user.agencyId)).limit(1);
+      const [agency] = await db3.select().from(agencies).where(eq13(agencies.id, ctx.user.agencyId)).limit(1);
       if (!agency) {
-        throw new TRPCError7({ code: "NOT_FOUND", message: "Agency not found" });
+        throw new TRPCError6({ code: "NOT_FOUND", message: "Agency not found" });
       }
       let customerId;
-      const existingSubscription = await db3.select().from(agencySubscriptions).where(eq14(agencySubscriptions.agencyId, ctx.user.agencyId)).limit(1);
+      const existingSubscription = await db3.select().from(agencySubscriptions).where(eq13(agencySubscriptions.agencyId, ctx.user.agencyId)).limit(1);
       if (existingSubscription.length > 0) {
         customerId = existingSubscription[0].stripeCustomerId;
       } else {
@@ -19864,7 +19945,7 @@ var billingRouter = {
       return { sessionId: session.id, url: session.url };
     } catch (error) {
       console.error("Error creating checkout session:", error);
-      throw new TRPCError7({
+      throw new TRPCError6({
         code: "INTERNAL_SERVER_ERROR",
         message: "Failed to create checkout session"
       });
@@ -19874,7 +19955,7 @@ var billingRouter = {
   subscription: agencyAdminProcedure.query(async ({ ctx }) => {
     const db3 = await getDb();
     if (!db3)
-      throw new TRPCError7({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+      throw new TRPCError6({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
     const [subscription] = await db3.select({
       id: agencySubscriptions.id,
       planId: agencySubscriptions.planId,
@@ -19884,23 +19965,23 @@ var billingRouter = {
       cancelAtPeriodEnd: agencySubscriptions.cancelAtPeriodEnd,
       stripeSubscriptionId: agencySubscriptions.stripeSubscriptionId,
       plan: plans
-    }).from(agencySubscriptions).leftJoin(plans, eq14(agencySubscriptions.planId, plans.id)).where(eq14(agencySubscriptions.agencyId, ctx.user.agencyId)).limit(1);
+    }).from(agencySubscriptions).leftJoin(plans, eq13(agencySubscriptions.planId, plans.id)).where(eq13(agencySubscriptions.agencyId, ctx.user.agencyId)).limit(1);
     return subscription || null;
   }),
   paymentMethods: agencyAdminProcedure.query(async ({ ctx }) => {
     const db3 = await getDb();
     if (!db3)
-      throw new TRPCError7({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
-    return await db3.select().from(paymentMethods).where(eq14(paymentMethods.agencyId, ctx.user.agencyId)).orderBy(paymentMethods.isDefault);
+      throw new TRPCError6({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+    return await db3.select().from(paymentMethods).where(eq13(paymentMethods.agencyId, ctx.user.agencyId)).orderBy(paymentMethods.isDefault);
   }),
   createSetupIntent: agencyAdminProcedure.input(createSetupIntentSchema).mutation(async ({ ctx }) => {
     const db3 = await getDb();
     if (!db3)
-      throw new TRPCError7({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+      throw new TRPCError6({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
     try {
-      const [subscription] = await db3.select().from(agencySubscriptions).where(eq14(agencySubscriptions.agencyId, ctx.user.agencyId)).limit(1);
+      const [subscription] = await db3.select().from(agencySubscriptions).where(eq13(agencySubscriptions.agencyId, ctx.user.agencyId)).limit(1);
       if (!subscription) {
-        throw new TRPCError7({ code: "NOT_FOUND", message: "No subscription found for agency" });
+        throw new TRPCError6({ code: "NOT_FOUND", message: "No subscription found for agency" });
       }
       const setupIntent = await stripe.setupIntents.create({
         customer: subscription.stripeCustomerId,
@@ -19915,7 +19996,7 @@ var billingRouter = {
       };
     } catch (error) {
       console.error("Error creating setup intent:", error);
-      throw new TRPCError7({
+      throw new TRPCError6({
         code: "INTERNAL_SERVER_ERROR",
         message: "Failed to create payment method setup"
       });
@@ -19924,17 +20005,17 @@ var billingRouter = {
   invoices: agencyAdminProcedure.query(async ({ ctx }) => {
     const db3 = await getDb();
     if (!db3)
-      throw new TRPCError7({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
-    return await db3.select().from(invoices).where(eq14(invoices.agencyId, ctx.user.agencyId)).orderBy(invoices.createdAt);
+      throw new TRPCError6({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+    return await db3.select().from(invoices).where(eq13(invoices.agencyId, ctx.user.agencyId)).orderBy(invoices.createdAt);
   }),
   cancelSubscription: agencyAdminProcedure.mutation(async ({ ctx }) => {
     const db3 = await getDb();
     if (!db3)
-      throw new TRPCError7({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+      throw new TRPCError6({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
     try {
-      const [subscription] = await db3.select().from(agencySubscriptions).where(eq14(agencySubscriptions.agencyId, ctx.user.agencyId)).limit(1);
+      const [subscription] = await db3.select().from(agencySubscriptions).where(eq13(agencySubscriptions.agencyId, ctx.user.agencyId)).limit(1);
       if (!subscription || !subscription.stripeSubscriptionId) {
-        throw new TRPCError7({ code: "NOT_FOUND", message: "No active subscription found" });
+        throw new TRPCError6({ code: "NOT_FOUND", message: "No active subscription found" });
       }
       await stripe.subscriptions.update(subscription.stripeSubscriptionId, {
         cancel_at_period_end: true
@@ -19942,11 +20023,11 @@ var billingRouter = {
       await db3.update(agencySubscriptions).set({
         cancelAtPeriodEnd: 1,
         updatedAt: /* @__PURE__ */ new Date()
-      }).where(eq14(agencySubscriptions.id, subscription.id));
+      }).where(eq13(agencySubscriptions.id, subscription.id));
       return { success: true };
     } catch (error) {
       console.error("Error canceling subscription:", error);
-      throw new TRPCError7({
+      throw new TRPCError6({
         code: "INTERNAL_SERVER_ERROR",
         message: "Failed to cancel subscription"
       });
@@ -19955,11 +20036,11 @@ var billingRouter = {
   reactivateSubscription: agencyAdminProcedure.mutation(async ({ ctx }) => {
     const db3 = await getDb();
     if (!db3)
-      throw new TRPCError7({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+      throw new TRPCError6({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
     try {
-      const [subscription] = await db3.select().from(agencySubscriptions).where(eq14(agencySubscriptions.agencyId, ctx.user.agencyId)).limit(1);
+      const [subscription] = await db3.select().from(agencySubscriptions).where(eq13(agencySubscriptions.agencyId, ctx.user.agencyId)).limit(1);
       if (!subscription || !subscription.stripeSubscriptionId) {
-        throw new TRPCError7({ code: "NOT_FOUND", message: "No subscription found" });
+        throw new TRPCError6({ code: "NOT_FOUND", message: "No subscription found" });
       }
       await stripe.subscriptions.update(subscription.stripeSubscriptionId, {
         cancel_at_period_end: false
@@ -19967,11 +20048,11 @@ var billingRouter = {
       await db3.update(agencySubscriptions).set({
         cancelAtPeriodEnd: 0,
         updatedAt: /* @__PURE__ */ new Date()
-      }).where(eq14(agencySubscriptions.id, subscription.id));
+      }).where(eq13(agencySubscriptions.id, subscription.id));
       return { success: true };
     } catch (error) {
       console.error("Error reactivating subscription:", error);
-      throw new TRPCError7({
+      throw new TRPCError6({
         code: "INTERNAL_SERVER_ERROR",
         message: "Failed to reactivate subscription"
       });
@@ -19982,7 +20063,7 @@ var billingRouter = {
     plans: superAdminProcedure.query(async () => {
       const db3 = await getDb();
       if (!db3)
-        throw new TRPCError7({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+        throw new TRPCError6({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
       return await db3.select().from(plans).orderBy(plans.sortOrder);
     }),
     updatePlan: superAdminProcedure.input(
@@ -20000,34 +20081,34 @@ var billingRouter = {
     ).mutation(async ({ input }) => {
       const db3 = await getDb();
       if (!db3)
-        throw new TRPCError7({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
-      await db3.update(plans).set(input.updates).where(eq14(plans.id, input.id));
+        throw new TRPCError6({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+      await db3.update(plans).set(input.updates).where(eq13(plans.id, input.id));
       return { success: true };
     }),
     billingOverview: superAdminProcedure.query(async () => {
       const db3 = await getDb();
       if (!db3)
-        throw new TRPCError7({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
-      const [totalRevenue] = await db3.select({ total: sql11`sum(${invoices.amount})` }).from(invoices).where(eq14(invoices.status, "paid"));
+        throw new TRPCError6({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+      const [totalRevenue] = await db3.select({ total: sql11`sum(${invoices.amount})` }).from(invoices).where(eq13(invoices.status, "paid"));
       const [monthlyRevenue] = await db3.select({ total: sql11`sum(${invoices.amount})` }).from(invoices).where(
         and13(
-          eq14(invoices.status, "paid"),
+          eq13(invoices.status, "paid"),
           sql11`${invoices.createdAt} >= DATE_SUB(NOW(), INTERVAL 30 DAY)`
         )
       );
-      const [activeSubscriptions] = await db3.select({ count: sql11`count(*)` }).from(agencySubscriptions).where(eq14(agencySubscriptions.status, "active"));
+      const [activeSubscriptions] = await db3.select({ count: sql11`count(*)` }).from(agencySubscriptions).where(eq13(agencySubscriptions.status, "active"));
       const [totalSubscriptions] = await db3.select({ count: sql11`count(*)` }).from(agencySubscriptions);
-      const [trialSubscriptions] = await db3.select({ count: sql11`count(*)` }).from(agencySubscriptions).where(eq14(agencySubscriptions.status, "trialing"));
+      const [trialSubscriptions] = await db3.select({ count: sql11`count(*)` }).from(agencySubscriptions).where(eq13(agencySubscriptions.status, "trialing"));
       const [churnedSubscriptions] = await db3.select({ count: sql11`count(*)` }).from(agencySubscriptions).where(
-        or9(eq14(agencySubscriptions.status, "canceled"), eq14(agencySubscriptions.status, "unpaid"))
+        or9(eq13(agencySubscriptions.status, "canceled"), eq13(agencySubscriptions.status, "unpaid"))
       );
       const [totalAgencies] = await db3.select({ count: sql11`count(*)` }).from(agencies);
-      const [paidAgencies] = await db3.select({ count: sql11`count(distinct ${agencies.id})` }).from(agencies).innerJoin(agencySubscriptions, eq14(agencies.id, agencySubscriptions.agencyId)).where(eq14(agencySubscriptions.status, "active"));
+      const [paidAgencies] = await db3.select({ count: sql11`count(distinct ${agencies.id})` }).from(agencies).innerJoin(agencySubscriptions, eq13(agencies.id, agencySubscriptions.agencyId)).where(eq13(agencySubscriptions.status, "active"));
       const planDistribution = await db3.select({
         planName: plans.name,
         planDisplayName: plans.displayName,
         count: sql11`count(*)`
-      }).from(agencySubscriptions).innerJoin(plans, eq14(agencySubscriptions.planId, plans.id)).where(eq14(agencySubscriptions.status, "active")).groupBy(plans.id, plans.name, plans.displayName);
+      }).from(agencySubscriptions).innerJoin(plans, eq13(agencySubscriptions.planId, plans.id)).where(eq13(agencySubscriptions.status, "active")).groupBy(plans.id, plans.name, plans.displayName);
       const recentTransactions = await db3.select({
         id: invoices.id,
         amount: invoices.amount,
@@ -20035,11 +20116,11 @@ var billingRouter = {
         status: invoices.status,
         createdAt: invoices.createdAt,
         agencyName: agencies.name
-      }).from(invoices).innerJoin(agencySubscriptions, eq14(invoices.subscriptionId, agencySubscriptions.id)).innerJoin(agencies, eq14(agencySubscriptions.agencyId, agencies.id)).where(sql11`${invoices.createdAt} >= DATE_SUB(NOW(), INTERVAL 30 DAY)`).orderBy(desc11(invoices.createdAt)).limit(10);
+      }).from(invoices).innerJoin(agencySubscriptions, eq13(invoices.subscriptionId, agencySubscriptions.id)).innerJoin(agencies, eq13(agencySubscriptions.agencyId, agencies.id)).where(sql11`${invoices.createdAt} >= DATE_SUB(NOW(), INTERVAL 30 DAY)`).orderBy(desc11(invoices.createdAt)).limit(10);
       const activeSubsWithPlans = await db3.select({
         amount: plans.price,
         interval: plans.interval
-      }).from(agencySubscriptions).innerJoin(plans, eq14(agencySubscriptions.planId, plans.id)).where(eq14(agencySubscriptions.status, "active"));
+      }).from(agencySubscriptions).innerJoin(plans, eq13(agencySubscriptions.planId, plans.id)).where(eq13(agencySubscriptions.status, "active"));
       let mrr = 0;
       for (const sub of activeSubsWithPlans) {
         const monthlyAmount = sub.interval === "year" ? sub.amount / 12 : sub.amount;
@@ -20081,7 +20162,7 @@ var billingRouter = {
     coupons: superAdminProcedure.query(async () => {
       const db3 = await getDb();
       if (!db3)
-        throw new TRPCError7({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+        throw new TRPCError6({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
       return await db3.select().from(coupons).orderBy(coupons.createdAt);
     }),
     createCoupon: superAdminProcedure.input(
@@ -20099,10 +20180,10 @@ var billingRouter = {
     ).mutation(async ({ input }) => {
       const db3 = await getDb();
       if (!db3)
-        throw new TRPCError7({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
-      const [existing] = await db3.select().from(coupons).where(eq14(coupons.code, input.code)).limit(1);
+        throw new TRPCError6({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+      const [existing] = await db3.select().from(coupons).where(eq13(coupons.code, input.code)).limit(1);
       if (existing) {
-        throw new TRPCError7({ code: "CONFLICT", message: "Coupon code already exists" });
+        throw new TRPCError6({ code: "CONFLICT", message: "Coupon code already exists" });
       }
       const couponData = {
         ...input,
@@ -20127,15 +20208,15 @@ var billingRouter = {
     ).mutation(async ({ input }) => {
       const db3 = await getDb();
       if (!db3)
-        throw new TRPCError7({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
-      await db3.update(coupons).set(input.updates).where(eq14(coupons.id, input.id));
+        throw new TRPCError6({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+      await db3.update(coupons).set(input.updates).where(eq13(coupons.id, input.id));
       return { success: true };
     }),
     deleteCoupon: superAdminProcedure.input(z9.object({ id: z9.number() })).mutation(async ({ input }) => {
       const db3 = await getDb();
       if (!db3)
-        throw new TRPCError7({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
-      await db3.delete(coupons).where(eq14(coupons.id, input.id));
+        throw new TRPCError6({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+      await db3.delete(coupons).where(eq13(coupons.id, input.id));
       return { success: true };
     }),
     // Validate coupon for checkout
@@ -20147,25 +20228,25 @@ var billingRouter = {
     ).query(async ({ input }) => {
       const db3 = await getDb();
       if (!db3)
-        throw new TRPCError7({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
-      const [coupon] = await db3.select().from(coupons).where(eq14(coupons.code, input.code.toUpperCase())).limit(1);
+        throw new TRPCError6({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+      const [coupon] = await db3.select().from(coupons).where(eq13(coupons.code, input.code.toUpperCase())).limit(1);
       if (!coupon || !coupon.isActive) {
-        throw new TRPCError7({ code: "NOT_FOUND", message: "Invalid or expired coupon" });
+        throw new TRPCError6({ code: "NOT_FOUND", message: "Invalid or expired coupon" });
       }
       const now = /* @__PURE__ */ new Date();
       if (coupon.validFrom && now < coupon.validFrom) {
-        throw new TRPCError7({ code: "BAD_REQUEST", message: "Coupon not yet valid" });
+        throw new TRPCError6({ code: "BAD_REQUEST", message: "Coupon not yet valid" });
       }
       if (coupon.validUntil && now > coupon.validUntil) {
-        throw new TRPCError7({ code: "BAD_REQUEST", message: "Coupon has expired" });
+        throw new TRPCError6({ code: "BAD_REQUEST", message: "Coupon has expired" });
       }
       if (coupon.maxRedemptions && coupon.redemptionsUsed >= coupon.maxRedemptions) {
-        throw new TRPCError7({ code: "BAD_REQUEST", message: "Coupon usage limit exceeded" });
+        throw new TRPCError6({ code: "BAD_REQUEST", message: "Coupon usage limit exceeded" });
       }
       if (coupon.appliesToPlans) {
         const allowedPlans = JSON.parse(coupon.appliesToPlans);
         if (!allowedPlans.includes(input.planId)) {
-          throw new TRPCError7({ code: "BAD_REQUEST", message: "Coupon not valid for this plan" });
+          throw new TRPCError6({ code: "BAD_REQUEST", message: "Coupon not valid for this plan" });
         }
       }
       return {
@@ -20184,7 +20265,7 @@ var billingRouter = {
 init_db();
 init_schema();
 import { z as z10 } from "zod";
-import { eq as eq15, and as and14, or as or10, like as like9, sql as sql13, count as count4 } from "drizzle-orm";
+import { eq as eq14, and as and14, or as or10, like as like9, sql as sql13, count as count4 } from "drizzle-orm";
 var locationRouter = router({
   /**
    * Search for locations (provinces, cities, suburbs, addresses)
@@ -20202,8 +20283,8 @@ var locationRouter = router({
     const cacheKey = `${input.query}_${input.type}_${input.limit}`;
     const [cached] = await db3.select().from(locationSearchCache).where(
       and14(
-        eq15(locationSearchCache.searchQuery, cacheKey),
-        eq15(locationSearchCache.searchType, input.type),
+        eq14(locationSearchCache.searchQuery, cacheKey),
+        eq14(locationSearchCache.searchType, input.type),
         sql13`${locationSearchCache.expiresAt} > NOW()`
       )
     ).limit(1);
@@ -20231,7 +20312,7 @@ var locationRouter = router({
         latitude: cities.latitude,
         longitude: cities.longitude,
         isMetro: cities.isMetro
-      }).from(cities).leftJoin(provinces, eq15(cities.provinceId, provinces.id)).where(like9(cities.name, searchQuery)).limit(input.type === "city" ? input.limit : Math.ceil(input.limit / 3));
+      }).from(cities).leftJoin(provinces, eq14(cities.provinceId, provinces.id)).where(like9(cities.name, searchQuery)).limit(input.type === "city" ? input.limit : Math.ceil(input.limit / 3));
       results.push(...cityResults);
     }
     if (input.type === "suburb" || input.type === "all") {
@@ -20245,7 +20326,7 @@ var locationRouter = router({
         latitude: suburbs.latitude,
         longitude: suburbs.longitude,
         postalCode: suburbs.postalCode
-      }).from(suburbs).leftJoin(cities, eq15(suburbs.cityId, cities.id)).leftJoin(provinces, eq15(cities.provinceId, provinces.id)).where(like9(suburbs.name, searchQuery)).limit(input.type === "suburb" ? input.limit : Math.ceil(input.limit / 3));
+      }).from(suburbs).leftJoin(cities, eq14(suburbs.cityId, cities.id)).leftJoin(provinces, eq14(cities.provinceId, provinces.id)).where(like9(suburbs.name, searchQuery)).limit(input.type === "suburb" ? input.limit : Math.ceil(input.limit / 3));
       results.push(...suburbResults);
     }
     const expiresAt = /* @__PURE__ */ new Date();
@@ -20306,7 +20387,7 @@ var locationRouter = router({
         latitude: cities.latitude,
         longitude: cities.longitude,
         isMetro: cities.isMetro
-      }).from(cities).leftJoin(provinces, eq15(cities.provinceId, provinces.id)).where(eq15(cities.provinceId, input.provinceId)).orderBy(cities.name);
+      }).from(cities).leftJoin(provinces, eq14(cities.provinceId, provinces.id)).where(eq14(cities.provinceId, input.provinceId)).orderBy(cities.name);
       return citiesList;
     }
     if (input.depth === "suburb" && input.cityId) {
@@ -20319,7 +20400,7 @@ var locationRouter = router({
         latitude: suburbs.latitude,
         longitude: suburbs.longitude,
         postalCode: suburbs.postalCode
-      }).from(suburbs).leftJoin(cities, eq15(suburbs.cityId, cities.id)).leftJoin(provinces, eq15(cities.provinceId, provinces.id)).where(eq15(suburbs.cityId, input.cityId)).orderBy(suburbs.name);
+      }).from(suburbs).leftJoin(cities, eq14(suburbs.cityId, cities.id)).leftJoin(provinces, eq14(cities.provinceId, provinces.id)).where(eq14(suburbs.cityId, input.cityId)).orderBy(suburbs.name);
       return suburbsList;
     }
     const hierarchy = await db3.select({
@@ -20352,7 +20433,7 @@ var locationRouter = router({
               )
             )
           )`
-    }).from(provinces).leftJoin(cities, eq15(cities.provinceId, provinces.id)).leftJoin(suburbs, eq15(suburbs.cityId, cities.id)).groupBy(
+    }).from(provinces).leftJoin(cities, eq14(cities.provinceId, provinces.id)).leftJoin(suburbs, eq14(suburbs.cityId, cities.id)).groupBy(
       provinces.id,
       provinces.name,
       provinces.code,
@@ -20427,7 +20508,7 @@ var locationRouter = router({
     const conditions = [
       sql13`${properties.latitude} BETWEEN ${input.bounds.south} AND ${input.bounds.north}`,
       sql13`${properties.longitude} BETWEEN ${input.bounds.west} AND ${input.bounds.east}`,
-      eq15(properties.status, "published")
+      eq14(properties.status, "published")
     ];
     if (input.filters?.propertyType?.length) {
       conditions.push(
@@ -20446,10 +20527,10 @@ var locationRouter = router({
       conditions.push(sql13`${properties.price} <= ${input.filters.maxPrice}`);
     }
     if (input.filters?.bedrooms) {
-      conditions.push(eq15(properties.bedrooms, input.filters.bedrooms));
+      conditions.push(eq14(properties.bedrooms, input.filters.bedrooms));
     }
     if (input.filters?.bathrooms) {
-      conditions.push(eq15(properties.bathrooms, input.filters.bathrooms));
+      conditions.push(eq14(properties.bathrooms, input.filters.bathrooms));
     }
     const propertiesList = await db3.select({
       id: properties.id,
@@ -20514,7 +20595,7 @@ var locationRouter = router({
             `
       }).from(cities).where(
         and14(
-          eq15(cities.provinceId, nearestProvince.id),
+          eq14(cities.provinceId, nearestProvince.id),
           sql13`${cities.latitude} IS NOT NULL`,
           sql13`${cities.longitude} IS NOT NULL`
         )
@@ -20538,7 +20619,7 @@ var locationRouter = router({
               `
         }).from(suburbs).where(
           and14(
-            eq15(suburbs.cityId, nearestCity.id),
+            eq14(suburbs.cityId, nearestCity.id),
             sql13`${suburbs.latitude} IS NOT NULL`,
             sql13`${suburbs.longitude} IS NOT NULL`
           )
@@ -20569,13 +20650,13 @@ var locationRouter = router({
     let agentId = input.agentId;
     if (!agentId) {
       const { agents: agents2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
-      const [agentRecord] = await db3.select().from(agents2).where(eq15(agents2.userId, ctx.user.id)).limit(1);
+      const [agentRecord] = await db3.select().from(agents2).where(eq14(agents2.userId, ctx.user.id)).limit(1);
       if (!agentRecord) {
         throw new Error("Agent profile not found");
       }
       agentId = agentRecord.id;
     }
-    const coverageAreas = await db3.select().from(agentCoverageAreas).where(eq15(agentCoverageAreas.agentId, agentId)).orderBy(agentCoverageAreas.areaName);
+    const coverageAreas = await db3.select().from(agentCoverageAreas).where(eq14(agentCoverageAreas.agentId, agentId)).orderBy(agentCoverageAreas.areaName);
     return coverageAreas;
   }),
   /**
@@ -20633,7 +20714,7 @@ var locationRouter = router({
           and14(
             sql13`${properties.latitude} BETWEEN ${gridLat} AND ${gridLat + latStep}`,
             sql13`${properties.longitude} BETWEEN ${gridLng} AND ${gridLng + lngStep}`,
-            eq15(properties.status, "published")
+            eq14(properties.status, "published")
           )
         );
         if (countResult?.count > 0) {
@@ -20754,7 +20835,7 @@ var locationRouter = router({
 init_db();
 init_schema();
 import { z as z11 } from "zod";
-import { eq as eq16, and as and15, like as like10, sql as sql14, count as count5 } from "drizzle-orm";
+import { eq as eq15, and as and15, like as like10, sql as sql14, count as count5 } from "drizzle-orm";
 var enhancedLocationRouter = router({
   /**
    * Advanced property search with multiple criteria
@@ -20822,22 +20903,22 @@ var enhancedLocationRouter = router({
     })
   ).query(async ({ input }) => {
     const db3 = await getDb();
-    const conditions = [eq16(properties.status, "published")];
+    const conditions = [eq15(properties.status, "published")];
     if (input.location) {
       if (input.location.type === "province") {
         const [province2] = await db3.select({ id: provinces.id }).from(provinces).where(like10(provinces.name, `%${input.location.value}%`)).limit(1);
         if (province2) {
-          conditions.push(eq16(properties.provinceId, province2.id));
+          conditions.push(eq15(properties.provinceId, province2.id));
         }
       } else if (input.location.type === "city") {
         const [city] = await db3.select({ id: cities.id }).from(cities).where(like10(cities.name, `%${input.location.value}%`)).limit(1);
         if (city) {
-          conditions.push(eq16(properties.cityId, city.id));
+          conditions.push(eq15(properties.cityId, city.id));
         }
       } else if (input.location.type === "suburb") {
         const [suburb] = await db3.select({ id: suburbs.id }).from(suburbs).where(like10(suburbs.name, `%${input.location.value}%`)).limit(1);
         if (suburb) {
-          conditions.push(eq16(properties.suburbId, suburb.id));
+          conditions.push(eq15(properties.suburbId, suburb.id));
         }
       } else if (input.location.type === "coordinates") {
         const [lat, lng] = input.location.value.split(",").map(Number);
@@ -21055,7 +21136,7 @@ var enhancedLocationRouter = router({
     const latStep = (input.bounds.north - input.bounds.south) / input.gridSize;
     const lngStep = (input.bounds.east - input.bounds.west) / input.gridSize;
     const heatmapData = [];
-    const conditions = [eq16(properties.status, "published")];
+    const conditions = [eq15(properties.status, "published")];
     if (input.filters?.propertyType?.length) {
       conditions.push(
         sql14`${properties.propertyType} IN (${input.filters.propertyType.map(() => "?").join(",")})`
@@ -21103,12 +21184,12 @@ var enhancedLocationRouter = router({
     })
   ).query(async ({ input }) => {
     const db3 = await getDb();
-    const [referenceProperty] = await db3.select().from(properties).where(eq16(properties.id, input.propertyId)).limit(1);
+    const [referenceProperty] = await db3.select().from(properties).where(eq15(properties.id, input.propertyId)).limit(1);
     if (!referenceProperty) {
       throw new Error("Property not found");
     }
     const conditions = [
-      eq16(properties.status, "published"),
+      eq15(properties.status, "published"),
       sql14`${properties.id} != ${input.propertyId}`,
       // Location similarity
       sql14`(
@@ -21122,7 +21203,7 @@ var enhancedLocationRouter = router({
         ) <= ${input.radius}`
     ];
     if (referenceProperty.propertyType) {
-      conditions.push(eq16(properties.propertyType, referenceProperty.propertyType));
+      conditions.push(eq15(properties.propertyType, referenceProperty.propertyType));
     }
     if (input.includePriceRange && referenceProperty.price) {
       const priceRange = referenceProperty.price * 0.3;
@@ -21184,19 +21265,19 @@ var enhancedLocationRouter = router({
       locationFilter = properties.address;
       locationValue = `%${locationValue}%`;
     }
-    const conditions = [eq16(properties.status, "published")];
+    const conditions = [eq15(properties.status, "published")];
     if (locationValue && locationFilter) {
       if (input.location.type === "suburb") {
         conditions.push(like10(properties.address, locationValue));
       } else {
-        conditions.push(eq16(locationFilter, locationValue));
+        conditions.push(eq15(locationFilter, locationValue));
       }
     }
     if (input.propertyType) {
-      conditions.push(eq16(properties.propertyType, input.propertyType));
+      conditions.push(eq15(properties.propertyType, input.propertyType));
     }
     if (input.listingType) {
-      conditions.push(eq16(properties.listingType, input.listingType));
+      conditions.push(eq15(properties.listingType, input.listingType));
     }
     const [priceStats] = await db3.select({
       avgPrice: sql14`AVG(${properties.price})`.as("avg_price"),
@@ -21259,8 +21340,8 @@ var enhancedLocationRouter = router({
     const db3 = await getDb();
     const [existingSearch] = await db3.select().from(locationSearchCache).where(
       and15(
-        eq16(locationSearchCache.searchQuery, `${ctx.user.id}_${input.name}`),
-        eq16(locationSearchCache.searchType, "saved_search")
+        eq15(locationSearchCache.searchQuery, `${ctx.user.id}_${input.name}`),
+        eq15(locationSearchCache.searchType, "saved_search")
       )
     ).limit(1);
     if (existingSearch) {
@@ -21272,7 +21353,7 @@ var enhancedLocationRouter = router({
         }),
         expiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1e3)
         // 1 year
-      }).where(eq16(locationSearchCache.id, existingSearch.id));
+      }).where(eq15(locationSearchCache.id, existingSearch.id));
       return { success: true, updated: true };
     } else {
       await db3.insert(locationSearchCache).values({
@@ -22351,7 +22432,7 @@ var priceInsightsRouter = router({
 import { z as z14 } from "zod";
 init_db();
 init_schema();
-import { eq as eq17, and as and16 } from "drizzle-orm";
+import { eq as eq16, and as and16 } from "drizzle-orm";
 
 // server/_core/email/mockEmailService.ts
 var MockEmailService = class {
@@ -22487,7 +22568,7 @@ var devRouter = router({
       await db3.update(agencies).set({
         subscriptionStatus: "active",
         updatedAt: /* @__PURE__ */ new Date()
-      }).where(eq17(agencies.id, agencyId));
+      }).where(eq16(agencies.id, agencyId));
       console.log("\u2705 Agency activated");
       const [agency] = await db3.select({
         id: agencies.id,
@@ -22496,13 +22577,13 @@ var devRouter = router({
         ownerEmail: users.email,
         ownerName: users.name,
         ownerFirstName: users.firstName
-      }).from(agencies).leftJoin(users, eq17(users.agencyId, agencies.id)).where(eq17(agencies.id, agencyId)).limit(1);
+      }).from(agencies).leftJoin(users, eq16(users.agencyId, agencies.id)).where(eq16(agencies.id, agencyId)).limit(1);
       if (!agency) {
         throw new Error(`Agency ${agencyId} not found`);
       }
-      const [plan] = await db3.select().from(plans).where(eq17(plans.id, planId)).limit(1);
+      const [plan] = await db3.select().from(plans).where(eq16(plans.id, planId)).limit(1);
       console.log(`\u{1F4CA} Agency: ${agency.name}, Plan: ${plan?.displayName || planId}`);
-      const teamInvitations = await db3.select().from(invitations).where(and16(eq17(invitations.agencyId, agencyId), eq17(invitations.status, "pending"))).limit(50);
+      const teamInvitations = await db3.select().from(invitations).where(and16(eq16(invitations.agencyId, agencyId), eq16(invitations.status, "pending"))).limit(50);
       console.log(`\u{1F4E8} Found ${teamInvitations.length} pending invitations`);
       let successCount = 0;
       const appUrl = process.env.VITE_APP_URL || "http://localhost:5173";
@@ -22558,13 +22639,13 @@ import { z as z15 } from "zod";
 init_schema();
 init_db();
 init_env();
-import { TRPCError as TRPCError8 } from "@trpc/server";
-import { eq as eq20 } from "drizzle-orm";
+import { TRPCError as TRPCError7 } from "@trpc/server";
+import { eq as eq19 } from "drizzle-orm";
 
 // server/services/locationAutoPopulation.ts
 init_db();
 init_schema();
-import { eq as eq18, and as and17, sql as sql17 } from "drizzle-orm";
+import { eq as eq17, and as and17, sql as sql17 } from "drizzle-orm";
 async function autoCreateLocationHierarchy(locationData) {
   console.log("[AutoLocation] Processing:", locationData.formattedAddress);
   const db3 = await getDb();
@@ -22586,7 +22667,7 @@ async function autoCreateLocationHierarchy(locationData) {
   if (cityName && provinceId) {
     console.log("[AutoLocation] Looking for city:", cityName);
     const [existingCity] = await db3.select().from(cities).where(
-      and17(eq18(cities.provinceId, provinceId), sql17`LOWER(${cities.name}) = LOWER(${cityName})`)
+      and17(eq17(cities.provinceId, provinceId), sql17`LOWER(${cities.name}) = LOWER(${cityName})`)
     ).limit(1);
     if (existingCity) {
       cityId = existingCity.id;
@@ -22610,7 +22691,7 @@ async function autoCreateLocationHierarchy(locationData) {
   const suburbName = components.sublocality;
   if (suburbName && cityId) {
     console.log("[AutoLocation] Looking for suburb:", suburbName);
-    const [existingSuburb] = await db3.select().from(suburbs).where(and17(eq18(suburbs.cityId, cityId), sql17`LOWER(${suburbs.name}) = LOWER(${suburbName})`)).limit(1);
+    const [existingSuburb] = await db3.select().from(suburbs).where(and17(eq17(suburbs.cityId, cityId), sql17`LOWER(${suburbs.name}) = LOWER(${suburbName})`)).limit(1);
     if (existingSuburb) {
       suburbId = existingSuburb.id;
       console.log("[AutoLocation] Suburb found:", existingSuburb.name, `(id: ${suburbId})`);
@@ -22801,9 +22882,9 @@ async function normalizeLocationInput(inputLocation) {
   }
   if (resolvedLocationId != null) {
     const dbInstance = await getDb();
-    const exists = await dbInstance.select({ id: locations.id }).from(locations).where(eq20(locations.id, resolvedLocationId)).limit(1);
+    const exists = await dbInstance.select({ id: locations.id }).from(locations).where(eq19(locations.id, resolvedLocationId)).limit(1);
     if (exists.length === 0) {
-      throw new TRPCError8({
+      throw new TRPCError7({
         code: "BAD_REQUEST",
         message: `Invalid location_id: ${resolvedLocationId}. Location does not exist.`
       });
@@ -22811,7 +22892,7 @@ async function normalizeLocationInput(inputLocation) {
   }
   if (sanitizedPlaceId && resolvedLocationId === null) {
     const dbInstance = await getDb();
-    const found = await dbInstance.select({ id: locations.id }).from(locations).where(eq20(locations.placeId, sanitizedPlaceId)).limit(1);
+    const found = await dbInstance.select({ id: locations.id }).from(locations).where(eq19(locations.placeId, sanitizedPlaceId)).limit(1);
     if (found.length > 0) {
       resolvedLocationId = found[0].id;
     }
@@ -22883,7 +22964,7 @@ var listingRouter = router({
   create: protectedProcedure.input(createListingSchema).mutation(async ({ ctx, input }) => {
     const userId = ctx.user?.id;
     if (!userId) {
-      throw new TRPCError8({ code: "UNAUTHORIZED" });
+      throw new TRPCError7({ code: "UNAUTHORIZED" });
     }
     try {
       const timestamp2 = Date.now().toString(36);
@@ -22993,12 +23074,12 @@ var listingRouter = router({
       };
     } catch (error) {
       console.error("Error creating listing:", error);
-      if (error instanceof TRPCError8) {
+      if (error instanceof TRPCError7) {
         throw error;
       }
       const errorMessage = error instanceof Error ? error.message : "Unknown error";
       console.error("Detailed error message:", errorMessage);
-      throw new TRPCError8({
+      throw new TRPCError7({
         code: "INTERNAL_SERVER_ERROR",
         message: `Failed to create listing: ${errorMessage}`,
         cause: error
@@ -23016,12 +23097,12 @@ var listingRouter = router({
   ).mutation(async ({ ctx, input }) => {
     const userId = ctx.user?.id;
     if (!userId) {
-      throw new TRPCError8({ code: "UNAUTHORIZED" });
+      throw new TRPCError7({ code: "UNAUTHORIZED" });
     }
     try {
       const listing = await getListingById(input.id);
       if (!listing || listing.userId !== userId) {
-        throw new TRPCError8({
+        throw new TRPCError7({
           code: "FORBIDDEN",
           message: "Not authorized to update this listing"
         });
@@ -23052,7 +23133,7 @@ var listingRouter = router({
       return { success: true };
     } catch (error) {
       console.error("Error updating listing:", error);
-      throw new TRPCError8({ code: "INTERNAL_SERVER_ERROR", message: "Failed to update listing" });
+      throw new TRPCError7({ code: "INTERNAL_SERVER_ERROR", message: "Failed to update listing" });
     }
   }),
   /**
@@ -23097,8 +23178,8 @@ var listingRouter = router({
       };
     } catch (error) {
       console.error("Error fetching listing:", error);
-      if (error instanceof TRPCError8) throw error;
-      throw new TRPCError8({ code: "INTERNAL_SERVER_ERROR", message: "Failed to fetch listing" });
+      if (error instanceof TRPCError7) throw error;
+      throw new TRPCError7({ code: "INTERNAL_SERVER_ERROR", message: "Failed to fetch listing" });
     }
   }),
   /**
@@ -23113,14 +23194,14 @@ var listingRouter = router({
   ).query(async ({ ctx, input }) => {
     const userId = ctx.user?.id;
     if (!userId) {
-      throw new TRPCError8({ code: "UNAUTHORIZED" });
+      throw new TRPCError7({ code: "UNAUTHORIZED" });
     }
     try {
       const listings2 = await getUserListings(userId, input.status, input.limit, input.offset);
       return listings2;
     } catch (error) {
       console.error("Error fetching user listings:", error);
-      throw new TRPCError8({ code: "INTERNAL_SERVER_ERROR", message: "Failed to fetch listings" });
+      throw new TRPCError7({ code: "INTERNAL_SERVER_ERROR", message: "Failed to fetch listings" });
     }
   }),
   /**
@@ -23129,12 +23210,12 @@ var listingRouter = router({
   archive: protectedProcedure.input(z15.object({ id: z15.number() })).mutation(async ({ ctx, input }) => {
     const userId = ctx.user?.id;
     if (!userId) {
-      throw new TRPCError8({ code: "UNAUTHORIZED" });
+      throw new TRPCError7({ code: "UNAUTHORIZED" });
     }
     try {
       const listing = await getListingById(input.id);
       if (!listing || listing.userId !== userId) {
-        throw new TRPCError8({
+        throw new TRPCError7({
           code: "FORBIDDEN",
           message: "Not authorized to archive this listing"
         });
@@ -23143,7 +23224,7 @@ var listingRouter = router({
       return { success: true };
     } catch (error) {
       console.error("Error archiving listing:", error);
-      throw new TRPCError8({
+      throw new TRPCError7({
         code: "INTERNAL_SERVER_ERROR",
         message: "Failed to archive listing"
       });
@@ -23155,17 +23236,17 @@ var listingRouter = router({
   delete: protectedProcedure.input(z15.object({ id: z15.number() })).mutation(async ({ ctx, input }) => {
     const userId = ctx.user?.id;
     if (!userId) {
-      throw new TRPCError8({ code: "UNAUTHORIZED" });
+      throw new TRPCError7({ code: "UNAUTHORIZED" });
     }
     try {
       const listing = await getListingById(input.id);
       if (!listing) {
-        throw new TRPCError8({ code: "NOT_FOUND", message: "Listing not found" });
+        throw new TRPCError7({ code: "NOT_FOUND", message: "Listing not found" });
       }
       const isOwner = listing.userId === userId;
       const isSuperAdmin = ctx.user.role === "super_admin";
       if (!isOwner && !isSuperAdmin) {
-        throw new TRPCError8({
+        throw new TRPCError7({
           code: "FORBIDDEN",
           message: "Not authorized to delete this listing"
         });
@@ -23174,11 +23255,11 @@ var listingRouter = router({
       return { success: true };
     } catch (error) {
       console.error("Error deleting listing:", error);
-      if (error instanceof TRPCError8) {
+      if (error instanceof TRPCError7) {
         throw error;
       }
       const errorMessage = error instanceof Error ? error.message : "Failed to delete listing";
-      throw new TRPCError8({
+      throw new TRPCError7({
         code: "INTERNAL_SERVER_ERROR",
         message: errorMessage,
         cause: error
@@ -23214,7 +23295,7 @@ var listingRouter = router({
       };
     } catch (error) {
       console.error("Error generating media upload URL:", error);
-      throw new TRPCError8({
+      throw new TRPCError7({
         code: "INTERNAL_SERVER_ERROR",
         message: "Failed to generate upload URL"
       });
@@ -23227,7 +23308,7 @@ var listingRouter = router({
     try {
       const listing = await getListingById(input.listingId);
       if (!listing) {
-        throw new TRPCError8({ code: "NOT_FOUND", message: "Listing not found" });
+        throw new TRPCError7({ code: "NOT_FOUND", message: "Listing not found" });
       }
       const analytics = await getListingAnalytics(input.listingId);
       if (!analytics) {
@@ -23256,7 +23337,7 @@ var listingRouter = router({
       return analytics;
     } catch (error) {
       console.error("Error fetching analytics:", error);
-      throw new TRPCError8({
+      throw new TRPCError7({
         code: "INTERNAL_SERVER_ERROR",
         message: "Failed to fetch analytics"
       });
@@ -23275,7 +23356,7 @@ var listingRouter = router({
     try {
       const listing = await getListingById(input.listingId);
       if (!listing) {
-        throw new TRPCError8({ code: "NOT_FOUND", message: "Listing not found" });
+        throw new TRPCError7({ code: "NOT_FOUND", message: "Listing not found" });
       }
       return {
         leads: [],
@@ -23283,7 +23364,7 @@ var listingRouter = router({
       };
     } catch (error) {
       console.error("Error fetching leads:", error);
-      throw new TRPCError8({ code: "INTERNAL_SERVER_ERROR", message: "Failed to fetch leads" });
+      throw new TRPCError7({ code: "INTERNAL_SERVER_ERROR", message: "Failed to fetch leads" });
     }
   }),
   /**
@@ -23293,7 +23374,7 @@ var listingRouter = router({
     try {
       const listing = await getListingById(input.listingId);
       if (!listing || listing.userId !== ctx.user?.id) {
-        throw new TRPCError8({
+        throw new TRPCError7({
           code: "FORBIDDEN",
           message: "Not authorized to submit this listing"
         });
@@ -23302,7 +23383,7 @@ var listingRouter = router({
       const media = await getListingMedia(input.listingId);
       const readiness = calculateListingReadiness({ ...fullListing, media });
       if (readiness.score < 75) {
-        throw new TRPCError8({
+        throw new TRPCError7({
           code: "PRECONDITION_FAILED",
           message: `Listing is not ready for submission (${readiness.score}%). Please complete missing fields.`
         });
@@ -23322,8 +23403,8 @@ var listingRouter = router({
       return { success: true, status: "pending_review" };
     } catch (error) {
       console.error("Error submitting for review:", error);
-      if (error instanceof TRPCError8) throw error;
-      throw new TRPCError8({
+      if (error instanceof TRPCError7) throw error;
+      throw new TRPCError7({
         code: "INTERNAL_SERVER_ERROR",
         message: "Failed to submit for review"
       });
@@ -23341,16 +23422,16 @@ var listingRouter = router({
   ).mutation(async ({ ctx, input }) => {
     try {
       const listing = await getListingById(input.listingId);
-      if (!listing) throw new TRPCError8({ code: "NOT_FOUND", message: "Listing not found" });
+      if (!listing) throw new TRPCError7({ code: "NOT_FOUND", message: "Listing not found" });
       const isOwner = listing.userId === ctx.user?.id;
       const isSuperAdmin = ctx.user?.role === "super_admin";
       if (!isOwner && !isSuperAdmin) {
-        throw new TRPCError8({ code: "FORBIDDEN", message: "Not authorized" });
+        throw new TRPCError7({ code: "FORBIDDEN", message: "Not authorized" });
       }
       if (input.featured) {
         const qualityScore = listing.qualityScore || 0;
         if (qualityScore < 85 && !isSuperAdmin) {
-          throw new TRPCError8({
+          throw new TRPCError7({
             code: "PRECONDITION_FAILED",
             message: `Listing Quality Score must be at least 85 to be Featured. Current score: ${qualityScore}.`
           });
@@ -23360,8 +23441,8 @@ var listingRouter = router({
       return { success: true };
     } catch (error) {
       console.error("Error promoting listing:", error);
-      if (error instanceof TRPCError8) throw error;
-      throw new TRPCError8({
+      if (error instanceof TRPCError7) throw error;
+      throw new TRPCError7({
         code: "INTERNAL_SERVER_ERROR",
         message: "Failed to update promotion status"
       });
@@ -23377,14 +23458,14 @@ var listingRouter = router({
     })
   ).mutation(async ({ ctx, input }) => {
     if (ctx.user?.role !== "super_admin") {
-      throw new TRPCError8({ code: "FORBIDDEN" });
+      throw new TRPCError7({ code: "FORBIDDEN" });
     }
     try {
       await approveListing(input.listingId, ctx.user.id, input.notes);
       return { success: true };
     } catch (error) {
       console.error("Error approving listing:", error);
-      throw new TRPCError8({
+      throw new TRPCError7({
         code: "INTERNAL_SERVER_ERROR",
         message: "Failed to approve listing"
       });
@@ -23403,7 +23484,7 @@ var listingRouter = router({
     })
   ).mutation(async ({ ctx, input }) => {
     if (ctx.user?.role !== "super_admin") {
-      throw new TRPCError8({ code: "FORBIDDEN" });
+      throw new TRPCError7({ code: "FORBIDDEN" });
     }
     try {
       await rejectListing(
@@ -23416,7 +23497,7 @@ var listingRouter = router({
       return { success: true };
     } catch (error) {
       console.error("Error rejecting listing:", error);
-      throw new TRPCError8({
+      throw new TRPCError7({
         code: "INTERNAL_SERVER_ERROR",
         message: "Failed to reject listing"
       });
@@ -23433,14 +23514,14 @@ var listingRouter = router({
     })
   ).query(async ({ ctx, input }) => {
     if (ctx.user?.role !== "super_admin") {
-      throw new TRPCError8({ code: "FORBIDDEN" });
+      throw new TRPCError7({ code: "FORBIDDEN" });
     }
     try {
       const queueItems = await getApprovalQueue(input.status);
       return queueItems.slice(input.offset, input.offset + input.limit);
     } catch (error) {
       console.error("Error fetching approval queue:", error);
-      throw new TRPCError8({
+      throw new TRPCError7({
         code: "INTERNAL_SERVER_ERROR",
         message: "Failed to fetch approval queue"
       });
@@ -23453,7 +23534,7 @@ import { z as z16 } from "zod";
 init_imageUpload();
 init_env();
 import crypto5 from "crypto";
-import { TRPCError as TRPCError9 } from "@trpc/server";
+import { TRPCError as TRPCError8 } from "@trpc/server";
 var uploadRouter = router({
   /**
    * Generate presigned URL for direct S3 upload
@@ -23489,7 +23570,7 @@ var uploadRouter = router({
       if (error instanceof Error) {
         console.error(error.stack);
       }
-      throw new TRPCError9({
+      throw new TRPCError8({
         code: "INTERNAL_SERVER_ERROR",
         message: "Failed to generate upload URL. Please check server logs.",
         cause: error
@@ -23502,8 +23583,8 @@ var uploadRouter = router({
 import { z as z17 } from "zod";
 init_db();
 init_schema();
-import { TRPCError as TRPCError10 } from "@trpc/server";
-import { eq as eq21, desc as desc14, and as and19 } from "drizzle-orm";
+import { TRPCError as TRPCError9 } from "@trpc/server";
+import { eq as eq20, desc as desc14, and as and19 } from "drizzle-orm";
 var savedSearchRouter = router({
   create: protectedProcedure.input(
     z17.object({
@@ -23515,7 +23596,7 @@ var savedSearchRouter = router({
   ).mutation(async ({ ctx, input }) => {
     const db3 = await getDb();
     if (!db3)
-      throw new TRPCError10({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+      throw new TRPCError9({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
     await db3.insert(savedSearches).values({
       userId: ctx.user.id,
       name: input.name,
@@ -23527,19 +23608,19 @@ var savedSearchRouter = router({
   getAll: protectedProcedure.query(async ({ ctx }) => {
     const db3 = await getDb();
     if (!db3)
-      throw new TRPCError10({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
-    const searches = await db3.select().from(savedSearches).where(eq21(savedSearches.userId, ctx.user.id)).orderBy(desc14(savedSearches.createdAt));
+      throw new TRPCError9({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+    const searches = await db3.select().from(savedSearches).where(eq20(savedSearches.userId, ctx.user.id)).orderBy(desc14(savedSearches.createdAt));
     return searches;
   }),
   delete: protectedProcedure.input(z17.object({ id: z17.number() })).mutation(async ({ ctx, input }) => {
     const db3 = await getDb();
     if (!db3)
-      throw new TRPCError10({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
-    const search = await db3.select().from(savedSearches).where(and19(eq21(savedSearches.id, input.id), eq21(savedSearches.userId, ctx.user.id))).limit(1);
+      throw new TRPCError9({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+    const search = await db3.select().from(savedSearches).where(and19(eq20(savedSearches.id, input.id), eq20(savedSearches.userId, ctx.user.id))).limit(1);
     if (search.length === 0) {
-      throw new TRPCError10({ code: "NOT_FOUND", message: "Saved search not found" });
+      throw new TRPCError9({ code: "NOT_FOUND", message: "Saved search not found" });
     }
-    await db3.delete(savedSearches).where(eq21(savedSearches.id, input.id));
+    await db3.delete(savedSearches).where(eq20(savedSearches.id, input.id));
     return { success: true };
   })
 });
@@ -23548,7 +23629,7 @@ var savedSearchRouter = router({
 import { z as z18 } from "zod";
 init_db();
 init_schema();
-import { TRPCError as TRPCError11 } from "@trpc/server";
+import { TRPCError as TRPCError10 } from "@trpc/server";
 var guestMigrationRouter = router({
   // Migrate guest activity data to user account
   migrateGuestData: protectedProcedure.input(
@@ -23596,7 +23677,7 @@ var guestMigrationRouter = router({
       };
     } catch (error) {
       console.error("Guest migration error:", error);
-      throw new TRPCError11({
+      throw new TRPCError10({
         code: "INTERNAL_SERVER_ERROR",
         message: "Failed to migrate guest data"
       });
@@ -23607,7 +23688,7 @@ var guestMigrationRouter = router({
 // server/settingsRouter.ts
 init_db();
 init_schema();
-import { eq as eq22 } from "drizzle-orm";
+import { eq as eq21 } from "drizzle-orm";
 var settingsRouter = router({
   /**
    * Get public platform settings
@@ -23622,7 +23703,7 @@ var settingsRouter = router({
       };
     }
     try {
-      const settings = await db3.select().from(platformSettings).where(eq22(platformSettings.isPublic, 1));
+      const settings = await db3.select().from(platformSettings).where(eq21(platformSettings.isPublic, 1));
       const settingsObj = {};
       settings.forEach((setting) => {
         settingsObj[setting.settingKey] = setting.settingValue || "";
@@ -23650,7 +23731,7 @@ var settingsRouter = router({
       return { rate: 10.5, lastUpdated: null };
     }
     try {
-      const result = await db3.select().from(platformSettings).where(eq22(platformSettings.settingKey, "sarb_prime_rate")).limit(1);
+      const result = await db3.select().from(platformSettings).where(eq21(platformSettings.settingKey, "sarb_prime_rate")).limit(1);
       if (result.length > 0) {
         return {
           rate: parseFloat(result[0].settingValue || "10.50"),
@@ -23671,7 +23752,7 @@ init_env();
 // server/marketingRouter.ts
 import { z as z19 } from "zod";
 init_db();
-import { eq as eq24, desc as desc15, and as and21 } from "drizzle-orm";
+import { eq as eq23, desc as desc15, and as and21 } from "drizzle-orm";
 var marketingCampaigns3 = {};
 var campaignTargeting = {};
 var campaignBudgets3 = {};
@@ -23736,27 +23817,27 @@ var marketingRouter = router({
     const db3 = await getDb();
     if (!db3) throw new Error("Database not available");
     const campaign = await db3.query.marketingCampaigns.findFirst({
-      where: eq24(marketingCampaigns3.id, input.campaignId)
+      where: eq23(marketingCampaigns3.id, input.campaignId)
     });
     if (!campaign) throw new Error("Campaign not found");
     const [targeting, budget, schedule, channels, creative, performance] = await Promise.all([
       db3.query.campaignTargeting.findFirst({
-        where: eq24(campaignTargeting.campaignId, input.campaignId)
+        where: eq23(campaignTargeting.campaignId, input.campaignId)
       }),
       db3.query.campaignBudgets.findFirst({
-        where: eq24(campaignBudgets3.campaignId, input.campaignId)
+        where: eq23(campaignBudgets3.campaignId, input.campaignId)
       }),
       db3.query.campaignSchedules.findFirst({
-        where: eq24(campaignSchedules.campaignId, input.campaignId)
+        where: eq23(campaignSchedules.campaignId, input.campaignId)
       }),
       db3.query.campaignChannels.findMany({
-        where: eq24(campaignChannels2.campaignId, input.campaignId)
+        where: eq23(campaignChannels2.campaignId, input.campaignId)
       }),
       db3.query.campaignCreatives.findFirst({
-        where: eq24(campaignCreatives.campaignId, input.campaignId)
+        where: eq23(campaignCreatives.campaignId, input.campaignId)
       }),
       db3.query.campaignPerformance.findMany({
-        where: eq24(campaignPerformance.campaignId, input.campaignId)
+        where: eq23(campaignPerformance.campaignId, input.campaignId)
       })
     ]);
     return {
@@ -23783,11 +23864,11 @@ var marketingRouter = router({
     if (!db3) throw new Error("Database not available");
     const conditions = [];
     if (input.ownerType && input.ownerId) {
-      conditions.push(eq24(marketingCampaigns3.ownerType, input.ownerType));
-      conditions.push(eq24(marketingCampaigns3.ownerId, input.ownerId));
+      conditions.push(eq23(marketingCampaigns3.ownerType, input.ownerType));
+      conditions.push(eq23(marketingCampaigns3.ownerId, input.ownerId));
     }
     if (input.status) {
-      conditions.push(eq24(marketingCampaigns3.status, input.status));
+      conditions.push(eq23(marketingCampaigns3.status, input.status));
     }
     const campaigns = await db3.select().from(marketingCampaigns3).where(and21(...conditions)).orderBy(desc15(marketingCampaigns3.createdAt));
     return campaigns;
@@ -23807,7 +23888,7 @@ var marketingRouter = router({
   ).mutation(async ({ ctx, input }) => {
     const db3 = await getDb();
     if (!db3) throw new Error("Database not available");
-    await db3.update(marketingCampaigns3).set(input.data).where(eq24(marketingCampaigns3.id, input.campaignId));
+    await db3.update(marketingCampaigns3).set(input.data).where(eq23(marketingCampaigns3.id, input.campaignId));
     return { success: true };
   }),
   /**
@@ -23827,7 +23908,7 @@ var marketingRouter = router({
   ).mutation(async ({ ctx, input }) => {
     const db3 = await getDb();
     if (!db3) throw new Error("Database not available");
-    await db3.update(campaignTargeting).set(input.targeting).where(eq24(campaignTargeting.campaignId, input.campaignId));
+    await db3.update(campaignTargeting).set(input.targeting).where(eq23(campaignTargeting.campaignId, input.campaignId));
     return { success: true };
   }),
   /**
@@ -23849,7 +23930,7 @@ var marketingRouter = router({
     if (input.budget.budgetAmount !== void 0) {
       updateData.budgetAmount = input.budget.budgetAmount.toString();
     }
-    await db3.update(campaignBudgets3).set(updateData).where(eq24(campaignBudgets3.campaignId, input.campaignId));
+    await db3.update(campaignBudgets3).set(updateData).where(eq23(campaignBudgets3.campaignId, input.campaignId));
     return { success: true };
   }),
   /**
@@ -23868,7 +23949,7 @@ var marketingRouter = router({
   ).mutation(async ({ ctx, input }) => {
     const db3 = await getDb();
     if (!db3) throw new Error("Database not available");
-    await db3.update(campaignSchedules).set(input.schedule).where(eq24(campaignSchedules.campaignId, input.campaignId));
+    await db3.update(campaignSchedules).set(input.schedule).where(eq23(campaignSchedules.campaignId, input.campaignId));
     return { success: true };
   }),
   /**
@@ -23898,12 +23979,12 @@ var marketingRouter = router({
     for (const channel of input.channels) {
       const existing = await db3.query.campaignChannels.findFirst({
         where: and21(
-          eq24(campaignChannels2.campaignId, input.campaignId),
-          eq24(campaignChannels2.type, channel.type)
+          eq23(campaignChannels2.campaignId, input.campaignId),
+          eq23(campaignChannels2.type, channel.type)
         )
       });
       if (existing) {
-        await db3.update(campaignChannels2).set({ enabled: channel.enabled }).where(eq24(campaignChannels2.id, existing.id));
+        await db3.update(campaignChannels2).set({ enabled: channel.enabled }).where(eq23(campaignChannels2.id, existing.id));
       } else {
         await db3.insert(campaignChannels2).values({
           campaignId: input.campaignId,
@@ -23937,7 +24018,7 @@ var marketingRouter = router({
   ).mutation(async ({ ctx, input }) => {
     const db3 = await getDb();
     if (!db3) throw new Error("Database not available");
-    await db3.update(campaignCreatives).set(input.creative).where(eq24(campaignCreatives.campaignId, input.campaignId));
+    await db3.update(campaignCreatives).set(input.creative).where(eq23(campaignCreatives.campaignId, input.campaignId));
     return { success: true };
   }),
   /**
@@ -23952,21 +24033,21 @@ var marketingRouter = router({
     const db3 = await getDb();
     if (!db3) throw new Error("Database not available");
     const campaign = await db3.query.marketingCampaigns.findFirst({
-      where: eq24(marketingCampaigns3.id, input.campaignId)
+      where: eq23(marketingCampaigns3.id, input.campaignId)
     });
     if (!campaign) throw new Error("Campaign not found");
     const schedule = await db3.query.campaignSchedules.findFirst({
-      where: eq24(campaignSchedules.campaignId, input.campaignId)
+      where: eq23(campaignSchedules.campaignId, input.campaignId)
     });
     let newStatus = "active";
     if (schedule?.startDate && new Date(schedule.startDate) > /* @__PURE__ */ new Date()) {
       newStatus = "scheduled";
     }
-    await db3.update(marketingCampaigns3).set({ status: newStatus }).where(eq24(marketingCampaigns3.id, input.campaignId));
+    await db3.update(marketingCampaigns3).set({ status: newStatus }).where(eq23(marketingCampaigns3.id, input.campaignId));
     try {
       const { recordCampaignTransaction: recordCampaignTransaction2 } = await Promise.resolve().then(() => (init_revenueCenterSync(), revenueCenterSync_exports));
       const budget = await db3.query.campaignBudgets.findFirst({
-        where: eq24(campaignBudgets3.campaignId, input.campaignId)
+        where: eq23(campaignBudgets3.campaignId, input.campaignId)
       });
       if (budget && Number(budget.budgetAmount) > 0) {
         let agencyId = 0;
@@ -23989,7 +24070,7 @@ var marketingRouter = router({
 
 // server/subscriptionRouter.ts
 import { z as z20 } from "zod";
-import { TRPCError as TRPCError12 } from "@trpc/server";
+import { TRPCError as TRPCError11 } from "@trpc/server";
 
 // server/services/subscriptionService.ts
 init_db();
@@ -24329,7 +24410,7 @@ var subscriptionRouter = router({
   getPlan: publicProcedure.input(z20.object({ plan_id: z20.string() })).query(async ({ input }) => {
     const plan = await getPlanByPlanId(input.plan_id);
     if (!plan) {
-      throw new TRPCError12({ code: "NOT_FOUND", message: "Plan not found" });
+      throw new TRPCError11({ code: "NOT_FOUND", message: "Plan not found" });
     }
     return plan;
   }),
@@ -24356,7 +24437,7 @@ var subscriptionRouter = router({
         trial_ends_at: subscription.trial_ends_at
       };
     } catch (error) {
-      throw new TRPCError12({
+      throw new TRPCError11({
         code: "BAD_REQUEST",
         message: error.message || "Failed to start trial"
       });
@@ -24368,10 +24449,10 @@ var subscriptionRouter = router({
   createSubscription: protectedProcedure.input(createSubscriptionSchema).mutation(async ({ ctx, input }) => {
     const db3 = await getDb();
     if (!db3)
-      throw new TRPCError12({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+      throw new TRPCError11({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
     const plan = await getPlanByPlanId(input.plan_id);
     if (!plan) {
-      throw new TRPCError12({ code: "NOT_FOUND", message: "Plan not found" });
+      throw new TRPCError11({ code: "NOT_FOUND", message: "Plan not found" });
     }
     const now = /* @__PURE__ */ new Date();
     const periodEnd = new Date(now);
@@ -24433,7 +24514,7 @@ var subscriptionRouter = router({
       const updated = await getUserSubscriptionWithPlan(ctx.user.id);
       return updated;
     } catch (error) {
-      throw new TRPCError12({
+      throw new TRPCError11({
         code: "BAD_REQUEST",
         message: error.message || "Failed to upgrade subscription"
       });
@@ -24452,7 +24533,7 @@ var subscriptionRouter = router({
       const updated = await getUserSubscriptionWithPlan(ctx.user.id);
       return updated;
     } catch (error) {
-      throw new TRPCError12({
+      throw new TRPCError11({
         code: "BAD_REQUEST",
         message: error.message || "Failed to downgrade subscription"
       });
@@ -24464,10 +24545,10 @@ var subscriptionRouter = router({
   cancel: protectedProcedure.input(z20.object({ immediate: z20.boolean().default(false) })).mutation(async ({ ctx, input }) => {
     const db3 = await getDb();
     if (!db3)
-      throw new TRPCError12({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+      throw new TRPCError11({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
     const subscription = await getUserSubscription(ctx.user.id);
     if (!subscription) {
-      throw new TRPCError12({ code: "NOT_FOUND", message: "No active subscription" });
+      throw new TRPCError11({ code: "NOT_FOUND", message: "No active subscription" });
     }
     const now = /* @__PURE__ */ new Date();
     const endsAt = input.immediate ? now : subscription.current_period_end || now;
@@ -24523,7 +24604,7 @@ var subscriptionRouter = router({
   getUsage: protectedProcedure.query(async ({ ctx }) => {
     const db3 = await getDb();
     if (!db3)
-      throw new TRPCError12({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+      throw new TRPCError11({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
     const subscription = await getUserSubscription(ctx.user.id);
     if (!subscription) return null;
     const [rows] = await db3.execute(
@@ -24551,7 +24632,7 @@ var subscriptionRouter = router({
   ).query(async ({ input }) => {
     const db3 = await getDb();
     if (!db3)
-      throw new TRPCError12({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+      throw new TRPCError11({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
     let query = `
         SELECT us.*, sp.name as plan_name, sp.category, u.email, u.name as user_name
         FROM user_subscriptions us
@@ -24579,7 +24660,7 @@ var subscriptionRouter = router({
   getAnalytics: superAdminProcedure.query(async () => {
     const db3 = await getDb();
     if (!db3)
-      throw new TRPCError12({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+      throw new TRPCError11({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
     const [statusStats] = await db3.execute(`
       SELECT status, COUNT(*) as count
       FROM user_subscriptions
@@ -24616,12 +24697,12 @@ var subscriptionRouter = router({
 // server/developerRouter.ts
 import { z as z21 } from "zod";
 init_db();
-import { TRPCError as TRPCError13 } from "@trpc/server";
+import { TRPCError as TRPCError12 } from "@trpc/server";
 
 // server/services/developerSubscriptionService.ts
 init_db();
 init_schema();
-import { eq as eq25, sql as sql20 } from "drizzle-orm";
+import { eq as eq24, sql as sql20 } from "drizzle-orm";
 
 // shared/types.ts
 var SUBSCRIPTION_TIER_LIMITS = {
@@ -24689,13 +24770,13 @@ var DeveloperSubscriptionService = class {
     });
     const usageId = usageResult[0].insertId;
     const subscription = await db.query.developerSubscriptions.findFirst({
-      where: eq25(developerSubscriptions.id, subscriptionId)
+      where: eq24(developerSubscriptions.id, subscriptionId)
     });
     const limits = await db.query.developerSubscriptionLimits.findFirst({
-      where: eq25(developerSubscriptionLimits.id, limitsId)
+      where: eq24(developerSubscriptionLimits.id, limitsId)
     });
     const usage = await db.query.developerSubscriptionUsage.findFirst({
-      where: eq25(developerSubscriptionUsage.id, usageId)
+      where: eq24(developerSubscriptionUsage.id, usageId)
     });
     if (!subscription || !limits || !usage) {
       throw new Error("Failed to create subscription");
@@ -24716,11 +24797,11 @@ var DeveloperSubscriptionService = class {
       usage: developerSubscriptionUsage
     }).from(developerSubscriptions).leftJoin(
       developerSubscriptionLimits,
-      eq25(developerSubscriptionLimits.subscriptionId, developerSubscriptions.id)
+      eq24(developerSubscriptionLimits.subscriptionId, developerSubscriptions.id)
     ).leftJoin(
       developerSubscriptionUsage,
-      eq25(developerSubscriptionUsage.subscriptionId, developerSubscriptions.id)
-    ).where(eq25(developerSubscriptions.developerId, developerId2)).limit(1);
+      eq24(developerSubscriptionUsage.subscriptionId, developerSubscriptions.id)
+    ).where(eq24(developerSubscriptions.developerId, developerId2)).limit(1);
     if (rows.length === 0) return null;
     const row = rows[0];
     if (!row.limits || !row.usage) {
@@ -24744,12 +24825,12 @@ var DeveloperSubscriptionService = class {
     await db.update(developerSubscriptions).set({
       tier: newTier,
       updatedAt: (/* @__PURE__ */ new Date()).toISOString()
-    }).where(eq25(developerSubscriptions.id, subscription.id));
+    }).where(eq24(developerSubscriptions.id, subscription.id));
     const newLimits = SUBSCRIPTION_TIER_LIMITS[newTier];
     await db.update(developerSubscriptionLimits).set({
       ...newLimits,
       updatedAt: (/* @__PURE__ */ new Date()).toISOString()
-    }).where(eq25(developerSubscriptionLimits.subscriptionId, subscription.id));
+    }).where(eq24(developerSubscriptionLimits.subscriptionId, subscription.id));
     return this.getSubscription(developerId2);
   }
   /**
@@ -24806,7 +24887,7 @@ var DeveloperSubscriptionService = class {
         updates.teamMembersCount = subscription.usage.teamMembersCount + 1;
         break;
     }
-    await db.update(developerSubscriptionUsage).set(updates).where(eq25(developerSubscriptionUsage.subscriptionId, subscription.id));
+    await db.update(developerSubscriptionUsage).set(updates).where(eq24(developerSubscriptionUsage.subscriptionId, subscription.id));
   }
   /**
    * Decrement usage counter
@@ -24830,7 +24911,7 @@ var DeveloperSubscriptionService = class {
         updates.teamMembersCount = Math.max(0, subscription.usage.teamMembersCount - 1);
         break;
     }
-    await db.update(developerSubscriptionUsage).set(updates).where(eq25(developerSubscriptionUsage.subscriptionId, subscription.id));
+    await db.update(developerSubscriptionUsage).set(updates).where(eq24(developerSubscriptionUsage.subscriptionId, subscription.id));
   }
   /**
    * Reset monthly lead counter (should be run monthly via cron job)
@@ -24844,7 +24925,7 @@ var DeveloperSubscriptionService = class {
       leadsThisMonth: 0,
       lastResetAt: (/* @__PURE__ */ new Date()).toISOString(),
       updatedAt: (/* @__PURE__ */ new Date()).toISOString()
-    }).where(eq25(developerSubscriptionUsage.subscriptionId, subscription.id));
+    }).where(eq24(developerSubscriptionUsage.subscriptionId, subscription.id));
   }
   /**
    * Check if trial has expired and update status
@@ -24865,7 +24946,7 @@ var DeveloperSubscriptionService = class {
       await db.update(developerSubscriptions).set({
         status: "expired",
         updatedAt: (/* @__PURE__ */ new Date()).toISOString()
-      }).where(eq25(developerSubscriptions.id, subscription.id));
+      }).where(eq24(developerSubscriptions.id, subscription.id));
       return { expired: true, daysRemaining: 0 };
     }
     return { expired: false, daysRemaining };
@@ -24878,12 +24959,12 @@ var DeveloperSubscriptionService = class {
     if (!subscription) {
       throw new Error("Subscription not found");
     }
-    const [result] = await db.select({ count: sql20`count(*)` }).from(developments).where(eq25(developments.developerId, developerId2));
+    const [result] = await db.select({ count: sql20`count(*)` }).from(developments).where(eq24(developments.developerId, developerId2));
     const actualCount = result?.count || 0;
     await db.update(developerSubscriptionUsage).set({
       developmentsCount: actualCount,
       updatedAt: (/* @__PURE__ */ new Date()).toISOString()
-    }).where(eq25(developerSubscriptionUsage.subscriptionId, subscription.id));
+    }).where(eq24(developerSubscriptionUsage.subscriptionId, subscription.id));
     return { newCount: actualCount };
   }
 };
@@ -25210,8 +25291,6 @@ async function getKPIsWithCache(developerId2, timeRange = "30d", forceRefresh = 
 }
 
 // server/developerRouter.ts
-init_schema();
-import { eq as eq28, sql as sql23 } from "drizzle-orm";
 console.log("[DEV ROUTER LOADED] build stamp", (/* @__PURE__ */ new Date()).toISOString());
 var ParkingTypeSchema = z21.enum(["none", "open", "covered", "carport", "garage"]);
 var UnitTypeSchemaV2 = z21.object({
@@ -25236,158 +25315,6 @@ var UnitTypeSchemaV2 = z21.object({
   // isActive exists but is not a publish blocker (defaulting happens server-side)
   isActive: z21.boolean().optional()
 }).passthrough();
-function normalizeUnitType(raw) {
-  const u = raw ?? {};
-  let parkingType = u.parkingType ?? u.parking_type ?? void 0;
-  let parkingBaysRaw = u.parkingBays ?? u.parking_bays ?? void 0;
-  if (!parkingType && u.parking != null) {
-    const p = String(u.parking).trim().toLowerCase();
-    if (p === "1") {
-      parkingType = "open";
-      parkingBaysRaw = 1;
-    } else if (p === "2") {
-      parkingType = "open";
-      parkingBaysRaw = 2;
-    } else if (p === "0" || p === "none" || p === "") {
-      parkingType = "none";
-      parkingBaysRaw = 0;
-    } else if (p === "garage") {
-      parkingType = "garage";
-      parkingBaysRaw = typeof parkingBaysRaw === "number" ? parkingBaysRaw : 1;
-    } else if (p === "carport") {
-      parkingType = "carport";
-      parkingBaysRaw = typeof parkingBaysRaw === "number" ? parkingBaysRaw : 1;
-    } else {
-      parkingType = "none";
-      parkingBaysRaw = 0;
-    }
-  }
-  let parkingBays = Number(parkingBaysRaw ?? 0);
-  if (!Number.isFinite(parkingBays)) parkingBays = 0;
-  parkingBays = Math.max(0, Math.floor(parkingBays));
-  if (!parkingType) parkingType = "none";
-  if (parkingType === "none") parkingBays = 0;
-  const basePriceFrom = Number(
-    u.basePriceFrom ?? u.base_price_from ?? u.priceFrom ?? u.price_from ?? 0
-  );
-  return {
-    ...u,
-    parkingType,
-    parkingBays,
-    basePriceFrom
-  };
-}
-function assertPublishable(fullDev, verifiedUnitCount) {
-  const errors = [];
-  const name = fullDev?.name ?? fullDev?.developmentData?.name;
-  if (!name || String(name).trim().length < 2) {
-    errors.push({ field: "name", message: "Development name is required." });
-  }
-  const address = fullDev?.address ?? fullDev?.developmentData?.location?.address;
-  const city = fullDev?.city ?? fullDev?.developmentData?.location?.city;
-  const province2 = fullDev?.province ?? fullDev?.developmentData?.location?.province;
-  if (!address) errors.push({ field: "location.address", message: "Address is required." });
-  if (!city) errors.push({ field: "location.city", message: "City is required." });
-  if (!province2) errors.push({ field: "location.province", message: "Province is required." });
-  const nature = fullDev?.nature ?? fullDev?.developmentData?.nature;
-  if (nature && nature !== "new" && nature !== "phase") {
-    errors.push({
-      field: "nature",
-      message: `Invalid nature: ${nature}. Only 'new' or 'phase' allowed.`
-    });
-  }
-  const heroFromMedia = fullDev?.media?.heroImage?.url ?? fullDev?.developmentData?.media?.heroImage?.url;
-  const images = Array.isArray(fullDev?.images) ? fullDev.images : [];
-  const heroFromImages = images?.[0]?.url ?? images?.[0];
-  if (!heroFromMedia && !heroFromImages) {
-    errors.push({ field: "media.heroImage", message: "A hero image is required." });
-  }
-  const devType = fullDev?.developmentType ?? fullDev?.developmentData?.developmentType;
-  const isLand = devType === "land";
-  const transactionType = fullDev?.transactionType ?? fullDev?.developmentData?.transactionType ?? fullDev?.transaction_type ?? "for_sale";
-  const isRent = transactionType === "for_rent";
-  const unitTypesRaw = Array.isArray(fullDev?.unitTypes) ? fullDev.unitTypes : [];
-  if (!isLand) {
-    const hasUnits = verifiedUnitCount !== void 0 ? verifiedUnitCount > 0 : unitTypesRaw.length > 0;
-    if (!hasUnits) {
-      errors.push({
-        field: "unitTypes",
-        message: "No unit types found. Please ensure you have added and saved at least one unit type."
-      });
-    }
-    unitTypesRaw.forEach((raw, idx) => {
-      const u = normalizeUnitType(raw);
-      const unitPrefix = `unitTypes[${idx}]`;
-      const unitLabel = u?.name || "Unnamed";
-      if (!u?.name) {
-        errors.push({ field: `${unitPrefix}.name`, message: "Unit type is missing a name." });
-      }
-      if (u?.bedrooms == null) {
-        errors.push({
-          field: `${unitPrefix}.bedrooms`,
-          message: `Unit "${unitLabel}" missing bedrooms.`
-        });
-      }
-      if (u?.bathrooms == null) {
-        errors.push({
-          field: `${unitPrefix}.bathrooms`,
-          message: `Unit "${unitLabel}" missing bathrooms.`
-        });
-      }
-      const pt = String(u?.parkingType ?? "").trim();
-      const pb = Number(u?.parkingBays ?? 0);
-      const validParking = ["none", "open", "covered", "carport", "garage"].includes(pt);
-      if (!validParking) {
-        errors.push({
-          field: `${unitPrefix}.parkingType`,
-          message: `Unit "${unitLabel}" has invalid parking type.`
-        });
-      }
-      if (!Number.isInteger(pb) || pb < 0) {
-        errors.push({
-          field: `${unitPrefix}.parkingBays`,
-          message: `Unit "${unitLabel}" has invalid parking bays.`
-        });
-      }
-      if (pt === "none" && pb !== 0) {
-        errors.push({
-          field: `${unitPrefix}.parkingBays`,
-          message: `Unit "${unitLabel}": parking bays must be 0 when parkingType is none.`
-        });
-      }
-      if (isRent) {
-        const rentFrom = Number(u?.monthlyRentFrom ?? u?.monthlyRent ?? 0);
-        const rentTo = Number(u?.monthlyRentTo ?? 0);
-        if ((!Number.isFinite(rentFrom) || rentFrom <= 0) && (!Number.isFinite(rentTo) || rentTo <= 0)) {
-          errors.push({
-            field: `${unitPrefix}.monthlyRentFrom`,
-            message: `Unit "${unitLabel}" must have a valid monthly rent > 0.`
-          });
-        }
-      } else {
-        const bp = Number(u?.basePriceFrom ?? 0);
-        if (!Number.isFinite(bp) || bp <= 0) {
-          errors.push({
-            field: `${unitPrefix}.basePriceFrom`,
-            message: `Unit "${unitLabel}" must have a valid base price > 0.`
-          });
-        }
-      }
-    });
-  }
-  if (errors.length) {
-    throw new TRPCError13({
-      code: "BAD_REQUEST",
-      message: errors[0].message,
-      cause: {
-        errors: errors.map((e) => e.message),
-        // legacy compatibility
-        validationErrors: errors
-        // structured for UI
-      }
-    });
-  }
-}
 var developerRouter = router({
   createProfile: protectedProcedure.input(
     z21.object({
@@ -25450,20 +25377,55 @@ var developerRouter = router({
     });
     const profile = await getDeveloperByUserId2(ctx.user.id);
     if (!profile) {
-      throw new TRPCError13({ code: "INTERNAL_SERVER_ERROR", message: "Profile creation failed." });
+      throw new TRPCError12({ code: "INTERNAL_SERVER_ERROR", message: "Profile creation failed." });
     }
     return profile;
   }),
   getPublishedDevelopments: publicProcedure.input(
     z21.object({
       province: z21.string().optional(),
-      limit: z21.number().optional()
+      limit: z21.number().optional(),
+      transactionType: z21.enum(["for_sale", "for_rent", "auction"]).optional(),
+      developmentType: z21.enum(["residential", "commercial", "mixed_use", "land"]).optional(),
+      enableFallback: z21.boolean().optional()
     })
   ).query(async ({ input }) => {
-    return await developmentService.listPublicDevelopments({
+    let results = await developmentService.listPublicDevelopments({
       province: input.province,
-      limit: input.limit
+      limit: input.limit,
+      transactionType: input.transactionType,
+      developmentType: input.developmentType
     });
+    let usedFallback = false;
+    let fallbackLevel = "none";
+    if (input.enableFallback && results.length === 0) {
+      usedFallback = true;
+      if (input.province) {
+        fallbackLevel = "province";
+        results = await developmentService.listPublicDevelopments({
+          province: input.province,
+          limit: input.limit,
+          transactionType: "for_sale",
+          developmentType: "residential"
+        });
+      }
+      if (results.length === 0) {
+        fallbackLevel = "nationwide";
+        results = await developmentService.listPublicDevelopments({
+          limit: input.limit,
+          transactionType: "for_sale",
+          developmentType: "residential"
+        });
+      }
+    }
+    return {
+      developments: results,
+      meta: {
+        usedFallback,
+        fallbackLevel,
+        primaryCount: usedFallback ? 0 : results.length
+      }
+    };
   }),
   getPublicDevelopmentBySlug: publicProcedure.input(z21.object({ slugOrId: z21.string().min(1) })).query(async ({ input }) => {
     return await developmentService.getPublicDevelopmentBySlug(input.slugOrId);
@@ -25487,10 +25449,24 @@ var developerRouter = router({
       ctx.user.id,
       input,
       {},
-      null
-      // No emulation context
+      ctx.brandEmulationContext
+      // Use emulation context if available
     );
     return { development };
+  }),
+  deleteDevelopment: protectedProcedure.input(z21.object({ id: z21.number() })).mutation(async ({ ctx, input }) => {
+    const { user } = ctx;
+    const operatingAs = ctx.operatingAs;
+    console.log("[deleteDevelopment Router] Context inspection:", {
+      userId: user.id,
+      userRole: user.role,
+      operatingAs,
+      hasOperatingAs: !!operatingAs
+    });
+    const operatingContext = operatingAs?.brandProfileId ? { brandProfileId: operatingAs.brandProfileId } : null;
+    console.log("[deleteDevelopment Router] Built operatingContext:", operatingContext);
+    await developmentService.deleteDevelopment(input.id, user.id, operatingContext);
+    return { success: true, deletedId: input.id };
   }),
   getDashboardKPIs: protectedProcedure.input(z21.object({ timeRange: z21.enum(["7d", "30d", "90d"]).optional() })).query(async ({ ctx, input }) => {
     const profile = await requireDeveloperProfileByUserId(ctx.user.id);
@@ -25513,21 +25489,21 @@ var developerRouter = router({
     const { user, brandEmulationContext } = ctx;
     const role = user?.role;
     if (role !== "property_developer" && role !== "super_admin") {
-      throw new TRPCError13({
+      throw new TRPCError12({
         code: "FORBIDDEN",
         message: "Insufficient role for developer profile."
       });
     }
     if (role === "super_admin" && brandEmulationContext?.mode === "seeding") {
       if (brandEmulationContext.brandProfileType !== "developer" && brandEmulationContext.brandProfileType !== "hybrid") {
-        throw new TRPCError13({
+        throw new TRPCError12({
           code: "FORBIDDEN",
           message: "Brand emulation context must be developer or hybrid type for developer profile."
         });
       }
       const brandProfile = await getBrandProfileById(brandEmulationContext.brandProfileId);
       if (!brandProfile) {
-        throw new TRPCError13({
+        throw new TRPCError12({
           code: "NOT_FOUND",
           message: `Brand profile ${brandEmulationContext.brandProfileId} not found.`
         });
@@ -25558,7 +25534,7 @@ var developerRouter = router({
     }
     const profile = await getDeveloperByUserId2(user.id);
     if (!profile) {
-      throw new TRPCError13({ code: "NOT_FOUND", message: "Developer profile not found." });
+      throw new TRPCError12({ code: "NOT_FOUND", message: "Developer profile not found." });
     }
     return profile;
   }),
@@ -25576,9 +25552,9 @@ var developerRouter = router({
   getDevelopment: protectedProcedure.input(z21.object({ id: z21.number() })).query(async ({ ctx, input }) => {
     const profile = await requireDeveloperProfileByUserId(ctx.user.id);
     const dev = await developmentService.getDevelopmentWithPhases(input.id);
-    if (!dev) throw new TRPCError13({ code: "NOT_FOUND" });
+    if (!dev) throw new TRPCError12({ code: "NOT_FOUND" });
     if (dev.developerId !== profile.id) {
-      throw new TRPCError13({ code: "FORBIDDEN", message: "You do not own this development" });
+      throw new TRPCError12({ code: "FORBIDDEN", message: "You do not own this development" });
     }
     return dev;
   }),
@@ -25593,36 +25569,23 @@ var developerRouter = router({
     return 0;
   }),
   publishDevelopment: protectedProcedure.input(z21.object({ id: z21.number() })).mutation(async ({ ctx, input }) => {
-    const developerProfile = await requireDeveloperProfileByUserId(ctx.user.id);
-    const dev = await developmentService.getDevelopmentWithPhases(input.id);
-    if (!dev) throw new TRPCError13({ code: "NOT_FOUND" });
-    if (dev.developerId !== developerProfile.id) {
-      throw new TRPCError13({ code: "FORBIDDEN" });
-    }
-    const isLand = dev.developmentType === "land";
-    let unitTypeCount = 0;
-    if (!isLand) {
-      const dbConn = await getDb();
-      if (!dbConn)
-        throw new TRPCError13({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
-      const unitTypeCountRes = await dbConn.select({ cnt: sql23`count(*)`.as("cnt") }).from(unitTypes).where(eq28(unitTypes.developmentId, input.id));
-      unitTypeCount = Number(unitTypeCountRes?.[0]?.cnt ?? 0);
-      console.log("[publishDevelopment] id=", input.id);
-      console.log("[publishDevelopment] unitTypeCountRes=", unitTypeCountRes);
-      console.log("[publishDevelopment] unitTypeCount=", unitTypeCount);
-      if (unitTypeCount <= 0) {
-        throw new TRPCError13({
-          code: "BAD_REQUEST",
-          message: "No unit types found. Please ensure you have added and saved at least one unit type."
-        });
-      }
-    }
-    assertPublishable(dev, unitTypeCount);
-    return await developmentService.publishDevelopment(input.id, ctx.user.id);
+    const dbConn = await getDb();
+    if (!dbConn)
+      throw new TRPCError12({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+    const result = await developmentService.publishDevelopment(
+      input.id,
+      ctx.user.id,
+      ctx.brandEmulationContext
+      // Pass emulation context directly
+    );
+    return result;
   }),
-  deleteDevelopment: protectedProcedure.input(z21.object({ id: z21.number() })).mutation(async ({ ctx, input }) => {
-    const profile = await requireDeveloperProfileByUserId(ctx.user.id);
-    return await developmentService.deleteDevelopment(input.id, profile.id);
+  unpublishDevelopment: protectedProcedure.input(z21.object({ id: z21.number() })).mutation(async ({ ctx, input }) => {
+    const dbConn = await getDb();
+    if (!dbConn)
+      throw new TRPCError12({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+    const result = await developmentService.unpublishDevelopment(input.id, ctx.user.id);
+    return result;
   })
 });
 
@@ -25632,7 +25595,7 @@ import { z as z22 } from "zod";
 // server/services/exploreFeedService.ts
 init_db();
 init_schema();
-import { eq as eq29, and as and26, desc as desc18, sql as sql24 } from "drizzle-orm";
+import { eq as eq28, and as and25, desc as desc17, sql as sql23 } from "drizzle-orm";
 
 // server/lib/cache.ts
 var SimpleCache2 = class {
@@ -25752,7 +25715,7 @@ var ExploreFeedService = class {
           const prefsCacheKey = CacheKeys.userPreferences(userId);
           userPrefs = await cache.get(prefsCacheKey);
           if (!userPrefs) {
-            const prefs = await db.select().from(exploreUserPreferences).where(eq29(exploreUserPreferences.userId, userId)).limit(1);
+            const prefs = await db.select().from(exploreUserPreferences).where(eq28(exploreUserPreferences.userId, userId)).limit(1);
             userPrefs = prefs[0] || null;
             if (userPrefs) {
               await cache.set(prefsCacheKey, userPrefs, CacheTTL3.USER_PREFERENCES);
@@ -25766,14 +25729,14 @@ var ExploreFeedService = class {
       let query = db.select({
         short: exploreShorts,
         qualityScore: listings.qualityScore
-      }).from(exploreShorts).leftJoin(listings, eq29(exploreShorts.listingId, listings.id)).where(eq29(exploreShorts.isPublished, 1));
+      }).from(exploreShorts).leftJoin(listings, eq28(exploreShorts.listingId, listings.id)).where(eq28(exploreShorts.isPublished, 1));
       if (userPrefs?.preferredLocations && userPrefs.preferredLocations.length > 0) {
       }
       const rows = await query.orderBy(
-        desc18(exploreShorts.boostPriority),
-        sql24`(${exploreShorts.performanceScore} * (1 + COALESCE(${listings.qualityScore}, 30) / 100)) DESC`,
+        desc17(exploreShorts.boostPriority),
+        sql23`(${exploreShorts.performanceScore} * (1 + COALESCE(${listings.qualityScore}, 30) / 100)) DESC`,
         // Use 30 as baseline for non-listings (e.g. developments) or nulls
-        desc18(exploreShorts.publishedAt)
+        desc17(exploreShorts.publishedAt)
       ).limit(limit).offset(offset);
       const shorts = rows.map((r) => r.short);
       const result = {
@@ -25807,7 +25770,7 @@ var ExploreFeedService = class {
       if (cached) {
         return cached;
       }
-      const result = await db.execute(sql24`
+      const result = await db.execute(sql23`
         SELECT es.* 
         FROM explore_shorts es
         LEFT JOIN listings l ON es.listing_id = l.id
@@ -25861,16 +25824,16 @@ var ExploreFeedService = class {
         off_grid: ["off_grid_ready"]
       };
       const tags = categoryMap[category] || [];
-      let query = db.select().from(exploreShorts).where(eq29(exploreShorts.isPublished, 1));
+      let query = db.select().from(exploreShorts).where(eq28(exploreShorts.isPublished, 1));
       if (tags.length > 0) {
-        const result = await db.execute(sql24`
+        const result = await db.execute(sql23`
           SELECT * FROM explore_shorts
           WHERE is_published = 1
           AND highlights IS NOT NULL
           AND (
-            ${sql24.join(
-          tags.map((tag) => sql24`JSON_CONTAINS(highlights, JSON_QUOTE(${tag}))`),
-          sql24` OR `
+            ${sql23.join(
+          tags.map((tag) => sql23`JSON_CONTAINS(highlights, JSON_QUOTE(${tag}))`),
+          sql23` OR `
         )}
           )
           ORDER BY boost_priority DESC, (performance_score * (1 + COALESCE((SELECT quality_score FROM listings WHERE id = listing_id), 30) / 100)) DESC, published_at DESC
@@ -25887,10 +25850,10 @@ var ExploreFeedService = class {
           }
         };
       }
-      const rows = await query.leftJoin(listings, eq29(exploreShorts.listingId, listings.id)).orderBy(
-        desc18(exploreShorts.boostPriority),
-        sql24`(${exploreShorts.performanceScore} * (1 + COALESCE(${listings.qualityScore}, 30) / 100)) DESC`,
-        desc18(exploreShorts.publishedAt)
+      const rows = await query.leftJoin(listings, eq28(exploreShorts.listingId, listings.id)).orderBy(
+        desc17(exploreShorts.boostPriority),
+        sql23`(${exploreShorts.performanceScore} * (1 + COALESCE(${listings.qualityScore}, 30) / 100)) DESC`,
+        desc17(exploreShorts.publishedAt)
       ).limit(limit).offset(offset);
       const shorts = rows.map((r) => r.explore_shorts);
       return {
@@ -25917,7 +25880,7 @@ var ExploreFeedService = class {
       throw new Error("Agent ID required for agent feed");
     }
     try {
-      const shorts = await db.select().from(exploreShorts).where(and26(eq29(exploreShorts.agentId, agentId), eq29(exploreShorts.isPublished, 1))).orderBy(desc18(exploreShorts.isFeatured), desc18(exploreShorts.publishedAt)).limit(limit).offset(offset);
+      const shorts = await db.select().from(exploreShorts).where(and25(eq28(exploreShorts.agentId, agentId), eq28(exploreShorts.isPublished, 1))).orderBy(desc17(exploreShorts.isFeatured), desc17(exploreShorts.publishedAt)).limit(limit).offset(offset);
       return {
         shorts: shorts.map(transformShort),
         feedType: "agent",
@@ -25942,7 +25905,7 @@ var ExploreFeedService = class {
       throw new Error("Developer ID required for developer feed");
     }
     try {
-      const shorts = await db.select().from(exploreShorts).where(and26(eq29(exploreShorts.developerId, developerId2), eq29(exploreShorts.isPublished, 1))).orderBy(desc18(exploreShorts.isFeatured), desc18(exploreShorts.publishedAt)).limit(limit).offset(offset);
+      const shorts = await db.select().from(exploreShorts).where(and25(eq28(exploreShorts.developerId, developerId2), eq28(exploreShorts.isPublished, 1))).orderBy(desc17(exploreShorts.isFeatured), desc17(exploreShorts.publishedAt)).limit(limit).offset(offset);
       return {
         shorts: shorts.map(transformShort),
         feedType: "developer",
@@ -25973,9 +25936,9 @@ var ExploreFeedService = class {
       if (cached) {
         return cached;
       }
-      let query = db.select().from(exploreShorts).where(eq29(exploreShorts.isPublished, 1));
+      let query = db.select().from(exploreShorts).where(eq28(exploreShorts.isPublished, 1));
       if (includeAgentContent) {
-        const result = await db.execute(sql24`
+        const result = await db.execute(sql23`
           SELECT es.* 
           FROM explore_shorts es
           LEFT JOIN agents a ON es.agent_id = a.id
@@ -26000,7 +25963,7 @@ var ExploreFeedService = class {
         await cache.set(cacheKey, feedResult, CacheTTL3.FEED);
         return feedResult;
       } else {
-        const shorts = await db.select().from(exploreShorts).where(and26(eq29(exploreShorts.agencyId, agencyId), eq29(exploreShorts.isPublished, 1))).orderBy(desc18(exploreShorts.isFeatured), desc18(exploreShorts.publishedAt)).limit(limit).offset(offset);
+        const shorts = await db.select().from(exploreShorts).where(and25(eq28(exploreShorts.agencyId, agencyId), eq28(exploreShorts.isPublished, 1))).orderBy(desc17(exploreShorts.isFeatured), desc17(exploreShorts.publishedAt)).limit(limit).offset(offset);
         const feedResult = {
           shorts: shorts.map(transformShort),
           feedType: "agency",
@@ -26049,13 +26012,13 @@ var ExploreFeedService = class {
    * Get all active categories for the selector
    */
   async getCategories() {
-    return await db.select().from(exploreCategories).where(eq29(exploreCategories.isActive, 1)).orderBy(exploreCategories.displayOrder);
+    return await db.select().from(exploreCategories).where(eq28(exploreCategories.isActive, 1)).orderBy(exploreCategories.displayOrder);
   }
   /**
    * Get all active topics for Deep Dive zone
    */
   async getTopics() {
-    return await db.select().from(exploreTopics).where(eq29(exploreTopics.isActive, 1));
+    return await db.select().from(exploreTopics).where(eq28(exploreTopics.isActive, 1));
   }
 };
 var exploreFeedService = new ExploreFeedService();
@@ -26063,7 +26026,7 @@ var exploreFeedService = new ExploreFeedService();
 // server/services/exploreInteractionService.ts
 init_db();
 init_schema();
-import { eq as eq30, sql as sql25 } from "drizzle-orm";
+import { eq as eq29, sql as sql24 } from "drizzle-orm";
 var ExploreInteractionService = class {
   /**
    * Record a single interaction
@@ -26196,14 +26159,14 @@ var ExploreInteractionService = class {
       };
       const field = metricUpdates[interactionType];
       if (field) {
-        await db.execute(sql25`
+        await db.execute(sql24`
           UPDATE explore_shorts 
-          SET ${sql25.raw(field)} = ${sql25.raw(field)} + 1
+          SET ${sql24.raw(field)} = ${sql24.raw(field)} + 1
           WHERE id = ${shortId}
         `);
       }
       if (interactionType === "view" && duration) {
-        await db.execute(sql25`
+        await db.execute(sql24`
           UPDATE explore_shorts 
           SET average_watch_time = (
             (average_watch_time * view_count + ${duration}) / (view_count + 1)
@@ -26212,7 +26175,7 @@ var ExploreInteractionService = class {
         `);
       }
       if (interactionType === "impression") {
-        await db.execute(sql25`
+        await db.execute(sql24`
           UPDATE explore_shorts 
           SET unique_view_count = unique_view_count + 1
           WHERE id = ${shortId}
@@ -26227,7 +26190,7 @@ var ExploreInteractionService = class {
    */
   async getShortStats(shortId) {
     try {
-      const short = await db.select().from(exploreShorts).where(eq30(exploreShorts.id, shortId)).limit(1);
+      const short = await db.select().from(exploreShorts).where(eq29(exploreShorts.id, shortId)).limit(1);
       if (short.length === 0) {
         throw new Error("Short not found");
       }
@@ -26251,7 +26214,7 @@ var ExploreInteractionService = class {
    */
   async getUserInteractionHistory(userId, limit = 50) {
     try {
-      const interactions = await db.select().from(exploreInteractions).where(eq30(exploreInteractions.userId, userId)).orderBy(sql25`timestamp DESC`).limit(limit);
+      const interactions = await db.select().from(exploreInteractions).where(eq29(exploreInteractions.userId, userId)).orderBy(sql24`timestamp DESC`).limit(limit);
       return interactions;
     } catch (error) {
       console.error("Error getting user interaction history:", error);
@@ -26263,7 +26226,7 @@ var ExploreInteractionService = class {
    */
   async getSessionInteractionHistory(sessionId, limit = 50) {
     try {
-      const interactions = await db.select().from(exploreInteractions).where(eq30(exploreInteractions.sessionId, sessionId)).orderBy(sql25`timestamp DESC`).limit(limit);
+      const interactions = await db.select().from(exploreInteractions).where(eq29(exploreInteractions.sessionId, sessionId)).orderBy(sql24`timestamp DESC`).limit(limit);
       return interactions;
     } catch (error) {
       console.error("Error getting session interaction history:", error);
@@ -26275,7 +26238,7 @@ var ExploreInteractionService = class {
    */
   async calculateEngagementRate(shortId) {
     try {
-      const short = await db.select().from(exploreShorts).where(eq30(exploreShorts.id, shortId)).limit(1);
+      const short = await db.select().from(exploreShorts).where(eq29(exploreShorts.id, shortId)).limit(1);
       if (short.length === 0) {
         return 0;
       }
@@ -26434,8 +26397,8 @@ var exploreRouter = router({
   getHighlightTags: publicProcedure.query(async () => {
     const { db: db3 } = await Promise.resolve().then(() => (init_db(), db_exports));
     const { exploreHighlightTags: exploreHighlightTags2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
-    const { eq: eq53, asc: asc5 } = await import("drizzle-orm");
-    const tags = await db3.select().from(exploreHighlightTags2).where(eq53(exploreHighlightTags2.isActive, 1)).orderBy(asc5(exploreHighlightTags2.displayOrder));
+    const { eq: eq52, asc: asc5 } = await import("drizzle-orm");
+    const tags = await db3.select().from(exploreHighlightTags2).where(eq52(exploreHighlightTags2.isActive, 1)).orderBy(asc5(exploreHighlightTags2.displayOrder));
     return tags;
   }),
   // Get categories
@@ -26460,8 +26423,8 @@ var exploreRouter = router({
     })
   ).mutation(async ({ input, ctx }) => {
     const { db: db3 } = await Promise.resolve().then(() => (init_db(), db_exports));
-    const { exploreShorts: exploreShorts4, agents: agents2, developers: developers4 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
-    const { eq: eq53 } = await import("drizzle-orm");
+    const { exploreShorts: exploreShorts4, agents: agents2, developers: developers3 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
+    const { eq: eq52 } = await import("drizzle-orm");
     let agentId = null;
     let developerId2 = null;
     let agencyId = null;
@@ -26469,7 +26432,7 @@ var exploreRouter = router({
       const agent = await db3.select({
         id: agents2.id,
         agencyId: agents2.agencyId
-      }).from(agents2).where(eq53(agents2.userId, ctx.user.id)).limit(1);
+      }).from(agents2).where(eq52(agents2.userId, ctx.user.id)).limit(1);
       if (agent[0]) {
         agentId = agent[0].id;
         if (input.attributeToAgency && agent[0].agencyId) {
@@ -26482,18 +26445,18 @@ var exploreRouter = router({
         }
       }
     } else if (ctx.user.role === "property_developer") {
-      const developer = await db3.select().from(developers4).where(eq53(developers4.userId, ctx.user.id)).limit(1);
+      const developer = await db3.select().from(developers3).where(eq52(developers3.userId, ctx.user.id)).limit(1);
       developerId2 = developer[0]?.id || null;
       console.log(`[ExploreUpload] Developer ${developerId2} uploading`);
     }
     if (agencyId) {
       const { agencies: agencies3 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
-      const agencyRecord = await db3.select().from(agencies3).where(eq53(agencies3.id, agencyId)).limit(1);
+      const agencyRecord = await db3.select().from(agencies3).where(eq52(agencies3.id, agencyId)).limit(1);
       if (!agencyRecord[0]) {
         throw new Error(`Agency with ID ${agencyId} does not exist`);
       }
       if (agentId) {
-        const agentRecord = await db3.select({ agencyId: agents2.agencyId }).from(agents2).where(eq53(agents2.id, agentId)).limit(1);
+        const agentRecord = await db3.select({ agencyId: agents2.agencyId }).from(agents2).where(eq52(agents2.id, agentId)).limit(1);
         if (agentRecord[0]?.agencyId !== agencyId) {
           throw new Error(`Agent ${agentId} does not belong to agency ${agencyId}`);
         }
@@ -26540,7 +26503,7 @@ init_schema();
 import { S3Client as S3Client3, PutObjectCommand as PutObjectCommand3 } from "@aws-sdk/client-s3";
 import { getSignedUrl as getSignedUrl3 } from "@aws-sdk/s3-request-presigner";
 import crypto6 from "crypto";
-import { eq as eq31 } from "drizzle-orm";
+import { eq as eq30 } from "drizzle-orm";
 var s3Client2 = new S3Client3({
   region: process.env.AWS_REGION || "eu-north-1",
   credentials: {
@@ -26629,7 +26592,7 @@ async function validateAgencyAttribution(agentId, agencyId) {
   const agencyRecord = await db.select({
     id: agencies3.id,
     name: agencies3.name
-  }).from(agencies3).where(eq31(agencies3.id, agencyId)).limit(1);
+  }).from(agencies3).where(eq30(agencies3.id, agencyId)).limit(1);
   if (!agencyRecord[0]) {
     return {
       valid: false,
@@ -26639,7 +26602,7 @@ async function validateAgencyAttribution(agentId, agencyId) {
   const agentRecord = await db.select({
     id: agents2.id,
     agencyId: agents2.agencyId
-  }).from(agents2).where(eq31(agents2.id, agentId)).limit(1);
+  }).from(agents2).where(eq30(agents2.id, agentId)).limit(1);
   if (!agentRecord[0]) {
     return {
       valid: false,
@@ -26658,12 +26621,12 @@ async function validateAgencyAttribution(agentId, agencyId) {
   return { valid: true };
 }
 async function detectAgencyAffiliation(creatorId) {
-  const { agents: agents2, users: users7 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
+  const { agents: agents2, users: users6 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
   const agentRecord = await db.select({
     id: agents2.id,
     agencyId: agents2.agencyId,
     userId: agents2.userId
-  }).from(agents2).where(eq31(agents2.userId, creatorId)).limit(1);
+  }).from(agents2).where(eq30(agents2.userId, creatorId)).limit(1);
   if (agentRecord[0]) {
     const agencyId = agentRecord[0].agencyId;
     const agentId = agentRecord[0].id;
@@ -26676,10 +26639,10 @@ async function detectAgencyAffiliation(creatorId) {
       creatorType: "agent"
     };
   }
-  const { developers: developers4 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
+  const { developers: developers3 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
   const developerRecord = await db.select({
-    id: developers4.id
-  }).from(developers4).where(eq31(developers4.userId, creatorId)).limit(1);
+    id: developers3.id
+  }).from(developers3).where(eq30(developers3.userId, creatorId)).limit(1);
   if (developerRecord[0]) {
     console.log(`[ExploreVideo] Detected developer ${developerRecord[0].id} for user ${creatorId}`);
     return {
@@ -26723,7 +26686,7 @@ async function createExploreVideo(creatorId, videoUrl, thumbnailUrl, metadata, d
   let priceMin = null;
   let priceMax = null;
   if (metadata.propertyId) {
-    const property = await db.select().from(properties).where(eq31(properties.id, metadata.propertyId)).limit(1);
+    const property = await db.select().from(properties).where(eq30(properties.id, metadata.propertyId)).limit(1);
     if (!property[0]) {
       throw new Error("Property not found");
     }
@@ -26732,7 +26695,7 @@ async function createExploreVideo(creatorId, videoUrl, thumbnailUrl, metadata, d
     priceMin = property[0].price || null;
     priceMax = property[0].price || null;
   } else if (metadata.developmentId) {
-    const development = await db.select().from(developments).where(eq31(developments.id, metadata.developmentId)).limit(1);
+    const development = await db.select().from(developments).where(eq30(developments.id, metadata.developmentId)).limit(1);
     if (!development[0]) {
       throw new Error("Development not found");
     }
@@ -26824,7 +26787,7 @@ async function updateVideoAnalytics(exploreVideoId, analytics) {
     if (analytics.clickThroughs !== void 0) {
       updates.clickThroughCount = analytics.clickThroughs;
     }
-    await db.update(exploreDiscoveryVideos).set(updates).where(eq31(exploreDiscoveryVideos.id, exploreVideoId));
+    await db.update(exploreDiscoveryVideos).set(updates).where(eq30(exploreDiscoveryVideos.id, exploreVideoId));
     console.log(`[ExploreVideo] Updated analytics for video ${exploreVideoId}`);
   } catch (error) {
     console.error("[ExploreVideo] Failed to update analytics:", error);
@@ -27027,14 +26990,14 @@ import { z as z24 } from "zod";
 // server/services/exploreAnalyticsService.ts
 init_db();
 init_schema();
-import { eq as eq33, and as and27, gte as gte6, lte as lte6 } from "drizzle-orm";
+import { eq as eq32, and as and26, gte as gte6, lte as lte6 } from "drizzle-orm";
 var ExploreAnalyticsService = class {
   /**
    * Get video analytics for a specific video
    * Requirement 8.6: Provide analytics on views, watch time, saves, and click-throughs
    */
   async getVideoAnalytics(videoId, startDate, endDate) {
-    const video = await db.select({ contentId: exploreDiscoveryVideos.exploreContentId }).from(exploreDiscoveryVideos).where(eq33(exploreDiscoveryVideos.id, videoId)).limit(1);
+    const video = await db.select({ contentId: exploreDiscoveryVideos.exploreContentId }).from(exploreDiscoveryVideos).where(eq32(exploreDiscoveryVideos.id, videoId)).limit(1);
     if (!video[0]) {
       throw new Error("Video not found");
     }
@@ -27053,8 +27016,8 @@ var ExploreAnalyticsService = class {
       userId: exploreEngagements.userId,
       contentId: exploreEngagements.contentId
     }).from(exploreEngagements).where(
-      and27(
-        eq33(exploreEngagements.contentId, contentId),
+      and26(
+        eq32(exploreEngagements.contentId, contentId),
         ...dateFilter.length > 0 ? dateFilter : []
       )
     );
@@ -27111,8 +27074,8 @@ var ExploreAnalyticsService = class {
       videoId: exploreDiscoveryVideos.id
     }).from(exploreContent).innerJoin(
       exploreDiscoveryVideos,
-      eq33(exploreContent.id, exploreDiscoveryVideos.exploreContentId)
-    ).where(eq33(exploreContent.creatorId, creatorId));
+      eq32(exploreContent.id, exploreDiscoveryVideos.exploreContentId)
+    ).where(eq32(exploreContent.creatorId, creatorId));
     const totalVideos = videos2.length;
     if (totalVideos === 0) {
       return {
@@ -27164,12 +27127,12 @@ var ExploreAnalyticsService = class {
    * Requirement 2.6: Track session duration and interactions
    */
   async getSessionAnalytics(sessionId) {
-    const session = await db.select().from(exploreFeedSessions).where(eq33(exploreFeedSessions.id, sessionId)).limit(1);
+    const session = await db.select().from(exploreFeedSessions).where(eq32(exploreFeedSessions.id, sessionId)).limit(1);
     if (!session[0]) {
       throw new Error("Session not found");
     }
     const sessionRow = session[0];
-    const engagements = await db.select().from(exploreEngagements).where(eq33(exploreEngagements.sessionId, sessionId));
+    const engagements = await db.select().from(exploreEngagements).where(eq32(exploreEngagements.sessionId, sessionId));
     const videosViewed = new Set(
       engagements.filter((e) => e.engagementType === "view").map((e) => e.contentId)
     ).size;
@@ -27227,12 +27190,12 @@ var ExploreAnalyticsService = class {
     }
     let contentIds = [];
     if (creatorId) {
-      const creatorContent = await db.select({ id: exploreContent.id }).from(exploreContent).where(eq33(exploreContent.creatorId, creatorId));
+      const creatorContent = await db.select({ id: exploreContent.id }).from(exploreContent).where(eq32(exploreContent.creatorId, creatorId));
       contentIds = creatorContent.map((c) => c.id);
     }
     let engagementsQuery = db.select().from(exploreEngagements);
     if (filters.length > 0) {
-      engagementsQuery = engagementsQuery.where(and27(...filters));
+      engagementsQuery = engagementsQuery.where(and26(...filters));
     }
     const engagements = await engagementsQuery;
     const filteredEngagements = creatorId ? engagements.filter((e) => contentIds.includes(e.contentId)) : engagements;
@@ -27294,7 +27257,7 @@ var ExploreAnalyticsService = class {
     await db.update(exploreDiscoveryVideos).set({
       totalViews: analytics.totalViews,
       completionRate: analytics.completionRate
-    }).where(eq33(exploreDiscoveryVideos.id, videoId));
+    }).where(eq32(exploreDiscoveryVideos.id, videoId));
   }
   /**
    * Calculate engagement score
@@ -27324,11 +27287,11 @@ var ExploreAnalyticsService = class {
         await db.update(exploreDiscoveryVideos).set({
           totalViews: analytics.totalViews,
           completionRate: analytics.completionRate
-        }).where(eq33(exploreDiscoveryVideos.id, video.id));
+        }).where(eq32(exploreDiscoveryVideos.id, video.id));
         await db.update(exploreContent).set({
           viewCount: analytics.totalViews,
           engagementScore: analytics.averageEngagementScore
-        }).where(eq33(exploreContent.id, analytics.contentId));
+        }).where(eq32(exploreContent.id, analytics.contentId));
       } catch (error) {
         console.error(`Failed to update analytics for video ${video.id}:`, error);
       }
@@ -27514,7 +27477,7 @@ import { z as z26 } from "zod";
 // server/services/similarPropertiesService.ts
 init_db();
 init_schema();
-import { eq as eq34, and as and28, gte as gte7, lte as lte7, ne as ne2, inArray as inArray7 } from "drizzle-orm";
+import { eq as eq33, and as and27, gte as gte7, lte as lte7, ne as ne2, inArray as inArray7 } from "drizzle-orm";
 var SimilarPropertiesService = class {
   // Default similarity weights
   defaultWeights = {
@@ -27537,7 +27500,7 @@ var SimilarPropertiesService = class {
    * Requirement 15.3: Consider price range (±20%), location, and features
    */
   async findSimilarProperties(propertyId, limit = 10, weights) {
-    const referenceProperty = await db.select().from(properties).where(eq34(properties.id, propertyId)).limit(1);
+    const referenceProperty = await db.select().from(properties).where(eq33(properties.id, propertyId)).limit(1);
     if (!referenceProperty[0]) {
       throw new Error("Reference property not found");
     }
@@ -27558,10 +27521,10 @@ var SimilarPropertiesService = class {
       latitude: properties.latitude,
       longitude: properties.longitude
     }).from(properties).where(
-      and28(
+      and27(
         ne2(properties.id, propertyId),
         // Exclude reference property
-        eq34(properties.status, "available"),
+        eq33(properties.status, "available"),
         gte7(properties.price, priceMin),
         lte7(properties.price, priceMax)
       )
@@ -27597,7 +27560,7 @@ var SimilarPropertiesService = class {
       contentId: exploreContent.id,
       thumbnailUrl: exploreContent.thumbnailUrl
     }).from(exploreContent).where(
-      and28(inArray7(exploreContent.id, propertyIds), eq34(exploreContent.contentType, "property"))
+      and27(inArray7(exploreContent.id, propertyIds), eq33(exploreContent.contentType, "property"))
     );
     const exploreMap = new Map(exploreData.map((e) => [e.propertyId, e]));
     sortedProperties.forEach((prop) => {
@@ -27743,9 +27706,9 @@ var SimilarPropertiesService = class {
       latitude: properties.latitude,
       longitude: properties.longitude
     }).from(properties).where(
-      and28(
+      and27(
         ne2(properties.id, excludeId),
-        eq34(properties.status, "available"),
+        eq33(properties.status, "available"),
         gte7(properties.price, priceMin),
         lte7(properties.price, priceMax)
       )
@@ -27996,7 +27959,7 @@ import { z as z28 } from "zod";
 // server/services/locationPagesService.improved.ts
 init_db();
 init_schema();
-import { eq as eq35, and as and29, desc as desc20, sql as sql28 } from "drizzle-orm";
+import { eq as eq34, and as and28, desc as desc19, sql as sql27 } from "drizzle-orm";
 
 // server/_core/cache/redis.ts
 import Redis from "ioredis";
@@ -28735,7 +28698,7 @@ var locationPagesService = {
       isHotSelling: developments.isHotSelling,
       isHighDemand: developments.isHighDemand,
       demandScore: developments.demandScore
-    }).from(developments).leftJoin(cities, eq35(developments.city, cities.name)).where(eq35(developments.province, province.name)).orderBy(desc20(developments.isHotSelling), desc20(developments.createdAt)).limit(12);
+    }).from(developments).leftJoin(cities, eq34(developments.city, cities.name)).where(eq34(developments.province, province.name)).orderBy(desc19(developments.isHotSelling), desc19(developments.createdAt)).limit(12);
     const featuredDevelopments = featuredDevelopmentsRaw.map((dev) => ({
       ...dev,
       images: parseJsonField2(dev.images)
@@ -28746,12 +28709,12 @@ var locationPagesService = {
       slug: suburbs.slug,
       cityName: cities.name,
       citySlug: cities.slug,
-      listingCount: sql28`count(${properties.id})`,
-      growth: sql28`count(${properties.id})`
-    }).from(suburbs).leftJoin(cities, eq35(suburbs.cityId, cities.id)).leftJoin(
+      listingCount: sql27`count(${properties.id})`,
+      growth: sql27`count(${properties.id})`
+    }).from(suburbs).leftJoin(cities, eq34(suburbs.cityId, cities.id)).leftJoin(
       properties,
-      and29(eq35(properties.suburbId, suburbs.id), eq35(properties.status, "published"))
-    ).where(eq35(cities.provinceId, province.id)).groupBy(suburbs.id, suburbs.name, suburbs.slug, cities.name, cities.slug).orderBy(desc20(sql28`count(${properties.id})`)).limit(10);
+      and28(eq34(properties.suburbId, suburbs.id), eq34(properties.status, "published"))
+    ).where(eq34(cities.provinceId, province.id)).groupBy(suburbs.id, suburbs.name, suburbs.slug, cities.name, cities.slug).orderBy(desc19(sql27`count(${properties.id})`)).limit(10);
     return {
       province,
       cities: cityList,
@@ -28782,31 +28745,31 @@ var locationPagesService = {
     const cityIntel = MARKET_INTELLIGENCE.find(
       (i) => i.level === "city" && i.slug === citySlug && i.province === provinceSlug
     );
-    let [city] = await db3.select({ id: cities.id, name: cities.name, slug: cities.slug }).from(cities).where(eq35(cities.slug, citySlug)).limit(1);
+    let [city] = await db3.select({ id: cities.id, name: cities.name, slug: cities.slug }).from(cities).where(eq34(cities.slug, citySlug)).limit(1);
     if (!city && !cityIntel) return null;
     let cityDbStats;
     if (city) {
       [cityDbStats] = await db3.select({
-        totalListings: sql28`count(*)`,
-        avgSalePrice: sql28`avg(case when ${properties.listingType} = 'sale' then ${properties.price} else null end)`,
-        avgRentPrice: sql28`avg(case when ${properties.listingType} = 'rent' then ${properties.price} else null end)`,
-        minPrice: sql28`min(${properties.price})`,
-        maxPrice: sql28`max(${properties.price})`,
-        rentalCount: sql28`sum(case when ${properties.listingType} = 'rent' then 1 else 0 end)`,
-        saleCount: sql28`sum(case when ${properties.listingType} = 'sale' then 1 else 0 end)`
-      }).from(properties).where(and29(eq35(properties.cityId, city.id), eq35(properties.status, "published")));
+        totalListings: sql27`count(*)`,
+        avgSalePrice: sql27`avg(case when ${properties.listingType} = 'sale' then ${properties.price} else null end)`,
+        avgRentPrice: sql27`avg(case when ${properties.listingType} = 'rent' then ${properties.price} else null end)`,
+        minPrice: sql27`min(${properties.price})`,
+        maxPrice: sql27`max(${properties.price})`,
+        rentalCount: sql27`sum(case when ${properties.listingType} = 'rent' then 1 else 0 end)`,
+        saleCount: sql27`sum(case when ${properties.listingType} = 'sale' then 1 else 0 end)`
+      }).from(properties).where(and28(eq34(properties.cityId, city.id), eq34(properties.status, "published")));
     }
     const hasEnoughData = Number(cityDbStats?.totalListings || 0) >= 5;
     const suburbStats = await db3.select({
       id: suburbs.id,
       name: suburbs.name,
       slug: suburbs.slug,
-      listingCount: sql28`count(${properties.id})`,
-      avgSalePrice: sql28`avg(case when ${properties.listingType} = 'sale' then ${properties.price} else null end)`
-    }).from(suburbs).leftJoin(cities, eq35(suburbs.cityId, cities.id)).leftJoin(
+      listingCount: sql27`count(${properties.id})`,
+      avgSalePrice: sql27`avg(case when ${properties.listingType} = 'sale' then ${properties.price} else null end)`
+    }).from(suburbs).leftJoin(cities, eq34(suburbs.cityId, cities.id)).leftJoin(
       properties,
-      and29(eq35(properties.suburbId, suburbs.id), eq35(properties.status, "published"))
-    ).where(eq35(cities.slug, citySlug)).groupBy(suburbs.id, suburbs.name, suburbs.slug).orderBy(desc20(sql28`count(${properties.id})`));
+      and28(eq34(properties.suburbId, suburbs.id), eq34(properties.status, "published"))
+    ).where(eq34(cities.slug, citySlug)).groupBy(suburbs.id, suburbs.name, suburbs.slug).orderBy(desc19(sql27`count(${properties.id})`));
     const suburbIntel = MARKET_INTELLIGENCE.filter(
       (i) => i.level === "suburb" && i.parentSlug === citySlug
     );
@@ -28851,7 +28814,7 @@ var locationPagesService = {
         suburb: suburbs.name,
         // Join suburbs to get name
         featured: properties.featured
-      }).from(properties).leftJoin(suburbs, eq35(properties.suburbId, suburbs.id)).where(and29(eq35(properties.cityId, city.id), eq35(properties.status, "published"))).limit(6);
+      }).from(properties).leftJoin(suburbs, eq34(properties.suburbId, suburbs.id)).where(and28(eq34(properties.cityId, city.id), eq34(properties.status, "published"))).limit(6);
     }
     const developmentsListRaw = await db3.select({
       id: developments.id,
@@ -28862,7 +28825,7 @@ var locationPagesService = {
       priceTo: developments.priceTo,
       city: developments.city,
       suburb: developments.suburb
-    }).from(developments).where(eq35(developments.city, city?.name || cityIntel?.name || "")).orderBy(desc20(developments.createdAt)).limit(10);
+    }).from(developments).where(eq34(developments.city, city?.name || cityIntel?.name || "")).orderBy(desc19(developments.createdAt)).limit(10);
     const developmentsList = developmentsListRaw.map((dev) => ({
       ...dev,
       images: parseJsonField2(dev.images)
@@ -28901,18 +28864,18 @@ var locationPagesService = {
     const suburbIntel = MARKET_INTELLIGENCE.find(
       (i) => i.level === "suburb" && i.slug === suburbSlug && (i.parentSlug === citySlug || i.province === provinceSlug)
     );
-    let [suburb] = await db3.select({ id: suburbs.id, name: suburbs.name, slug: suburbs.slug }).from(suburbs).where(eq35(suburbs.slug, suburbSlug)).limit(1);
+    let [suburb] = await db3.select({ id: suburbs.id, name: suburbs.name, slug: suburbs.slug }).from(suburbs).where(eq34(suburbs.slug, suburbSlug)).limit(1);
     let suburbDbStats;
     if (suburb) {
       [suburbDbStats] = await db3.select({
-        totalListings: sql28`count(*)`,
-        avgSalePrice: sql28`avg(case when ${properties.listingType} = 'sale' then ${properties.price} else null end)`,
-        avgRentPrice: sql28`avg(case when ${properties.listingType} = 'rent' then ${properties.price} else null end)`,
-        minPrice: sql28`min(${properties.price})`,
-        maxPrice: sql28`max(${properties.price})`,
-        rentalCount: sql28`sum(case when ${properties.listingType} = 'rent' then 1 else 0 end)`,
-        saleCount: sql28`sum(case when ${properties.listingType} = 'sale' then 1 else 0 end)`
-      }).from(properties).where(and29(eq35(properties.suburbId, suburb.id), eq35(properties.status, "published")));
+        totalListings: sql27`count(*)`,
+        avgSalePrice: sql27`avg(case when ${properties.listingType} = 'sale' then ${properties.price} else null end)`,
+        avgRentPrice: sql27`avg(case when ${properties.listingType} = 'rent' then ${properties.price} else null end)`,
+        minPrice: sql27`min(${properties.price})`,
+        maxPrice: sql27`max(${properties.price})`,
+        rentalCount: sql27`sum(case when ${properties.listingType} = 'rent' then 1 else 0 end)`,
+        saleCount: sql27`sum(case when ${properties.listingType} = 'sale' then 1 else 0 end)`
+      }).from(properties).where(and28(eq34(properties.suburbId, suburb.id), eq34(properties.status, "published")));
     }
     const hasStats = Number(suburbDbStats?.totalListings || 0) > 0;
     if (!suburbIntel && !hasStats) {
@@ -28934,7 +28897,7 @@ var locationPagesService = {
         mainImage: properties.mainImage,
         city: properties.city,
         suburb: suburbs.name
-      }).from(properties).leftJoin(suburbs, eq35(properties.suburbId, suburbs.id)).where(and29(eq35(properties.suburbId, suburb.id), eq35(properties.status, "published"))).limit(6);
+      }).from(properties).leftJoin(suburbs, eq34(properties.suburbId, suburbs.id)).where(and28(eq34(properties.suburbId, suburb.id), eq34(properties.status, "published"))).limit(6);
     }
     return {
       suburb: suburb || {
@@ -28984,7 +28947,7 @@ var locationPagesService = {
 // server/locationPagesRouter.ts
 init_db();
 init_schema();
-import { and as and31, eq as eq38, lte as lte8, gte as gte9, or as or14, isNull as isNull3, inArray as inArray9 } from "drizzle-orm";
+import { and as and30, eq as eq37, lte as lte8, gte as gte9, or as or13, isNull as isNull3, inArray as inArray9 } from "drizzle-orm";
 var locationPagesRouter = router({
   /**
    * Get province data (legacy method - dynamic only)
@@ -29141,11 +29104,11 @@ var locationPagesRouter = router({
     const today = /* @__PURE__ */ new Date();
     const targetSlugs = [input.locationSlug, ...input.fallbacks];
     const campaigns = await db3.select().from(heroCampaigns).where(
-      and31(
+      and30(
         inArray9(heroCampaigns.targetSlug, targetSlugs),
-        eq38(heroCampaigns.isActive, 1),
-        or14(isNull3(heroCampaigns.startDate), lte8(heroCampaigns.startDate, today.toISOString())),
-        or14(isNull3(heroCampaigns.endDate), gte9(heroCampaigns.endDate, today.toISOString()))
+        eq37(heroCampaigns.isActive, 1),
+        or13(isNull3(heroCampaigns.startDate), lte8(heroCampaigns.startDate, today.toISOString())),
+        or13(isNull3(heroCampaigns.endDate), gte9(heroCampaigns.endDate, today.toISOString()))
       )
     );
     if (campaigns.length === 0) return null;
@@ -29187,8 +29150,8 @@ import { z as z29 } from "zod";
 init_db();
 init_schema();
 init_propertySearchService();
-import { TRPCError as TRPCError14 } from "@trpc/server";
-import { eq as eq40, desc as desc24, and as and33 } from "drizzle-orm";
+import { TRPCError as TRPCError13 } from "@trpc/server";
+import { eq as eq39, desc as desc23, and as and32 } from "drizzle-orm";
 var propertyFiltersSchema = z29.object({
   province: z29.string().optional(),
   city: z29.string().optional(),
@@ -29252,7 +29215,7 @@ var propertyResultsRouter = router({
       };
     } catch (error) {
       console.error("[PropertyResults] Search error:", error);
-      throw new TRPCError14({
+      throw new TRPCError13({
         code: "INTERNAL_SERVER_ERROR",
         message: "Failed to search properties"
       });
@@ -29277,7 +29240,7 @@ var propertyResultsRouter = router({
       };
     } catch (error) {
       console.error("[PropertyResults] Filter counts error:", error);
-      throw new TRPCError14({
+      throw new TRPCError13({
         code: "INTERNAL_SERVER_ERROR",
         message: "Failed to get filter counts"
       });
@@ -29301,7 +29264,7 @@ var propertyResultsRouter = router({
     ).mutation(async ({ ctx, input }) => {
       const db3 = await getDb();
       if (!db3) {
-        throw new TRPCError14({
+        throw new TRPCError13({
           code: "INTERNAL_SERVER_ERROR",
           message: "Database not available"
         });
@@ -29323,7 +29286,7 @@ var propertyResultsRouter = router({
         };
       } catch (error) {
         console.error("[PropertyResults] Create saved search error:", error);
-        throw new TRPCError14({
+        throw new TRPCError13({
           code: "INTERNAL_SERVER_ERROR",
           message: "Failed to create saved search"
         });
@@ -29336,13 +29299,13 @@ var propertyResultsRouter = router({
     list: protectedProcedure.query(async ({ ctx }) => {
       const db3 = await getDb();
       if (!db3) {
-        throw new TRPCError14({
+        throw new TRPCError13({
           code: "INTERNAL_SERVER_ERROR",
           message: "Database not available"
         });
       }
       try {
-        const searches = await db3.select().from(savedSearches).where(and33(eq40(savedSearches.userId, ctx.user.id), eq40(savedSearches.isActive, 1))).orderBy(desc24(savedSearches.createdAt));
+        const searches = await db3.select().from(savedSearches).where(and32(eq39(savedSearches.userId, ctx.user.id), eq39(savedSearches.isActive, 1))).orderBy(desc23(savedSearches.createdAt));
         const searchesWithCounts = await Promise.all(
           searches.map(async (search) => {
             try {
@@ -29385,7 +29348,7 @@ var propertyResultsRouter = router({
         };
       } catch (error) {
         console.error("[PropertyResults] List saved searches error:", error);
-        throw new TRPCError14({
+        throw new TRPCError13({
           code: "INTERNAL_SERVER_ERROR",
           message: "Failed to list saved searches"
         });
@@ -29402,21 +29365,21 @@ var propertyResultsRouter = router({
     ).query(async ({ ctx, input }) => {
       const db3 = await getDb();
       if (!db3) {
-        throw new TRPCError14({
+        throw new TRPCError13({
           code: "INTERNAL_SERVER_ERROR",
           message: "Database not available"
         });
       }
       try {
         const search = await db3.select().from(savedSearches).where(
-          and33(
-            eq40(savedSearches.id, input.id),
-            eq40(savedSearches.userId, ctx.user.id),
-            eq40(savedSearches.isActive, 1)
+          and32(
+            eq39(savedSearches.id, input.id),
+            eq39(savedSearches.userId, ctx.user.id),
+            eq39(savedSearches.isActive, 1)
           )
         ).limit(1);
         if (search.length === 0) {
-          throw new TRPCError14({
+          throw new TRPCError13({
             code: "NOT_FOUND",
             message: "Saved search not found"
           });
@@ -29432,9 +29395,9 @@ var propertyResultsRouter = router({
           }
         };
       } catch (error) {
-        if (error instanceof TRPCError14) throw error;
+        if (error instanceof TRPCError13) throw error;
         console.error("[PropertyResults] Load saved search error:", error);
-        throw new TRPCError14({
+        throw new TRPCError13({
           code: "INTERNAL_SERVER_ERROR",
           message: "Failed to load saved search"
         });
@@ -29450,27 +29413,27 @@ var propertyResultsRouter = router({
     ).mutation(async ({ ctx, input }) => {
       const db3 = await getDb();
       if (!db3) {
-        throw new TRPCError14({
+        throw new TRPCError13({
           code: "INTERNAL_SERVER_ERROR",
           message: "Database not available"
         });
       }
       try {
-        const search = await db3.select().from(savedSearches).where(and33(eq40(savedSearches.id, input.id), eq40(savedSearches.userId, ctx.user.id))).limit(1);
+        const search = await db3.select().from(savedSearches).where(and32(eq39(savedSearches.id, input.id), eq39(savedSearches.userId, ctx.user.id))).limit(1);
         if (search.length === 0) {
-          throw new TRPCError14({
+          throw new TRPCError13({
             code: "NOT_FOUND",
             message: "Saved search not found"
           });
         }
-        await db3.update(savedSearches).set({ isActive: 0 }).where(eq40(savedSearches.id, input.id));
+        await db3.update(savedSearches).set({ isActive: 0 }).where(eq39(savedSearches.id, input.id));
         return {
           success: true
         };
       } catch (error) {
-        if (error instanceof TRPCError14) throw error;
+        if (error instanceof TRPCError13) throw error;
         console.error("[PropertyResults] Delete saved search error:", error);
-        throw new TRPCError14({
+        throw new TRPCError13({
           code: "INTERNAL_SERVER_ERROR",
           message: "Failed to delete saved search"
         });
@@ -29496,7 +29459,7 @@ var propertyResultsRouter = router({
     ).mutation(async ({ ctx, input }) => {
       const db3 = await getDb();
       if (!db3) {
-        throw new TRPCError14({
+        throw new TRPCError13({
           code: "INTERNAL_SERVER_ERROR",
           message: "Database not available"
         });
@@ -29534,7 +29497,7 @@ var propertyResultsRouter = router({
     ).mutation(async ({ ctx, input }) => {
       const db3 = await getDb();
       if (!db3) {
-        throw new TRPCError14({
+        throw new TRPCError13({
           code: "INTERNAL_SERVER_ERROR",
           message: "Database not available"
         });
@@ -29564,7 +29527,7 @@ var propertyResultsRouter = router({
 init_db();
 init_schema();
 import { z as z30 } from "zod";
-import { and as and34, eq as eq41, desc as desc25, gte as gte11, lte as lte10, or as or16, isNull as isNull4 } from "drizzle-orm";
+import { and as and33, eq as eq40, desc as desc24, gte as gte11, lte as lte10, or as or15, isNull as isNull4 } from "drizzle-orm";
 var monetizationRouter = router({
   createTargetingRule: protectedProcedure.input(
     z30.object({
@@ -29587,7 +29550,7 @@ var monetizationRouter = router({
     return { success: true };
   }),
   getAllRules: protectedProcedure.query(async () => {
-    const rules = await db.select().from(locationTargeting).orderBy(desc25(locationTargeting.createdAt));
+    const rules = await db.select().from(locationTargeting).orderBy(desc24(locationTargeting.createdAt));
     return rules;
   }),
   getHeroAd: publicProcedure.input(
@@ -29598,16 +29561,16 @@ var monetizationRouter = router({
   ).query(async ({ input }) => {
     const now = (/* @__PURE__ */ new Date()).toISOString();
     const ads = await db.select().from(locationTargeting).where(
-      and34(
-        eq41(locationTargeting.targetType, "hero_ad"),
-        eq41(locationTargeting.locationType, input.locationType),
-        eq41(locationTargeting.locationId, input.locationId),
-        eq41(locationTargeting.status, "active"),
+      and33(
+        eq40(locationTargeting.targetType, "hero_ad"),
+        eq40(locationTargeting.locationType, input.locationType),
+        eq40(locationTargeting.locationId, input.locationId),
+        eq40(locationTargeting.status, "active"),
         // Handle date ranges (start <= now <= end)
-        or16(isNull4(locationTargeting.startDate), lte10(locationTargeting.startDate, now)),
-        or16(isNull4(locationTargeting.endDate), gte11(locationTargeting.endDate, now))
+        or15(isNull4(locationTargeting.startDate), lte10(locationTargeting.startDate, now)),
+        or15(isNull4(locationTargeting.endDate), gte11(locationTargeting.endDate, now))
       )
-    ).orderBy(desc25(locationTargeting.ranking)).limit(1);
+    ).orderBy(desc24(locationTargeting.ranking)).limit(1);
     return ads[0] || null;
     return ads[0] || null;
   }),
@@ -29626,16 +29589,16 @@ var monetizationRouter = router({
         slug: developers.slug,
         logo: developers.logo
       }
-    }).from(locationTargeting).innerJoin(developers, eq41(locationTargeting.targetId, developers.id)).where(
-      and34(
-        eq41(locationTargeting.targetType, "featured_developer"),
-        eq41(locationTargeting.locationType, input.locationType),
-        eq41(locationTargeting.locationId, input.locationId),
-        eq41(locationTargeting.status, "active"),
-        or16(isNull4(locationTargeting.startDate), lte10(locationTargeting.startDate, now)),
-        or16(isNull4(locationTargeting.endDate), gte11(locationTargeting.endDate, now))
+    }).from(locationTargeting).innerJoin(developers, eq40(locationTargeting.targetId, developers.id)).where(
+      and33(
+        eq40(locationTargeting.targetType, "featured_developer"),
+        eq40(locationTargeting.locationType, input.locationType),
+        eq40(locationTargeting.locationId, input.locationId),
+        eq40(locationTargeting.status, "active"),
+        or15(isNull4(locationTargeting.startDate), lte10(locationTargeting.startDate, now)),
+        or15(isNull4(locationTargeting.endDate), gte11(locationTargeting.endDate, now))
       )
-    ).orderBy(desc25(locationTargeting.ranking)).limit(6);
+    ).orderBy(desc24(locationTargeting.ranking)).limit(6);
     return results.map((r) => ({
       ...r.developer,
       ranking: r.targeting.ranking
@@ -29664,16 +29627,16 @@ var monetizationRouter = router({
         name: agencies.name,
         logo: agencies.logo
       }
-    }).from(locationTargeting).innerJoin(agents, eq41(locationTargeting.targetId, agents.id)).leftJoin(agencies, eq41(agents.agencyId, agencies.id)).where(
-      and34(
-        eq41(locationTargeting.targetType, "recommended_agent"),
-        eq41(locationTargeting.locationType, input.locationType),
-        eq41(locationTargeting.locationId, input.locationId),
-        eq41(locationTargeting.status, "active"),
-        or16(isNull4(locationTargeting.startDate), lte10(locationTargeting.startDate, now)),
-        or16(isNull4(locationTargeting.endDate), gte11(locationTargeting.endDate, now))
+    }).from(locationTargeting).innerJoin(agents, eq40(locationTargeting.targetId, agents.id)).leftJoin(agencies, eq40(agents.agencyId, agencies.id)).where(
+      and33(
+        eq40(locationTargeting.targetType, "recommended_agent"),
+        eq40(locationTargeting.locationType, input.locationType),
+        eq40(locationTargeting.locationId, input.locationId),
+        eq40(locationTargeting.status, "active"),
+        or15(isNull4(locationTargeting.startDate), lte10(locationTargeting.startDate, now)),
+        or15(isNull4(locationTargeting.endDate), gte11(locationTargeting.endDate, now))
       )
-    ).orderBy(desc25(locationTargeting.ranking)).limit(8);
+    ).orderBy(desc24(locationTargeting.ranking)).limit(8);
     return results.map((r) => ({
       ...r.agent,
       agency: r.agency,
@@ -29684,12 +29647,12 @@ var monetizationRouter = router({
 
 // server/brandProfileRouter.ts
 import { z as z31 } from "zod";
-import { TRPCError as TRPCError15 } from "@trpc/server";
+import { TRPCError as TRPCError14 } from "@trpc/server";
 
 // server/services/brandLeadService.ts
 init_db();
 init_schema();
-import { eq as eq42, and as and35, desc as desc26 } from "drizzle-orm";
+import { eq as eq41, and as and34, desc as desc25 } from "drizzle-orm";
 
 // server/_core/emailService.ts
 init_env();
@@ -30248,7 +30211,7 @@ async function routeLeadToEmail(leadId, brandProfile, leadData) {
         propertyId: leadData.propertyId
       }
     );
-    await db.update(leads).set({ brandLeadStatus: "delivered_unsubscribed" }).where(eq42(leads.id, leadId));
+    await db.update(leads).set({ brandLeadStatus: "delivered_unsubscribed" }).where(eq41(leads.id, leadId));
     return true;
   } catch (error) {
     console.error("Failed to route lead via email:", error);
@@ -30271,11 +30234,11 @@ async function getBrandLeads(brandProfileId, filters = {}) {
       message: "Subscribe to view leads in your dashboard."
     };
   }
-  const conditions = [eq42(leads.developerBrandProfileId, brandProfileId)];
+  const conditions = [eq41(leads.developerBrandProfileId, brandProfileId)];
   if (filters.status) {
-    conditions.push(eq42(leads.status, filters.status));
+    conditions.push(eq41(leads.status, filters.status));
   }
-  const leadResults = await db.select().from(leads).where(and35(...conditions)).orderBy(desc26(leads.createdAt)).limit(filters.limit || 50).offset(filters.offset || 0);
+  const leadResults = await db.select().from(leads).where(and34(...conditions)).orderBy(desc25(leads.createdAt)).limit(filters.limit || 50).offset(filters.offset || 0);
   return {
     leads: leadResults,
     total: leadResults.length,
@@ -30377,7 +30340,7 @@ var brandProfileRouter = router({
   getBrandProfile: publicProcedure.input(z31.object({ slug: z31.string() })).query(async ({ input }) => {
     const profile = await developerBrandProfileService.getBrandProfileBySlug(input.slug);
     if (!profile) {
-      throw new TRPCError15({
+      throw new TRPCError14({
         code: "NOT_FOUND",
         message: "Developer brand not found"
       });
@@ -30406,7 +30369,7 @@ var brandProfileRouter = router({
       return result;
     } catch (error) {
       console.error("Lead capture failed:", error);
-      throw new TRPCError15({
+      throw new TRPCError14({
         code: "INTERNAL_SERVER_ERROR",
         message: "Failed to submit enquiry. Please try again."
       });
@@ -30420,7 +30383,7 @@ var brandProfileRouter = router({
    */
   adminCreateBrandProfile: protectedProcedure.input(createBrandProfileSchema).mutation(async ({ input, ctx }) => {
     if (ctx.user.role !== "super_admin") {
-      throw new TRPCError15({
+      throw new TRPCError14({
         code: "FORBIDDEN",
         message: "Only super admins can create brand profiles"
       });
@@ -30436,7 +30399,7 @@ var brandProfileRouter = router({
    */
   adminUpdateBrandProfile: protectedProcedure.input(updateBrandProfileSchema).mutation(async ({ input, ctx }) => {
     if (ctx.user.role !== "super_admin") {
-      throw new TRPCError15({
+      throw new TRPCError14({
         code: "FORBIDDEN",
         message: "Only super admins can update brand profiles"
       });
@@ -30453,7 +30416,7 @@ var brandProfileRouter = router({
     })
   ).mutation(async ({ input, ctx }) => {
     if (ctx.user.role !== "super_admin") {
-      throw new TRPCError15({
+      throw new TRPCError14({
         code: "FORBIDDEN",
         message: "Only super admins can toggle visibility"
       });
@@ -30470,7 +30433,7 @@ var brandProfileRouter = router({
     })
   ).mutation(async ({ input, ctx }) => {
     if (ctx.user.role !== "super_admin") {
-      throw new TRPCError15({
+      throw new TRPCError14({
         code: "FORBIDDEN",
         message: "Only super admins can attach developments"
       });
@@ -30489,7 +30452,7 @@ var brandProfileRouter = router({
     })
   ).mutation(async ({ input, ctx }) => {
     if (ctx.user.role !== "super_admin") {
-      throw new TRPCError15({
+      throw new TRPCError14({
         code: "FORBIDDEN",
         message: "Only super admins can detach developments"
       });
@@ -30501,7 +30464,7 @@ var brandProfileRouter = router({
    */
   adminGetBrandLeadStats: protectedProcedure.input(z31.object({ brandProfileId: z31.number().int() })).query(async ({ input, ctx }) => {
     if (ctx.user.role !== "super_admin") {
-      throw new TRPCError15({
+      throw new TRPCError14({
         code: "FORBIDDEN",
         message: "Only super admins can view lead stats"
       });
@@ -30513,7 +30476,7 @@ var brandProfileRouter = router({
    */
   adminListAllBrandProfiles: protectedProcedure.input(listBrandProfilesSchema).query(async ({ input, ctx }) => {
     if (ctx.user.role !== "super_admin") {
-      throw new TRPCError15({
+      throw new TRPCError14({
         code: "FORBIDDEN",
         message: "Only super admins can list all brand profiles"
       });
@@ -30535,7 +30498,7 @@ var brandProfileRouter = router({
     })
   ).mutation(async ({ input, ctx }) => {
     if (ctx.user.role !== "super_admin") {
-      throw new TRPCError15({
+      throw new TRPCError14({
         code: "FORBIDDEN",
         message: "Only super admins can convert brands to subscribers"
       });
@@ -30550,7 +30513,7 @@ var brandProfileRouter = router({
    */
   adminGetSalesPitchStats: protectedProcedure.input(z31.object({ brandProfileId: z31.number().int() })).query(async ({ input, ctx }) => {
     if (ctx.user.role !== "super_admin") {
-      throw new TRPCError15({
+      throw new TRPCError14({
         code: "FORBIDDEN",
         message: "Only super admins can view sales stats"
       });
@@ -30565,8 +30528,8 @@ import { z as z32 } from "zod";
 // server/services/brandContextService.ts
 init_db();
 init_schema();
-import { eq as eq43, and as and36, isNull as isNull5 } from "drizzle-orm";
-import { TRPCError as TRPCError16 } from "@trpc/server";
+import { eq as eq42, and as and35, isNull as isNull5 } from "drizzle-orm";
+import { TRPCError as TRPCError15 } from "@trpc/server";
 var BrandContextService = class {
   /**
    * Get all available platform-owned brand profiles for emulator mode
@@ -30583,18 +30546,18 @@ var BrandContextService = class {
       isOperatingAs: developerBrandProfiles.linkedDeveloperAccountId
       // Use as placeholder
     }).from(developerBrandProfiles).where(
-      and36(
-        eq43(developerBrandProfiles.ownerType, "platform"),
-        eq43(developerBrandProfiles.isVisible, 1),
+      and35(
+        eq42(developerBrandProfiles.ownerType, "platform"),
+        eq42(developerBrandProfiles.isVisible, 1),
         isNull5(developerBrandProfiles.linkedDeveloperAccountId)
         // Not claimed by real developer
       )
     ).limit(options.limit || 50);
     if (options.search) {
       query = query.where(
-        and36(
-          eq43(developerBrandProfiles.ownerType, "platform"),
-          eq43(developerBrandProfiles.isVisible, 1),
+        and35(
+          eq42(developerBrandProfiles.ownerType, "platform"),
+          eq42(developerBrandProfiles.isVisible, 1),
           isNull5(developerBrandProfiles.linkedDeveloperAccountId)
         )
       );
@@ -30619,14 +30582,14 @@ var BrandContextService = class {
       brandTier: developerBrandProfiles.brandTier,
       isOperatingAs: developerBrandProfiles.linkedDeveloperAccountId
     }).from(developerBrandProfiles).where(
-      and36(
-        eq43(developerBrandProfiles.id, brandProfileId),
-        eq43(developerBrandProfiles.ownerType, "platform"),
-        eq43(developerBrandProfiles.isVisible, 1)
+      and35(
+        eq42(developerBrandProfiles.id, brandProfileId),
+        eq42(developerBrandProfiles.ownerType, "platform"),
+        eq42(developerBrandProfiles.isVisible, 1)
       )
     );
     if (!profile) {
-      throw new TRPCError16({
+      throw new TRPCError15({
         code: "NOT_FOUND",
         message: "Platform brand profile not found or not accessible"
       });
@@ -30658,10 +30621,10 @@ var BrandContextService = class {
 var brandContextService = new BrandContextService();
 
 // server/services/brandEmulatorService.ts
-import { TRPCError as TRPCError17 } from "@trpc/server";
+import { TRPCError as TRPCError16 } from "@trpc/server";
 init_db();
 init_schema();
-import { eq as eq44, desc as desc27, sql as sql33 } from "drizzle-orm";
+import { eq as eq43, desc as desc26, sql as sql32 } from "drizzle-orm";
 var BrandEmulatorService = class {
   /**
    * Get brand identity for emulator operations
@@ -30685,9 +30648,9 @@ var BrandEmulatorService = class {
     const brandIdentity = await this.getBrandIdentity(brandProfileId);
     const database = await db.getDb();
     if (!database) throw new Error("Database not available");
-    const [brandProfile] = await database.select().from(developerBrandProfiles).where(eq44(developerBrandProfiles.id, brandProfileId));
+    const [brandProfile] = await database.select().from(developerBrandProfiles).where(eq43(developerBrandProfiles.id, brandProfileId));
     if (!brandProfile) {
-      throw new TRPCError17({
+      throw new TRPCError16({
         code: "NOT_FOUND",
         message: "Platform brand profile not found"
       });
@@ -30756,7 +30719,7 @@ var BrandEmulatorService = class {
       };
     } catch (error) {
       console.error("[BrandEmulator] Failed to seed development:", error);
-      throw new TRPCError17({
+      throw new TRPCError16({
         code: "INTERNAL_SERVER_ERROR",
         message: "Failed to seed development under brand profile"
       });
@@ -30799,7 +30762,7 @@ var BrandEmulatorService = class {
       };
     } catch (error) {
       console.error("[BrandEmulator] Failed to seed property:", error);
-      throw new TRPCError17({
+      throw new TRPCError16({
         code: "INTERNAL_SERVER_ERROR",
         message: "Failed to seed property under brand profile"
       });
@@ -30821,10 +30784,10 @@ var BrandEmulatorService = class {
         updatedAt: /* @__PURE__ */ new Date()
       }).$returningId();
       await database.update(developerBrandProfiles).set({
-        totalLeadsReceived: sql33`${developerBrandProfiles.totalLeadsReceived} + 1`,
-        unclaimedLeadCount: sql33`${developerBrandProfiles.unclaimedLeadCount} + 1`,
+        totalLeadsReceived: sql32`${developerBrandProfiles.totalLeadsReceived} + 1`,
+        unclaimedLeadCount: sql32`${developerBrandProfiles.unclaimedLeadCount} + 1`,
         lastLeadDate: /* @__PURE__ */ new Date()
-      }).where(eq44(developerBrandProfiles.id, brandProfileId));
+      }).where(eq43(developerBrandProfiles.id, brandProfileId));
       return {
         success: true,
         entityIds: [lead.id],
@@ -30835,7 +30798,7 @@ var BrandEmulatorService = class {
       };
     } catch (error) {
       console.error("[BrandEmulator] Failed to generate lead:", error);
-      throw new TRPCError17({
+      throw new TRPCError16({
         code: "INTERNAL_SERVER_ERROR",
         message: "Failed to generate lead for brand profile"
       });
@@ -30847,16 +30810,16 @@ var BrandEmulatorService = class {
   async getBrandEntities(brandProfileId) {
     const database = await db.getDb();
     if (!database) throw new Error("Database not available");
-    const [developments4, properties4, leads2] = await Promise.all([
-      database.select().from(developments4).where(eq44(developments4.developerBrandProfileId, brandProfileId)),
-      database.select().from(properties4).where(eq44(properties4.developerBrandProfileId, brandProfileId)),
-      database.select().from(leads2).where(eq44(leads2.developerBrandProfileId, brandProfileId)).orderBy(desc27(leads2.createdAt))
+    const [developments3, properties4, leads2] = await Promise.all([
+      database.select().from(developments3).where(eq43(developments3.developerBrandProfileId, brandProfileId)),
+      database.select().from(properties4).where(eq43(properties4.developerBrandProfileId, brandProfileId)),
+      database.select().from(leads2).where(eq43(leads2.developerBrandProfileId, brandProfileId)).orderBy(desc26(leads2.createdAt))
     ]);
     return {
-      developments: developments4,
+      developments: developments3,
       properties: properties4,
       leads: leads2,
-      totalEntities: developments4.length + properties4.length + leads2.length
+      totalEntities: developments3.length + properties4.length + leads2.length
     };
   }
   /**
@@ -30874,36 +30837,36 @@ var BrandEmulatorService = class {
       units: 0
     };
     try {
-      const brandDevelopments = await database.select({ id: developments.id }).from(developments).where(eq44(developments.developerBrandProfileId, brandProfileId));
+      const brandDevelopments = await database.select({ id: developments.id }).from(developments).where(eq43(developments.developerBrandProfileId, brandProfileId));
       const developmentIds = brandDevelopments.map((d) => d.id);
       if (developmentIds.length > 0) {
-        const deletedUnits = await database.delete(unitTypes).where(eq44(unitTypes.developmentId, developmentIds[0]));
+        const deletedUnits = await database.delete(unitTypes).where(eq43(unitTypes.developmentId, developmentIds[0]));
         deletedCounts.units = deletedUnits.rowsAffected || 0;
-        const deletedDevs = await database.delete(developments).where(eq44(developments.developerBrandProfileId, brandProfileId));
+        const deletedDevs = await database.delete(developments).where(eq43(developments.developerBrandProfileId, brandProfileId));
         deletedCounts.developments = deletedDevs.rowsAffected || 0;
       }
-      const brandProperties = await database.select({ id: properties.id }).from(properties).where(eq44(properties.developerBrandProfileId, brandProfileId));
+      const brandProperties = await database.select({ id: properties.id }).from(properties).where(eq43(properties.developerBrandProfileId, brandProfileId));
       const propertyIds = brandProperties.map((p) => p.id);
       if (propertyIds.length > 0) {
-        const deletedMedia = await database.delete(listingMedia).where(eq44(listingMedia.propertyId, propertyIds[0]));
+        const deletedMedia = await database.delete(listingMedia).where(eq43(listingMedia.propertyId, propertyIds[0]));
         deletedCounts.media = deletedMedia.rowsAffected || 0;
-        const deletedProps = await database.delete(properties).where(eq44(properties.developerBrandProfileId, brandProfileId));
+        const deletedProps = await database.delete(properties).where(eq43(properties.developerBrandProfileId, brandProfileId));
         deletedCounts.properties = deletedProps.rowsAffected || 0;
       }
-      const deletedLeadsResult = await database.delete(leads).where(eq44(leads.developerBrandProfileId, brandProfileId));
+      const deletedLeadsResult = await database.delete(leads).where(eq43(leads.developerBrandProfileId, brandProfileId));
       deletedCounts.leads = deletedLeadsResult.rowsAffected || 0;
       await database.update(developerBrandProfiles).set({
         totalLeadsReceived: 0,
         unclaimedLeadCount: 0,
         lastLeadDate: null
-      }).where(eq44(developerBrandProfiles.id, brandProfileId));
+      }).where(eq43(developerBrandProfiles.id, brandProfileId));
       return {
         deletedCounts,
         success: true
       };
     } catch (error) {
       console.error("[BrandEmulator] Cleanup failed:", error);
-      throw new TRPCError17({
+      throw new TRPCError16({
         code: "INTERNAL_SERVER_ERROR",
         message: "Failed to cleanup brand entities"
       });
@@ -30926,7 +30889,7 @@ var BrandEmulatorService = class {
 var brandEmulatorService = new BrandEmulatorService();
 
 // server/brandEmulatorRouter.ts
-import { TRPCError as TRPCError18 } from "@trpc/server";
+import { TRPCError as TRPCError17 } from "@trpc/server";
 var brandEmulatorRouter = router({
   // ==========================================================================
   // Brand Context Management
@@ -30985,7 +30948,7 @@ var brandEmulatorRouter = router({
     await brandContextService.verifyBrandContext(input.brandProfileId);
     const profile = await developerBrandProfileService.getBrandProfileById(input.brandProfileId);
     if (!profile) {
-      throw new TRPCError18({
+      throw new TRPCError17({
         code: "NOT_FOUND",
         message: "Brand profile not found"
       });
@@ -31195,7 +31158,7 @@ var brandEmulatorRouter = router({
     })
   ).mutation(async ({ input }) => {
     if (!input.confirm) {
-      throw new TRPCError18({
+      throw new TRPCError17({
         code: "BAD_REQUEST",
         message: "Confirmation required. Set confirm=true to proceed with cleanup."
       });
@@ -31217,14 +31180,14 @@ var brandEmulatorRouter = router({
     })
   ).mutation(async ({ input }) => {
     if (!input.confirm) {
-      throw new TRPCError18({
+      throw new TRPCError17({
         code: "BAD_REQUEST",
         message: "Must confirm deletion to proceed"
       });
     }
     const brandContext = await brandContextService.verifyBrandContext(input.brandProfileId);
     if (brandContext.ownerType !== "platform") {
-      throw new TRPCError18({
+      throw new TRPCError17({
         code: "FORBIDDEN",
         message: "Can only delete platform-owned brands"
       });
@@ -31242,9 +31205,9 @@ var brandEmulatorRouter = router({
 // server/superAdminPublisherRouter.ts
 import { z as z33 } from "zod";
 init_db();
-import { TRPCError as TRPCError19 } from "@trpc/server";
+import { TRPCError as TRPCError18 } from "@trpc/server";
 init_schema();
-import { eq as eq45, desc as desc28, and as and38, sql as sql34 } from "drizzle-orm";
+import { eq as eq44, desc as desc27, and as and37, sql as sql33 } from "drizzle-orm";
 var superAdminPublisherRouter = router({
   // ==========================================================================
   // Brand Context Selection
@@ -31466,13 +31429,13 @@ var superAdminPublisherRouter = router({
     const dbConn = await getDb();
     if (!dbConn) throw new Error("Database not available");
     const [dev] = await dbConn.select().from(developments).where(
-      and38(
-        eq45(developments.id, input.developmentId),
-        eq45(developments.developerBrandProfileId, input.brandProfileId)
+      and37(
+        eq44(developments.id, input.developmentId),
+        eq44(developments.developerBrandProfileId, input.brandProfileId)
       )
     );
     if (!dev) {
-      throw new TRPCError19({
+      throw new TRPCError18({
         code: "NOT_FOUND",
         message: "Development not found or does not belong to this brand context"
       });
@@ -31480,7 +31443,7 @@ var superAdminPublisherRouter = router({
     await dbConn.update(developments).set({
       ...input.data,
       updatedAt: (/* @__PURE__ */ new Date()).toISOString()
-    }).where(eq45(developments.id, input.developmentId));
+    }).where(eq44(developments.id, input.developmentId));
     return { success: true };
   }),
   // ==========================================================================
@@ -31498,7 +31461,7 @@ var superAdminPublisherRouter = router({
   ).query(async ({ input }) => {
     const dbConn = await getDb();
     if (!dbConn) throw new Error("Database not available");
-    const brandLeads = await dbConn.select().from(leads).where(eq45(leads.developerBrandProfileId, input.brandProfileId)).orderBy(desc28(leads.createdAt)).limit(input.limit).offset(input.offset);
+    const brandLeads = await dbConn.select().from(leads).where(eq44(leads.developerBrandProfileId, input.brandProfileId)).orderBy(desc27(leads.createdAt)).limit(input.limit).offset(input.offset);
     return brandLeads;
   }),
   /**
@@ -31507,8 +31470,8 @@ var superAdminPublisherRouter = router({
   getGlobalMetrics: superAdminProcedure.query(async () => {
     const dbConn = await getDb();
     if (!dbConn) throw new Error("Database not available");
-    const [devCount] = await dbConn.select({ count: sql34`count(*)` }).from(developments);
-    const [leadCount] = await dbConn.select({ count: sql34`count(*)` }).from(leads);
+    const [devCount] = await dbConn.select({ count: sql33`count(*)` }).from(developments);
+    const [leadCount] = await dbConn.select({ count: sql33`count(*)` }).from(leads);
     return {
       totalDevelopments: Number(devCount?.count || 0),
       totalLeads: Number(leadCount?.count || 0)
@@ -32014,8 +31977,8 @@ function serveStatic(app) {
 // server/_core/stripeWebhooks.ts
 init_db();
 init_schema();
-import { eq as eq46, and as and39 } from "drizzle-orm";
-import { TRPCError as TRPCError20 } from "@trpc/server";
+import { eq as eq45, and as and38 } from "drizzle-orm";
+import { TRPCError as TRPCError19 } from "@trpc/server";
 var emailService = process.env.NODE_ENV === "development" || process.env.VITE_USE_MOCK_EMAILS === "true" ? MockEmailService : EmailService2;
 var handleStripeWebhook = async (req, res) => {
   if (!stripe) {
@@ -32024,7 +31987,7 @@ var handleStripeWebhook = async (req, res) => {
   }
   const db3 = await getDb();
   if (!db3) {
-    throw new TRPCError20({
+    throw new TRPCError19({
       code: "INTERNAL_SERVER_ERROR",
       message: "Database not available"
     });
@@ -32062,11 +32025,11 @@ var handleStripeWebhook = async (req, res) => {
 };
 async function handleSubscriptionCreated(subscription, db3) {
   try {
-    const [existingSubscription] = await db3.select().from(agencySubscriptions).where(eq46(agencySubscriptions.stripeSubscriptionId, subscription.id)).limit(1);
+    const [existingSubscription] = await db3.select().from(agencySubscriptions).where(eq45(agencySubscriptions.stripeSubscriptionId, subscription.id)).limit(1);
     if (existingSubscription) {
       if (subscription.status === "active" && existingSubscription.status !== "active") {
-        const [agency] = await db3.select().from(agencies).where(eq46(agencies.id, existingSubscription.agencyId)).limit(1);
-        const [plan] = await db3.select().from(plans).where(eq46(plans.id, existingSubscription.planId)).limit(1);
+        const [agency] = await db3.select().from(agencies).where(eq45(agencies.id, existingSubscription.agencyId)).limit(1);
+        const [plan] = await db3.select().from(plans).where(eq45(plans.id, existingSubscription.planId)).limit(1);
         if (agency && plan) {
           await EmailService2.sendSubscriptionCreatedEmail(
             agency.email,
@@ -32082,7 +32045,7 @@ async function handleSubscriptionCreated(subscription, db3) {
         trialEnd: subscription.trial_end ? new Date(subscription.trial_end * 1e3) : null,
         cancelAtPeriodEnd: subscription.cancel_at_period_end ? 1 : 0,
         updatedAt: /* @__PURE__ */ new Date()
-      }).where(eq46(agencySubscriptions.id, existingSubscription.id));
+      }).where(eq45(agencySubscriptions.id, existingSubscription.id));
     }
     console.log(`\u2705 Subscription created: ${subscription.id}`);
   } catch (error) {
@@ -32104,7 +32067,7 @@ async function handleSubscriptionUpdated(subscription, db3) {
     if (subscription.items.data[0]?.price?.id) {
       updateData.stripePriceId = subscription.items.data[0].price.id;
     }
-    await db3.update(agencySubscriptions).set(updateData).where(eq46(agencySubscriptions.stripeSubscriptionId, subscription.id));
+    await db3.update(agencySubscriptions).set(updateData).where(eq45(agencySubscriptions.stripeSubscriptionId, subscription.id));
     console.log(`\u2705 Subscription updated: ${subscription.id}`);
   } catch (error) {
     console.error("Error handling subscription updated:", error);
@@ -32112,14 +32075,14 @@ async function handleSubscriptionUpdated(subscription, db3) {
 }
 async function handleSubscriptionDeleted(subscription, db3) {
   try {
-    const [existingSubscription] = await db3.select().from(agencySubscriptions).where(eq46(agencySubscriptions.stripeSubscriptionId, subscription.id)).limit(1);
+    const [existingSubscription] = await db3.select().from(agencySubscriptions).where(eq45(agencySubscriptions.stripeSubscriptionId, subscription.id)).limit(1);
     if (existingSubscription) {
       await db3.update(agencySubscriptions).set({
         status: "canceled",
         endedAt: /* @__PURE__ */ new Date(),
         updatedAt: /* @__PURE__ */ new Date()
-      }).where(eq46(agencySubscriptions.id, existingSubscription.id));
-      const [agency] = await db3.select().from(agencies).where(eq46(agencies.id, existingSubscription.agencyId)).limit(1);
+      }).where(eq45(agencySubscriptions.id, existingSubscription.id));
+      const [agency] = await db3.select().from(agencies).where(eq45(agencies.id, existingSubscription.agencyId)).limit(1);
       if (agency) {
         const endDate = existingSubscription.currentPeriodEnd?.toLocaleDateString() || "period end";
         await EmailService2.sendSubscriptionCancelledEmail(agency.email, agency.name, endDate);
@@ -32129,7 +32092,7 @@ async function handleSubscriptionDeleted(subscription, db3) {
         subscriptionStatus: "canceled",
         subscriptionExpiry: null,
         updatedAt: /* @__PURE__ */ new Date()
-      }).where(eq46(agencies.id, existingSubscription.agencyId));
+      }).where(eq45(agencies.id, existingSubscription.agencyId));
     }
     console.log(`\u2705 Subscription canceled: ${subscription.id}`);
   } catch (error) {
@@ -32154,7 +32117,7 @@ async function handleInvoicePaymentSucceeded(invoice, db3) {
       paidAt: /* @__PURE__ */ new Date(),
       updatedAt: /* @__PURE__ */ new Date()
     };
-    const [subscription] = await db3.select().from(agencySubscriptions).where(eq46(agencySubscriptions.stripeCustomerId, invoice.customer)).limit(1);
+    const [subscription] = await db3.select().from(agencySubscriptions).where(eq45(agencySubscriptions.stripeCustomerId, invoice.customer)).limit(1);
     if (subscription) {
       invoiceData.agencyId = subscription.agencyId;
       await db3.insert(invoices).values(invoiceData).onDuplicateKeyUpdate({
@@ -32171,7 +32134,7 @@ async function handleInvoicePaymentFailed(invoice, db3) {
     await db3.update(invoices).set({
       status: "uncollectible",
       updatedAt: /* @__PURE__ */ new Date()
-    }).where(eq46(invoices.stripeInvoiceId, invoice.id));
+    }).where(eq45(invoices.stripeInvoiceId, invoice.id));
     console.log(`\u274C Invoice payment failed: ${invoice.id}`);
   } catch (error) {
     console.error("Error handling invoice payment failed:", error);
@@ -32189,7 +32152,7 @@ async function handleCheckoutSessionCompleted(session, db3) {
     await db3.update(agencies).set({
       subscriptionStatus: "active",
       updatedAt: /* @__PURE__ */ new Date()
-    }).where(eq46(agencies.id, numericAgencyId));
+    }).where(eq45(agencies.id, numericAgencyId));
     const [agency] = await db3.select({
       id: agencies.id,
       name: agencies.name,
@@ -32197,13 +32160,13 @@ async function handleCheckoutSessionCompleted(session, db3) {
       ownerEmail: users.email,
       ownerName: users.name,
       ownerFirstName: users.firstName
-    }).from(agencies).leftJoin(users, eq46(agencies.id, users.agencyId)).where(eq46(agencies.id, numericAgencyId)).limit(1);
+    }).from(agencies).leftJoin(users, eq45(agencies.id, users.agencyId)).where(eq45(agencies.id, numericAgencyId)).limit(1);
     if (!agency) {
       console.error(`\u274C Agency ${agencyId} not found after checkout`);
       return;
     }
-    const [plan] = await db3.select().from(plans).where(eq46(plans.id, numericPlanId)).limit(1);
-    const teamInvitations = await db3.select().from(invitations).where(and39(eq46(invitations.agencyId, numericAgencyId), eq46(invitations.status, "pending"))).limit(50);
+    const [plan] = await db3.select().from(plans).where(eq45(plans.id, numericPlanId)).limit(1);
+    const teamInvitations = await db3.select().from(invitations).where(and38(eq45(invitations.agencyId, numericAgencyId), eq45(invitations.status, "pending"))).limit(50);
     let successCount = 0;
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
     for (const invitation of teamInvitations) {
@@ -32317,7 +32280,7 @@ async function handleCheckoutSessionCompleted(session, db3) {
 init_db();
 init_schema();
 import express2 from "express";
-import { eq as eq47 } from "drizzle-orm";
+import { eq as eq46 } from "drizzle-orm";
 var router2 = express2.Router();
 var domainRoutingMiddleware = async (req, res, next) => {
   const db3 = await getDb();
@@ -32328,7 +32291,7 @@ var domainRoutingMiddleware = async (req, res, next) => {
   const subdomain = getSubdomain(host);
   if (subdomain && subdomain !== "www" && subdomain !== "app") {
     try {
-      const [branding] = await db3.select().from(agencyBranding).where(eq47(agencyBranding.subdomain, subdomain)).limit(1);
+      const [branding] = await db3.select().from(agencyBranding).where(eq46(agencyBranding.subdomain, subdomain)).limit(1);
       if (branding && branding.isEnabled) {
         req.agencyBranding = branding;
         req.isWhiteLabel = true;
@@ -32359,7 +32322,7 @@ var customDomainMiddleware = async (req, res, next) => {
   const host = req.headers.host?.split(":")[0];
   if (host) {
     try {
-      const [branding] = await db3.select().from(agencyBranding).where(eq47(agencyBranding.customDomain, host)).limit(1);
+      const [branding] = await db3.select().from(agencyBranding).where(eq46(agencyBranding.customDomain, host)).limit(1);
       if (branding && branding.isEnabled) {
         req.agencyBranding = branding;
         req.isWhiteLabel = true;
@@ -32432,7 +32395,7 @@ async function startServer() {
       },
       credentials: true,
       methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-      allowedHeaders: ["Content-Type", "Authorization", "trpc-batch-mode"],
+      allowedHeaders: ["Content-Type", "Authorization", "trpc-batch-mode", "x-operating-as-brand"],
       exposedHeaders: ["Set-Cookie"],
       maxAge: 86400
       // 24 hours
@@ -32446,7 +32409,7 @@ async function startServer() {
   app.get("/api/test", async (req, res) => {
     try {
       const { db: db3 } = await Promise.resolve().then(() => (init_db(), db_exports));
-      await db3.execute(sql40`SELECT 1`);
+      await db3.execute(sql39`SELECT 1`);
       res.json({
         message: "Backend is running!",
         database: "Connected",
