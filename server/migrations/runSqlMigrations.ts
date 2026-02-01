@@ -1,13 +1,18 @@
 import { readFileSync, readdirSync } from 'fs';
-import { join } from 'path';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
 import { connect } from '@tidbcloud/serverless';
+
+// ESM-safe __dirname replacement
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 /**
  * Run SQL migrations in order
  * Executes all .sql files in server/migrations/ directory
  */
 async function runSqlMigrations() {
-  const migrationsDir = join(__dirname);
+  const migrationsDir = __dirname;
   const connection = connect({
     url: process.env.DATABASE_URL!,
   });
