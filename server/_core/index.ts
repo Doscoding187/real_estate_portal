@@ -11,7 +11,6 @@ import express from 'express';
 import cors from 'cors';
 import rateLimit from 'express-rate-limit';
 import { createServer } from 'http';
-import net from 'net';
 import superjson from 'superjson';
 import { createExpressMiddleware } from '@trpc/server/adapters/express';
 import { registerAuthRoutes } from './authRoutes';
@@ -22,23 +21,47 @@ import { handleStripeWebhook } from './stripeWebhooks';
 import { domainRoutingMiddleware, customDomainMiddleware } from './domainRouter';
 import { initializeCache, shutdownCache } from './cache/redis';
 
-function isPortAvailable(port: number): Promise<boolean> {
-  return new Promise(resolve => {
-    const server = net.createServer();
-    server.listen(port, () => {
-      server.close(() => resolve(true));
-    });
-    server.on('error', () => resolve(false));
-  });
-}
+// -------------------- BOOT-SAFE OPTIONAL ROUTER LOADER --------------------
+// If any router module is missing, mis-exported, or unfinished, we DO NOT crash boot.
+// We log and skip instead.
+async function mountOptionalRouter(app: express.Express, mountPath: string, importPath: string) {
+  try {
+    const mod: any = await import(importPath);
 
-async function findAvailablePort(startPort: number = 3000): Promise<number> {
-  for (let port = startPort; port < startPort + 20; port++) {
-    if (await isPortAvailable(port)) {
-      return port;
+    // Support multiple export styles:
+    // - export default router
+    // - export const router = Router()
+    // - export const routes = Router()
+    // - module.exports = router (rare in TS/ESM but possible)
+    const routerCandidate =
+      mod?.default ??
+      mod?.router ??
+      mod?.routes ??
+      mod?.partnerRouter ?? // ✅ support tRPC router export name
+      mod;
+
+    const isMiddleware =
+      typeof routerCandidate === 'function' ||
+      (routerCandidate &&
+        typeof routerCandidate === 'object' &&
+        typeof routerCandidate.use === 'function');
+
+    if (!isMiddleware) {
+      console.warn(
+        `[Routes] ⚠️  Skipping ${mountPath} (no usable router export) from ${importPath}. Exports:`,
+        Object.keys(mod ?? {}),
+      );
+      return;
     }
+
+    app.use(mountPath, routerCandidate);
+    console.log(`[Routes] ✅ Mounted ${mountPath} <- ${importPath}`);
+  } catch (err: any) {
+    console.warn(
+      `[Routes] ⚠️  Skipping ${mountPath} (failed import) from ${importPath}:`,
+      err?.message,
+    );
   }
-  throw new Error(`No available port found starting from ${startPort}`);
 }
 
 async function startServer() {
@@ -48,6 +71,7 @@ async function startServer() {
     env: process.env.NODE_ENV,
     startedAt: new Date().toISOString(),
   });
+
   // Check for critical environment variables
   if (!process.env.JWT_SECRET) {
     console.error('\n❌ CRITICAL ERROR: JWT_SECRET is not defined in environment variables.');
@@ -56,7 +80,6 @@ async function startServer() {
   }
 
   console.log('[Server] Initializing cache...');
-  // Initialize Cache Services (Redis)
   await initializeCache();
   console.log('[Server] Cache initialized');
 
@@ -72,30 +95,27 @@ async function startServer() {
     legacyHeaders: false,
   });
 
-  // Apply rate limiting to auth endpoints
   app.use('/api/auth/login', authLimiter);
   app.use('/api/auth/register', authLimiter);
 
   // CORS Configuration - Allow Vercel frontend and local development
   const allowedOrigins = [
-    'http://localhost:5173', // Vite dev
-    'http://localhost:3000', // Local dev
-    'http://localhost:5000', // Local dev (port 5000)
-    'https://real-estate-portal-xi.vercel.app', // Vercel production
-    'https://realestateportal-production-8e32.up.railway.app', // Railway backend (old)
-    'https://realestateportal-production-9bb8.up.railway.app', // Railway backend (current)
-    'https://www.propertylistifysa.co.za', // Production Domain
-    'https://propertylistifysa.co.za', // Production Domain (non-www)
-    'http://localhost:3009', // Vite dev (Correct Port)
+    'http://localhost:5173',
+    'http://localhost:3000',
+    'http://localhost:5000',
+    'https://real-estate-portal-xi.vercel.app',
+    'https://realestateportal-production-8e32.up.railway.app',
+    'https://realestateportal-production-9bb8.up.railway.app',
+    'https://www.propertylistifysa.co.za',
+    'https://propertylistifysa.co.za',
+    'http://localhost:3009',
   ];
 
   app.use(
     cors({
       origin: (origin, callback) => {
-        // Allow requests with no origin (mobile apps, Postman, etc.)
         if (!origin) return callback(null, true);
 
-        // Check if origin is in allowed list or matches vercel.app pattern
         if (allowedOrigins.includes(origin) || origin.endsWith('.vercel.app')) {
           console.log(`✅ CORS: Allowed origin: ${origin}`);
           callback(null, true);
@@ -108,25 +128,20 @@ async function startServer() {
       methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
       allowedHeaders: ['Content-Type', 'Authorization', 'trpc-batch-mode', 'x-operating-as-brand'],
       exposedHeaders: ['Set-Cookie'],
-      maxAge: 86400, // 24 hours
+      maxAge: 86400,
     }),
   );
 
-  // Configure body parser with larger size limit for file uploads
   app.use(express.json({ limit: '50mb' }));
   app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
-  // Domain routing middleware (must be before other routes)
   app.use(domainRoutingMiddleware);
   app.use(customDomainMiddleware);
 
-  // Custom authentication routes (register/login/logout)
   registerAuthRoutes(app);
 
-  // Simple test endpoint for debugging
   app.get('/api/test', async (req, res) => {
     try {
-      // Try to connect to DB
       const { db } = await import('../db');
       await db.execute(sql`SELECT 1`);
       res.json({
@@ -145,10 +160,8 @@ async function startServer() {
     }
   });
 
-  // Stripe webhook endpoint (must be before JSON parsing)
   app.post('/api/webhooks/stripe', express.raw({ type: 'application/json' }), handleStripeWebhook);
 
-  // tRPC API
   app.use(
     '/api/trpc',
     createExpressMiddleware({
@@ -168,41 +181,28 @@ async function startServer() {
     }),
   );
 
-  // Analytics endpoint (for advertise page tracking)
-  const analyticsRouter = await import('../routes/analytics');
-  app.use('/api/analytics', analyticsRouter.default);
+  // -------------------- OPTIONAL ROUTERS (BOOT-SAFE) --------------------
+  console.log('[Server] Loading optional routers...');
 
-  // Partner Management API
-  const partnerRouter = await import('../partnerRouter');
-  app.use('/api/partners', partnerRouter.default);
+  await mountOptionalRouter(app, '/api/analytics', '../routes/analytics');
+  // NOTE: partnerRouter.ts is a tRPC router, NOT an Express router.
+  // Do not mount it with app.use().
+  console.log('[Routes] ℹ️  /api/partners is handled by tRPC, skipping Express mount');
+  await mountOptionalRouter(app, '/api/partner-analytics', '../partnerAnalyticsRouter');
+  await mountOptionalRouter(app, '/api/content', '../contentRouter');
+  await mountOptionalRouter(app, '/api/topics', '../topicsRouter');
+  await mountOptionalRouter(app, '/api/subscriptions', '../partnerSubscriptionRouter');
+  await mountOptionalRouter(app, '/api/boosts', '../partnerBoostCampaignRouter');
+  await mountOptionalRouter(app, '/api/leads', '../partnerLeadRouter');
 
-  // Partner Analytics API
-  const partnerAnalyticsRouter = await import('../partnerAnalyticsRouter');
-  app.use('/api/partner-analytics', partnerAnalyticsRouter.default);
+  await mountOptionalRouter(app, '/api/explore', '../routes/exploreShorts');
+  await mountOptionalRouter(app, '/api/explore/video', '../routes/exploreVideoUpload');
 
-  // Content Approval API
-  const contentRouter = await import('../contentRouter');
-  app.use('/api/content', contentRouter.default);
+  console.log('[Server] Optional routers loaded');
 
-  // Topics Navigation API
-  const topicsRouter = await import('../topicsRouter');
-  app.use('/api/topics', topicsRouter.default);
-
-  // Partner Subscription API
-  const partnerSubscriptionRouter = await import('../partnerSubscriptionRouter');
-  app.use('/api/subscriptions', partnerSubscriptionRouter.default);
-
-  // Partner Boost Campaign API
-  const partnerBoostCampaignRouter = await import('../partnerBoostCampaignRouter');
-  app.use('/api/boosts', partnerBoostCampaignRouter.default);
-
-  // Partner Lead Generation API
-  const partnerLeadRouter = await import('../partnerLeadRouter');
-  app.use('/api/leads', partnerLeadRouter.default);
-  // development mode uses Vite, production mode serves static files
-  // Skip static file serving if SKIP_FRONTEND env var is set (for Railway backend-only deployment)
   console.log('[Server] NODE_ENV:', process.env.NODE_ENV);
   console.log('[Server] SKIP_FRONTEND:', process.env.SKIP_FRONTEND);
+
   if (process.env.NODE_ENV === 'development' && process.env.SKIP_FRONTEND !== 'true') {
     console.log('[Server] Using Vite development server');
     await setupVite(app, server);
@@ -213,7 +213,6 @@ async function startServer() {
     console.log('[Server] Skipping frontend static file serving (backend-only mode)');
   }
 
-  // Use configured port or default to 5000
   const port = parseInt(process.env.PORT || '5000', 10);
   console.log('----------------------------------------');
   console.log(`[Server] Starting on port ${port}`);
@@ -228,7 +227,6 @@ async function startServer() {
 
 startServer().catch(console.error);
 
-// Handle graceful shutdown
 process.on('SIGTERM', async () => {
   console.log('SIGTERM received, shutting down...');
   await shutdownCache();

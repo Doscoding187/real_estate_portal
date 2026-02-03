@@ -2,7 +2,7 @@ import { lazy, Suspense } from 'react';
 import { Toaster } from '@/components/ui/sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import NotFound from '@/pages/NotFound';
-import { Route, Switch } from 'wouter';
+import { Route, Switch, Redirect } from 'wouter';
 import ErrorBoundary from './components/ErrorBoundary';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { BrandingProvider } from './contexts/BrandingContext';
@@ -63,6 +63,8 @@ const ExploreFeed = lazy(() => import('./pages/ExploreFeed'));
 const ExploreHome = lazy(() => import('./pages/ExploreHome'));
 const ExploreShorts = lazy(() => import('./pages/ExploreShorts'));
 const ExploreUpload = lazy(() => import('./pages/ExploreUpload'));
+const ExploreDiscovery = lazy(() => import('./pages/ExploreDiscovery'));
+const ExploreMap = lazy(() => import('./pages/ExploreMap'));
 const PartnerProfile = lazy(() => import('./pages/PartnerProfile'));
 const AgencyOnboarding = lazy(() => import('./pages/AgencyOnboarding'));
 const OnboardingSuccess = lazy(() => import('./pages/OnboardingSuccess'));
@@ -276,7 +278,18 @@ function Router() {
           <Route path="/explore/upload" component={ExploreUpload} />
           <Route path="/explore/component-demo" component={ExploreComponentDemo} />
           <Route path="/map-preview-demo" component={MapPreviewDemo} />
-          <Route path="/explore" component={ExploreFeed} />
+
+          {/* New Explore Pages */}
+          <Route path="/explore/discovery" component={ExploreDiscovery} />
+          <Route path="/explore/map" component={ExploreMap} />
+
+          {/* Legacy Feed */}
+          <Route path="/explore/feed" component={ExploreFeed} />
+
+          {/* Explore Entry Rule (MUST be after the specific routes) */}
+          <Route path="/explore">
+            <Redirect to="/explore/home" />
+          </Route>
 
           {/* Partner Profile */}
           <Route path="/partner/:partnerId" component={PartnerProfile} />
@@ -563,7 +576,7 @@ function App() {
       <BrandingProvider>
         <ThemeProvider
           defaultTheme="light"
-          // switchable
+        // switchable
         >
           <GuestActivityProvider>
             <ComparisonProvider>

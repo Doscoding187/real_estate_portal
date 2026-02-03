@@ -1,12 +1,12 @@
 /**
- * Boost Campaign Service
- * Manages paid promotion campaigns for Explore content
- * Requirements: 9.1, 9.2, 9.4, 9.5
+ * Boost Campaign Service (STUBBED)
+ *
+ * Disabled: References exploreBoostCampaigns and exploreEngagements which are not exported from schema.
+ * All methods return stub values until tables are properly added via migration.
  */
 
-import { db } from '../db';
-import { exploreBoostCampaigns, exploreContent, exploreEngagements } from '../../drizzle/schema';
-import { eq, and, gte, lte, sql } from 'drizzle-orm';
+// import { db } from '../db';
+// import { exploreBoostCampaigns, exploreContent, exploreEngagements } from '../../drizzle/schema';
 
 export interface BoostConfig {
   duration: number; // days
@@ -56,8 +56,7 @@ export interface BoostAnalytics {
 
 export class BoostCampaignService {
   /**
-   * Create a new boost campaign
-   * Requirement 9.1: Display boost options including duration, budget, and target audience
+   * Create a new boost campaign - STUBBED
    */
   async createBoostCampaign(
     creatorId: number,
@@ -65,286 +64,93 @@ export class BoostCampaignService {
     campaignName: string,
     config: BoostConfig,
   ): Promise<BoostCampaign> {
-    // Verify content exists and belongs to creator
-    const content = await db.query.exploreContent.findFirst({
-      where: and(eq(exploreContent.id, contentId), eq(exploreContent.creatorId, creatorId)),
-    });
-
-    if (!content) {
-      throw new Error('Content not found or does not belong to creator');
-    }
-
-    // Calculate end date
-    const startDate = new Date();
-    const endDate = new Date();
-    endDate.setDate(endDate.getDate() + config.duration);
-
-    // Create campaign
-    const [result] = await db.insert(exploreBoostCampaigns).values({
-      creatorId,
-      contentId,
-      campaignName,
-      budget: config.budget,
-      spent: 0,
-      durationDays: config.duration,
-      startDate,
-      endDate,
-      targetAudience: config.targetAudience,
-      status: 'active',
-      impressions: 0,
-      clicks: 0,
-      conversions: 0,
-      costPerClick: 0,
-    });
-
-    const campaign = await db.query.exploreBoostCampaigns.findFirst({
-      where: eq(exploreBoostCampaigns.id, result.insertId),
-    });
-
-    if (!campaign) throw new Error('Failed to create campaign');
-
-    return campaign as BoostCampaign;
+    console.debug(
+      '[BoostCampaignService] createBoostCampaign called but disabled (no exploreBoostCampaigns table)',
+    );
+    throw new Error('Boost campaigns temporarily disabled');
   }
 
   /**
-   * Get boost campaign analytics
-   * Requirement 9.4: Provide real-time analytics on impressions, engagement, and cost per interaction
+   * Get boost campaign analytics - STUBBED
    */
   async getBoostAnalytics(campaignId: number): Promise<BoostAnalytics> {
-    const campaign = await db.query.exploreBoostCampaigns.findFirst({
-      where: eq(exploreBoostCampaigns.id, campaignId),
-    });
-
-    if (!campaign) {
-      throw new Error('Campaign not found');
-    }
-
-    // Calculate metrics
-    const costPerClick = campaign.clicks > 0 ? campaign.spent / campaign.clicks : 0;
-    const costPerImpression = campaign.impressions > 0 ? campaign.spent / campaign.impressions : 0;
-    const clickThroughRate =
-      campaign.impressions > 0 ? (campaign.clicks / campaign.impressions) * 100 : 0;
-    const conversionRate = campaign.clicks > 0 ? (campaign.conversions / campaign.clicks) * 100 : 0;
-    const remainingBudget = campaign.budget - campaign.spent;
-
-    // Calculate days remaining
-    const now = new Date();
-    const endDate = new Date(campaign.endDate);
-    const daysRemaining = Math.max(
-      0,
-      Math.ceil((endDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)),
+    console.debug(
+      '[BoostCampaignService] getBoostAnalytics called but disabled (no exploreBoostCampaigns table)',
     );
-
     return {
-      campaignId: campaign.id,
-      impressions: campaign.impressions,
-      clicks: campaign.clicks,
-      conversions: campaign.conversions,
-      spent: campaign.spent,
-      budget: campaign.budget,
-      costPerClick,
-      costPerImpression,
-      clickThroughRate,
-      conversionRate,
-      remainingBudget,
-      daysRemaining,
-      status: campaign.status,
+      campaignId,
+      impressions: 0,
+      clicks: 0,
+      conversions: 0,
+      spent: 0,
+      budget: 0,
+      costPerClick: 0,
+      costPerImpression: 0,
+      clickThroughRate: 0,
+      conversionRate: 0,
+      remainingBudget: 0,
+      daysRemaining: 0,
+      status: 'disabled',
     };
   }
 
   /**
-   * Deactivate a boost campaign
+   * Deactivate a boost campaign - STUBBED
    */
   async deactivateBoost(campaignId: number, creatorId: number): Promise<void> {
-    const campaign = await db.query.exploreBoostCampaigns.findFirst({
-      where: and(
-        eq(exploreBoostCampaigns.id, campaignId),
-        eq(exploreBoostCampaigns.creatorId, creatorId),
-      ),
-    });
-
-    if (!campaign) {
-      throw new Error('Campaign not found or does not belong to creator');
-    }
-
-    await db
-      .update(exploreBoostCampaigns)
-      .set({
-        status: 'paused',
-        updatedAt: new Date(),
-      })
-      .where(eq(exploreBoostCampaigns.id, campaignId));
+    console.debug('[BoostCampaignService] deactivateBoost called but disabled');
   }
 
   /**
-   * Reactivate a paused boost campaign
+   * Reactivate a paused boost campaign - STUBBED
    */
   async reactivateBoost(campaignId: number, creatorId: number): Promise<void> {
-    const campaign = await db.query.exploreBoostCampaigns.findFirst({
-      where: and(
-        eq(exploreBoostCampaigns.id, campaignId),
-        eq(exploreBoostCampaigns.creatorId, creatorId),
-      ),
-    });
-
-    if (!campaign) {
-      throw new Error('Campaign not found or does not belong to creator');
-    }
-
-    // Check if budget is depleted
-    if (campaign.spent >= campaign.budget) {
-      throw new Error('Cannot reactivate campaign: budget depleted');
-    }
-
-    // Check if campaign has expired
-    const now = new Date();
-    const endDate = new Date(campaign.endDate);
-    if (now > endDate) {
-      throw new Error('Cannot reactivate campaign: campaign has expired');
-    }
-
-    await db
-      .update(exploreBoostCampaigns)
-      .set({
-        status: 'active',
-        updatedAt: new Date(),
-      })
-      .where(eq(exploreBoostCampaigns.id, campaignId));
+    console.debug('[BoostCampaignService] reactivateBoost called but disabled');
   }
 
   /**
-   * Get all campaigns for a creator
+   * Get all campaigns for a creator - STUBBED
    */
   async getCreatorCampaigns(creatorId: number): Promise<BoostCampaign[]> {
-    const campaigns = await db.query.exploreBoostCampaigns.findMany({
-      where: eq(exploreBoostCampaigns.creatorId, creatorId),
-      orderBy: (campaigns, { desc }) => [desc(campaigns.createdAt)],
-    });
-
-    return campaigns as BoostCampaign[];
+    console.debug('[BoostCampaignService] getCreatorCampaigns called but disabled');
+    return [];
   }
 
   /**
-   * Get active campaigns for content injection
-   * Requirement 9.2: Increase content's appearance frequency in relevant user feeds
+   * Get active campaigns for content injection - STUBBED
    */
   async getActiveCampaigns(): Promise<BoostCampaign[]> {
-    const now = new Date();
-
-    const campaigns = await db.query.exploreBoostCampaigns.findMany({
-      where: and(
-        eq(exploreBoostCampaigns.status, 'active'),
-        lte(exploreBoostCampaigns.startDate, now),
-        gte(exploreBoostCampaigns.endDate, now),
-        sql`${exploreBoostCampaigns.spent} < ${exploreBoostCampaigns.budget}`,
-      ),
-    });
-
-    return campaigns as BoostCampaign[];
+    console.debug('[BoostCampaignService] getActiveCampaigns called but disabled');
+    return [];
   }
 
   /**
-   * Record impression for a boosted content
-   * Updates campaign metrics and checks budget
-   * Requirement 9.5: Auto-stop when budget depleted
+   * Record impression for a boosted content - STUBBED
    */
   async recordImpression(campaignId: number, cost: number = 0.01): Promise<void> {
-    const campaign = await db.query.exploreBoostCampaigns.findFirst({
-      where: eq(exploreBoostCampaigns.id, campaignId),
-    });
-
-    if (!campaign) {
-      return;
-    }
-
-    const newSpent = campaign.spent + cost;
-    const newImpressions = campaign.impressions + 1;
-
-    // Check if budget will be depleted
-    const shouldPause = newSpent >= campaign.budget;
-
-    await db
-      .update(exploreBoostCampaigns)
-      .set({
-        impressions: newImpressions,
-        spent: newSpent,
-        status: shouldPause ? 'completed' : campaign.status,
-        updatedAt: new Date(),
-      })
-      .where(eq(exploreBoostCampaigns.id, campaignId));
-
-    // TODO: Send notification to creator if budget depleted
-    if (shouldPause) {
-      console.log(`Campaign ${campaignId} budget depleted. Pausing campaign.`);
-    }
+    // No-op
   }
 
   /**
-   * Record click for a boosted content
+   * Record click for a boosted content - STUBBED
    */
   async recordClick(campaignId: number, cost: number = 0.1): Promise<void> {
-    const campaign = await db.query.exploreBoostCampaigns.findFirst({
-      where: eq(exploreBoostCampaigns.id, campaignId),
-    });
-
-    if (!campaign) {
-      return;
-    }
-
-    const newSpent = campaign.spent + cost;
-    const newClicks = campaign.clicks + 1;
-    const newCostPerClick = newSpent / newClicks;
-
-    // Check if budget will be depleted
-    const shouldPause = newSpent >= campaign.budget;
-
-    await db
-      .update(exploreBoostCampaigns)
-      .set({
-        clicks: newClicks,
-        spent: newSpent,
-        costPerClick: newCostPerClick,
-        status: shouldPause ? 'completed' : campaign.status,
-        updatedAt: new Date(),
-      })
-      .where(eq(exploreBoostCampaigns.id, campaignId));
-
-    if (shouldPause) {
-      console.log(`Campaign ${campaignId} budget depleted. Pausing campaign.`);
-    }
+    // No-op
   }
 
   /**
-   * Record conversion for a boosted content
+   * Record conversion for a boosted content - STUBBED
    */
   async recordConversion(campaignId: number): Promise<void> {
-    await db
-      .update(exploreBoostCampaigns)
-      .set({
-        conversions: sql`${exploreBoostCampaigns.conversions} + 1`,
-        updatedAt: new Date(),
-      })
-      .where(eq(exploreBoostCampaigns.id, campaignId));
+    // No-op
   }
 
   /**
-   * Check and update expired campaigns
-   * Should be run periodically (e.g., via cron job)
+   * Check and update expired campaigns - STUBBED
    */
   async updateExpiredCampaigns(): Promise<number> {
-    const now = new Date();
-
-    const result = await db
-      .update(exploreBoostCampaigns)
-      .set({
-        status: 'completed',
-        updatedAt: now,
-      })
-      .where(
-        and(eq(exploreBoostCampaigns.status, 'active'), lte(exploreBoostCampaigns.endDate, now)),
-      );
-
-    return result.rowsAffected || 0;
+    console.debug('[BoostCampaignService] updateExpiredCampaigns called but disabled');
+    return 0;
   }
 }
 

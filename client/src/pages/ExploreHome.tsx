@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { useLocation } from 'wouter';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Play, Grid3x3, SlidersHorizontal, MapPin } from 'lucide-react';
 import { DiscoveryCardFeed } from '@/components/explore-discovery/DiscoveryCardFeed';
@@ -28,8 +29,8 @@ import {
 export default function ExploreHome() {
   // Use common state hook for shared logic
   const {
-    viewMode,
-    setViewMode,
+    // viewMode,
+    // setViewMode,
     selectedCategoryId,
     setSelectedCategoryId,
     showFilters,
@@ -75,6 +76,9 @@ export default function ExploreHome() {
     }
   }, []);
 
+  // Navigation
+  const [location, setLocation] = useLocation();
+
   const handleItemClick = (item: DiscoveryItem) => {
     console.log('Item clicked:', item);
 
@@ -88,7 +92,7 @@ export default function ExploreHome() {
       // Navigate to property detail
     } else if (item.type === 'video') {
       // Open video feed at this video
-      setViewMode('videos');
+      setLocation('/explore/discovery');
     } else if (item.type === 'neighbourhood') {
       // Navigate to neighbourhood detail
     }
@@ -97,7 +101,7 @@ export default function ExploreHome() {
   const handleSeeAll = (sectionType: string) => {
     console.log('See all:', sectionType);
     // Navigate to full view of section
-    setViewMode('cards');
+    setLocation('/explore/map');
   };
 
   // Handle trending video click - switch to videos view
@@ -107,7 +111,7 @@ export default function ExploreHome() {
     // Increment scroll count for topic tooltip
     topicTooltip.incrementScrollCount();
 
-    setViewMode('videos');
+    setLocation('/explore/discovery');
   };
 
   // Handle "See All" for trending videos - switch to videos view
@@ -115,7 +119,7 @@ export default function ExploreHome() {
     // Increment scroll count for topic tooltip
     topicTooltip.incrementScrollCount();
 
-    setViewMode('videos');
+    setLocation('/explore/discovery');
   };
 
   // Handle topic selection from welcome overlay
@@ -177,23 +181,23 @@ export default function ExploreHome() {
               aria-label="View mode selection"
             >
               <motion.button
-                onClick={() => setViewMode('home')}
+                onClick={() => setLocation('/explore/home')}
                 className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all"
                 style={{
                   backgroundColor:
-                    viewMode === 'home' ? designTokens.colors.bg.primary : 'transparent',
+                    location === '/explore/home' ? designTokens.colors.bg.primary : 'transparent',
                   color:
-                    viewMode === 'home'
+                    location === '/explore/home'
                       ? designTokens.colors.text.primary
                       : designTokens.colors.text.secondary,
-                  boxShadow: viewMode === 'home' ? designTokens.shadows.sm : 'none',
+                  boxShadow: location === '/explore/home' ? designTokens.shadows.sm : 'none',
                   fontWeight: designTokens.typography.fontWeight.medium,
                 }}
                 variants={buttonVariants}
                 whileHover="hover"
                 whileTap="tap"
                 role="tab"
-                aria-selected={viewMode === 'home'}
+                aria-selected={location === '/explore/home'}
                 aria-controls="explore-content"
                 aria-label="Home view"
               >
@@ -201,47 +205,47 @@ export default function ExploreHome() {
                 <span className="hidden sm:inline">Home</span>
               </motion.button>
               <motion.button
-                onClick={() => setViewMode('cards')}
+                onClick={() => setLocation('/explore/map')}
                 className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all"
                 style={{
                   backgroundColor:
-                    viewMode === 'cards' ? designTokens.colors.bg.primary : 'transparent',
+                    location === '/explore/map' ? designTokens.colors.bg.primary : 'transparent',
                   color:
-                    viewMode === 'cards'
+                    location === '/explore/map'
                       ? designTokens.colors.text.primary
                       : designTokens.colors.text.secondary,
-                  boxShadow: viewMode === 'cards' ? designTokens.shadows.sm : 'none',
+                  boxShadow: location === '/explore/map' ? designTokens.shadows.sm : 'none',
                   fontWeight: designTokens.typography.fontWeight.medium,
                 }}
                 variants={buttonVariants}
                 whileHover="hover"
                 whileTap="tap"
                 role="tab"
-                aria-selected={viewMode === 'cards'}
+                aria-selected={location === '/explore/map'}
                 aria-controls="explore-content"
                 aria-label="Cards view"
               >
                 <Grid3x3 className="w-4 h-4" aria-hidden="true" />
-                <span className="hidden sm:inline">Cards</span>
+                <span className="hidden sm:inline">Map</span>
               </motion.button>
               <motion.button
-                onClick={() => setViewMode('videos')}
+                onClick={() => setLocation('/explore/discovery')}
                 className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all"
                 style={{
                   backgroundColor:
-                    viewMode === 'videos' ? designTokens.colors.bg.primary : 'transparent',
+                    location === '/explore/discovery' ? designTokens.colors.bg.primary : 'transparent',
                   color:
-                    viewMode === 'videos'
+                    location === '/explore/discovery'
                       ? designTokens.colors.text.primary
                       : designTokens.colors.text.secondary,
-                  boxShadow: viewMode === 'videos' ? designTokens.shadows.sm : 'none',
+                  boxShadow: location === '/explore/discovery' ? designTokens.shadows.sm : 'none',
                   fontWeight: designTokens.typography.fontWeight.medium,
                 }}
                 variants={buttonVariants}
                 whileHover="hover"
                 whileTap="tap"
                 role="tab"
-                aria-selected={viewMode === 'videos'}
+                aria-selected={location === '/explore/discovery'}
                 aria-controls="explore-content"
                 aria-label="Videos view"
               >
@@ -273,156 +277,128 @@ export default function ExploreHome() {
       </motion.header>
 
       {/* Content - Smooth transitions between view modes */}
+      {/* Content */}
       <main
         className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"
         id="explore-content"
         role="main"
         aria-label="Explore content"
       >
-        <AnimatePresence mode="wait">
-          {viewMode === 'home' ? (
-            <motion.div
-              key="home-view"
-              className="py-6 space-y-8"
-              initial="initial"
-              animate="animate"
-              exit="exit"
-              variants={getVariants(pageVariants)}
-            >
-              {/* Trending Videos Section - First content after header */}
-              <TrendingVideosSection
-                categoryId={selectedCategoryId ?? undefined}
-                onVideoClick={handleTrendingVideoClick}
-                onSeeAll={handleTrendingVideosSeeAll}
-              />
+        <motion.div
+          key="home-view"
+          className="py-6 space-y-8"
+          initial="initial"
+          animate="animate"
+          exit="exit"
+          variants={getVariants(pageVariants)}
+        >
+          {/* Trending Videos Section - First content after header */}
+          <TrendingVideosSection
+            categoryId={selectedCategoryId ?? undefined}
+            onVideoClick={handleTrendingVideoClick}
+            onSeeAll={handleTrendingVideosSeeAll}
+          />
 
-              {/* Personalized Content Sections with stagger animation */}
-              {sectionsLoading ? (
-                <motion.div variants={staggerContainerVariants} initial="initial" animate="animate">
-                  <motion.div variants={staggerItemVariants}>
-                    <PersonalizedContentBlock
-                      title="Loading..."
-                      items={[]}
-                      onItemClick={handleItemClick}
-                      isLoading={true}
-                    />
-                  </motion.div>
-                  <motion.div variants={staggerItemVariants}>
-                    <PersonalizedContentBlock
-                      title="Loading..."
-                      items={[]}
-                      onItemClick={handleItemClick}
-                      isLoading={true}
-                    />
-                  </motion.div>
-                </motion.div>
-              ) : (
-                <motion.div variants={staggerContainerVariants} initial="initial" animate="animate">
-                  {sections.map(section => (
-                    <motion.div
-                      key={section.id}
-                      ref={section.type === 'partner' ? partnerContentRef : undefined}
-                      variants={staggerItemVariants}
-                      style={{ marginBottom: designTokens.spacing.xl }}
-                    >
-                      <PersonalizedContentBlock
-                        title={section.title}
-                        subtitle={section.subtitle}
-                        items={section.items}
-                        onItemClick={handleItemClick}
-                        onSeeAll={() => handleSeeAll(section.type)}
-                      />
-                    </motion.div>
-                  ))}
-                </motion.div>
-              )}
-
-              {/* Empty state - Modern design */}
-              {!sectionsLoading && sections.length === 0 && (
-                <motion.div
-                  className="text-center py-16 px-4"
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ duration: 0.3 }}
-                >
-                  <motion.div
-                    initial={{ y: 20, opacity: 0 }}
-                    animate={{ y: 0, opacity: 1 }}
-                    transition={{ delay: 0.1 }}
-                  >
-                    <MapPin
-                      className="w-20 h-20 mx-auto mb-6"
-                      style={{ color: designTokens.colors.text.tertiary }}
-                    />
-                  </motion.div>
-                  <motion.h3
-                    className="text-2xl font-semibold mb-3"
-                    style={{
-                      color: designTokens.colors.text.primary,
-                      fontWeight: designTokens.typography.fontWeight.semibold,
-                    }}
-                    initial={{ y: 20, opacity: 0 }}
-                    animate={{ y: 0, opacity: 1 }}
-                    transition={{ delay: 0.2 }}
-                  >
-                    Start Exploring
-                  </motion.h3>
-                  <motion.p
-                    className="text-lg mb-8 max-w-md mx-auto"
-                    style={{ color: designTokens.colors.text.secondary }}
-                    initial={{ y: 20, opacity: 0 }}
-                    animate={{ y: 0, opacity: 1 }}
-                    transition={{ delay: 0.3 }}
-                  >
-                    Discover properties tailored to your preferences
-                  </motion.p>
-                  <motion.button
-                    onClick={() => setViewMode('cards')}
-                    className="px-8 py-3 rounded-xl text-white font-medium"
-                    style={{
-                      background: designTokens.colors.accent.gradient,
-                      boxShadow: designTokens.shadows.accent,
-                      fontWeight: designTokens.typography.fontWeight.medium,
-                    }}
-                    variants={buttonVariants}
-                    whileHover="hover"
-                    whileTap="tap"
-                    initial={{ y: 20, opacity: 0 }}
-                    animate={{ y: 0, opacity: 1 }}
-                    transition={{ delay: 0.4 }}
-                  >
-                    Browse All Properties
-                  </motion.button>
-                </motion.div>
-              )}
-            </motion.div>
-          ) : viewMode === 'cards' ? (
-            <motion.div
-              key="cards-view"
-              className="py-6"
-              initial="initial"
-              animate="animate"
-              exit="exit"
-              variants={getVariants(pageVariants)}
-            >
-              <DiscoveryCardFeed
-                categoryId={selectedCategoryId ?? undefined}
-                filters={filters}
-                onItemClick={handleItemClick}
-              />
+          {/* Personalized Content Sections with stagger animation */}
+          {sectionsLoading ? (
+            <motion.div variants={staggerContainerVariants} initial="initial" animate="animate">
+              <motion.div variants={staggerItemVariants}>
+                <PersonalizedContentBlock
+                  title="Loading..."
+                  items={[]}
+                  onItemClick={handleItemClick}
+                  isLoading={true}
+                />
+              </motion.div>
+              <motion.div variants={staggerItemVariants}>
+                <PersonalizedContentBlock
+                  title="Loading..."
+                  items={[]}
+                  onItemClick={handleItemClick}
+                  isLoading={true}
+                />
+              </motion.div>
             </motion.div>
           ) : (
-            <motion.div
-              key="videos-view"
-              initial="initial"
-              animate="animate"
-              exit="exit"
-              variants={getVariants(pageVariants)}
-            >
-              <ExploreVideoFeed categoryId={selectedCategoryId ?? undefined} />
+            <motion.div variants={staggerContainerVariants} initial="initial" animate="animate">
+              {sections.map(section => (
+                <motion.div
+                  key={section.id}
+                  ref={section.type === 'partner' ? partnerContentRef : undefined}
+                  variants={staggerItemVariants}
+                  style={{ marginBottom: designTokens.spacing.xl }}
+                >
+                  <PersonalizedContentBlock
+                    title={section.title}
+                    subtitle={section.subtitle}
+                    items={section.items}
+                    onItemClick={handleItemClick}
+                    onSeeAll={() => handleSeeAll(section.type)}
+                  />
+                </motion.div>
+              ))}
             </motion.div>
           )}
-        </AnimatePresence>
+
+          {/* Empty state - Modern design */}
+          {!sectionsLoading && sections.length === 0 && (
+            <motion.div
+              className="text-center py-16 px-4"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.3 }}
+            >
+              <motion.div
+                initial={{ y: 20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.1 }}
+              >
+                <MapPin
+                  className="w-20 h-20 mx-auto mb-6"
+                  style={{ color: designTokens.colors.text.tertiary }}
+                />
+              </motion.div>
+              <motion.h3
+                className="text-2xl font-semibold mb-3"
+                style={{
+                  color: designTokens.colors.text.primary,
+                  fontWeight: designTokens.typography.fontWeight.semibold,
+                }}
+                initial={{ y: 20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.2 }}
+              >
+                Start Exploring
+              </motion.h3>
+              <motion.p
+                className="text-lg mb-8 max-w-md mx-auto"
+                style={{ color: designTokens.colors.text.secondary }}
+                initial={{ y: 20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.3 }}
+              >
+                Discover properties tailored to your preferences
+              </motion.p>
+              <motion.button
+                onClick={() => setLocation('/explore/map')}
+                className="px-8 py-3 rounded-xl text-white font-medium"
+                style={{
+                  background: designTokens.colors.accent.gradient,
+                  boxShadow: designTokens.shadows.accent,
+                  fontWeight: designTokens.typography.fontWeight.medium,
+                }}
+                variants={buttonVariants}
+                whileHover="hover"
+                whileTap="tap"
+                initial={{ y: 20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.4 }}
+              >
+                Browse All Properties
+              </motion.button>
+            </motion.div>
+          )}
+        </motion.div>
       </main>
 
       {/* Filter button (floating) - Modern design with accent gradient */}

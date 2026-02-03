@@ -1,18 +1,18 @@
 /**
  * Explore Analytics Service
  * Aggregates engagement metrics and generates creator analytics
- * Requirements: 2.3, 8.6, 14.1
+ * Works with MySQL/TiDB using Drizzle ORM
  */
 
 import { db } from '../db';
 import {
-  exploreEngagements,
   exploreDiscoveryVideos,
   exploreContent,
+  exploreEngagements,
   exploreFeedSessions,
   exploreSavedProperties,
 } from '../../drizzle/schema';
-import { eq, and, gte, lte, sql, desc, count, SQL } from 'drizzle-orm';
+import { eq, and, gte, lte, sql } from 'drizzle-orm';
 
 interface VideoAnalytics {
   videoId: number;
@@ -43,7 +43,7 @@ interface CreatorAnalytics {
   engagementRate: number;
   topPerformingVideos: Array<{
     contentId: number;
-    title: string;
+    title: string | null;
     views: number;
     completionRate: number;
     engagementScore: number;
@@ -63,18 +63,6 @@ interface SessionAnalytics {
   engagementRate: number;
 }
 
-interface AggregatedMetrics {
-  period: 'day' | 'week' | 'month' | 'all';
-  totalViews: number;
-  totalUniqueViewers: number;
-  totalWatchTime: number;
-  averageSessionDuration: number;
-  totalSessions: number;
-  averageCompletionRate: number;
-  totalEngagements: number;
-  engagementRate: number;
-}
-
 type EngagementRow = {
   engagementType: string;
   watchTime: number | null;
@@ -86,11 +74,6 @@ type EngagementRow = {
 type VideoRow = {
   id: number;
   title: string | null;
-  videoId: number;
-};
-
-type CreatorContentRow = {
-  id: number;
 };
 
 type SessionRow = {
@@ -100,79 +83,48 @@ type SessionRow = {
 };
 
 export class ExploreAnalyticsService {
-  /**
-   * Get video analytics for a specific video
-   * Requirement 8.6: Provide analytics on views, watch time, saves, and click-throughs
-   */
+  /** Get analytics for a specific video */
   async getVideoAnalytics(
     videoId: number,
     startDate?: Date,
     endDate?: Date,
   ): Promise<VideoAnalytics> {
-    // Get video content ID
+    // Get contentId for this video
     const video = await db
       .select({ contentId: exploreDiscoveryVideos.exploreContentId })
       .from(exploreDiscoveryVideos)
       .where(eq(exploreDiscoveryVideos.id, videoId))
       .limit(1);
 
-    if (!video[0]) {
-      throw new Error('Video not found');
-    }
-
+    if (!video[0]) throw new Error('Video not found');
     const contentId = video[0].contentId;
 
     // Build date filter
-    const dateFilter: SQL[] = [];
-    if (startDate) {
-      dateFilter.push(gte(exploreEngagements.createdAt, startDate.toISOString()));
-    }
-    if (endDate) {
-      dateFilter.push(lte(exploreEngagements.createdAt, endDate.toISOString()));
-    }
+    const filters: any[] = [eq(exploreEngagements.contentId, contentId)];
+    if (startDate) filters.push(gte(exploreEngagements.createdAt, startDate));
+    if (endDate) filters.push(lte(exploreEngagements.createdAt, endDate));
 
-    // Get all engagements for this video
+    // Fetch engagements
     const engagements = (await db
-      .select({
-        engagementType: exploreEngagements.engagementType,
-        watchTime: exploreEngagements.watchTime,
-        completed: exploreEngagements.completed,
-        userId: exploreEngagements.userId,
-        contentId: exploreEngagements.contentId,
-      })
+      .select()
       .from(exploreEngagements)
-      .where(
-        and(
-          eq(exploreEngagements.contentId, contentId),
-          ...(dateFilter.length > 0 ? dateFilter : []),
-        ),
-      )) as EngagementRow[];
+      .where(and(...filters))) as EngagementRow[];
 
-    // Calculate metrics
-    const views = engagements.filter((e: EngagementRow) => e.engagementType === 'view').length;
+    // Metrics
+    const views = engagements.filter(e => e.engagementType === 'view').length;
     const uniqueViewers = new Set(
-      engagements
-        .filter((e: EngagementRow) => e.engagementType === 'view')
-        .map((e: EngagementRow) => e.userId),
+      engagements.filter(e => e.engagementType === 'view').map(e => e.userId),
     ).size;
-    const completions = engagements.filter((e: EngagementRow) => e.completed).length;
-    const saves = engagements.filter((e: EngagementRow) => e.engagementType === 'save').length;
-    const shares = engagements.filter((e: EngagementRow) => e.engagementType === 'share').length;
-    const clicks = engagements.filter((e: EngagementRow) => e.engagementType === 'click').length;
-    const skips = engagements.filter((e: EngagementRow) => e.engagementType === 'skip').length;
+    const completions = engagements.filter(e => e.completed).length;
+    const saves = engagements.filter(e => e.engagementType === 'save').length;
+    const shares = engagements.filter(e => e.engagementType === 'share').length;
+    const clicks = engagements.filter(e => e.engagementType === 'click').length;
+    const skips = engagements.filter(e => e.engagementType === 'skip').length;
 
-    const totalWatchTime = engagements.reduce(
-      (sum: number, e: EngagementRow) => sum + (e.watchTime || 0),
-      0,
-    );
-    const averageWatchTime = views > 0 ? totalWatchTime / views : 0;
-    const completionRate = views > 0 ? (completions / views) * 100 : 0;
-
-    // Calculate engagement rate (saves + shares + clicks) / views
-    const totalEngagements = saves + shares + clicks;
-    const engagementRate = views > 0 ? (totalEngagements / views) * 100 : 0;
-
-    // Calculate average engagement score
+    const totalWatchTime = engagements.reduce((sum, e) => sum + (e.watchTime || 0), 0);
+    const averageWatchTime = views ? totalWatchTime / views : 0;
+    const completionRate = views ? (completions / views) * 100 : 0;
+    const engagementRate = views ? ((saves + shares + clicks) / views) * 100 : 0;
     const averageEngagementScore = this.calculateEngagementScore({
       views,
       completions,
@@ -200,32 +152,32 @@ export class ExploreAnalyticsService {
     };
   }
 
-  /**
-   * Get creator analytics across all their videos
-   * Requirement 8.6: Generate creator analytics
-   */
+  /** Get analytics for a creator across all videos */
   async getCreatorAnalytics(
     creatorId: number,
     startDate?: Date,
     endDate?: Date,
   ): Promise<CreatorAnalytics> {
-    // Get all creator's videos
+    // All creator's videos
     const videos = (await db
       .select({
         id: exploreContent.id,
         title: exploreContent.title,
-        videoId: exploreDiscoveryVideos.id,
+        discoveryVideoId: exploreDiscoveryVideos.id,
       })
       .from(exploreContent)
-      .innerJoin(
+      .leftJoin(
         exploreDiscoveryVideos,
-        eq(exploreContent.id, exploreDiscoveryVideos.exploreContentId),
+        eq(exploreDiscoveryVideos.exploreContentId, exploreContent.id),
       )
-      .where(eq(exploreContent.creatorId, creatorId))) as VideoRow[];
+      .where(eq(exploreContent.creatorId, creatorId))) as {
+      id: number;
+      title: string | null;
+      discoveryVideoId: number | null;
+    }[];
 
     const totalVideos = videos.length;
-
-    if (totalVideos === 0) {
+    if (!totalVideos)
       return {
         creatorId,
         totalVideos: 0,
@@ -238,30 +190,33 @@ export class ExploreAnalyticsService {
         engagementRate: 0,
         topPerformingVideos: [],
       };
-    }
 
-    // Get analytics for each video
+    // Filter out videos that might not have a discovery video linked (if that's possible)
+    // or just process those that do.
+    const validVideos = videos.filter(v => v.discoveryVideoId !== null);
+
+    // Analytics for each video
     const videoAnalytics = await Promise.all(
-      videos.map((v: VideoRow) => this.getVideoAnalytics(v.videoId, startDate, endDate)),
+      validVideos.map(v => this.getVideoAnalytics(v.discoveryVideoId!, startDate, endDate)),
     );
 
-    // Aggregate metrics
     const totalViews = videoAnalytics.reduce((sum, v) => sum + v.totalViews, 0);
     const totalWatchTime = videoAnalytics.reduce((sum, v) => sum + v.totalWatchTime, 0);
     const averageCompletionRate =
-      videoAnalytics.reduce((sum, v) => sum + v.completionRate, 0) / totalVideos;
+      validVideos.length > 0
+        ? videoAnalytics.reduce((sum, v) => sum + v.completionRate, 0) / validVideos.length
+        : 0;
     const totalSaves = videoAnalytics.reduce((sum, v) => sum + v.saves, 0);
     const totalShares = videoAnalytics.reduce((sum, v) => sum + v.shares, 0);
     const totalClicks = videoAnalytics.reduce((sum, v) => sum + v.clicks, 0);
+    const engagementRate = totalViews
+      ? ((totalSaves + totalShares + totalClicks) / totalViews) * 100
+      : 0;
 
-    const totalEngagements = totalSaves + totalShares + totalClicks;
-    const engagementRate = totalViews > 0 ? (totalEngagements / totalViews) * 100 : 0;
-
-    // Get top performing videos
     const topPerformingVideos = videoAnalytics
-      .map((v, index) => ({
+      .map((v, i) => ({
         contentId: v.contentId,
-        title: videos[index].title,
+        title: validVideos[i].title,
         views: v.totalViews,
         completionRate: v.completionRate,
         engagementScore: v.averageEngagementScore,
@@ -283,57 +238,40 @@ export class ExploreAnalyticsService {
     };
   }
 
-  /**
-   * Get session analytics
-   * Requirement 2.6: Track session duration and interactions
-   */
+  /** Get session analytics */
   async getSessionAnalytics(sessionId: number): Promise<SessionAnalytics> {
-    // Get session
-    const session = await db
+    const session = (await db
       .select()
       .from(exploreFeedSessions)
       .where(eq(exploreFeedSessions.id, sessionId))
-      .limit(1);
+      .limit(1)) as SessionRow[];
 
-    if (!session[0]) {
-      throw new Error('Session not found');
-    }
+    if (!session[0]) throw new Error('Session not found');
 
-    const sessionRow = session[0] as SessionRow;
-
-    // Get all engagements for this session
     const engagements = (await db
       .select()
       .from(exploreEngagements)
       .where(eq(exploreEngagements.sessionId, sessionId))) as EngagementRow[];
 
-    // Calculate metrics
     const videosViewed = new Set(
-      engagements.filter((e: EngagementRow) => e.engagementType === 'view').map(e => e.contentId),
+      engagements.filter(e => e.engagementType === 'view').map(e => e.contentId),
     ).size;
-    const completions = engagements.filter((e: EngagementRow) => e.completed).length;
-    const saves = engagements.filter((e: EngagementRow) => e.engagementType === 'save').length;
-    const shares = engagements.filter((e: EngagementRow) => e.engagementType === 'share').length;
-    const clicks = engagements.filter((e: EngagementRow) => e.engagementType === 'click').length;
+    const completions = engagements.filter(e => e.completed).length;
+    const saves = engagements.filter(e => e.engagementType === 'save').length;
+    const shares = engagements.filter(e => e.engagementType === 'share').length;
+    const clicks = engagements.filter(e => e.engagementType === 'click').length;
+    const totalWatchTime = engagements.reduce((sum, e) => sum + (e.watchTime || 0), 0);
+    const averageWatchTime = videosViewed ? totalWatchTime / videosViewed : 0;
+    const engagementRate = videosViewed ? ((saves + shares + clicks) / videosViewed) * 100 : 0;
 
-    const totalWatchTime = engagements.reduce(
-      (sum: number, e: EngagementRow) => sum + (e.watchTime || 0),
-      0,
-    );
-    const averageWatchTime = videosViewed > 0 ? totalWatchTime / videosViewed : 0;
-
-    const totalEngagements = saves + shares + clicks;
-    const engagementRate = videosViewed > 0 ? (totalEngagements / videosViewed) * 100 : 0;
-
-    // Calculate session duration
-    const sessionStart = sessionRow.sessionStart ? new Date(sessionRow.sessionStart) : null;
-    const sessionEnd = sessionRow.sessionEnd ? new Date(sessionRow.sessionEnd) : null;
+    const sessionStart = session[0].sessionStart ? new Date(session[0].sessionStart) : null;
+    const sessionEnd = session[0].sessionEnd ? new Date(session[0].sessionEnd) : null;
     const duration =
       sessionStart && sessionEnd ? (sessionEnd.getTime() - sessionStart.getTime()) / 1000 : 0;
 
     return {
       sessionId,
-      userId: sessionRow.userId ?? 0,
+      userId: session[0].userId ?? 0,
       duration,
       videosViewed,
       completions,
@@ -346,146 +284,108 @@ export class ExploreAnalyticsService {
   }
 
   /**
-   * Get aggregated metrics for a period
-   * Requirement 8.6: Display engagement metrics
+   * Batch update engagement scores for all content
+   * Run this as a scheduled job (e.g. cron)
    */
-  async getAggregatedMetrics(
-    period: 'day' | 'week' | 'month' | 'all',
-    creatorId?: number,
-  ): Promise<AggregatedMetrics> {
-    // Calculate date range
-    const now = new Date();
-    let startDate: Date | undefined;
+  async batchUpdateEngagementScores() {
+    console.log('[Analytics] Starting batch engagement score update...');
 
-    switch (period) {
-      case 'day':
-        startDate = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-        break;
-      case 'week':
-        startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-        break;
-      case 'month':
-        startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-        break;
-      case 'all':
-        startDate = undefined;
-        break;
+    // 1. Get all content IDs
+    const contentList = await db.select({ id: exploreContent.id }).from(exploreContent);
+
+    for (const content of contentList) {
+      try {
+        // 2. Fetch all engagements for this content
+        const engagements = await db
+          .select({
+            type: exploreEngagements.engagementType,
+            completed: exploreEngagements.completed,
+          })
+          .from(exploreEngagements)
+          .where(eq(exploreEngagements.contentId, content.id));
+
+        // 3. Calculate metrics
+        const views = engagements.filter(e => e.type === 'view').length;
+        const completions = engagements.filter(e => e.completed).length;
+        const saves = engagements.filter(e => e.type === 'save').length;
+        const shares = engagements.filter(e => e.type === 'share').length;
+        const clicks = engagements.filter(e => e.type === 'click').length;
+        const skips = engagements.filter(e => e.type === 'skip').length;
+
+        // 4. Calculate score
+        const score = this.calculateEngagementScore({
+          views,
+          completions,
+          saves,
+          shares,
+          clicks,
+          skips,
+        });
+
+        // 5. Update content table
+        // Note: score passed as string because decimal mapping in Drizzle often expects string for precision
+        await db
+          .update(exploreContent)
+          .set({ engagementScore: sql`${score.toFixed(2)}` })
+          .where(eq(exploreContent.id, content.id));
+      } catch (err) {
+        console.error(`[Analytics] Failed to update score for content ${content.id}:`, err);
+      }
     }
 
-    // Build query filters
-    const filters: SQL[] = [];
-    if (startDate) {
-      filters.push(gte(exploreEngagements.createdAt, startDate.toISOString()));
-    }
-
-    // If creator specified, filter by creator's content
-    let contentIds: number[] = [];
-    if (creatorId) {
-      const creatorContent = (await db
-        .select({ id: exploreContent.id })
-        .from(exploreContent)
-        .where(eq(exploreContent.creatorId, creatorId))) as CreatorContentRow[];
-      contentIds = creatorContent.map((c: CreatorContentRow) => c.id);
-    }
-
-    // Get engagements
-    let engagementsQuery = db.select().from(exploreEngagements);
-
-    if (filters.length > 0) {
-      engagementsQuery = engagementsQuery.where(and(...filters));
-    }
-
-    const engagements = (await engagementsQuery) as EngagementRow[];
-
-    // Filter by creator if specified
-    const filteredEngagements = creatorId
-      ? engagements.filter((e: EngagementRow) => contentIds.includes(e.contentId))
-      : engagements;
-
-    // Calculate metrics
-    const totalViews = filteredEngagements.filter(
-      (e: EngagementRow) => e.engagementType === 'view',
-    ).length;
-    const totalUniqueViewers = new Set(
-      filteredEngagements
-        .filter((e: EngagementRow) => e.engagementType === 'view')
-        .map((e: EngagementRow) => e.userId),
-    ).size;
-    const totalWatchTime = filteredEngagements.reduce(
-      (sum: number, e: EngagementRow) => sum + (e.watchTime || 0),
-      0,
-    );
-    const completions = filteredEngagements.filter((e: EngagementRow) => e.completed).length;
-    const averageCompletionRate = totalViews > 0 ? (completions / totalViews) * 100 : 0;
-
-    const saves = filteredEngagements.filter(
-      (e: EngagementRow) => e.engagementType === 'save',
-    ).length;
-    const shares = filteredEngagements.filter(
-      (e: EngagementRow) => e.engagementType === 'share',
-    ).length;
-    const clicks = filteredEngagements.filter(
-      (e: EngagementRow) => e.engagementType === 'click',
-    ).length;
-    const totalEngagements = saves + shares + clicks;
-    const engagementRate = totalViews > 0 ? (totalEngagements / totalViews) * 100 : 0;
-
-    // Get session metrics
-    let sessionsQuery = db.select().from(exploreFeedSessions);
-    if (startDate) {
-      // Assuming 'startedAt' is the correct column, using toISOString
-      // If startedAt doesn't exist on the table definition, we need to check schema.
-      // For now, based on line 295 usage, keeping startedAt but fixing Date.
-      sessionsQuery = sessionsQuery.where(
-        gte(exploreFeedSessions.sessionStart, startDate.toISOString()),
-      );
-    }
-    const sessions = await sessionsQuery;
-
-    const totalSessions = sessions.length;
-    const averageSessionDuration =
-      sessions.reduce((sum: number, s: any) => {
-        if (s.sessionEnd && s.sessionStart) {
-          return (
-            sum + (new Date(s.sessionEnd).getTime() - new Date(s.sessionStart).getTime()) / 1000
-          );
-        }
-        return sum;
-      }, 0) / (totalSessions || 1);
-
-    return {
-      period,
-      totalViews,
-      totalUniqueViewers,
-      totalWatchTime,
-      averageSessionDuration,
-      totalSessions,
-      averageCompletionRate,
-      totalEngagements,
-      engagementRate,
-    };
+    console.log('[Analytics] Finished batch engagement score update.');
   }
 
   /**
-   * Update video completion rate in database
-   * Requirement 8.6: Calculate video completion rates
+   * Update video completion rates
+   * Run this as a scheduled job
    */
-  async updateVideoCompletionRate(videoId: number): Promise<void> {
-    const analytics = await this.getVideoAnalytics(videoId);
+  async updateVideoCompletionRate() {
+    console.log('[Analytics] Starting video completion rate update...');
 
-    await db
-      .update(exploreDiscoveryVideos)
-      .set({
-        totalViews: analytics.totalViews,
-        completionRate: analytics.completionRate,
+    const videos = await db
+      .select({
+        id: exploreDiscoveryVideos.id,
+        contentId: exploreDiscoveryVideos.exploreContentId,
       })
-      .where(eq(exploreDiscoveryVideos.id, videoId));
+      .from(exploreDiscoveryVideos);
+
+    for (const video of videos) {
+      try {
+        // Get view stats
+        const engagements = await db
+          .select({
+            completed: exploreEngagements.completed,
+            type: exploreEngagements.engagementType,
+          })
+          .from(exploreEngagements)
+          .where(
+            and(
+              eq(exploreEngagements.contentId, video.contentId),
+              eq(exploreEngagements.engagementType, 'view'),
+            ),
+          );
+
+        const totalViews = engagements.length;
+        const completions = engagements.filter(e => e.completed).length;
+        const rate = totalViews > 0 ? (completions / totalViews) * 100 : 0;
+
+        await db
+          .update(exploreDiscoveryVideos)
+          .set({
+            completionRate: sql`${rate.toFixed(2)}`,
+            totalViews: totalViews,
+          })
+          .where(eq(exploreDiscoveryVideos.id, video.id));
+      } catch (err) {
+        console.error(`[Analytics] Failed to update completion rate for video ${video.id}:`, err);
+      }
+    }
+
+    console.log('[Analytics] Finished video completion rate update.');
   }
 
-  /**
-   * Calculate engagement score
-   * Used for ranking and recommendations
-   */
+  /** Calculate engagement score for ranking */
   private calculateEngagementScore(metrics: {
     views: number;
     completions: number;
@@ -494,55 +394,16 @@ export class ExploreAnalyticsService {
     clicks: number;
     skips: number;
   }): number {
-    if (metrics.views === 0) return 0;
-
-    // Weighted scoring
+    if (!metrics.views) return 0;
     const completionScore = (metrics.completions / metrics.views) * 40;
     const saveScore = (metrics.saves / metrics.views) * 30;
     const shareScore = (metrics.shares / metrics.views) * 20;
     const clickScore = (metrics.clicks / metrics.views) * 10;
     const skipPenalty = (metrics.skips / metrics.views) * -20;
-
     return Math.max(
       0,
       Math.min(100, completionScore + saveScore + shareScore + clickScore + skipPenalty),
     );
-  }
-
-  /**
-   * Batch update engagement scores for all content
-   * Should be run periodically (e.g., hourly)
-   */
-  async batchUpdateEngagementScores(): Promise<void> {
-    // Get all videos
-    const videos = await db.select({ id: exploreDiscoveryVideos.id }).from(exploreDiscoveryVideos);
-
-    // Update each video's completion rate and engagement score
-    for (const video of videos) {
-      try {
-        const analytics = await this.getVideoAnalytics(video.id);
-
-        // Update video table
-        await db
-          .update(exploreDiscoveryVideos)
-          .set({
-            totalViews: analytics.totalViews,
-            completionRate: analytics.completionRate,
-          })
-          .where(eq(exploreDiscoveryVideos.id, video.id));
-
-        // Update content table
-        await db
-          .update(exploreContent)
-          .set({
-            viewCount: analytics.totalViews,
-            engagementScore: analytics.averageEngagementScore,
-          })
-          .where(eq(exploreContent.id, analytics.contentId));
-      } catch (error) {
-        console.error(`Failed to update analytics for video ${video.id}:`, error);
-      }
-    }
   }
 }
 

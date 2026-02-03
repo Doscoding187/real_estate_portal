@@ -1,208 +1,237 @@
 /**
- * Partner Analytics Router
+ * Partner Analytics Router (BOOT-SAFE)
  * API endpoints for partner analytics dashboard
- * Requirements: 13.1, 13.2, 13.3, 13.4, 13.5, 13.6
+ * Requirements: 13.1 - 13.6
+ *
+ * IMPORTANT:
+ * - We lazy-import the service so missing schema exports do NOT crash backend boot.
+ * - If service import fails, we return 501 and log a clear warning.
  */
 
 import { Router } from 'express';
-import { partnerAnalyticsService } from './services/partnerAnalyticsService';
 
 const router = Router();
 
+// ---- Boot-safe lazy loader ----
+let _service: any | null = null;
+
+async function getPartnerAnalyticsService() {
+  if (_service) return _service;
+
+  try {
+    // Adjust path if your service file lives elsewhere:
+    // Common options:
+    // 1) '../services/partnerAnalyticsService'
+    // 2) './services/partnerAnalyticsService'
+    const mod: any = await import('./services/partnerAnalyticsService');
+
+    const svc = mod?.partnerAnalyticsService ?? mod?.default;
+    if (!svc) {
+      throw new Error(
+        `partnerAnalyticsService not exported. Exports: ${Object.keys(mod ?? {}).join(', ')}`,
+      );
+    }
+
+    _service = svc;
+    return _service;
+  } catch (err: any) {
+    console.warn(
+      '[PartnerAnalyticsRouter] Service unavailable (boot-safe). Reason:',
+      err?.message ?? err,
+    );
+    throw err;
+  }
+}
+
+function parseDate(d: unknown): Date | undefined {
+  if (!d || typeof d !== 'string') return undefined;
+  const dt = new Date(d);
+  return Number.isNaN(dt.getTime()) ? undefined : dt;
+}
+
+/**
+ * GET /api/partner-analytics/benchmarks
+ * Get tier benchmark comparisons
+ * Requirement 13.5
+ */
+router.get('/benchmarks', async (_req, res) => {
+  try {
+    const partnerAnalyticsService = await getPartnerAnalyticsService();
+    const benchmarks = await partnerAnalyticsService.getTierBenchmarks();
+
+    res.json({ success: true, data: benchmarks });
+  } catch (error) {
+    res.status(501).json({
+      success: false,
+      error: 'Partner analytics service not available yet',
+    });
+  }
+});
+
 /**
  * GET /api/partner-analytics/:partnerId/summary
- * Get partner analytics summary
- * Requirement 13.1: Display total views, engagement rate, and lead conversions
+ * Requirement 13.1
  */
 router.get('/:partnerId/summary', async (req, res) => {
   try {
-    const { partnerId } = req.params;
-    const { startDate, endDate } = req.query;
+    const partnerAnalyticsService = await getPartnerAnalyticsService();
 
-    const start = startDate ? new Date(startDate as string) : undefined;
-    const end = endDate ? new Date(endDate as string) : undefined;
+    const { partnerId } = req.params;
+    const start = parseDate(req.query.startDate);
+    const end = parseDate(req.query.endDate);
 
     const summary = await partnerAnalyticsService.getPartnerAnalyticsSummary(partnerId, start, end);
 
-    res.json({
-      success: true,
-      data: summary,
-    });
+    res.json({ success: true, data: summary });
   } catch (error) {
     console.error('Error fetching partner analytics summary:', error);
-    res.status(500).json({
+    res.status(501).json({
       success: false,
-      error: 'Failed to fetch analytics summary',
+      error: 'Partner analytics service not available yet',
     });
   }
 });
 
 /**
  * GET /api/partner-analytics/:partnerId/trends
- * Get performance trends over time
- * Requirement 13.2: Show daily, weekly, monthly performance trends
+ * Requirement 13.2
  */
 router.get('/:partnerId/trends', async (req, res) => {
   try {
-    const { partnerId } = req.params;
-    const { period = 'daily', startDate, endDate } = req.query;
+    const partnerAnalyticsService = await getPartnerAnalyticsService();
 
-    if (!startDate || !endDate) {
+    const { partnerId } = req.params;
+    const period = (req.query.period ?? 'daily') as string;
+
+    const startRaw = req.query.startDate;
+    const endRaw = req.query.endDate;
+
+    if (!startRaw || !endRaw) {
       return res.status(400).json({
         success: false,
         error: 'startDate and endDate are required',
       });
     }
 
-    if (!['daily', 'weekly', 'monthly'].includes(period as string)) {
+    if (!['daily', 'weekly', 'monthly'].includes(period)) {
       return res.status(400).json({
         success: false,
         error: 'period must be daily, weekly, or monthly',
       });
     }
 
+    const start = new Date(startRaw as string);
+    const end = new Date(endRaw as string);
+
     const trends = await partnerAnalyticsService.getPerformanceTrends(
       partnerId,
       period as 'daily' | 'weekly' | 'monthly',
-      new Date(startDate as string),
-      new Date(endDate as string),
+      start,
+      end,
     );
 
-    res.json({
-      success: true,
-      data: trends,
-    });
+    res.json({ success: true, data: trends });
   } catch (error) {
     console.error('Error fetching performance trends:', error);
-    res.status(500).json({
+    res.status(501).json({
       success: false,
-      error: 'Failed to fetch performance trends',
+      error: 'Partner analytics service not available yet',
     });
   }
 });
 
 /**
  * GET /api/partner-analytics/:partnerId/top-content
- * Get content ranked by performance
- * Requirement 13.3: Rank partner's content pieces by engagement
+ * Requirement 13.3
  */
 router.get('/:partnerId/top-content', async (req, res) => {
   try {
+    const partnerAnalyticsService = await getPartnerAnalyticsService();
+
     const { partnerId } = req.params;
-    const { limit = '10' } = req.query;
+    const limit = parseInt((req.query.limit ?? '10') as string, 10);
 
     const topContent = await partnerAnalyticsService.getContentRankedByPerformance(
       partnerId,
-      parseInt(limit as string, 10),
+      Number.isFinite(limit) ? limit : 10,
     );
 
-    res.json({
-      success: true,
-      data: topContent,
-    });
+    res.json({ success: true, data: topContent });
   } catch (error) {
     console.error('Error fetching top content:', error);
-    res.status(500).json({
+    res.status(501).json({
       success: false,
-      error: 'Failed to fetch top content',
+      error: 'Partner analytics service not available yet',
     });
   }
 });
 
 /**
  * GET /api/partner-analytics/:partnerId/funnel
- * Get conversion funnel analytics
- * Requirement 13.4: Track view → engagement → lead funnel
+ * Requirement 13.4
  */
 router.get('/:partnerId/funnel', async (req, res) => {
   try {
-    const { partnerId } = req.params;
-    const { startDate, endDate } = req.query;
+    const partnerAnalyticsService = await getPartnerAnalyticsService();
 
-    const start = startDate ? new Date(startDate as string) : undefined;
-    const end = endDate ? new Date(endDate as string) : undefined;
+    const { partnerId } = req.params;
+    const start = parseDate(req.query.startDate);
+    const end = parseDate(req.query.endDate);
 
     const funnel = await partnerAnalyticsService.getConversionFunnel(partnerId, start, end);
 
-    res.json({
-      success: true,
-      data: funnel,
-    });
+    res.json({ success: true, data: funnel });
   } catch (error) {
     console.error('Error fetching conversion funnel:', error);
-    res.status(500).json({
+    res.status(501).json({
       success: false,
-      error: 'Failed to fetch conversion funnel',
-    });
-  }
-});
-
-/**
- * GET /api/partner-analytics/benchmarks
- * Get tier benchmark comparisons
- * Requirement 13.5: Compare partner performance to tier averages
- */
-router.get('/benchmarks', async (req, res) => {
-  try {
-    const benchmarks = await partnerAnalyticsService.getTierBenchmarks();
-
-    res.json({
-      success: true,
-      data: benchmarks,
-    });
-  } catch (error) {
-    console.error('Error fetching tier benchmarks:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to fetch tier benchmarks',
+      error: 'Partner analytics service not available yet',
     });
   }
 });
 
 /**
  * GET /api/partner-analytics/:partnerId/boost-roi
- * Get boost campaign ROI metrics
- * Requirement 13.6: Calculate ROI for each boost campaign
+ * Requirement 13.6
  */
 router.get('/:partnerId/boost-roi', async (req, res) => {
   try {
-    const { partnerId } = req.params;
+    const partnerAnalyticsService = await getPartnerAnalyticsService();
 
+    const { partnerId } = req.params;
     const roiData = await partnerAnalyticsService.getBoostCampaignROI(partnerId);
 
-    res.json({
-      success: true,
-      data: roiData,
-    });
+    res.json({ success: true, data: roiData });
   } catch (error) {
     console.error('Error fetching boost ROI:', error);
-    res.status(500).json({
+    res.status(501).json({
       success: false,
-      error: 'Failed to fetch boost ROI',
+      error: 'Partner analytics service not available yet',
     });
   }
 });
 
 /**
  * GET /api/partner-analytics/:partnerId/dashboard
- * Get complete analytics dashboard data
- * Combines all analytics for a comprehensive dashboard view
+ * Combined dashboard endpoint
  */
 router.get('/:partnerId/dashboard', async (req, res) => {
   try {
+    const partnerAnalyticsService = await getPartnerAnalyticsService();
+
     const { partnerId } = req.params;
-    const { period = 'weekly', startDate, endDate } = req.query;
+    const period = (req.query.period ?? 'weekly') as string;
+    const start = parseDate(req.query.startDate);
+    const end = parseDate(req.query.endDate);
 
-    const start = startDate ? new Date(startDate as string) : undefined;
-    const end = endDate ? new Date(endDate as string) : undefined;
-
-    // Fetch all analytics in parallel
     const [summary, trends, topContent, funnel, benchmarks, boostROI] = await Promise.all([
       partnerAnalyticsService.getPartnerAnalyticsSummary(partnerId, start, end),
       start && end
         ? partnerAnalyticsService.getPerformanceTrends(
             partnerId,
-            period as 'daily' | 'weekly' | 'monthly',
+            (['daily', 'weekly', 'monthly'].includes(period)
+              ? period
+              : 'weekly') as 'daily' | 'weekly' | 'monthly',
             start,
             end,
           )
@@ -215,22 +244,16 @@ router.get('/:partnerId/dashboard', async (req, res) => {
 
     res.json({
       success: true,
-      data: {
-        summary,
-        trends,
-        topContent,
-        funnel,
-        benchmarks,
-        boostROI,
-      },
+      data: { summary, trends, topContent, funnel, benchmarks, boostROI },
     });
   } catch (error) {
     console.error('Error fetching analytics dashboard:', error);
-    res.status(500).json({
+    res.status(501).json({
       success: false,
-      error: 'Failed to fetch analytics dashboard',
+      error: 'Partner analytics service not available yet',
     });
   }
 });
 
 export default router;
+

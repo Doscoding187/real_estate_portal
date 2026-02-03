@@ -1,6 +1,14 @@
+/**
+ * Location Insights Service (STUBBED)
+ *
+ * NOTE: suburbReviews table is not exported from schema.
+ * Review submission/retrieval features are disabled.
+ * AI insights generation preserved.
+ */
+
 import { db } from '../db';
-import { suburbs, suburbReviews } from '../../drizzle/schema';
-import { eq, desc } from 'drizzle-orm';
+import { suburbs } from '../../drizzle/schema';
+import { eq } from 'drizzle-orm';
 import { OpenAI } from 'openai';
 
 // Initialize OpenAI client - assumes OPENAI_API_KEY is in env
@@ -104,7 +112,8 @@ export const locationInsightsService = {
   },
 
   /**
-   * submitReview
+   * submitReview - STUBBED
+   * suburbReviews table not available
    */
   async submitReview(data: {
     suburbId: number;
@@ -115,39 +124,22 @@ export const locationInsightsService = {
     cons: string;
     comment: string;
   }) {
-    await db.insert(suburbReviews).values({
-      suburbId: data.suburbId,
-      userId: data.userId || null,
-      rating: data.rating,
-      userType: data.userType,
-      pros: data.pros,
-      cons: data.cons,
-      comment: data.comment,
-      isPublished: 1, // Auto-publish for now
-      isVerified: 0,
-    });
-    return { success: true };
+    // STUB: No-op - suburbReviews table not available
+    console.debug(
+      '[locationInsightsService] submitReview called but disabled (no suburbReviews table)',
+    );
+    return { success: false, message: 'Reviews temporarily disabled' };
   },
 
   /**
-   * getReviews
+   * getReviews - STUBBED
+   * suburbReviews table not available
    */
   async getReviews(suburbId: number) {
-    const reviews = await db.query.suburbReviews.findMany({
-      where: eq(suburbReviews.suburbId, suburbId),
-      orderBy: [desc(suburbReviews.createdAt)],
-      with: {
-        user: {
-          columns: {
-            firstName: true,
-            lastName: true,
-            // avatar column might not exist properly on user table yet based on standard schema, using default or joining profile
-          },
-        },
-      },
-      limit: 10,
-    });
-
-    return reviews;
+    // STUB: Return empty array - suburbReviews table not available
+    console.debug(
+      '[locationInsightsService] getReviews called but disabled (no suburbReviews table)',
+    );
+    return [];
   },
 };

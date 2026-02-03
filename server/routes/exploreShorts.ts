@@ -1,12 +1,4 @@
 import { Router } from 'express';
-import { db } from '../db';
-import {
-  exploreShorts,
-  exploreInteractions,
-  exploreHighlightTags,
-  exploreUserPreferences,
-} from '../../drizzle/schema';
-import { eq, and, desc, sql } from 'drizzle-orm';
 import type { Request, Response } from 'express';
 import { exploreFeedService } from '../services/exploreFeedService';
 import { exploreInteractionService } from '../services/exploreInteractionService';
@@ -14,10 +6,11 @@ import { exploreInteractionService } from '../services/exploreInteractionService
 const router = Router();
 
 /**
- * Explore Shorts API Router
+ * Explore Shorts API Router (BOOT-SAFE)
  *
- * Handles all API endpoints for the Property Explore Shorts feature
- * including feed generation, interaction tracking, and content management.
+ * Important:
+ * - We DO NOT import any tables from ../../drizzle/schema here.
+ * - Missing schema exports (like exploreHighlightTags) must never crash server boot.
  */
 
 // Middleware to check authentication (optional for some endpoints)
@@ -46,10 +39,7 @@ const rateLimit = (maxRequests: number, windowMs: number) => {
     const userLimit = rateLimitMap.get(identifier);
 
     if (!userLimit || now > userLimit.resetTime) {
-      rateLimitMap.set(identifier, {
-        count: 1,
-        resetTime: now + windowMs,
-      });
+      rateLimitMap.set(identifier, { count: 1, resetTime: now + windowMs });
       return next();
     }
 
@@ -72,7 +62,7 @@ const rateLimit = (maxRequests: number, windowMs: number) => {
 router.get(
   '/recommended',
   optionalAuth,
-  rateLimit(100, 60000), // 100 requests per minute
+  rateLimit(100, 60000),
   async (req: Request, res: Response) => {
     try {
       const { limit = 20, offset = 0 } = req.query;
@@ -119,37 +109,22 @@ router.get('/by-area', optionalAuth, rateLimit(100, 60000), async (req: Request,
 
 /**
  * GET /api/explore/by-category
- * Get properties by category
+ * Boot-safe stub (the feed service currently does not implement getCategoryFeed)
  */
 router.get(
   '/by-category',
   optionalAuth,
   rateLimit(100, 60000),
-  async (req: Request, res: Response) => {
-    try {
-      const { category, limit = 20, offset = 0 } = req.query;
-
-      if (!category) {
-        return res.status(400).json({ error: 'Category parameter required' });
-      }
-
-      const result = await exploreFeedService.getCategoryFeed({
-        category: String(category),
-        limit: Number(limit),
-        offset: Number(offset),
-      });
-
-      res.json(result);
-    } catch (error) {
-      console.error('Error fetching category feed:', error);
-      res.status(500).json({ error: 'Failed to fetch feed' });
-    }
+  async (_req: Request, res: Response) => {
+    return res.status(501).json({
+      error: 'Not implemented',
+      message: 'Category feed is not available yet.',
+    });
   },
 );
 
 /**
  * GET /api/explore/agent-feed/:id
- * Get all properties from specific agent
  */
 router.get(
   '/agent-feed/:id',
@@ -176,7 +151,6 @@ router.get(
 
 /**
  * GET /api/explore/developer-feed/:id
- * Get all properties from specific developer
  */
 router.get(
   '/developer-feed/:id',
@@ -208,7 +182,7 @@ router.get(
 router.post(
   '/interaction',
   optionalAuth,
-  rateLimit(500, 60000), // 500 requests per minute for interactions
+  rateLimit(500, 60000),
   async (req: Request, res: Response) => {
     try {
       const { shortId, interactionType, duration, feedType, feedContext, deviceType } = req.body;
@@ -217,8 +191,7 @@ router.post(
         return res.status(400).json({ error: 'Missing required fields' });
       }
 
-      // Generate session ID if not provided
-      const sessionId = req.sessionID || `guest-${Date.now()}-${Math.random()}`;
+      const sessionId = (req as any).sessionID || `guest-${Date.now()}-${Math.random()}`;
 
       await exploreInteractionService.recordInteraction({
         shortId,
@@ -231,7 +204,7 @@ router.post(
         deviceType,
         userAgent: req.headers['user-agent'],
         ipAddress: req.ip || req.socket.remoteAddress || undefined,
-      });
+      } as any);
 
       res.json({ success: true });
     } catch (error) {
@@ -243,7 +216,7 @@ router.post(
 
 /**
  * POST /api/explore/save/:propertyId
- * Save property to favorites
+ * Save property to favorites (best-effort)
  */
 router.post(
   '/save/:propertyId',
@@ -266,7 +239,6 @@ router.post(
 
 /**
  * POST /api/explore/share/:propertyId
- * Record property share
  */
 router.post(
   '/share/:propertyId',
@@ -276,7 +248,7 @@ router.post(
     try {
       const { propertyId } = req.params;
       const { platform } = req.body;
-      const sessionId = req.sessionID || `guest-${Date.now()}-${Math.random()}`;
+      const sessionId = (req as any).sessionID || `guest-${Date.now()}-${Math.random()}`;
 
       await exploreInteractionService.shareProperty(
         Number(propertyId),
@@ -295,21 +267,10 @@ router.post(
 
 /**
  * GET /api/explore/highlight-tags
- * Get all available highlight tags
+ * Boot-safe stub (exploreHighlightTags is not exported in schema)
  */
-router.get('/highlight-tags', rateLimit(50, 60000), async (req: Request, res: Response) => {
-  try {
-    const tags = await db
-      .select()
-      .from(exploreHighlightTags)
-      .where(eq(exploreHighlightTags.isActive, 1))
-      .orderBy(exploreHighlightTags.displayOrder);
-
-    res.json({ tags });
-  } catch (error) {
-    console.error('Error fetching highlight tags:', error);
-    res.status(500).json({ error: 'Failed to fetch tags' });
-  }
+router.get('/highlight-tags', rateLimit(50, 60000), async (_req: Request, res: Response) => {
+  return res.json({ tags: [] });
 });
 
 export default router;

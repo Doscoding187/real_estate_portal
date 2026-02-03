@@ -1,13 +1,17 @@
 import { db } from '../db';
-import { exploreShorts, exploreInteractions } from '../../drizzle/schema';
-import { eq, sql } from 'drizzle-orm';
+import { exploreContent, exploreEngagements } from '../../drizzle/schema';
+import { eq, sql, and, count, desc } from 'drizzle-orm';
 import type { InteractionType, DeviceType, FeedType } from '../../shared/types';
 
 /**
- * Explore Interaction Service
+ * Explore Interaction Service (BOOT-SAFE)
  *
- * Handles tracking and recording of user interactions with property shorts.
- * Supports both authenticated and guest users.
+ * Goal right now: keep backend booting even if Explore tables/columns differ.
+ *
+ * This implementation:
+ * - Writes interactions into exploreEngagements (best-effort)
+ * - Updates explore_content counters (best-effort, raw SQL)
+ * - Never throws for interaction recording (doesn't block UI)
  */
 
 export interface RecordInteractionOptions {
@@ -30,7 +34,7 @@ export interface BatchInteractionOptions {
 
 export class ExploreInteractionService {
   /**
-   * Record a single interaction
+   * Record a single interaction (best-effort)
    */
   async recordInteraction(options: RecordInteractionOptions): Promise<void> {
     const {
@@ -48,103 +52,91 @@ export class ExploreInteractionService {
     } = options;
 
     try {
-      // Insert interaction record
-      await db.insert(exploreInteractions).values({
-        shortId,
-        userId: userId || null,
-        sessionId,
-        interactionType,
-        duration: duration || null,
-        feedType,
-        feedContext: feedContext ? JSON.stringify(feedContext) : null,
-        deviceType,
-        userAgent: userAgent || null,
-        ipAddress: ipAddress || null,
-        metadata: metadata ? JSON.stringify(metadata) : null,
-      });
+      // Write interaction to exploreEngagements (schema-safe via `as any`)
+      await db.insert(exploreEngagements).values({
+        contentId: shortId,
+        userId: userId ?? null,
+        sessionId: sessionId ?? null,
+        interactionType: interactionType as any,
+        metadata: {
+          duration,
+          feedType,
+          feedContext,
+          deviceType,
+          userAgent,
+          ipAddress,
+          ...metadata,
+        },
+        createdAt: new Date(),
+      } as any);
 
-      // Update short metrics asynchronously (don't wait)
-      this.updateShortMetrics(shortId, interactionType, duration).catch(error => {
-        console.error('Error updating short metrics:', error);
+      // Update aggregation metrics asynchronously (best-effort)
+      this.updateContentMetrics(shortId, interactionType as any, duration).catch(error => {
+        console.error('Error updating content metrics:', error);
       });
     } catch (error) {
       console.error('Error recording interaction:', error);
-      throw error;
+      // DO NOT throw — must not block UI or crash backend due to analytics.
     }
   }
 
   /**
-   * Record multiple interactions in batch
-   * Optimized for high-volume interaction tracking
+   * Record multiple interactions in batch (best-effort)
    */
   async recordBatchInteractions(options: BatchInteractionOptions): Promise<void> {
     const { interactions } = options;
-
-    if (interactions.length === 0) {
-      return;
-    }
+    if (interactions.length === 0) return;
 
     try {
-      // Prepare batch insert values
       const values = interactions.map(interaction => ({
-        shortId: interaction.shortId,
-        userId: interaction.userId || null,
-        sessionId: interaction.sessionId,
-        interactionType: interaction.interactionType,
-        duration: interaction.duration || null,
-        feedType: interaction.feedType,
-        feedContext: interaction.feedContext ? JSON.stringify(interaction.feedContext) : null,
-        deviceType: interaction.deviceType,
-        userAgent: interaction.userAgent || null,
-        ipAddress: interaction.ipAddress || null,
-        metadata: interaction.metadata ? JSON.stringify(interaction.metadata) : null,
+        contentId: interaction.shortId,
+        userId: interaction.userId ?? null,
+        sessionId: interaction.sessionId ?? null,
+        interactionType: interaction.interactionType as any,
+        metadata: {
+          duration: interaction.duration,
+          feedType: interaction.feedType,
+          feedContext: interaction.feedContext,
+          deviceType: interaction.deviceType,
+          userAgent: interaction.userAgent,
+          ipAddress: interaction.ipAddress,
+          ...interaction.metadata,
+        },
+        createdAt: new Date(),
       }));
 
-      // Batch insert
-      await db.insert(exploreInteractions).values(values);
+      await db.insert(exploreEngagements).values(values as any);
 
-      // Update metrics for all affected shorts
-      const shortIds = [...new Set(interactions.map(i => i.shortId))];
-      for (const shortId of shortIds) {
-        const shortInteractions = interactions.filter(i => i.shortId === shortId);
-        for (const interaction of shortInteractions) {
-          this.updateShortMetrics(shortId, interaction.interactionType, interaction.duration).catch(
-            error => {
-              console.error('Error updating short metrics:', error);
-            },
-          );
-        }
+      // Update metrics once per unique content item (best-effort)
+      const contentIds = [...new Set(interactions.map(i => i.shortId))];
+      for (const contentId of contentIds) {
+        const itemInteractions = interactions.filter(i => i.shortId === contentId);
+        const last = itemInteractions[itemInteractions.length - 1];
+        this.updateContentMetrics(contentId, (last?.interactionType as any) ?? 'view').catch(
+          console.error,
+        );
       }
     } catch (error) {
       console.error('Error recording batch interactions:', error);
-      throw error;
     }
   }
 
   /**
-   * Save property to favorites
+   * Save property (favorite)
    */
   async saveProperty(shortId: number, userId: number): Promise<void> {
-    try {
-      // Record save interaction
-      await this.recordInteraction({
-        shortId,
-        userId,
-        sessionId: `user-${userId}`,
-        interactionType: 'save',
-        feedType: 'recommended',
-        deviceType: 'mobile',
-      });
-
-      // TODO: Add to favorites table in Phase 7
-    } catch (error) {
-      console.error('Error saving property:', error);
-      throw error;
-    }
+    return this.recordInteraction({
+      shortId,
+      userId,
+      sessionId: `user-${userId}`,
+      interactionType: 'save',
+      feedType: 'recommended',
+      deviceType: 'mobile',
+    });
   }
 
   /**
-   * Record property share
+   * Share property
    */
   async shareProperty(
     shortId: number,
@@ -152,104 +144,133 @@ export class ExploreInteractionService {
     sessionId: string,
     platform?: string,
   ): Promise<void> {
-    try {
-      await this.recordInteraction({
-        shortId,
-        userId,
-        sessionId,
-        interactionType: 'share',
-        feedType: 'recommended',
-        deviceType: 'mobile',
-        metadata: { platform },
-      });
-    } catch (error) {
-      console.error('Error recording share:', error);
-      throw error;
-    }
+    return this.recordInteraction({
+      shortId,
+      userId,
+      sessionId,
+      interactionType: 'share',
+      feedType: 'recommended',
+      deviceType: 'mobile',
+      metadata: { platform },
+    });
   }
 
   /**
-   * Update short engagement metrics
-   * Called asynchronously after recording interactions
+   * Update content engagement metrics (best-effort)
    */
-  private async updateShortMetrics(
-    shortId: number,
-    interactionType: InteractionType,
-    duration?: number,
+  private async updateContentMetrics(
+    contentId: number,
+    interactionType: string,
+    _duration?: number,
   ): Promise<void> {
     try {
-      // Map interaction types to metric fields
-      const metricUpdates: Record<string, string> = {
-        impression: 'view_count',
-        view: 'view_count',
-        skip: 'skip_count',
-        save: 'save_count',
-        share: 'share_count',
-      };
-
-      const field = metricUpdates[interactionType];
-
-      if (field) {
-        // Increment the appropriate counter
+      // 1) Increment view count if view/impression
+      if (interactionType === 'view' || interactionType === 'impression') {
         await db.execute(sql`
-          UPDATE explore_shorts 
-          SET ${sql.raw(field)} = ${sql.raw(field)} + 1
-          WHERE id = ${shortId}
+          UPDATE explore_content
+          SET view_count = view_count + 1
+          WHERE id = ${contentId}
         `);
       }
 
-      // Update average watch time for view interactions
-      if (interactionType === 'view' && duration) {
-        await db.execute(sql`
-          UPDATE explore_shorts 
-          SET average_watch_time = (
-            (average_watch_time * view_count + ${duration}) / (view_count + 1)
-          )
-          WHERE id = ${shortId}
-        `);
+      // 2) Update engagement score
+      // Score weights: like=1, comment=2, save=5, share=5, click_cta/contact/whatsapp/book_viewing=10
+      let scoreParams = 0;
+      switch (interactionType) {
+        case 'like':
+          scoreParams = 1;
+          break;
+        case 'comment':
+          scoreParams = 2;
+          break;
+        case 'save':
+          scoreParams = 5;
+          break;
+        case 'share':
+          scoreParams = 5;
+          break;
+        case 'click_cta':
+        case 'contact':
+        case 'whatsapp':
+        case 'book_viewing':
+          scoreParams = 10;
+          break;
       }
 
-      // Update unique view count (simplified - in production, use session tracking)
-      if (interactionType === 'impression') {
+      if (scoreParams > 0) {
         await db.execute(sql`
-          UPDATE explore_shorts 
-          SET unique_view_count = unique_view_count + 1
-          WHERE id = ${shortId}
+          UPDATE explore_content
+          SET engagement_score = engagement_score + ${scoreParams}
+          WHERE id = ${contentId}
         `);
       }
     } catch (error) {
-      console.error('Error updating short metrics:', error);
-      // Don't throw - this is a background operation
+      console.error('Error updating content metrics:', error);
     }
   }
 
   /**
-   * Get interaction statistics for a short
+   * Get interaction statistics for content
+   * Aggregates from exploreEngagements + reads counters from exploreContent
    */
-  async getShortStats(shortId: number): Promise<any> {
+  async getShortStats(contentId: number): Promise<any> {
     try {
-      const short = await db
-        .select()
-        .from(exploreShorts)
-        .where(eq(exploreShorts.id, shortId))
+      const content = await db
+        .select({
+          viewCount: (exploreContent as any).viewCount,
+          engagementScore: (exploreContent as any).engagementScore,
+        })
+        .from(exploreContent)
+        .where(eq((exploreContent as any).id, contentId))
         .limit(1);
 
-      if (short.length === 0) {
-        throw new Error('Short not found');
+      if (!content || content.length === 0) {
+        throw new Error('Content not found');
       }
 
+      // Aggregate counts from exploreEngagements (best-effort)
+      const [saves] = await db
+        .select({ count: count() })
+        .from(exploreEngagements)
+        .where(
+          and(
+            eq((exploreEngagements as any).contentId, contentId),
+            eq((exploreEngagements as any).interactionType, 'save' as any),
+          ),
+        );
+
+      const [shares] = await db
+        .select({ count: count() })
+        .from(exploreEngagements)
+        .where(
+          and(
+            eq((exploreEngagements as any).contentId, contentId),
+            eq((exploreEngagements as any).interactionType, 'share' as any),
+          ),
+        );
+
+      const [skips] = await db
+        .select({ count: count() })
+        .from(exploreEngagements)
+        .where(
+          and(
+            eq((exploreEngagements as any).contentId, contentId),
+            eq((exploreEngagements as any).interactionType, 'skip' as any),
+          ),
+        );
+
       return {
-        shortId,
-        viewCount: short[0].viewCount,
-        uniqueViewCount: short[0].uniqueViewCount,
-        saveCount: short[0].saveCount,
-        shareCount: short[0].shareCount,
-        skipCount: short[0].skipCount,
-        averageWatchTime: short[0].averageWatchTime,
-        performanceScore: short[0].performanceScore,
+        shortId: contentId,
+        viewCount: (content as any)[0].viewCount ?? 0,
+        uniqueViewCount: (content as any)[0].viewCount ?? 0, // placeholder
+        saveCount: (saves as any)?.count ?? 0,
+        shareCount: (shares as any)?.count ?? 0,
+        skipCount: (skips as any)?.count ?? 0,
+        averageWatchTime: 0, // not stored currently
+        performanceScore: (content as any)[0].engagementScore ?? 0,
       };
     } catch (error) {
-      console.error('Error getting short stats:', error);
+      console.error('Error getting content stats:', error);
       throw error;
     }
   }
@@ -259,14 +280,12 @@ export class ExploreInteractionService {
    */
   async getUserInteractionHistory(userId: number, limit: number = 50): Promise<any[]> {
     try {
-      const interactions = await db
+      return await db
         .select()
-        .from(exploreInteractions)
-        .where(eq(exploreInteractions.userId, userId))
-        .orderBy(sql`timestamp DESC`)
+        .from(exploreEngagements)
+        .where(eq((exploreEngagements as any).userId, userId))
+        .orderBy(desc((exploreEngagements as any).createdAt))
         .limit(limit);
-
-      return interactions;
     } catch (error) {
       console.error('Error getting user interaction history:', error);
       throw error;
@@ -274,18 +293,16 @@ export class ExploreInteractionService {
   }
 
   /**
-   * Get session interaction history (for guest users)
+   * Get session interaction history
    */
   async getSessionInteractionHistory(sessionId: string, limit: number = 50): Promise<any[]> {
     try {
-      const interactions = await db
+      return await db
         .select()
-        .from(exploreInteractions)
-        .where(eq(exploreInteractions.sessionId, sessionId))
-        .orderBy(sql`timestamp DESC`)
+        .from(exploreEngagements)
+        .where(eq((exploreEngagements as any).sessionId, sessionId))
+        .orderBy(desc((exploreEngagements as any).createdAt))
         .limit(limit);
-
-      return interactions;
     } catch (error) {
       console.error('Error getting session interaction history:', error);
       throw error;
@@ -293,35 +310,19 @@ export class ExploreInteractionService {
   }
 
   /**
-   * Calculate engagement rate for a short
+   * Calculate engagement rate
    */
-  async calculateEngagementRate(shortId: number): Promise<number> {
+  async calculateEngagementRate(contentId: number): Promise<number> {
     try {
-      const short = await db
-        .select()
-        .from(exploreShorts)
-        .where(eq(exploreShorts.id, shortId))
-        .limit(1);
+      const stats = await this.getShortStats(contentId);
+      if (!stats || stats.viewCount === 0) return 0;
 
-      if (short.length === 0) {
-        return 0;
-      }
-
-      const { viewCount, saveCount, shareCount } = short[0];
-
-      if (viewCount === 0) {
-        return 0;
-      }
-
-      // Engagement rate = (saves + shares) / views * 100
-      const engagementRate = ((saveCount + shareCount) / viewCount) * 100;
-      return Math.round(engagementRate * 100) / 100; // Round to 2 decimal places
-    } catch (error) {
-      console.error('Error calculating engagement rate:', error);
+      const engagementRate = ((stats.saveCount + stats.shareCount) / stats.viewCount) * 100;
+      return Math.round(engagementRate * 100) / 100;
+    } catch {
       return 0;
     }
   }
 }
 
-// Export singleton instance
 export const exploreInteractionService = new ExploreInteractionService();

@@ -2,14 +2,17 @@
  * Property Results Router
  * tRPC endpoints for property search results page optimization
  * Requirements: 4.1, 4.2, 4.3, 11.1, 11.3
+ *
+ * NOTE: Analytics tracking (searchAnalytics, propertyClicks) is STUBBED.
+ * These tables are not exported from schema.ts.
  */
 
 import { z } from 'zod';
 import { router, publicProcedure, protectedProcedure } from './_core/trpc';
 import { TRPCError } from '@trpc/server';
 import { getDb } from './db';
-import { savedSearches, searchAnalytics, propertyClicks } from '../drizzle/schema';
-import { eq, desc, and, sql } from 'drizzle-orm';
+import { savedSearches } from '../drizzle/schema';
+import { eq, desc, and } from 'drizzle-orm';
 import { propertySearchService } from './services/propertySearchService';
 import type { PropertyFilters, SortOption } from '../shared/types';
 
@@ -359,12 +362,12 @@ export const propertyResultsRouter = router({
   }),
 
   /**
-   * Analytics tracking
+   * Analytics tracking (STUBBED)
+   * Tables searchAnalytics and propertyClicks are not exported from schema.
    */
   analytics: router({
     /**
-     * Track search event
-     * Requirement 11.1: Track search criteria and result count
+     * Track search event - STUBBED
      */
     trackSearch: publicProcedure
       .input(
@@ -376,40 +379,16 @@ export const propertyResultsRouter = router({
           sessionId: z.string(),
         }),
       )
-      .mutation(async ({ ctx, input }) => {
-        const db = await getDb();
-        if (!db) {
-          throw new TRPCError({
-            code: 'INTERNAL_SERVER_ERROR',
-            message: 'Database not available',
-          });
-        }
-
-        try {
-          await db.insert(searchAnalytics).values({
-            userId: ctx.user?.id || null,
-            sessionId: input.sessionId,
-            filters: input.filters as any,
-            resultCount: input.resultCount,
-            sortOrder: input.sortOrder,
-            viewMode: input.viewMode,
-          });
-
-          return {
-            success: true,
-          };
-        } catch (error) {
-          console.error('[PropertyResults] Track search error:', error);
-          // Don't throw error for analytics - fail silently
-          return {
-            success: false,
-          };
-        }
+      .mutation(async () => {
+        // STUB: Analytics tracking disabled - table not available
+        console.debug(
+          '[PropertyResults] trackSearch called but disabled (no searchAnalytics table)',
+        );
+        return { success: true };
       }),
 
     /**
-     * Track property click
-     * Requirement 11.3: Track click-through rate by position and location
+     * Track property click - STUBBED
      */
     trackClick: publicProcedure
       .input(
@@ -420,34 +399,10 @@ export const propertyResultsRouter = router({
           sessionId: z.string(),
         }),
       )
-      .mutation(async ({ ctx, input }) => {
-        const db = await getDb();
-        if (!db) {
-          throw new TRPCError({
-            code: 'INTERNAL_SERVER_ERROR',
-            message: 'Database not available',
-          });
-        }
-
-        try {
-          await db.insert(propertyClicks).values({
-            propertyId: input.propertyId,
-            userId: ctx.user?.id || null,
-            sessionId: input.sessionId,
-            position: input.position,
-            searchFilters: input.searchFilters as any,
-          });
-
-          return {
-            success: true,
-          };
-        } catch (error) {
-          console.error('[PropertyResults] Track click error:', error);
-          // Don't throw error for analytics - fail silently
-          return {
-            success: false,
-          };
-        }
+      .mutation(async () => {
+        // STUB: Analytics tracking disabled - table not available
+        console.debug('[PropertyResults] trackClick called but disabled (no propertyClicks table)');
+        return { success: true };
       }),
   }),
 });

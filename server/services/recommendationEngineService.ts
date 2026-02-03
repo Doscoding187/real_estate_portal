@@ -1,17 +1,14 @@
 /**
  * Recommendation Engine Service
- * Intelligent personalization and content ranking
- * Requirements: 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 7.3, 7.4
+ * Intelligent personalization and content ranking (PARTIALLY STUBBED)
+ *
+ * NOTE: exploreEngagements and exploreBoostCampaigns are not exported from schema.
+ * Boost injection functionality is disabled.
  */
 
 import { db } from '../db';
-import {
-  exploreContent,
-  exploreUserPreferencesNew,
-  exploreEngagements,
-  exploreBoostCampaigns,
-} from '../../drizzle/schema';
-import { eq, desc, sql, and, gte } from 'drizzle-orm';
+import { exploreContent, exploreUserPreferencesNew } from '../../drizzle/schema';
+import { eq, desc, sql } from 'drizzle-orm';
 
 interface UserContext {
   userId: number;
@@ -63,6 +60,26 @@ class RecommendationEngineService {
       followedNeighbourhoods: profile[0].followedNeighbourhoods || [],
       followedCreators: profile[0].followedCreators || [],
     };
+  }
+
+  /**
+   * Get recommendations for a user
+   */
+  async getRecommendations(userId: number | null, limit: number = 10): Promise<any[]> {
+    try {
+      // Get recent content
+      const content = await db
+        .select()
+        .from(exploreContent)
+        .where(eq(exploreContent.isActive, 1))
+        .orderBy(desc(exploreContent.engagementScore), desc(exploreContent.createdAt))
+        .limit(limit);
+
+      return content;
+    } catch (error) {
+      console.error('[RecommendationEngine] getRecommendations error:', error);
+      return [];
+    }
   }
 
   /**
@@ -208,67 +225,18 @@ class RecommendationEngineService {
   }
 
   /**
-   * Inject boosted content into feed
-   * Requirements: 9.2, 9.3, 9.6
+   * Inject boosted content into feed - STUBBED
+   * exploreBoostCampaigns table not available
    */
   async injectBoostedContent(feed: any[], userProfile: UserProfile): Promise<any[]> {
-    // Get active boost campaigns
-    const now = new Date();
-    const activeCampaigns = await db
-      .select()
-      .from(exploreBoostCampaigns)
-      .where(
-        and(eq(exploreBoostCampaigns.status, 'active'), gte(exploreBoostCampaigns.endDate, now)),
-      )
-      .orderBy(desc(exploreBoostCampaigns.budget));
-
-    if (activeCampaigns.length === 0) {
-      return feed;
-    }
-
-    // Get boosted content
-    const boostedContentIds = activeCampaigns.map(c => c.contentId);
-    const boostedContent = await db
-      .select()
-      .from(exploreContent)
-      .where(sql`${exploreContent.id} IN (${boostedContentIds.join(',')})`);
-
-    // Create map of content to campaigns
-    const contentCampaignMap = new Map();
-    activeCampaigns.forEach(campaign => {
-      contentCampaignMap.set(campaign.contentId, campaign);
-    });
-
-    // Inject boosted content at 1:10 ratio
-    const result = [];
-    let organicIndex = 0;
-    let boostedIndex = 0;
-
-    while (organicIndex < feed.length || boostedIndex < boostedContent.length) {
-      // Add 10 organic items
-      for (let i = 0; i < 10 && organicIndex < feed.length; i++) {
-        result.push({
-          ...feed[organicIndex],
-          isSponsored: false,
-        });
-        organicIndex++;
-      }
-
-      // Add 1 boosted item
-      if (boostedIndex < boostedContent.length) {
-        const boostedItem = boostedContent[boostedIndex];
-        const campaign = contentCampaignMap.get(boostedItem.id);
-
-        result.push({
-          ...boostedItem,
-          isSponsored: true,
-          campaignId: campaign?.id,
-        });
-        boostedIndex++;
-      }
-    }
-
-    return result;
+    // STUB: No boost campaigns available, return feed as-is
+    console.debug(
+      '[RecommendationEngine] injectBoostedContent called but disabled (no exploreBoostCampaigns table)',
+    );
+    return feed.map(item => ({
+      ...item,
+      isSponsored: false,
+    }));
   }
 }
 
