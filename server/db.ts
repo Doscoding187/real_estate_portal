@@ -1,4 +1,4 @@
-import { exploreDiscoveryVideos } from "../drizzle/schema";
+import { exploreDiscoveryVideos } from '../drizzle/schema';
 import {
   eq,
   desc,

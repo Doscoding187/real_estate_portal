@@ -86,9 +86,23 @@ const PublisherDevelopments: React.FC = () => {
   };
 
   const handleCreateDevelopment = () => {
-    // Navigate to wizard with special param to indicate brand context override
-    // We'll need to update the wizard to handle this param or create a wrapper
-    setLocation(`/developer/create-development?brandProfileId=${selectedBrandId}`);
+    if (!selectedBrandId) return;
+
+    // Persist the same structure that main.tsx expects:
+    // localStorage['publisher-context'] => { state: { context: { brandProfileId } } }
+    const payload = {
+      state: {
+        context: {
+          brandProfileId: selectedBrandId,
+        },
+      },
+    };
+
+    localStorage.setItem('publisher-context', JSON.stringify(payload));
+
+    // Now navigate WITHOUT relying on query params
+    setLocation(`/developer/create-development`);
+
     toast.info(`Creating development for ${selectedBrand?.brandName}`);
   };
 

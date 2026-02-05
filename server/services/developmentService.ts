@@ -574,25 +574,69 @@ export async function getPublicDevelopmentBySlug(slugOrId: string) {
         marketingRole: developments.marketingRole,
         ownershipType: developments.ownershipType,
         developer: {
-          id: developers.id,
-          name: developers.name,
-          slug: developers.slug,
-          logo: developers.logo,
-          description: developers.description,
-          website: developers.website,
-          email: developers.email,
+          id: sql<number>`COALESCE(${developerBrandProfiles.id}, ${developers.id})`,
+          name: sql<string>`COALESCE(${developerBrandProfiles.brandName}, ${developers.name})`,
+          slug: sql<string>`COALESCE(${developerBrandProfiles.slug}, ${developers.slug})`,
+          logo: sql<string>`COALESCE(${developerBrandProfiles.logoUrl}, ${developers.logo})`,
+          description: sql<string>`COALESCE(${developerBrandProfiles.about}, ${developers.description})`,
+          website: sql<string>`COALESCE(${developerBrandProfiles.websiteUrl}, ${developers.website})`,
+          email: sql<string>`COALESCE(${developerBrandProfiles.publicContactEmail}, ${developers.email})`,
           phone: developers.phone,
           status: developers.status,
+          isBrand: sql<boolean>`CASE WHEN ${developerBrandProfiles.id} IS NOT NULL THEN 1 ELSE 0 END`,
         },
       })
       .from(developments)
       .leftJoin(developers, eq(developments.developerId, developers.id))
+      .leftJoin(
+        developerBrandProfiles,
+        eq(developments.developerBrandProfileId, developerBrandProfiles.id),
+      )
       .where(whereClause)
       .limit(1);
 
     if (results.length === 0) return null;
 
     const dev = results[0];
+
+    // ✅ Explicitly construct publisher object logic
+    // If brand profile exists (id is not null), it is the publisher.
+    const hasBrand = !!dev.developer.isBrand;
+
+    // We construct a dedicated publisher object for the UI to use
+    const publisher = hasBrand
+      ? {
+          type: 'brand_profile',
+          id: dev.developer.id, // This is already coalesced to brand ID
+          name: dev.developer.name,
+          slug: dev.developer.slug,
+          logoUrl: dev.developer.logo,
+          description: dev.developer.description,
+          websiteUrl: dev.developer.website,
+          contactEmail: dev.developer.email,
+          contactPhone: dev.developer.phone,
+          isVerified: true, // Brands are verified by default in this context
+        }
+      : dev.developer.id
+        ? {
+            type: 'developer_account',
+            id: dev.developer.id,
+            name: dev.developer.name,
+            slug: dev.developer.slug,
+            logoUrl: dev.developer.logo,
+            description: dev.developer.description,
+            websiteUrl: dev.developer.website,
+            contactEmail: dev.developer.email,
+            contactPhone: dev.developer.phone,
+            isVerified: !!dev.developer.status, // Assuming status check
+          }
+        : null;
+
+    // Return enhanced object
+    return {
+      ...dev,
+      publisher, // <--- The new field the UI will use
+    };
 
     const [units, phases] = await Promise.all([
       db
@@ -777,13 +821,18 @@ export async function listPublicDevelopments(
       status: developments.status,
       isFeatured: developments.isFeatured,
       developer: {
-        id: developers.id,
-        name: developers.name,
-        logo: developers.logo,
+        id: sql<number>`COALESCE(${developerBrandProfiles.id}, ${developers.id})`,
+        name: sql<string>`COALESCE(${developerBrandProfiles.brandName}, ${developers.name})`,
+        logo: sql<string>`COALESCE(${developerBrandProfiles.logoUrl}, ${developers.logo})`,
+        isBrand: sql<boolean>`CASE WHEN ${developerBrandProfiles.id} IS NOT NULL THEN 1 ELSE 0 END`,
       },
     })
     .from(developments)
     .leftJoin(developers, eq(developments.developerId, developers.id))
+    .leftJoin(
+      developerBrandProfiles,
+      eq(developments.developerBrandProfileId, developerBrandProfiles.id),
+    )
     // @ts-ignore
     .where(and(...conditions))
     .orderBy(desc(developments.isFeatured), desc(developments.createdAt))
@@ -978,25 +1027,31 @@ export async function createDevelopment(
 
   let developerProfileId: number | null = null;
   let resolvedBrandProfileId: number | null = null;
-  let effectiveOwnerType: 'platform' | 'developer' = ownerType || 'developer';
+  let effectiveOwnerType: 'platform' | 'developer';
 
-  // If super admin, bypass ALL checks
-  if (user?.role === 'super_admin') {
-    // Super admin mode - use brand profile from context or metadata
-    resolvedBrandProfileId =
-      operatingContext?.brandProfileId ||
-      brandProfileId ||
-      (developmentData as any).developerBrandProfileId ||
-      null;
+  const isSuperAdmin = user?.role === 'super_admin';
+
+  if (isSuperAdmin) {
+    // ✅ Super admin MUST operate as a brand (emulator)
+    resolvedBrandProfileId = operatingContext?.brandProfileId ?? null;
+
+    if (!resolvedBrandProfileId) {
+      throw createError(
+        'Super admin must operate as a brand to create a development.',
+        'VALIDATION_ERROR',
+        { userId },
+      );
+    }
+
     developerProfileId = null;
     effectiveOwnerType = 'platform';
 
-    console.log('[createDevelopment] ✅ SUPER ADMIN MODE - Bypassing all checks:', {
+    console.log('[createDevelopment] ✅ SUPER ADMIN EMULATION MODE:', {
       brandProfileId: resolvedBrandProfileId,
       ownerType: effectiveOwnerType,
     });
   } else {
-    // Regular developer mode - require developer profile
+    // ✅ Real developer mode: must have dev profile AND brandProfileId
     const devProfile = await db.query.developers.findFirst({
       where: eq(developers.userId, userId),
       columns: { id: true, brandProfileId: true },
@@ -1010,13 +1065,22 @@ export async function createDevelopment(
       );
     }
 
+    if (!devProfile.brandProfileId) {
+      throw createError(
+        'Developer brand profile not found. Please complete onboarding.',
+        'VALIDATION_ERROR',
+        { userId, developerId: devProfile.id },
+      );
+    }
+
     developerProfileId = devProfile.id;
-    resolvedBrandProfileId = devProfile.brandProfileId || brandProfileId || null;
+    resolvedBrandProfileId = devProfile.brandProfileId;
     effectiveOwnerType = 'developer';
 
-    console.log('[createDevelopment] Developer mode:', {
+    console.log('[createDevelopment] ✅ DEVELOPER MODE:', {
       developerId: developerProfileId,
       brandProfileId: resolvedBrandProfileId,
+      ownerType: effectiveOwnerType,
     });
   }
 
@@ -1101,6 +1165,14 @@ export async function createDevelopment(
   const auctionRange =
     normalizedTransactionType === 'auction' ? computeAuctionRangeFromUnits(unitTypesData) : null;
 
+  // ✅ Critical safety guard: prevent orphan developments
+  if (!resolvedBrandProfileId) {
+    throw createError('Missing brandProfileId for development creation.', 'VALIDATION_ERROR', {
+      userId,
+      role: user?.role,
+    });
+  }
+
   const insertPayload: Record<string, any> = {
     // Use resolved identity for ownership
     developerId: developerProfileId, // null for emulator mode
@@ -1111,7 +1183,7 @@ export async function createDevelopment(
     developmentType: (developmentData as any).developmentType || 'residential',
     transactionType: normalizedTransactionType,
     status: 'launching-soon',
-    devOwnerType: ownerType || 'developer',
+    devOwnerType: effectiveOwnerType, // ✅ the only allowed source
 
     isFeatured: 0,
     isPublished: 0,
@@ -1234,14 +1306,8 @@ export async function createDevelopment(
     insertPayload.brochures = JSON.stringify((developmentData as any).brochures);
   }
 
-  // Apply metadata overrides explicitly
-  if (ownerType && !(ownerType in insertPayload)) {
-    insertPayload.devOwnerType = ownerType;
-  }
-  if (brandProfileId && !(brandProfileId in insertPayload)) {
-    insertPayload.developerBrandProfileId = brandProfileId;
-  }
-
+  // ✅ Removed metadata override block - ownership is derived, never trusted from input
+  // Only apply non-ownership metadata
   Object.keys(restMetadata).forEach(key => {
     if (!(key in insertPayload)) insertPayload[key] = (restMetadata as any)[key];
   });

@@ -233,7 +233,9 @@ export default function ExploreHome() {
                 className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all"
                 style={{
                   backgroundColor:
-                    location === '/explore/discovery' ? designTokens.colors.bg.primary : 'transparent',
+                    location === '/explore/discovery'
+                      ? designTokens.colors.bg.primary
+                      : 'transparent',
                   color:
                     location === '/explore/discovery'
                       ? designTokens.colors.text.primary

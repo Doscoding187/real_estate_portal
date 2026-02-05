@@ -17,6 +17,7 @@ import {
 } from './services/affordabilityCompanion';
 import { getActivityFeed as getActivityFeedService } from './services/activityService';
 import { getKPIsWithCache } from './services/kpiService';
+import { seedCleanupService } from './services/seedCleanupService';
 import {
   developmentDrafts,
   developments,
@@ -321,6 +322,26 @@ export const developerRouter = router({
       const existingProfile = await getDeveloperByUserId(ctx.user.id);
       if (existingProfile) return existingProfile;
 
+      // Generate slug for seed cleanup check (use shared generator for consistency)
+      const generatedSlug = seedCleanupService.generateSlug(input.name);
+
+      // Clean up any matching seeded brand profile BEFORE creating the real one
+      // This blocks registration if deletion fails (fail-fast)
+      const cleanupResult = await seedCleanupService.handleSeedDeletionOnRegistration(
+        ctx.user.id,
+        input.name,
+        generatedSlug,
+        undefined, // seedBatchId not known at registration
+        ctx.req,
+      );
+
+      if (cleanupResult.deleted) {
+        console.log(
+          '[developerRouter.createProfile] Cleaned up seeded brand:',
+          cleanupResult.deletedCounts,
+        );
+      }
+
       const developerId = await db.createDeveloper({
         name: input.name,
         description: input.description || undefined,
@@ -456,13 +477,32 @@ export const developerRouter = router({
         .passthrough(),
     )
     .mutation(async ({ ctx, input }) => {
-      // Real developer flow - no operating context
+      const role = ctx.user.role;
+
+      // 🔒 Hard separation
+      if (role === 'property_developer') {
+        // Real developer: force no emulation
+        (ctx as any).brandEmulationContext = null;
+        (ctx as any).operatingAs = undefined;
+      }
+
+      if (role === 'super_admin') {
+        // Super admin: emulation is required for this endpoint
+        if (!ctx.brandEmulationContext?.brandProfileId) {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: 'Super admin must operate as a brand to create developments in emulator mode.',
+          });
+        }
+      }
+
       const development = await developmentService.createDevelopment(
         ctx.user.id,
         input as any,
         {},
-        ctx.brandEmulationContext, // Use emulation context if available
+        ctx.brandEmulationContext ?? null,
       );
+
       return { development };
     }),
 

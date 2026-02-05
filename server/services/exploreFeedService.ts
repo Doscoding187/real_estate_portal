@@ -141,7 +141,11 @@ export class ExploreFeedService {
           )`,
         ),
       )
-      .orderBy(desc(exploreContent.isFeatured), desc(exploreContent.engagementScore), desc(exploreContent.createdAt))
+      .orderBy(
+        desc(exploreContent.isFeatured),
+        desc(exploreContent.engagementScore),
+        desc(exploreContent.createdAt),
+      )
       .limit(limit)
       .offset(offset);
 
@@ -279,4 +283,3 @@ export class ExploreFeedService {
 
 // Singleton
 export const exploreFeedService = new ExploreFeedService();
-

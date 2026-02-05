@@ -15,8 +15,15 @@ import { ResponsiveFilterPanel } from '@/components/explore-discovery/Responsive
 import { useExploreCommonState } from '@/hooks/useExploreCommonState';
 
 export default function ExploreMap() {
-  const { selectedCategoryId, setSelectedCategoryId, showFilters, setShowFilters, toggleFilters, filters, filterActions } =
-    useExploreCommonState({ initialViewMode: 'map' });
+  const {
+    selectedCategoryId,
+    setSelectedCategoryId,
+    showFilters,
+    setShowFilters,
+    toggleFilters,
+    filters,
+    filterActions,
+  } = useExploreCommonState({ initialViewMode: 'map' });
 
   const handlePropertyClick = (propertyId: number) => {
     console.log('Navigate to property:', propertyId);
@@ -75,12 +82,19 @@ export default function ExploreMap() {
         animate={{ opacity: 1 }}
         transition={{ duration: 0.4, delay: 0.1 }}
       >
-        <MapHybridView categoryId={selectedCategoryId} filters={filters} onPropertyClick={handlePropertyClick} />
+        <MapHybridView
+          categoryId={selectedCategoryId}
+          filters={filters}
+          onPropertyClick={handlePropertyClick}
+        />
       </motion.div>
 
       {/* Filters (simplified API) */}
-      <ResponsiveFilterPanel isOpen={showFilters} onClose={() => setShowFilters(false)} onApply={() => setShowFilters(false)} />
+      <ResponsiveFilterPanel
+        isOpen={showFilters}
+        onClose={() => setShowFilters(false)}
+        onApply={() => setShowFilters(false)}
+      />
     </div>
   );
 }
-

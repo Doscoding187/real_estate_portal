@@ -55,19 +55,21 @@ export function ExploreVideoFeed({ categoryId }: ExploreVideoFeedProps) {
           <div className="space-y-2">
             <h3 className="text-white text-xl font-semibold">No videos yet</h3>
             <p className="text-gray-400">
-              {error ? 'We encountered an error loading the video feed.' : 'We are still curating the best property videos for you.'}
+              {error
+                ? 'We encountered an error loading the video feed.'
+                : 'We are still curating the best property videos for you.'}
             </p>
           </div>
 
           <div className="flex flex-col w-full gap-3">
             <button
-              onClick={() => window.location.href = '/explore/map'}
+              onClick={() => (window.location.href = '/explore/map')}
               className="w-full px-6 py-3 bg-white text-black rounded-xl font-semibold hover:bg-gray-100 transition-colors"
             >
               Browse Properties on Map
             </button>
             <button
-              onClick={() => window.location.href = '/explore/home'}
+              onClick={() => (window.location.href = '/explore/home')}
               className="w-full px-6 py-3 bg-white/10 text-white rounded-xl font-medium hover:bg-white/20 transition-colors backdrop-blur-sm"
             >
               Back to Explore Home
@@ -95,8 +97,9 @@ export function ExploreVideoFeed({ categoryId }: ExploreVideoFeedProps) {
         {videos.map((video, index) => (
           <div
             key={video.id}
-            className={`absolute inset-0 transition-opacity duration-300 ${index === currentIndex ? 'opacity-100 z-10' : 'opacity-0 z-0'
-              }`}
+            className={`absolute inset-0 transition-opacity duration-300 ${
+              index === currentIndex ? 'opacity-100 z-10' : 'opacity-0 z-0'
+            }`}
             aria-hidden={index !== currentIndex}
           >
             <VideoPlayer
@@ -127,8 +130,9 @@ export function ExploreVideoFeed({ categoryId }: ExploreVideoFeedProps) {
           return (
             <div
               key={actualIndex}
-              className={`h-0.5 flex-1 rounded-full transition-all ${actualIndex === currentIndex ? 'bg-white' : 'bg-gray-500'
-                }`}
+              className={`h-0.5 flex-1 rounded-full transition-all ${
+                actualIndex === currentIndex ? 'bg-white' : 'bg-gray-500'
+              }`}
               aria-label={`Video ${actualIndex + 1}`}
             />
           );

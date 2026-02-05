@@ -52,7 +52,8 @@ export const partnerAnalyticsService = {
       const totalEngagementScore = safeNumber(row.totalEngagementScore);
 
       // Engagement rate is "score per view" as a rough metric (boot-safe)
-      const engagementRate = totalViews > 0 ? Math.round((totalEngagementScore / totalViews) * 10000) / 100 : 0;
+      const engagementRate =
+        totalViews > 0 ? Math.round((totalEngagementScore / totalViews) * 10000) / 100 : 0;
 
       // Leads (best-effort) from partner_leads if it exists
       let totalLeads = 0;
@@ -76,7 +77,10 @@ export const partnerAnalyticsService = {
         totalLeads,
       };
     } catch (err) {
-      console.warn('[partnerAnalyticsService] getPartnerAnalyticsSummary fallback:', (err as any)?.message);
+      console.warn(
+        '[partnerAnalyticsService] getPartnerAnalyticsSummary fallback:',
+        (err as any)?.message,
+      );
       return { partnerId, totalViews: 0, engagementRate: 0, totalLeads: 0 };
     }
   },
@@ -128,7 +132,10 @@ export const partnerAnalyticsService = {
 
       return out;
     } catch (err) {
-      console.warn('[partnerAnalyticsService] getPerformanceTrends fallback:', (err as any)?.message);
+      console.warn(
+        '[partnerAnalyticsService] getPerformanceTrends fallback:',
+        (err as any)?.message,
+      );
       return [];
     }
   },
@@ -159,7 +166,10 @@ export const partnerAnalyticsService = {
 
       return (rows as any)?.rows ?? [];
     } catch (err) {
-      console.warn('[partnerAnalyticsService] getContentRankedByPerformance fallback:', (err as any)?.message);
+      console.warn(
+        '[partnerAnalyticsService] getContentRankedByPerformance fallback:',
+        (err as any)?.message,
+      );
       return [];
     }
   },
@@ -206,7 +216,10 @@ export const partnerAnalyticsService = {
 
       return { partnerId, views, engagements, leads };
     } catch (err) {
-      console.warn('[partnerAnalyticsService] getConversionFunnel fallback:', (err as any)?.message);
+      console.warn(
+        '[partnerAnalyticsService] getConversionFunnel fallback:',
+        (err as any)?.message,
+      );
       return { partnerId, views: 0, engagements: 0, leads: 0 };
     }
   },
@@ -227,4 +240,3 @@ export const partnerAnalyticsService = {
     return [];
   },
 };
-

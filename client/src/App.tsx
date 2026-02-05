@@ -576,7 +576,7 @@ function App() {
       <BrandingProvider>
         <ThemeProvider
           defaultTheme="light"
-        // switchable
+          // switchable
         >
           <GuestActivityProvider>
             <ComparisonProvider>

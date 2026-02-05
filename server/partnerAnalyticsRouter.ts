@@ -229,9 +229,10 @@ router.get('/:partnerId/dashboard', async (req, res) => {
       start && end
         ? partnerAnalyticsService.getPerformanceTrends(
             partnerId,
-            (['daily', 'weekly', 'monthly'].includes(period)
-              ? period
-              : 'weekly') as 'daily' | 'weekly' | 'monthly',
+            (['daily', 'weekly', 'monthly'].includes(period) ? period : 'weekly') as
+              | 'daily'
+              | 'weekly'
+              | 'monthly',
             start,
             end,
           )
@@ -256,4 +257,3 @@ router.get('/:partnerId/dashboard', async (req, res) => {
 });
 
 export default router;
-

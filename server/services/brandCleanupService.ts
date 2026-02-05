@@ -3,21 +3,23 @@
  *
  * Provides safe cleanup operations for seeded platform-owned brands.
  * Ensures data integrity during cleanup operations.
+ *
+ * IMPORTANT: Uses Drizzle column references only (no raw SQL column names)
+ * to prevent runtime errors from schema drift.
  */
 
 import { db } from '../db';
 import {
   developerBrandProfiles,
   developments,
-  leads,
   properties,
   listingMedia,
   developmentDrafts,
   developmentPhases,
   unitTypes,
-  locations,
+  leads,
 } from '../../drizzle/schema';
-import { eq, and, isNull, sql } from 'drizzle-orm';
+import { eq, and, sql, or, inArray } from 'drizzle-orm';
 import { TRPCError } from '@trpc/server';
 import { developerBrandProfileService } from './developerBrandProfileService';
 
@@ -74,7 +76,7 @@ class BrandCleanupService {
 
     const profile = verification.brandProfile!;
 
-    // Count all related entities
+    // Count all related entities using Drizzle column refs
     const [devCount] = await database
       .select({ count: sql<number>`count(*)` })
       .from(developments)
@@ -85,33 +87,57 @@ class BrandCleanupService {
       .from(properties)
       .where(eq(properties.developerBrandProfileId, brandProfileId));
 
+    // Count leads using developerBrandProfileId (now confirmed in DB + Drizzle)
     const [leadCount] = await database
       .select({ count: sql<number>`count(*)` })
       .from(leads)
       .where(eq(leads.developerBrandProfileId, brandProfileId));
 
-    // Count media files (development and property media)
-    const devMediaCount = await database
-      .select({ count: sql<number>`count(*)` })
-      .from(listingMedia)
-      .where(
-        and(
-          eq(listingMedia.entityType, 'development'),
-          sql`${listingMedia.entityId} IN (SELECT id FROM developments WHERE developer_brand_profile_id = ${brandProfileId})`,
-        ),
-      );
+    // Get development and property IDs for media counting
+    const devIds = await database
+      .select({ id: developments.id })
+      .from(developments)
+      .where(eq(developments.developerBrandProfileId, brandProfileId));
 
-    const propMediaCount = await database
-      .select({ count: sql<number>`count(*)` })
-      .from(listingMedia)
-      .where(
-        and(
-          eq(listingMedia.entityType, 'property'),
-          sql`${listingMedia.entityId} IN (SELECT id FROM properties WHERE developer_brand_profile_id = ${brandProfileId})`,
-        ),
-      );
+    const propIds = await database
+      .select({ id: properties.id })
+      .from(properties)
+      .where(eq(properties.developerBrandProfileId, brandProfileId));
 
-    const totalMedia = (devMediaCount[0]?.count || 0) + (propMediaCount[0]?.count || 0);
+    // Count media files using proper Drizzle conditions
+    let totalMedia = 0;
+
+    if (devIds.length > 0) {
+      const [devMediaCount] = await database
+        .select({ count: sql<number>`count(*)` })
+        .from(listingMedia)
+        .where(
+          and(
+            eq(listingMedia.entityType, 'development'),
+            inArray(
+              listingMedia.entityId,
+              devIds.map(d => d.id),
+            ),
+          ),
+        );
+      totalMedia += devMediaCount?.count || 0;
+    }
+
+    if (propIds.length > 0) {
+      const [propMediaCount] = await database
+        .select({ count: sql<number>`count(*)` })
+        .from(listingMedia)
+        .where(
+          and(
+            eq(listingMedia.entityType, 'property'),
+            inArray(
+              listingMedia.entityId,
+              propIds.map(p => p.id),
+            ),
+          ),
+        );
+      totalMedia += propMediaCount?.count || 0;
+    }
 
     // Determine if hard delete is safe
     const hasDependencies =
@@ -126,9 +152,6 @@ class BrandCleanupService {
 
     // Generate recommendations
     const recommendations: string[] = [];
-    if (leadCount && leadCount.count > 0) {
-      recommendations.push(`Export ${leadCount.count} leads before deletion for CRM records`);
-    }
     if (devCount && devCount.count > 0) {
       recommendations.push(`Archive ${devCount.count} development data for future reference`);
     }
@@ -148,7 +171,7 @@ class BrandCleanupService {
       },
       impact: {
         publicUrls,
-        indexedContent: publicUrls, // Simplified - could include search engine indexed content
+        indexedContent: publicUrls,
       },
       recommendations,
     };
@@ -156,6 +179,9 @@ class BrandCleanupService {
 
   /**
    * Perform safe brand cleanup with proper cascade handling
+   *
+   * Uses precomputed IDs and Drizzle column references (no raw SQL column names)
+   * to ensure schema drift is caught at compile time.
    */
   async executeCleanup(brandProfileId: number, confirm: boolean = false): Promise<CleanupResult> {
     if (!confirm) {
@@ -193,61 +219,67 @@ class BrandCleanupService {
 
     try {
       await database.transaction(async tx => {
-        // 1. Delete media files first (foreign key dependencies)
+        // Precompute IDs once (stable + reusable)
+        const devIdsRows = await tx
+          .select({ id: developments.id })
+          .from(developments)
+          .where(eq(developments.developerBrandProfileId, brandProfileId));
+
+        const devIds = devIdsRows.map(r => r.id);
+
+        const propIdsRows = await tx
+          .select({ id: properties.id })
+          .from(properties)
+          .where(eq(properties.developerBrandProfileId, brandProfileId));
+
+        const propIds = propIdsRows.map(r => r.id);
+
+        // 1. Delete media files (SAFE pairing with entityType + entityId)
         if (impact.summary.mediaFiles > 0) {
-          await tx.delete(listingMedia).where(
-            sql`entity_type IN ('development', 'property') AND entity_id IN (
-                SELECT id FROM developments WHERE developer_brand_profile_id = ${brandProfileId}
-                UNION
-                SELECT id FROM properties WHERE developer_brand_profile_id = ${brandProfileId}
-              )`,
-          );
+          const clauses = [];
+
+          if (devIds.length) {
+            clauses.push(
+              and(
+                eq(listingMedia.entityType, 'development'),
+                inArray(listingMedia.entityId, devIds),
+              ),
+            );
+          }
+          if (propIds.length) {
+            clauses.push(
+              and(eq(listingMedia.entityType, 'property'), inArray(listingMedia.entityId, propIds)),
+            );
+          }
+
+          if (clauses.length) {
+            await tx.delete(listingMedia).where(or(...clauses));
+          }
           deletedItems.mediaFiles = impact.summary.mediaFiles;
         }
 
-        // 2. Delete properties (if any)
-        if (impact.summary.properties > 0) {
-          const result = await tx
-            .delete(properties)
-            .where(eq(properties.developerBrandProfileId, brandProfileId));
-          deletedItems.properties = impact.summary.properties;
+        // 2. Delete properties
+        if (propIds.length) {
+          await tx.delete(properties).where(inArray(properties.id, propIds));
+          deletedItems.properties = propIds.length;
         }
 
-        // 3. Delete development-related entities
-        if (impact.summary.developments > 0) {
-          // Delete development phases
+        // 3. Delete development children then developments
+        if (devIds.length) {
           await tx
             .delete(developmentPhases)
-            .where(
-              sql`development_id IN (SELECT id FROM developments WHERE developer_brand_profile_id = ${brandProfileId})`,
-            );
-
-          // Delete unit types
-          await tx
-            .delete(unitTypes)
-            .where(
-              sql`development_id IN (SELECT id FROM developments WHERE developer_brand_profile_id = ${brandProfileId})`,
-            );
-
-          // Delete development drafts
+            .where(inArray(developmentPhases.developmentId, devIds));
+          await tx.delete(unitTypes).where(inArray(unitTypes.developmentId, devIds));
           await tx
             .delete(developmentDrafts)
-            .where(
-              sql`development_id IN (SELECT id FROM developments WHERE developer_brand_profile_id = ${brandProfileId})`,
-            );
-
-          // Delete the developments themselves
-          await tx
-            .delete(developments)
-            .where(eq(developments.developerBrandProfileId, brandProfileId));
-          deletedItems.developments = impact.summary.developments;
+            .where(inArray(developmentDrafts.developmentId, devIds));
+          await tx.delete(developments).where(inArray(developments.id, devIds));
+          deletedItems.developments = devIds.length;
         }
 
-        // 4. Delete leads
-        if (impact.summary.leads > 0) {
-          await tx.delete(leads).where(eq(leads.developerBrandProfileId, brandProfileId));
-          deletedItems.leads = impact.summary.leads;
-        }
+        // 4. Delete leads by developerBrandProfileId (column now confirmed in DB + Drizzle)
+        await tx.delete(leads).where(eq(leads.developerBrandProfileId, brandProfileId));
+        deletedItems.leads = impact.summary.leads;
 
         // 5. Handle brand profile based on whether hard delete is safe
         if (impact.canHardDelete) {
@@ -289,25 +321,42 @@ class BrandCleanupService {
   /**
    * Export brand data before deletion
    */
-  async exportBrandData(brandProfileId: number): Promise<any> {
-    // This would generate a comprehensive export of all brand data
-    // Implementation could include:
-    // - Development details and media
-    // - Property listings and media
-    // - Lead information (anonymized if needed)
-    // - Analytics data
-    // - Audit trail
+  async exportBrandData(brandProfileId: number): Promise<{
+    profile: any;
+    developments: any[];
+    properties: any[];
+  }> {
+    const database = await db.getDb();
+    if (!database) throw new Error('Database not available');
 
-    const impact = await this.analyzeCleanupImpact(brandProfileId);
+    // Verify brand can be operated on
+    const verification = await developerBrandProfileService.verifyBrandOperation(
+      'export',
+      brandProfileId,
+    );
+    if (!verification.canOperate) {
+      throw new TRPCError({
+        code: 'FORBIDDEN',
+        message: verification.reason || 'Cannot operate on this brand',
+      });
+    }
+
+    const profile = verification.brandProfile;
+
+    const devs = await database
+      .select()
+      .from(developments)
+      .where(eq(developments.developerBrandProfileId, brandProfileId));
+
+    const props = await database
+      .select()
+      .from(properties)
+      .where(eq(properties.developerBrandProfileId, brandProfileId));
 
     return {
-      exportedAt: new Date().toISOString(),
-      brandProfileId,
-      summary: impact.summary,
-      // Implementation would include actual data export
-      data: {
-        // Comprehensive export data
-      },
+      profile,
+      developments: devs,
+      properties: props,
     };
   }
 }

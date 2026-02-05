@@ -174,11 +174,7 @@ export async function updateTranscodedUrls(
  */
 function extractS3Key(videoUrl: string): string {
   if (videoUrl.includes(S3_BUCKET_NAME)) {
-    return (
-      videoUrl.split(`${S3_BUCKET_NAME}/`)[1] ||
-      videoUrl.split('.com/')[1] ||
-      ''
-    );
+    return videoUrl.split(`${S3_BUCKET_NAME}/`)[1] || videoUrl.split('.com/')[1] || '';
   }
   return videoUrl;
 }
@@ -221,7 +217,10 @@ export async function generatePreviewThumbnails(
 /**
  * Placeholder sprite sheet
  */
-export async function generateSpriteSheet(thumbnailUrls: string[], _columns: number = 10): Promise<string> {
+export async function generateSpriteSheet(
+  thumbnailUrls: string[],
+  _columns: number = 10,
+): Promise<string> {
   if (thumbnailUrls.length === 0) return '';
 
   const firstKey = extractS3Key(thumbnailUrls[0]);
@@ -364,9 +363,7 @@ export async function handleTranscodingComplete(
 /**
  * Query current transcoding status
  */
-export async function getTranscodingStatus(
-  exploreVideoId: number,
-): Promise<{
+export async function getTranscodingStatus(exploreVideoId: number): Promise<{
   status: string;
   jobId?: string;
   completedAt?: string;
@@ -404,4 +401,3 @@ export async function getTranscodingStatus(
         : undefined,
   };
 }
-

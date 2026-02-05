@@ -20,28 +20,83 @@ import {
 } from 'drizzle-orm/mysql-core';
 import { sql } from 'drizzle-orm';
 import { users } from './core';
-import { listings, properties } from './listings';
-import { developments } from './developments';
+import { properties, listings } from './listings';
+import { developments, developerBrandProfiles } from './developments';
 import { agencies, agents } from './agencies';
 
 export const leads = mysqlTable('leads', {
   id: int().autoincrement().notNull(),
-  type: mysqlEnum(['buyer', 'seller', 'tenant', 'landlord', 'developer']).notNull(),
-  firstName: varchar({ length: 100 }).notNull(),
-  lastName: varchar({ length: 100 }).notNull(),
+  propertyId: int('propertyId').references(() => properties.id, { onDelete: 'set null' }),
+  developmentId: int('developmentId').references(() => developments.id, { onDelete: 'set null' }),
+  agencyId: int('agencyId').references(() => agencies.id, { onDelete: 'set null' }),
+  agentId: int('agentId').references(() => agents.id, { onDelete: 'set null' }),
+  name: varchar({ length: 200 }).notNull(),
   email: varchar({ length: 320 }).notNull(),
   phone: varchar({ length: 50 }),
-  budgetMin: int(),
-  budgetMax: int(),
-  propertyType: varchar({ length: 50 }),
-  areasOfInterest: text(),
   message: text(),
-  status: mysqlEnum(['new', 'contacted', 'qualified', 'lost', 'closed']).default('new').notNull(),
+  leadType: mysqlEnum('leadType', ['inquiry', 'viewing_request', 'offer', 'callback'])
+    .default('inquiry')
+    .notNull(),
+  status: mysqlEnum([
+    'new',
+    'contacted',
+    'qualified',
+    'converted',
+    'closed',
+    'viewing_scheduled',
+    'offer_sent',
+    'lost',
+  ])
+    .default('new')
+    .notNull(),
   source: varchar({ length: 100 }),
-  assignedTo: int().references(() => users.id, { onDelete: 'set null' }),
-  agencyId: int().references(() => agencies.id, { onDelete: 'cascade' }),
-  createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
-  updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+  createdAt: timestamp('createdAt', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+  updatedAt: timestamp('updatedAt', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+  nextFollowUp: timestamp('nextFollowUp', { mode: 'string' }),
+  lastContactedAt: timestamp('lastContactedAt', { mode: 'string' }),
+  notes: text(),
+  affordabilityData: json('affordability_data'),
+  qualificationStatus: mysqlEnum('qualification_status', [
+    'qualified',
+    'partially_qualified',
+    'unqualified',
+    'pending',
+  ]).default('pending'),
+  qualificationScore: int('qualification_score').default(0),
+  leadSource: varchar('lead_source', { length: 100 }),
+  referrerUrl: text('referrer_url'),
+  utmSource: varchar('utm_source', { length: 100 }),
+  utmMedium: varchar('utm_medium', { length: 100 }),
+  utmCampaign: varchar('utm_campaign', { length: 100 }),
+  funnelStage: mysqlEnum('funnel_stage', [
+    'interest',
+    'affordability',
+    'qualification',
+    'viewing',
+    'offer',
+    'bond',
+    'sale',
+  ]).default('interest'),
+  assignedTo: int('assigned_to').references(() => users.id, { onDelete: 'set null' }),
+  assignedAt: timestamp('assigned_at', { mode: 'string' }),
+  convertedAt: timestamp('converted_at', { mode: 'string' }),
+  lostReason: text('lost_reason'),
+  developerBrandProfileId: int('developer_brand_profile_id').references(
+    () => developerBrandProfiles.id,
+    { onDelete: 'set null' },
+  ),
+  brandLeadStatus: mysqlEnum('brand_lead_status', [
+    'captured',
+    'delivered_unsubscribed',
+    'delivered_subscriber',
+    'claimed',
+  ]).default('captured'),
+  leadDeliveryMethod: mysqlEnum('lead_delivery_method', [
+    'email',
+    'crm_export',
+    'manual',
+    'none',
+  ]).default('email'),
 });
 
 export const leadActivities = mysqlTable('lead_activities', {

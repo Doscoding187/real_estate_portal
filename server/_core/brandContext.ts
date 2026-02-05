@@ -29,7 +29,6 @@ export async function applyBrandContext(ctx: TrpcContext): Promise<EnhancedTRPCC
   }
 
   // Check for X-Operating-As-Brand header
-
   const operatingAsHeader = ctx.req?.headers?.['x-operating-as-brand'];
 
   if (!operatingAsHeader) {
@@ -61,9 +60,15 @@ export async function applyBrandContext(ctx: TrpcContext): Promise<EnhancedTRPCC
       ...ctx,
       operatingAs: {
         brandProfileId: brandProfile.id,
-        brandType: brandProfile.identityType || 'developer', // Use actual type from DB
+        brandType: (brandProfile.identityType || 'developer') as any,
         brandName: brandProfile.brandName,
         originalUserId: ctx.user.id,
+      },
+      // ✅ BRIDGE: legacy code expects this
+      brandEmulationContext: {
+        mode: 'seeding',
+        brandProfileId: brandProfile.id,
+        brandProfileType: (brandProfile.identityType || 'developer') as any,
       },
     };
 

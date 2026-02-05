@@ -205,9 +205,8 @@ export const listingRouter = router({
       // Fallback: Try legacy location resolution (for logging only)
       if (!cityId) {
         try {
-          const { locationPagesServiceEnhanced } = await import(
-            './services/locationPagesServiceEnhanced'
-          );
+          const { locationPagesServiceEnhanced } =
+            await import('./services/locationPagesServiceEnhanced');
           const location = await locationPagesServiceEnhanced.resolveLocation(input.location);
           console.log(
             '[ListingRouter] Fallback: Resolved location:',

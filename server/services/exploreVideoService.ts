@@ -7,7 +7,12 @@ import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import crypto from 'crypto';
 import { db } from '../db';
-import { exploreContent, exploreDiscoveryVideos, properties, developments } from '../../drizzle/schema';
+import {
+  exploreContent,
+  exploreDiscoveryVideos,
+  properties,
+  developments,
+} from '../../drizzle/schema';
 import { eq } from 'drizzle-orm';
 
 // Initialize S3 client
@@ -181,7 +186,11 @@ export async function createExploreVideo(
   let priceMax: number | null = null;
 
   if (metadata.propertyId) {
-    const property = await db.select().from(properties).where(eq(properties.id, metadata.propertyId)).limit(1);
+    const property = await db
+      .select()
+      .from(properties)
+      .where(eq(properties.id, metadata.propertyId))
+      .limit(1);
     if (!property[0]) throw new Error('Property not found');
 
     locationLat = property[0].latitude ? parseFloat(property[0].latitude.toString()) : null;
@@ -189,7 +198,11 @@ export async function createExploreVideo(
     priceMin = property[0].price || null;
     priceMax = property[0].price || null;
   } else if (metadata.developmentId) {
-    const development = await db.select().from(developments).where(eq(developments.id, metadata.developmentId)).limit(1);
+    const development = await db
+      .select()
+      .from(developments)
+      .where(eq(developments.id, metadata.developmentId))
+      .limit(1);
     if (!development[0]) throw new Error('Development not found');
 
     locationLat = development[0].latitude ? parseFloat(development[0].latitude.toString()) : null;

@@ -137,12 +137,16 @@ export class TopicsService {
         }
 
         if (currentTopic.propertyFeatures && topic.propertyFeatures) {
-          const overlap = currentTopic.propertyFeatures.filter(f => topic.propertyFeatures?.includes(f));
+          const overlap = currentTopic.propertyFeatures.filter(f =>
+            topic.propertyFeatures?.includes(f),
+          );
           score += overlap.length * 2;
         }
 
         if (currentTopic.partnerCategories && topic.partnerCategories) {
-          const overlap = currentTopic.partnerCategories.filter(c => topic.partnerCategories?.includes(c));
+          const overlap = currentTopic.partnerCategories.filter(c =>
+            topic.partnerCategories?.includes(c),
+          );
           score += overlap.length * 2;
         }
 
@@ -191,7 +195,14 @@ export class TopicsService {
         JOIN content_topics ct ON ct.content_id = ec.id
         WHERE ct.topic_id = ${topicId}
           AND ec.is_active = 1
-          ${contentTypes.length ? sql`AND ec.content_type IN (${sql.join(contentTypes.map(t => sql`${t}`), sql`, `)})` : sql``}
+          ${
+            contentTypes.length
+              ? sql`AND ec.content_type IN (${sql.join(
+                  contentTypes.map(t => sql`${t}`),
+                  sql`, `,
+                )})`
+              : sql``
+          }
           ${priceMin != null ? sql`AND ec.price_min >= ${priceMin}` : sql``}
           ${priceMax != null ? sql`AND ec.price_max <= ${priceMax}` : sql``}
         ORDER BY ec.engagement_score DESC, ec.created_at DESC
@@ -215,13 +226,17 @@ export class TopicsService {
 
       if (topic.propertyFeatures?.length) {
         for (const feature of topic.propertyFeatures) {
-          tagConds.push(sql`JSON_CONTAINS(ec.metadata, JSON_QUOTE(${feature}), '$.propertyFeatures')`);
+          tagConds.push(
+            sql`JSON_CONTAINS(ec.metadata, JSON_QUOTE(${feature}), '$.propertyFeatures')`,
+          );
         }
       }
 
       if (topic.partnerCategories?.length) {
         for (const category of topic.partnerCategories) {
-          tagConds.push(sql`JSON_CONTAINS(ec.metadata, JSON_QUOTE(${category}), '$.partnerCategory')`);
+          tagConds.push(
+            sql`JSON_CONTAINS(ec.metadata, JSON_QUOTE(${category}), '$.partnerCategory')`,
+          );
         }
       }
 
@@ -230,7 +245,14 @@ export class TopicsService {
         FROM explore_content ec
         WHERE ec.is_active = 1
           ${tagConds.length ? sql`AND (${sql.join(tagConds, sql` OR `)})` : sql``}
-          ${contentTypes.length ? sql`AND ec.content_type IN (${sql.join(contentTypes.map(t => sql`${t}`), sql`, `)})` : sql``}
+          ${
+            contentTypes.length
+              ? sql`AND ec.content_type IN (${sql.join(
+                  contentTypes.map(t => sql`${t}`),
+                  sql`, `,
+                )})`
+              : sql``
+          }
           ${priceMin != null ? sql`AND ec.price_min >= ${priceMin}` : sql``}
           ${priceMax != null ? sql`AND ec.price_max <= ${priceMax}` : sql``}
         ORDER BY ec.engagement_score DESC, ec.created_at DESC
