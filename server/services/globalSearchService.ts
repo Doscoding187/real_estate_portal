@@ -1,21 +1,20 @@
 /**
- * Global Search Service (STUBBED)
- *
- * NOTE: locationSearches table is not exported from schema.
- * Trending/personalization features that depend on locationSearches are disabled.
- * Core search functionality preserved.
- */
-
-import { getDb } from '../db';
-import { locations, properties, developments } from '../../drizzle/schema';
-import { eq, and, or, like, inArray, SQL } from 'drizzle-orm';
-
-/**
  * Global Search Service
  *
  * Provides unified search across locations, listings, and developments
- * with intelligent ranking based on multiple signals.
+ * with basic ranking and location URL building.
+ *
+ * FIX: Un-stubbed tracking by using locationSearches from schema.
  */
+
+import { getDb } from '../db';
+import {
+  locations,
+  properties,
+  developments,
+  locationSearches,
+} from '../../drizzle/schema';
+import { eq, and, or, like, inArray, SQL, sql } from 'drizzle-orm';
 
 export interface SearchOptions {
   query: string;
@@ -139,7 +138,7 @@ function extractMainImage(images: string | null): string | null {
  * Perform global search across all entity types
  */
 export async function globalSearch(options: SearchOptions): Promise<SearchResults> {
-  const { query, types = ['location', 'listing', 'development'], limit = 20 } = options;
+  const { query, types = ['location', 'listing', 'development'], limit = 20, userId } = options;
 
   const results: SearchResults = {
     locations: [],
@@ -149,17 +148,14 @@ export async function globalSearch(options: SearchOptions): Promise<SearchResult
     query,
   };
 
-  // Search locations if requested
   if (types.includes('location')) {
-    results.locations = await searchLocations(query, limit);
+    results.locations = await searchLocations(query, limit, userId);
   }
 
-  // Search listings if requested
   if (types.includes('listing')) {
     results.listings = await searchListings(query, Math.ceil(limit / 2));
   }
 
-  // Search developments if requested
   if (types.includes('development')) {
     results.developments = await searchDevelopments(query, Math.ceil(limit / 2));
   }
@@ -171,17 +167,16 @@ export async function globalSearch(options: SearchOptions): Promise<SearchResult
 }
 
 /**
- * Search locations with basic ranking
- * NOTE: Trending/personalization disabled (locationSearches table not available)
+ * Search locations with basic ranking + trendingScore (last 30 days)
  */
 export async function searchLocations(
   query: string,
   limit: number = 10,
+  userId?: number,
 ): Promise<LocationResult[]> {
   const db = await getDb();
   const searchQuery = `%${query.toLowerCase()}%`;
 
-  // Get locations matching the query
   const matchingLocations = (await db
     .select({
       id: locations.id,
@@ -205,45 +200,62 @@ export async function searchLocations(
     )
     .limit(limit * 2)) as LocationRow[];
 
-  if (matchingLocations.length === 0) {
-    return [];
-  }
+  if (matchingLocations.length === 0) return [];
 
-  // Calculate relevance scores and build results (simplified - no trending data)
+  // Track searches for the top matches (so trending accumulates)
+  // (Don’t track every fuzzy match — track only the top few)
+  const toTrack = matchingLocations.slice(0, Math.min(3, matchingLocations.length));
+  await Promise.all(toTrack.map((l) => trackLocationSearch(l.id, userId)));
+
+  // Pull trending counts for these locations (last 30 days)
+  const ids = matchingLocations.map((l) => l.id);
+
+  const trendingRows = await db
+    .select({
+      locationId: locationSearches.locationId,
+      searches: sql<number>`COUNT(*)`.as('searches'),
+    })
+    .from(locationSearches)
+    .where(
+      and(
+        sql`${locationSearches.searchedAt} >= DATE_SUB(NOW(), INTERVAL 30 DAY)`,
+        sql`${locationSearches.locationId} IN (${sql.join(ids.map((id) => sql`${id}`), sql`,`)})`,
+      ),
+    )
+    .groupBy(locationSearches.locationId);
+
+  const trendingMap = new Map<number, number>(
+    trendingRows.map((r) => [Number(r.locationId), Number(r.searches)]),
+  );
+
   const rankedResults = await Promise.all(
     matchingLocations.map(async (location: LocationRow) => {
-      // 1. Query similarity score (0-100)
       const nameLower = location.name.toLowerCase();
       const queryLower = query.toLowerCase();
+
       let similarityScore = 0;
+      if (nameLower === queryLower) similarityScore = 100;
+      else if (nameLower.startsWith(queryLower)) similarityScore = 80;
+      else if (nameLower.includes(queryLower)) similarityScore = 60;
+      else similarityScore = 40;
 
-      if (nameLower === queryLower) {
-        similarityScore = 100; // Exact match
-      } else if (nameLower.startsWith(queryLower)) {
-        similarityScore = 80; // Starts with query
-      } else if (nameLower.includes(queryLower)) {
-        similarityScore = 60; // Contains query
-      } else {
-        similarityScore = 40; // Fuzzy match
-      }
-
-      // 2. Listing inventory volume (0-100)
       const inventoryScore = Math.min(((location.propertyCount || 0) / 50) * 100, 100);
 
-      // 3. Type priority (suburbs > cities > provinces)
       let typePriority = 0;
-      if (location.type === 'suburb' || location.type === 'neighborhood') {
-        typePriority = 20;
-      } else if (location.type === 'city') {
-        typePriority = 10;
-      } else if (location.type === 'province') {
-        typePriority = 5;
-      }
+      if (location.type === 'suburb' || location.type === 'neighborhood') typePriority = 20;
+      else if (location.type === 'city') typePriority = 10;
+      else if (location.type === 'province') typePriority = 5;
 
-      // Calculate weighted relevance score (no trending/history)
-      const relevanceScore = similarityScore * 0.5 + inventoryScore * 0.3 + typePriority * 0.2;
+      const trendingScoreRaw = trendingMap.get(location.id) ?? 0;
+      // Normalize trending into 0-100-ish range without needing a global max
+      const trendingScore = Math.min(trendingScoreRaw * 5, 100);
 
-      // Build hierarchical URL
+      const relevanceScore =
+        similarityScore * 0.45 +
+        inventoryScore * 0.25 +
+        typePriority * 0.10 +
+        trendingScore * 0.20;
+
       const url = await buildLocationUrl(db, location);
 
       return {
@@ -257,13 +269,12 @@ export async function searchLocations(
         longitude: location.longitude,
         propertyCount: location.propertyCount,
         relevanceScore: Math.round(relevanceScore),
-        trendingScore: 0, // Disabled - no locationSearches table
+        trendingScore,
         url,
       };
     }),
   );
 
-  // Sort by relevance score and return top results
   return rankedResults.sort((a, b) => b.relevanceScore - a.relevanceScore).slice(0, limit);
 }
 
@@ -275,7 +286,6 @@ async function buildLocationUrl(db: any, location: any): Promise<string> {
   const segments = [location.slug];
   let currentLocation = location;
 
-  // Traverse up the hierarchy
   while (currentLocation.parentId) {
     const [parent] = (await db
       .select({ slug: locations.slug, parentId: locations.parentId })
@@ -331,7 +341,7 @@ async function searchListings(query: string, limit: number = 10): Promise<Listin
   return results.map((listing: ListingRow) => ({
     ...listing,
     price: Number(listing.price),
-    relevanceScore: 50, // Basic relevance for now
+    relevanceScore: 50,
   }));
 }
 
@@ -378,7 +388,7 @@ async function searchDevelopments(query: string, limit: number = 10): Promise<De
     locationId: dev.locationId,
     placeId: dev.placeId,
     mainImage: extractMainImage(dev.images),
-    relevanceScore: 50, // Basic relevance for now
+    relevanceScore: 50,
   }));
 }
 
@@ -399,7 +409,6 @@ export async function filterListingsByPlaceId(
 ): Promise<ListingResult[]> {
   const db = await getDb();
 
-  // First, find the location by Place ID
   const [location] = await db
     .select({ id: locations.id })
     .from(locations)
@@ -407,31 +416,15 @@ export async function filterListingsByPlaceId(
     .limit(1);
 
   if (!location) {
-    // Fallback to direct Place ID matching on listings
     return filterListingsByPlaceIdDirect(placeId, filters, limit);
   }
 
-  // Build filter conditions
-  const conditions: SQL[] = [
-    eq(properties.locationId, location.id),
-    eq(properties.status, 'published'),
-  ];
+  const conditions: SQL[] = [eq(properties.locationId, location.id), eq(properties.status, 'published')];
 
-  if (filters?.propertyType && filters.propertyType.length > 0) {
-    conditions.push(inArray(properties.propertyType, filters.propertyType as any));
-  }
-
-  if (filters?.listingType && filters.listingType.length > 0) {
-    conditions.push(inArray(properties.listingType, filters.listingType as any));
-  }
-
-  if (filters?.bedrooms) {
-    conditions.push(eq(properties.bedrooms, filters.bedrooms));
-  }
-
-  if (filters?.bathrooms) {
-    conditions.push(eq(properties.bathrooms, filters.bathrooms));
-  }
+  if (filters?.propertyType?.length) conditions.push(inArray(properties.propertyType, filters.propertyType as any));
+  if (filters?.listingType?.length) conditions.push(inArray(properties.listingType, filters.listingType as any));
+  if (filters?.bedrooms) conditions.push(eq(properties.bedrooms, filters.bedrooms));
+  if (filters?.bathrooms) conditions.push(eq(properties.bathrooms, filters.bathrooms));
 
   const results = (await db
     .select({
@@ -453,12 +446,12 @@ export async function filterListingsByPlaceId(
   return results.map((listing: ListingRow) => ({
     ...listing,
     price: Number(listing.price),
-    relevanceScore: 100, // High relevance for exact location match
+    relevanceScore: 100,
   }));
 }
 
 /**
- * Fallback: Filter listings by Place ID directly (when location record doesn't exist)
+ * Fallback: Filter listings by Place ID directly
  */
 async function filterListingsByPlaceIdDirect(
   placeId: string,
@@ -469,21 +462,10 @@ async function filterListingsByPlaceIdDirect(
 
   const conditions: SQL[] = [eq(properties.placeId, placeId), eq(properties.status, 'published')];
 
-  if (filters?.propertyType && filters.propertyType.length > 0) {
-    conditions.push(inArray(properties.propertyType, filters.propertyType as any));
-  }
-
-  if (filters?.listingType && filters.listingType.length > 0) {
-    conditions.push(inArray(properties.listingType, filters.listingType as any));
-  }
-
-  if (filters?.bedrooms) {
-    conditions.push(eq(properties.bedrooms, filters.bedrooms));
-  }
-
-  if (filters?.bathrooms) {
-    conditions.push(eq(properties.bathrooms, filters.bathrooms));
-  }
+  if (filters?.propertyType?.length) conditions.push(inArray(properties.propertyType, filters.propertyType as any));
+  if (filters?.listingType?.length) conditions.push(inArray(properties.listingType, filters.listingType as any));
+  if (filters?.bedrooms) conditions.push(eq(properties.bedrooms, filters.bedrooms));
+  if (filters?.bathrooms) conditions.push(eq(properties.bathrooms, filters.bathrooms));
 
   const results = (await db
     .select({
@@ -511,11 +493,15 @@ async function filterListingsByPlaceIdDirect(
 
 /**
  * Track location search for trending analysis
- * STUBBED: locationSearches table not available
+ * FIXED: writes to location_searches
  */
 export async function trackLocationSearch(locationId: number, userId?: number): Promise<void> {
-  // STUB: No-op - locationSearches table not available
-  console.debug(
-    '[globalSearchService] trackLocationSearch called but disabled (no locationSearches table)',
-  );
+  const db = await getDb();
+
+  await db.insert(locationSearches).values({
+    locationId,
+    userId: userId ?? null,
+    // searchedAt default CURRENT_TIMESTAMP
+  });
 }
+
