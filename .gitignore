@@ -107,3 +107,6 @@ verification_*.txt
 .env.prod.backup
 .env.backup
 dist/
+
+# Vitest timestamp artifacts
+vitest.config.ts.timestamp-*.mjs
