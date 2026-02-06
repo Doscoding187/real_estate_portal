@@ -419,19 +419,18 @@ class BrandEmulatorService {
 
   /**
    * Verify brand context and return operating identity
-   * This is the replacement for developer.getProfile in emulator mode
+   * IMPORTANT: In emulator mode we DO NOT masquerade brandProfileId as developerId
    */
   async verifyOperatingIdentity(brandProfileId: number): Promise<{
-    developerId: number;
+    developerId: number | null; // ← now nullable + null in emulation
     brandProfileId: number;
     operatingMode: 'emulator';
     brandName: string;
   }> {
     const brandIdentity = await this.getBrandIdentity(brandProfileId);
 
-    // In emulator mode, brandProfileId acts as developerId for ownership checks
     return {
-      developerId: brandProfileId,
+      developerId: null, // ← critical fix
       brandProfileId,
       operatingMode: 'emulator',
       brandName: brandIdentity.name,

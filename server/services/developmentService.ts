@@ -1,25 +1,15 @@
+import { sql, eq, desc, and, inArray } from 'drizzle-orm';
 import type { InferSelectModel } from 'drizzle-orm';
-import { eq, desc, and, sql, inArray } from 'drizzle-orm';
 import { TRPCError } from '@trpc/server';
 import { getDb } from '../db-connection';
+
 import {
   developments,
   developers,
   unitTypes,
   developmentPhases,
-  locations,
   developerBrandProfiles,
-  developmentDrafts,
-  users,
 } from '../../drizzle/schema';
-import * as crypto from 'crypto';
-
-import {
-  normalizeForPublish,
-  validateNormalizedPayload,
-  type WizardData,
-  type NormalizedDevelopmentPayload,
-} from './publishNormalizer';
 
 // ===========================================================================
 // TYPES
@@ -30,107 +20,9 @@ type DeveloperRow = InferSelectModel<typeof developers>;
 type UnitTypeRow = InferSelectModel<typeof unitTypes>;
 type DevelopmentPhaseRow = InferSelectModel<typeof developmentPhases>;
 
-interface CreateDevelopmentData {
-  name: string;
-  tagline?: string;
-  developmentType: 'residential' | 'commercial' | 'mixed_use' | 'land';
-  description?: string;
-  slug?: string;
-
-  unitTypes?: UnitTypeData[];
-  amenities?: string[] | string;
-  showHouseAddress?: boolean;
-  isFeatured?: boolean;
-  isPublished?: boolean;
-  views?: number;
-  developerBrandProfileId?: number | null;
-  [key: string]: any;
-}
-
-interface UnitTypeData {
-  id?: string;
-  name?: string;
-  bedrooms?: number;
-  bathrooms?: number;
-  parkingType?: string;
-  parkingBays?: number;
-  unitSize?: number;
-  priceFrom?: number;
-  priceTo?: number;
-  basePriceFrom?: number;
-  monthlyRentFrom?: number;
-  monthlyRentTo?: number;
-  extras?: Array<{ price: number; [key: string]: any }>;
-  depositRequired?: number;
-  leaseTerm?: string;
-  isFurnished?: boolean;
-  startingBid?: number;
-  reservePrice?: number;
-  auctionStartDate?: string;
-  auctionEndDate?: string;
-  auctionStatus?: 'scheduled' | 'active' | 'sold' | 'passed_in' | 'withdrawn';
-  totalUnits?: number;
-  availableUnits?: number;
-  isActive?: boolean;
-}
-
-interface DevelopmentMetadata {
-  ownerType?: 'platform' | 'developer';
-  brandProfileId?: number | null;
-  [key: string]: any;
-}
-
-interface DevelopmentError extends Error {
-  code?: string;
-  details?: Record<string, any>;
-}
-
 // ===========================================================================
 // UTILITIES
 // ===========================================================================
-
-export function generateSlug(text: string): string {
-  return text
-    .toString()
-    .toLowerCase()
-    .trim()
-    .replace(/\s+/g, '-')
-    .replace(/[^\w\-]+/g, '')
-    .replace(/\-\-+/g, '-')
-    .replace(/^-+/, '')
-    .replace(/-+$/, '');
-}
-
-/**
- * NOTE: Uses getDb() internally (same as your original).
- * If you previously edited generateUniqueSlug to accept (baseName, db),
- * revert your call sites OR adjust this signature + callers accordingly.
- */
-export async function generateUniqueSlug(baseName: string): Promise<string> {
-  const db = await getDb();
-  if (!db) throw new Error('Database connection unavailable for slug generation');
-
-  let slug = generateSlug(baseName);
-  let counter = 1;
-
-  while (true) {
-    const existing = await db
-      .select({ id: developments.id })
-      .from(developments)
-      .where(eq(developments.slug, slug))
-      .limit(1);
-
-    if (existing.length === 0) return slug;
-
-    slug = `${generateSlug(baseName)}-${counter}`;
-    counter++;
-  }
-}
-
-function boolToInt(value: unknown): 0 | 1 {
-  if (value === true || value === 'true' || value === 1 || value === '1') return 1;
-  return 0;
-}
 
 function parseSlugOrId(input: string): { isId: boolean; value: string | number } {
   const trimmed = input.trim();
@@ -144,90 +36,19 @@ function parseSlugOrId(input: string): { isId: boolean; value: string | number }
   return { isId: false, value: trimmed };
 }
 
-function normalizeAmenities(amenities: unknown): string[] {
-  if (Array.isArray(amenities)) return amenities as string[];
-
-  if (typeof amenities === 'string') {
-    try {
-      const parsed = parseJsonMaybeTwice(amenities, null);
-      if (Array.isArray(parsed)) return parsed as string[];
-      if (parsed && typeof parsed === 'object') {
-        const standard = Array.isArray((parsed as any).standard) ? (parsed as any).standard : [];
-        const additional = Array.isArray((parsed as any).additional)
-          ? (parsed as any).additional
-          : [];
-        const merged = [...standard, ...additional].filter(Boolean).map(String);
-        if (merged.length > 0) return merged;
-      }
-      return amenities ? [amenities] : [];
-    } catch {
-      return amenities ? [amenities] : [];
-    }
-  }
-
-  if (amenities && typeof amenities === 'object') {
-    const standard = Array.isArray((amenities as any).standard) ? (amenities as any).standard : [];
-    const additional = Array.isArray((amenities as any).additional)
-      ? (amenities as any).additional
-      : [];
-    const merged = [...standard, ...additional].filter(Boolean).map(String);
-    if (merged.length > 0) return merged;
-  }
-
-  return [];
-}
-
-function parseJsonMaybeTwice<T>(value: unknown, fallback: T): T | unknown {
+function parseJsonMaybeTwice<T>(value: unknown, fallback: T): T {
   if (value === null || value === undefined || value === '') return fallback;
-  if (typeof value !== 'string') return value;
+  if (typeof value !== 'string') return value as T;
 
   try {
     const parsed = JSON.parse(value);
     if (typeof parsed === 'string') {
-      const trimmed = parsed.trim();
-      if (
-        (trimmed.startsWith('[') && trimmed.endsWith(']')) ||
-        (trimmed.startsWith('{') && trimmed.endsWith('}'))
-      ) {
-        try {
-          return JSON.parse(trimmed);
-        } catch {
-          return fallback;
-        }
-      }
+      return JSON.parse(parsed);
     }
     return parsed;
   } catch {
     return fallback;
   }
-}
-
-/**
- * Preserves structured objects { url, category, caption }.
- * IMPORTANT: do NOT flatten or reshape.
- */
-function normalizeImages(images: unknown): unknown[] {
-  if (Array.isArray(images)) return images;
-
-  if (typeof images === 'string') {
-    if (images.includes(',') && !images.trim().startsWith('[')) {
-      return images
-        .split(',')
-        .map(img => img.trim())
-        .filter(Boolean);
-    }
-
-    try {
-      const parsed = JSON.parse(images);
-      if (Array.isArray(parsed)) return parsed;
-    } catch {
-      return images ? [images] : [];
-    }
-
-    return images ? [images] : [];
-  }
-
-  return [];
 }
 
 function parseJsonField(field: unknown): unknown[] {
@@ -237,15 +58,10 @@ function parseJsonField(field: unknown): unknown[] {
   if (typeof field === 'string') {
     try {
       const trimmed = field.trim();
-      if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
-        return JSON.parse(trimmed);
-      }
-      if (trimmed.includes(',')) {
-        return trimmed.split(',').map((s: string) => s.trim());
-      }
+      if (trimmed.startsWith('[')) return JSON.parse(trimmed);
+      if (trimmed.includes(',')) return trimmed.split(',').map(s => s.trim());
       return [trimmed];
     } catch {
-      console.warn('[developmentService] Failed to parse JSON field:', field);
       return [];
     }
   }
@@ -253,262 +69,59 @@ function parseJsonField(field: unknown): unknown[] {
   return [];
 }
 
-function sanitizeEnum<T extends string>(
-  value: unknown,
-  allowedValues: T[],
-  defaultValue: T | null = null,
-): T | null {
-  if (value === undefined || value === null || value === '') return defaultValue;
-  if (allowedValues.includes(value as T)) return value as T;
-  return defaultValue;
-}
+function normalizeAmenities(amenities: unknown): string[] {
+  if (Array.isArray(amenities)) return amenities as string[];
 
-function normalizeTransactionType(value: unknown): 'for_sale' | 'for_rent' | 'auction' {
-  const normalized = String(value ?? '')
-    .trim()
-    .toLowerCase();
-
-  if (normalized === 'sale') return 'for_sale';
-  if (normalized === 'rent') return 'for_rent';
-  if (normalized === 'auction') return 'auction';
-  if (normalized === 'for_sale' || normalized === 'for_rent') {
-    return normalized as 'for_sale' | 'for_rent';
+  if (typeof amenities === 'string') {
+    const parsed = parseJsonMaybeTwice<any>(amenities, null);
+    if (Array.isArray(parsed)) return parsed;
+    if (parsed?.standard || parsed?.additional) {
+      return [...(parsed.standard ?? []), ...(parsed.additional ?? [])].filter(Boolean);
+    }
+    return amenities ? [amenities] : [];
   }
 
-  return 'for_sale';
+  return [];
 }
 
-function computeRentRangeFromUnits(unitTypesData?: any[]): {
-  monthlyRentFrom: number | null;
-  monthlyRentTo: number | null;
-} {
-  if (!Array.isArray(unitTypesData) || unitTypesData.length === 0) {
-    return { monthlyRentFrom: null, monthlyRentTo: null };
-  }
+// ===========================================================================
+// DEVELOPER DISPLAY HELPER (single source of truth)
+// ===========================================================================
 
-  const ranges = unitTypesData
-    .map(unit => {
-      const from = Number(unit?.monthlyRentFrom ?? unit?.monthlyRent ?? 0);
-      const to = Number(unit?.monthlyRentTo ?? 0);
-      const resolvedFrom = from > 0 ? from : to;
-      const resolvedTo = to > 0 ? to : from;
-      return { from: resolvedFrom, to: resolvedTo };
-    })
-    .filter(r => (Number.isFinite(r.from) && r.from > 0) || (Number.isFinite(r.to) && r.to > 0));
+function buildDeveloperDisplay(dev: any) {
+  const brand = dev?.brandProfile ?? dev?.publisher ?? null;
+  const developer = dev?.developer ?? null;
 
-  if (ranges.length === 0) {
-    return { monthlyRentFrom: null, monthlyRentTo: null };
-  }
-
-  const mins = ranges.map(r => r.from).filter(n => n > 0);
-  const maxs = ranges.map(r => r.to).filter(n => n > 0);
-
-  return {
-    monthlyRentFrom: mins.length ? Math.min(...mins) : null,
-    monthlyRentTo: maxs.length ? Math.max(...maxs) : null,
-  };
-}
-
-function computeAuctionRangeFromUnits(unitTypesData?: any[]): {
-  auctionStartDate: string | null;
-  auctionEndDate: string | null;
-  startingBidFrom: number | null;
-  reservePriceFrom: number | null;
-} {
-  if (!Array.isArray(unitTypesData) || unitTypesData.length === 0) {
+  if (brand?.name) {
     return {
-      auctionStartDate: null,
-      auctionEndDate: null,
-      startingBidFrom: null,
-      reservePriceFrom: null,
+      type: 'brand_profile' as const,
+      name: brand.name,
+      logoUrl: brand.logoUrl ?? null,
+      websiteUrl: brand.websiteUrl ?? null,
+      description: brand.description ?? null,
+      slug: brand.slug ?? undefined,
     };
   }
 
-  const normalizeDateTimeString = (value: unknown): string | null => {
-    if (value === undefined || value === null || value === '') return null;
-    if (value instanceof Date) {
-      return value.toISOString().slice(0, 19).replace('T', ' ');
-    }
-    if (typeof value !== 'string') return null;
-    const trimmed = value.trim();
-    if (!trimmed) return null;
-    if (trimmed.includes('T')) return trimmed.replace('T', ' ').slice(0, 19);
-    if (trimmed.includes(' ')) return trimmed.slice(0, 19);
-    const parsed = new Date(trimmed);
-    if (Number.isNaN(parsed.getTime())) return null;
-    return parsed.toISOString().slice(0, 19).replace('T', ' ');
-  };
-
-  const parseDateTime = (value: unknown) => {
-    const normalized = normalizeDateTimeString(value);
-    if (!normalized) return null;
-    const parsed = new Date(normalized.replace(' ', 'T'));
-    if (Number.isNaN(parsed.getTime())) return null;
-    return { normalized, ts: parsed.getTime() };
-  };
-
-  const startDates = unitTypesData
-    .map(unit => parseDateTime(unit?.auctionStartDate))
-    .filter(Boolean) as Array<{ normalized: string; ts: number }>;
-  const endDates = unitTypesData
-    .map(unit => parseDateTime(unit?.auctionEndDate))
-    .filter(Boolean) as Array<{ normalized: string; ts: number }>;
-
-  const startingBids = unitTypesData
-    .map(unit => Number(unit?.startingBid ?? 0))
-    .filter(n => Number.isFinite(n) && n > 0);
-  const reservePrices = unitTypesData
-    .map(unit => Number(unit?.reservePrice ?? 0))
-    .filter(n => Number.isFinite(n) && n > 0);
-
-  const earliestStart = startDates.sort((a, b) => a.ts - b.ts)[0]?.normalized ?? null;
-  const latestEnd = endDates.sort((a, b) => b.ts - a.ts)[0]?.normalized ?? null;
+  if (developer?.name) {
+    return {
+      type: 'developer' as const,
+      name: developer.name,
+      logoUrl: developer.logo ?? null,
+      websiteUrl: developer.website ?? null,
+      description: developer.description ?? null,
+      slug: developer.slug ?? undefined,
+    };
+  }
 
   return {
-    auctionStartDate: earliestStart,
-    auctionEndDate: latestEnd,
-    startingBidFrom: startingBids.length ? Math.min(...startingBids) : null,
-    reservePriceFrom: reservePrices.length ? Math.min(...reservePrices) : null,
+    type: 'unknown' as const,
+    name: 'Unknown Developer',
+    logoUrl: null,
+    websiteUrl: null,
+    description: 'Professional property developer committed to quality and excellence.',
+    slug: undefined,
   };
-}
-
-function sanitizeInt(value: unknown): number | null {
-  if (value === undefined || value === null || value === '') return null;
-  const num = parseInt(String(value), 10);
-  return isNaN(num) ? null : num;
-}
-
-function sanitizeDecimal(value: unknown): number | null {
-  if (value === undefined || value === null || value === '') return null;
-  const num = Number(value);
-  return Number.isFinite(num) ? num : null;
-}
-
-function sanitizeString(value: unknown): string | null {
-  if (value === undefined || value === null) return null;
-  if (typeof value !== 'string') return null;
-  const trimmed = value.trim();
-  return trimmed.length ? trimmed : null;
-}
-
-function sanitizeDate(value: unknown): Date | null {
-  if (value === undefined || value === null || value === '') return null;
-  if (value instanceof Date) return value;
-  if (typeof value === 'string') {
-    const trimmed = value.trim();
-    if (!trimmed.length) return null;
-    const parsed = new Date(trimmed);
-    return Number.isNaN(parsed.getTime()) ? null : parsed;
-  }
-  return null;
-}
-
-function stringifyJsonValue(value: unknown, fallback: unknown): string {
-  if (typeof value === 'string') return value;
-  const safeValue = value ?? fallback;
-  try {
-    return JSON.stringify(safeValue);
-  } catch {
-    return JSON.stringify(fallback);
-  }
-}
-
-function requireEnum<T extends string>(value: unknown, allowed: T[], fieldName: string): T {
-  const sanitized = sanitizeEnum(value, allowed, null);
-  if (sanitized === null) {
-    throw new TRPCError({
-      code: 'BAD_REQUEST',
-      message: `Invalid ${fieldName}`,
-    });
-  }
-  return sanitized;
-}
-
-function validateDevelopmentData(data: CreateDevelopmentData, developerId: number): void {
-  if (!developerId) throw createError('Invalid developerId', 'VALIDATION_ERROR', { developerId });
-
-  if (
-    (data as any).devOwnerType &&
-    !['platform', 'developer'].includes((data as any).devOwnerType)
-  ) {
-    throw createError(
-      `Invalid devOwnerType: ${(data as any).devOwnerType}. Must be 'platform' or 'developer'`,
-      'VALIDATION_ERROR',
-      { devOwnerType: (data as any).devOwnerType },
-    );
-  }
-}
-
-function createError(
-  message: string,
-  code: string,
-  details?: Record<string, any>,
-): DevelopmentError {
-  const error = new Error(message) as DevelopmentError;
-  error.code = code;
-  error.details = details;
-  return error;
-}
-
-function handleDatabaseError(error: any, context: Record<string, any>): never {
-  console.error('[developmentService] ⛔ FULL DATABASE ERROR:', {
-    message: error?.message,
-    code: error?.code,
-    errno: error?.errno,
-    sqlMessage: error?.sqlMessage,
-    sqlState: error?.sqlState,
-    sql: error?.sql,
-    values: error?.values,
-    params: error?.params,
-    allKeys: error ? Object.keys(error) : [],
-    context,
-  });
-  console.error('[developmentService] ⛔ RAW ERROR STACK:', error?.stack);
-
-  if (error?.cause) {
-    console.error('[developmentService] ⛔ CAUSE ERROR:', {
-      causeMessage: error.cause?.message,
-      causeCode: error.cause?.code,
-      causeSqlMessage: error.cause?.sqlMessage,
-      causeSql: error.cause?.sql,
-    });
-  }
-
-  switch (error?.code) {
-    case 'ER_NO_REFERENCED_ROW_2':
-      throw createError(
-        'Foreign key constraint violation. Invalid developerId or developerBrandProfileId.',
-        'FK_CONSTRAINT_ERROR',
-        {
-          developerId: context.developerId,
-          developerBrandProfileId: context.developerBrandProfileId,
-        },
-      );
-
-    case 'ER_TRUNCATED_WRONG_VALUE_FOR_FIELD':
-      throw createError(
-        `Invalid enum value for devOwnerType: ${context.devOwnerType}. Must be 'platform' or 'developer'.`,
-        'ENUM_ERROR',
-        { devOwnerType: context.devOwnerType },
-      );
-
-    case 'ER_DUP_ENTRY':
-      throw createError(
-        'Duplicate entry detected. Development slug or unique field already exists.',
-        'DUPLICATE_ENTRY',
-        context,
-      );
-
-    case 'ER_DATA_TOO_LONG':
-      throw createError('Data too long for one or more fields.', 'DATA_TOO_LONG', context);
-
-    default:
-      throw createError(
-        `Database operation failed: ${error?.message ?? 'Unknown DB error'}`,
-        error?.code || 'DB_ERROR',
-        context,
-      );
-  }
 }
 
 // ===========================================================================
@@ -516,234 +129,175 @@ function handleDatabaseError(error: any, context: Record<string, any>): never {
 // ===========================================================================
 
 export async function getPublicDevelopmentBySlug(slugOrId: string) {
-  console.log('[DEBUG] Service: getPublicDevelopmentBySlug called with:', slugOrId);
+  const db = await getDb();
+  if (!db) return null;
 
+  const { isId, value } = parseSlugOrId(slugOrId);
+
+  const whereClause = isId
+    ? and(eq(developments.id, value as number), eq(developments.isPublished, 1))
+    : and(eq(developments.slug, value as string), eq(developments.isPublished, 1));
+
+  const results = await db
+    .select({
+      id: developments.id,
+      name: developments.name,
+      slug: developments.slug,
+      description: developments.description,
+      images: developments.images,
+      videos: developments.videos,
+      city: developments.city,
+      province: developments.province,
+      suburb: developments.suburb,
+      address: developments.address,
+      latitude: developments.latitude,
+      longitude: developments.longitude,
+      priceFrom: developments.priceFrom,
+      priceTo: developments.priceTo,
+      monthlyRentFrom: developments.monthlyRentFrom,
+      monthlyRentTo: developments.monthlyRentTo,
+      amenities: developments.amenities,
+      estateSpecs: developments.estateSpecs,
+      floorPlans: developments.floorPlans,
+      brochures: developments.brochures,
+      developerBrandProfileId: developments.developerBrandProfileId,
+
+      // ✅ chips + status row + availability bar
+      status: developments.status,
+      developmentType: developments.developmentType,
+      ownershipType: developments.ownershipType,
+      transactionType: developments.transactionType,
+      marketingRole: developments.marketingRole,
+      completionDate: developments.completionDate,
+      totalUnits: developments.totalUnits,
+      availableUnits: developments.availableUnits,
+
+      developer: {
+        id: developers.id,
+        name: developers.name,
+        slug: developers.slug,
+        logo: developers.logo,
+        description: developers.description,
+        website: developers.website,
+      },
+    })
+    .from(developments)
+    .leftJoin(developers, eq(developments.developerId, developers.id))
+    .where(whereClause)
+    .limit(1);
+
+  if (!results[0]) return null;
+
+  const dev: any = results[0];
+
+  // Attach brand profile (optional)
   try {
-    const db = await getDb();
-    if (!db) {
-      console.error('[CRITICAL] Service: Database connection is NULL');
-      return null;
-    }
-
-    const { isId, value } = parseSlugOrId(slugOrId);
-
-    if (!isId && (!value || value === 'undefined' || value === 'null')) return null;
-
-    const whereClause = isId
-      ? and(eq(developments.id, value as number), eq(developments.isPublished, 1))
-      : and(eq(developments.slug, value as string), eq(developments.isPublished, 1));
-
-    const results = await db
-      .select({
-        id: developments.id,
-        name: developments.name,
-        slug: developments.slug,
-        description: developments.description,
-        images: developments.images,
-        videos: developments.videos,
-        locationId: developments.locationId,
-        city: developments.city,
-        province: developments.province,
-        suburb: developments.suburb,
-        address: developments.address,
-        latitude: developments.latitude,
-        longitude: developments.longitude,
-        priceFrom: developments.priceFrom,
-        priceTo: developments.priceTo,
-        monthlyRentFrom: developments.monthlyRentFrom,
-        monthlyRentTo: developments.monthlyRentTo,
-        amenities: developments.amenities,
-        highlights: developments.highlights,
-        features: developments.features,
-        estateSpecs: developments.estateSpecs,
-        monthlyLevyFrom: developments.monthlyLevyFrom,
-        monthlyLevyTo: developments.monthlyLevyTo,
-        ratesFrom: developments.ratesFrom,
-        ratesTo: developments.ratesTo,
-        transferCostsIncluded: developments.transferCostsIncluded,
-        status: developments.status,
-        developmentType: developments.developmentType,
-        transactionType: developments.transactionType,
-        completionDate: developments.completionDate,
-        totalUnits: developments.totalUnits,
-        availableUnits: developments.availableUnits,
-        floorPlans: developments.floorPlans,
-        brochures: developments.brochures,
-        showHouseAddress: developments.showHouseAddress,
-        isPublished: developments.isPublished,
-        marketingRole: developments.marketingRole,
-        ownershipType: developments.ownershipType,
-        developer: {
-          id: sql<number>`COALESCE(${developerBrandProfiles.id}, ${developers.id})`,
-          name: sql<string>`COALESCE(${developerBrandProfiles.brandName}, ${developers.name})`,
-          slug: sql<string>`COALESCE(${developerBrandProfiles.slug}, ${developers.slug})`,
-          logo: sql<string>`COALESCE(${developerBrandProfiles.logoUrl}, ${developers.logo})`,
-          description: sql<string>`COALESCE(${developerBrandProfiles.about}, ${developers.description})`,
-          website: sql<string>`COALESCE(${developerBrandProfiles.websiteUrl}, ${developers.website})`,
-          email: sql<string>`COALESCE(${developerBrandProfiles.publicContactEmail}, ${developers.email})`,
-          phone: developers.phone,
-          status: developers.status,
-          isBrand: sql<boolean>`CASE WHEN ${developerBrandProfiles.id} IS NOT NULL THEN 1 ELSE 0 END`,
-        },
-      })
-      .from(developments)
-      .leftJoin(developers, eq(developments.developerId, developers.id))
-      .leftJoin(
-        developerBrandProfiles,
-        eq(developments.developerBrandProfileId, developerBrandProfiles.id),
-      )
-      .where(whereClause)
-      .limit(1);
-
-    if (results.length === 0) return null;
-
-    const dev = results[0];
-
-    // ✅ Explicitly construct publisher object logic
-    // If brand profile exists (id is not null), it is the publisher.
-    const hasBrand = !!dev.developer.isBrand;
-
-    // We construct a dedicated publisher object for the UI to use
-    const publisher = hasBrand
-      ? {
-          type: 'brand_profile',
-          id: dev.developer.id, // This is already coalesced to brand ID
-          name: dev.developer.name,
-          slug: dev.developer.slug,
-          logoUrl: dev.developer.logo,
-          description: dev.developer.description,
-          websiteUrl: dev.developer.website,
-          contactEmail: dev.developer.email,
-          contactPhone: dev.developer.phone,
-          isVerified: true, // Brands are verified by default in this context
-        }
-      : dev.developer.id
-        ? {
-            type: 'developer_account',
-            id: dev.developer.id,
-            name: dev.developer.name,
-            slug: dev.developer.slug,
-            logoUrl: dev.developer.logo,
-            description: dev.developer.description,
-            websiteUrl: dev.developer.website,
-            contactEmail: dev.developer.email,
-            contactPhone: dev.developer.phone,
-            isVerified: !!dev.developer.status, // Assuming status check
-          }
-        : null;
-
-    // Return enhanced object
-    return {
-      ...dev,
-      publisher, // <--- The new field the UI will use
-    };
-
-    const [units, phases] = await Promise.all([
-      db
-        .select()
-        .from(unitTypes)
-        .where(and(eq(unitTypes.developmentId, dev.id), eq(unitTypes.isActive, 1)))
-        .orderBy(unitTypes.basePriceFrom),
-
-      db
+    if (dev?.developerBrandProfileId) {
+      const brand = await db
         .select({
-          id: developmentPhases.id,
-          developmentId: developmentPhases.developmentId,
-          name: developmentPhases.name,
-          phaseNumber: developmentPhases.phaseNumber,
-          description: developmentPhases.description,
-          status: developmentPhases.status,
-          totalUnits: developmentPhases.totalUnits,
-          availableUnits: developmentPhases.availableUnits,
-          priceFrom: developmentPhases.priceFrom,
-          priceTo: developmentPhases.priceTo,
-          launchDate: developmentPhases.launchDate,
-          completionDate: developmentPhases.completionDate,
+          id: developerBrandProfiles.id,
+          brandName: developerBrandProfiles.brandName,
+          slug: developerBrandProfiles.slug,
+          logoUrl: developerBrandProfiles.logoUrl,
+          websiteUrl: developerBrandProfiles.websiteUrl,
+          about: developerBrandProfiles.about,
         })
-        .from(developmentPhases)
-        .where(eq(developmentPhases.developmentId, dev.id))
-        .orderBy(developmentPhases.phaseNumber),
-    ]);
+        .from(developerBrandProfiles)
+        .where(eq(developerBrandProfiles.id, dev.developerBrandProfileId))
+        .limit(1);
 
-    const unitsWithMedia = (units as UnitTypeRow[]).map(u => {
-      let baseMedia: unknown = (u as any).baseMedia;
-
-      if (typeof baseMedia === 'string') {
-        try {
-          baseMedia = JSON.parse(baseMedia);
-          if (typeof baseMedia === 'string') baseMedia = JSON.parse(baseMedia);
-        } catch (e) {
-          console.error('Failed to parse baseMedia', e);
-          baseMedia = null;
-        }
-      }
-
-      const baseMediaObj =
-        baseMedia && typeof baseMedia === 'object'
-          ? (baseMedia as any)
-          : { gallery: [], floorPlans: [], renders: [] };
-
-      const gallery = Array.isArray(baseMediaObj.gallery) ? baseMediaObj.gallery : [];
-      const primary = gallery.find((m: any) => m?.isPrimary) || gallery[0];
-
-      return {
-        ...u,
-        baseMedia: baseMediaObj,
-        primaryImageUrl: primary?.url || null,
-      };
-    });
-
-    let salesMetrics: null | {
-      totalUnits: number;
-      availableUnits: number;
-      soldUnits: number;
-      soldPct: number;
-    } = null;
-
-    if (unitsWithMedia.length > 0) {
-      const totalUnits = unitsWithMedia.reduce(
-        (sum: number, u: any) => sum + (Number(u.totalUnits) || 0),
-        0,
-      );
-      const availableUnits = unitsWithMedia.reduce(
-        (sum: number, u: any) => sum + (Number(u.availableUnits) || 0),
-        0,
-      );
-
-      if (totalUnits > 0) {
-        const soldUnits = totalUnits - availableUnits;
-        const soldPct = Math.round((soldUnits / totalUnits) * 100);
-        salesMetrics = { totalUnits, availableUnits, soldUnits, soldPct };
+      const bp = brand?.[0];
+      if (bp) {
+        dev.brandProfile = {
+          id: bp.id,
+          name: bp.brandName,
+          slug: bp.slug,
+          logoUrl: bp.logoUrl ?? null,
+          websiteUrl: bp.websiteUrl ?? null,
+          description: bp.about ?? null,
+        };
+        dev.publisher = dev.brandProfile; // alias for older UI code
       }
     }
+  } catch (err) {
+    console.warn('[getPublicDevelopmentBySlug] Brand profile attachment failed (non-fatal):', err);
+  }
 
-    let parsedEstateSpecs: any = {};
-    if (dev.estateSpecs) {
+  // Units (for unit cards)
+  const units = await db
+    .select()
+    .from(unitTypes)
+    .where(and(eq(unitTypes.developmentId, dev.id), eq(unitTypes.isActive, 1)))
+    .orderBy(unitTypes.basePriceFrom);
+
+  const unitsWithMedia = units.map((u: any) => {
+    let baseMedia = u.baseMedia;
+
+    if (typeof baseMedia === 'string') {
       try {
-        parsedEstateSpecs =
-          typeof dev.estateSpecs === 'string' ? JSON.parse(dev.estateSpecs) : dev.estateSpecs;
-      } catch (e) {
-        console.warn('[getPublicDevelopmentBySlug] Failed to parse estateSpecs:', e);
+        baseMedia = JSON.parse(baseMedia);
+        if (typeof baseMedia === 'string') baseMedia = JSON.parse(baseMedia);
+      } catch {
+        baseMedia = { gallery: [] };
       }
     }
+
+    const gallery = Array.isArray(baseMedia?.gallery) ? baseMedia.gallery : [];
+    const primary = gallery[0];
 
     return {
-      ...dev,
-      amenities: normalizeAmenities(dev.amenities),
-      images: parseJsonField(dev.images),
-      videos: parseJsonField(dev.videos),
-      floorPlans: parseJsonField(dev.floorPlans),
-      brochures: parseJsonField(dev.brochures),
-      estateSpecs: parsedEstateSpecs,
-
-      unitTypes: unitsWithMedia,
-      phases,
-      salesMetrics,
+      ...u,
+      baseMedia,
+      primaryImageUrl: primary?.url ?? null,
     };
-  } catch (err) {
-    console.error('[CRITICAL] Error in getPublicDevelopmentBySlug:', err);
-    return null;
+  });
+
+  // Sales metrics (drives progress bar vs "Sales data unavailable")
+  let salesMetrics: null | {
+    totalUnits: number;
+    availableUnits: number;
+    soldUnits: number;
+    soldPct: number;
+  } = null;
+
+  if (unitsWithMedia.length > 0) {
+    const totalUnits = unitsWithMedia.reduce(
+      (sum: number, u: any) => sum + (Number(u?.totalUnits) || 0),
+      0,
+    );
+    const availableUnits = unitsWithMedia.reduce(
+      (sum: number, u: any) => sum + (Number(u?.availableUnits) || 0),
+      0,
+    );
+
+    if (totalUnits > 0) {
+      const soldUnits = totalUnits - availableUnits;
+      const soldPct = Math.round((soldUnits / totalUnits) * 100);
+      salesMetrics = { totalUnits, availableUnits, soldUnits, soldPct };
+    }
   }
+
+  return {
+    ...dev,
+    developerDisplay: buildDeveloperDisplay(dev),
+
+    images: parseJsonField(dev.images),
+    videos: parseJsonField(dev.videos),
+    floorPlans: parseJsonField(dev.floorPlans),
+    brochures: parseJsonField(dev.brochures),
+    amenities: normalizeAmenities(dev.amenities),
+
+    estateSpecs:
+      typeof dev.estateSpecs === 'string'
+        ? (parseJsonMaybeTwice(dev.estateSpecs, {}) as any)
+        : (dev.estateSpecs ?? {}),
+
+    brandProfile: dev.brandProfile,
+    publisher: dev.publisher,
+
+    unitTypes: unitsWithMedia,
+    salesMetrics,
+  };
 }
 
 export async function getPublicDevelopment(id: number) {
@@ -757,21 +311,13 @@ export async function getPublicDevelopment(id: number) {
       slug: developments.slug,
       description: developments.description,
       images: developments.images,
-      address: developments.address,
       city: developments.city,
       province: developments.province,
+      suburb: developments.suburb,
+      address: developments.address,
       priceFrom: developments.priceFrom,
       priceTo: developments.priceTo,
-      monthlyRentFrom: developments.monthlyRentFrom,
-      monthlyRentTo: developments.monthlyRentTo,
-      monthlyLevyFrom: developments.monthlyLevyFrom,
-      monthlyLevyTo: developments.monthlyLevyTo,
-      ratesFrom: developments.ratesFrom,
-      ratesTo: developments.ratesTo,
-      transferCostsIncluded: developments.transferCostsIncluded,
-      status: developments.status,
-      transactionType: developments.transactionType,
-      developerId: developments.developerId,
+      isPublished: developments.isPublished,
     })
     .from(developments)
     .where(and(eq(developments.id, id), eq(developments.isPublished, 1)))
@@ -779,215 +325,47 @@ export async function getPublicDevelopment(id: number) {
 
   if (!results[0]) return null;
 
-  return { ...results[0], images: parseJsonField(results[0].images) };
+  return {
+    ...results[0],
+    images: parseJsonField(results[0].images),
+  };
 }
 
-export async function listPublicDevelopments(
-  options: {
-    limit?: number;
-    province?: string;
-    transactionType?: 'for_sale' | 'for_rent' | 'auction';
-    developmentType?: 'residential' | 'commercial' | 'mixed_use' | 'land';
-  } = {},
-) {
-  const { limit = 20, province } = options;
+export async function listPublicDevelopments(options: {
+  limit?: number;
+  province?: string;
+  city?: string;
+}) {
   const db = await getDb();
   if (!db) return [];
 
-  const conditions = [eq(developments.isPublished, 1)];
+  const { limit = 20, province, city } = options;
+
+  const conditions: any[] = [eq(developments.isPublished, 1)];
   if (province) conditions.push(eq(developments.province, province));
-  if (options.transactionType)
-    conditions.push(eq(developments.transactionType, options.transactionType));
-  if (options.developmentType)
-    conditions.push(eq(developments.developmentType, options.developmentType));
+  if (city) conditions.push(eq(developments.city, city));
 
   const results = await db
     .select({
       id: developments.id,
-      developerId: developments.developerId,
       name: developments.name,
       slug: developments.slug,
-      description: developments.description,
       images: developments.images,
-      suburb: developments.suburb,
       city: developments.city,
       province: developments.province,
       priceFrom: developments.priceFrom,
       priceTo: developments.priceTo,
-      monthlyRentFrom: developments.monthlyRentFrom,
-      monthlyRentTo: developments.monthlyRentTo,
-      transactionType: developments.transactionType,
-      developmentType: developments.developmentType,
-      status: developments.status,
-      isFeatured: developments.isFeatured,
-      developer: {
-        id: sql<number>`COALESCE(${developerBrandProfiles.id}, ${developers.id})`,
-        name: sql<string>`COALESCE(${developerBrandProfiles.brandName}, ${developers.name})`,
-        logo: sql<string>`COALESCE(${developerBrandProfiles.logoUrl}, ${developers.logo})`,
-        isBrand: sql<boolean>`CASE WHEN ${developerBrandProfiles.id} IS NOT NULL THEN 1 ELSE 0 END`,
-      },
+      developerBrandProfileId: developments.developerBrandProfileId,
     })
     .from(developments)
-    .leftJoin(developers, eq(developments.developerId, developers.id))
-    .leftJoin(
-      developerBrandProfiles,
-      eq(developments.developerBrandProfileId, developerBrandProfiles.id),
-    )
-    // @ts-ignore
     .where(and(...conditions))
-    .orderBy(desc(developments.isFeatured), desc(developments.createdAt))
+    .orderBy(desc(developments.createdAt))
     .limit(limit);
 
-  // Parse images for all results to ensure consistent array format
-  const parsedResults = results.map(d => ({
+  return results.map((d: any) => ({
     ...d,
     images: parseJsonField(d.images),
   }));
-
-  const devIds = parsedResults.map(d => d.id);
-
-  let priceMap: Record<number, { min: number; max: number }> = {};
-  let rentMap: Record<number, { min: number; max: number }> = {};
-  let bedroomMap: Record<number, number[]> = {};
-
-  if (devIds.length > 0) {
-    const priceAgg = await db
-      .select({
-        devId: unitTypes.developmentId,
-        minPrice: sql<number>`min(case when ${unitTypes.basePriceFrom} > 0 then ${unitTypes.basePriceFrom} end)`,
-        maxPrice: sql<number>`max(case when ${unitTypes.basePriceFrom} > 0 then ${unitTypes.basePriceFrom} end)`,
-      })
-      .from(unitTypes)
-      .where(and(inArray(unitTypes.developmentId, devIds), eq(unitTypes.isActive, 1)))
-      .groupBy(unitTypes.developmentId);
-
-    priceMap = priceAgg.reduce(
-      (acc: Record<number, { min: number; max: number }>, curr: (typeof priceAgg)[number]) => {
-        acc[curr.devId] = { min: Number(curr.minPrice) || 0, max: Number(curr.maxPrice) || 0 };
-        return acc;
-      },
-      {} as Record<number, { min: number; max: number }>,
-    );
-
-    const rentAgg = await db
-      .select({
-        devId: unitTypes.developmentId,
-        minRent: sql<number>`min(case when ${unitTypes.monthlyRentFrom} > 0 then ${unitTypes.monthlyRentFrom} end)`,
-        maxRent: sql<number>`max(case when coalesce(${unitTypes.monthlyRentTo}, ${unitTypes.monthlyRentFrom}) > 0 then coalesce(${unitTypes.monthlyRentTo}, ${unitTypes.monthlyRentFrom}) end)`,
-      })
-      .from(unitTypes)
-      .where(and(inArray(unitTypes.developmentId, devIds), eq(unitTypes.isActive, 1)))
-      .groupBy(unitTypes.developmentId);
-
-    rentMap = rentAgg.reduce(
-      (acc: Record<number, { min: number; max: number }>, curr: (typeof rentAgg)[number]) => {
-        acc[curr.devId] = { min: Number(curr.minRent) || 0, max: Number(curr.maxRent) || 0 };
-        return acc;
-      },
-      {} as Record<number, { min: number; max: number }>,
-    );
-
-    // Fetch bedrooms
-    const units = await db
-      .select({
-        devId: unitTypes.developmentId,
-        bedrooms: unitTypes.bedrooms,
-      })
-      .from(unitTypes)
-      .where(and(inArray(unitTypes.developmentId, devIds), eq(unitTypes.isActive, 1)));
-
-    for (const u of units) {
-      if (u.devId && u.bedrooms !== null && u.bedrooms !== undefined) {
-        if (!bedroomMap[u.devId]) bedroomMap[u.devId] = [];
-        const beds = Number(u.bedrooms);
-        if (!isNaN(beds) && !bedroomMap[u.devId].includes(beds)) {
-          bedroomMap[u.devId].push(beds);
-        }
-      }
-    }
-    // Sort bedrooms
-    for (const id in bedroomMap) {
-      bedroomMap[id].sort((a, b) => a - b);
-    }
-  }
-
-  return parsedResults
-    .map((dev: any) => {
-      const rawImages = dev.images; // Already parsed above
-      let heroImage = '';
-
-      const extractUrl = (item: unknown): string | null => {
-        if (typeof item === 'string') return item;
-        if (typeof item === 'object' && item !== null) {
-          const obj = item as any;
-          return obj.url || obj.secure_url || null;
-        }
-        return null;
-      };
-
-      const isHero = (item: unknown): boolean => {
-        if (typeof item === 'object' && item !== null) {
-          const obj = item as any;
-          const cat = String(obj.category || '').toLowerCase();
-          return cat === 'hero' || cat === 'cover' || cat === 'main';
-        }
-        return false;
-      };
-
-      const explicitHero = rawImages.find(img => isHero(img));
-      if (explicitHero) heroImage = extractUrl(explicitHero) || '';
-
-      if (!heroImage && rawImages.length > 0) {
-        for (const img of rawImages) {
-          const url = extractUrl(img);
-          if (url) {
-            heroImage = url;
-            break;
-          }
-        }
-      }
-
-      const transactionType = (dev as any).transactionType || 'for_sale';
-      const isRental = transactionType === 'for_rent';
-
-      const aggregatedSale = priceMap[dev.id];
-      const aggregatedRent = rentMap[dev.id];
-
-      let finalPriceMin = Number((dev as any).priceFrom) || 0;
-      let finalPriceMax = Number((dev as any).priceTo) || 0;
-      let finalRentMin = Number((dev as any).monthlyRentFrom) || 0;
-      let finalRentMax = Number((dev as any).monthlyRentTo) || 0;
-
-      if (aggregatedSale && aggregatedSale.min > 0) {
-        finalPriceMin = aggregatedSale.min;
-        finalPriceMax = aggregatedSale.max || aggregatedSale.min;
-      }
-
-      if (aggregatedRent && aggregatedRent.min > 0) {
-        finalRentMin = aggregatedRent.min;
-        finalRentMax = aggregatedRent.max || aggregatedRent.min;
-      }
-
-      if (isRental) {
-        if (!finalRentMin && !finalRentMax) return null;
-      } else {
-        if (!finalPriceMin && !finalPriceMax) return null;
-      }
-
-      if (!heroImage) return null;
-
-      return {
-        ...dev,
-        images: rawImages,
-        bedrooms: bedroomMap[dev.id] || [],
-        heroImage,
-        priceFrom: isRental ? (dev as any).priceFrom : finalPriceMin,
-        priceTo: isRental ? (dev as any).priceTo : finalPriceMax,
-        monthlyRentFrom: isRental ? finalRentMin : (dev as any).monthlyRentFrom,
-        monthlyRentTo: isRental ? finalRentMax : (dev as any).monthlyRentTo,
-      };
-    })
-    .filter(Boolean) as any[];
 }
 
 // ===========================================================================
@@ -1003,14 +381,21 @@ export async function createDevelopment(
   const db = await getDb();
   if (!db) throw new Error('Database not available');
 
-  console.log('[createDevelopment] Input data:', { name: data.name, slug: data.slug });
-
-  const { unitTypes: unitTypesData, ...developmentData } = data;
-  const { ownerType, brandProfileId, ...restMetadata } = metadata;
-
-  // ============================================================================
-  // SUPER ADMIN BYPASS - CHECK FIRST!
-  // ============================================================================
+  const { brandProfileId, ownerType, ...restMetadata } = metadata;
+  const {
+    unitTypes: unitTypesData,
+    amenities: amenitiesData,
+    estateSpecs: estateSpecsData,
+    specifications: specificationsData,
+    phases: phasesData,
+    highlights: highlightsData,
+    features: featuresData,
+    videos: videosData,
+    floorPlans: floorPlansData,
+    brochures: brochuresData,
+    images: imagesData,
+    ...developmentData
+  } = data as any;
 
   console.log('[createDevelopment] Input params:', {
     userId,
@@ -1027,31 +412,25 @@ export async function createDevelopment(
 
   let developerProfileId: number | null = null;
   let resolvedBrandProfileId: number | null = null;
-  let effectiveOwnerType: 'platform' | 'developer';
+  let effectiveOwnerType: 'platform' | 'developer' = ownerType || 'developer';
 
-  const isSuperAdmin = user?.role === 'super_admin';
-
-  if (isSuperAdmin) {
-    // ✅ Super admin MUST operate as a brand (emulator)
-    resolvedBrandProfileId = operatingContext?.brandProfileId ?? null;
-
-    if (!resolvedBrandProfileId) {
-      throw createError(
-        'Super admin must operate as a brand to create a development.',
-        'VALIDATION_ERROR',
-        { userId },
-      );
-    }
-
+  // If super admin, bypass ALL checks
+  if (user?.role === 'super_admin') {
+    // Super admin mode - use brand profile from context or metadata
+    resolvedBrandProfileId =
+      operatingContext?.brandProfileId ||
+      brandProfileId ||
+      (developmentData as any).developerBrandProfileId ||
+      null;
     developerProfileId = null;
     effectiveOwnerType = 'platform';
 
-    console.log('[createDevelopment] ✅ SUPER ADMIN EMULATION MODE:', {
+    console.log('[createDevelopment] ✅ SUPER ADMIN MODE - Bypassing all checks:', {
       brandProfileId: resolvedBrandProfileId,
       ownerType: effectiveOwnerType,
     });
   } else {
-    // ✅ Real developer mode: must have dev profile AND brandProfileId
+    // Regular developer mode - require developer profile
     const devProfile = await db.query.developers.findFirst({
       where: eq(developers.userId, userId),
       columns: { id: true, brandProfileId: true },
@@ -1065,22 +444,13 @@ export async function createDevelopment(
       );
     }
 
-    if (!devProfile.brandProfileId) {
-      throw createError(
-        'Developer brand profile not found. Please complete onboarding.',
-        'VALIDATION_ERROR',
-        { userId, developerId: devProfile.id },
-      );
-    }
-
     developerProfileId = devProfile.id;
-    resolvedBrandProfileId = devProfile.brandProfileId;
+    resolvedBrandProfileId = devProfile.brandProfileId || brandProfileId || null;
     effectiveOwnerType = 'developer';
 
-    console.log('[createDevelopment] ✅ DEVELOPER MODE:', {
+    console.log('[createDevelopment] Developer mode:', {
       developerId: developerProfileId,
       brandProfileId: resolvedBrandProfileId,
-      ownerType: effectiveOwnerType,
     });
   }
 
@@ -1165,14 +535,6 @@ export async function createDevelopment(
   const auctionRange =
     normalizedTransactionType === 'auction' ? computeAuctionRangeFromUnits(unitTypesData) : null;
 
-  // ✅ Critical safety guard: prevent orphan developments
-  if (!resolvedBrandProfileId) {
-    throw createError('Missing brandProfileId for development creation.', 'VALIDATION_ERROR', {
-      userId,
-      role: user?.role,
-    });
-  }
-
   const insertPayload: Record<string, any> = {
     // Use resolved identity for ownership
     developerId: developerProfileId, // null for emulator mode
@@ -1183,7 +545,7 @@ export async function createDevelopment(
     developmentType: (developmentData as any).developmentType || 'residential',
     transactionType: normalizedTransactionType,
     status: 'launching-soon',
-    devOwnerType: effectiveOwnerType, // ✅ the only allowed source
+    devOwnerType: ownerType || 'developer',
 
     isFeatured: 0,
     isPublished: 0,
@@ -1306,8 +668,14 @@ export async function createDevelopment(
     insertPayload.brochures = JSON.stringify((developmentData as any).brochures);
   }
 
-  // ✅ Removed metadata override block - ownership is derived, never trusted from input
-  // Only apply non-ownership metadata
+  // Apply metadata overrides explicitly
+  if (ownerType && !(ownerType in insertPayload)) {
+    insertPayload.devOwnerType = ownerType;
+  }
+  if (brandProfileId && !(brandProfileId in insertPayload)) {
+    insertPayload.developerBrandProfileId = brandProfileId;
+  }
+
   Object.keys(restMetadata).forEach(key => {
     if (!(key in insertPayload)) insertPayload[key] = (restMetadata as any)[key];
   });
@@ -2955,7 +2323,7 @@ export const developmentService = {
   createDevelopment,
   updateDevelopment,
   getDevelopmentWithPhases,
-  getDevelopmentById, // Add this method
+  getDevelopmentById,
   getDevelopmentsByDeveloperId,
   getDeveloperDevelopments: getDevelopmentsByDeveloperId,
   createPhase,
