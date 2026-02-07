@@ -2,6 +2,13 @@ import { readFileSync, readdirSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { connect } from '@tidbcloud/serverless';
+import * as dotenv from 'dotenv';
+
+// Load environment variables
+dotenv.config(); // Load .env
+if (process.env.NODE_ENV === 'production') {
+  dotenv.config({ path: '.env.production', override: true });
+}
 
 // ESM-safe __dirname replacement
 const __filename = fileURLToPath(import.meta.url);

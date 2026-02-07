@@ -12,12 +12,12 @@
     "dev:backend": "cross-env NODE_ENV=development SKIP_FRONTEND=true tsx watch server/_core/start.ts",
     "dev:backend:clean": "powershell -NoProfile -Command \"$p=(Get-NetTCPConnection -LocalPort 5000 -State Listen -ErrorAction SilentlyContinue).OwningProcess; if($p -and $p -ne 0){Stop-Process -Id $p -Force};\" && pnpm dev:backend",
     "dev:frontend": "vite",
-    "build": "vite build && tsx --tsconfig tsconfig.json scripts/build-backend.ts",
+    "build": "vite build",
     "build:prod": "cross-env NODE_ENV=production pnpm build",
     "build:frontend": "vite build",
-    "build:backend": "tsx --tsconfig tsconfig.json scripts/build-backend.ts",
+    "build:backend": "echo 'Backend build not required; run with tsx directly'",
     "build:railway": "pnpm build:backend",
-    "start": "node dist/index.js",
+    "start": "cross-env NODE_ENV=production tsx server/_core/start.ts",
     "check": "tsc -p tsconfig.check.json --noEmit",
     "lint": "eslint client/src/**/*.{ts,tsx} server/**/*.{ts,tsx} shared/**/*.{ts,tsx} --fix",
     "format": "prettier --write client/src/**/*.{ts,tsx,json} server/**/*.{ts,tsx,json} shared/**/*.{ts,tsx,json}",
@@ -41,7 +41,9 @@
     "migration:serverless:production": "cross-env NODE_ENV=production tsx server/migrations/tidbServerlessMigration.ts",
     "migration:sql": "cross-env NODE_ENV=production tsx server/migrations/runSqlMigrations.ts",
     "db:migrate": "pnpm migration:sql && pnpm migration:serverless:production",
-    "start:prod": "pnpm db:migrate && node dist/index.js"
+    "start:server": "tsx server/_core/start.ts",
+    "start:server:prodlike": "cross-env NODE_ENV=production tsx server/_core/start.ts",
+    "start:prod": "pnpm db:migrate && cross-env NODE_ENV=production tsx server/_core/start.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.693.0",

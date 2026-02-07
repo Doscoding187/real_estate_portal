@@ -22,23 +22,11 @@ import { domainRoutingMiddleware, customDomainMiddleware } from './domainRouter'
 import { initializeCache, shutdownCache } from './cache/redis';
 
 // -------------------- BOOT-SAFE OPTIONAL ROUTER LOADER --------------------
-// If any router module is missing, mis-exported, or unfinished, we DO NOT crash boot.
-// We log and skip instead.
 async function mountOptionalRouter(app: express.Express, mountPath: string, importPath: string) {
   try {
     const mod: any = await import(importPath);
 
-    // Support multiple export styles:
-    // - export default router
-    // - export const router = Router()
-    // - export const routes = Router()
-    // - module.exports = router (rare in TS/ESM but possible)
-    const routerCandidate =
-      mod?.default ??
-      mod?.router ??
-      mod?.routes ??
-      mod?.partnerRouter ?? // ✅ support tRPC router export name
-      mod;
+    const routerCandidate = mod?.default ?? mod?.router ?? mod?.routes ?? mod?.partnerRouter ?? mod;
 
     const isMiddleware =
       typeof routerCandidate === 'function' ||
@@ -72,7 +60,6 @@ async function startServer() {
     startedAt: new Date().toISOString(),
   });
 
-  // Check for critical environment variables
   if (!process.env.JWT_SECRET) {
     console.error('\n❌ CRITICAL ERROR: JWT_SECRET is not defined in environment variables.');
     console.error('   Login functionality will fail with HTTP 500 errors.');
@@ -86,10 +73,9 @@ async function startServer() {
   const app = express();
   const server = createServer(app);
 
-  // Rate limiting for authentication endpoints
   const authLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 5, // 5 login attempts
+    windowMs: 15 * 60 * 1000,
+    max: 5,
     message: 'Too many login attempts, please try again later',
     standardHeaders: true,
     legacyHeaders: false,
@@ -98,7 +84,6 @@ async function startServer() {
   app.use('/api/auth/login', authLimiter);
   app.use('/api/auth/register', authLimiter);
 
-  // CORS Configuration - Allow Vercel frontend and local development
   const allowedOrigins = [
     'http://localhost:5173',
     'http://localhost:3000',
@@ -181,13 +166,13 @@ async function startServer() {
     }),
   );
 
-  // -------------------- OPTIONAL ROUTERS (BOOT-SAFE) --------------------
+  // -------------------- OPTIONAL ROUTERS (FIXED PATHS) --------------------
   console.log('[Server] Loading optional routers...');
 
   await mountOptionalRouter(app, '/api/analytics', '../routes/analytics');
-  // NOTE: partnerRouter.ts is a tRPC router, NOT an Express router.
-  // Do not mount it with app.use().
+
   console.log('[Routes] ℹ️  /api/partners is handled by tRPC, skipping Express mount');
+
   await mountOptionalRouter(app, '/api/partner-analytics', '../partnerAnalyticsRouter');
   await mountOptionalRouter(app, '/api/content', '../contentRouter');
   await mountOptionalRouter(app, '/api/topics', '../topicsRouter');
@@ -199,9 +184,6 @@ async function startServer() {
   await mountOptionalRouter(app, '/api/explore/video', '../routes/exploreVideoUpload');
 
   console.log('[Server] Optional routers loaded');
-
-  console.log('[Server] NODE_ENV:', process.env.NODE_ENV);
-  console.log('[Server] SKIP_FRONTEND:', process.env.SKIP_FRONTEND);
 
   if (process.env.NODE_ENV === 'development' && process.env.SKIP_FRONTEND !== 'true') {
     console.log('[Server] Using Vite development server');
