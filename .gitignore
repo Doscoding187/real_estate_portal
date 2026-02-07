@@ -117,3 +117,6 @@ vitest.config.ts.timestamp-*.mjs
 
 # Build output
 dist/
+
+# Local backups
+backups/
