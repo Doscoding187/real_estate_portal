@@ -110,3 +110,7 @@ dist/
 
 # Vitest timestamp artifacts
 vitest.config.ts.timestamp-*.mjs
+
+# Local / production env files
+.env.production
+.env.local
