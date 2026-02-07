@@ -114,3 +114,6 @@ vitest.config.ts.timestamp-*.mjs
 # Local / production env files
 .env.production
 .env.local
+
+# Build output
+dist/
