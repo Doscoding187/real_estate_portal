@@ -71,6 +71,51 @@ export function useDiscoveryFeed(options: UseDiscoveryFeedOptions = {}) {
   // Record engagement mutation
   const recordEngagementMutation = trpc.explore.recordInteraction.useMutation();
 
+  // Organize content into themed blocks
+  const organizeIntoBlocks = useCallback(
+    (items: any[]): ContentBlock[] => {
+      const blocks: ContentBlock[] = [];
+
+      // Group items into blocks of 6-8 items
+      const blockSize = 7;
+      for (let i = 0; i < items.length; i += blockSize) {
+        const blockItems = items.slice(i, i + blockSize);
+
+        // Determine block type based on content
+        let blockType: ContentBlock['type'] = 'for-you';
+        let blockTitle = 'For You';
+
+        if (i === 0 && page === 1) {
+          blockType = 'for-you';
+          blockTitle = 'For You';
+        } else if (i === blockSize && page === 1) {
+          blockType = 'popular-near-you';
+          blockTitle = 'Popular Near You';
+        } else if (i === blockSize * 2 && page === 1) {
+          blockType = 'new-developments';
+          blockTitle = 'New Developments';
+        } else {
+          blockType = 'trending';
+          blockTitle = 'Trending';
+        }
+
+        blocks.push({
+          id: `block-${page}-${i}`,
+          title: blockTitle,
+          type: blockType,
+          items: blockItems.map((item: any) => ({
+            id: item.id,
+            type: item.contentType,
+            data: item,
+          })),
+        });
+      }
+
+      return blocks;
+    },
+    [page],
+  );
+
   // Process feed data into content blocks
   useEffect(() => {
     if (hasActiveFilters) {
@@ -90,33 +135,6 @@ export function useDiscoveryFeed(options: UseDiscoveryFeedOptions = {}) {
         if (page === 1) {
           setContentBlocks([searchBlock]);
         } else {
-          // For search, we might append to the generic list item?
-          // ContentBlock structure assumes horizontal swimlanes.
-          // "Load More" page usually implies vertical list.
-          // DiscoveryCardFeed supports infinite scroll of BLOCKS.
-          // If we return 1 block, it's a swimlane.
-          // We might want to chunk results into multiple blocks if we want multiple rows?
-          // Or just one huge block? DiscoveryCardFeed renders horizontal scroll.
-          // Issue: Search results usually vertical.
-          // For now, let's keep it as one block. Vertical scrolling is handled by the page,
-          // but DiscoveryCardFeed loops blocks.
-          // If we want vertical list, we might need to change how blocks are rendered or create multiple blocks.
-
-          // Hack: append items to the existing block?
-          // setContentBlocks(prev => {
-          //     const newBlocks = [...prev];
-          //     if (newBlocks[0]) {
-          //         newBlocks[0].items = [...newBlocks[0].items, ...newItems];
-          //     }
-          //     return newBlocks;
-          // });
-
-          // Simplest: Create new blocks for stored pages?
-          // Or just replace the block items with Accumulation?
-          // Actually, DiscoveryCardFeed renders `contentBlocks.map`.
-          // If we add more blocks, they appear below.
-          // So for pagination, we can just add a "Page 2" block.
-
           const newBlock: ContentBlock = {
             id: `search-page-${page}`,
             title: '', // No title for subsequent pages
@@ -132,8 +150,10 @@ export function useDiscoveryFeed(options: UseDiscoveryFeedOptions = {}) {
         setHasMore(searchQuery.data.hasMore);
       }
     } else {
-      // Feed Mode - use queryData directly
-      const contentArray = queryData as any[];
+      // Feed Mode - queries return { shorts: [...], hasMore, ... }
+      // We need to treat queryData as FeedResult
+      const feedResult = queryData as any; // Typed as any to avoid strict interface issues for now, but implies FeedResult
+      const contentArray = feedResult?.shorts || [];
       const hasValidContent = Array.isArray(contentArray) && contentArray.length > 0;
 
       if (hasValidContent) {
@@ -145,55 +165,23 @@ export function useDiscoveryFeed(options: UseDiscoveryFeedOptions = {}) {
           setContentBlocks(prev => [...prev, ...newBlocks]);
         }
 
-        setHasMore(contentArray.length === 20);
+        // Use server's hasMore if available, otherwise fallback (though server should always provide it now)
+        setHasMore(feedResult?.hasMore ?? contentArray.length === 20);
       } else if (!isLoading && usePlaceholderData && contentBlocks.length === 0) {
+        // Only show placeholder if we have absolutely nothing and aren't loading
         setContentBlocks(getPlaceholderContentBlocks());
         setHasMore(false);
       }
     }
-  }, [queryData, page, isLoading, usePlaceholderData, hasActiveFilters]);
-
-  // Organize content into themed blocks
-  const organizeIntoBlocks = (items: any[]): ContentBlock[] => {
-    const blocks: ContentBlock[] = [];
-
-    // Group items into blocks of 6-8 items
-    const blockSize = 7;
-    for (let i = 0; i < items.length; i += blockSize) {
-      const blockItems = items.slice(i, i + blockSize);
-
-      // Determine block type based on content
-      let blockType: ContentBlock['type'] = 'for-you';
-      let blockTitle = 'For You';
-
-      if (i === 0 && page === 1) {
-        blockType = 'for-you';
-        blockTitle = 'For You';
-      } else if (i === blockSize && page === 1) {
-        blockType = 'popular-near-you';
-        blockTitle = 'Popular Near You';
-      } else if (i === blockSize * 2 && page === 1) {
-        blockType = 'new-developments';
-        blockTitle = 'New Developments';
-      } else {
-        blockType = 'trending';
-        blockTitle = 'Trending';
-      }
-
-      blocks.push({
-        id: `block-${page}-${i}`,
-        title: blockTitle,
-        type: blockType,
-        items: blockItems.map((item: any) => ({
-          id: item.id,
-          type: item.contentType,
-          data: item,
-        })),
-      });
-    }
-
-    return blocks;
-  };
+  }, [
+    queryData,
+    page,
+    isLoading,
+    usePlaceholderData,
+    hasActiveFilters,
+    searchQuery.data,
+    organizeIntoBlocks,
+  ]);
 
   // Load more content
   const loadMore = useCallback(() => {

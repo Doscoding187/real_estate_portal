@@ -57,6 +57,13 @@ export default function ExploreFeed() {
     userId: user?.id,
   });
 
+  // Debug logging for feed verification
+  useEffect(() => {
+    if (feedData) {
+      console.log('FEED DATA:', feedData);
+    }
+  }, [feedData]);
+
   // Mutation for recording interactions
   const recordInteractionMutation = trpc.explore.recordInteraction.useMutation();
 
@@ -67,11 +74,11 @@ export default function ExploreFeed() {
   // Filter videos based on search query
   const filteredVideos = searchQuery
     ? videos.filter(
-        (video: any) =>
-          video.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          video.caption?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          video.propertyLocation?.toLowerCase().includes(searchQuery.toLowerCase()),
-      )
+      (video: any) =>
+        video.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        video.caption?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        video.propertyLocation?.toLowerCase().includes(searchQuery.toLowerCase()),
+    )
     : videos;
 
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
@@ -85,7 +92,7 @@ export default function ExploreFeed() {
     const videos = document.querySelectorAll('video');
     videos.forEach((video, index) => {
       if (index === currentIndex) {
-        video.play().catch(() => {}); // Ignore autoplay errors
+        video.play().catch(() => { }); // Ignore autoplay errors
       } else {
         video.pause();
       }

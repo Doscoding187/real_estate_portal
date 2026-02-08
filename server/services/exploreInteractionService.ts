@@ -15,7 +15,7 @@ import type { InteractionType, DeviceType, FeedType } from '../../shared/types';
  */
 
 export interface RecordInteractionOptions {
-  shortId: number;
+  contentId: number;
   userId?: number;
   sessionId: string;
   interactionType: InteractionType;
@@ -38,7 +38,7 @@ export class ExploreInteractionService {
    */
   async recordInteraction(options: RecordInteractionOptions): Promise<void> {
     const {
-      shortId,
+      contentId,
       userId,
       sessionId,
       interactionType,
@@ -52,12 +52,12 @@ export class ExploreInteractionService {
     } = options;
 
     try {
-      // Write interaction to exploreEngagements (schema-safe via `as any`)
+      // Write interaction to exploreEngagements (schema now properly typed)
       await db.insert(exploreEngagements).values({
-        contentId: shortId,
+        contentId,
         userId: userId ?? null,
-        sessionId: sessionId ?? null,
-        interactionType: interactionType as any,
+        sessionId: sessionId ?? '',
+        interactionType: interactionType,
         metadata: {
           duration,
           feedType,
@@ -68,10 +68,10 @@ export class ExploreInteractionService {
           ...metadata,
         },
         createdAt: new Date(),
-      } as any);
+      });
 
       // Update aggregation metrics asynchronously (best-effort)
-      this.updateContentMetrics(shortId, interactionType as any, duration).catch(error => {
+      this.updateContentMetrics(contentId, interactionType as any, duration).catch(error => {
         console.error('Error updating content metrics:', error);
       });
     } catch (error) {
@@ -89,10 +89,10 @@ export class ExploreInteractionService {
 
     try {
       const values = interactions.map(interaction => ({
-        contentId: interaction.shortId,
+        contentId: interaction.contentId,
         userId: interaction.userId ?? null,
-        sessionId: interaction.sessionId ?? null,
-        interactionType: interaction.interactionType as any,
+        sessionId: interaction.sessionId ?? '',
+        interactionType: interaction.interactionType,
         metadata: {
           duration: interaction.duration,
           feedType: interaction.feedType,
@@ -105,12 +105,12 @@ export class ExploreInteractionService {
         createdAt: new Date(),
       }));
 
-      await db.insert(exploreEngagements).values(values as any);
+      await db.insert(exploreEngagements).values(values);
 
       // Update metrics once per unique content item (best-effort)
-      const contentIds = [...new Set(interactions.map(i => i.shortId))];
+      const contentIds = Array.from(new Set(interactions.map(i => i.contentId)));
       for (const contentId of contentIds) {
-        const itemInteractions = interactions.filter(i => i.shortId === contentId);
+        const itemInteractions = interactions.filter(i => i.contentId === contentId);
         const last = itemInteractions[itemInteractions.length - 1];
         this.updateContentMetrics(contentId, (last?.interactionType as any) ?? 'view').catch(
           console.error,
@@ -124,9 +124,9 @@ export class ExploreInteractionService {
   /**
    * Save property (favorite)
    */
-  async saveProperty(shortId: number, userId: number): Promise<void> {
+  async saveProperty(contentId: number, userId: number): Promise<void> {
     return this.recordInteraction({
-      shortId,
+      contentId,
       userId,
       sessionId: `user-${userId}`,
       interactionType: 'save',
@@ -139,13 +139,13 @@ export class ExploreInteractionService {
    * Share property
    */
   async shareProperty(
-    shortId: number,
+    contentId: number,
     userId: number | undefined,
     sessionId: string,
     platform?: string,
   ): Promise<void> {
     return this.recordInteraction({
-      shortId,
+      contentId,
       userId,
       sessionId,
       interactionType: 'share',
@@ -217,11 +217,11 @@ export class ExploreInteractionService {
     try {
       const content = await db
         .select({
-          viewCount: (exploreContent as any).viewCount,
-          engagementScore: (exploreContent as any).engagementScore,
+          viewCount: exploreContent.viewCount,
+          engagementScore: exploreContent.engagementScore,
         })
         .from(exploreContent)
-        .where(eq((exploreContent as any).id, contentId))
+        .where(eq(exploreContent.id, contentId))
         .limit(1);
 
       if (!content || content.length === 0) {
@@ -234,8 +234,8 @@ export class ExploreInteractionService {
         .from(exploreEngagements)
         .where(
           and(
-            eq((exploreEngagements as any).contentId, contentId),
-            eq((exploreEngagements as any).interactionType, 'save' as any),
+            eq(exploreEngagements.contentId, contentId),
+            eq(exploreEngagements.interactionType, 'save'),
           ),
         );
 
@@ -244,8 +244,8 @@ export class ExploreInteractionService {
         .from(exploreEngagements)
         .where(
           and(
-            eq((exploreEngagements as any).contentId, contentId),
-            eq((exploreEngagements as any).interactionType, 'share' as any),
+            eq(exploreEngagements.contentId, contentId),
+            eq(exploreEngagements.interactionType, 'share'),
           ),
         );
 
@@ -254,20 +254,22 @@ export class ExploreInteractionService {
         .from(exploreEngagements)
         .where(
           and(
-            eq((exploreEngagements as any).contentId, contentId),
-            eq((exploreEngagements as any).interactionType, 'skip' as any),
+            eq(exploreEngagements.contentId, contentId),
+            eq(exploreEngagements.interactionType, 'skip'),
           ),
         );
 
       return {
+        contentId,
+        // Legacy alias for compatibility
         shortId: contentId,
-        viewCount: (content as any)[0].viewCount ?? 0,
-        uniqueViewCount: (content as any)[0].viewCount ?? 0, // placeholder
-        saveCount: (saves as any)?.count ?? 0,
-        shareCount: (shares as any)?.count ?? 0,
-        skipCount: (skips as any)?.count ?? 0,
+        viewCount: content[0]?.viewCount ?? 0,
+        uniqueViewCount: content[0]?.viewCount ?? 0, // placeholder
+        saveCount: saves?.count ?? 0,
+        shareCount: shares?.count ?? 0,
+        skipCount: skips?.count ?? 0,
         averageWatchTime: 0, // not stored currently
-        performanceScore: (content as any)[0].engagementScore ?? 0,
+        performanceScore: content[0]?.engagementScore ?? 0,
       };
     } catch (error) {
       console.error('Error getting content stats:', error);
@@ -283,8 +285,8 @@ export class ExploreInteractionService {
       return await db
         .select()
         .from(exploreEngagements)
-        .where(eq((exploreEngagements as any).userId, userId))
-        .orderBy(desc((exploreEngagements as any).createdAt))
+        .where(eq(exploreEngagements.userId, userId))
+        .orderBy(desc(exploreEngagements.createdAt))
         .limit(limit);
     } catch (error) {
       console.error('Error getting user interaction history:', error);
@@ -300,8 +302,8 @@ export class ExploreInteractionService {
       return await db
         .select()
         .from(exploreEngagements)
-        .where(eq((exploreEngagements as any).sessionId, sessionId))
-        .orderBy(desc((exploreEngagements as any).createdAt))
+        .where(eq(exploreEngagements.sessionId, sessionId))
+        .orderBy(desc(exploreEngagements.createdAt))
         .limit(limit);
     } catch (error) {
       console.error('Error getting session interaction history:', error);

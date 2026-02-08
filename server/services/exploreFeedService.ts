@@ -71,12 +71,7 @@ export class ExploreFeedService {
       })
       .from(exploreContent)
       .leftJoin(listings, eq(exploreContent.referenceId, listings.id))
-      .where(
-        and(
-          eq(exploreContent.contentType, 'video' as any),
-          eq(exploreContent.isActive, true as any),
-        ),
-      )
+      .where(and(eq(exploreContent.contentType, 'video'), eq(exploreContent.isActive, 1)))
       .orderBy(
         desc(exploreContent.isFeatured),
         sql`(COALESCE(${exploreContent.engagementScore}, 0) * (1 + COALESCE(${listings.qualityScore}, 30) / 100)) DESC`,
@@ -130,8 +125,8 @@ export class ExploreFeedService {
       .leftJoin(developments, eq(exploreContent.referenceId, developments.id))
       .where(
         and(
-          eq(exploreContent.contentType, 'video' as any),
-          eq(exploreContent.isActive, true as any),
+          eq(exploreContent.contentType, 'video'),
+          eq(exploreContent.isActive, 1),
           sql`(
             LOWER(COALESCE(${listings.city}, '')) LIKE ${`%${loc}%`}
             OR LOWER(COALESCE(${listings.suburb}, '')) LIKE ${`%${loc}%`}
@@ -172,9 +167,9 @@ export class ExploreFeedService {
       .from(exploreContent)
       .where(
         and(
-          eq(exploreContent.contentType, 'video' as any),
-          eq(exploreContent.isActive, true as any),
-          eq(exploreContent.creatorType, 'agent' as any),
+          eq(exploreContent.contentType, 'video'),
+          eq(exploreContent.isActive, 1),
+          eq(exploreContent.creatorType, 'agent'),
           eq(exploreContent.creatorId, agentId),
         ),
       )
@@ -203,9 +198,9 @@ export class ExploreFeedService {
       .from(exploreContent)
       .where(
         and(
-          eq(exploreContent.contentType, 'video' as any),
-          eq(exploreContent.isActive, true as any),
-          eq(exploreContent.creatorType, 'developer' as any),
+          eq(exploreContent.contentType, 'video'),
+          eq(exploreContent.isActive, 1),
+          eq(exploreContent.creatorType, 'developer'),
           eq(exploreContent.creatorId, developerId),
         ),
       )
@@ -234,8 +229,8 @@ export class ExploreFeedService {
       .from(exploreContent)
       .where(
         and(
-          eq(exploreContent.contentType, 'video' as any),
-          eq(exploreContent.isActive, true as any),
+          eq(exploreContent.contentType, 'video'),
+          eq(exploreContent.isActive, 1),
           eq(exploreContent.agencyId, agencyId),
         ),
       )
@@ -253,6 +248,47 @@ export class ExploreFeedService {
   }
 
   /**
+   * Category feed
+   */
+  async getCategoryFeed(options: FeedOptions): Promise<FeedResult> {
+    const { category, limit = 20, offset = 0 } = options;
+    if (!category) throw new Error('Category required');
+
+    // For now, we'll just search for the category in the description or title as a simple fallback
+    // In a real implementation, we would have a proper taxonomy relation
+    const cat = category.toLowerCase();
+
+    const rows = await db
+      .select({
+        content: exploreContent,
+      })
+      .from(exploreContent)
+      .where(
+        and(
+          eq(exploreContent.contentType, 'video'),
+          eq(exploreContent.isActive, 1),
+          sql`(
+            LOWER(COALESCE(${exploreContent.title}, '')) LIKE ${`%${cat}%`}
+            OR LOWER(COALESCE(${exploreContent.description}, '')) LIKE ${`%${cat}%`}
+          )`,
+        ),
+      )
+      .orderBy(desc(exploreContent.isFeatured), desc(exploreContent.createdAt))
+      .limit(limit)
+      .offset(offset);
+
+    const shorts = rows.map(r => r.content);
+
+    return {
+      shorts: shorts.map(transformShort),
+      feedType: 'category',
+      hasMore: shorts.length === limit,
+      offset: offset + shorts.length,
+      metadata: { category },
+    };
+  }
+
+  /**
    * Feed router
    */
   async getFeed(feedType: FeedType, options: FeedOptions): Promise<FeedResult> {
@@ -261,6 +297,8 @@ export class ExploreFeedService {
         return this.getRecommendedFeed(options);
       case 'area':
         return this.getAreaFeed(options);
+      case 'category':
+        return this.getCategoryFeed(options);
       case 'agent':
         return this.getAgentFeed(options);
       case 'developer':
@@ -273,7 +311,13 @@ export class ExploreFeedService {
   }
 
   async getCategories() {
-    return [];
+    // Return some static categories for now or fetch from DB if available
+    return [
+      { id: 'apartments', name: 'Apartments' },
+      { id: 'houses', name: 'Houses' },
+      { id: 'luxury', name: 'Luxury' },
+      { id: 'new-devs', name: 'New Developments' },
+    ];
   }
 
   async getTopics() {
