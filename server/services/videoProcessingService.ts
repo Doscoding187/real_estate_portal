@@ -1,12 +1,14 @@
 /**
  * Video Processing Service
  * Handles video transcoding, thumbnail generation, and metadata extraction
+ * 
+ * Phase 1: most processing is gated – only basic validation and thumbnails are active
  */
 
 import { S3Client, HeadObjectCommand } from '@aws-sdk/client-s3';
 import { db } from '../db';
-import { exploreDiscoveryVideos } from '../../drizzle/schema';
-import { eq } from 'drizzle-orm';
+import { exploreContent } from '../../drizzle/schema';
+import { eq, and } from 'drizzle-orm';
 
 const s3Client = new S3Client({
   region: process.env.AWS_REGION || 'eu-north-1',
@@ -21,7 +23,10 @@ const AWS_REGION = process.env.AWS_REGION || 'eu-north-1';
 const CDN_URL =
   process.env.CLOUDFRONT_URL || `https://${S3_BUCKET_NAME}.s3.${AWS_REGION}.amazonaws.com`;
 
-// MediaConvert (optional)
+// Gate for full video pipeline (transcoding, MediaConvert, etc.)
+const VIDEO_PIPELINE_ENABLED = process.env.ENABLE_VIDEO_PIPELINE === 'true';
+
+// MediaConvert (optional – only used when enabled)
 const MEDIACONVERT_ENDPOINT = process.env.MEDIACONVERT_ENDPOINT;
 const MEDIACONVERT_ROLE_ARN = process.env.MEDIACONVERT_ROLE_ARN;
 
@@ -55,21 +60,25 @@ const VIDEO_FORMATS: VideoFormat[] = [
 ];
 
 /**
- * Queue video for transcoding (falls back to original if MediaConvert not configured)
+ * Queue video for transcoding (Phase 1: mostly no-op unless pipeline enabled)
  */
 export async function queueVideoForTranscoding(
-  exploreVideoId: number,
+  contentId: number,
   videoUrl: string,
 ): Promise<{ jobId?: string; status: string }> {
+  if (!VIDEO_PIPELINE_ENABLED) {
+    console.warn('[VideoProcessing] Pipeline disabled in Phase 1 – marking as completed with original');
+    return { status: 'completed' };
+  }
+
   try {
     const s3Key = extractS3Key(videoUrl);
-
     const inputPath = `s3://${S3_BUCKET_NAME}/${s3Key}`;
-    const outputPath = `s3://${S3_BUCKET_NAME}/transcoded/${exploreVideoId}`;
+    const outputPath = `s3://${S3_BUCKET_NAME}/transcoded/${contentId}`;
 
-    // Mark as queued
+    // Mark as queued (in exploreContent)
     await db
-      .update(exploreDiscoveryVideos)
+      .update(exploreContent)
       .set({
         transcodedUrls: JSON.stringify({
           status: 'queued',
@@ -77,16 +86,22 @@ export async function queueVideoForTranscoding(
           inputPath,
           outputPath,
         }),
-      } as any)
-      .where(eq((exploreDiscoveryVideos as any).id, exploreVideoId));
+        processingStatus: 'queued', // optional – add this column if you want
+      })
+      .where(
+        and(
+          eq(exploreContent.id, contentId),
+          eq(exploreContent.contentType, 'video'),
+        ),
+      );
 
     // Try MediaConvert if configured
     if (MEDIACONVERT_ENDPOINT && MEDIACONVERT_ROLE_ARN) {
       try {
-        const jobId = await submitMediaConvertJob(inputPath, outputPath, exploreVideoId);
+        const jobId = await submitMediaConvertJob(inputPath, outputPath, contentId);
 
         await db
-          .update(exploreDiscoveryVideos)
+          .update(exploreContent)
           .set({
             transcodedUrls: JSON.stringify({
               status: 'processing',
@@ -95,8 +110,14 @@ export async function queueVideoForTranscoding(
               inputPath,
               outputPath,
             }),
-          } as any)
-          .where(eq((exploreDiscoveryVideos as any).id, exploreVideoId));
+            processingStatus: 'processing',
+          })
+          .where(
+            and(
+              eq(exploreContent.id, contentId),
+              eq(exploreContent.contentType, 'video'),
+            ),
+          );
 
         return { jobId, status: 'processing' };
       } catch (err: any) {
@@ -104,36 +125,48 @@ export async function queueVideoForTranscoding(
       }
     }
 
-    // Fallback: mark original as all qualities
+    // Fallback: use original video
     const fallbackUrls: Record<string, string> = {};
     VIDEO_FORMATS.forEach(f => (fallbackUrls[f.quality] = videoUrl));
 
     await db
-      .update(exploreDiscoveryVideos)
+      .update(exploreContent)
       .set({
         transcodedUrls: JSON.stringify({
           status: 'completed',
           completedAt: new Date().toISOString(),
           ...fallbackUrls,
-          note: 'Original video used (MediaConvert not configured)',
+          note: 'Original video used (MediaConvert not configured or disabled)',
         }),
-      } as any)
-      .where(eq((exploreDiscoveryVideos as any).id, exploreVideoId));
+        processingStatus: 'completed',
+      })
+      .where(
+        and(
+          eq(exploreContent.id, contentId),
+          eq(exploreContent.contentType, 'video'),
+        ),
+      );
 
     return { status: 'completed' };
   } catch (error: any) {
     console.error('[VideoProcessing] Queue failed:', error);
 
     await db
-      .update(exploreDiscoveryVideos)
+      .update(exploreContent)
       .set({
         transcodedUrls: JSON.stringify({
           status: 'failed',
           error: error.message,
           failedAt: new Date().toISOString(),
         }),
-      } as any)
-      .where(eq((exploreDiscoveryVideos as any).id, exploreVideoId))
+        processingStatus: 'failed',
+      })
+      .where(
+        and(
+          eq(exploreContent.id, contentId),
+          eq(exploreContent.contentType, 'video'),
+        ),
+      )
       .catch(() => {});
 
     throw error;
@@ -146,7 +179,7 @@ export async function queueVideoForTranscoding(
 async function submitMediaConvertJob(
   _inputPath: string,
   _outputPath: string,
-  _videoId: number,
+  _contentId: number,
 ): Promise<string> {
   throw new Error(
     'MediaConvert not implemented. Add @aws-sdk/client-mediaconvert and set MEDIACONVERT_* env vars.',
@@ -157,20 +190,33 @@ async function submitMediaConvertJob(
  * Called after transcoding finishes (usually via webhook)
  */
 export async function updateTranscodedUrls(
-  exploreVideoId: number,
+  contentId: number,
   transcodedVideos: TranscodedVideo[],
 ): Promise<void> {
+  if (!VIDEO_PIPELINE_ENABLED) {
+    console.warn('[VideoProcessing] Pipeline disabled – ignoring transcoded URLs update');
+    return;
+  }
+
   const map: Record<string, string> = {};
   transcodedVideos.forEach(v => (map[v.quality] = v.url));
 
   await db
-    .update(exploreDiscoveryVideos)
-    .set({ transcodedUrls: JSON.stringify(map) } as any)
-    .where(eq((exploreDiscoveryVideos as any).id, exploreVideoId));
+    .update(exploreContent)
+    .set({
+      transcodedUrls: JSON.stringify(map),
+      processingStatus: 'completed',
+    })
+    .where(
+      and(
+        eq(exploreContent.id, contentId),
+        eq(exploreContent.contentType, 'video'),
+      ),
+    );
 }
 
 /**
- * Helper to extract S3 key
+ * Helper to extract S3 key from URL
  */
 function extractS3Key(videoUrl: string): string {
   if (videoUrl.includes(S3_BUCKET_NAME)) {
@@ -180,7 +226,7 @@ function extractS3Key(videoUrl: string): string {
 }
 
 /**
- * Placeholder thumbnail
+ * Placeholder thumbnail generation
  */
 export async function generateThumbnail(videoUrl: string, timeOffset: number = 2): Promise<string> {
   const s3Key = extractS3Key(videoUrl);
@@ -232,7 +278,7 @@ export async function generateSpriteSheet(
 }
 
 /**
- * Basic metadata estimation
+ * Very basic metadata estimation (used when real extraction is not available)
  */
 export async function extractVideoMetadata(
   videoUrl: string,
@@ -268,7 +314,7 @@ export async function extractVideoMetadata(
 }
 
 /**
- * Basic video validation
+ * Basic video file validation
  */
 export async function validateVideoFile(
   videoUrl: string,
@@ -305,10 +351,10 @@ export async function validateVideoFile(
 }
 
 /**
- * Main entry point
+ * Main entry point – Phase 1: limited to validation + thumbnails
  */
 export async function processUploadedVideo(
-  exploreVideoId: number,
+  contentId: number,
   videoUrl: string,
   providedDuration?: number,
 ): Promise<{
@@ -319,21 +365,31 @@ export async function processUploadedVideo(
   mainThumbnail: string;
 }> {
   const validation = await validateVideoFile(videoUrl, providedDuration);
-  if (!validation.valid) throw new Error(`Validation failed: ${validation.errors.join(', ')}`);
+  if (!validation.valid) {
+    throw new Error(`Validation failed: ${validation.errors.join(', ')}`);
+  }
 
   const metadata = await extractVideoMetadata(videoUrl, providedDuration);
 
   const mainThumbnail = await generateThumbnail(videoUrl, 2);
   const previewThumbnails = await generatePreviewThumbnails(videoUrl, metadata.duration, 5);
 
-  const transcoding = await queueVideoForTranscoding(exploreVideoId, videoUrl);
+  let transcodingStatus = 'not_started';
+
+  if (VIDEO_PIPELINE_ENABLED) {
+    const transcoding = await queueVideoForTranscoding(contentId, videoUrl);
+    transcodingStatus = transcoding.status;
+  } else {
+    // In Phase 1 we assume original is good enough
+    transcodingStatus = 'completed';
+  }
 
   generateSpriteSheet(previewThumbnails, 10).catch(() => {});
 
   return {
     success: true,
     metadata,
-    transcodingStatus: transcoding.status,
+    transcodingStatus,
     previewThumbnails,
     mainThumbnail,
   };
@@ -343,12 +399,17 @@ export async function processUploadedVideo(
  * Webhook / callback handler
  */
 export async function handleTranscodingComplete(
-  exploreVideoId: number,
+  contentId: number,
   jobId: string,
   outputUrls: Record<string, string>,
 ): Promise<void> {
+  if (!VIDEO_PIPELINE_ENABLED) {
+    console.warn('[VideoProcessing] Pipeline disabled – ignoring complete webhook');
+    return;
+  }
+
   await db
-    .update(exploreDiscoveryVideos)
+    .update(exploreContent)
     .set({
       transcodedUrls: JSON.stringify({
         status: 'completed',
@@ -356,14 +417,20 @@ export async function handleTranscodingComplete(
         jobId,
         ...outputUrls,
       }),
-    } as any)
-    .where(eq((exploreDiscoveryVideos as any).id, exploreVideoId));
+      processingStatus: 'completed',
+    })
+    .where(
+      and(
+        eq(exploreContent.id, contentId),
+        eq(exploreContent.contentType, 'video'),
+      ),
+    );
 }
 
 /**
  * Query current transcoding status
  */
-export async function getTranscodingStatus(exploreVideoId: number): Promise<{
+export async function getTranscodingStatus(contentId: number): Promise<{
   status: string;
   jobId?: string;
   completedAt?: string;
@@ -371,20 +438,25 @@ export async function getTranscodingStatus(exploreVideoId: number): Promise<{
   urls?: Record<string, string>;
 }> {
   const rows = await db
-    .select()
-    .from(exploreDiscoveryVideos)
-    .where(eq((exploreDiscoveryVideos as any).id, exploreVideoId))
+    .select({ transcodedUrls: exploreContent.transcodedUrls })
+    .from(exploreContent)
+    .where(
+      and(
+        eq(exploreContent.id, contentId),
+        eq(exploreContent.contentType, 'video'),
+      ),
+    )
     .limit(1);
 
-  const video = rows[0];
-  if (!video) throw new Error(`Video ${exploreVideoId} not found`);
+  const record = rows[0];
+  if (!record) throw new Error(`Video content ${contentId} not found`);
 
-  if (!(video as any).transcodedUrls) return { status: 'not_started' };
+  if (!record.transcodedUrls) return { status: 'not_started' };
 
   const data =
-    typeof (video as any).transcodedUrls === 'string'
-      ? JSON.parse((video as any).transcodedUrls)
-      : (video as any).transcodedUrls;
+    typeof record.transcodedUrls === 'string'
+      ? JSON.parse(record.transcodedUrls)
+      : record.transcodedUrls;
 
   return {
     status: data.status || 'unknown',

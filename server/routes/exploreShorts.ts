@@ -56,9 +56,36 @@ const rateLimit = (maxRequests: number, windowMs: number) => {
 };
 
 /**
- * GET /api/explore/recommended
- * Get personalized recommended feed
+ * GET /api/explore
+ * Canonical Explore feed (Phase 1): alias to /recommended
  */
+router.get('/', optionalAuth, rateLimit(100, 60000), async (req: Request, res: Response) => {
+  try {
+    const { limit = 20, offset = 0 } = req.query;
+    const userId = req.user?.id;
+
+    const result = await exploreFeedService.getRecommendedFeed({
+      userId,
+      limit: Number(limit),
+      offset: Number(offset),
+    });
+
+    res.json(result);
+  } catch (err) {
+    console.error('[Explore API] Failed to fetch recommended feed:', err);
+
+    res.status(500).json({
+      error: 'Failed to fetch feed',
+      details:
+        process.env.NODE_ENV !== 'production'
+          ? err instanceof Error
+            ? err.message
+            : String(err)
+          : undefined,
+    });
+  }
+});
+
 router.get(
   '/recommended',
   optionalAuth,
@@ -75,9 +102,18 @@ router.get(
       });
 
       res.json(result);
-    } catch (error) {
-      console.error('Error fetching recommended feed:', error);
-      res.status(500).json({ error: 'Failed to fetch feed' });
+    } catch (err) {
+      console.error('[Explore API] Failed to fetch recommended feed:', err);
+
+      res.status(500).json({
+        error: 'Failed to fetch feed',
+        details:
+          process.env.NODE_ENV !== 'production'
+            ? err instanceof Error
+              ? err.message
+              : String(err)
+            : undefined,
+      });
     }
   },
 );
@@ -101,9 +137,18 @@ router.get('/by-area', optionalAuth, rateLimit(100, 60000), async (req: Request,
     });
 
     res.json(result);
-  } catch (error) {
-    console.error('Error fetching area feed:', error);
-    res.status(500).json({ error: 'Failed to fetch feed' });
+  } catch (err) {
+    console.error('[Explore API] Failed to fetch area feed:', err);
+
+    res.status(500).json({
+      error: 'Failed to fetch feed',
+      details:
+        process.env.NODE_ENV !== 'production'
+          ? err instanceof Error
+            ? err.message
+            : String(err)
+          : undefined,
+    });
   }
 });
 
@@ -142,9 +187,18 @@ router.get(
       });
 
       res.json(result);
-    } catch (error) {
-      console.error('Error fetching agent feed:', error);
-      res.status(500).json({ error: 'Failed to fetch feed' });
+    } catch (err) {
+      console.error('[Explore API] Failed to fetch agent feed:', err);
+
+      res.status(500).json({
+        error: 'Failed to fetch feed',
+        details:
+          process.env.NODE_ENV !== 'production'
+            ? err instanceof Error
+              ? err.message
+              : String(err)
+            : undefined,
+      });
     }
   },
 );
@@ -168,9 +222,18 @@ router.get(
       });
 
       res.json(result);
-    } catch (error) {
-      console.error('Error fetching developer feed:', error);
-      res.status(500).json({ error: 'Failed to fetch feed' });
+    } catch (err) {
+      console.error('[Explore API] Failed to fetch developer feed:', err);
+
+      res.status(500).json({
+        error: 'Failed to fetch feed',
+        details:
+          process.env.NODE_ENV !== 'production'
+            ? err instanceof Error
+              ? err.message
+              : String(err)
+            : undefined,
+      });
     }
   },
 );
@@ -194,7 +257,7 @@ router.post(
       const sessionId = (req as any).sessionID || `guest-${Date.now()}-${Math.random()}`;
 
       await exploreInteractionService.recordInteraction({
-        shortId,
+        contentId: shortId, // Pass the shortId as contentId
         userId: req.user?.id,
         sessionId,
         interactionType,
@@ -207,9 +270,18 @@ router.post(
       } as any);
 
       res.json({ success: true });
-    } catch (error) {
-      console.error('Error recording interaction:', error);
-      res.status(500).json({ error: 'Failed to record interaction' });
+    } catch (err) {
+      console.error('[Explore API] Failed to record interaction:', err);
+
+      res.status(500).json({
+        error: 'Failed to record interaction',
+        details:
+          process.env.NODE_ENV !== 'production'
+            ? err instanceof Error
+              ? err.message
+              : String(err)
+            : undefined,
+      });
     }
   },
 );
@@ -230,9 +302,18 @@ router.post(
       await exploreInteractionService.saveProperty(Number(propertyId), userId);
 
       res.json({ success: true, propertyId: Number(propertyId) });
-    } catch (error) {
-      console.error('Error saving property:', error);
-      res.status(500).json({ error: 'Failed to save property' });
+    } catch (err) {
+      console.error('[Explore API] Failed to save property:', err);
+
+      res.status(500).json({
+        error: 'Failed to save property',
+        details:
+          process.env.NODE_ENV !== 'production'
+            ? err instanceof Error
+              ? err.message
+              : String(err)
+            : undefined,
+      });
     }
   },
 );
@@ -258,9 +339,18 @@ router.post(
       );
 
       res.json({ success: true, propertyId: Number(propertyId), platform });
-    } catch (error) {
-      console.error('Error recording share:', error);
-      res.status(500).json({ error: 'Failed to record share' });
+    } catch (err) {
+      console.error('[Explore API] Failed to record share:', err);
+
+      res.status(500).json({
+        error: 'Failed to record share',
+        details:
+          process.env.NODE_ENV !== 'production'
+            ? err instanceof Error
+              ? err.message
+              : String(err)
+            : undefined,
+      });
     }
   },
 );

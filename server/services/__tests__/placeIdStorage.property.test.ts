@@ -13,12 +13,29 @@
  * is correctly stored in the location record.
  */
 
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 import fc from 'fast-check';
 import { locationPagesServiceEnhanced } from '../locationPagesServiceEnhanced';
 import { getDb } from '../../db';
 import { locations } from '../../../drizzle/schema';
 import { eq } from 'drizzle-orm';
+import { locationResolver } from '../../services/locationResolverService';
+import { createDbChain } from '../../test-utils/mockDb';
+import { mockGooglePlacesOffline } from '../../test-utils/mockGooglePlaces';
+
+// Mock Google Places
+mockGooglePlacesOffline();
+
+// Database Mock
+const { dbChain } = vi.hoisted(() => {
+  const dbChain = createDbChain([]);
+  return { dbChain };
+});
+
+vi.mock('../../db', () => ({
+  db: dbChain,
+  getDb: vi.fn(async () => dbChain),
+}));
 
 describe('Property 32: Place ID storage on selection', () => {
   let testLocationIds: number[] = [];

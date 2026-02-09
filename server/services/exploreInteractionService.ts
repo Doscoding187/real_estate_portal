@@ -6,12 +6,12 @@ import type { InteractionType, DeviceType, FeedType } from '../../shared/types';
 /**
  * Explore Interaction Service (BOOT-SAFE)
  *
- * Goal right now: keep backend booting even if Explore tables/columns differ.
- *
- * This implementation:
- * - Writes interactions into exploreEngagements (best-effort)
- * - Updates explore_content counters (best-effort, raw SQL)
- * - Never throws for interaction recording (doesn't block UI)
+ * Goals:
+ * - Never block UI
+ * - Never crash backend
+ * - Best-effort analytics
+ * - Deterministic scoring
+ * - Future-proof feed logic
  */
 
 export interface RecordInteractionOptions {
@@ -52,12 +52,21 @@ export class ExploreInteractionService {
     } = options;
 
     try {
-      // Write interaction to exploreEngagements (schema now properly typed)
+      // 1) Write raw interaction (analytics layer)
+      console.log('[ENG_INSERT_ATTEMPT]', {
+        contentId,
+        interactionType,
+        userId: userId ?? null,
+        sessionId,
+        feedType,
+        deviceType,
+      });
+
       await db.insert(exploreEngagements).values({
         contentId,
         userId: userId ?? null,
         sessionId: sessionId ?? '',
-        interactionType: interactionType,
+        interactionType,
         metadata: {
           duration,
           feedType,
@@ -67,16 +76,24 @@ export class ExploreInteractionService {
           ipAddress,
           ...metadata,
         },
-        createdAt: new Date(),
       });
 
-      // Update aggregation metrics asynchronously (best-effort)
-      this.updateContentMetrics(contentId, interactionType as any, duration).catch(error => {
-        console.error('Error updating content metrics:', error);
+      console.log('[ENG_INSERT_OK]', { contentId, interactionType });
+
+      // 2) Update aggregated metrics (async, non-blocking)
+      this.updateContentMetrics(contentId, interactionType as any, duration).catch(err => {
+        console.error('Error updating content metrics:', err);
       });
-    } catch (error) {
-      console.error('Error recording interaction:', error);
-      // DO NOT throw — must not block UI or crash backend due to analytics.
+    } catch (error: any) {
+      console.error('[ENG_INSERT_FAIL]', {
+        contentId,
+        interactionType,
+        message: error?.message,
+        code: error?.code,
+        name: error?.name,
+        stack: error?.stack,
+      });
+      // NEVER throw — analytics must not block UI or crash app
     }
   }
 
@@ -85,33 +102,32 @@ export class ExploreInteractionService {
    */
   async recordBatchInteractions(options: BatchInteractionOptions): Promise<void> {
     const { interactions } = options;
-    if (interactions.length === 0) return;
+    if (!interactions.length) return;
 
     try {
-      const values = interactions.map(interaction => ({
-        contentId: interaction.contentId,
-        userId: interaction.userId ?? null,
-        sessionId: interaction.sessionId ?? '',
-        interactionType: interaction.interactionType,
+      const values = interactions.map(i => ({
+        contentId: i.contentId,
+        userId: i.userId ?? null,
+        sessionId: i.sessionId ?? '',
+        interactionType: i.interactionType,
         metadata: {
-          duration: interaction.duration,
-          feedType: interaction.feedType,
-          feedContext: interaction.feedContext,
-          deviceType: interaction.deviceType,
-          userAgent: interaction.userAgent,
-          ipAddress: interaction.ipAddress,
-          ...interaction.metadata,
+          duration: i.duration,
+          feedType: i.feedType,
+          feedContext: i.feedContext,
+          deviceType: i.deviceType,
+          userAgent: i.userAgent,
+          ipAddress: i.ipAddress,
+          ...i.metadata,
         },
-        createdAt: new Date(),
       }));
 
       await db.insert(exploreEngagements).values(values);
 
-      // Update metrics once per unique content item (best-effort)
+      // Aggregate per content item
       const contentIds = Array.from(new Set(interactions.map(i => i.contentId)));
+
       for (const contentId of contentIds) {
-        const itemInteractions = interactions.filter(i => i.contentId === contentId);
-        const last = itemInteractions[itemInteractions.length - 1];
+        const last = interactions.filter(i => i.contentId === contentId).pop();
         this.updateContentMetrics(contentId, (last?.interactionType as any) ?? 'view').catch(
           console.error,
         );
@@ -164,7 +180,9 @@ export class ExploreInteractionService {
     _duration?: number,
   ): Promise<void> {
     try {
-      // 1) Increment view count if view/impression
+      /* -----------------------------------
+       * 1) View counter
+       * ----------------------------------- */
       if (interactionType === 'view' || interactionType === 'impression') {
         await db.execute(sql`
           UPDATE explore_content
@@ -173,34 +191,55 @@ export class ExploreInteractionService {
         `);
       }
 
-      // 2) Update engagement score
-      // Score weights: like=1, comment=2, save=5, share=5, click_cta/contact/whatsapp/book_viewing=10
-      let scoreParams = 0;
+      /* -----------------------------------
+       * 2) Engagement scoring (Phase 1.2 LOCKED)
+       * -----------------------------------
+       * Intention tiers (TikTok-grade v1):
+       *
+       * Passive:     view → 1
+       * Quality:     complete → 3
+       * Light:       like → 2, comment → 3
+       * Strong:      save → 5, share → 7
+       * Conversion:  click_cta/contact/whatsapp/book_viewing → 10
+       */
+
+      let scoreDelta = 0;
+
       switch (interactionType) {
+        case 'view':
+          scoreDelta = 1;
+          break;
+        case 'complete':
+          scoreDelta = 3;
+          break;
         case 'like':
-          scoreParams = 1;
+          scoreDelta = 2;
           break;
         case 'comment':
-          scoreParams = 2;
+          scoreDelta = 3;
           break;
         case 'save':
-          scoreParams = 5;
+          scoreDelta = 5;
           break;
         case 'share':
-          scoreParams = 5;
+          scoreDelta = 7;
           break;
         case 'click_cta':
         case 'contact':
         case 'whatsapp':
         case 'book_viewing':
-          scoreParams = 10;
+          scoreDelta = 10;
           break;
+        default:
+          scoreDelta = 0;
       }
 
-      if (scoreParams > 0) {
+      console.log('[SCORE_DEBUG]', { interactionType, scoreDelta, contentId });
+
+      if (scoreDelta > 0) {
         await db.execute(sql`
           UPDATE explore_content
-          SET engagement_score = engagement_score + ${scoreParams}
+          SET engagement_score = engagement_score + ${scoreDelta}
           WHERE id = ${contentId}
         `);
       }
@@ -211,7 +250,6 @@ export class ExploreInteractionService {
 
   /**
    * Get interaction statistics for content
-   * Aggregates from exploreEngagements + reads counters from exploreContent
    */
   async getShortStats(contentId: number): Promise<any> {
     try {
@@ -224,11 +262,8 @@ export class ExploreInteractionService {
         .where(eq(exploreContent.id, contentId))
         .limit(1);
 
-      if (!content || content.length === 0) {
-        throw new Error('Content not found');
-      }
+      if (!content.length) throw new Error('Content not found');
 
-      // Aggregate counts from exploreEngagements (best-effort)
       const [saves] = await db
         .select({ count: count() })
         .from(exploreEngagements)
@@ -261,14 +296,16 @@ export class ExploreInteractionService {
 
       return {
         contentId,
-        // Legacy alias for compatibility
+
+        // legacy alias
         shortId: contentId,
+
         viewCount: content[0]?.viewCount ?? 0,
-        uniqueViewCount: content[0]?.viewCount ?? 0, // placeholder
+        uniqueViewCount: content[0]?.viewCount ?? 0, // placeholder for future dedupe logic
         saveCount: saves?.count ?? 0,
         shareCount: shares?.count ?? 0,
         skipCount: skips?.count ?? 0,
-        averageWatchTime: 0, // not stored currently
+        averageWatchTime: 0, // future metric
         performanceScore: content[0]?.engagementScore ?? 0,
       };
     } catch (error) {

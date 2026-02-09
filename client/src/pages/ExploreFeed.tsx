@@ -67,18 +67,18 @@ export default function ExploreFeed() {
   // Mutation for recording interactions
   const recordInteractionMutation = trpc.explore.recordInteraction.useMutation();
 
-  // Use placeholder videos if no data available
-  const videos =
-    feedData?.shorts && feedData.shorts.length > 0 ? feedData.shorts : PLACEHOLDER_VIDEOS;
+  // Use canonical `items` when available, fall back to legacy `shorts`, then placeholders
+  const items = feedData?.items ?? feedData?.shorts ?? [];
+  const videos = items.length > 0 ? items : PLACEHOLDER_VIDEOS;
 
   // Filter videos based on search query
   const filteredVideos = searchQuery
     ? videos.filter(
-      (video: any) =>
-        video.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        video.caption?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        video.propertyLocation?.toLowerCase().includes(searchQuery.toLowerCase()),
-    )
+        (video: any) =>
+          video.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          video.caption?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          video.propertyLocation?.toLowerCase().includes(searchQuery.toLowerCase()),
+      )
     : videos;
 
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
@@ -92,7 +92,7 @@ export default function ExploreFeed() {
     const videos = document.querySelectorAll('video');
     videos.forEach((video, index) => {
       if (index === currentIndex) {
-        video.play().catch(() => { }); // Ignore autoplay errors
+        video.play().catch(() => {}); // Ignore autoplay errors
       } else {
         video.pause();
       }

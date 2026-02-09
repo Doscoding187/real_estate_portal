@@ -5,7 +5,6 @@ import {
   users,
   contentQualityScores,
   exploreContent,
-  exploreShorts,
 } from '../../drizzle/schema';
 import { eq, and, desc, sql } from 'drizzle-orm';
 import { randomUUID } from 'crypto';

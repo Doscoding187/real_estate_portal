@@ -6,11 +6,8 @@
 
 import { db } from '../db';
 import {
-  exploreDiscoveryVideos,
   exploreContent,
   exploreEngagements,
-  exploreFeedSessions,
-  exploreSavedProperties,
 } from '../../drizzle/schema';
 import { eq, and, gte, lte, sql } from 'drizzle-orm';
 

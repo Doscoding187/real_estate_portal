@@ -122,7 +122,7 @@ export const CacheKeys = {
     includeAgentContent: boolean = true,
   ) => `feed:agency:${agencyId}:${limit}:${offset}:${includeAgentContent}`,
 
-  performanceScore: (shortId: number) => `score:${shortId}`,
+  performanceScore: (contentId: number) => `score:${contentId}`,
 
   userPreferences: (userId: number) => `prefs:${userId}`,
 };

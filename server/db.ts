@@ -1,4 +1,3 @@
-import { exploreDiscoveryVideos } from '../drizzle/schema';
 import {
   eq,
   desc,
@@ -50,7 +49,6 @@ import {
   partners as services, // Alias partners as services to match db usage
   reviews,
   exploreContent,
-  exploreDiscoveryVideos,
   exploreEngagements,
   exploreFeedSessions,
   exploreSavedProperties,
@@ -881,42 +879,6 @@ export async function getLeadsByAgent(agentId: number) {
 
   // leads already imported at top
   return await db.select().from(leads).where(eq(leads.agentId, agentId));
-}
-
-// ==================== EXPLORE VIDEOS ====================
-
-export async function getAllExploreVideos(limit: number = 20) {
-  const db = await getDb();
-  if (!db) return [];
-
-  return await db
-    .select()
-    .from(exploreDiscoveryVideos)
-    .where(eq(exploreDiscoveryVideos.isPublished, 1))
-    .limit(limit);
-}
-
-export async function getExploreVideoById(id: number) {
-  const db = await getDb();
-  if (!db) return undefined;
-
-  const result = await db
-    .select()
-    .from(exploreDiscoveryVideos)
-    .where(eq(exploreDiscoveryVideos.id, id))
-    .limit(1);
-
-  return result.length > 0 ? result[0] : undefined;
-}
-
-export async function incrementVideoViews(id: number) {
-  const db = await getDb();
-  if (!db) return;
-
-  await db
-    .update(exploreDiscoveryVideos)
-    .set({ views: sql`${exploreDiscoveryVideos.views} + 1` })
-    .where(eq(exploreDiscoveryVideos.id, id));
 }
 
 // ==================== LOCATIONS ====================
