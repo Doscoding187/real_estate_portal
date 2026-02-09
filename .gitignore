@@ -120,3 +120,8 @@ dist/
 
 # Local backups
 backups/
+
+# Local debug artifacts
+_WIP_*.patch
+rg-meta-output*.txt
+vitest.*.timestamp-*.mjs
